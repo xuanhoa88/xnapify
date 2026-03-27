@@ -37,37 +37,26 @@ export default {
   translations: () => translationsContext,
 
   /**
-   * Lifecycle: install (one-time setup — currently a no-op)
+   * Lifecycle: providers — bind DI services shared with other modules.
    */
-  async install() {},
+  async providers({ container }) {}, // eslint-disable-line no-unused-vars
 
   /**
-   * Lifecycle: init (called on every load)
+   * Lifecycle: boot — called on every load after models/migrations/seeds.
    */
-  async boot() {},
+  async boot({ container }) {}, // eslint-disable-line no-unused-vars
 
   /**
-   * Lifecycle: destroy
+   * Lifecycle: shutdown — teardown on extension unload.
    */
-  async shutdown() {},
+  async shutdown({ container }) {}, // eslint-disable-line no-unused-vars
 
   /**
-   * Lifecycle: uninstall
-   * Reverts seeds and database migrations.
+   * Lifecycle: uninstall — custom teardown (if any).
+   * Seeds and migrations are auto-reverted by the framework using
+   * the declarative migrations() and seeds() contexts above.
    */
-  async uninstall({ container }) {
-    const db = container.resolve('db');
-    if (db) {
-      await db.connection.revertSeeds(
-        [{ context: seedsContext, prefix: __EXTENSION_NAME__ }],
-        { container },
-      );
-
-      await db.connection.revertMigrations([
-        { context: migrationsContext, prefix: __EXTENSION_NAME__ },
-      ]);
-    }
-  },
+  async uninstall() {},
 
   /**
    * Module-type hook: provides API routes for dynamic injection.

@@ -329,7 +329,7 @@ export function registerPostWorkers(container) {
 }
 ```
 
-Register in the module's `init()` lifecycle hook:
+Register in the module's `boot()` lifecycle hook:
 
 ```javascript
 // @apps/posts/api/index.js

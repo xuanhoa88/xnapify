@@ -23,11 +23,10 @@ describe('ExtensionRegistry', () => {
   });
 
   describe('Extension Management', () => {
-    test('registers an extension and initializes it', async () => {
-      const boot = jest.fn().mockResolvedValue();
-      const ext = { name: 'Test Extension', boot };
+    test('registers an extension and stores it', () => {
+      const ext = { name: 'Test Extension', boot: jest.fn() };
 
-      await registry.register('extension-1', ext, { someContext: true });
+      registry.register('extension-1', ext);
 
       expect(registry.has('extension-1')).toBe(true);
       expect(registry.get('extension-1')).toMatchObject({
@@ -35,18 +34,20 @@ describe('ExtensionRegistry', () => {
         name: 'Test Extension',
       });
       expect(registry.list()).toContain('extension-1');
-      expect(boot).toHaveBeenCalledWith({ someContext: true, registry });
+      // boot is NOT called — lifecycle is owned by activateViewNamespace
+      expect(ext.boot).not.toHaveBeenCalled();
     });
 
-    test('unregisters an extension and calls shutdown', async () => {
-      const shutdown = jest.fn().mockResolvedValue();
+    test('unregisters an extension and removes it', () => {
+      const shutdown = jest.fn();
       const ext = { name: 'Test Extension', shutdown };
 
-      await registry.register('extension-1', ext);
-      await registry.unregister('extension-1', { someContext: true });
+      registry.register('extension-1', ext);
+      registry.unregister('extension-1');
 
       expect(registry.has('extension-1')).toBe(false);
-      expect(shutdown).toHaveBeenCalledWith({ someContext: true, registry });
+      // shutdown is NOT called — lifecycle is owned by deactivateViewNamespace
+      expect(shutdown).not.toHaveBeenCalled();
     });
 
     test('unregister clears extension slots and hooks', async () => {
@@ -129,11 +130,11 @@ describe('ExtensionRegistry', () => {
     });
 
     test('updates an extension by ID', async () => {
-      const boot = jest.fn().mockResolvedValue();
-      const shutdown = jest.fn().mockResolvedValue();
+      const boot = jest.fn();
+      const shutdown = jest.fn();
 
       // Initial mock extension already registered
-      await registry.register('extension-updatable', { shutdown });
+      registry.register('extension-updatable', { shutdown });
 
       const definition = { boot };
       const manifest = {
@@ -145,10 +146,9 @@ describe('ExtensionRegistry', () => {
 
       const result = await registry.runUpdateHook('extension-updatable');
 
-      // The registry unregisters the current instance and registers the new one built from definition
+      // runUpdateHook stores the new definition (pure-store)
       expect(result).toBe(registry);
-      expect(shutdown).toHaveBeenCalledTimes(1);
-      expect(boot).toHaveBeenCalledWith({ contextVal: 42, registry });
+      expect(registry.has('extension-updatable')).toBe(true);
     });
 
     test('module-type without subscribe auto-subscribes to wildcard', () => {

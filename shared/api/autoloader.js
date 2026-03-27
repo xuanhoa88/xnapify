@@ -23,6 +23,7 @@
 import { getTranslations } from '@shared/i18n/loader';
 import { addNamespace } from '@shared/i18n/utils';
 import { createWebpackContextAdapter } from '@shared/utils/contextAdapter';
+import { API_LIFECYCLE_PHASES } from '@shared/utils/lifecycle';
 
 import ModelRegistry from './ModelRegistry';
 
@@ -34,23 +35,10 @@ import ModelRegistry from './ModelRegistry';
 const LIFECYCLE_PATH_PATTERN = /^\.\/([^/]+)\/api\/index\.[cm]?[jt]s$/i;
 
 /**
- * Ordered lifecycle phases. The sequence is intentional:
- *   models     — register data structures first (migrations depend on them)
- *   shared     — bind DI services (boot/seeds may consume them)
- *   migrations — create all tables before any data is inserted
- *   seeds      — populate data after schema is guaranteed to exist
- *   boot       — run auth hooks / schedulers after DB is fully ready
- *   routes     — mount routes last, once the app is fully initialised
+ * Ordered lifecycle phases.
+ * @see shared/utils/lifecycle.js — single source of truth
  */
-const LIFECYCLE_PHASES = [
-  'translations',
-  'models',
-  'providers',
-  'migrations',
-  'seeds',
-  'boot',
-  'routes',
-];
+const LIFECYCLE_PHASES = API_LIFECYCLE_PHASES.filter(p => p !== 'shutdown');
 
 // =============================================================================
 // CORE MODULES CONFIGURATION
@@ -279,7 +267,28 @@ export async function discoverModules(modulesContext, container) {
     })),
   );
 
-  // ─── Phase 2: models ──────────────────────────────────────────────────────
+  // ─── Phase 2: providers ───────────────────────────────────────────────────
+  errors.push(
+    ...(await runPhase('providers', lifecycles, (_, hook) =>
+      hook({ container }),
+    )),
+  );
+
+  // ─── Phase 3: migrations ──────────────────────────────────────────────────
+  errors.push(
+    ...(await runPhase('migrations', lifecycles, async (name, hook) => {
+      const result = await hook({ container });
+      // Declarative: hook returned a context → auto-execute
+      if (result) {
+        const db = container.resolve('db');
+        await db.connection.runMigrations([{ context: result, prefix: name }], {
+          container,
+        });
+      }
+    })),
+  );
+
+  // ─── Phase 4: models ──────────────────────────────────────────────────────
   const registry = new ModelRegistry(
     container.has('db') ? container.resolve('db') : null,
   );
@@ -303,23 +312,18 @@ export async function discoverModules(modulesContext, container) {
 
   container.instance('models', registry);
 
-  // ─── Phase 3: providers ───────────────────────────────────────────────────
-  errors.push(
-    ...(await runPhase('providers', lifecycles, (_, hook) =>
-      hook({ container }),
-    )),
-  );
-
-  // ─── Phase 4: migrations ──────────────────────────────────────────────────
-  errors.push(
-    ...(await runPhase('migrations', lifecycles, (_, hook) =>
-      hook({ container }),
-    )),
-  );
-
   // ─── Phase 5: seeds ───────────────────────────────────────────────────────
   errors.push(
-    ...(await runPhase('seeds', lifecycles, (_, hook) => hook({ container }))),
+    ...(await runPhase('seeds', lifecycles, async (name, hook) => {
+      const result = await hook({ container });
+      // Declarative: hook returned a context → auto-execute
+      if (result) {
+        const db = container.resolve('db');
+        await db.connection.runSeeds([{ context: result, prefix: name }], {
+          container,
+        });
+      }
+    })),
   );
 
   // ─── Phase 6: boot ────────────────────────────────────────────────────────

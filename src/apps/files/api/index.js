@@ -29,25 +29,12 @@ const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
 // =============================================================================
 
 export default {
+  migrations: () => migrationsContext,
+  seeds: () => seedsContext,
+  models: () => modelsContext,
+  routes: () => routesContext,
+
   async providers({ container }) {
     container.bind('files:seed_constants', () => SEED_PERMISSIONS, OWNER_KEY);
   },
-
-  async migrations({ container }) {
-    const db = container.resolve('db');
-    await db.connection.runMigrations(
-      [{ context: migrationsContext, prefix: 'files' }],
-      { container },
-    );
-  },
-
-  async seeds({ container }) {
-    const db = container.resolve('db');
-    await db.connection.runSeeds([{ context: seedsContext, prefix: 'files' }], {
-      container,
-    });
-  },
-
-  models: () => modelsContext,
-  routes: () => routesContext,
 };

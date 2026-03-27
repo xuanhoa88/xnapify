@@ -20,14 +20,15 @@ Modules interact with the core framework by exporting specific lifecycle hooks f
 1. **Setup Directory:** Choose a domain name `[module_name]`. Create `src/apps/[module_name]/api/`.
 2. **Setup Subdirectories:** Always create `controllers`, `services`, `routes`, `models`, and `database/migrations` + `database/seeds`.
 3. **The Index File (`api/index.js`):** Export the following exact lifecycle hooks:
+   - `translations()`: returns the Webpack context for locale JSON files.
+   - `providers({ container })`: binds singletons/factories to the dependency injection `container`.
+   - `migrations()`: returns the Webpack context for migrations (declarative — autoloader executes).
    - `models()`: returns the Webpack context for models.
-   - `providers(container)`: binds singletons/factories to the dependency injection `container`.
-   - `migrations(container)`: executes `db.connection.runMigrations()`.
-   - `seeds(container)`: executes `db.connection.runSeeds()`.
+   - `seeds()`: returns the Webpack context for seeds (declarative — autoloader executes).
    - `boot({ container })`: registers hooks, schedules, queue-based workers, or Piscina worker pools. Runs after all models are loaded.
    - `routes()`: returns `[moduleName, routesContext]` tuple for dynamic routing.
 
-   *Note: Ensure you include `translations()` hook if this module provides backend i18n JSON.*
+   *Phase order: `translations → providers → migrations → models → seeds → boot → routes` (defined in `shared/utils/lifecycle.js`)*
 
 4. **Models & Migrations:** 
    Migrations run on every boot via the autoloader. Create standard Sequelize models and migrations. Ensure models have an `associate` method if they relate to other tables.

@@ -84,7 +84,7 @@ const mockQueue = jest.fn(() => mockQueueChannel);
 
 const mockExtensionManager = {
   getInstalledExtensionsDir: jest.fn(() => '/mock/extensions'),
-  getDevExtensionPath: jest.fn(cwd =>
+  getDevExtensionsDir: jest.fn(cwd =>
     path.resolve(cwd, process.env.RSK_EXTENSION_LOCAL_PATH || 'extensions'),
   ),
 };
@@ -118,7 +118,6 @@ describe('Extension Service', () => {
       ]);
 
       fs.existsSync.mockReturnValue(true);
-      // fs.promises.readFile is used in readExtensionManifest
       fs.promises.readFile.mockImplementation(path => {
         if (path.includes('fs-extension')) {
           return Promise.resolve(
@@ -272,7 +271,6 @@ describe('Extension Service', () => {
         }
         return Promise.reject('File not found');
       });
-      // getActiveExtensions uses readExtensionManifest which uses fs.readFile
 
       const result = await getActiveExtensions(mockContext);
 

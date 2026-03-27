@@ -26,26 +26,12 @@ const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
 // =============================================================================
 
 export default {
-  async migrations({ container }) {
-    const db = container.resolve('db');
-    await db.connection.runMigrations(
-      [{ context: migrationsContext, prefix: 'extensions' }],
-      { container },
-    );
-  },
-
-  async seeds({ container }) {
-    const db = container.resolve('db');
-    await db.connection.runSeeds(
-      [{ context: seedsContext, prefix: 'extensions' }],
-      { container },
-    );
-  },
+  migrations: () => migrationsContext,
+  seeds: () => seedsContext,
+  models: () => modelsContext,
+  routes: () => routesContext,
 
   async boot({ container }) {
     registerExtensionWorkers(container);
   },
-
-  models: () => modelsContext,
-  routes: () => routesContext,
 };

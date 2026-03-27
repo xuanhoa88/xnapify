@@ -10,24 +10,22 @@
  * Handles dynamic loading, unloading, and synchronization of extensions.
  * Shared logic for both server and client.
  */
-import assign from 'lodash/assign';
 
 import { getTranslations } from '@shared/i18n/loader';
-import { addNamespace } from '@shared/i18n/utils';
-
-import { registry } from './Registry';
+import { addNamespace, removeNamespace } from '@shared/i18n/utils';
+import { LIFECYCLE_HOOKS } from '@shared/utils/lifecycle';
 
 // Symbols — exported (used by subclass managers and tests)
-export const INITIALIZED = Symbol('__rsk.ext.initialized__');
 export const ACTIVE_EXTENSIONS = Symbol('__rsk.ext.active__');
 export const EXTENSION_METADATA = Symbol('__rsk.ext.metadata__');
-export const LOADED_VERSIONS = Symbol('__rsk.ext.loadedVersions__');
 export const BUFFERED_ROUTES = Symbol('__rsk.ext.pendingRoutes__');
 export const STORED_ADAPTERS = Symbol('__rsk.ext.routeAdapters__');
+export const CONNECTED_ROUTERS = Symbol('__rsk.ext.connectedRouters__');
 
 // Symbols — private (internal to base manager)
 const FETCH = Symbol('__rsk.ext.fetch__');
-const PROVIDERS_CONTEXT = Symbol('__rsk.ext.providersContext__');
+const CONTEXTS = Symbol('__rsk.ext.contexts__');
+const REGISTRY = Symbol('__rsk.ext.registry__');
 const EVENT_HANDLERS = Symbol('__rsk.ext.eventHandlers__');
 
 /**
@@ -56,22 +54,86 @@ export const ExtensionState = Object.freeze({
  */
 
 export class BaseExtensionManager {
-  constructor() {
-    this[INITIALIZED] = false;
+  // ---------------------------------------------------------------------------
+  // 1. Constructor
+  // ---------------------------------------------------------------------------
+
+  /**
+   * @param {ExtensionRegistry} registryInstance - Environment-specific registry
+   */
+  constructor(registryInstance) {
+    if (!registryInstance) {
+      throw new Error('BaseExtensionManager requires a registry instance');
+    }
+    this[REGISTRY] = registryInstance;
     this[FETCH] = null;
-    this[PROVIDERS_CONTEXT] = null;
     this[ACTIVE_EXTENSIONS] = new Map(); // id -> extension instance
     this[EXTENSION_METADATA] = new Map(); // id -> metadata
     this[EVENT_HANDLERS] = new Map(); // eventType -> Set of handlers
-    this[LOADED_VERSIONS] = new Map(); // extensionId -> version
+    this[CONNECTED_ROUTERS] = { api: null, view: null };
+    this[STORED_ADAPTERS] = new Map(); // id -> { view?, api? }
+    this[BUFFERED_ROUTES] = []; // [{ id, adapter, type }]
+    this[CONTEXTS] = { view: null, api: null };
   }
+
+  // ---------------------------------------------------------------------------
+  // 2. Properties / Accessors
+  // ---------------------------------------------------------------------------
 
   /**
    * Get the registry instance
-   * @returns {Registry} The registry instance
+   * @returns {ExtensionRegistry} The registry instance
    */
   get registry() {
-    return registry;
+    return this[REGISTRY];
+  }
+
+  /**
+   * Set the fetch instance
+   * @param {Object} fetch - Fetch instance
+   */
+  set fetch(fetchInstance) {
+    this[FETCH] = fetchInstance;
+  }
+
+  /**
+   * Get the fetch instance
+   * @returns {Object} Fetch instance
+   */
+  get fetch() {
+    return this[FETCH];
+  }
+
+  /**
+   * Set the view container
+   * @param {Object} container - View container
+   */
+  set viewContainer(container) {
+    this[CONTEXTS].view = container;
+  }
+
+  /**
+   * Get the view container
+   * @returns {Object} View container
+   */
+  get viewContainer() {
+    return this[CONTEXTS].view;
+  }
+
+  /**
+   * Set the API container
+   * @param {Object} container - API container
+   */
+  set apiContainer(container) {
+    this[CONTEXTS].api = container;
+  }
+
+  /**
+   * Get the API container
+   * @returns {Object} API container
+   */
+  get apiContainer() {
+    return this[CONTEXTS].api;
   }
 
   /**
@@ -84,14 +146,47 @@ export class BaseExtensionManager {
     return `/api/extensions/${id}/static/${filename}`;
   }
 
+  // ---------------------------------------------------------------------------
+  // 3. Subclass Hooks (template methods — override in server/client)
+  // ---------------------------------------------------------------------------
+
   /**
-   * Subclass hook called once during init (before sync).
-   * Override to perform environment-specific setup.
-   * @param {Object} container - Application container
+   * Resolve the container for extension lifecycle hooks.
+   * Subclasses override to return the appropriate container:
+   * - Client: viewContainer (React app context)
+   * - Server: apiContainer (DI container)
+   *
+   * @returns {Object|null} Container for lifecycle hooks
+   * @protected
    */
-  // eslint-disable-next-line class-methods-use-this
-  _onInit(_container) {
-    // Override in subclasses
+  _hookContext() {
+    return this.viewContainer;
+  }
+
+  /**
+   * Resolve the extension entry point based on manifest.
+   * Override in subclasses.
+   *
+   * @param {Object} _manifest - Extension manifest
+   * @returns {string|null} Entry point filename
+   * @protected
+   */
+  // eslint-disable-next-line class-methods-use-this, no-unused-vars
+  _resolveEntryPoint(_manifest) {
+    return null;
+  }
+
+  /**
+   * Load extension module.
+   * @param {string} _id - Extension ID
+   * @param {string} _entryPoint - Resolved entry point filename
+   * @param {Object} _manifest - Extension manifest
+   * @param {string} _containerName - Container name
+   * @returns {Promise<Object|null>} Extension instance or null if skipped
+   * @protected
+   */
+  async _loadExtensionModule(_id, _entryPoint, _manifest, _containerName) {
+    return null;
   }
 
   /**
@@ -101,38 +196,33 @@ export class BaseExtensionManager {
    * @param {string} _id - Extension ID
    * @param {Object} _ext - Loaded extension module
    * @param {Object} _manifest - Extension manifest
+   * @protected
    */
   // eslint-disable-next-line class-methods-use-this, no-unused-vars
   async _postLoad(_id, _ext, _manifest) {}
 
   /**
-   * Initialize the extension manager.
-   * Stores the fetch function and calls the subclass _onInit hook.
-   * Does NOT load extensions — call sync() separately
-   * after the API is reachable.
-   *
-   * @param {Function} fetch$ - Fetch function for API calls (required)
-   * @param {Object} container - Application container
+   * Inject routes for an extension.
+   * @param {string} _id - Extension ID
+   * @param {*} _hookResult - Return value of the extension's views() hook
+   * @param {string} _type - Type of routes (view or api)
+   * @protected
    */
-  async init(fetch$, container) {
-    // Singleton pattern: Skip re-initialization if already initialized
-    if (this[INITIALIZED]) return;
-    this[INITIALIZED] = true;
-
-    // Store fetch for API calls
-    this[FETCH] = fetch$;
-
-    // Subclass hook for environment-specific setup (receives full context)
-    // eslint-disable-next-line no-underscore-dangle
-    await this._onInit(container);
+  // eslint-disable-next-line class-methods-use-this, no-unused-vars
+  _injectRoutes(_id, _hookResult, _type) {
+    // Override in subclasses
   }
+
+  // ---------------------------------------------------------------------------
+  // 4. Initialization
+  // ---------------------------------------------------------------------------
 
   /**
    * Fetch and load all active extensions from API
    */
   async sync() {
     try {
-      const { data: response } = await this[FETCH]('/api/extensions');
+      const { data: response } = await this.fetch('/api/extensions');
       const extensions =
         response && Array.isArray(response.extensions)
           ? response.extensions
@@ -174,113 +264,9 @@ export class BaseExtensionManager {
     }
   }
 
-  /**
-   * Run providers hooks on all loaded extensions.
-   * Called per-request on the server (with ssrContainer) and once on the client.
-   *
-   * @param {Object} context - Per-request context
-   * @param {Object} context.container - DI container for service binding
-   * @param {Object} [context.store] - Redux store instance
-   */
-  async runProviders(context) {
-    // Store for lifecycle hooks (boot, shutdown, etc.)
-    this[PROVIDERS_CONTEXT] = context;
-
-    const extensions = Array.from(this[ACTIVE_EXTENSIONS].entries());
-    if (extensions.length === 0) return;
-
-    const results = await Promise.allSettled(
-      extensions.map(async ([, ext]) => {
-        if (typeof ext.providers !== 'function') return;
-        await ext.providers({ ...context });
-      }),
-    );
-
-    const failures = results.filter(r => r.status === 'rejected');
-    if (failures.length > 0) {
-      console.warn(
-        `[ExtensionManager] ${failures.length} provider(s) failed:`,
-        failures.map(r => (r.reason && r.reason.message) || r.reason),
-      );
-    }
-  }
-
-  /**
-   * Resolve context for lifecycle hooks.
-   * Returns the context stored by runProviders(), or empty object if not yet called.
-   *
-   * @returns {Object}
-   */
-  _hookContext() {
-    return this[PROVIDERS_CONTEXT] || {};
-  }
-
-  /**
-   * Resolve the extension entry point based on manifest.
-   * Override in subclasses.
-   *
-   * @param {Object} _manifest - Extension manifest
-   * @returns {string|null} Entry point filename
-   * @private
-   */
-  // eslint-disable-next-line class-methods-use-this, no-unused-vars
-  _resolveEntryPoint(_manifest) {
-    return null;
-  }
-
-  /**
-   * Load extension module
-   * @param {string} _id - Extension ID
-   * @param {string} _entryPoint - Resolved entry point filename
-   * @param {Object} _manifest - Extension manifest
-   * @param {Object} _options - Additional options (containerName)
-   * @returns {Promise<Object|null>} Extension instance or null if skipped
-   */
-  async _bootstrapExtension(_id, _entryPoint, _manifest, _options) {
-    // Override in subclasses
-    return null;
-  }
-
-  /**
-   * Inject view routes from an extension module that provides a views() hook.
-   *
-   * Calls views(), auto-derives the namespace from the views() tuple
-   * [moduleName, context] for module-kind extensions (so activateNamespace()
-   * can find and initialise them, e.g. inject Redux reducers), then delegates
-   * to the subclass _injectRoutes implementation.
-   *
-   * @param {string} id - Extension ID
-   * @param {Object} ext - Extension module exports
-   * @param {Object} manifest - Extension manifest (mutated in place)
-   * @param {...any} injectArgs - Extra args forwarded to _injectRoutes
-   * @returns {boolean} True if routes were injected
-   * @protected
-   */
-  _injectViewRoutes(id, ext, manifest, ...injectArgs) {
-    if (!ext || typeof ext.routes !== 'function') return false;
-
-    const routesResult = ext.routes();
-
-    // Auto-subscribe module namespace from [moduleName, context] tuple
-    if (
-      Array.isArray(routesResult) &&
-      routesResult.length === 2 &&
-      typeof routesResult[0] === 'string'
-    ) {
-      const moduleName = routesResult[0];
-      const rsk = assign({}, manifest.rsk);
-      const subs = Array.isArray(rsk.subscribe) ? rsk.subscribe : [];
-      if (!subs.includes(moduleName)) {
-        // eslint-disable-next-line no-param-reassign
-        manifest.rsk = { ...rsk, subscribe: [...subs, moduleName] };
-      }
-    }
-
-    // eslint-disable-next-line no-underscore-dangle
-    this._injectRoutes(id, routesResult, ...injectArgs);
-
-    return true;
-  }
+  // ---------------------------------------------------------------------------
+  // 6. Extension Lifecycle (load / unload / reload / update)
+  // ---------------------------------------------------------------------------
 
   /**
    * Load extension dependencies
@@ -317,44 +303,6 @@ export class BaseExtensionManager {
   }
 
   /**
-   * Validate extension structure
-   * @param {Object} ext - Extension object
-   */
-  validateExtensionStructure(ext) {
-    if (!ext || typeof ext !== 'object') {
-      const error = new Error('Extension must be an object');
-      error.name = 'ExtensionManagerError';
-      throw error;
-    }
-
-    // Accept any object that has at least one recognized extension property
-    // Recognized extension properties grouped by purpose:
-    //   Lifecycle:   install → providers → boot → shutdown → uninstall
-    //   Declarative: routes, translations, models
-    const recognizedKeys = [
-      'install',
-      'providers',
-      'boot',
-      'shutdown',
-      'uninstall',
-      'routes',
-      'translations',
-      'models',
-    ];
-    const hasRecognized = recognizedKeys.some(
-      key => key in ext && ext[key] != null,
-    );
-
-    if (!hasRecognized) {
-      const error = new Error(
-        `Extension must have at least one recognized property (${recognizedKeys.join(', ')})`,
-      );
-      error.name = 'ExtensionManagerError';
-      throw error;
-    }
-  }
-
-  /**
    * Load a single extension by ID
    * @param {string} id - Extension ID
    * @param {Object} manifest - Optional extension manifest
@@ -378,7 +326,7 @@ export class BaseExtensionManager {
     }
 
     // Initialize metadata
-    this[EXTENSION_METADATA].set(id, {
+    const metadata = {
       id,
       state: ExtensionState.LOADING,
       version: (manifest && manifest.version) || '0.0.0',
@@ -386,7 +334,8 @@ export class BaseExtensionManager {
       loadedAt: null,
       require: (manifest && manifest.rsk && manifest.rsk.require) || {},
       manifest,
-    });
+    };
+    this[EXTENSION_METADATA].set(id, metadata);
 
     try {
       await this.emit('extension:loading', { id });
@@ -402,18 +351,21 @@ export class BaseExtensionManager {
         await this.loadDependencies(id, manifest.rsk.require, _loadingChain);
       }
 
-      // Fetch extension bundle details from API — skip if the caller
-      // explicitly marked the manifest as read from disk (server-side
-      // refresh sets fromDisk = true after reading the built manifest).
-      let containerName = null;
+      // Fetch extension bundle details from API — skip if the manifest
+      // already provides containerName (e.g., from sync's getActiveExtensions
+      // or server-side refresh with fromDisk = true).
+      let containerName =
+        manifest && manifest.rsk && manifest.rsk.containerName
+          ? manifest.rsk.containerName
+          : null;
 
       if (manifest && manifest.fromDisk) {
-        // Server-side refresh: manifest was read directly from disk
-        containerName = manifest.rsk && manifest.rsk.containerName;
         // Clean up the internal flag
         delete manifest.fromDisk;
-      } else {
-        const response = await this[FETCH](`/api/extensions/${id}`);
+      }
+
+      if (!containerName) {
+        const response = await this.fetch(`/api/extensions/${id}`);
         if (!response || !response.success) {
           const error = new Error(
             (response && response.message) ||
@@ -440,7 +392,6 @@ export class BaseExtensionManager {
         }
 
         // Update metadata to show it's loaded safely but has no active instance
-        const metadata = this[EXTENSION_METADATA].get(id);
         metadata.state = ExtensionState.LOADED;
         metadata.loadedAt = Date.now();
         metadata.manifest = { ...manifest };
@@ -449,21 +400,33 @@ export class BaseExtensionManager {
 
       // Load the extension module (subclass handles require/MF + unwrapping)
       // eslint-disable-next-line no-underscore-dangle
-      const ext = await this._bootstrapExtension(id, entryPoint, manifest, {
+      const ext = await this._loadExtensionModule(
+        id,
+        entryPoint,
+        manifest,
         containerName,
-      });
+      );
 
       // Null = extension was skipped (e.g., API-only on client)
       if (!ext) {
-        const metadata = this[EXTENSION_METADATA].get(id);
         metadata.state = ExtensionState.LOADED;
         metadata.loadedAt = Date.now();
         metadata.manifest = { ...manifest };
         return null;
       }
 
-      // Validate extension structure
-      this.validateExtensionStructure(ext);
+      // Accept any object that has at least one recognized extension property
+      const hasRecognized = LIFECYCLE_HOOKS.some(
+        key => key in ext && ext[key] != null,
+      );
+
+      if (!hasRecognized) {
+        const error = new Error(
+          `Extension must have at least one recognized property (${LIFECYCLE_HOOKS.join(', ')})`,
+        );
+        error.name = 'ExtensionManagerError';
+        throw error;
+      }
 
       // Register with registry
       if (__DEV__) {
@@ -471,7 +434,7 @@ export class BaseExtensionManager {
       }
 
       // eslint-disable-next-line no-underscore-dangle
-      await registry.defineExtension(ext, this._hookContext(), manifest);
+      await this.registry.defineExtension(ext, this._hookContext(), manifest);
 
       // Extensions with routes() are module-type (eagerly activated);
       // extensions without routes are plugin-type (lazily activated).
@@ -481,8 +444,13 @@ export class BaseExtensionManager {
       // eslint-disable-next-line no-underscore-dangle
       await this._postLoad(id, ext, manifest);
 
+      // Inject view routes (module-type only; plugins have no routes)
+      if (hasRoutes) {
+        // eslint-disable-next-line no-underscore-dangle
+        this._injectRoutes(id, ext.routes(), 'view');
+      }
+
       // Update metadata
-      const metadata = this[EXTENSION_METADATA].get(id);
       metadata.state = ExtensionState.LOADED;
       metadata.hasRoutes = hasRoutes;
       metadata.loadedAt = Date.now();
@@ -501,11 +469,8 @@ export class BaseExtensionManager {
       );
 
       // Update metadata
-      const metadata = this[EXTENSION_METADATA].get(id);
-      if (metadata) {
-        metadata.state = ExtensionState.FAILED;
-        metadata.error = error;
-      }
+      metadata.state = ExtensionState.FAILED;
+      metadata.error = error;
 
       await this.emit('extension:failed', { id, error });
     }
@@ -537,17 +502,12 @@ export class BaseExtensionManager {
     await this.emit('extension:unloading', { id });
 
     try {
-      const ext = this[ACTIVE_EXTENSIONS].get(id);
-
-      // Call extension lifecycle hook
-      if (ext && typeof ext.onUnload === 'function') {
-        // eslint-disable-next-line no-underscore-dangle
-        await ext.onUnload(this._hookContext());
-      }
-
-      // Unregister from registry
+      // Remove route adapters (buffered + injected)
       // eslint-disable-next-line no-underscore-dangle
-      await registry.unregister(id, this._hookContext());
+      await this._removeRouteAdapters(id);
+
+      // Unregister from registry (clears slots, hooks)
+      this.registry.unregister(id);
 
       // Remove from active extensions
       this[ACTIVE_EXTENSIONS].delete(id);
@@ -642,31 +602,33 @@ export class BaseExtensionManager {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // 7. Install / Uninstall
+  // ---------------------------------------------------------------------------
+
   /**
-   * Install an extension (one-time setup, calls install() lifecycle hook).
-   *
-   * Client: delegates to the registry which finds the extension
-   * definition by ID and calls its `install()` hook.
-   *
-   * Server: `ServerExtensionManager` overrides this method to load the API module
-   * directly from disk (the extension may not yet be registered in the Registry).
+   * Install an extension (one-time setup).
+   * Orchestrates validation, events, and error handling. Delegates the
+   * actual work to `_performInstall` which subclasses can override.
    *
    * @param {string} id - Extension ID
+   * @param {Object} [manifest] - Extension manifest (server uses for disk loading)
    * @returns {Promise<boolean>} True if installed successfully
    */
-  async installExtension(id) {
+  async installExtension(id, manifest) {
     if (typeof id !== 'string' || id.trim().length === 0) {
       const error = new Error('Extension ID must be a non-empty string');
       error.name = 'ExtensionManagerError';
       await this.emit('extension:validation-failed', { id, error });
       console.error(error);
-      return;
+      return false;
     }
 
     await this.emit('extension:installing', { id });
 
     try {
-      const result = await registry.runInstallHook(id);
+      // eslint-disable-next-line no-underscore-dangle
+      const result = await this._performInstall(id, manifest);
       if (result) {
         if (__DEV__) {
           console.log(`[ExtensionManager] Installed extension: ${id}`);
@@ -680,35 +642,47 @@ export class BaseExtensionManager {
         error,
       );
       await this.emit('extension:install-failed', { id, error });
-      console.error(error);
+      throw error;
     }
   }
 
   /**
-   * Uninstall an extension (one-time teardown, calls uninstall() lifecycle hook).
-   *
-   * Client: delegates to the registry which finds the extension
-   * definition by ID and calls its `uninstall()` hook.
-   *
-   * Server: `ServerExtensionManager` overrides this method to load the API module
-   * directly from disk (the extension may already be unloaded from the Registry).
+   * Perform the actual install work.
+   * Base: delegates to registry. Server: overrides to load from disk.
    *
    * @param {string} id - Extension ID
+   * @param {Object} [_manifest] - Extension manifest
+   * @returns {Promise<boolean>}
+   * @protected
+   */
+  // eslint-disable-next-line no-unused-vars
+  async _performInstall(id, _manifest) {
+    return this.registry.runInstallHook(id);
+  }
+
+  /**
+   * Uninstall an extension (one-time teardown).
+   * Orchestrates validation, events, and error handling. Delegates the
+   * actual work to `_performUninstall` which subclasses can override.
+   *
+   * @param {string} id - Extension ID
+   * @param {Object} [manifest] - Extension manifest (server uses for disk loading)
    * @returns {Promise<boolean>} True if uninstalled successfully
    */
-  async uninstallExtension(id) {
+  async uninstallExtension(id, manifest) {
     if (typeof id !== 'string' || id.trim().length === 0) {
       const error = new Error('Extension ID must be a non-empty string');
       error.name = 'ExtensionManagerError';
       await this.emit('extension:validation-failed', { id, error });
       console.error(error);
-      return;
+      return false;
     }
 
     await this.emit('extension:uninstalling', { id });
 
     try {
-      const result = await registry.runUninstallHook(id);
+      // eslint-disable-next-line no-underscore-dangle
+      const result = await this._performUninstall(id, manifest);
       if (result) {
         if (__DEV__) {
           console.log(`[ExtensionManager] Uninstalled extension: ${id}`);
@@ -722,17 +696,151 @@ export class BaseExtensionManager {
         error,
       );
       await this.emit('extension:uninstall-failed', { id, error });
-      console.error(error);
+      throw error;
     }
   }
 
   /**
+   * Perform the actual uninstall work.
+   * Base: delegates to registry. Server: overrides to load from disk + revert.
+   *
+   * @param {string} id - Extension ID
+   * @param {Object} [_manifest] - Extension manifest
+   * @returns {Promise<boolean>}
+   * @protected
+   */
+  // eslint-disable-next-line no-unused-vars
+  async _performUninstall(id, _manifest) {
+    return this.registry.runUninstallHook(id);
+  }
+
+  // ---------------------------------------------------------------------------
+  // 8. Activate / Deactivate
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Activate an extension's runtime (API lifecycle: boot, routes, etc.).
+   * Orchestrates validation, events, and error handling. Delegates the
+   * actual work to `_performActivate` which subclasses can override.
+   *
+   * @param {string} id - Extension ID
+   * @param {Object} [manifest] - Extension manifest (server uses for disk loading)
+   * @returns {Promise<boolean>} True if activated successfully
+   */
+  async activateExtension(id, manifest) {
+    if (typeof id !== 'string' || id.trim().length === 0) {
+      const error = new Error('Extension ID must be a non-empty string');
+      error.name = 'ExtensionManagerError';
+      await this.emit('extension:validation-failed', { id, error });
+      console.error(error);
+      return false;
+    }
+
+    await this.emit('extension:activating', { id });
+
+    try {
+      // eslint-disable-next-line no-underscore-dangle
+      const result = await this._performActivate(id, manifest);
+      if (result) {
+        // Transition metadata state to ACTIVE
+        const meta = this[EXTENSION_METADATA].get(id);
+        if (meta) meta.state = ExtensionState.ACTIVE;
+
+        if (__DEV__) {
+          console.log(`[ExtensionManager] Activated extension: ${id}`);
+        }
+        await this.emit('extension:activated', { id });
+      }
+      return result;
+    } catch (error) {
+      console.error(
+        `[ExtensionManager] Failed to activate extension "${id}":`,
+        error,
+      );
+      await this.emit('extension:activate-failed', { id, error });
+      throw error;
+    }
+  }
+
+  /**
+   * Perform the actual activate work.
+   * Base: no-op. Server: overrides to load API module and run full lifecycle.
+   *
+   * @param {string} _id - Extension ID
+   * @param {Object} [_manifest] - Extension manifest
+   * @returns {Promise<boolean>}
+   * @protected
+   */
+  // eslint-disable-next-line no-unused-vars
+  async _performActivate(_id, _manifest) {
+    return true;
+  }
+
+  /**
+   * Deactivate an extension's runtime (teardown API: destroy, remove routes).
+   * Orchestrates validation, events, and error handling. Delegates the
+   * actual work to `_performDeactivate` which subclasses can override.
+   *
+   * @param {string} id - Extension ID
+   * @param {Object} [manifest] - Extension manifest
+   * @returns {Promise<boolean>} True if deactivated successfully
+   */
+  async deactivateExtension(id, manifest) {
+    if (typeof id !== 'string' || id.trim().length === 0) {
+      const error = new Error('Extension ID must be a non-empty string');
+      error.name = 'ExtensionManagerError';
+      await this.emit('extension:validation-failed', { id, error });
+      console.error(error);
+      return false;
+    }
+
+    await this.emit('extension:deactivating', { id });
+
+    try {
+      // eslint-disable-next-line no-underscore-dangle
+      const result = await this._performDeactivate(id, manifest);
+      if (result) {
+        if (__DEV__) {
+          console.log(`[ExtensionManager] Deactivated extension: ${id}`);
+        }
+        await this.emit('extension:deactivated', { id });
+      }
+      return result;
+    } catch (error) {
+      console.error(
+        `[ExtensionManager] Failed to deactivate extension "${id}":`,
+        error,
+      );
+      await this.emit('extension:deactivate-failed', { id, error });
+      throw error;
+    }
+  }
+
+  /**
+   * Perform the actual deactivate work.
+   * Base: no-op. Server: overrides to shutdown API, remove routes, clean up.
+   *
+   * @param {string} _id - Extension ID
+   * @param {Object} [_manifest] - Extension manifest
+   * @returns {Promise<boolean>}
+   * @protected
+   */
+  // eslint-disable-next-line no-unused-vars
+  async _performDeactivate(_id, _manifest) {
+    return true;
+  }
+
+  // ---------------------------------------------------------------------------
+  // 9. Namespace Management
+  // ---------------------------------------------------------------------------
+
+  /**
    * Activate a namespace only if it is not already active.
-   * Convenience wrapper around isNamespaceActive + activateNamespace.
+   * Convenience wrapper around isViewNamespaceActive + activateViewNamespace.
    * @param {string} ns - Namespace to ensure is active
    */
-  async ensureNamespaceActive(ns) {
-    if (this.isNamespaceActive(ns)) {
+  async ensureViewNamespaceActive(ns) {
+    if (this.isViewNamespaceActive(ns)) {
       if (__DEV__) {
         console.log(`[ExtensionManager] Namespace already active: ${ns}`);
       }
@@ -741,7 +849,7 @@ export class BaseExtensionManager {
     if (__DEV__) {
       console.log(`[ExtensionManager] Activating namespace: ${ns}`);
     }
-    await this.activateNamespace(ns);
+    await this.activateViewNamespace(ns);
   }
 
   /**
@@ -749,31 +857,21 @@ export class BaseExtensionManager {
    * @param {string} ns - Namespace to check
    * @returns {boolean}
    */
-  isNamespaceActive(ns) {
-    const extensions = registry.getDefinitions(ns);
+  isViewNamespaceActive(ns) {
+    const extensions = this.registry.getDefinitions(ns);
     if (!extensions) return false;
 
     for (const def of extensions) {
-      if (registry.has(def.id)) return true;
+      if (this.registry.has(def.id)) return true;
     }
     return false;
-  }
-
-  /**
-   * Check if an extension has routes (module-type)
-   * @param {string} id - Extension ID
-   * @returns {boolean}
-   */
-  hasExtensionRoutes(id) {
-    const meta = this[EXTENSION_METADATA].get(id);
-    return meta ? !!meta.hasRoutes : false;
   }
 
   /**
    * Load all extensions for a given namespace (runtime activation)
    * @param {string} ns - Namespace to load
    */
-  async activateNamespace(ns) {
+  async activateViewNamespace(ns) {
     if (typeof ns !== 'string' || ns.trim().length === 0) {
       const error = new Error('Namespace must be a non-empty string');
       error.name = 'ExtensionManagerError';
@@ -785,117 +883,95 @@ export class BaseExtensionManager {
     await this.emit('namespace:loading', { ns });
 
     try {
-      const extensions = registry.getDefinitions(ns);
+      const extensions = this.registry.getDefinitions(ns);
       if (!extensions) {
         return;
       }
+
+      // Filter to unactivated extensions only
+      const pending = Array.from(extensions).filter(def => {
+        if (this[ACTIVE_EXTENSIONS].has(def.id)) {
+          if (__DEV__) {
+            console.log(
+              `[ExtensionManager] Extension "${def.id}" is already active. Skipping.`,
+            );
+          }
+          return false;
+        }
+        return true;
+      });
+
+      if (pending.length === 0) return;
+
       if (__DEV__) {
         console.log(
-          `[ExtensionManager] Found ${extensions.size} extensions for namespace ${ns}`,
+          `[ExtensionManager] Activating ${pending.length} extension(s) for namespace "${ns}"`,
         );
       }
 
-      const results = await Promise.allSettled(
-        Array.from(extensions)
-          .filter(def => {
-            if (this[ACTIVE_EXTENSIONS].has(def.id)) {
-              if (__DEV__) {
-                console.log(
-                  `[ExtensionManager] Extension "${def.id}" is already active. Skipping component registration.`,
-                );
-              }
-              return false;
+      // eslint-disable-next-line no-underscore-dangle
+      const context = this._hookContext();
+
+      // ── Phase 1: Translations (all extensions) ──
+      for (const def of pending) {
+        if (typeof def.translations === 'function') {
+          try {
+            const translations = getTranslations(def.translations());
+            if (Object.keys(translations).length > 0) {
+              addNamespace(`extension:${def.id}`, translations);
             }
-            return true;
-          })
-          .map(async def => {
-            if (__DEV__) {
-              console.log(
-                `[ExtensionManager] Loading extension from namespace: ${def.id}`,
-              );
-            }
-
-            // Wrap boot/shutdown for the standard register method
-            const extInstance = {
-              ...def,
-              boot: async context => {
-                if (__DEV__) {
-                  console.log(
-                    `[ExtensionManager] Booting extension: ${def.id}`,
-                  );
-                }
-
-                // Auto-register translations before boot if extension exports translations()
-                if (typeof def.translations === 'function') {
-                  try {
-                    const translations = getTranslations(def.translations());
-                    if (Object.keys(translations).length > 0) {
-                      addNamespace(`extension:${def.id}`, translations);
-                    }
-                  } catch (error) {
-                    console.error(
-                      `[ExtensionManager] Failed to register translations for ${def.id}:`,
-                      error,
-                    );
-                  }
-                }
-
-                if (typeof def.boot === 'function') {
-                  try {
-                    await def.boot(context);
-                  } catch (error) {
-                    console.error(
-                      `[ExtensionManager] Failed to boot extension ${def.id}:`,
-                      error,
-                    );
-                    await this.emit('extension:boot-error', {
-                      id: def.id,
-                      error,
-                      phase: 'boot',
-                    });
-                  }
-                }
-              },
-              shutdown: async context => {
-                if (__DEV__) {
-                  console.log(
-                    `[ExtensionManager] Shutting down extension: ${def.id}`,
-                  );
-                }
-                if (typeof def.shutdown === 'function') {
-                  try {
-                    await def.shutdown(context);
-                  } catch (error) {
-                    console.error(
-                      `[ExtensionManager] Failed to shutdown extension ${def.id}:`,
-                      error,
-                    );
-                    await this.emit('extension:shutdown-error', {
-                      id: def.id,
-                      error,
-                      phase: 'shutdown',
-                    });
-                  }
-                }
-              },
-            };
-
-            await registry.register(def.id, extInstance);
-            this[ACTIVE_EXTENSIONS].set(def.id, extInstance);
-
-            // Transition metadata state to ACTIVE
-            const meta = this[EXTENSION_METADATA].get(def.id);
-            if (meta) meta.state = ExtensionState.ACTIVE;
-          }),
-      );
-
-      for (const r of results) {
-        if (r.status === 'rejected') {
-          console.error(
-            `[ExtensionManager] Extension registration failed in "${ns}":`,
-            r.reason,
-          );
+          } catch (error) {
+            console.error(
+              `[ExtensionManager] Failed to register translations for ${def.id}:`,
+              error,
+            );
+          }
         }
+      }
+
+      // ── Phase 2: Providers (all extensions) ──
+      for (const def of pending) {
+        if (typeof def.providers === 'function') {
+          try {
+            // eslint-disable-next-line no-await-in-loop
+            await def.providers({ ...context, registry: this.registry });
+          } catch (error) {
+            console.error(
+              `[ExtensionManager] Failed to run providers for ${def.id}:`,
+              error,
+            );
+          }
+        }
+      }
+
+      // ── Phase 3: Boot (all extensions) ──
+      for (const def of pending) {
+        if (typeof def.boot === 'function') {
+          try {
+            // eslint-disable-next-line no-await-in-loop
+            await def.boot({ ...context, registry: this.registry });
+          } catch (error) {
+            console.error(
+              `[ExtensionManager] Failed to boot extension ${def.id}:`,
+              error,
+            );
+            // eslint-disable-next-line no-await-in-loop
+            await this.emit('extension:boot-error', {
+              id: def.id,
+              error,
+              phase: 'boot',
+            });
+          }
+        }
+      }
+
+      // ── Phase 4: Register + mark ACTIVE ──
+      for (const def of pending) {
+        this.registry.register(def.id, def);
+        this[ACTIVE_EXTENSIONS].set(def.id, def);
+
+        const meta = this[EXTENSION_METADATA].get(def.id);
+        if (meta) meta.state = ExtensionState.ACTIVE;
       }
 
       if (__DEV__) {
@@ -916,7 +992,7 @@ export class BaseExtensionManager {
    * Unload all extensions for a given namespace (runtime deactivation)
    * @param {string} ns - Namespace to unload
    */
-  async deactivateNamespace(ns) {
+  async deactivateViewNamespace(ns) {
     if (typeof ns !== 'string' || ns.trim().length === 0) {
       const error = new Error('Namespace must be a non-empty string');
       error.name = 'ExtensionManagerError';
@@ -928,24 +1004,48 @@ export class BaseExtensionManager {
     await this.emit('namespace:unloading', { ns });
 
     try {
-      const extensions = registry.getDefinitions(ns);
+      const extensions = this.registry.getDefinitions(ns);
       if (!extensions) return;
 
-      const results = await Promise.allSettled(
-        Array.from(extensions).map(async def => {
-          // eslint-disable-next-line no-underscore-dangle
-          await registry.unregister(def.id, this._hookContext());
-          this[ACTIVE_EXTENSIONS].delete(def.id);
-        }),
+      const active = Array.from(extensions).filter(def =>
+        this[ACTIVE_EXTENSIONS].has(def.id),
       );
 
-      for (const r of results) {
-        if (r.status === 'rejected') {
-          console.error(
-            `[ExtensionManager] Extension unregistration failed in "${ns}":`,
-            r.reason,
-          );
+      if (active.length === 0) return;
+
+      // eslint-disable-next-line no-underscore-dangle
+      const context = this._hookContext();
+
+      // ── Phase 1: Shutdown (all extensions) ──
+      for (const def of active) {
+        if (typeof def.shutdown === 'function') {
+          try {
+            // eslint-disable-next-line no-await-in-loop
+            await def.shutdown({ ...context, registry: this.registry });
+          } catch (error) {
+            console.error(
+              `[ExtensionManager] Failed to shutdown extension ${def.id}:`,
+              error,
+            );
+            // eslint-disable-next-line no-await-in-loop
+            await this.emit('extension:shutdown-error', {
+              id: def.id,
+              error,
+              phase: 'shutdown',
+            });
+          }
         }
+      }
+
+      // ── Phase 2: Remove translations (all extensions) ──
+      for (const def of active) {
+        removeNamespace(`extension:${def.id}`);
+      }
+
+      // ── Phase 3: Unregister + mark INACTIVE ──
+      for (const def of active) {
+        this.registry.unregister(def.id);
+        this[ACTIVE_EXTENSIONS].delete(def.id);
       }
 
       if (__DEV__) {
@@ -961,6 +1061,170 @@ export class BaseExtensionManager {
       console.error(error);
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // 10. Route Management
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Connect a router instance and flush pending/stored route adapters.
+   *
+   * Shared logic for both view and API routers:
+   * 1. Stores the router reference
+   * 2. Drains pending injections matching `routerKey` from buffer → store
+   * 3. Re-injects all stored adapters for `routerKey` into the router
+   *
+   * @param {string} routerKey - 'view' or 'api'
+   * @param {Object} router - Router instance with add(adapter) method
+   * @param {Function} [injectFn] - Optional custom injection: (router, adapter, id) => void
+   */
+  _connectRouter(routerKey, router, injectFn) {
+    this[CONNECTED_ROUTERS][routerKey] = router;
+
+    // 1. Drain pending injections for this router key (buffer → store)
+    const remaining = [];
+    for (const entry of this[BUFFERED_ROUTES]) {
+      const entryKey = entry.type === 'api' ? 'api' : 'view';
+      if (entryKey === routerKey) {
+        if (!this[STORED_ADAPTERS].has(entry.id)) {
+          this[STORED_ADAPTERS].set(entry.id, {});
+        }
+        this[STORED_ADAPTERS].get(entry.id)[routerKey] = entry.adapter;
+      } else {
+        remaining.push(entry);
+      }
+    }
+    this[BUFFERED_ROUTES].length = 0;
+    this[BUFFERED_ROUTES].push(...remaining);
+
+    // 2. Inject all stored adapters for this router key
+    if (router) {
+      const inject = injectFn || ((r, adapter) => r.add(adapter));
+      for (const [id, adapters] of this[STORED_ADAPTERS].entries()) {
+        if (adapters[routerKey]) {
+          inject(router, adapters[routerKey], id);
+        }
+      }
+    }
+  }
+
+  /**
+   * Remove all route adapters (buffered, stored, and injected) for an extension.
+   *
+   * 1. Purges any pending buffered routes for this extension
+   * 2. Removes injected adapters from connected routers
+   * 3. Cleans up stored adapter references
+   *
+   * @param {string} id - Extension ID
+   * @param {Function} [removeFn] - Optional custom removal: (router, adapter, id) => void
+   *        Defaults to router.remove(adapter). Client overrides for string-based removal.
+   * @returns {Promise<void>}
+   * @protected
+   */
+  async _removeRouteAdapters(id, removeFn) {
+    // 1. Purge buffered routes for this extension (prevents stale injection)
+    const remaining = this[BUFFERED_ROUTES].filter(entry => entry.id !== id);
+    this[BUFFERED_ROUTES].length = 0;
+    this[BUFFERED_ROUTES].push(...remaining);
+
+    // 2. Remove from connected routers
+    const adapters = this[STORED_ADAPTERS].get(id);
+    if (adapters) {
+      const remove = removeFn || ((router, adapter) => router.remove(adapter));
+      for (const routerKey of ['view', 'api']) {
+        try {
+          const router = this[CONNECTED_ROUTERS][routerKey];
+          if (router && adapters[routerKey]) {
+            await remove(router, adapters[routerKey], id);
+          }
+        } catch (error) {
+          console.error(
+            `[ExtensionManager] Failed to remove route adapters for ${id}:`,
+            error,
+          );
+          await this.emit('extension:remove-route-adapters-error', {
+            id,
+            error,
+            phase: 'remove-route-adapters',
+          });
+        }
+      }
+    }
+
+    // 3. Clean up stored reference
+    this[STORED_ADAPTERS].delete(id);
+
+    if (__DEV__) {
+      console.log(`[ExtensionManager] Removed route adapters for: ${id}`);
+    }
+  }
+
+  /**
+   * Connect the view router instance.
+   * @param {Object} viewRouter - View router with add/remove methods
+   */
+  connectViewRouter(viewRouter) {
+    // eslint-disable-next-line no-underscore-dangle
+    this._connectRouter('view', viewRouter);
+  }
+
+  // ---------------------------------------------------------------------------
+  // 11. Refresh
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Refresh extensions (unload, reset state, re-fetch).
+   * Unlike destroy(), this preserves context and event handlers,
+   * allowing the manager to immediately re-initialize.
+   *
+   * @param {...string} extensionIds - Specific IDs to refresh (empty = all)
+   */
+  async refresh(...extensionIds) {
+    // Targeted refresh — delegate to subclass hook
+    if (extensionIds.length > 0) {
+      // eslint-disable-next-line no-underscore-dangle
+      return this._refreshExtensions(extensionIds);
+    }
+
+    // Full refresh: unload all, reset state, re-fetch
+    if (__DEV__) {
+      console.log('[ExtensionManager] Refreshing all...');
+    }
+
+    await this.emit('extensions:refreshing', { extensionIds: null });
+
+    const allIds = Array.from(this[ACTIVE_EXTENSIONS].keys());
+    await Promise.all(allIds.map(id => this.unloadExtension(id)));
+
+    this[ACTIVE_EXTENSIONS].clear();
+    this[EXTENSION_METADATA].clear();
+
+    await this.sync();
+
+    await this.emit('extensions:refreshed', { extensionIds: null });
+
+    if (__DEV__) {
+      console.log('[ExtensionManager] Refreshed');
+    }
+  }
+
+  /**
+   * Targeted refresh hook — subclasses override to refresh specific extensions.
+   * Base class does not support targeted refresh (no disk access).
+   *
+   * @param {string[]} _extensionIds - Extension IDs to refresh
+   * @protected
+   */
+  // eslint-disable-next-line no-unused-vars
+  async _refreshExtensions(_extensionIds) {
+    throw new Error(
+      '_refreshExtensions must be overridden for targeted refresh',
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // 12. Queries
+  // ---------------------------------------------------------------------------
 
   /**
    * Get extension by ID
@@ -1014,6 +1278,10 @@ export class BaseExtensionManager {
     const metadata = this[EXTENSION_METADATA].get(id);
     return (metadata && metadata.state) || null;
   }
+
+  // ---------------------------------------------------------------------------
+  // 13. Event System
+  // ---------------------------------------------------------------------------
 
   /**
    * Event emitter - emit an event
@@ -1087,39 +1355,13 @@ export class BaseExtensionManager {
     }
   }
 
-  /**
-   * Refresh extensions (unload, reset state, re-fetch)
-   * Unlike destroy(), this preserves context and event handlers,
-   * allowing the manager to immediately re-initialize.
-   *
-   * Subclasses may override to add targeted refresh (by specific IDs).
-   */
-  async refresh() {
-    if (__DEV__) {
-      console.log('[ExtensionManager] Refreshing all...');
-    }
-
-    await this.emit('extensions:refreshing', { extensionIds: null });
-
-    // Full refresh: unload all, reset state, re-fetch
-    const allIds = Array.from(this[ACTIVE_EXTENSIONS].keys());
-    await Promise.all(allIds.map(id => this.unloadExtension(id)));
-
-    this[ACTIVE_EXTENSIONS].clear();
-    this[EXTENSION_METADATA].clear();
-    this[LOADED_VERSIONS].clear();
-
-    await this.sync();
-
-    await this.emit('extensions:refreshed', { extensionIds: null });
-
-    if (__DEV__) {
-      console.log('[ExtensionManager] Refreshed');
-    }
-  }
+  // ---------------------------------------------------------------------------
+  // 14. Teardown
+  // ---------------------------------------------------------------------------
 
   /**
-   * Clean up resources
+   * Clean up resources.
+   * Deactivates API, unloads all extensions, clears state.
    */
   async destroy() {
     if (__DEV__) {
@@ -1132,14 +1374,11 @@ export class BaseExtensionManager {
     const extensionIds = Array.from(this[ACTIVE_EXTENSIONS].keys());
     await Promise.all(extensionIds.map(id => this.unloadExtension(id)));
 
-    // Clear all internal state
+    // Clear all base state
     this[ACTIVE_EXTENSIONS].clear();
     this[EXTENSION_METADATA].clear();
-
-    this[LOADED_VERSIONS].clear();
     this[FETCH] = null;
-    this[PROVIDERS_CONTEXT] = null;
-    this[INITIALIZED] = false;
+    this[CONTEXTS] = { view: null, api: null };
 
     await this.emit('manager:destroyed');
 

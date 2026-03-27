@@ -122,7 +122,7 @@ export default async function initializeRouter(context, extension) {
           if (__DEV__) {
             console.log(`[Router] Loading extension namespace: ${ns}`);
           }
-          await extension.ensureNamespaceActive(ns);
+          await extension.ensureViewNamespaceActive(ns);
         }
       } catch (err) {
         log('Failed to load extension namespace: ' + err, 'error');
@@ -135,7 +135,7 @@ export default async function initializeRouter(context, extension) {
           if (__DEV__) {
             console.log(`[Router] Unloading extension namespace: ${ns}`);
           }
-          await extension.deactivateNamespace(ns);
+          await extension.deactivateViewNamespace(ns);
         }
       } catch (err) {
         log('Failed to unload extension namespace: ' + err, 'error');

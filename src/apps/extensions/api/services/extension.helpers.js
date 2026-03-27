@@ -106,74 +106,11 @@ export async function resolveExtension(models, id, { required = true } = {}) {
   return { extension, extensionKey };
 }
 
-/**
- * Resolve the physical directory of an extension on disk.
- *
- * Delegates to `extensionManager.resolveExtensionDir()` as the single source
- * of truth for dev/prod path resolution. Falls back to manual resolution
- * when the method is unavailable (backward compatibility).
- *
- * @param {Object} extensionManager - ServerExtensionManager instance
- * @param {string} cwd - Current working directory (unused when delegating)
- * @param {string} extensionKey - Extension directory name / key
- * @returns {{ dir: string|null, isDevExtension: boolean }}
- */
-export function resolveExtensionDir(extensionManager, cwd, extensionKey) {
-  if (!extensionManager || !extensionKey)
-    return { dir: null, isDevExtension: false };
-
-  // Delegate to extensionManager's canonical implementation
-  if (typeof extensionManager.resolveExtensionDir === 'function') {
-    return extensionManager.resolveExtensionDir(extensionKey);
-  }
-
-  // Fallback for backward compatibility
-  const devBase = extensionManager.getDevExtensionPath(cwd);
-  const prodBase = extensionManager.getInstalledExtensionsDir();
-
-  if (devBase) {
-    const devPath = path.join(devBase, extensionKey);
-    if (fs.existsSync(devPath)) {
-      return { dir: devPath, isDevExtension: true };
-    }
-  }
-
-  if (prodBase) {
-    const prodPath = path.join(prodBase, extensionKey);
-    if (fs.existsSync(prodPath)) {
-      return { dir: prodPath, isDevExtension: false };
-    }
-  }
-
-  return { dir: null, isDevExtension: false };
-}
+// ========================================================================
 
 // ========================================================================
 // Manifest Validation (DRY — used by 2 service functions)
 // ========================================================================
-
-/**
- * Read extension manifest from directory
- * @param {string} extensionsDir - Extensions directory path
- * @param {string} extensionName - Extension directory name
- * @returns {Promise<Object|null>} Extension manifest or null if invalid
- */
-export async function readExtensionManifest(extensionsDir, extensionName) {
-  try {
-    const manifestPath = path.join(
-      extensionsDir,
-      extensionName,
-      'package.json',
-    );
-    const manifestContent = await fs.promises.readFile(manifestPath, 'utf8');
-    return JSON.parse(manifestContent);
-  } catch (e) {
-    console.debug(
-      `[readExtensionManifest] Failed to read manifest for ${extensionName}: ${e.message}`,
-    );
-    return null;
-  }
-}
 
 /**
  * Validate a parsed extension manifest (requires name + version).

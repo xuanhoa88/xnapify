@@ -11,7 +11,7 @@ import PropTypes from 'prop-types';
 
 import { useAppContext } from '@shared/renderer/AppContext';
 
-import { registry } from '../utils/Registry';
+import { registry } from './Registry';
 
 /**
  * Error boundary that catches render errors from extension components.

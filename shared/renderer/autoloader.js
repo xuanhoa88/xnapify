@@ -20,6 +20,7 @@
 import { getTranslations } from '@shared/i18n/loader';
 import { addNamespace } from '@shared/i18n/utils';
 import { createWebpackContextAdapter } from '@shared/utils/contextAdapter';
+import { VIEW_LIFECYCLE_PHASES } from '@shared/utils/lifecycle';
 
 // =============================================================================
 // CONSTANTS
@@ -29,12 +30,10 @@ import { createWebpackContextAdapter } from '@shared/utils/contextAdapter';
 const LIFECYCLE_PATH_PATTERN = /^\.\/([^/]+)\/views\/index\.[cm]?[jt]s$/i;
 
 /**
- * Ordered lifecycle phases. The sequence is intentional:
- *   translations — register i18n namespaces first (providers/views may use them)
- *   providers    — bind DI services (views may consume them)
- *   views        — collect route contexts last, once bindings are ready
+ * Ordered lifecycle phases.
+ * @see shared/utils/lifecycle.js — single source of truth
  */
-const LIFECYCLE_PHASES = ['translations', 'providers', 'routes'];
+const LIFECYCLE_PHASES = VIEW_LIFECYCLE_PHASES.filter(p => p !== 'shutdown');
 
 // =============================================================================
 // LOGGING
@@ -247,7 +246,12 @@ export async function discoverModules(modulesContext, context) {
     })),
   );
 
-  // ─── Phase 3: views ─────────────────────────────────────────────────────
+  // ─── Phase 3: boot ──────────────────────────────────────────────────────
+  errors.push(
+    ...(await runPhase('boot', lifecycles, (_, hook) => hook(context))),
+  );
+
+  // ─── Phase 4: views ─────────────────────────────────────────────────────
   const viewAdapters = new Map();
   errors.push(
     ...(await runPhase('routes', lifecycles, (name, hook) => {

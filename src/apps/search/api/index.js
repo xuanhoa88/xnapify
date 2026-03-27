@@ -15,10 +15,10 @@ const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
 // =============================================================================
 
 export default {
+  routes: () => routesContext,
+
   async boot({ container }) {
     registerSearchHooks(container);
     console.info('[Search] ✅ Initialized');
   },
-
-  routes: () => routesContext,
 };

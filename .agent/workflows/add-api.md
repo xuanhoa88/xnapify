@@ -105,38 +105,29 @@ const seedsContext = require.context('./database/seeds', false, /\.js$/);
 // Auto-load routes for the dynamic router
 const routesContext = require.context('./routes', true, /\.js$/);
 
-/**
- * Migrations hook - called to run module migrations.
- */
-export async function migrations(container) {
-  const db = container.resolve('db');
-  await db.connection.runMigrations([
-    { context: migrationsContext, prefix: 'posts' },
-  ]);
-}
+export default {
+  /**
+   * Declarative migrations — autoloader auto-executes.
+   */
+  migrations: () => migrationsContext,
 
-/**
- * Seeds hook - called to run module seeds.
- */
-export async function seeds(container) {
-  const db = container.resolve('db');
-  await db.connection.runSeeds([{ context: seedsContext, prefix: 'posts' }]);
-}
+  /**
+   * Declarative seeds — autoloader auto-executes.
+   */
+  seeds: () => seedsContext,
 
-/**
- * Routes hook — return [moduleName, context] tuple for dynamic routing.
- */
-export function routes() {
-  return ['{module-name}', routesContext];
-}
+  /**
+   * Routes hook — return [moduleName, context] tuple for dynamic routing.
+   */
+  routes: () => ['{module-name}', routesContext],
 
-/**
- * Providers hook - share services with other modules.
- */
-export async function providers(container) {
-  
-  container.bind('posts:controllers', () => ({ post: postController }), true);
-}
+  /**
+   * Providers hook - share services with other modules.
+   */
+  providers({ container }) {
+    container.bind('posts:controllers', () => ({ post: postController }));
+  },
+};
 ```
 
 ---

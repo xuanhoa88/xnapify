@@ -10,16 +10,41 @@ The `shared/extension/` module establishes the boundaries, lifecycle events, UI 
 shared/extension/
 ├── client/          # Frontend-specific implementation
 │   ├── index.js     # Client exports
-│   ├── manager.js   # ClientExtensionManager (Module Federation handler)
+│   ├── ExtensionManager.js # ClientExtensionManager (Module Federation handler)
 │   ├── ExtensionSlot.js# React component for dynamic rendering
 │   └── useExtension.js # React hooks (useExtensionHooks, etc.)
 ├── server/          # Backend-specific implementation
-│   └── index.js     # ServerExtensionManager (Node.js loader)
+│   └── ExtensionManager.js # ServerExtensionManager (Node.js loader)
 └── utils/           # Universal isomorphic utilities
     ├── BaseExtensionManager.js # Base class with extension fetching/state logic
     ├── Hook.js      # Callback manager
     └── Registry.js  # The core state container for the extension ecosystem
 ```
+
+Lifecycle phase constants are defined in `shared/utils/lifecycle.js` — the single source of truth.
+
+## Lifecycle Phases
+
+### API Extensions (Server)
+
+| # | Phase | Description |
+|---|-------|-------------|
+| 1 | `translations` | Register i18n namespaces |
+| 2 | `providers` | Bind DI services via `container.bind()` |
+| 3 | `migrations` | Create/alter tables (declarative context return) |
+| 4 | `models` | Register ORM definitions |
+| 5 | `seeds` | Populate data (declarative context return) |
+| 6 | `boot` | Hook registration, schedulers |
+| 7 | `routes` | Mount API routes |
+
+### View Extensions (Server SSR + Client)
+
+| # | Phase | Description |
+|---|-------|-------------|
+| 1 | `translations` | Register i18n namespaces |
+| 2 | `providers` | Bind DI services |
+| 3 | `boot` | Module-level initialization |
+| 4 | `routes` | Inject view routes |
 
 ## `Registry` (`utils/Registry.js`)
 
@@ -34,7 +59,7 @@ It supports two primary execution strategies:
 1. `execute(hookId, ...args)`: Sequential execution via `for...of`. Waits for each asynchronous hook to resolve before proceeding to the next — critical for state-mutation hooks.
 2. `executeParallel(hookId, ...args)`: Concurrent execution utilizing `Promise.all()`. High performance, used for broad notifications.
 
-## Client Extension Manager (`client/manager.js`)
+## Client Extension Manager (`client/ExtensionManager.js`)
 
 Extends `BaseExtensionManager`. It operates strictly within the browser context and handles Webpack 5 Module Federation natively.
 
@@ -45,9 +70,9 @@ Extends `BaseExtensionManager`. It operates strictly within the browser context 
 4. Pauses until the script parses, attaching a global variable representing the MF Container.
 5. Injects the shared host scope via `container.init(__webpack_share_scopes__.default)`.
 6. Extracts the bootstrapped module via `container.get('./extension')`.
-7. Calls `extension.init()` injecting the universal `Registry`.
+7. Runs the full view lifecycle (`translations → providers → boot → routes`).
 
-## Server Extension Manager (`server/manager.js`)
+## Server Extension Manager (`server/ExtensionManager.js`)
 
 Operates in Node.js and relies on standard `fs` resolution and non-webpack `require()`.
 
@@ -55,5 +80,7 @@ Operates in Node.js and relies on standard `fs` resolution and non-webpack `requ
 1. Exposes logic to resolve the exact physical directory of a extension, supporting dev-mode overrides (checking `RSK_EXTENSION_LOCAL_PATH` first, then standard paths).
 2. Deletes the `require` cache entry for the targeted module ensuring fresh code is loaded on HMR.
 3. Loads the module cleanly utilizing `__non_webpack_require__`.
-4. Executes explicit lifecycle methods (`installExtension`, `uninstallExtension`, `updateExtension`) parsing the physical manifest and invoking the corresponding exported hooks natively for backend configuration tasks (migrations, API routes, database hooks). 
-5. Caches generated CSS and JS entry points to serialize into SSR HTML responses.
+4. Runs the full API lifecycle (`translations → providers → migrations → models → seeds → boot → routes`).
+5. For view modules, runs the view lifecycle (`translations → providers → boot → routes`).
+6. Caches generated CSS and JS entry points to serialize into SSR HTML responses.
+7. On uninstall, auto-reverts seeds and migrations using the extension's declarative contexts.

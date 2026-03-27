@@ -29,27 +29,14 @@ const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
 // =============================================================================
 
 export default {
+  migrations: () => migrationsContext,
+  seeds: () => seedsContext,
+  models: () => modelsContext,
+  routes: () => routesContext,
+
   async providers({ container }) {
     container.bind('roles:seed_constants', () => SEED_ROLES, OWNER_KEY);
   },
 
-  async migrations({ container }) {
-    const db = container.resolve('db');
-    await db.connection.runMigrations(
-      [{ context: migrationsContext, prefix: 'roles' }],
-      { container },
-    );
-  },
-
-  async seeds({ container }) {
-    const db = container.resolve('db');
-    await db.connection.runSeeds([{ context: seedsContext, prefix: 'roles' }], {
-      container,
-    });
-  },
-
   async boot() {},
-
-  models: () => modelsContext,
-  routes: () => routesContext,
 };

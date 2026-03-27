@@ -27,10 +27,11 @@ import {
  */
 async function handleInstallJob(container, job) {
   const { extensionDir, extensionId, extensionKey, actorId } = job.data;
-  const extensionManager = container.resolve('extension');
-  const hook = container.resolve('hook');
 
   try {
+    const extensionManager = container.resolve('extension');
+    const hook = container.resolve('hook');
+
     job.updateProgress(10);
     await installExtensionDependencies(extensionDir, {
       name: extensionKey || extensionId,
@@ -81,12 +82,13 @@ async function handleInstallJob(container, job) {
  */
 async function handleDeleteJob(container, job) {
   const { extensionId, extensionKey, actorId } = job.data;
-  const cwd = container.resolve('cwd');
-  const extensionManager = container.resolve('extension');
-  const hook = container.resolve('hook');
-  const { Extension } = container.resolve('models');
 
   try {
+    const cwd = container.resolve('cwd');
+    const extensionManager = container.resolve('extension');
+    const hook = container.resolve('hook');
+    const { Extension } = container.resolve('models');
+
     if (extensionManager && extensionId) {
       if (extensionManager.isExtensionLoaded(extensionId)) {
         await extensionManager.unloadExtension(extensionId);
@@ -99,7 +101,7 @@ async function handleDeleteJob(container, job) {
     if (cwd && extensionManager) {
       const dirs = [
         extensionManager.getInstalledExtensionsDir(),
-        extensionManager.getDevExtensionPath(cwd),
+        extensionManager.getDevExtensionsDir(cwd),
       ].filter(Boolean);
       for (const baseDir of dirs) {
         try {
@@ -161,10 +163,11 @@ async function handleToggleJob(container, job) {
     extensionDir,
     isDevExtension,
   } = job.data;
-  const extensionManager = container.resolve('extension');
-  const hook = container.resolve('hook');
 
   try {
+    const extensionManager = container.resolve('extension');
+    const hook = container.resolve('hook');
+
     // Security: verify checksum before activating (skip for dev extensions)
     if (isActive && extensionDir && !isDevExtension) {
       const { Extension } = container.resolve('models');

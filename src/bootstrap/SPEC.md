@@ -94,7 +94,7 @@ Only applied if `container.resolve('jwt')` is available.
 require.context('../../apps', true, /^\.\/[^/]+\/api\/index\.[cm]?[jt]s$/i);
 ```
 
-Discovers `src/apps/*/api/index.js` files. Each module goes through the lifecycle: `models → init → routes`.
+Discovers `src/apps/*/api/index.js` files. Each module goes through the lifecycle: `translations → providers → migrations → models → seeds → boot → routes`.
 
 ## 3. View Router Bootstrap (`views.js`)
 
@@ -111,7 +111,7 @@ Discovers `src/apps/*/api/index.js` files. Each module goes through the lifecycl
 require.context('../apps', true, /^\.\/[^/]+\/views\/index\.[cm]?[jt]s$/i);
 ```
 
-Discovers `src/apps/*/views/index.js` files. Each module goes through the lifecycle: `translations → providers → views`.
+Discovers `src/apps/*/views/index.js` files. Each module goes through the lifecycle: `translations → providers → boot → routes`.
 
 ### `AppRouter` (extends `Router`)
 

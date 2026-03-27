@@ -11,32 +11,7 @@
  * during CPU-intensive SHA-256 directory hashing.
  */
 
-import { hashElement } from 'folder-hash';
-
-const DEFAULT_OPTIONS = {
-  algo: 'sha256',
-  encoding: 'hex',
-  folders: {
-    exclude: ['node_modules', '.git', '__tests__', '__mocks__'],
-  },
-  files: {
-    exclude: [
-      '.DS_Store',
-      'package.json',
-      'package-lock.json',
-      'npm-debug.log',
-    ],
-  },
-};
-
-function mergeOptions(overrides = {}) {
-  return {
-    ...DEFAULT_OPTIONS,
-    ...overrides,
-    folders: { ...DEFAULT_OPTIONS.folders, ...(overrides.folders || {}) },
-    files: { ...DEFAULT_OPTIONS.files, ...(overrides.files || {}) },
-  };
-}
+import { computeChecksum } from '../utils/checksum';
 
 /**
  * Compute SHA-256 checksum of an extension directory.
@@ -45,10 +20,7 @@ function mergeOptions(overrides = {}) {
  * @returns {Promise<string>} Hex-encoded hash
  */
 export async function COMPUTE_CHECKSUM(data) {
-  const { dir, options } = data;
-  const opts = mergeOptions(options);
-  const result = await hashElement(dir, opts);
-  return result.hash;
+  return computeChecksum(data);
 }
 
 /**

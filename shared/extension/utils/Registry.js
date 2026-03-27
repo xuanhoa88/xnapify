@@ -46,13 +46,11 @@ class ExtensionRegistry {
    * @param {Object} context - Optional extension context (i18n, store, etc.)
    * @returns {Promise<this>}
    */
-  async register(extensionId, ext, context) {
+  register(extensionId, ext) {
     if (this[EXTENSIONS].has(extensionId)) return this;
 
     this[EXTENSIONS].set(extensionId, { ...ext, id: extensionId });
-    if (typeof ext.boot === 'function') {
-      await ext.boot({ ...context, registry: this });
-    }
+
     return this;
   }
 
@@ -63,15 +61,10 @@ class ExtensionRegistry {
    * @param {Object} context - Optional extension context
    * @returns {Promise<this>}
    */
-  async unregister(extensionId, context) {
-    // Clean up all registrations before calling shutdown
+  unregister(extensionId) {
+    // Clean up all registrations (slots, hooks)
     // eslint-disable-next-line no-underscore-dangle
     this._clearExtensionRegistrations(extensionId);
-
-    const ext = this[EXTENSIONS].get(extensionId);
-    if (ext && typeof ext.shutdown === 'function') {
-      await ext.shutdown({ ...context, registry: this });
-    }
     this[EXTENSIONS].delete(extensionId);
     return this;
   }
@@ -353,11 +346,11 @@ class ExtensionRegistry {
 
     // Unload if currently loaded
     if (this.has(id)) {
-      await this.unregister(id, definition.context);
+      this.unregister(id);
     }
 
     // Reload extension
-    return this.register(id, definition, definition.context);
+    return this.register(id, definition);
   }
 
   // =========================================================================
@@ -501,8 +494,6 @@ class ExtensionRegistry {
   }
 }
 
-// Export singleton
-export const registry = new ExtensionRegistry();
-
-// Export class
+// Export class only — each environment creates its own singleton
+// (see server/Registry.js and client/Registry.js)
 export default ExtensionRegistry;

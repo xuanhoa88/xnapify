@@ -6,13 +6,14 @@
  */
 
 import { hashElement } from 'folder-hash';
+import merge from 'lodash/merge';
 
 /**
  * Default options for folder hashing.
  * Excludes volatile / non-source files so the checksum
  * only changes when the actual extension code changes.
  */
-const DEFAULT_OPTIONS = {
+export const DEFAULT_OPTIONS = Object.freeze({
   algo: 'sha256',
   encoding: 'hex',
   folders: {
@@ -26,7 +27,7 @@ const DEFAULT_OPTIONS = {
       'npm-debug.log',
     ],
   },
-};
+});
 
 /**
  * Compute a SHA-256 checksum of an extension directory.
@@ -40,9 +41,7 @@ const DEFAULT_OPTIONS = {
  * @returns {Promise<string>} Hex-encoded SHA-256 hash
  */
 export async function computeChecksum(dir, options = {}) {
-  const opts = {
-    ...DEFAULT_OPTIONS,
-    ...options,
+  const opts = merge({}, DEFAULT_OPTIONS, options, {
     folders: {
       ...DEFAULT_OPTIONS.folders,
       ...(options.folders || {}),
@@ -51,7 +50,7 @@ export async function computeChecksum(dir, options = {}) {
       ...DEFAULT_OPTIONS.files,
       ...(options.files || {}),
     },
-  };
+  });
 
   const result = await hashElement(dir, opts);
   return result.hash;

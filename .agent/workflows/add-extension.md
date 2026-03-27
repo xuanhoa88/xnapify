@@ -908,7 +908,7 @@ registry.registerHook(
 - Check `__EXTENSION_NAME__` and `__EXTENSION_DESCRIPTION__` globals are defined
 - For **plugin-kind** extensions: verify `rsk.subscribe` in `package.json` lists the route paths where the extension should activate (e.g., `["/login", "/profile"]`)
 - For **module-kind** extensions: the namespace is auto-derived from `views()` — check that `views()` returns a valid `[moduleName, context]` tuple
-- Extensions are eagerly activated via `ensureNamespaceActive()` during loading — check console for `[ExtensionManager] Activating namespace:` logs
+- Extensions are eagerly activated via `ensureViewNamespaceActive()` during loading — check console for `[ExtensionManager] Activating namespace:` logs
 - Ensure both `api/index.js` and `views/index.js` export default extension definitions
 - Check browser console for any initialization errors
 - Verify the extension was built by Webpack (check `.cache/dev/extensions/` for build output)

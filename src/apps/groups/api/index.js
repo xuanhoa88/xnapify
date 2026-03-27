@@ -36,6 +36,11 @@ const workersContext = require.context(
 // =============================================================================
 
 export default {
+  migrations: () => migrationsContext,
+  seeds: () => seedsContext,
+  models: () => modelsContext,
+  routes: () => routesContext,
+
   async providers({ container }) {
     container.bind('groups:seed_constants', () => SEED_GROUPS, OWNER_KEY);
 
@@ -46,28 +51,8 @@ export default {
         maxWorkers: 1,
       });
       const searchWorkerPool = attachSearchMethods(pool);
-      container.bind(
-        'groups:search:worker',
-        () => searchWorkerPool,
-        OWNER_KEY,
-      );
+      container.bind('groups:search:worker', () => searchWorkerPool, OWNER_KEY);
     }
-  },
-
-  async migrations({ container }) {
-    const db = container.resolve('db');
-    await db.connection.runMigrations(
-      [{ context: migrationsContext, prefix: 'groups' }],
-      { container },
-    );
-  },
-
-  async seeds({ container }) {
-    const db = container.resolve('db');
-    await db.connection.runSeeds(
-      [{ context: seedsContext, prefix: 'groups' }],
-      { container },
-    );
   },
 
   async boot({ container }) {
@@ -98,7 +83,4 @@ export default {
       }
     }
   },
-
-  models: () => modelsContext,
-  routes: () => routesContext,
 };

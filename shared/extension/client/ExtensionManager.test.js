@@ -11,7 +11,7 @@
 
 /* eslint-env jest */
 
-import { INITIALIZED } from '../utils/BaseExtensionManager';
+import { ACTIVE_EXTENSIONS } from '../utils/BaseExtensionManager';
 
 import clientManager from './ExtensionManager';
 
@@ -19,8 +19,6 @@ describe('ClientExtensionManager', () => {
   let mockContext;
 
   beforeEach(async () => {
-    clientManager[INITIALIZED] = false;
-
     mockContext = {
       fetch: jest.fn().mockResolvedValue({ data: { extensions: [] } }),
     };
@@ -31,7 +29,7 @@ describe('ClientExtensionManager', () => {
     // eslint-disable-next-line no-underscore-dangle
     window.__webpack_share_scopes__ = { default: {} };
 
-    await clientManager.init(mockContext.fetch);
+    clientManager.fetch = mockContext.fetch;
 
     jest.clearAllMocks();
     jest.spyOn(console, 'log').mockImplementation(() => {});
@@ -171,19 +169,12 @@ describe('ClientExtensionManager', () => {
         data: { manifest: { hasClientCss: true } },
       });
 
-      expect(
-        document.querySelector('link[data-extension-id="new-p"]'),
-      ).toBeTruthy();
+      // CSS injection happens inside loadExtension → emit('extension:loaded'),
+      // not directly in processLifecycleEvent. Here we verify the reload call.
       expect(reloadSpy).toHaveBeenCalledWith('new-p');
     });
 
     it('unloads and removes resources on EXTENSION_UNINSTALLED', async () => {
-      // Pre-inject
-      await clientManager.emit('extension:loaded', {
-        id: 'old-p',
-        manifest: { hasClientCss: true },
-      });
-
       // Mark as loaded so unload path is taken
       jest.spyOn(clientManager, 'isExtensionLoaded').mockReturnValue(true);
 
@@ -192,10 +183,9 @@ describe('ClientExtensionManager', () => {
         extensionId: 'old-p',
       });
 
+      // Unload is called via _teardownExtension; DOM cleanup happens
+      // inside unloadExtension → emit('extension:unloaded') handler.
       expect(unloadSpy).toHaveBeenCalledWith('old-p');
-      expect(
-        document.querySelector('link[data-extension-id="old-p"]'),
-      ).toBeNull();
     });
 
     it('reloads extension on EXTENSION_UPDATED', async () => {
@@ -347,6 +337,9 @@ describe('ClientExtensionManager', () => {
       // Store router reference via flush
       clientManager.connectViewRouter(mockRouter);
 
+      // Mark extension as loaded (teardown resolves via ACTIVE_EXTENSIONS)
+      clientManager[ACTIVE_EXTENSIONS].set('test-ext', {});
+
       // Inject routes first
       // eslint-disable-next-line no-underscore-dangle
       await clientManager._injectRoutes('test-ext', mockAdapter);
@@ -363,11 +356,13 @@ describe('ClientExtensionManager', () => {
       expect(mockRouter.remove).toHaveBeenCalledWith('test-ext', undefined);
     });
 
-    it('end-to-end: _bootstrapExtension injects view routes automatically', async () => {
+    it('end-to-end: loadExtension injects view routes automatically', async () => {
       const mockAdapter = { files: () => [], load: () => ({}) };
       const mockManifest = {
         name: 'test-ext',
         main: 'remoteEntry.js',
+        browser: 'remoteEntry.js',
+        hasClientScript: true,
         rsk: { containerName: 'testContainer' },
       };
 
@@ -389,14 +384,14 @@ describe('ClientExtensionManager', () => {
       // Set global container
       window.testContainer = {};
 
-      // Bootstrap the extension
-      // eslint-disable-next-line no-underscore-dangle
-      await clientManager._bootstrapExtension(
-        'test-ext',
-        'remote.js',
-        mockManifest,
-        { containerName: 'testContainer' },
-      );
+      // Mock fetch for loadExtension
+      clientManager.fetch = jest.fn().mockResolvedValue({
+        success: true,
+        data: { containerName: 'testContainer', manifest: mockManifest },
+      });
+
+      // Bootstrap the extension via loadExtension (view lifecycle now runs here)
+      await clientManager.loadExtension('test-ext', mockManifest);
 
       // Verify that the views function was called and the adapter injected
       expect(mockRouter.add).toHaveBeenCalledWith(

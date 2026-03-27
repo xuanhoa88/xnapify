@@ -687,24 +687,14 @@ async function attemptStartup() {
   log('✅ Starting app...');
 
   // Phase 1: Initialize extension manager (setup only, no sync)
-  try {
-    await extensionManager.init(fetch, context.container);
-  } catch (error) {
-    log(`⚠️ Extension init failed: ${error.message}`, 'error');
-  }
+  extensionManager.viewContainer = context.container;
+  extensionManager.fetch = fetch;
 
   // Phase 1b: Load active extensions (API is already reachable on the client)
   try {
     await extensionManager.sync();
   } catch (error) {
     log(`⚠️ Extension sync failed: ${error.message}`, 'error');
-  }
-
-  // Phase 2: Bind extension services into the DI container
-  try {
-    await extensionManager.runProviders(context);
-  } catch (error) {
-    log(`⚠️ Extension providers failed: ${error.message}`, 'error');
   }
 
   // Initialize app

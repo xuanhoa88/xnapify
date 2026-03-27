@@ -261,7 +261,7 @@ function invalidateCaches() {
 }
 
 function computeSsrKey(req, baseUrl, locale, authHeader) {
-  if (!SERVER_CONFIG.enableSSRCache || req.method !== 'GET') return null;
+  if (!SERVER_CONFIG.enableSSRCache) return null;
 
   const url = new URL(req.url, baseUrl);
   const params = Array.from(url.searchParams.keys()).filter(
@@ -454,44 +454,47 @@ async function renderToHtml({ context, component, metadata = {}, nonce }) {
 
 function makeSsrMiddleware(baseUrl) {
   return async (req, res, next) => {
+    // Skip if response is already sent
     if (res.headersSent) return;
 
-    // API requests should never be SSR-rendered — pass to error handler
-    if (req.path.startsWith('/api/')) return next();
+    // Skip API routes and non-GET requests
+    if (req.path.startsWith('/api/') || req.method !== 'GET') return next();
 
+    // Start timer for render time
     const startTime = Date.now();
-
-    let store = null;
-    let context = null;
 
     // Abort controller for cancelling the request
     const abortController = new AbortController();
 
-    const authHeader = validateCookieHeader(req.headers.cookie || '');
-    const rawLocale = req.language || DEFAULT_LOCALE;
-
-    // Normalize bare language codes (e.g. 'en' → 'en-US')
-    // express-request-language may return a prefix that doesn't exactly
-    // match an available locale key.
-    const availableKeys = Object.keys(AVAILABLE_LOCALES);
-    const locale = availableKeys.includes(rawLocale)
-      ? rawLocale
-      : availableKeys.find(k => k.startsWith(rawLocale)) || DEFAULT_LOCALE;
-
-    // Extract auth-specific cookie for cache key and auth detection
-    const authCookie = (req.cookies && req.cookies['id_token']) || '';
-
+    // Handle client disconnect
     const handleClientDisconnect = () => {
       if (!res.writableEnded) {
         if (__DEV__) console.info('❌ Client disconnected:', req.path);
         abortController.abort();
       }
     };
+    req.on('close', handleClientDisconnect);
+
+    // View context — created after cache check to avoid wasted allocation
+    let context = null;
 
     try {
+      // Validate auth cookie
+      const authHeader = validateCookieHeader(req.headers.cookie || '');
+
+      // Normalize bare language codes (e.g. 'en' → 'en-US')
+      // express-request-language may return a prefix that doesn't exactly
+      // match an available locale key.
+      const rawLocale = req.language || DEFAULT_LOCALE;
+      const availableKeys = Object.keys(AVAILABLE_LOCALES);
+      const locale = availableKeys.includes(rawLocale)
+        ? rawLocale
+        : availableKeys.find(k => k.startsWith(rawLocale)) || DEFAULT_LOCALE;
+
+      // Extract auth-specific cookie for cache key and auth detection
+      const authCookie = (req.cookies && req.cookies['id_token']) || '';
       const cacheKey = computeSsrKey(req, baseUrl, locale, authCookie);
       const cached = fetchSsrCache(cacheKey);
-
       if (cached) {
         if (__DEV__) {
           res.setHeader('X-Cache', 'HIT');
@@ -500,16 +503,31 @@ function makeSsrMiddleware(baseUrl) {
         }
         return res.status(cached.status).send(cached.html);
       }
-
       if (__DEV__) res.setHeader('X-Cache', 'MISS');
-      req.on('close', handleClientDisconnect);
 
-      const history = createMemoryHistory({
+      // ── Cache miss: build full view context ──
+      context = {
+        i18n,
+        locale,
+        container: new Container(),
+        signal: abortController.signal,
+      };
+
+      // Set view container for extensions
+      extensionManager.viewContainer = context.container;
+
+      // Create memory history
+      context.history = createMemoryHistory({
         initialEntries: [req.originalUrl || req.url || '/'],
         initialIndex: 0,
       });
+      context.pathname = context.history.location.pathname;
+      context.query = Object.fromEntries(
+        new URLSearchParams(context.history.location.search),
+      );
 
-      const fetch = createFetch(nodeFetch, {
+      // Create fetch with abort controller
+      context.fetch = createFetch(nodeFetch, {
         signal: abortController.signal,
         defaults: {
           baseUrl,
@@ -520,20 +538,14 @@ function makeSsrMiddleware(baseUrl) {
         },
       });
 
-      context = {
-        fetch,
-        i18n,
-        locale,
-        history,
-        container: new Container(),
-        pathname: history.location.pathname,
-        query: Object.fromEntries(new URLSearchParams(history.location.search)),
-        signal: abortController.signal,
-      };
-
-      store = await promiseWithDeadline(
+      // Initialize Redux store
+      context.store = await promiseWithDeadline(
         createReduxStore(
-          { fetch, history, locale },
+          {
+            fetch: context.fetch,
+            history: context.history,
+            locale: context.locale,
+          },
           {
             hasAuthCookie: !!authCookie,
           },
@@ -541,16 +553,12 @@ function makeSsrMiddleware(baseUrl) {
         SERVER_TIMEOUTS.STORE_INIT,
         'Redux store initialization',
       );
-      if (!store) {
+      if (!context.store) {
         const err = new Error('Redux store initialization returned null');
         err.name = 'ReduxStoreInitError';
         err.status = 500;
         throw err;
       }
-      context.store = store;
-
-      // Run extension providers per-request (binds services into the context container)
-      await extensionManager.runProviders(context);
 
       const views = await promiseWithDeadline(
         initializeViews(context),
@@ -599,7 +607,7 @@ function makeSsrMiddleware(baseUrl) {
       // Only expose internal timing/locale headers in development
       if (__DEV__) {
         res.setHeader('X-Render-Time', `${renderTime}ms`);
-        res.setHeader('X-SSR-Locale', locale);
+        res.setHeader('X-SSR-Locale', context.locale);
       }
 
       if (status === 200 && cacheKey) {
@@ -632,19 +640,19 @@ function makeSsrMiddleware(baseUrl) {
     } finally {
       req.removeListener('close', handleClientDisconnect);
 
-      if (store && typeof store.close === 'function') {
-        try {
-          store.close();
-        } catch (cleanupErr) {
-          console.error('❌ Error closing store:', cleanupErr.message);
-        }
-      }
-
       if (!abortController.signal.aborted) {
         abortController.abort();
       }
 
       if (context) {
+        if (context.store && typeof context.store.close === 'function') {
+          try {
+            context.store.close();
+          } catch (cleanupErr) {
+            console.error('❌ Error closing store:', cleanupErr.message);
+          }
+        }
+
         context.fetch = null;
         context.store = null;
         context.history = null;
@@ -830,14 +838,26 @@ export async function bootstrapApp(app, server, options = {}) {
   set(process.env, 'RSK_APP_DESC', APP_METADATA.description);
 
   // Core DI container — the only provider stored on Express settings
-  const container = new Container();
+  const apiContainer = new Container();
 
   // Register core services
-  container.instance('cwd', SERVER_CONFIG.cwd);
-  container.instance('env', SERVER_CONFIG.nodeEnv);
-  container.instance('jwt', configureJwt());
-  container.instance('i18n', i18n);
-  container.instance('extension', extensionManager);
+  apiContainer.instance('cwd', SERVER_CONFIG.cwd);
+  apiContainer.instance('env', SERVER_CONFIG.nodeEnv);
+  apiContainer.instance('jwt', configureJwt());
+  apiContainer.instance('i18n', i18n);
+  apiContainer.instance('extension', extensionManager);
+
+  // Set api container
+  extensionManager.apiContainer = apiContainer;
+
+  // Extension manager boot-time setup (singleton — set once, not per-request)
+  extensionManager.setDevExtensionsDir(SERVER_CONFIG.cwd);
+  extensionManager.fetch = createFetch(nodeFetch, {
+    defaults: {
+      baseUrl,
+      headers: { 'User-Agent': 'RSK-Server' },
+    },
+  });
 
   // WebSocket
   appState.wsServer = createWebSocketServer(
@@ -845,15 +865,15 @@ export async function bootstrapApp(app, server, options = {}) {
       path: '/ws',
       enableLogging: !__DEV__,
       onAuthentication: token =>
-        validateWsToken(container.resolve('jwt'), token),
+        validateWsToken(apiContainer.resolve('jwt'), token),
     },
     server,
   );
-  container.instance('ws', appState.wsServer);
-  container.instance('nodeRED', appState.nodeRed);
+  apiContainer.instance('ws', appState.wsServer);
+  apiContainer.instance('nodeRED', appState.nodeRed);
 
   // Register container on Express settings (accessible via app.get / req.app.get)
-  app.set('container', container);
+  app.set('container', apiContainer);
   Object.defineProperty(app.settings, 'container', {
     writable: false,
     configurable: false,
@@ -973,31 +993,13 @@ export async function bootstrapApp(app, server, options = {}) {
   const apiRouter = await api.default(app, extensionManager);
   app.use('/api', apiRouter);
 
-  // Initialize extensions AFTER API routes are mounted so connectApiRouter
-  // can store the router ref.
-  try {
-    await extensionManager.init(
-      createFetch(nodeFetch, {
-        defaults: {
-          baseUrl,
-          headers: { 'User-Agent': 'RSK-Server' },
-        },
-      }),
-      container,
-    );
-  } catch (err) {
-    if (__DEV__) {
-      console.warn('⚠️  Extension initialization failed:', err.message);
-    }
-  }
-
   // Node-RED
   await appState.nodeRed.init(app, server, {
     ...SERVER_CONFIG,
     port,
     host: resolvedHost,
     functionGlobalContext: {
-      container: () => container,
+      container: () => apiContainer,
       fetch: () =>
         createFetch(nodeFetch, {
           defaults: {

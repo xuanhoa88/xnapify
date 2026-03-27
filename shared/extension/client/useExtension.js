@@ -7,7 +7,7 @@
 
 import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 
-import { registry } from '../utils/Registry';
+import { registry } from './Registry';
 
 /**
  * Hook to execute extension hooks

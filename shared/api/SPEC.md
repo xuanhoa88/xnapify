@@ -61,11 +61,11 @@ Discovers and boots API modules in deterministic lifecycle order.
 | # | Phase | Hook Signature | Purpose |
 |---|---|---|---|
 | 1 | `translations` | `translations()` → `require.context` | Register i18n namespaces |
-| 2 | `models` | `models()` → `require.context` | Load Sequelize model factories |
-| 3 | `providers` | `providers(container)` | Bind DI services via `container.instance()` |
-| 4 | `migrations` | `migrations(container)` | Create/alter database schema |
-| 5 | `seeds` | `seeds(container)` | Populate initial data |
-| 6 | `init` | `init(container)` | Hook registration, workers, schedulers |
+| 2 | `providers` | `providers({ container })` | Bind DI services via `container.bind()` |
+| 3 | `migrations` | `migrations()` → `require.context` | Create/alter database schema (declarative) |
+| 4 | `models` | `models()` → `require.context` | Load Sequelize model factories |
+| 5 | `seeds` | `seeds()` → `require.context` | Populate initial data (declarative) |
+| 6 | `boot` | `boot({ container })` | Hook registration, workers, schedulers |
 | 7 | `routes` | `routes()` → `require.context` | Expose file-based API routes |
 
 #### Module Loading Order

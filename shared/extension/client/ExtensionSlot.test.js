@@ -9,9 +9,8 @@
 
 import renderer, { act } from 'react-test-renderer';
 
-import { registry } from '../utils/Registry';
-
 import ExtensionSlot from './ExtensionSlot';
+import { registry } from './Registry';
 
 // Mock AppContext
 jest.mock('@shared/renderer/AppContext', () => ({

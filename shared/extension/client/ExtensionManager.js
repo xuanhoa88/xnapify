@@ -5,25 +5,27 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { removeNamespace } from '@shared/i18n/utils';
+
 import {
   BaseExtensionManager,
   ACTIVE_EXTENSIONS,
   EXTENSION_METADATA,
   BUFFERED_ROUTES,
   STORED_ADAPTERS,
+  CONNECTED_ROUTERS,
 } from '../utils/BaseExtensionManager';
 import { normalizeRouteAdapter } from '../utils/routeAdapter';
 
-// Symbols — private (internal to client manager)
-const VIEW_ROUTER = Symbol('__rsk.ext.viewRouter__');
+import { registry } from './Registry';
 
 class ClientExtensionManager extends BaseExtensionManager {
-  constructor() {
-    super();
+  // ---------------------------------------------------------------------------
+  // 1. Constructor
+  // ---------------------------------------------------------------------------
 
-    this[STORED_ADAPTERS] = new Map();
-    this[BUFFERED_ROUTES] = [];
-    this[VIEW_ROUTER] = null;
+  constructor() {
+    super(registry);
 
     // Inject CSS and script tags when a extension is loaded at runtime
     this.on('extension:loaded', ({ id, manifest }) => {
@@ -34,17 +36,17 @@ class ClientExtensionManager extends BaseExtensionManager {
       // Inject extension.css
       if (manifest.hasClientCss) {
         if (!document.querySelector(`link[data-extension-id="${id}"]`)) {
-          const href = this.getExtensionAssetUrl(
+          const url = this.getExtensionAssetUrl(
             id,
             `extension.css?v=${version}`,
           );
           const link = document.createElement('link');
           link.rel = 'stylesheet';
-          link.href = href;
+          link.href = url;
           link.setAttribute('data-extension-id', id);
           document.head.appendChild(link);
           if (__DEV__) {
-            console.log(`[ExtensionManager] Injected CSS: ${href}`);
+            console.log(`[ExtensionManager] Injected CSS: ${url}`);
           }
         }
       }
@@ -52,14 +54,14 @@ class ClientExtensionManager extends BaseExtensionManager {
       // Inject remote.js (MF container)
       if (manifest.hasClientScript) {
         if (!document.querySelector(`script[data-extension-id="${id}"]`)) {
-          const src = this.getExtensionAssetUrl(id, `remote.js?v=${version}`);
+          const url = this.getExtensionAssetUrl(id, `remote.js?v=${version}`);
           const script = document.createElement('script');
-          script.src = src;
+          script.src = url;
           script.async = true;
           script.setAttribute('data-extension-id', id);
           document.body.appendChild(script);
           if (__DEV__) {
-            console.log(`[ExtensionManager] Injected script: ${src}`);
+            console.log(`[ExtensionManager] Injected script: ${url}`);
           }
         }
       }
@@ -84,8 +86,18 @@ class ClientExtensionManager extends BaseExtensionManager {
   }
 
   // ---------------------------------------------------------------------------
-  // Post-load: eager namespace activation
+  // 2. Subclass Hooks
   // ---------------------------------------------------------------------------
+
+  /**
+   * Resolve view context for lifecycle hooks.
+   * Returns the view container (React app context).
+   *
+   * @returns {import('@shared/container').Container}
+   */
+  _hookContext() {
+    return this.viewContainer;
+  }
 
   /**
    * Eagerly activate namespaces for module-type extensions so boot() runs
@@ -101,7 +113,7 @@ class ClientExtensionManager extends BaseExtensionManager {
         ? manifest.rsk.subscribe
         : [];
     const results = await Promise.allSettled(
-      subs.map(ns => this.ensureNamespaceActive(ns)),
+      subs.map(ns => this.ensureViewNamespaceActive(ns)),
     );
     for (let i = 0; i < results.length; i++) {
       if (results[i].status === 'rejected') {
@@ -113,192 +125,19 @@ class ClientExtensionManager extends BaseExtensionManager {
     }
   }
 
+  /**
+   * Resolve the extension entry point based on manifest
+   * @param {Object} manifest - Extension manifest
+   * @returns {string|null} Entry point filename or null to skip
+   */
+  _resolveEntryPoint(manifest) {
+    // If the build produced a remote.js, load it as the Webpack MF container
+    return manifest && manifest.hasClientScript ? 'remote.js' : null;
+  }
+
   // ---------------------------------------------------------------------------
-  // Route injection (mirrors ServerExtensionManager)
+  // 3. Module Loading
   // ---------------------------------------------------------------------------
-
-  /**
-   * Normalize and inject (or buffer) view routes for an extension.
-   * @param {string} id - Extension ID
-   * @param {*} hookResult - Return value of the extension's views() hook
-   */
-  async _injectRoutes(id, hookResult) {
-    const adapter = normalizeRouteAdapter(hookResult, 'views');
-
-    if (!this[VIEW_ROUTER]) {
-      // Router not available yet — buffer for later injection
-      this[BUFFERED_ROUTES].push({ id, adapter });
-      if (__DEV__) {
-        console.log(
-          `[ClientExtensionManager] Buffered view route(s) for ${id} (router not ready)`,
-        );
-      }
-      return;
-    }
-
-    // Pass _lastResolveContext so register() lifecycle fires immediately
-    // Pass id as sourceId for robust removal (survives HMR reference changes)
-    // eslint-disable-next-line no-underscore-dangle
-    const ctx = this[VIEW_ROUTER]._lastResolveContext;
-    await this[VIEW_ROUTER].add(adapter, ctx, id);
-
-    if (!this[STORED_ADAPTERS].has(id)) {
-      this[STORED_ADAPTERS].set(id, {});
-    }
-    this[STORED_ADAPTERS].get(id).view = adapter;
-
-    if (__DEV__) {
-      console.log(`[ClientExtensionManager] Injected view route(s) for ${id}`);
-    }
-  }
-
-  /**
-   * Inject buffered and stored extension view routes into the router.
-   *
-   * Called by views bootstrap after the router is created. Handles:
-   * 1. Pending injections buffered before the router was ready
-   * 2. Re-injection of already-stored adapters (e.g. on HMR/SSR)
-   *
-   * @param {Object} viewRouter - The current view router instance
-   */
-  connectViewRouter(viewRouter) {
-    // Store the view router reference for future use
-    this[VIEW_ROUTER] = viewRouter;
-
-    // 1. Process pending injections (buffer → store)
-    const pending = this[BUFFERED_ROUTES].splice(0);
-    for (const { id, adapter } of pending) {
-      if (!this[STORED_ADAPTERS].has(id)) {
-        this[STORED_ADAPTERS].set(id, {});
-      }
-      this[STORED_ADAPTERS].get(id).view = adapter;
-    }
-
-    if (!viewRouter) {
-      if (__DEV__) {
-        console.warn(
-          '[ClientExtensionManager] viewRouter unavailable for flush',
-        );
-      }
-      return;
-    }
-
-    // 2. Inject all stored view adapters into the current router
-    for (const [id, adapters] of this[STORED_ADAPTERS].entries()) {
-      if (!adapters.view) continue;
-
-      viewRouter.add(adapters.view, undefined, id);
-      if (__DEV__) {
-        console.log(`[ClientExtensionManager] Flushed view route(s) for ${id}`);
-      }
-    }
-  }
-
-  /**
-   * Remove injected route adapters for an extension.
-   * @param {string} id - Extension ID
-   * @private
-   */
-  async _removeRouteAdapters(id) {
-    if (this[VIEW_ROUTER]) {
-      // Use string-based sourceId removal (survives HMR/reference changes)
-      // eslint-disable-next-line no-underscore-dangle
-      const ctx = this[VIEW_ROUTER]._lastResolveContext;
-      await this[VIEW_ROUTER].remove(id, ctx);
-    }
-
-    // Clean up adapter reference if still stored
-    this[STORED_ADAPTERS].delete(id);
-
-    if (__DEV__) {
-      console.log(`[ClientExtensionManager] Removed route adapters for: ${id}`);
-    }
-  }
-
-  /**
-   * Initialize Module Federation container
-   * @param {Object} container - MF container
-   * @param {string} containerName - Container name
-   * @returns {Promise<void>}
-   */
-  async _initializeContainer(container, containerName) {
-    // Check if already initialized
-    // eslint-disable-next-line no-underscore-dangle
-    if (container.__initialized__) {
-      return;
-    }
-
-    // Verify shared scope is available
-    // eslint-disable-next-line no-undef
-    if (
-      typeof __webpack_share_scopes__ === 'undefined' ||
-      // eslint-disable-next-line no-undef
-      !__webpack_share_scopes__.default
-    ) {
-      const error = new Error('Module Federation shared scope not available');
-      error.code = 'SHARED_SCOPE_UNAVAILABLE';
-      throw error;
-    }
-
-    // Initialize with shared scope
-    // eslint-disable-next-line no-undef
-    await container.init(__webpack_share_scopes__.default);
-    // eslint-disable-next-line no-underscore-dangle
-    container.__initialized__ = true;
-
-    if (__DEV__) {
-      console.log(
-        `[ClientExtensionManager] Initialized container: ${containerName}`,
-      );
-    }
-  }
-
-  /**
-   * Get module from container
-   * @param {Object} container - MF container
-   * @returns {Promise<Object>} Module
-   */
-  async _getContainerModule(container) {
-    const factory = await container.get('./extension');
-    return factory();
-  }
-
-  /**
-   * Environment-specific setup called once by init().
-   * Verifies Module Federation shared scope and sets up dev debug.
-   */
-  _onInit() {
-    try {
-      // Verify shared scope is available
-      // eslint-disable-next-line no-undef
-      if (
-        typeof __webpack_share_scopes__ === 'undefined' ||
-        // eslint-disable-next-line no-undef
-        !__webpack_share_scopes__.default
-      ) {
-        console.warn(
-          '[ClientExtensionManager] Module Federation shared scope not found.',
-        );
-      } else if (__DEV__) {
-        console.log(
-          '[ClientExtensionManager] Module Federation ready for extensions',
-        );
-      }
-
-      // Expose debug inspector in dev mode
-      if (__DEV__) {
-        // eslint-disable-next-line no-underscore-dangle
-        window.__RSK_EXTENSION_DEBUG__ = {
-          registry: this.registry,
-          metadata: this[EXTENSION_METADATA],
-          active: this[ACTIVE_EXTENSIONS],
-          manager: this,
-        };
-      }
-    } catch (error) {
-      console.error('[ClientExtensionManager] Failed to initialize:', error);
-    }
-  }
 
   /**
    * Load a script and wait for it to finish executing.
@@ -353,13 +192,51 @@ class ClientExtensionManager extends BaseExtensionManager {
   }
 
   /**
-   * Resolve the extension entry point based on manifest
-   * @param {Object} manifest - Extension manifest
-   * @returns {string|null} Entry point filename or null to skip
+   * Initialize Module Federation container
+   * @param {Object} container - MF container
+   * @param {string} containerName - Container name
+   * @returns {Promise<void>}
    */
-  _resolveEntryPoint(manifest) {
-    // If the build produced a remote.js, load it as the Webpack MF container
-    return manifest && manifest.hasClientScript ? 'remote.js' : null;
+  async _initializeContainer(container, containerName) {
+    // Check if already initialized
+    // eslint-disable-next-line no-underscore-dangle
+    if (container.__initialized__) {
+      return;
+    }
+
+    // Verify shared scope is available
+    // eslint-disable-next-line no-undef
+    if (
+      typeof __webpack_share_scopes__ === 'undefined' ||
+      // eslint-disable-next-line no-undef
+      !__webpack_share_scopes__.default
+    ) {
+      const error = new Error('Module Federation shared scope not available');
+      error.code = 'SHARED_SCOPE_UNAVAILABLE';
+      throw error;
+    }
+
+    // Initialize with shared scope
+    // eslint-disable-next-line no-undef
+    await container.init(__webpack_share_scopes__.default);
+    // eslint-disable-next-line no-underscore-dangle
+    container.__initialized__ = true;
+
+    if (__DEV__) {
+      console.log(
+        `[ClientExtensionManager] Initialized container: ${containerName}`,
+      );
+    }
+  }
+
+  /**
+   * Get module from container
+   * @param {Object} container - MF container
+   * @returns {Promise<Object>} Module
+   */
+  async _getContainerModule(container) {
+    const factory = await container.get('./extension');
+    return factory();
   }
 
   /**
@@ -367,23 +244,21 @@ class ClientExtensionManager extends BaseExtensionManager {
    * @param {string} id - Extension ID
    * @param {string|null} entryPoint - Resolved entry point filename
    * @param {Object} manifest - Extension manifest
-   * @param {Object} options - Additional options (containerName)
+   * @param {Object} containerName - Container name
    */
-  async _bootstrapExtension(id, entryPoint, manifest, options) {
-    const containerName = options && options.containerName;
-
+  async _loadExtensionModule(id, entryPoint, manifest, containerName) {
     try {
       // If the MF container is not yet on window (SSR script hasn't
       // executed or was not injected), load the script dynamically.
       if (!window[containerName]) {
-        const scriptUrl = this.getExtensionAssetUrl(id, entryPoint);
+        const url = this.getExtensionAssetUrl(id, entryPoint);
         if (__DEV__) {
           console.log(
-            `[ClientExtensionManager] Container ${containerName} not on window, loading ${scriptUrl}`,
+            `[ClientExtensionManager] Container ${containerName} not on window, loading ${url}`,
           );
         }
         // eslint-disable-next-line no-underscore-dangle
-        await this._loadScript(scriptUrl, id);
+        await this._loadScript(url, id);
       }
 
       const container = window[containerName];
@@ -405,17 +280,6 @@ class ClientExtensionManager extends BaseExtensionManager {
       const extensionModule = await this._getContainerModule(container);
       const ext = extensionModule.default || extensionModule;
 
-      // Inject view routes if the extension provides a views() hook
-      try {
-        // eslint-disable-next-line no-underscore-dangle
-        await this._injectViewRoutes(id, ext, manifest);
-      } catch (err) {
-        console.error(
-          `[ClientExtensionManager] Failed to inject view routes for ${id}:`,
-          err.message,
-        );
-      }
-
       if (__DEV__) {
         console.log(
           `[ClientExtensionManager] Successfully loaded extension: ${id}`,
@@ -424,31 +288,154 @@ class ClientExtensionManager extends BaseExtensionManager {
 
       return ext;
     } catch (err) {
-      // Enhanced error with full context for debugging
-      const error = new Error(
-        `Failed to load extension "${id}": ${err.message}`,
+      console.error(
+        `[ClientExtensionManager] Failed to load view module for ${id}:`,
+        err.message,
       );
-      error.code = err.code || 'EXTENSION_LOAD_FAILED';
-      error.extensionId = id;
-      error.containerName = containerName;
-      error.originalError = err;
-
-      console.error(`[ClientExtensionManager] ${error.message}`, {
-        extensionId: id,
-        containerName,
-        error: err.message,
-        stack: __DEV__ ? err.stack : undefined,
+      this.emit('extension:error', {
+        id,
+        error: err,
+        phase: 'view-module',
       });
-
-      throw error;
+      return null;
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // 4. Route Management
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Normalize and inject (or buffer) view routes for an extension.
+   * @param {string} id - Extension ID
+   * @param {*} hookResult - Return value of the extension's views() hook
+   * @param {string} [type='view'] - Route type (always 'view' on client)
+   */
+  async _injectRoutes(id, hookResult, type = 'view') {
+    const adapter = normalizeRouteAdapter(hookResult, type);
+    const viewRouter = this[CONNECTED_ROUTERS]['view'];
+
+    if (!viewRouter) {
+      // Router not available yet — buffer for later injection
+      this[BUFFERED_ROUTES].push({ id, adapter, type });
+      if (__DEV__) {
+        console.log(
+          `[ClientExtensionManager] Buffered view route(s) for ${id} (router not ready)`,
+        );
+      }
+      return;
+    }
+
+    // Pass _lastResolveContext so register() lifecycle fires immediately
+    // Pass id as sourceId for robust removal (survives HMR reference changes)
+    // eslint-disable-next-line no-underscore-dangle
+    const ctx = viewRouter._lastResolveContext;
+    await viewRouter.add(adapter, ctx, id);
+
+    if (!this[STORED_ADAPTERS].has(id)) {
+      this[STORED_ADAPTERS].set(id, {});
+    }
+    this[STORED_ADAPTERS].get(id).view = adapter;
+
+    if (__DEV__) {
+      console.log(`[ClientExtensionManager] Injected view route(s) for ${id}`);
+    }
+  }
+
+  /**
+   * Inject buffered and stored extension view routes into the router.
+   *
+   * Called by views bootstrap after the router is created.
+   * Overrides base to use client-specific add(adapter, ctx, sourceId) signature.
+   *
+   * @param {Object} viewRouter - The current view router instance
+   */
+  connectViewRouter(viewRouter) {
+    // eslint-disable-next-line no-underscore-dangle
+    this._connectRouter('view', viewRouter, (router, adapter, id) => {
+      router.add(adapter, undefined, id);
+      if (__DEV__) {
+        console.log(`[ClientExtensionManager] Flushed view route(s) for ${id}`);
+      }
+    });
+  }
+
+  /**
+   * Remove injected route adapters for an extension.
+   * Delegates to base with client-specific string-based removal.
+   * @param {string} id - Extension ID
+   */
+  async _removeRouteAdapters(id) {
+    // Client uses string-based sourceId removal (survives HMR reference changes)
+    // eslint-disable-next-line no-underscore-dangle
+    await super._removeRouteAdapters(id, async (router, _adapter, extId) => {
+      // eslint-disable-next-line no-underscore-dangle
+      const ctx = router._lastResolveContext;
+      await router.remove(extId, ctx);
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // 5. Refresh
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Targeted refresh: unload + reload specific extensions.
+   * Triggers CSS/script tag removal (via extension:unloaded event),
+   * then reloads from API with fresh manifests.
+   *
+   * @param {string[]} extensionIds - Extension IDs to refresh
+   * @protected
+   */
+  async _refreshExtensions(extensionIds) {
+    const resolvedIds = [
+      ...new Set(extensionIds.filter(id => this[EXTENSION_METADATA].has(id))),
+    ];
+
+    if (resolvedIds.length === 0) {
+      if (__DEV__) {
+        console.log(
+          `[ClientExtensionManager] refresh: no matching extensions for ${extensionIds.join(', ')}`,
+        );
+      }
+      return;
+    }
+
+    if (__DEV__) {
+      console.log(
+        `[ClientExtensionManager] Refreshing: ${resolvedIds.join(', ')}`,
+      );
+    }
+
+    await this.emit('extensions:refreshing', { extensionIds: resolvedIds });
+
+    // Unload all targeted extensions (removes CSS/script tags via event)
+    await Promise.all(
+      resolvedIds.map(async id => {
+        await this.unloadExtension(id);
+        this[EXTENSION_METADATA].delete(id);
+      }),
+    );
+
+    // Reload — each call fetches fresh manifest from API
+    await Promise.allSettled(resolvedIds.map(id => this.loadExtension(id)));
+
+    await this.emit('extensions:refreshed', { extensionIds: resolvedIds });
+
+    if (__DEV__) {
+      console.log('[ClientExtensionManager] Refreshed ✅');
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // 6. WebSocket Event Handling
+  // ---------------------------------------------------------------------------
 
   /**
    * Resolve the loaded ID for an extension.
    *
    * WebSocket events send the database UUID, but ACTIVE_EXTENSIONS is keyed
-   * by package name (set during activateNamespace via registry.register).
+   * by package name (set during activateViewNamespace via registry.register).
    * This helper tries the UUID first, then resolves the package name via
    * extension metadata.
    *
@@ -473,14 +460,30 @@ class ClientExtensionManager extends BaseExtensionManager {
    * @private
    */
   async _teardownExtension(id) {
-    // eslint-disable-next-line no-underscore-dangle
-    await this._removeRouteAdapters(id);
-
+    // Resolve UUID → package-name (routes/ACTIVE_EXTENSIONS use package-name)
     // eslint-disable-next-line no-underscore-dangle
     const loadedId = this._resolveLoadedId(id);
-    if (loadedId) {
-      await this.unloadExtension(loadedId);
+    if (!loadedId) return;
+
+    // Phase 1: Shutdown hook
+    const ext = this[ACTIVE_EXTENSIONS].get(loadedId);
+    if (ext && typeof ext.shutdown === 'function') {
+      try {
+        // eslint-disable-next-line no-underscore-dangle
+        await ext.shutdown(this._hookContext());
+      } catch (error) {
+        console.error(
+          `[ClientExtensionManager] Failed to shutdown extension ${loadedId}:`,
+          error,
+        );
+      }
     }
+
+    // Phase 2: Translation cleanup
+    removeNamespace(`extension:${loadedId}`);
+
+    // Phase 3: Unregister from registry + remove routes + ACTIVE_EXTENSIONS
+    await this.unloadExtension(loadedId);
   }
 
   /**
@@ -499,26 +502,19 @@ class ClientExtensionManager extends BaseExtensionManager {
     switch (type) {
       case 'EXTENSION_INSTALLED':
       case 'EXTENSION_UPDATED': {
-        await this.emit('extension:loaded', { id: extensionId, manifest });
         await this.reloadExtension(extensionId);
         break;
       }
 
+      case 'EXTENSION_DEACTIVATED':
       case 'EXTENSION_UNINSTALLED': {
         // eslint-disable-next-line no-underscore-dangle
         await this._teardownExtension(extensionId);
-        await this.emit('extension:unloaded', { id: extensionId });
         break;
       }
 
       case 'EXTENSION_ACTIVATED': {
         await this.loadExtension(extensionId, manifest);
-        break;
-      }
-
-      case 'EXTENSION_DEACTIVATED': {
-        // eslint-disable-next-line no-underscore-dangle
-        await this._teardownExtension(extensionId);
         break;
       }
 

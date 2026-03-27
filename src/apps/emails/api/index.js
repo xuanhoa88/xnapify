@@ -26,26 +26,12 @@ const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
 // =============================================================================
 
 export default {
-  async migrations({ container }) {
-    const db = container.resolve('db');
-    await db.connection.runMigrations(
-      [{ context: migrationsContext, prefix: 'emails' }],
-      { container },
-    );
-  },
-
-  async seeds({ container }) {
-    const db = container.resolve('db');
-    await db.connection.runSeeds(
-      [{ context: seedsContext, prefix: 'emails' }],
-      { container },
-    );
-  },
+  migrations: () => migrationsContext,
+  seeds: () => seedsContext,
+  models: () => modelsContext,
+  routes: () => routesContext,
 
   async boot({ container }) {
     registerEmailHooks(container);
   },
-
-  models: () => modelsContext,
-  routes: () => routesContext,
 };

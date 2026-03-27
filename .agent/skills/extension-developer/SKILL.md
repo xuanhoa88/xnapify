@@ -13,19 +13,22 @@ Unlike Modules (which contain core domain logic), Extensions (`src/extensions/`)
 
 ## Extension Lifecycle
 
-Extensions follow a well-defined lifecycle with hooks that receive progressively richer context:
+Extensions follow a well-defined phase-sequential lifecycle. Each phase runs for **all extensions** before the next phase begins, ensuring cross-extension dependencies are resolved.
+
+### Phase-Sequential Activation Order
+
+**View-side** (`activateViewNamespace`): `translations → providers → boot → register`
+**API-side** (`_performActivate`): `translations → providers → migrations → models → seeds → boot → routes`
 
 ### Boot-time Hooks (no DI context)
 
-- **`translations()`**: Declarative — returns a `require.context` for i18n JSON files. Auto-registered before other hooks.
+- **`translations()`**: Declarative — returns a `require.context` for i18n JSON files. Auto-registered via `addNamespace()` before other hooks. Cleaned up via `removeNamespace()` on deactivation.
 
 ### Post-bootstrap Hooks (full DI context: `{ container, store }`)
 
-After `runProviders()` is called (during SSR or client bootstrap), lifecycle hooks receive the full DI context:
-
 - **`providers({ container })`**: Called once per request (SSR) or once at boot (client). Use to inject Redux reducers or other per-request setup. 
 - **`boot({ container, registry })`**: Re-runs on every server boot. Register IPC handlers, subscribe to hooks. Data layer (migrations, models, seeds) is already processed before this runs. 
-- **`shutdown({ container, registry })`**: Re-runs when disabled. MUST unsubscribe from all hooks. Extension models are auto-unregistered from the `ModelRegistry`. 
+- **`shutdown({ container, registry })`**: Called on deactivation. MUST unsubscribe from all hooks. Extension models are auto-unregistered from the `ModelRegistry`. 
 
 ### One-time Hooks (backend only)
 
@@ -64,7 +67,7 @@ After `runProviders()` is called (during SSR or client bootstrap), lifecycle hoo
    - **`install({ container })`**: Runs ONCE when installed. Currently a no-op since migrations/seeds are now declarative.
    - **`boot({ container, registry })`**: Re-runs on every server boot. Register IPC handlers and subscribe to Backend Hooks. Models, migrations, and seeds are already processed before this runs.
    - **`uninstall({ container })`**: Runs ONCE when deleted. Undo migrations/seeds via `db.connection.revertSeeds()`/`revertMigrations()`.
-   - **`shutdown({ container, registry })`**: Re-runs when disabled. MUST unsubscribe from all hooks (`.off()`). Extension models are auto-unregistered from the `ModelRegistry`.
+   - **`shutdown({ container, registry })`**: Called on deactivation. MUST unsubscribe from all hooks (`.off()`). Extension models are auto-unregistered from the `ModelRegistry`. Translations are auto-cleaned via `removeNamespace()`.
 
 3. **Frontend Entry (`views/index.js`):**
 
@@ -86,6 +89,15 @@ Extension API and view routes are connected symmetrically:
 - **`connectViewRouter(router)`**: Called per-request from `bootstrap/views`. Flushes buffered view routes.
 
 Both use the shared `_connectRouter(routerKey, router)` method internally. Routes buffered during `boot()` (before routers exist) are drained and injected when the router connects.
+
+## Namespace Activation (View-side only)
+
+- **`activateViewNamespace(ns)`**: Activates all extensions for a namespace (translations → providers → boot → register)
+- **`deactivateViewNamespace(ns)`**: Deactivates all extensions (shutdown → removeNamespace → unregister)
+- **`ensureViewNamespaceActive(ns)`**: Activates only if not already active
+- **`isViewNamespaceActive(ns)`**: Checks if namespace is currently active
+
+These are exclusively view-side (lazy, per-route activation). API-side routes are static and loaded once at boot via `activateExtension()`/`deactivateExtension()`.
 
 ## Critical Requirements
 

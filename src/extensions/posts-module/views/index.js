@@ -23,6 +23,11 @@ const translationsContext = require.context(
 
 export default {
   /**
+   * Lifecycle: providers — bind DI services shared with other modules.
+   */
+  providers({ container }) {}, // eslint-disable-line no-unused-vars
+
+  /**
    * Declarative translations — auto-registered by extension manager.
    */
   translations() {

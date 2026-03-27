@@ -11,8 +11,7 @@ import { useMemo } from 'react';
 
 import renderer, { act } from 'react-test-renderer';
 
-import { registry } from '../utils/Registry';
-
+import { registry } from './Registry';
 import {
   useExtensionHooks,
   useExtensionValidator,
@@ -20,7 +19,7 @@ import {
 } from './useExtension';
 
 // Mock Registry
-jest.mock('../utils/Registry', () => ({
+jest.mock('./Registry', () => ({
   registry: {
     executeHook: jest.fn(),
   },

@@ -9,28 +9,30 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
+import { getTranslations } from '@shared/i18n/loader';
+import { addNamespace, removeNamespace } from '@shared/i18n/utils';
+
 import {
   BaseExtensionManager,
-  ACTIVE_EXTENSIONS,
-  LOADED_VERSIONS,
   EXTENSION_METADATA,
   BUFFERED_ROUTES,
   STORED_ADAPTERS,
+  CONNECTED_ROUTERS,
 } from '../utils/BaseExtensionManager';
 import { normalizeRouteAdapter } from '../utils/routeAdapter';
+
+import { registry } from './Registry';
 
 // Symbols — private (internal to server manager)
 const EXTENSION_API_ENTRY_POINTS = Symbol('__rsk.ext.apiEntryPoints__');
 const EXTENSION_CSS_ENTRY_POINTS = Symbol('__rsk.ext.cssEntryPoints__');
 const EXTENSION_SCRIPT_ENTRY_POINTS = Symbol('__rsk.ext.scriptEntryPoints__');
-const CONNECTED_ROUTERS = Symbol('__rsk.ext.connectedRouters__');
 const SERVER_CWD = Symbol('__rsk.ext.serverCwd__');
-const SERVER_CONTAINER = Symbol('__rsk.ext.serverContainer__');
 
 /** Non-throwing async file existence check */
-async function fileExists(filePath) {
+async function fileExists(...filePaths) {
   try {
-    await fs.promises.access(filePath);
+    await fs.promises.access(path.join(...filePaths));
     return true;
   } catch {
     return false;
@@ -38,33 +40,71 @@ async function fileExists(filePath) {
 }
 
 class ServerExtensionManager extends BaseExtensionManager {
+  // ---------------------------------------------------------------------------
+  // 1. Constructor
+  // ---------------------------------------------------------------------------
+
   constructor() {
-    super();
+    super(registry);
     this[EXTENSION_API_ENTRY_POINTS] = new Map();
     this[EXTENSION_CSS_ENTRY_POINTS] = new Map();
     this[EXTENSION_SCRIPT_ENTRY_POINTS] = new Map();
-    this[STORED_ADAPTERS] = new Map();
-    this[BUFFERED_ROUTES] = [];
-    this[CONNECTED_ROUTERS] = { api: null, view: null };
-    this[SERVER_CWD] = null;
-    this[SERVER_CONTAINER] = null;
 
     // eslint-disable-next-line no-underscore-dangle
     this.on('extension:loaded', ({ id }) => this._onExtensionLoaded(id));
+
     // eslint-disable-next-line no-underscore-dangle
     this.on('extension:unloaded', ({ id }) => this._onExtensionUnloaded(id));
+
+    // Discover dev extensions after full refresh (extensionIds: null)
+    this.on('extensions:refreshed', ({ extensionIds }) => {
+      // eslint-disable-next-line no-underscore-dangle
+      if (extensionIds === null) this._discoverDevExtensions();
+    });
+
     // eslint-disable-next-line no-underscore-dangle
-    this.on('manager:destroyed', () => this._onManagerDestroyed());
+    this.on('manager:destroyed', () => this._onDestroy());
   }
 
   // ---------------------------------------------------------------------------
-  // Lifecycle event handlers
+  // 2. Subclass Hooks
   // ---------------------------------------------------------------------------
 
+  /**
+   * Resolve view context for lifecycle hooks.
+   * Returns the API DI container.
+   *
+   * @returns {import('@shared/container').Container}
+   */
+  _hookContext() {
+    return this.apiContainer;
+  }
+
+  /**
+   * Resolve the extension entry point based on manifest
+   * @param {Object} manifest - Extension manifest
+   * @returns {string|null} Entry point filename or null
+   */
+  _resolveEntryPoint(manifest) {
+    // If browser exists, we have a View (server.js) generated from it
+    if (manifest && manifest.browser) return 'server.js';
+    if (manifest && manifest.main) return 'api.js';
+    return null;
+  }
+
+  /**
+   * Handle extension loaded event — activate via public API + store asset URLs.
+   * Uses activateExtension() for validation, events, and error handling.
+   */
   async _onExtensionLoaded(id) {
+    const metadata = this[EXTENSION_METADATA].get(id);
+    const manifest = metadata && metadata.manifest;
+
+    // Activate via public API (validation → events → _performActivate)
+    await this.activateExtension(id, manifest);
+
+    // Store CSS/Script asset URLs for SSR injection
     try {
-      const metadata = this[EXTENSION_METADATA].get(id);
-      const manifest = metadata && metadata.manifest;
       const version = (manifest && manifest.version) || '0.0.0';
 
       if (manifest && manifest.hasClientCss) {
@@ -88,66 +128,462 @@ class ServerExtensionManager extends BaseExtensionManager {
     }
   }
 
+  /**
+   * Handle extension unloaded event — deactivate via public API + view cleanup.
+   * Uses deactivateExtension() for validation, events, and error handling.
+   */
   async _onExtensionUnloaded(id) {
-    // Shutdown API instance
-    try {
-      const apiEntry = this[EXTENSION_API_ENTRY_POINTS].get(id);
-      if (apiEntry && typeof apiEntry.shutdown === 'function') {
-        await apiEntry.shutdown({
-          container: this[SERVER_CONTAINER],
-          registry: this.registry,
-        });
-        if (__DEV__) {
-          console.log(`[ServerExtensionManager] Shut down API for: ${id}`);
-        }
-      }
-    } catch (err) {
-      console.error(
-        `[ServerExtensionManager] Failed to shutdown API for ${id}:`,
-        err,
-      );
-      this.emit('extension:error', { id, error: err, phase: 'api-shutdown' });
-    }
+    // Deactivate via public API (validation → events → _performDeactivate)
+    await this.deactivateExtension(id);
 
-    // Remove injected route adapters from routers
-    // eslint-disable-next-line no-underscore-dangle
-    this._removeRouteAdapters(id);
-
-    // Unregister extension models from the global ModelRegistry
-    try {
-      const models =
-        this[SERVER_CONTAINER] &&
-        this[SERVER_CONTAINER].has('models') &&
-        this[SERVER_CONTAINER].resolve('models');
-      if (models && typeof models.unregister === 'function') {
-        models.unregister(id);
-      }
-    } catch (_) {
-      // non-fatal
-    }
-
-    // Clean up maps
-    this[EXTENSION_API_ENTRY_POINTS].delete(id);
+    // View-specific cleanup
     this[EXTENSION_CSS_ENTRY_POINTS].delete(id);
     this[EXTENSION_SCRIPT_ENTRY_POINTS].delete(id);
-    this[STORED_ADAPTERS].delete(id);
   }
 
-  _onManagerDestroyed() {
+  /**
+   * Server-specific cleanup during destroy().
+   * Clears all server maps and routers.
+   */
+  _onDestroy() {
     this[EXTENSION_API_ENTRY_POINTS].clear();
     this[EXTENSION_CSS_ENTRY_POINTS].clear();
     this[EXTENSION_SCRIPT_ENTRY_POINTS].clear();
     this[STORED_ADAPTERS].clear();
     this[CONNECTED_ROUTERS] = { api: null, view: null };
     this[BUFFERED_ROUTES].length = 0;
-    this[SERVER_CWD] = null;
-    this[SERVER_CONTAINER] = null;
   }
 
   // ---------------------------------------------------------------------------
-  // Route helpers
+  // 3. Module Loading
   // ---------------------------------------------------------------------------
 
+  /**
+   * Load a module using non-webpack require
+   * @param {string} bundlePath - Absolute path to the bundle
+   * @returns {Object} Module exports
+   */
+  requireModule(bundlePath) {
+    // Use non-webpack require to load extensions from filesystem
+    // eslint-disable-next-line no-undef
+    const requireFunc =
+      typeof __non_webpack_require__ === 'function'
+        ? // eslint-disable-next-line no-undef
+          __non_webpack_require__
+        : require;
+
+    // Delete require cache to ensure we get the latest version
+    try {
+      const resolvedPath = requireFunc.resolve(bundlePath);
+      delete requireFunc.cache[resolvedPath];
+    } catch {
+      delete requireFunc.cache[bundlePath];
+    }
+
+    try {
+      return requireFunc(bundlePath);
+    } catch (error) {
+      console.error(
+        `[ServerExtensionManager] Failed to load module "${bundlePath}":`,
+        error,
+      );
+      return null;
+    }
+  }
+
+  /**
+   * Resolve and require an extension's API module from disk.
+   *
+   * @param {Object} manifest - Extension manifest (needs .name and .main)
+   * @returns {Promise<Object|null>} The API module exports, or null
+   * @private
+   */
+  async _requireApiModule(manifest) {
+    if (!manifest || !manifest.main || !manifest.name) return null;
+
+    // eslint-disable-next-line no-underscore-dangle
+    const bundlePath = await this._getExtensionBundlePath(
+      manifest.name,
+      manifest.main,
+    );
+    if (!bundlePath) return null;
+
+    const apiModule = this.requireModule(bundlePath);
+    if (!apiModule) return null;
+    return apiModule.default || apiModule;
+  }
+
+  /**
+   * Load the SSR view bundle and run view lifecycle phases.
+   *
+   * View lifecycle: translations → providers → routes
+   * Mirrors the views autoloader pattern (shared/renderer/autoloader.js).
+   *
+   * @param {string} id - Extension ID
+   * @param {Object} manifest - Extension manifest
+   * @returns {Object|null} Extension module exports or null
+   * @private
+   */
+  async _loadViewModule(id, manifest) {
+    try {
+      if (!manifest || !manifest.browser || !manifest.name) return null;
+
+      // eslint-disable-next-line no-underscore-dangle
+      const bundlePath = await this._getExtensionBundlePath(
+        path.join(manifest.name, path.dirname(manifest.browser)),
+        'server.js',
+      );
+      if (__DEV__) {
+        console.log(
+          `[ServerExtensionManager] Loading view module for ${id} from ${bundlePath}`,
+        );
+      }
+
+      const viewModule = this.requireModule(bundlePath);
+      const extensionView = viewModule.default || viewModule;
+
+      if (__DEV__) {
+        console.log(`[ServerExtensionManager] Loaded view module for ${id}`);
+      }
+
+      return extensionView;
+    } catch (err) {
+      console.error(
+        `[ServerExtensionManager] Failed to load view module for ${id}:`,
+        err.message,
+      );
+      this.emit('extension:error', {
+        id,
+        error: err,
+        phase: 'view-module',
+      });
+      return null;
+    }
+  }
+
+  /**
+   * Load extension module (server uses require, not MF containers).
+   * Loads the SSR view module for registry registration.
+   * API module loading is handled separately by the extension service
+   * (activate/deactivate flow).
+   *
+   * @param {string} id - Extension ID
+   * @param {string|null} _entryPoint - Resolved entry point filename
+   * @param {Object} manifest - Extension manifest
+   * @returns {Promise<Object|null>} View module or null (API-only extensions)
+   */
+  async _loadExtensionModule(id, _entryPoint, manifest) {
+    try {
+      // Load SSR view module (server.js — generated from browser entry)
+      // eslint-disable-next-line no-underscore-dangle
+      const viewModule = await this._loadViewModule(id, manifest);
+
+      if (__DEV__) {
+        const version = (manifest && manifest.version) || '0.0.0';
+        console.log(
+          `[ServerExtensionManager] Loaded view for ${id} v${version}`,
+        );
+      }
+
+      return viewModule;
+    } catch (error) {
+      console.error(
+        `[ServerExtensionManager] Failed to load view module for ${id}:`,
+        error.message,
+      );
+      this.emit('extension:error', {
+        id,
+        error,
+        phase: 'load-module',
+      });
+    }
+
+    return null;
+  }
+
+  // ---------------------------------------------------------------------------
+  // 4. Install / Uninstall
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Server-specific install: loads the API module from disk and
+   * runs the install() lifecycle hook.
+   *
+   * @param {string} id - Extension ID
+   * @param {Object} manifest - Extension manifest
+   * @returns {Promise<boolean>}
+   * @protected
+   */
+  async _performInstall(id, manifest) {
+    // eslint-disable-next-line no-underscore-dangle
+    const apiModule = await this._requireApiModule(manifest);
+    if (!apiModule || typeof apiModule.install !== 'function') {
+      if (__DEV__) {
+        console.log(
+          `[ServerExtensionManager] ${id} has no install hook. Skipping.`,
+        );
+      }
+      return true;
+    }
+
+    if (__DEV__) {
+      console.log(
+        `[ServerExtensionManager] Running install for ${id} (v${manifest.version || '0.0.0'})`,
+      );
+    }
+
+    await apiModule.install({
+      container: this.apiContainer,
+      registry: this.registry,
+    });
+
+    console.log(`[ServerExtensionManager] install completed for ${id}`);
+    return true;
+  }
+
+  /**
+   * Server-specific uninstall: auto-reverts seeds and migrations from
+   * declarative contexts, then runs the uninstall() lifecycle hook.
+   *
+   * @param {string} id - Extension ID
+   * @param {Object} manifest - Extension manifest
+   * @returns {Promise<boolean>}
+   * @protected
+   */
+  async _performUninstall(id, manifest) {
+    // Load module once — reused for both revert and uninstall hook
+    // eslint-disable-next-line no-underscore-dangle
+    const apiModule = await this._requireApiModule(manifest);
+    if (!apiModule) return true;
+
+    // Auto-revert seeds and migrations from declarative contexts
+    if (this.apiContainer) {
+      try {
+        const db = this.apiContainer.resolve('db');
+        // Revert seeds first (data before schema)
+        if (typeof apiModule.seeds === 'function') {
+          const seedCtx = apiModule.seeds();
+          if (seedCtx) {
+            await db.connection.revertSeeds(
+              [{ context: seedCtx, prefix: manifest.name }],
+              { container: this.apiContainer },
+            );
+          }
+        }
+
+        // Revert migrations
+        if (typeof apiModule.migrations === 'function') {
+          const migrationCtx = apiModule.migrations();
+          if (migrationCtx) {
+            await db.connection.revertMigrations([
+              { context: migrationCtx, prefix: manifest.name },
+            ]);
+          }
+        }
+      } catch (revertErr) {
+        console.error(
+          `[ServerExtensionManager] Auto-revert failed for ${id}:`,
+          revertErr.message,
+        );
+      }
+    }
+
+    // Run extension's custom uninstall() hook (if any)
+    if (typeof apiModule.uninstall === 'function') {
+      if (__DEV__) {
+        console.log(
+          `[ServerExtensionManager] Running uninstall for ${id} (v${manifest.version || '0.0.0'})`,
+        );
+      }
+
+      await apiModule.uninstall({
+        container: this.apiContainer,
+        registry: this.registry,
+      });
+
+      console.log(`[ServerExtensionManager] uninstall completed for ${id}`);
+    } else if (__DEV__) {
+      console.log(
+        `[ServerExtensionManager] ${id} has no uninstall hook. Skipping.`,
+      );
+    }
+
+    return true;
+  }
+
+  // ---------------------------------------------------------------------------
+  // 5. Activate / Deactivate
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Load and boot the extension's API module.
+   * Runs the full API lifecycle:
+   *   translations → providers → migrations → models → seeds → boot → routes
+   *
+   * @param {string} id - Extension ID
+   * @param {Object} manifest - Extension manifest
+   * @returns {Promise<boolean>}
+   * @protected
+   */
+  async _performActivate(id, manifest) {
+    // eslint-disable-next-line no-underscore-dangle
+    const extensionApi = await this._requireApiModule(manifest);
+    if (!extensionApi) return false;
+
+    // Store entry point for later shutdown
+    this[EXTENSION_API_ENTRY_POINTS].set(id, extensionApi);
+
+    try {
+      const db = this.apiContainer.resolve('db');
+
+      if (__DEV__) {
+        console.log(`[ServerExtensionManager] Booting API for ${id}`);
+      }
+
+      // 1. Translations — register i18n namespaces
+      if (typeof extensionApi.translations === 'function') {
+        const translationContext = extensionApi.translations();
+        if (translationContext) {
+          const translations = getTranslations(translationContext);
+          if (translations && Object.keys(translations).length > 0) {
+            addNamespace(id, translations);
+          }
+        }
+      }
+
+      // 2. Providers — bind DI services
+      if (typeof extensionApi.providers === 'function') {
+        await extensionApi.providers({
+          container: this.apiContainer,
+          registry: this.registry,
+        });
+      }
+
+      // 3. Migrations (idempotent — skips already-applied)
+      if (db && typeof extensionApi.migrations === 'function') {
+        const migrationCtx = extensionApi.migrations();
+        if (migrationCtx) {
+          await db.connection.runMigrations([
+            { context: migrationCtx, prefix: manifest.name },
+          ]);
+        }
+      }
+
+      // 4. Models — register into global ModelRegistry
+      if (db && typeof extensionApi.models === 'function') {
+        const modelCtx = extensionApi.models();
+        if (modelCtx) {
+          const models = this.apiContainer.resolve('models');
+          if (models && typeof models.discover === 'function') {
+            await models.discover(modelCtx, id);
+            models.associate();
+          }
+        }
+      }
+
+      // 5. Seeds (idempotent — skips already-applied)
+      if (db && typeof extensionApi.seeds === 'function') {
+        const seedCtx = extensionApi.seeds();
+        if (seedCtx) {
+          await db.connection.runSeeds(
+            [{ context: seedCtx, prefix: manifest.name }],
+            { container: this.apiContainer },
+          );
+        }
+      }
+
+      // 6. Extension boot() hook
+      if (typeof extensionApi.boot === 'function') {
+        await extensionApi.boot({
+          container: this.apiContainer,
+          registry: this.registry,
+        });
+      }
+
+      // 7. API Routes
+      if (typeof extensionApi.routes === 'function') {
+        // eslint-disable-next-line no-underscore-dangle
+        this._injectRoutes(id, extensionApi.routes(), 'api');
+      }
+    } catch (bootErr) {
+      console.error(
+        `[ServerExtensionManager] Activate failed for ${id}:`,
+        bootErr.message,
+      );
+      this.emit('extension:error', {
+        id,
+        error: bootErr,
+        phase: 'api-activate',
+      });
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Shut down the extension's API module and clean up.
+   * Runs shutdown hook, removes API routes, unregisters models.
+   *
+   * @param {string} id - Extension ID
+   * @returns {Promise<boolean>}
+   * @protected
+   */
+  async _performDeactivate(id) {
+    try {
+      // Run shutdown hook
+      const apiEntry = this[EXTENSION_API_ENTRY_POINTS].get(id);
+      if (apiEntry && typeof apiEntry.shutdown === 'function') {
+        await apiEntry.shutdown({
+          container: this.apiContainer,
+          registry: this.registry,
+        });
+        if (__DEV__) {
+          console.log(`[ServerExtensionManager] Shut down API for: ${id}`);
+        }
+      }
+
+      // Unregister extension models
+      try {
+        const models = this.apiContainer.resolve('models');
+        if (typeof models.unregister === 'function') {
+          models.unregister(id);
+        }
+      } catch {
+        // non-fatal
+      }
+
+      // Remove API-side translations
+      removeNamespace(id);
+
+      // Clean up API entry point
+      this[EXTENSION_API_ENTRY_POINTS].delete(id);
+    } catch (err) {
+      console.error(
+        `[ServerExtensionManager] Deactivate failed for ${id}:`,
+        err.message,
+      );
+      this.emit('extension:error', {
+        id,
+        error: err,
+        phase: 'api-deactivate',
+      });
+      return false;
+    }
+
+    return true;
+  }
+
+  // ---------------------------------------------------------------------------
+  // 6. Route Management
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Inject (or buffer) routes for an extension.
+   * @param {string} id - Extension ID
+   * @param {*} hookResult - Return value of the extension's routes() hook
+   * @param {string} type - Type of routes (view or api)
+   */
   _injectRoutes(id, hookResult, type) {
     const routerKey = type === 'api' ? 'api' : 'view';
     const router = this[CONNECTED_ROUTERS][routerKey];
@@ -179,59 +615,6 @@ class ServerExtensionManager extends BaseExtensionManager {
   }
 
   /**
-   * Connect a router instance and flush pending/stored route adapters.
-   *
-   * Shared logic for both view and API routers:
-   * 1. Drains pending injections matching `routerKey` from buffer → store
-   * 2. Re-injects all stored adapters for `routerKey` into the router
-   *
-   * @param {string} routerKey - 'view' or 'api'
-   * @param {Object} router - Router instance with add(adapter) method
-   */
-  _connectRouter(routerKey, router) {
-    this[CONNECTED_ROUTERS][routerKey] = router;
-
-    // 1. Drain pending injections for this router key (buffer → store)
-    const remaining = [];
-    for (const entry of this[BUFFERED_ROUTES]) {
-      const entryKey = entry.type === 'api' ? 'api' : 'view';
-      if (entryKey === routerKey) {
-        if (!this[STORED_ADAPTERS].has(entry.id)) {
-          this[STORED_ADAPTERS].set(entry.id, {});
-        }
-        this[STORED_ADAPTERS].get(entry.id)[routerKey] = entry.adapter;
-      } else {
-        remaining.push(entry);
-      }
-    }
-    this[BUFFERED_ROUTES].length = 0;
-    this[BUFFERED_ROUTES].push(...remaining);
-
-    // 2. Inject all stored adapters for this router key
-    for (const [id, adapters] of this[STORED_ADAPTERS].entries()) {
-      if (adapters[routerKey] && router) {
-        const added = router.add(adapters[routerKey]);
-        if (__DEV__) {
-          console.log(
-            `[ServerExtensionManager] Injected ${added.length} ${routerKey} route(s) for ${id}`,
-          );
-        }
-      }
-    }
-  }
-
-  /**
-   * Connect the view router instance.
-   * Called per-request by views bootstrap (SSR creates a new router each time).
-   *
-   * @param {Object} viewRouter - View router with add/remove methods
-   */
-  connectViewRouter(viewRouter) {
-    // eslint-disable-next-line no-underscore-dangle
-    this._connectRouter('view', viewRouter);
-  }
-
-  /**
    * Connect the API router instance.
    * Called once at boot after the API DynamicRouter is created.
    *
@@ -239,27 +622,401 @@ class ServerExtensionManager extends BaseExtensionManager {
    */
   connectApiRouter(apiRouter) {
     // eslint-disable-next-line no-underscore-dangle
-    this._connectRouter('api', apiRouter);
+    super._connectRouter('api', apiRouter);
+    if (__DEV__) {
+      console.log('[ServerExtensionManager] API router connected');
+    }
   }
 
-  _removeRouteAdapters(id) {
-    const adapters = this[STORED_ADAPTERS].get(id);
-    if (!adapters) return;
+  // ---------------------------------------------------------------------------
+  // 7. Refresh
+  // ---------------------------------------------------------------------------
 
-    if (adapters.api && this[CONNECTED_ROUTERS].api) {
-      this[CONNECTED_ROUTERS].api.remove(adapters.api);
+  /**
+   * Targeted refresh: unload + reload specific extensions.
+   * Each reload calls `GET /api/extensions/:id` for a fresh manifest.
+   *
+   * @param {string[]} extensionIds - Extension names or IDs
+   * @protected
+   */
+  async _refreshExtensions(extensionIds) {
+    // Build lookup map: name/id → internal id
+    const metadataByKey = new Map();
+    for (const [id, metadata] of this[EXTENSION_METADATA].entries()) {
+      metadataByKey.set(id, id);
+      const manifestName = metadata.manifest && metadata.manifest.name;
+      if (manifestName && !metadataByKey.has(manifestName)) {
+        metadataByKey.set(manifestName, id);
+      }
     }
 
-    if (adapters.view && this[CONNECTED_ROUTERS].view) {
-      this[CONNECTED_ROUTERS].view.remove(adapters.view);
-    }
+    // Resolve + deduplicate
+    const resolvedIds = [
+      ...new Set(
+        extensionIds.map(name => metadataByKey.get(name)).filter(Boolean),
+      ),
+    ];
 
-    this[STORED_ADAPTERS].delete(id);
+    if (resolvedIds.length === 0) {
+      if (__DEV__) {
+        console.log(
+          `[ServerExtensionManager] refresh: no matching extensions for ${extensionIds.join(', ')}`,
+        );
+      }
+      return;
+    }
 
     if (__DEV__) {
-      console.log(`[ServerExtensionManager] Removed route adapters for: ${id}`);
+      console.log(
+        `[ServerExtensionManager] Refreshing: ${resolvedIds.join(', ')}`,
+      );
+    }
+
+    await this.emit('extensions:refreshing', { extensionIds: resolvedIds });
+
+    // Unload all targeted extensions in parallel
+    await Promise.all(
+      resolvedIds.map(async id => {
+        await this.unloadExtension(id);
+        this[EXTENSION_METADATA].delete(id);
+      }),
+    );
+
+    // Reload — each call fetches fresh manifest from API automatically
+    await Promise.allSettled(resolvedIds.map(id => this.loadExtension(id)));
+
+    await this.emit('extensions:refreshed', { extensionIds: resolvedIds });
+
+    if (__DEV__) {
+      console.log('[ServerExtensionManager] Refreshed ✅');
     }
   }
+
+  /**
+   * Scan the dev extensions directory for extensions not yet in the DB.
+   * Uses async I/O throughout. Called after full refresh to enable
+   * "plug & play" development without DB registration.
+   *
+   * @private
+   */
+  async _discoverDevExtensions() {
+    try {
+      const devBaseDir = this.getDevExtensionsDir(this[SERVER_CWD]);
+      if (!devBaseDir || !(await fileExists(devBaseDir))) return;
+
+      const entries = await fs.promises.readdir(devBaseDir, {
+        withFileTypes: true,
+      });
+
+      const loadedNames = new Set(
+        Array.from(this[EXTENSION_METADATA].values())
+          .map(m => m.manifest && m.manifest.name)
+          .filter(Boolean),
+      );
+
+      const devExtensions = (
+        await Promise.all(
+          entries
+            .filter(entry => entry.isDirectory())
+            .map(async entry => {
+              const extDir = path.join(devBaseDir, entry.name);
+              const manifest = await this.readManifest(extDir);
+              if (!manifest || !manifest.name) return null;
+              if (loadedNames.has(manifest.name)) return null;
+
+              if (await fileExists(extDir, 'extension.css')) {
+                manifest.hasClientCss = true;
+              }
+              if (await fileExists(extDir, 'remote.js')) {
+                manifest.hasClientScript = true;
+              }
+
+              return { ...manifest, fromDisk: true };
+            }),
+        )
+      ).filter(Boolean);
+
+      if (devExtensions.length > 0) {
+        if (__DEV__) {
+          console.log(
+            `[ServerExtensionManager] Discovered dev extensions: ${devExtensions.map(m => m.name).join(', ')}`,
+          );
+        }
+        await Promise.allSettled(
+          devExtensions.map(manifest =>
+            this.loadExtension(manifest.name, manifest),
+          ),
+        );
+      }
+    } catch (err) {
+      if (__DEV__) {
+        console.warn(
+          '[ServerExtensionManager] Dev extension scan failed:',
+          err.message,
+        );
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // 8. Filesystem & Paths
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Get the remote/installed extension path
+   * @returns {string} Absolute extension path
+   */
+  getInstalledExtensionsDir() {
+    try {
+      return path.resolve(
+        process.env.RSK_EXTENSION_DIR ||
+          path.join(os.homedir(), '.rsk', 'extensions'),
+      );
+    } catch (err) {
+      console.error(`Failed to get extension path:`, err);
+      return null;
+    }
+  }
+
+  /**
+   * Get the local/dev extension path
+   * @param {string} cwd - Current working directory
+   * @returns {string} Absolute dev extension path
+   */
+  getDevExtensionsDir(cwd = process.cwd()) {
+    try {
+      return path.resolve(
+        cwd,
+        process.env.RSK_EXTENSION_LOCAL_PATH || 'extensions',
+      );
+    } catch (err) {
+      console.error(`Failed to get dev extension path for ${cwd}:`, err);
+      return null;
+    }
+  }
+
+  /**
+   * Set the dev extensions directory
+   * @param {string} cwd - Current working directory
+   */
+  setDevExtensionsDir(cwd) {
+    this[SERVER_CWD] = cwd;
+  }
+
+  /**
+   * Resolve the physical directory of an extension on disk.
+   * Checks local/dev path first (dev override), then installed/remote path.
+   *
+   * This is the single source of truth for extension path resolution — used
+   * internally by `_getExtensionBundlePath` and externally by the service layer
+   *
+   * @param {string} extensionKey - Extension directory name / key
+   * @returns {{ dir: string|null, isDevExtension: boolean }}
+   */
+  async resolveExtensionDir(extensionKey) {
+    if (!extensionKey) return { dir: null, isDevExtension: false };
+
+    try {
+      const baseExtensionDir = extensionKey.split(path.sep)[0] || extensionKey;
+
+      if (this[SERVER_CWD]) {
+        const devBaseDir = this.getDevExtensionsDir(this[SERVER_CWD]);
+        if (devBaseDir && (await fileExists(devBaseDir, baseExtensionDir))) {
+          return {
+            dir: path.join(devBaseDir, extensionKey),
+            isDevExtension: true,
+          };
+        }
+      }
+
+      const baseDir = this.getInstalledExtensionsDir();
+      if (baseDir && (await fileExists(baseDir, baseExtensionDir))) {
+        return { dir: path.join(baseDir, extensionKey), isDevExtension: false };
+      }
+    } catch (err) {
+      console.error(
+        `[ServerExtensionManager] Failed to resolve extension dir for ${extensionKey}:`,
+        err,
+      );
+    }
+
+    return { dir: null, isDevExtension: false };
+  }
+
+  /**
+   * Read an extension's package.json manifest from its directory on disk.
+   * @param {...string} extensionDirs - Absolute path to the extension directory
+   * @returns {Object|null} Parsed manifest or null on failure
+   */
+  async readManifest(...extensionDirs) {
+    try {
+      const manifestPath = path.join(...extensionDirs, 'package.json');
+      const manifestContent = await fs.promises.readFile(manifestPath, 'utf8');
+      return JSON.parse(manifestContent);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Install an extension from an in-memory package buffer (tarball/zip).
+   *
+   * Filesystem-only operation:
+   *  1. Write buffer to a temp file
+   *  2. Extract into a temp directory
+   *  3. Locate and validate package.json
+   *  4. Move to the installed extensions directory
+   *  5. Load the extension into the manager
+   *
+   * Does NOT interact with the database — the caller (e.g. marketplace
+   * engine) is responsible for creating/updating DB records.
+   *
+   * @param {Buffer} packageBuffer - Raw package contents
+   * @returns {Promise<{ name: string, version: string, manifest: Object, dir: string }>}
+   */
+  async installFromBuffer(packageBuffer) {
+    if (!Buffer.isBuffer(packageBuffer) || packageBuffer.length === 0) {
+      const error = new Error('installFromBuffer requires a non-empty Buffer');
+      error.code = 'INVALID_BUFFER';
+      throw error;
+    }
+
+    const tempDir = path.join(
+      os.tmpdir(),
+      'rsk-ext-install-' + Date.now().toString(36),
+    );
+    const tempFile = tempDir + '.pkg';
+
+    try {
+      // 1. Write buffer to temp file
+      await fs.promises.writeFile(tempFile, packageBuffer);
+
+      // 2. Extract
+      await fs.promises.mkdir(tempDir, { recursive: true });
+
+      // Try tar.gz first, fall back to treating as zip via child_process
+      const { exec } = await import('child_process');
+      const { promisify } = await import('util');
+      const execAsync = promisify(exec);
+
+      try {
+        await execAsync(`tar -xzf "${tempFile}" -C "${tempDir}"`);
+      } catch {
+        // Fall back to unzip
+        await execAsync(`unzip -o "${tempFile}" -d "${tempDir}"`);
+      }
+
+      // 3. Locate package.json (may be at root or one level deep)
+      let extensionRoot = tempDir;
+      let manifest = await this.readManifest(extensionRoot);
+
+      if (!manifest) {
+        // Check single subdirectory (common tarball layout: package/...)
+        const entries = await fs.promises.readdir(tempDir, {
+          withFileTypes: true,
+        });
+        const subdirs = entries.filter(d => d.isDirectory());
+        if (subdirs.length === 1) {
+          extensionRoot = path.join(tempDir, subdirs[0].name);
+          manifest = await this.readManifest(extensionRoot);
+        }
+      }
+
+      if (!manifest || !manifest.name) {
+        const error = new Error(
+          'Invalid extension package: package.json not found or missing "name"',
+        );
+        error.code = 'INVALID_PACKAGE';
+        throw error;
+      }
+
+      const extensionName = manifest.name;
+      const extensionVersion = manifest.version || '0.0.0';
+
+      // 4. Security: prevent path traversal
+      if (
+        extensionName.includes('..') ||
+        extensionName.includes('/') ||
+        extensionName.includes('\\')
+      ) {
+        const error = new Error(
+          `Extension name "${extensionName}" contains invalid path characters`,
+        );
+        error.code = 'INVALID_EXTENSION_NAME';
+        throw error;
+      }
+
+      // 5. Move to installed extensions directory
+      const extensionsDir = this.getInstalledExtensionsDir();
+      if (!extensionsDir) {
+        const error = new Error(
+          'Installed extensions directory not configured',
+        );
+        error.code = 'NO_EXTENSIONS_DIR';
+        throw error;
+      }
+
+      await fs.promises.mkdir(extensionsDir, { recursive: true });
+      const finalDir = path.join(extensionsDir, extensionName);
+
+      // Remove existing version if present
+      if (await fileExists(finalDir)) {
+        await fs.promises.rm(finalDir, { recursive: true, force: true });
+      }
+
+      await fs.promises.rename(extensionRoot, finalDir);
+
+      // 6. Load the extension
+      await this.loadExtension(extensionName, manifest);
+
+      if (__DEV__) {
+        console.log(
+          `[ServerExtensionManager] Installed from buffer: ${extensionName}@${extensionVersion}`,
+        );
+      }
+
+      return {
+        name: extensionName,
+        version: extensionVersion,
+        manifest,
+        dir: finalDir,
+      };
+    } finally {
+      // Cleanup temp files
+      try {
+        if (await fileExists(tempFile)) {
+          await fs.promises.unlink(tempFile);
+        }
+        if (await fileExists(tempDir)) {
+          await fs.promises.rm(tempDir, { recursive: true, force: true });
+        }
+      } catch (cleanupErr) {
+        if (__DEV__) {
+          console.warn(
+            '[ServerExtensionManager] installFromBuffer cleanup failed:',
+            cleanupErr.message,
+          );
+        }
+      }
+    }
+  }
+
+  /**
+   * Get the path to an extension's bundle file.
+   * Delegates to `resolveExtensionDir` for dev/prod path resolution.
+   *
+   * @param {string} extensionDir - Extension directory name
+   * @param {string} filename - Bundle filename
+   * @returns {string|null} Absolute path to the bundle file
+   */
+  async _getExtensionBundlePath(extensionDir, filename) {
+    const { dir } = await this.resolveExtensionDir(extensionDir);
+    return dir ? path.join(dir, filename) : null;
+  }
+
+  // ---------------------------------------------------------------------------
+  // 9. SSR Accessors
+  // ---------------------------------------------------------------------------
 
   /**
    * Get all extension CSS entries for SSR injection
@@ -283,682 +1040,6 @@ class ServerExtensionManager extends BaseExtensionManager {
       entries.push({ src, id });
     }
     return entries;
-  }
-
-  /**
-   * Get the remote/installed extension path
-   * @returns {string} Absolute extension path
-   */
-  getInstalledExtensionsDir() {
-    try {
-      return path.resolve(
-        process.env.RSK_EXTENSION_DIR ||
-          path.join(os.homedir(), '.rsk', 'extensions'),
-      );
-    } catch (err) {
-      console.error(`Failed to get extension path:`, err);
-      return null;
-    }
-  }
-
-  /**
-   * Get the local/dev extension path
-   * @param {string} cwd - Current working directory
-   * @returns {string} Absolute dev extension path
-   */
-  getDevExtensionPath(cwd = process.cwd()) {
-    try {
-      return path.resolve(
-        cwd,
-        process.env.RSK_EXTENSION_LOCAL_PATH || 'extensions',
-      );
-    } catch (err) {
-      console.error(`Failed to get dev extension path for ${cwd}:`, err);
-      return null;
-    }
-  }
-
-  /**
-   * Resolve the physical directory of an extension on disk.
-   * Checks local/dev path first (dev override), then installed/remote path.
-   *
-   * This is the single source of truth for extension path resolution — used
-   * internally by `_getExtensionBundlePath` and externally by the service layer
-   * (via `extension.helpers.resolveExtensionDir`).
-   *
-   * @param {string} extensionKey - Extension directory name / key
-   * @returns {{ dir: string|null, isDevExtension: boolean }}
-   */
-  resolveExtensionDir(extensionKey) {
-    if (!extensionKey) return { dir: null, isDevExtension: false };
-
-    const baseExtensionDir = extensionKey.split(path.sep)[0] || extensionKey;
-
-    try {
-      if (this[SERVER_CWD]) {
-        const devBaseDir = this.getDevExtensionPath(this[SERVER_CWD]);
-        if (
-          devBaseDir &&
-          fs.existsSync(path.join(devBaseDir, baseExtensionDir))
-        ) {
-          return {
-            dir: path.join(devBaseDir, extensionKey),
-            isDevExtension: true,
-          };
-        }
-      }
-
-      const baseDir = this.getInstalledExtensionsDir();
-      if (baseDir && fs.existsSync(path.join(baseDir, baseExtensionDir))) {
-        return { dir: path.join(baseDir, extensionKey), isDevExtension: false };
-      }
-    } catch (err) {
-      console.error(
-        `[ServerExtensionManager] Failed to resolve extension dir for ${extensionKey}:`,
-        err,
-      );
-    }
-
-    return { dir: null, isDevExtension: false };
-  }
-
-  /**
-   * Read an extension's package.json manifest from its directory on disk.
-   * @param {string} extensionDir - Absolute path to the extension directory
-   * @returns {Object|null} Parsed manifest or null on failure
-   */
-  readManifest(extensionDir) {
-    try {
-      const manifestPath = path.join(extensionDir, 'package.json');
-      return JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-    } catch {
-      return null;
-    }
-  }
-
-  /**
-   * Get the path to an extension's bundle file.
-   * Delegates to `resolveExtensionDir` for dev/prod path resolution.
-   *
-   * @param {string} extensionDir - Extension directory name
-   * @param {string} filename - Bundle filename
-   * @returns {string|null} Absolute path to the bundle file
-   */
-  _getExtensionBundlePath(extensionDir, filename) {
-    const { dir } = this.resolveExtensionDir(extensionDir);
-    return dir ? path.join(dir, filename) : null;
-  }
-
-  /**
-   * Load a module using non-webpack require
-   * @param {string} bundlePath - Absolute path to the bundle
-   * @returns {Object} Module exports
-   */
-  requireModule(bundlePath) {
-    // Use non-webpack require to load extensions from filesystem
-    // eslint-disable-next-line no-undef
-    const requireFunc =
-      typeof __non_webpack_require__ === 'function'
-        ? // eslint-disable-next-line no-undef
-          __non_webpack_require__
-        : require;
-
-    // Delete require cache to ensure we get the latest version
-    try {
-      const resolvedPath = requireFunc.resolve(bundlePath);
-      delete requireFunc.cache[resolvedPath];
-    } catch {
-      delete requireFunc.cache[bundlePath];
-    }
-
-    return requireFunc(bundlePath);
-  }
-
-  /**
-   * Environment-specific setup called once by init().
-   * Resolves `cwd` for bundle path resolution and stores the DI container
-   * for use by lifecycle hooks (init, destroy, install, uninstall).
-   * @param {Object} container - DI container
-   */
-  async _onInit(container) {
-    // Store container for extension lifecycle hooks
-    this[SERVER_CONTAINER] = container;
-
-    // Store cwd for bundle path resolution
-    try {
-      const cwd = container.resolve('cwd');
-      await fileExists(cwd);
-      this[SERVER_CWD] = cwd;
-    } catch {
-      if (__DEV__) {
-        console.warn(
-          '[ServerExtensionManager] cwd not accessible, using process.cwd()',
-        );
-      }
-      this[SERVER_CWD] = process.cwd();
-    }
-
-    if (__DEV__) {
-      console.log('[ServerExtensionManager] Server extension manager ready');
-    }
-  }
-
-  /**
-   * Resolve the extension entry point based on manifest
-   * @param {Object} manifest - Extension manifest
-   * @returns {string|null} Entry point filename or null
-   */
-  _resolveEntryPoint(manifest) {
-    // If browser exists, we have a View (server.js) generated from it
-    if (manifest && manifest.browser) return 'server.js';
-    if (manifest && manifest.main) return 'api.js';
-    return null;
-  }
-
-  /**
-   * Run a lifecycle hook from the extension's API module.
-   * Loads the API bundle from disk and calls the named export.
-   *
-   * @param {string} id - Extension key
-   * @param {string} hookName - Hook name (e.g. 'install', 'uninstall')
-   * @param {Object} manifest - Extension manifest (must contain `name` and `main`)
-   * @private
-   */
-  async _runLifecycleHook(id, hookName, manifest) {
-    if (!manifest || !manifest.main) {
-      if (__DEV__) {
-        console.log(
-          `[ServerExtensionManager] Skipping ${hookName} for ${id} (no API entry)`,
-        );
-      }
-      return;
-    }
-
-    if (!manifest.name) return;
-
-    // eslint-disable-next-line no-underscore-dangle
-    const apiBundlePath = this._getExtensionBundlePath(
-      manifest.name,
-      manifest.main,
-    );
-
-    const apiModule = this.requireModule(apiBundlePath);
-    const extensionApi = apiModule.default || apiModule;
-
-    if (extensionApi && typeof extensionApi[hookName] === 'function') {
-      if (__DEV__) {
-        console.log(
-          `[ServerExtensionManager] Running ${hookName} for ${id} (v${manifest.version || '0.0.0'})`,
-        );
-      }
-      await extensionApi[hookName](this.registry, {
-        container: this[SERVER_CONTAINER],
-      });
-      console.log(`[ServerExtensionManager] ${hookName} completed for ${id}`);
-    } else if (__DEV__) {
-      console.log(
-        `[ServerExtensionManager] ${id} has no ${hookName} hook. Skipping.`,
-      );
-    }
-  }
-
-  /**
-   * Execute a server-side lifecycle hook (install/uninstall) with event
-   * emission and error handling.
-   *
-   * @param {string} id - Extension key
-   * @param {string} hookName - 'install' or 'uninstall'
-   * @param {Object} manifest - Extension manifest
-   * @returns {Promise<boolean>}
-   * @private
-   */
-  async _executeLifecycle(id, hookName, manifest) {
-    if (typeof id !== 'string' || id.trim().length === 0) {
-      const error = new Error('Extension ID must be a non-empty string');
-      error.name = 'ExtensionManagerError';
-      await this.emit('extension:validation-failed', { id, error });
-      console.error(error);
-      return false;
-    }
-
-    await this.emit(`extension:${hookName}ing`, { id });
-
-    try {
-      // eslint-disable-next-line no-underscore-dangle
-      await this._runLifecycleHook(id, hookName, manifest);
-      await this.emit(`extension:${hookName}ed`, { id });
-      return true;
-    } catch (error) {
-      console.error(
-        `[ServerExtensionManager] Failed to ${hookName} extension "${id}":`,
-        error,
-      );
-      await this.emit(`extension:${hookName}-failed`, { id, error });
-      throw error;
-    }
-  }
-
-  /**
-   * Server-specific install: loads the API module from disk and runs
-   * the install() lifecycle hook.
-   */
-  async installExtension(id, manifest) {
-    // eslint-disable-next-line no-underscore-dangle
-    return this._executeLifecycle(id, 'install', manifest);
-  }
-
-  /**
-   * Server-specific uninstall: loads the API module from disk and runs
-   * the uninstall() lifecycle hook.
-   */
-  async uninstallExtension(id, manifest) {
-    // eslint-disable-next-line no-underscore-dangle
-    return this._executeLifecycle(id, 'uninstall', manifest);
-  }
-
-  // ---------------------------------------------------------------------------
-  // Module loading — split into focused helpers
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Load the SSR view bundle and inject view routes.
-   * `server.js` is the SSR-compiled version of the browser entry, typically
-   * exporting `{ views, translations }`. The full lifecycle hooks (init,
-   * routes, install) come from the API module, not here.
-   *
-   * @param {string} id - Extension ID
-   * @param {Object} manifest - Extension manifest
-   * @returns {Object|null} Extension module exports or null
-   * @private
-   */
-  _loadViewModule(id, manifest) {
-    if (!manifest || !manifest.browser) return null;
-
-    // eslint-disable-next-line no-underscore-dangle
-    const bundlePath = this._getExtensionBundlePath(
-      path.join(manifest.name, path.dirname(manifest.browser)),
-      'server.js',
-    );
-    if (__DEV__) {
-      console.log(
-        `[ServerExtensionManager] Loading view module for ${id} from ${bundlePath}`,
-      );
-    }
-
-    const viewModule = this.requireModule(bundlePath);
-    const extensionModule = viewModule.default || viewModule;
-
-    // Inject view routes if the extension provides a views() hook
-    try {
-      // eslint-disable-next-line no-underscore-dangle
-      this._injectViewRoutes(id, extensionModule, manifest, 'views');
-    } catch (err) {
-      console.error(
-        `[ServerExtensionManager] Failed to inject view routes for ${id}:`,
-        err.message,
-      );
-      this.emit('extension:error', {
-        id,
-        error: err,
-        phase: 'view-routes',
-      });
-    }
-
-    return extensionModule;
-  }
-
-  /**
-   * Load the API module, call init(), and inject API routes.
-   *
-   * Init and route injection are independent — if init() fails (e.g. because
-   * runProviders hasn't been called yet), routes are still injected so the
-   * API endpoints are reachable.
-   *
-   * @param {string} id - Extension ID
-   * @param {Object} manifest - Extension manifest
-   * @private
-   */
-  async _loadApiModule(id, manifest) {
-    if (!manifest || !manifest.main) return;
-
-    // eslint-disable-next-line no-underscore-dangle
-    const apiBundlePath = this._getExtensionBundlePath(
-      manifest.name,
-      manifest.main,
-    );
-
-    let extensionApi;
-
-    try {
-      const apiModule = this.requireModule(apiBundlePath);
-      extensionApi = apiModule.default || apiModule;
-    } catch (err) {
-      console.error(
-        `[ServerExtensionManager] Failed to load API module for ${id}:`,
-        err.message,
-      );
-      this.emit('extension:error', { id, error: err, phase: 'api-load' });
-      return;
-    }
-
-    // Store entry point so destroy() can run later regardless of init() outcome
-    this[EXTENSION_API_ENTRY_POINTS].set(id, extensionApi);
-
-    // ── Extension init: migrations → models → seeds → init() ──
-    // (non-fatal — routes are injected regardless)
-    try {
-      const container = this[SERVER_CONTAINER];
-      const db = container && container.resolve('db');
-
-      if (__DEV__) {
-        console.log(`[ServerExtensionManager] Booting API for ${id}`);
-      }
-
-      // 1. Migrations (idempotent — skips already-applied)
-      if (db && typeof extensionApi.migrations === 'function') {
-        const migrationCtx = extensionApi.migrations();
-        if (migrationCtx) {
-          await db.connection.runMigrations([
-            { context: migrationCtx, prefix: manifest.name },
-          ]);
-        }
-      }
-
-      // 2. Models — register into global ModelRegistry
-      if (db && typeof extensionApi.models === 'function') {
-        const modelCtx = extensionApi.models();
-        if (modelCtx) {
-          const models = container.resolve('models');
-          if (models && typeof models.discover === 'function') {
-            await models.discover(modelCtx, id);
-            models.associate();
-          }
-        }
-      }
-
-      // 3. Seeds (idempotent — skips already-applied)
-      if (db && typeof extensionApi.seeds === 'function') {
-        const seedCtx = extensionApi.seeds();
-        if (seedCtx) {
-          await db.connection.runSeeds(
-            [{ context: seedCtx, prefix: manifest.name }],
-            { container },
-          );
-        }
-      }
-
-      // 4. Extension boot() hook
-      if (typeof extensionApi.boot === 'function') {
-        await extensionApi.boot({ container, registry: this.registry });
-      }
-    } catch (initErr) {
-      console.error(
-        `[ServerExtensionManager] boot failed for ${id}:`,
-        initErr.message,
-      );
-      this.emit('extension:error', {
-        id,
-        error: initErr,
-        phase: 'api-boot',
-      });
-    }
-
-    // Inject API routes if the extension provides a routes() hook
-    if (extensionApi && typeof extensionApi.routes === 'function') {
-      try {
-        // eslint-disable-next-line no-underscore-dangle
-        this._injectRoutes(id, extensionApi.routes(), 'api');
-      } catch (routeErr) {
-        console.error(
-          `[ServerExtensionManager] Failed to inject API routes for ${id}:`,
-          routeErr.message,
-        );
-        this.emit('extension:error', {
-          id,
-          error: routeErr,
-          phase: 'api-routes',
-        });
-      }
-    }
-
-    return extensionApi;
-  }
-
-  /**
-   * Load extension module (server uses require, not MF containers).
-   * Orchestrates view module loading, API booting, and route injection.
-   *
-   * @param {string} id - Extension ID
-   * @param {string|null} _entryPoint - Resolved entry point filename
-   * @param {Object} manifest - Extension manifest
-   * @returns {Promise<Object|null>} Extension module or null
-   */
-  async _bootstrapExtension(id, _entryPoint, manifest) {
-    const extensionDir = manifest && manifest.name;
-    const currentVersion = (manifest && manifest.version) || '0.0.0';
-
-    if (!extensionDir) {
-      const error = new Error(
-        `Extension name required for server-side extension loading: ${id}`,
-      );
-      error.code = 'EXTENSION_NAME_REQUIRED';
-      error.extensionId = id;
-      throw error;
-    }
-
-    const startTime = Date.now();
-
-    try {
-      // 1. Load SSR view module (server.js — generated from browser entry)
-      // eslint-disable-next-line no-underscore-dangle
-      const viewModule = this._loadViewModule(id, manifest);
-
-      // 2. Load API module (init + routes)
-      // eslint-disable-next-line no-underscore-dangle
-      const apiModule = await this._loadApiModule(id, manifest);
-
-      // Track version
-      this[LOADED_VERSIONS].set(id, currentVersion);
-
-      // Performance monitoring
-      const loadTime = Date.now() - startTime;
-      if (__DEV__) {
-        console.log(
-          `[ServerExtensionManager] Loaded ${id} v${currentVersion} (${loadTime}ms)`,
-        );
-        if (loadTime > 500) {
-          console.warn(
-            `[ServerExtensionManager] Slow load: ${id} took ${loadTime}ms`,
-          );
-        }
-      }
-
-      // Merge view + API modules into a single extension object so
-      // loadExtension → defineExtension gets the complete picture
-      // (e.g. views from SSR bundle, init/routes from API bundle).
-      if (viewModule || apiModule) {
-        return { ...apiModule, ...viewModule };
-      }
-      return null;
-    } catch (err) {
-      const error = new Error(
-        `Failed to load extension "${id}": ${err.message}`,
-      );
-      error.code = err.code || 'EXTENSION_LOAD_FAILED';
-      error.extensionId = id;
-      error.originalError = err;
-
-      console.error(`[ServerExtensionManager] ${error.message}`, {
-        extensionDir,
-        extensionId: id,
-        version: currentVersion,
-        error: err.message,
-        stack: __DEV__ ? err.stack : undefined,
-      });
-
-      throw error;
-    }
-  }
-
-  /**
-   * Server-side refresh override.
-   *
-   * For targeted refreshes (specific extension IDs), reads fresh manifests
-   * directly from disk rather than going through the HTTP self-fetch cycle.
-   * This ensures that newly rebuilt extension bundles are picked up immediately
-   * during dev-mode HMR.
-   *
-   * For full refreshes (no specific IDs), delegates to the base class which
-   * does a complete sync().
-   *
-   * @param  {...string} extensionIds - Extension names/IDs to refresh (empty = all)
-   * @returns {Promise<void>}
-   */
-  async refresh(...extensionIds) {
-    // Full refresh: re-sync from API, then discover dev disk extensions
-    if (extensionIds.length === 0) {
-      await super.refresh();
-
-      // After API sync, scan dev extensions dir for disk-only extensions
-      // not yet registered in the DB (true plug & play for dev)
-      const devDir = this.getDevExtensionPath(this[SERVER_CWD]);
-      if (devDir && fs.existsSync(devDir)) {
-        try {
-          const entries = fs.readdirSync(devDir, { withFileTypes: true });
-          const loadedNames = new Set(
-            Array.from(this[EXTENSION_METADATA].values())
-              .map(m => m.manifest && m.manifest.name)
-              .filter(Boolean),
-          );
-
-          const devExtensions = (
-            await Promise.all(
-              entries
-                .filter(entry => entry.isDirectory())
-                .map(async entry => {
-                  const extDir = path.join(devDir, entry.name);
-                  const manifest = this.readManifest(extDir);
-                  if (!manifest || !manifest.name) return null;
-                  if (loadedNames.has(manifest.name)) return null;
-
-                  if (await fileExists(path.join(extDir, 'extension.css'))) {
-                    manifest.hasClientCss = true;
-                  }
-                  if (await fileExists(path.join(extDir, 'remote.js'))) {
-                    manifest.hasClientScript = true;
-                  }
-
-                  return { ...manifest, fromDisk: true };
-                }),
-            )
-          ).filter(Boolean);
-
-          if (devExtensions.length > 0) {
-            if (__DEV__) {
-              console.log(
-                `[ServerExtensionManager] Discovered dev extensions: ${devExtensions.map(m => m.name).join(', ')}`,
-              );
-            }
-            await Promise.allSettled(
-              devExtensions.map(manifest =>
-                this.loadExtension(manifest.name, manifest),
-              ),
-            );
-          }
-        } catch (err) {
-          if (__DEV__) {
-            console.warn(
-              '[ServerExtensionManager] Dev extension scan failed:',
-              err.message,
-            );
-          }
-        }
-      }
-
-      return;
-    }
-
-    // Build lookup map once: name/id → { id, metadata }  (O(M))
-    const metadataByKey = new Map();
-    for (const [id, metadata] of this[EXTENSION_METADATA].entries()) {
-      metadataByKey.set(id, { id, metadata });
-      const manifestName = metadata.manifest && metadata.manifest.name;
-      if (manifestName && !metadataByKey.has(manifestName)) {
-        metadataByKey.set(manifestName, { id, metadata });
-      }
-    }
-
-    // Resolve each name in O(1)
-    const resolvedEntries = (
-      await Promise.all(
-        extensionIds
-          .map(name => metadataByKey.get(name))
-          .filter(Boolean)
-          .map(async ({ id, metadata }) => {
-            const extensionKey =
-              (metadata.manifest && metadata.manifest.name) || id;
-            const { dir } = this.resolveExtensionDir(extensionKey);
-
-            let freshManifest = dir ? this.readManifest(dir) : null;
-            if (!freshManifest) {
-              freshManifest = metadata.manifest;
-            } else {
-              if (await fileExists(path.join(dir, 'extension.css'))) {
-                freshManifest.hasClientCss = true;
-              }
-              if (await fileExists(path.join(dir, 'remote.js'))) {
-                freshManifest.hasClientScript = true;
-              }
-            }
-
-            return { id, manifest: { ...freshManifest, fromDisk: true } };
-          }),
-      )
-    ).filter(Boolean);
-
-    if (resolvedEntries.length === 0) {
-      if (__DEV__) {
-        console.log(
-          `[ServerExtensionManager] refresh: no matching extensions found for ${extensionIds.join(', ')}`,
-        );
-      }
-      return;
-    }
-
-    if (__DEV__) {
-      console.log(
-        `[ServerExtensionManager] Refreshing: ${resolvedEntries.map(e => e.id).join(', ')}`,
-      );
-    }
-
-    await this.emit('extensions:refreshing', {
-      extensionIds: resolvedEntries.map(e => e.id),
-    });
-
-    // Unload all extensions in parallel (they're independent)
-    await Promise.all(
-      resolvedEntries.map(async ({ id }) => {
-        if (this[ACTIVE_EXTENSIONS].has(id)) {
-          await this.unloadExtension(id);
-        }
-        this[EXTENSION_METADATA].delete(id);
-      }),
-    );
-
-    // Reload all extensions in parallel with fresh disk manifests
-    await Promise.all(
-      resolvedEntries.map(({ id, manifest }) =>
-        this.loadExtension(id, manifest),
-      ),
-    );
-
-    await this.emit('extensions:refreshed', {
-      extensionIds: resolvedEntries.map(e => e.id),
-    });
-
-    if (__DEV__) {
-      console.log('[ServerExtensionManager] Refreshed ✅');
-    }
   }
 }
 

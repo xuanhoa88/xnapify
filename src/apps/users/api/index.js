@@ -57,6 +57,11 @@ async function registerAuthHooks(container) {
 // =============================================================================
 
 export default {
+  migrations: () => migrationsContext,
+  seeds: () => seedsContext,
+  models: () => modelsContext,
+  routes: () => routesContext,
+
   async providers({ container }) {
     container.bind('users:seed_constants', () => SEED_USERS, OWNER_KEY);
 
@@ -78,21 +83,6 @@ export default {
       const searchWorkerPool = attachSearchMethods(pool);
       container.bind('users:search:worker', () => searchWorkerPool, OWNER_KEY);
     }
-  },
-
-  async migrations({ container }) {
-    const db = container.resolve('db');
-    await db.connection.runMigrations(
-      [{ context: migrationsContext, prefix: 'users' }],
-      { container },
-    );
-  },
-
-  async seeds({ container }) {
-    const db = container.resolve('db');
-    await db.connection.runSeeds([{ context: seedsContext, prefix: 'users' }], {
-      container,
-    });
   },
 
   async boot({ container }) {
@@ -124,7 +114,4 @@ export default {
       }
     }
   },
-
-  models: () => modelsContext,
-  routes: () => routesContext,
 };

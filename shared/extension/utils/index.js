@@ -6,5 +6,5 @@
  */
 
 export { default as Hook } from './Hook';
-export { default as ExtensionRegistry, registry } from './Registry';
+export { default as ExtensionRegistry } from './Registry';
 export * from './BaseExtensionManager';

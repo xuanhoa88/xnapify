@@ -770,12 +770,12 @@ Modules are auto-discovered during application bootstrap:
 **Backend:** `src/bootstrap/api/index.js`
 
 - Scans `src/apps/*/api/index.js` for lifecycle hooks
-- Hooks called in order: `providers` → `migrations` → `seeds` → `boot`
+- Hooks called in order: `translations` → `providers` → `migrations` → `models` → `seeds` → `boot` → `routes`
 
 **Frontend:** `src/bootstrap/views.js`
 
 - Scans `src/apps/*/views/index.js` for lifecycle hooks
-- Calls `routes()` to get webpack context for route discovery
+- Hooks called in order: `translations` → `providers` → `boot` → `routes`
 
 **Naming Convention:**
 

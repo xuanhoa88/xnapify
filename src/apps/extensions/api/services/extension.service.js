@@ -15,8 +15,6 @@ import {
   CACHE_TTL,
   ExtensionError,
   resolveExtension,
-  resolveExtensionDir,
-  readExtensionManifest,
   validateManifest,
   validateExtensionNameSafe,
   invalidateCache,
@@ -31,9 +29,10 @@ import {
  * Scan a directory and add extensions to the map
  * @param {string} dirPath - Directory path
  * @param {string} source - Source of extensions ('remote' or 'local')
- * @param {Map} fsExtensionsMap - Map to store extensions
+ * @param {Map} metadata - Map to store extensions
+ * @param {object} extensionManager - Extension manager
  */
-async function scanDirectory(dirPath, source, fsExtensionsMap) {
+async function scanDirectory(dirPath, source, metadata, extensionManager) {
   try {
     if (!dirPath || !fs.existsSync(dirPath)) {
       console.debug(`[manageExtensions] ${source} dir not found: ${dirPath}`);
@@ -48,7 +47,10 @@ async function scanDirectory(dirPath, source, fsExtensionsMap) {
         console.debug(
           `[manageExtensions] Scanning extension: ${dirent.name} (${source})`,
         );
-        const manifest = await readExtensionManifest(dirPath, dirent.name);
+        const manifest = await extensionManager.readManifest(
+          dirPath,
+          dirent.name,
+        );
         if (manifest) {
           // Use manifest.name (the built package name) as map key so it
           // matches the DB key derived from snakeCase(manifest.name).
@@ -61,7 +63,7 @@ async function scanDirectory(dirPath, source, fsExtensionsMap) {
           // Icon from manifest (built-in name or relative path)
           const icon = rsk.icon || null;
 
-          fsExtensionsMap.set(mapKey, {
+          metadata.set(mapKey, {
             ...manifest,
             name: rsk.name || mapKey,
             id: encryptedId,
@@ -97,20 +99,30 @@ export async function manageExtensions({
   queue,
 }) {
   const installedExtensionsDir = extensionManager.getInstalledExtensionsDir();
-  const localExtensionsDir = extensionManager.getDevExtensionPath(cwd);
+  const localExtensionsDir = extensionManager.getDevExtensionsDir(cwd);
 
   const { Extension } = models;
 
   const extensions = [];
-  const fsExtensionsMap = new Map();
+  const metadata = new Map();
 
   // 1. Scan File Systems (Remote & Local)
-  // This populates fsExtensionsMap with what's physically available
-  await scanDirectory(installedExtensionsDir, 'remote', fsExtensionsMap);
+  // This populates metadata with what's physically available
+  await scanDirectory(
+    installedExtensionsDir,
+    'remote',
+    metadata,
+    extensionManager,
+  );
 
   // Only scan local dir if it differs from installed dir to avoid duplicate scanning
   if (localExtensionsDir !== installedExtensionsDir) {
-    await scanDirectory(localExtensionsDir, 'local', fsExtensionsMap);
+    await scanDirectory(
+      localExtensionsDir,
+      'local',
+      metadata,
+      extensionManager,
+    );
   }
 
   // 2. Fetch from DB
@@ -120,12 +132,12 @@ export async function manageExtensions({
 
   // 2a. Process DB extensions
   for (const dbExtension of dbExtensions) {
-    const fsExtension = fsExtensionsMap.get(dbExtension.key);
+    const fsExtension = metadata.get(dbExtension.key);
 
     if (fsExtension) {
       // Extension exists in both DB and FS
       // Merge DB data into FS data. DB is the source of truth for status.
-      fsExtensionsMap.set(dbExtension.key, {
+      metadata.set(dbExtension.key, {
         ...fsExtension,
         ...dbExtension.toJSON(),
         id: dbExtension.id,
@@ -151,19 +163,19 @@ export async function manageExtensions({
   }
 
   // 2b. Process new extensions on disk (Not in DB)
-  for (const [key, fsExtension] of fsExtensionsMap.entries()) {
+  for (const [key, manifest] of metadata.entries()) {
     if (!dbExtensionsMap.has(key)) {
-      fsExtensionsMap.set(key, {
-        ...fsExtension,
+      metadata.set(key, {
+        ...manifest,
         isInstalled: false,
         isActive: false,
-        source: fsExtension.source,
+        source: manifest.source,
       });
     }
   }
 
   // Convert Map to Array
-  extensions.push(...fsExtensionsMap.values());
+  extensions.push(...metadata.values());
 
   // Attach job_status if there are active queue jobs for these extensions
   if (queue) {
@@ -248,7 +260,7 @@ export async function getActiveExtensions({
 
   const { Extension } = models;
   const installedExtensionsDir = extensionManager.getInstalledExtensionsDir();
-  const localExtensionsDir = extensionManager.getDevExtensionPath(cwd);
+  const localExtensionsDir = extensionManager.getDevExtensionsDir(cwd);
 
   // 1. Fetch only active extensions from DB
   const dbExtensions = await Extension.findAll({
@@ -266,17 +278,37 @@ export async function getActiveExtensions({
     // Check Local first (dev override)
     if (
       localExtensionsDir &&
-      (manifest = await readExtensionManifest(localExtensionsDir, key))
+      (manifest = await extensionManager.readManifest(localExtensionsDir, key))
     ) {
       isLocal = true;
     } else if (
       installedExtensionsDir &&
-      (manifest = await readExtensionManifest(installedExtensionsDir, key))
+      (manifest = await extensionManager.readManifest(
+        installedExtensionsDir,
+        key,
+      ))
     ) {
       isLocal = false;
     }
 
     if (manifest) {
+      // Detect built client assets so the client can resolve entry points
+      // without a redundant per-extension API fetch.
+      const baseDir = isLocal ? localExtensionsDir : installedExtensionsDir;
+      const extDir = path.join(baseDir, key);
+      try {
+        await fs.promises.access(path.join(extDir, 'remote.js'));
+        manifest.hasClientScript = true;
+      } catch {
+        /* no remote.js */
+      }
+      try {
+        await fs.promises.access(path.join(extDir, 'extension.css'));
+        manifest.hasClientCss = true;
+      } catch {
+        /* no extension.css */
+      }
+
       // Extension is in DB (Active) AND on Disk
       extensions.push({
         ...manifest,
@@ -353,7 +385,7 @@ export async function deleteExtension(
  * @throws {ExtensionError} If extension ID is invalid or extension not found
  */
 export async function getExtensionById(
-  { extensionManager, cwd, models, cache },
+  { extensionManager, models, cache },
   id,
 ) {
   const cacheKey = `extensions:detail:${id}`;
@@ -376,15 +408,12 @@ export async function getExtensionById(
   }
 
   // Resolve directory and manifest
-  const { dir: resolvedDir, isDevExtension } = resolveExtensionDir(
-    extensionManager,
-    cwd,
-    extensionKey,
-  );
+  const { dir: resolvedDir, isDevExtension } =
+    await extensionManager.resolveExtensionDir(extensionKey);
 
   let manifest = null;
   if (resolvedDir) {
-    manifest = await readExtensionManifest(
+    manifest = await extensionManager.readManifest(
       path.dirname(resolvedDir),
       extensionKey,
     );
@@ -458,16 +487,13 @@ export async function getExtensionById(
  * @param {string} id - Extension ID (DB UUID or encrypted key)
  * @returns {Promise<string|null>} Extension static files directory path or null if invalid
  */
-export async function getExtensionStaticDir(
-  { extensionManager, cwd, models },
-  id,
-) {
+export async function getExtensionStaticDir({ extensionManager, models }, id) {
   const { extensionKey } = await resolveExtension(models, id, {
     required: false,
   });
   if (!extensionKey) return null;
 
-  const { dir } = resolveExtensionDir(extensionManager, cwd, extensionKey);
+  const { dir } = await extensionManager.resolveExtensionDir(extensionKey);
   return dir;
 }
 
@@ -664,16 +690,19 @@ export async function toggleExtensionStatus(
 
   // FS-only extension with no DB record yet — create one
   if (!extension && extensionKey && cwd) {
-    const localExtensionsDir = extensionManager.getDevExtensionPath(cwd);
+    const localExtensionsDir = extensionManager.getDevExtensionsDir(cwd);
     const installedExtensionsDir = extensionManager.getInstalledExtensionsDir();
 
     // Check local/dev first (dev override), then installed
     let manifest = null;
     if (localExtensionsDir) {
-      manifest = await readExtensionManifest(localExtensionsDir, extensionKey);
+      manifest = await extensionManager.readManifest(
+        localExtensionsDir,
+        extensionKey,
+      );
     }
     if (!manifest && installedExtensionsDir) {
-      manifest = await readExtensionManifest(
+      manifest = await extensionManager.readManifest(
         installedExtensionsDir,
         extensionKey,
       );
@@ -703,11 +732,8 @@ export async function toggleExtensionStatus(
   }
 
   // Resolve extension physical directory on disk
-  const { dir: extensionDir, isDevExtension } = resolveExtensionDir(
-    extensionManager,
-    cwd,
-    extension.key,
-  );
+  const { dir: extensionDir, isDevExtension } =
+    await extensionManager.resolveExtensionDir(extension.key);
 
   // Update extension status
   await extension.update({ is_active: isActive });

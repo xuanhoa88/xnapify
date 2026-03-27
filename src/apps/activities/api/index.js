@@ -34,32 +34,18 @@ const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
 // =============================================================================
 
 export default {
+  migrations: () => migrationsContext,
+  seeds: () => seedsContext,
+  models: () => modelsContext,
+  routes: () => routesContext,
+
   async providers({ container }) {
     const workerPool = getActivityWorkerPool(container);
     container.bind('activities:worker', () => workerPool, OWNER_KEY);
-  },
-
-  async migrations({ container }) {
-    const db = container.resolve('db');
-    await db.connection.runMigrations(
-      [{ context: migrationsContext, prefix: 'activities' }],
-      { container },
-    );
-  },
-
-  async seeds({ container }) {
-    const db = container.resolve('db');
-    await db.connection.runSeeds(
-      [{ context: seedsContext, prefix: 'activities' }],
-      { container },
-    );
   },
 
   async boot({ container }) {
     registerActivityHooks(container);
     console.info('[Activity] ✅ Initialized');
   },
-
-  models: () => modelsContext,
-  routes: () => routesContext,
 };

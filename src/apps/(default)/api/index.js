@@ -13,9 +13,9 @@ const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
 // =============================================================================
 
 export default {
+  routes: () => routesContext,
+
   boot() {
     console.info('[Default] ✅ Initialized');
   },
-
-  routes: () => routesContext,
 };

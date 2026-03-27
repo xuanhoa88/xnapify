@@ -9,10 +9,10 @@ When creating or modifying scheduled tasks, enforce these patterns.
 
 ## Registration Pattern
 
-Scheduled tasks are registered during module `init()` via `container.resolve('schedule')`.
+Scheduled tasks are registered during module `boot()` via `container.resolve('schedule')`.
 
 ```javascript
-export async function init(container) {
+export async function boot({ container }) {
   
   const schedule = container.resolve('schedule');
 
