@@ -105,6 +105,22 @@ export class BaseExtensionManager {
   }
 
   /**
+   * Whether any loaded extension has view route adapters.
+   * The server can't load extension view SSR bundles via native require,
+   * so the client uses this to skip hydrateRoot in favour of createRoot.
+   * @returns {boolean}
+   */
+  get hasViewRoutes() {
+    for (const adapters of this[STORED_ADAPTERS].values()) {
+      if (adapters.views) return true;
+    }
+    for (const entry of this[BUFFERED_ROUTES]) {
+      if (entry.type === 'views') return true;
+    }
+    return false;
+  }
+
+  /**
    * Set the view container
    * @param {Object} container - View container
    */

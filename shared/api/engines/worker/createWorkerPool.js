@@ -13,8 +13,12 @@
 import os from 'os';
 
 import { createWebpackContextAdapter } from '@shared/utils/contextAdapter';
+import { createNativeRequire } from '@shared/utils/createNativeRequire';
 
 import { WorkerError } from './errors';
+
+// Use native require to load Piscina
+const moduleRequire = createNativeRequire(__filename);
 
 /**
  * Checks if the current Node.js environment supports Piscina.
@@ -48,12 +52,6 @@ function loadPiscina() {
     // We use eval('require') to completely hide this call from Webpack's
     // static analysis. This ensures the dependency is NOT bundled and
     // is only resolved at runtime if this function is actually executed.
-    // Use __non_webpack_require__ if available (for Webpack environments)
-    const moduleRequire =
-      typeof __non_webpack_require__ === 'function'
-        ? // eslint-disable-next-line no-undef
-          __non_webpack_require__
-        : require;
     Piscina = moduleRequire('piscina');
     return Piscina;
   } catch (error) {

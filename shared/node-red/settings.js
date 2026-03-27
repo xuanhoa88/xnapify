@@ -12,8 +12,12 @@ import path from 'path';
 import merge from 'lodash/merge';
 
 import { createWebpackContextAdapter } from '@shared/utils/contextAdapter';
+import { createNativeRequire } from '@shared/utils/createNativeRequire';
 
 import { createNodeRedAuth, createNodeRedLogoutConfig } from './auth';
+
+// Use native require to load Piscina
+const moduleRequire = createNativeRequire(__filename);
 
 // Auto-discover all custom Node-RED node modules in ./nodes/
 // Each module must export: getNodeJS() and getNodeHTML()
@@ -26,13 +30,6 @@ const clientScriptsContexts = require.context(
   false,
   /\.[cm]?[jt]s$/i,
 );
-
-// Use __non_webpack_require__ if available (for Webpack environments)
-const moduleRequire =
-  typeof __non_webpack_require__ === 'function'
-    ? // eslint-disable-next-line no-undef
-      __non_webpack_require__
-    : require;
 
 /**
  * Safely require a module, returning null if not available

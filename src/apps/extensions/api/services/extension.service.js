@@ -310,10 +310,14 @@ export async function getActiveExtensions({
       }
 
       // Extension is in DB (Active) AND on Disk
+      // Note: manifest.name is the built directory name (e.g. rsk_extension_posts)
+      // and dbExtension.name is the display name (e.g. @rsk-extension/posts).
+      // We preserve manifest.name so resolveExtensionDir works correctly.
       extensions.push({
         ...manifest,
         ...dbExtension.toJSON(),
         id: dbExtension.id,
+        name: manifest.name,
         isActive: true,
         isInstalled: true,
         source: isLocal ? 'local' : 'remote',

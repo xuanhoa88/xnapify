@@ -101,6 +101,49 @@ node --version  # >= 16.14.0
 npm --version   # >= 8.0.0
 ```
 
+## Webpack Output Directories
+
+`BUILD_DIR` env var controls where Webpack writes compiled bundles (defined in `tools/config.js`):
+
+| Environment   | `BUILD_DIR`    | Source                       |
+| ------------- | -------------- | ---------------------------- |
+| Development   | `.cache/dev`   | `.env.development`           |
+| Production    | `build`        | default in `tools/config.js` |
+
+### Directory structure
+
+```
+<BUILD_DIR>/
+├── server.js              ← Server bundle (SSR entry)
+├── vendors.js             ← Server vendor chunk
+├── stats.json             ← Client asset manifest {scripts, stylesheets}
+├── updates/               ← Server HMR hot-update files (dev only)
+├── public/assets/         ← Client bundles + CSS
+└── extensions/            ← Compiled extension bundles
+```
+
+### Key paths
+
+| Artifact           | Path                                   | Config source              |
+| ------------------ | -------------------------------------- | -------------------------- |
+| Server bundle      | `BUILD_DIR/server.js`                  | `serverConfig.output`      |
+| Client assets      | `BUILD_DIR/public/assets/`             | `clientConfig.output`      |
+| Stats manifest     | `BUILD_DIR/stats.json`                 | `StatsWriterPlugin`        |
+| Extension builds   | `BUILD_DIR/<RSK_EXTENSION_LOCAL_PATH>` | `tools/tasks/extension.js` |
+
+### Inspect build output
+
+```bash
+# Dev mode
+ls -la .cache/dev/
+cat .cache/dev/stats.json | python3 -m json.tool
+ls -la .cache/dev/extensions/
+
+# Production mode
+ls -la build/
+cat build/stats.json | python3 -m json.tool
+```
+
 ### VS Code Debugger
 
 Use preconfigured launch configurations:

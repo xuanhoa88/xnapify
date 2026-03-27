@@ -11,6 +11,7 @@ import path from 'path';
 
 import { getTranslations } from '@shared/i18n/loader';
 import { addNamespace, removeNamespace } from '@shared/i18n/utils';
+import { createNativeRequire } from '@shared/utils/createNativeRequire';
 
 import {
   BaseExtensionManager,
@@ -22,6 +23,9 @@ import {
 import { normalizeRouteAdapter } from '../utils/routeAdapter';
 
 import { registry } from './Registry';
+
+// Use native require to load extension modules
+const nativeRequire = createNativeRequire(__filename);
 
 // Symbols — private (internal to server manager)
 const EXTENSION_API_ENTRY_POINTS = Symbol('__rsk.ext.apiEntryPoints__');
@@ -164,24 +168,16 @@ class ServerExtensionManager extends BaseExtensionManager {
    * @returns {Object} Module exports
    */
   requireModule(bundlePath) {
-    // Use non-webpack require to load extensions from filesystem
-    // eslint-disable-next-line no-undef
-    const requireFunc =
-      typeof __non_webpack_require__ === 'function'
-        ? // eslint-disable-next-line no-undef
-          __non_webpack_require__
-        : require;
-
     // Delete require cache to ensure we get the latest version
     try {
-      const resolvedPath = requireFunc.resolve(bundlePath);
-      delete requireFunc.cache[resolvedPath];
+      const resolvedPath = nativeRequire.resolve(bundlePath);
+      delete nativeRequire.cache[resolvedPath];
     } catch {
-      delete requireFunc.cache[bundlePath];
+      delete nativeRequire.cache[bundlePath];
     }
 
     try {
-      return requireFunc(bundlePath);
+      return nativeRequire(bundlePath);
     } catch (error) {
       console.error(
         `[ServerExtensionManager] Failed to load module "${bundlePath}":`,
@@ -233,6 +229,14 @@ class ServerExtensionManager extends BaseExtensionManager {
         path.join(manifest.name, path.dirname(manifest.browser)),
         'server.js',
       );
+      if (!bundlePath) {
+        if (__DEV__) {
+          console.warn(
+            `[ServerExtensionManager] No view bundle path resolved for ${id} (name=${manifest.name}, browser=${manifest.browser})`,
+          );
+        }
+        return null;
+      }
       if (__DEV__) {
         console.log(
           `[ServerExtensionManager] Loading view module for ${id} from ${bundlePath}`,
@@ -240,6 +244,7 @@ class ServerExtensionManager extends BaseExtensionManager {
       }
 
       const viewModule = this.requireModule(bundlePath);
+      if (!viewModule) return null;
       const extensionView = viewModule.default || viewModule;
 
       if (__DEV__) {
@@ -278,7 +283,7 @@ class ServerExtensionManager extends BaseExtensionManager {
       // eslint-disable-next-line no-underscore-dangle
       const viewModule = await this._loadViewModule(id, manifest);
 
-      if (__DEV__) {
+      if (viewModule && __DEV__) {
         const version = (manifest && manifest.version) || '0.0.0';
         console.log(
           `[ServerExtensionManager] Loaded view for ${id} v${version}`,
