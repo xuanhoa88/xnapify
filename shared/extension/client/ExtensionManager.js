@@ -100,18 +100,22 @@ class ClientExtensionManager extends BaseExtensionManager {
   }
 
   /**
-   * Eagerly activate namespaces for module-type extensions so boot() runs
-   * immediately — injecting Redux reducers and registering sidebar menus.
+   * Eagerly activate namespaces for extensions so boot() runs
+   * immediately — injecting Redux reducers, registering sidebar menus,
+   * and registering slots for plugin-type extensions.
    * Server skips this (inherits no-op); SSR activates per-request via onRouteInit.
    */
   async _postLoad(id, ext, manifest) {
-    const hasRoutes = typeof ext.routes === 'function';
-    if (!hasRoutes) return;
-
     const subs =
       manifest.rsk && Array.isArray(manifest.rsk.subscribe)
         ? manifest.rsk.subscribe
         : [];
+
+    // Module-type extensions (with routes) auto-subscribe to '*' if no
+    // explicit subscribe is declared (handled in Registry.defineExtension).
+    // Plugin-type extensions (no routes) rely solely on their subscribe list.
+    if (subs.length === 0) return;
+
     const results = await Promise.allSettled(
       subs.map(ns => this.ensureViewNamespaceActive(ns)),
     );
