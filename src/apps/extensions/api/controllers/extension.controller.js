@@ -268,7 +268,9 @@ export const updateExtensionStatus = async (req, res) => {
 
     const ws = container.resolve('ws');
     ws.sendToPublicChannel('extension:updated', {
-      type: result.is_active ? 'EXTENSION_ACTIVATED' : 'EXTENSION_DEACTIVATED',
+      type: result.is_active
+        ? 'EXTENSION_ACTIVATING'
+        : 'EXTENSION_DEACTIVATING',
       extensionId: extensionData.key || id,
       data: { manifest: extensionData },
     });

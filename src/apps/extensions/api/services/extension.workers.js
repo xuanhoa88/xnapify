@@ -189,16 +189,15 @@ async function handleToggleJob(container, job) {
 
     if (extensionManager) {
       if (isActive) {
-        await extensionManager.reloadExtension(extensionKey);
-        const metadata = extensionManager.getExtensionMetadata(extensionKey);
-        if (
-          metadata &&
-          metadata.manifest &&
-          !extensionManager.isExtensionLoaded(extensionKey)
-        ) {
-          await extensionManager.emit('extension:loaded', {
-            id: extensionKey,
-          });
+        if (extensionManager.isExtensionLoaded(extensionKey)) {
+          await extensionManager.reloadExtension(extensionKey);
+        } else if (extensionDir) {
+          // Extension was never loaded — read manifest from disk
+          const manifest = await extensionManager.readManifest(extensionDir);
+          if (manifest) {
+            manifest.fromDisk = true;
+            await extensionManager.loadExtension(extensionKey, manifest);
+          }
         }
       } else {
         if (extensionManager.isExtensionLoaded(extensionKey)) {
