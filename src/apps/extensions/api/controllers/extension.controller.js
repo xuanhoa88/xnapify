@@ -266,15 +266,6 @@ export const updateExtensionStatus = async (req, res) => {
     const extensionData =
       typeof extension.toJSON === 'function' ? extension.toJSON() : extension;
 
-    const ws = container.resolve('ws');
-    ws.sendToPublicChannel('extension:updated', {
-      type: result.is_active
-        ? 'EXTENSION_ACTIVATING'
-        : 'EXTENSION_DEACTIVATING',
-      extensionId: extensionData.key || id,
-      data: { manifest: extensionData },
-    });
-
     return http.sendSuccess(res, { extension: extensionData });
   } catch (error) {
     return http.sendServerError(
