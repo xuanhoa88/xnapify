@@ -221,7 +221,7 @@ export const uploadExtension = async (req, res) => {
     const ws = container.resolve('ws');
     ws.sendToPublicChannel('extension:updated', {
       type: 'EXTENSION_INSTALLED',
-      extensionId: extensionData.key || extensionData.id,
+      extensionId: extensionData.key,
       data: { manifest: extensionData },
     });
 

@@ -128,7 +128,7 @@ export async function manageExtensions({
       metadata.set(dbExtension.key, {
         ...fsExtension,
         ...dbExtension.toJSON(),
-        id: dbExtension.id,
+        id: fsExtension.id,
         isActive: dbExtension.is_active,
         isInstalled: true,
         source: fsExtension.source === 'local' ? 'db+local' : 'db+remote',
@@ -178,8 +178,7 @@ export async function manageExtensions({
         ['pending', 'active', 'delayed'].includes(j.status),
       );
 
-      // Map extensionId/extensionKey → specific job_status
-      const statusByExtensionId = new Map();
+      // Map extensionKey → specific job_status
       const statusByExtensionKey = new Map();
 
       for (const job of busyJobs) {
@@ -192,8 +191,6 @@ export async function manageExtensions({
           status = 'INSTALLING';
         }
 
-        if (job.data.extensionId)
-          statusByExtensionId.set(job.data.extensionId, status);
         if (job.data.extensionKey)
           statusByExtensionKey.set(job.data.extensionKey, status);
         if (job.data.extensionDir)
@@ -205,7 +202,7 @@ export async function manageExtensions({
 
       for (const p of extensions) {
         const status =
-          statusByExtensionId.get(p.id) ||
+          statusByExtensionKey.get(p.id) ||
           statusByExtensionKey.get(p.key) ||
           statusByExtensionKey.get(p.name);
         if (status) {
@@ -357,7 +354,7 @@ export async function deleteExtension(
     await extension.destroy();
   }
 
-  if (cache && extension) await invalidateCache(cache, extension.id);
+  if (cache && extension) await invalidateCache(cache, extension.key);
 
   return true;
 }
@@ -439,7 +436,7 @@ export async function getExtensionById(
         await dbExtension.update({ is_active: false });
 
         // Invalidate cache so stale data isn't served
-        if (cache) await invalidateCache(cache, dbExtension.id);
+        if (cache) await invalidateCache(cache, extensionKey);
 
         // Flag it so the frontend can display a warning
         manifest.isTampered = true;
@@ -747,7 +744,7 @@ export async function upgradeExtension(
 
   if (hook) {
     hook('admin:extensions').emit('upgraded', {
-      extension_id: extension.id,
+      extension_id: extension.key,
       options: data,
       actor_id: actorId,
     });
