@@ -65,9 +65,8 @@ async function handleInstallJob(container, job) {
       });
     }
 
-    notifyExtensionChange(container, 'EXTENSION_INSTALLED', extensionKey);
     job.updateProgress(100);
-    return { success: true };
+    return { success: true, notifyType: 'EXTENSION_INSTALLED', extensionKey };
   } catch (err) {
     console.error(`[ExtensionWorker] Install failed for ${extensionKey}:`, err);
     throw err;
@@ -132,8 +131,7 @@ async function handleDeleteJob(container, job) {
       });
     }
 
-    notifyExtensionChange(container, 'EXTENSION_UNINSTALLED', extensionKey);
-    return { success: true };
+    return { success: true, notifyType: 'EXTENSION_UNINSTALLED', extensionKey };
   } catch (err) {
     console.error(`[ExtensionWorker] Delete failed for ${extensionKey}:`, err);
     throw err;
@@ -218,12 +216,11 @@ async function handleToggleJob(container, job) {
       });
     }
 
-    notifyExtensionChange(
-      container,
-      isActive ? 'EXTENSION_ACTIVATED' : 'EXTENSION_DEACTIVATED',
+    return {
+      success: true,
+      notifyType: isActive ? 'EXTENSION_ACTIVATED' : 'EXTENSION_DEACTIVATED',
       extensionKey,
-    );
-    return { success: true };
+    };
   } catch (err) {
     console.error(`[ExtensionWorker] Toggle failed for ${extensionKey}:`, err);
     throw err;
@@ -248,4 +245,33 @@ export function registerExtensionWorkers(container) {
   queueChannel.on('install', job => handleInstallJob(container, job));
   queueChannel.on('delete', job => handleDeleteJob(container, job));
   queueChannel.on('toggle', job => handleToggleJob(container, job));
+
+  // Send WS notifications AFTER job is fully processed and removed from queue.
+  // This prevents a race where the frontend re-fetches the list while the job
+  // is still active, causing the server to return a stale job_status.
+  if (queueChannel.queue) {
+    queueChannel.queue.on('completed', (job, result) => {
+      if (result && result.notifyType && result.extensionKey) {
+        notifyExtensionChange(
+          container,
+          result.notifyType,
+          result.extensionKey,
+        );
+      }
+    });
+    queueChannel.queue.on('failed', job => {
+      const { extensionKey, isActive } = job.data || {};
+      if (extensionKey) {
+        const type =
+          job.name === 'toggle'
+            ? isActive
+              ? 'EXTENSION_ACTIVATED'
+              : 'EXTENSION_DEACTIVATED'
+            : job.name === 'delete'
+              ? 'EXTENSION_UNINSTALLED'
+              : 'EXTENSION_INSTALLED';
+        notifyExtensionChange(container, type, extensionKey);
+      }
+    });
+  }
 }
