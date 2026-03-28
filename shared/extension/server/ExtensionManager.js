@@ -195,11 +195,11 @@ class ServerExtensionManager extends BaseExtensionManager {
    * @private
    */
   async _requireApiModule(manifest) {
-    if (!manifest || !manifest.main || !manifest.name) return null;
+    if (!manifest || !manifest.main || !manifest.id) return null;
 
     // eslint-disable-next-line no-underscore-dangle
     const bundlePath = await this._getExtensionBundlePath(
-      manifest.name,
+      manifest.id,
       manifest.main,
     );
     if (!bundlePath) return null;
@@ -223,11 +223,11 @@ class ServerExtensionManager extends BaseExtensionManager {
    */
   async _loadViewModule(id, manifest) {
     try {
-      if (!manifest || !manifest.browser || !manifest.name) return null;
+      if (!manifest || !manifest.browser || !manifest.id) return null;
 
       // eslint-disable-next-line no-underscore-dangle
       const bundlePath = await this._getExtensionBundlePath(
-        path.join(manifest.name, path.dirname(manifest.browser)),
+        path.join(manifest.id, path.dirname(manifest.browser)),
         'server.js',
       );
       if (!bundlePath) {
