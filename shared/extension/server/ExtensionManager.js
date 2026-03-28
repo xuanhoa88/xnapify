@@ -829,11 +829,10 @@ class ServerExtensionManager extends BaseExtensionManager {
     if (!extensionKey) return { dir: null, isDevExtension: false };
 
     try {
-      const baseExtensionDir = extensionKey.split(path.sep)[0] || extensionKey;
-
+      // 1. Check dev/local dir
       if (this[SERVER_CWD]) {
         const devBaseDir = this.getDevExtensionsDir(this[SERVER_CWD]);
-        if (devBaseDir && (await fileExists(devBaseDir, baseExtensionDir))) {
+        if (devBaseDir && (await fileExists(devBaseDir, extensionKey))) {
           return {
             dir: path.join(devBaseDir, extensionKey),
             isDevExtension: true,
@@ -841,8 +840,9 @@ class ServerExtensionManager extends BaseExtensionManager {
         }
       }
 
+      // 3. Check installed dir
       const baseDir = this.getInstalledExtensionsDir();
-      if (baseDir && (await fileExists(baseDir, baseExtensionDir))) {
+      if (baseDir && (await fileExists(baseDir, extensionKey))) {
         return { dir: path.join(baseDir, extensionKey), isDevExtension: false };
       }
     } catch (err) {

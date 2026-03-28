@@ -55,13 +55,14 @@ async function scanDirectory(dirPath, source, metadata, extensionManager) {
     const manifest = await extensionManager.readManifest(dirPath, dirent.name);
     if (!manifest) return;
 
-    // Use the filesystem directory name as map key — it matches the DB
-    // Extension.key column (snakeCase'd manifest name).
-    const mapKey = dirent.name;
+    // Derive a stable map key that matches the DB Extension.key column.
+    // Built extensions have manifest.id injected; dev extensions derive it
+    // from the manifest name (snakeCase).
+    const mapKey = manifest.id || snakeCase(manifest.name) || dirent.name;
     const rsk = manifest.rsk || {};
 
     metadata.set(mapKey, {
-      id: manifest.id || mapKey,
+      id: mapKey,
       name: manifest.name || mapKey,
       version: manifest.version || '0.0.0',
       description: manifest.description || '',
@@ -233,7 +234,7 @@ export async function getActiveExtensions({
   extensionManager,
   models,
   cache,
-  cwd,
+  _cwd,
 }) {
   const ACTIVE_EXTENSIONS_CACHE_KEY = 'extensions:list:active';
 
@@ -244,8 +245,6 @@ export async function getActiveExtensions({
   }
 
   const { Extension } = models;
-  const installedExtensionsDir = extensionManager.getInstalledExtensionsDir();
-  const localExtensionsDir = extensionManager.getDevExtensionsDir(cwd);
 
   // 1. Fetch only active extensions from DB
   const dbExtensions = await Extension.findAll({
@@ -257,56 +256,38 @@ export async function getActiveExtensions({
   // 2. Process each active extension
   for (const dbExtension of dbExtensions) {
     const { key } = dbExtension;
-    let manifest = null;
-    let isLocal = false;
 
-    // Check Local first (dev override)
-    if (
-      localExtensionsDir &&
-      (manifest = await extensionManager.readManifest(localExtensionsDir, key))
-    ) {
-      isLocal = true;
-    } else if (
-      installedExtensionsDir &&
-      (manifest = await extensionManager.readManifest(
-        installedExtensionsDir,
-        key,
-      ))
-    ) {
-      isLocal = false;
-    }
-
-    if (manifest) {
-      // Detect built client assets so the client can resolve entry points
-      // without a redundant per-extension API fetch.
-      const baseDir = isLocal ? localExtensionsDir : installedExtensionsDir;
-      const extDir = path.join(baseDir, key);
-      if (await pathExists(path.join(extDir, 'remote.js'))) {
-        manifest.hasClientScript = true;
-      }
-      if (await pathExists(path.join(extDir, 'extension.css'))) {
-        manifest.hasClientCss = true;
-      }
-
-      // Extension is in DB (Active) AND on Disk
-      // Note: manifest.name is the built directory name (e.g. rsk_extension_posts)
-      // and dbExtension.name is the display name (e.g. @rsk-extension/posts).
-      // We preserve manifest.name so resolveExtensionDir works correctly.
-      extensions.push({
-        ...manifest,
-        ...dbExtension.toJSON(),
-        id: manifest.id || dbExtension.key,
-        name: manifest.name,
-        isActive: true,
-        isInstalled: true,
-        source: isLocal ? 'local' : 'remote',
-      });
-    } else {
-      // Logic decision: If active in DB but missing on disk, do we return it?
-      // For frontend loader, a missing extension cannot be loaded.
-      // So we skip it.
+    // Resolve the actual FS directory — handles dev dir name mismatches
+    const { dir: extDir, isDevExtension } =
+      await extensionManager.resolveExtensionDir(key);
+    if (!extDir) {
       console.warn(`Active extension ${key} missing from disk.`);
+      continue;
     }
+
+    const manifest = await extensionManager.readManifest(extDir);
+    if (!manifest) {
+      console.warn(`Active extension ${key} missing manifest at ${extDir}.`);
+      continue;
+    }
+
+    // Detect built client assets
+    if (await pathExists(path.join(extDir, 'remote.js'))) {
+      manifest.hasClientScript = true;
+    }
+    if (await pathExists(path.join(extDir, 'extension.css'))) {
+      manifest.hasClientCss = true;
+    }
+
+    extensions.push({
+      ...manifest,
+      ...dbExtension.toJSON(),
+      id: manifest.id || dbExtension.key,
+      name: manifest.name,
+      isActive: true,
+      isInstalled: true,
+      source: isDevExtension ? 'local' : 'remote',
+    });
   }
 
   // Update Cache
