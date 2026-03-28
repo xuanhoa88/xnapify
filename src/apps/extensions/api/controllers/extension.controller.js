@@ -256,7 +256,6 @@ export const updateExtensionStatus = async (req, res) => {
       },
     );
 
-    // Convert to plain object (toggle is synchronous — no background job)
     const extensionData =
       typeof extension.toJSON === 'function' ? extension.toJSON() : extension;
 

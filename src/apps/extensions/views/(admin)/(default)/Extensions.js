@@ -16,6 +16,7 @@ import * as Box from '@shared/renderer/components/Box';
 import Button from '@shared/renderer/components/Button';
 import ConfirmModal from '@shared/renderer/components/ConfirmModal';
 import Icon from '@shared/renderer/components/Icon';
+import { useDebounce } from '@shared/renderer/components/InfiniteScroll';
 import Loader from '@shared/renderer/components/Loader';
 import { useRbac } from '@shared/renderer/components/Rbac';
 import Table from '@shared/renderer/components/Table';
@@ -71,6 +72,7 @@ function Extensions() {
 
   // Search & filter state
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const [activeFilter, setActiveFilter] = useState('all');
   const [activeDropdownId, setActiveDropdownId] = useState(null);
   const [actionMap, setActionMap] = useState({});
@@ -93,14 +95,26 @@ function Extensions() {
     if (!ws) return;
     const controller = new AbortController();
     const { signal } = controller;
+    let debounceTimer = null;
+
+    const debouncedFetch = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      return new Promise(resolve => {
+        debounceTimer = setTimeout(async () => {
+          if (!signal.aborted) {
+            await dispatch(fetchExtensions({ signal }));
+          }
+          resolve();
+        }, 500);
+      });
+    };
 
     const handler = async data => {
       if (!data || signal.aborted) return;
       switch (data.type) {
         case 'EXTENSION_INSTALLED':
-        case 'EXTENSION_UPDATED':
-        case 'EXTENSION_UNINSTALLED': {
-          await dispatch(fetchExtensions({ signal }));
+        case 'EXTENSION_UPDATED': {
+          await debouncedFetch();
           if (signal.aborted) return;
           if (data.extensionId) {
             setActionMap(prev => {
@@ -110,10 +124,51 @@ function Extensions() {
               return next;
             });
           }
+          if (data.type === 'EXTENSION_INSTALLED') {
+            dispatch(
+              showSuccessMessage({
+                message: t(
+                  'admin:extensions.installSuccess',
+                  'Extension installed successfully.',
+                ),
+              }),
+            );
+          }
+          if (data.type === 'EXTENSION_UPDATED') {
+            dispatch(
+              showSuccessMessage({
+                message: t(
+                  'admin:extensions.upgradeSuccess',
+                  'Extension upgraded successfully.',
+                ),
+              }),
+            );
+          }
+          break;
+        }
+        case 'EXTENSION_UNINSTALLED': {
+          await debouncedFetch();
+          if (signal.aborted) return;
+          if (data.extensionId) {
+            setActionMap(prev => {
+              if (!(data.extensionId in prev)) return prev;
+              const next = { ...prev };
+              delete next[data.extensionId];
+              return next;
+            });
+          }
+          dispatch(
+            showSuccessMessage({
+              message: t(
+                'admin:extensions.uninstallSuccess',
+                'Extension uninstalled successfully.',
+              ),
+            }),
+          );
           break;
         }
         case 'EXTENSION_ACTIVATED': {
-          await dispatch(fetchExtensions({ signal }));
+          await debouncedFetch();
           if (signal.aborted) return;
           if (data.extensionId) {
             setActionMap(prev => {
@@ -134,7 +189,7 @@ function Extensions() {
           break;
         }
         case 'EXTENSION_DEACTIVATED': {
-          await dispatch(fetchExtensions({ signal }));
+          await debouncedFetch();
           if (signal.aborted) return;
           if (data.extensionId) {
             setActionMap(prev => {
@@ -155,7 +210,7 @@ function Extensions() {
           break;
         }
         case 'EXTENSION_TAMPERED': {
-          await dispatch(fetchExtensions({ signal }));
+          await debouncedFetch();
           if (signal.aborted) return;
           dispatch(
             showWarningMessage({
@@ -173,6 +228,7 @@ function Extensions() {
     };
     ws.on('extension:updated', handler);
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
       controller.abort();
       ws.off('extension:updated', handler);
     };
@@ -199,15 +255,8 @@ function Extensions() {
       }));
       try {
         await dispatch(uninstallExtension(item.id)).unwrap();
-        dispatch(
-          showSuccessMessage({
-            message: t(
-              'admin:extensions.uninstallSuccess',
-              'Extension uninstalled successfully.',
-            ),
-          }),
-        );
-      } finally {
+        // Success toast deferred to WebSocket EXTENSION_UNINSTALLED handler
+      } catch {
         setActionMap(prev => {
           const next = { ...prev };
           delete next[item.id];
@@ -293,15 +342,8 @@ function Extensions() {
     if (!file) return;
     await dispatch(uploadExtension(file)).unwrap();
     pendingFileRef.current = null;
-    dispatch(
-      showSuccessMessage({
-        message: t(
-          'admin:extensions.installSuccess',
-          'Extension installed successfully.',
-        ),
-      }),
-    );
-  }, [dispatch, t]);
+    // Success toast deferred to WebSocket EXTENSION_INSTALLED handler
+  }, [dispatch]);
 
   const handleInstallCancel = useCallback(() => {
     pendingFileRef.current = null;
@@ -309,15 +351,24 @@ function Extensions() {
 
   const handleUpgrade = useCallback(
     async extension => {
+      setActionMap(prev => ({
+        ...prev,
+        [extension.id]: t('admin:common.upgrading', 'Upgrading...'),
+      }));
       try {
         await dispatch(
           upgradeExtension({ id: extension.id, data: {} }),
         ).unwrap();
-      } catch (error) {
-        console.error('Upgrade failed', error);
+        // Success toast deferred to WebSocket EXTENSION_UPDATED handler
+      } catch {
+        setActionMap(prev => {
+          const next = { ...prev };
+          delete next[extension.id];
+          return next;
+        });
       }
     },
-    [dispatch],
+    [dispatch, t],
   );
 
   // Count per tab for badges
@@ -344,9 +395,9 @@ function Extensions() {
       result = result.filter(p => !p.is_active);
     }
 
-    // Apply search
-    if (search) {
-      const lowerSearch = toLower(search);
+    // Apply search (debounced to avoid filtering on every keystroke)
+    if (debouncedSearch) {
+      const lowerSearch = toLower(debouncedSearch);
       result = result.filter(p => {
         return (
           (p.name && toLower(p.name).indexOf(lowerSearch) !== -1) ||
@@ -356,7 +407,7 @@ function Extensions() {
     }
 
     return result;
-  }, [extensions, activeFilter, search]);
+  }, [extensions, activeFilter, debouncedSearch]);
 
   if (!initialized || (loading && extensions.length === 0)) {
     return (
