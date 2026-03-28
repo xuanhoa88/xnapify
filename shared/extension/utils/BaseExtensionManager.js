@@ -847,7 +847,54 @@ export class BaseExtensionManager {
   }
 
   // ---------------------------------------------------------------------------
-  // 9. Namespace Management
+  // 9. Scoped Registry
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Create a scoped registry proxy for an extension.
+   *
+   * Auto-injects `extensionId` into `registerSlot()` and `registerHook()`
+   * calls so that all registrations are automatically tracked for cleanup
+   * when the extension is unloaded via `_clearExtensionRegistrations()`.
+   *
+   * Extension authors call `registry.registerSlot(slotId, Component, opts)`
+   * without needing to know their own ID — the proxy handles it.
+   *
+   * @param {string} extensionId - Extension ID to scope registrations to
+   * @returns {Object} Proxy that delegates to the real registry
+   * @private
+   */
+  _scopedRegistry(extensionId) {
+    const real = this.registry;
+    return {
+      // Proxy registerSlot — inject extensionId for tracking
+      registerSlot(slotId, component, options = {}) {
+        return real.registerSlot(slotId, component, {
+          ...options,
+          extensionId,
+        });
+      },
+
+      // Proxy registerHook — inject extensionId for tracking
+      registerHook(hookId, callback) {
+        return real.registerHook(hookId, callback, extensionId);
+      },
+
+      // All other methods pass through unchanged
+      unregisterSlot: real.unregisterSlot.bind(real),
+      unregisterHook: real.unregisterHook.bind(real),
+      getSlotEntries: real.getSlotEntries.bind(real),
+      executeHook: real.executeHook.bind(real),
+      executeHookParallel: real.executeHookParallel.bind(real),
+      hasHook: real.hasHook.bind(real),
+      subscribe: real.subscribe.bind(real),
+      notify: real.notify.bind(real),
+      createPipeline: real.createPipeline.bind(real),
+    };
+  }
+
+  // ---------------------------------------------------------------------------
+  // 10. Namespace Management
   // ---------------------------------------------------------------------------
 
   /**
@@ -856,15 +903,15 @@ export class BaseExtensionManager {
    * @param {string} ns - Namespace to ensure is active
    */
   async ensureViewNamespaceActive(ns) {
-    if (this.isViewNamespaceActive(ns)) {
-      if (__DEV__) {
-        console.log(`[ExtensionManager] Namespace already active: ${ns}`);
-      }
-      return;
-    }
     if (__DEV__) {
-      console.log(`[ExtensionManager] Activating namespace: ${ns}`);
+      console.log(`[ExtensionManager] Ensuring namespace active: ${ns}`);
     }
+    // Always delegate to activateViewNamespace which internally filters
+    // to only pending (unactivated) extensions. The previous
+    // isViewNamespaceActive guard was a false optimization — it treated
+    // a namespace as "fully active" if ANY extension (e.g., a wildcard '*'
+    // subscriber) was registered, preventing newly loaded plugins from
+    // booting.
     await this.activateViewNamespace(ns);
   }
 
@@ -949,8 +996,12 @@ export class BaseExtensionManager {
       for (const def of pending) {
         if (typeof def.providers === 'function') {
           try {
-            // eslint-disable-next-line no-await-in-loop
-            await def.providers({ ...context, registry: this.registry });
+            // eslint-disable-next-line no-await-in-loop,no-underscore-dangle
+            await def.providers({
+              ...context,
+              // eslint-disable-next-line no-underscore-dangle
+              registry: this._scopedRegistry(def.id),
+            });
           } catch (error) {
             console.error(
               `[ExtensionManager] Failed to run providers for ${def.id}:`,
@@ -964,8 +1015,12 @@ export class BaseExtensionManager {
       for (const def of pending) {
         if (typeof def.boot === 'function') {
           try {
-            // eslint-disable-next-line no-await-in-loop
-            await def.boot({ ...context, registry: this.registry });
+            // eslint-disable-next-line no-await-in-loop,no-underscore-dangle
+            await def.boot({
+              ...context,
+              // eslint-disable-next-line no-underscore-dangle
+              registry: this._scopedRegistry(def.id),
+            });
           } catch (error) {
             console.error(
               `[ExtensionManager] Failed to boot extension ${def.id}:`,

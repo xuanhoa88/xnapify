@@ -473,8 +473,10 @@ class ClientExtensionManager extends BaseExtensionManager {
     const ext = this[ACTIVE_EXTENSIONS].get(loadedId);
     if (ext && typeof ext.shutdown === 'function') {
       try {
+        // Pass registry in context — symmetric with boot() which receives
+        // { ...context, registry } from activateViewNamespace.
         // eslint-disable-next-line no-underscore-dangle
-        await ext.shutdown(this._hookContext());
+        await ext.shutdown({ ...this._hookContext(), registry: this.registry });
       } catch (error) {
         console.error(
           `[ClientExtensionManager] Failed to shutdown extension ${loadedId}:`,
