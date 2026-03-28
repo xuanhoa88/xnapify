@@ -137,7 +137,7 @@ class ExtensionRegistry {
 
   /**
    * Register an extension definition using manifest metadata
-   * Namespaces and identity come from the manifest's rsk.subscribe, rsk.name, and description fields.
+   * Namespaces and identity come from the manifest's rsk.subscribe, name, and description fields.
    * @param {Object} definition - Extension definition object (boot, shutdown, translations)
    * @param {Object} context - Extension context
    * @param {Object} manifest - Extension manifest from package.json

@@ -26,7 +26,7 @@ import {
  * @param {Object} job - Queue job
  */
 async function handleInstallJob(container, job) {
-  const { extensionDir, extensionId, extensionKey, actorId } = job.data;
+  const { extensionDir, extensionKey, actorId } = job.data;
 
   try {
     const extensionManager = container.resolve('extension');
@@ -34,42 +34,42 @@ async function handleInstallJob(container, job) {
 
     job.updateProgress(10);
     await installExtensionDependencies(extensionDir, {
-      name: extensionKey || extensionId,
+      name: extensionKey,
     });
     job.updateProgress(50);
 
     // Compute checksum in worker thread (avoids blocking event loop)
     const checksum = await workerPool.computeChecksum(extensionDir);
     const { Extension } = container.resolve('models');
-    await Extension.update({ checksum }, { where: { id: extensionId } });
+    await Extension.update({ checksum }, { where: { key: extensionKey } });
     job.updateProgress(60);
 
     if (extensionManager) {
-      await extensionManager.reloadExtension(extensionId);
-      const metadata = extensionManager.getExtensionMetadata(extensionId);
+      await extensionManager.reloadExtension(extensionKey);
+      const metadata = extensionManager.getExtensionMetadata(extensionKey);
       if (
         metadata &&
         metadata.manifest &&
-        !extensionManager.isExtensionLoaded(extensionId)
+        !extensionManager.isExtensionLoaded(extensionKey)
       ) {
-        await extensionManager.emit('extension:loaded', { id: extensionId });
+        await extensionManager.emit('extension:loaded', { id: extensionKey });
       }
     }
     job.updateProgress(90);
 
     if (hook) {
       hook('admin:extensions').emit('installed', {
-        extension_id: extensionId,
+        extension_id: extensionKey,
         actor_id: actorId,
         data: { path: extensionDir, checksum },
       });
     }
 
-    notifyExtensionChange(container, 'EXTENSION_INSTALLED', extensionId);
+    notifyExtensionChange(container, 'EXTENSION_INSTALLED', extensionKey);
     job.updateProgress(100);
     return { success: true };
   } catch (err) {
-    console.error(`[ExtensionWorker] Install failed for ${extensionId}:`, err);
+    console.error(`[ExtensionWorker] Install failed for ${extensionKey}:`, err);
     throw err;
   }
 }
@@ -81,7 +81,7 @@ async function handleInstallJob(container, job) {
  * @param {Object} job - Queue job
  */
 async function handleDeleteJob(container, job) {
-  const { extensionId, extensionKey, actorId } = job.data;
+  const { extensionKey, actorId } = job.data;
 
   try {
     const cwd = container.resolve('cwd');
@@ -89,11 +89,13 @@ async function handleDeleteJob(container, job) {
     const hook = container.resolve('hook');
     const { Extension } = container.resolve('models');
 
-    if (extensionManager && extensionId) {
-      if (extensionManager.isExtensionLoaded(extensionId)) {
-        await extensionManager.unloadExtension(extensionId);
+    if (extensionManager) {
+      if (extensionManager.isExtensionLoaded(extensionKey)) {
+        await extensionManager.unloadExtension(extensionKey);
       } else {
-        await extensionManager.emit('extension:unloaded', { id: extensionId });
+        await extensionManager.emit('extension:unloaded', {
+          id: extensionKey,
+        });
       }
     }
 
@@ -112,38 +114,28 @@ async function handleDeleteJob(container, job) {
             !relative.startsWith('..') &&
             !path.isAbsolute(relative)
           ) {
-            if (fs.existsSync(pDir)) {
-              await fs.promises.rm(pDir, { recursive: true, force: true });
-            }
+            await fs.promises.rm(pDir, { recursive: true, force: true });
           }
         } catch {
-          // Non-fatal — directory will be removed next
+          // Non-fatal — directory may not exist
         }
       }
     }
 
-    if (extensionId) {
-      await Extension.destroy({ where: { id: extensionId } });
-    }
+    await Extension.destroy({ where: { key: extensionKey } });
+
     if (hook) {
       hook('admin:extensions').emit('deleted', {
-        extension_id: extensionId || extensionKey,
+        extension_id: extensionKey,
         actor_id: actorId,
         data: { key: extensionKey },
       });
     }
 
-    notifyExtensionChange(
-      container,
-      'EXTENSION_UNINSTALLED',
-      extensionId || extensionKey,
-    );
+    notifyExtensionChange(container, 'EXTENSION_UNINSTALLED', extensionKey);
     return { success: true };
   } catch (err) {
-    console.error(
-      `[ExtensionWorker] Delete failed for ${extensionId || extensionKey}:`,
-      err,
-    );
+    console.error(`[ExtensionWorker] Delete failed for ${extensionKey}:`, err);
     throw err;
   }
 }
@@ -155,23 +147,19 @@ async function handleDeleteJob(container, job) {
  * @param {Object} job - Queue job
  */
 async function handleToggleJob(container, job) {
-  const {
-    extensionId,
-    extensionKey,
-    isActive,
-    actorId,
-    extensionDir,
-    isDevExtension,
-  } = job.data;
+  const { extensionKey, isActive, actorId, extensionDir, isDevExtension } =
+    job.data;
 
   try {
     const extensionManager = container.resolve('extension');
     const hook = container.resolve('hook');
+    const { Extension } = container.resolve('models');
 
     // Security: verify checksum before activating (skip for dev extensions)
     if (isActive && extensionDir && !isDevExtension) {
-      const { Extension } = container.resolve('models');
-      const dbExtension = await Extension.findByPk(extensionId);
+      const dbExtension = await Extension.findOne({
+        where: { key: extensionKey },
+      });
       if (dbExtension && dbExtension.checksum) {
         // Verify checksum in worker thread (avoids blocking event loop)
         const { valid, actual } = await workerPool.verifyChecksum(
@@ -180,12 +168,12 @@ async function handleToggleJob(container, job) {
         );
         if (!valid) {
           console.error(
-            `[ExtensionWorker] ⛔ Checksum verification FAILED for extension ${extensionId}. ` +
+            `[ExtensionWorker] ⛔ Checksum verification FAILED for extension ${extensionKey}. ` +
               `Expected: ${dbExtension.checksum}, Got: ${actual}. ` +
               `Refusing to activate — possible code injection detected.`,
           );
           await dbExtension.update({ is_active: false });
-          notifyExtensionChange(container, 'EXTENSION_TAMPERED', extensionId);
+          notifyExtensionChange(container, 'EXTENSION_TAMPERED', extensionKey);
           return { success: false, reason: 'checksum_mismatch' };
         }
       }
@@ -196,27 +184,28 @@ async function handleToggleJob(container, job) {
 
       // Recompute checksum in worker thread after fresh npm install
       const checksum = await workerPool.computeChecksum(extensionDir);
-      const { Extension } = container.resolve('models');
-      await Extension.update({ checksum }, { where: { id: extensionId } });
+      await Extension.update({ checksum }, { where: { key: extensionKey } });
     }
 
     if (extensionManager) {
       if (isActive) {
-        await extensionManager.reloadExtension(extensionId);
-        const metadata = extensionManager.getExtensionMetadata(extensionId);
+        await extensionManager.reloadExtension(extensionKey);
+        const metadata = extensionManager.getExtensionMetadata(extensionKey);
         if (
           metadata &&
           metadata.manifest &&
-          !extensionManager.isExtensionLoaded(extensionId)
+          !extensionManager.isExtensionLoaded(extensionKey)
         ) {
-          await extensionManager.emit('extension:loaded', { id: extensionId });
+          await extensionManager.emit('extension:loaded', {
+            id: extensionKey,
+          });
         }
       } else {
-        if (extensionManager.isExtensionLoaded(extensionId)) {
-          await extensionManager.unloadExtension(extensionId);
+        if (extensionManager.isExtensionLoaded(extensionKey)) {
+          await extensionManager.unloadExtension(extensionKey);
         } else {
           await extensionManager.emit('extension:unloaded', {
-            id: extensionId,
+            id: extensionKey,
           });
         }
       }
@@ -224,7 +213,7 @@ async function handleToggleJob(container, job) {
 
     if (hook) {
       hook('admin:extensions').emit('status_changed', {
-        extension_id: extensionId,
+        extension_id: extensionKey,
         actor_id: actorId,
         data: { isActive },
       });
@@ -233,11 +222,11 @@ async function handleToggleJob(container, job) {
     notifyExtensionChange(
       container,
       isActive ? 'EXTENSION_ACTIVATED' : 'EXTENSION_DEACTIVATED',
-      extensionId,
+      extensionKey,
     );
     return { success: true };
   } catch (err) {
-    console.error(`[ExtensionWorker] Toggle failed for ${extensionId}:`, err);
+    console.error(`[ExtensionWorker] Toggle failed for ${extensionKey}:`, err);
     throw err;
   }
 }

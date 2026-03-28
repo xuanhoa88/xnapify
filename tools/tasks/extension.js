@@ -17,7 +17,6 @@ const webpack = require('webpack');
 
 const config = require('../config');
 const { computeChecksum } = require('../utils/checksum');
-const { toContainerName } = require('../utils/extension');
 const { copyDir, pathExists } = require('../utils/fs');
 const { logInfo, logError, formatDuration } = require('../utils/logger');
 const { isDev } = require('../webpack/base.config');
@@ -58,7 +57,8 @@ function discoverExtensions() {
         if (hasMain || hasBrowser) {
           return {
             manifest,
-            name: snakeCase(manifest.name || name),
+            name: manifest.name || name,
+            dirName: snakeCase(manifest.name || name),
             version: semver.clean(manifest.version),
             path: extensionPath,
           };
@@ -77,11 +77,12 @@ function discoverExtensions() {
 async function generateManifests(extensions) {
   for (const {
     name,
+    dirName,
     version,
     manifest: initialManifest,
     path: extensionPath,
   } of extensions) {
-    const outputDir = path.join(EXTENSIONS_BUILD_DIR, name);
+    const outputDir = path.join(EXTENSIONS_BUILD_DIR, dirName);
 
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, { recursive: true });
@@ -104,6 +105,7 @@ async function generateManifests(extensions) {
 
     const outputManifest = {
       ...pick(manifest, [
+        'name',
         'version',
         'description',
         'dependencies',
@@ -123,17 +125,17 @@ async function generateManifests(extensions) {
       }),
     };
 
-    // Set name to snake_case
+    // Preserve original name, use cleaned semver version.
+    // id = filesystem-safe identifier (= DB key = dir name = MF container base)
     outputManifest.name = name;
+    outputManifest.id = dirName;
     outputManifest.version = version;
 
-    // Set rsk metadata with original name, containerName, checksum, and
-    // build timestamp so dev-mode HMR can detect code changes even when the
-    // package.json version stays the same.
+    // Set rsk metadata with checksum and build timestamp so dev-mode HMR
+    // can detect code changes even when the package.json version stays the
+    // same. containerName is NOT stored — it is derived at API time.
     outputManifest.rsk = {
       ...outputManifest.rsk,
-      name: manifest.name,
-      containerName: toContainerName(name),
       checksum,
       buildTimestamp: Date.now(),
     };
@@ -150,9 +152,9 @@ async function generateManifests(extensions) {
  * @param {Array} extensions - Array of extension objects
  */
 async function copyStaticAssets(extensions) {
-  for (const { name, path: extensionPath } of extensions) {
+  for (const { dirName, path: extensionPath } of extensions) {
     const assetsSource = path.join(extensionPath, 'assets');
-    const assetsTarget = path.join(EXTENSIONS_BUILD_DIR, name, 'assets');
+    const assetsTarget = path.join(EXTENSIONS_BUILD_DIR, dirName, 'assets');
 
     if (await pathExists(assetsSource)) {
       await copyDir(assetsSource, assetsTarget);

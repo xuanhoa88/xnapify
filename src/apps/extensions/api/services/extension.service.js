@@ -9,21 +9,28 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
-import merge from 'lodash/merge';
+import snakeCase from 'lodash/snakeCase';
 
 import {
   CACHE_TTL,
   ExtensionError,
   resolveExtension,
   validateManifest,
-  validateExtensionNameSafe,
   invalidateCache,
-  encryptExtensionId,
 } from './extension.helpers';
 
 // ========================================================================
 // Internal Helpers
 // ========================================================================
+
+async function pathExists(filePath) {
+  try {
+    await fs.promises.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Scan a directory and add extensions to the map
@@ -33,52 +40,41 @@ import {
  * @param {object} extensionManager - Extension manager
  */
 async function scanDirectory(dirPath, source, metadata, extensionManager) {
+  if (!dirPath) return;
+
+  let files;
   try {
-    if (!dirPath || !fs.existsSync(dirPath)) {
-      console.debug(`[manageExtensions] ${source} dir not found: ${dirPath}`);
-      return;
-    }
-    const files = await fs.promises.readdir(dirPath, { withFileTypes: true });
-    console.debug(
-      `[manageExtensions] Found ${files.length} items in ${source} dir: ${dirPath}`,
-    );
-    const dirPromises = files.map(async dirent => {
-      if (dirent.isDirectory()) {
-        console.debug(
-          `[manageExtensions] Scanning extension: ${dirent.name} (${source})`,
-        );
-        const manifest = await extensionManager.readManifest(
-          dirPath,
-          dirent.name,
-        );
-        if (manifest) {
-          // Use manifest.name (the built package name) as map key so it
-          // matches the DB key derived from snakeCase(manifest.name).
-          // Falls back to folder name when manifest.name is absent.
-          const mapKey = manifest.name || dirent.name;
-          console.debug(`[manageExtensions] Added extension: ${mapKey}`);
-          const encryptedId = encryptExtensionId(mapKey);
-          const rsk = merge({}, manifest.rsk);
-
-          // Icon from manifest (built-in name or relative path)
-          const icon = rsk.icon || null;
-
-          metadata.set(mapKey, {
-            ...manifest,
-            name: rsk.name || mapKey,
-            id: encryptedId,
-            icon,
-            isInstalled: false, // Default, will be overwritten by DB check
-            source, // 'remote' or 'local'
-          });
-        }
-      }
-    });
-
-    await Promise.all(dirPromises);
-  } catch (err) {
-    console.warn(`Failed to scan extensions dir: ${dirPath}`, err.message);
+    files = await fs.promises.readdir(dirPath, { withFileTypes: true });
+  } catch {
+    return;
   }
+
+  const dirPromises = files.map(async dirent => {
+    if (!dirent.isDirectory()) return;
+
+    const manifest = await extensionManager.readManifest(dirPath, dirent.name);
+    if (!manifest) return;
+
+    // Use the filesystem directory name as map key — it matches the DB
+    // Extension.key column (snakeCase'd manifest name).
+    const mapKey = dirent.name;
+    const rsk = manifest.rsk || {};
+
+    metadata.set(mapKey, {
+      id: manifest.id || mapKey,
+      name: manifest.name || mapKey,
+      version: manifest.version || '0.0.0',
+      description: manifest.description || '',
+      main: manifest.main || null,
+      browser: manifest.browser || null,
+      rsk,
+      icon: rsk.icon || null,
+      isInstalled: false, // Default, will be overwritten by DB check
+      source, // 'remote' or 'local'
+    });
+  });
+
+  await Promise.all(dirPromises);
 }
 
 // ========================================================================
@@ -106,24 +102,16 @@ export async function manageExtensions({
   const extensions = [];
   const metadata = new Map();
 
-  // 1. Scan File Systems (Remote & Local)
-  // This populates metadata with what's physically available
-  await scanDirectory(
-    installedExtensionsDir,
-    'remote',
-    metadata,
-    extensionManager,
-  );
-
-  // Only scan local dir if it differs from installed dir to avoid duplicate scanning
-  if (localExtensionsDir !== installedExtensionsDir) {
-    await scanDirectory(
-      localExtensionsDir,
-      'local',
-      metadata,
-      extensionManager,
+  // 1. Scan File Systems (Remote & Local) in parallel
+  const scanTasks = [
+    scanDirectory(installedExtensionsDir, 'remote', metadata, extensionManager),
+  ];
+  if (localExtensionsDir && localExtensionsDir !== installedExtensionsDir) {
+    scanTasks.push(
+      scanDirectory(localExtensionsDir, 'local', metadata, extensionManager),
     );
   }
+  await Promise.all(scanTasks);
 
   // 2. Fetch from DB
   const dbExtensions = await Extension.findAll();
@@ -296,17 +284,11 @@ export async function getActiveExtensions({
       // without a redundant per-extension API fetch.
       const baseDir = isLocal ? localExtensionsDir : installedExtensionsDir;
       const extDir = path.join(baseDir, key);
-      try {
-        await fs.promises.access(path.join(extDir, 'remote.js'));
+      if (await pathExists(path.join(extDir, 'remote.js'))) {
         manifest.hasClientScript = true;
-      } catch {
-        /* no remote.js */
       }
-      try {
-        await fs.promises.access(path.join(extDir, 'extension.css'));
+      if (await pathExists(path.join(extDir, 'extension.css'))) {
         manifest.hasClientCss = true;
-      } catch {
-        /* no extension.css */
       }
 
       // Extension is in DB (Active) AND on Disk
@@ -316,7 +298,7 @@ export async function getActiveExtensions({
       extensions.push({
         ...manifest,
         ...dbExtension.toJSON(),
-        id: dbExtension.id,
+        id: manifest.id || dbExtension.key,
         name: manifest.name,
         isActive: true,
         isInstalled: true,
@@ -343,10 +325,10 @@ export async function getActiveExtensions({
  *
  * Follows the same lookup pattern as `toggleExtensionStatus`:
  *  1. Try `findByPk(id)` for installed extensions.
- *  2. Fall back to `decryptExtensionId` for FS-only extensions.
+ *  2. Try `findOne({ key: id })` for plain key (manifest.id).
  *  3. Enqueue deletion via queue if available.
  *
- * @param {string} id - Extension UUID or encrypted extension.key
+ * @param {string} id - Extension UUID or plain key (manifest.id)
  * @param {Object} context - App context
  */
 export async function deleteExtension(
@@ -367,7 +349,6 @@ export async function deleteExtension(
   if (queue && cwd) {
     const queueChannel = queue('extensions');
     queueChannel.emit('delete', {
-      extensionId: extension ? extension.id : null,
       extensionKey: extension ? extension.key : extensionKey,
       actorId,
     });
@@ -385,7 +366,7 @@ export async function deleteExtension(
  * Get extension by ID (DB UUID or encrypted key)
  * @param {object} context - Context with cwd, models, and cache
  * @param {string} id - Extension ID (DB UUID or encrypted key)
- * @returns {Promise<Object>} Extension data with containerName and manifest
+ * @returns {Promise<Object>} Extension data with manifest (includes id for MF container derivation)
  * @throws {ExtensionError} If extension ID is invalid or extension not found
  */
 export async function getExtensionById(
@@ -427,23 +408,17 @@ export async function getExtensionById(
     throw ExtensionError.notFound(extensionKey);
   }
 
-  // Read container name from manifest (written by the build step)
-  const containerName = (manifest.rsk && manifest.rsk.containerName) || null;
-
-  try {
-    const assetsPath = path.join(resolvedDir, 'extension.css');
-    await fs.promises.access(assetsPath);
-    manifest.hasClientCss = true;
-  } catch {
-    // extension.css might not exist if extension has no CSS or build failed
+  // Ensure manifest.id is set — fallback to extensionKey for older manifests
+  if (!manifest.id) {
+    manifest.id = extensionKey;
   }
 
-  try {
-    const assetsPath = path.join(resolvedDir, 'remote.js');
-    await fs.promises.access(assetsPath);
+  if (await pathExists(path.join(resolvedDir, 'extension.css'))) {
+    manifest.hasClientCss = true;
+  }
+
+  if (await pathExists(path.join(resolvedDir, 'remote.js'))) {
     manifest.hasClientScript = true;
-  } catch {
-    // remote.js might not exist if extension has no remote or build failed
   }
 
   // Validate checksum against DB (only for production extensions, not dev)
@@ -473,7 +448,6 @@ export async function getExtensionById(
   }
 
   const result = {
-    containerName,
     manifest,
   };
 
@@ -544,14 +518,10 @@ export async function installExtensionFromPackage(
       );
     }
 
-    if (!fs.existsSync(extensionsDir)) {
-      await fs.promises.mkdir(extensionsDir, { recursive: true });
-    }
+    await fs.promises.mkdir(extensionsDir, { recursive: true });
 
     const tmpDir = path.dirname(tempExtractDir);
-    if (!fs.existsSync(tmpDir)) {
-      await fs.promises.mkdir(tmpDir, { recursive: true });
-    }
+    await fs.promises.mkdir(tmpDir, { recursive: true });
 
     // 2. Extract using shared FS engine
     await fsEngine.extract(tempPath, tempExtractDir);
@@ -560,7 +530,7 @@ export async function installExtensionFromPackage(
     let manifestPath = path.join(tempExtractDir, 'package.json');
     let extensionRoot = tempExtractDir;
 
-    if (!fs.existsSync(manifestPath)) {
+    if (!(await pathExists(manifestPath))) {
       const entries = await fs.promises.readdir(tempExtractDir, {
         withFileTypes: true,
       });
@@ -578,7 +548,7 @@ export async function installExtensionFromPackage(
       }
     }
 
-    if (!fs.existsSync(manifestPath)) {
+    if (!(await pathExists(manifestPath))) {
       throw ExtensionError.invalidPackage(
         'Invalid extension package: package.json not found. ' +
           'Ensure the zip contains package.json at the root, or in a single subdirectory.',
@@ -593,23 +563,23 @@ export async function installExtensionFromPackage(
     const { name: extensionName, version: extensionVersion } =
       validateManifest(manifest);
 
-    // 4a. Security: prevent path traversal via crafted extension names
-    validateExtensionNameSafe(extensionName, extensionsDir);
-
-    // 5. Move to final destination
-    const finalExtensionDir = path.join(extensionsDir, extensionName);
-
-    if (fs.existsSync(finalExtensionDir)) {
-      await fs.promises.rm(finalExtensionDir, { recursive: true, force: true });
+    // Ensure manifest.id is set — fallback to snakeCase(name) for older manifests
+    if (!manifest.id) {
+      manifest.id = snakeCase(extensionName);
     }
+
+    // 5. Move to final destination (use manifest.id for filesystem-safe dir name)
+    const finalExtensionDir = path.join(extensionsDir, manifest.id);
+
+    await fs.promises.rm(finalExtensionDir, { recursive: true, force: true });
 
     await fs.promises.rename(extensionRoot, finalExtensionDir);
 
-    // 6. Create or update DB record
+    // 6. Create or update DB record (key = manifest.id = snakeCase dir name)
     const [extension, created] = await Extension.findOrCreate({
-      where: { key: extensionName },
+      where: { key: manifest.id },
       defaults: {
-        name: (manifest.rsk && manifest.rsk.name) || extensionName,
+        name: extensionName,
         description: manifest.description,
         version: extensionVersion,
         is_active: true,
@@ -623,7 +593,7 @@ export async function installExtensionFromPackage(
 
     if (!created) {
       await extension.update({
-        name: (manifest.rsk && manifest.rsk.name) || extensionName,
+        name: extensionName,
         description: manifest.description,
         version: extensionVersion,
         is_active: true,
@@ -639,8 +609,7 @@ export async function installExtensionFromPackage(
     const queueChannel = queue('extensions');
     queueChannel.emit('install', {
       extensionDir: finalExtensionDir,
-      extensionId: extension.id,
-      extensionKey: extensionName,
+      extensionKey: manifest.id,
       actorId,
     });
 
@@ -653,17 +622,13 @@ export async function installExtensionFromPackage(
   } finally {
     // Cleanup temp files
     try {
-      if (fs.existsSync(tempExtractDir)) {
-        await fs.promises.rm(tempExtractDir, { recursive: true, force: true });
-      }
+      await fs.promises.rm(tempExtractDir, { recursive: true, force: true });
 
       if (file.filename && fsEngine && typeof fsEngine.remove === 'function') {
         await fsEngine.remove(file.filename);
       }
 
-      if (fs.existsSync(tempPath)) {
-        await fs.promises.unlink(tempPath);
-      }
+      await fs.promises.unlink(tempPath).catch(() => {});
     } catch (cleanupErr) {
       console.warn(
         '[installExtensionFromPackage] Cleanup failed:',
@@ -716,13 +681,18 @@ export async function toggleExtensionStatus(
       throw ExtensionError.notFound('on disk');
     }
 
+    // Ensure manifest.id is set — fallback to extensionKey for older manifests
+    if (!manifest.id) {
+      manifest.id = extensionKey;
+    }
+
     const { name: extensionName, version: extensionVersion } =
       validateManifest(manifest);
 
     [extension] = await Extension.findOrCreate({
       where: { key: extensionKey },
       defaults: {
-        name: (manifest.rsk && manifest.rsk.name) || extensionName,
+        name: extensionName,
         description: manifest.description || '',
         version: extensionVersion,
         is_active: isActive,
@@ -748,7 +718,6 @@ export async function toggleExtensionStatus(
   if (queue) {
     const queueChannel = queue('extensions');
     queueChannel.emit('toggle', {
-      extensionId: extension.id,
       extensionKey: extension.key,
       extensionDir,
       isActive,

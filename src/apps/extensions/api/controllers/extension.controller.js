@@ -13,6 +13,7 @@ import {
   extensionStatusSchema,
   extensionUpgradeSchema,
 } from '../../validator/extension';
+import { resolveExtension } from '../services/extension.helpers';
 import * as extensionService from '../services/extension.service';
 
 // ========================================================================
@@ -67,7 +68,7 @@ export const getExtension = async (req, res) => {
       if (ws) {
         ws.sendToPublicChannel('extension:updated', {
           type: 'EXTENSION_TAMPERED',
-          extensionId: req.params.id,
+          extensionId: extensionData.manifest.name || req.params.id,
         });
       }
     }
@@ -146,6 +147,12 @@ export const deleteExtension = async (req, res) => {
     const { id } = req.params;
     const models = container.resolve('models');
 
+    // Resolve extensionKey before deletion so we can broadcast it
+    const { extension: dbRecord } = await resolveExtension(models, id, {
+      required: false,
+    });
+    const extensionKey = dbRecord ? dbRecord.key : id;
+
     await extensionService.deleteExtension(id, {
       models,
       cache: container.resolve('cache'),
@@ -157,7 +164,7 @@ export const deleteExtension = async (req, res) => {
     const ws = container.resolve('ws');
     ws.sendToPublicChannel('extension:updated', {
       type: 'EXTENSION_UNINSTALLED',
-      extensionId: id,
+      extensionId: extensionKey,
     });
 
     return http.sendSuccess(res, { message: 'Extension deleted' });
@@ -214,7 +221,7 @@ export const uploadExtension = async (req, res) => {
     const ws = container.resolve('ws');
     ws.sendToPublicChannel('extension:updated', {
       type: 'EXTENSION_INSTALLED',
-      extensionId: extensionData.id,
+      extensionId: extensionData.key || extensionData.id,
       data: { manifest: extensionData },
     });
 
@@ -262,7 +269,7 @@ export const updateExtensionStatus = async (req, res) => {
     const ws = container.resolve('ws');
     ws.sendToPublicChannel('extension:updated', {
       type: result.is_active ? 'EXTENSION_ACTIVATED' : 'EXTENSION_DEACTIVATED',
-      extensionId: id,
+      extensionId: extensionData.key || id,
       data: { manifest: extensionData },
     });
 
@@ -300,7 +307,7 @@ export const upgradeExtension = async (req, res) => {
     const ws = container.resolve('ws');
     ws.sendToPublicChannel('extension:updated', {
       type: 'EXTENSION_UPDATED',
-      extensionId: id,
+      extensionId: extension.key || id,
     });
 
     return http.sendSuccess(res, { extension });

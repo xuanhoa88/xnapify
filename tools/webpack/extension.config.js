@@ -10,7 +10,6 @@ const path = require('path');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const webpack = require('webpack');
 
-const { toContainerName } = require('../utils/extension');
 const { logWarn } = require('../utils/logger');
 
 const {
@@ -86,17 +85,20 @@ function validateExtension(extension) {
     return null;
   }
 
+  const { dirName } = extension;
+
   return {
     extensionName: extension.name,
     extensionPath: extension.path,
     extensionDescription: extension.manifest.description || extension.name,
+    dirName,
     clientPath: extension.manifest.browser
       ? path.resolve(extension.path, extension.manifest.browser)
       : null,
     apiPath: extension.manifest.main
       ? path.resolve(extension.path, extension.manifest.main)
       : null,
-    libraryName: toContainerName(extension.name),
+    libraryName: `extension_${dirName}`,
   };
 }
 
@@ -121,12 +123,12 @@ const getExtensionLocalIdentName = extensionName =>
  * Returns both browser (Module Federation) and server (CommonJS + CSS) builds
  */
 function createClientConfig(extensionData, extensionDefines, buildPath) {
-  const { extensionName, clientPath, libraryName } = extensionData;
+  const { dirName, clientPath, libraryName } = extensionData;
 
   if (!clientPath) return [];
 
-  const outputPath = path.join(buildPath, extensionName);
-  const localIdentName = getExtensionLocalIdentName(extensionName);
+  const outputPath = path.join(buildPath, dirName);
+  const localIdentName = getExtensionLocalIdentName(dirName);
 
   const clientConfig = createWebpackConfig('client', {
     entry: clientPath,
@@ -221,7 +223,7 @@ function createClientConfig(extensionData, extensionDefines, buildPath) {
  * Create API server config (if extension has API entry)
  */
 function createApiConfig(extensionData, extensionDefines, buildPath) {
-  const { extensionName, apiPath } = extensionData;
+  const { dirName, apiPath } = extensionData;
 
   if (!apiPath) return [];
 
@@ -229,7 +231,7 @@ function createApiConfig(extensionData, extensionDefines, buildPath) {
     entry: apiPath,
     experiments: { outputModule: false },
     output: {
-      path: path.join(buildPath, extensionName),
+      path: path.join(buildPath, dirName),
       filename: 'api.js',
     },
     plugins: [

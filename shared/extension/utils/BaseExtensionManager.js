@@ -367,13 +367,10 @@ export class BaseExtensionManager {
         await this.loadDependencies(id, manifest.rsk.require, _loadingChain);
       }
 
-      // Fetch extension bundle details from API — skip if the manifest
-      // already provides containerName (e.g., from sync's getActiveExtensions
-      // or server-side refresh with fromDisk = true).
+      // Derive MF container name from manifest.id (written at build time).
+      // Format: extension_<snakeCase(name)>, matching webpack MF library name.
       let containerName =
-        manifest && manifest.rsk && manifest.rsk.containerName
-          ? manifest.rsk.containerName
-          : null;
+        manifest && manifest.id ? `extension_${manifest.id}` : null;
 
       if (manifest && manifest.fromDisk) {
         // Clean up the internal flag
@@ -391,9 +388,11 @@ export class BaseExtensionManager {
           throw error;
         }
 
-        const { containerName: cn, manifest: serverManifest } = response.data;
-        containerName = cn;
-        if (serverManifest) manifest = serverManifest;
+        const { manifest: serverManifest } = response.data;
+        if (serverManifest) {
+          manifest = serverManifest;
+          containerName = manifest.id ? `extension_${manifest.id}` : null;
+        }
       }
 
       // Resolve entry point (main vs browser)

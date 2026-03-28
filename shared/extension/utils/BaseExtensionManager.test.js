@@ -106,8 +106,11 @@ describe('BaseExtensionManager', () => {
       mockContext.fetch.mockResolvedValue({
         success: true,
         data: {
-          containerName: 'test_container',
-          manifest: { id: 'test-extension', main: 'index.js' },
+          manifest: {
+            id: 'test_extension',
+            name: 'test-extension',
+            main: 'index.js',
+          },
         },
       });
 
@@ -127,7 +130,11 @@ describe('BaseExtensionManager', () => {
       expect(registry.defineExtension).toHaveBeenCalledWith(
         mockExtensionInstance,
         null,
-        { id: 'test-extension', main: 'index.js' },
+        {
+          id: 'test_extension',
+          name: 'test-extension',
+          main: 'index.js',
+        },
       );
 
       const meta = manager[EXTENSION_METADATA].get('test-extension');

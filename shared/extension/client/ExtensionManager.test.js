@@ -341,10 +341,10 @@ describe('ClientExtensionManager', () => {
       const mockAdapter = { files: () => [], load: () => ({}) };
       const mockManifest = {
         name: 'test-ext',
+        id: 'test_ext',
         main: 'remoteEntry.js',
         browser: 'remoteEntry.js',
         hasClientScript: true,
-        rsk: { containerName: 'testContainer' },
       };
 
       // Mock the module returned from the container
@@ -362,13 +362,13 @@ describe('ClientExtensionManager', () => {
         .spyOn(clientManager, '_getContainerModule')
         .mockResolvedValue(mockModule);
 
-      // Set global container
-      window.testContainer = {};
+      // Set global container (MF container name = extension_<id>)
+      window.extension_test_ext = {};
 
-      // Mock fetch for loadExtension
+      // Mock fetch for loadExtension — API returns { manifest } (no containerName)
       clientManager.fetch = jest.fn().mockResolvedValue({
         success: true,
-        data: { containerName: 'testContainer', manifest: mockManifest },
+        data: { manifest: mockManifest },
       });
 
       // Bootstrap the extension via loadExtension (view lifecycle now runs here)

@@ -6,11 +6,8 @@
  */
 
 import { execFile } from 'child_process';
-import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
-
-import { decryptExtensionId, encryptExtensionId } from '../utils/crypto';
 
 // Promisify execFile
 const execFileAsync = promisify(execFile);
@@ -72,14 +69,17 @@ export class ExtensionError extends Error {
 // ========================================================================
 
 /**
- * Resolve an extension record from a mixed ID (DB UUID or encrypted key).
+ * Resolve an extension record from an ID (DB UUID or plain key).
  *
  * Lookup order:
- *  1. Try `findByPk(id)` — works for installed extensions with UUID.
- *  2. Fall back to `decryptExtensionId(id)` → `findOne({ key })`.
+ *  1. Try `findByPk(id)` — works when called with DB UUID.
+ *  2. Try `findOne({ key: id })` — works when called with manifest.id (snakeCase).
+ *
+ * If neither finds a DB record, `extensionKey` defaults to `id` so callers
+ * can still resolve the extension directory on disk.
  *
  * @param {Object} models - Sequelize models ({ Extension })
- * @param {string} id - Extension UUID or encrypted extension key
+ * @param {string} id - Extension UUID or plain key (manifest.id)
  * @param {Object} [options]
  * @param {boolean} [options.required=true] - Throw if not found
  * @returns {Promise<{extension: Object|null, extensionKey: string|null}>}
@@ -89,21 +89,18 @@ export async function resolveExtension(models, id, { required = true } = {}) {
 
   // 1. Try DB primary key (UUID)
   let extension = await Extension.findByPk(id);
-  let extensionKey = extension ? extension.key : null;
-
-  // 2. Fall back to encrypted key
-  if (!extension) {
-    extensionKey = decryptExtensionId(id);
-    if (extensionKey) {
-      extension = await Extension.findOne({ where: { key: extensionKey } });
-    }
+  if (extension) {
+    return { extension, extensionKey: extension.key };
   }
+
+  // 2. Try plain key (manifest.id = snakeCase dir name)
+  extension = await Extension.findOne({ where: { key: id } });
 
   if (!extension && required) {
     throw ExtensionError.notFound();
   }
 
-  return { extension, extensionKey };
+  return { extension, extensionKey: extension ? extension.key : id };
 }
 
 // ========================================================================
@@ -120,10 +117,11 @@ export async function resolveExtension(models, id, { required = true } = {}) {
  * @throws {ExtensionError} If name or version is missing/empty
  */
 export function validateManifest(manifest) {
-  const name = typeof manifest.name === 'string' ? manifest.name.trim() : '';
+  const name =
+    (typeof manifest.name === 'string' && manifest.name.trim()) || '';
   const version =
-    typeof manifest.version === 'string' ? manifest.version.trim() : '';
-
+    (typeof manifest.version === 'string' && manifest.version.trim()) ||
+    '0.0.0';
   if (name.length === 0 || version.length === 0) {
     throw ExtensionError.invalidPackage(
       'Invalid extension manifest: missing required fields (name, version)',
@@ -131,24 +129,6 @@ export function validateManifest(manifest) {
   }
 
   return { name, version };
-}
-
-/**
- * Validate that an extension name is safe for use in file paths.
- * Prevents path traversal attacks (e.g. "../../etc").
- *
- * @param {string} extensionName - Extension name from manifest
- * @param {string} baseDir - Base directory extensions are stored in
- * @throws {ExtensionError} If the name escapes the base directory
- */
-export function validateExtensionNameSafe(extensionName, baseDir) {
-  const resolved = path.join(baseDir, extensionName);
-  const relative = path.relative(baseDir, resolved);
-  if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) {
-    throw ExtensionError.invalidPackage(
-      `Invalid extension name "${extensionName}": path traversal detected`,
-    );
-  }
 }
 
 // ========================================================================
@@ -223,19 +203,21 @@ export async function installExtensionDependencies(extensionDir, extension) {
  *
  * @param {Object} container - DI container instance
  * @param {string} type - Event type (EXTENSION_INSTALLED, EXTENSION_UPDATED, EXTENSION_UNINSTALLED, EXTENSION_TAMPERED)
- * @param {string} extensionId - extension ID
+ * @param {string} extensionKey - Extension manifest name (canonical key)
+ * @param {string} [extensionId] - Optional DB UUID (for manifest lookup)
  */
-export function notifyExtensionChange(container, type, extensionId) {
+export function notifyExtensionChange(container, type, extensionKey) {
   const ws = container.resolve('ws');
   if (!ws) return;
 
-  const payload = { type, extensionId };
+  // Use extensionKey (manifest.id) as the canonical identifier
+  const payload = { type, extensionId: extensionKey };
 
   // Include manifest data for install/update events
   if (type === 'EXTENSION_INSTALLED' || type === 'EXTENSION_UPDATED') {
     const extensionManager = container.resolve('extension');
     const metadata = extensionManager
-      ? extensionManager.getExtensionMetadata(extensionId)
+      ? extensionManager.getExtensionMetadata(extensionKey)
       : null;
     payload.data = {
       manifest:
@@ -251,6 +233,3 @@ export function notifyExtensionChange(container, type, extensionId) {
 
   ws.sendToPublicChannel('extension:updated', payload);
 }
-
-// Re-export crypto utils for convenience
-export { encryptExtensionId, decryptExtensionId };
