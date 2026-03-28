@@ -103,7 +103,7 @@ function Login() {
 
           {/* OAuth buttons slot — container is always rendered for SSR hydration safety.
              CSS hides the wrapper when the slot is empty (no children). */}
-          <div className={s.oauthSection} suppressHydrationWarning>
+          <div className={s.oauthSection}>
             <div className={s.oauthButtonsContainer}>
               <ExtensionSlot
                 name='auth.oauth.buttons'

@@ -330,7 +330,6 @@ function Icon({ name, size = 20, className, style, title, ...rest }) {
       aria-hidden={!title}
       role={title ? 'img' : undefined}
       {...(title ? { 'aria-label': title } : {})}
-      suppressHydrationWarning
       {...rest}
     >
       {title && <title>{title}</title>}
@@ -343,7 +342,6 @@ function Icon({ name, size = 20, className, style, title, ...rest }) {
           strokeLinecap='round'
           strokeLinejoin='round'
           fill='none'
-          suppressHydrationWarning
         />
       ))}
     </svg>
