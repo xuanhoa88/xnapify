@@ -20,7 +20,7 @@ import { computeChecksum } from '../utils/checksum';
  * @returns {Promise<string>} Hex-encoded hash
  */
 export async function COMPUTE_CHECKSUM(data) {
-  return computeChecksum(data);
+  return computeChecksum(data.dir, data.options);
 }
 
 /**

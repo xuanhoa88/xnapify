@@ -98,7 +98,7 @@ describe('ServerExtensionManager', () => {
       };
 
       const mockView = { default: { name: 'ViewExtension' } };
-      jest.spyOn(serverManager, 'requireModule').mockReturnValue(mockView);
+      jest.spyOn(serverManager, '_requireModule').mockReturnValue(mockView);
       jest
         .spyOn(serverManager, '_getExtensionBundlePath')
         .mockReturnValue('/abs/path/server.js');
@@ -117,7 +117,7 @@ describe('ServerExtensionManager', () => {
   describe('installExtension', () => {
     it('calls install hook if exported by extension API', async () => {
       const mockApi = { install: jest.fn().mockResolvedValue() };
-      jest.spyOn(serverManager, 'requireModule').mockReturnValue(mockApi);
+      jest.spyOn(serverManager, '_requireModule').mockReturnValue(mockApi);
       jest
         .spyOn(serverManager, '_getExtensionBundlePath')
         .mockResolvedValue('/abs/path/api.js');
@@ -133,7 +133,7 @@ describe('ServerExtensionManager', () => {
         manifest,
       );
 
-      expect(serverManager.requireModule).toHaveBeenCalledWith(
+      expect(serverManager._requireModule).toHaveBeenCalledWith(
         '/abs/path/api.js',
       );
       expect(mockApi.install).toHaveBeenCalledWith(
@@ -147,7 +147,7 @@ describe('ServerExtensionManager', () => {
 
     it('skips install hook if not exported', async () => {
       const mockApi = { init: jest.fn() }; // no install()
-      jest.spyOn(serverManager, 'requireModule').mockReturnValue(mockApi);
+      jest.spyOn(serverManager, '_requireModule').mockReturnValue(mockApi);
       jest
         .spyOn(serverManager, '_getExtensionBundlePath')
         .mockResolvedValue('/abs/path/api.js');
@@ -178,7 +178,7 @@ describe('ServerExtensionManager', () => {
   describe('uninstallExtension', () => {
     it('calls uninstall hook if exported by extension API', async () => {
       const mockApi = { uninstall: jest.fn().mockResolvedValue() };
-      jest.spyOn(serverManager, 'requireModule').mockReturnValue(mockApi);
+      jest.spyOn(serverManager, '_requireModule').mockReturnValue(mockApi);
       jest
         .spyOn(serverManager, '_getExtensionBundlePath')
         .mockResolvedValue('/abs/path/api.js');
@@ -194,7 +194,7 @@ describe('ServerExtensionManager', () => {
         manifest,
       );
 
-      expect(serverManager.requireModule).toHaveBeenCalledWith(
+      expect(serverManager._requireModule).toHaveBeenCalledWith(
         '/abs/path/api.js',
       );
       expect(mockApi.uninstall).toHaveBeenCalledWith(

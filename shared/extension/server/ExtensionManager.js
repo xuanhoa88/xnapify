@@ -167,7 +167,7 @@ class ServerExtensionManager extends BaseExtensionManager {
    * @param {string} bundlePath - Absolute path to the bundle
    * @returns {Object} Module exports
    */
-  requireModule(bundlePath) {
+  _requireModule(bundlePath) {
     // Delete require cache to ensure we get the latest version
     try {
       const resolvedPath = nativeRequire.resolve(bundlePath);
@@ -204,7 +204,8 @@ class ServerExtensionManager extends BaseExtensionManager {
     );
     if (!bundlePath) return null;
 
-    const apiModule = this.requireModule(bundlePath);
+    // eslint-disable-next-line no-underscore-dangle
+    const apiModule = this._requireModule(bundlePath);
     if (!apiModule) return null;
     return apiModule.default || apiModule;
   }
@@ -243,7 +244,8 @@ class ServerExtensionManager extends BaseExtensionManager {
         );
       }
 
-      const viewModule = this.requireModule(bundlePath);
+      // eslint-disable-next-line no-underscore-dangle
+      const viewModule = this._requireModule(bundlePath);
       if (!viewModule) return null;
       const extensionView = viewModule.default || viewModule;
 
@@ -290,7 +292,10 @@ class ServerExtensionManager extends BaseExtensionManager {
         );
       }
 
-      return viewModule;
+      // Always return a non-null object so the base class emits
+      // 'extension:loaded' and triggers _onExtensionLoaded → activateExtension.
+      // Without this, API-only or view-failed extensions would never activate.
+      return viewModule || { setup() {} };
     } catch (error) {
       console.error(
         `[ServerExtensionManager] Failed to load view module for ${id}:`,
@@ -303,7 +308,9 @@ class ServerExtensionManager extends BaseExtensionManager {
       });
     }
 
-    return null;
+    // Even on error, return a minimal object so the extension lifecycle
+    // continues and API routes can still be registered.
+    return { setup() {} };
   }
 
   // ---------------------------------------------------------------------------
