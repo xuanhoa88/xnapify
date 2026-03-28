@@ -9,6 +9,8 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
+import snakeCase from 'lodash/snakeCase';
+
 import { getTranslations } from '@shared/i18n/loader';
 import { addNamespace, removeNamespace } from '@shared/i18n/utils';
 import { createNativeRequire } from '@shared/utils/createNativeRequire';
@@ -733,7 +735,7 @@ class ServerExtensionManager extends BaseExtensionManager {
             .map(async entry => {
               const extDir = path.join(devBaseDir, entry.name);
               const manifest = await this.readManifest(extDir);
-              if (!manifest || !manifest.name) return null;
+              if (!manifest || !manifest.id) return null;
               if (loadedNames.has(manifest.name)) return null;
 
               if (await fileExists(extDir, 'extension.css')) {
@@ -751,12 +753,12 @@ class ServerExtensionManager extends BaseExtensionManager {
       if (devExtensions.length > 0) {
         if (__DEV__) {
           console.log(
-            `[ServerExtensionManager] Discovered dev extensions: ${devExtensions.map(m => m.name).join(', ')}`,
+            `[ServerExtensionManager] Discovered dev extensions: ${devExtensions.map(m => m.id).join(', ')}`,
           );
         }
         await Promise.allSettled(
           devExtensions.map(manifest =>
-            this.loadExtension(manifest.name, manifest),
+            this.loadExtension(manifest.id, manifest),
           ),
         );
       }
@@ -864,7 +866,14 @@ class ServerExtensionManager extends BaseExtensionManager {
     try {
       const manifestPath = path.join(...extensionDirs, 'package.json');
       const manifestContent = await fs.promises.readFile(manifestPath, 'utf8');
-      return JSON.parse(manifestContent);
+      const manifest = JSON.parse(manifestContent);
+
+      // Inject canonical id if missing (dev extensions don't have it)
+      if (!manifest.id && manifest.name) {
+        manifest.id = snakeCase(manifest.name);
+      }
+
+      return manifest;
     } catch {
       return null;
     }
