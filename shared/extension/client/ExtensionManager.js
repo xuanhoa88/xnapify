@@ -433,26 +433,17 @@ class ClientExtensionManager extends BaseExtensionManager {
   // ---------------------------------------------------------------------------
 
   /**
-   * Resolve the loaded ID for an extension.
+   * Resolve the internal loaded ID for an extension.
+   * Handles mismatch between WS event IDs (manifest.name) and internal
+   * map keys (manifest.id = snakeCase(name)).
    *
-   * WebSocket events send the DB key (= manifest.name, e.g. '@rsk-extension/posts'),
-   * but ACTIVE_EXTENSIONS and EXTENSION_METADATA are keyed by manifest.id
-   * (= snakeCase(name), e.g. 'rsk_extension_posts').
-   *
-   * Resolution order:
-   *  1. Direct match in ACTIVE_EXTENSIONS (exact id)
-   *  2. Direct match in EXTENSION_METADATA → resolve via manifest.name
-   *  3. Scan all metadata entries for a manifest.name match → return internal id
-   *
-   * @param {string} id - Extension identifier from WebSocket event (DB key / manifest.name)
-   * @returns {string|null} The key in ACTIVE_EXTENSIONS, or null
+   * @param {string} id - Extension identifier (DB key or manifest.name)
+   * @returns {string|null}
    * @private
    */
   _resolveLoadedId(id) {
-    // 1. Direct match (manifest.id or already-loaded key)
     if (this.isExtensionLoaded(id)) return id;
 
-    // 2. Direct metadata lookup
     const meta = this[EXTENSION_METADATA].get(id);
     if (meta) {
       const pkgName =
@@ -460,8 +451,6 @@ class ClientExtensionManager extends BaseExtensionManager {
       if (pkgName && this.isExtensionLoaded(pkgName)) return pkgName;
     }
 
-    // 3. Scan all metadata for a manifest.name match
-    //    (WS sends manifest.name but maps are keyed by manifest.id)
     for (const [internalId, m] of this[EXTENSION_METADATA].entries()) {
       if (m.manifest && m.manifest.name === id) {
         if (this.isExtensionLoaded(internalId)) return internalId;
@@ -472,24 +461,18 @@ class ClientExtensionManager extends BaseExtensionManager {
   }
 
   /**
-   * Full teardown of an extension: remove routes, unload, and clean up.
-   * Handles the UUID vs package-name ID mismatch transparently.
-   *
-   * @param {string} id - Database UUID from WebSocket event
+   * Full teardown: shutdown hook → translation cleanup → unload.
+   * @param {string} id - Extension ID from WebSocket event
    * @private
    */
   async _teardownExtension(id) {
-    // Resolve UUID → package-name (routes/ACTIVE_EXTENSIONS use package-name)
     // eslint-disable-next-line no-underscore-dangle
     const loadedId = this._resolveLoadedId(id);
     if (!loadedId) return;
 
-    // Phase 1: Shutdown hook
     const ext = this[ACTIVE_EXTENSIONS].get(loadedId);
     if (ext && typeof ext.shutdown === 'function') {
       try {
-        // Pass registry in context — symmetric with boot() which receives
-        // { ...context, registry } from activateViewNamespace.
         // eslint-disable-next-line no-underscore-dangle
         await ext.shutdown({ ...this._hookContext(), registry: this.registry });
       } catch (error) {
@@ -500,10 +483,7 @@ class ClientExtensionManager extends BaseExtensionManager {
       }
     }
 
-    // Phase 2: Translation cleanup
     removeNamespace(`extension:${loadedId}`);
-
-    // Phase 3: Unregister from registry + remove routes + ACTIVE_EXTENSIONS
     await this.unloadExtension(loadedId);
   }
 
