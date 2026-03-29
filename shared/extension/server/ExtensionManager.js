@@ -113,13 +113,33 @@ class ServerExtensionManager extends BaseExtensionManager {
     try {
       const version = (manifest && manifest.version) || '0.0.0';
 
-      if (manifest && manifest.hasClientCss) {
+      // When loaded from disk (e.g. toggle activation), the manifest may
+      // lack hasClientCss/hasClientScript flags. Auto-detect by checking
+      // if the actual asset files exist in the extension directory.
+      let hasClientCss = manifest && manifest.hasClientCss;
+      let hasClientScript = manifest && manifest.hasClientScript;
+
+      if (manifest && (!hasClientCss || !hasClientScript)) {
+        const { dir } = await this.resolveExtensionDir(id);
+        if (dir) {
+          if (!hasClientCss && (await fileExists(dir, 'extension.css'))) {
+            hasClientCss = true;
+            manifest.hasClientCss = true;
+          }
+          if (!hasClientScript && (await fileExists(dir, 'remote.js'))) {
+            hasClientScript = true;
+            manifest.hasClientScript = true;
+          }
+        }
+      }
+
+      if (hasClientCss) {
         this[EXTENSION_CSS_ENTRY_POINTS].set(
           id,
           this.getExtensionAssetUrl(id, `extension.css?v=${version}`),
         );
       }
-      if (manifest && manifest.hasClientScript) {
+      if (hasClientScript) {
         this[EXTENSION_SCRIPT_ENTRY_POINTS].set(
           id,
           this.getExtensionAssetUrl(id, `remote.js?v=${version}`),
