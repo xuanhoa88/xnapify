@@ -292,7 +292,10 @@ export function createAction(pageInfo, configs = [], layouts = []) {
   const reversedLayouts = [...layouts].reverse();
 
   return function (context) {
-    return runMiddleware(context, async () => {
+    return runMiddleware(context, async err => {
+      // composeMiddleware calls next(err) when a middleware throws.
+      // Re-throw so the error propagates to the router's errorHandler.
+      if (err) throw err;
       // 1. Load route data
       let pageData = {};
       if (typeof module.getInitialProps === 'function') {
