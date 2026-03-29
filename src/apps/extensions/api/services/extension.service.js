@@ -17,19 +17,6 @@ import {
   invalidateCache,
 } from './extension.helpers';
 
-// ========================================================================
-// Internal Helpers
-// ========================================================================
-
-async function pathExists(filePath) {
-  try {
-    await fs.promises.access(filePath);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 /**
  * Scan a directory and add extensions to the map
  * @param {string} dirPath - Directory path
@@ -256,14 +243,6 @@ export async function getActiveExtensions({
       continue;
     }
 
-    // Detect built client assets
-    if (await pathExists(path.join(extDir, 'remote.js'))) {
-      manifest.hasClientScript = true;
-    }
-    if (await pathExists(path.join(extDir, 'extension.css'))) {
-      manifest.hasClientCss = true;
-    }
-
     extensions.push({
       ...manifest,
       ...dbExtension.toJSON(),
@@ -364,22 +343,11 @@ export async function getExtensionById(
 
   let manifest = null;
   if (resolvedDir) {
-    manifest = await extensionManager.readManifest(
-      path.dirname(resolvedDir),
-      extensionKey,
-    );
+    manifest = await extensionManager.readManifest(resolvedDir);
   }
 
   if (!manifest) {
     throw ExtensionError.notFound(extensionKey);
-  }
-
-  if (await pathExists(path.join(resolvedDir, 'extension.css'))) {
-    manifest.hasClientCss = true;
-  }
-
-  if (await pathExists(path.join(resolvedDir, 'remote.js'))) {
-    manifest.hasClientScript = true;
   }
 
   const result = {
@@ -466,7 +434,12 @@ export async function installExtensionFromPackage(
     let manifestPath = path.join(tempExtractDir, 'package.json');
     let extensionRoot = tempExtractDir;
 
-    if (!(await pathExists(manifestPath))) {
+    if (
+      !(await fs.promises
+        .access(manifestPath)
+        .then(() => true)
+        .catch(() => false))
+    ) {
       const entries = await fs.promises.readdir(tempExtractDir, {
         withFileTypes: true,
       });
@@ -484,7 +457,12 @@ export async function installExtensionFromPackage(
       }
     }
 
-    if (!(await pathExists(manifestPath))) {
+    if (
+      !(await fs.promises
+        .access(manifestPath)
+        .then(() => true)
+        .catch(() => false))
+    ) {
       throw ExtensionError.invalidPackage(
         'Invalid extension package: package.json not found. ' +
           'Ensure the zip contains package.json at the root, or in a single subdirectory.',

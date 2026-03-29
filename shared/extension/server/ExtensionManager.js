@@ -113,33 +113,13 @@ class ServerExtensionManager extends BaseExtensionManager {
     try {
       const version = (manifest && manifest.version) || '0.0.0';
 
-      // When loaded from disk (e.g. toggle activation), the manifest may
-      // lack hasClientCss/hasClientScript flags. Auto-detect by checking
-      // if the actual asset files exist in the extension directory.
-      let hasClientCss = manifest && manifest.hasClientCss;
-      let hasClientScript = manifest && manifest.hasClientScript;
-
-      if (manifest && (!hasClientCss || !hasClientScript)) {
-        const { dir } = await this.resolveExtensionDir(id);
-        if (dir) {
-          if (!hasClientCss && (await fileExists(dir, 'extension.css'))) {
-            hasClientCss = true;
-            manifest.hasClientCss = true;
-          }
-          if (!hasClientScript && (await fileExists(dir, 'remote.js'))) {
-            hasClientScript = true;
-            manifest.hasClientScript = true;
-          }
-        }
-      }
-
-      if (hasClientCss) {
+      if (manifest && manifest.hasClientCss) {
         this[EXTENSION_CSS_ENTRY_POINTS].set(
           id,
           this.getExtensionAssetUrl(id, `extension.css?v=${version}`),
         );
       }
-      if (hasClientScript) {
+      if (manifest && manifest.hasClientScript) {
         this[EXTENSION_SCRIPT_ENTRY_POINTS].set(
           id,
           this.getExtensionAssetUrl(id, `remote.js?v=${version}`),
@@ -758,13 +738,6 @@ class ServerExtensionManager extends BaseExtensionManager {
               if (!manifest || !manifest.id) return null;
               if (loadedNames.has(manifest.name)) return null;
 
-              if (await fileExists(extDir, 'extension.css')) {
-                manifest.hasClientCss = true;
-              }
-              if (await fileExists(extDir, 'remote.js')) {
-                manifest.hasClientScript = true;
-              }
-
               return { ...manifest, fromDisk: true };
             }),
         )
@@ -891,19 +864,31 @@ class ServerExtensionManager extends BaseExtensionManager {
 
   /**
    * Read an extension's package.json manifest from its directory on disk.
-   * Always auto-generates `manifest.id` from `manifest.name`.
+   * Always auto-generates `manifest.id` from `manifest.name` and detects
+   * built client assets (`extension.css`, `remote.js`).
    * @param {...string} extensionDirs - Absolute path to the extension directory
    * @returns {Object|null} Parsed manifest or null on failure
    */
   async readManifest(...extensionDirs) {
     try {
-      const manifestPath = path.join(...extensionDirs, 'package.json');
-      const manifestContent = await fs.promises.readFile(manifestPath, 'utf8');
+      const extDir = path.join(...extensionDirs);
+      const manifestContent = await fs.promises.readFile(
+        path.join(extDir, 'package.json'),
+        'utf8',
+      );
       const manifest = JSON.parse(manifestContent);
 
       // Always auto-generate id from name
       // eslint-disable-next-line no-underscore-dangle
       manifest.id = this._resolveExtensionId(manifest);
+
+      // Detect built client assets
+      if (await fileExists(extDir, 'extension.css')) {
+        manifest.hasClientCss = true;
+      }
+      if (await fileExists(extDir, 'remote.js')) {
+        manifest.hasClientScript = true;
+      }
 
       return manifest;
     } catch {

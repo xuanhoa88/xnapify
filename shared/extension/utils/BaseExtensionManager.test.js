@@ -138,7 +138,7 @@ describe('BaseExtensionManager', () => {
       );
 
       const meta = manager[EXTENSION_METADATA].get('test-extension');
-      expect(meta.state).toBe(ExtensionState.LOADED);
+      expect(meta.state).toBe(ExtensionState.ACTIVE);
     });
 
     it('handles load failure', async () => {

@@ -202,8 +202,12 @@ export function notifyExtensionChange(container, type, extensionKey) {
   // Use extensionKey (manifest.id) as the canonical identifier
   const payload = { type, extensionId: extensionKey };
 
-  // Include manifest data for install/update events
-  if (type === 'EXTENSION_INSTALLED' || type === 'EXTENSION_UPDATED') {
+  // Include manifest data for install/update/activate events
+  if (
+    type === 'EXTENSION_INSTALLED' ||
+    type === 'EXTENSION_UPDATED' ||
+    type === 'EXTENSION_ACTIVATED'
+  ) {
     const extensionManager = container.resolve('extension');
     const metadata = extensionManager
       ? extensionManager.getExtensionMetadata(extensionKey)
