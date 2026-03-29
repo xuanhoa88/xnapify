@@ -435,21 +435,39 @@ class ClientExtensionManager extends BaseExtensionManager {
   /**
    * Resolve the loaded ID for an extension.
    *
-   * WebSocket events send the database UUID, but ACTIVE_EXTENSIONS is keyed
-   * by package name (set during activateViewNamespace via registry.register).
-   * This helper tries the UUID first, then resolves the package name via
-   * extension metadata.
+   * WebSocket events send the DB key (= manifest.name, e.g. '@rsk-extension/posts'),
+   * but ACTIVE_EXTENSIONS and EXTENSION_METADATA are keyed by manifest.id
+   * (= snakeCase(name), e.g. 'rsk_extension_posts').
    *
-   * @param {string} id - Database UUID from WebSocket event
+   * Resolution order:
+   *  1. Direct match in ACTIVE_EXTENSIONS (exact id)
+   *  2. Direct match in EXTENSION_METADATA → resolve via manifest.name
+   *  3. Scan all metadata entries for a manifest.name match → return internal id
+   *
+   * @param {string} id - Extension identifier from WebSocket event (DB key / manifest.name)
    * @returns {string|null} The key in ACTIVE_EXTENSIONS, or null
    * @private
    */
   _resolveLoadedId(id) {
+    // 1. Direct match (manifest.id or already-loaded key)
     if (this.isExtensionLoaded(id)) return id;
+
+    // 2. Direct metadata lookup
     const meta = this[EXTENSION_METADATA].get(id);
-    const pkgName =
-      meta && meta.manifest && meta.manifest.name ? meta.manifest.name : null;
-    if (pkgName && this.isExtensionLoaded(pkgName)) return pkgName;
+    if (meta) {
+      const pkgName =
+        meta.manifest && meta.manifest.name ? meta.manifest.name : null;
+      if (pkgName && this.isExtensionLoaded(pkgName)) return pkgName;
+    }
+
+    // 3. Scan all metadata for a manifest.name match
+    //    (WS sends manifest.name but maps are keyed by manifest.id)
+    for (const [internalId, m] of this[EXTENSION_METADATA].entries()) {
+      if (m.manifest && m.manifest.name === id) {
+        if (this.isExtensionLoaded(internalId)) return internalId;
+      }
+    }
+
     return null;
   }
 
@@ -461,9 +479,13 @@ class ClientExtensionManager extends BaseExtensionManager {
    * @private
    */
   async _teardownExtension(id) {
+    console.log('[ClientExtensionManager] _teardownExtension called with id:', id);
+    console.log('[ClientExtensionManager] ACTIVE_EXTENSIONS keys:', Array.from(this[ACTIVE_EXTENSIONS].keys()));
+    console.log('[ClientExtensionManager] EXTENSION_METADATA keys:', Array.from(this[EXTENSION_METADATA].keys()));
     // Resolve UUID → package-name (routes/ACTIVE_EXTENSIONS use package-name)
     // eslint-disable-next-line no-underscore-dangle
     const loadedId = this._resolveLoadedId(id);
+    console.log('[ClientExtensionManager] _resolveLoadedId result:', loadedId);
     if (!loadedId) return;
 
     // Phase 1: Shutdown hook
@@ -494,6 +516,7 @@ class ClientExtensionManager extends BaseExtensionManager {
    * @param {Object} event - Event with { type, extensionId, data }
    */
   async processLifecycleEvent(event) {
+    console.log('[ClientExtensionManager] processLifecycleEvent called:', JSON.stringify(event));
     if (!event || !event.type) {
       console.warn('[ClientExtensionManager] Invalid event received:', event);
       return;

@@ -466,8 +466,18 @@ export class BaseExtensionManager {
         this._injectRoutes(id, ext.routes(), 'views');
       }
 
+      // Register as ACTIVE so unload/teardown can find it later.
+      // activateViewNamespace does this in its Phase 4, but for
+      // dynamically-loaded extensions (e.g. WS-triggered activation)
+      // that phase never runs — the extension is only "defined" but
+      // never "registered".  Without this, _teardownExtension silently
+      // skips cleanup because _resolveLoadedId cannot find the id in
+      // ACTIVE_EXTENSIONS.
+      this.registry.register(id, ext);
+      this[ACTIVE_EXTENSIONS].set(id, ext);
+      metadata.state = ExtensionState.ACTIVE;
+
       // Update metadata
-      metadata.state = ExtensionState.LOADED;
       metadata.hasRoutes = hasRoutes;
       metadata.loadedAt = Date.now();
       metadata.manifest = { ...manifest };
