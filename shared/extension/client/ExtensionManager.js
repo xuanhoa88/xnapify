@@ -479,13 +479,9 @@ class ClientExtensionManager extends BaseExtensionManager {
    * @private
    */
   async _teardownExtension(id) {
-    console.log('[ClientExtensionManager] _teardownExtension called with id:', id);
-    console.log('[ClientExtensionManager] ACTIVE_EXTENSIONS keys:', Array.from(this[ACTIVE_EXTENSIONS].keys()));
-    console.log('[ClientExtensionManager] EXTENSION_METADATA keys:', Array.from(this[EXTENSION_METADATA].keys()));
     // Resolve UUID → package-name (routes/ACTIVE_EXTENSIONS use package-name)
     // eslint-disable-next-line no-underscore-dangle
     const loadedId = this._resolveLoadedId(id);
-    console.log('[ClientExtensionManager] _resolveLoadedId result:', loadedId);
     if (!loadedId) return;
 
     // Phase 1: Shutdown hook
@@ -516,7 +512,6 @@ class ClientExtensionManager extends BaseExtensionManager {
    * @param {Object} event - Event with { type, extensionId, data }
    */
   async processLifecycleEvent(event) {
-    console.log('[ClientExtensionManager] processLifecycleEvent called:', JSON.stringify(event));
     if (!event || !event.type) {
       console.warn('[ClientExtensionManager] Invalid event received:', event);
       return;
