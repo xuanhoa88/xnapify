@@ -13,6 +13,7 @@ import workerPool from '../workers';
 import {
   installExtensionDependencies,
   notifyExtensionChange,
+  resolveExtension,
 } from './extension.helpers';
 
 // ========================================================================
@@ -38,21 +39,18 @@ async function handleInstallJob(container, job) {
     });
     job.updateProgress(50);
 
-    // Compute checksum in worker thread (avoids blocking event loop)
-    const checksum = await workerPool.computeChecksum(extensionDir);
+    // Compute integrity hash in worker thread (avoids blocking event loop)
+    const integrity = await workerPool.computeChecksum(extensionDir);
     const { Extension } = container.resolve('models');
-    await Extension.update({ checksum }, { where: { key: extensionKey } });
+    await Extension.update({ integrity }, { where: { key: extensionKey } });
     job.updateProgress(60);
 
     if (extensionManager) {
-      await extensionManager.reloadExtension(extensionKey);
-      const metadata = extensionManager.getExtensionMetadata(extensionKey);
-      if (
-        metadata &&
-        metadata.manifest &&
-        !extensionManager.isExtensionLoaded(extensionKey)
-      ) {
-        await extensionManager.emit('extension:loaded', { id: extensionKey });
+      // Run one-time install hook (e.g. persistent config, initial setup)
+      // Extension stays inactive — admin must manually activate.
+      const manifest = await extensionManager.readManifest(extensionDir);
+      if (manifest) {
+        await extensionManager.installExtension(extensionKey, manifest);
       }
     }
     job.updateProgress(90);
@@ -61,7 +59,7 @@ async function handleInstallJob(container, job) {
       hook('admin:extensions').emit('installed', {
         extension_id: extensionKey,
         actor_id: actorId,
-        data: { path: extensionDir, checksum },
+        data: { path: extensionDir, integrity },
       });
     }
 
@@ -89,12 +87,17 @@ async function handleDeleteJob(container, job) {
     const { Extension } = container.resolve('models');
 
     if (extensionManager) {
+      // 1. Unload → deactivate via event chain (extension:unloaded → deactivateExtension)
+      //    Must happen first: uninstall requires a non-active extension.
       if (extensionManager.isExtensionLoaded(extensionKey)) {
         await extensionManager.unloadExtension(extensionKey);
-      } else {
-        await extensionManager.emit('extension:unloaded', {
-          id: extensionKey,
-        });
+      }
+
+      // 2. Run one-time uninstall hook (reverts seeds, migrations, cleanup)
+      const metadata = extensionManager.getExtensionMetadata(extensionKey);
+      const manifest = metadata && metadata.manifest;
+      if (manifest) {
+        await extensionManager.uninstallExtension(extensionKey, manifest);
       }
     }
 
@@ -151,28 +154,30 @@ async function handleToggleJob(container, job) {
   try {
     const extensionManager = container.resolve('extension');
     const hook = container.resolve('hook');
-    const { Extension } = container.resolve('models');
+    const models = container.resolve('models');
 
-    // Security: verify checksum before activating (skip for dev extensions)
+    // Security: verify integrity before activating (skip for dev extensions)
     if (isActive && extensionDir && !isDevExtension) {
-      const dbExtension = await Extension.findOne({
-        where: { key: extensionKey },
-      });
-      if (dbExtension && dbExtension.checksum) {
-        // Verify checksum in worker thread (avoids blocking event loop)
+      const { extension: dbExtension } = await resolveExtension(
+        models,
+        extensionKey,
+        { required: false },
+      );
+      if (dbExtension && dbExtension.integrity) {
+        // Verify integrity in worker thread (avoids blocking event loop)
         const { valid, actual } = await workerPool.verifyChecksum(
           extensionDir,
-          dbExtension.checksum,
+          dbExtension.integrity,
         );
         if (!valid) {
           console.error(
-            `[ExtensionWorker] ⛔ Checksum verification FAILED for extension ${extensionKey}. ` +
-              `Expected: ${dbExtension.checksum}, Got: ${actual}. ` +
+            `[ExtensionWorker] ⛔ Integrity verification FAILED for extension ${extensionKey}. ` +
+              `Expected: ${dbExtension.integrity}, Got: ${actual}. ` +
               `Refusing to activate — possible code injection detected.`,
           );
           await dbExtension.update({ is_active: false });
           notifyExtensionChange(container, 'EXTENSION_TAMPERED', extensionKey);
-          return { success: false, reason: 'checksum_mismatch' };
+          return { success: false, reason: 'integrity_mismatch' };
         }
       }
     }
@@ -180,9 +185,12 @@ async function handleToggleJob(container, job) {
     if (extensionDir && isActive) {
       await installExtensionDependencies(extensionDir, { name: extensionKey });
 
-      // Recompute checksum in worker thread after fresh npm install
-      const checksum = await workerPool.computeChecksum(extensionDir);
-      await Extension.update({ checksum }, { where: { key: extensionKey } });
+      // Recompute integrity hash in worker thread after fresh npm install
+      const integrity = await workerPool.computeChecksum(extensionDir);
+      await models.Extension.update(
+        { integrity },
+        { where: { key: extensionKey } },
+      );
     }
 
     if (extensionManager) {

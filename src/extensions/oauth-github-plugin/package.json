@@ -4,13 +4,11 @@
   "browser": "views/index.js",
   "main": "api/index.js",
   "description": "GitHub OAuth login provider",
-  "rsk": {
-    "icon": "github",
-    "subscribe": [
-      "/login"
-    ]
-  },
   "dependencies": {
     "passport-github2": "^0.1.12"
-  }
+  },
+  "slots": [
+    "/login"
+  ],
+  "icon": "github"
 }

@@ -22,31 +22,70 @@ const { logInfo, logError, formatDuration } = require('../utils/logger');
 const { isDev } = require('../webpack/base.config');
 const createExtensionConfig = require('../webpack/extension.config');
 
-// Promisify execFile
 const execFileAsync = util.promisify(execFile);
 
-// Configuration
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
 const EXTENSION_PATH = config.env('RSK_EXTENSION_LOCAL_PATH', 'extensions');
 const EXTENSIONS_DIR = path.resolve(config.APP_DIR, EXTENSION_PATH);
 const EXTENSIONS_BUILD_DIR = path.resolve(config.BUILD_DIR, EXTENSION_PATH);
 
+/** Fields preserved in the built package.json (allowlist for safety). */
+const MANIFEST_FIELDS = [
+  'name',
+  'version',
+  'description',
+  'keywords',
+  'author',
+  'license',
+  'homepage',
+  'repository',
+  'dependencies',
+  'peerDependencies',
+  'icon',
+  'screenshots',
+  'slots',
+  'autoload',
+];
+
+const WATCH_IGNORED = [
+  '**/node_modules/**',
+  '**/*.test.js',
+  '**/*.spec.js',
+  '**/__tests__/**',
+];
+
+// ---------------------------------------------------------------------------
+// Discovery
+// ---------------------------------------------------------------------------
+
 /**
- * Discover extensions from the extensions directory
- * @returns {Array} Array of extension objects with name, path, and parsed manifest
+ * Discover valid extensions from the local extensions directory.
+ * An extension must have a package.json with `name` and at least one
+ * entry point (`main` or `browser`) that exists on disk.
+ *
+ * @returns {Array<{manifest: Object, name: string, dirName: string, version: string, path: string}>}
  */
 function discoverExtensions() {
-  if (!fs.existsSync(EXTENSIONS_DIR)) {
-    return [];
-  }
+  if (!fs.existsSync(EXTENSIONS_DIR)) return [];
 
   return fs
-    .readdirSync(EXTENSIONS_DIR)
-    .map(name => {
-      const extensionPath = path.join(EXTENSIONS_DIR, name);
-      const manifestPath = path.join(extensionPath, 'package.json');
-
+    .readdirSync(EXTENSIONS_DIR, { withFileTypes: true })
+    .filter(dirent => dirent.isDirectory())
+    .map(dirent => {
+      const extensionPath = path.join(EXTENSIONS_DIR, dirent.name);
       try {
-        const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+        const manifest = JSON.parse(
+          fs.readFileSync(path.join(extensionPath, 'package.json'), 'utf8'),
+        );
+
+        if (!manifest.name) {
+          logError(`Extension at ${dirent.name} missing "name" — skipped`);
+          return null;
+        }
+
         const hasMain =
           manifest.main &&
           fs.existsSync(path.join(extensionPath, manifest.main));
@@ -54,90 +93,62 @@ function discoverExtensions() {
           manifest.browser &&
           fs.existsSync(path.join(extensionPath, manifest.browser));
 
-        if (hasMain || hasBrowser) {
-          return {
-            manifest,
-            name: manifest.name || name,
-            dirName: snakeCase(manifest.name || name),
-            version: semver.clean(manifest.version),
-            path: extensionPath,
-          };
-        }
+        if (!hasMain && !hasBrowser) return null;
+
+        return {
+          manifest,
+          name: manifest.name,
+          dirName: snakeCase(manifest.name),
+          version: semver.clean(manifest.version) || '0.0.0',
+          path: extensionPath,
+        };
       } catch {
-        // Invalid or missing manifest
+        return null;
       }
-      return null;
     })
     .filter(Boolean);
 }
+
+// ---------------------------------------------------------------------------
+// Manifest Generation
+// ---------------------------------------------------------------------------
+
 /**
- * Generate package.json for each built extension
- * @param {Array} extensions - Array of extension objects
+ * (Re-)generate the built package.json for each extension.
+ * Re-reads source manifest on every call so watch-mode picks up metadata changes.
+ *
+ * Note: `id` is intentionally omitted — `readManifest()` always auto-generates
+ * it at runtime from `snakeCase(name)`. Writing it here would be redundant.
  */
 async function generateManifests(extensions) {
-  for (const {
-    name,
-    dirName,
-    version,
-    manifest: initialManifest,
-    path: extensionPath,
-  } of extensions) {
+  for (const { name, dirName, version, path: extensionPath } of extensions) {
     const outputDir = path.join(EXTENSIONS_BUILD_DIR, dirName);
+    fs.mkdirSync(outputDir, { recursive: true });
 
-    if (!fs.existsSync(outputDir)) {
-      fs.mkdirSync(outputDir, { recursive: true });
+    // Re-read source manifest to pick up metadata changes during watch-mode
+    let manifest;
+    try {
+      manifest = JSON.parse(
+        fs.readFileSync(path.join(extensionPath, 'package.json'), 'utf8'),
+      );
+    } catch {
+      logError(`Failed to read manifest for ${name} — skipped`);
+      continue;
     }
 
-    // Re-read package.json from source on every build so metadata changes
-    // (e.g. rsk.subscribe) are picked up during watch-mode rebuilds.
-    let manifest = initialManifest;
-    const sourceManifest = path.join(extensionPath, 'package.json');
-    if (fs.existsSync(sourceManifest)) {
-      try {
-        manifest = JSON.parse(fs.readFileSync(sourceManifest, 'utf8'));
-      } catch {
-        // Fall back to the initially discovered manifest
-      }
-    }
-
-    // Compute checksum of all built files
     const checksum = await computeChecksum(outputDir);
 
     const outputManifest = {
-      ...pick(manifest, [
-        'name',
-        'version',
-        'description',
-        'dependencies',
-        'peerDependencies',
-        'keywords',
-        'author',
-        'license',
-        'homepage',
-        'repository',
-        'rsk',
-      ]),
-      ...(manifest.main && {
-        main: './api.js',
-      }),
-      ...(manifest.browser && {
-        browser: './browser.js',
-      }),
-    };
-
-    // Preserve original name, use cleaned semver version.
-    // id = filesystem-safe identifier (= DB key = dir name = MF container base)
-    outputManifest.name = name;
-    outputManifest.id = dirName;
-    outputManifest.version = version;
-
-    // Set rsk metadata with checksum and build timestamp so dev-mode HMR
-    // can detect code changes even when the package.json version stays the
-    // same. containerName is NOT stored — it is derived at API time.
-    outputManifest.rsk = {
-      ...outputManifest.rsk,
-      checksum,
-      buildTimestamp: Date.now(),
+      ...pick(manifest, MANIFEST_FIELDS),
+      // Canonical identity
+      name,
+      version,
+      // Entry points (rewritten to built filenames)
+      ...(manifest.main && { main: './api.js' }),
+      ...(manifest.browser && { browser: './browser.js' }),
+      // Build metadata
+      integrity: checksum,
+      builtAt: Date.now(),
     };
 
     fs.writeFileSync(
@@ -147,29 +158,26 @@ async function generateManifests(extensions) {
   }
 }
 
-/**
- * Copy static assets (e.g. assets/) from extension source to build output
- * @param {Array} extensions - Array of extension objects
- */
+// ---------------------------------------------------------------------------
+// Static Assets
+// ---------------------------------------------------------------------------
+
 async function copyStaticAssets(extensions) {
   for (const { dirName, path: extensionPath } of extensions) {
-    const assetsSource = path.join(extensionPath, 'assets');
-    const assetsTarget = path.join(EXTENSIONS_BUILD_DIR, dirName, 'assets');
+    const source = path.join(extensionPath, 'assets');
+    const target = path.join(EXTENSIONS_BUILD_DIR, dirName, 'assets');
 
-    if (await pathExists(assetsSource)) {
-      await copyDir(assetsSource, assetsTarget);
-      logInfo(`📁 Copied static assets for ${name}`);
+    if (await pathExists(source)) {
+      await copyDir(source, target);
+      logInfo(`📁 Copied static assets for ${dirName}`);
     }
   }
 }
 
-/**
- * Handle webpack build result
- * @param {Error} err - Webpack error
- * @param {Object} stats - Webpack stats
- * @param {boolean} isWatch - Whether in watch mode
- * @returns {Error|null} Error if compilation failed
- */
+// ---------------------------------------------------------------------------
+// Webpack Helpers
+// ---------------------------------------------------------------------------
+
 function handleBuildResult(err, stats, isWatch) {
   if (err) {
     logError('Webpack configuration error');
@@ -194,104 +202,111 @@ function handleBuildResult(err, stats, isWatch) {
   return null;
 }
 
+/** Notify the dev server that extension bundles have been rebuilt. */
+function notifyServer(extensions) {
+  const names = extensions.map(p => p.name);
+  const msg = { type: 'extensions-refreshed', extensions: names };
+
+  if (typeof process.send === 'function') {
+    process.send(msg);
+  } else {
+    process.emit('message', msg);
+  }
+  logInfo(`🔌 Sent extensions-refreshed: ${names.join(', ')}`);
+}
+
+/** Install npm dependencies for each extension (dev-mode only). */
+async function installDependencies(extensions) {
+  logInfo(
+    `📦 Installing dependencies for ${extensions.length} extension(s)...`,
+  );
+  for (const ext of extensions) {
+    try {
+      await execFileAsync(
+        'npm',
+        [
+          'install',
+          '--no-audit',
+          '--no-update-notifier',
+          '--no-fund',
+          '--engine-strict',
+          '--no-package-lock',
+        ],
+        { cwd: ext.path },
+      );
+      if (isDev) {
+        console.log(`[ExtensionBuild] npm install completed for ${ext.name}`);
+      }
+    } catch (npmErr) {
+      logError(`Failed to install dependencies for ${ext.name}`);
+      console.error(npmErr);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Watch-Mode (empty extensions directory)
+// ---------------------------------------------------------------------------
+
 /**
- * Bundle extensions using Webpack
- * @param {Object} options - Build options
- * @param {boolean} options.watch - Whether to watch for changes
- * @returns {Promise<void>}
+ * When no extensions exist yet, start a lightweight watcher that detects
+ * when the first extension appears, then restarts with a real build.
  */
+function watchForNewExtensions(options) {
+  if (!fs.existsSync(EXTENSIONS_DIR)) {
+    fs.mkdirSync(EXTENSIONS_DIR, { recursive: true });
+  }
+
+  const placeholderFile = path.join(EXTENSIONS_DIR, '.placeholder.js');
+  if (!fs.existsSync(placeholderFile)) {
+    fs.writeFileSync(placeholderFile, '// Placeholder for webpack watch\n');
+  }
+
+  const watchConfig = {
+    mode: 'development',
+    entry: placeholderFile,
+    output: { path: EXTENSIONS_BUILD_DIR, filename: '.placeholder.js' },
+    plugins: [
+      {
+        apply: compiler => {
+          compiler.hooks.afterCompile.tap('WatchExtensionsDir', compilation => {
+            compilation.contextDependencies.add(EXTENSIONS_DIR);
+          });
+          compiler.hooks.done.tap('CheckForExtensions', () => {
+            if (discoverExtensions().length > 0) {
+              logInfo('🔍 New extension(s) detected — restarting build');
+              compiler.close(() => buildExtensions(options));
+            }
+          });
+        },
+      },
+    ],
+  };
+
+  const watcher = webpack(watchConfig);
+  return new Promise(resolve => {
+    watcher.watch({ ignored: WATCH_IGNORED, aggregateTimeout: 300 }, () =>
+      resolve(),
+    );
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Main Entry
+// ---------------------------------------------------------------------------
+
 async function buildExtensions(options = {}) {
   const isWatch =
     config.env('NODE_ENV') === 'development' &&
     (options.watch || process.argv.includes('--watch'));
+
   const extensions = discoverExtensions();
 
   if (extensions.length === 0) {
     logInfo('📦 No extensions found to build');
-
-    // In watch mode, stay alive and use webpack's native watch
     if (isWatch) {
       logInfo('👀 Watching for new extensions...');
-
-      // Ensure extensions directory exists
-      if (!fs.existsSync(EXTENSIONS_DIR)) {
-        fs.mkdirSync(EXTENSIONS_DIR, { recursive: true });
-      }
-
-      // Create a placeholder entry file for webpack to watch
-      const placeholderFile = path.join(EXTENSIONS_DIR, '.placeholder.js');
-      if (!fs.existsSync(placeholderFile)) {
-        fs.writeFileSync(placeholderFile, '// Placeholder for webpack watch\n');
-      }
-
-      // Create minimal webpack config to watch the extensions directory
-      const watchConfig = {
-        mode: 'development',
-        entry: placeholderFile,
-        output: {
-          path: EXTENSIONS_BUILD_DIR,
-          filename: '.placeholder.js',
-        },
-        plugins: [
-          {
-            apply: compiler => {
-              // Add extensions directory to watch dependencies
-              compiler.hooks.afterCompile.tap(
-                'WatchExtensionsDir',
-                compilation => {
-                  compilation.contextDependencies.add(EXTENSIONS_DIR);
-                },
-              );
-
-              // Check for new extensions after each compilation
-              compiler.hooks.done.tap('CheckForExtensions', async () => {
-                const newExtensions = discoverExtensions();
-                if (newExtensions.length > 0) {
-                  logInfo(
-                    `🔍 New extension(s) detected: ${newExtensions.map(p => p.name).join(', ')}`,
-                  );
-                  compiler.close(() => {
-                    // Restart with real extensions
-                    buildExtensions(options);
-                  });
-                }
-              });
-            },
-          },
-        ],
-      };
-
-      const watcher = webpack(watchConfig);
-      // specific return for empty watch case?
-      // Current logic strictly returned a promise that never resolves (watcher.watch)
-      // For dev server, we probably want it to resolve immediately if no extensions so server can start.
-      // But if we return, the process might exit if not held open?
-      // tools/run.js waits for the promise.
-      // If we resolve, run.js finishes this task.
-      // If called from dev.js, we want to proceed.
-      // So resolving is good. The watcher keeps the process alive?
-      // No, watcher.watch returns a Watching object.
-      // If we don't return a pending promise, the task function returns.
-      // If run via tools/run.js, it finishes.
-      // If run via dev.js, it continues to next step.
-
-      return new Promise(resolve => {
-        watcher.watch(
-          {
-            ignored: [
-              '**/node_modules/**',
-              '**/*.test.js',
-              '**/*.spec.js',
-              '**/__tests__/**',
-            ],
-            aggregateTimeout: 300,
-          },
-          () => {
-            // Resolve on first build (even if placeholder)
-            resolve();
-          },
-        );
-      });
+      return watchForNewExtensions(options);
     }
     return;
   }
@@ -299,37 +314,8 @@ async function buildExtensions(options = {}) {
   logInfo(`🚀 Building ${extensions.length} extension(s)...`);
   const start = Date.now();
 
-  // Ensure all extensions have their dependencies installed before building
   if (isDev) {
-    logInfo(
-      `📦 Installing dependencies for ${extensions.length} extension(s)...`,
-    );
-    for (const ext of extensions) {
-      if (fs.existsSync(path.join(ext.path, 'package.json'))) {
-        try {
-          await execFileAsync(
-            'npm',
-            [
-              'install',
-              '--no-audit',
-              '--no-update-notifier',
-              '--no-fund',
-              '--engine-strict',
-              '--no-package-lock',
-            ],
-            { cwd: ext.path },
-          );
-          if (config.env('NODE_ENV') === 'development') {
-            console.log(
-              `[ExtensionBuild] npm install completed for ${ext.name}`,
-            );
-          }
-        } catch (npmErr) {
-          logError(`Failed to install dependencies for extension ${ext.name}`);
-          console.error(npmErr);
-        }
-      }
-    }
+    await installDependencies(extensions);
   }
 
   const compiler = webpack(
@@ -353,24 +339,12 @@ async function buildExtensions(options = {}) {
       await generateManifests(extensions);
       await copyStaticAssets(extensions);
 
-      const duration = Date.now() - start;
-      logInfo(`✅ Extension build completed in ${formatDuration(duration)}`);
+      logInfo(
+        `✅ Extension build completed in ${formatDuration(Date.now() - start)}`,
+      );
 
-      // Notify the server process to refresh extensions on successful rebuild
       if (!error && isWatch) {
-        const extensionNames = extensions.map(p => p.name);
-        const msg = {
-          type: 'extensions-refreshed',
-          extensions: extensionNames,
-        };
-        if (typeof process.send === 'function') {
-          process.send(msg);
-        } else {
-          process.emit('message', msg);
-        }
-        logInfo(
-          `🔌 Sent extensions-refreshed to server: ${extensionNames.join(', ')}`,
-        );
+        notifyServer(extensions);
       }
 
       if (!isWatch) {
@@ -387,15 +361,7 @@ async function buildExtensions(options = {}) {
     if (isWatch) {
       logInfo('👀 Watching for extension changes...');
       compiler.watch(
-        {
-          ignored: [
-            '**/node_modules/**',
-            '**/*.test.js',
-            '**/*.spec.js',
-            '**/__tests__/**',
-          ],
-          aggregateTimeout: 300,
-        },
+        { ignored: WATCH_IGNORED, aggregateTimeout: 300 },
         onBuild,
       );
     } else {

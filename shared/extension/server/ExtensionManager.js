@@ -856,9 +856,22 @@ class ServerExtensionManager extends BaseExtensionManager {
 
     return { dir: null, isDevExtension: false };
   }
+  /**
+   * Derive the canonical extension ID from a manifest name.
+   * Always computes from snakeCase(manifest.name) — the ID is never
+   * read from the manifest itself, it is always auto-generated.
+   *
+   * @param {Object} manifest - Extension manifest (package.json)
+   * @returns {string|null}
+   */
+  _resolveExtensionId(manifest) {
+    if (manifest && manifest.name) return snakeCase(manifest.name);
+    return null;
+  }
 
   /**
    * Read an extension's package.json manifest from its directory on disk.
+   * Always auto-generates `manifest.id` from `manifest.name`.
    * @param {...string} extensionDirs - Absolute path to the extension directory
    * @returns {Object|null} Parsed manifest or null on failure
    */
@@ -868,10 +881,9 @@ class ServerExtensionManager extends BaseExtensionManager {
       const manifestContent = await fs.promises.readFile(manifestPath, 'utf8');
       const manifest = JSON.parse(manifestContent);
 
-      // Inject canonical id if missing (dev extensions don't have it)
-      if (!manifest.id && manifest.name) {
-        manifest.id = snakeCase(manifest.name);
-      }
+      // Always auto-generate id from name
+      // eslint-disable-next-line no-underscore-dangle
+      manifest.id = this._resolveExtensionId(manifest);
 
       return manifest;
     } catch {

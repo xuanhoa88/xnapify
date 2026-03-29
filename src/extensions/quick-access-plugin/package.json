@@ -3,10 +3,8 @@
   "version": "1.0.0",
   "browser": "views/index.js",
   "description": "Quick login with demo user accounts",
-  "rsk": {
-    "icon": "key",
-    "subscribe": [
-      "/login"
-    ]
-  }
+  "slots": [
+    "/login"
+  ],
+  "icon": "key"
 }

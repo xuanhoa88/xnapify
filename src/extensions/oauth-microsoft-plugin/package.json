@@ -4,12 +4,10 @@
   "browser": "views/index.js",
   "main": "api/index.js",
   "description": "Microsoft OAuth login provider",
-  "rsk": {
-    "subscribe": [
-      "/login"
-    ]
-  },
   "dependencies": {
     "passport-microsoft": "^2.1.0"
-  }
+  },
+  "slots": [
+    "/login"
+  ]
 }

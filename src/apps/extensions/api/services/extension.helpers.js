@@ -58,49 +58,38 @@ export class ExtensionError extends Error {
       400,
     );
   }
-}
 
-// ========================================================================
-// Extension Error
-// ========================================================================
+  static conflict(message) {
+    return new ExtensionError(
+      message || 'Extension already exists',
+      'ExtensionConflict',
+      409,
+    );
+  }
+}
 
 // ========================================================================
 // Extension Resolution (DRY — used by 4 service functions)
 // ========================================================================
-
 /**
- * Resolve an extension record from an ID (DB UUID or plain key).
- *
- * Lookup order:
- *  1. Try `findByPk(id)` — works when called with DB UUID.
- *  2. Try `findOne({ key: id })` — works when called with manifest.id (snakeCase).
- *
- * If neither finds a DB record, `extensionKey` defaults to `id` so callers
- * can still resolve the extension directory on disk.
+ * Resolve an extension record by its canonical key (manifest.id = DB `key`).
  *
  * @param {Object} models - Sequelize models ({ Extension })
- * @param {string} id - Extension UUID or plain key (manifest.id)
+ * @param {string} id - Extension key (manifest.id)
  * @param {Object} [options]
  * @param {boolean} [options.required=true] - Throw if not found
- * @returns {Promise<{extension: Object|null, extensionKey: string|null}>}
+ * @returns {Promise<{extension: Object|null}>}
  */
 export async function resolveExtension(models, id, { required = true } = {}) {
   const { Extension } = models;
 
-  // 1. Try DB primary key (UUID)
-  let extension = await Extension.findByPk(id);
-  if (extension) {
-    return { extension, extensionKey: extension.key };
-  }
-
-  // 2. Try plain key (manifest.id = snakeCase dir name)
-  extension = await Extension.findOne({ where: { key: id } });
+  const extension = await Extension.findOne({ where: { key: id } });
 
   if (!extension && required) {
     throw ExtensionError.notFound();
   }
 
-  return { extension, extensionKey: extension ? extension.key : id };
+  return { extension };
 }
 
 // ========================================================================

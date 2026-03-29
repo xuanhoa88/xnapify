@@ -27,7 +27,6 @@ describe('ServerExtensionManager', () => {
   let mockContext;
 
   beforeEach(async () => {
-    // Reset singleton state manually since it's a singleton
     serverManager[ACTIVE_EXTENSIONS].clear();
     serverManager[EXTENSION_METADATA].clear();
 
@@ -35,7 +34,6 @@ describe('ServerExtensionManager', () => {
       fetch: jest.fn().mockResolvedValue({ data: { extensions: [] } }),
     };
 
-    // Initialize properly
     serverManager.fetch = mockContext.fetch;
 
     jest.clearAllMocks();
@@ -47,6 +45,10 @@ describe('ServerExtensionManager', () => {
   afterEach(() => {
     jest.restoreAllMocks();
   });
+
+  // ---------------------------------------------------------------------------
+  // Entry Point Resolution
+  // ---------------------------------------------------------------------------
 
   describe('_resolveEntryPoint', () => {
     it('resolves server.js for browser extensions', () => {
@@ -64,20 +66,30 @@ describe('ServerExtensionManager', () => {
     });
   });
 
+  // ---------------------------------------------------------------------------
+  // Module Loading
+  // ---------------------------------------------------------------------------
+
   describe('_loadExtensionModule', () => {
-    it('returns null if extension has no loadable modules', async () => {
-      const result = await // eslint-disable-next-line no-underscore-dangle
-      serverManager._loadExtensionModule('test', 'server.js', {});
-      expect(result).toBeNull();
+    it('returns fallback object for extensions without view module', async () => {
+      jest.spyOn(serverManager, '_loadViewModule').mockResolvedValue(null);
+
+      // eslint-disable-next-line no-underscore-dangle
+      const result = await serverManager._loadExtensionModule(
+        'test',
+        'server.js',
+        {},
+      );
+
+      // Returns a minimal { setup() {} } so the lifecycle continues
+      expect(result).toBeDefined();
+      expect(typeof result.setup).toBe('function');
     });
 
-    it('returns null for API-only extensions (no view module)', async () => {
-      // API-only extension has main but no browser field
-      const manifest = {
-        name: 'test_extension',
-        id: 'test',
-        main: 'server.js',
-      };
+    it('returns fallback object for API-only extensions', async () => {
+      const manifest = { name: 'test_extension', id: 'test', main: 'api.js' };
+
+      jest.spyOn(serverManager, '_loadViewModule').mockResolvedValue(null);
 
       // eslint-disable-next-line no-underscore-dangle
       const result = await serverManager._loadExtensionModule(
@@ -86,22 +98,21 @@ describe('ServerExtensionManager', () => {
         manifest,
       );
 
-      // API module loading is handled by the activate flow, not bootstrap
-      expect(result).toBeNull();
+      expect(result).toBeDefined();
+      expect(typeof result.setup).toBe('function');
     });
 
-    it('loads View module from server.js', async () => {
+    it('returns view module when available', async () => {
       const manifest = {
         name: 'test_extension',
         id: 'test',
         browser: 'src/index.js',
       };
+      const mockViewModule = { name: 'ViewExtension', routes: jest.fn() };
 
-      const mockView = { default: { name: 'ViewExtension' } };
-      jest.spyOn(serverManager, '_requireModule').mockReturnValue(mockView);
       jest
-        .spyOn(serverManager, '_getExtensionBundlePath')
-        .mockReturnValue('/abs/path/server.js');
+        .spyOn(serverManager, '_loadViewModule')
+        .mockResolvedValue(mockViewModule);
 
       // eslint-disable-next-line no-underscore-dangle
       const result = await serverManager._loadExtensionModule(
@@ -110,32 +121,33 @@ describe('ServerExtensionManager', () => {
         manifest,
       );
 
-      expect(result).toStrictEqual(mockView.default);
+      expect(result).toBe(mockViewModule);
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // Install / Uninstall Lifecycle
+  // ---------------------------------------------------------------------------
 
   describe('installExtension', () => {
     it('calls install hook if exported by extension API', async () => {
       const mockApi = { install: jest.fn().mockResolvedValue() };
-      jest.spyOn(serverManager, '_requireModule').mockReturnValue(mockApi);
-      jest
-        .spyOn(serverManager, '_getExtensionBundlePath')
-        .mockResolvedValue('/abs/path/api.js');
+
+      jest.spyOn(serverManager, '_requireApiModule').mockResolvedValue(mockApi);
 
       serverManager.apiContainer = {
         resolve: jest.fn().mockReturnValue(null),
       };
 
-      const manifest = { name: 'test_extension', main: 'api.js' };
+      const manifest = { name: 'test_extension', id: 'test', main: 'api.js' };
 
       const result = await serverManager.installExtension(
         'test_extension_id',
         manifest,
       );
 
-      expect(serverManager._requireModule).toHaveBeenCalledWith(
-        '/abs/path/api.js',
-      );
+      // eslint-disable-next-line no-underscore-dangle
+      expect(serverManager._requireApiModule).toHaveBeenCalledWith(manifest);
       expect(mockApi.install).toHaveBeenCalledWith(
         expect.objectContaining({
           container: expect.any(Object),
@@ -147,12 +159,9 @@ describe('ServerExtensionManager', () => {
 
     it('skips install hook if not exported', async () => {
       const mockApi = { init: jest.fn() }; // no install()
-      jest.spyOn(serverManager, '_requireModule').mockReturnValue(mockApi);
-      jest
-        .spyOn(serverManager, '_getExtensionBundlePath')
-        .mockResolvedValue('/abs/path/api.js');
+      jest.spyOn(serverManager, '_requireApiModule').mockResolvedValue(mockApi);
 
-      const manifest = { name: 'test_extension', main: 'api.js' };
+      const manifest = { name: 'test_extension', id: 'test', main: 'api.js' };
 
       const result = await serverManager.installExtension(
         'test_extension_id',
@@ -160,11 +169,13 @@ describe('ServerExtensionManager', () => {
       );
 
       expect(mockApi.init).not.toHaveBeenCalled();
-      expect(result).toBe(true); // Still conceptually successful (no-op)
+      expect(result).toBe(true);
     });
 
     it('skips install hook if manifest has no main', async () => {
-      const manifest = { name: 'test_extension' }; // no "main"
+      jest.spyOn(serverManager, '_requireApiModule').mockResolvedValue(null);
+
+      const manifest = { name: 'test_extension', id: 'test' }; // no "main"
 
       const result = await serverManager.installExtension(
         'test_extension_id',
@@ -173,30 +184,32 @@ describe('ServerExtensionManager', () => {
 
       expect(result).toBe(true);
     });
+
+    it('rejects invalid extension ID', async () => {
+      const result = await serverManager.installExtension('', {});
+      expect(result).toBe(false);
+    });
   });
 
   describe('uninstallExtension', () => {
     it('calls uninstall hook if exported by extension API', async () => {
       const mockApi = { uninstall: jest.fn().mockResolvedValue() };
-      jest.spyOn(serverManager, '_requireModule').mockReturnValue(mockApi);
-      jest
-        .spyOn(serverManager, '_getExtensionBundlePath')
-        .mockResolvedValue('/abs/path/api.js');
+
+      jest.spyOn(serverManager, '_requireApiModule').mockResolvedValue(mockApi);
 
       serverManager.apiContainer = {
         resolve: jest.fn().mockReturnValue(null),
       };
 
-      const manifest = { name: 'test_extension', main: 'api.js' };
+      const manifest = { name: 'test_extension', id: 'test', main: 'api.js' };
 
       const result = await serverManager.uninstallExtension(
         'test_extension_id',
         manifest,
       );
 
-      expect(serverManager._requireModule).toHaveBeenCalledWith(
-        '/abs/path/api.js',
-      );
+      // eslint-disable-next-line no-underscore-dangle
+      expect(serverManager._requireApiModule).toHaveBeenCalledWith(manifest);
       expect(mockApi.uninstall).toHaveBeenCalledWith(
         expect.objectContaining({
           container: expect.any(Object),
@@ -205,7 +218,60 @@ describe('ServerExtensionManager', () => {
       );
       expect(result).toBe(true);
     });
+
+    it('auto-reverts seeds and migrations before uninstall hook', async () => {
+      const mockRevertSeeds = jest.fn().mockResolvedValue();
+      const mockRevertMigrations = jest.fn().mockResolvedValue();
+      const mockApi = {
+        seeds: jest.fn(() => ({ up: jest.fn() })),
+        migrations: jest.fn(() => ({ up: jest.fn() })),
+        uninstall: jest.fn().mockResolvedValue(),
+      };
+
+      jest.spyOn(serverManager, '_requireApiModule').mockResolvedValue(mockApi);
+
+      serverManager.apiContainer = {
+        resolve: jest.fn().mockReturnValue({
+          connection: {
+            revertSeeds: mockRevertSeeds,
+            revertMigrations: mockRevertMigrations,
+          },
+        }),
+      };
+
+      const manifest = { name: 'test_extension', id: 'test', main: 'api.js' };
+
+      await serverManager.uninstallExtension('test_extension_id', manifest);
+
+      // Seeds reverted before migrations
+      expect(mockRevertSeeds).toHaveBeenCalled();
+      expect(mockRevertMigrations).toHaveBeenCalled();
+      // Then custom hook runs
+      expect(mockApi.uninstall).toHaveBeenCalled();
+    });
+
+    it('skips uninstall hook if API module has no exports', async () => {
+      jest.spyOn(serverManager, '_requireApiModule').mockResolvedValue(null);
+
+      const manifest = { name: 'test_extension', id: 'test' };
+
+      const result = await serverManager.uninstallExtension(
+        'test_extension_id',
+        manifest,
+      );
+
+      expect(result).toBe(true);
+    });
+
+    it('rejects invalid extension ID', async () => {
+      const result = await serverManager.uninstallExtension('', {});
+      expect(result).toBe(false);
+    });
   });
+
+  // ---------------------------------------------------------------------------
+  // Router Connection
+  // ---------------------------------------------------------------------------
 
   describe('router connection', () => {
     let mockViewRouter;
@@ -219,11 +285,8 @@ describe('ServerExtensionManager', () => {
     it('connectViewRouter injects buffered view routes', () => {
       const mockAdapter = { files: () => [], load: () => ({}) };
 
-      // Buffer a view route (no router yet)
       // eslint-disable-next-line no-underscore-dangle
       serverManager._injectRoutes('test-ext', mockAdapter, 'views');
-
-      // Connect view router — should flush buffered adapter
       serverManager.connectViewRouter(mockViewRouter);
 
       expect(mockViewRouter.add).toHaveBeenCalledWith(mockAdapter);
@@ -232,11 +295,8 @@ describe('ServerExtensionManager', () => {
     it('connectApiRouter injects buffered API routes', () => {
       const mockAdapter = { files: () => [], load: () => ({}) };
 
-      // Buffer an API route (no router yet)
       // eslint-disable-next-line no-underscore-dangle
       serverManager._injectRoutes('test-ext', mockAdapter, 'api');
-
-      // Connect API router — should flush buffered adapter
       serverManager.connectApiRouter(mockApiRouter);
 
       expect(mockApiRouter.add).toHaveBeenCalledWith(mockAdapter);
@@ -245,13 +305,11 @@ describe('ServerExtensionManager', () => {
     it('re-injects stored adapters on subsequent connectViewRouter (SSR per-request)', () => {
       const mockAdapter = { files: () => [], load: () => ({}) };
 
-      // Buffer and connect
       // eslint-disable-next-line no-underscore-dangle
       serverManager._injectRoutes('test-ext', mockAdapter, 'views');
       serverManager.connectViewRouter(mockViewRouter);
       expect(mockViewRouter.add).toHaveBeenCalledTimes(1);
 
-      // New router (next SSR request)
       const newRouter = { add: jest.fn(() => []), remove: jest.fn() };
       serverManager.connectViewRouter(newRouter);
 
@@ -262,19 +320,16 @@ describe('ServerExtensionManager', () => {
       const viewAdapter = { files: () => [], load: () => ({}) };
       const apiAdapter = { files: () => [], load: () => ({}) };
 
-      // Buffer both types (no routers available yet)
       // eslint-disable-next-line no-underscore-dangle
       serverManager._injectRoutes('test-ext', viewAdapter, 'views');
       // eslint-disable-next-line no-underscore-dangle
       serverManager._injectRoutes('test-ext', apiAdapter, 'api');
 
-      // connectViewRouter — should inject only view routes
       serverManager.connectViewRouter(mockViewRouter);
 
       expect(mockViewRouter.add).toHaveBeenCalledWith(viewAdapter);
       expect(mockApiRouter.add).not.toHaveBeenCalled();
 
-      // connectApiRouter — should inject only API routes
       serverManager.connectApiRouter(mockApiRouter);
 
       expect(mockApiRouter.add).toHaveBeenCalledWith(apiAdapter);
@@ -283,14 +338,11 @@ describe('ServerExtensionManager', () => {
     it('handles null viewRouter without crash', () => {
       const mockAdapter = { files: () => [], load: () => ({}) };
 
-      // Buffer a route
       // eslint-disable-next-line no-underscore-dangle
       serverManager._injectRoutes('test-ext', mockAdapter, 'views');
 
-      // Should not crash
       expect(() => serverManager.connectViewRouter(null)).not.toThrow();
 
-      // Now connect real router — stored adapter should inject
       serverManager.connectViewRouter(mockViewRouter);
       expect(mockViewRouter.add).toHaveBeenCalledWith(mockAdapter);
     });

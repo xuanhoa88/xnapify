@@ -106,10 +106,7 @@ class ClientExtensionManager extends BaseExtensionManager {
    * Server skips this (inherits no-op); SSR activates per-request via onRouteInit.
    */
   async _postLoad(id, ext, manifest) {
-    const subs =
-      manifest.rsk && Array.isArray(manifest.rsk.subscribe)
-        ? manifest.rsk.subscribe
-        : [];
+    const subs = Array.isArray(manifest.slots) ? manifest.slots : [];
 
     // Module-type extensions (with routes) auto-subscribe to '*' if no
     // explicit subscribe is declared (handled in Registry.defineExtension).

@@ -9,8 +9,6 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
-import snakeCase from 'lodash/snakeCase';
-
 import {
   CACHE_TTL,
   ExtensionError,
@@ -55,23 +53,10 @@ async function scanDirectory(dirPath, source, metadata, extensionManager) {
     const manifest = await extensionManager.readManifest(dirPath, dirent.name);
     if (!manifest) return;
 
-    // Derive a stable map key that matches the DB Extension.key column.
-    // Built extensions have manifest.id injected; dev extensions derive it
-    // from the manifest name (snakeCase).
-    const mapKey = manifest.id || snakeCase(manifest.name) || dirent.name;
-    const rsk = manifest.rsk || {};
-
-    metadata.set(mapKey, {
-      id: mapKey,
-      name: manifest.name || mapKey,
-      version: manifest.version || '0.0.0',
-      description: manifest.description || '',
-      main: manifest.main || null,
-      browser: manifest.browser || null,
-      rsk,
-      icon: rsk.icon || null,
-      isInstalled: false, // Default, will be overwritten by DB check
-      source, // 'remote' or 'local'
+    metadata.set(manifest.id, {
+      ...manifest,
+      isInstalled: false,
+      source,
     });
   });
 
@@ -301,33 +286,37 @@ export async function getActiveExtensions({
 /**
  * Delete (uninstall) an extension — removes DB record and FS directory.
  *
- * Follows the same lookup pattern as `toggleExtensionStatus`:
- *  1. Try `findByPk(id)` for installed extensions.
- *  2. Try `findOne({ key: id })` for plain key (manifest.id).
- *  3. Enqueue deletion via queue if available.
+ * Resolves the extension by its canonical key (manifest.id = DB `key`),
+ * then enqueues the deletion job via the background queue.
  *
- * @param {string} id - Extension UUID or plain key (manifest.id)
+ * @param {string} id - Extension key (manifest.id)
  * @param {Object} context - App context
  */
 export async function deleteExtension(
   id,
   { models, cache, cwd, actorId, queue },
 ) {
-  const { extension, extensionKey } = await resolveExtension(models, id, {
+  const { extension } = await resolveExtension(models, id, {
     required: false,
   });
 
-  // Extension not found in DB — could be a disk-only extension discovered from filesystem.
-  // Decrypt the ID to get the extension key for directory deletion.
-  if (!extension && !extensionKey) {
-    throw ExtensionError.notFound();
+  // Canonical key: DB record's key, or raw ID for disk-only extensions
+  const key = extension ? extension.key : id;
+
+  // Guard: must deactivate before uninstall/delete
+  if (extension && extension.is_active) {
+    const error = new Error(
+      'Cannot delete an active extension. Deactivate it first.',
+    );
+    error.statusCode = 400;
+    throw error;
   }
 
   // Enqueue the background deletion job
   if (queue && cwd) {
     const queueChannel = queue('extensions');
     queueChannel.emit('delete', {
-      extensionKey: extension ? extension.key : extensionKey,
+      extensionKey: key,
       actorId,
     });
   } else if (extension) {
@@ -341,10 +330,10 @@ export async function deleteExtension(
 }
 
 /**
- * Get extension by ID (DB UUID or encrypted key)
+ * Get extension details by key.
  * @param {object} context - Context with cwd, models, and cache
- * @param {string} id - Extension ID (DB UUID or encrypted key)
- * @returns {Promise<Object>} Extension data with manifest (includes id for MF container derivation)
+ * @param {string} id - Extension key (manifest.id)
+ * @returns {Promise<Object>} Extension data with manifest
  * @throws {ExtensionError} If extension ID is invalid or extension not found
  */
 export async function getExtensionById(
@@ -359,19 +348,18 @@ export async function getExtensionById(
     if (cached) return cached;
   }
 
-  // Resolve extension.key from mixed ID
-  const { extension: dbExtensionRecord, extensionKey } = await resolveExtension(
-    models,
-    id,
-    { required: false },
-  );
+  // Resolve extension record by canonical key
+  const { extension: dbRecord } = await resolveExtension(models, id, {
+    required: false,
+  });
+  const extensionKey = dbRecord ? dbRecord.key : id;
 
   if (!extensionKey) {
     throw ExtensionError.invalidId();
   }
 
   // Resolve directory and manifest
-  const { dir: resolvedDir, isDevExtension } =
+  const { dir: resolvedDir } =
     await extensionManager.resolveExtensionDir(extensionKey);
 
   let manifest = null;
@@ -386,43 +374,12 @@ export async function getExtensionById(
     throw ExtensionError.notFound(extensionKey);
   }
 
-  // Ensure manifest.id is set — fallback to extensionKey for older manifests
-  if (!manifest.id) {
-    manifest.id = extensionKey;
-  }
-
   if (await pathExists(path.join(resolvedDir, 'extension.css'))) {
     manifest.hasClientCss = true;
   }
 
   if (await pathExists(path.join(resolvedDir, 'remote.js'))) {
     manifest.hasClientScript = true;
-  }
-
-  // Validate checksum against DB (only for production extensions, not dev)
-  if (models && !isDevExtension) {
-    const dbExtension =
-      dbExtensionRecord ||
-      (await models.Extension.findOne({ where: { key: extensionKey } }));
-    if (dbExtension && dbExtension.checksum) {
-      const manifestChecksum = (manifest.rsk && manifest.rsk.checksum) || null;
-      if (dbExtension.checksum !== manifestChecksum) {
-        console.error(
-          `[extensionService] ⛔ Checksum mismatch for extension "${extensionKey}": ` +
-            `DB=${dbExtension.checksum}, manifest=${manifest.rsk.checksum}. ` +
-            `Auto-deactivating extension — possible code tampering detected.`,
-        );
-
-        // Auto-deactivate the tampered extension
-        await dbExtension.update({ is_active: false });
-
-        // Invalidate cache so stale data isn't served
-        if (cache) await invalidateCache(cache, extensionKey);
-
-        // Flag it so the frontend can display a warning
-        manifest.isTampered = true;
-      }
-    }
   }
 
   const result = {
@@ -444,9 +401,10 @@ export async function getExtensionById(
  * @returns {Promise<string|null>} Extension static files directory path or null if invalid
  */
 export async function getExtensionStaticDir({ extensionManager, models }, id) {
-  const { extensionKey } = await resolveExtension(models, id, {
+  const { extension } = await resolveExtension(models, id, {
     required: false,
   });
+  const extensionKey = extension ? extension.key : id;
   if (!extensionKey) return null;
 
   const { dir } = await extensionManager.resolveExtensionDir(extensionKey);
@@ -533,55 +491,50 @@ export async function installExtensionFromPackage(
       );
     }
 
-    const manifest = JSON.parse(
-      await fs.promises.readFile(manifestPath, 'utf8'),
-    );
+    const manifest = await extensionManager.readManifest(extensionRoot);
+    if (!manifest) {
+      throw ExtensionError.invalidPackage(
+        'Invalid extension package: failed to parse package.json.',
+      );
+    }
 
     // 4. Validate manifest
     const { name: extensionName, version: extensionVersion } =
       validateManifest(manifest);
 
-    // Ensure manifest.id is set — fallback to snakeCase(name) for older manifests
-    if (!manifest.id) {
-      manifest.id = snakeCase(extensionName);
+    // 5. Check for duplicate — reject if already installed
+    const { extension: existingExtension } = await resolveExtension(
+      models,
+      manifest.id,
+      { required: false },
+    );
+    if (existingExtension) {
+      throw ExtensionError.conflict(
+        `Extension "${manifest.id}" is already installed. ` +
+          'Uninstall it first or use upgrade.',
+      );
     }
 
-    // 5. Move to final destination (use manifest.id for filesystem-safe dir name)
+    // 6. Move to final destination (use manifest.id for filesystem-safe dir name)
     const finalExtensionDir = path.join(extensionsDir, manifest.id);
 
     await fs.promises.rm(finalExtensionDir, { recursive: true, force: true });
 
     await fs.promises.rename(extensionRoot, finalExtensionDir);
 
-    // 6. Create or update DB record (key = manifest.id = snakeCase dir name)
-    const [extension, created] = await Extension.findOrCreate({
-      where: { key: manifest.id },
-      defaults: {
-        name: extensionName,
-        description: manifest.description,
-        version: extensionVersion,
-        is_active: true,
-        options: {
-          author: manifest.author,
-          repository: manifest.repository,
-        },
-        checksum: (manifest.rsk && manifest.rsk.checksum) || null,
+    // 7. Create DB record — inactive by default (admin must manually activate)
+    const extension = await Extension.create({
+      key: manifest.id,
+      name: extensionName,
+      description: manifest.description,
+      version: extensionVersion,
+      is_active: false,
+      options: {
+        author: manifest.author,
+        repository: manifest.repository,
       },
+      integrity: null,
     });
-
-    if (!created) {
-      await extension.update({
-        name: extensionName,
-        description: manifest.description,
-        version: extensionVersion,
-        is_active: true,
-        options: {
-          author: manifest.author,
-          repository: manifest.repository,
-        },
-        checksum: (manifest.rsk && manifest.rsk.checksum) || null,
-      });
-    }
 
     // 7. Enqueue the heavy dependencies install and module reload
     const queueChannel = queue('extensions');
@@ -619,7 +572,7 @@ export async function installExtensionFromPackage(
 /**
  * Toggle extension status (activate / deactivate).
  *
- * @param {string} id - Extension UUID or encrypted extension.key
+ * @param {string} id - Extension key (manifest.id)
  * @param {boolean} isActive - Desired status
  * @param {Object} context - App context
  */
@@ -631,27 +584,27 @@ export async function toggleExtensionStatus(
   const { Extension } = models;
 
   // Resolve extension — may need to create DB record for FS-only extension
-  let { extension, extensionKey } = await resolveExtension(models, id, {
+  let { extension } = await resolveExtension(models, id, {
     required: false,
   });
 
+  // Canonical key: DB record's key, or raw ID for FS-only extensions
+  const key = extension ? extension.key : id;
+
   // FS-only extension with no DB record yet — create one
-  if (!extension && extensionKey && cwd) {
+  if (!extension && key && cwd) {
     const localExtensionsDir = extensionManager.getDevExtensionsDir(cwd);
     const installedExtensionsDir = extensionManager.getInstalledExtensionsDir();
 
     // Check local/dev first (dev override), then installed
     let manifest = null;
     if (localExtensionsDir) {
-      manifest = await extensionManager.readManifest(
-        localExtensionsDir,
-        extensionKey,
-      );
+      manifest = await extensionManager.readManifest(localExtensionsDir, key);
     }
     if (!manifest && installedExtensionsDir) {
       manifest = await extensionManager.readManifest(
         installedExtensionsDir,
-        extensionKey,
+        key,
       );
     }
 
@@ -659,22 +612,17 @@ export async function toggleExtensionStatus(
       throw ExtensionError.notFound('on disk');
     }
 
-    // Ensure manifest.id is set — fallback to extensionKey for older manifests
-    if (!manifest.id) {
-      manifest.id = extensionKey;
-    }
-
     const { name: extensionName, version: extensionVersion } =
       validateManifest(manifest);
 
     [extension] = await Extension.findOrCreate({
-      where: { key: extensionKey },
+      where: { key },
       defaults: {
         name: extensionName,
         description: manifest.description || '',
         version: extensionVersion,
         is_active: isActive,
-        checksum: (manifest.rsk && manifest.rsk.checksum) || null,
+        integrity: null,
       },
     });
   }
@@ -708,8 +656,9 @@ export async function toggleExtensionStatus(
 }
 
 /**
- * Upgrade extension metadata
- * @param {string} id - Extension UUID or encrypted key
+ * Upgrade extension metadata.
+ * Nulls out integrity so next activation re-verifies.
+ * @param {string} id - Extension key (manifest.id)
  * @param {Object} data - Update data (name, description, version)
  * @param {Object} context - App context
  */
@@ -720,7 +669,7 @@ export async function upgradeExtension(
 ) {
   const { extension } = await resolveExtension(models, id);
 
-  await extension.update(data);
+  await extension.update({ ...data, integrity: null });
   if (cache) await invalidateCache(cache, id);
 
   if (hook) {

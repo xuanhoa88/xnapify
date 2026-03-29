@@ -4,15 +4,13 @@
   "browser": "views/index.js",
   "main": "api/index.js",
   "description": "Extended profile fields, validation, and IPC handlers",
-  "rsk": {
-    "subscribe": [
-      "/profile"
-    ]
-  },
   "dependencies": {
     "jquery": "^3.7.1"
   },
   "devDependencies": {
     "ts-loader": "^9.5.1"
-  }
+  },
+  "slots": [
+    "/profile"
+  ]
 }

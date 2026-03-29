@@ -4,12 +4,10 @@
   "browser": "views/index.js",
   "main": "api/index.js",
   "description": "Google OAuth login provider",
-  "rsk": {
-    "subscribe": [
-      "/login"
-    ]
-  },
   "dependencies": {
     "passport-google-oauth20": "^2.0.0"
-  }
+  },
+  "slots": [
+    "/login"
+  ]
 }

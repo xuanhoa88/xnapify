@@ -307,10 +307,12 @@ export class BaseExtensionManager {
     );
 
     if (missing.length > 0) {
-      console.log(
-        `[ExtensionManager] Loading dependencies for "${extensionId}":`,
-        missing,
-      );
+      if (__DEV__) {
+        console.log(
+          `[ExtensionManager] Loading dependencies for "${extensionId}":`,
+          missing,
+        );
+      }
 
       await Promise.all(
         missing.map(depId => this.loadExtension(depId, undefined, chain)),
@@ -348,7 +350,7 @@ export class BaseExtensionManager {
       version: (manifest && manifest.version) || '0.0.0',
       error: null,
       loadedAt: null,
-      require: (manifest && manifest.rsk && manifest.rsk.require) || {},
+      autoload: (manifest && manifest.autoload) || {},
       manifest,
     };
     this[EXTENSION_METADATA].set(id, metadata);
@@ -360,11 +362,10 @@ export class BaseExtensionManager {
       // Dependencies are loaded recursively before the extension itself
       if (
         manifest &&
-        manifest.rsk &&
-        manifest.rsk.require &&
-        Object.keys(manifest.rsk.require).length > 0
+        manifest.autoload &&
+        Object.keys(manifest.autoload).length > 0
       ) {
-        await this.loadDependencies(id, manifest.rsk.require, _loadingChain);
+        await this.loadDependencies(id, manifest.autoload, _loadingChain);
       }
 
       // Derive MF container name from manifest.id (written at build time).
@@ -639,6 +640,22 @@ export class BaseExtensionManager {
       return false;
     }
 
+    // Guard: reject if already installed (loaded or active)
+    const meta = this[EXTENSION_METADATA].get(id);
+    if (
+      meta &&
+      (meta.state === ExtensionState.LOADED ||
+        meta.state === ExtensionState.ACTIVE)
+    ) {
+      const error = new Error(
+        `Extension "${id}" is already installed. Uninstall it first.`,
+      );
+      error.name = 'ExtensionManagerError';
+      await this.emit('extension:install-failed', { id, error });
+      console.error(error);
+      return false;
+    }
+
     await this.emit('extension:installing', { id });
 
     try {
@@ -689,6 +706,18 @@ export class BaseExtensionManager {
       const error = new Error('Extension ID must be a non-empty string');
       error.name = 'ExtensionManagerError';
       await this.emit('extension:validation-failed', { id, error });
+      console.error(error);
+      return false;
+    }
+
+    // Guard: must deactivate before uninstall
+    const meta = this[EXTENSION_METADATA].get(id);
+    if (meta && meta.state === ExtensionState.ACTIVE) {
+      const error = new Error(
+        `Cannot uninstall active extension "${id}". Deactivate it first.`,
+      );
+      error.name = 'ExtensionManagerError';
+      await this.emit('extension:uninstall-failed', { id, error });
       console.error(error);
       return false;
     }

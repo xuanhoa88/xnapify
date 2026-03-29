@@ -4,13 +4,11 @@
   "browser": "views/index.js",
   "main": "api/index.js",
   "description": "Facebook OAuth login provider",
-  "rsk": {
-    "icon": "facebook",
-    "subscribe": [
-      "/login"
-    ]
-  },
   "dependencies": {
     "passport-facebook": "^3.0.0"
-  }
+  },
+  "slots": [
+    "/login"
+  ],
+  "icon": "facebook"
 }

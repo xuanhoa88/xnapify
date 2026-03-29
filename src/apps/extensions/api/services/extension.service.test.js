@@ -68,7 +68,6 @@ const mockModels = {
   Extension: {
     findAll: jest.fn(),
     create: jest.fn(),
-    findByPk: jest.fn(),
     findOne: jest.fn(),
   },
 };
@@ -87,6 +86,29 @@ const mockExtensionManager = {
   getDevExtensionsDir: jest.fn(cwd =>
     path.resolve(cwd, process.env.RSK_EXTENSION_LOCAL_PATH || 'extensions'),
   ),
+  readManifest: jest.fn(async (dirPath, dirName) => {
+    const filePath = dirName
+      ? path.join(dirPath, dirName, 'package.json')
+      : path.join(dirPath, 'package.json');
+    try {
+      const raw = await fs.promises.readFile(filePath, 'utf8');
+      const manifest = JSON.parse(raw);
+      // Mirror real readManifest: always auto-generate id from name
+      if (manifest.name) {
+        manifest.id = manifest.name
+          .replace(/[@/]/g, '')
+          .replace(/[^a-z0-9]+/gi, '_')
+          .toLowerCase();
+      }
+      return manifest;
+    } catch {
+      return null;
+    }
+  }),
+  resolveExtensionDir: jest.fn(async key => ({
+    dir: `/mock/extensions/${key}`,
+    isDevExtension: true,
+  })),
 };
 
 const mockContext = {
@@ -124,7 +146,6 @@ describe('Extension Service', () => {
             JSON.stringify({
               name: 'fs-extension',
               version: '1.0.0',
-              rsk: { name: 'FS Extension', extension: { key: 'fs-extension' } },
             }),
           );
         }
@@ -133,10 +154,6 @@ describe('Extension Service', () => {
             JSON.stringify({
               name: 'local-extension',
               version: '1.0.0',
-              rsk: {
-                name: 'Local Extension',
-                extension: { key: 'local-extension' },
-              },
             }),
           );
         }
@@ -146,7 +163,6 @@ describe('Extension Service', () => {
             JSON.stringify({
               name: 'db-extension',
               version: '1.0.0',
-              rsk: { name: 'DB Extension', extension: { key: 'db-extension' } },
             }),
           );
         }
@@ -175,12 +191,12 @@ describe('Extension Service', () => {
 
       expect(result).toHaveLength(2);
 
-      const fsExtension = result.find(p => p.name === 'FS Extension');
+      const fsExtension = result.find(p => p.name === 'fs-extension');
       expect(fsExtension).toBeDefined();
       expect(fsExtension.isInstalled).toBe(false);
       expect(fsExtension.source).toBe('remote');
 
-      const localExtension = result.find(p => p.name === 'Local Extension');
+      const localExtension = result.find(p => p.name === 'local-extension');
       expect(localExtension).toBeDefined();
       expect(localExtension.source).toBe('local');
 
@@ -223,10 +239,6 @@ describe('Extension Service', () => {
             JSON.stringify({
               name: 'new-extension',
               version: '1.0.0',
-              rsk: {
-                name: 'New Extension',
-                extension: { key: 'new-extension' },
-              },
             }),
           );
         }
@@ -239,7 +251,7 @@ describe('Extension Service', () => {
 
       expect(result).toHaveLength(1);
       const extension = result[0];
-      expect(extension.name).toBe('New Extension');
+      expect(extension.name).toBe('new-extension');
       expect(extension.isInstalled).toBe(false);
       expect(extension.isActive).toBe(false);
     });
@@ -265,7 +277,6 @@ describe('Extension Service', () => {
             JSON.stringify({
               name: 'Active',
               version: '1.0',
-              rsk: { extension: { key: 'active-p' } },
             }),
           );
         }
@@ -289,19 +300,18 @@ describe('Extension Service', () => {
         key: 'extension-1',
         update: jest.fn(),
       };
-      mockModels.Extension.findByPk.mockResolvedValue(mockExtension);
+      mockModels.Extension.findOne.mockResolvedValue(mockExtension);
 
       await toggleExtensionStatus('p1', true, mockContext);
 
       expect(mockExtension.update).toHaveBeenCalledWith({ is_active: true });
       expect(mockQueue).toHaveBeenCalledWith('extensions');
       expect(mockQueueChannel.emit).toHaveBeenCalledWith('toggle', {
-        extensionId: 'p1',
         extensionKey: 'extension-1',
         extensionDir: expect.any(String),
         isActive: true,
         actorId: 'user-123',
-        isDevExtension: true, // local/dev path is checked first
+        isDevExtension: true,
       });
     });
   });

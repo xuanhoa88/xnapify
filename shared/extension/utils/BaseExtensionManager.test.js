@@ -237,4 +237,114 @@ describe('BaseExtensionManager', () => {
       expect(mockDef.boot).toHaveBeenCalledWith(mockContext);
     });
   });
+
+  describe('uninstallExtension', () => {
+    it('rejects uninstall on active extension', async () => {
+      await initManager();
+      jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      // Simulate an active extension
+      manager[EXTENSION_METADATA].set('active-ext', {
+        id: 'active-ext',
+        state: ExtensionState.ACTIVE,
+        manifest: { name: 'active-ext' },
+      });
+
+      const result = await manager.uninstallExtension('active-ext', {
+        name: 'active-ext',
+      });
+
+      expect(result).toBe(false);
+    });
+
+    it('allows uninstall on non-active extension', async () => {
+      await initManager();
+
+      // Simulate an unloaded extension
+      manager[EXTENSION_METADATA].set('inactive-ext', {
+        id: 'inactive-ext',
+        state: ExtensionState.UNLOADED,
+        manifest: { name: 'inactive-ext' },
+      });
+
+      const result = await manager.uninstallExtension('inactive-ext', {
+        name: 'inactive-ext',
+      });
+
+      expect(result).toBe(true);
+      expect(registry.runUninstallHook).toHaveBeenCalledWith('inactive-ext');
+    });
+
+    it('allows uninstall when no metadata exists', async () => {
+      await initManager();
+
+      const result = await manager.uninstallExtension('unknown-ext', {
+        name: 'unknown-ext',
+      });
+
+      expect(result).toBe(true);
+    });
+  });
+
+  describe('installExtension', () => {
+    it('rejects install on already-loaded extension', async () => {
+      await initManager();
+      jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      manager[EXTENSION_METADATA].set('dup-ext', {
+        id: 'dup-ext',
+        state: ExtensionState.LOADED,
+        manifest: { name: 'dup-ext' },
+      });
+
+      const result = await manager.installExtension('dup-ext', {
+        name: 'dup-ext',
+      });
+
+      expect(result).toBe(false);
+    });
+
+    it('rejects install on active extension', async () => {
+      await initManager();
+      jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      manager[EXTENSION_METADATA].set('active-ext', {
+        id: 'active-ext',
+        state: ExtensionState.ACTIVE,
+        manifest: { name: 'active-ext' },
+      });
+
+      const result = await manager.installExtension('active-ext', {
+        name: 'active-ext',
+      });
+
+      expect(result).toBe(false);
+    });
+
+    it('allows install on pending (fresh) extension', async () => {
+      await initManager();
+
+      manager[EXTENSION_METADATA].set('new-ext', {
+        id: 'new-ext',
+        state: ExtensionState.PENDING,
+      });
+
+      const result = await manager.installExtension('new-ext', {
+        name: 'new-ext',
+      });
+
+      expect(result).toBe(true);
+      expect(registry.runInstallHook).toHaveBeenCalledWith('new-ext');
+    });
+
+    it('allows install when no metadata exists', async () => {
+      await initManager();
+
+      const result = await manager.installExtension('fresh-ext', {
+        name: 'fresh-ext',
+      });
+
+      expect(result).toBe(true);
+    });
+  });
 });

@@ -5,8 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import assign from 'lodash/assign';
-
 import { composeMiddleware } from '@shared/utils/middleware';
 
 import Hook from './Hook';
@@ -137,7 +135,7 @@ class ExtensionRegistry {
 
   /**
    * Register an extension definition using manifest metadata
-   * Namespaces and identity come from the manifest's rsk.subscribe, name, and description fields.
+   * Namespaces and identity come from the manifest's slots, name, and description fields.
    * @param {Object} definition - Extension definition object (boot, shutdown, translations)
    * @param {Object} context - Extension context
    * @param {Object} manifest - Extension manifest from package.json
@@ -150,9 +148,7 @@ class ExtensionRegistry {
       return this;
     }
 
-    // Auto-populate rsk defaults from standard package.json fields
-    const rsk = assign({}, manifest.rsk);
-    const namespaces = Array.isArray(rsk.subscribe) ? rsk.subscribe : [];
+    const namespaces = Array.isArray(manifest.slots) ? manifest.slots : [];
     const extensionId = manifest.name;
     const meta = { description: manifest.description };
 

@@ -13,7 +13,6 @@ import {
   extensionStatusSchema,
   extensionUpgradeSchema,
 } from '../../validator/extension';
-import { resolveExtension } from '../services/extension.helpers';
 import * as extensionService from '../services/extension.service';
 
 // ========================================================================
@@ -147,12 +146,6 @@ export const deleteExtension = async (req, res) => {
     const { id } = req.params;
     const models = container.resolve('models');
 
-    // Resolve extensionKey before deletion so we can broadcast it
-    const { extension: dbRecord } = await resolveExtension(models, id, {
-      required: false,
-    });
-    const extensionKey = dbRecord ? dbRecord.key : id;
-
     await extensionService.deleteExtension(id, {
       models,
       cache: container.resolve('cache'),
@@ -164,7 +157,7 @@ export const deleteExtension = async (req, res) => {
     const ws = container.resolve('ws');
     ws.sendToPublicChannel('extension:updated', {
       type: 'EXTENSION_UNINSTALLED',
-      extensionId: extensionKey,
+      extensionId: id,
     });
 
     return http.sendSuccess(res, { message: 'Extension deleted' });

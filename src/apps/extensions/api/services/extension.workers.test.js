@@ -11,6 +11,7 @@ jest.mock('../workers', () => {
 jest.mock('./extension.helpers', () => ({
   installExtensionDependencies: jest.fn().mockResolvedValue(undefined),
   notifyExtensionChange: jest.fn(),
+  resolveExtension: jest.fn().mockResolvedValue({ extension: null }),
 }));
 
 jest.mock('fs', () => {
@@ -33,34 +34,44 @@ jest.mock('fs', () => {
   };
 });
 
-import fs from 'fs';
-
 import workerPool from '../workers';
 
 import {
   installExtensionDependencies,
   notifyExtensionChange,
+  resolveExtension,
 } from './extension.helpers';
 import { registerExtensionWorkers } from './extension.workers';
 
 // ── Helpers ──────────────────────────────────────────────
 
+const TEST_MANIFEST = {
+  id: 'test_extension',
+  name: 'test-extension',
+  version: '1.0.0',
+  main: 'api.js',
+};
+
 function createMockContainer(overrides = {}) {
   const mockExtensionUpdate = jest.fn().mockResolvedValue([1]);
   const mockExtensionDestroy = jest.fn().mockResolvedValue(1);
-  const mockExtensionFindByPk = jest.fn().mockResolvedValue(null);
 
   const services = {
     models: {
       Extension: {
         update: mockExtensionUpdate,
         destroy: mockExtensionDestroy,
-        findByPk: mockExtensionFindByPk,
       },
     },
     extension: {
+      readManifest: jest.fn().mockResolvedValue(TEST_MANIFEST),
+      installExtension: jest.fn().mockResolvedValue(true),
+      uninstallExtension: jest.fn().mockResolvedValue(true),
       reloadExtension: jest.fn().mockResolvedValue(undefined),
-      getExtensionMetadata: jest.fn(() => null),
+      loadExtension: jest.fn().mockResolvedValue(undefined),
+      getExtensionMetadata: jest.fn(() => ({
+        manifest: TEST_MANIFEST,
+      })),
       isExtensionLoaded: jest.fn(() => false),
       unloadExtension: jest.fn().mockResolvedValue(undefined),
       emit: jest.fn().mockResolvedValue(undefined),
@@ -86,7 +97,6 @@ function createMockContainer(overrides = {}) {
 function createMockJob(data = {}) {
   return {
     data: {
-      extensionId: 'p1',
       extensionKey: 'test-extension',
       extensionDir: '/extensions/test-extension',
       actorId: 'user-1',
@@ -116,7 +126,6 @@ describe('Extension Workers', () => {
     };
     // eslint-disable-next-line no-underscore-dangle
     mockContainer._services.queue = jest.fn(() => mockChannel);
-    // eslint-disable-next-line no-underscore-dangle
     mockContainer.resolve.mockImplementation(
       // eslint-disable-next-line no-underscore-dangle
       key => mockContainer._services[key],
@@ -133,41 +142,64 @@ describe('Extension Workers', () => {
     });
   });
 
-  describe('install handler', () => {
-    it('should install dependencies, compute checksum, and store it', async () => {
-      const job = createMockJob();
+  // ── Install ──────────────────────────────────────────
 
+  describe('install handler', () => {
+    it('should install deps, compute integrity, and run install hook (no auto-activate)', async () => {
+      const job = createMockJob();
       const result = await handlers.install(job);
 
+      // npm install
       expect(installExtensionDependencies).toHaveBeenCalledWith(
         '/extensions/test-extension',
         { name: 'test-extension' },
       );
+
+      // integrity
       expect(workerPool.computeChecksum).toHaveBeenCalledWith(
         '/extensions/test-extension',
       );
-      // eslint-disable-next-line no-underscore-dangle
       expect(
         // eslint-disable-next-line no-underscore-dangle
         mockContainer._services.models.Extension.update,
       ).toHaveBeenCalledWith(
-        { checksum: 'abc123hash' },
-        { where: { id: 'p1' } },
+        { integrity: 'abc123hash' },
+        { where: { key: 'test-extension' } },
       );
-      expect(result).toEqual({ success: true });
+
+      // install lifecycle
+      const em = mockContainer._services.extension; // eslint-disable-line no-underscore-dangle
+      expect(em.readManifest).toHaveBeenCalledWith(
+        '/extensions/test-extension',
+      );
+      expect(em.installExtension).toHaveBeenCalledWith(
+        'test-extension',
+        TEST_MANIFEST,
+      );
+
+      // must NOT auto-activate — admin must manually toggle
+      expect(em.reloadExtension).not.toHaveBeenCalled();
+      expect(em.loadExtension).not.toHaveBeenCalled();
+
+      expect(result).toEqual({
+        success: true,
+        notifyType: 'EXTENSION_INSTALLED',
+        extensionKey: 'test-extension',
+      });
       expect(job.updateProgress).toHaveBeenCalledWith(100);
     });
 
-    it('should notify via WebSocket on success', async () => {
+    it('should skip install hook if readManifest returns null', async () => {
+      // eslint-disable-next-line no-underscore-dangle
+      mockContainer._services.extension.readManifest.mockResolvedValue(null);
+
       const job = createMockJob();
+      const result = await handlers.install(job);
 
-      await handlers.install(job);
-
-      expect(notifyExtensionChange).toHaveBeenCalledWith(
-        mockContainer,
-        'EXTENSION_INSTALLED',
-        'p1',
-      );
+      const em = mockContainer._services.extension; // eslint-disable-line no-underscore-dangle
+      expect(em.installExtension).not.toHaveBeenCalled();
+      expect(em.reloadExtension).not.toHaveBeenCalled();
+      expect(result.success).toBe(true);
     });
 
     it('should emit hook on success', async () => {
@@ -184,7 +216,7 @@ describe('Extension Workers', () => {
       );
       expect(mockEmit).toHaveBeenCalledWith(
         'installed',
-        expect.objectContaining({ extension_id: 'p1' }),
+        expect.objectContaining({ extension_id: 'test-extension' }),
       );
     });
 
@@ -195,34 +227,64 @@ describe('Extension Workers', () => {
       );
 
       const job = createMockJob();
-
       await expect(handlers.install(job)).rejects.toThrow('npm install failed');
     });
   });
 
+  // ── Delete ───────────────────────────────────────────
+
   describe('delete handler', () => {
-    it('should unload extension, remove files, and destroy DB record', async () => {
+    it('should unload first, then run uninstall hook, and destroy DB', async () => {
       // eslint-disable-next-line no-underscore-dangle
       mockContainer._services.extension.isExtensionLoaded.mockReturnValue(true);
-      fs.existsSync.mockReturnValue(true);
 
       const job = createMockJob();
       const result = await handlers.delete(job);
 
-      expect(
-        // eslint-disable-next-line no-underscore-dangle
-        mockContainer._services.extension.unloadExtension,
-      ).toHaveBeenCalledWith('p1');
+      const em = mockContainer._services.extension; // eslint-disable-line no-underscore-dangle
+
+      // 1. Unload first (triggers deactivate via event chain)
+      expect(em.unloadExtension).toHaveBeenCalledWith('test-extension');
+
+      // 2. Then uninstall lifecycle (one-time teardown — requires non-active state)
+      expect(em.getExtensionMetadata).toHaveBeenCalledWith('test-extension');
+      expect(em.uninstallExtension).toHaveBeenCalledWith(
+        'test-extension',
+        TEST_MANIFEST,
+      );
+
+      // Verify order: unload before uninstall
+      const unloadOrder = em.unloadExtension.mock.invocationCallOrder[0];
+      const uninstallOrder = em.uninstallExtension.mock.invocationCallOrder[0];
+      expect(unloadOrder).toBeLessThan(uninstallOrder);
+
+      // DB cleanup
       expect(
         // eslint-disable-next-line no-underscore-dangle
         mockContainer._services.models.Extension.destroy,
-      ).toHaveBeenCalledWith({
-        where: { id: 'p1' },
+      ).toHaveBeenCalledWith({ where: { key: 'test-extension' } });
+
+      expect(result).toEqual({
+        success: true,
+        notifyType: 'EXTENSION_UNINSTALLED',
+        extensionKey: 'test-extension',
       });
-      expect(result).toEqual({ success: true });
     });
 
-    it('should emit extension:unloaded when extension is not loaded', async () => {
+    it('should skip uninstall hook if no manifest in metadata', async () => {
+      // eslint-disable-next-line no-underscore-dangle
+      mockContainer._services.extension.getExtensionMetadata.mockReturnValue(
+        null,
+      );
+
+      const job = createMockJob();
+      await handlers.delete(job);
+
+      const em = mockContainer._services.extension; // eslint-disable-line no-underscore-dangle
+      expect(em.uninstallExtension).not.toHaveBeenCalled();
+    });
+
+    it('should skip unload if extension is not loaded', async () => {
       // eslint-disable-next-line no-underscore-dangle
       mockContainer._services.extension.isExtensionLoaded.mockReturnValue(
         false,
@@ -231,11 +293,8 @@ describe('Extension Workers', () => {
       const job = createMockJob();
       await handlers.delete(job);
 
-      // eslint-disable-next-line no-underscore-dangle
-      expect(mockContainer._services.extension.emit).toHaveBeenCalledWith(
-        'extension:unloaded',
-        { id: 'p1' },
-      );
+      const em = mockContainer._services.extension; // eslint-disable-line no-underscore-dangle
+      expect(em.unloadExtension).not.toHaveBeenCalled();
     });
 
     it('should emit hook on delete', async () => {
@@ -248,21 +307,23 @@ describe('Extension Workers', () => {
 
       expect(mockEmit).toHaveBeenCalledWith(
         'deleted',
-        expect.objectContaining({ extension_id: 'p1' }),
+        expect.objectContaining({ extension_id: 'test-extension' }),
       );
     });
   });
 
+  // ── Toggle ───────────────────────────────────────────
+
   describe('toggle handler', () => {
-    it('should verify checksum before activating non-dev extensions', async () => {
+    it('should verify integrity before activating non-dev extensions', async () => {
       const mockDbExtension = {
-        checksum: 'expected-hash',
+        integrity: 'expected-hash',
         update: jest.fn(),
       };
-      // eslint-disable-next-line no-underscore-dangle
-      mockContainer._services.models.Extension.findByPk.mockResolvedValue(
-        mockDbExtension,
-      );
+      resolveExtension.mockResolvedValueOnce({
+        extension: mockDbExtension,
+        extensionKey: 'test-extension',
+      });
 
       workerPool.verifyChecksum.mockResolvedValueOnce({
         valid: true,
@@ -280,19 +341,19 @@ describe('Extension Workers', () => {
         '/extensions/test-extension',
         'expected-hash',
       );
-      expect(result).toEqual({ success: true });
+      expect(result.success).toBe(true);
     });
 
-    it('should reject activation on checksum mismatch', async () => {
+    it('should reject activation on integrity mismatch', async () => {
       const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
       const mockDbExtension = {
-        checksum: 'expected-hash',
+        integrity: 'expected-hash',
         update: jest.fn(),
       };
-      // eslint-disable-next-line no-underscore-dangle
-      mockContainer._services.models.Extension.findByPk.mockResolvedValue(
-        mockDbExtension,
-      );
+      resolveExtension.mockResolvedValueOnce({
+        extension: mockDbExtension,
+        extensionKey: 'test-extension',
+      });
 
       workerPool.verifyChecksum.mockResolvedValueOnce({
         valid: false,
@@ -306,17 +367,19 @@ describe('Extension Workers', () => {
 
       const result = await handlers.toggle(job);
 
-      expect(result).toEqual({ success: false, reason: 'checksum_mismatch' });
-      expect(mockDbExtension.update).toHaveBeenCalledWith({ is_active: false });
+      expect(result).toEqual({ success: false, reason: 'integrity_mismatch' });
+      expect(mockDbExtension.update).toHaveBeenCalledWith({
+        is_active: false,
+      });
       expect(notifyExtensionChange).toHaveBeenCalledWith(
         mockContainer,
         'EXTENSION_TAMPERED',
-        'p1',
+        'test-extension',
       );
       spy.mockRestore();
     });
 
-    it('should skip checksum for dev extensions', async () => {
+    it('should skip integrity check for dev extensions', async () => {
       const job = createMockJob({
         isActive: true,
         isDevExtension: true,
@@ -327,7 +390,7 @@ describe('Extension Workers', () => {
       expect(workerPool.verifyChecksum).not.toHaveBeenCalled();
     });
 
-    it('should compute and store checksum after activating', async () => {
+    it('should compute and store integrity after activating', async () => {
       workerPool.computeChecksum.mockResolvedValueOnce('new-hash');
 
       const job = createMockJob({
@@ -340,11 +403,26 @@ describe('Extension Workers', () => {
       expect(workerPool.computeChecksum).toHaveBeenCalledWith(
         '/extensions/test-extension',
       );
-      // eslint-disable-next-line no-underscore-dangle
       expect(
         // eslint-disable-next-line no-underscore-dangle
         mockContainer._services.models.Extension.update,
-      ).toHaveBeenCalledWith({ checksum: 'new-hash' }, { where: { id: 'p1' } });
+      ).toHaveBeenCalledWith(
+        { integrity: 'new-hash' },
+        { where: { key: 'test-extension' } },
+      );
+    });
+
+    it('should unload extension on deactivate', async () => {
+      // eslint-disable-next-line no-underscore-dangle
+      mockContainer._services.extension.isExtensionLoaded.mockReturnValue(true);
+
+      const job = createMockJob({ isActive: false });
+
+      const result = await handlers.toggle(job);
+
+      const em = mockContainer._services.extension; // eslint-disable-line no-underscore-dangle
+      expect(em.unloadExtension).toHaveBeenCalledWith('test-extension');
+      expect(result.notifyType).toBe('EXTENSION_DEACTIVATED');
     });
   });
 });

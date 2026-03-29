@@ -64,7 +64,6 @@ describe('ExtensionRegistry', () => {
       await registry.unregister('extension-1');
 
       expect(registry.getSlotEntries('header')).toHaveLength(0);
-      // Hooks clearing is tested in Hook.test.js, but we ensure the Registry calls clear
     });
   });
 
@@ -74,7 +73,7 @@ describe('ExtensionRegistry', () => {
       const manifest = {
         name: 'extension-1',
         description: 'Test',
-        rsk: { subscribe: ['core'], name: 'extension-1' },
+        slots: ['core'],
       };
 
       registry.defineExtension(definition, { appContext: true }, manifest);
@@ -85,11 +84,11 @@ describe('ExtensionRegistry', () => {
       expect(registry.getDefinitions('core').size).toBe(1);
     });
 
-    test('can define multiple namespaces via subscribe', () => {
+    test('can define multiple namespaces via slots', () => {
       const definition = { init: jest.fn() };
       const manifest = {
         name: 'extension-multi-ns',
-        rsk: { subscribe: ['core', 'ui'], name: 'extension-multi-ns' },
+        slots: ['core', 'ui'],
       };
 
       registry.defineExtension(definition, {}, manifest);
@@ -104,7 +103,7 @@ describe('ExtensionRegistry', () => {
       const definition = { install };
       const manifest = {
         name: 'extension-to-install',
-        rsk: { subscribe: ['core'], name: 'extension-to-install' },
+        slots: ['core'],
       };
 
       registry.defineExtension(definition, { contextVal: 42 }, manifest);
@@ -119,7 +118,7 @@ describe('ExtensionRegistry', () => {
       const definition = { uninstall };
       const manifest = {
         name: 'extension-to-uninstall',
-        rsk: { subscribe: ['core'], name: 'extension-to-uninstall' },
+        slots: ['core'],
       };
 
       registry.defineExtension(definition, { contextVal: 42 }, manifest);
@@ -139,7 +138,7 @@ describe('ExtensionRegistry', () => {
       const definition = { boot };
       const manifest = {
         name: 'extension-updatable',
-        rsk: { subscribe: ['core'], name: 'extension-updatable' },
+        slots: ['core'],
       };
 
       registry.defineExtension(definition, { contextVal: 42 }, manifest);
@@ -151,13 +150,12 @@ describe('ExtensionRegistry', () => {
       expect(registry.has('extension-updatable')).toBe(true);
     });
 
-    test('module-type without subscribe auto-subscribes to wildcard', () => {
+    test('module-type without slots auto-subscribes to wildcard', () => {
       const definition = { routes: jest.fn() };
       const manifest = {
         name: 'posts-module',
         browser: 'views/index.js',
         main: 'api/index.js',
-        rsk: {},
       };
 
       registry.defineExtension(definition, {}, manifest);
@@ -172,14 +170,14 @@ describe('ExtensionRegistry', () => {
       registry.defineExtension(
         { routes: jest.fn() },
         {},
-        { name: 'global-mod', browser: 'index.js', rsk: {} },
+        { name: 'global-mod', browser: 'index.js' },
       );
 
       // Define a namespace-specific extension
       registry.defineExtension(
         { init: jest.fn() },
         {},
-        { name: 'core-ext', rsk: { subscribe: ['core'] } },
+        { name: 'core-ext', slots: ['core'] },
       );
 
       // Querying 'core' should return both core-ext AND global-mod
@@ -196,12 +194,12 @@ describe('ExtensionRegistry', () => {
       expect([...otherDefs][0].id).toBe('global-mod');
     });
 
-    test('explicit subscribe is preserved for module-type', () => {
+    test('explicit slots is preserved for module-type', () => {
       const definition = { routes: jest.fn() };
       const manifest = {
         name: 'scoped-mod',
         browser: 'index.js',
-        rsk: { subscribe: ['admin'] },
+        slots: ['admin'],
       };
 
       registry.defineExtension(definition, {}, manifest);
@@ -216,7 +214,6 @@ describe('ExtensionRegistry', () => {
       const manifest = {
         name: 'api-module',
         main: 'api/index.js',
-        rsk: {},
       };
 
       registry.defineExtension(definition, {}, manifest);
@@ -229,13 +226,23 @@ describe('ExtensionRegistry', () => {
       const definition = { init: jest.fn() };
       const manifest = {
         name: 'hook-plugin',
-        rsk: { subscribe: ['core'] },
+        slots: ['core'],
       };
 
       registry.defineExtension(definition, {}, manifest);
 
       expect(registry.getDefinitions('core').size).toBe(1);
       expect(registry.getDefinitions('*')).toBeNull();
+    });
+
+    test('runInstallHook returns false for unknown extension', async () => {
+      const result = await registry.runInstallHook('nonexistent');
+      expect(result).toBe(false);
+    });
+
+    test('runUninstallHook returns false for unknown extension', async () => {
+      const result = await registry.runUninstallHook('nonexistent');
+      expect(result).toBe(false);
     });
   });
 

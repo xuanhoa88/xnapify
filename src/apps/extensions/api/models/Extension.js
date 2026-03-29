@@ -119,11 +119,11 @@ export default function createExtensionModel({ connection, DataTypes }) {
         },
       },
 
-      checksum: {
+      integrity: {
         type: DataTypes.STRING(64),
         allowNull: true,
         unique: true,
-        comment: 'SHA-256 checksum of built extension files',
+        comment: 'SHA-256 integrity hash of built extension files',
       },
     },
     {

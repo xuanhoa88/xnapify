@@ -43,11 +43,11 @@ export async function up({ context, Sequelize }) {
       defaultValue: '0.0.0',
       comment: 'Extension version',
     },
-    checksum: {
+    integrity: {
       type: DataTypes.STRING(64),
       allowNull: true,
       unique: true,
-      comment: 'SHA-256 checksum of built extension files',
+      comment: 'SHA-256 integrity hash of built extension files',
     },
     is_active: {
       type: DataTypes.BOOLEAN,
