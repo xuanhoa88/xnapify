@@ -5,7 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { SEED_USERS } from './constants';
 import * as authController from './controllers/auth.controller';
 import * as profileController from './controllers/profile.controller';
 import { authenticate as handleApiKeyStrategy } from './utils/apiKey';
@@ -20,11 +19,7 @@ const migrationsContext = require.context(
   false,
   /\.[cm]?[jt]s$/i,
 );
-const seedsContext = require.context(
-  './database/seeds',
-  false,
-  /\.[cm]?[jt]s$/i,
-);
+
 const modelsContext = require.context('./models', false, /\.[cm]?[jt]s$/i);
 const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
 const workersContext = require.context(
@@ -58,13 +53,10 @@ async function registerAuthHooks(container) {
 
 export default {
   migrations: () => migrationsContext,
-  seeds: () => seedsContext,
   models: () => modelsContext,
   routes: () => routesContext,
 
   async providers({ container }) {
-    container.bind('users:seed_constants', () => SEED_USERS, OWNER_KEY);
-
     container.bind(
       'users:controllers',
       () => ({
