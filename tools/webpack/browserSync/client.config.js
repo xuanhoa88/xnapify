@@ -120,6 +120,7 @@ const BANNER_STYLES = `
 let lastMessageTime = Date.now();
 let heartbeatInterval = null;
 let isShuttingDown = false;
+let isReconnecting = false;
 let unsubscribers = [];
 let hotClient = null;
 let bannerCountdownId = null;
@@ -541,7 +542,8 @@ function handleMessage(data) {
  * Handle HMR connection close/error
  */
 function handleConnectionLoss() {
-  if (isShuttingDown) return;
+  if (isShuttingDown || isReconnecting) return;
+  isReconnecting = true;
 
   logWarn('[BrowserSync] HMR connection lost - checking if temporary...');
 
@@ -549,6 +551,7 @@ function handleConnectionLoss() {
 
   setTimeout(() => {
     if (!reconnected && !isShuttingDown) {
+      isReconnecting = false;
       logInfo('[BrowserSync] Server connection not restored, closing tab...');
       handleShutdown();
     }
@@ -560,7 +563,19 @@ function handleConnectionLoss() {
     const readyState = hotClient.getReadyState();
     if (readyState === EventSource.OPEN) {
       reconnected = true;
-      logInfo('[BrowserSync] Connection restored');
+      isReconnecting = false;
+      logInfo('[BrowserSync] Connection restored after temporary loss');
+
+      // The browser_sync_server_ready message was likely sent while
+      // the SSE connection was down and lost. Dismiss the banner and
+      // reload so the client picks up the new server bundle.
+      dismissBanner();
+
+      // Reset heartbeat so future disconnections are detected
+      lastMessageTime = Date.now();
+      startHeartbeatMonitor();
+
+      reloadPage();
     }
   };
 
