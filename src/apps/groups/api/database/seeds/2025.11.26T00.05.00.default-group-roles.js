@@ -8,38 +8,35 @@
 import { v4 as uuidv4 } from 'uuid';
 
 /**
- * Run the seed
+ * Default group → role mappings.
+ * Each group inherits a base role so that new members receive
+ * the correct permission set automatically upon assignment.
  */
 export async function up(_, { container }) {
   const { GroupRole } = container.resolve('models');
-
-  // Get seed groups from container
   const SEED_GROUPS = container.resolve('groups:seed_constants');
   const SEED_ROLES = container.resolve('roles:seed_constants');
 
   const groupRoles = [
-    // Engineering group - editor role
+    // Engineering → editor (create + update content)
     {
       id: uuidv4(),
       group_id: SEED_GROUPS.engineering,
       role_id: SEED_ROLES.editor,
     },
-
-    // Marketing group - user role
+    // Marketing → user (standard access)
     {
       id: uuidv4(),
       group_id: SEED_GROUPS.marketing,
       role_id: SEED_ROLES.user,
     },
-
-    // Support group - moderator role
+    // Customer Support → moderator (read + update users/groups)
     {
       id: uuidv4(),
       group_id: SEED_GROUPS.support,
       role_id: SEED_ROLES.mod,
     },
-
-    // Management group - admin role
+    // Management → admin (full access)
     {
       id: uuidv4(),
       group_id: SEED_GROUPS.management,
@@ -55,15 +52,10 @@ export async function up(_, { container }) {
  */
 export async function down(_, { container }) {
   const { GroupRole } = container.resolve('models');
-
-  // Get seed groups from container
   const SEED_GROUPS = container.resolve('groups:seed_constants');
 
-  // Remove all seeded group roles by groupId
   await GroupRole.destroy({
-    where: {
-      group_id: Object.values(SEED_GROUPS),
-    },
-    force: true, // Hard delete
+    where: { group_id: Object.values(SEED_GROUPS) },
+    force: true,
   });
 }

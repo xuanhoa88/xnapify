@@ -6,37 +6,40 @@
  */
 
 /**
- * Run the seed
+ * Default organisational groups — seeded on first run.
+ * These represent standard enterprise departments and are referenced
+ * by group-role mappings and user-group assignments.
  */
 export async function up(_, { container }) {
   const { Group } = container.resolve('models');
-
-  // Get seed groups from container
   const SEED_GROUPS = container.resolve('groups:seed_constants');
 
   const groups = [
     {
       id: SEED_GROUPS.engineering,
       name: 'Engineering',
-      description: 'Engineering and development team',
+      description:
+        'Software engineering, DevOps, and platform reliability teams.',
       is_active: true,
     },
     {
       id: SEED_GROUPS.marketing,
       name: 'Marketing',
-      description: 'Marketing and communications team',
+      description:
+        'Brand strategy, growth marketing, and communications teams.',
       is_active: true,
     },
     {
       id: SEED_GROUPS.support,
-      name: 'Support',
-      description: 'Customer support team',
+      name: 'Customer Support',
+      description:
+        'Tier-1/2 customer support, escalation, and knowledge-base maintenance.',
       is_active: true,
     },
     {
       id: SEED_GROUPS.management,
       name: 'Management',
-      description: 'Management and leadership team',
+      description: 'Executive leadership, department heads, and programme management.',
       is_active: true,
     },
   ];
@@ -49,15 +52,10 @@ export async function up(_, { container }) {
  */
 export async function down(_, { container }) {
   const { Group } = container.resolve('models');
-
-  // Get seed groups from container
   const SEED_GROUPS = container.resolve('groups:seed_constants');
 
-  // Remove all seeded groups by id
   await Group.destroy({
-    where: {
-      id: Object.values(SEED_GROUPS),
-    },
-    force: true, // Hard delete
+    where: { id: Object.values(SEED_GROUPS) },
+    force: true,
   });
 }

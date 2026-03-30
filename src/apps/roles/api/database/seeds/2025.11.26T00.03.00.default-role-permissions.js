@@ -8,18 +8,24 @@
 import { v4 as uuidv4 } from 'uuid';
 
 /**
- * Run the seed
+ * Default role → permission matrix.
+ * Follows the principle of least privilege: each role receives only
+ * the permissions required for its operational scope.
+ *
+ *   admin   — wildcard (*:manage)
+ *   mod     — read all + update users/groups
+ *   editor  — read all + create/update users
+ *   user    — read-only on core resources
+ *   viewer  — minimal read-only
  */
 export async function up(_, { container }) {
   const { RolePermission } = container.resolve('models');
-
-  // Get seed roles from container
   const SEED_ROLES = container.resolve('roles:seed_constants');
   const SEED_PERMISSIONS = container.resolve('permissions:seed_constants');
 
   const rolePermissions = [
     // =========================================================================
-    // ADMIN — super admin permission (*:*) grants all permissions dynamically
+    // ADMIN — super-admin wildcard grants all permissions dynamically
     // =========================================================================
     {
       id: uuidv4(),
@@ -28,9 +34,8 @@ export async function up(_, { container }) {
     },
 
     // =========================================================================
-    // MODERATOR — read all + update users/groups
+    // MODERATOR — read all core resources + update users/groups
     // =========================================================================
-    // Users: read + update
     {
       id: uuidv4(),
       role_id: SEED_ROLES.mod,
@@ -41,13 +46,11 @@ export async function up(_, { container }) {
       role_id: SEED_ROLES.mod,
       permission_id: SEED_PERMISSIONS.usersUpdate,
     },
-    // Roles: read
     {
       id: uuidv4(),
       role_id: SEED_ROLES.mod,
       permission_id: SEED_PERMISSIONS.rolesRead,
     },
-    // Groups: read + update
     {
       id: uuidv4(),
       role_id: SEED_ROLES.mod,
@@ -58,7 +61,6 @@ export async function up(_, { container }) {
       role_id: SEED_ROLES.mod,
       permission_id: SEED_PERMISSIONS.groupsUpdate,
     },
-    // Permissions: read
     {
       id: uuidv4(),
       role_id: SEED_ROLES.mod,
@@ -66,9 +68,8 @@ export async function up(_, { container }) {
     },
 
     // =========================================================================
-    // EDITOR — read all + create/update users
+    // EDITOR — read all core resources + create/update users
     // =========================================================================
-    // Users: read + create + update
     {
       id: uuidv4(),
       role_id: SEED_ROLES.editor,
@@ -84,19 +85,16 @@ export async function up(_, { container }) {
       role_id: SEED_ROLES.editor,
       permission_id: SEED_PERMISSIONS.usersUpdate,
     },
-    // Roles: read
     {
       id: uuidv4(),
       role_id: SEED_ROLES.editor,
       permission_id: SEED_PERMISSIONS.rolesRead,
     },
-    // Groups: read
     {
       id: uuidv4(),
       role_id: SEED_ROLES.editor,
       permission_id: SEED_PERMISSIONS.groupsRead,
     },
-    // Permissions: read
     {
       id: uuidv4(),
       role_id: SEED_ROLES.editor,
@@ -104,7 +102,7 @@ export async function up(_, { container }) {
     },
 
     // =========================================================================
-    // USER — read-only on core resources + files read
+    // USER — read-only on core resources
     // =========================================================================
     {
       id: uuidv4(),
@@ -128,7 +126,7 @@ export async function up(_, { container }) {
     },
 
     // =========================================================================
-    // VIEWER — minimal read-only
+    // VIEWER — minimal read-only for auditing
     // =========================================================================
     {
       id: uuidv4(),
@@ -160,15 +158,10 @@ export async function up(_, { container }) {
  */
 export async function down(_, { container }) {
   const { RolePermission } = container.resolve('models');
-
-  // Get seed roles from container
   const SEED_ROLES = container.resolve('roles:seed_constants');
 
-  // Remove all seeded role permissions by roleId
   await RolePermission.destroy({
-    where: {
-      role_id: Object.values(SEED_ROLES),
-    },
-    force: true, // Hard delete
+    where: { role_id: Object.values(SEED_ROLES) },
+    force: true,
   });
 }

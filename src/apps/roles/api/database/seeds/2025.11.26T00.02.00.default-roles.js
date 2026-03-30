@@ -6,43 +6,48 @@
  */
 
 /**
- * Run the seed
+ * Default RBAC roles — seeded on first run.
+ * These map to the enterprise role hierarchy used by the
+ * permission matrix and group-role assignments.
  */
 export async function up(_, { container }) {
   const { Role } = container.resolve('models');
-
-  // Get seed roles from container
   const SEED_ROLES = container.resolve('roles:seed_constants');
 
   const roles = [
     {
       id: SEED_ROLES.admin,
       name: 'admin',
-      description: 'System administrator with full access',
+      description:
+        'System administrator — unrestricted access to all resources and operations.',
       is_active: true,
     },
     {
       id: SEED_ROLES.user,
       name: 'user',
-      description: 'Regular user with standard permissions',
+      description:
+        'Standard user — read access to core resources with limited self-service capabilities.',
       is_active: true,
     },
     {
       id: SEED_ROLES.mod,
       name: 'mod',
-      description: 'Content moderator with moderation permissions',
+      description:
+        'Content moderator — read/update access to users and groups for moderation workflows.',
       is_active: true,
     },
     {
       id: SEED_ROLES.editor,
       name: 'editor',
-      description: 'Content editor with write permissions',
+      description:
+        'Content editor — create/read/update access to users and content resources.',
       is_active: true,
     },
     {
       id: SEED_ROLES.viewer,
       name: 'viewer',
-      description: 'Read-only access to resources',
+      description:
+        'Read-only observer — minimal read access for auditing and reporting.',
       is_active: true,
     },
   ];
@@ -55,15 +60,10 @@ export async function up(_, { container }) {
  */
 export async function down(_, { container }) {
   const { Role } = container.resolve('models');
-
-  // Get seed roles from container
   const SEED_ROLES = container.resolve('roles:seed_constants');
 
-  // Remove all seeded roles by id
   await Role.destroy({
-    where: {
-      id: Object.values(SEED_ROLES),
-    },
-    force: true, // Hard delete
+    where: { id: Object.values(SEED_ROLES) },
+    force: true,
   });
 }
