@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -64,15 +64,15 @@ function ensureDir(dirPath) {
  * Node-RED requires real files on the filesystem (it cannot load from a webpack bundle).
  *
  * Auto-discovers all modules in ./nodes/ that export getNodeJS() and getNodeHTML().
- * Each module's basename becomes the filename written to <userDir>/nodes/rsk/.
+ * Each module's basename becomes the filename written to <userDir>/nodes/xnapify/.
  *
  * @param {string} userDir - Node-RED user directory
  * @returns {string} Path to the nodes directory
  */
 function writeCustomNodes(userDir) {
   const nodesDir = path.join(userDir, 'nodes');
-  const rskDir = path.join(nodesDir, 'rsk');
-  ensureDir(rskDir);
+  const xnapifyDir = path.join(nodesDir, 'xnapify');
+  ensureDir(xnapifyDir);
 
   // Create adapter for nodes context
   const nodesAdapter = createWebpackContextAdapter(nodesContexts);
@@ -81,7 +81,7 @@ function writeCustomNodes(userDir) {
   const seen = new Set();
 
   modulePaths.forEach(modulePath => {
-    // Extract basename without extension, e.g. './rsk-middleware.js' → 'rsk-middleware'
+    // Extract basename without extension, e.g. './xnapify-middleware.js' → 'xnapify-middleware'
     const baseName = path.basename(modulePath).replace(/\.[cm]?[jt]s$/i, '');
     if (seen.has(baseName)) return;
     seen.add(baseName);
@@ -99,16 +99,16 @@ function writeCustomNodes(userDir) {
         return;
       }
 
-      fs.writeFileSync(path.join(rskDir, `${baseName}.js`), getJS(), 'utf8');
+      fs.writeFileSync(path.join(xnapifyDir, `${baseName}.js`), getJS(), 'utf8');
       fs.writeFileSync(
-        path.join(rskDir, `${baseName}.html`),
+        path.join(xnapifyDir, `${baseName}.html`),
         getHTML(),
         'utf8',
       );
 
       console.log(
         `📦 [Node-RED Settings] Node "${baseName}" written to`,
-        rskDir,
+        xnapifyDir,
       );
     } catch (err) {
       console.warn(
@@ -248,10 +248,10 @@ export default function createSettings(options = {}) {
     host = '127.0.0.1',
     port = 1337,
     protocol = 'http',
-    userDir = process.env.RSK_NODERED_HOME ||
-      path.join(os.homedir(), '.rsk', '.node-red'),
-    logLevel = process.env.RSK_NODERED_LOG_LEVEL || 'info',
-    enableProjects = process.env.RSK_NODERED_PROJECTS === 'true',
+    userDir = process.env.XNAPIFY_NODERED_HOME ||
+      path.join(os.homedir(), '.xnapify', '.node-red'),
+    logLevel = process.env.XNAPIFY_NODERED_LOG_LEVEL || 'info',
+    enableProjects = process.env.XNAPIFY_NODERED_PROJECTS === 'true',
     httpAdminRoot = '/~/red/admin',
     httpNodeRoot = '/~/red',
     enableMetrics = false,

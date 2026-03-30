@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -39,14 +39,14 @@ function parseCustomFileTypes(envVar) {
  * @returns {Object} File types with extensions, MIME types, and metadata
  */
 function createFileTypes() {
-  const customImageTypes = parseCustomFileTypes('RSK_FS_CUSTOM_IMAGE_TYPES');
+  const customImageTypes = parseCustomFileTypes('XNAPIFY_FS_CUSTOM_IMAGE_TYPES');
   const customDocumentTypes = parseCustomFileTypes(
-    'RSK_FS_CUSTOM_DOCUMENT_TYPES',
+    'XNAPIFY_FS_CUSTOM_DOCUMENT_TYPES',
   );
-  const customAudioTypes = parseCustomFileTypes('RSK_FS_CUSTOM_AUDIO_TYPES');
-  const customVideoTypes = parseCustomFileTypes('RSK_FS_CUSTOM_VIDEO_TYPES');
+  const customAudioTypes = parseCustomFileTypes('XNAPIFY_FS_CUSTOM_AUDIO_TYPES');
+  const customVideoTypes = parseCustomFileTypes('XNAPIFY_FS_CUSTOM_VIDEO_TYPES');
   const customArchiveTypes = parseCustomFileTypes(
-    'RSK_FS_CUSTOM_ARCHIVE_TYPES',
+    'XNAPIFY_FS_CUSTOM_ARCHIVE_TYPES',
   );
 
   return {

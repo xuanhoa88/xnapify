@@ -52,17 +52,14 @@ mkdir -p src/extensions/{extension-name}
   "version": "1.0.0",
   "browser": "views/index.js",
   "main": "api/index.js",
-  "description": "Brief extension description",
-  "rsk": {
-    "subscribe": ["/route-path"]
-  }
+  "description": "Brief extension description"
 }
 ```
 
-**`rsk.subscribe`** declares which namespaces activate the extension's frontend.
+**Namespace activation:**
 
-- **Plugin-kind extensions** (no `views()` hook): You **must** list route paths manually (e.g., `["/login", "/profile"]`).
-- **Module-kind extensions** (with `views()` hook): The namespace is **auto-derived** from the `views()` return tuple `[moduleName, context]`. You can omit `rsk.subscribe` — it will be populated automatically (e.g., `"posts"`).
+- **Plugin-kind extensions** (no `views()` hook): Subscribe to route paths via `defineExtension()` configuration.
+- **Module-kind extensions** (with `views()` hook): The namespace is **auto-derived** from the `views()` return tuple `[moduleName, context]`.
 - Extensions are **eagerly activated** during loading — their `boot()` runs immediately after registration, so Redux reducers and sidebar menus are available before the user navigates to the route.
 
 **Route namespace override:** A `_route.js` file can export `namespace` to override which namespace the route belongs to:
@@ -76,14 +73,11 @@ Example:
 
 ```json
 {
-  "name": "@rsk-extension/notifications",
+  "name": "@xnapify-extension/notifications",
   "version": "1.0.0",
   "browser": "views/index.js",
   "main": "api/index.js",
-  "description": "Notification system extension",
-  "rsk": {
-    "subscribe": ["/dashboard", "/notifications"]
-  }
+  "description": "Notification system extension"
 }
 ```
 
@@ -92,7 +86,7 @@ Example:
 ```javascript
 // src/extensions/{extension-name}/api/index.js
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -261,7 +255,7 @@ export default {
 ```javascript
 // src/extensions/{extension-name}/views/index.js
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -500,7 +494,7 @@ ExtensionField.propTypes = {
 ```javascript
 // src/extensions/{extension-name}/validator/index.js
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -610,14 +604,11 @@ cd src/extensions/comments-extension
 
 ```json
 {
-  "name": "@rsk-extension/comments",
+  "name": "@xnapify-extension/comments",
   "version": "1.0.0",
   "browser": "views/index.js",
   "main": "api/index.js",
-  "description": "Add comments functionality to posts",
-  "rsk": {
-    "subscribe": ["/posts"]
-  }
+  "description": "Add comments functionality to posts"
 }
 ```
 
@@ -935,7 +926,7 @@ registry.registerHook(
 ### Extension Not Loading
 
 - Check `__EXTENSION_NAME__` and `__EXTENSION_DESCRIPTION__` globals are defined
-- For **plugin-kind** extensions: verify `rsk.subscribe` in `package.json` lists the route paths where the extension should activate (e.g., `["/login", "/profile"]`)
+- For **plugin-kind** extensions: verify the extension subscribes to the correct route paths where it should activate (e.g., `["/login", "/profile"]`)
 - For **module-kind** extensions: the namespace is auto-derived from `views()` — check that `views()` returns a valid `[moduleName, context]` tuple
 - Extensions are eagerly activated via `ensureViewNamespaceActive()` during loading — check console for `[ExtensionManager] Activating namespace:` logs
 - Ensure both `api/index.js` and `views/index.js` export default extension definitions

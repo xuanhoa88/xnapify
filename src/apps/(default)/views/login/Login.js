@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -154,13 +154,13 @@ function HeroSection() {
       <div className={s.heroContent}>
         <Link to='/' className={s.brand}>
           <img
-            src='/rsk_38x38.png'
-            srcSet='/rsk_72x72.png 2x'
+            src='/xnapify_38x38.png'
+            srcSet='/xnapify_72x72.png 2x'
             width='48'
             height='48'
-            alt='RSK'
+            alt='xnapify'
           />
-          <span className={s.brandText}>React Starter Kit</span>
+          <span className={s.brandText}>xnapify</span>
         </Link>
         <h1 className={s.heroTitle}>{t('login.welcome', 'Welcome Back')}</h1>
         <p className={s.heroSubtitle}>

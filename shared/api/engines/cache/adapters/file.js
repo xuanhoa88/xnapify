@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -43,8 +43,8 @@ export default class FileCache {
   constructor(options = {}) {
     this.directory =
       options.directory ||
-      process.env.RSK_CACHE_DIR ||
-      path.join(os.homedir(), '.rsk', 'caches');
+      process.env.XNAPIFY_CACHE_DIR ||
+      path.join(os.homedir(), '.xnapify', 'caches');
     this.maxSize = options.maxSize || 10000;
     this.defaultTTL = options.ttl || 5 * 60 * 1000; // 5 minutes
     this.locks = new Map(); // In-memory locks for race condition prevention

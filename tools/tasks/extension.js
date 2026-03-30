@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -28,7 +28,7 @@ const execFileAsync = util.promisify(execFile);
 // Constants
 // ---------------------------------------------------------------------------
 
-const EXTENSION_PATH = config.env('RSK_EXTENSION_LOCAL_PATH', 'extensions');
+const EXTENSION_PATH = config.env('XNAPIFY_EXTENSION_LOCAL_PATH', 'extensions');
 const EXTENSIONS_DIR = path.resolve(config.APP_DIR, EXTENSION_PATH);
 const EXTENSIONS_BUILD_DIR = path.resolve(config.BUILD_DIR, EXTENSION_PATH);
 

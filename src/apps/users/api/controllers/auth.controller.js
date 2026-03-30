@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -468,7 +468,7 @@ export async function generateRandomPassword(req, res) {
 export async function oauthCallback(req, res) {
   const container = req.app.get('container');
   const http = container.resolve('http');
-  const appUrl = process.env.RSK_APP_URL;
+  const appUrl = process.env.XNAPIFY_APP_URL;
 
   try {
     const { provider } = req.params;

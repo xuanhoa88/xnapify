@@ -3,7 +3,7 @@
   "configurations": [
     {
       "type": "node",
-      "name": "RSK: Start Dev Server",
+      "name": "xnapify: Start Dev Server",
       "request": "launch",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
@@ -30,7 +30,7 @@
     },
     {
       "type": "node",
-      "name": "RSK: Run Tests",
+      "name": "xnapify: Run Tests",
       "request": "launch",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["test", "--", "--runInBand", "--no-cache"],

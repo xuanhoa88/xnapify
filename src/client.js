@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -47,7 +47,7 @@ const preloadedState = window.__PRELOADED_STATE__ || {};
 // Create browser history with configurable basename
 let parsedBasename = '';
 try {
-  const appUrlStr = process.env.RSK_APP_URL || preloadedState.appUrl || '';
+  const appUrlStr = process.env.XNAPIFY_APP_URL || preloadedState.appUrl || '';
   if (appUrlStr.startsWith('http')) {
     parsedBasename = new URL(appUrlStr).pathname;
     if (parsedBasename === '/') parsedBasename = '';
@@ -734,7 +734,7 @@ if (module.hot) {
   });
 
   // Listen for extension rebuild events from dev server via hot middleware
-  const RELOAD_PENDING = Symbol.for('__rsk.hmrExtensionReloadPending__');
+  const RELOAD_PENDING = Symbol.for('__xnapify.hmrExtensionReloadPending__');
   let hmrEventSource = null;
   let isHmrInitialized = false;
 

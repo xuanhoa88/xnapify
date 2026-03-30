@@ -4,8 +4,8 @@
 
 ```bash
 # Fork and clone
-git clone https://github.com/YOUR_USERNAME/rapid-rsk.git
-cd rapid-rsk
+git clone https://github.com/YOUR_USERNAME/xnapify.git
+cd xnapify
 
 # Install and run
 npm install

@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -93,7 +93,7 @@ export async function uploadFile(req, res) {
       return http.sendValidationError(res, { file: errorMsg });
     }
 
-    // `fs` middleware places info in req.file (if multer) or uploadResult depending on how rapid-rsk is built
+    // `fs` middleware places info in req.file (if multer) or uploadResult depending on how xnapify is built
     // Usually it provides a relative path or filename
     const fileMetadata = {
       name:

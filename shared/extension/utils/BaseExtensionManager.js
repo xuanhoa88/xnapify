@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -16,17 +16,17 @@ import { addNamespace, removeNamespace } from '@shared/i18n/utils';
 import { LIFECYCLE_HOOKS } from '@shared/utils/lifecycle';
 
 // Symbols — exported (used by subclass managers and tests)
-export const ACTIVE_EXTENSIONS = Symbol('__rsk.ext.active__');
-export const EXTENSION_METADATA = Symbol('__rsk.ext.metadata__');
-export const BUFFERED_ROUTES = Symbol('__rsk.ext.pendingRoutes__');
-export const STORED_ADAPTERS = Symbol('__rsk.ext.routeAdapters__');
-export const CONNECTED_ROUTERS = Symbol('__rsk.ext.connectedRouters__');
+export const ACTIVE_EXTENSIONS = Symbol('__xnapify.ext.active__');
+export const EXTENSION_METADATA = Symbol('__xnapify.ext.metadata__');
+export const BUFFERED_ROUTES = Symbol('__xnapify.ext.pendingRoutes__');
+export const STORED_ADAPTERS = Symbol('__xnapify.ext.routeAdapters__');
+export const CONNECTED_ROUTERS = Symbol('__xnapify.ext.connectedRouters__');
 
 // Symbols — private (internal to base manager)
-const FETCH = Symbol('__rsk.ext.fetch__');
-const CONTEXTS = Symbol('__rsk.ext.contexts__');
-const REGISTRY = Symbol('__rsk.ext.registry__');
-const EVENT_HANDLERS = Symbol('__rsk.ext.eventHandlers__');
+const FETCH = Symbol('__xnapify.ext.fetch__');
+const CONTEXTS = Symbol('__xnapify.ext.contexts__');
+const REGISTRY = Symbol('__xnapify.ext.registry__');
+const EVENT_HANDLERS = Symbol('__xnapify.ext.eventHandlers__');
 
 /**
  * Extension states

@@ -37,8 +37,8 @@ No external dependencies. No error classes file — errors are thrown inline.
 ### Private State
 
 Internal state is stored via Symbols to prevent external access:
-- `Symbol('__rsk.hookName__')` → channel name string
-- `Symbol('__rsk.hookHandlers__')` → `Map<event, Array<{ handler, priority }>>`
+- `Symbol('__xnapify.hookName__')` → channel name string
+- `Symbol('__xnapify.hookHandlers__')` → `Map<event, Array<{ handler, priority }>>`
 
 ### Getters
 
@@ -98,7 +98,7 @@ Returns a proxy-like object where handlers registered via `on()` are invoked wit
 
 ### Private State
 
-- `Symbol('__rsk.hookChannels__')` → `Map<name, HookChannel>`
+- `Symbol('__xnapify.hookChannels__')` → `Map<name, HookChannel>`
 
 ### Methods
 

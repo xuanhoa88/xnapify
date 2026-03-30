@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -183,7 +183,7 @@ export function withNamespace(namespace, baseSearch) {
  */
 export function createFactory(options = {}) {
   // Determine default type from environment or fallback to memory
-  const defaultType = process.env.RSK_SEARCH_TYPE || 'memory';
+  const defaultType = process.env.XNAPIFY_SEARCH_TYPE || 'memory';
   const { type = defaultType, ...configOptions } = options;
 
   const AdapterClass = adapterRegistry.get(type);

@@ -206,7 +206,7 @@ useEffect(() => {
 
 ## Authentication
 
-Authentication is handled automatically via cookies if `RSK_JWT_COOKIE_NAME` is set.
+Authentication is handled automatically via cookies if `XNAPIFY_JWT_COOKIE_NAME` is set.
 
 - **Auto-Auth**: On connection, the server checks the cookie.
 - **Manual Auth**: Call `ws.login(token)` on the client.

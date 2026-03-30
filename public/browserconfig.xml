@@ -3,10 +3,10 @@
 <browserconfig>
     <msapplication>
         <tile>
-            <square70x70logo src="rsk_70x70.png"/>
-            <square150x150logo src="rsk_150x150.png"/>
-            <wide310x150logo src="rsk_310x150.png"/>
-            <square310x310logo src="rsk_310x310.png"/>
+            <square70x70logo src="xnapify_70x70.png"/>
+            <square150x150logo src="xnapify_150x150.png"/>
+            <wide310x150logo src="xnapify_310x150.png"/>
+            <square310x310logo src="xnapify_310x310.png"/>
         </tile>
     </msapplication>
 </browserconfig>

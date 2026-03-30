@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -98,7 +98,7 @@ export async function up({ context, Sequelize }) {
     compatibility: {
       type: DataTypes.STRING(20),
       allowNull: true,
-      comment: 'Tested with RSK version',
+      comment: 'Tested with xnapify version',
     },
     type: {
       type: DataTypes.STRING(10),

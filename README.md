@@ -1,8 +1,8 @@
 <div align="center">
 
-# 🚀 Rapid RSK
+# 🚀 xnapify
 
-**Modern, production-ready full-stack React application with server-side rendering**
+**Your API, SSR-ready in a Snap**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE.txt)
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D16.14-green.svg)](https://nodejs.org/)
@@ -29,23 +29,23 @@
 
 ## 📋 Prerequisites
 
-| Tool | Version |
-| ------- | ---------- |
+| Tool    | Version   |
+| ------- | --------- |
 | Node.js | ≥ 16.14.0 |
-| npm | ≥ 8.0.0 |
+| npm     | ≥ 8.0.0   |
 
 ## 🚀 Quick Start
 
 ```bash
 # Clone the repository
-git clone https://github.com/xuanhoa88/rapid-rsk.git
-cd rapid-rsk
+git clone https://github.com/xuanhoa88/xnapify.git
+cd xnapify
 
 # Install dependencies
 npm install
 
 # Copy environment variables (Optional)
-cp .env.rsk .env
+cp .env.xnapify .env
 
 # Start the development server (http://localhost:1337)
 npm run dev
@@ -54,7 +54,7 @@ npm run dev
 ## 📁 Project Structure
 
 ```
-rapid-rsk/
+xnapify/
 ├── src/                        # Application source code
 │   ├── bootstrap/              # App bootstrap & configuration
 │   ├── apps/                   # Business modules (auto-discovered)
@@ -107,7 +107,7 @@ rapid-rsk/
 │   └── tasks/                  # Build tasks (dev, build, test, etc.)
 ├── public/                     # Static assets
 ├── Dockerfile                  # Multi-stage production Docker build
-├── .env.rsk                    # Environment variable template
+├── .env.xnapify                    # Environment variable template
 └── package.json
 ```
 
@@ -115,37 +115,37 @@ rapid-rsk/
 
 ### Frontend
 
-| Technology | Purpose |
-| -------------------------------- | ----------------------------- |
-| React 18 | UI with SSR and hydration |
-| Redux Toolkit | Global state management |
+| Technology            | Purpose                    |
+| --------------------- | -------------------------- |
+| React 18              | UI with SSR and hydration  |
+| Redux Toolkit         | Global state management    |
 | React Hook Form + Zod | Form handling & validation |
-| Tiptap 3 | Rich text editor (WYSIWYG) |
-| CSS Modules + PostCSS | Scoped styling |
-| i18next | Internationalization |
+| Tiptap 3              | Rich text editor (WYSIWYG) |
+| CSS Modules + PostCSS | Scoped styling             |
+| i18next               | Internationalization       |
 
 ### Backend
 
-| Technology | Purpose |
-| -------------------------------- | ----------------------------- |
-| Express 4 | HTTP server |
-| Sequelize 6 | ORM (PostgreSQL, MySQL, SQLite) |
-| JSON Web Tokens | Authentication |
-| Passport.js | OAuth (Google, Facebook, GitHub, Microsoft) |
-| ws | WebSocket server |
-| Nodemailer | Email delivery |
-| node-cron | Scheduled tasks |
-| Piscina | Worker thread pools |
-| Node-RED | Visual workflow automation |
+| Technology      | Purpose                                     |
+| --------------- | ------------------------------------------- |
+| Express 4       | HTTP server                                 |
+| Sequelize 6     | ORM (PostgreSQL, MySQL, SQLite)             |
+| JSON Web Tokens | Authentication                              |
+| Passport.js     | OAuth (Google, Facebook, GitHub, Microsoft) |
+| ws              | WebSocket server                            |
+| Nodemailer      | Email delivery                              |
+| node-cron       | Scheduled tasks                             |
+| Piscina         | Worker thread pools                         |
+| Node-RED        | Visual workflow automation                  |
 
 ### Tooling
 
-| Technology | Purpose |
-| -------------------------------- | ----------------------------- |
-| Webpack 5 | Bundling, code splitting, HMR |
-| Babel 7 | ES2015+ transpilation |
-| Jest | Testing & benchmarks |
-| ESLint + Prettier + Stylelint | Code quality & formatting |
+| Technology                    | Purpose                       |
+| ----------------------------- | ----------------------------- |
+| Webpack 5                     | Bundling, code splitting, HMR |
+| Babel 7                       | ES2015+ transpilation         |
+| Jest                          | Testing & benchmarks          |
+| ESLint + Prettier + Stylelint | Code quality & formatting     |
 
 ## 📜 Available Scripts
 
@@ -192,13 +192,13 @@ src/apps/<module>/
 
 Each `_route.js` page can export lifecycle hooks:
 
-| Hook | When Called | Purpose |
-| ------------------ | -------------------- | -------------------------------- |
-| `register` | Route discovered | Register menus, global state |
-| `middleware` | Before render | Permission checks |
-| `mount` | Route mounted | Set breadcrumbs |
-| `getInitialProps` | Before render | Data fetching, page metadata |
-| `unregister` | Route unloaded | Cleanup |
+| Hook              | When Called      | Purpose                      |
+| ----------------- | ---------------- | ---------------------------- |
+| `register`        | Route discovered | Register menus, global state |
+| `middleware`      | Before render    | Permission checks            |
+| `mount`           | Route mounted    | Set breadcrumbs              |
+| `getInitialProps` | Before render    | Data fetching, page metadata |
+| `unregister`      | Route unloaded   | Cleanup                      |
 
 > **Note:** Redux reducer injection is handled in `views/index.js` `providers()` hook, not in `_route.js`.
 
@@ -229,26 +229,26 @@ registry.register extension', {
 
 ## ⚙️ Configuration
 
-All environment variables use the `RSK_` prefix. Copy `.env.rsk` to `.env` and configure:
+All environment variables use the `XNAPIFY_` prefix. Copy `.env.xnapify` to `.env` and configure:
 
 ```bash
 # Server
-RSK_PORT=1337
-RSK_HOST=127.0.0.1
+XNAPIFY_PORT=1337
+XNAPIFY_HOST=127.0.0.1
 
 # Application
-RSK_APP_NAME="React Starter Kit"
-RSK_APP_DESC="Boilerplate for React.js web applications"
+XNAPIFY_APP_NAME="xnapify"
+XNAPIFY_APP_DESC="Boilerplate for React.js web applications"
 
 # Database (SQLite default, supports PostgreSQL/MySQL)
-RSK_DB_URL=sqlite:database.sqlite
+XNAPIFY_DB_URL=sqlite:database.sqlite
 
 # Authentication
-RSK_JWT_SECRET=            # Auto-generated on first run
-RSK_JWT_EXPIRY=7d
+XNAPIFY_JWT_SECRET=            # Auto-generated on first run
+XNAPIFY_JWT_EXPIRY=7d
 
 # Node-RED (optional)
-RSK_NODERED_URL=http://localhost:1880
+XNAPIFY_NODERED_URL=http://localhost:1880
 ```
 
 > **Note:** Environment variables are baked into the client bundle at build time. Changing them requires a rebuild.
@@ -257,14 +257,14 @@ RSK_NODERED_URL=http://localhost:1880
 
 ```bash
 # Build image
-docker build -t rapid-rsk .
+docker build -t xnapify .
 
 # Run container
 docker run -p 1337:1337 \
   -e NODE_ENV=production \
-  -e RSK_JWT_SECRET=$(openssl rand -base64 32) \
-  -e RSK_DB_URL=postgresql://user:pass@host:5432/dbname \
-  rapid-rsk
+  -e XNAPIFY_JWT_SECRET=$(openssl rand -base64 32) \
+  -e XNAPIFY_DB_URL=postgresql://user:pass@host:5432/dbname \
+  xnapify
 ```
 
 ## 🚢 Production Deployment

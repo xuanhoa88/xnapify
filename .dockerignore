@@ -50,7 +50,7 @@ docs/
 # Environment
 .env
 .env.*
-!.env.rsk
+!.env.xnapify
 
 # Runtime data
 database.sqlite

@@ -1,5 +1,5 @@
 # =============================================================================
-# Docker Compose – React Starter Kit (rapid-rsk)
+# Docker Compose – xnapify (xnapify)
 # =============================================================================
 # Usage:
 #   docker compose -f .docker/docker-compose.yml up
@@ -16,25 +16,25 @@ services:
     build:
       context: ..
       dockerfile: .docker/Dockerfile
-    container_name: rsk-app
+    container_name: xnapify-app
     restart: unless-stopped
     env_file:
       - ../.env
     ports:
-      - '${RSK_PORT:-1337}:1337'
+      - '${XNAPIFY_PORT:-1337}:1337'
     environment:
       NODE_ENV: ${NODE_ENV:-production}
-      RSK_HOST: 0.0.0.0
+      XNAPIFY_HOST: 0.0.0.0
       # Writable directories — all under /app/data (single persistent volume)
-      RSK_UPLOAD_DIR: /app/data/uploads
-      RSK_NODERED_HOME: /app/data/node-red
-      RSK_EXTENSION_DIR: /app/data/extensions
-      RSK_CACHE_DIR: /app/data/caches
-      RSK_FTS_DIR: /app/data/fts
+      XNAPIFY_UPLOAD_DIR: /app/data/uploads
+      XNAPIFY_NODERED_HOME: /app/data/node-red
+      XNAPIFY_EXTENSION_DIR: /app/data/extensions
+      XNAPIFY_CACHE_DIR: /app/data/caches
+      XNAPIFY_FTS_DIR: /app/data/fts
     volumes:
-      - rsk_data:/app/data
+      - xnapify_data:/app/data
     networks:
-      - rsk-net
+      - xnapify-net
     healthcheck:
       test: ['CMD', 'wget', '-qO-', 'http://localhost:1337/']
       interval: 30s
@@ -47,22 +47,22 @@ services:
   # ---------------------------------------------------------------------------
   postgres:
     image: postgres:16-alpine
-    container_name: rsk-postgres
+    container_name: xnapify-postgres
     profiles:
       - postgres
     restart: unless-stopped
     ports:
-      - '${RSK_PG_PORT:-5432}:5432'
+      - '${XNAPIFY_PG_PORT:-5432}:5432'
     environment:
-      POSTGRES_DB: ${RSK_PG_DB:-rsk}
-      POSTGRES_USER: ${RSK_PG_USER:-rsk}
-      POSTGRES_PASSWORD: ${RSK_PG_PASSWORD:-rsk_secret}
+      POSTGRES_DB: ${XNAPIFY_PG_DB:-xnapify}
+      POSTGRES_USER: ${XNAPIFY_PG_USER:-xnapify}
+      POSTGRES_PASSWORD: ${XNAPIFY_PG_PASSWORD:-xnapify_secret}
     volumes:
-      - rsk_pg:/var/lib/postgresql/data
+      - xnapify_pg:/var/lib/postgresql/data
     networks:
-      - rsk-net
+      - xnapify-net
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${RSK_PG_USER:-rsk}']
+      test: ['CMD-SHELL', 'pg_isready -U ${XNAPIFY_PG_USER:-xnapify}']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -72,21 +72,21 @@ services:
   # ---------------------------------------------------------------------------
   mysql:
     image: mysql:8.0
-    container_name: rsk-mysql
+    container_name: xnapify-mysql
     profiles:
       - mysql
     restart: unless-stopped
     ports:
-      - '${RSK_MYSQL_PORT:-3306}:3306'
+      - '${XNAPIFY_MYSQL_PORT:-3306}:3306'
     environment:
-      MYSQL_DATABASE: ${RSK_MYSQL_DB:-rsk}
-      MYSQL_USER: ${RSK_MYSQL_USER:-rsk}
-      MYSQL_PASSWORD: ${RSK_MYSQL_PASSWORD:-rsk_secret}
-      MYSQL_ROOT_PASSWORD: ${RSK_MYSQL_ROOT_PASSWORD:-root_secret}
+      MYSQL_DATABASE: ${XNAPIFY_MYSQL_DB:-xnapify}
+      MYSQL_USER: ${XNAPIFY_MYSQL_USER:-xnapify}
+      MYSQL_PASSWORD: ${XNAPIFY_MYSQL_PASSWORD:-xnapify_secret}
+      MYSQL_ROOT_PASSWORD: ${XNAPIFY_MYSQL_ROOT_PASSWORD:-root_secret}
     volumes:
-      - rsk_mysql:/var/lib/mysql
+      - xnapify_mysql:/var/lib/mysql
     networks:
-      - rsk-net
+      - xnapify-net
     healthcheck:
       test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost']
       interval: 10s
@@ -97,13 +97,13 @@ services:
 # Volumes
 # =============================================================================
 volumes:
-  rsk_data:
-  rsk_pg:
-  rsk_mysql:
+  xnapify_data:
+  xnapify_pg:
+  xnapify_mysql:
 
 # =============================================================================
 # Networks
 # =============================================================================
 networks:
-  rsk-net:
+  xnapify-net:
     driver: bridge

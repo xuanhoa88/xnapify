@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -101,43 +101,43 @@ function createProvider(options = {}) {
 
     case 'smtp':
       return new SmtpEmailProvider({
-        host: process.env.RSK_SMTP_HOST,
-        port: parseInt(process.env.RSK_SMTP_PORT, 10) || 587,
-        secure: process.env.RSK_SMTP_SECURE === 'true',
-        user: process.env.RSK_SMTP_USER,
-        pass: process.env.RSK_SMTP_PASS,
-        defaultFrom: process.env.RSK_MAIL_FROM,
+        host: process.env.XNAPIFY_SMTP_HOST,
+        port: parseInt(process.env.XNAPIFY_SMTP_PORT, 10) || 587,
+        secure: process.env.XNAPIFY_SMTP_SECURE === 'true',
+        user: process.env.XNAPIFY_SMTP_USER,
+        pass: process.env.XNAPIFY_SMTP_PASS,
+        defaultFrom: process.env.XNAPIFY_MAIL_FROM,
         defaultFromName:
-          process.env.RSK_MAIL_FROM_NAME || process.env.RSK_APP_NAME,
+          process.env.XNAPIFY_MAIL_FROM_NAME || process.env.XNAPIFY_APP_NAME,
         ...explicitConfig,
       });
 
     case 'sendgrid':
       return new SendGridEmailProvider({
-        apiKey: process.env.RSK_SENDGRID_KEY,
-        defaultFrom: process.env.RSK_MAIL_FROM,
+        apiKey: process.env.XNAPIFY_SENDGRID_KEY,
+        defaultFrom: process.env.XNAPIFY_MAIL_FROM,
         defaultFromName:
-          process.env.RSK_MAIL_FROM_NAME || process.env.RSK_APP_NAME,
+          process.env.XNAPIFY_MAIL_FROM_NAME || process.env.XNAPIFY_APP_NAME,
         ...explicitConfig,
       });
 
     case 'mailgun':
       return new MailgunEmailProvider({
-        apiKey: process.env.RSK_MAILGUN_KEY,
-        domain: process.env.RSK_MAILGUN_DOMAIN,
-        region: process.env.RSK_MAILGUN_REGION,
-        defaultFrom: process.env.RSK_MAIL_FROM,
+        apiKey: process.env.XNAPIFY_MAILGUN_KEY,
+        domain: process.env.XNAPIFY_MAILGUN_DOMAIN,
+        region: process.env.XNAPIFY_MAILGUN_REGION,
+        defaultFrom: process.env.XNAPIFY_MAIL_FROM,
         defaultFromName:
-          process.env.RSK_MAIL_FROM_NAME || process.env.RSK_APP_NAME,
+          process.env.XNAPIFY_MAIL_FROM_NAME || process.env.XNAPIFY_APP_NAME,
         ...explicitConfig,
       });
 
     case 'resend':
       return new ResendEmailProvider({
-        apiKey: process.env.RSK_RESEND_KEY,
-        defaultFrom: process.env.RSK_MAIL_FROM,
+        apiKey: process.env.XNAPIFY_RESEND_KEY,
+        defaultFrom: process.env.XNAPIFY_MAIL_FROM,
         defaultFromName:
-          process.env.RSK_MAIL_FROM_NAME || process.env.RSK_APP_NAME,
+          process.env.XNAPIFY_MAIL_FROM_NAME || process.env.XNAPIFY_APP_NAME,
         ...explicitConfig,
       });
 

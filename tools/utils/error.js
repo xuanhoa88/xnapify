@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -9,7 +9,7 @@ const { isVerbose, logError, logInfo } = require('./logger');
 
 // Store registered handlers for cleanup on the global object so they survive
 // module reloads (e.g. HMR). This prevents accumulating process listeners.
-const SHUTDOWN_SYMBOL = Symbol.for('__rsk.gracefulShutdownHandlers__');
+const SHUTDOWN_SYMBOL = Symbol.for('__xnapify.gracefulShutdownHandlers__');
 const SHUTDOWN_TIMEOUT = 10_000;
 
 /**

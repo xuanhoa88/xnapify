@@ -78,7 +78,7 @@ Registers a custom adapter class in the shared registry. **Overwrites** existing
 
 Creates and returns a new adapter instance.
 
-1. Resolves adapter type: `options.type` → `RSK_SEARCH_TYPE` env var → `'memory'` fallback.
+1. Resolves adapter type: `options.type` → `XNAPIFY_SEARCH_TYPE` env var → `'memory'` fallback.
 2. Looks up adapter class from registry. Throws `InvalidSearchTypeError` (status 400) if not found.
 3. For `'database'` type: validates that `options.connection` exists, throws `InvalidSearchDatabaseAdapterError` (status 400) if missing.
 4. Instantiates adapter with `configOptions` (options minus `type`).
@@ -107,7 +107,7 @@ File-backed in-memory search. Documents stored in a `Map` in-process and persist
 
 | Option | Default | Description |
 |---|---|---|
-| `directory` | `~/.rsk/fts` | Directory for JSON document files |
+| `directory` | `~/.xnapify/fts` | Directory for JSON document files |
 
 ### Initialization
 
@@ -227,7 +227,7 @@ No dedicated error classes file. Errors thrown inline:
 
 - **Module `init(container)`**: Access via `container.resolve('search')`. Use `withNamespace()` to avoid collisions.
 - **Hook engine**: The search module listens for user/group hooks to update indexes.
-- **`RSK_SEARCH_TYPE`**: Environment variable to switch default adapter (`'memory'` or `'database'`).
+- **`XNAPIFY_SEARCH_TYPE`**: Environment variable to switch default adapter (`'memory'` or `'database'`).
 - **DB engine**: The database adapter requires `connection` and `DataTypes` from the DB engine. The factory auto-injects these during bootstrap.
 
 ---

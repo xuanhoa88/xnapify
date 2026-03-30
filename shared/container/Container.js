@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -19,8 +19,8 @@ const BINDING_TYPE = Object.freeze({
 });
 
 // Private symbol for internal state (matches HookFactory convention)
-const BINDINGS = Symbol('__rsk.containerBindings__');
-const PARENT = Symbol('__rsk.containerParent__');
+const BINDINGS = Symbol('__xnapify.containerBindings__');
+const PARENT = Symbol('__xnapify.containerParent__');
 
 /**
  * A lightweight, isomorphic Dependency Injection container.

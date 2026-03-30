@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -23,7 +23,7 @@ function Home({ loading, payload, featuresData }) {
       <section className={s.hero}>
         <div className={s.heroContent}>
           <h1 className={s.heroTitle}>
-            {t('home.hero.title', 'React Starter Kit')}
+            {t('home.hero.title', 'xnapify')}
           </h1>
           <p className={s.heroSubtitle}>
             {t(
@@ -33,7 +33,7 @@ function Home({ loading, payload, featuresData }) {
           </p>
           <div className={s.heroActions}>
             <a
-              href='https://github.com/xuanhoa88/rapid-rsk'
+              href='https://github.com/xuanhoa88/xnapify'
               className={s.btnPrimary}
               target='_blank'
               rel='noopener noreferrer'
@@ -52,7 +52,7 @@ function Home({ loading, payload, featuresData }) {
         <div className={s.container}>
           <div className={s.sectionHeader}>
             <h2 className={s.sectionTitle}>
-              {t('home.features.title', 'Why Choose React Starter Kit?')}
+              {t('home.features.title', 'Why Choose xnapify?')}
             </h2>
             <p className={s.sectionSubtitle}>
               {t(

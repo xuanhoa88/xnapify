@@ -7,7 +7,7 @@ Sequelize ORM connection management with built-in migration and seed support. Re
 ```javascript
 import { connection } from '@shared/api/engines/db';
 
-// Connection is pre-configured from RSK_DB_URL env var
+// Connection is pre-configured from XNAPIFY_DB_URL env var
 const { models } = container.resolve('db');
 const users = await models.User.findAll();
 ```
@@ -20,7 +20,7 @@ Creates a Sequelize instance with migration methods attached.
 
 | Param | Type | Default | Description |
 |---|---|---|---|
-| `url` | `string` | `RSK_DB_URL` or `sqlite:database.sqlite` | Database connection URL |
+| `url` | `string` | `XNAPIFY_DB_URL` or `sqlite:database.sqlite` | Database connection URL |
 | `options` | `object` | `{}` | Sequelize options (deep-merged with defaults) |
 
 ### Migration Methods (attached to connection)
@@ -38,11 +38,11 @@ const seedStatus = await connection.getSeedStatus(seedsContext);
 
 | Option | Value |
 |---|---|
-| Timezone | `RSK_DB_TZ` or `+00:00` (UTC) |
+| Timezone | `XNAPIFY_DB_TZ` or `+00:00` (UTC) |
 | Pool max | `5` |
 | Pool idle | `10s` |
 | Pool acquire | `30s` |
-| Logging | `RSK_DB_LOG=true` enables `console.log` |
+| Logging | `XNAPIFY_DB_LOG=true` enables `console.log` |
 | `freezeTableName` | `true` |
 | `timestamps` | `true` |
 

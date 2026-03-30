@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -23,7 +23,7 @@ function Feedback() {
       <div className={s.container}>
         <a
           className={s.link}
-          href='https://gitter.im/xuanhoa88/rapid-rsk'
+          href='https://gitter.im/xuanhoa88/xnapify'
           target='_blank'
           rel='noopener noreferrer'
         >
@@ -33,7 +33,7 @@ function Feedback() {
         <span className={s.spacer}>|</span>
         <a
           className={s.link}
-          href='https://github.com/xuanhoa88/rapid-rsk/issues/new'
+          href='https://github.com/xuanhoa88/xnapify/issues/new'
           target='_blank'
           rel='noopener noreferrer'
         >

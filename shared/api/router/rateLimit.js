@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -38,8 +38,8 @@ function getDefaultConfig() {
   if (defaultConfig !== undefined) return defaultConfig;
 
   const windowMs =
-    parseInt(process.env.RSK_RATE_LIMIT_WINDOW, 10) || 15 * 60_000;
-  const max = parseInt(process.env.RSK_RATE_LIMIT_MAX, 10) || 50;
+    parseInt(process.env.XNAPIFY_RATE_LIMIT_WINDOW, 10) || 15 * 60_000;
+  const max = parseInt(process.env.XNAPIFY_RATE_LIMIT_MAX, 10) || 50;
 
   defaultConfig = {
     windowMs,
@@ -102,7 +102,7 @@ export function createRateLimiter(config, key) {
 export function resolveRateLimiter(routeRateLimit) {
   if (routeRateLimit === false) return null;
 
-  if (process.env.RSK_RATE_LIMIT === 'false') return null;
+  if (process.env.XNAPIFY_RATE_LIMIT === 'false') return null;
 
   const config = getDefaultConfig();
   if (!config) return null;

@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * Webpack loader that wraps an entry module in a dynamic import(),
  * creating the async boundary required by Module Federation to

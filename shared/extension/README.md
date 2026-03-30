@@ -1,6 +1,6 @@
 # Shared Extension
 
-The core extension architecture for React Starter Kit. It provides a universal Extension Registry for cross-extension communication, dependency injection, UI slots, and backend extension points (hooks), along with server-side API loading and client-side advanced Webpack Module Federation (MF).
+The core extension architecture for xnapify. It provides a universal Extension Registry for cross-extension communication, dependency injection, UI slots, and backend extension points (hooks), along with server-side API loading and client-side advanced Webpack Module Federation (MF).
 
 ## Quick Start
 

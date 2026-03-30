@@ -19,7 +19,7 @@ export async function boot(container) {
   const webhook = container.resolve('webhook');
 
   webhook.register('{provider-name}', {
-    secret: process.env.RSK_WEBHOOK_{PROVIDER}_SECRET,
+    secret: process.env.XNAPIFY_WEBHOOK_{PROVIDER}_SECRET,
     handler: async (payload, { headers, query, ip, app }) => {
       const event = headers['x-webhook-event'];
 
@@ -42,10 +42,10 @@ export async function boot(container) {
 
 ```bash
 # .env
-RSK_WEBHOOK_{PROVIDER}_SECRET=your-webhook-secret-here
+XNAPIFY_WEBHOOK_{PROVIDER}_SECRET=your-webhook-secret-here
 ```
 
-Add the same variable to `.env.rsk` template with a comment.
+Add the same variable to `.env.xnapify` template with a comment.
 
 ### 3. Create Handler Functions
 

@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -30,19 +30,19 @@ import { createWebpackContextAdapter } from '@shared/utils/contextAdapter';
 const TAG = 'ModelRegistry';
 
 /** @type {symbol} Internal models map */
-const MODELS = Symbol('__rsk.models__');
+const MODELS = Symbol('__xnapify.models__');
 
 /** @type {symbol} Set of sealed (core) model names */
-const CORE_KEYS = Symbol('__rsk.coreKeys__');
+const CORE_KEYS = Symbol('__xnapify.coreKeys__');
 
 /** @type {symbol} Set of already-associated model names */
-const ASSOCIATED = Symbol('__rsk.associated__');
+const ASSOCIATED = Symbol('__xnapify.associated__');
 
 /** @type {symbol} Map of source → registered model names */
-const SOURCE_MAP = Symbol('__rsk.sourceMap__');
+const SOURCE_MAP = Symbol('__xnapify.sourceMap__');
 
 /** @type {symbol} Database engine reference */
-const DB_ENGINE = Symbol('__rsk.dbEngine__');
+const DB_ENGINE = Symbol('__xnapify.dbEngine__');
 
 function log(message, level = 'info') {
   const prefix = `[${TAG}]`;

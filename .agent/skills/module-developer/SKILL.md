@@ -5,11 +5,11 @@ description: Build API and View modules with correct auto-discovery, lifecycle h
 
 # Module Developer Skill
 
-This skill equips you to build new modules for the `rapid-rsk` application. Modules are automatically discovered and loaded via Webpack `require.context`.
+This skill equips you to build new modules for the `xnapify` application. Modules are automatically discovered and loaded via Webpack `require.context`.
 
 ## Core Concepts
 
-In `rapid-rsk`, the business logic is organized into domains placed under `src/apps/`. Each domain contains:
+In `xnapify`, the business logic is organized into domains placed under `src/apps/`. Each domain contains:
 - `api/` for all backend code (Express routes, Sequelize models, Services)
 - `views/` for all frontend code (React components, Redux slices)
 

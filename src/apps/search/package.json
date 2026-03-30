@@ -1,5 +1,5 @@
 {
-  "name": "@rsk-module/search",
+  "name": "@xnapify-module/search",
   "version": "1.0.0",
   "main": "api/index.js",
   "description": "Search module"

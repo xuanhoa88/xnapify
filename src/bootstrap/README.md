@@ -34,8 +34,8 @@ Applied to every API route (before module routes):
 2. `optionalAuth()` — populates `req.user` if token present.
 
 Body parsing scoped to API only:
-- `express.json()` — limit: `RSK_JSON_BODY_LIMIT` (default `10mb`)
-- `express.urlencoded()` — limit: `RSK_URLENCODED_BODY_LIMIT` (default `1mb`)
+- `express.json()` — limit: `XNAPIFY_JSON_BODY_LIMIT` (default `10mb`)
+- `express.urlencoded()` — limit: `XNAPIFY_URLENCODED_BODY_LIMIT` (default `1mb`)
 
 ## View Router Bootstrap
 
@@ -57,7 +57,7 @@ const page = await router.resolve({ pathname, store });
 
 ## CORS Configuration
 
-| `RSK_CORS_ORIGIN` Value | Behavior |
+| `XNAPIFY_CORS_ORIGIN` Value | Behavior |
 |---|---|
 | `'true'` | Allow all origins (dev only) |
 | `'false'` | Block all origins |
@@ -70,9 +70,9 @@ Requests without origin (mobile, curl) are always allowed. Credentials enabled, 
 
 | Var | Default | Description |
 |---|---|---|
-| `RSK_CORS_ORIGIN` | same-host | CORS origin whitelist |
-| `RSK_JSON_BODY_LIMIT` | `'10mb'` | JSON body size limit |
-| `RSK_URLENCODED_BODY_LIMIT` | `'1mb'` | URL-encoded body limit |
+| `XNAPIFY_CORS_ORIGIN` | same-host | CORS origin whitelist |
+| `XNAPIFY_JSON_BODY_LIMIT` | `'10mb'` | JSON body size limit |
+| `XNAPIFY_URLENCODED_BODY_LIMIT` | `'1mb'` | URL-encoded body limit |
 
 ## See Also
 

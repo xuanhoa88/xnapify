@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -98,12 +98,12 @@ function updateEnvContent(lines, existingKeys, jwtConfig) {
  * This function:
  * 1. Checks if .env file already exists
  * 2. If .env exists:
- *    - Preserves existing RSK_JWT_SECRET (even if empty)
+ *    - Preserves existing XNAPIFY_JWT_SECRET (even if empty)
  *    - Only generates new secret if missing or empty
  * 3. If .env doesn't exist (first-time setup):
- *    - Creates .env from .env.rsk template (or minimal config)
+ *    - Creates .env from .env.xnapify template (or minimal config)
  *    - Generates a new secure random JWT secret automatically
- * 4. Updates RSK_JWT_SECRET and RSK_JWT_EXPIRY
+ * 4. Updates XNAPIFY_JWT_SECRET and XNAPIFY_JWT_EXPIRY
  * 5. Writes back to .env file
  * 6. For production builds (when buildDir is provided):
  *    - Copies the .env file to the build directory
@@ -121,7 +121,7 @@ async function generateJWT(cwd, buildDir) {
 
     // Determine source and target paths
     const envPath = path.resolve(buildDir || cwd, '.env');
-    const envDefaultsPath = path.resolve(cwd, '.env.rsk');
+    const envDefaultsPath = path.resolve(cwd, '.env.xnapify');
 
     let envContent = '';
     let shouldGenerateSecret = false;
@@ -133,25 +133,25 @@ async function generateJWT(cwd, buildDir) {
 
       // Parse to check if secret exists
       const { keys } = parseEnvFile(envContent);
-      const existingSecret = keys.has('RSK_JWT_SECRET')
-        ? keys.get('RSK_JWT_SECRET').value
+      const existingSecret = keys.has('XNAPIFY_JWT_SECRET')
+        ? keys.get('XNAPIFY_JWT_SECRET').value
         : null;
 
       // Only generate if secret is missing or empty in existing .env
       shouldGenerateSecret = !existingSecret || existingSecret.trim() === '';
     }
-    // Fall back to .env.rsk if .env doesn't exist
+    // Fall back to .env.xnapify if .env doesn't exist
     else if (await pathExists(envDefaultsPath)) {
       envContent = await readFile(envDefaultsPath, { encoding: 'utf8' });
-      logWarn(`.env file not found, creating from .env.rsk`);
+      logWarn(`.env file not found, creating from .env.xnapify`);
 
       // First-time creation: generate secret for out-of-the-box functionality
       shouldGenerateSecret = true;
     }
     // Create minimal .env if neither exists
     else {
-      logWarn(`Neither .env nor .env.rsk found, creating minimal .env`);
-      envContent = '# React Starter Kit - Environment Configuration\n\n';
+      logWarn(`Neither .env nor .env.xnapify found, creating minimal .env`);
+      envContent = '# xnapify - Environment Configuration\n\n';
 
       // Generate secret for brand new minimal .env
       shouldGenerateSecret = true;
@@ -162,8 +162,8 @@ async function generateJWT(cwd, buildDir) {
 
     // Determine JWT secret value
     let jwtSecret;
-    const existingSecret = keys.has('RSK_JWT_SECRET')
-      ? keys.get('RSK_JWT_SECRET').value
+    const existingSecret = keys.has('XNAPIFY_JWT_SECRET')
+      ? keys.get('XNAPIFY_JWT_SECRET').value
       : null;
 
     if (shouldGenerateSecret) {
@@ -175,14 +175,14 @@ async function generateJWT(cwd, buildDir) {
     } else {
       // Preserve empty value from template
       jwtSecret = '';
-      logInfo(`ℹ️  RSK_JWT_SECRET is empty (manual configuration required)`);
+      logInfo(`ℹ️  XNAPIFY_JWT_SECRET is empty (manual configuration required)`);
     }
 
-    // JWT configuration to add/update (using RSK_ prefix)
+    // JWT configuration to add/update (using XNAPIFY_ prefix)
     const jwtConfig = {
-      RSK_JWT_SECRET: jwtSecret,
-      RSK_JWT_EXPIRY: keys.has('RSK_JWT_EXPIRY')
-        ? keys.get('RSK_JWT_EXPIRY').value
+      XNAPIFY_JWT_SECRET: jwtSecret,
+      XNAPIFY_JWT_EXPIRY: keys.has('XNAPIFY_JWT_EXPIRY')
+        ? keys.get('XNAPIFY_JWT_EXPIRY').value
         : '7d',
     };
 
@@ -203,14 +203,14 @@ async function generateJWT(cwd, buildDir) {
     }
 
     if (jwtSecret) {
-      logInfo(`   ⏰ Token expires: ${jwtConfig.RSK_JWT_EXPIRY}`);
+      logInfo(`   ⏰ Token expires: ${jwtConfig.XNAPIFY_JWT_EXPIRY}`);
     }
 
     // Update process.env directly since we know the values
     // This allows the current process to use the new secret immediately
     // without relying on dotenv-flow to reload (which doesn't overwrite existing vars)
-    process.env.RSK_JWT_SECRET = jwtConfig.RSK_JWT_SECRET;
-    process.env.RSK_JWT_EXPIRY = jwtConfig.RSK_JWT_EXPIRY;
+    process.env.XNAPIFY_JWT_SECRET = jwtConfig.XNAPIFY_JWT_SECRET;
+    process.env.XNAPIFY_JWT_EXPIRY = jwtConfig.XNAPIFY_JWT_EXPIRY;
   } catch (error) {
     throw new Error(`Failed to generate JWT configuration: ${error.message}`);
   }

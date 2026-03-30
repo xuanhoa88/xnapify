@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -306,7 +306,7 @@ module.exports = {
    * Display individual test results with the test suite hierarchy.
    */
   displayName: {
-    name: 'React Starter Kit',
+    name: 'xnapify',
     color: 'blue',
   },
 

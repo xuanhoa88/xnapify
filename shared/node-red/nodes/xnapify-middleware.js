@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -13,7 +13,7 @@
  */
 export function getNodeJS() {
   // -----------------------------------------------------------------------
-  // IMPORTANT: This string is written to <userDir>/nodes/rsk
+  // IMPORTANT: This string is written to <userDir>/nodes/xnapify
   // and loaded by Node-RED at runtime via native require().
   // It must be plain CommonJS — no ES imports, no webpack features.
   // -----------------------------------------------------------------------
@@ -21,7 +21,7 @@ export function getNodeJS() {
 'use strict';
 
 module.exports = function (RED) {
-  function RskMiddlewareNode(config) {
+  function XnapifyMiddlewareNode(config) {
     RED.nodes.createNode(this, config);
     var node = this;
 
@@ -39,7 +39,7 @@ module.exports = function (RED) {
     // ---------------------------------------------------------------
     var getContainer = RED.settings.functionGlobalContext.container;
     if (typeof getContainer !== 'function') {
-      node.error('RSK container not found in functionGlobalContext');
+      node.error('xnapify container not found in functionGlobalContext');
       node.status({ fill: 'red', shape: 'dot', text: 'container missing' });
       return;
     }
@@ -153,7 +153,7 @@ module.exports = function (RED) {
     });
   }
 
-  RED.nodes.registerType('rsk-middleware', RskMiddlewareNode);
+  RED.nodes.registerType('xnapify-middleware', XnapifyMiddlewareNode);
 };
 `;
 }
@@ -166,8 +166,8 @@ module.exports = function (RED) {
 export function getNodeHTML() {
   return `
 <script type="text/javascript">
-  RED.nodes.registerType('rsk-middleware', {
-    category: 'RSK',
+  RED.nodes.registerType('xnapify-middleware', {
+    category: 'Xnapify',
     color: '#E9967A',
     defaults: {
       name:           { value: '' },
@@ -195,14 +195,14 @@ export function getNodeHTML() {
         case 'ownership':
           return 'Owner: ' + (this.ownerParam || 'userId');
         default:
-          return 'RSK Middleware';
+          return 'Xnapify Middleware';
       }
     },
     oneditprepare: function () {
       var toggle = function () {
         var t = $('#node-input-middlewareType').val();
-        $('.rsk-mw-row').hide();
-        $('#rsk-mw-' + t).show();
+        $('.xnapify-mw-row').hide();
+        $('#xnapify-mw-' + t).show();
       };
       $('#node-input-middlewareType').on('change', toggle);
       toggle();
@@ -210,7 +210,7 @@ export function getNodeHTML() {
   });
 </script>
 
-<script type="text/html" data-template-name="rsk-middleware">
+<script type="text/html" data-template-name="xnapify-middleware">
   <div class="form-row">
     <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
     <input type="text" id="node-input-name" placeholder="Name">
@@ -225,33 +225,33 @@ export function getNodeHTML() {
       <option value="ownership">Ownership Check</option>
     </select>
   </div>
-  <div class="form-row rsk-mw-row" id="rsk-mw-auth">
+  <div class="form-row xnapify-mw-row" id="xnapify-mw-auth">
     <label for="node-input-authType"><i class="fa fa-lock"></i> Mode</label>
     <select id="node-input-authType">
       <option value="required">Required</option>
       <option value="optional">Optional</option>
     </select>
   </div>
-  <div class="form-row rsk-mw-row" id="rsk-mw-role" style="display:none">
+  <div class="form-row xnapify-mw-row" id="xnapify-mw-role" style="display:none">
     <label for="node-input-role"><i class="fa fa-id-badge"></i> Role</label>
     <input type="text" id="node-input-role" placeholder="e.g. admin">
   </div>
-  <div class="form-row rsk-mw-row" id="rsk-mw-permission" style="display:none">
+  <div class="form-row xnapify-mw-row" id="xnapify-mw-permission" style="display:none">
     <label for="node-input-permission"><i class="fa fa-key"></i> Permission</label>
     <input type="text" id="node-input-permission" placeholder="e.g. users:read">
   </div>
-  <div class="form-row rsk-mw-row" id="rsk-mw-group" style="display:none">
+  <div class="form-row xnapify-mw-row" id="xnapify-mw-group" style="display:none">
     <label for="node-input-group"><i class="fa fa-users"></i> Group</label>
     <input type="text" id="node-input-group" placeholder="e.g. engineering">
   </div>
-  <div class="form-row rsk-mw-row" id="rsk-mw-ownership" style="display:none">
+  <div class="form-row xnapify-mw-row" id="xnapify-mw-ownership" style="display:none">
     <label for="node-input-ownerParam"><i class="fa fa-user-circle"></i> Param</label>
     <input type="text" id="node-input-ownerParam" placeholder="e.g. userId">
   </div>
 </script>
 
-<script type="text/html" data-help-name="rsk-middleware">
-  <p>Applies RSK Express middlewares (auth, role, permission, group, ownership) to the incoming HTTP request.</p>
+<script type="text/html" data-help-name="xnapify-middleware">
+  <p>Applies Xnapify Express middlewares (auth, role, permission, group, ownership) to the incoming HTTP request.</p>
   <h3>Configuration</h3>
   <dl class="message-properties">
     <dt>Type</dt>

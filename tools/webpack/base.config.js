@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -223,7 +223,7 @@ const createProgressPlugin = () =>
  * @returns {webpack.DefinePlugin} DefinePlugin instance
  */
 const createEnvDefine = () =>
-  createDefinePlugin({ ...loadDotenv({ prefix: 'RSK_', verbose }) });
+  createDefinePlugin({ ...loadDotenv({ prefix: 'XNAPIFY_', verbose }) });
 
 /**
  * Create shared dependencies configuration for Module Federation

@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -14,7 +14,7 @@ import { loadRouteTranslations, runInit, runMount } from './lifecycle';
 import { createMatchCache, clearMatchCache, findRoute } from './matcher';
 
 /** @type {symbol} Per-instance radix tree cache */
-const ROUTE_CACHE_KEY = Symbol('__rsk.routeCache__');
+const ROUTE_CACHE_KEY = Symbol('__xnapify.routeCache__');
 
 /**
  * File-based dynamic API router for Express.

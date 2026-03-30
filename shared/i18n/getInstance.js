@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -30,7 +30,7 @@ defaultI18nInstance.use(initReactI18next).init({
     bindI18n: 'languageChanged loaded', // Re-render on language change
     bindI18nStore: 'added removed', // Re-render on store changes
   },
-  debug: process.env.RSK_I18N_DEBUG === 'true',
+  debug: process.env.XNAPIFY_I18N_DEBUG === 'true',
 });
 
 /**

@@ -1,6 +1,6 @@
-# React Starter Kit - Source Directory (`src/`)
+# xnapify - Source Directory (`src/`)
 
-This directory contains the root source code and entry points for the React Starter Kit application. It orchestrates the initialization and rendering of the application on both the client and server sides.
+This directory contains the root source code and entry points for the xnapify application. It orchestrates the initialization and rendering of the application on both the client and server sides.
 
 ## Directory Structure
 

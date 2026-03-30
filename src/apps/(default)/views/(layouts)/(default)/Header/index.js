@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -29,11 +29,11 @@ function Header() {
         {/* Left: Brand */}
         <Link className={s.brand} to='/'>
           <img
-            src='/rsk_38x38.png'
-            srcSet='/rsk_72x72.png 2x'
+            src='/xnapify_38x38.png'
+            srcSet='/xnapify_72x72.png 2x'
             width='38'
             height='38'
-            alt='RSK'
+            alt='xnapify'
           />
           <span className={s.brandTxt}>{t('header.brand')}</span>
         </Link>

@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -213,7 +213,7 @@ export async function previewAvatar(req, res) {
 
   // Default avatar URL (can be configured via env)
   const defaultAvatar =
-    process.env.RSK_AVATAR_DEFAULT_URL ||
+    process.env.XNAPIFY_AVATAR_DEFAULT_URL ||
     'https://ui-avatars.com/api/?background=random&name=User';
 
   // Safe redirect helper - never throws

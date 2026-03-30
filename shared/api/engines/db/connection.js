@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -22,7 +22,7 @@ import {
  */
 const DEFAULT_SEQUELIZE_OPTIONS = Object.freeze({
   // Timezone configuration (defaults to UTC)
-  timezone: process.env.RSK_DB_TZ || '+00:00',
+  timezone: process.env.XNAPIFY_DB_TZ || '+00:00',
   // Connection pooling for better performance
   pool: {
     max: 5,
@@ -31,7 +31,7 @@ const DEFAULT_SEQUELIZE_OPTIONS = Object.freeze({
     idle: 10_000,
   },
   // Logging configuration
-  logging: process.env.RSK_DB_LOG === 'true' ? console.log : false,
+  logging: process.env.XNAPIFY_DB_LOG === 'true' ? console.log : false,
   define: {
     freezeTableName: true,
     timestamps: true,
@@ -110,7 +110,7 @@ function attachMigrationMethods(sequelize) {
  * @returns {Sequelize} Sequelize connection instance with migration methods
  */
 export function createConnection(...args) {
-  let databaseUrl = process.env.RSK_DB_URL || 'sqlite:database.sqlite';
+  let databaseUrl = process.env.XNAPIFY_DB_URL || 'sqlite:database.sqlite';
   let options = {};
 
   // Handle variable arguments

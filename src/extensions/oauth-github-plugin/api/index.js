@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -11,17 +11,17 @@ const TAG = '[OAuth GitHub]';
 
 export default {
   async boot({ container }) {
-    const clientID = process.env.RSK_GITHUB_CLIENT_ID;
-    const clientSecret = process.env.RSK_GITHUB_CLIENT_SECRET;
+    const clientID = process.env.XNAPIFY_GITHUB_CLIENT_ID;
+    const clientSecret = process.env.XNAPIFY_GITHUB_CLIENT_SECRET;
 
     if (!clientID || !clientSecret) {
       console.warn(
-        `${TAG} ⚠️ RSK_GITHUB_CLIENT_ID / RSK_GITHUB_CLIENT_SECRET not set — skipping`,
+        `${TAG} ⚠️ XNAPIFY_GITHUB_CLIENT_ID / XNAPIFY_GITHUB_CLIENT_SECRET not set — skipping`,
       );
       return;
     }
 
-    const appUrl = process.env.RSK_APP_URL || 'http://localhost:1337';
+    const appUrl = process.env.XNAPIFY_APP_URL || 'http://localhost:1337';
     const oauth = container.resolve('oauth');
 
     oauth.registerProvider('github', {

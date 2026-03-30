@@ -106,10 +106,10 @@
     "backToSite": "Quay lại trang web"
   },
   "header": {
-    "brand": "React Starter Kit"
+    "brand": "xnapify"
   },
   "footer": {
-    "copyright": "© {{year}} React Starter Kit. Mọi quyền được bảo lưu."
+    "copyright": "© {{year}} xnapify. Mọi quyền được bảo lưu."
   },
   "contact": {
     "lead": "Chúng tôi rất vui được nghe từ bạn! Nếu bạn có câu hỏi, góp ý hoặc chỉ muốn nói chuyện, hãy liên hệ với chúng tôi.",

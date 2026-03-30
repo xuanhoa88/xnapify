@@ -59,7 +59,7 @@ describe('Email Hooks', () => {
   const expectBaseVars = templateData => {
     expect(templateData).toEqual(
       expect.objectContaining({
-        appName: process.env.RSK_APP_NAME,
+        appName: process.env.XNAPIFY_APP_NAME,
         loginUrl: expect.stringContaining('/login'),
         resetUrl: expect.stringContaining('/auth/reset'),
         supportUrl: expect.stringContaining('/support'),

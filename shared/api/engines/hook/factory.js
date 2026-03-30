@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -8,7 +8,7 @@
 import { HookChannel } from './channel';
 
 // Private symbols for internal state
-const HOOK_CHANNELS = Symbol('__rsk.hookChannels__');
+const HOOK_CHANNELS = Symbol('__xnapify.hookChannels__');
 
 /**
  * Hook Factory - Creates and manages named hook channels

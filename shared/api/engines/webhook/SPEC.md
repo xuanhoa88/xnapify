@@ -88,9 +88,9 @@ Verifies an HMAC signature against a payload using **timing-safe comparison**.
 
 ### Private State (Symbols)
 
-- `Symbol('__rsk.webhookChannel__')` → `HookChannel|null` — injected via `withContext()`.
-- `Symbol('__rsk.webhookContext__')` → `Object|null` — DI container.
-- `Symbol('__rsk.webhookProviders__')` → `Map<provider, { secret, signatureHeader }>`.
+- `Symbol('__xnapify.webhookChannel__')` → `HookChannel|null` — injected via `withContext()`.
+- `Symbol('__xnapify.webhookContext__')` → `Object|null` — DI container.
+- `Symbol('__xnapify.webhookProviders__')` → `Map<provider, { secret, signatureHeader }>`.
 
 ### `withContext(container) → this`
 

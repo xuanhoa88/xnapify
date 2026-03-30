@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -41,7 +41,7 @@ export class EmailManager {
    * Get default provider name dynamically (lazy evaluated)
    */
   get defaultProvider() {
-    return this.config.provider || process.env.RSK_MAIL_PROVIDER || 'resend';
+    return this.config.provider || process.env.XNAPIFY_MAIL_PROVIDER || 'resend';
   }
 
   /**
@@ -53,76 +53,76 @@ export class EmailManager {
     if (
       name === 'smtp' &&
       (this.config.smtp ||
-        process.env.RSK_SMTP_HOST ||
+        process.env.XNAPIFY_SMTP_HOST ||
         this.defaultProvider === 'smtp')
     ) {
       const smtpHost =
         (this.config.smtp && this.config.smtp.host) ||
-        process.env.RSK_SMTP_HOST;
+        process.env.XNAPIFY_SMTP_HOST;
       if (!smtpHost && this.defaultProvider === 'smtp') {
         console.warn(
-          '⚠️ SMTP is the default email provider but RSK_SMTP_HOST is not set. Emails will fail.',
+          '⚠️ SMTP is the default email provider but XNAPIFY_SMTP_HOST is not set. Emails will fail.',
         );
       }
       this.providers.set(
         'smtp',
         new SmtpEmailProvider(
           this.config.smtp || {
-            host: process.env.RSK_SMTP_HOST,
-            port: parseInt(process.env.RSK_SMTP_PORT, 10) || 587,
-            secure: process.env.RSK_SMTP_SECURE === 'true',
-            user: process.env.RSK_SMTP_USER,
-            pass: process.env.RSK_SMTP_PASS,
-            defaultFrom: process.env.RSK_MAIL_FROM,
+            host: process.env.XNAPIFY_SMTP_HOST,
+            port: parseInt(process.env.XNAPIFY_SMTP_PORT, 10) || 587,
+            secure: process.env.XNAPIFY_SMTP_SECURE === 'true',
+            user: process.env.XNAPIFY_SMTP_USER,
+            pass: process.env.XNAPIFY_SMTP_PASS,
+            defaultFrom: process.env.XNAPIFY_MAIL_FROM,
             defaultFromName:
-              process.env.RSK_MAIL_FROM_NAME || process.env.RSK_APP_NAME,
+              process.env.XNAPIFY_MAIL_FROM_NAME || process.env.XNAPIFY_APP_NAME,
           },
         ),
       );
     } else if (
       name === 'resend' &&
-      (this.config.resend || process.env.RSK_RESEND_KEY)
+      (this.config.resend || process.env.XNAPIFY_RESEND_KEY)
     ) {
       this.providers.set(
         'resend',
         new ResendEmailProvider(
           this.config.resend || {
-            apiKey: process.env.RSK_RESEND_KEY,
-            defaultFrom: process.env.RSK_MAIL_FROM,
+            apiKey: process.env.XNAPIFY_RESEND_KEY,
+            defaultFrom: process.env.XNAPIFY_MAIL_FROM,
             defaultFromName:
-              process.env.RSK_MAIL_FROM_NAME || process.env.RSK_APP_NAME,
+              process.env.XNAPIFY_MAIL_FROM_NAME || process.env.XNAPIFY_APP_NAME,
           },
         ),
       );
     } else if (
       name === 'sendgrid' &&
-      (this.config.sendgrid || process.env.RSK_SENDGRID_KEY)
+      (this.config.sendgrid || process.env.XNAPIFY_SENDGRID_KEY)
     ) {
       this.providers.set(
         'sendgrid',
         new SendGridEmailProvider(
           this.config.sendgrid || {
-            apiKey: process.env.RSK_SENDGRID_KEY,
-            defaultFrom: process.env.RSK_MAIL_FROM,
+            apiKey: process.env.XNAPIFY_SENDGRID_KEY,
+            defaultFrom: process.env.XNAPIFY_MAIL_FROM,
             defaultFromName:
-              process.env.RSK_MAIL_FROM_NAME || process.env.RSK_APP_NAME,
+              process.env.XNAPIFY_MAIL_FROM_NAME || process.env.XNAPIFY_APP_NAME,
           },
         ),
       );
     } else if (
       name === 'mailgun' &&
-      (this.config.mailgun || process.env.RSK_MAILGUN_KEY)
+      (this.config.mailgun || process.env.XNAPIFY_MAILGUN_KEY)
     ) {
       this.providers.set(
         'mailgun',
         new MailgunEmailProvider(
           this.config.mailgun || {
-            apiKey: process.env.RSK_MAILGUN_KEY,
-            domain: process.env.RSK_MAILGUN_DOMAIN,
-            region: process.env.RSK_MAILGUN_REGION || 'us',
-            defaultFrom: process.env.RSK_MAIL_FROM,
+            apiKey: process.env.XNAPIFY_MAILGUN_KEY,
+            domain: process.env.XNAPIFY_MAILGUN_DOMAIN,
+            region: process.env.XNAPIFY_MAILGUN_REGION || 'us',
+            defaultFrom: process.env.XNAPIFY_MAIL_FROM,
             defaultFromName:
-              process.env.RSK_MAIL_FROM_NAME || process.env.RSK_APP_NAME,
+              process.env.XNAPIFY_MAIL_FROM_NAME || process.env.XNAPIFY_APP_NAME,
           },
         ),
       );

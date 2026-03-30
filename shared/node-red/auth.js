@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -8,15 +8,15 @@
 import { Strategy } from 'passport-strategy';
 
 /**
- * Custom Passport Strategy for RSK Authentication
+ * Custom Passport Strategy for xnapify Authentication
  *
  * Adapts the application's JWT/RBAC system to a Passport strategy
  * compatible with Node-RED's adminAuth.
  */
-class RskAuthStrategy extends Strategy {
+class XnapifyAuthStrategy extends Strategy {
   constructor(options, verify) {
     super();
-    this.name = 'rsk-auth';
+    this.name = 'xnapify-auth';
     this.app = options.app;
     this.verify = verify; // Node-RED's verify callback
   }
@@ -220,11 +220,11 @@ export function createNodeRedAuth(options = {}) {
   return {
     type: 'strategy',
     strategy: {
-      name: 'rsk-auth',
+      name: 'xnapify-auth',
       label: 'Authentication',
       icon: 'icons/node-red.svg',
       autoLogin: true,
-      strategy: RskAuthStrategy,
+      strategy: XnapifyAuthStrategy,
       options,
     },
     // Define users function to support user lookup by BearerStrategy

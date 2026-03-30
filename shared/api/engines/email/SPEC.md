@@ -63,7 +63,7 @@ new EmailManager({ provider, smtp, resend, sendgrid, mailgun, memory, workerThre
 ### Default Provider Resolution
 
 ```
-config.provider → RSK_MAIL_PROVIDER env → 'resend'
+config.provider → XNAPIFY_MAIL_PROVIDER env → 'resend'
 ```
 
 Evaluated dynamically via getter (not at construction time), allowing late-loaded env vars.
@@ -74,12 +74,12 @@ Each provider is created only when requested (via `getProvider`, `hasProvider`, 
 
 | Provider | Trigger Condition | Env Vars |
 |---|---|---|
-| `smtp` | `config.smtp` or `RSK_SMTP_HOST` or default is `'smtp'` | `RSK_SMTP_HOST`, `RSK_SMTP_PORT` (587), `RSK_SMTP_SECURE`, `RSK_SMTP_USER`, `RSK_SMTP_PASS` |
-| `resend` | `config.resend` or `RSK_RESEND_KEY` | `RSK_RESEND_KEY` |
-| `sendgrid` | `config.sendgrid` or `RSK_SENDGRID_KEY` | `RSK_SENDGRID_KEY` |
-| `mailgun` | `config.mailgun` or `RSK_MAILGUN_KEY` | `RSK_MAILGUN_KEY`, `RSK_MAILGUN_DOMAIN`, `RSK_MAILGUN_REGION` (`'us'`) |
+| `smtp` | `config.smtp` or `XNAPIFY_SMTP_HOST` or default is `'smtp'` | `XNAPIFY_SMTP_HOST`, `XNAPIFY_SMTP_PORT` (587), `XNAPIFY_SMTP_SECURE`, `XNAPIFY_SMTP_USER`, `XNAPIFY_SMTP_PASS` |
+| `resend` | `config.resend` or `XNAPIFY_RESEND_KEY` | `XNAPIFY_RESEND_KEY` |
+| `sendgrid` | `config.sendgrid` or `XNAPIFY_SENDGRID_KEY` | `XNAPIFY_SENDGRID_KEY` |
+| `mailgun` | `config.mailgun` or `XNAPIFY_MAILGUN_KEY` | `XNAPIFY_MAILGUN_KEY`, `XNAPIFY_MAILGUN_DOMAIN`, `XNAPIFY_MAILGUN_REGION` (`'us'`) |
 
-All providers share: `RSK_MAIL_FROM` (from address), `RSK_MAIL_FROM_NAME` (falls back to `RSK_APP_NAME`).
+All providers share: `XNAPIFY_MAIL_FROM` (from address), `XNAPIFY_MAIL_FROM_NAME` (falls back to `XNAPIFY_APP_NAME`).
 
 ### Provider Management
 
@@ -212,7 +212,7 @@ HTTP API via `node-fetch`. `verify()` tests against `/api-keys` endpoint.
 
 ### SendGrid / Mailgun Providers
 
-Similar pattern. Env vars: `RSK_SENDGRID_KEY` / `RSK_MAILGUN_KEY` + `RSK_MAILGUN_DOMAIN` + `RSK_MAILGUN_REGION`.
+Similar pattern. Env vars: `XNAPIFY_SENDGRID_KEY` / `XNAPIFY_MAILGUN_KEY` + `XNAPIFY_MAILGUN_DOMAIN` + `XNAPIFY_MAILGUN_REGION`.
 
 ## 7. Worker Pool (`workers/index.js`)
 
@@ -224,9 +224,9 @@ createWorkerPool('📧 Email', workersContext, { ErrorHandler: EmailWorkerError,
 
 | Env Var | Default | Description |
 |---|---|---|
-| `RSK_MAIL_WORKERS` | `4` | Max workers |
-| `RSK_MAIL_WORKER_TIMEOUT` | `60000` ms | Worker timeout |
-| `RSK_MAIL_WORKER_MAX_REQ` | `100` | Max requests per worker |
+| `XNAPIFY_MAIL_WORKERS` | `4` | Max workers |
+| `XNAPIFY_MAIL_WORKER_TIMEOUT` | `60000` ms | Worker timeout |
+| `XNAPIFY_MAIL_WORKER_MAX_REQ` | `100` | Max requests per worker |
 
 ### Methods
 
@@ -264,22 +264,22 @@ const email = createFactory();
 
 | Var | Default | Used By |
 |---|---|---|
-| `RSK_MAIL_PROVIDER` | `'resend'` | Default provider selection |
-| `RSK_MAIL_FROM` | — | From address (all providers) |
-| `RSK_MAIL_FROM_NAME` | `RSK_APP_NAME` | From name (all providers) |
-| `RSK_SMTP_HOST` | `'localhost'` | SMTP provider |
-| `RSK_SMTP_PORT` | `587` | SMTP provider |
-| `RSK_SMTP_SECURE` | `'false'` | SMTP TLS |
-| `RSK_SMTP_USER` | — | SMTP auth |
-| `RSK_SMTP_PASS` | — | SMTP auth |
-| `RSK_RESEND_KEY` | — | Resend provider |
-| `RSK_SENDGRID_KEY` | — | SendGrid provider |
-| `RSK_MAILGUN_KEY` | — | Mailgun provider |
-| `RSK_MAILGUN_DOMAIN` | — | Mailgun provider |
-| `RSK_MAILGUN_REGION` | `'us'` | Mailgun region |
-| `RSK_MAIL_WORKERS` | `4` | Worker pool |
-| `RSK_MAIL_WORKER_TIMEOUT` | `60000` | Worker timeout |
-| `RSK_MAIL_WORKER_MAX_REQ` | `100` | Worker max requests |
+| `XNAPIFY_MAIL_PROVIDER` | `'resend'` | Default provider selection |
+| `XNAPIFY_MAIL_FROM` | — | From address (all providers) |
+| `XNAPIFY_MAIL_FROM_NAME` | `XNAPIFY_APP_NAME` | From name (all providers) |
+| `XNAPIFY_SMTP_HOST` | `'localhost'` | SMTP provider |
+| `XNAPIFY_SMTP_PORT` | `587` | SMTP provider |
+| `XNAPIFY_SMTP_SECURE` | `'false'` | SMTP TLS |
+| `XNAPIFY_SMTP_USER` | — | SMTP auth |
+| `XNAPIFY_SMTP_PASS` | — | SMTP auth |
+| `XNAPIFY_RESEND_KEY` | — | Resend provider |
+| `XNAPIFY_SENDGRID_KEY` | — | SendGrid provider |
+| `XNAPIFY_MAILGUN_KEY` | — | Mailgun provider |
+| `XNAPIFY_MAILGUN_DOMAIN` | — | Mailgun provider |
+| `XNAPIFY_MAILGUN_REGION` | `'us'` | Mailgun region |
+| `XNAPIFY_MAIL_WORKERS` | `4` | Worker pool |
+| `XNAPIFY_MAIL_WORKER_TIMEOUT` | `60000` | Worker timeout |
+| `XNAPIFY_MAIL_WORKER_MAX_REQ` | `100` | Worker max requests |
 
 ---
 

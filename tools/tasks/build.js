@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -67,7 +67,7 @@ async function copyFiles() {
       JSON.stringify(
         {
           private: true,
-          name: pkg.name || `rsk-${BUILD_TIMESTAMP}`,
+          name: pkg.name || `xnapify-${BUILD_TIMESTAMP}`,
           version: pkg.version || `0.0.1-${BUILD_TIMESTAMP}`,
           engines: pkg.engines,
           dependencies: pkg.dependencies,

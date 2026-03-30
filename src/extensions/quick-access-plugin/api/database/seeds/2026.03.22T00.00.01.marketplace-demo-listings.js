@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -20,7 +20,7 @@ const demoListings = [
     icon: null,
     screenshots: JSON.stringify([]),
     version: '1.2.0',
-    author: 'RSK Team',
+    author: 'xnapify Team',
     type: 'plugin',
     install_count: 1245,
     compatibility: '2.0',
@@ -39,7 +39,7 @@ const demoListings = [
     icon: null,
     screenshots: JSON.stringify([]),
     version: '2.0.1',
-    author: 'RSK Team',
+    author: 'xnapify Team',
     type: 'plugin',
     install_count: 892,
     compatibility: '2.0',
@@ -97,7 +97,7 @@ const demoListings = [
     icon: null,
     screenshots: JSON.stringify([]),
     version: '1.3.0',
-    author: 'RSK Team',
+    author: 'xnapify Team',
     type: 'module',
     install_count: 1580,
     compatibility: '2.0',

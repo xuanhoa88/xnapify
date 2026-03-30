@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -33,10 +33,10 @@ const getRuntimeState = createSelector([selectRuntimeRaw], runtime =>
  * Get application name
  *
  * @param {Object} state - Redux state
- * @param {string} [defaultValue='React Starter Kit'] - Default value if not set
+ * @param {string} [defaultValue='xnapify'] - Default value if not set
  * @returns {string} Application name
  */
-export const getAppName = (state, defaultValue = 'React Starter Kit') => {
+export const getAppName = (state, defaultValue = 'xnapify') => {
   const runtime = getRuntimeState(state);
   return runtime.appName != null ? runtime.appName : defaultValue;
 };

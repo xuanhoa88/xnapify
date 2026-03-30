@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -14,7 +14,7 @@ import { LRUCache } from 'lru-cache';
  */
 export const jwtCache = new LRUCache({
   max: 10_000,
-  ttl: parseInt(process.env.RSK_SSR_CACHE_TTL, 10) || 60_000,
+  ttl: parseInt(process.env.XNAPIFY_SSR_CACHE_TTL, 10) || 60_000,
 });
 
 /**

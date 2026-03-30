@@ -2,7 +2,7 @@
 title: Privacy Policy
 ---
 
-This Privacy Policy describes how React Starter Kit ("we", "us", or "our") handles information
+This Privacy Policy describes how xnapify ("we", "us", or "our") handles information
 when you use our application.
 
 ## Information We Collect

@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -11,8 +11,8 @@
  */
 const DEFAULT_EXTENSIONS = [
   {
-    key: 'rsk_extension_quick_access',
-    name: '@rsk-extension/quick-access',
+    key: 'xnapify_extension_quick_access',
+    name: '@xnapify-extension/quick-access',
     description: 'Quick login with demo user accounts',
     version: '1.0.0',
   },

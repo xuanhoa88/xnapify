@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -46,10 +46,10 @@ const LIFECYCLE_PHASES = API_LIFECYCLE_PHASES.filter(p => p !== 'shutdown');
 
 /**
  * Parse additional core modules from environment variable.
- * Format: RSK_MODULE_DEFAULTS=admin,reports
+ * Format: XNAPIFY_MODULE_DEFAULTS=admin,reports
  */
 function parseEnvCoreModules() {
-  const envValue = process.env.RSK_MODULE_DEFAULTS;
+  const envValue = process.env.XNAPIFY_MODULE_DEFAULTS;
   if (!envValue || typeof envValue !== 'string') return [];
   return envValue
     .split(',')
@@ -59,7 +59,7 @@ function parseEnvCoreModules() {
 
 /**
  * Set of core modules that must always be present.
- * Additional modules come from RSK_MODULE_DEFAULTS.
+ * Additional modules come from XNAPIFY_MODULE_DEFAULTS.
  */
 const CORE_MODULES = new Set([
   'permissions',

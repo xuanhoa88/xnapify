@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -16,7 +16,7 @@ import rootReducer from './rootReducer';
  * Symbol to mark identity reducers created for SSR state preservation
  * @private
  */
-const IDENTITY_REDUCER = Symbol('__rsk.identityReducer__');
+const IDENTITY_REDUCER = Symbol('__xnapify.identityReducer__');
 
 // Empty objects for default parameters
 const EMPTY_INITIAL_STATE = {};

@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -23,7 +23,7 @@ export default function ListingDetail({ listing = null, onClose }) {
   const tags = (listing && listing.tags) || [];
   const screenshots = (listing && listing.screenshots) || [];
   const isOfficial =
-    listing && listing.author && listing.author.toLowerCase().includes('rsk');
+    listing && listing.author && listing.author.toLowerCase().includes('xnapify');
 
   // Lightbox state: null = closed, number = index of active screenshot
   const [lightboxIdx, setLightboxIdx] = useState(null);
@@ -69,7 +69,7 @@ export default function ListingDetail({ listing = null, onClose }) {
       ? {
           icon: 'check-circle',
           label: t('admin:hub.testedWith', 'Tested with'),
-          value: `RSK ${listing.compatibility}`,
+          value: `xnapify ${listing.compatibility}`,
         }
       : null,
   ].filter(Boolean);

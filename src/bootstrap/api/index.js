@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -151,12 +151,12 @@ async function buildApiRouter(app, extension) {
 
   // Body parsing scoped to API routes only
   router.use(
-    express.json({ limit: process.env.RSK_JSON_BODY_LIMIT || '10mb' }),
+    express.json({ limit: process.env.XNAPIFY_JSON_BODY_LIMIT || '10mb' }),
   );
   router.use(
     express.urlencoded({
       extended: true,
-      limit: process.env.RSK_URLENCODED_BODY_LIMIT || '1mb',
+      limit: process.env.XNAPIFY_URLENCODED_BODY_LIMIT || '1mb',
     }),
   );
 

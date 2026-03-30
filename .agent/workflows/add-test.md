@@ -278,7 +278,7 @@ const fetch = jest.fn();
 const initialState = {
   runtime: {
     initialNow: Date.now(),
-    appName: 'React Starter Kit',
+    appName: 'xnapify',
     appDescription: 'Boilerplate for React.js web applications',
   },
   intl: {

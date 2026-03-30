@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -10,12 +10,12 @@ import { composeMiddleware } from '@shared/utils/middleware';
 import Hook from './Hook';
 
 // Symbols — private (internal to registry)
-const EXTENSIONS = Symbol('__rsk.ext.list__');
-const SLOTS = Symbol('__rsk.ext.slots__');
-const DEFINITIONS = Symbol('__rsk.ext.definitions__');
-const LISTENERS = Symbol('__rsk.ext.listeners__');
-const HOOKS = Symbol('__rsk.ext.hooks__');
-const REGISTRATIONS = Symbol('__rsk.ext.registrations__');
+const EXTENSIONS = Symbol('__xnapify.ext.list__');
+const SLOTS = Symbol('__xnapify.ext.slots__');
+const DEFINITIONS = Symbol('__xnapify.ext.definitions__');
+const LISTENERS = Symbol('__xnapify.ext.listeners__');
+const HOOKS = Symbol('__xnapify.ext.hooks__');
+const REGISTRATIONS = Symbol('__xnapify.ext.registrations__');
 
 /**
  * ExtensionRegistry - Manages extension registrations, UI slots, hooks, and schema extensions

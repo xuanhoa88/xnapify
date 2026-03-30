@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -10,7 +10,7 @@ import crypto from 'crypto';
 // Derive encryption key from JWT secret for consistent ID obfuscation
 const EXTENSION_KEY = crypto
   .createHash('sha256')
-  .update(process.env.RSK_JWT_SECRET || __filename)
+  .update(process.env.XNAPIFY_JWT_SECRET || __filename)
   .digest();
 
 /**

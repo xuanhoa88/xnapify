@@ -84,7 +84,7 @@ const mockQueue = jest.fn(() => mockQueueChannel);
 const mockExtensionManager = {
   getInstalledExtensionsDir: jest.fn(() => '/mock/extensions'),
   getDevExtensionsDir: jest.fn(cwd =>
-    path.resolve(cwd, process.env.RSK_EXTENSION_LOCAL_PATH || 'extensions'),
+    path.resolve(cwd, process.env.XNAPIFY_EXTENSION_LOCAL_PATH || 'extensions'),
   ),
   readManifest: jest.fn(async (dirPath, dirName) => {
     const filePath = dirName
@@ -185,7 +185,7 @@ describe('Extension Service', () => {
       ]);
 
       // Set local extension path to differ from installed path
-      process.env.RSK_EXTENSION_LOCAL_PATH = 'local-extensions';
+      process.env.XNAPIFY_EXTENSION_LOCAL_PATH = 'local-extensions';
 
       const result = await manageExtensions(mockContext);
 

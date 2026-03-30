@@ -45,7 +45,7 @@ Thumbs.db
 # Environment files
 .env
 .env.*
-!.env.rsk
+!.env.xnapify
 
 # Lock files
 package-lock.json

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -36,7 +36,7 @@ const clean = require('./clean');
 const buildExtensions = require('./extension');
 
 // Unique symbol to mark webpack middlewares
-const kWebpackMiddleware = Symbol('__rsk.webpackMiddleware__');
+const kWebpackMiddleware = Symbol('__xnapify.webpackMiddleware__');
 
 // Webpack HMR plugin
 const { HotModuleReplacementPlugin } = webpack;
@@ -48,8 +48,8 @@ const silent = isSilent();
 const verbose = isVerbose();
 
 // Get port and host from environment variables
-const port = parseInt(config.env('RSK_PORT', '1337'), 10);
-const host = config.env('RSK_HOST', '127.0.0.1');
+const port = parseInt(config.env('XNAPIFY_PORT', '1337'), 10);
+const host = config.env('XNAPIFY_HOST', '127.0.0.1');
 
 // Module-level variables for managing the Express app and HMR state
 // - app: Holds the Express application instance

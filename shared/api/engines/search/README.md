@@ -77,10 +77,10 @@ const draftSearch = blogSearch.withNamespace('drafts');
 
 | Type | Description | Config |
 |---|---|---|
-| `memory` | File-backed in-memory search (default) | `{ directory?: string }` (default: `~/.rsk/fts`) |
+| `memory` | File-backed in-memory search (default) | `{ directory?: string }` (default: `~/.xnapify/fts`) |
 | `database` | Native FTS — SQLite FTS5, PostgreSQL tsvector, MySQL FULLTEXT | `{ connection, DataTypes }` (auto-injected) |
 
-Configure via `RSK_SEARCH_TYPE` env var (`'memory'` or `'database'`).
+Configure via `XNAPIFY_SEARCH_TYPE` env var (`'memory'` or `'database'`).
 
 ### Database Adapter — Dialect Support
 

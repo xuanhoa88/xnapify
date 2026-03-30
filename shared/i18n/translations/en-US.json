@@ -111,10 +111,10 @@
     "backToSite": "Back to Site"
   },
   "header": {
-    "brand": "React Starter Kit"
+    "brand": "xnapify"
   },
   "footer": {
-    "copyright": "© {{year}} React Starter Kit. All rights reserved."
+    "copyright": "© {{year}} xnapify. All rights reserved."
   },
   "contact": {
     "lead": "We'd love to hear from you! Whether you have a question, feedback, or just want to say hello, feel free to reach out to us.",

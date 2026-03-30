@@ -14,12 +14,11 @@ export async function up(_, { container }) {
 
   const posts = [
     {
-      title: 'Getting Started with React Starter Kit',
-      slug: 'getting-started-with-react-starter-kit',
+      title: 'Getting Started with xnapify',
+      slug: 'getting-started-with-xnapify',
       content:
-        'Welcome to React Starter Kit! This guide will walk you through the basics of setting up your first project, configuring modules, and deploying to production.',
-      excerpt:
-        'A comprehensive guide to getting started with React Starter Kit.',
+        'Welcome to xnapify! This guide will walk you through the basics of setting up your first project, configuring modules, and deploying to production.',
+      excerpt: 'A comprehensive guide to getting started with xnapify.',
       status: 'published',
       published_at: now,
       created_at: new Date(now.getTime() - 7 * 86400000),
@@ -82,7 +81,7 @@ export async function down(_, { container }) {
   await Post.destroy({
     where: {
       slug: [
-        'getting-started-with-react-starter-kit',
+        'getting-started-with-xnapify',
         'understanding-the-extension-system',
         'building-a-custom-admin-dashboard',
         'api-design-best-practices',

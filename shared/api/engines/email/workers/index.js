@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -21,10 +21,10 @@ import { EmailWorkerError } from '../utils/errors';
 
 // Worker configuration
 const WORKER_CONFIG = Object.freeze({
-  maxWorkers: parseInt(process.env.RSK_MAIL_WORKERS, 10) || 4,
-  workerTimeout: parseInt(process.env.RSK_MAIL_WORKER_TIMEOUT, 10) || 60000,
+  maxWorkers: parseInt(process.env.XNAPIFY_MAIL_WORKERS, 10) || 4,
+  workerTimeout: parseInt(process.env.XNAPIFY_MAIL_WORKER_TIMEOUT, 10) || 60000,
   maxRequestsPerWorker:
-    parseInt(process.env.RSK_MAIL_WORKER_MAX_REQ, 10) || 100,
+    parseInt(process.env.XNAPIFY_MAIL_WORKER_MAX_REQ, 10) || 100,
 });
 
 // Auto-load workers via require.context (*.worker.js or *.worker.ts)

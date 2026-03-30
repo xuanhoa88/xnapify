@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -12,7 +12,7 @@ export const get = [
     const { provider } = req.params;
 
     // Get app URL from environment variable
-    const appUrl = process.env.RSK_APP_URL;
+    const appUrl = process.env.XNAPIFY_APP_URL;
 
     try {
       passport.authenticate(

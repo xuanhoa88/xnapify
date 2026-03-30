@@ -13,7 +13,7 @@ The project ships with pre-configured launch configurations.
 1. Stop any running `npm run dev` process first
 2. Open VS Code Command Palette (`Cmd+Shift+P`)
 3. Select **Debug: Select and Start Debugging**
-4. Choose **RSK: Start Dev Server**
+4. Choose **xnapify: Start Dev Server**
 5. Set breakpoints in server-side code (`src/server.js`, controllers, routes, etc.)
 6. The debugger auto-attaches to the child process that runs the Webpack dev task
 
@@ -21,7 +21,7 @@ The project ships with pre-configured launch configurations.
 
 ### Debug a Specific Test
 
-1. Command Palette → **Debug: Select and Start Debugging** → **RSK: Run Tests**
+1. Command Palette → **Debug: Select and Start Debugging** → **xnapify: Run Tests**
 2. Runs Jest with `--runInBand --no-cache` for reliable breakpoint hits
 
 ---
@@ -71,12 +71,12 @@ LOG_LEVEL=debug npm run dev -- --verbose
 
 ### Environment Variables for Debugging
 
-| Variable       | Purpose                              | Example            |
-| -------------- | ------------------------------------ | ------------------ |
-| `LOG_LEVEL`    | App log verbosity                    | `debug`            |
-| `--verbose`    | Build system detail                  | (CLI flag)         |
-| `DEBUG`        | Debug namespace filter               | `app:*`            |
-| `FORCE_COLOR`  | Force colored output in piped output | `1`                |
+| Variable      | Purpose                              | Example    |
+| ------------- | ------------------------------------ | ---------- |
+| `LOG_LEVEL`   | App log verbosity                    | `debug`    |
+| `--verbose`   | Build system detail                  | (CLI flag) |
+| `DEBUG`       | Debug namespace filter               | `app:*`    |
+| `FORCE_COLOR` | Force colored output in piped output | `1`        |
 
 ---
 
@@ -88,10 +88,10 @@ Understanding where compiled bundles land helps when inspecting build output, st
 
 Controlled by `BUILD_DIR` env var (defined in `tools/config.js`):
 
-| Environment   | `BUILD_DIR`    | Source                    |
-| ------------- | -------------- | ------------------------- |
-| Development   | `.cache/dev`   | `.env.development`        |
-| Production    | `build`        | default in `tools/config.js` |
+| Environment | `BUILD_DIR`  | Source                       |
+| ----------- | ------------ | ---------------------------- |
+| Development | `.cache/dev` | `.env.development`           |
+| Production  | `build`      | default in `tools/config.js` |
 
 ### Directory structure (dev mode)
 
@@ -116,13 +116,13 @@ Controlled by `BUILD_DIR` env var (defined in `tools/config.js`):
 
 ### Key paths (from `tools/webpack/app.config.js`)
 
-| Artifact              | Path                                | Config source          |
-| --------------------- | ----------------------------------- | ---------------------- |
-| Server bundle         | `BUILD_DIR/server.js`               | `serverConfig.output`  |
-| Client assets         | `BUILD_DIR/public/assets/`          | `clientConfig.output`  |
-| Stats manifest        | `BUILD_DIR/stats.json`              | `StatsWriterPlugin`    |
-| Extension builds      | `BUILD_DIR/<RSK_EXTENSION_LOCAL_PATH>` | `tools/tasks/extension.js` |
-| Server HMR updates    | `BUILD_DIR/updates/`                | `configureWebpackForDev()` in `dev.js` |
+| Artifact           | Path                                       | Config source                          |
+| ------------------ | ------------------------------------------ | -------------------------------------- |
+| Server bundle      | `BUILD_DIR/server.js`                      | `serverConfig.output`                  |
+| Client assets      | `BUILD_DIR/public/assets/`                 | `clientConfig.output`                  |
+| Stats manifest     | `BUILD_DIR/stats.json`                     | `StatsWriterPlugin`                    |
+| Extension builds   | `BUILD_DIR/<XNAPIFY_EXTENSION_LOCAL_PATH>` | `tools/tasks/extension.js`             |
+| Server HMR updates | `BUILD_DIR/updates/`                       | `configureWebpackForDev()` in `dev.js` |
 
 ### Inspect build output
 
@@ -199,6 +199,7 @@ console.log('DB connection:', db.connection?.config);
 ### Debug server HMR reload
 
 Watch terminal for these messages during HMR:
+
 - `🔄 Compiling 'server'...` — server bundle recompiling
 - `✅ 'server' compiled` — compilation succeeded
 - `🔥 HMR: Detected N updated module(s).` — hot update applied
@@ -210,14 +211,14 @@ If HMR fails, look for `❌ HMR update failed` with status info.
 
 ## 7. Common Dev-Mode Issues
 
-| Symptom                        | Cause                              | Fix                                       |
-| ------------------------------ | ---------------------------------- | ----------------------------------------- |
-| Port 1337 already in use       | Previous process still running     | `npx kill-port -p 1337`                   |
-| Breakpoints not hit            | Source maps misconfigured          | Ensure `sourceMaps: true` in launch.json  |
-| HMR says "connected" but no reload | Server compilation error        | Check terminal for Webpack errors         |
-| `Cannot find module` on reload | Stale require cache                | Restart dev server                        |
-| Slow recompilation             | Large watched file tree            | Check `ignored` patterns in dev.js        |
-| API returns HTML instead of JSON | SSR middleware intercepting `/api` | Ensure API routes are mounted before SSR  |
+| Symptom                            | Cause                              | Fix                                      |
+| ---------------------------------- | ---------------------------------- | ---------------------------------------- |
+| Port 1337 already in use           | Previous process still running     | `npx kill-port -p 1337`                  |
+| Breakpoints not hit                | Source maps misconfigured          | Ensure `sourceMaps: true` in launch.json |
+| HMR says "connected" but no reload | Server compilation error           | Check terminal for Webpack errors        |
+| `Cannot find module` on reload     | Stale require cache                | Restart dev server                       |
+| Slow recompilation                 | Large watched file tree            | Check `ignored` patterns in dev.js       |
+| API returns HTML instead of JSON   | SSR middleware intercepting `/api` | Ensure API routes are mounted before SSR |
 
 ---
 

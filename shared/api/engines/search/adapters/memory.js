@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -28,13 +28,13 @@ import path from 'path';
 export default class MemorySearch {
   /**
    * @param {Object} options
-   * @param {string} [options.directory] - Directory to store document files. Defaults to `~/.rsk/fts`
+   * @param {string} [options.directory] - Directory to store document files. Defaults to `~/.xnapify/fts`
    */
   constructor(options = {}) {
     this.directory =
       options.directory ||
-      process.env.RSK_FTS_DIR ||
-      path.join(os.homedir(), '.rsk', 'fts');
+      process.env.XNAPIFY_FTS_DIR ||
+      path.join(os.homedir(), '.xnapify', 'fts');
     this.memoryIndex = new Map(); // Key: `${entityType}_${entityId}` -> Value: Document
     this.isInitialized = false;
     this._initPromise = null;

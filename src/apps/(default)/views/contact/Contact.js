@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -22,8 +22,8 @@ import s from './Contact.css';
 const CONTACT_INFO = [
   {
     type: 'email',
-    value: 'hello@xtepify.com',
-    href: 'mailto:hello@xtepify.com',
+    value: 'hello@xnapify.com',
+    href: 'mailto:hello@xnapify.com',
     icon: 'mail',
   },
   {
@@ -46,7 +46,7 @@ const CONTACT_INFO = [
 const SOCIAL_LINKS = [
   {
     name: 'GitHub',
-    href: 'https://github.com/xuanhoa88/rapid-rsk',
+    href: 'https://github.com/xuanhoa88/xnapify',
     icon: 'github',
   },
   {

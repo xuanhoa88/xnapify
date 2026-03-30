@@ -69,7 +69,7 @@ If `engines.db.connection` exists, runs `runMigrations()` then `runSeeds()`.
 Applies globally (to all requests, not just API):
 
 1. **Morgan logging** — `dev` format in `__DEV__`, `combined` in production.
-2. **CORS** — configurable via `RSK_CORS_ORIGIN` env var.
+2. **CORS** — configurable via `XNAPIFY_CORS_ORIGIN` env var.
 
 ### `createApiMiddlewareStack(app) → middleware[]`
 
@@ -84,8 +84,8 @@ Only applied if `container.resolve('jwt')` is available.
 
 1. Creates `express.Router()`.
 2. Applies body parsing scoped to API routes:
-   - `express.json({ limit: RSK_JSON_BODY_LIMIT || '10mb' })`
-   - `express.urlencoded({ extended: true, limit: RSK_URLENCODED_BODY_LIMIT || '1mb' })`
+   - `express.json({ limit: XNAPIFY_JSON_BODY_LIMIT || '10mb' })`
+   - `express.urlencoded({ extended: true, limit: XNAPIFY_URLENCODED_BODY_LIMIT || '1mb' })`
 3. For each discovered module → creates `DynamicRouter(adapter)` and mounts with API middleware stack.
 
 ### Module Discovery
@@ -138,7 +138,7 @@ Extension namespace is derived from: `route.workspace` → `route.module.workspa
 
 Uses the `cors` package with dynamic origin resolution.
 
-### `RSK_CORS_ORIGIN` Env Var
+### `XNAPIFY_CORS_ORIGIN` Env Var
 
 | Value                | Behavior                                                          |
 | -------------------- | ----------------------------------------------------------------- |
@@ -167,9 +167,9 @@ Morgan request logging:
 
 | Var                         | Default   | Description            |
 | --------------------------- | --------- | ---------------------- |
-| `RSK_CORS_ORIGIN`           | same-host | CORS allowed origins   |
-| `RSK_JSON_BODY_LIMIT`       | `'10mb'`  | JSON body parser limit |
-| `RSK_URLENCODED_BODY_LIMIT` | `'1mb'`   | URL-encoded body limit |
+| `XNAPIFY_CORS_ORIGIN`           | same-host | CORS allowed origins   |
+| `XNAPIFY_JSON_BODY_LIMIT`       | `'10mb'`  | JSON body parser limit |
+| `XNAPIFY_URLENCODED_BODY_LIMIT` | `'1mb'`   | URL-encoded body limit |
 
 ## 7. Container-Based DI
 

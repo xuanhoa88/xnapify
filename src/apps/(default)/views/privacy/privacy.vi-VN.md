@@ -2,7 +2,7 @@
 title: Chính sách bảo mật
 ---
 
-Chính sách Bảo mật này mô tả cách React Starter Kit ("chúng tôi") xử lý thông tin khi bạn
+Chính sách Bảo mật này mô tả cách xnapify ("chúng tôi") xử lý thông tin khi bạn
 sử dụng ứng dụng của chúng tôi.
 
 ## Thông tin chúng tôi thu thập

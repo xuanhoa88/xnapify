@@ -52,10 +52,10 @@ Every email automatically receives these variables via `baseVars()`:
 
 | Variable | Source | Example |
 |---|---|---|
-| `appName` | `RSK_APP_NAME` | `"React Starter Kit"` |
-| `loginUrl` | `RSK_APP_URL + /login` | `"https://app.example.com/login"` |
-| `resetUrl` | `RSK_APP_URL + /auth/reset` | `"https://app.example.com/auth/reset"` |
-| `supportUrl` | `RSK_APP_URL + /support` | `"https://app.example.com/support"` |
+| `appName` | `XNAPIFY_APP_NAME` | `"xnapify"` |
+| `loginUrl` | `XNAPIFY_APP_URL + /login` | `"https://app.example.com/login"` |
+| `resetUrl` | `XNAPIFY_APP_URL + /auth/reset` | `"https://app.example.com/auth/reset"` |
+| `supportUrl` | `XNAPIFY_APP_URL + /support` | `"https://app.example.com/support"` |
 | `now` | `new Date().toISOString()` | `"2026-01-15T10:30:00.000Z"` |
 | `year` | `new Date().getFullYear()` | `2026` |
 

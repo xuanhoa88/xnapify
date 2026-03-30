@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -128,7 +128,7 @@ export function createJwt(config = {}) {
  * Returns null if JWT secret is not configured.
  */
 export function createJwtFromEnv() {
-  const secret = process.env.RSK_JWT_SECRET;
+  const secret = process.env.XNAPIFY_JWT_SECRET;
 
   if (!secret) {
     return null;
@@ -136,10 +136,10 @@ export function createJwtFromEnv() {
 
   return createJwt({
     secret,
-    expiresIn: process.env.RSK_JWT_EXPIRY || DEFAULT_JWT_CONFIG.expiresIn,
-    algorithm: process.env.RSK_JWT_ALG || DEFAULT_JWT_CONFIG.algorithm,
-    issuer: process.env.RSK_JWT_ISS || DEFAULT_JWT_CONFIG.issuer,
-    audience: process.env.RSK_JWT_AUD || DEFAULT_JWT_CONFIG.audience,
+    expiresIn: process.env.XNAPIFY_JWT_EXPIRY || DEFAULT_JWT_CONFIG.expiresIn,
+    algorithm: process.env.XNAPIFY_JWT_ALG || DEFAULT_JWT_CONFIG.algorithm,
+    issuer: process.env.XNAPIFY_JWT_ISS || DEFAULT_JWT_CONFIG.issuer,
+    audience: process.env.XNAPIFY_JWT_AUD || DEFAULT_JWT_CONFIG.audience,
   });
 }
 

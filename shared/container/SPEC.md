@@ -17,7 +17,7 @@ shared/container/
 The `Container` class utilizes an ES6 `Map` to store its bindings using a private symbol key:
 
 ```javascript
-const BINDINGS = Symbol('__rsk.containerBindings__');
+const BINDINGS = Symbol('__xnapify.containerBindings__');
 
 class Container {
   constructor() {

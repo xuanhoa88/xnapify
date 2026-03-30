@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -10,14 +10,14 @@
  * Returns mock news data for the home page
  */
 export async function get(req, res) {
-  // Mock news data - Showcasing React Starter Kit features and updates
+  // Mock news data - Showcasing xnapify features and updates
   const mockNews = [
     {
       id: 1,
       title: 'Vietnamese Locale Support Added',
       link: '/about?lang=vi-VN',
       contentSnippet:
-        'React Starter Kit now supports Vietnamese (vi-VN) locale with full translations for UI elements, navigation, and content pages. Switch languages seamlessly using the language switcher.',
+        'xnapify now supports Vietnamese (vi-VN) locale with full translations for UI elements, navigation, and content pages. Switch languages seamlessly using the language switcher.',
     },
     {
       id: 2,
@@ -49,8 +49,8 @@ export async function get(req, res) {
     },
     {
       id: 6,
-      title: 'React Starter Kit - Production Ready',
-      link: 'https://github.com/xuanhoa88/rapid-rsk',
+      title: 'xnapify - Production Ready',
+      link: 'https://github.com/xuanhoa88/xnapify',
       contentSnippet:
         'Isomorphic web app boilerplate with Node.js, Express, React 16+ (supports React 16, 17, and 18+), Redux, Webpack 5, CSS Modules, Hot Module Replacement, and comprehensive testing setup.',
     },

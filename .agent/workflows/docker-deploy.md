@@ -33,19 +33,19 @@ docker compose -f .docker/docker-compose.yml down
 
 ## Important: Webpack DefinePlugin
 
-> **All `RSK_*` env vars are baked into the server bundle at build time** via Webpack's
+> **All `XNAPIFY_*` env vars are baked into the server bundle at build time** via Webpack's
 > `DefinePlugin`. Runtime `environment:` overrides in `docker-compose.yml` have **no effect**
 > on values already replaced during `npm run build`.
 
 To change baked values for Docker builds, set them in the Dockerfile's `RUN` command:
 ```dockerfile
-RUN RSK_HOST=0.0.0.0 npm run build
+RUN XNAPIFY_HOST=0.0.0.0 npm run build
 ```
 
 ## When Database URL Changes
 
-If switching from SQLite to Postgres/MySQL for Docker, you must change `RSK_DB_URL` in
-`.env.rsk` (the file included in the Docker build context) so Webpack bakes the correct
+If switching from SQLite to Postgres/MySQL for Docker, you must change `XNAPIFY_DB_URL` in
+`.env.xnapify` (the file included in the Docker build context) so Webpack bakes the correct
 connection string. Or pass it as a build arg to override at build time.
 
 ## Debugging
@@ -58,7 +58,7 @@ docker compose -f .docker/docker-compose.yml ps
 docker compose -f .docker/docker-compose.yml exec app sh
 
 # Inspect env vars inside container
-docker compose -f .docker/docker-compose.yml exec app env | grep RSK_
+docker compose -f .docker/docker-compose.yml exec app env | grep XNAPIFY_
 
 # Rebuild without cache
 docker compose -f .docker/docker-compose.yml build --no-cache app

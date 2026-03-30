@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -122,7 +122,7 @@ export default function Html({
         {/* Page metadata */}
         <title>{title}</title>
         <meta name='description' content={description} />
-        <link rel='shortcut icon' href='/rsk.ico' />
+        <link rel='shortcut icon' href='/xnapify.ico' />
 
         {/* Open Graph meta tags for social media */}
         <OpenGraphMeta
@@ -176,7 +176,7 @@ export default function Html({
 
         {/* PWA manifest and icons */}
         <link rel='manifest' href='/site.webmanifest' />
-        <link rel='apple-touch-icon' href='/rsk_192x192.png' />
+        <link rel='apple-touch-icon' href='/xnapify_192x192.png' />
       </head>
       <body>
         {/* React app root */}

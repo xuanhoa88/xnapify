@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -22,7 +22,7 @@ import { DEFAULT_JWT_CONFIG } from './constants';
  * @example
  * const token = generateToken(
  *   { userId: 123, email: 'user@example.com' },
- *   process.env.RSK_JWT_SECRET
+ *   process.env.XNAPIFY_JWT_SECRET
  * );
  */
 export function generateToken(payload, secret, options = {}) {
@@ -70,7 +70,7 @@ export function generateToken(payload, secret, options = {}) {
  *
  * @example
  * try {
- *   const decoded = verifyToken(token, process.env.RSK_JWT_SECRET);
+ *   const decoded = verifyToken(token, process.env.XNAPIFY_JWT_SECRET);
  *   console.log('User ID:', decoded.userId);
  * } catch (error) {
  *   console.error('Invalid token:', error.message);

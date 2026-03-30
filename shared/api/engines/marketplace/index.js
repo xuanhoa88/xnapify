@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -9,7 +9,7 @@
  * Marketplace Engine
  *
  * Lightweight HTTP client for connecting to a remote Extension Marketplace
- * registry. Used by consumer RSK instances to browse and install extensions
+ * registry. Used by consumer xnapify instances to browse and install extensions
  * from the shared registry.
  *
  * @example
@@ -36,8 +36,8 @@ class MarketplaceClient {
     const env =
       typeof process !== 'undefined' && process.env ? process.env : {};
 
-    this.registryUrl = options.registryUrl || env.RSK_MARKETPLACE_URL || '';
-    this.apiKey = options.apiKey || env.RSK_MARKETPLACE_API_KEY || '';
+    this.registryUrl = options.registryUrl || env.XNAPIFY_MARKETPLACE_URL || '';
+    this.apiKey = options.apiKey || env.XNAPIFY_MARKETPLACE_API_KEY || '';
     this.timeout = options.timeout || 30000;
   }
 
@@ -160,7 +160,7 @@ class MarketplaceClient {
   async fetchJSON(path) {
     if (!this.registryUrl) {
       throw new Error(
-        'Marketplace not configured. Set RSK_MARKETPLACE_URL in your environment.',
+        'Marketplace not configured. Set XNAPIFY_MARKETPLACE_URL in your environment.',
       );
     }
 
@@ -202,7 +202,7 @@ class MarketplaceClient {
   async fetchRaw(path) {
     if (!this.registryUrl) {
       throw new Error(
-        'Marketplace not configured. Set RSK_MARKETPLACE_URL in your environment.',
+        'Marketplace not configured. Set XNAPIFY_MARKETPLACE_URL in your environment.',
       );
     }
 

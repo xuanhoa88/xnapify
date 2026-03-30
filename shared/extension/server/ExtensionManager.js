@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -30,10 +30,10 @@ import { registry } from './Registry';
 const nativeRequire = createNativeRequire(__filename);
 
 // Symbols — private (internal to server manager)
-const EXTENSION_API_ENTRY_POINTS = Symbol('__rsk.ext.apiEntryPoints__');
-const EXTENSION_CSS_ENTRY_POINTS = Symbol('__rsk.ext.cssEntryPoints__');
-const EXTENSION_SCRIPT_ENTRY_POINTS = Symbol('__rsk.ext.scriptEntryPoints__');
-const SERVER_CWD = Symbol('__rsk.ext.serverCwd__');
+const EXTENSION_API_ENTRY_POINTS = Symbol('__xnapify.ext.apiEntryPoints__');
+const EXTENSION_CSS_ENTRY_POINTS = Symbol('__xnapify.ext.cssEntryPoints__');
+const EXTENSION_SCRIPT_ENTRY_POINTS = Symbol('__xnapify.ext.scriptEntryPoints__');
+const SERVER_CWD = Symbol('__xnapify.ext.serverCwd__');
 
 /** Non-throwing async file existence check */
 async function fileExists(...filePaths) {
@@ -776,8 +776,8 @@ class ServerExtensionManager extends BaseExtensionManager {
   getInstalledExtensionsDir() {
     try {
       return path.resolve(
-        process.env.RSK_EXTENSION_DIR ||
-          path.join(os.homedir(), '.rsk', 'extensions'),
+        process.env.XNAPIFY_EXTENSION_DIR ||
+          path.join(os.homedir(), '.xnapify', 'extensions'),
       );
     } catch (err) {
       console.error(`Failed to get extension path:`, err);
@@ -794,7 +794,7 @@ class ServerExtensionManager extends BaseExtensionManager {
     try {
       return path.resolve(
         cwd,
-        process.env.RSK_EXTENSION_LOCAL_PATH || 'extensions',
+        process.env.XNAPIFY_EXTENSION_LOCAL_PATH || 'extensions',
       );
     } catch (err) {
       console.error(`Failed to get dev extension path for ${cwd}:`, err);
@@ -921,7 +921,7 @@ class ServerExtensionManager extends BaseExtensionManager {
 
     const tempDir = path.join(
       os.tmpdir(),
-      'rsk-ext-install-' + Date.now().toString(36),
+      'xnapify-ext-install-' + Date.now().toString(36),
     );
     const tempFile = tempDir + '.pkg';
 

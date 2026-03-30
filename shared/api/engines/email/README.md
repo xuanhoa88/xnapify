@@ -87,13 +87,13 @@ await email.cleanup();       // close all connections
 | Provider | Transport | Config Env Var | Default |
 |---|---|---|---|
 | `memory` | In-memory array | — | Always available |
-| `smtp` | Nodemailer | `RSK_SMTP_HOST` | Lazy init |
-| `resend` | Resend HTTP API | `RSK_RESEND_KEY` | Default provider |
-| `sendgrid` | SendGrid API | `RSK_SENDGRID_KEY` | Lazy init |
-| `mailgun` | Mailgun API | `RSK_MAILGUN_KEY` | Lazy init |
+| `smtp` | Nodemailer | `XNAPIFY_SMTP_HOST` | Lazy init |
+| `resend` | Resend HTTP API | `XNAPIFY_RESEND_KEY` | Default provider |
+| `sendgrid` | SendGrid API | `XNAPIFY_SENDGRID_KEY` | Lazy init |
+| `mailgun` | Mailgun API | `XNAPIFY_MAILGUN_KEY` | Lazy init |
 
-Default provider: `RSK_MAIL_PROVIDER` env var (default: `'resend'`).
-Common: `RSK_MAIL_FROM` (from address), `RSK_MAIL_FROM_NAME` (from name).
+Default provider: `XNAPIFY_MAIL_PROVIDER` env var (default: `'resend'`).
+Common: `XNAPIFY_MAIL_FROM` (from address), `XNAPIFY_MAIL_FROM_NAME` (from name).
 
 ### Provider Interface
 

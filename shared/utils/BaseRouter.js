@@ -1,14 +1,14 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
  */
 
 // Tag routes with their source adapter for dynamic add/remove tracking
-export const ROUTE_SOURCE_KEY = Symbol('__rsk.routeSource__');
+export const ROUTE_SOURCE_KEY = Symbol('__xnapify.routeSource__');
 // String-based source ID for robust removal (survives HMR/reference changes)
-export const ROUTE_SOURCE_ID = Symbol('__rsk.routeSourceId__');
+export const ROUTE_SOURCE_ID = Symbol('__xnapify.routeSourceId__');
 
 /**
  * Recursively tag routes with a source identifier.

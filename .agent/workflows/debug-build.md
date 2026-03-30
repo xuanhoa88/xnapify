@@ -105,10 +105,10 @@ npm --version   # >= 8.0.0
 
 `BUILD_DIR` env var controls where Webpack writes compiled bundles (defined in `tools/config.js`):
 
-| Environment   | `BUILD_DIR`    | Source                       |
-| ------------- | -------------- | ---------------------------- |
-| Development   | `.cache/dev`   | `.env.development`           |
-| Production    | `build`        | default in `tools/config.js` |
+| Environment | `BUILD_DIR`  | Source                       |
+| ----------- | ------------ | ---------------------------- |
+| Development | `.cache/dev` | `.env.development`           |
+| Production  | `build`      | default in `tools/config.js` |
 
 ### Directory structure
 
@@ -124,12 +124,12 @@ npm --version   # >= 8.0.0
 
 ### Key paths
 
-| Artifact           | Path                                   | Config source              |
-| ------------------ | -------------------------------------- | -------------------------- |
-| Server bundle      | `BUILD_DIR/server.js`                  | `serverConfig.output`      |
-| Client assets      | `BUILD_DIR/public/assets/`             | `clientConfig.output`      |
-| Stats manifest     | `BUILD_DIR/stats.json`                 | `StatsWriterPlugin`        |
-| Extension builds   | `BUILD_DIR/<RSK_EXTENSION_LOCAL_PATH>` | `tools/tasks/extension.js` |
+| Artifact         | Path                                       | Config source              |
+| ---------------- | ------------------------------------------ | -------------------------- |
+| Server bundle    | `BUILD_DIR/server.js`                      | `serverConfig.output`      |
+| Client assets    | `BUILD_DIR/public/assets/`                 | `clientConfig.output`      |
+| Stats manifest   | `BUILD_DIR/stats.json`                     | `StatsWriterPlugin`        |
+| Extension builds | `BUILD_DIR/<XNAPIFY_EXTENSION_LOCAL_PATH>` | `tools/tasks/extension.js` |
 
 ### Inspect build output
 
@@ -151,8 +151,8 @@ Use preconfigured launch configurations:
 1. Open VS Code Command Palette (`Cmd+Shift+P`)
 2. Select **Debug: Select and Start Debugging**
 3. Choose:
-   - **RSK: Start Dev Server** - Debug development server
-   - **RSK: Run Tests** - Debug tests
+   - **xnapify: Start Dev Server** - Debug development server
+   - **xnapify: Run Tests** - Debug tests
 
 ## Common Errors
 

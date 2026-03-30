@@ -15,7 +15,7 @@ const manager = new NodeRedManager({
 // Assuming you have your Express app and HTTP server initialized
 await manager.init(app, server, {
   httpAdminRoot: '/admin/flows',
-  httpNodeRoot: '/flows/api'
+  httpNodeRoot: '/flows/api',
 });
 
 await manager.start();
@@ -30,7 +30,7 @@ manager.setupApiProxy(app, '/proxy');
 - **Auto-Discovery of Custom Nodes**: Any files defined under `shared/node-red/nodes/*.js` that export `getNodeJS()` and `getNodeHTML()` are automatically unpacked into the Node-RED `userDir` and loaded on boot.
 - **Client Scripts Injection**: Files under `shared/node-red/client-scripts/*.js` exporting `getScript()` are automatically injected into the Node-RED Admin UI.
 - **Flow Splitter**: Automatically splits monolithic `flows.json` files into organized directories (`tabs`, `subflows`, `config-nodes`) inside `.node-red/src/...`. This creates clean git commits for flows. On start, if `flows.json` is missing, it dynamically reconstructs it from the split files.
-- **Unified Authentication**: Provides an `RskAuthStrategy` that connects Node-RED's bearer token logic straight into the main application's JWT mechanism and role-based permissions (`nodered:admin`, `nodered:read`).
+- **Unified Authentication**: Provides an `XnapifyAuthStrategy` that connects Node-RED's bearer token logic straight into the main application's JWT mechanism and role-based permissions (`nodered:admin`, `nodered:read`).
 
 ## Usage Guide
 
@@ -79,13 +79,14 @@ export function getNodeHTML() {
 }
 ```
 
-On restart, the node will be written to `.node-red/nodes/rsk/my-custom-node.js` and loaded into the palette.
+On restart, the node will be written to `.node-red/nodes/xnapify/my-custom-node.js` and loaded into the palette.
 
 ### Flow Splitting
 
-The split logic runs whenever you click "Deploy" in the Node-RED Editor. 
+The split logic runs whenever you click "Deploy" in the Node-RED Editor.
 
 Instead of generating one massive `flows.json`, you will see:
+
 ```
 .node-red/src/
 ├── config-nodes/
@@ -96,6 +97,7 @@ Instead of generating one massive `flows.json`, you will see:
     ├── Flow 1.json
     └── Flow 2.json
 ```
+
 If you delete `flows.json` and start the server, the flow splitter will read these segmented files and dynamically rebuild the monolithic configuration needed by Node-RED internally.
 
 ## See Also

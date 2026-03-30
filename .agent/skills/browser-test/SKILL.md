@@ -7,21 +7,21 @@ version: 1.0
 
 # Browser Automation Test Skill
 
-You are performing **visual or functional browser tests** on the running `rapid-rsk` application using the `browser_subagent` tool.
+You are performing **visual or functional browser tests** on the running `xnapify` application using the `browser_subagent` tool.
 
 ---
 
 ## Port Discovery (MANDATORY — Do This First)
 
 > [!CAUTION]
-> The port is **NOT** 3000. It is configured via `RSK_PORT` in `.env` and can be **overridden** by environment-specific files (`.env.development`, `.env.local`, etc.).
+> The port is **NOT** 3000. It is configured via `XNAPIFY_PORT` in `.env` and can be **overridden** by environment-specific files (`.env.development`, `.env.local`, etc.).
 
 **Resolution order:**
 
 | Priority | Source | How |
 |----------|--------|-----|
 | 1 | User metadata | Check "Browser State" URLs or "Running terminal commands" for `localhost:XXXX` — this is always the **actual** running port |
-| 2 | `.env` files | `grep RSK_PORT .env .env.* 2>/dev/null` — use the **last** match (env-specific files override base) |
+| 2 | `.env` files | `grep XNAPIFY_PORT .env .env.* 2>/dev/null` — use the **last** match (env-specific files override base) |
 | 3 | Default fallback | `1337` |
 
 > 🔴 **NEVER guess or assume port 3000.** Always resolve from user context or `.env` files first.
@@ -147,7 +147,7 @@ If the page redirects to login:
 
 | ❌ Don't | ✅ Do |
 |----------|------|
-| Hardcode port 3000 | Read RSK_PORT from .env |
+| Hardcode port 3000 | Read XNAPIFY_PORT from .env |
 | Test multiple flows in one call | One flow per browser_subagent call |
 | Skip wait for page load | Always wait for specific elements |
 | Use vague element descriptions | Use exact text, IDs, or roles |

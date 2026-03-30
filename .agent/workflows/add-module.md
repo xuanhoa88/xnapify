@@ -74,7 +74,7 @@ mkdir -p src/apps/{module-name}/{api,views}/{(admin),(default)}
 
 ```json
 {
-  "name": "@rsk-module/{module-name}",
+  "name": "@xnapify-module/{module-name}",
   "version": "1.0.0",
   "browser": "views/index.js",
   "main": "api/index.js",
@@ -86,7 +86,7 @@ mkdir -p src/apps/{module-name}/{api,views}/{(admin),(default)}
 
 ```json
 {
-  "name": "@rsk-module/products",
+  "name": "@xnapify-module/products",
   "version": "1.0.0",
   "browser": "views/index.js",
   "main": "api/index.js",
@@ -99,7 +99,7 @@ mkdir -p src/apps/{module-name}/{api,views}/{(admin),(default)}
 ```javascript
 // src/apps/{module-name}/api/index.js
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -465,7 +465,7 @@ export async function down(connection, Sequelize) {
 ```javascript
 // src/apps/{module-name}/views/index.js
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -787,22 +787,22 @@ Modules are auto-discovered during application bootstrap:
 
 ### Backend (API)
 
-| Hook                    | Purpose                                | Called When              | Async |
-| ----------------------- | -------------------------------------- | ------------------------ | ----- |
+| Hook                        | Purpose                                | Called When              | Async |
+| --------------------------- | -------------------------------------- | ------------------------ | ----- |
 | `providers({ container })`  | Bind services to container             | Module loaded            | Yes   |
 | `migrations({ container })` | Run database migrations                | After core migrations    | Yes   |
 | `seeds({ container })`      | Run database seeds                     | After module migrations  | Yes   |
 | `boot({ container })`       | Initialize module                      | All models loaded        | Yes   |
-| `models()`              | Return models webpack context          | Model discovery phase    | No    |
-| `routes()`              | Return `[name, context]` tuple         | Router setup phase       | No    |
-| `translations()`        | Provide webpack context for i18n files | Module loaded (optional) | No    |
+| `models()`                  | Return models webpack context          | Model discovery phase    | No    |
+| `routes()`                  | Return `[name, context]` tuple         | Router setup phase       | No    |
+| `translations()`            | Provide webpack context for i18n files | Module loaded (optional) | No    |
 
 ### Frontend (Views)
 
 | Hook                 | Purpose                        | Called When          | Async |
 | -------------------- | ------------------------------ | -------------------- | ----- |
 | `providers(context)` | Bind client services           | Module loaded        | No    |
-| `routes()`            | Return `[name, context]` tuple | View discovery phase | No    |
+| `routes()`           | Return `[name, context]` tuple | View discovery phase | No    |
 
 ## API File-Based Routing
 
@@ -832,7 +832,7 @@ Routes are discovered from `views/` using special files:
 
 ## Best Practices
 
-1. **Naming:** Use `@rsk-module/{name}` for packages
+1. **Naming:** Use `@xnapify-module/{name}` for packages
 2. **Module Order:** Prefix with number if load order matters (e.g., `0_auth`, `1_users`)
 3. **Separation:** Keep API and Views completely separate
 4. **Permissions:** Always check permissions in route controllers
@@ -888,6 +888,6 @@ See `src/apps/users/` for a complete working example with:
 
 Each module can optionally include a `SPEC.md` file in its root directory to document specific features for AI assistance. To avoid duplication, start from the global template:
 
-- **Template:** [.agent/templates/SPEC.template.md](file:///Users/xuanguyen/Workspaces/react-starter-kit/.agent/templates/SPEC.template.md)
+- **Template:** [.agent/templates/SPEC.template.md](file:///Users/xuanguyen/Workspaces/xnapify/.agent/templates/SPEC.template.md)
 
 Copy this template to `src/apps/{module-name}/SPEC.md` when planning a new feature.

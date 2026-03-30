@@ -3,11 +3,11 @@ title: About Us
 component: ContentPage
 ---
 
-Welcome to React Starter Kit – a comprehensive boilerplate for building modern web applications
+Welcome to xnapify – a comprehensive boilerplate for building modern web applications
 with React. This project provides a solid foundation with server-side rendering (SSR), routing,
 and state management using Redux.
 
-React Starter Kit is designed to help you get started quickly with your project while following
+xnapify is designed to help you get started quickly with your project while following
 industry best practices. It integrates the latest technologies and patterns to ensure your
 application is performant, maintainable, and scalable.
 
@@ -33,9 +33,9 @@ unique application on this solid foundation.
 
 ## Getting Started
 
-To get started with React Starter Kit, simply clone the repository and run the development
+To get started with xnapify, simply clone the repository and run the development
 server. The project includes comprehensive documentation and examples to help you understand
 the codebase and start building your application.
 
-We hope React Starter Kit saves you time and effort in setting up your project, allowing you
+We hope xnapify saves you time and effort in setting up your project, allowing you
 to focus on building the features that make your application unique.

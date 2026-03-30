@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -20,7 +20,7 @@
 import fs from 'fs';
 import path from 'path';
 
-const EXTENSION_NAME = 'rsk-flow-splitter';
+const EXTENSION_NAME = 'xnapify-flow-splitter';
 const EXTENSION_LOG_PREFIX = `[${EXTENSION_NAME}]`;
 const SPLIT_CONFIG_FILE = '.config.flow-splitter.json';
 const DEFAULT_CONFIG = Object.freeze({
@@ -580,13 +580,13 @@ function handleFlowsStarted(RED) {
 export default function flowSplitter(RED) {
   RED.log.info(`${EXTENSION_LOG_PREFIX} Initializing...`);
 
-  if (RED.events.rskFlowSplitterHandler) {
+  if (RED.events.xnapifyFlowSplitterHandler) {
     RED.events.removeListener(
       'flows:started',
-      RED.events.rskFlowSplitterHandler,
+      RED.events.xnapifyFlowSplitterHandler,
     );
   }
 
-  RED.events.rskFlowSplitterHandler = handleFlowsStarted(RED);
-  RED.events.on('flows:started', RED.events.rskFlowSplitterHandler);
+  RED.events.xnapifyFlowSplitterHandler = handleFlowsStarted(RED);
+  RED.events.on('flows:started', RED.events.xnapifyFlowSplitterHandler);
 }

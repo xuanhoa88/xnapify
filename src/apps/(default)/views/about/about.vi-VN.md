@@ -3,11 +3,11 @@ title: Giới thiệu
 component: ContentPage
 ---
 
-Chào mừng bạn đến với React Starter Kit – bộ khung toàn diện để xây dựng các ứng dụng web
+Chào mừng bạn đến với xnapify – bộ khung toàn diện để xây dựng các ứng dụng web
 hiện đại với React. Dự án này cung cấp một nền tảng vững chắc với server-side rendering (SSR),
 routing và quản lý trạng thái sử dụng Redux.
 
-React Starter Kit được thiết kế để giúp bạn bắt đầu nhanh chóng với dự án của mình trong khi
+xnapify được thiết kế để giúp bạn bắt đầu nhanh chóng với dự án của mình trong khi
 tuân theo các phương pháp hay nhất trong ngành. Nó tích hợp các công nghệ và mẫu thiết kế
 mới nhất để đảm bảo ứng dụng của bạn có hiệu suất cao, dễ bảo trì và có khả năng mở rộng.
 
@@ -33,10 +33,10 @@ cụ thể của bạn. Bạn có thể thêm các tính năng mới, tích hợ
 
 ## Bắt đầu
 
-Để bắt đầu với React Starter Kit, chỉ cần clone repository và chạy development server.
+Để bắt đầu với xnapify, chỉ cần clone repository và chạy development server.
 Dự án bao gồm tài liệu toàn diện và các ví dụ để giúp bạn hiểu codebase và bắt đầu xây dựng
 ứng dụng của mình.
 
-Chúng tôi hy vọng React Starter Kit sẽ giúp bạn tiết kiệm thời gian và công sức trong việc
+Chúng tôi hy vọng xnapify sẽ giúp bạn tiết kiệm thời gian và công sức trong việc
 thiết lập dự án, cho phép bạn tập trung vào việc xây dựng các tính năng làm cho ứng dụng
 của bạn trở nên độc đáo.

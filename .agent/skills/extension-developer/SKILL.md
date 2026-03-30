@@ -5,7 +5,7 @@ description: Extend the extension and hook systems with slots, hooks, and API en
 
 # Extension Developer Skill
 
-This skill equips you to build entirely encapsulated extensions for the `rapid-rsk` application using the Extension Manager registry and event hooks.
+This skill equips you to build entirely encapsulated extensions for the `xnapify` application using the Extension Manager registry and event hooks.
 
 ## Core Concepts
 
@@ -39,10 +39,10 @@ Extensions follow a well-defined phase-sequential lifecycle. Each phase runs for
 
 ### Plugin-kind (no `routes()` hook)
 - Extends existing modules (e.g., profile enhancements)
-- Should declare `rsk.subscribe` in `package.json` with route paths (e.g., `["/profile"]`)
+- Subscribe to route paths via `defineExtension()` configuration (e.g., `["/profile"]`)
 - Injects UI via slots and hooks
 
-> **Note:** The `rsk` config in `package.json` is optional. If omitted, `defineExtension()` auto-defaults to `{}`. Module-kind extensions auto-subscribe to the `'*'` wildcard namespace. Plugin-kind extensions should still declare `rsk.subscribe` to target specific routes.
+> **Note:** Module-kind extensions auto-subscribe to the `'*'` wildcard namespace. Plugin-kind extensions should configure target routes via `defineExtension()`.
 
 ### Module-kind (with `routes()` hook)
 - Provides its own view routes

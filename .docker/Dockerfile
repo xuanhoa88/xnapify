@@ -15,9 +15,9 @@ RUN npm install
 COPY . .
 
 # Build application
-# RSK_HOST must be 0.0.0.0 inside Docker so the server binds to all interfaces
-# (Webpack DefinePlugin bakes RSK_* env vars into the bundle at build time)
-RUN RSK_HOST=0.0.0.0 npm run build
+# XNAPIFY_HOST must be 0.0.0.0 inside Docker so the server binds to all interfaces
+# (Webpack DefinePlugin bakes XNAPIFY_* env vars into the bundle at build time)
+RUN XNAPIFY_HOST=0.0.0.0 npm run build
 
 # =============================================================================
 # Production Stage

@@ -129,7 +129,7 @@ Filesystem-backed cache with persistent storage across restarts.
 
 | Option | Default | Description |
 |---|---|---|
-| `directory` | `~/.rsk/caches` | Cache directory path |
+| `directory` | `~/.xnapify/caches` | Cache directory path |
 | `maxSize` | `10000` | Maximum cache files |
 | `ttl` | `300000` (5 min) | Default TTL in milliseconds |
 

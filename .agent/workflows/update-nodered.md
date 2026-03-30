@@ -78,5 +78,5 @@ To roll back to a previous version of flows:
 
 ## Troubleshooting
 
-- **Flows not updating?** Check the console logs for `[rsk-flow-splitter]`. It informs you when it saves a migration or rebuilds flows.
+- **Flows not updating?** Check the console logs for `[xnapify-flow-splitter]`. It informs you when it saves a migration or rebuilds flows.
 - **Migration not saved?** The extension compares the current state with the latest migration. if they are identical, it skips saving to avoid noise.

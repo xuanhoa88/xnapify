@@ -86,7 +86,7 @@ web_modules/
 # Environment variables
 .env
 .env.*
-!.env.rsk
+!.env.xnapify
 
 # Performance logs
 .rts2_cache/

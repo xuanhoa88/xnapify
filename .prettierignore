@@ -33,7 +33,7 @@ pnpm-lock.yaml
 # Environment files
 .env
 .env.*
-!.env.rsk
+!.env.xnapify
 
 # Configuration files that shouldn't be formatted
 .gitignore

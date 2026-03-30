@@ -5,7 +5,7 @@ description: Build worker handlers and pools with Piscina for background process
 
 # Worker Engineer Skill
 
-This skill equips you to build non-blocking background tasks and worker pools for the `rapid-rsk` application using the Worker Engine (`@shared/api/engines/worker`).
+This skill equips you to build non-blocking background tasks and worker pools for the `xnapify` application using the Worker Engine (`@shared/api/engines/worker`).
 
 ## Core Concepts
 The Worker Engine manages concurrency, error handling, and thread assignment for heavy, asynchronous, or scheduled node operations.

@@ -77,7 +77,7 @@ Extends `BaseExtensionManager`. It operates strictly within the browser context 
 Operates in Node.js and relies on standard `fs` resolution and non-webpack `require()`.
 
 ### Execution Flow:
-1. Exposes logic to resolve the exact physical directory of a extension, supporting dev-mode overrides (checking `RSK_EXTENSION_LOCAL_PATH` first, then standard paths).
+1. Exposes logic to resolve the exact physical directory of a extension, supporting dev-mode overrides (checking `XNAPIFY_EXTENSION_LOCAL_PATH` first, then standard paths).
 2. Deletes the `require` cache entry for the targeted module ensuring fresh code is loaded on HMR.
 3. Loads the module cleanly utilizing `__non_webpack_require__`.
 4. Runs the full API lifecycle (`translations → providers → migrations → models → seeds → boot → routes`).

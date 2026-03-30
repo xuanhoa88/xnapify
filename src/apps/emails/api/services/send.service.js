@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -25,10 +25,10 @@
 /** Common variables injected into every email */
 export function baseVars() {
   return {
-    appName: process.env.RSK_APP_NAME,
-    loginUrl: `${process.env.RSK_APP_URL}/login`,
-    resetUrl: `${process.env.RSK_APP_URL}/auth/reset`,
-    supportUrl: `${process.env.RSK_APP_URL}/support`,
+    appName: process.env.XNAPIFY_APP_NAME,
+    loginUrl: `${process.env.XNAPIFY_APP_URL}/login`,
+    resetUrl: `${process.env.XNAPIFY_APP_URL}/auth/reset`,
+    supportUrl: `${process.env.XNAPIFY_APP_URL}/support`,
     now: new Date().toISOString(),
     year: new Date().getFullYear(),
   };

@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -9,9 +9,9 @@ import { WebhookValidationError } from './errors';
 import { WEBHOOK_EVENTS } from './utils/constants';
 
 // Private symbols
-const HOOK = Symbol('__rsk.webhookChannel__');
-const PROVIDERS = Symbol('__rsk.webhookProviders__');
-const CONTEXT = Symbol('__rsk.webhookContext__');
+const HOOK = Symbol('__xnapify.webhookChannel__');
+const PROVIDERS = Symbol('__xnapify.webhookProviders__');
+const CONTEXT = Symbol('__xnapify.webhookContext__');
 
 /**
  * Inbound Webhook Manager

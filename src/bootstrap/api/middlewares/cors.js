@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -27,8 +27,8 @@ export function createCorsMiddleware() {
     cors({
       origin(origin, callback) {
         const corsOrigin =
-          typeof process.env.RSK_CORS_ORIGIN === 'string'
-            ? process.env.RSK_CORS_ORIGIN.trim()
+          typeof process.env.XNAPIFY_CORS_ORIGIN === 'string'
+            ? process.env.XNAPIFY_CORS_ORIGIN.trim()
             : '';
 
         // Handle boolean string values

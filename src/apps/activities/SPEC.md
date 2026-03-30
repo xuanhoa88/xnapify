@@ -46,4 +46,4 @@ The Activities module serves as the central audit logging system. It asynchronou
 - **Rule:** Used throughout `ActivityList.js` and `_route.js` via the `i18n.t()` function to support multi-language dashboard deployments.
 
 ---
-*Note: This specification reflects the implementation within the rapid-rsk framework.*
+*Note: This specification reflects the implementation within the xnapify framework.*

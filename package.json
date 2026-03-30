@@ -1,5 +1,5 @@
 {
-  "name": "rapid-rsk",
+  "name": "xnapify",
   "version": "1.0.0",
   "description": "Modern, production-ready React application boilerplate with server-side rendering",
   "keywords": [
@@ -11,13 +11,13 @@
     "boilerplate",
     "starter-kit"
   ],
-  "homepage": "https://github.com/xuanhoa88/rapid-rsk#readme",
+  "homepage": "https://github.com/xuanhoa88/xnapify#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/xuanhoa88/rapid-rsk.git"
+    "url": "https://github.com/xuanhoa88/xnapify.git"
   },
   "bugs": {
-    "url": "https://github.com/xuanhoa88/rapid-rsk/issues"
+    "url": "https://github.com/xuanhoa88/xnapify/issues"
   },
   "license": "MIT",
   "author": "xuanguyen<xuan.0211@gmail.com>",

@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -646,7 +646,7 @@ function initialize() {
   const attemptInit = () => {
     // Get hotClient from window (hotClient.js loads first as entry point)
     // eslint-disable-next-line no-underscore-dangle
-    hotClient = window.__rsk_hmr_api__;
+    hotClient = window.__xnapify_hmr_api__;
 
     if (!hotClient) {
       retries++;

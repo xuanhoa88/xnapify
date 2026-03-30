@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * Webpack plugin that creates an async boundary for Module Federation.
  *

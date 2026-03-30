@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -21,7 +21,7 @@ export default function MarketplaceCard({
   isFeatured = false,
 }) {
   const { t } = useTranslation();
-  const isOfficial = listing.author === 'RSK Team';
+  const isOfficial = listing.author === 'xnapify Team';
 
   return (
     <div
@@ -56,7 +56,10 @@ export default function MarketplaceCard({
               {isOfficial && (
                 <span
                   className={s.officialBadge}
-                  title={t('admin:hub.officialBadge', 'Official RSK Extension')}
+                  title={t(
+                    'admin:hub.officialBadge',
+                    'Official xnapify Extension',
+                  )}
                 >
                   <Icon name='check' size={10} />
                 </span>

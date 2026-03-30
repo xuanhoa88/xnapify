@@ -1,5 +1,5 @@
 {
-  "name": "@rsk-module/files",
+  "name": "@xnapify-module/files",
   "version": "1.0.0",
   "browser": "views/index.js",
   "main": "api/index.js",

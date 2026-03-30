@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -12,8 +12,8 @@ export const ROUTE_SEPARATOR = '/';
 /** @type {string} Default module/config placeholder name */
 export const ROUTE_PATH_DEFAULT = '(default)';
 /** @type {symbol} Tracks whether a route's init() has been called */
-export const ROUTE_INIT_KEY = Symbol('__rsk.routeInitKey__');
+export const ROUTE_INIT_KEY = Symbol('__xnapify.routeInitKey__');
 /** @type {symbol} Tracks mounted config modules to prevent double-mounting */
-export const ROUTE_MOUNT_KEY = Symbol('__rsk.routeMountKey__');
+export const ROUTE_MOUNT_KEY = Symbol('__xnapify.routeMountKey__');
 /** @type {symbol} Tracks whether a route's translations have been registered */
-export const ROUTE_TRANSLATIONS_KEY = Symbol('__rsk.routeTranslationsKey__');
+export const ROUTE_TRANSLATIONS_KEY = Symbol('__xnapify.routeTranslationsKey__');

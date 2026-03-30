@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -324,7 +324,7 @@ export async function resetPasswordRequest(email, { models, hook } = {}) {
     used_at: null,
   });
 
-  const resetLink = `${process.env.RSK_APP_URL}/reset-password?token=${tokenData.token}`;
+  const resetLink = `${process.env.XNAPIFY_APP_URL}/reset-password?token=${tokenData.token}`;
 
   // Emit hook event if hook factory provided
   await hook('auth').emit('password_reset_requested', {

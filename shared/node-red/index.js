@@ -1,6 +1,6 @@
 /* eslint-disable no-underscore-dangle */
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -18,7 +18,7 @@ import {
 const migrationsContext = require.context('./migrations', true, /\.json$/i);
 
 // This prevents the instance from being lost during HMR
-const kNodeRedInstance = Symbol.for('__rsk.nodeREDInstance__');
+const kNodeRedInstance = Symbol.for('__xnapify.nodeREDInstance__');
 
 /**
  * Lifecycle states for the Node-RED manager
@@ -526,7 +526,7 @@ export class NodeRedManager {
 
         // Main app session truly gone (no cookies): strip Node-RED's
         // bearer token so its BearerStrategy fails, triggering the
-        // login dialog which redirects to /admin via RskAuthStrategy
+        // login dialog which redirects to /admin via XnapifyAuthStrategy
         delete req.headers.authorization;
         return next();
       });
@@ -736,7 +736,7 @@ export class NodeRedManager {
 
       // --- Patch getAllNodeConfigs across all 3 snapshot layers ---
       const origGetAll = registryMod.getAllNodeConfigs;
-      if (typeof origGetAll === 'function' && !origGetAll.__rsk_patched) {
+      if (typeof origGetAll === 'function' && !origGetAll.__xnapify_patched) {
         const safe = function safeGetAllNodeConfigs(lang) {
           try {
             return origGetAll.call(this, lang);
@@ -771,7 +771,7 @@ export class NodeRedManager {
             return result;
           }
         };
-        safe.__rsk_patched = true;
+        safe.__xnapify_patched = true;
         registryMod.getAllNodeConfigs = safe;
         if (registryIndex) registryIndex.getNodeConfigs = safe;
         if (runtimeNodes) runtimeNodes.getNodeConfigs = safe;
@@ -779,7 +779,7 @@ export class NodeRedManager {
 
       // --- Patch getNodeConfig across all 3 layers ---
       const origGetOne = registryMod.getNodeConfig;
-      if (typeof origGetOne === 'function' && !origGetOne.__rsk_patched) {
+      if (typeof origGetOne === 'function' && !origGetOne.__xnapify_patched) {
         const safe = function safeGetNodeConfig(id, lang) {
           if (!id) return null;
           try {
@@ -789,7 +789,7 @@ export class NodeRedManager {
             return null;
           }
         };
-        safe.__rsk_patched = true;
+        safe.__xnapify_patched = true;
         registryMod.getNodeConfig = safe;
         if (registryIndex) registryIndex.getNodeConfig = safe;
         if (runtimeNodes) runtimeNodes.getNodeConfig = safe;

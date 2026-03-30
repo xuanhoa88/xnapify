@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -15,7 +15,7 @@ import { createFactory, registerAdapter, withNamespace } from './factory';
  * - **database**: Native FTS using SQLite FTS5, PostgreSQL tsvector, or MySQL FULLTEXT
  *
  * Adapters can be dynamically registered via `registerAdapter()`.
- * Set `RSK_SEARCH_TYPE` env var to change the default adapter.
+ * Set `XNAPIFY_SEARCH_TYPE` env var to change the default adapter.
  *
  * @example
  * // Use default singleton instance directly

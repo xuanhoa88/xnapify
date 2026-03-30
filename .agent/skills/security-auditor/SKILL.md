@@ -64,15 +64,15 @@ export const post = [requirePermission('resource:create'), controller.create];
 
 ### 3. Environment Variables
 
-- All custom env vars **must** use the `RSK_` prefix
-- Secrets must never be hardcoded — always use `process.env.RSK_*`
-- New env vars must be added to `.env.rsk` template with a comment
+- All custom env vars **must** use the `XNAPIFY_` prefix
+- Secrets must never be hardcoded — always use `process.env.XNAPIFY_*`
+- New env vars must be added to `.env.xnapify` template with a comment
 
 **Check for:**
 
 - Hardcoded secrets, API keys, or tokens in source code
-- `process.env.SOMETHING` without the `RSK_` prefix (except `NODE_ENV`)
-- Missing entries in `.env.rsk`
+- `process.env.SOMETHING` without the `XNAPIFY_` prefix (except `NODE_ENV`)
+- Missing entries in `.env.xnapify`
 
 ### 4. SQL Injection Prevention
 

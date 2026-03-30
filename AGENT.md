@@ -1,13 +1,13 @@
-# React Starter Kit - AI Assistant Guide
+# xnapify - AI Assistant Guide
 
 ## Project Overview
 
-**Rapid RSK** is a production-ready, full-stack React application with server-side rendering (SSR), built on React 18, Express 4, and Webpack 5. This is a **single-repository** application with comprehensive tooling, RBAC, WebSocket support, and Node-RED integration for modern web development.
+**xnapify** is a production-ready, full-stack React application with server-side rendering (SSR), built on React 18, Express 4, and Webpack 5. This is a **single-repository** application with comprehensive tooling, RBAC, WebSocket support, and Node-RED integration for modern web development.
 
 ## Project Structure
 
 ```
-react-starter-kit/
+xnapify/
 ├── src/                          # Application source code
 │   ├── bootstrap/                # Application bootstrap & configuration
 │   ├── apps/                     # Business modules (auto-discovered)
@@ -55,7 +55,7 @@ react-starter-kit/
 │   ├── skills/                   # AI persona skills (12)
 │   └── templates/                # SPEC.md template
 ├── database.sqlite               # Local SQLite database (dev)
-└── .env.rsk                      # Environment variable template
+└── .env.xnapify                      # Environment variable template
 ```
 
 ## Tech Stack
@@ -276,9 +276,14 @@ const workerPool = createWorkerPool('MyDomain', workersContext, {
 
 // 3. Dispatch jobs
 try {
-  const result = await workerPool.sendRequest('task-name', 'MY_TASK_TYPE', payload, {
-    throwOnError: true, // Native robust error propagation
-  });
+  const result = await workerPool.sendRequest(
+    'task-name',
+    'MY_TASK_TYPE',
+    payload,
+    {
+      throwOnError: true, // Native robust error propagation
+    },
+  );
   console.log('Worker result:', result);
 } catch (error) {
   console.error('Worker failed natively:', error);
@@ -321,24 +326,28 @@ Channel-based async event system (`shared/api/engines/hook`) for decoupled inter
 
 ```javascript
 // In init(container) or controllers:
-const hook = container.resolve('hook');  // or req.app.get('container').resolve('hook')
+const hook = container.resolve('hook'); // or req.app.get('container').resolve('hook')
 
 // Create/get a channel
 const userHooks = hook('users');
 
 // Register handlers with optional priority (lower = first)
-userHooks.on('create', async (user) => {
-  user.createdAt = new Date();
-}, 10);
+userHooks.on(
+  'create',
+  async user => {
+    user.createdAt = new Date();
+  },
+  10,
+);
 
 // Emit events — handlers run sequentially, can mutate data
 await userHooks.emit('create', userData);
 
 // Management
-hook.has('users');          // Check if channel exists
-hook.getChannelNames();     // List all channels
-hook.remove('users');       // Remove a channel
-hook.cleanup();             // Clear all
+hook.has('users'); // Check if channel exists
+hook.getChannelNames(); // List all channels
+hook.remove('users'); // Remove a channel
+hook.cleanup(); // Clear all
 ```
 
 ### 12. Dependency Injection Container
@@ -361,10 +370,10 @@ container.instance('config', { debug: true });
 const pool = container.resolve('db:pool');
 
 // Inspection & cleanup
-container.has('key');              // Check existence
-container.getBindingNames();       // List all bindings
-container.reset('key');            // Remove one
-container.cleanup();               // Remove all
+container.has('key'); // Check existence
+container.getBindingNames(); // List all bindings
+container.reset('key'); // Remove one
+container.cleanup(); // Remove all
 ```
 
 **Convention:** Use `module:scope` naming (e.g., `users:controllers`, `billing:services`).
@@ -375,21 +384,25 @@ API routes are auto-resolved from the filesystem (`shared/api/router`). Director
 
 **Path Mapping Rules:**
 
-| File Path | URL |
-|---|---|
-| `routes/(default)/_route.js` | `/api/{module}` |
+| File Path                            | URL                           |
+| ------------------------------------ | ----------------------------- |
+| `routes/(default)/_route.js`         | `/api/{module}`               |
 | `routes/(admin)/(default)/_route.js` | `/api/{module}` (admin group) |
-| `routes/(admin)/[id]/_route.js` | `/api/{module}/:id` |
-| `routes/status/_route.js` | `/api/{module}/status` |
+| `routes/(admin)/[id]/_route.js`      | `/api/{module}/:id`           |
+| `routes/status/_route.js`            | `/api/{module}/status`        |
 
 **Method Exports:**
 
 ```javascript
 // _route.js — export HTTP verbs as named exports
-export function get(req, res) { /* GET */ }
-export function post(req, res) { /* POST */ }
-export const put = [middleware, handler];  // Array = middleware chain
-export const del = [middleware, handler];  // del = DELETE
+export function get(req, res) {
+  /* GET */
+}
+export function post(req, res) {
+  /* POST */
+}
+export const put = [middleware, handler]; // Array = middleware chain
+export const del = [middleware, handler]; // del = DELETE
 export { del as delete };
 ```
 
@@ -404,7 +417,7 @@ export default [rateLimiter, requireAuth];
 
 ```javascript
 // In _route.js — bypass inherited middlewares
-export const middleware = false;  // No parent middlewares
+export const middleware = false; // No parent middlewares
 ```
 
 ## Code Conventions
@@ -556,13 +569,13 @@ export default PostsList;
 
 **Route Lifecycle Hooks:**
 
-| Hook              | Purpose                      | Called When          |
-| ----------------- | ---------------------------- | -------------------- |
-| `register`        | Register menus, global state | Route discovered     |
-| `unregister`      | Cleanup menus, global state  | Route unloaded       |
-| `mount`           | Dispatch breadcrumbs         | Route mounted        |
-| `middleware`      | Permission checks, redirects | Before rendering     |
-| `getInitialProps` | Data fetching, page metadata | Before rendering     |
+| Hook              | Purpose                      | Called When      |
+| ----------------- | ---------------------------- | ---------------- |
+| `register`        | Register menus, global state | Route discovered |
+| `unregister`      | Cleanup menus, global state  | Route unloaded   |
+| `mount`           | Dispatch breadcrumbs         | Route mounted    |
+| `middleware`      | Permission checks, redirects | Before rendering |
+| `getInitialProps` | Data fetching, page metadata | Before rendering |
 
 > **Note:** Redux reducer injection (`store.injectReducer`) should be handled in `_route.js` `init({ store })` hook to ensure lazy loading, rather than in `views/index.js` `providers()` hook.
 
@@ -653,7 +666,7 @@ function LoginForm() {
 5. **Async/Await:** Prefer async/await over promise chains
 6. **Error Handling:** Use try-catch with meaningful error messages
 7. **Logging:** Use `console.log`, `console.error`, `console.warn` (environment-aware)
-8. **Configuration:** Use environment variables with `RSK_` prefix
+8. **Configuration:** Use environment variables with `XNAPIFY_` prefix
 9. **Documentation:** Add JSDoc comments for complex functions
 10. **Testing:** Write tests for critical functionality
 11. **File Naming:** Use PascalCase for components, camelCase for utilities, kebab-case for CSS modules
@@ -673,27 +686,27 @@ function LoginForm() {
 
 ## Environment Variables
 
-All environment variables use the `RSK_` prefix for consistency. Key variables (see `.env.rsk`):
+All environment variables use the `XNAPIFY_` prefix for consistency. Key variables (see `.env.xnapify`):
 
 ```bash
 # Server Configuration
-RSK_PORT=1337
-RSK_HOST=127.0.0.1
+XNAPIFY_PORT=1337
+XNAPIFY_HOST=127.0.0.1
 
 # Application Metadata
-RSK_APP_NAME="React Starter Kit"
-RSK_APP_DESC="Boilerplate for React.js web applications"
+XNAPIFY_APP_NAME="xnapify"
+XNAPIFY_APP_DESC="Boilerplate for React.js web applications"
 
 # Database
-RSK_DB_URL=sqlite:database.sqlite
+XNAPIFY_DB_URL=sqlite:database.sqlite
 # PostgreSQL: postgresql://user:password@localhost:5432/dbname
 
 # Authentication
-RSK_JWT_SECRET=                # Auto-generated on first run
-RSK_JWT_EXPIRY=7d
+XNAPIFY_JWT_SECRET=                # Auto-generated on first run
+XNAPIFY_JWT_EXPIRY=7d
 
 # Node-RED (Optional)
-RSK_NODERED_URL=http://localhost:1880
+XNAPIFY_NODERED_URL=http://localhost:1880
 
 # Build Configuration (Optional)
 WEBPACK_ANALYZE=false
@@ -726,19 +739,19 @@ npm install --production
 
 # Set environment variables
 export NODE_ENV=production
-export RSK_JWT_SECRET=$(openssl rand -base64 32)
-export RSK_DB_URL=postgresql://user:pass@localhost:5432/dbname
+export XNAPIFY_JWT_SECRET=$(openssl rand -base64 32)
+export XNAPIFY_DB_URL=postgresql://user:pass@localhost:5432/dbname
 
 # Start server
 npm start
 
 # Or use Docker
-docker build -t rapid-rsk .
+docker build -t xnapify .
 docker run -p 1337:1337 \
   -e NODE_ENV=production \
-  -e RSK_JWT_SECRET=your-secret \
-  -e RSK_DB_URL=postgresql://user:pass@host:5432/db \
-  rapid-rsk
+  -e XNAPIFY_JWT_SECRET=your-secret \
+  -e XNAPIFY_DB_URL=postgresql://user:pass@host:5432/db \
+  xnapify
 ```
 
 ## Key Features
@@ -884,7 +897,7 @@ polluting the regular test suite.
 
 1. **No i18n generation:** The i18n extraction task was removed. i18next is still used for runtime translations.
 2. **Auto-discovery:** Both API modules and pages are auto-discovered. Follow naming conventions.
-3. **RSK\_ prefix:** All custom environment variables use the `RSK_` prefix.
+3. **XNAPIFY\_ prefix:** All custom environment variables use the `XNAPIFY_` prefix.
 4. **JWT auto-generation:** JWT secret is auto-generated during build if not set.
 5. **Module naming:** Prefix module names with alphanumeric characters and underscores to control load order.
 6. **CSS Modules:** Use `.module.css` extension for CSS Modules, or plain `.css` for global styles.
@@ -898,12 +911,13 @@ polluting the regular test suite.
 - **.agent/workflows/** — 23 step-by-step development guides
 - **.agent/skills/** — 12 specialized AI persona skills
 - **.agent/templates/SPEC.template.md** — Feature specification template
-- **.env.rsk** — Environment variable documentation
+- **.env.xnapify** — Environment variable documentation
 - **CONTRIBUTING.md** — Contribution guidelines and commit conventions
 
 ## Support
 
 For issues and questions, refer to:
 
-- GitHub Issues: https://github.com/xuanhoa88/rapid-rsk/issues
-- Repository: https://github.com/xuanhoa88/rapid-rsk
+- GitHub Issues: https://github.com/xuanhoa88/xnapify/issues
+- Repository: https://github.com/xuanhoa88/xnapify
+```

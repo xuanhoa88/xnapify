@@ -141,7 +141,7 @@ const AUTO_WORKER_THRESHOLDS = {
 ### `MIDDLEWARES` Constants
 
 ```javascript
-{ UPLOAD: Symbol('__rsk.fsUpload__') }
+{ UPLOAD: Symbol('__xnapify.fsUpload__') }
 ```
 
 Results attached to `req[MIDDLEWARES.UPLOAD]`.
@@ -174,7 +174,7 @@ All providers implement: `store`, `retrieve`, `delete`, `exists`, `getMetadata`,
 
 | Config | Default | Description |
 |---|---|---|
-| `basePath` | `~/.rsk/uploads` | Base directory |
+| `basePath` | `~/.xnapify/uploads` | Base directory |
 | `createDirectories` | `true` | Auto-create dirs |
 | `maxFileSize` | `10MB` | Max file size |
 | `allowedExtensions` | `null` (all) | Extension whitelist |
@@ -260,10 +260,10 @@ Standardized result object: `{ success, data, message, timestamp, error? }`. Inc
 
 | Env Var | Default | Description |
 |---|---|---|
-| `RSK_UPLOAD_FILE_SIZE` | `50MB` | Max upload file size |
-| `RSK_UPLOAD_FILE_LENGTH` | `255` | Max filename length |
-| `RSK_UPLOAD_DIR` | `~/.rsk/uploads` | Upload directory |
-| `RSK_UPLOAD_FILE_EXT` | `null` (all) | Comma-separated allowed extensions |
+| `XNAPIFY_UPLOAD_FILE_SIZE` | `50MB` | Max upload file size |
+| `XNAPIFY_UPLOAD_FILE_LENGTH` | `255` | Max filename length |
+| `XNAPIFY_UPLOAD_DIR` | `~/.xnapify/uploads` | Upload directory |
+| `XNAPIFY_UPLOAD_FILE_EXT` | `null` (all) | Comma-separated allowed extensions |
 
 ### `ERROR_CODES`
 

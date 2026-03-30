@@ -1,6 +1,6 @@
 # Shared Utils
 
-A collection of small, universal utility functions used across the React Starter Kit.
+A collection of small, universal utility functions used across the xnapify.
 
 ## Available Utilities
 

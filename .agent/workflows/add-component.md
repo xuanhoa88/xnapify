@@ -2,7 +2,7 @@
 description: Create a new functional React component with CSS Modules and PropTypes
 ---
 
-When the user asks to create a new React component or UI element, enforce the following patterns based on the Rapid RSK architecture.
+When the user asks to create a new React component or UI element, enforce the following patterns based on the xnapify architecture.
 
 ### Component Structure
 
@@ -32,9 +32,7 @@ function MyComponent({ title, children, className }) {
   return (
     <div className={clsx(s.container, className)}>
       <h2 className={s.title}>{title}</h2>
-      <div className={s.content}>
-        {children}
-      </div>
+      <div className={s.content}>{children}</div>
     </div>
   );
 }
@@ -69,7 +67,11 @@ const schema = z.object({
 });
 
 // Inside component:
-const { register, handleSubmit, formState: { errors } } = useForm({
+const {
+  register,
+  handleSubmit,
+  formState: { errors },
+} = useForm({
   resolver: zodResolver(schema),
 });
 ```

@@ -50,7 +50,7 @@ describe('shared/api/autoloader', () => {
     });
 
     it('should respect custom core modules from env', () => {
-      process.env.RSK_MODULE_DEFAULTS = 'custom';
+      process.env.XNAPIFY_MODULE_DEFAULTS = 'custom';
       const { validateCoreModules } = require('./autoloader');
 
       const paths = ['other'].map(p => `./${p}/api/index.js`);
@@ -96,7 +96,7 @@ describe('shared/api/autoloader', () => {
     });
 
     it('should sort based on custom core modules', () => {
-      process.env.RSK_MODULE_DEFAULTS = 'z_module';
+      process.env.XNAPIFY_MODULE_DEFAULTS = 'z_module';
       const { sortModules } = require('./autoloader');
       const paths = ['users', 'z_module', 'a_module'].map(
         p => `./${p}/api/index.js`,

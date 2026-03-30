@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -57,22 +57,22 @@ const SERVER_TIMEOUTS = Object.freeze({
 const SERVER_CONFIG = Object.freeze({
   cwd: __dirname,
   nodeEnv: process.env.NODE_ENV || 'development',
-  port: validatePort(process.env.RSK_PORT, 1337),
-  host: process.env.RSK_HOST || '127.0.0.1',
+  port: validatePort(process.env.XNAPIFY_PORT, 1337),
+  host: process.env.XNAPIFY_HOST || '127.0.0.1',
 
-  enableCompression: process.env.RSK_COMPRESSION !== 'false',
+  enableCompression: process.env.XNAPIFY_COMPRESSION !== 'false',
   compressionLevel: parseInt(
-    process.env.RSK_COMPRESSION_LEVEL || (__DEV__ ? 1 : 6),
+    process.env.XNAPIFY_COMPRESSION_LEVEL || (__DEV__ ? 1 : 6),
     10,
   ),
 
-  enableSSRCache: process.env.RSK_SSR_CACHE === 'true',
-  ssrCacheTTL: parseInt(process.env.RSK_SSR_CACHE_TTL, 10) || 60_000,
+  enableSSRCache: process.env.XNAPIFY_SSR_CACHE === 'true',
+  ssrCacheTTL: parseInt(process.env.XNAPIFY_SSR_CACHE_TTL, 10) || 60_000,
 
-  localeCacheTTL: parseInt(process.env.RSK_I18N_CACHE_TTL, 10) || 60_000,
-  localeCacheMax: parseInt(process.env.RSK_I18N_CACHE_MAX, 10) || 500,
+  localeCacheTTL: parseInt(process.env.XNAPIFY_I18N_CACHE_TTL, 10) || 60_000,
+  localeCacheMax: parseInt(process.env.XNAPIFY_I18N_CACHE_MAX, 10) || 500,
 
-  maxCookieSize: parseInt(process.env.RSK_COOKIE_MAX_SIZE, 10) || 4096,
+  maxCookieSize: parseInt(process.env.XNAPIFY_COOKIE_MAX_SIZE, 10) || 4096,
 });
 
 // Static security headers (CSP is generated per-request with a nonce)
@@ -83,9 +83,9 @@ const STATIC_SECURITY_HEADERS = Object.entries({
 });
 
 const APP_METADATA = Object.freeze({
-  title: process.env.RSK_APP_NAME || 'React Starter Kit',
+  title: process.env.XNAPIFY_APP_NAME || 'xnapify',
   description:
-    process.env.RSK_APP_DESC || 'Boilerplate for React.js web applications',
+    process.env.XNAPIFY_APP_DESC || 'Boilerplate for React.js web applications',
 });
 
 // ---------------------------------------------------------------------------
@@ -149,7 +149,7 @@ async function extractPageMetadata(page, req) {
   const metadata = {
     title: (page && page.title) || APP_METADATA.title,
     description: (page && page.description) || APP_METADATA.description,
-    image: (page && page.image) || process.env.RSK_APP_IMAGE,
+    image: (page && page.image) || process.env.XNAPIFY_APP_IMAGE,
     type: (page && page.type) || 'website',
   };
 
@@ -443,7 +443,7 @@ async function renderToHtml({ context, component, metadata = {}, nonce }) {
     scriptLinks: [...scriptLinks, ...safeExtUrls('scriptUrls')],
     appState: {
       redux: context.store.getState(),
-      appUrl: process.env.RSK_APP_URL,
+      appUrl: process.env.XNAPIFY_APP_URL,
     },
     nonce,
   };
@@ -533,7 +533,7 @@ function makeSsrMiddleware(baseUrl) {
           baseUrl,
           headers: {
             Cookie: authHeader,
-            'User-Agent': req.headers['user-agent'] || 'RSK-SSR',
+            'User-Agent': req.headers['user-agent'] || 'xnapify',
           },
         },
       });
@@ -826,16 +826,16 @@ export async function bootstrapApp(app, server, options = {}) {
   const resolvedHost = await sanitizeHost(host);
   const baseUrl = `http://${resolvedHost}:${port}`;
 
-  // Ensure an absolute RSK_APP_URL exists (used by OAuth callbacks, Passport, etc.)
+  // Ensure an absolute XNAPIFY_APP_URL exists (used by OAuth callbacks, Passport, etc.)
   // If undefined or invalid, default to the local port/host used by the server
   // Access via bracket notation to prevent Webpack DefinePlugin from replacing it with a build-time string
-  if (!/^(http|https):\/\/.+$/.test(process.env.RSK_APP_URL || '')) {
-    set(process.env, 'RSK_APP_URL', baseUrl);
+  if (!/^(http|https):\/\/.+$/.test(process.env.XNAPIFY_APP_URL || '')) {
+    set(process.env, 'XNAPIFY_APP_URL', baseUrl);
   }
 
   // Set app name and description
-  set(process.env, 'RSK_APP_NAME', APP_METADATA.title);
-  set(process.env, 'RSK_APP_DESC', APP_METADATA.description);
+  set(process.env, 'XNAPIFY_APP_NAME', APP_METADATA.title);
+  set(process.env, 'XNAPIFY_APP_DESC', APP_METADATA.description);
 
   // Core DI container — the only provider stored on Express settings
   const apiContainer = new Container();
@@ -855,7 +855,7 @@ export async function bootstrapApp(app, server, options = {}) {
   extensionManager.fetch = createFetch(nodeFetch, {
     defaults: {
       baseUrl,
-      headers: { 'User-Agent': 'RSK-Server' },
+      headers: { 'User-Agent': 'xnapify' },
     },
   });
 
@@ -1003,7 +1003,7 @@ export async function bootstrapApp(app, server, options = {}) {
       fetch: () =>
         createFetch(nodeFetch, {
           defaults: {
-            headers: { 'User-Agent': 'RSK-NodeRED' },
+            headers: { 'User-Agent': 'xnapify-NodeRED' },
           },
         }),
     },

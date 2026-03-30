@@ -23,7 +23,7 @@ shared/api/engines/db/
 ## 2. Connection (`connection.js`)
 
 - `createConnection(url?, options?)` — creates Sequelize instance, deep-merges `DEFAULT_SEQUELIZE_OPTIONS`, removes timezone for SQLite, attaches migration convenience methods.
-- `connection` — default singleton using `RSK_DB_URL` env var.
+- `connection` — default singleton using `XNAPIFY_DB_URL` env var.
 - `attachMigrationMethods(sequelize)` — adds `runMigrations`, `runSeeds`, `revertMigrations`, `undoSeeds`, `getMigrationStatus`, `getSeedStatus` directly to the Sequelize instance.
 
 ## 3. Migrator (`migrator.js`)
