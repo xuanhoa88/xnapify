@@ -225,7 +225,7 @@ No dedicated error classes file. Errors thrown inline:
 
 ## 8. Integration Points
 
-- **Module `init(container)`**: Access via `container.resolve('search')`. Use `withNamespace()` to avoid collisions.
+- **Module `boot({ container })`**: Access via `container.resolve('search')`. Use `withNamespace()` to avoid collisions.
 - **Hook engine**: The search module listens for user/group hooks to update indexes.
 - **`XNAPIFY_SEARCH_TYPE`**: Environment variable to switch default adapter (`'memory'` or `'database'`).
 - **DB engine**: The database adapter requires `connection` and `DataTypes` from the DB engine. The factory auto-injects these during bootstrap.

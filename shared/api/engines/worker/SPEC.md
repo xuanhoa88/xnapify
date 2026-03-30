@@ -210,7 +210,7 @@ await workerPool.sendRequest('flexsearch', 'INDEX_USER',
 
 ## 9. Integration Points
 
-- **Module `init(container)`**: Access via `container.resolve('worker')` to get the factory, then create module-specific pools.
+- **Module `boot({ container })`**: Access via `container.resolve('worker')` to get the factory, then create module-specific pools.
 - **Schedule Engine**: Cron handlers can dispatch heavy work to worker pools.
 - **Extension lifecycle**: Extensions can import `createWorkerPool` directly for isolated pools.
 - **Hybrid pattern**: Queue handlers (main thread, `app` access) call `workerPool.sendRequest()` for CPU-bound subtasks.

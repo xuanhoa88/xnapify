@@ -66,7 +66,7 @@ Stateful operations that need `app` access (models, hooks, extension manager, We
 - **`delete`**: Unloads extension, removes files (with path traversal guard), destroys DB record.
 - **`toggle`**: Verifies checksum (via worker pool) before activation, installs/uninstalls deps, manages extension load state.
 
-Handlers are registered in the `init(container)` lifecycle hook and capture `app` via closure.
+Handlers are registered in the `boot({ container })` lifecycle hook and capture `app` via closure.
 
 ---
 

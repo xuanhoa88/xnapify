@@ -265,3 +265,57 @@ export async function getInitialProps({ i18n }) {
 
 export default Dashboard;
 ```
+
+## Standalone Components
+
+When creating a reusable component (not a page route), use this pattern:
+
+```
+@apps/{module-name}/views/{view-path}/
+├── {ComponentName}/
+│   ├── index.js              # Re-export
+│   ├── {ComponentName}.js    # Component
+│   └── {ComponentName}.css   # CSS Modules styles
+```
+
+```javascript
+// {ComponentName}.js
+import React from 'react';
+import PropTypes from 'prop-types';
+import s from './{ComponentName}.css';
+
+function {ComponentName}({ title, children }) {
+  return (
+    <div className={s.root}>
+      <h2 className={s.title}>{title}</h2>
+      {children}
+    </div>
+  );
+}
+
+{ComponentName}.propTypes = {
+  title: PropTypes.string.isRequired,
+  children: PropTypes.node,
+};
+
+export default {ComponentName};
+```
+
+### PropTypes Quick Reference
+
+| Type | Usage |
+|------|-------|
+| `PropTypes.string` | String value |
+| `PropTypes.number` | Number value |
+| `PropTypes.bool` | Boolean value |
+| `PropTypes.func` | Function/callback |
+| `PropTypes.node` | Renderable content |
+| `PropTypes.element` | React element |
+| `PropTypes.object` | Object (prefer `shape`) |
+| `PropTypes.array` | Array (prefer `arrayOf`) |
+| `PropTypes.shape({...})` | Object with specific shape |
+| `PropTypes.arrayOf(Type)` | Array of specific type |
+| `PropTypes.oneOf([...])` | Enum values |
+| `PropTypes.oneOfType([...])` | Union types |
+
+Append `.isRequired` to make any prop mandatory.

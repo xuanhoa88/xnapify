@@ -50,9 +50,9 @@ Run the complete test suite to catch cross-module regressions:
 npm test
 ```
 
-All 912+ tests must pass. If any fail, investigate whether your change caused the regression.
+All tests must pass. If any fail, investigate whether your change caused the regression.
 
-## 6. Run Linting
+## 6. Run Linting & Formatting
 
 // turbo
 Verify code style compliance:
@@ -67,14 +67,36 @@ If there are linting errors, fix them:
 npm run fix
 ```
 
-## 7. Update or Add Tests
+Check code formatting:
+
+```bash
+npm run format:check
+```
+
+Fix formatting if needed:
+
+```bash
+npm run format
+```
+
+## 7. Run Benchmarks (If Performance-Sensitive)
+
+If your changes affect performance-sensitive code paths:
+
+```bash
+npm run benchmark
+```
+
+This executes all `*.benchmark.js` files under `JEST_BENCHMARK=true`. Place benchmarks alongside the optimized file or in `src/benchmarks/`.
+
+## 8. Update or Add Tests
 
 If your changes modified:
 - **Public API** (function signatures, return types, new parameters) → Update existing tests
 - **New behavior** (new code paths, edge cases) → Add new test cases
 - **Bug fixes** → Add a regression test that would have caught the bug
 
-Follow the testing patterns in `.agent/workflows/add-tests.md`.
+Follow the testing patterns in `.agent/workflows/add-test.md`.
 
 ## Summary Checklist
 
@@ -84,4 +106,20 @@ Before reporting the task as complete, confirm:
 - [ ] Targeted tests pass after changes
 - [ ] Full test suite passes (`npm test`)
 - [ ] Linting passes (`npm run lint`)
+- [ ] Formatting passes (`npm run format:check`)
+- [ ] Benchmarks pass (if applicable)
 - [ ] Tests updated/added if behavior changed
+
+## Quick Command Reference
+
+| Command | Purpose |
+|---------|---------|
+| `npm test` | Run all unit and integration tests |
+| `npm run test -- <pattern>` | Run tests matching a pattern |
+| `npm run lint` | Check JS and CSS lint rules |
+| `npm run lint:js` | Check JS only |
+| `npm run lint:css` | Check CSS only |
+| `npm run fix` | Auto-fix lint issues |
+| `npm run format` | Format code with Prettier |
+| `npm run format:check` | Check formatting without modifying |
+| `npm run benchmark` | Run performance benchmarks |

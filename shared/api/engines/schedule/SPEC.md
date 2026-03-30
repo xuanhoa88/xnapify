@@ -201,7 +201,7 @@ Tests instantiate `ScheduleManager` directly with `{ autoStart: false }` to avoi
 
 ## 7. Integration Points
 
-- **Module `init(container)`**: Primary registration point. Access via `container.resolve('schedule')`.
+- **Module `boot({ container })`**: Primary registration point. Access via `container.resolve('schedule')`.
 - **Worker Engine**: Cron handlers can dispatch heavy work to worker pools (keep handlers lightweight, offload to `workerPool.sendRequest()`).
 - **Extension lifecycle**: Extensions can create isolated instances via `createFactory()` and manage their own teardown.
 

@@ -4,15 +4,24 @@ description: Add an extension with slots, hooks, and optional API endpoints
 
 Add a new extension with API endpoints, UI components, validation, and database support.
 
+Extensions come in two types:
+- **Plugin-type** — Extends existing modules via slots, hooks, and IPC (e.g., `profile-plugin`)
+- **Module-type** — Provides own routes, views, and controllers like an `@apps/` module but installable/uninstallable (e.g., `posts-module`)
+
 ## When to Use Extensions
 
-Use extensions for:
+Use **plugin-type** extensions for:
 
-- Optional features that can be toggled on/off
 - Features that extend existing modules (e.g., profile enhancements)
-- Reusable functionality across multiple modules
-- Third-party integrations
+- Injecting UI fields, validators, or middleware into existing pages
+- Third-party integrations via IPC endpoints
 - A/B testing and feature flags
+
+Use **module-type** extensions for:
+
+- Self-contained features with their own routes, controllers, and views
+- Optional modules that can be installed/uninstalled at runtime
+- Features that behave like `@apps/` modules but need to be togglable
 
 ## Extension Structure
 
@@ -920,6 +929,148 @@ registry.registerHook(
 8. **Migrations**: Use versioned filenames (1.initial.js, 2.add_field.js) and call `revertMigrations()` in destroy
 9. **Testing**: Create test files (ComponentName.test.js) for critical extension parts
 10. **Register with Extension ID**: Include `__EXTENSION_NAME__` when registering hooks for auto-cleanup on unregister
+
+---
+
+# Module-Type Extensions
+
+Module-type extensions provide their own routes and views — just like `@apps/` modules — but are installable/uninstallable at runtime.
+
+## Module-Type Structure
+
+```
+src/extensions/{extension-name}/
+├── package.json
+├── api/
+│   ├── index.js                # API entry with routes() hook
+│   ├── controllers/
+│   │   └── {entity}.controller.js
+│   ├── models/
+│   │   └── {Model}.js
+│   ├── routes/
+│   │   ├── (admin)/
+│   │   │   └── (default)/
+│   │   │       └── _route.js   # Admin routes
+│   │   └── (default)/
+│   │       └── _route.js       # Public routes
+│   ├── services/
+│   │   └── {entity}.service.js
+│   └── database/
+│       ├── migrations/
+│       └── seeds/
+├── views/
+│   ├── index.js                # View entry with routes() hook
+│   ├── {ViewName}/
+│   │   ├── _route.js
+│   │   ├── {ViewName}.js
+│   │   └── {ViewName}.css
+│   └── (admin)/
+│       └── {AdminView}/
+│           ├── _route.js
+│           └── {AdminView}.js
+├── validator/
+│   └── index.js
+└── translations/
+    └── en-US.json
+```
+
+## API Entry (Module-Type)
+
+```javascript
+// src/extensions/{extension-name}/api/index.js
+const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
+const migrationsContext = require.context('./database/migrations', false, /\.[cm]?[jt]s$/i);
+const seedsContext = require.context('./database/seeds', false, /\.[cm]?[jt]s$/i);
+const modelsContext = require.context('./models', false, /\.[cm]?[jt]s$/i);
+const translationsContext = require.context('../translations', false, /\.json$/i);
+
+export default {
+  // Declarative hooks — auto-processed by ServerExtensionManager
+  models: () => modelsContext,
+  migrations: () => migrationsContext,
+  seeds: () => seedsContext,
+  translations: () => translationsContext,
+
+  // Imperative lifecycle hooks
+  async providers({ container }) {},
+  async boot({ container }) {},
+  async shutdown({ container }) {},
+  async uninstall() {},
+
+  /**
+   * Module-type hook: provides API routes for dynamic injection.
+   * Returns [moduleName, context] — the framework auto-builds the route adapter.
+   */
+  routes() {
+    return ['{module-name}', routesContext];
+  },
+};
+```
+
+## Views Entry (Module-Type)
+
+```javascript
+// src/extensions/{extension-name}/views/index.js
+const viewsContext = require.context('.', true, /(?:\/_route|\/_layout)\.[cm]?[jt]sx?$/i);
+const translationsContext = require.context('../translations', false, /\.json$/i);
+
+export default {
+  providers({ container }) {},
+
+  translations() {
+    return translationsContext;
+  },
+
+  /**
+   * Module-type hook: provides view routes for dynamic injection.
+   * Returns [moduleName, context] — the framework auto-builds the route adapter.
+   */
+  routes() {
+    return ['{module-name}', viewsContext];
+  },
+};
+```
+
+## Key Differences from Plugin-Type
+
+| Feature | Plugin-Type | Module-Type |
+|---------|-------------|-------------|
+| Routes | IPC only (`/api/extensions/:id/ipc`) | Full routes via `routes()` hook |
+| Views | Inject into existing via slots/hooks | Own page routes with `_route.js` |
+| URL paths | None (hooks into existing pages) | `/api/{module-name}/*`, `/{module-name}/*` |
+| Navigation | N/A | Own admin sidebar, breadcrumbs |
+| `routes()` hook | Not used | **Required** — returns `[name, context]` |
+| Namespace | N/A | Auto-derived from `routes()` return |
+
+## Module-Type Route Files
+
+Route files follow the exact same conventions as `@apps/` modules:
+
+```javascript
+// src/extensions/{extension-name}/api/routes/(admin)/(default)/_route.js
+function requirePermission(permission) {
+  return (req, res, next) => {
+    const auth = req.app.get('container').resolve('auth');
+    return auth.middlewares.requirePermission(permission)(req, res, next);
+  };
+}
+
+async function list(req, res) {
+  const { models } = req.app.get('container').resolve('db');
+  const items = await models.{Model}.findAll();
+  res.json({ data: items });
+}
+
+export const get = [requirePermission('{module}:read'), list];
+```
+
+## Example: `posts-module`
+
+See `src/extensions/posts-module/` for a complete working module-type extension with:
+- Full CRUD API routes with permission guards
+- Admin and public views with Redux state
+- Database models, migrations, and seeds
+- Translations and validators
 
 ## Common Issues
 

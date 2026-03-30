@@ -17,7 +17,7 @@ Extensions follow a well-defined phase-sequential lifecycle. Each phase runs for
 
 ### Phase-Sequential Activation Order
 
-**View-side** (`activateViewNamespace`): `translations → providers → boot → register`
+**View-side** (`activateViewNamespace`): `translations → providers → boot → routes`
 **API-side** (`_performActivate`): `translations → providers → migrations → models → seeds → boot → routes`
 
 ### Boot-time Hooks (no DI context)
@@ -26,7 +26,7 @@ Extensions follow a well-defined phase-sequential lifecycle. Each phase runs for
 
 ### Post-bootstrap Hooks (full DI context: `{ container, store }`)
 
-- **`providers({ container })`**: Called once per request (SSR) or once at boot (client). Use to inject Redux reducers or other per-request setup. 
+- **`providers({ container })`**: Called once per bootstrap (client) or once per request (SSR). Use to inject Redux reducers or other per-load setup.
 - **`boot({ container, registry })`**: Re-runs on every server boot. Register IPC handlers, subscribe to hooks. Data layer (migrations, models, seeds) is already processed before this runs. 
 - **`shutdown({ container, registry })`**: Called on deactivation. MUST unsubscribe from all hooks. Extension models are auto-unregistered from the `ModelRegistry`. 
 
@@ -108,7 +108,7 @@ Extensions can resolve these services from the DI container in `boot()`:
 | `hook` | `Function` | Event hook engine — `hook('namespace').on('event', handler)` |
 | `email` | `EmailManager` | Low-level email engine (direct provider access) |
 | `emails:send` | `Function` | High-level templated email service with base variables |
-| `models` | `Object` | Sequelize model registry |
+| `models` | `Object` | Sequelize model registry — `container.resolve('db').models` or `container.resolve('models')` |
 | `db` | `Object` | Database connection and migration runner |
 
 ### Sending Emails from Extensions

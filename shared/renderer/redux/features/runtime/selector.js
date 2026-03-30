@@ -45,12 +45,12 @@ export const getAppName = (state, defaultValue = 'xnapify') => {
  * Get application description
  *
  * @param {Object} state - Redux state
- * @param {string} [defaultValue='Boilerplate for React.js web applications'] - Default value if not set
+ * @param {string} [defaultValue='Snap your API, Stream your React'] - Default value if not set
  * @returns {string} Application description
  */
 export const getAppDescription = (
   state,
-  defaultValue = 'Boilerplate for React.js web applications',
+  defaultValue = 'Snap your API, Stream your React',
 ) => {
   const runtime = getRuntimeState(state);
   return runtime.appDescription != null ? runtime.appDescription : defaultValue;

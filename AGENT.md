@@ -136,15 +136,17 @@ npm run format:check           # Check code formatting
 
 The application uses an auto-discovery system for both API modules and page components.
 
-**API Modules** (`src/bootstrap/index.js`):
+**API Modules** (`src/bootstrap/api/index.js`):
 
 - Automatically discovers modules in `@apps/*/api/index.js`
-- Each module can export models, routes, and initialization logic
-- Modules are loaded in two phases: models first, then routes
+- Each module exports lifecycle hooks via `export default { ... }`
+- Phases run in strict order (defined in `shared/utils/lifecycle.js`):
+  `translations → providers → migrations → models → seeds → boot → routes`
 
 **Views** (`src/bootstrap/views.js`):
 
-- Automatically discovers views in `@apps/*/views`
+- Automatically discovers views in `@apps/*/views/index.js`
+- Phases: `translations → providers → boot → routes`
 - Finds and mounts `_route.js` files using a defined hierarchy
 - Merges metadata and props via `getInitialProps`
 
@@ -152,7 +154,7 @@ The application uses an auto-discovery system for both API modules and page comp
 
 **Shared API** (`shared/api/engines/` & `shared/jwt/`):
 
-- Core infrastructure: `auth`, `cache`, `db`, `email`, `fs`, `hook`, `http`, `queue`, `schedule`, `search`, `template`, `webhook`, `worker`
+- Core infrastructure: `auth`, `cache`, `db`, `email`, `fs`, `hook`, `http`, `marketplace`, `queue`, `schedule`, `search`, `template`, `webhook`, `worker`
 - Auto-loaded from `shared/api/engines/*/index.js` and re-exported via `shared/api/index.js`
 - Provide reusable capabilities for modules — should not contain business logic
 
@@ -312,7 +314,7 @@ const { models } = container.resolve('db');
 
 > **Convention:** In module code (`init`, services), use `container.resolve('name')` directly. In route handlers/controllers, use `req.app.get('container').resolve('name')`. Direct imports are reserved for shared libraries.
 
-**Available Engines:** `auth`, `cache`, `db`, `email`, `fs`, `hook`, `http`, `queue`, `schedule`, `search`, `template`, `webhook`, `worker`
+**Available Engines:** `auth`, `cache`, `db`, `email`, `fs`, `hook`, `http`, `marketplace`, `queue`, `schedule`, `search`, `template`, `webhook`, `worker`
 
 **Adding a New Engine:**
 
@@ -518,105 +520,130 @@ function MyComponent() {
 
 ### 4. Page Routing with Lifecycle Hooks
 
+Each `_route.js` can export lifecycle hooks that the router calls at specific points:
+
 ```javascript
-// @apps/blog/views/(admin)/posts/_route.js
-import PostsList from './PostsList';
+// @apps/activities/views/(admin)/(default)/_route.js
+import ActivityList from './ActivityList';
 import {
   addBreadcrumb,
   registerMenu,
   unregisterMenu,
 } from '@shared/renderer/redux';
 import { requirePermission } from '@shared/renderer/components/Rbac';
+import reducer, { SLICE_NAME } from '../redux';
 
-// 1. Middleware - permission check
-export const middleware = requirePermission('posts:read');
+// 1. Middleware — permission guard (const, not function)
+export const middleware = requirePermission('activities:read');
 
-// 2. Register - called once when route is discovered
-export function register({ store, i18n }) {
+// 2. Init — inject Redux reducer (runs once per route)
+export function init({ store }) {
+  store.injectReducer(SLICE_NAME, reducer);
+}
+
+// 3. Setup — register sidebar menus (runs once when route discovered)
+export function setup({ store, i18n }) {
   store.dispatch(
     registerMenu({
       ns: 'admin',
-      item: {
-        ns: i18n.t('navigation.content', 'Content'),
-        path: '/admin/posts',
-        label: i18n.t('navigation.posts', 'Posts'),
-        icon: 'file-text',
-        permission: 'posts:read',
-        order: 20,
-      },
+      id: 'monitoring',
+      label: i18n.t('admin:navigation.monitoring', 'Monitoring'),
+      order: 30,
+      icon: 'activity',
+      items: [
+        {
+          path: '/admin/activities',
+          label: i18n.t('admin:navigation.activities', 'Activity Logs'),
+          icon: 'activity',
+          permission: 'activities:read',
+          order: 10,
+        },
+      ],
     }),
   );
 }
 
-// 3. Mount - dispatch breadcrumb
+// 4. Teardown — unregister menus (runs when route unloaded)
+export function teardown({ store }) {
+  store.dispatch(unregisterMenu({ ns: 'admin', path: '/admin/activities' }));
+}
+
+// 5. Mount — dispatch breadcrumbs (runs on each navigation)
 export function mount({ store, i18n, path }) {
   store.dispatch(
     addBreadcrumb(
-      { label: i18n.t('navigation.posts', 'Posts'), url: path },
+      {
+        label: i18n.t('admin:navigation.activities', 'Activity Logs'),
+        url: path,
+      },
       'admin',
     ),
   );
 }
 
-// 4. Page metadata
+// 6. Page metadata — SSR data fetching
 export async function getInitialProps({ i18n }) {
-  return { title: i18n.t('admin.posts.title', 'Posts Management') };
+  return { title: i18n.t('admin:navigation.activities', 'Activity Logs') };
 }
 
-// 5. Component export
-export default PostsList;
+// 7. Default export — the page component
+export default ActivityList;
 ```
 
 **Route Lifecycle Hooks:**
 
-| Hook              | Purpose                      | Called When      |
-| ----------------- | ---------------------------- | ---------------- |
-| `register`        | Register menus, global state | Route discovered |
-| `unregister`      | Cleanup menus, global state  | Route unloaded   |
-| `mount`           | Dispatch breadcrumbs         | Route mounted    |
-| `middleware`      | Permission checks, redirects | Before rendering |
-| `getInitialProps` | Data fetching, page metadata | Before rendering |
-
-> **Note:** Redux reducer injection (`store.injectReducer`) should be handled in `_route.js` `init({ store })` hook to ensure lazy loading, rather than in `views/index.js` `providers()` hook.
+| Hook              | Purpose                         | Called When      |
+| ----------------- | ------------------------------- | ---------------- |
+| `middleware`      | Permission checks, redirects    | Before rendering |
+| `init`            | Inject Redux reducer            | Once per route   |
+| `setup`           | Register sidebar menus          | Route discovered |
+| `teardown`        | Unregister menus, cleanup state | Route unloaded   |
+| `mount`           | Dispatch breadcrumbs            | Route mounted    |
+| `unmount`         | Cleanup breadcrumbs or state    | Route unmounted  |
+| `getInitialProps` | Data fetching, page metadata    | Before rendering |
+| `namespace`       | Override extension namespace    | (const export)   |
 
 ### 5. API Module Structure
 
 ```javascript
+// src/apps/{module-name}/api/index.js
+
+// Declarative context loaders (Webpack statically analyses these)
+const migrationsContext = require.context(
+  './database/migrations',
+  false,
+  /\.[cm]?[jt]s$/i,
+);
+const modelsContext = require.context('./models', false, /\.[cm]?[jt]s$/i);
 const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
 
-export function routes() {
-  return routesContext;
-}
+export default {
+  // Declarative hooks — autoloader handles execution
+  migrations: () => migrationsContext,
+  models: () => modelsContext,
+  routes: () => routesContext,
 
-export async function init(container) {
-  // Initialize module
-}
+  // Imperative hooks — your initialization logic
+  async providers({ container }) {
+    container.bind(
+      'module:controllers',
+      () => ({
+        /* ... */
+      }),
+      true,
+    );
+  },
 
-// @apps/my-module/api/routes.js
-import express from 'express';
-import * as controller from './controller';
-
-const router = express.Router();
-
-router.get('/', controller.list);
-router.post('/', controller.create);
-
-export default router;
-
-// @apps/my-module/api/controller.js
-import * as service from './service';
-
-export async function list(req, res) {
-  const items = await service.getAll();
-  res.json(items);
-}
-
-// @apps/my-module/api/service.js
-export async function getAll() {
-  // Business logic
-  return [];
-}
+  async boot({ container }) {
+    const hook = container.resolve('hook');
+    hook('module').on('created', async entity => {
+      console.log('Entity created:', entity);
+    });
+  },
+};
 ```
+
+> **Key distinction:** Modules return the Webpack context directly from `routes()` (e.g., `() => routesContext`). Extensions return a `[name, context]` tuple instead (e.g., `() => ['posts', routesContext]`).
 
 ### 6. Form Validation with React Hook Form + Zod
 
@@ -695,7 +722,7 @@ XNAPIFY_HOST=127.0.0.1
 
 # Application Metadata
 XNAPIFY_APP_NAME="xnapify"
-XNAPIFY_APP_DESC="Boilerplate for React.js web applications"
+XNAPIFY_APP_DESC="Snap your API, Stream your React"
 
 # Database
 XNAPIFY_DB_URL=sqlite:database.sqlite
@@ -807,33 +834,45 @@ export default UsersPage;
 ### Protected Routes
 
 ```javascript
-import { requireAuth } from '@shared/api/auth/middlewares';
+// In _route.js — file-based API route
+function requirePermission(permission) {
+  return (req, res, next) => {
+    const auth = req.container.resolve('auth');
+    return auth.middlewares.requirePermission(permission)(req, res, next);
+  };
+}
 
-router.get('/protected', requireAuth, (req, res) => {
-  // req.user is available
-  res.json({ user: req.user });
-});
+export const get = [requirePermission('resource:read'), controller.list];
 ```
 
 ### Scheduled Tasks
 
 ```javascript
-import schedule from '@shared/api/schedule';
+// In module boot()
+async boot({ container }) {
+  const schedule = container.resolve('schedule');
 
-schedule.register('daily-cleanup', '0 0 * * *', async () => {
-  // Lightweight task or dispatch to worker
-  console.log('Running daily cleanup');
-});
+  schedule.register('module:daily-cleanup', '0 0 * * *', async () => {
+    console.log('Running daily cleanup');
+  });
+}
 ```
 
 ### Database Models
 
 ```javascript
 // @apps/my-module/api/models/MyModel.js
-export default function createMyModel(connection, DataTypes) {
-  const MyModel = sequelize.define('MyModel', {
+export default function createMyModel({ connection, DataTypes }) {
+  const types = DataTypes || connection.constructor.DataTypes;
+
+  const MyModel = connection.define('MyModel', {
+    id: {
+      type: types.UUID,
+      defaultValue: types.UUIDV1,
+      primaryKey: true,
+    },
     name: {
-      type: DataTypes.STRING,
+      type: types.STRING,
       allowNull: false,
     },
   });
@@ -891,8 +930,6 @@ describe('myFeature slice', () => {
 Benchmarks help catch regressions and guide optimization work without
 polluting the regular test suite.
 
-```
-
 ## Important Notes
 
 1. **No i18n generation:** The i18n extraction task was removed. i18next is still used for runtime translations.
@@ -908,8 +945,8 @@ polluting the regular test suite.
 - **README.md** — Quick start and overview
 - **AGENT.md** — This file; full architecture guide for AI agents
 - **.agent/rules.md** — Hard rules and coding constraints
-- **.agent/workflows/** — 23 step-by-step development guides
-- **.agent/skills/** — 12 specialized AI persona skills
+- **.agent/workflows/** — 25 step-by-step development guides
+- **.agent/skills/** — 14 specialized AI persona skills
 - **.agent/templates/SPEC.template.md** — Feature specification template
 - **.env.xnapify** — Environment variable documentation
 - **CONTRIBUTING.md** — Contribution guidelines and commit conventions
@@ -920,4 +957,3 @@ For issues and questions, refer to:
 
 - GitHub Issues: https://github.com/xuanhoa88/xnapify/issues
 - Repository: https://github.com/xuanhoa88/xnapify
-```

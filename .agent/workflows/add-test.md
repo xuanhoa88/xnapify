@@ -279,7 +279,7 @@ const initialState = {
   runtime: {
     initialNow: Date.now(),
     appName: 'xnapify',
-    appDescription: 'Boilerplate for React.js web applications',
+    appDescription: 'Snap your API, Stream your React',
   },
   intl: {
     locale: DEFAULT_LOCALE,

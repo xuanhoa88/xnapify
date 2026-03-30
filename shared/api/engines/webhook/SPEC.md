@@ -252,7 +252,7 @@ Uses a helper `createWebhook()` that creates a factory instance and binds it wit
 
 - **Bootstrap**: `registerEngines()` calls `webhook.withContext(container)` to inject the hook engine.
 - **Controller layer**: `POST /api/webhooks/:provider` reads raw body, verifies HMAC via `verifySignature`, then calls `webhook.dispatch()`.
-- **Module `init(container)`**: Modules register providers via `container.resolve('webhook').handler(...)`.
+- **Module `boot({ container })`**: Modules register providers via `container.resolve('webhook').handler(...)`.
 - **Hook engine**: The webhook engine uses a dedicated `'webhook'` HookChannel for all internal dispatch.
 
 ---

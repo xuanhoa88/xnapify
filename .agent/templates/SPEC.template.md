@@ -34,5 +34,19 @@
 - **Keys Required:** [e.g., `users.2fa.reset_success`, `users.2fa.btn_reset`]
 - **Rule:** Do not hardcode these strings. Pre-load them into the dashboard and wrap output in `i18n.t()`.
 
+## 5. Container Services (optional)
+*Define any services this module registers on the DI container for cross-module use.*
+- **Service Key:** [e.g., `billing:invoices`]
+- **Type:** [e.g., `Function`]
+- **Registered In:** [e.g., `providers()` lifecycle hook]
+- **Description:** [e.g., "Allows other modules to generate invoices via `container.resolve('billing:invoices')`."]
+
+## 6. Workers & Background Processing (optional)
+*Define any worker pools or queue-based handlers for heavy processing.*
+- **Worker File:** [e.g., `api/workers/report.worker.js`]
+- **Task Type:** [e.g., `GENERATE_REPORT`]
+- **Pool Config:** [e.g., `maxWorkers: 2`]
+- **Queue Handlers:** [e.g., "Register `install` and `delete` handlers in `boot()` via the queue engine."]
+
 ---
-*Note: Once this file is filled out, ask the AI to **"Execute SPEC.md"**.*
+*Note: Once this file is filled out, use it as a reference for the AI to generate or review code against.*

@@ -85,7 +85,7 @@ const STATIC_SECURITY_HEADERS = Object.entries({
 const APP_METADATA = Object.freeze({
   title: process.env.XNAPIFY_APP_NAME || 'xnapify',
   description:
-    process.env.XNAPIFY_APP_DESC || 'Boilerplate for React.js web applications',
+    process.env.XNAPIFY_APP_DESC || 'Snap your API, Stream your React',
 });
 
 // ---------------------------------------------------------------------------

@@ -69,7 +69,7 @@ xnapify/
 │   │   ├── search/             # Search engine
 │   │   ├── webhooks/           # Webhook management
 │   │   ├── activities/         # Activity logging
-│   │   └── extensions/            # Extension management
+│   │   └── extensions/         # Extension management
 │   ├── extensions/                # Application extensions
 │   ├── client.js               # Client entry point
 │   └── server.js               # Server entry point
@@ -97,7 +97,7 @@ xnapify/
 │   ├── ws/                     # WebSocket client
 │   ├── jwt/                    # JWT utilities
 │   ├── i18n/                   # Internationalization
-│   ├── extension/                 # Extension system (registry, slots, hooks)
+│   ├── extension/              # Extension system (registry, slots, hooks)
 │   ├── validator/              # Validation (Zod)
 │   ├── node-red/               # Node-RED integration & migrations
 │   └── utils/                  # Common utilities
@@ -107,7 +107,7 @@ xnapify/
 │   └── tasks/                  # Build tasks (dev, build, test, etc.)
 ├── public/                     # Static assets
 ├── Dockerfile                  # Multi-stage production Docker build
-├── .env.xnapify                    # Environment variable template
+├── .env.xnapify                # Environment variable template
 └── package.json
 ```
 
@@ -210,7 +210,7 @@ Extend the application without modifying core code:
 // Register an extension
 import { registry } from '@shared/extension/client';
 
-registry.register extension', {
+registry.register('my-extension', {
   init: async (reg, context) => {
     reg.registerSlot('profile.actions', MyButton, { order: 10 });
     reg.registerHook('user.validate', myValidator);
@@ -218,7 +218,7 @@ registry.register extension', {
 });
 
 // Render a slot in JSX
-<ExtensionSlot name="profile.actions" props={userData} />
+<ExtensionSlot name='profile.actions' props={userData} />;
 ```
 
 ### Authentication & RBAC
@@ -238,7 +238,7 @@ XNAPIFY_HOST=127.0.0.1
 
 # Application
 XNAPIFY_APP_NAME="xnapify"
-XNAPIFY_APP_DESC="Boilerplate for React.js web applications"
+XNAPIFY_APP_DESC="Snap your API, Stream your React"
 
 # Database (SQLite default, supports PostgreSQL/MySQL)
 XNAPIFY_DB_URL=sqlite:database.sqlite

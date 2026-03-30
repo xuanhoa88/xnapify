@@ -75,9 +75,7 @@ describe('[runtime] selector.js', () => {
           initialNow: null,
         },
       };
-      expect(getAppDescription(state)).toBe(
-        'Boilerplate for React.js web applications',
-      );
+      expect(getAppDescription(state)).toBe('Snap your API, Stream your React');
     });
 
     it('should return custom default value', () => {

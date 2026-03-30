@@ -130,10 +130,24 @@ const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
 // =============================================================================
 
 export default {
-  /**
-   * Providers hook — share services with other modules via container.
-   * Called during API bootstrap before initialization.
-   */
+  // -----------------------------------------------------------------------
+  // Declarative hooks — autoloader handles execution
+  // -----------------------------------------------------------------------
+  migrations: () => migrationsContext,
+  models: () => modelsContext,
+  routes: () => routesContext,
+
+  // -----------------------------------------------------------------------
+  // Translations hook — return webpack require.context for i18n files.
+  // -----------------------------------------------------------------------
+  // translations() {
+  //   return require.context('./translations', false, /\.json$/i);
+  // },
+
+  // -----------------------------------------------------------------------
+  // Providers hook — share services with other modules via container.
+  // Called during API bootstrap before initialization.
+  // -----------------------------------------------------------------------
   async providers({ container }) {
     container.bind(
       '{module-name}:controllers',
@@ -142,47 +156,18 @@ export default {
       }),
       true, // isSingleton
     );
-
-    container.bind('{module-name}:constants', () => ({}), true);
   },
 
-  /**
-   * Translations hook — return webpack require.context for module-specific i18n files.
-   */
-  translations() {
-    // Example:
-    // return require.context('./translations', false, /\.json$/i);
-    return null;
-  },
+  // -----------------------------------------------------------------------
+  // Seeds hook (declarative) — return context, autoloader executes.
+  // Called after migrations.
+  // -----------------------------------------------------------------------
+  seeds: () => seedsContext,
 
-  /**
-   * Migrations hook — run database migrations.
-   * Called after core migrations, before seeds.
-   */
-  async migrations({ container }) {
-    const db = container.resolve('db');
-    await db.connection.runMigrations(
-      [{ context: migrationsContext, prefix: '{module-name}' }],
-      { container },
-    );
-  },
-
-  /**
-   * Seeds hook — run database seeds.
-   * Called after migrations.
-   */
-  async seeds({ container }) {
-    const db = container.resolve('db');
-    await db.connection.runSeeds(
-      [{ context: seedsContext, prefix: '{module-name}' }],
-      { container },
-    );
-  },
-
-  /**
-   * Boot hook — initialize module after all models are loaded.
-   * Register auth strategies, webhooks, scheduled tasks, etc.
-   */
+  // -----------------------------------------------------------------------
+  // Boot hook — initialize module after all models are loaded.
+  // Register auth strategies, webhooks, scheduled tasks, etc.
+  // -----------------------------------------------------------------------
   async boot({ container }) {
     const hook = container.resolve('hook');
 
@@ -190,9 +175,6 @@ export default {
       console.log('Entity created:', entity);
     });
   },
-
-  models: () => modelsContext,
-  routes: () => routesContext,
 };
 ```
 
@@ -471,10 +453,11 @@ export async function down(connection, Sequelize) {
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import reducer, { SLICE_NAME } from './(admin)/redux';
-import RoleTag from './(admin)/components/RoleTag';
 import * as selectors from './(admin)/redux/selector';
 import * as thunks from './(admin)/redux/thunks';
+
+/** @type {Symbol} Ownership key for this module's persistent bindings */
+const OWNER_KEY = Symbol('{module-name}:views');
 
 // Auto-load contexts
 const viewsContext = require.context(
@@ -490,30 +473,17 @@ const viewsContext = require.context(
 export default {
   /**
    * Providers hook — share client-side services with other modules.
-   * Called during view bootstrap before route initialization.
+   * Use for container bindings only. Redux injection goes in _route.js init().
    */
-  providers({ container, store }) {
-    store.injectReducer(SLICE_NAME, reducer);
-
+  providers({ container }) {
     container.bind(
       '{module-name}:admin:state',
       () => ({ selectors, thunks }),
-      true,
+      OWNER_KEY,
     );
-
-    container.bind('{module-name}:admin:components', () => ({ RoleTag }), true);
   },
 
-  /**
-   * Translations hook — return webpack require.context for module-specific i18n files.
-   */
-  translations() {
-    // Example:
-    // return require.context('./translations', false, /\.json$/i);
-    return null;
-  },
-
-  views: () => viewsContext,
+  routes: () => viewsContext,
 };
 ```
 
@@ -528,65 +498,81 @@ Frontend routes work similarly to backend routes, but use React:
  * File: (admin)/(default)/_route.js = /admin/{module-name}
  */
 
-import { isAuthenticated, hasPermission } from '@shared/renderer/redux';
+import { requirePermission } from '@shared/renderer/components/Rbac';
+import {
+  addBreadcrumb,
+  registerMenu,
+  unregisterMenu,
+} from '@shared/renderer/redux';
+import reducer, { SLICE_NAME } from '../redux';
 import ModuleList from './ModuleList';
 
 /**
  * Optional: Override the namespace used for extension activation.
- * By default, the namespace is the route path. Set this to group
- * multiple routes under a single extension namespace.
  */
 // export const namespace = '{module-name}';
 
 /**
- * Middleware — permission check
+ * Middleware — permission guard
  */
-export async function middleware(context, next) {
-  const { store } = context;
-  const state = store.getState();
+export const middleware = requirePermission('{module-name}:read');
 
-  if (!isAuthenticated(state)) {
-    return { redirect: '/login' };
-  }
-
-  if (!hasPermission(state, '{module-name}:read')) {
-    return { redirect: '/not-found' };
-  }
-
-  return next();
+/**
+ * Init — inject Redux reducer (runs once per route)
+ */
+export function init({ store }) {
+  store.injectReducer(SLICE_NAME, reducer);
 }
 
 /**
- * Setup — called once when route is discovered
+ * Setup — register sidebar menus (runs once when route discovered)
  */
-export function setup({ store, i18n, extension }) {
-  extension.registerMenu({
-    ns: 'admin',
-    item: {
-      ns: i18n.t('navigation.admin'),
-      path: '/admin/{module-name}',
-      label: i18n.t('navigation.module', 'Module'),
-      icon: 'folder',
-      permission: '{module-name}:read',
+export function setup({ store, i18n }) {
+  store.dispatch(
+    registerMenu({
+      ns: 'admin',
+      id: '{module-name}',
+      label: i18n.t('admin:navigation.{module-name}', 'Module'),
       order: 20,
-    },
-  });
+      icon: 'folder',
+      items: [
+        {
+          path: '/admin/{module-name}',
+          label: i18n.t('admin:navigation.{module-name}', 'Module'),
+          icon: 'folder',
+          permission: '{module-name}:read',
+          order: 10,
+        },
+      ],
+    }),
+  );
 }
 
 /**
- * Mount — called when route is mounted
+ * Teardown — unregister menus (runs when route unloaded)
  */
-export function mount({ store, i18n, path, extension }) {
-  extension.addBreadcrumb(
-    { label: i18n.t('navigation.module'), url: path },
-    'admin',
+export function teardown({ store }) {
+  store.dispatch(
+    unregisterMenu({ ns: 'admin', path: '/admin/{module-name}' }),
+  );
+}
+
+/**
+ * Mount — dispatch breadcrumbs (runs on each navigation)
+ */
+export function mount({ store, i18n, path }) {
+  store.dispatch(
+    addBreadcrumb(
+      { label: i18n.t('admin:navigation.{module-name}', 'Module'), url: path },
+      'admin',
+    ),
   );
 }
 
 /**
  * Data fetching — server-side & client-side
  */
-export async function getInitialProps({ fetch, store, i18n }) {
+export async function getInitialProps({ fetch, i18n }) {
   const { data } = await fetch('/api/{module-name}');
 
   return {
@@ -596,7 +582,7 @@ export async function getInitialProps({ fetch, store, i18n }) {
 }
 
 /**
- * Export view component
+ * Default export — page component
  */
 export default ModuleList;
 ```
@@ -787,22 +773,23 @@ Modules are auto-discovered during application bootstrap:
 
 ### Backend (API)
 
-| Hook                        | Purpose                                | Called When              | Async |
-| --------------------------- | -------------------------------------- | ------------------------ | ----- |
-| `providers({ container })`  | Bind services to container             | Module loaded            | Yes   |
-| `migrations({ container })` | Run database migrations                | After core migrations    | Yes   |
-| `seeds({ container })`      | Run database seeds                     | After module migrations  | Yes   |
-| `boot({ container })`       | Initialize module                      | All models loaded        | Yes   |
-| `models()`                  | Return models webpack context          | Model discovery phase    | No    |
-| `routes()`                  | Return `[name, context]` tuple         | Router setup phase       | No    |
-| `translations()`            | Provide webpack context for i18n files | Module loaded (optional) | No    |
+| Hook                       | Purpose                                | Called When              | Async |
+| -------------------------- | -------------------------------------- | ------------------------ | ----- |
+| `translations()`           | Provide webpack context for i18n files | Module loaded            | No    |
+| `providers({ container })` | Bind services to container             | After translations       | Yes   |
+| `migrations()`             | Return migrations webpack context      | After providers          | No    |
+| `models()`                 | Return models webpack context          | After migrations         | No    |
+| `seeds()`                  | Return seeds webpack context           | After models             | No    |
+| `boot({ container })`      | Initialize module (hooks, schedules)   | After seeds              | Yes   |
+| `routes()`                 | Return routes webpack context          | After boot               | No    |
 
 ### Frontend (Views)
 
-| Hook                 | Purpose                        | Called When          | Async |
-| -------------------- | ------------------------------ | -------------------- | ----- |
-| `providers(context)` | Bind client services           | Module loaded        | No    |
-| `routes()`           | Return `[name, context]` tuple | View discovery phase | No    |
+| Hook                       | Purpose                        | Called When          | Async |
+| -------------------------- | ------------------------------ | -------------------- | ----- |
+| `translations()`           | Provide webpack context for i18n files | Module loaded | No    |
+| `providers({ container })` | Bind client services           | After translations   | No    |
+| `routes()`                 | Return views webpack context   | After providers      | No    |
 
 ## API File-Based Routing
 
@@ -888,6 +875,86 @@ See `src/apps/users/` for a complete working example with:
 
 Each module can optionally include a `SPEC.md` file in its root directory to document specific features for AI assistance. To avoid duplication, start from the global template:
 
-- **Template:** [.agent/templates/SPEC.template.md](file:///Users/xuanguyen/Workspaces/xnapify/.agent/templates/SPEC.template.md)
+- **Template:** [.agent/templates/SPEC.template.md](file:///Users/xuanguyen/Workspaces/react-starter-kit/.agent/templates/SPEC.template.md)
 
 Copy this template to `src/apps/{module-name}/SPEC.md` when planning a new feature.
+
+---
+
+## Appendix A: Scheduled Tasks
+
+Register cron tasks in the module's `boot()` hook using the schedule engine:
+
+```javascript
+// Inside boot({ container })
+const schedule = container.resolve('schedule');
+
+// Lightweight task — runs directly
+schedule.register('{module}:daily-cleanup', '0 0 * * *', async () => {
+  const { models } = container.resolve('db');
+  await models.TempFile.destroy({
+    where: { createdAt: { [Op.lt]: subDays(new Date(), 7) } },
+  });
+});
+
+// Heavy task — dispatch to worker pool
+schedule.register('{module}:weekly-report', '0 9 * * 1', async () => {
+  const workerPool = container.resolve('{module}:workerPool');
+  await workerPool.sendRequest('report', 'GENERATE_REPORT', { week: getCurrentWeek() });
+});
+```
+
+### Common Cron Expressions
+
+| Expression | Schedule |
+|---|---|
+| `* * * * *` | Every minute |
+| `*/5 * * * *` | Every 5 minutes |
+| `0 * * * *` | Every hour |
+| `0 0 * * *` | Daily at midnight |
+| `0 9 * * 1` | Monday at 9 AM |
+| `0 0 1 * *` | First of each month |
+
+### Guidelines
+
+- **Keep handlers lightweight.** For heavy processing, dispatch to a worker pool.
+- **Use descriptive task names.** Format: `{module}:{action}` (e.g., `billing:invoice-reminders`).
+- **Log execution.** Always log start/completion for debugging cron issues.
+- **Handle errors.** Wrap handler body in try-catch — uncaught errors in cron handlers are silent.
+
+---
+
+## Appendix B: Webhook Handlers
+
+Register inbound webhook handlers in the module's `boot()` hook:
+
+```javascript
+// Inside boot({ container })
+const webhook = container.resolve('webhook');
+
+webhook.register('{provider-name}', {
+  // Secret for HMAC signature verification
+  secret: process.env.XNAPIFY_{PROVIDER}_WEBHOOK_SECRET,
+
+  // Handle the verified payload
+  async handler({ event, payload, headers }) {
+    switch (event) {
+      case 'payment.completed':
+        await handlePaymentCompleted(payload);
+        break;
+      case 'subscription.canceled':
+        await handleSubscriptionCanceled(payload);
+        break;
+      default:
+        console.log(`[Webhook] Unhandled event: ${event}`);
+    }
+  },
+});
+```
+
+### Guidelines
+
+- **Always verify signatures.** The webhook engine handles HMAC verification automatically when `secret` is provided.
+- **Use descriptive provider names.** E.g., `stripe`, `github`, `sendgrid`.
+- **Return quickly.** Acknowledge the webhook and process asynchronously if needed (dispatch to worker).
+- **Store the secret** in an env var with `XNAPIFY_` prefix.

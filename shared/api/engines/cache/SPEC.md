@@ -250,7 +250,7 @@ The singleton is registered on the DI container as `container.resolve('cache')` 
 
 ## 10. Integration Points
 
-- **Module `init(container)`**: Access via `container.resolve('cache')`. Use `withNamespace()` to scope by module.
+- **Module `boot({ container })`**: Access via `container.resolve('cache')`. Use `withNamespace()` to scope by module.
 - **`__DEV__` global**: When truthy, all `createFactory` calls produce `NoOpCache` — ensures fresh data during development.
 - **Schedule engine**: Can pair with scheduled `cleanup()` calls for periodic expired-entry removal.
 
