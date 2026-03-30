@@ -65,7 +65,7 @@ export async function up(_, { container }) {
       resource: DEFAULT_RESOURCES.USERS,
       action: DEFAULT_ACTIONS.IMPERSONATE,
       description:
-        'Assume another user\'s session for support and debugging purposes.',
+        "Assume another user's session for support and debugging purposes.",
       is_active: true,
     },
 
@@ -108,7 +108,8 @@ export async function up(_, { container }) {
       id: SEED_PERMISSIONS.groupsCreate,
       resource: DEFAULT_RESOURCES.GROUPS,
       action: DEFAULT_ACTIONS.CREATE,
-      description: 'Create organisational groups for team-based access control.',
+      description:
+        'Create organisational groups for team-based access control.',
       is_active: true,
     },
     {

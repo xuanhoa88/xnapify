@@ -15,9 +15,7 @@ jest.mock('@shared/utils/contextAdapter', () => ({
   createWebpackContextAdapter: jest.fn(),
 }));
 
-const {
-  createWebpackContextAdapter,
-} = require('@shared/utils/contextAdapter');
+const { createWebpackContextAdapter } = require('@shared/utils/contextAdapter');
 
 // Helpers
 function createMockDb() {
@@ -493,8 +491,14 @@ describe('ModelRegistry', () => {
       const userAssociate = jest.fn();
       const postAssociate = jest.fn();
 
-      registry.register('User', createMockModel('User', { associate: userAssociate }));
-      registry.register('Post', createMockModel('Post', { associate: postAssociate }));
+      registry.register(
+        'User',
+        createMockModel('User', { associate: userAssociate }),
+      );
+      registry.register(
+        'Post',
+        createMockModel('Post', { associate: postAssociate }),
+      );
 
       const errors = registry.associate();
 
@@ -512,7 +516,10 @@ describe('ModelRegistry', () => {
 
     it('should not re-associate already-associated models', () => {
       const associateFn = jest.fn();
-      registry.register('User', createMockModel('User', { associate: associateFn }));
+      registry.register(
+        'User',
+        createMockModel('User', { associate: associateFn }),
+      );
 
       registry.associate();
       registry.associate();
@@ -551,11 +558,17 @@ describe('ModelRegistry', () => {
 
     it('should associate new models added after first associate() call', () => {
       const userAssociate = jest.fn();
-      registry.register('User', createMockModel('User', { associate: userAssociate }));
+      registry.register(
+        'User',
+        createMockModel('User', { associate: userAssociate }),
+      );
       registry.associate();
 
       const postAssociate = jest.fn();
-      registry.register('Post', createMockModel('Post', { associate: postAssociate }));
+      registry.register(
+        'Post',
+        createMockModel('Post', { associate: postAssociate }),
+      );
       registry.associate();
 
       expect(userAssociate).toHaveBeenCalledTimes(1);

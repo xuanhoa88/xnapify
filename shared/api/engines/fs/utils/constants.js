@@ -30,13 +30,15 @@ export const DEFAULT_FILE_SIZES = Object.freeze({
 
 // Configuration from environment variables
 export const MAX_FILE_SIZE =
-  parseInt(process.env.XNAPIFY_UPLOAD_FILE_SIZE, 10) || DEFAULT_FILE_SIZES.LARGE;
+  parseInt(process.env.XNAPIFY_UPLOAD_FILE_SIZE, 10) ||
+  DEFAULT_FILE_SIZES.LARGE;
 
 export const MAX_FILE_LENGTH =
   parseInt(process.env.XNAPIFY_UPLOAD_FILE_LENGTH, 10) || 255;
 
 export const UPLOAD_DIR =
-  process.env.XNAPIFY_UPLOAD_DIR || path.join(os.homedir(), '.xnapify', 'uploads');
+  process.env.XNAPIFY_UPLOAD_DIR ||
+  path.join(os.homedir(), '.xnapify', 'uploads');
 
 export const ALLOWED_EXTENSIONS = process.env.XNAPIFY_UPLOAD_FILE_EXT
   ? process.env.XNAPIFY_UPLOAD_FILE_EXT.split(',').map(ext => ext.trim())

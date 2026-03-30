@@ -175,7 +175,9 @@ async function generateJWT(cwd, buildDir) {
     } else {
       // Preserve empty value from template
       jwtSecret = '';
-      logInfo(`ℹ️  XNAPIFY_JWT_SECRET is empty (manual configuration required)`);
+      logInfo(
+        `ℹ️  XNAPIFY_JWT_SECRET is empty (manual configuration required)`,
+      );
     }
 
     // JWT configuration to add/update (using XNAPIFY_ prefix)

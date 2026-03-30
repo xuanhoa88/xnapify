@@ -32,7 +32,9 @@ const nativeRequire = createNativeRequire(__filename);
 // Symbols — private (internal to server manager)
 const EXTENSION_API_ENTRY_POINTS = Symbol('__xnapify.ext.apiEntryPoints__');
 const EXTENSION_CSS_ENTRY_POINTS = Symbol('__xnapify.ext.cssEntryPoints__');
-const EXTENSION_SCRIPT_ENTRY_POINTS = Symbol('__xnapify.ext.scriptEntryPoints__');
+const EXTENSION_SCRIPT_ENTRY_POINTS = Symbol(
+  '__xnapify.ext.scriptEntryPoints__',
+);
 const SERVER_CWD = Symbol('__xnapify.ext.serverCwd__');
 
 /** Non-throwing async file existence check */

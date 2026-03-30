@@ -99,7 +99,11 @@ function writeCustomNodes(userDir) {
         return;
       }
 
-      fs.writeFileSync(path.join(xnapifyDir, `${baseName}.js`), getJS(), 'utf8');
+      fs.writeFileSync(
+        path.join(xnapifyDir, `${baseName}.js`),
+        getJS(),
+        'utf8',
+      );
       fs.writeFileSync(
         path.join(xnapifyDir, `${baseName}.html`),
         getHTML(),

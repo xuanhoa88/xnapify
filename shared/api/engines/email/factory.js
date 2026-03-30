@@ -41,7 +41,9 @@ export class EmailManager {
    * Get default provider name dynamically (lazy evaluated)
    */
   get defaultProvider() {
-    return this.config.provider || process.env.XNAPIFY_MAIL_PROVIDER || 'resend';
+    return (
+      this.config.provider || process.env.XNAPIFY_MAIL_PROVIDER || 'resend'
+    );
   }
 
   /**
@@ -75,7 +77,8 @@ export class EmailManager {
             pass: process.env.XNAPIFY_SMTP_PASS,
             defaultFrom: process.env.XNAPIFY_MAIL_FROM,
             defaultFromName:
-              process.env.XNAPIFY_MAIL_FROM_NAME || process.env.XNAPIFY_APP_NAME,
+              process.env.XNAPIFY_MAIL_FROM_NAME ||
+              process.env.XNAPIFY_APP_NAME,
           },
         ),
       );
@@ -90,7 +93,8 @@ export class EmailManager {
             apiKey: process.env.XNAPIFY_RESEND_KEY,
             defaultFrom: process.env.XNAPIFY_MAIL_FROM,
             defaultFromName:
-              process.env.XNAPIFY_MAIL_FROM_NAME || process.env.XNAPIFY_APP_NAME,
+              process.env.XNAPIFY_MAIL_FROM_NAME ||
+              process.env.XNAPIFY_APP_NAME,
           },
         ),
       );
@@ -105,7 +109,8 @@ export class EmailManager {
             apiKey: process.env.XNAPIFY_SENDGRID_KEY,
             defaultFrom: process.env.XNAPIFY_MAIL_FROM,
             defaultFromName:
-              process.env.XNAPIFY_MAIL_FROM_NAME || process.env.XNAPIFY_APP_NAME,
+              process.env.XNAPIFY_MAIL_FROM_NAME ||
+              process.env.XNAPIFY_APP_NAME,
           },
         ),
       );
@@ -122,7 +127,8 @@ export class EmailManager {
             region: process.env.XNAPIFY_MAILGUN_REGION || 'us',
             defaultFrom: process.env.XNAPIFY_MAIL_FROM,
             defaultFromName:
-              process.env.XNAPIFY_MAIL_FROM_NAME || process.env.XNAPIFY_APP_NAME,
+              process.env.XNAPIFY_MAIL_FROM_NAME ||
+              process.env.XNAPIFY_APP_NAME,
           },
         ),
       );

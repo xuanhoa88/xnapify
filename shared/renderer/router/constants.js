@@ -22,4 +22,6 @@ export const ROUTE_PREV_KEY = Symbol('__xnapify.routePrevKey__');
 /** @type {symbol} Stores the previous route's context (for unmount) */
 export const ROUTE_PREV_CTX = Symbol('__xnapify.routePrevCtx__');
 /** @type {symbol} Tracks whether a route's translations have been registered */
-export const ROUTE_TRANSLATIONS_KEY = Symbol('__xnapify.routeTranslationsKey__');
+export const ROUTE_TRANSLATIONS_KEY = Symbol(
+  '__xnapify.routeTranslationsKey__',
+);

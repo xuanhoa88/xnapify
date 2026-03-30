@@ -23,7 +23,9 @@ export default function ListingDetail({ listing = null, onClose }) {
   const tags = (listing && listing.tags) || [];
   const screenshots = (listing && listing.screenshots) || [];
   const isOfficial =
-    listing && listing.author && listing.author.toLowerCase().includes('xnapify');
+    listing &&
+    listing.author &&
+    listing.author.toLowerCase().includes('xnapify');
 
   // Lightbox state: null = closed, number = index of active screenshot
   const [lightboxIdx, setLightboxIdx] = useState(null);

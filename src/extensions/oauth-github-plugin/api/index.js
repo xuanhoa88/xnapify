@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+// eslint-disable-next-line import/no-unresolved
 import { Strategy as GitHubStrategy } from 'passport-github2';
 
 const TAG = '[OAuth GitHub]';

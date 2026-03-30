@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+// eslint-disable-next-line import/no-unresolved
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 
 const TAG = '[OAuth Google]';

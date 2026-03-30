@@ -39,7 +39,8 @@ export async function up(_, { container }) {
     {
       id: SEED_GROUPS.management,
       name: 'Management',
-      description: 'Executive leadership, department heads, and programme management.',
+      description:
+        'Executive leadership, department heads, and programme management.',
       is_active: true,
     },
   ];

@@ -16,4 +16,6 @@ export const ROUTE_INIT_KEY = Symbol('__xnapify.routeInitKey__');
 /** @type {symbol} Tracks mounted config modules to prevent double-mounting */
 export const ROUTE_MOUNT_KEY = Symbol('__xnapify.routeMountKey__');
 /** @type {symbol} Tracks whether a route's translations have been registered */
-export const ROUTE_TRANSLATIONS_KEY = Symbol('__xnapify.routeTranslationsKey__');
+export const ROUTE_TRANSLATIONS_KEY = Symbol(
+  '__xnapify.routeTranslationsKey__',
+);

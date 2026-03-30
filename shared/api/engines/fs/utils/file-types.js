@@ -39,12 +39,18 @@ function parseCustomFileTypes(envVar) {
  * @returns {Object} File types with extensions, MIME types, and metadata
  */
 function createFileTypes() {
-  const customImageTypes = parseCustomFileTypes('XNAPIFY_FS_CUSTOM_IMAGE_TYPES');
+  const customImageTypes = parseCustomFileTypes(
+    'XNAPIFY_FS_CUSTOM_IMAGE_TYPES',
+  );
   const customDocumentTypes = parseCustomFileTypes(
     'XNAPIFY_FS_CUSTOM_DOCUMENT_TYPES',
   );
-  const customAudioTypes = parseCustomFileTypes('XNAPIFY_FS_CUSTOM_AUDIO_TYPES');
-  const customVideoTypes = parseCustomFileTypes('XNAPIFY_FS_CUSTOM_VIDEO_TYPES');
+  const customAudioTypes = parseCustomFileTypes(
+    'XNAPIFY_FS_CUSTOM_AUDIO_TYPES',
+  );
+  const customVideoTypes = parseCustomFileTypes(
+    'XNAPIFY_FS_CUSTOM_VIDEO_TYPES',
+  );
   const customArchiveTypes = parseCustomFileTypes(
     'XNAPIFY_FS_CUSTOM_ARCHIVE_TYPES',
   );

@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+// eslint-disable-next-line import/no-unresolved
 import { Strategy as MicrosoftStrategy } from 'passport-microsoft';
 
 const TAG = '[OAuth Microsoft]';

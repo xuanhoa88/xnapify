@@ -64,9 +64,11 @@ export const UPLOAD_PRESETS = Object.freeze({
 
   archive: {
     destination:
-      process.env.XNAPIFY_UPLOAD_ARCHIVE_DIR || path.join(UPLOAD_DIR, 'archives'),
+      process.env.XNAPIFY_UPLOAD_ARCHIVE_DIR ||
+      path.join(UPLOAD_DIR, 'archives'),
     maxFileSize:
-      parseInt(process.env.XNAPIFY_UPLOAD_ARCHIVE_MAX, 10) || 100 * SIZE_LIMITS.MB,
+      parseInt(process.env.XNAPIFY_UPLOAD_ARCHIVE_MAX, 10) ||
+      100 * SIZE_LIMITS.MB,
     allowedMimeTypes: getMimeTypesForCategories(['archive']),
     maxFiles: 5,
     fieldName: 'archives',
@@ -79,9 +81,11 @@ export const UPLOAD_PRESETS = Object.freeze({
 
   general: {
     destination:
-      process.env.XNAPIFY_UPLOAD_GENERAL_DIR || path.join(UPLOAD_DIR, 'general'),
+      process.env.XNAPIFY_UPLOAD_GENERAL_DIR ||
+      path.join(UPLOAD_DIR, 'general'),
     maxFileSize:
-      parseInt(process.env.XNAPIFY_UPLOAD_GENERAL_MAX, 10) || 25 * SIZE_LIMITS.MB,
+      parseInt(process.env.XNAPIFY_UPLOAD_GENERAL_MAX, 10) ||
+      25 * SIZE_LIMITS.MB,
     allowedMimeTypes: null, // Allow all types
     maxFiles: 15,
     fieldName: 'files',

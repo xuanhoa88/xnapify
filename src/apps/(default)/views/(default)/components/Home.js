@@ -22,9 +22,7 @@ function Home({ loading, payload, featuresData }) {
       {/* Hero Section */}
       <section className={s.hero}>
         <div className={s.heroContent}>
-          <h1 className={s.heroTitle}>
-            {t('home.hero.title', 'xnapify')}
-          </h1>
+          <h1 className={s.heroTitle}>{t('home.hero.title', 'xnapify')}</h1>
           <p className={s.heroSubtitle}>
             {t(
               'home.hero.subtitle',
