@@ -179,6 +179,7 @@
     "husky": "8.0.3",
     "identity-obj-proxy": "3.0.0",
     "jest": "24.9.0",
+    "jest-junit": "16.0.0",
     "jest-transform-stub": "2.0.0",
     "jest-watch-typeahead": "0.4.2",
     "less": "4.5.1",
