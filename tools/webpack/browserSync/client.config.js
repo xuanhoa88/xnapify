@@ -126,6 +126,7 @@ let hotClient = null;
 let bannerCountdownId = null;
 let bannerShownAt = 0;
 let styleElement = null;
+let reconnectIntervalId = null;
 
 /**
  * Validate message data structure
@@ -324,6 +325,33 @@ function attemptClose() {
 }
 
 /**
+ * Notify server that this client is alive (cancel duplicate tab open).
+ * Retries once on failure since middleware may not be attached yet.
+ */
+function notifyServerConnected() {
+  const doNotify = attempt => {
+    try {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/~/__bs_connected');
+      xhr.onload = () => {
+        if (xhr.status !== 204 && attempt < 2) {
+          setTimeout(() => doNotify(attempt + 1), 500);
+        }
+      };
+      xhr.onerror = () => {
+        if (attempt < 2) {
+          setTimeout(() => doNotify(attempt + 1), 500);
+        }
+      };
+      xhr.send();
+    } catch (_) {
+      // Ignore
+    }
+  };
+  doNotify(1);
+}
+
+/**
  * Wait for server to come back online with visible countdown
  */
 function waitForReconnect() {
@@ -341,27 +369,18 @@ function waitForReconnect() {
       return;
     }
 
+    // Use the HMR endpoint as a lightweight health check — it always
+    // returns 200 text/event-stream when the dev middleware is up,
+    // unlike the app URL which may return 500 on a broken build.
     const xhr = new XMLHttpRequest();
-    xhr.open('HEAD', window.location.href);
+    xhr.open('HEAD', '/~/__webpack_hmr');
     xhr.setRequestHeader('Cache-Control', 'no-store');
 
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 400) {
         logInfo('[BrowserSync] Server is back online, reloading...');
 
-        // Notify server to cancel new tab opening
-        try {
-          if (navigator.sendBeacon) {
-            navigator.sendBeacon('/~/__bs_connected');
-          } else {
-            const notifyXhr = new XMLHttpRequest();
-            notifyXhr.open('POST', '/~/__bs_connected', false);
-            notifyXhr.send();
-          }
-        } catch (_) {
-          // Ignore
-        }
-
+        notifyServerConnected();
         dismissBanner();
         reloadPage();
       } else {
@@ -399,14 +418,16 @@ function waitForReconnect() {
 }
 
 /**
- * Handle server shutdown: try to close tab, if fails show banner and poll
+ * Handle server shutdown: try to close tab, if fails show banner and poll.
+ * Only tears down the heartbeat — HMR subscribers stay alive so the
+ * onOpen handler can detect when the SSE connection auto-recovers.
  */
 async function handleShutdown() {
   if (isShuttingDown) return;
   isShuttingDown = true;
 
   logInfo('[BrowserSync] Server shutdown detected');
-  cleanup();
+  stopHeartbeat();
 
   attemptClose();
 
@@ -549,9 +570,23 @@ function handleConnectionLoss() {
 
   let reconnected = false;
 
+  // Clear any previous reconnect interval
+  if (reconnectIntervalId) {
+    clearInterval(reconnectIntervalId);
+    reconnectIntervalId = null;
+  }
+
   setTimeout(() => {
     if (!reconnected && !isShuttingDown) {
+      // Reset so handleShutdown/waitForReconnect can take over
       isReconnecting = false;
+
+      // Clean up the fast-poll interval
+      if (reconnectIntervalId) {
+        clearInterval(reconnectIntervalId);
+        reconnectIntervalId = null;
+      }
+
       logInfo('[BrowserSync] Server connection not restored, closing tab...');
       handleShutdown();
     }
@@ -564,12 +599,21 @@ function handleConnectionLoss() {
     if (readyState === EventSource.OPEN) {
       reconnected = true;
       isReconnecting = false;
+
+      if (reconnectIntervalId) {
+        clearInterval(reconnectIntervalId);
+        reconnectIntervalId = null;
+      }
+
       logInfo('[BrowserSync] Connection restored after temporary loss');
 
       // The browser_sync_server_ready message was likely sent while
       // the SSE connection was down and lost. Dismiss the banner and
       // reload so the client picks up the new server bundle.
       dismissBanner();
+
+      // Notify server so it doesn't open a new tab
+      notifyServerConnected();
 
       // Reset heartbeat so future disconnections are detected
       lastMessageTime = Date.now();
@@ -579,9 +623,10 @@ function handleConnectionLoss() {
     }
   };
 
-  const reconnectInterval = setInterval(() => {
+  reconnectIntervalId = setInterval(() => {
     if (reconnected || isShuttingDown) {
-      clearInterval(reconnectInterval);
+      clearInterval(reconnectIntervalId);
+      reconnectIntervalId = null;
       return;
     }
     checkReconnect();
@@ -606,24 +651,42 @@ function startHeartbeatMonitor() {
         `[BrowserSync] No messages for ${timeSinceLastMessage}ms - connection lost`,
       );
       clearInterval(heartbeatInterval);
+      heartbeatInterval = null;
       handleConnectionLoss();
     }
   }, CONFIG.HEARTBEAT_TIMEOUT / 2);
 }
 
 /**
- * Cleanup resources
+ * Stop heartbeat and reconnect timers only.
+ * HMR subscribers are intentionally kept alive so the onOpen handler
+ * can detect when the SSE connection auto-recovers after a restart.
  */
-function cleanup() {
+function stopHeartbeat() {
   if (heartbeatInterval) {
     clearInterval(heartbeatInterval);
     heartbeatInterval = null;
+  }
+
+  if (reconnectIntervalId) {
+    clearInterval(reconnectIntervalId);
+    reconnectIntervalId = null;
   }
 
   if (bannerCountdownId) {
     clearInterval(bannerCountdownId);
     bannerCountdownId = null;
   }
+
+  logInfo('[BrowserSync] Heartbeat stopped (subscribers kept alive)');
+}
+
+/**
+ * Full cleanup — tears down everything including HMR subscribers.
+ * Used only on permanent page unload, not during reconnect flows.
+ */
+function cleanup() {
+  stopHeartbeat();
 
   unsubscribers.forEach(unsub => {
     try {
@@ -634,7 +697,7 @@ function cleanup() {
   });
   unsubscribers = [];
 
-  logInfo('[BrowserSync] Cleanup completed');
+  logInfo('[BrowserSync] Full cleanup completed');
 }
 
 /**
@@ -678,13 +741,24 @@ function initialize() {
         logInfo('[BrowserSync] HMR connected');
         lastMessageTime = Date.now();
 
-        try {
-          const xhr = new XMLHttpRequest();
-          xhr.open('POST', '/~/__bs_connected');
-          xhr.send();
-        } catch (_) {
-          // Ignore
+        // If the connection re-opens after a shutdown/reconnect cycle,
+        // the server is back. Dismiss banner, notify server, and reload.
+        if (isShuttingDown) {
+          logInfo('[BrowserSync] SSE reconnected after shutdown — recovering');
+          isShuttingDown = false;
+          isReconnecting = false;
+
+          notifyServerConnected();
+          dismissBanner();
+
+          // Restart heartbeat for future disconnection detection
+          startHeartbeatMonitor();
+
+          reloadPage();
+          return;
         }
+
+        notifyServerConnected();
       });
       unsubscribers.push(unsubOpen);
 
@@ -713,6 +787,9 @@ function initialize() {
   };
 
   attemptInit();
+
+  // Full cleanup on actual page unload (not reconnect flows)
+  window.addEventListener('beforeunload', cleanup);
 
   if (document.readyState === 'complete') {
     restoreScrollPosition();

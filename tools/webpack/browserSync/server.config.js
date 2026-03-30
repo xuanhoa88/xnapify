@@ -27,6 +27,7 @@ let isRestarting = false;
 let isShuttingDown = false;
 let pendingBrowserOpen = null; // Pending timeout for opening browser
 let serverRef = null; // Reference to server for deferred browser open
+let clientConnected = false; // Persistent flag: true once ANY client has connected
 
 /**
  * Validate server object
@@ -282,6 +283,8 @@ const reloadClients = async () => {
  * Cancel pending browser open (called when client connects)
  */
 const onClientConnected = () => {
+  clientConnected = true;
+
   if (pendingBrowserOpen) {
     clearTimeout(pendingBrowserOpen);
     pendingBrowserOpen = null;
@@ -329,6 +332,14 @@ const start = async (server, middleware) => {
 
   pendingBrowserOpen = setTimeout(async () => {
     pendingBrowserOpen = null;
+
+    // A client may have connected after the timeout was scheduled
+    // but before it fired (race). The persistent flag catches this.
+    if (clientConnected) {
+      logInfo('[BrowserSync] Client already connected, skipping browser open');
+      return;
+    }
+
     logInfo('[BrowserSync] No client reconnected, opening browser...');
     await openBrowser(serverRef);
   }, CONFIG.CLIENT_WAIT_TIMEOUT);
@@ -407,6 +418,7 @@ const shutdown = async () => {
     // Clean up state
     hotMiddleware = null;
     isRestarting = false;
+    clientConnected = false;
 
     logInfo('[BrowserSync] Shutdown complete');
   } catch (error) {
