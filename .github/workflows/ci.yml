@@ -24,8 +24,8 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
-      - name: Install dependencies
-        run: npm install
+      - name: Install all dependencies
+        run: npm run setup
 
       - name: Lint code
         run: npm run lint
@@ -54,8 +54,8 @@ jobs:
         with:
           node-version: '18.x'
 
-      - name: Install dependencies
-        run: npm install
+      - name: Install all dependencies
+        run: npm run setup
 
       - name: Build application
         run: npm run build

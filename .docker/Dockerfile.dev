@@ -7,7 +7,9 @@ WORKDIR /app
 
 # Install dependencies first (layer cache optimisation)
 COPY package*.json ./
-RUN npm install
+COPY tools/preinstall.js tools/
+COPY tools/tasks/setup.js tools/tasks/
+RUN npm run setup
 
 # Source code is bind-mounted at runtime — no COPY needed
 # COPY . .  (intentionally omitted)

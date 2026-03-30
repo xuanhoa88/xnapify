@@ -41,8 +41,8 @@
 git clone https://github.com/xuanhoa88/xnapify.git
 cd xnapify
 
-# Install dependencies
-npm install
+# Install all dependencies (root + sub-packages)
+npm run setup
 
 # Copy environment variables (Optional)
 cp .env.xnapify .env
@@ -150,6 +150,9 @@ xnapify/
 ## 📜 Available Scripts
 
 ```bash
+# Setup
+npm run setup                  # Install all dependencies (root + sub-packages)
+
 # Development
 npm run dev                    # Start dev server with HMR
 npm run build                  # Build for production
@@ -269,12 +272,15 @@ docker run -p 1337:1337 \
 ## 🚢 Production Deployment
 
 ```bash
+# Install all dependencies
+npm run setup
+
 # Build
 npm run build
 
-# Deploy
+# Deploy (inside the build output directory)
 cd build
-npm install --production
+npm install --production   # ← only for build/, NOT project root
 NODE_ENV=production node server.js
 ```
 

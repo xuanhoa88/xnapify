@@ -5,10 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-const { execFile } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const util = require('util');
 
 const pick = require('lodash/pick');
 const snakeCase = require('lodash/snakeCase');
@@ -19,10 +17,7 @@ const config = require('../config');
 const { computeChecksum } = require('../utils/checksum');
 const { copyDir, pathExists } = require('../utils/fs');
 const { logInfo, logError, formatDuration } = require('../utils/logger');
-const { isDev } = require('../webpack/base.config');
 const createExtensionConfig = require('../webpack/extension.config');
-
-const execFileAsync = util.promisify(execFile);
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -215,35 +210,6 @@ function notifyServer(extensions) {
   logInfo(`🔌 Sent extensions-refreshed: ${names.join(', ')}`);
 }
 
-/** Install npm dependencies for each extension (dev-mode only). */
-async function installDependencies(extensions) {
-  logInfo(
-    `📦 Installing dependencies for ${extensions.length} extension(s)...`,
-  );
-  for (const ext of extensions) {
-    try {
-      await execFileAsync(
-        'npm',
-        [
-          'install',
-          '--no-audit',
-          '--no-update-notifier',
-          '--no-fund',
-          '--engine-strict',
-          '--no-package-lock',
-        ],
-        { cwd: ext.path },
-      );
-      if (isDev) {
-        console.log(`[ExtensionBuild] npm install completed for ${ext.name}`);
-      }
-    } catch (npmErr) {
-      logError(`Failed to install dependencies for ${ext.name}`);
-      console.error(npmErr);
-    }
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Watch-Mode (empty extensions directory)
 // ---------------------------------------------------------------------------
@@ -313,10 +279,6 @@ async function buildExtensions(options = {}) {
 
   logInfo(`🚀 Building ${extensions.length} extension(s)...`);
   const start = Date.now();
-
-  if (isDev) {
-    await installDependencies(extensions);
-  }
 
   const compiler = webpack(
     createExtensionConfig({

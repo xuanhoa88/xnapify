@@ -434,7 +434,7 @@ async function main() {
         '💡 Troubleshooting tips:',
         '   1. Try: npm run clean && npm run build',
         '   2. Check for syntax errors in your code',
-        '   3. Ensure dependencies are installed: npm install',
+        '   3. Ensure dependencies are installed: npm run setup',
         '   4. Run with LOG_LEVEL=verbose for details',
         '   5. See DEPLOYMENT.md for deployment issues',
         '',

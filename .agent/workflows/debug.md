@@ -8,7 +8,7 @@ Debug common build and runtime issues in development mode.
 
 ```bash
 # Clean rebuild (fixes most issues)
-npm run clean && rm -rf node_modules package-lock.json && npm install
+npm run clean && rm -rf node_modules package-lock.json && npm run setup
 
 # Clear webpack cache only
 rm -rf node_modules/.cache
@@ -25,7 +25,7 @@ npx kill-port -p 1337
 
 ```bash
 rm -rf node_modules package-lock.json
-npm install
+npm run setup
 ```
 
 ## Heap out of memory
@@ -288,7 +288,7 @@ await db.connection.revertMigrations(); // Rollback last
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | Port 1337 already in use | Previous process still running | `npx kill-port -p 1337` |
-| `Cannot find module` | Stale require cache or missing dep | `npm install` or restart |
+| `Cannot find module` | Stale require cache or missing dep | `npm run setup` or restart |
 | Breakpoints not hit | Source maps misconfigured | Ensure `sourceMaps: true` in launch.json |
 | HMR says "connected" but no reload | Server compilation error | Check terminal for Webpack errors |
 | Slow recompilation | Large watched file tree | Check `ignored` patterns in dev.js |

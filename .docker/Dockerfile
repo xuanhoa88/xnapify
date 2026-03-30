@@ -5,14 +5,19 @@ FROM node:18-alpine AS builder
 
 WORKDIR /build
 
-# Copy package files
+# Copy package files and setup script
 COPY package*.json ./
+COPY tools/preinstall.js tools/
+COPY tools/tasks/setup.js tools/tasks/
 
 # Install ALL dependencies (including devDependencies for build)
-RUN npm install
+RUN npm run setup
 
 # Copy source code
 COPY . .
+
+# Install extension/sub-package dependencies
+RUN node tools/tasks/setup.js --skip-root
 
 # Build application
 # XNAPIFY_HOST must be 0.0.0.0 inside Docker so the server binds to all interfaces

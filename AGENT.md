@@ -15,7 +15,7 @@ xnapify/
 │   │   │   ├── api/              # Backend: routes, controllers, models, services
 │   │   │   └── views/            # Frontend: React pages, Redux slices
 │   │   └── {module}/             # Other modules (users, roles, etc.)
-│   ├── extensions/                  # Extension packages (auto-discovered)
+│   ├── extensions/               # Extension packages (auto-discovered)
 │   ├── client.js                 # Client entry point
 │   └── server.js                 # Server entry point
 ├── shared/                       # Shared libraries (aliased as @shared)
@@ -32,7 +32,7 @@ xnapify/
 │   │   ├── router/               # File-based API routing engine
 │   │   └── index.js              # Engine auto-loader
 │   ├── container/                # Dependency injection container
-│   ├── extension/                   # Extension registry (slots & hooks)
+│   ├── extension/                # Extension registry (slots & hooks)
 │   ├── jwt/                      # JWT configuration & utilities
 │   ├── renderer/                 # SSR utilities and Redux store
 │   ├── fetch/                    # API client
@@ -55,7 +55,7 @@ xnapify/
 │   ├── skills/                   # AI persona skills (12)
 │   └── templates/                # SPEC.md template
 ├── database.sqlite               # Local SQLite database (dev)
-└── .env.xnapify                      # Environment variable template
+└── .env.xnapify                  # Environment variable template
 ```
 
 ## Tech Stack
@@ -154,7 +154,7 @@ The application uses an auto-discovery system for both API modules and page comp
 
 **Shared API** (`shared/api/engines/` & `shared/jwt/`):
 
-- Core infrastructure: `auth`, `cache`, `db`, `email`, `fs`, `hook`, `http`, `marketplace`, `queue`, `schedule`, `search`, `template`, `webhook`, `worker`
+- Core infrastructure: `auth`, `cache`, `db`, `email`, `fs`, `hook`, `http`, `queue`, `schedule`, `search`, `template`, `webhook`, `worker`
 - Auto-loaded from `shared/api/engines/*/index.js` and re-exported via `shared/api/index.js`
 - Provide reusable capabilities for modules — should not contain business logic
 
@@ -317,7 +317,7 @@ const { models } = container.resolve('db');
 
 > **Convention:** In module code (`init`, services), use `container.resolve('name')` directly. In route handlers/controllers, use `req.app.get('container').resolve('name')`. Direct imports are reserved for shared libraries.
 
-**Available Engines:** `auth`, `cache`, `db`, `email`, `fs`, `hook`, `http`, `marketplace`, `queue`, `schedule`, `search`, `template`, `webhook`, `worker`
+**Available Engines:** `auth`, `cache`, `db`, `email`, `fs`, `hook`, `http`, `queue`, `schedule`, `search`, `template`, `webhook`, `worker`
 
 **Adding a New Engine:**
 
@@ -744,24 +744,28 @@ WEBPACK_PROFILE=false
 
 ## Development Workflow
 
-1. **Start development:** `npm run dev`
-2. **Make changes:** Edit files in `src/`
-3. **See updates:** HMR updates browser automatically
-4. **Run tests:** `npm run test` or `npm run test:watch`
-5. **Lint code:** `npm run lint` or `npm run fix`
-6. **Build production:** `npm run build`
-7. **Deploy:** Use Docker or direct Node.js deployment
+1. **Install dependencies:** `npm run setup` (root + all sub-packages)
+2. **Start development:** `npm run dev`
+3. **Make changes:** Edit files in `src/`
+4. **See updates:** HMR updates browser automatically
+5. **Run tests:** `npm run test` or `npm run test:watch`
+6. **Lint code:** `npm run lint` or `npm run fix`
+7. **Build production:** `npm run build`
+8. **Deploy:** Use Docker or direct Node.js deployment
 
 ## Production Deployment
 
 ```bash
+# Install all dependencies
+npm run setup
+
 # Build for production
 npm run build
 
 # Navigate to build directory
 cd build
 
-# Install production dependencies
+# Install production dependencies (build output only, NOT project root)
 npm install --production
 
 # Set environment variables

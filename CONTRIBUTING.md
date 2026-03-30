@@ -8,7 +8,7 @@ git clone https://github.com/YOUR_USERNAME/xnapify.git
 cd xnapify
 
 # Install and run
-npm install
+npm run setup
 npm run dev
 
 # Create branch
