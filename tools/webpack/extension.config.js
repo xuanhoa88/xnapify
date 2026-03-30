@@ -9,6 +9,7 @@ const path = require('path');
 
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const webpack = require('webpack');
+const nodeExternals = require('webpack-node-externals');
 
 const { logWarn } = require('../utils/logger');
 
@@ -20,6 +21,10 @@ const {
   createEnvDefine,
   createProgressPlugin,
   createSharedDependencies,
+  reStyle,
+  reImage,
+  reFont,
+  reSvg,
   pkg,
   isDev,
   verbose,
@@ -227,9 +232,17 @@ function createApiConfig(extensionData, extensionDefines, buildPath) {
 
   if (!apiPath) return [];
 
+  const extNodeModules = path.join(extensionData.extensionPath, 'node_modules');
+
   const apiConfig = createWebpackConfig('server', {
     entry: apiPath,
     experiments: { outputModule: false },
+    externals: [
+      nodeExternals({
+        additionalModuleDirs: [extNodeModules],
+        allowlist: [reStyle, reImage, reFont, reSvg, /^\.\.\?\//],
+      }),
+    ],
     output: {
       path: path.join(buildPath, dirName),
       filename: 'api.js',
@@ -241,9 +254,7 @@ function createApiConfig(extensionData, extensionDefines, buildPath) {
     ].filter(Boolean),
   });
 
-  apiConfig.resolve.modules.unshift(
-    path.join(extensionData.extensionPath, 'node_modules'),
-  );
+  apiConfig.resolve.modules.unshift(extNodeModules);
 
   return [apiConfig];
 }
