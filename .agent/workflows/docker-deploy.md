@@ -12,7 +12,7 @@ All Docker configuration lives in `.docker/`:
 - `.docker/entrypoint.sh` — Runtime permission fixer via `su-exec`
 - `.dockerignore` — Build context exclusions (stays in project root)
 
-## Build & Run
+## Build & Run (Production)
 
 ```bash
 # Build and start app (SQLite, default)
@@ -25,11 +25,35 @@ docker compose -f .docker/docker-compose.yml --profile postgres up -d --build
 docker compose -f .docker/docker-compose.yml --profile mysql up -d --build
 
 # View logs
-docker compose -f .docker/docker-compose.yml logs -f app
+docker compose -f .docker/docker-compose.yml logs -f xnapify
 
 # Stop all
 docker compose -f .docker/docker-compose.yml down
 ```
+
+## Build & Run (Development with HMR)
+
+Uses `.docker/docker-compose.dev.yml` with bind-mounted source and polling for live reload.
+
+```bash
+# Start dev server with HMR
+docker compose -f .docker/docker-compose.dev.yml up --build
+
+# Podman equivalent
+podman compose -f .docker/docker-compose.dev.yml up --build
+
+# With PostgreSQL
+docker compose -f .docker/docker-compose.dev.yml --profile postgres up --build
+
+# Stop
+docker compose -f .docker/docker-compose.dev.yml down
+```
+
+Key differences from production:
+- Source is bind-mounted (`..:/app`) — edits on host trigger HMR
+- `node_modules` uses anonymous volume to isolate Linux binaries from host
+- `CHOKIDAR_USEPOLLING=true` enables filesystem polling inside the container
+- Runs `npm run dev` instead of `npm run build` + `node server.js`
 
 ## Important: Webpack DefinePlugin
 
@@ -55,11 +79,11 @@ connection string. Or pass it as a build arg to override at build time.
 docker compose -f .docker/docker-compose.yml ps
 
 # Exec into running container
-docker compose -f .docker/docker-compose.yml exec app sh
+docker compose -f .docker/docker-compose.yml exec xnapify sh
 
 # Inspect env vars inside container
-docker compose -f .docker/docker-compose.yml exec app env | grep XNAPIFY_
+docker compose -f .docker/docker-compose.yml exec xnapify env | grep XNAPIFY_
 
 # Rebuild without cache
-docker compose -f .docker/docker-compose.yml build --no-cache app
+docker compose -f .docker/docker-compose.yml build --no-cache xnapify
 ```

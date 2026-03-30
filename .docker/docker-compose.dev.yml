@@ -1,46 +1,48 @@
 # =============================================================================
-# Docker Compose – xnapify (xnapify)
+# Docker Compose – xnapify (Development with HMR)
 # =============================================================================
 # Usage:
-#   docker compose -f .docker/docker-compose.yml up
-#   docker compose -f .docker/docker-compose.yml --profile postgres up
+#   docker compose -f .docker/docker-compose.dev.yml up --build
+#   docker compose -f .docker/docker-compose.dev.yml --profile postgres up --build
 #
-# Override per-environment settings by creating docker-compose.override.yml
+# Podman:
+#   podman compose -f .docker/docker-compose.dev.yml up --build
 # =============================================================================
 
 services:
   # ---------------------------------------------------------------------------
-  # Application
+  # Application (development mode)
   # ---------------------------------------------------------------------------
   xnapify:
     build:
       context: ..
-      dockerfile: .docker/Dockerfile
-    container_name: xnapify-app
+      dockerfile: .docker/Dockerfile.dev
+    container_name: xnapify-dev
     restart: unless-stopped
     env_file:
       - ../.env
     ports:
       - '${XNAPIFY_PORT:-1337}:1337'
     environment:
-      NODE_ENV: ${NODE_ENV:-production}
+      NODE_ENV: development
       XNAPIFY_HOST: 0.0.0.0
-      # Writable directories — all under /app/data (single persistent volume)
+      CHOKIDAR_USEPOLLING: 'true'
+      # Writable directories
       XNAPIFY_UPLOAD_DIR: /app/data/uploads
       XNAPIFY_NODERED_HOME: /app/data/node-red
       XNAPIFY_EXTENSION_DIR: /app/data/extensions
       XNAPIFY_CACHE_DIR: /app/data/caches
       XNAPIFY_FTS_DIR: /app/data/fts
     volumes:
+      # Bind-mount source code for live editing / HMR
+      - ..:/app
+      # Anonymous volume keeps container's Linux node_modules isolated
+      # from host's macOS/Windows native bindings
+      - /app/node_modules
+      # Persistent data volume
       - xnapify_data:/app/data
     networks:
       - xnapify-net
-    healthcheck:
-      test: ['CMD', 'wget', '-qO-', 'http://localhost:1337/']
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 15s
 
   # ---------------------------------------------------------------------------
   # PostgreSQL (activate with: --profile postgres)

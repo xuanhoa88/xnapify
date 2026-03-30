@@ -439,7 +439,7 @@ function setupServerBundleWatcher(serverCompiler) {
       ],
       aggregateTimeout: 200,
       followSymlinks: false,
-      // poll: 500 // uncomment for WSL/VM/Docker
+      poll: process.env.CHOKIDAR_USEPOLLING === 'true' ? 500 : false,
     },
     async function (error, stats) {
       // Fatal errors (I/O, config, plugin crash, file missing)
