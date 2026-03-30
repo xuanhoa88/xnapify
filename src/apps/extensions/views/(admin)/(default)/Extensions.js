@@ -42,6 +42,13 @@ import {
 import s from './Extensions.css';
 
 /**
+ * Safety timeout for actionMap entries (ms).
+ * If no WebSocket event clears the label within this window, auto-clear it
+ * to prevent the UI from being permanently stuck on "Activating..."/"Deactivating...".
+ */
+const ACTION_TIMEOUT_MS = 60_000;
+
+/**
  * Filter tab definitions
  */
 const FILTER_TABS = [
@@ -77,6 +84,51 @@ function Extensions() {
   const [activeDropdownId, setActiveDropdownId] = useState(null);
   const [actionMap, setActionMap] = useState({});
 
+  // Safety timeout timers — keyed by extension ID
+  const actionTimersRef = useRef({});
+
+  // Set an actionMap entry with a safety timeout that auto-clears it
+  const setActionWithTimeout = useCallback((id, label) => {
+    setActionMap(prev => ({ ...prev, [id]: label }));
+
+    // Cancel any existing timer for this ID
+    if (actionTimersRef.current[id]) {
+      clearTimeout(actionTimersRef.current[id]);
+    }
+
+    actionTimersRef.current[id] = setTimeout(() => {
+      setActionMap(prev => {
+        if (!(id in prev)) return prev;
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+      delete actionTimersRef.current[id];
+    }, ACTION_TIMEOUT_MS);
+  }, []);
+
+  // Clear an actionMap entry and its safety timer
+  const clearAction = useCallback(id => {
+    if (actionTimersRef.current[id]) {
+      clearTimeout(actionTimersRef.current[id]);
+      delete actionTimersRef.current[id];
+    }
+    setActionMap(prev => {
+      if (!(id in prev)) return prev;
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  }, []);
+
+  // Cleanup all timers on unmount
+  useEffect(() => {
+    const timers = actionTimersRef.current;
+    return () => {
+      Object.values(timers).forEach(clearTimeout);
+    };
+  }, []);
+
   // Modals & Refs
   const deleteModalRef = useRef();
   const activateModalRef = useRef();
@@ -88,6 +140,30 @@ function Extensions() {
   useEffect(() => {
     dispatch(fetchExtensions());
   }, [dispatch]);
+
+  // Reconcile actionMap with fetched data — if an extension no longer has
+  // a job_status, its action is done and can be cleared from the local map.
+  useEffect(() => {
+    setActionMap(prev => {
+      const ids = Object.keys(prev);
+      if (ids.length === 0) return prev;
+
+      let changed = false;
+      const next = { ...prev };
+      for (const id of ids) {
+        const ext = extensions.find(e => e.id === id);
+        if (ext && !ext.job_status) {
+          delete next[id];
+          if (actionTimersRef.current[id]) {
+            clearTimeout(actionTimersRef.current[id]);
+            delete actionTimersRef.current[id];
+          }
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [extensions]);
 
   // Listen for background job completion via WebSocket to refresh extension list
   const ws = useWebSocket();
@@ -117,12 +193,7 @@ function Extensions() {
           await debouncedFetch();
           if (signal.aborted) return;
           if (data.extensionId) {
-            setActionMap(prev => {
-              if (!(data.extensionId in prev)) return prev;
-              const next = { ...prev };
-              delete next[data.extensionId];
-              return next;
-            });
+            clearAction(data.extensionId);
           }
           if (data.type === 'EXTENSION_INSTALLED') {
             dispatch(
@@ -150,12 +221,7 @@ function Extensions() {
           await debouncedFetch();
           if (signal.aborted) return;
           if (data.extensionId) {
-            setActionMap(prev => {
-              if (!(data.extensionId in prev)) return prev;
-              const next = { ...prev };
-              delete next[data.extensionId];
-              return next;
-            });
+            clearAction(data.extensionId);
           }
           dispatch(
             showSuccessMessage({
@@ -171,12 +237,7 @@ function Extensions() {
           await debouncedFetch();
           if (signal.aborted) return;
           if (data.extensionId) {
-            setActionMap(prev => {
-              if (!(data.extensionId in prev)) return prev;
-              const next = { ...prev };
-              delete next[data.extensionId];
-              return next;
-            });
+            clearAction(data.extensionId);
           }
           dispatch(
             showSuccessMessage({
@@ -192,12 +253,7 @@ function Extensions() {
           await debouncedFetch();
           if (signal.aborted) return;
           if (data.extensionId) {
-            setActionMap(prev => {
-              if (!(data.extensionId in prev)) return prev;
-              const next = { ...prev };
-              delete next[data.extensionId];
-              return next;
-            });
+            clearAction(data.extensionId);
           }
           dispatch(
             showSuccessMessage({
@@ -232,7 +288,7 @@ function Extensions() {
       controller.abort();
       ws.off('extension:updated', handler);
     };
-  }, [ws, dispatch, t]);
+  }, [ws, dispatch, t, clearAction]);
 
   const handleSearchChange = useCallback(value => {
     setSearch(value);
@@ -249,22 +305,18 @@ function Extensions() {
 
   const handleDeleteAction = useCallback(
     async item => {
-      setActionMap(prev => ({
-        ...prev,
-        [item.id]: t('admin:common.uninstalling', 'Uninstalling...'),
-      }));
+      setActionWithTimeout(
+        item.id,
+        t('admin:common.uninstalling', 'Uninstalling...'),
+      );
       try {
         await dispatch(uninstallExtension(item.id)).unwrap();
         // Success toast deferred to WebSocket EXTENSION_UNINSTALLED handler
       } catch {
-        setActionMap(prev => {
-          const next = { ...prev };
-          delete next[item.id];
-          return next;
-        });
+        clearAction(item.id);
       }
     },
-    [dispatch, t],
+    [dispatch, t, setActionWithTimeout, clearAction],
   );
 
   // --- Activate ---
@@ -274,24 +326,20 @@ function Extensions() {
 
   const handleActivateAction = useCallback(
     async item => {
-      setActionMap(prev => ({
-        ...prev,
-        [item.id]: t('admin:common.activating', 'Activating...'),
-      }));
+      setActionWithTimeout(
+        item.id,
+        t('admin:common.activating', 'Activating...'),
+      );
       try {
         await dispatch(
           toggleExtensionStatus({ id: item.id, isActive: true }),
         ).unwrap();
         // Success toast deferred to WebSocket EXTENSION_ACTIVATED handler
       } catch {
-        setActionMap(prev => {
-          const next = { ...prev };
-          delete next[item.id];
-          return next;
-        });
+        clearAction(item.id);
       }
     },
-    [dispatch, t],
+    [dispatch, t, setActionWithTimeout, clearAction],
   );
 
   // --- Deactivate ---
@@ -301,24 +349,20 @@ function Extensions() {
 
   const handleDeactivateAction = useCallback(
     async item => {
-      setActionMap(prev => ({
-        ...prev,
-        [item.id]: t('admin:common.deactivating', 'Deactivating...'),
-      }));
+      setActionWithTimeout(
+        item.id,
+        t('admin:common.deactivating', 'Deactivating...'),
+      );
       try {
         await dispatch(
           toggleExtensionStatus({ id: item.id, isActive: false }),
         ).unwrap();
         // Success toast deferred to WebSocket EXTENSION_DEACTIVATED handler
       } catch {
-        setActionMap(prev => {
-          const next = { ...prev };
-          delete next[item.id];
-          return next;
-        });
+        clearAction(item.id);
       }
     },
-    [dispatch, t],
+    [dispatch, t, setActionWithTimeout, clearAction],
   );
 
   // --- Install (Upload) ---
@@ -351,24 +395,20 @@ function Extensions() {
 
   const handleUpgrade = useCallback(
     async extension => {
-      setActionMap(prev => ({
-        ...prev,
-        [extension.id]: t('admin:common.upgrading', 'Upgrading...'),
-      }));
+      setActionWithTimeout(
+        extension.id,
+        t('admin:common.upgrading', 'Upgrading...'),
+      );
       try {
         await dispatch(
           upgradeExtension({ id: extension.id, data: {} }),
         ).unwrap();
         // Success toast deferred to WebSocket EXTENSION_UPDATED handler
       } catch {
-        setActionMap(prev => {
-          const next = { ...prev };
-          delete next[extension.id];
-          return next;
-        });
+        clearAction(extension.id);
       }
     },
-    [dispatch, t],
+    [dispatch, t, setActionWithTimeout, clearAction],
   );
 
   // Count per tab for badges

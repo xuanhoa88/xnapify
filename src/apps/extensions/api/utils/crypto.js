@@ -10,7 +10,7 @@ import crypto from 'crypto';
 // Derive encryption key from JWT secret for consistent ID obfuscation
 const EXTENSION_KEY = crypto
   .createHash('sha256')
-  .update(process.env.XNAPIFY_JWT_SECRET || __filename)
+  .update(process.env.XNAPIFY_KEY || __filename)
   .digest();
 
 /**

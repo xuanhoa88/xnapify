@@ -128,7 +128,7 @@ export function createJwt(config = {}) {
  * Returns null if JWT secret is not configured.
  */
 export function createJwtFromEnv() {
-  const secret = process.env.XNAPIFY_JWT_SECRET;
+  const secret = process.env.XNAPIFY_KEY;
 
   if (!secret) {
     return null;

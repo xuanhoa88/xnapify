@@ -98,12 +98,12 @@ function updateEnvContent(lines, existingKeys, jwtConfig) {
  * This function:
  * 1. Checks if .env file already exists
  * 2. If .env exists:
- *    - Preserves existing XNAPIFY_JWT_SECRET (even if empty)
+ *    - Preserves existing XNAPIFY_KEY (even if empty)
  *    - Only generates new secret if missing or empty
  * 3. If .env doesn't exist (first-time setup):
  *    - Creates .env from .env.xnapify template (or minimal config)
  *    - Generates a new secure random JWT secret automatically
- * 4. Updates XNAPIFY_JWT_SECRET and XNAPIFY_JWT_EXPIRY
+ * 4. Updates XNAPIFY_KEY and XNAPIFY_JWT_EXPIRY
  * 5. Writes back to .env file
  * 6. For production builds (when buildDir is provided):
  *    - Copies the .env file to the build directory
@@ -133,8 +133,8 @@ async function generateJWT(cwd, buildDir) {
 
       // Parse to check if secret exists
       const { keys } = parseEnvFile(envContent);
-      const existingSecret = keys.has('XNAPIFY_JWT_SECRET')
-        ? keys.get('XNAPIFY_JWT_SECRET').value
+      const existingSecret = keys.has('XNAPIFY_KEY')
+        ? keys.get('XNAPIFY_KEY').value
         : null;
 
       // Only generate if secret is missing or empty in existing .env
@@ -162,8 +162,8 @@ async function generateJWT(cwd, buildDir) {
 
     // Determine JWT secret value
     let jwtSecret;
-    const existingSecret = keys.has('XNAPIFY_JWT_SECRET')
-      ? keys.get('XNAPIFY_JWT_SECRET').value
+    const existingSecret = keys.has('XNAPIFY_KEY')
+      ? keys.get('XNAPIFY_KEY').value
       : null;
 
     if (shouldGenerateSecret) {
@@ -175,14 +175,12 @@ async function generateJWT(cwd, buildDir) {
     } else {
       // Preserve empty value from template
       jwtSecret = '';
-      logInfo(
-        `ℹ️  XNAPIFY_JWT_SECRET is empty (manual configuration required)`,
-      );
+      logInfo(`ℹ️  XNAPIFY_KEY is empty (manual configuration required)`);
     }
 
     // JWT configuration to add/update (using XNAPIFY_ prefix)
     const jwtConfig = {
-      XNAPIFY_JWT_SECRET: jwtSecret,
+      XNAPIFY_KEY: jwtSecret,
       XNAPIFY_JWT_EXPIRY: keys.has('XNAPIFY_JWT_EXPIRY')
         ? keys.get('XNAPIFY_JWT_EXPIRY').value
         : '7d',
@@ -211,7 +209,7 @@ async function generateJWT(cwd, buildDir) {
     // Update process.env directly since we know the values
     // This allows the current process to use the new secret immediately
     // without relying on dotenv-flow to reload (which doesn't overwrite existing vars)
-    process.env.XNAPIFY_JWT_SECRET = jwtConfig.XNAPIFY_JWT_SECRET;
+    process.env.XNAPIFY_KEY = jwtConfig.XNAPIFY_KEY;
     process.env.XNAPIFY_JWT_EXPIRY = jwtConfig.XNAPIFY_JWT_EXPIRY;
   } catch (error) {
     throw new Error(`Failed to generate JWT configuration: ${error.message}`);

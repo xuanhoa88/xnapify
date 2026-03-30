@@ -7,7 +7,7 @@ Standardized JSON Web Token implementation. Features core JWT creation/verificat
 ```javascript
 import { createJwtFromEnv } from '@shared/jwt';
 
-// Automatically loads XNAPIFY_JWT_SECRET and other XNAPIFY_JWT_* env vars
+// Automatically loads XNAPIFY_KEY and other XNAPIFY_JWT_* env vars
 const jwt = createJwtFromEnv();
 
 // Generate an access token
@@ -32,7 +32,7 @@ console.log(pair.accessToken, pair.refreshToken);
 
 ## Requirements
 
-The minimum required configuration is a secret string. Using `createJwtFromEnv()` expects the `XNAPIFY_JWT_SECRET` environment variable to be set.
+The minimum required configuration is a secret string. Using `createJwtFromEnv()` expects the `XNAPIFY_KEY` environment variable to be set.
 
 ## Usage Guide
 

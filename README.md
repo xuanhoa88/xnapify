@@ -249,7 +249,7 @@ XNAPIFY_APP_DESC="Snap your API, Stream your React"
 XNAPIFY_DB_URL=sqlite:database.sqlite
 
 # Authentication
-XNAPIFY_JWT_SECRET=            # Auto-generated on first run
+XNAPIFY_KEY=            # Auto-generated on first run
 XNAPIFY_JWT_EXPIRY=7d
 ```
 
@@ -264,7 +264,7 @@ docker build -t xnapify .
 # Run container
 docker run -p 1337:1337 \
   -e NODE_ENV=production \
-  -e XNAPIFY_JWT_SECRET=$(openssl rand -base64 32) \
+  -e XNAPIFY_KEY=$(openssl rand -base64 32) \
   -e XNAPIFY_DB_URL=postgresql://user:pass@host:5432/dbname \
   xnapify
 ```

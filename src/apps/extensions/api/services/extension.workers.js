@@ -267,19 +267,38 @@ export function registerExtensionWorkers(container) {
         );
       }
     });
-    queueChannel.queue.on('failed', job => {
+    queueChannel.queue.on('failed', async job => {
       const { extensionKey, isActive } = job.data || {};
-      if (extensionKey) {
-        const type =
-          job.name === 'toggle'
-            ? isActive
-              ? 'EXTENSION_ACTIVATED'
-              : 'EXTENSION_DEACTIVATED'
-            : job.name === 'delete'
-              ? 'EXTENSION_UNINSTALLED'
-              : 'EXTENSION_INSTALLED';
-        notifyExtensionChange(container, type, extensionKey);
+      if (!extensionKey) return;
+
+      // Revert DB status on failed toggle to keep it consistent
+      if (job.name === 'toggle') {
+        try {
+          const models = container.resolve('models');
+          await models.Extension.update(
+            { is_active: !isActive },
+            { where: { key: extensionKey } },
+          );
+          console.warn(
+            `[ExtensionWorker] Reverted is_active for ${extensionKey} after failed toggle`,
+          );
+        } catch (revertErr) {
+          console.error(
+            `[ExtensionWorker] Failed to revert DB status for ${extensionKey}:`,
+            revertErr,
+          );
+        }
       }
+
+      const type =
+        job.name === 'toggle'
+          ? isActive
+            ? 'EXTENSION_ACTIVATED'
+            : 'EXTENSION_DEACTIVATED'
+          : job.name === 'delete'
+            ? 'EXTENSION_UNINSTALLED'
+            : 'EXTENSION_INSTALLED';
+      notifyExtensionChange(container, type, extensionKey);
     });
   }
 }

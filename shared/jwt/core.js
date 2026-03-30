@@ -22,7 +22,7 @@ import { DEFAULT_JWT_CONFIG } from './constants';
  * @example
  * const token = generateToken(
  *   { userId: 123, email: 'user@example.com' },
- *   process.env.XNAPIFY_JWT_SECRET
+ *   process.env.XNAPIFY_KEY
  * );
  */
 export function generateToken(payload, secret, options = {}) {
@@ -70,7 +70,7 @@ export function generateToken(payload, secret, options = {}) {
  *
  * @example
  * try {
- *   const decoded = verifyToken(token, process.env.XNAPIFY_JWT_SECRET);
+ *   const decoded = verifyToken(token, process.env.XNAPIFY_KEY);
  *   console.log('User ID:', decoded.userId);
  * } catch (error) {
  *   console.error('Invalid token:', error.message);

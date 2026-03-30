@@ -732,7 +732,7 @@ XNAPIFY_DB_URL=sqlite:database.sqlite
 # PostgreSQL: postgresql://user:password@localhost:5432/dbname
 
 # Authentication
-XNAPIFY_JWT_SECRET=                # Auto-generated on first run
+XNAPIFY_KEY=                # Auto-generated on first run
 XNAPIFY_JWT_EXPIRY=7d
 
 # Build Configuration (Optional)
@@ -770,7 +770,7 @@ npm install --production
 
 # Set environment variables
 export NODE_ENV=production
-export XNAPIFY_JWT_SECRET=$(openssl rand -base64 32)
+export XNAPIFY_KEY=$(openssl rand -base64 32)
 export XNAPIFY_DB_URL=postgresql://user:pass@localhost:5432/dbname
 
 # Start server
@@ -780,7 +780,7 @@ npm start
 docker build -t xnapify .
 docker run -p 1337:1337 \
   -e NODE_ENV=production \
-  -e XNAPIFY_JWT_SECRET=your-secret \
+  -e XNAPIFY_KEY=your-secret \
   -e XNAPIFY_DB_URL=postgresql://user:pass@host:5432/db \
   xnapify
 ```
