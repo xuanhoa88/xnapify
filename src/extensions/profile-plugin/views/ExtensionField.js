@@ -15,7 +15,7 @@ import Form from '@shared/renderer/components/Form';
 import s from './ExtensionField.scss';
 
 export default function ExtensionField({ register, context }) {
-  const { t } = useTranslation(`extension:${__EXTENSION_NAME__}`);
+  const { t } = useTranslation(`extension:${__EXTENSION_ID__}`);
 
   const handleAsyncValidate = useCallback(
     async value => {
@@ -23,7 +23,7 @@ export default function ExtensionField({ register, context }) {
       if (!value || value.length < 3) return true;
       try {
         const response = await context.fetch(
-          `/api/extensions/${__EXTENSION_NAME__}/ipc`,
+          `/api/extensions/${__EXTENSION_ID__}/ipc`,
           {
             method: 'POST',
             body: {

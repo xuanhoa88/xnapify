@@ -50,6 +50,13 @@ The extension system contains universal utilities, client-specific managers, and
 - **ServerExtensionManager (`server/manager.js`)**: Exposes physical filesystem resolving (`resolveExtensionDir`), reads package.json manifests natively, and loads backend extension code (`api.js`) to trigger lifecycle events (`install`, `uninstall`, `init`, `destroy`).
 - **ExtensionSlot (`client/ExtensionSlot.js`)**: A React component that listens to `Registry` changes and dynamically renders arrays of components injected by extensions.
 
+## Extension Identity
+
+Each extension has a single compile-time identifier injected by Webpack:
+
+- **`__EXTENSION_ID__`** — `snakeCase(manifest.name)` (e.g. `xnapify_extension_profile`). Used for all purposes: IPC hook IDs, URL paths, i18n namespaces, logging, and migration prefixes.
+
+
 ## Creating a Extension
 
 Extensions are dynamically loaded. Their capabilities are defined by entry points defined in their `package.json` (`main` for API/Server, `browser` for View/Client).

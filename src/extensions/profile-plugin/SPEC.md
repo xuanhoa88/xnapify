@@ -35,10 +35,12 @@ All hook listeners are stored on `this[HANDLERS]` and explicitly unsubscribed in
 
 IPC handlers are registered on the `registry` in `boot()` and accessible via `POST /api/extensions/:id/ipc`.
 
-| Action | Pipeline | Purpose |
+> **Identity note:** IPC hook IDs and URLs use `__EXTENSION_ID__` (`snakeCase(manifest.name)`), which is URL-safe.
+
+| Action | Hook ID | Purpose |
 |--------|----------|---------|
-| `hello` | `loggingMiddleware → handler` | Returns greeting with extension name and timestamp |
-| `checkNickname` | `loggingMiddleware → validationMiddleware → handler` | Checks if a nickname is already taken via `UserProfile.findOne()` |
+| `hello` | ``ipc:${__EXTENSION_ID__}:hello`` | Returns greeting with extension name and timestamp |
+| `checkNickname` | ``ipc:${__EXTENSION_ID__}:checkNickname`` | Checks if a nickname is already taken via `UserProfile.findOne()` |
 
 **Middleware pipeline pattern:** IPC handlers use `registry.createPipeline(mw1, mw2, handler)` — a composable middleware chain where each function calls `next()` to proceed.
 

@@ -59,8 +59,8 @@ Extensions follow a well-defined phase-sequential lifecycle. Each phase runs for
 
    **Declarative Hooks (auto-processed by the framework):**
    - **`models()`**: Returns a `require.context` for model factories. Models are auto-registered into the global `ModelRegistry` via `discover()`. No manual registration needed.
-   - **`migrations()`**: Returns a `require.context` for migration files. Auto-run with `__EXTENSION_NAME__` prefix (idempotent).
-   - **`seeds()`**: Returns a `require.context` for seed files. Auto-run with `__EXTENSION_NAME__` prefix (idempotent).
+   - **`migrations()`**: Returns a `require.context` for migration files. Auto-run with `__EXTENSION_ID__` prefix (idempotent).
+   - **`seeds()`**: Returns a `require.context` for seed files. Auto-run with `__EXTENSION_ID__` prefix (idempotent).
    - **`translations()`**: Returns a `require.context` for i18n JSON files.
 
    **Lifecycle Hooks:**
@@ -78,8 +78,8 @@ Extensions follow a well-defined phase-sequential lifecycle. Each phase runs for
 
 4. **IPC Pipelines:**
    To allow the frontend to communicate securely with the backend, use IPC pipelines.
-   - Backend: `registry.registerHook('ipc:extension-name:action', registry.createPipeline(...middlewares, handler))`
-   - Frontend: `dispatch(executeIpc('extension-name:action', payload))` (or via `useExtensionHooks`)
+   - Backend: `registry.registerHook('ipc:${__EXTENSION_ID__}:action', registry.createPipeline(...middlewares, handler), __EXTENSION_ID__)`
+   - Frontend: `context.fetch('/api/extensions/${__EXTENSION_ID__}/ipc', { method: 'POST', body: { action, data } })`
 
 ## Router Connection (Plug & Play)
 
@@ -145,6 +145,15 @@ await sendTemplatedEmail(
 **Base variables** (`appName`, `loginUrl`, `resetUrl`, `supportUrl`, `now`, `year`) are auto-injected into every email. If `slug` matches an active `EmailTemplate` in the database, the DB template overrides the inline fallbacks.
 
 **Validation (hook API):** The `emails:send` hook validates `to` (valid email), `slug` (lowercase alphanumeric with hyphens), and requires either `html` or `slug`. Invalid payloads are silently skipped with `console.warn`.
+
+## Extension Identity
+
+Webpack injects a single compile-time constant for each extension:
+
+| Constant | Value | Use For |
+|---|---|---|
+| `__EXTENSION_ID__` | `snakeCase(manifest.name)` (e.g. `xnapify_extension_profile`) | Everything: IPC hook IDs, URL paths, i18n namespaces, logging, migration prefixes |
+
 
 ## Critical Requirements
 

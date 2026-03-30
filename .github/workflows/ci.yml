@@ -62,6 +62,6 @@ jobs:
 
       - name: Check build output
         run: |
-          test -f build/server.js || exit 1
-          test -f build/public/assets/client.js || exit 1
+          test -f build/server.js || { echo "❌ Missing build/server.js"; exit 1; }
+          ls build/public/assets*/client.*.js >/dev/null 2>&1 || { echo "❌ Missing client bundle"; exit 1; }
           echo "✅ Build successful"

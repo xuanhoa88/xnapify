@@ -23,6 +23,19 @@ shared/extension/
 
 Lifecycle phase constants are defined in `shared/utils/lifecycle.js` — the single source of truth.
 
+## Extension Identity
+
+Each extension has a single compile-time identifier injected by Webpack:
+
+| Constant | Source | Example |
+|---|---|---|
+| `__EXTENSION_ID__` | `snakeCase(manifest.name)` | `xnapify_extension_profile` |
+
+This is URL-safe and used consistently for IPC hook IDs, URL paths, route params, i18n namespaces, migration prefixes, and logging.
+
+The server-side `_resolveExtensionId(manifest)` computes `snakeCase(manifest.name)` — identical to `__EXTENSION_ID__`.
+
+
 ## Lifecycle Phases
 
 ### API Extensions (Server)

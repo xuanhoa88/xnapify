@@ -46,7 +46,7 @@ export default {
 
   // Lifecycle: install (called once when the user clicks 'Install Extension')
   async install({ container }) {
-    console.log('[Test Extension] Installing...', __EXTENSION_NAME__);
+    console.log('[Test Extension] Installing...', __EXTENSION_ID__);
     const db = container.resolve('db');
     if (db) {
       try {
@@ -55,7 +55,7 @@ export default {
           migrationsContext.keys(),
         );
         await db.connection.runMigrations([
-          { context: migrationsContext, prefix: __EXTENSION_NAME__ },
+          { context: migrationsContext, prefix: __EXTENSION_ID__ },
         ]);
         console.log('[Test Extension] Database migrations executed');
       } catch (error) {
@@ -68,7 +68,7 @@ export default {
       try {
         console.log('[Test Extension] Seed keys:', seedsContext.keys());
         await db.connection.runSeeds([
-          { context: seedsContext, prefix: __EXTENSION_NAME__ },
+          { context: seedsContext, prefix: __EXTENSION_ID__ },
         ]);
         console.log('[Test Extension] Database seeds executed');
       } catch (error) {
@@ -80,7 +80,7 @@ export default {
   // Lifecycle: boot (called when extension is booted on server)
   async boot({ container, registry }) {
     console.log(
-      '[Test Extension] Backend logic initialized for ' + __EXTENSION_NAME__,
+      '[Test Extension] Backend logic initialized for ' + __EXTENSION_ID__,
     );
 
     // Get hook engine
@@ -176,16 +176,16 @@ export default {
       async data => {
         console.log('[Test Extension] IPC hello called with:', data);
         return {
-          message: `Hello from ${__EXTENSION_NAME__}!`,
+          message: `Hello from ${__EXTENSION_ID__}!`,
           received: data,
           timestamp: new Date().toISOString(),
         };
       },
     );
     registry.registerHook(
-      `ipc:${__EXTENSION_NAME__}:hello`,
+      `ipc:${__EXTENSION_ID__}:hello`,
       this[HANDLERS].ipcHello,
-      __EXTENSION_NAME__,
+      __EXTENSION_ID__,
     );
 
     // IPC handler to check if a nickname exists using createPipeline
@@ -222,16 +222,16 @@ export default {
       },
     );
     registry.registerHook(
-      `ipc:${__EXTENSION_NAME__}:checkNickname`,
+      `ipc:${__EXTENSION_ID__}:checkNickname`,
       this[HANDLERS].ipcCheckNickname,
-      __EXTENSION_NAME__,
+      __EXTENSION_ID__,
     );
   },
 
   // Lifecycle: shutdown (called when extension is disabled)
   async shutdown({ container }) {
     console.log(
-      '[Test Extension] Backend logic destroyed for ' + __EXTENSION_NAME__,
+      '[Test Extension] Backend logic destroyed for ' + __EXTENSION_ID__,
     );
 
     // Unsubscribe from hooks
@@ -252,12 +252,12 @@ export default {
 
   // Lifecycle: uninstall (called once when the user deletes the extension)
   async uninstall({ container }) {
-    console.log('[Test Extension] Uninstalling...', __EXTENSION_NAME__);
+    console.log('[Test Extension] Uninstalling...', __EXTENSION_ID__);
     const db = container.resolve('db');
     if (db) {
       try {
         await db.connection.undoSeeds([
-          { context: seedsContext, prefix: __EXTENSION_NAME__ },
+          { context: seedsContext, prefix: __EXTENSION_ID__ },
         ]);
         console.log('[Test Extension] Database seeds destroyed');
       } catch (error) {
@@ -267,7 +267,7 @@ export default {
       try {
         console.log('[Test Extension] Database migrations/seeds destroyed');
         await db.connection.revertMigrations([
-          { context: migrationsContext, prefix: __EXTENSION_NAME__ },
+          { context: migrationsContext, prefix: __EXTENSION_ID__ },
         ]);
         console.log('[Test Extension] Database migrations destroyed');
       } catch (error) {

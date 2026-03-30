@@ -287,7 +287,7 @@ function createExtensionConfig({ extensions = [], buildPath }) {
 
     // Create shared extension defines once
     const extensionDefines = createDefinePlugin({
-      __EXTENSION_NAME__: JSON.stringify(extensionData.extensionName),
+      __EXTENSION_ID__: JSON.stringify(extensionData.dirName),
       __EXTENSION_DESCRIPTION__: JSON.stringify(
         extensionData.extensionDescription,
       ),

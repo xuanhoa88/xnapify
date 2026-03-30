@@ -139,14 +139,14 @@ export default {
 
   // Lifecycle: Boot on server startup
   async boot({ container, registry }) {
-    console.log('[Extension] Initialized for ' + __EXTENSION_NAME__);
+    console.log('[Extension] Initialized for ' + __EXTENSION_ID__);
 
     // Run database migrations
     const db = container.resolve('db');
     if (db) {
       try {
         await db.connection.runMigrations([
-          { context: migrationsContext, prefix: __EXTENSION_NAME__ },
+          { context: migrationsContext, prefix: __EXTENSION_ID__ },
         ]);
         console.log('[Extension] Database migrations executed');
       } catch (error) {
@@ -155,7 +155,7 @@ export default {
 
       try {
         await db.connection.runSeeds([
-          { context: seedsContext, prefix: __EXTENSION_NAME__ },
+          { context: seedsContext, prefix: __EXTENSION_ID__ },
         ]);
         console.log('[Extension] Database seeds executed');
       } catch (error) {
@@ -205,7 +205,7 @@ export default {
       loggingMiddleware,
       async data => {
         return {
-          message: `Hello from ${__EXTENSION_NAME__}!`,
+          message: `Hello from ${__EXTENSION_ID__}!`,
           received: data,
           timestamp: new Date().toISOString(),
         };
@@ -214,9 +214,9 @@ export default {
 
     // Register IPC handler - include extension name for auto-cleanup
     registry.registerHook(
-      `ipc:${__EXTENSION_NAME__}:hello`,
+      `ipc:${__EXTENSION_ID__}:hello`,
       this[HANDLERS].ipcHello,
-      __EXTENSION_NAME__,
+      __EXTENSION_ID__,
     );
   },
 
@@ -234,7 +234,7 @@ export default {
     if (db) {
       try {
         await db.connection.undoSeeds([
-          { context: seedsContext, prefix: __EXTENSION_NAME__ },
+          { context: seedsContext, prefix: __EXTENSION_ID__ },
         ]);
         console.log('[Extension] Database seeds destroyed');
       } catch (error) {
@@ -243,7 +243,7 @@ export default {
 
       try {
         await db.connection.revertMigrations([
-          { context: migrationsContext, prefix: __EXTENSION_NAME__ },
+          { context: migrationsContext, prefix: __EXTENSION_ID__ },
         ]);
         console.log('[Extension] Database migrations reverted');
       } catch (error) {
@@ -434,7 +434,7 @@ import s from './ExtensionField.scss';
  * Receives register (React Hook Form) and context (fetch, etc.)
  */
 export default function ExtensionField({ register, context }) {
-  const { t } = useTranslation(`extension:${__EXTENSION_NAME__}`);
+  const { t } = useTranslation(`extension:${__EXTENSION_ID__}`);
 
   const handleAsyncValidate = useCallback(
     async value => {
@@ -442,7 +442,7 @@ export default function ExtensionField({ register, context }) {
       if (!value || value.length < 3) return true;
       try {
         const response = await context.fetch(
-          `/api/extensions/${__EXTENSION_NAME__}/ipc`,
+          `/api/extensions/${__EXTENSION_ID__}/ipc`,
           {
             method: 'POST',
             body: {
@@ -522,7 +522,7 @@ export const profileSchema = zod => {
         .string()
         .min(3, {
           params: {
-            i18n: `extension:${__EXTENSION_NAME__}:validations.nickname_too_short`,
+            i18n: `extension:${__EXTENSION_ID__}:validations.nickname_too_short`,
           },
         })
         .max(50)
@@ -533,7 +533,7 @@ export const profileSchema = zod => {
         .string()
         .regex(/^\d{2}\/\d{2}\/\d{4}$/, {
           params: {
-            i18n: `extension:${__EXTENSION_NAME__}:validations.birthdate_format`,
+            i18n: `extension:${__EXTENSION_ID__}:validations.birthdate_format`,
           },
         })
         .optional()
@@ -632,12 +632,12 @@ export const commentSchema = zod => {
         .string()
         .min(1, {
           params: {
-            i18n: `extension:${__EXTENSION_NAME__}:validations.required`,
+            i18n: `extension:${__EXTENSION_ID__}:validations.required`,
           },
         })
         .max(1000, {
           params: {
-            i18n: `extension:${__EXTENSION_NAME__}:validations.too_long`,
+            i18n: `extension:${__EXTENSION_ID__}:validations.too_long`,
           },
         }),
     }),
@@ -743,7 +743,7 @@ export default {
     if (db) {
       try {
         await db.connection.runMigrations([
-          { context: migrationsContext, prefix: __EXTENSION_NAME__ },
+          { context: migrationsContext, prefix: __EXTENSION_ID__ },
         ]);
         console.log('[Comments Extension] Migrations executed');
       } catch (error) {
@@ -774,7 +774,7 @@ export default {
     if (db) {
       try {
         await db.connection.revertMigrations([
-          { context: migrationsContext, prefix: __EXTENSION_NAME__ },
+          { context: migrationsContext, prefix: __EXTENSION_ID__ },
         ]);
         console.log('[Comments Extension] Migrations reverted');
       } catch (error) {
@@ -852,7 +852,7 @@ IPC handlers allow frontend components to call backend logic via HTTP POST reque
 ```javascript
 // In an extension component
 const response = await context.fetch(
-  `/api/extensions/${__EXTENSION_NAME__}/ipc`,
+  `/api/extensions/${__EXTENSION_ID__}/ipc`,
   {
     method: 'POST',
     body: {
@@ -893,9 +893,9 @@ this[HANDLERS].ipcCheckNickname = registry.createPipeline(
 
 // Register with extension ID for auto-cleanup
 registry.registerHook(
-  `ipc:${__EXTENSION_NAME__}:checkNickname`,
+  `ipc:${__EXTENSION_ID__}:checkNickname`,
   this[HANDLERS].ipcCheckNickname,
-  __EXTENSION_NAME__,
+  __EXTENSION_ID__,
 );
 ```
 
@@ -920,7 +920,7 @@ registry.registerHook(
 ## Best Practices
 
 1. **Use Symbol for Handler Storage**: Store handlers in `this[HANDLERS]` for cleanup on destroy
-2. **Namespace Everything**: Use `extension:{__EXTENSION_NAME__}:` prefix for i18n keys
+2. **Namespace Everything**: Use `extension:{__EXTENSION_ID__}:` prefix for i18n keys
 3. **Cleanup on Destroy**: Always unregister hooks/slots when extension is disabled
 4. **Store Composed Handlers**: When using `registry.createPipeline()`, store the result in `this[HANDLERS]` so you can unregister it by reference
 5. **Deep Merge Schemas**: When extending nested objects like `profile`, check for `.unwrap()` and merge properly
@@ -928,7 +928,8 @@ registry.registerHook(
 7. **Validation**: Use Zod schema factories for both client & server validation
 8. **Migrations**: Use versioned filenames (1.initial.js, 2.add_field.js) and call `revertMigrations()` in destroy
 9. **Testing**: Create test files (ComponentName.test.js) for critical extension parts
-10. **Register with Extension ID**: Include `__EXTENSION_NAME__` when registering hooks for auto-cleanup on unregister
+10. **Register with Extension ID**: Include `__EXTENSION_ID__` as the third arg (owner) when registering hooks for auto-cleanup on unregister
+11. **Single constant**: Use `__EXTENSION_ID__` everywhere — it is URL-safe `snakeCase(manifest.name)`.
 
 ---
 
@@ -1076,13 +1077,19 @@ See `src/extensions/posts-module/` for a complete working module-type extension 
 
 ### Extension Not Loading
 
-- Check `__EXTENSION_NAME__` and `__EXTENSION_DESCRIPTION__` globals are defined
+- Check `__EXTENSION_ID__` and `__EXTENSION_DESCRIPTION__` globals are defined
 - For **plugin-kind** extensions: verify the extension subscribes to the correct route paths where it should activate (e.g., `["/login", "/profile"]`)
 - For **module-kind** extensions: the namespace is auto-derived from `views()` — check that `views()` returns a valid `[moduleName, context]` tuple
 - Extensions are eagerly activated via `ensureViewNamespaceActive()` during loading — check console for `[ExtensionManager] Activating namespace:` logs
 - Ensure both `api/index.js` and `views/index.js` export default extension definitions
 - Check browser console for any initialization errors
 - Verify the extension was built by Webpack (check `.cache/dev/extensions/` for build output)
+
+### IPC Returns `Cannot POST`
+
+- **Most common cause:** Using the raw `manifest.name` (scoped npm name like `@scope/name`) instead of `__EXTENSION_ID__` in URLs or hook IDs. The `/` in scoped names splits the Express `:id` route param.
+- Fix: Use `__EXTENSION_ID__` for all IPC hook registrations and URL paths.
+- If source code is correct, the **build output may be stale** — rebuild extensions with `node tools/tasks/extension.js`.
 
 ### Slots Not Appearing
 
