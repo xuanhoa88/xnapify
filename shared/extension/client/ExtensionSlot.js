@@ -5,11 +5,18 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { Component, useState, useEffect, useCallback, memo } from 'react';
+import {
+  Component,
+  useState,
+  useEffect,
+  useCallback,
+  memo,
+  useContext,
+} from 'react';
 
 import PropTypes from 'prop-types';
 
-import { useAppContext } from '@shared/renderer/AppContext';
+import { AppContext } from '@shared/renderer/AppContext';
 
 import { registry } from './Registry';
 
@@ -71,7 +78,7 @@ const ExtensionSlot = memo(function ExtensionSlot({ name, ...props }) {
   // Start as not-mounted; flips to true after hydration completes.
   const [mounted, setMounted] = useState(false);
   const [components, setComponents] = useState([]);
-  const context = useAppContext();
+  const context = useContext(AppContext);
 
   useEffect(() => {
     // Mark as mounted — this only runs on the client after hydration.

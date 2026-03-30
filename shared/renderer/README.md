@@ -6,7 +6,7 @@ Client-side infrastructure — React application shell, view autoloading, routin
 
 ```jsx
 import App from '@shared/renderer/App';
-import { useAppContext } from '@shared/renderer/AppContext';
+import { AppContext } from '@shared/renderer/AppContext';
 import { configureStore } from '@shared/renderer/redux';
 import { Router } from '@shared/renderer/router';
 ```
@@ -30,10 +30,11 @@ AppContext → Redux → i18next → History → children
 ### DI Context
 
 ```jsx
-import { useAppContext } from '@shared/renderer/AppContext';
+import { useContext } from 'react';
+import { AppContext } from '@shared/renderer/AppContext';
 
 function MyComponent() {
-  const { fetch, container, locale } = useAppContext();
+  const { fetch, container, locale } = useContext(AppContext);
 }
 ```
 

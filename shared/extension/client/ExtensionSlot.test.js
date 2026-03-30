@@ -9,13 +9,15 @@
 
 import renderer, { act } from 'react-test-renderer';
 
+import { AppContext } from '@shared/renderer/AppContext';
+
 import ExtensionSlot from './ExtensionSlot';
 import { registry } from './Registry';
 
-// Mock AppContext
-jest.mock('@shared/renderer/AppContext', () => ({
-  useAppContext: () => ({ mockContext: true }),
-}));
+const mockContext = { mockContext: true };
+const withContext = ui => (
+  <AppContext.Provider value={mockContext}>{ui}</AppContext.Provider>
+);
 
 describe('ExtensionSlot', () => {
   let comp;
@@ -35,7 +37,7 @@ describe('ExtensionSlot', () => {
 
   test('renders nothing when no components are registered', () => {
     act(() => {
-      comp = renderer.create(<ExtensionSlot name='empty.slot' />);
+      comp = renderer.create(withContext(<ExtensionSlot name='empty.slot' />));
     });
     // div wrapper is always rendered (for SSR hydration safety)
     const tree = comp.toJSON();
@@ -62,7 +64,7 @@ describe('ExtensionSlot', () => {
 
     act(() => {
       comp = renderer.create(
-        <ExtensionSlot name='test.slot' customProp='hello' />,
+        withContext(<ExtensionSlot name='test.slot' customProp='hello' />),
       );
     });
 
@@ -86,7 +88,9 @@ describe('ExtensionSlot', () => {
     const MockComponent = () => <span>Added dynamically</span>;
 
     act(() => {
-      comp = renderer.create(<ExtensionSlot name='dynamic.slot' />);
+      comp = renderer.create(
+        withContext(<ExtensionSlot name='dynamic.slot' />),
+      );
     });
 
     // Empty wrapper initially

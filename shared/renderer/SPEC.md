@@ -9,7 +9,7 @@
 ```
 shared/renderer/
 ├── App.js              # Root component (provider composition)
-├── AppContext.js        # DI context + useAppContext() hook
+├── AppContext.js       # DI context (React.createContext)
 ├── Html.js             # SSR HTML shell (meta, hydration, OG tags)
 ├── autoloader.js       # View module lifecycle orchestrator
 ├── Providers/
@@ -31,7 +31,7 @@ shared/renderer/
 │       ├── user/          # Authentication state
 │       └── ui/            # UI state (modals, sidebars, toasts)
 └── components/         # Shared UI component library
-    ├── variables.css    # CSS design tokens
+    ├── variables.css   # CSS design tokens
     └── 19 components   # See Components section
 ```
 
@@ -49,20 +49,21 @@ AppContext.Provider → ReduxProvider → I18nextProvider → HistoryProvider �
 
 **Context shape:**
 
-| Property | Type | Description |
-|---|---|---|
-| `container` | `Object` | DI container |
-| `fetch` | `Function` | Universal HTTP client |
-| `store` | `Object` | Redux store |
-| `history` | `Object` | Browser history |
-| `i18n` | `Object` | i18next instance |
-| `locale` | `string` | Current locale |
-| `pathname` | `string` | Current URL path |
-| `query` | `Object` | Query parameters |
+| Property    | Type       | Description           |
+| ----------- | ---------- | --------------------- |
+| `container` | `Object`   | DI container          |
+| `fetch`     | `Function` | Universal HTTP client |
+| `store`     | `Object`   | Redux store           |
+| `history`   | `Object`   | Browser history       |
+| `i18n`      | `Object`   | i18next instance      |
+| `locale`    | `string`   | Current locale        |
+| `pathname`  | `string`   | Current URL path      |
+| `query`     | `Object`   | Query parameters      |
 
 #### `Html.js` — SSR Shell
 
 Server-side rendered HTML document with:
+
 - SEO meta tags (`<title>`, `<meta description>`)
 - Open Graph meta (`og:title`, `og:description`, `og:image`, etc.)
 - CSS/JS injection with `data-extension-id` support
@@ -75,11 +76,11 @@ Discovers and boots view modules. Mirrors the API autoloader pattern.
 
 #### Lifecycle Phases (sequential)
 
-| # | Phase | Hook Signature | Purpose |
-|---|---|---|---|
-| 1 | `translations` | `translations()` → `require.context` | Register i18n namespaces |
-| 2 | `providers` | `providers({ container })` | Bind client-side DI services |
-| 3 | `views` | `views()` → `require.context` | Collect view route contexts |
+| #   | Phase          | Hook Signature                       | Purpose                      |
+| --- | -------------- | ------------------------------------ | ---------------------------- |
+| 1   | `translations` | `translations()` → `require.context` | Register i18n namespaces     |
+| 2   | `providers`    | `providers({ container })`           | Bind client-side DI services |
+| 3   | `views`        | `views()` → `require.context`        | Collect view route contexts  |
 
 #### Adapter Merging
 
@@ -91,13 +92,13 @@ File-based radix-tree router with full CSR lifecycle support.
 
 #### File Conventions
 
-| Pattern | Meaning |
-|---|---|
-| `_route.js` | View route (exports `action` function or React component) |
-| `_config.js` | Route configuration |
-| `_layout.js` | Layout wrapper component |
-| `(name)/` | Route group (not in URL) |
-| `[param]/` | Dynamic segment → `:param` |
+| Pattern      | Meaning                                                   |
+| ------------ | --------------------------------------------------------- |
+| `_route.js`  | View route (exports `action` function or React component) |
+| `_config.js` | Route configuration                                       |
+| `_layout.js` | Layout wrapper component                                  |
+| `(name)/`    | Route group (not in URL)                                  |
+| `[param]/`   | Dynamic segment → `:param`                                |
 
 #### Route Lifecycle (per navigation)
 
@@ -105,14 +106,14 @@ File-based radix-tree router with full CSR lifecycle support.
 translations → init → unmount(previous) → mount(current) → resolve(action)
 ```
 
-| Hook | When | Purpose |
-|---|---|---|
-| `translations` | Once per route | Load route-specific i18n |
-| `init` | Once per route | One-time setup (data prefetch) |
-| `unmount` | Per navigation | Cleanup previous route |
-| `mount` | Per navigation | Setup current route |
-| `register` | On first resolve | One-time registration |
-| `unregister` | On cleanup | Teardown |
+| Hook           | When             | Purpose                        |
+| -------------- | ---------------- | ------------------------------ |
+| `translations` | Once per route   | Load route-specific i18n       |
+| `init`         | Once per route   | One-time setup (data prefetch) |
+| `unmount`      | Per navigation   | Cleanup previous route         |
+| `mount`        | Per navigation   | Setup current route            |
+| `register`     | On first resolve | One-time registration          |
+| `unregister`   | On cleanup       | Teardown                       |
 
 #### Navigation Queue
 
@@ -123,8 +124,8 @@ The router uses a `NavigationEntry` queue to prevent race conditions during rapi
 Routes can be added/removed at runtime:
 
 ```javascript
-const adapter = router.add(extensionAdapter);  // Merges into existing tree
-router.remove(extensionAdapter);               // Removes by adapter reference (source tagging)
+const adapter = router.add(extensionAdapter); // Merges into existing tree
+router.remove(extensionAdapter); // Removes by adapter reference (source tagging)
 ```
 
 ### 4. Redux (`redux/`)
@@ -132,6 +133,7 @@ router.remove(extensionAdapter);               // Removes by adapter reference (
 #### Store Configuration
 
 `configureStore.js` creates a Redux store with:
+
 - Custom middleware chain
 - State persistence (optional)
 - Hot module replacement for reducers
@@ -150,35 +152,35 @@ features/{name}/
 └── reducer.js     # State reducer (private)
 ```
 
-| Feature | Slice | Purpose |
-|---|---|---|
-| `runtime` | `state.runtime` | Locale, theme, env flags |
-| `intl` | `state.intl` | i18n locale and messages |
-| `user` | `state.user` | Auth state, profile, tokens |
-| `ui` | `state.ui` | Modals, sidebars, toasts, loading |
+| Feature   | Slice           | Purpose                           |
+| --------- | --------------- | --------------------------------- |
+| `runtime` | `state.runtime` | Locale, theme, env flags          |
+| `intl`    | `state.intl`    | i18n locale and messages          |
+| `user`    | `state.user`    | Auth state, profile, tokens       |
+| `ui`      | `state.ui`      | Modals, sidebars, toasts, loading |
 
 ### 5. UI Component Library
 
-| Component | Description |
-|---|---|
-| `Avatar` | User avatar with fallback |
-| `Box` | Flexible layout container |
-| `Button` | Button with variants and loading state |
-| `Card` | Card container with header/body/footer |
-| `ConfirmModal` | Confirmation dialog |
-| `ContextMenu` | Right-click / dropdown menu |
-| `Form` | Form primitives (Input, Select, Checkbox, WYSIWYG, etc.) |
-| `History` | Navigation history utilities |
-| `Icon` | Icon component with sprite support |
-| `InfiniteScroll` | Scroll-based pagination |
-| `Loader` | Loading spinner/skeleton |
-| `Modal` | Modal dialog system |
-| `Rbac` | Role-based access control wrappers |
-| `SearchableSelect` | Searchable dropdown select |
-| `Table` | Data table with sorting/pagination |
-| `Tabs` | Tabbed interface |
-| `Tag` | Tag/badge component |
-| `Toast` | Toast notification system |
-| `WYSIWYG` | Rich text editor (Tiptap) |
+| Component          | Description                                              |
+| ------------------ | -------------------------------------------------------- |
+| `Avatar`           | User avatar with fallback                                |
+| `Box`              | Flexible layout container                                |
+| `Button`           | Button with variants and loading state                   |
+| `Card`             | Card container with header/body/footer                   |
+| `ConfirmModal`     | Confirmation dialog                                      |
+| `ContextMenu`      | Right-click / dropdown menu                              |
+| `Form`             | Form primitives (Input, Select, Checkbox, WYSIWYG, etc.) |
+| `History`          | Navigation history utilities                             |
+| `Icon`             | Icon component with sprite support                       |
+| `InfiniteScroll`   | Scroll-based pagination                                  |
+| `Loader`           | Loading spinner/skeleton                                 |
+| `Modal`            | Modal dialog system                                      |
+| `Rbac`             | Role-based access control wrappers                       |
+| `SearchableSelect` | Searchable dropdown select                               |
+| `Table`            | Data table with sorting/pagination                       |
+| `Tabs`             | Tabbed interface                                         |
+| `Tag`              | Tag/badge component                                      |
+| `Toast`            | Toast notification system                                |
+| `WYSIWYG`          | Rich text editor (Tiptap)                                |
 
 All components import from `variables.css` for consistent design tokens.
