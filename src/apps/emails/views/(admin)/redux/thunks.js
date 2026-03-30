@@ -33,7 +33,9 @@ export const fetchTemplates = createAsyncThunk(
 
       return data;
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -48,7 +50,9 @@ export const fetchTemplateById = createAsyncThunk(
       const { data } = await fetch(`/api/admin/emails/templates/${id}`);
       return data;
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -69,7 +73,9 @@ export const createTemplate = createAsyncThunk(
 
       return data;
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -93,7 +99,9 @@ export const updateTemplate = createAsyncThunk(
 
       return data;
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -111,7 +119,9 @@ export const deleteTemplate = createAsyncThunk(
 
       return id;
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -130,7 +140,9 @@ export const bulkDeleteTemplates = createAsyncThunk(
 
       return ids;
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -152,7 +164,9 @@ export const previewTemplate = createAsyncThunk(
 
       return data;
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -174,7 +188,9 @@ export const previewRawTemplate = createAsyncThunk(
 
       return data;
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -197,7 +213,9 @@ export const duplicateTemplate = createAsyncThunk(
 
       return data;
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );

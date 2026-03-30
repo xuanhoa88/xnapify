@@ -26,7 +26,9 @@ export const fetchExtensions = createAsyncThunk(
       return data.extensions || [];
     } catch (error) {
       if (error.name === 'AbortError') return [];
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -47,7 +49,9 @@ export const uploadExtension = createAsyncThunk(
       });
       return data.extension;
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -68,7 +72,9 @@ export const upgradeExtension = createAsyncThunk(
       );
       return responseData.extension;
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -86,7 +92,9 @@ export const toggleExtensionStatus = createAsyncThunk(
       });
       return data.extension;
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -103,7 +111,9 @@ export const uninstallExtension = createAsyncThunk(
       });
       return id;
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );

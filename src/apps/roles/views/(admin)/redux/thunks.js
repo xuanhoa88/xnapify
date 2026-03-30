@@ -33,7 +33,9 @@ export const fetchRoles = createAsyncThunk(
 
       return data;
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -48,7 +50,9 @@ export const fetchRoleById = createAsyncThunk(
       const { data } = await fetch(`/api/admin/roles/${roleId}`);
       return data.role;
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -65,7 +69,9 @@ export const deleteRole = createAsyncThunk(
       });
       return roleId;
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -83,7 +89,9 @@ export const createRole = createAsyncThunk(
       });
       return data.role;
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -101,7 +109,9 @@ export const updateRole = createAsyncThunk(
       });
       return data.role;
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -126,7 +136,9 @@ export const fetchRoleUsers = createAsyncThunk(
 
       return data;
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -151,7 +163,9 @@ export const fetchRoleGroups = createAsyncThunk(
 
       return data;
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -166,7 +180,9 @@ export const fetchRolePermissions = createAsyncThunk(
       const { data } = await fetch(`/api/admin/roles/${roleId}/permissions`);
       return data.permissions || [];
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );

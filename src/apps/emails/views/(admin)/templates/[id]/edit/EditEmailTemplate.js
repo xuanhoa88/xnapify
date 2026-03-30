@@ -149,7 +149,10 @@ function EditEmailTemplate({ params }) {
           title={t('admin:emails.edit.title', 'Edit Email Template')}
         />
         <div className={s.errorBanner}>
-          {detailError || t('admin:emails.edit.notFound', 'Template not found')}
+          {(typeof detailError === 'string'
+            ? detailError
+            : (detailError && detailError.message) || '') ||
+            t('admin:emails.edit.notFound', 'Template not found')}
         </div>
         <Button
           variant='ghost'

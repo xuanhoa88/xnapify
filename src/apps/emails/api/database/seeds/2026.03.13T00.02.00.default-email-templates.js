@@ -82,7 +82,7 @@ const TEMPLATES = [
       'Welcome to {{ appName }}, {{ displayName }}! Your account is ready. Log in at {{ loginUrl }}.',
     sample_data: {
       displayName: 'Alex Morgan',
-      appName: 'Acme Platform',
+      appName: 'xnapify',
       loginUrl: 'https://app.example.com/login',
       now: '2026-01-15T10:30:00.000Z',
     },
@@ -107,7 +107,7 @@ const TEMPLATES = [
       'Reset your password: {{ resetLink }} — This link expires in 1 hour.',
     sample_data: {
       resetLink: 'https://app.example.com/auth/reset?token=abc123',
-      appName: 'Acme Platform',
+      appName: 'xnapify',
       now: '2026-01-15T10:30:00.000Z',
     },
   },
@@ -139,7 +139,7 @@ const TEMPLATES = [
       displayName: 'Jordan Lee',
       email: 'jordan.lee@example.com',
       password: 'Temp!Pass42',
-      appName: 'Acme Platform',
+      appName: 'xnapify',
       loginUrl: 'https://app.example.com/login',
       now: '2026-01-15T10:30:00.000Z',
     },
@@ -165,7 +165,7 @@ const TEMPLATES = [
       'Your password was reset by an admin. New password: {{ password }}. Change it at {{ loginUrl }}.',
     sample_data: {
       password: 'Reset!Pass99',
-      appName: 'Acme Platform',
+      appName: 'xnapify',
       loginUrl: 'https://app.example.com/login',
       now: '2026-01-15T10:30:00.000Z',
     },
@@ -198,7 +198,7 @@ const TEMPLATES = [
     sample_data: {
       is_active: false,
       status: 'Inactive',
-      appName: 'Acme Platform',
+      appName: 'xnapify',
       loginUrl: 'https://app.example.com/login',
       now: '2026-01-15T10:30:00.000Z',
     },
@@ -218,7 +218,7 @@ const TEMPLATES = [
     text_body:
       'Your {{ appName }} account has been removed by an administrator.',
     sample_data: {
-      appName: 'Acme Platform',
+      appName: 'xnapify',
       now: '2026-01-15T10:30:00.000Z',
     },
   },
@@ -246,7 +246,7 @@ const TEMPLATES = [
     text_body:
       'Your {{ appName }} password was changed. If this was not you, reset it immediately.',
     sample_data: {
-      appName: 'Acme Platform',
+      appName: 'xnapify',
       resetUrl: 'https://app.example.com/auth/reset',
       now: '2026-01-15T10:30:00.000Z',
     },
@@ -268,7 +268,7 @@ const TEMPLATES = [
     text_body:
       'Your {{ appName }} account has been deleted. Data will be purged within 30 days.',
     sample_data: {
-      appName: 'Acme Platform',
+      appName: 'xnapify',
       now: '2026-01-15T10:30:00.000Z',
     },
   },
@@ -293,7 +293,7 @@ const TEMPLATES = [
       '{{ sharerEmail }} shared a file with you. View it at {{ driveUrl }}.',
     sample_data: {
       sharerEmail: 'alex.morgan@example.com',
-      appName: 'Acme Platform',
+      appName: 'xnapify',
       driveUrl: 'https://app.example.com/drive',
       now: '2026-01-15T10:30:00.000Z',
     },

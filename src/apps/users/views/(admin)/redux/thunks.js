@@ -42,7 +42,9 @@ export const fetchUsers = createAsyncThunk(
 
       return data;
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -57,7 +59,9 @@ export const fetchUserById = createAsyncThunk(
       const { data } = await fetch(`/api/admin/users/${userId}`);
       return data.user;
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -79,7 +83,9 @@ export const createUser = createAsyncThunk(
 
       return data.user;
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -104,7 +110,9 @@ export const updateUser = createAsyncThunk(
 
       return data.user;
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -127,7 +135,9 @@ export const assignRolesToUser = createAsyncThunk(
 
       return data.user;
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -146,7 +156,9 @@ export const assignGroupsToUser = createAsyncThunk(
 
       return data.user;
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -161,7 +173,9 @@ export const fetchUserPermissions = createAsyncThunk(
       const { data } = await fetch(`/api/admin/users/${userId}/permissions`);
       return data.permissions || [];
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -180,7 +194,9 @@ export const bulkUpdateUserStatus = createAsyncThunk(
 
       return data.users;
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -199,7 +215,9 @@ export const bulkDeleteUsers = createAsyncThunk(
 
       return data.deletedIds;
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -218,7 +236,9 @@ export const fetchApiKeys = createAsyncThunk(
       const { data } = await fetch(`/api/admin/users/${userId}/api-keys`);
       return data.keys || [];
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -242,7 +262,9 @@ export const createApiKey = createAsyncThunk(
 
       return data;
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -265,7 +287,9 @@ export const revokeApiKey = createAsyncThunk(
 
       return keyId;
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );

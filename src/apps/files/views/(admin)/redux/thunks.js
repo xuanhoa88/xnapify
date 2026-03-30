@@ -37,7 +37,9 @@ export const fetchFiles = createAsyncThunk(
       });
       return data; // { files, currentFolder, breadcrumbs, total }
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -52,7 +54,9 @@ export const createFolder = createAsyncThunk(
       });
       return data; // { folder }
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -67,7 +71,9 @@ export const renameItem = createAsyncThunk(
       });
       return data; // { file }
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -98,7 +104,9 @@ export const moveItems = createAsyncThunk(
         }),
       );
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -113,7 +121,9 @@ export const toggleStarItem = createAsyncThunk(
       });
       return data; // { file }
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -142,7 +152,9 @@ export const trashItems = createAsyncThunk(
 
       return { ids };
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -170,7 +182,9 @@ export const restoreItems = createAsyncThunk(
 
       return { ids };
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -189,7 +203,9 @@ export const deleteItemsPermanently = createAsyncThunk(
       dispatch(fetchStorageUsage());
       return { ids };
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -204,7 +220,9 @@ export const emptyTrash = createAsyncThunk(
       dispatch(fetchStorageUsage());
       return true;
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -219,7 +237,9 @@ export const updateSharing = createAsyncThunk(
       });
       return data; // { file }
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -231,7 +251,9 @@ export const fetchFileShares = createAsyncThunk(
       const { data } = await fetch(`${ADMIN_API_BASE}/${id}/shares`);
       return data;
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -249,7 +271,9 @@ export const uploadFile = createAsyncThunk(
       dispatch(fetchStorageUsage());
       return data; // { file }
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -261,7 +285,9 @@ export const fetchStorageUsage = createAsyncThunk(
       const { data } = await fetch(`${ADMIN_API_BASE}/storage`);
       return data; // { used, total }
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -276,7 +302,9 @@ export const searchUsersAndGroups = createAsyncThunk(
 
       return data; // { query, results, count }
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );

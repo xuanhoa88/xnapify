@@ -28,7 +28,9 @@ export const fetchHubListings = createAsyncThunk(
       return data;
     } catch (error) {
       if (error.name === 'AbortError') return { listings: [], total: 0 };
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -43,7 +45,9 @@ export const fetchFeaturedListings = createAsyncThunk(
       return data.featured || [];
     } catch (error) {
       if (error.name === 'AbortError') return [];
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -58,7 +62,9 @@ export const fetchCategories = createAsyncThunk(
       return data.categories || [];
     } catch (error) {
       if (error.name === 'AbortError') return [];
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -70,7 +76,9 @@ export const fetchListingDetail = createAsyncThunk(
       const { data } = await fetch(`/api/extensions/hub/${id}`);
       return data.listing;
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -89,7 +97,9 @@ export const submitExtension = createAsyncThunk(
       });
       return data.submission;
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -104,7 +114,9 @@ export const fetchMySubmissions = createAsyncThunk(
       return data.submissions || [];
     } catch (error) {
       if (error.name === 'AbortError') return [];
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -128,7 +140,9 @@ export const fetchSubmissions = createAsyncThunk(
       return data;
     } catch (error) {
       if (error.name === 'AbortError') return { submissions: [], total: 0 };
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
@@ -146,7 +160,9 @@ export const reviewSubmission = createAsyncThunk(
       );
       return data;
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );

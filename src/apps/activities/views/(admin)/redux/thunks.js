@@ -28,7 +28,9 @@ export const fetchActivities = createAsyncThunk(
       const { data } = await fetch('/api/admin/activities', { query });
       return data;
     } catch (error) {
-      return rejectWithValue(error.data || error.message);
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
     }
   },
 );
