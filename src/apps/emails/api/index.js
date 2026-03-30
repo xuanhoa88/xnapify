@@ -6,6 +6,10 @@
  */
 
 import { registerEmailHooks } from './hooks';
+import { createSendTemplatedEmail } from './services/send.service';
+
+/** @type {Symbol} Ownership key for this module's persistent bindings */
+const OWNER_KEY = Symbol('emails:api');
 
 // Auto-load contexts
 const migrationsContext = require.context(
@@ -30,6 +34,14 @@ export default {
   seeds: () => seedsContext,
   models: () => modelsContext,
   routes: () => routesContext,
+
+  async providers({ container }) {
+    container.bind(
+      'emails:send',
+      () => createSendTemplatedEmail(container),
+      OWNER_KEY,
+    );
+  },
 
   async boot({ container }) {
     registerEmailHooks(container);

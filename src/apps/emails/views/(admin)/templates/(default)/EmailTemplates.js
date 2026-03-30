@@ -17,9 +17,11 @@ import ConfirmModal from '@shared/renderer/components/ConfirmModal';
 import { useHistory } from '@shared/renderer/components/History';
 import Icon from '@shared/renderer/components/Icon';
 import Loader from '@shared/renderer/components/Loader';
+import Modal from '@shared/renderer/components/Modal';
 import Table from '@shared/renderer/components/Table';
 import Tag from '@shared/renderer/components/Tag';
 
+import TemplateEditor from '../../components/TemplateEditor';
 import {
   fetchTemplates,
   getTemplates,
@@ -30,6 +32,8 @@ import {
   duplicateTemplate,
   deleteTemplate,
   bulkDeleteTemplates,
+  previewTemplate,
+  clearPreview,
 } from '../../redux';
 
 import s from './EmailTemplates.css';
@@ -50,6 +54,7 @@ function EmailTemplates() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedItems, setSelectedItems] = useState([]);
 
+  const [previewOpen, setPreviewOpen] = useState(false);
   const confirmDeleteRef = useRef();
 
   useEffect(() => {
@@ -144,6 +149,24 @@ function EmailTemplates() {
     },
     [dispatch],
   );
+
+  const handlePreview = useCallback(
+    record => {
+      dispatch(
+        previewTemplate({
+          id: record.id,
+          sampleData: record.sample_data || {},
+        }),
+      );
+      setPreviewOpen(true);
+    },
+    [dispatch],
+  );
+
+  const handlePreviewClose = useCallback(() => {
+    setPreviewOpen(false);
+    dispatch(clearPreview());
+  }, [dispatch]);
 
   const hasActiveFilters = search || statusFilter;
 
@@ -304,6 +327,15 @@ function EmailTemplates() {
                   variant='ghost'
                   size='small'
                   iconOnly
+                  title={t('admin:emails.list.preview', 'Preview')}
+                  onClick={() => handlePreview(record)}
+                >
+                  <Icon name='eye' size={16} />
+                </Button>
+                <Button
+                  variant='ghost'
+                  size='small'
+                  iconOnly
                   title={t('admin:emails.list.edit', 'Edit')}
                   onClick={() =>
                     history.push(`/admin/emails/templates/${record.id}/edit`)
@@ -377,6 +409,19 @@ function EmailTemplates() {
         onDelete={onConfirmDelete}
         onSuccess={refreshList}
       />
+
+      <Modal
+        isOpen={previewOpen}
+        onClose={handlePreviewClose}
+        placement='right'
+      >
+        <Modal.Header onClose={handlePreviewClose}>
+          {t('admin:emails.list.previewTitle', 'Template Preview')}
+        </Modal.Header>
+        <Modal.Body className={s.previewBody}>
+          <TemplateEditor />
+        </Modal.Body>
+      </Modal>
     </div>
   );
 }

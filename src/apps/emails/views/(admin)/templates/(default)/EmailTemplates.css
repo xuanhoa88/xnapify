@@ -49,3 +49,7 @@
   align-items: center;
   gap: var(--spacing-xs, 4px);
 }
+
+.previewBody {
+  padding: 0;
+}

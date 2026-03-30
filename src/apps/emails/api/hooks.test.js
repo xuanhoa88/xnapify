@@ -2,12 +2,14 @@ import { createFactory as createEmailFactory } from '@shared/api/engines/email/f
 import { createFactory as createHookFactory } from '@shared/api/engines/hook/factory';
 
 import { registerEmailHooks } from './hooks';
+import { createSendTemplatedEmail } from './services/send.service';
 
 describe('Email Hooks', () => {
   let container;
   let hook;
   let emailManager;
   let models;
+  let sendTemplatedEmail;
 
   beforeEach(() => {
     hook = createHookFactory();
@@ -23,11 +25,20 @@ describe('Email Hooks', () => {
       },
     };
 
+    // Create the real sendTemplatedEmail bound to mocked services
+    const serviceContainer = {
+      resolve: jest.fn(name => {
+        if (name === 'email') return emailManager;
+        if (name === 'models') return models;
+        return null;
+      }),
+    };
+    sendTemplatedEmail = createSendTemplatedEmail(serviceContainer);
+
     container = {
       resolve: jest.fn(name => {
         if (name === 'hook') return hook;
-        if (name === 'email') return emailManager;
-        if (name === 'models') return models;
+        if (name === 'emails:send') return sendTemplatedEmail;
         return null;
       }),
     };
@@ -39,6 +50,28 @@ describe('Email Hooks', () => {
   afterEach(() => {
     jest.clearAllMocks();
   });
+
+  // ---------------------------------------------------------------------------
+  // Shared assertions
+  // ---------------------------------------------------------------------------
+
+  /** Assert common baseVars are present in every email */
+  const expectBaseVars = templateData => {
+    expect(templateData).toEqual(
+      expect.objectContaining({
+        appName: process.env.RSK_APP_NAME,
+        loginUrl: expect.stringContaining('/login'),
+        resetUrl: expect.stringContaining('/auth/reset'),
+        supportUrl: expect.stringContaining('/support'),
+        now: expect.any(String),
+        year: new Date().getFullYear(),
+      }),
+    );
+  };
+
+  // ---------------------------------------------------------------------------
+  // auth:* hooks
+  // ---------------------------------------------------------------------------
 
   describe('auth hooks', () => {
     test('sends welcome email on auth:registered', async () => {
@@ -53,12 +86,26 @@ describe('Email Hooks', () => {
       const callArgs = emailManager.send.mock.calls[0];
       expect(callArgs[0]).toMatchObject({
         to: payload.email,
-        subject: expect.any(String),
-        html: expect.stringContaining('{{displayName}}'),
+        subject: expect.stringContaining('Welcome'),
+        html: expect.stringContaining('displayName'),
         templateData: expect.objectContaining({
           displayName: 'Test User',
+          subject: expect.any(String),
         }),
       });
+      expectBaseVars(callArgs[0].templateData);
+    });
+
+    test('sends welcome email with fallback displayName', async () => {
+      const payload = {
+        email: 'no-profile@example.com',
+        user: { id: '999' },
+      };
+
+      await hook('auth').emit('registered', payload);
+
+      const callArgs = emailManager.send.mock.calls[0];
+      expect(callArgs[0].templateData.displayName).toBe('there');
     });
 
     test('uses database template when available', async () => {
@@ -68,8 +115,9 @@ describe('Email Hooks', () => {
       };
 
       models.EmailTemplate.findOne.mockResolvedValueOnce({
-        subject: 'Custom DB Subject: {{displayName}}',
-        html_body: '<p>Custom DB HTML: {{displayName}}</p>',
+        subject: 'Custom DB Subject: {{ displayName }}',
+        html_body: '<p>Custom DB HTML: {{ displayName }}</p>',
+        text_body: 'Custom plain text: {{ displayName }}',
       });
 
       await hook('auth').emit('registered', payload);
@@ -78,12 +126,12 @@ describe('Email Hooks', () => {
         where: { slug: 'welcome-email', is_active: true },
       });
 
-      expect(emailManager.send).toHaveBeenCalledTimes(1);
       const callArgs = emailManager.send.mock.calls[0];
       expect(callArgs[0]).toMatchObject({
         to: payload.email,
-        subject: 'Custom DB Subject: {{displayName}}',
-        html: '<p>Custom DB HTML: {{displayName}}</p>',
+        subject: 'Custom DB Subject: {{ displayName }}',
+        html: '<p>Custom DB HTML: {{ displayName }}</p>',
+        text: 'Custom plain text: {{ displayName }}',
         templateData: expect.objectContaining({
           displayName: 'Test Temp',
         }),
@@ -103,13 +151,18 @@ describe('Email Hooks', () => {
       expect(callArgs[0]).toMatchObject({
         to: payload.email,
         subject: expect.stringContaining('Password Reset'),
-        html: expect.stringContaining('{{resetLink}}'),
+        html: expect.stringContaining('resetLink'),
         templateData: expect.objectContaining({
           resetLink: payload.resetLink,
         }),
       });
+      expectBaseVars(callArgs[0].templateData);
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // admin:users:* hooks
+  // ---------------------------------------------------------------------------
 
   describe('admin:users hooks', () => {
     test('sends email on admin:users:created', async () => {
@@ -126,15 +179,36 @@ describe('Email Hooks', () => {
       expect(callArgs[0]).toMatchObject({
         to: payload.email,
         subject: expect.any(String),
-        html: expect.stringContaining('{{displayName}}'),
+        html: expect.stringContaining('displayName'),
         templateData: expect.objectContaining({
           displayName: 'Admin Created',
+          password: payload.password,
+          email: payload.email,
+        }),
+      });
+      expectBaseVars(callArgs[0].templateData);
+    });
+
+    test('sends notification on admin:users:password_reset', async () => {
+      const payload = {
+        email: 'testpw@example.com',
+        password: 'newTempPass!',
+      };
+
+      await hook('admin:users').emit('password_reset', payload);
+
+      expect(emailManager.send).toHaveBeenCalledTimes(1);
+      const callArgs = emailManager.send.mock.calls[0];
+      expect(callArgs[0]).toMatchObject({
+        to: payload.email,
+        subject: expect.stringContaining('Password Was Reset'),
+        templateData: expect.objectContaining({
           password: payload.password,
         }),
       });
     });
 
-    test('sends notification on admin:users:status_updated', async () => {
+    test('sends notification on admin:users:status_updated (deactivate)', async () => {
       const payload = {
         email: 'teststatus@example.com',
         is_active: false,
@@ -146,21 +220,51 @@ describe('Email Hooks', () => {
       const callArgs = emailManager.send.mock.calls[0];
       expect(callArgs[0]).toMatchObject({
         to: payload.email,
-        subject: expect.stringContaining('Account Status Update'),
-        html: expect.stringContaining('{{status}}'),
+        subject: expect.stringContaining('Inactive'),
         templateData: expect.objectContaining({
           status: 'Inactive',
+          is_active: false,
         }),
       });
     });
+
+    test('sends notification on admin:users:status_updated (activate)', async () => {
+      const payload = {
+        email: 'teststatus@example.com',
+        is_active: true,
+      };
+
+      await hook('admin:users').emit('status_updated', payload);
+
+      const callArgs = emailManager.send.mock.calls[0];
+      expect(callArgs[0].templateData).toMatchObject({
+        status: 'Active',
+        is_active: true,
+      });
+    });
+
+    test('sends notification on admin:users:deleted', async () => {
+      const payload = { email: 'deleted@example.com' };
+
+      await hook('admin:users').emit('deleted', payload);
+
+      expect(emailManager.send).toHaveBeenCalledTimes(1);
+      const callArgs = emailManager.send.mock.calls[0];
+      expect(callArgs[0]).toMatchObject({
+        to: payload.email,
+        subject: expect.stringContaining('Removed'),
+      });
+      expectBaseVars(callArgs[0].templateData);
+    });
   });
+
+  // ---------------------------------------------------------------------------
+  // profile:* hooks
+  // ---------------------------------------------------------------------------
 
   describe('profile hooks', () => {
     test('sends notification on profile:password_changed', async () => {
-      const payload = {
-        email: 'user@example.com',
-        user_id: '789',
-      };
+      const payload = { email: 'user@example.com' };
 
       await hook('profile').emit('password_changed', payload);
 
@@ -168,19 +272,16 @@ describe('Email Hooks', () => {
       const callArgs = emailManager.send.mock.calls[0];
       expect(callArgs[0]).toMatchObject({
         to: payload.email,
-        subject: expect.stringContaining('Password Was Changed'),
-        html: expect.stringContaining('{{appName}}'),
+        subject: expect.stringContaining('Password Changed'),
         templateData: expect.objectContaining({
-          appName: process.env.RSK_APP_NAME,
+          resetUrl: expect.stringContaining('/auth/reset'),
         }),
       });
+      expectBaseVars(callArgs[0].templateData);
     });
 
     test('sends notification on profile:account_deleted', async () => {
-      const payload = {
-        email: 'deleted@example.com',
-        user_id: '999',
-      };
+      const payload = { email: 'deleted@example.com' };
 
       await hook('profile').emit('account_deleted', payload);
 
@@ -188,14 +289,15 @@ describe('Email Hooks', () => {
       const callArgs = emailManager.send.mock.calls[0];
       expect(callArgs[0]).toMatchObject({
         to: payload.email,
-        subject: expect.stringContaining('Account Has Been Removed'),
-        html: expect.stringContaining('{{appName}}'),
-        templateData: expect.objectContaining({
-          appName: process.env.RSK_APP_NAME,
-        }),
+        subject: expect.stringContaining('Account Deleted'),
       });
+      expectBaseVars(callArgs[0].templateData);
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // files:* hooks
+  // ---------------------------------------------------------------------------
 
   describe('files hooks', () => {
     test('sends notification on files:shared', async () => {
@@ -210,12 +312,103 @@ describe('Email Hooks', () => {
       const callArgs = emailManager.send.mock.calls[0];
       expect(callArgs[0]).toMatchObject({
         to: payload.email,
-        subject: expect.stringContaining('New File Shared With You'),
-        html: expect.stringContaining('{{sharerEmail}}'),
+        subject: expect.stringContaining('shared a file'),
         templateData: expect.objectContaining({
           sharerEmail: 'sharer@example.com',
+          driveUrl: expect.stringContaining('/drive'),
         }),
       });
+      expectBaseVars(callArgs[0].templateData);
     });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Edge cases
+  // ---------------------------------------------------------------------------
+
+  describe('resilience', () => {
+    test('handles emailManager.send failure gracefully', async () => {
+      emailManager.send.mockRejectedValueOnce(new Error('SMTP timeout'));
+
+      // Should not throw
+      await hook('auth').emit('registered', {
+        email: 'fail@example.com',
+        user: { id: '1' },
+      });
+
+      expect(emailManager.send).toHaveBeenCalledTimes(1);
+    });
+
+    test('skips hooks when dependencies are missing', () => {
+      const emptyContainer = {
+        resolve: jest.fn(() => null),
+      };
+
+      // Should not throw
+      expect(() => registerEmailHooks(emptyContainer)).not.toThrow();
+    });
+
+    test('subject is injected into templateData', async () => {
+      await hook('auth').emit('registered', {
+        email: 'test@example.com',
+        user: { id: '1' },
+      });
+
+      const callArgs = emailManager.send.mock.calls[0];
+      expect(callArgs[0].templateData.subject).toBe(callArgs[0].subject);
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// send.service unit tests
+// ---------------------------------------------------------------------------
+
+describe('createSendTemplatedEmail', () => {
+  test('returns a no-op when email service is missing', async () => {
+    const emptyContainer = { resolve: () => null };
+    const send = createSendTemplatedEmail(emptyContainer);
+
+    // Should not throw
+    await expect(
+      send('test-slug', { to: 'a@b.com', subject: 'x', html: 'y' }),
+    ).resolves.toBeUndefined();
+  });
+
+  test('auto-injects baseVars into templateData', async () => {
+    const mockSend = jest.fn().mockResolvedValue(true);
+    const serviceContainer = {
+      resolve: name => {
+        if (name === 'email') return { send: mockSend };
+        if (name === 'models')
+          return {
+            EmailTemplate: { findOne: jest.fn().mockResolvedValue(null) },
+          };
+        return null;
+      },
+    };
+    const send = createSendTemplatedEmail(serviceContainer);
+
+    await send(
+      'test',
+      { to: 'a@b.com', subject: 'Hi', html: '<p>Hi</p>' },
+      { custom: 'val' },
+    );
+
+    expect(mockSend).toHaveBeenCalledTimes(1);
+    const { templateData } = mockSend.mock.calls[0][0];
+    expect(templateData).toEqual(
+      expect.objectContaining({
+        custom: 'val',
+        subject: 'Hi',
+        now: expect.any(String),
+        year: expect.any(Number),
+      }),
+    );
+    // baseVars keys are present (values depend on env)
+    expect('appName' in templateData).toBe(true);
+    expect('loginUrl' in templateData).toBe(true);
+    expect('resetUrl' in templateData).toBe(true);
+    expect('supportUrl' in templateData).toBe(true);
   });
 });

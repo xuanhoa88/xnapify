@@ -79,7 +79,7 @@ ${TIPTAP_CORE_STYLES}
             ref={iframeRef}
             className={s.previewIframe}
             title={t('admin:emails.modal.previewTitle', 'Preview Template')}
-            sandbox='allow-same-origin allow-scripts allow-popups'
+            sandbox='allow-popups'
             srcDoc={injectedHtml || ''}
           />
         )}

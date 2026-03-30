@@ -10,7 +10,7 @@ import { v4 as uuidv4 } from 'uuid';
 /**
  * Default email-template permissions and role assignments.
  * Registers CRUD actions for the `emails:templates` resource and
- * assigns all four permissions to the admin role.
+ * assigns full permissions to the admin role, read-only to editor/mod.
  */
 
 const EMAILS_PERMISSIONS = {
@@ -32,7 +32,8 @@ export async function up(_, { container }) {
       id: EMAILS_PERMISSIONS.emailTemplatesCreate,
       resource: RESOURCE,
       action: DEFAULT_ACTIONS.CREATE,
-      description: 'Create email templates for transactional and marketing workflows.',
+      description:
+        'Create email templates for transactional and marketing workflows.',
       is_active: true,
     },
     {
@@ -60,14 +61,31 @@ export async function up(_, { container }) {
 
   await Permission.bulkCreate(permissions);
 
-  // Assign all email-template permissions to admin role
-  const rolePermissions = Object.values(EMAILS_PERMISSIONS).map(
-    permissionId => ({
+  const rolePermissions = [
+    // Admin — full CRUD on email templates
+    ...Object.values(EMAILS_PERMISSIONS).map(permissionId => ({
       id: uuidv4(),
       role_id: SEED_ROLES.admin,
       permission_id: permissionId,
-    }),
-  );
+    })),
+    // Editor — read + update (edit templates, no create/delete)
+    {
+      id: uuidv4(),
+      role_id: SEED_ROLES.editor,
+      permission_id: EMAILS_PERMISSIONS.emailTemplatesRead,
+    },
+    {
+      id: uuidv4(),
+      role_id: SEED_ROLES.editor,
+      permission_id: EMAILS_PERMISSIONS.emailTemplatesUpdate,
+    },
+    // Moderator — read-only (inspect templates for compliance)
+    {
+      id: uuidv4(),
+      role_id: SEED_ROLES.mod,
+      permission_id: EMAILS_PERMISSIONS.emailTemplatesRead,
+    },
+  ];
 
   await RolePermission.bulkCreate(rolePermissions);
 }
