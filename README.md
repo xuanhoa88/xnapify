@@ -207,15 +207,17 @@ Each `_route.js` page can export lifecycle hooks:
 Extend the application without modifying core code:
 
 ```javascript
-// Register an extension
-import { registry } from '@shared/extension/client';
-
-registry.register('my-extension', {
-  init: async (reg, context) => {
-    reg.registerSlot('profile.actions', MyButton, { order: 10 });
-    reg.registerHook('user.validate', myValidator);
+// Define an extension (src/extensions/my-plugin/views/index.js)
+export default {
+  boot({ registry }) {
+    registry.registerSlot('profile.actions', MyButton, { order: 10 });
+    registry.registerHook('user.validate', myValidator);
   },
-});
+  shutdown({ registry }) {
+    registry.unregisterSlot('profile.actions', MyButton);
+    registry.unregisterHook('user.validate', myValidator);
+  },
+};
 
 // Render a slot in JSX
 <ExtensionSlot name='profile.actions' props={userData} />;
@@ -246,9 +248,6 @@ XNAPIFY_DB_URL=sqlite:database.sqlite
 # Authentication
 XNAPIFY_JWT_SECRET=            # Auto-generated on first run
 XNAPIFY_JWT_EXPIRY=7d
-
-# Node-RED (optional)
-XNAPIFY_NODERED_URL=http://localhost:1880
 ```
 
 > **Note:** Environment variables are baked into the client bundle at build time. Changing them requires a rebuild.

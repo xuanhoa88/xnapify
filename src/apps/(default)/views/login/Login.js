@@ -11,7 +11,7 @@ import PropTypes from 'prop-types';
 import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import ExtensionSlot from '@shared/extension/client/ExtensionSlot';
+import { ExtensionSlot } from '@shared/extension/client';
 import Button from '@shared/renderer/components/Button';
 import Form from '@shared/renderer/components/Form';
 import {

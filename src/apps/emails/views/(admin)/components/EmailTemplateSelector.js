@@ -8,7 +8,7 @@
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
-import ExtensionSlot from '@shared/extension/client/ExtensionSlot';
+import { ExtensionSlot } from '@shared/extension/client';
 import ContextMenu from '@shared/renderer/components/ContextMenu';
 import ToolbarButton from '@shared/renderer/components/WYSIWYG/ToolbarButton';
 import Icons from '@shared/renderer/components/WYSIWYG/ToolbarIcon';

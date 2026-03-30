@@ -209,18 +209,21 @@ The application features a robust extension system (`shared/extension`) for exte
 **Using Extensions:**
 
 ```javascript
-// Register an extension
-import { registry } from '@shared/extension/client';
-
-registry.register('my-extension', {
-  init: async (reg, context) => {
+// Define an extension (src/extensions/my-plugin/views/index.js)
+export default {
+  boot({ registry }) {
     // Register UI slot
-    reg.registerSlot('profile.actions', MyButton, { order: 10 });
+    registry.registerSlot('profile.actions', MyButton, { order: 10 });
 
     // Register Logic hook
-    reg.registerHook('user.validate', myValidator);
+    registry.registerHook('user.validate', myValidator);
   },
-});
+
+  shutdown({ registry }) {
+    registry.unregisterSlot('profile.actions', MyButton);
+    registry.unregisterHook('user.validate', myValidator);
+  },
+};
 
 // Render a Slot (in your component)
 import { ExtensionSlot } from '@shared/extension/client';
@@ -731,9 +734,6 @@ XNAPIFY_DB_URL=sqlite:database.sqlite
 # Authentication
 XNAPIFY_JWT_SECRET=                # Auto-generated on first run
 XNAPIFY_JWT_EXPIRY=7d
-
-# Node-RED (Optional)
-XNAPIFY_NODERED_URL=http://localhost:1880
 
 # Build Configuration (Optional)
 WEBPACK_ANALYZE=false
