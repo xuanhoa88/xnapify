@@ -56,7 +56,7 @@
     "@tiptap/core": "3.20.1",
     "@tiptap/extension-code-block": "3.20.1",
     "@tiptap/extension-code-block-lowlight": "3.20.1",
-    "@tiptap/extension-collaboration": "3.20.1",
+    "@tiptap/extension-collaboration": "3.21.0",
     "@tiptap/extension-color": "3.20.1",
     "@tiptap/extension-drag-handle": "3.20.1",
     "@tiptap/extension-drag-handle-react": "3.20.1",
