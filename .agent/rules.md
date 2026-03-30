@@ -38,6 +38,7 @@ Whenever you provide assistance to a Developer on this codebase, you MUST adhere
 - **No direct imports** between `@apps/*` modules. If `@apps/billing` needs data from `@apps/users`, use one of:
   - **Hook Engine**: `hook('users').on('created', handler)` for event-driven communication
   - **DI Container**: `container.resolve('users:services')` for service access
+  - **Email Service**: `container.resolve('emails:send')` or `hook('emails').emit('send', {...})` to send templated emails from any module or extension
   - **Extension Slots/Hooks**: `registry.registerHook('user.validate', fn)` for extensibility
   - **HTTP API**: `fetch('/api/users')` for loose coupling
 - If none of these fit, the feature likely belongs in `@shared/`.

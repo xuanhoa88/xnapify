@@ -22,6 +22,98 @@ export function registerEmailHooks(container) {
   }
 
   // ---------------------------------------------------------------------------
+  // emails:* — public API for extensions
+  //
+  // Extensions can send templated emails by emitting:
+  //
+  //   hook('emails').emit('send', {
+  //     slug: 'order-confirmation',          // DB template slug (optional)
+  //     to: 'customer@example.com',          // required
+  //     subject: 'Order Confirmed',          // fallback subject
+  //     html: '<p>Hi {{ name }}</p>',         // fallback HTML body
+  //     data: { name: 'John', orderId: 42 }, // template variables
+  //   });
+  //
+  // If `slug` matches an active EmailTemplate in the database, the DB
+  // template's subject/html_body/text_body override the inline fallbacks.
+  // The `data` object is merged with baseVars (appName, loginUrl, etc.)
+  // and rendered through LiquidJS.
+  // ---------------------------------------------------------------------------
+
+  hook('emails').on('send', async payload => {
+    if (!payload || typeof payload !== 'object') {
+      console.warn(
+        '⚠️ hook(emails:send): payload must be an object, skipping.',
+      );
+      return;
+    }
+
+    const { slug, to, subject, html, data } = payload;
+
+    // --- Validate required fields ---
+
+    if (!to || typeof to !== 'string') {
+      console.warn('⚠️ hook(emails:send): "to" must be a non-empty string.');
+      return;
+    }
+
+    // Basic email format check
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
+      console.warn(
+        `⚠️ hook(emails:send): "${to}" is not a valid email address.`,
+      );
+      return;
+    }
+
+    // --- Validate optional fields ---
+
+    if (
+      slug != null &&
+      (typeof slug !== 'string' || !/^[a-z0-9-]+$/.test(slug))
+    ) {
+      console.warn(
+        '⚠️ hook(emails:send): "slug" must be lowercase alphanumeric with hyphens (e.g. "order-confirmation").',
+      );
+      return;
+    }
+
+    if (subject != null && typeof subject !== 'string') {
+      console.warn('⚠️ hook(emails:send): "subject" must be a string.');
+      return;
+    }
+
+    if (html != null && typeof html !== 'string') {
+      console.warn('⚠️ hook(emails:send): "html" must be a string.');
+      return;
+    }
+
+    if (data != null && (typeof data !== 'object' || Array.isArray(data))) {
+      console.warn(
+        '⚠️ hook(emails:send): "data" must be a plain object of template variables.',
+      );
+      return;
+    }
+
+    // Must have content: html, subject, or a slug to look up
+    if (!html && !slug) {
+      console.warn(
+        '⚠️ hook(emails:send): provide either "html" (inline template) or "slug" (DB template).',
+      );
+      return;
+    }
+
+    await sendTemplatedEmail(
+      slug || 'custom',
+      {
+        to,
+        subject: subject || '(No Subject)',
+        html: html || '',
+      },
+      data,
+    );
+  });
+
+  // ---------------------------------------------------------------------------
   // auth:* — self-service
   // ---------------------------------------------------------------------------
 

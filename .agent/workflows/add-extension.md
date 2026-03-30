@@ -797,6 +797,35 @@ export default {
 - `{feature}.submit` - Handle form submission
 - `validation:update` - Listen for validation changes
 - `data:change` - Listen for data changes
+- `emails → send` - Send a templated email on demand (see below)
+
+### Sending Emails from Extensions
+
+Use the `emails:send` hook to send templated emails. Base variables (`appName`, `loginUrl`, `now`, etc.) are auto-injected.
+
+```javascript
+// In boot()
+const hook = container.resolve('hook');
+
+// Option A: Use a DB-managed template (by slug)
+await hook('emails').emit('send', {
+  slug: 'order-confirmation',          // Looks up EmailTemplate by slug
+  to: 'customer@example.com',          // Required — valid email
+  subject: 'Order Confirmed',          // Fallback if DB template not found
+  html: '<p>Fallback content</p>',     // Fallback HTML
+  data: { orderId: 42, name: 'John' }, // Template variables (plain object)
+});
+
+// Option B: Inline custom template (no slug)
+await hook('emails').emit('send', {
+  to: 'user@example.com',
+  subject: 'Welcome to {{ appName }}',
+  html: '<p>Hi {{ name }}, your account is ready.</p>',
+  data: { name: 'Jane' },
+});
+```
+
+**Validation:** `to` must be a valid email. `slug` must be lowercase alphanumeric with hyphens. Either `html` or `slug` is required. Invalid payloads are silently skipped.
 
 ### Using Hooks
 

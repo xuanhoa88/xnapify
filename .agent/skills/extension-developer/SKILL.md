@@ -99,6 +99,53 @@ Both use the shared `_connectRouter(routerKey, router)` method internally. Route
 
 These are exclusively view-side (lazy, per-route activation). API-side routes are static and loaded once at boot via `activateExtension()`/`deactivateExtension()`.
 
+## Available Container Services
+
+Extensions can resolve these services from the DI container in `boot()`:
+
+| Service Key | Type | Description |
+|---|---|---|
+| `hook` | `Function` | Event hook engine — `hook('namespace').on('event', handler)` |
+| `email` | `EmailManager` | Low-level email engine (direct provider access) |
+| `emails:send` | `Function` | High-level templated email service with base variables |
+| `models` | `Object` | Sequelize model registry |
+| `db` | `Object` | Database connection and migration runner |
+
+### Sending Emails from Extensions
+
+Extensions should use the `emails:send` hook (preferred) or resolve `emails:send` from the container:
+
+**Option 1: Hook API (recommended)**
+
+```javascript
+// In boot()
+const hook = container.resolve('hook');
+
+await hook('emails').emit('send', {
+  slug: 'order-confirmation',          // DB template slug (optional)
+  to: 'customer@example.com',          // required — valid email
+  subject: 'Order #{{ orderId }}',     // fallback subject
+  html: '<p>Hi {{ name }}</p>',        // fallback HTML (required if no slug)
+  data: { name: 'John', orderId: 42 }, // template variables (plain object)
+});
+```
+
+**Option 2: Direct service (if you need return value or more control)**
+
+```javascript
+const sendTemplatedEmail = container.resolve('emails:send');
+
+await sendTemplatedEmail(
+  'order-confirmation',
+  { to: 'customer@example.com', subject: 'Order', html: '<p>Fallback</p>' },
+  { name: 'John', orderId: 42 },
+);
+```
+
+**Base variables** (`appName`, `loginUrl`, `resetUrl`, `supportUrl`, `now`, `year`) are auto-injected into every email. If `slug` matches an active `EmailTemplate` in the database, the DB template overrides the inline fallbacks.
+
+**Validation (hook API):** The `emails:send` hook validates `to` (valid email), `slug` (lowercase alphanumeric with hyphens), and requires either `html` or `slug`. Invalid payloads are silently skipped with `console.warn`.
+
 ## Critical Requirements
 
 - NEVER directly modify `src/apps/` files from an extension.

@@ -60,5 +60,6 @@ Modules interact with the core framework by exporting specific lifecycle hooks f
 
 ## Best Practices
 - **Do not use static imports** between independent `apps/` domains. Use the DI `app.get('container')` or `hook` system to share logic.
+- **Sending emails from modules**: Resolve `container.resolve('emails:send')` (registered by the emails module) or emit `hook('emails').emit('send', { to, slug, html, data })`. Base variables (`appName`, `loginUrl`, `now`, etc.) are auto-injected.
 - Follow the exact `_route.js` format for the frontend router.
 - Always use `const ContextName = require.context(...)` inside the `index.js` files precisely as described, because Webpack statically analyzes these strings.

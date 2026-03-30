@@ -70,6 +70,129 @@ describe('Email Hooks', () => {
   };
 
   // ---------------------------------------------------------------------------
+  // emails:* — public API for extensions
+  // ---------------------------------------------------------------------------
+
+  describe('emails:send hook (public API)', () => {
+    test('sends email with DB template slug', async () => {
+      await hook('emails').emit('send', {
+        slug: 'order-confirmation',
+        to: 'customer@example.com',
+        subject: 'Order #123',
+        html: '<p>Fallback</p>',
+        data: { orderId: 123 },
+      });
+
+      expect(emailManager.send).toHaveBeenCalledTimes(1);
+      const callArgs = emailManager.send.mock.calls[0];
+      expect(callArgs[0]).toMatchObject({
+        to: 'customer@example.com',
+        subject: 'Order #123',
+        templateData: expect.objectContaining({ orderId: 123 }),
+      });
+      expectBaseVars(callArgs[0].templateData);
+    });
+
+    test('sends inline template when no slug provided', async () => {
+      await hook('emails').emit('send', {
+        to: 'user@example.com',
+        subject: 'Hello',
+        html: '<p>Hi {{ name }}</p>',
+        data: { name: 'Jane' },
+      });
+
+      expect(emailManager.send).toHaveBeenCalledTimes(1);
+      const callArgs = emailManager.send.mock.calls[0];
+      expect(callArgs[0]).toMatchObject({
+        to: 'user@example.com',
+        html: '<p>Hi {{ name }}</p>',
+        templateData: expect.objectContaining({ name: 'Jane' }),
+      });
+    });
+
+    // --- Validation: required fields ---
+
+    test('rejects undefined payload', async () => {
+      await hook('emails').emit('send', undefined);
+      expect(emailManager.send).not.toHaveBeenCalled();
+    });
+
+    test('rejects non-object payload', async () => {
+      await hook('emails').emit('send', 'not-an-object');
+      expect(emailManager.send).not.toHaveBeenCalled();
+    });
+
+    test('rejects missing "to"', async () => {
+      await hook('emails').emit('send', {
+        subject: 'No recipient',
+        html: '<p>Oops</p>',
+      });
+      expect(emailManager.send).not.toHaveBeenCalled();
+    });
+
+    test('rejects invalid email address', async () => {
+      await hook('emails').emit('send', {
+        to: 'not-an-email',
+        html: '<p>Hi</p>',
+      });
+      expect(emailManager.send).not.toHaveBeenCalled();
+    });
+
+    // --- Validation: optional fields ---
+
+    test('rejects invalid slug format', async () => {
+      await hook('emails').emit('send', {
+        to: 'user@example.com',
+        slug: 'Bad Slug!',
+        html: '<p>Hi</p>',
+      });
+      expect(emailManager.send).not.toHaveBeenCalled();
+    });
+
+    test('rejects non-string subject', async () => {
+      await hook('emails').emit('send', {
+        to: 'user@example.com',
+        subject: 123,
+        html: '<p>Hi</p>',
+      });
+      expect(emailManager.send).not.toHaveBeenCalled();
+    });
+
+    test('rejects non-string html', async () => {
+      await hook('emails').emit('send', {
+        to: 'user@example.com',
+        html: { body: '<p>' },
+      });
+      expect(emailManager.send).not.toHaveBeenCalled();
+    });
+
+    test('rejects array as data', async () => {
+      await hook('emails').emit('send', {
+        to: 'user@example.com',
+        html: '<p>Hi</p>',
+        data: ['not', 'an', 'object'],
+      });
+      expect(emailManager.send).not.toHaveBeenCalled();
+    });
+
+    test('rejects when neither html nor slug provided', async () => {
+      await hook('emails').emit('send', {
+        to: 'user@example.com',
+        subject: 'No content',
+      });
+      expect(emailManager.send).not.toHaveBeenCalled();
+    });
+
+    test('accepts slug-only (no html) for DB template lookup', async () => {
+      await hook('emails').emit('send', {
+        to: 'user@example.com',
+        slug: 'welcome-email',
+      });
+      expect(emailManager.send).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
   // auth:* hooks
   // ---------------------------------------------------------------------------
 
