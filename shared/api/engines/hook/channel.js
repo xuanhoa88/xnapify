@@ -6,8 +6,8 @@
  */
 
 // Private symbols for internal state
-const HOOK_NAME = Symbol('__xnapify.hookName__');
-const HOOK_HANDLERS = Symbol('__xnapify.hookHandlers__');
+const HOOK_NAME = Symbol('__xnapify.hook.name__');
+const HOOK_HANDLERS = Symbol('__xnapify.hook.handlers__');
 
 /**
  * Hook Channel - Async middleware hooks with priority support

@@ -6,11 +6,30 @@ Add tests using Jest and React Test Renderer.
 
 ## Run Tests
 
+> **⚠️ NEVER use `npx jest` directly.** Always use `npm test` (or `npm run test:*` variants).
+> The `pretest` hook runs `node tools/npm/preboot.js` which installs the SQLite driver.
+> Bypassing it with `npx jest` causes `Database setup failed: Please install sqlite3 package manually`.
+
 ```bash
-npm test              # Run all tests
-npm run test:watch    # Watch mode
-npm run test:coverage # Coverage report
-npm run test:ci       # CI mode
+# Run all tests
+// turbo
+npm test
+
+# Run tests for a specific file or pattern
+// turbo
+npm test -- --testPathPattern="shared/extension"
+
+# Watch mode
+// turbo
+npm run test:watch
+
+# Coverage report
+// turbo
+npm run test:coverage
+
+# CI mode
+// turbo
+npm run test:ci
 ```
 
 ## Test File Locations

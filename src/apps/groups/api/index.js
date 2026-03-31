@@ -8,7 +8,7 @@
 import { SEED_GROUPS } from './constants';
 
 /** @type {Symbol} Ownership key for this module's persistent bindings */
-const OWNER_KEY = Symbol('groups:api');
+const OWNER_KEY = Symbol('__xnapify.module.groups.api__');
 
 // Auto-load contexts
 const migrationsContext = require.context(

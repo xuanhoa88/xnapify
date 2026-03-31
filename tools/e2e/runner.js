@@ -18,11 +18,12 @@
  *   node tools/e2e/runner.js extensions              # Run extensions module
  *   node tools/e2e/runner.js oauth-google-plugin     # Run specific extension
  *   node tools/e2e/runner.js extensions/02-activate  # Run specific file
+ *   node tools/e2e/runner.js --headed                # Show browser window
  *   node tools/e2e/runner.js --clear-cache            # Clear LLM cache + run all
  *
  * Environment:
  *   E2E_PORT=1337          # App port (auto-detected from .env)
- *   E2E_HEADLESS=false     # Show browser (default: true)
+ *   E2E_HEADLESS=false     # Show browser (fallback; prefer --headed flag)
  *   E2E_FIXTURE_ZIP=...    # Path to test extension .zip
  *   E2E_EMAIL=admin@...    # Login email (fallback — prefer YAML front-matter)
  *   E2E_PASSWORD=secret    # Login password (fallback — prefer YAML front-matter)
@@ -116,10 +117,11 @@ function resolveTarget(arg) {
 async function run() {
   const args = process.argv.slice(2);
   const clearCache = args.includes('--clear-cache');
+  const headed = args.includes('--headed');
   const targetArg = args.find(a => !a.startsWith('--'));
   const port = resolvePort();
   const baseUrl = `http://localhost:${port}`;
-  const headless = config.env('E2E_HEADLESS') !== 'false';
+  const headless = headed ? false : config.env('E2E_HEADLESS') !== 'false';
   const timestamp = new Date()
     .toISOString()
     .slice(0, 16)

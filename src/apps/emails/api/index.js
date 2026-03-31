@@ -9,7 +9,7 @@ import { registerEmailHooks } from './hooks';
 import { createSendTemplatedEmail } from './services/send.service';
 
 /** @type {Symbol} Ownership key for this module's persistent bindings */
-const OWNER_KEY = Symbol('emails:api');
+const OWNER_KEY = Symbol('__xnapify.module.emails.api__');
 
 // Auto-load contexts
 const migrationsContext = require.context(

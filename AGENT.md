@@ -762,7 +762,7 @@ When `XNAPIFY_DB_URL=postgres` (or an unreachable full URL), preboot resolves PG
 2. **Local system PG** (port 5432) — if a system PostgreSQL is running, auto-switch URL
 3. **Embedded PG** (port 5433) — auto-downloads and starts a portable PostgreSQL
 
-Manual control: `node tools/preboot.js --start | --stop | --status`
+Manual control: `node tools/npm/preboot.js --start | --stop | --status`
 
 ## Production Deployment
 

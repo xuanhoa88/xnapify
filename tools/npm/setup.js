@@ -7,7 +7,7 @@
  * Pure Node.js, no external dependencies required.
  *
  * Usage:
- *   node tools/tasks/setup.js
+ *   node tools/npm/setup.js
  *   npm run setup
  */
 
@@ -95,15 +95,13 @@ function npmInstall(cwd, label) {
   const start = Date.now();
 
   try {
-    execSync('npm install', {
+    execSync('npm install --xnapify-setup', {
       cwd,
-      stdio: ['pipe', 'pipe', 'pipe'],
-      timeout: 300_000,
+      stdio: 'inherit',
       shell: true,
       env: {
         ...process.env,
         npm_config_engine_strict: 'false',
-        XNAPIFY_SETUP: '1',
       },
     });
     log(`   ✅ ${label} (${elapsed(start)})`);

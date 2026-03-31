@@ -8,7 +8,7 @@
 import { SEED_PERMISSIONS } from './constants';
 
 /** @type {Symbol} Ownership key for this module's persistent bindings */
-const OWNER_KEY = Symbol('files:api');
+const OWNER_KEY = Symbol('__xnapify.module.files.api__');
 
 // Auto-load contexts
 const migrationsContext = require.context(

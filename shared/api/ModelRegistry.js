@@ -30,19 +30,19 @@ import { createWebpackContextAdapter } from '@shared/utils/contextAdapter';
 const TAG = 'ModelRegistry';
 
 /** @type {symbol} Internal models map */
-const MODELS = Symbol('__xnapify.models__');
+const MODELS = Symbol('__xnapify.model.registry__');
 
 /** @type {symbol} Set of sealed (core) model names */
-const CORE_KEYS = Symbol('__xnapify.coreKeys__');
+const CORE_KEYS = Symbol('__xnapify.model.coreKeys__');
 
 /** @type {symbol} Set of already-associated model names */
-const ASSOCIATED = Symbol('__xnapify.associated__');
+const ASSOCIATED = Symbol('__xnapify.model.associated__');
 
 /** @type {symbol} Map of source → registered model names */
-const SOURCE_MAP = Symbol('__xnapify.sourceMap__');
+const SOURCE_MAP = Symbol('__xnapify.model.sourceMap__');
 
 /** @type {symbol} Database engine reference */
-const DB_ENGINE = Symbol('__xnapify.dbEngine__');
+const DB_ENGINE = Symbol('__xnapify.model.dbEngine__');
 
 function log(message, level = 'info') {
   const prefix = `[${TAG}]`;

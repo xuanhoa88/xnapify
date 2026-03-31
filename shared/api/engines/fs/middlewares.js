@@ -11,7 +11,7 @@ import { v4 as uuidv4 } from 'uuid';
  * Symbol for storing upload result in request
  */
 export const MIDDLEWARES = {
-  UPLOAD: Symbol('__xnapify.fsUpload__'),
+  UPLOAD: Symbol('__xnapify.fs.upload__'),
 };
 
 /**

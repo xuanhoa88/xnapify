@@ -8,7 +8,7 @@
 import { SEED_USERS } from './constants';
 
 /** @type {Symbol} Ownership key for this extension's persistent bindings */
-const OWNER_KEY = Symbol('quick-access:api');
+const OWNER_KEY = Symbol('__xnapify.ext.quickAccess.api__');
 
 // Auto-load contexts
 const seedsContext = require.context(

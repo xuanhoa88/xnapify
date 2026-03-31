@@ -6,9 +6,9 @@
  */
 
 // Tag routes with their source adapter for dynamic add/remove tracking
-export const ROUTE_SOURCE_KEY = Symbol('__xnapify.routeSource__');
+export const ROUTE_SOURCE_KEY = Symbol('__xnapify.route.source__');
 // String-based source ID for robust removal (survives HMR/reference changes)
-export const ROUTE_SOURCE_ID = Symbol('__xnapify.routeSourceId__');
+export const ROUTE_SOURCE_ID = Symbol('__xnapify.route.sourceId__');
 
 /**
  * Recursively tag routes with a source identifier.

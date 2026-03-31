@@ -9,8 +9,9 @@
 
 'use strict';
 
-// Authorized by setup.js
-if (process.env.XNAPIFY_SETUP) process.exit(0);
+// Authorized by setup.js via `npm install --xnapify-setup`.
+// npm converts CLI flags to npm_config_* env vars — scoped to the process.
+if (process.env.npm_config_xnapify_setup) process.exit(0);
 
 // ─── Detect if npm was invoked with package arguments ────────────────────────
 

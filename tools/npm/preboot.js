@@ -18,7 +18,7 @@
  *   - "prestart" in build package.json  (npm start — production)
  *
  * Auto mode (no flags): ensure .env → install driver → resolve PG server
- * Manual mode: node tools/preboot.js --start | --stop | --status
+ * Manual mode: node tools/npm/preboot.js --start | --stop | --status
  *
  * Cross-platform: macOS, Linux, Windows (x64 + arm64)
  */
@@ -604,7 +604,7 @@ async function showStatus() {
  */
 function showHelp() {
   console.log(`
-Usage: node tools/preboot.js [command]
+Usage: node tools/npm/preboot.js [command]
 
 Commands:
   (none)      Auto mode — detect dialect, install deps, resolve server

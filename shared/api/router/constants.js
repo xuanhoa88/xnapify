@@ -12,10 +12,8 @@ export const ROUTE_SEPARATOR = '/';
 /** @type {string} Default module/config placeholder name */
 export const ROUTE_PATH_DEFAULT = '(default)';
 /** @type {symbol} Tracks whether a route's init() has been called */
-export const ROUTE_INIT_KEY = Symbol('__xnapify.routeInitKey__');
+export const ROUTE_INIT_KEY = Symbol('__xnapify.route.init__');
 /** @type {symbol} Tracks mounted config modules to prevent double-mounting */
-export const ROUTE_MOUNT_KEY = Symbol('__xnapify.routeMountKey__');
+export const ROUTE_MOUNT_KEY = Symbol('__xnapify.route.mount__');
 /** @type {symbol} Tracks whether a route's translations have been registered */
-export const ROUTE_TRANSLATIONS_KEY = Symbol(
-  '__xnapify.routeTranslationsKey__',
-);
+export const ROUTE_TRANSLATIONS_KEY = Symbol('__xnapify.route.translations__');

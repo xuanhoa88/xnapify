@@ -7,8 +7,7 @@ WORKDIR /build
 
 # Copy package files and setup script
 COPY package*.json ./
-COPY tools/preinstall.js tools/
-COPY tools/tasks/setup.js tools/tasks/
+COPY tools/npm/ ./tools/npm/
 
 # Install ALL dependencies (including devDependencies for build)
 RUN npm run setup
@@ -17,7 +16,7 @@ RUN npm run setup
 COPY . .
 
 # Install extension/sub-package dependencies
-RUN node tools/tasks/setup.js --skip-root
+RUN node tools/npm/setup.js --skip-root
 
 # Build application
 # XNAPIFY_HOST must be 0.0.0.0 inside Docker so the server binds to all interfaces
@@ -37,10 +36,9 @@ WORKDIR /app
 # Copy built files from builder stage
 COPY --from=builder /build/build ./build
 
-# Install production dependencies
+# Install production dependencies (build/package.json already has merged ext deps)
 WORKDIR /app/build
-COPY --from=builder /build/package*.json ./
-RUN npm install --production && npm cache clean --force
+RUN NODE_ENV=production npm install --production && npm cache clean --force
 
 # Copy entrypoint script
 COPY .docker/entrypoint.sh /usr/local/bin/

@@ -5,12 +5,14 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { v4 as uuidv4 } from 'uuid';
+import { v5 as uuidv5 } from 'uuid';
 
-// Store user IDs for use in other seeds
+const NS = uuidv5.DNS;
+
+// Seed user IDs — deterministic UUIDs (stable across webpack bundles)
 export const SEED_USERS = Object.freeze({
-  admin: uuidv4(),
-  'john.doe': uuidv4(),
-  'jane.smith': uuidv4(),
-  'locked.user': uuidv4(),
+  admin: uuidv5('xnapify.user.admin', NS),
+  'john.doe': uuidv5('xnapify.user.john.doe', NS),
+  'jane.smith': uuidv5('xnapify.user.jane.smith', NS),
+  'locked.user': uuidv5('xnapify.user.locked.user', NS),
 });

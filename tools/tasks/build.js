@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+const fsP = require('fs/promises');
 const path = require('path');
 
 const webpack = require('webpack');
@@ -37,6 +38,7 @@ const {
   clientConfig: webpackClientConfig,
   serverConfig: webpackServerConfig,
 } = require('../webpack/app.config');
+const { createWebpackConfig } = require('../webpack/base.config');
 
 const clean = require('./clean');
 const buildExtensions = require('./extension');
@@ -77,6 +79,8 @@ async function copyFiles() {
           engines: pkg.engines,
           dependencies: buildDeps,
           scripts: {
+            preinstall: 'node preinstall.js',
+            setup: 'node setup.js',
             prestart: 'node preboot.js',
             start: 'node server.js',
           },
@@ -121,12 +125,7 @@ async function copyFiles() {
     );
     logDebug('Copied .npmrc');
 
-    // 6. Copy preboot.js for standalone auto-boot
-    await copyFile(
-      path.join(config.CWD, 'tools/preboot.js'),
-      path.join(config.BUILD_DIR, 'preboot.js'),
-    );
-    logDebug('Copied preboot.js');
+    // 6. npm scripts are bundled by createNpmScripts() step (setup, preinstall, preboot)
 
     // 7. Copy .env.xnapify template (preboot creates .env from it)
     const envTemplatePath = path.join(config.CWD, '.env.xnapify');
@@ -144,6 +143,87 @@ async function copyFiles() {
       originalError: error.message,
     });
   }
+}
+
+/**
+ * Bundle tools/npm scripts into standalone files in the build directory.
+ * Reuses the shared server webpack config for consistency (node target,
+ * externals, resolve, etc.) with lightweight overrides for npm scripts.
+ */
+async function createNpmScripts() {
+  logInfo('📦 Bundling npm scripts...');
+
+  // Auto-discover all .js files in tools/npm/
+  const npmDir = path.join(config.CWD, 'tools/npm');
+  const files = await fsP.readdir(npmDir);
+  const entry = Object.fromEntries(
+    files
+      .filter(f => f.endsWith('.js'))
+      .map(f => [path.basename(f, '.js'), path.join(npmDir, f)]),
+  );
+
+  const npmConfig = createWebpackConfig('server', {
+    entry,
+    output: {
+      path: config.BUILD_DIR,
+      filename: '[name].js',
+    },
+    // npm scripts are plain CJS — no loaders, no transforms.
+    module: {
+      rules: [],
+      parser: {
+        javascript: {
+          // npm scripts use require.resolve(dep.name) at runtime to probe
+          // optional dependencies. Disable static analysis — all non-relative
+          // imports are externalized and resolved at runtime by Node.
+          requireResolve: false,
+          // Prevent "Critical dependency: the request of a dependency is an
+          // expression" diagnostics for intentional dynamic require() calls
+          // (e.g. require('embedded-postgres') inside conditional blocks).
+          exprContextCritical: false,
+        },
+      },
+    },
+    optimization: { minimize: false },
+    devtool: false,
+    // Externalize ALL non-relative imports. npm scripts run after
+    // `npm install` in production — deps (including on-demand ones like
+    // embedded-postgres, dialect drivers, dotenv-flow) must resolve at
+    // runtime, not be bundled at build time.
+    externals: [
+      ({ request }, callback) => {
+        if (/^\.{0,2}[/\\]/.test(request)) return callback();
+        callback(null, `commonjs ${request}`);
+      },
+    ],
+  });
+
+  const compiler = webpack(npmConfig);
+
+  return new Promise((resolve, reject) => {
+    compiler.run((err, stats) => {
+      compiler.close(() => {});
+
+      if (err) {
+        reject(err);
+        return;
+      }
+
+      if (stats.hasErrors()) {
+        const info = stats.toJson({ errors: true });
+        reject(new Error(info.errors.map(e => e.message).join('\n')));
+        return;
+      }
+
+      if (stats.hasWarnings()) {
+        const info = stats.toJson({ warnings: true });
+        info.warnings.forEach(w => logWarn(w.message || w));
+      }
+
+      logInfo('✅ npm scripts bundled');
+      resolve();
+    });
+  });
 }
 
 /**
@@ -365,6 +445,15 @@ async function main() {
             verbose,
           }),
         description: 'Copying static files',
+      },
+      {
+        name: 'npm scripts',
+        task: () =>
+          withBuildRetry(() => createNpmScripts(), {
+            operation: 'npm-scripts',
+            verbose,
+          }),
+        description: 'Bundling npm scripts',
       },
       {
         name: 'extensions',

@@ -9,9 +9,9 @@ import { WebhookValidationError } from './errors';
 import { WEBHOOK_EVENTS } from './utils/constants';
 
 // Private symbols
-const HOOK = Symbol('__xnapify.webhookChannel__');
-const PROVIDERS = Symbol('__xnapify.webhookProviders__');
-const CONTEXT = Symbol('__xnapify.webhookContext__');
+const HOOK = Symbol('__xnapify.webhook.channel__');
+const PROVIDERS = Symbol('__xnapify.webhook.providers__');
+const CONTEXT = Symbol('__xnapify.webhook.context__');
 
 /**
  * Inbound Webhook Manager

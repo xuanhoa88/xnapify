@@ -5,12 +5,14 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { v4 as uuidv4 } from 'uuid';
+import { v5 as uuidv5 } from 'uuid';
 
-// Seed group ids
+const NS = uuidv5.DNS;
+
+// Seed group ids — deterministic UUIDs (stable across webpack bundles)
 export const SEED_GROUPS = Object.freeze({
-  engineering: uuidv4(),
-  marketing: uuidv4(),
-  support: uuidv4(),
-  management: uuidv4(),
+  engineering: uuidv5('xnapify.group.engineering', NS),
+  marketing: uuidv5('xnapify.group.marketing', NS),
+  support: uuidv5('xnapify.group.support', NS),
+  management: uuidv5('xnapify.group.management', NS),
 });

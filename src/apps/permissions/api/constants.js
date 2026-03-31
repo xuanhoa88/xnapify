@@ -5,55 +5,57 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { v4 as uuidv4 } from 'uuid';
+import { v5 as uuidv5 } from 'uuid';
 
-// Seed roles
+const NS = uuidv5.DNS;
+
+// Seed permissions — deterministic UUIDs (stable across webpack bundles)
 export const SEED_PERMISSIONS = Object.freeze({
   // Super admin
-  superAdmin: uuidv4(),
+  superAdmin: uuidv5('xnapify.perm.superAdmin', NS),
   // Users CRUD + impersonate
-  usersCreate: uuidv4(),
-  usersRead: uuidv4(),
-  usersUpdate: uuidv4(),
-  usersDelete: uuidv4(),
-  usersImpersonate: uuidv4(),
+  usersCreate: uuidv5('xnapify.perm.usersCreate', NS),
+  usersRead: uuidv5('xnapify.perm.usersRead', NS),
+  usersUpdate: uuidv5('xnapify.perm.usersUpdate', NS),
+  usersDelete: uuidv5('xnapify.perm.usersDelete', NS),
+  usersImpersonate: uuidv5('xnapify.perm.usersImpersonate', NS),
   // Roles CRUD
-  rolesCreate: uuidv4(),
-  rolesRead: uuidv4(),
-  rolesUpdate: uuidv4(),
-  rolesDelete: uuidv4(),
+  rolesCreate: uuidv5('xnapify.perm.rolesCreate', NS),
+  rolesRead: uuidv5('xnapify.perm.rolesRead', NS),
+  rolesUpdate: uuidv5('xnapify.perm.rolesUpdate', NS),
+  rolesDelete: uuidv5('xnapify.perm.rolesDelete', NS),
   // Groups CRUD
-  groupsCreate: uuidv4(),
-  groupsRead: uuidv4(),
-  groupsUpdate: uuidv4(),
-  groupsDelete: uuidv4(),
+  groupsCreate: uuidv5('xnapify.perm.groupsCreate', NS),
+  groupsRead: uuidv5('xnapify.perm.groupsRead', NS),
+  groupsUpdate: uuidv5('xnapify.perm.groupsUpdate', NS),
+  groupsDelete: uuidv5('xnapify.perm.groupsDelete', NS),
   // Permissions CRUD
-  permissionsCreate: uuidv4(),
-  permissionsRead: uuidv4(),
-  permissionsUpdate: uuidv4(),
-  permissionsDelete: uuidv4(),
+  permissionsCreate: uuidv5('xnapify.perm.permissionsCreate', NS),
+  permissionsRead: uuidv5('xnapify.perm.permissionsRead', NS),
+  permissionsUpdate: uuidv5('xnapify.perm.permissionsUpdate', NS),
+  permissionsDelete: uuidv5('xnapify.perm.permissionsDelete', NS),
   // Node-RED
-  nodeRedAdmin: uuidv4(),
-  nodeRedReadOnly: uuidv4(),
+  nodeRedAdmin: uuidv5('xnapify.perm.nodeRedAdmin', NS),
+  nodeRedReadOnly: uuidv5('xnapify.perm.nodeRedReadOnly', NS),
   // API Keys
-  apiKeysCreate: uuidv4(),
-  apiKeysRead: uuidv4(),
-  apiKeysDelete: uuidv4(),
+  apiKeysCreate: uuidv5('xnapify.perm.apiKeysCreate', NS),
+  apiKeysRead: uuidv5('xnapify.perm.apiKeysRead', NS),
+  apiKeysDelete: uuidv5('xnapify.perm.apiKeysDelete', NS),
   // Files CRUD
-  filesCreate: uuidv4(),
-  filesRead: uuidv4(),
-  filesUpdate: uuidv4(),
-  filesDelete: uuidv4(),
+  filesCreate: uuidv5('xnapify.perm.filesCreate', NS),
+  filesRead: uuidv5('xnapify.perm.filesRead', NS),
+  filesUpdate: uuidv5('xnapify.perm.filesUpdate', NS),
+  filesDelete: uuidv5('xnapify.perm.filesDelete', NS),
   // Activities (read only)
-  activitiesRead: uuidv4(),
+  activitiesRead: uuidv5('xnapify.perm.activitiesRead', NS),
   // Extensions CRUD
-  extensionsCreate: uuidv4(),
-  extensionsRead: uuidv4(),
-  extensionsUpdate: uuidv4(),
-  extensionsDelete: uuidv4(),
+  extensionsCreate: uuidv5('xnapify.perm.extensionsCreate', NS),
+  extensionsRead: uuidv5('xnapify.perm.extensionsRead', NS),
+  extensionsUpdate: uuidv5('xnapify.perm.extensionsUpdate', NS),
+  extensionsDelete: uuidv5('xnapify.perm.extensionsDelete', NS),
   // Email templates CRUD
-  emailTemplatesCreate: uuidv4(),
-  emailTemplatesRead: uuidv4(),
-  emailTemplatesUpdate: uuidv4(),
-  emailTemplatesDelete: uuidv4(),
+  emailTemplatesCreate: uuidv5('xnapify.perm.emailTemplatesCreate', NS),
+  emailTemplatesRead: uuidv5('xnapify.perm.emailTemplatesRead', NS),
+  emailTemplatesUpdate: uuidv5('xnapify.perm.emailTemplatesUpdate', NS),
+  emailTemplatesDelete: uuidv5('xnapify.perm.emailTemplatesDelete', NS),
 });

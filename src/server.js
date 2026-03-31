@@ -941,7 +941,7 @@ export async function bootstrapApp(app, server, options = {}) {
       ? `q:${queryLocale}`
       : cookieLocale
         ? `c:${cookieLocale}`
-        : `a:${req.get('accept-language') || ''}`;
+        : `a:${req.get('accept-language') || DEFAULT_LOCALE}`;
 
     const cachedLang = appState.localeCache.get(cacheKey);
     if (cachedLang) {

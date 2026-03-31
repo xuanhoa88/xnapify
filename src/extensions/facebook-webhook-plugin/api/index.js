@@ -24,14 +24,14 @@
  * - `XNAPIFY_FACEBOOK_WEBHOOK_KEY` — Shared secret from Facebook App Dashboard
  *
  * @example <caption>Sending a test webhook</caption>
- * curl -X POST http://localhost:3000/webhooks/facebook \
+ * curl -X POST http://localhost:1337/api/webhooks/facebook \
  *   -H "Content-Type: application/json" \
  *   -H "x-hub-signature-256: sha256=<hmac>" \
  *   -d '{"object":"page","entry":[...]}'
  */
 
 // Private symbol for handlers storage
-const HANDLERS = Symbol('handlers');
+const HANDLERS = Symbol('__xnapify.ext.facebookWebhookHandlers__');
 
 const TAG = '[Facebook Extension]';
 

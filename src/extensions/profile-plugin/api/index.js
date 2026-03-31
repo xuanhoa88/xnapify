@@ -11,7 +11,7 @@ import snakeCase from 'lodash/snakeCase';
 import { profileSchema } from '../validator';
 
 // Private symbol for handlers storage
-const HANDLERS = Symbol('handlers');
+const HANDLERS = Symbol('__xnapify.ext.profileApiHandlers__');
 
 // Private symbol for translations context
 const translationsContext = require.context(

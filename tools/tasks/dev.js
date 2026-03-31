@@ -36,7 +36,7 @@ const clean = require('./clean');
 const buildExtensions = require('./extension');
 
 // Unique symbol to mark webpack middlewares
-const kWebpackMiddleware = Symbol('__xnapify.webpackMiddleware__');
+const kWebpackMiddleware = Symbol('__xnapify.webpack.middleware__');
 
 // Webpack HMR plugin
 const { HotModuleReplacementPlugin } = webpack;

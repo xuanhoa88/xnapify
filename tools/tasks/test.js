@@ -55,8 +55,11 @@ async function main() {
     // Log jest command in debug mode
     logDebug(`Running: jest ${jestArgs.join(' ')}`);
 
+    // Resolve local jest binary (avoids ENOENT when jest isn't in PATH)
+    const jestBin = require.resolve('jest/bin/jest');
+
     // Spawn Jest process
-    const jestProcess = spawn('jest', jestArgs, {
+    const jestProcess = spawn(process.execPath, [jestBin, ...jestArgs], {
       stdio: 'inherit',
       env: {
         ...process.env,

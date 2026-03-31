@@ -266,9 +266,9 @@ XNAPIFY_JWT_EXPIRY=7d
 
 ```bash
 # Manual control
-node tools/preboot.js --status   # Show DB status
-node tools/preboot.js --start    # Start embedded PG
-node tools/preboot.js --stop     # Stop embedded PG (drains connections)
+node tools/npm/preboot.js --status   # Show DB status
+node tools/npm/preboot.js --start    # Start embedded PG
+node tools/npm/preboot.js --stop     # Stop embedded PG (drains connections)
 ```
 
 ## 🐳 Docker

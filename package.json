@@ -27,10 +27,10 @@
     "npm": ">=8.0.0"
   },
   "scripts": {
-    "preinstall": "node tools/preinstall.js",
-    "predev": "node tools/preboot.js",
+    "preinstall": "node tools/npm/preinstall.js",
+    "predev": "node tools/npm/preboot.js",
     "precommit": "lint-staged",
-    "setup": "node tools/tasks/setup.js",
+    "setup": "node tools/npm/setup.js",
     "dev": "node tools/run dev",
     "build": "node tools/run build",
     "clean": "node tools/run clean",
@@ -43,14 +43,14 @@
     "fix:css": "node tools/run stylelint --fix",
     "format": "node tools/run prettier",
     "format:check": "node tools/run prettier --check",
-    "pretest": "node tools/preboot.js",
+    "pretest": "node tools/npm/preboot.js",
     "test": "node tools/run test",
     "test:watch": "node tools/run test --watch",
     "test:coverage": "node tools/run test --coverage",
     "test:ci": "node tools/run test --ci",
     "test:benchmark": "node tools/run benchmark",
     "test:e2e": "node tools/e2e/runner.js",
-    "test:e2e:headed": "E2E_HEADLESS=false node tools/e2e/runner.js"
+    "test:e2e:headed": "npm run test:e2e -- --headed"
   },
   "dependencies": {
     "@hookform/resolvers": "3.9.1",

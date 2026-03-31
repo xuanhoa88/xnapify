@@ -645,7 +645,58 @@ class ServerExtensionManager extends BaseExtensionManager {
   }
 
   // ---------------------------------------------------------------------------
-  // 7. Refresh
+  // 7. Sync (serialized — prevents SQLITE_BUSY)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Override base sync() to serialize extension loading.
+   * SQLite only supports a single writer — loading extensions in parallel
+   * (via Promise.allSettled in the base class) causes SQLITE_BUSY when
+   * multiple extensions run migrations/seeds concurrently.
+   *
+   * The client-side base class keeps parallel loading (no SQLite concern).
+   */
+  async sync() {
+    try {
+      const { data: response } = await this.fetch('/api/extensions');
+      const extensions =
+        response && Array.isArray(response.extensions)
+          ? response.extensions
+          : [];
+
+      let loaded = 0;
+      let failed = 0;
+
+      // Sequential loading prevents concurrent SQLite writes
+      for (const item of extensions) {
+        const id = typeof item === 'object' ? item.id : item;
+        const manifest = typeof item === 'object' ? item : null;
+        try {
+          // eslint-disable-next-line no-await-in-loop
+          await this.loadExtension(id, manifest);
+          loaded++;
+        } catch (err) {
+          failed++;
+          console.warn(
+            `[ServerExtensionManager] Failed to load extension "${id}":`,
+            err.message,
+          );
+        }
+      }
+
+      await this.emit('extensions:initialized', {
+        total: extensions.length,
+        loaded,
+        failed,
+      });
+    } catch (error) {
+      console.error('[ExtensionManager] Failed to fetch extensions:', error);
+      await this.emit('extensions:init-failed', { error });
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // 8. Refresh
   // ---------------------------------------------------------------------------
 
   /**
@@ -698,8 +749,18 @@ class ServerExtensionManager extends BaseExtensionManager {
       }),
     );
 
-    // Reload — each call fetches fresh manifest from API automatically
-    await Promise.allSettled(resolvedIds.map(id => this.loadExtension(id)));
+    // Reload sequentially — prevents concurrent SQLite writes
+    for (const id of resolvedIds) {
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        await this.loadExtension(id);
+      } catch (err) {
+        console.warn(
+          `[ServerExtensionManager] Failed to reload extension "${id}":`,
+          err.message,
+        );
+      }
+    }
 
     await this.emit('extensions:refreshed', { extensionIds: resolvedIds });
 
@@ -751,11 +812,18 @@ class ServerExtensionManager extends BaseExtensionManager {
             `[ServerExtensionManager] Discovered dev extensions: ${devExtensions.map(m => m.id).join(', ')}`,
           );
         }
-        await Promise.allSettled(
-          devExtensions.map(manifest =>
-            this.loadExtension(manifest.id, manifest),
-          ),
-        );
+        // Sequential loading — prevents concurrent SQLite writes
+        for (const manifest of devExtensions) {
+          try {
+            // eslint-disable-next-line no-await-in-loop
+            await this.loadExtension(manifest.id, manifest);
+          } catch (err) {
+            console.warn(
+              `[ServerExtensionManager] Failed to load dev extension "${manifest.id}":`,
+              err.message,
+            );
+          }
+        }
       }
     } catch (err) {
       if (__DEV__) {

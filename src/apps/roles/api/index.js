@@ -8,7 +8,7 @@
 import { SEED_ROLES } from './constants';
 
 /** @type {Symbol} Ownership key for this module's persistent bindings */
-const OWNER_KEY = Symbol('roles:api');
+const OWNER_KEY = Symbol('__xnapify.module.roles.api__');
 
 // Auto-load contexts
 const migrationsContext = require.context(

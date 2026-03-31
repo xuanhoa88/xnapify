@@ -13,7 +13,7 @@ import * as selectors from './(admin)/redux/selector';
 import * as thunks from './(admin)/redux/thunks';
 
 /** @type {Symbol} Ownership key for this module's persistent bindings */
-const OWNER_KEY = Symbol('activities:views');
+const OWNER_KEY = Symbol('__xnapify.module.activities.views__');
 
 // Auto-load contexts
 const viewsContext = require.context(

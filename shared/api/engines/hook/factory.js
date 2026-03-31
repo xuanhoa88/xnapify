@@ -8,7 +8,7 @@
 import { HookChannel } from './channel';
 
 // Private symbols for internal state
-const HOOK_CHANNELS = Symbol('__xnapify.hookChannels__');
+const HOOK_CHANNELS = Symbol('__xnapify.hook.channels__');
 
 /**
  * Hook Factory - Creates and manages named hook channels

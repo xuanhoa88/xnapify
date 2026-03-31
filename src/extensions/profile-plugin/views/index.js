@@ -10,7 +10,7 @@ import { profileSchema } from '../validator';
 import ExtensionField from './ExtensionField';
 
 // Private symbol for storing composed handlers (needed for cleanup)
-const HANDLERS = Symbol('handlers');
+const HANDLERS = Symbol('__xnapify.ext.profileViewHandlers__');
 
 // Private symbol for translations context
 const translationsContext = require.context(

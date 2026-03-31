@@ -11,7 +11,7 @@ import { authenticate as handleApiKeyStrategy } from './utils/apiKey';
 import { getUserRBACData } from './utils/rbac/fetcher';
 
 /** @type {Symbol} Ownership key for this module's persistent bindings */
-const OWNER_KEY = Symbol('users:api');
+const OWNER_KEY = Symbol('__xnapify.module.users.api__');
 
 // Auto-load contexts
 const migrationsContext = require.context(

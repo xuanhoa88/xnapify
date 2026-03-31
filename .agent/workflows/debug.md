@@ -252,7 +252,9 @@ console.log('Is expired:', Date.now() > decoded.exp * 1000);
 ```javascript
 // JWT is httpOnly — can't access via document.cookie
 // Use the API endpoint instead:
-fetch('/api/auth/me').then(res => res.json()).then(console.log);
+fetch('/api/auth/me')
+  .then(res => res.json())
+  .then(console.log);
 ```
 
 ### WebSocket connections
@@ -285,20 +287,23 @@ await db.connection.revertMigrations(); // Rollback last
 
 # Part 8: Common Issues
 
-| Symptom | Cause | Fix |
-|---------|-------|-----|
-| Port 1337 already in use | Previous process still running | `npx kill-port -p 1337` |
-| `Cannot find module` | Stale require cache or missing dep | `npm run setup` or restart |
-| Breakpoints not hit | Source maps misconfigured | Ensure `sourceMaps: true` in launch.json |
-| HMR says "connected" but no reload | Server compilation error | Check terminal for Webpack errors |
-| Slow recompilation | Large watched file tree | Check `ignored` patterns in dev.js |
-| API returns HTML instead of JSON | SSR middleware intercepting `/api` | Ensure API routes mounted before SSR |
-| SSR hydration mismatch | Browser-only code in render | Use `useEffect` for browser-only logic |
-| Redux state not updating | Reducer not returning new object | Use Redux DevTools to inspect |
-| `ENOSPC` (Linux) | File watcher limit | Increase `fs.inotify.max_user_watches` |
-| `Cannot find module 'sqlite3'` | DB driver not installed | Run `npm run dev` (preboot installs it) or `node tools/preboot.js` |
-| `Cannot find module 'pg'` | PG driver not installed | Set `XNAPIFY_DB_URL=postgres` in `.env`, run `npm run dev` |
-| PostgreSQL connection refused | PG daemon not running | `node tools/preboot.js --start` |
+| Symptom                            | Cause                              | Fix                                                                    |
+| ---------------------------------- | ---------------------------------- | ---------------------------------------------------------------------- |
+| Port 1337 already in use           | Previous process still running     | `npx kill-port -p 1337`                                                |
+| `Cannot find module`               | Stale require cache or missing dep | `npm run setup` or restart                                             |
+| Breakpoints not hit                | Source maps misconfigured          | Ensure `sourceMaps: true` in launch.json                               |
+| HMR says "connected" but no reload | Server compilation error           | Check terminal for Webpack errors                                      |
+| Slow recompilation                 | Large watched file tree            | Check `ignored` patterns in dev.js                                     |
+| API returns HTML instead of JSON   | SSR middleware intercepting `/api` | Ensure API routes mounted before SSR                                   |
+| SSR hydration mismatch             | Browser-only code in render        | Use `useEffect` for browser-only logic                                 |
+| Redux state not updating           | Reducer not returning new object   | Use Redux DevTools to inspect                                          |
+| `ENOSPC` (Linux)                   | File watcher limit                 | Increase `fs.inotify.max_user_watches`                                 |
+| `Cannot find module 'sqlite3'`     | DB driver not installed            | Run `npm run dev` (preboot installs it) or `node tools/npm/preboot.js` |
+| `Cannot find module 'pg'`          | PG driver not installed            | Set `XNAPIFY_DB_URL=postgres` in `.env`, run `npm run dev`             |
+| PostgreSQL connection refused      | PG daemon not running              | `node tools/npm/preboot.js --start`                                    |
+| `SQLITE_BUSY: database is locked`  | Parallel extension migrations      | Serialize loads in `ServerExtensionManager.sync()` (see Part 10)       |
+| Extension active in DB but not loaded | Crash during toggle or stale DB | Deactivate via admin UI, then re-toggle                                |
+| Test: `Database setup failed: Please install sqlite3` | Used `npx jest` directly | Use `npm test -- --testPathPattern=...` (runs `pretest` hook)     |
 
 ---
 
@@ -341,12 +346,23 @@ import { memo, useMemo, useCallback } from 'react';
 
 // Memoize expensive components
 const ExpensiveList = memo(({ items }) => {
-  const sorted = useMemo(() => items.sort((a, b) => a.value - b.value), [items]);
-  return <ul>{sorted.map(item => <li key={item.id}>{item.name}</li>)}</ul>;
+  const sorted = useMemo(
+    () => items.sort((a, b) => a.value - b.value),
+    [items],
+  );
+  return (
+    <ul>
+      {sorted.map(item => (
+        <li key={item.id}>{item.name}</li>
+      ))}
+    </ul>
+  );
 });
 
 // Stable callbacks
-const handleClick = useCallback(id => { console.log(id); }, []);
+const handleClick = useCallback(id => {
+  console.log(id);
+}, []);
 ```
 
 ## Database Optimization
@@ -386,3 +402,65 @@ export const getFilteredUsers = createSelector(
 - [ ] Offload heavy tasks to worker pools
 - [ ] Debounce search inputs and frequent events
 - [ ] Lazy load images with `loading="lazy"`
+
+---
+
+# Part 10: Extension Lifecycle Debugging
+
+## Extension Boot Flow
+
+Extensions load during server startup via `extensionManager.sync()`:
+
+```
+sync() → GET /api/extensions
+       → getActiveExtensions() → DB query: is_active=true
+       → for each: resolveExtensionDir(key) → find on disk
+       → readManifest() → full package.json with main/browser
+       → loadExtension(id, manifest)
+       → _performActivate → migrations + seeds
+```
+
+### Key Invariant
+
+Extensions that should auto-load on boot **must be in the DB seed data** with `is_active: true`. The `_discoverDevExtensions()` disk scan only runs during `refresh()` (HMR/admin), **not** on boot.
+
+Seed file: `src/apps/extensions/api/database/seeds/2026.03.01T00.00.00.default-active-extensions.js`
+
+## Extension Directory Resolution
+
+| Environment | Extension dirs on disk | Resolved via |
+|---|---|---|
+| Dev (`npm run dev`) | `.cache/dev/extensions/xnapify_extension_*/` | `getDevExtensionsDir()` = `<BUILD_DIR>/extensions/` |
+| Production (`npm start`) | `build/extensions/xnapify_extension_*/` | `getDevExtensionsDir()` = `build/extensions/` |
+| Installed (admin upload) | `~/.xnapify/extensions/<key>/` | `getInstalledExtensionsDir()` |
+
+Directory naming uses `snakeCase(manifest.name)`:
+- Source: `src/extensions/quick-access-plugin/` (`name: @xnapify-extension/quick-access`)
+- Built: `.cache/dev/extensions/xnapify_extension_quick_access/`
+
+## SQLITE_BUSY: Database Lock
+
+**Root cause**: `sync()`, `_refreshExtensions()`, and `_discoverDevExtensions()` use `Promise.allSettled` to load extensions concurrently. Each load runs Umzug migrations + seeds → concurrent SQLite writes → `SQLITE_BUSY`.
+
+**Fix**: `ServerExtensionManager` must serialize extension loads (sequential `for...of` instead of `Promise.allSettled`). The client-side `BaseExtensionManager.sync()` keeps parallel loading (no SQLite).
+
+**Files involved**:
+- `shared/extension/server/ExtensionManager.js` — `sync()` override, `_refreshExtensions()`, `_discoverDevExtensions()`
+- `shared/extension/utils/BaseExtensionManager.js` — base `sync()` (parallel, OK for client)
+- `shared/api/engines/db/migrator.js` — Umzug migration runner
+
+### Debug extension loading order
+
+```bash
+# Check which extensions are active in DB
+// turbo
+sqlite3 .cache/dev/database.sqlite "SELECT key, is_active FROM extensions"
+
+# Check built extension manifests
+// turbo
+for d in .cache/dev/extensions/*/; do echo "--- $(basename $d) ---"; cat "$d/package.json" | node -e "const j=require('fs').readFileSync('/dev/stdin','utf8');const m=JSON.parse(j);console.log('name:',m.name,'main:',m.main||'N/A','browser:',m.browser||'N/A')"; done
+```
+
+## Queue Concurrency
+
+Admin-triggered extension operations (install/toggle/delete) go through the queue with `concurrency: 1` — already serialized. SQLITE_BUSY only occurs from the **boot path** (`sync()`) which bypasses the queue.

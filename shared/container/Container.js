@@ -19,8 +19,8 @@ const BINDING_TYPE = Object.freeze({
 });
 
 // Private symbol for internal state (matches HookFactory convention)
-const BINDINGS = Symbol('__xnapify.containerBindings__');
-const PARENT = Symbol('__xnapify.containerParent__');
+const BINDINGS = Symbol('__xnapify.container.bindings__');
+const PARENT = Symbol('__xnapify.container.parent__');
 
 /**
  * A lightweight, isomorphic Dependency Injection container.

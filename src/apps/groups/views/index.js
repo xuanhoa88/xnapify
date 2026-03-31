@@ -9,7 +9,7 @@ import * as selectors from './(admin)/redux/selector';
 import * as thunks from './(admin)/redux/thunks';
 
 /** @type {Symbol} Ownership key for this module's persistent bindings */
-const OWNER_KEY = Symbol('groups:views');
+const OWNER_KEY = Symbol('__xnapify.module.groups.views__');
 
 // Auto-load contexts
 const viewsContext = require.context(

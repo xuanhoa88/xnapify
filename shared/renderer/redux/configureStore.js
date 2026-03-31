@@ -16,7 +16,7 @@ import rootReducer from './rootReducer';
  * Symbol to mark identity reducers created for SSR state preservation
  * @private
  */
-const IDENTITY_REDUCER = Symbol('__xnapify.identityReducer__');
+const IDENTITY_REDUCER = Symbol('__xnapify.redux.identityReducer__');
 
 // Empty objects for default parameters
 const EMPTY_INITIAL_STATE = {};

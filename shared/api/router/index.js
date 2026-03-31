@@ -14,7 +14,7 @@ import { loadRouteTranslations, runInit, runMount } from './lifecycle';
 import { createMatchCache, clearMatchCache, findRoute } from './matcher';
 
 /** @type {symbol} Per-instance radix tree cache */
-const ROUTE_CACHE_KEY = Symbol('__xnapify.routeCache__');
+const ROUTE_CACHE_KEY = Symbol('__xnapify.route.cache__');
 
 /**
  * File-based dynamic API router for Express.
