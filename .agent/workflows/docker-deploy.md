@@ -7,6 +7,7 @@ Build and manage the application using Docker Compose from the `.docker/` direct
 ## File Locations
 
 All Docker configuration lives in `.docker/`:
+
 - `.docker/Dockerfile` — Multi-stage build (builder → production)
 - `.docker/docker-compose.yml` — Service definitions (app, postgres, mysql)
 - `.docker/entrypoint.sh` — Runtime permission fixer via `su-exec`
@@ -50,10 +51,11 @@ docker compose -f .docker/docker-compose.dev.yml down
 ```
 
 Key differences from production:
+
 - Source is bind-mounted (`..:/app`) — edits on host trigger HMR
 - `node_modules` uses anonymous volume to isolate Linux binaries from host
 - `CHOKIDAR_USEPOLLING=true` enables filesystem polling inside the container
-- Runs `npm run dev` instead of `npm run build` + `node server.js`
+- Runs `npm run dev` instead of `npm run build` + `npm start`
 
 ## Important: Webpack DefinePlugin
 
@@ -62,6 +64,7 @@ Key differences from production:
 > on values already replaced during `npm run build`.
 
 To change baked values for Docker builds, set them in the Dockerfile's `RUN` command:
+
 ```dockerfile
 RUN XNAPIFY_HOST=0.0.0.0 npm run build
 ```

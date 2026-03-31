@@ -281,7 +281,7 @@ npm run build
 # Deploy (inside the build output directory)
 cd build
 npm install --production   # ← only for build/, NOT project root
-NODE_ENV=production node server.js
+npm start
 ```
 
 ## 🤝 Contributing
