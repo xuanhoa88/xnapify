@@ -36,9 +36,12 @@ WORKDIR /app
 # Copy built files from builder stage
 COPY --from=builder /build/build ./build
 
-# Install production dependencies (build/package.json already has merged ext deps)
+# Install production dependencies (.npmrc in build/ forces production=true)
 WORKDIR /app/build
-RUN NODE_ENV=production npm install --production && npm cache clean --force
+RUN npm run setup && npm cache clean --force
+
+# Preboot installs DB drivers on-demand at runtime (as `node` user via su-exec)
+RUN chown -R node:node /app/build
 
 # Copy entrypoint script
 COPY .docker/entrypoint.sh /usr/local/bin/
@@ -51,4 +54,4 @@ ENV NODE_ENV=production
 EXPOSE 1337
 
 ENTRYPOINT ["entrypoint.sh"]
-CMD ["node", "server.js"]
+CMD ["npm", "start"]

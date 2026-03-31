@@ -296,7 +296,7 @@ npm run build
 
 # Deploy (inside the build output directory)
 cd build
-npm install --production   # ← only for build/, NOT project root
+npm run setup              # ← only for build/, NOT project root (.npmrc forces production=true)
 npm start                  # .env + DB driver auto-provisioned on first start
 ```
 

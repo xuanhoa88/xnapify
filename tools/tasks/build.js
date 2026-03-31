@@ -110,7 +110,7 @@ async function copyFiles() {
     // 5. Copy .npmrc if it exists
     const npmrcPath = path.join(config.CWD, '.npmrc');
     const normalizedNpmrcContent = [
-      '# Force production mode for npm install --production',
+      '# Force production mode — npm run setup installs only production deps',
       'production=true',
     ];
     if (await pathExists(npmrcPath)) {
@@ -496,7 +496,7 @@ async function main() {
         '📋 Next steps:',
         '',
         '  1️⃣ Install production dependencies (REQUIRED):',
-        `     cd '${config.BUILD_DIR}' && npm install --production`,
+        `     cd '${config.BUILD_DIR}' && npm run setup`,
         '',
         '  2️⃣ Test locally:',
         `     cd '${config.BUILD_DIR}'`,

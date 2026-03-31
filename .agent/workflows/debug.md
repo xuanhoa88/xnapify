@@ -38,6 +38,7 @@ npm run build
 ## CSS/Babel errors
 
 ```bash
+# Adding specific packages bypasses the preinstall guard automatically
 npm install --save-dev babel-loader css-loader
 ```
 

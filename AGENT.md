@@ -777,7 +777,8 @@ npm run build
 cd build
 
 # Install production dependencies (build output only, NOT project root)
-npm install --production
+# .npmrc in build/ sets production=true — only production deps are installed
+npm run setup
 
 # Start server (.env + DB driver auto-provisioned by prestart hook)
 npm start
