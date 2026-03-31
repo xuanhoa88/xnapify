@@ -240,6 +240,56 @@ async function handleToggleJob(container, job) {
 // ========================================================================
 
 /**
+ * Reconcile extension states on boot.
+ * Recovers from crash scenarios where the DB says is_active=true but the
+ * extension was never actually loaded (e.g. server crashed during a toggle job).
+ *
+ * @param {Object} container - DI container instance
+ * @param {Object} queueChannel - Queue channel for 'extensions'
+ */
+async function reconcileExtensionStates(container, queueChannel) {
+  try {
+    const extensionManager = container.resolve('extension');
+    const models = container.resolve('models');
+    if (!extensionManager || !models) return;
+
+    const { Extension } = models;
+    const activeExtensions = await Extension.findAll({
+      where: { is_active: true },
+    });
+
+    // Collect IDs of extensions with active queue jobs (skip those)
+    const busyKeys = new Set();
+    if (
+      queueChannel.queue &&
+      typeof queueChannel.queue.getJobs === 'function'
+    ) {
+      const allJobs = await queueChannel.queue.getJobs();
+      for (const job of allJobs) {
+        if (['pending', 'active', 'delayed'].includes(job.status)) {
+          if (job.data && job.data.extensionKey) {
+            busyKeys.add(job.data.extensionKey);
+          }
+        }
+      }
+    }
+
+    for (const ext of activeExtensions) {
+      if (busyKeys.has(ext.key)) continue;
+
+      if (!extensionManager.isExtensionLoaded(ext.key)) {
+        await ext.update({ is_active: false });
+        console.warn(
+          `[ExtensionWorker] Reconciled stale is_active for ${ext.key} — extension not loaded`,
+        );
+      }
+    }
+  } catch (err) {
+    console.error('[ExtensionWorker] Boot reconciliation failed:', err);
+  }
+}
+
+/**
  * Register background workers for extension tasks.
  * Called during server initialization.
  *
@@ -254,10 +304,18 @@ export function registerExtensionWorkers(container) {
   queueChannel.on('delete', job => handleDeleteJob(container, job));
   queueChannel.on('toggle', job => handleToggleJob(container, job));
 
-  // Send WS notifications AFTER job is fully processed and removed from queue.
-  // This prevents a race where the frontend re-fetches the list while the job
-  // is still active, causing the server to return a stale job_status.
-  if (queueChannel.queue) {
+  // Assert queue adapter is available — fail loudly during boot rather than
+  // silently dropping all completed/failed events (which causes permanent
+  // "state frozen" in the UI).
+  if (!queueChannel.queue) {
+    console.error(
+      '[ExtensionWorker] ⚠️ Queue adapter not available — completed/failed handlers NOT registered. ' +
+        'Extension lifecycle WS notifications will not work.',
+    );
+  } else {
+    // Send WS notifications AFTER job is fully processed and removed from queue.
+    // This prevents a race where the frontend re-fetches the list while the job
+    // is still active, causing the server to return a stale job_status.
     queueChannel.queue.on('completed', (job, result) => {
       if (result && result.notifyType && result.extensionKey) {
         notifyExtensionChange(
@@ -267,6 +325,7 @@ export function registerExtensionWorkers(container) {
         );
       }
     });
+
     queueChannel.queue.on('failed', async job => {
       const { extensionKey, isActive } = job.data || {};
       if (!extensionKey) return;
@@ -290,15 +349,36 @@ export function registerExtensionWorkers(container) {
         }
       }
 
+      // Clean up orphaned DB record on install failure
+      if (job.name === 'install') {
+        try {
+          const models = container.resolve('models');
+          await models.Extension.destroy({ where: { key: extensionKey } });
+          console.warn(
+            `[ExtensionWorker] Cleaned up DB record for ${extensionKey} after failed install`,
+          );
+        } catch (cleanupErr) {
+          console.error(
+            `[ExtensionWorker] Failed to cleanup DB after install failure for ${extensionKey}:`,
+            cleanupErr,
+          );
+        }
+      }
+
+      // Send *_FAILED notification types so the frontend can show error toasts
+      // instead of false success messages.
       const type =
         job.name === 'toggle'
           ? isActive
-            ? 'EXTENSION_ACTIVATED'
-            : 'EXTENSION_DEACTIVATED'
+            ? 'EXTENSION_ACTIVATE_FAILED'
+            : 'EXTENSION_DEACTIVATE_FAILED'
           : job.name === 'delete'
-            ? 'EXTENSION_UNINSTALLED'
-            : 'EXTENSION_INSTALLED';
+            ? 'EXTENSION_UNINSTALL_FAILED'
+            : 'EXTENSION_INSTALL_FAILED';
       notifyExtensionChange(container, type, extensionKey);
     });
   }
+
+  // Reconcile stale is_active flags on boot (async, non-blocking)
+  reconcileExtensionStates(container, queueChannel);
 }

@@ -154,11 +154,8 @@ export const deleteExtension = async (req, res) => {
       queue: container.resolve('queue'),
     });
 
-    const ws = container.resolve('ws');
-    ws.sendToPublicChannel('extension:updated', {
-      type: 'EXTENSION_UNINSTALLED',
-      extensionId: id,
-    });
+    // WS notification is handled by the worker's completed/failed events
+    // to avoid premature success feedback before the background job finishes.
 
     return http.sendSuccess(res, { message: 'Extension deleted' });
   } catch (error) {

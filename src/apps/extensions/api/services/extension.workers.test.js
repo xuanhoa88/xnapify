@@ -61,6 +61,7 @@ function createMockContainer(overrides = {}) {
       Extension: {
         update: mockExtensionUpdate,
         destroy: mockExtensionDestroy,
+        findAll: jest.fn().mockResolvedValue([]),
       },
     },
     extension: {
@@ -110,6 +111,7 @@ function createMockJob(data = {}) {
 
 describe('Extension Workers', () => {
   let handlers;
+  let queueHandlers;
   let mockContainer;
 
   beforeEach(() => {
@@ -119,10 +121,18 @@ describe('Extension Workers', () => {
 
     // Capture registered handlers from queueChannel.on()
     handlers = {};
+    queueHandlers = {};
+    const mockQueue = {
+      on: jest.fn((event, handler) => {
+        queueHandlers[event] = handler;
+      }),
+      getJobs: jest.fn().mockResolvedValue([]),
+    };
     const mockChannel = {
       on: jest.fn((event, handler) => {
         handlers[event] = handler;
       }),
+      queue: mockQueue,
     };
     // eslint-disable-next-line no-underscore-dangle
     mockContainer._services.queue = jest.fn(() => mockChannel);
@@ -423,6 +433,238 @@ describe('Extension Workers', () => {
       const em = mockContainer._services.extension; // eslint-disable-line no-underscore-dangle
       expect(em.unloadExtension).toHaveBeenCalledWith('test-extension');
       expect(result.notifyType).toBe('EXTENSION_DEACTIVATED');
+    });
+  });
+
+  // ── Queue Lifecycle Events ──────────────────────────────
+
+  describe('queue completed handler', () => {
+    it('should register completed and failed handlers on queue adapter', () => {
+      expect(queueHandlers.completed).toBeDefined();
+      expect(queueHandlers.failed).toBeDefined();
+    });
+
+    it('should send WS notification on completed with notifyType', () => {
+      const job = { data: { extensionKey: 'test-ext' }, name: 'toggle' };
+      const result = {
+        success: true,
+        notifyType: 'EXTENSION_ACTIVATED',
+        extensionKey: 'test-ext',
+      };
+
+      queueHandlers.completed(job, result);
+
+      expect(notifyExtensionChange).toHaveBeenCalledWith(
+        mockContainer,
+        'EXTENSION_ACTIVATED',
+        'test-ext',
+      );
+    });
+  });
+
+  describe('queue failed handler', () => {
+    it('should send EXTENSION_ACTIVATE_FAILED on failed activate toggle', async () => {
+      const job = {
+        data: { extensionKey: 'test-ext', isActive: true },
+        name: 'toggle',
+      };
+
+      await queueHandlers.failed(job);
+
+      expect(notifyExtensionChange).toHaveBeenCalledWith(
+        mockContainer,
+        'EXTENSION_ACTIVATE_FAILED',
+        'test-ext',
+      );
+    });
+
+    it('should send EXTENSION_DEACTIVATE_FAILED on failed deactivate toggle', async () => {
+      const job = {
+        data: { extensionKey: 'test-ext', isActive: false },
+        name: 'toggle',
+      };
+
+      await queueHandlers.failed(job);
+
+      expect(notifyExtensionChange).toHaveBeenCalledWith(
+        mockContainer,
+        'EXTENSION_DEACTIVATE_FAILED',
+        'test-ext',
+      );
+    });
+
+    it('should send EXTENSION_INSTALL_FAILED on failed install', async () => {
+      const job = {
+        data: { extensionKey: 'test-ext' },
+        name: 'install',
+      };
+
+      await queueHandlers.failed(job);
+
+      expect(notifyExtensionChange).toHaveBeenCalledWith(
+        mockContainer,
+        'EXTENSION_INSTALL_FAILED',
+        'test-ext',
+      );
+    });
+
+    it('should send EXTENSION_UNINSTALL_FAILED on failed delete', async () => {
+      const job = {
+        data: { extensionKey: 'test-ext' },
+        name: 'delete',
+      };
+
+      await queueHandlers.failed(job);
+
+      expect(notifyExtensionChange).toHaveBeenCalledWith(
+        mockContainer,
+        'EXTENSION_UNINSTALL_FAILED',
+        'test-ext',
+      );
+    });
+
+    it('should revert is_active on failed toggle', async () => {
+      const job = {
+        data: { extensionKey: 'test-ext', isActive: true },
+        name: 'toggle',
+      };
+
+      await queueHandlers.failed(job);
+
+      expect(
+        // eslint-disable-next-line no-underscore-dangle
+        mockContainer._services.models.Extension.update,
+      ).toHaveBeenCalledWith(
+        { is_active: false },
+        { where: { key: 'test-ext' } },
+      );
+    });
+
+    it('should clean up DB record on failed install', async () => {
+      const job = {
+        data: { extensionKey: 'test-ext' },
+        name: 'install',
+      };
+
+      await queueHandlers.failed(job);
+
+      expect(
+        // eslint-disable-next-line no-underscore-dangle
+        mockContainer._services.models.Extension.destroy,
+      ).toHaveBeenCalledWith({ where: { key: 'test-ext' } });
+    });
+  });
+
+  // ── Queue Assertion ────────────────────────────────────
+
+  describe('queue assertion', () => {
+    it('should log error when queueChannel.queue is undefined', () => {
+      const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      const container = createMockContainer();
+      const mockChannelNoQueue = {
+        on: jest.fn(),
+        queue: null,
+      };
+      // eslint-disable-next-line no-underscore-dangle
+      container._services.queue = jest.fn(() => mockChannelNoQueue);
+      container.resolve.mockImplementation(
+        // eslint-disable-next-line no-underscore-dangle
+        key => container._services[key],
+      );
+
+      registerExtensionWorkers(container);
+
+      expect(spy).toHaveBeenCalledWith(
+        expect.stringContaining('Queue adapter not available'),
+      );
+      spy.mockRestore();
+    });
+  });
+
+  // ── Boot Reconciliation ────────────────────────────────
+
+  describe('boot reconciliation', () => {
+    it('should revert is_active for unloaded extensions on boot', async () => {
+      const mockExt = {
+        key: 'stale-ext',
+        update: jest.fn().mockResolvedValue(undefined),
+      };
+
+      const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const container = createMockContainer();
+      // eslint-disable-next-line no-underscore-dangle
+      container._services.models.Extension.findAll = jest
+        .fn()
+        .mockResolvedValue([mockExt]);
+      // eslint-disable-next-line no-underscore-dangle
+      container._services.extension.isExtensionLoaded.mockReturnValue(false);
+
+      const mockQueue = {
+        on: jest.fn(),
+        getJobs: jest.fn().mockResolvedValue([]),
+      };
+      const mockChannel = {
+        on: jest.fn(),
+        queue: mockQueue,
+      };
+      // eslint-disable-next-line no-underscore-dangle
+      container._services.queue = jest.fn(() => mockChannel);
+      container.resolve.mockImplementation(
+        // eslint-disable-next-line no-underscore-dangle
+        key => container._services[key],
+      );
+
+      registerExtensionWorkers(container);
+
+      // Wait for async reconciliation
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      expect(mockExt.update).toHaveBeenCalledWith({ is_active: false });
+      spy.mockRestore();
+    });
+
+    it('should skip extensions with active queue jobs', async () => {
+      const mockExt = {
+        key: 'busy-ext',
+        update: jest.fn().mockResolvedValue(undefined),
+      };
+
+      const container = createMockContainer();
+      // eslint-disable-next-line no-underscore-dangle
+      container._services.models.Extension.findAll = jest
+        .fn()
+        .mockResolvedValue([mockExt]);
+      // eslint-disable-next-line no-underscore-dangle
+      container._services.extension.isExtensionLoaded.mockReturnValue(false);
+
+      const mockQueue = {
+        on: jest.fn(),
+        getJobs: jest.fn().mockResolvedValue([
+          {
+            status: 'active',
+            data: { extensionKey: 'busy-ext' },
+          },
+        ]),
+      };
+      const mockChannel = {
+        on: jest.fn(),
+        queue: mockQueue,
+      };
+      // eslint-disable-next-line no-underscore-dangle
+      container._services.queue = jest.fn(() => mockChannel);
+      container.resolve.mockImplementation(
+        // eslint-disable-next-line no-underscore-dangle
+        key => container._services[key],
+      );
+
+      registerExtensionWorkers(container);
+
+      // Wait for async reconciliation
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      expect(mockExt.update).not.toHaveBeenCalled();
     });
   });
 });

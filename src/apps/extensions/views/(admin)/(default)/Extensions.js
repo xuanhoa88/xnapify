@@ -46,7 +46,7 @@ import s from './Extensions.css';
  * If no WebSocket event clears the label within this window, auto-clear it
  * to prevent the UI from being permanently stuck on "Activating..."/"Deactivating...".
  */
-const ACTION_TIMEOUT_MS = 60_000;
+const ACTION_TIMEOUT_MS = 120_000;
 
 /**
  * Filter tab definitions
@@ -190,11 +190,11 @@ function Extensions() {
       switch (data.type) {
         case 'EXTENSION_INSTALLED':
         case 'EXTENSION_UPDATED': {
-          await debouncedFetch();
-          if (signal.aborted) return;
           if (data.extensionId) {
             clearAction(data.extensionId);
           }
+          await debouncedFetch();
+          if (signal.aborted) return;
           if (data.type === 'EXTENSION_INSTALLED') {
             dispatch(
               showSuccessMessage({
@@ -218,11 +218,11 @@ function Extensions() {
           break;
         }
         case 'EXTENSION_UNINSTALLED': {
-          await debouncedFetch();
-          if (signal.aborted) return;
           if (data.extensionId) {
             clearAction(data.extensionId);
           }
+          await debouncedFetch();
+          if (signal.aborted) return;
           dispatch(
             showSuccessMessage({
               message: t(
@@ -234,11 +234,11 @@ function Extensions() {
           break;
         }
         case 'EXTENSION_ACTIVATED': {
-          await debouncedFetch();
-          if (signal.aborted) return;
           if (data.extensionId) {
             clearAction(data.extensionId);
           }
+          await debouncedFetch();
+          if (signal.aborted) return;
           dispatch(
             showSuccessMessage({
               message: t(
@@ -250,16 +250,35 @@ function Extensions() {
           break;
         }
         case 'EXTENSION_DEACTIVATED': {
-          await debouncedFetch();
-          if (signal.aborted) return;
           if (data.extensionId) {
             clearAction(data.extensionId);
           }
+          await debouncedFetch();
+          if (signal.aborted) return;
           dispatch(
             showSuccessMessage({
               message: t(
                 'admin:extensions.deactivateSuccess',
                 'Extension deactivated successfully.',
+              ),
+            }),
+          );
+          break;
+        }
+        case 'EXTENSION_INSTALL_FAILED':
+        case 'EXTENSION_ACTIVATE_FAILED':
+        case 'EXTENSION_DEACTIVATE_FAILED':
+        case 'EXTENSION_UNINSTALL_FAILED': {
+          if (data.extensionId) {
+            clearAction(data.extensionId);
+          }
+          await debouncedFetch();
+          if (signal.aborted) return;
+          dispatch(
+            showWarningMessage({
+              message: t(
+                'admin:extensions.operationFailed',
+                'Extension operation failed. Please check the server logs for details.',
               ),
             }),
           );
