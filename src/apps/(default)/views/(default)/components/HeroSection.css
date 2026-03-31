@@ -1,0 +1,173 @@
+/**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+/* =============================================================================
+   HERO SECTION
+   ============================================================================= */
+
+.hero {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: var(--spacing-20) var(--spacing-6);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(
+      circle at 30% 50%,
+      rgb(255 255 255 / 10%) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 70% 80%,
+      rgb(255 255 255 / 8%) 0%,
+      transparent 50%
+    );
+  pointer-events: none;
+}
+
+.heroContent {
+  max-width: 800px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+.heroTitle {
+  font-size: var(--font-size-5xl);
+  font-weight: var(--font-weight-bold);
+  color: white;
+  margin: 0 0 var(--spacing-6);
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+  text-shadow: 0 2px 8px rgb(0 0 0 / 15%);
+}
+
+.heroSubtitle {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-normal);
+  color: rgb(255 255 255 / 95%);
+  margin: 0 0 var(--spacing-10);
+  line-height: 1.6;
+  letter-spacing: -0.01em;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.heroActions {
+  display: flex;
+  gap: var(--spacing-4);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btnPrimary,
+.btnSecondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-4) var(--spacing-8);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  border-radius: var(--radius-lg);
+  text-decoration: none;
+  transition: all var(--transition-base);
+  min-width: 160px;
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+
+.btnPrimary {
+  background: white;
+  color: #667eea;
+  box-shadow: 0 4px 6px rgb(0 0 0 / 10%);
+}
+
+.btnPrimary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgb(0 0 0 / 15%);
+  color: #764ba2;
+  text-decoration: none;
+}
+
+.btnSecondary {
+  background: rgb(255 255 255 / 15%);
+  color: white;
+  border: 2px solid rgb(255 255 255 / 30%);
+  backdrop-filter: blur(10px);
+}
+
+.btnSecondary:hover {
+  background: rgb(255 255 255 / 25%);
+  border-color: rgb(255 255 255 / 50%);
+  transform: translateY(-2px);
+  text-decoration: none;
+}
+
+.btnSecondary:active {
+  transform: translateY(0);
+  background: rgb(255 255 255 / 20%);
+}
+
+/* =============================================================================
+   RESPONSIVE
+   ============================================================================= */
+
+/* Tablet */
+@media (max-width: 992px) {
+  .hero {
+    padding: var(--spacing-16) var(--spacing-4);
+  }
+
+  .heroTitle {
+    font-size: var(--font-size-4xl);
+  }
+
+  .heroSubtitle {
+    font-size: var(--font-size-lg);
+  }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .hero {
+    padding: var(--spacing-10) var(--spacing-4) var(--spacing-12);
+  }
+
+  .heroTitle {
+    font-size: var(--font-size-3xl);
+    margin-bottom: var(--spacing-4);
+  }
+
+  .heroSubtitle {
+    font-size: var(--font-size-sm);
+    margin-bottom: var(--spacing-6);
+    line-height: var(--line-height-normal);
+  }
+
+  .heroActions {
+    flex-direction: column;
+    gap: var(--spacing-3);
+  }
+
+  .btnPrimary,
+  .btnSecondary {
+    width: 100%;
+    max-width: 100%;
+    padding: var(--spacing-3) var(--spacing-6);
+    font-size: var(--font-size-base);
+  }
+}

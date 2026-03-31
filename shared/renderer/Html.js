@@ -122,7 +122,33 @@ export default function Html({
         {/* Page metadata */}
         <title>{title}</title>
         <meta name='description' content={description} />
-        <link rel='shortcut icon' href='/xnapify.ico' />
+
+        {/* Favicons — multi-size for cross-browser support */}
+        <link rel='icon' type='image/x-icon' href='/favicon.ico' />
+        <link
+          rel='icon'
+          type='image/png'
+          sizes='16x16'
+          href='/xnapify_16x16.png'
+        />
+        <link
+          rel='icon'
+          type='image/png'
+          sizes='32x32'
+          href='/xnapify_32x32.png'
+        />
+        <link
+          rel='icon'
+          type='image/png'
+          sizes='48x48'
+          href='/xnapify_48x48.png'
+        />
+
+        {/* Theme color for mobile browsers */}
+        <meta name='theme-color' content='#F57C00' />
+
+        {/* Windows tile configuration */}
+        <meta name='msapplication-config' content='/browserconfig.xml' />
 
         {/* Open Graph meta tags for social media */}
         <OpenGraphMeta

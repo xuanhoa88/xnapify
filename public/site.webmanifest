@@ -1,10 +1,20 @@
 {
+  "name": "xnapify",
+  "short_name": "xnapify",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#F57C00",
+  "background_color": "#ffffff",
   "icons": [
     {
       "src": "xnapify_192x192.png",
       "sizes": "192x192",
       "type": "image/png"
+    },
+    {
+      "src": "xnapify_512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
     }
-  ],
-  "start_url": "/"
+  ]
 }

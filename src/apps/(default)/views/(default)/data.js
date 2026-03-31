@@ -7,63 +7,63 @@
 
 export const featuresData = [
   {
-    id: 'lightning-fast',
-    name: 'Lightning Fast',
-    icon: '⚡',
+    id: 'modular-architecture',
+    name: 'Modular Architecture',
+    icon: '🧩',
     description:
-      'Server-side rendering with React 16+, automatic code splitting, and optimized Webpack 5 configuration for instant page loads and superior performance',
+      'Domain-driven modules auto-discovered via Webpack require.context. Each module owns its API routes, controllers, services, models, migrations, seeds, and views — fully self-contained.',
     details:
-      'Our implementation leverages the latest React features (supporting versions 16, 17, and 18+) with server-side rendering (SSR) to deliver blazing-fast initial page loads. Webpack 5 automatically splits your code into optimized chunks that are loaded on demand, significantly reducing bundle sizes. Combined with intelligent prefetching and caching strategies, your users experience near-instant page transitions and superior performance metrics.',
-    tags: ['React', 'SSR', 'Performance', 'Webpack'],
+      'Every business domain lives under src/apps/ as an independent module. Modules declare lifecycle hooks (translations, providers, migrations, models, seeds, boot, routes) that the framework orchestrates automatically. Webpack require.context scans and registers modules at build time, eliminating manual wiring. Core modules include auth, users, roles, permissions, groups, activities, emails, extensions, files, search, and webhooks — all following the same pattern.',
+    tags: ['Auto-Discovery', 'Lifecycle Hooks', 'Domain-Driven', 'Webpack'],
   },
   {
-    id: 'beautiful-design',
-    name: 'Beautiful Design System',
-    icon: '🎨',
+    id: 'extension-system',
+    name: 'Extension System',
+    icon: '🔌',
     description:
-      'Professional UI with CSS Modules, design tokens, and responsive layouts. Mobile-first approach with accessibility built-in from day one',
+      'Install, activate, and manage extensions at runtime with hooks, slots, and integrity verification. Extend functionality without modifying core code.',
     details:
-      'Built with a comprehensive design system featuring CSS Modules for scoped styling, design tokens for consistent theming, and a mobile-first responsive approach. Every component is crafted with accessibility (a11y) in mind, ensuring WCAG compliance and keyboard navigation support. The design system includes a complete set of reusable components, spacing utilities, and color palettes that make building beautiful interfaces effortless.',
-    tags: ['CSS Modules', 'Design Tokens', 'Responsive', 'Accessibility'],
+      'The extension system enables third-party and first-party plugins to integrate seamlessly. Extensions register hooks and slots that core modules listen to, enabling cross-cutting behavior. Built-in extensions include OAuth providers (Google, GitHub, Microsoft, Facebook), profile customization, quick access widgets, search indexing, and webhook plugins. Extensions support integrity verification, dependency resolution, and background installation via worker queues.',
+    tags: ['Hooks', 'Slots', 'Plugins', 'Runtime Install'],
   },
   {
-    id: 'developer-experience',
-    name: 'Developer Experience',
-    icon: '🔧',
+    id: 'dependency-injection',
+    name: 'Dependency Injection',
+    icon: '💉',
     description:
-      'Hot Module Replacement for instant feedback, Redux DevTools for state debugging, and Jest + React Testing Library for comprehensive testing',
+      'Centralized DI container with singleton bindings, factory methods, and ownership keys. Services resolve dependencies at runtime, never via static imports.',
     details:
-      'Developer productivity is at the core of this starter kit. Hot Module Replacement (HMR) provides instant feedback during development without losing application state. Redux DevTools integration makes state management transparent and debuggable. The testing setup with Jest and React Testing Library encourages test-driven development with an intuitive API. ESLint and Prettier are pre-configured to maintain code quality and consistency across your team.',
-    tags: ['HMR', 'Redux DevTools', 'Jest', 'Testing Library'],
+      'The DI container (container.bind / container.resolve) is the backbone of inter-module communication. Modules register services, controllers, and worker pools during the providers lifecycle phase. Controllers resolve dependencies from req.app.get("container") — never importing across module boundaries. Ownership keys (Symbol) prevent accidental overwrites. The hook system (container.resolve("hook")) enables event-driven communication between decoupled modules.',
+    tags: ['Container', 'Providers', 'Singletons', 'Decoupling'],
   },
   {
-    id: 'global-ready',
-    name: 'Global Ready',
-    icon: '🌍',
+    id: 'file-based-routing',
+    name: 'File-Based Routing',
+    icon: '📁',
     description:
-      'Full internationalization with react-i18next, locale-specific routing, and dynamic language switching. Currently supports English and Vietnamese',
+      'Convention-based routing with _route.js files. Dynamic segments via [param] folders, route groups with (parentheses), and automatic middleware inheritance.',
     details:
-      'Internationalization (i18n) is built-in from the start using react-i18next, one of the most powerful i18n frameworks for React. The routing system supports locale-specific URLs, and users can switch languages dynamically without page reloads. Translation files are organized by namespace for easy management, and the system supports pluralization, interpolation, and formatting. Currently ships with English and Vietnamese translations, with easy extensibility for additional languages.',
-    tags: ['i18n', 'react-i18next', 'Localization', 'Multi-language'],
+      'Routes are discovered by scanning _route.js files under routes/ directories. Export named HTTP verb functions (get, post, put, delete) or arrays with middleware chains. Dynamic route parameters use bracket notation ([id]), and route groups use parenthesized folder names ((admin), (default)). Frontend views follow the same convention with lifecycle hooks: getInitialProps for SSR data, init/setup/teardown/mount/unmount for page lifecycle management, and middleware exports for permission guards.',
+    tags: ['Convention', '_route.js', 'SSR', 'Lifecycle'],
   },
   {
-    id: 'secure-by-default',
-    name: 'Secure by Default',
+    id: 'rbac-security',
+    name: 'RBAC Security',
     icon: '🔐',
     description:
-      'JWT authentication, protected routes, role-based access control, and security best practices implemented throughout the codebase',
+      'Role-based access control with JWT authentication, permission guards, user groups, API key strategies, and OAuth provider integration.',
     details:
-      'Security is not an afterthought. The authentication system uses JSON Web Tokens (JWT) with secure httpOnly cookies, protecting against XSS attacks. Route guards ensure that protected pages are only accessible to authenticated users with appropriate permissions. Role-based access control (RBAC) is implemented for fine-grained authorization. The codebase follows OWASP security best practices, including CSRF protection, secure headers, input validation, and SQL injection prevention.',
-    tags: ['JWT', 'Authentication', 'RBAC', 'Security'],
+      'The auth module implements a full RBAC system: Users are assigned Roles, Roles grant Permissions (resource:action pairs), and Users belong to Groups. JWT tokens are stored in httpOnly cookies with refresh token rotation. Route-level permission guards (requirePermission) enforce access control. The system supports multiple authentication strategies including local credentials, API keys, and OAuth providers (Google, GitHub, Microsoft, Facebook) via Passport.js. Admin impersonation is built-in for debugging.',
+    tags: ['JWT', 'Permissions', 'OAuth', 'Guards'],
   },
   {
-    id: 'production-ready',
-    name: 'Production Ready',
-    icon: '🚀',
+    id: 'full-stack-tooling',
+    name: 'Full-Stack Tooling',
+    icon: '🛠️',
     description:
-      'Docker support, environment configuration, optimized builds, and comprehensive deployment guides. Ship to production with confidence',
+      'Webpack 5 builds, Sequelize ORM with migrations, Redux Toolkit with dynamic injection, Piscina worker pools, queue-based workers, and Docker deployment.',
     details:
-      'This starter kit is battle-tested and production-ready. Docker configuration is included for containerized deployments, with multi-stage builds for optimized image sizes. Environment-specific configuration management makes it easy to deploy to different environments (development, staging, production). The build process generates optimized, minified bundles with source maps for debugging. Comprehensive deployment guides cover popular platforms including Vercel, AWS, Google Cloud, and traditional VPS hosting.',
-    tags: ['Docker', 'Deployment', 'CI/CD', 'DevOps'],
+      'The build system uses Webpack 5 for both server and client bundles with automatic code splitting, CSS Modules, and hot module replacement. The backend runs on Express with Sequelize ORM supporting SQLite, PostgreSQL, and MySQL via runtime driver installation. Redux Toolkit powers frontend state with dynamic slice injection via store.injectReducer(). CPU-intensive work offloads to Piscina worker pools, while queue-based workers handle background jobs. Production deployment uses multi-stage Docker builds with preboot hooks for driver installation.',
+    tags: ['Webpack 5', 'Sequelize', 'Redux', 'Docker'],
   },
 ];

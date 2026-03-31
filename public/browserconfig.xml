@@ -7,6 +7,7 @@
             <square150x150logo src="xnapify_150x150.png"/>
             <wide310x150logo src="xnapify_310x150.png"/>
             <square310x310logo src="xnapify_310x310.png"/>
+            <TileColor>#F57C00</TileColor>
         </tile>
     </msapplication>
 </browserconfig>

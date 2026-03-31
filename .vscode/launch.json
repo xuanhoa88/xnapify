@@ -11,8 +11,7 @@
       "cwd": "${workspaceFolder}",
       "env": {
         "NODE_ENV": "development",
-        "FORCE_COLOR": "1",
-        "DEBUG": "app:*"
+        "FORCE_COLOR": "1"
       },
       "console": "integratedTerminal",
       "outputCapture": "std",
@@ -20,7 +19,25 @@
       "sourceMaps": true,
       "resolveSourceMapLocations": [
         "${workspaceFolder}/**",
+        "${workspaceFolder}/build/**",
         "${workspaceFolder}/.cache/**",
+        "!**/node_modules/**"
+      ],
+      "skipFiles": [
+        "<node_internals>/**",
+        "**/node_modules/**"
+      ]
+    },
+    {
+      "type": "node",
+      "name": "xnapify: Attach to Process",
+      "request": "attach",
+      "port": 9229,
+      "restart": true,
+      "sourceMaps": true,
+      "resolveSourceMapLocations": [
+        "${workspaceFolder}/**",
+        "${workspaceFolder}/build/**",
         "!**/node_modules/**"
       ],
       "skipFiles": [
@@ -34,6 +51,7 @@
       "request": "launch",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["test", "--", "--runInBand", "--no-cache"],
+      "autoAttachChildProcesses": true,
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
@@ -41,6 +59,65 @@
         "NODE_ENV": "test",
         "FORCE_COLOR": "1"
       },
+      "sourceMaps": true,
+      "resolveSourceMapLocations": [
+        "${workspaceFolder}/**",
+        "!**/node_modules/**"
+      ],
+      "skipFiles": [
+        "<node_internals>/**",
+        "**/node_modules/**"
+      ]
+    },
+    {
+      "type": "node",
+      "name": "xnapify: Debug Current Test File",
+      "request": "launch",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "test",
+        "--",
+        "--runInBand",
+        "--no-cache",
+        "${relativeFile}"
+      ],
+      "autoAttachChildProcesses": true,
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "env": {
+        "NODE_ENV": "test",
+        "FORCE_COLOR": "1"
+      },
+      "sourceMaps": true,
+      "resolveSourceMapLocations": [
+        "${workspaceFolder}/**",
+        "!**/node_modules/**"
+      ],
+      "skipFiles": [
+        "<node_internals>/**",
+        "**/node_modules/**"
+      ]
+    },
+    {
+      "type": "node",
+      "name": "xnapify: Run Benchmarks",
+      "request": "launch",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "test:benchmark"],
+      "autoAttachChildProcesses": true,
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "env": {
+        "NODE_ENV": "test",
+        "FORCE_COLOR": "1"
+      },
+      "sourceMaps": true,
+      "resolveSourceMapLocations": [
+        "${workspaceFolder}/**",
+        "!**/node_modules/**"
+      ],
       "skipFiles": [
         "<node_internals>/**",
         "**/node_modules/**"

@@ -3,13 +3,10 @@
 
 # TEAM
 
-  <name> -- <role> -- <twitter>
-
-# THANKS
-
-  <name>
+  xnapify -- Creator -- https://github.com/xuanhoa88
 
 # TECHNOLOGY COLOPHON
 
+  React, Node.js, Express, Webpack
   CSS3, HTML5, JavaScript
-  xnapify -- https://xnapify.com/
+  xnapify -- https://github.com/xuanhoa88/xnapify/

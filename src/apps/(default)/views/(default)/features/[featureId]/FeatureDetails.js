@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from '@shared/renderer/components/History';
 import Icon from '@shared/renderer/components/Icon';
 
-import { featuresData } from '../data';
+import { featuresData } from '../../data';
 
 import s from './FeatureDetails.css';
 
@@ -102,5 +102,4 @@ FeatureDetails.propTypes = {
   featureId: PropTypes.string.isRequired,
 };
 
-// Force rebuild
 export default FeatureDetails;
