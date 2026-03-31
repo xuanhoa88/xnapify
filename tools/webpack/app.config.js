@@ -19,6 +19,7 @@ const {
   createWebpackConfig,
   createCSSRule,
   createEnvDefine,
+  createHostProvidedCSSPlugins,
   createProgressPlugin,
   createSharedDependencies,
   isDev,
@@ -222,6 +223,7 @@ const serverConfig = createWebpackConfig('server', {
   },
   plugins: [
     createEnvDefine(),
+    ...createHostProvidedCSSPlugins(),
     ...(isDev
       ? [
           new webpack.BannerPlugin({

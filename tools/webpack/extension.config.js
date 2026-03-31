@@ -19,6 +19,7 @@ const {
   createCSSRule,
   createDefinePlugin,
   createEnvDefine,
+  createHostProvidedCSSPlugins,
   createProgressPlugin,
   createSharedDependencies,
   reStyle,
@@ -167,6 +168,7 @@ function createClientConfig(extensionData, extensionDefines, buildPath) {
       new webpack.ProvidePlugin({
         process: require.resolve('process/browser'),
       }),
+      ...createHostProvidedCSSPlugins(),
       extensionDefines,
       createEnvDefine(),
       new webpack.container.ModuleFederationPlugin({
@@ -206,6 +208,7 @@ function createClientConfig(extensionData, extensionDefines, buildPath) {
       ],
     },
     plugins: [
+      ...createHostProvidedCSSPlugins(),
       extensionDefines,
       createEnvDefine(),
       new MiniCssExtractPlugin({

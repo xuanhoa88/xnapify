@@ -64,6 +64,57 @@ const reMarkdown = /\.(?:md|markdown)(?:\?.*)?$/i;
 const reText = /\.txt(?:\?.*)?$/i;
 
 // =============================================================================
+// HOST-PROVIDED ASSETS
+// =============================================================================
+
+/**
+ * Path to a minimal no-op CSS module.
+ *
+ * Used as a build-time replacement for CSS modules whose assets (fonts, images)
+ * are already bundled by the host app's client build (build/public/).
+ * Replacing them with this no-op prevents webpack from emitting duplicate
+ * asset files into server and extension output directories.
+ */
+const NOOP_MODULE = path.resolve(__dirname, 'noop.css');
+
+/**
+ * CSS modules that ship heavy font/image assets and are already bundled by the
+ * host app's client webpack compilation.
+ *
+ * Server and extension builds do NOT need their own copy of these assets
+ * because:
+ *   1. The host's client bundle (build/public/) already emits the assets and
+ *      the corresponding CSS with correct publicPath references.
+ *   2. Module Federation shares the JS at runtime — extensions receive the
+ *      host's singleton instance, so font URLs resolve correctly.
+ *   3. The server build never serves static assets to browsers.
+ *
+ * To add a new entry, append a regex that matches the CSS file's resolved path
+ * (use [\\/] for cross-platform path separators).
+ */
+const HOST_PROVIDED_CSS = [
+  // katex: 20 font families × 3 formats (woff2, woff, ttf) = 60 files per build
+  /katex[\\/]dist[\\/]katex[\w.]*\.css$/,
+];
+
+/**
+ * Create NormalModuleReplacementPlugin instances that replace host-provided CSS
+ * modules with a no-op.
+ *
+ * Use in every webpack compilation EXCEPT the host's client build:
+ *   - App server config   (build/)           → fonts not needed
+ *   - Extension client     (build/extensions/) → host serves fonts at runtime
+ *   - Extension server     (build/extensions/) → SSR doesn't serve static assets
+ *
+ * @returns {import('webpack').WebpackPluginInstance[]}
+ */
+function createHostProvidedCSSPlugins() {
+  return HOST_PROVIDED_CSS.map(
+    pattern => new webpack.NormalModuleReplacementPlugin(pattern, NOOP_MODULE),
+  );
+}
+
+// =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
 
@@ -698,6 +749,7 @@ module.exports = {
   createCSSRule,
   createDefinePlugin,
   createEnvDefine,
+  createHostProvidedCSSPlugins,
   createProgressPlugin,
   createSharedDependencies,
   createWebpackConfig,
