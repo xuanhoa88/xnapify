@@ -12,7 +12,7 @@ Running
 - Run all benchmarks:
 
 ```bash
-npm run benchmark
+npm run test:benchmark
 ```
 
 - Run only the production-grade extension IPC benchmark:
@@ -20,7 +20,7 @@ npm run benchmark
 ```bash
 # optional env overrides
 BENCH_HANDLERS=100 BENCH_REQUESTS=5000 BENCH_CONCURRENCY=500 BENCH_PAYLOAD_BYTES=1024 \
-  npm run benchmark -- --testNamePattern=extension-ipc-prod
+  npm run test:benchmark -- --testNamePattern=extension-ipc-prod
 ```
 
 Notes
@@ -31,12 +31,12 @@ Notes
 
 Standalone runner
 
-- A standalone runner is available at `tools/bench/extension-ipc-prod-runner.js`. It runs outside Jest and records a small summary JSON file when `BENCH_RECORD` is set.
+- A standalone runner is available at `tools/bench/extension-ipc-prod.runner.js`. It runs outside Jest and records a small summary JSON file when `BENCH_RECORD` is set.
 
 Example (standalone run with recording):
 
 ```bash
 BENCH_HANDLERS=100 BENCH_REQUESTS=5000 BENCH_CONCURRENCY=500 BENCH_PAYLOAD_BYTES=1024 \
   BENCH_IO_MS=10 BENCH_RECORD=build/bench-results/extension-ipc-prod.json \
-  npm run benchmark:prod:run
+  node tools/bench/extension-ipc-prod.runner.js
 ```

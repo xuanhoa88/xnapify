@@ -194,3 +194,6 @@ uploads/
 
 # Node-RED
 .node-red/
+
+# E2E LLM step cache
+tools/e2e/.step-cache.json

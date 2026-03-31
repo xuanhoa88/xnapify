@@ -46,7 +46,9 @@
     "test:watch": "node tools/run test --watch",
     "test:coverage": "node tools/run test --coverage",
     "test:ci": "node tools/run test --ci",
-    "benchmark": "node tools/run benchmark"
+    "test:benchmark": "node tools/run benchmark",
+    "test:e2e": "node tools/e2e/runner.js",
+    "test:e2e:headed": "E2E_HEADLESS=false node tools/e2e/runner.js"
   },
   "dependencies": {
     "@hookform/resolvers": "3.9.1",
@@ -214,6 +216,7 @@
     "postcss-selector-parser": "7.1.1",
     "prettier": "3.3.3",
     "process": "0.11.10",
+    "puppeteer": "21.11.0",
     "raw-loader": "4.0.2",
     "react-refresh": "0.18.0",
     "react-test-renderer": "18.3.1",

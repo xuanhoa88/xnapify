@@ -163,7 +163,7 @@ npm run test                   # Run all tests
 npm run test:watch             # Watch mode
 npm run test:coverage          # Coverage report
 npm run test:ci                # CI mode
-npm run benchmark              # Run performance benchmarks
+npm run test:benchmark         # Run performance benchmarks
 
 # Code Quality
 npm run lint                   # Lint JS + CSS

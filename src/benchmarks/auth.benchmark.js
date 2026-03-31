@@ -2,7 +2,7 @@
  * Auth Middleware Performance Benchmark
  *
  * Measures JWT verification with and without caching.
- * Run via: npm run benchmark
+ * Run via: npm run test:benchmark
  */
 const { performance } = require('perf_hooks');
 

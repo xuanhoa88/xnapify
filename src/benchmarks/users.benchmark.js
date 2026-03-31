@@ -5,7 +5,7 @@
  * listing users with search filters to catch potential N+1 or
  * heavy query patterns.
  *
- * Run via: npm run benchmark
+ * Run via: npm run test:benchmark
  */
 
 const { performance } = require('perf_hooks');

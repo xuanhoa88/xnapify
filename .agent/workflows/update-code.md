@@ -84,7 +84,7 @@ npm run format
 If your changes affect performance-sensitive code paths:
 
 ```bash
-npm run benchmark
+npm run test:benchmark
 ```
 
 This executes all `*.benchmark.js` files under `JEST_BENCHMARK=true`. Place benchmarks alongside the optimized file or in `src/benchmarks/`.
@@ -92,6 +92,7 @@ This executes all `*.benchmark.js` files under `JEST_BENCHMARK=true`. Place benc
 ## 8. Update or Add Tests
 
 If your changes modified:
+
 - **Public API** (function signatures, return types, new parameters) → Update existing tests
 - **New behavior** (new code paths, edge cases) → Add new test cases
 - **Bug fixes** → Add a regression test that would have caught the bug
@@ -112,14 +113,14 @@ Before reporting the task as complete, confirm:
 
 ## Quick Command Reference
 
-| Command | Purpose |
-|---------|---------|
-| `npm test` | Run all unit and integration tests |
-| `npm run test -- <pattern>` | Run tests matching a pattern |
-| `npm run lint` | Check JS and CSS lint rules |
-| `npm run lint:js` | Check JS only |
-| `npm run lint:css` | Check CSS only |
-| `npm run fix` | Auto-fix lint issues |
-| `npm run format` | Format code with Prettier |
-| `npm run format:check` | Check formatting without modifying |
-| `npm run benchmark` | Run performance benchmarks |
+| Command                     | Purpose                            |
+| --------------------------- | ---------------------------------- |
+| `npm test`                  | Run all unit and integration tests |
+| `npm run test -- <pattern>` | Run tests matching a pattern       |
+| `npm run lint`              | Check JS and CSS lint rules        |
+| `npm run lint:js`           | Check JS only                      |
+| `npm run lint:css`          | Check CSS only                     |
+| `npm run fix`               | Auto-fix lint issues               |
+| `npm run format`            | Format code with Prettier          |
+| `npm run format:check`      | Check formatting without modifying |
+| `npm run test:benchmark`    | Run performance benchmarks         |

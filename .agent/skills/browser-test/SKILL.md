@@ -1,13 +1,16 @@
 ---
 name: browser-test
-description: Browser automation testing using the browser_subagent tool. Guides agents on navigating, interacting with, and visually verifying the running dev app.
+description: Browser automation testing using the AI agent's browser tools. Guides agents on navigating, interacting with, and visually verifying the running dev app.
 allowed-tools: Browser, Read
-version: 1.0
+version: 2.0
 ---
 
 # Browser Automation Test Skill
 
-You are performing **visual or functional browser tests** on the running `xnapify` application using the `browser_subagent` tool.
+You are performing **visual or functional browser tests** on the running `xnapify` application using your browser automation capability.
+
+> [!TIP]
+> For **E2E lifecycle tests**, see the `/run-e2e` workflow which reads `.md` test case files from each module's `e2e/` directory and uses this skill's rules to execute them.
 
 ---
 
@@ -20,7 +23,7 @@ You are performing **visual or functional browser tests** on the running `xnapif
 
 | Priority | Source | How |
 |----------|--------|-----|
-| 1 | User metadata | Check "Browser State" URLs or "Running terminal commands" for `localhost:XXXX` — this is always the **actual** running port |
+| 1 | User context | Check running terminal outputs for `localhost:XXXX` — this is always the **actual** running port |
 | 2 | `.env` files | `grep XNAPIFY_PORT .env .env.* 2>/dev/null` — use the **last** match (env-specific files override base) |
 | 3 | Default fallback | `1337` |
 
@@ -28,18 +31,20 @@ You are performing **visual or functional browser tests** on the running `xnapif
 
 ---
 
-## browser_subagent Task Format
+## Browser Test Execution
 
-When calling `browser_subagent`, your `Task` prompt must include:
+Use your IDE's browser automation capability (e.g., `browser_subagent`, `browser_action`, browser tool, MCP browser, etc.) to perform tests.
+
+### What to include in each browser task
 
 | Field | Description |
 |-------|-------------|
 | **URL** | Full URL with correct port, e.g. `http://localhost:1337/admin/extensions` |
 | **Steps** | Numbered, specific actions (click X, wait for Y, verify Z) |
 | **Return condition** | What to report back (screenshot, text content, pass/fail) |
-| **Recording name** | Descriptive snake_case, max 3 words |
+| **Recording/Screenshot** | Always capture visual evidence of the final state |
 
-### Template
+### Task prompt template
 
 ```
 Navigate to http://localhost:{PORT}/{path}.
@@ -97,10 +102,28 @@ Return: Did navigation work correctly? What URL and content appeared?
 
 ```
 Navigate to http://localhost:{PORT}/{page}.
-1. [Trigger error condition] — e.g., submit invalid data, disconnect network.
+1. [Trigger error condition] — e.g., submit invalid data.
 2. Observe error message/banner.
 3. Take screenshot of the error state.
 Return: What error message appeared? Where was it displayed?
+```
+
+### 5. E2E Lifecycle Test (from `.md` file)
+
+When executing test cases from `/run-e2e`, inject the parsed steps:
+
+```
+Navigate to http://localhost:{PORT}/admin/{module-page}.
+
+Steps:
+1. Wait for the page to fully load (look for the page header or main content).
+2. {step 1 from the .md file}
+3. {step 2 from the .md file}
+...
+N. Take a screenshot of the final state.
+
+Return: Describe what happened at each step. Did all steps succeed?
+Report any errors, unexpected UI states, or missing elements.
 ```
 
 ---
@@ -111,24 +134,11 @@ Return: What error message appeared? Where was it displayed?
 |------|-------------|
 | **Port first** | Always resolve port before building URLs |
 | **Be specific** | Use exact text, CSS selectors, or element descriptions |
-| **One flow per call** | Test ONE user flow per `browser_subagent` call |
+| **One flow per call** | Test ONE user flow per browser automation call |
 | **Screenshot proof** | Always request screenshots for visual verification |
 | **Wait for load** | Always include "wait for page to load" as step 1 |
-| **Auth awareness** | If page requires login, handle auth first or note the redirect |
-
----
-
-## Recording Names
-
-Use descriptive `snake_case` names, max 3 words:
-
-| Test Type | Example Name |
-|-----------|-------------|
-| Button loading state | `button_loading_test` |
-| Form submission | `form_submit_flow` |
-| Navigation check | `nav_routing_test` |
-| Error handling | `error_state_check` |
-| Extension actions | `extension_action_test` |
+| **Auth first** | If page requires login, handle auth in a dedicated step first |
+| **No guessing** | Ask the user for credentials / URLs if not known |
 
 ---
 
@@ -136,10 +146,10 @@ Use descriptive `snake_case` names, max 3 words:
 
 If the page redirects to login:
 
-1. Check if there's a session cookie or dev login bypass
-2. Try navigating to the login page first, fill credentials, submit
-3. Then navigate to the target page
-4. If no credentials are known, report and ask the user
+1. Navigate to `/login`, fill admin credentials, submit
+2. Wait for redirect to the authenticated page
+3. If no credentials are known, **ask the user** — never guess passwords
+4. Reuse the browser session for subsequent tests (don't re-login each time)
 
 ---
 
@@ -148,7 +158,8 @@ If the page redirects to login:
 | ❌ Don't | ✅ Do |
 |----------|------|
 | Hardcode port 3000 | Read XNAPIFY_PORT from .env |
-| Test multiple flows in one call | One flow per browser_subagent call |
+| Test multiple flows in one call | One flow per browser automation call |
 | Skip wait for page load | Always wait for specific elements |
 | Use vague element descriptions | Use exact text, IDs, or roles |
 | Ignore login/auth redirects | Handle auth flow first |
+| Guess admin passwords | Ask the user if credentials are not known |

@@ -1,5 +1,5 @@
 // Simple benchmark example
-// Run using `npm run benchmark` (or `node tools/run benchmark`)
+// Run using `npm run test:benchmark` (or `node tools/run benchmark`)
 // Benchmarks are plain Jest tests that log timing information.
 
 const { performance } = require('perf_hooks');

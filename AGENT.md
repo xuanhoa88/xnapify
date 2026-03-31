@@ -921,7 +921,7 @@ describe('myFeature slice', () => {
 
 - **File naming:** create `*.benchmark.js` files alongside the code you
   want to measure (common to put examples in `src/benchmarks/`).
-- **Running:** use `npm run benchmark` or `node tools/run benchmark`.
+- **Running:** use `npm run test:benchmark` or `node tools/run benchmark`.
   The task will invoke Jest in "benchmark mode" (`JEST_BENCHMARK=true`)
   which only loads files matching the pattern and disables coverage to
   avoid skewing timings.
