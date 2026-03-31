@@ -590,12 +590,22 @@ function makeSsrMiddleware(baseUrl) {
         throw err;
       }
 
+      // Generate per-request CSP nonce (production only).
+      // Applied here (not globally) because CSP only matters for HTML
+      // documents — API JSON and Node-RED responses don't execute scripts.
+      const nonce = !__DEV__
+        ? crypto.randomBytes(16).toString('base64')
+        : undefined;
+      if (nonce) {
+        res.setHeader('Content-Security-Policy', buildCspHeader(nonce));
+      }
+
       const html = await promiseWithDeadline(
         renderToHtml({
           context,
           component: page.component,
           metadata: await extractPageMetadata(page, req),
-          nonce: req.cspNonce,
+          nonce,
         }),
         SERVER_TIMEOUTS.RENDER,
         'SSR render',
@@ -913,13 +923,6 @@ export async function bootstrapApp(app, server, options = {}) {
       res.setHeader('X-Request-Id', req.id);
       for (const [k, v] of STATIC_SECURITY_HEADERS) {
         res.setHeader(k, v);
-      }
-
-      // Per-request nonce-based CSP (only in production)
-      if (!__DEV__) {
-        const nonce = crypto.randomBytes(16).toString('base64');
-        req.cspNonce = nonce; // Available to SSR templates
-        res.setHeader('Content-Security-Policy', buildCspHeader(nonce));
       }
     } catch (err) {
       console.error('❌ Error setting security headers:', err);

@@ -470,6 +470,31 @@ export class NodeRedManager {
       // Initialize runtime
       await this._runtime.init(this._settings, serverProxy, this._editorApi);
 
+      // ── Fix: init the runtime's OWN @node-red/util copy ─────────────
+      // npm nests separate copies of @node-red/util under runtime/,
+      // editor-api/, and registry/. Our top-level import('@node-red/util')
+      // may resolve to a different copy than the one the runtime requires
+      // internally. runtime.start() calls i18n.registerMessageCatalog()
+      // which needs initPromise to be set — that only happens via
+      // util.init(). We must init EACH nested copy.
+      const runtimeInternal = this._runtime._;
+      if (runtimeInternal && runtimeInternal.i18n) {
+        // The internal runtime object has the correct i18n reference.
+        // Calling init directly on the nested i18n/log modules ensures
+        // the same instances that runtime.start() uses are initialized.
+        try {
+          // runtime._ has .i18n and .log — reconstruct init call
+          if (typeof runtimeInternal.i18n.init === 'function') {
+            runtimeInternal.i18n.init(this._settings);
+          }
+          if (typeof runtimeInternal.log.init === 'function') {
+            runtimeInternal.log.init(this._settings);
+          }
+        } catch (err) {
+          Logger.warn('Runtime util init fallback:', err.message);
+        }
+      }
+
       // Initialize editor API
       await this._editorApi.init(
         this._settings,
