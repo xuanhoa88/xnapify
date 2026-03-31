@@ -26,6 +26,7 @@
 const { execSync } = require('child_process');
 const fs = require('fs');
 const net = require('net');
+const os = require('os');
 const path = require('path');
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -42,20 +43,26 @@ const PG_DEFAULTS = {
   database: 'xnapify_dev',
 };
 
-const DIALECT_DEPS = {
-  // Pin sqlite3@5 — v6+ requires Node >= 20
-  sqlite: [{ name: 'sqlite3', spec: 'sqlite3@^5.0.11' }],
-  // pg + pg-hstore are always needed; embedded-postgres only for portable mode
-  postgres: [
-    { name: 'pg', spec: 'pg@^8.20.0' },
-    { name: 'pg-hstore', spec: 'pg-hstore@^2.3.4' },
-  ],
-  // Installed only when embedded (local) PG is needed
-  _embedded: [
-    { name: 'embedded-postgres', spec: 'embedded-postgres@^18.3.0-beta.16' },
-  ],
-  mysql: [{ name: 'mysql2', spec: 'mysql2@^3.20.0' }],
-};
+const DIALECT_DEPS = (() => {
+  const platMap = { darwin: 'darwin', linux: 'linux', win32: 'windows' };
+  const archMap = { x64: 'x64', arm64: 'arm64' };
+  const platKey = platMap[os.platform()] || os.platform();
+  const archKey = archMap[os.arch()] || os.arch();
+  const embeddedPkg = `@embedded-postgres/${platKey}-${archKey}`;
+
+  return {
+    // Pin sqlite3@5 — v6+ requires Node >= 20
+    sqlite: [{ name: 'sqlite3', spec: 'sqlite3@^5.0.11' }],
+    // pg + pg-hstore are always needed
+    postgres: [
+      { name: 'pg', spec: 'pg@^8.20.0' },
+      { name: 'pg-hstore', spec: 'pg-hstore@^2.3.4' },
+    ],
+    // Platform-specific PG binaries (initdb, pg_ctl, postgres)
+    _embedded: [{ name: embeddedPkg, spec: `${embeddedPkg}@^18.3.0-beta.16` }],
+    mysql: [{ name: 'mysql2', spec: 'mysql2@^3.20.0' }],
+  };
+})();
 
 /**
  * Load .env into process.env. Tries dotenv-flow first (supports
@@ -193,6 +200,20 @@ function ensureDeps(dialect) {
       timeout: 120_000,
       shell: true, // Required for Windows (cmd.exe)
     });
+    // Bust Node's module resolution cache so require() finds the new packages
+    // within this same process (avoids stale _pathCache from prior resolve())
+    // eslint-disable-next-line no-underscore-dangle
+    const pathCache = require('module')._pathCache;
+    if (pathCache) {
+      for (const key of Object.keys(pathCache)) {
+        for (const dep of missing) {
+          if (key.includes(dep.name)) {
+            delete pathCache[key];
+          }
+        }
+      }
+    }
+
     console.log(`✅ ${dialect} dependencies installed`);
   } catch (err) {
     const message = err.stderr ? err.stderr.toString().trim() : err.message;
@@ -264,6 +285,10 @@ function buildPostgresUrl(cfg) {
 
 /**
  * Start embedded PostgreSQL daemon. Idempotent — checks port first.
+ *
+ * Calls `initdb` and `pg_ctl` binaries directly from the
+ * `@embedded-postgres/<platform>` package — no ESM imports required.
+ *
  * @param {{ port?: number, user?: string, password?: string, database?: string }} [cfg]
  * @returns {Promise<void>}
  */
@@ -275,32 +300,136 @@ async function startPostgres(cfg = PG_DEFAULTS) {
     return;
   }
 
-  // Dynamic require — package was installed by ensureDeps()
-  const EmbeddedPostgres = require('embedded-postgres');
-
-  const pg = new EmbeddedPostgres({
-    databaseDir: PG_DATA_DIR,
-    port,
-    user: cfg.user || PG_DEFAULTS.user,
-    password: cfg.password || PG_DEFAULTS.password,
-    persistent: true,
-  });
-
   console.log(`🐘 Starting embedded PostgreSQL on port ${port}...`);
 
-  await pg.initialise();
-  await pg.start();
+  // Initialise data directory via initdb (idempotent — skips if already done)
+  if (!fs.existsSync(path.join(PG_DATA_DIR, 'PG_VERSION'))) {
+    const initdb = resolvePgBin('initdb');
+    const user = cfg.user || PG_DEFAULTS.user;
+    // --locale=C is universally available; --lc-messages may not exist on
+    // Windows or minimal containers, so we only add it on platforms that
+    // are likely to have the en_US.UTF-8 locale installed.
+    const localeFlags =
+      os.platform() === 'win32'
+        ? '--locale=C'
+        : '--locale=C --lc-messages=en_US.UTF-8';
+    execSync(
+      `"${initdb}" -D "${PG_DATA_DIR}" -U "${user}" --auth=trust --encoding=UTF8 ${localeFlags}`,
+      { cwd: ROOT, stdio: 'inherit', timeout: 60_000, shell: true },
+    );
+  }
 
-  // Create database (idempotent — embedded-postgres handles "already exists")
+  // Resolve pg_ctl binary path from the embedded-postgres platform package
+  const pgCtl = resolvePgBin('pg_ctl');
+
+  // Write port override into postgresql.conf if needed
+  const confPath = path.join(PG_DATA_DIR, 'postgresql.conf');
+  let confContent = fs.readFileSync(confPath, 'utf-8');
+  if (!confContent.includes(`port = ${port}`)) {
+    confContent = confContent.replace(/^#?\s*port\s*=.*/m, `port = ${port}`);
+    fs.writeFileSync(confPath, confContent, 'utf-8');
+  }
+
+  // Ensure listen on 127.0.0.1 only
+  if (!confContent.includes("listen_addresses = '127.0.0.1'")) {
+    confContent = confContent.replace(
+      /^#?\s*listen_addresses\s*=.*/m,
+      "listen_addresses = '127.0.0.1'",
+    );
+    fs.writeFileSync(confPath, confContent, 'utf-8');
+  }
+
+  // Start PG as a background daemon via pg_ctl (survives process exit)
+  const logFile = path.join(PG_DATA_DIR, 'logfile');
+  execSync(
+    `"${pgCtl}" -D "${PG_DATA_DIR}" -l "${logFile}" -o "-p ${port}" start`,
+    { cwd: ROOT, stdio: 'inherit', timeout: 30_000, shell: true },
+  );
+
+  // Wait for PG to become reachable
+  const maxWait = 10_000;
+  const start = Date.now();
+  while (!(await isPortReachable(port)) && Date.now() - start < maxWait) {
+    await new Promise(r => setTimeout(r, 200));
+  }
+
+  if (!(await isPortReachable(port))) {
+    throw new Error(`PostgreSQL did not become reachable on port ${port}`);
+  }
+
+  // Create database (idempotent)
   const dbName = cfg.database || PG_DEFAULTS.database;
   try {
-    await pg.createDatabase(dbName);
+    const { Client } = require('pg');
+    const client = new Client({
+      host: '127.0.0.1',
+      port,
+      user: cfg.user || PG_DEFAULTS.user,
+      password: cfg.password || PG_DEFAULTS.password,
+      database: 'postgres',
+    });
+    await client.connect();
+    // Check if database exists
+    const result = await client.query(
+      'SELECT 1 FROM pg_database WHERE datname = $1',
+      [dbName],
+    );
+    if (result.rowCount === 0) {
+      await client.query(`CREATE DATABASE "${dbName}"`);
+    }
+    await client.end();
   } catch {
-    // Database already exists — safe to ignore
+    // Database might already exist or pg not fully ready — non-fatal
   }
 
   console.log(
     `✅ PostgreSQL ready — ${buildPostgresUrl({ ...PG_DEFAULTS, ...cfg })}`,
+  );
+}
+
+/**
+ * Resolve a PostgreSQL binary from the installed @embedded-postgres platform package.
+ * @param {string} binName - Binary name (e.g. 'pg_ctl', 'initdb', 'postgres')
+ * @returns {string} Absolute path to the binary
+ */
+function resolvePgBin(binName) {
+  const isWin = os.platform() === 'win32';
+  // On Windows the binaries have a .exe extension
+  const fileName = isWin ? `${binName}.exe` : binName;
+
+  // Map Node arch/platform names to embedded-postgres package names
+  const archMap = { x64: 'x64', arm64: 'arm64' };
+  const platMap = { darwin: 'darwin', linux: 'linux', win32: 'windows' };
+
+  const platKey = platMap[os.platform()] || os.platform();
+  const archKey = archMap[os.arch()] || os.arch();
+  const pkgName = `@embedded-postgres/${platKey}-${archKey}`;
+
+  try {
+    const pkgDir = path.dirname(require.resolve(`${pkgName}/package.json`));
+    const bin = path.join(pkgDir, 'native', 'bin', fileName);
+    if (fs.existsSync(bin)) return bin;
+  } catch {
+    // Fall through to glob search
+  }
+
+  // Fallback: search node_modules for any embedded-postgres platform package
+  const embeddedDir = path.join(ROOT, 'node_modules', '@embedded-postgres');
+  if (fs.existsSync(embeddedDir)) {
+    for (const entry of fs.readdirSync(embeddedDir)) {
+      const candidate = path.join(
+        embeddedDir,
+        entry,
+        'native',
+        'bin',
+        fileName,
+      );
+      if (fs.existsSync(candidate)) return candidate;
+    }
+  }
+
+  throw new Error(
+    `Could not locate '${binName}' binary from @embedded-postgres`,
   );
 }
 
@@ -343,6 +472,7 @@ async function terminateConnections(port) {
 /**
  * Stop embedded PostgreSQL daemon if running.
  * Gracefully terminates active connections before shutdown.
+ * Uses pg_ctl stop for daemon-mode PG started by startPostgres().
  * @returns {Promise<void>}
  */
 async function stopPostgres() {
@@ -372,25 +502,15 @@ async function stopPostgres() {
       console.log(`🔌 Terminated ${terminated} active connection(s)`);
     }
 
-    // Step 2: Stop embedded server
-    ensureDeps('_embedded');
-    const EmbeddedPostgres = require('embedded-postgres');
-
-    const pg = new EmbeddedPostgres({
-      databaseDir: PG_DATA_DIR,
-      port,
-      user: PG_DEFAULTS.user,
-      password: PG_DEFAULTS.password,
-      persistent: true,
-    });
-
+    // Step 2: Stop via pg_ctl
+    const pgCtl = resolvePgBin('pg_ctl');
     console.log('🐘 Stopping embedded PostgreSQL...');
-
-    // Graceful stop with timeout fallback
-    const stopTimeout = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Stop timed out after 10s')), 10_000),
-    );
-    await Promise.race([pg.stop(), stopTimeout]);
+    execSync(`"${pgCtl}" -D "${PG_DATA_DIR}" -m fast stop`, {
+      cwd: ROOT,
+      stdio: 'inherit',
+      timeout: 15_000,
+      shell: true,
+    });
 
     console.log('✅ PostgreSQL stopped');
   } catch (err) {
