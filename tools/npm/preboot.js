@@ -528,10 +528,26 @@ async function stopPostgres() {
  * 3. Detect dialect from XNAPIFY_DB_URL (shorthand or full URL)
  * 4. Install driver deps
  * 5. Resolve server (postgres: priority chain, mysql: reachability check)
+ *
+ * In test context (pretest / NODE_ENV=test) always uses SQLite for speed
+ * and isolation — tests should not depend on an external database server.
  */
 async function autoMode() {
   ensureEnvFile();
   loadEnv();
+
+  // Force SQLite for tests — fast, in-process, no server required.
+  // npm sets npm_lifecycle_event=pretest when running the pretest hook.
+  const isTest =
+    process.env.NODE_ENV === 'test' ||
+    (process.env.npm_lifecycle_event || '').includes('test');
+
+  if (isTest) {
+    const dialect = 'sqlite';
+    ensureDeps(dialect);
+    console.log('🧪 Test mode — using SQLite (in-memory)');
+    return;
+  }
 
   const url = process.env.XNAPIFY_DB_URL || 'sqlite:database.sqlite';
   const dialect = detectDialect(url);
