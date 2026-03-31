@@ -74,11 +74,11 @@ export class EmailManager {
             port: parseInt(process.env.XNAPIFY_SMTP_PORT, 10) || 587,
             secure: process.env.XNAPIFY_SMTP_SECURE === 'true',
             user: process.env.XNAPIFY_SMTP_USER,
-            pass: process.env.XNAPIFY_SMTP_PASS,
+            pass: process.env.XNAPIFY_SMTP_KEY,
             defaultFrom: process.env.XNAPIFY_MAIL_FROM,
             defaultFromName:
               process.env.XNAPIFY_MAIL_FROM_NAME ||
-              process.env.XNAPIFY_APP_NAME,
+              process.env.XNAPIFY_PUBLIC_APP_NAME,
           },
         ),
       );
@@ -94,7 +94,7 @@ export class EmailManager {
             defaultFrom: process.env.XNAPIFY_MAIL_FROM,
             defaultFromName:
               process.env.XNAPIFY_MAIL_FROM_NAME ||
-              process.env.XNAPIFY_APP_NAME,
+              process.env.XNAPIFY_PUBLIC_APP_NAME,
           },
         ),
       );
@@ -110,7 +110,7 @@ export class EmailManager {
             defaultFrom: process.env.XNAPIFY_MAIL_FROM,
             defaultFromName:
               process.env.XNAPIFY_MAIL_FROM_NAME ||
-              process.env.XNAPIFY_APP_NAME,
+              process.env.XNAPIFY_PUBLIC_APP_NAME,
           },
         ),
       );
@@ -128,7 +128,7 @@ export class EmailManager {
             defaultFrom: process.env.XNAPIFY_MAIL_FROM,
             defaultFromName:
               process.env.XNAPIFY_MAIL_FROM_NAME ||
-              process.env.XNAPIFY_APP_NAME,
+              process.env.XNAPIFY_PUBLIC_APP_NAME,
           },
         ),
       );

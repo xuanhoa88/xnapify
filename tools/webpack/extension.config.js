@@ -207,7 +207,6 @@ function createClientConfig(extensionData, extensionDefines, buildPath) {
     },
     plugins: [
       extensionDefines,
-      createEnvDefine(),
       new MiniCssExtractPlugin({
         filename: 'extension.css',
         ignoreOrder: isDev,
@@ -247,11 +246,7 @@ function createApiConfig(extensionData, extensionDefines, buildPath) {
       path: path.join(buildPath, dirName),
       filename: 'api.js',
     },
-    plugins: [
-      extensionDefines,
-      createEnvDefine(),
-      createProgressPlugin(),
-    ].filter(Boolean),
+    plugins: [extensionDefines, createProgressPlugin()].filter(Boolean),
   });
 
   apiConfig.resolve.modules.unshift(extNodeModules);

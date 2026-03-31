@@ -8,6 +8,7 @@
 import 'url-polyfill';
 import 'whatwg-fetch';
 import { createBrowserHistory } from 'history';
+import merge from 'lodash/merge';
 
 import { Container } from '@shared/container';
 import extensionManager from '@shared/extension/client';
@@ -42,12 +43,13 @@ const REACT_DOM_UNAVAILABLE = false;
 // =============================================================================
 
 // eslint-disable-next-line no-underscore-dangle
-const preloadedState = window.__PRELOADED_STATE__ || {};
+const preloadedState = merge({}, window.__PRELOADED_STATE__);
 
 // Create browser history with configurable basename
 let parsedBasename = '';
 try {
-  const appUrlStr = process.env.XNAPIFY_APP_URL || preloadedState.appUrl || '';
+  const appUrlStr =
+    preloadedState.appUrl || process.env.XNAPIFY_PUBLIC_APP_URL || '';
   if (appUrlStr.startsWith('http')) {
     parsedBasename = new URL(appUrlStr).pathname;
     if (parsedBasename === '/') parsedBasename = '';

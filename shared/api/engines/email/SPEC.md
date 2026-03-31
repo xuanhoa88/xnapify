@@ -74,12 +74,12 @@ Each provider is created only when requested (via `getProvider`, `hasProvider`, 
 
 | Provider | Trigger Condition | Env Vars |
 |---|---|---|
-| `smtp` | `config.smtp` or `XNAPIFY_SMTP_HOST` or default is `'smtp'` | `XNAPIFY_SMTP_HOST`, `XNAPIFY_SMTP_PORT` (587), `XNAPIFY_SMTP_SECURE`, `XNAPIFY_SMTP_USER`, `XNAPIFY_SMTP_PASS` |
+| `smtp` | `config.smtp` or `XNAPIFY_SMTP_HOST` or default is `'smtp'` | `XNAPIFY_SMTP_HOST`, `XNAPIFY_SMTP_PORT` (587), `XNAPIFY_SMTP_SECURE`, `XNAPIFY_SMTP_USER`, `XNAPIFY_SMTP_KEY` |
 | `resend` | `config.resend` or `XNAPIFY_RESEND_KEY` | `XNAPIFY_RESEND_KEY` |
 | `sendgrid` | `config.sendgrid` or `XNAPIFY_SENDGRID_KEY` | `XNAPIFY_SENDGRID_KEY` |
 | `mailgun` | `config.mailgun` or `XNAPIFY_MAILGUN_KEY` | `XNAPIFY_MAILGUN_KEY`, `XNAPIFY_MAILGUN_DOMAIN`, `XNAPIFY_MAILGUN_REGION` (`'us'`) |
 
-All providers share: `XNAPIFY_MAIL_FROM` (from address), `XNAPIFY_MAIL_FROM_NAME` (falls back to `XNAPIFY_APP_NAME`).
+All providers share: `XNAPIFY_MAIL_FROM` (from address), `XNAPIFY_MAIL_FROM_NAME` (falls back to `XNAPIFY_PUBLIC_APP_NAME`).
 
 ### Provider Management
 
@@ -266,12 +266,12 @@ const email = createFactory();
 |---|---|---|
 | `XNAPIFY_MAIL_PROVIDER` | `'resend'` | Default provider selection |
 | `XNAPIFY_MAIL_FROM` | — | From address (all providers) |
-| `XNAPIFY_MAIL_FROM_NAME` | `XNAPIFY_APP_NAME` | From name (all providers) |
+| `XNAPIFY_MAIL_FROM_NAME` | `XNAPIFY_PUBLIC_APP_NAME` | From name (all providers) |
 | `XNAPIFY_SMTP_HOST` | `'localhost'` | SMTP provider |
 | `XNAPIFY_SMTP_PORT` | `587` | SMTP provider |
 | `XNAPIFY_SMTP_SECURE` | `'false'` | SMTP TLS |
 | `XNAPIFY_SMTP_USER` | — | SMTP auth |
-| `XNAPIFY_SMTP_PASS` | — | SMTP auth |
+| `XNAPIFY_SMTP_KEY` | — | SMTP auth |
 | `XNAPIFY_RESEND_KEY` | — | Resend provider |
 | `XNAPIFY_SENDGRID_KEY` | — | SendGrid provider |
 | `XNAPIFY_MAILGUN_KEY` | — | Mailgun provider |

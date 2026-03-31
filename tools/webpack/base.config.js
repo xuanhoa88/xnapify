@@ -219,11 +219,11 @@ const createProgressPlugin = () =>
     : null;
 
 /**
- * Create environment DefinePlugin with dotenv variables
+ * Create environment DefinePlugin (client — only XNAPIFY_PUBLIC_* vars)
  * @returns {webpack.DefinePlugin} DefinePlugin instance
  */
 const createEnvDefine = () =>
-  createDefinePlugin({ ...loadDotenv({ prefix: 'XNAPIFY_', verbose }) });
+  createDefinePlugin({ ...loadDotenv({ verbose }) });
 
 /**
  * Create shared dependencies configuration for Module Federation

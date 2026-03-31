@@ -62,6 +62,11 @@ async function copyFiles() {
       'utf-8',
     );
     const pkg = JSON.parse(manifest);
+
+    // Remove DB drivers — installed on-demand by preboot.js
+    const buildDeps = { ...pkg.dependencies };
+    delete buildDeps.sqlite3;
+
     await writeFile(
       path.join(config.BUILD_DIR, 'package.json'),
       JSON.stringify(
@@ -70,8 +75,9 @@ async function copyFiles() {
           name: pkg.name || `xnapify-${BUILD_TIMESTAMP}`,
           version: pkg.version || `0.0.1-${BUILD_TIMESTAMP}`,
           engines: pkg.engines,
-          dependencies: pkg.dependencies,
+          dependencies: buildDeps,
           scripts: {
+            prestart: 'node preboot.js',
             start: 'node server.js',
           },
         },
@@ -114,6 +120,23 @@ async function copyFiles() {
       normalizedNpmrcContent.join('\n'),
     );
     logDebug('Copied .npmrc');
+
+    // 6. Copy preboot.js for standalone auto-boot
+    await copyFile(
+      path.join(config.CWD, 'tools/preboot.js'),
+      path.join(config.BUILD_DIR, 'preboot.js'),
+    );
+    logDebug('Copied preboot.js');
+
+    // 7. Copy .env.xnapify template (preboot creates .env from it)
+    const envTemplatePath = path.join(config.CWD, '.env.xnapify');
+    if (await pathExists(envTemplatePath)) {
+      await copyFile(
+        envTemplatePath,
+        path.join(config.BUILD_DIR, '.env.xnapify'),
+      );
+      logDebug('Copied .env.xnapify');
+    }
 
     logInfo('✅ Static files copied');
   } catch (error) {

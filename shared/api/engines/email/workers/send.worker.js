@@ -105,10 +105,10 @@ function createProvider(options = {}) {
         port: parseInt(process.env.XNAPIFY_SMTP_PORT, 10) || 587,
         secure: process.env.XNAPIFY_SMTP_SECURE === 'true',
         user: process.env.XNAPIFY_SMTP_USER,
-        pass: process.env.XNAPIFY_SMTP_PASS,
+        pass: process.env.XNAPIFY_SMTP_KEY,
         defaultFrom: process.env.XNAPIFY_MAIL_FROM,
         defaultFromName:
-          process.env.XNAPIFY_MAIL_FROM_NAME || process.env.XNAPIFY_APP_NAME,
+          process.env.XNAPIFY_MAIL_FROM_NAME || process.env.XNAPIFY_PUBLIC_APP_NAME,
         ...explicitConfig,
       });
 
@@ -117,7 +117,7 @@ function createProvider(options = {}) {
         apiKey: process.env.XNAPIFY_SENDGRID_KEY,
         defaultFrom: process.env.XNAPIFY_MAIL_FROM,
         defaultFromName:
-          process.env.XNAPIFY_MAIL_FROM_NAME || process.env.XNAPIFY_APP_NAME,
+          process.env.XNAPIFY_MAIL_FROM_NAME || process.env.XNAPIFY_PUBLIC_APP_NAME,
         ...explicitConfig,
       });
 
@@ -128,7 +128,7 @@ function createProvider(options = {}) {
         region: process.env.XNAPIFY_MAILGUN_REGION,
         defaultFrom: process.env.XNAPIFY_MAIL_FROM,
         defaultFromName:
-          process.env.XNAPIFY_MAIL_FROM_NAME || process.env.XNAPIFY_APP_NAME,
+          process.env.XNAPIFY_MAIL_FROM_NAME || process.env.XNAPIFY_PUBLIC_APP_NAME,
         ...explicitConfig,
       });
 
@@ -137,7 +137,7 @@ function createProvider(options = {}) {
         apiKey: process.env.XNAPIFY_RESEND_KEY,
         defaultFrom: process.env.XNAPIFY_MAIL_FROM,
         defaultFromName:
-          process.env.XNAPIFY_MAIL_FROM_NAME || process.env.XNAPIFY_APP_NAME,
+          process.env.XNAPIFY_MAIL_FROM_NAME || process.env.XNAPIFY_PUBLIC_APP_NAME,
         ...explicitConfig,
       });
 

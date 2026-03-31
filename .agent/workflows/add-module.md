@@ -934,7 +934,7 @@ const webhook = container.resolve('webhook');
 
 webhook.register('{provider-name}', {
   // Secret for HMAC signature verification
-  secret: process.env.XNAPIFY_{PROVIDER}_WEBHOOK_SECRET,
+  secret: process.env.XNAPIFY_{PROVIDER}_WEBHOOK_KEY,
 
   // Handle the verified payload
   async handler({ event, payload, headers }) {
@@ -957,4 +957,4 @@ webhook.register('{provider-name}', {
 - **Always verify signatures.** The webhook engine handles HMAC verification automatically when `secret` is provided.
 - **Use descriptive provider names.** E.g., `stripe`, `github`, `sendgrid`.
 - **Return quickly.** Acknowledge the webhook and process asynchronously if needed (dispatch to worker).
-- **Store the secret** in an env var with `XNAPIFY_` prefix.
+- **Store the secret** in an env var ending with `_KEY` (e.g., `XNAPIFY_{PROVIDER}_WEBHOOK_KEY`). The `_KEY` suffix auto-excludes it from client bundles.

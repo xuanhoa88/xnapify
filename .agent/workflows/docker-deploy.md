@@ -16,7 +16,7 @@ All Docker configuration lives in `.docker/`:
 ## Build & Run (Production)
 
 ```bash
-# Build and start app (SQLite, default)
+# Build and start app (SQLite default — DB driver auto-installed by preboot)
 docker compose -f .docker/docker-compose.yml up -d --build
 
 # With PostgreSQL
@@ -71,9 +71,10 @@ RUN XNAPIFY_HOST=0.0.0.0 npm run build
 
 ## When Database URL Changes
 
-If switching from SQLite to Postgres/MySQL for Docker, you must change `XNAPIFY_DB_URL` in
-`.env.xnapify` (the file included in the Docker build context) so Webpack bakes the correct
-connection string. Or pass it as a build arg to override at build time.
+If switching from SQLite to Postgres/MySQL for Docker:
+1. Change `XNAPIFY_DB_URL` in `.env.xnapify` (baked at build time by Webpack)
+2. Or set it as a build arg: `RUN XNAPIFY_DB_URL=postgresql://... npm run build`
+3. The `prestart` hook auto-installs the correct driver at container startup
 
 ## Debugging
 

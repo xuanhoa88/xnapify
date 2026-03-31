@@ -44,10 +44,8 @@ cd xnapify
 # Install all dependencies (root + sub-packages)
 npm run setup
 
-# Copy environment variables (Optional)
-cp .env.xnapify .env
-
 # Start the development server (http://localhost:1337)
+# .env is auto-created from .env.xnapify on first run
 npm run dev
 ```
 
@@ -242,10 +240,11 @@ XNAPIFY_PORT=1337
 XNAPIFY_HOST=127.0.0.1
 
 # Application
-XNAPIFY_APP_NAME="xnapify"
-XNAPIFY_APP_DESC="Snap your API, Stream your React"
+XNAPIFY_PUBLIC_APP_NAME="xnapify"
+XNAPIFY_PUBLIC_APP_DESC="Snap your API, Stream your React"
 
-# Database (SQLite default, supports PostgreSQL/MySQL)
+# Database (drivers installed on-demand by preboot.js)
+# Use shorthand 'postgres' or full URL
 XNAPIFY_DB_URL=sqlite:database.sqlite
 
 # Authentication
@@ -254,6 +253,23 @@ XNAPIFY_JWT_EXPIRY=7d
 ```
 
 > **Note:** Environment variables are baked into the client bundle at build time. Changing them requires a rebuild.
+
+### 🗄️ Database
+
+**Default:** SQLite (zero-config). Drivers are installed on-demand — no DB packages in `package.json`.
+
+**Switch to PostgreSQL:** Set `XNAPIFY_DB_URL=postgres` in `.env`, then `npm run dev`. Preboot resolves PG servers with this priority:
+
+1. **Configured URL** — if `XNAPIFY_DB_URL` points to a reachable server, use it
+2. **Local system PG** (port 5432) — if a system PostgreSQL is running, auto-switch
+3. **Embedded PG** (port 5433) — auto-downloads and starts a portable PostgreSQL
+
+```bash
+# Manual control
+node tools/preboot.js --status   # Show DB status
+node tools/preboot.js --start    # Start embedded PG
+node tools/preboot.js --stop     # Stop embedded PG (drains connections)
+```
 
 ## 🐳 Docker
 
@@ -281,7 +297,7 @@ npm run build
 # Deploy (inside the build output directory)
 cd build
 npm install --production   # ← only for build/, NOT project root
-npm start
+npm start                  # .env + DB driver auto-provisioned on first start
 ```
 
 ## 🤝 Contributing

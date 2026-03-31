@@ -13,16 +13,16 @@ const TAG = '[OAuth GitHub]';
 export default {
   async boot({ container }) {
     const clientID = process.env.XNAPIFY_GITHUB_CLIENT_ID;
-    const clientSecret = process.env.XNAPIFY_GITHUB_CLIENT_SECRET;
+    const clientSecret = process.env.XNAPIFY_GITHUB_CLIENT_KEY;
 
     if (!clientID || !clientSecret) {
       console.warn(
-        `${TAG} ⚠️ XNAPIFY_GITHUB_CLIENT_ID / XNAPIFY_GITHUB_CLIENT_SECRET not set — skipping`,
+        `${TAG} ⚠️ XNAPIFY_GITHUB_CLIENT_ID / XNAPIFY_GITHUB_CLIENT_KEY not set — skipping`,
       );
       return;
     }
 
-    const appUrl = process.env.XNAPIFY_APP_URL || 'http://localhost:1337';
+    const appUrl = process.env.XNAPIFY_PUBLIC_APP_URL || 'http://localhost:1337';
     const oauth = container.resolve('oauth');
 
     oauth.registerProvider('github', {

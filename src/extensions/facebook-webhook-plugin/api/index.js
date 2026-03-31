@@ -21,7 +21,7 @@
  *
  * ## Environment Variables
  *
- * - `FACEBOOK_WEBHOOK_SECRET` — Shared secret from Facebook App Dashboard
+ * - `XNAPIFY_FACEBOOK_WEBHOOK_KEY` — Shared secret from Facebook App Dashboard
  *
  * @example <caption>Sending a test webhook</caption>
  * curl -X POST http://localhost:3000/webhooks/facebook \
@@ -48,11 +48,11 @@ export default {
   async boot({ container }) {
     const webhook = container.resolve('webhook');
 
-    const secret = process.env.FACEBOOK_WEBHOOK_SECRET;
+    const secret = process.env.XNAPIFY_FACEBOOK_WEBHOOK_KEY;
 
     if (!secret) {
       console.warn(
-        `${TAG} ⚠️ FACEBOOK_WEBHOOK_SECRET not set — skipping handler registration`,
+        `${TAG} ⚠️ XNAPIFY_FACEBOOK_WEBHOOK_KEY not set — skipping handler registration`,
       );
       return;
     }

@@ -296,6 +296,9 @@ await db.connection.revertMigrations(); // Rollback last
 | SSR hydration mismatch | Browser-only code in render | Use `useEffect` for browser-only logic |
 | Redux state not updating | Reducer not returning new object | Use Redux DevTools to inspect |
 | `ENOSPC` (Linux) | File watcher limit | Increase `fs.inotify.max_user_watches` |
+| `Cannot find module 'sqlite3'` | DB driver not installed | Run `npm run dev` (preboot installs it) or `node tools/preboot.js` |
+| `Cannot find module 'pg'` | PG driver not installed | Set `XNAPIFY_DB_URL=postgres` in `.env`, run `npm run dev` |
+| PostgreSQL connection refused | PG daemon not running | `node tools/preboot.js --start` |
 
 ---
 

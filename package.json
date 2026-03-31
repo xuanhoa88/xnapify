@@ -28,6 +28,7 @@
   },
   "scripts": {
     "preinstall": "node tools/preinstall.js",
+    "predev": "node tools/preboot.js",
     "precommit": "lint-staged",
     "setup": "node tools/tasks/setup.js",
     "dev": "node tools/run dev",
@@ -42,6 +43,7 @@
     "fix:css": "node tools/run stylelint --fix",
     "format": "node tools/run prettier",
     "format:check": "node tools/run prettier --check",
+    "pretest": "node tools/preboot.js",
     "test": "node tools/run test",
     "test:watch": "node tools/run test --watch",
     "test:coverage": "node tools/run test --coverage",
@@ -128,7 +130,6 @@
     "redux": "5.0.1",
     "sequelize": "6.37.7",
     "serialize-javascript": "6.0.2",
-    "sqlite3": "5.0.11",
     "tippy.js": "6.3.7",
     "turndown": "7.2.0",
     "umzug": "3.8.2",

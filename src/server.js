@@ -83,9 +83,9 @@ const STATIC_SECURITY_HEADERS = Object.entries({
 });
 
 const APP_METADATA = Object.freeze({
-  title: process.env.XNAPIFY_APP_NAME || 'xnapify',
+  title: process.env.XNAPIFY_PUBLIC_APP_NAME || 'xnapify',
   description:
-    process.env.XNAPIFY_APP_DESC || 'Snap your API, Stream your React',
+    process.env.XNAPIFY_PUBLIC_APP_DESC || 'Snap your API, Stream your React',
 });
 
 // ---------------------------------------------------------------------------
@@ -149,7 +149,7 @@ async function extractPageMetadata(page, req) {
   const metadata = {
     title: (page && page.title) || APP_METADATA.title,
     description: (page && page.description) || APP_METADATA.description,
-    image: (page && page.image) || process.env.XNAPIFY_APP_IMAGE,
+    image: (page && page.image) || process.env.XNAPIFY_PUBLIC_APP_IMAGE,
     type: (page && page.type) || 'website',
   };
 
@@ -443,7 +443,7 @@ async function renderToHtml({ context, component, metadata = {}, nonce }) {
     scriptLinks: [...scriptLinks, ...safeExtUrls('scriptUrls')],
     appState: {
       redux: context.store.getState(),
-      appUrl: process.env.XNAPIFY_APP_URL,
+      appUrl: process.env.XNAPIFY_PUBLIC_APP_URL,
     },
     nonce,
   };
@@ -826,16 +826,16 @@ export async function bootstrapApp(app, server, options = {}) {
   const resolvedHost = await sanitizeHost(host);
   const baseUrl = `http://${resolvedHost}:${port}`;
 
-  // Ensure an absolute XNAPIFY_APP_URL exists (used by OAuth callbacks, Passport, etc.)
+  // Ensure an absolute XNAPIFY_PUBLIC_APP_URL exists (used by OAuth callbacks, Passport, etc.)
   // If undefined or invalid, default to the local port/host used by the server
   // Access via bracket notation to prevent Webpack DefinePlugin from replacing it with a build-time string
-  if (!/^(http|https):\/\/.+$/.test(process.env.XNAPIFY_APP_URL || '')) {
-    set(process.env, 'XNAPIFY_APP_URL', baseUrl);
+  if (!/^(http|https):\/\/.+$/.test(process.env.XNAPIFY_PUBLIC_APP_URL || '')) {
+    set(process.env, 'XNAPIFY_PUBLIC_APP_URL', baseUrl);
   }
 
   // Set app name and description
-  set(process.env, 'XNAPIFY_APP_NAME', APP_METADATA.title);
-  set(process.env, 'XNAPIFY_APP_DESC', APP_METADATA.description);
+  set(process.env, 'XNAPIFY_PUBLIC_APP_NAME', APP_METADATA.title);
+  set(process.env, 'XNAPIFY_PUBLIC_APP_DESC', APP_METADATA.description);
 
   // Core DI container — the only provider stored on Express settings
   const apiContainer = new Container();

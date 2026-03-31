@@ -324,7 +324,7 @@ export async function resetPasswordRequest(email, { models, hook } = {}) {
     used_at: null,
   });
 
-  const resetLink = `${process.env.XNAPIFY_APP_URL}/reset-password?token=${tokenData.token}`;
+  const resetLink = `${process.env.XNAPIFY_PUBLIC_APP_URL}/reset-password?token=${tokenData.token}`;
 
   // Emit hook event if hook factory provided
   await hook('auth').emit('password_reset_requested', {

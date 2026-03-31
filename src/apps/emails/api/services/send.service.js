@@ -25,10 +25,10 @@
 /** Common variables injected into every email */
 export function baseVars() {
   return {
-    appName: process.env.XNAPIFY_APP_NAME,
-    loginUrl: `${process.env.XNAPIFY_APP_URL}/login`,
-    resetUrl: `${process.env.XNAPIFY_APP_URL}/auth/reset`,
-    supportUrl: `${process.env.XNAPIFY_APP_URL}/support`,
+    appName: process.env.XNAPIFY_PUBLIC_APP_NAME,
+    loginUrl: `${process.env.XNAPIFY_PUBLIC_APP_URL}/login`,
+    resetUrl: `${process.env.XNAPIFY_PUBLIC_APP_URL}/auth/reset`,
+    supportUrl: `${process.env.XNAPIFY_PUBLIC_APP_URL}/support`,
     now: new Date().toISOString(),
     year: new Date().getFullYear(),
   };

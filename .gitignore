@@ -197,3 +197,6 @@ uploads/
 
 # E2E LLM step cache
 tools/e2e/.step-cache.json
+
+# Embedded PostgreSQL data
+.postgres/

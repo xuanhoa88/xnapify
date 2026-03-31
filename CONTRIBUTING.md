@@ -9,7 +9,7 @@ cd xnapify
 
 # Install and run
 npm run setup
-npm run dev
+npm run dev   # .env auto-created on first run
 
 # Create branch
 git checkout -b feature/your-feature

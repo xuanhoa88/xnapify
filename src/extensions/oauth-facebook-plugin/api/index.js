@@ -13,16 +13,16 @@ const TAG = '[OAuth Facebook]';
 export default {
   async boot({ container }) {
     const clientID = process.env.XNAPIFY_FACEBOOK_APP_ID;
-    const clientSecret = process.env.XNAPIFY_FACEBOOK_APP_SECRET;
+    const clientSecret = process.env.XNAPIFY_FACEBOOK_APP_KEY;
 
     if (!clientID || !clientSecret) {
       console.warn(
-        `${TAG} ⚠️ XNAPIFY_FACEBOOK_APP_ID / XNAPIFY_FACEBOOK_APP_SECRET not set — skipping`,
+        `${TAG} ⚠️ XNAPIFY_FACEBOOK_APP_ID / XNAPIFY_FACEBOOK_APP_KEY not set — skipping`,
       );
       return;
     }
 
-    const appUrl = process.env.XNAPIFY_APP_URL || 'http://localhost:1337';
+    const appUrl = process.env.XNAPIFY_PUBLIC_APP_URL || 'http://localhost:1337';
     const oauth = container.resolve('oauth');
 
     oauth.registerProvider('facebook', {

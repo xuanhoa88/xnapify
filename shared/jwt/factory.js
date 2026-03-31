@@ -129,18 +129,54 @@ export function createJwt(config = {}) {
  */
 export function createJwtFromEnv() {
   const secret = process.env.XNAPIFY_KEY;
+  const previousSecret = process.env.XNAPIFY_PREV_KEY;
 
-  if (!secret) {
+  if (typeof secret !== 'string' || secret.trim().length === 0) {
     return null;
   }
 
-  return createJwt({
-    secret,
+  if (secret.length < 32) {
+    console.warn(
+      '[JWT] XNAPIFY_KEY is shorter than 32 characters — this is insecure.',
+    );
+  }
+
+  const jwtConfig = {
     expiresIn: process.env.XNAPIFY_JWT_EXPIRY || DEFAULT_JWT_CONFIG.expiresIn,
     algorithm: process.env.XNAPIFY_JWT_ALG || DEFAULT_JWT_CONFIG.algorithm,
     issuer: process.env.XNAPIFY_JWT_ISS || DEFAULT_JWT_CONFIG.issuer,
     audience: process.env.XNAPIFY_JWT_AUD || DEFAULT_JWT_CONFIG.audience,
-  });
+  };
+
+  const jwt = createJwt({ secret, ...jwtConfig });
+
+  // Key rotation: if a previous key is configured, wrap verify methods
+  // to try the current key first, then fall back to the previous key.
+  if (previousSecret && previousSecret.trim().length > 0) {
+    const previousJwt = createJwt({ secret: previousSecret, ...jwtConfig });
+    const originalVerify = jwt.verifyToken.bind(jwt);
+    const originalVerifyTyped = jwt.verifyTypedToken.bind(jwt);
+
+    return Object.freeze({
+      ...jwt,
+      verifyToken(token, overrides) {
+        try {
+          return originalVerify(token, overrides);
+        } catch {
+          return previousJwt.verifyToken(token, overrides);
+        }
+      },
+      verifyTypedToken(token, expectedType, overrides) {
+        try {
+          return originalVerifyTyped(token, expectedType, overrides);
+        } catch {
+          return previousJwt.verifyTypedToken(token, expectedType, overrides);
+        }
+      },
+    });
+  }
+
+  return jwt;
 }
 
 /**

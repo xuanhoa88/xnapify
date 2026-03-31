@@ -724,12 +724,12 @@ XNAPIFY_PORT=1337
 XNAPIFY_HOST=127.0.0.1
 
 # Application Metadata
-XNAPIFY_APP_NAME="xnapify"
-XNAPIFY_APP_DESC="Snap your API, Stream your React"
+XNAPIFY_PUBLIC_APP_NAME="xnapify"
+XNAPIFY_PUBLIC_APP_DESC="Snap your API, Stream your React"
 
-# Database
+# Database (drivers installed on-demand by preboot.js)
+# Use shorthand 'postgres' or full URL
 XNAPIFY_DB_URL=sqlite:database.sqlite
-# PostgreSQL: postgresql://user:password@localhost:5432/dbname
 
 # Authentication
 XNAPIFY_KEY=                # Auto-generated on first run
@@ -745,13 +745,24 @@ WEBPACK_PROFILE=false
 ## Development Workflow
 
 1. **Install dependencies:** `npm run setup` (root + all sub-packages)
-2. **Start development:** `npm run dev`
-3. **Make changes:** Edit files in `src/`
-4. **See updates:** HMR updates browser automatically
-5. **Run tests:** `npm run test` or `npm run test:watch`
-6. **Lint code:** `npm run lint` or `npm run fix`
-7. **Build production:** `npm run build`
-8. **Deploy:** Use Docker or direct Node.js deployment
+2. **Start development:** `npm run dev` (auto-creates `.env`, installs DB driver)
+3. **Switch to PostgreSQL:** Set `XNAPIFY_DB_URL=postgres` in `.env`, then `npm run dev`
+4. **Make changes:** Edit files in `src/`
+5. **See updates:** HMR updates browser automatically
+6. **Run tests:** `npm run test` or `npm run test:watch`
+7. **Lint code:** `npm run lint` or `npm run fix`
+8. **Build production:** `npm run build`
+9. **Deploy:** Use Docker or direct Node.js deployment
+
+### Database Resolution (PostgreSQL)
+
+When `XNAPIFY_DB_URL=postgres` (or an unreachable full URL), preboot resolves PG servers with this priority:
+
+1. **Configured URL** — if `XNAPIFY_DB_URL` points to a reachable server (remote or local), use it
+2. **Local system PG** (port 5432) — if a system PostgreSQL is running, auto-switch URL
+3. **Embedded PG** (port 5433) — auto-downloads and starts a portable PostgreSQL
+
+Manual control: `node tools/preboot.js --start | --stop | --status`
 
 ## Production Deployment
 
@@ -768,12 +779,7 @@ cd build
 # Install production dependencies (build output only, NOT project root)
 npm install --production
 
-# Set environment variables
-export NODE_ENV=production
-export XNAPIFY_KEY=$(openssl rand -base64 32)
-export XNAPIFY_DB_URL=postgresql://user:pass@localhost:5432/dbname
-
-# Start server
+# Start server (.env + DB driver auto-provisioned by prestart hook)
 npm start
 
 # Or use Docker

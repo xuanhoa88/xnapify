@@ -12,6 +12,12 @@ const { pathExists, readFile, writeFile } = require('./fs');
 const { logInfo, logWarn, logDebug } = require('./logger');
 
 /**
+ * Minimum acceptable secret length (characters)
+ * Secrets shorter than this trigger a console warning.
+ */
+const MIN_SECRET_LENGTH = 32;
+
+/**
  * Generate a secure random JWT secret
  * @returns {string} Base64URL encoded secret (256 bits)
  */
@@ -197,9 +203,17 @@ async function generateJWT(cwd, buildDir) {
       logInfo(`✅ Created ${path.basename(envPath)}`);
     } else if (shouldGenerateSecret) {
       logInfo(`✅ Generated new JWT secret in ${path.basename(envPath)}`);
-      logInfo(`   🔑 Secret: ${jwtSecret.substring(0, 10)}...`);
+      logInfo(`   🔑 Secret: [redacted] (${jwtSecret.length} chars)`);
     } else {
       logInfo(`✅ JWT configuration verified in ${path.basename(envPath)}`);
+    }
+
+    // Validate secret strength
+    if (jwtSecret && jwtSecret.length < MIN_SECRET_LENGTH) {
+      logWarn(
+        `⚠️  XNAPIFY_KEY is too short (${jwtSecret.length} chars, min ${MIN_SECRET_LENGTH}). ` +
+          `Generate a stronger secret: openssl rand -base64 32`,
+      );
     }
 
     if (jwtSecret) {

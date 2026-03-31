@@ -20,7 +20,7 @@ const path = require('path');
 
 const config = require('../config');
 
-const ROOT_DIR = config.CWD || path.resolve(__dirname, '..', '..');
+const ROOT_DIR = config.CWD || process.cwd();
 
 let passed = 0;
 let failed = 0;

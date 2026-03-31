@@ -8,13 +8,15 @@
 const { logInfo, logWarn } = require('../utils/logger');
 
 /**
- * Webpack plugin to load environment variables with XNAPIFY_ prefix
- * and inject them into the bundle using DefinePlugin.
+ * Load XNAPIFY_ environment variables for client-side bundles.
  *
- * This plugin:
- * 1. Scans process.env for variables with XNAPIFY_ prefix
- * 2. Creates DefinePlugin definitions for each variable
- * 3. Makes them available as process.env.XNAPIFY_* in the bundle
+ * SECURITY: Default-deny. Only variables with the `XNAPIFY_PUBLIC_` prefix
+ * are included in the client bundle. Everything else stays server-only.
+ *
+ * Naming convention:
+ *   XNAPIFY_PUBLIC_APP_NAME  → ✅ included in client bundle
+ *   XNAPIFY_KEY              → ❌ server-only (no _PUBLIC_)
+ *   XNAPIFY_SMTP_KEY         → ❌ server-only
  *
  * @param {Object} options - Plugin options
  * @param {boolean} options.verbose - Enable verbose logging (default: false)
@@ -23,25 +25,17 @@ const { logInfo, logWarn } = require('../utils/logger');
 function loadDotenv(options = {}) {
   const { verbose = false } = options;
 
-  // Load environment variables using dotenv-flow
-  // This supports .env, .env.local, .env.[node_env], etc.
-  // Note: dotenv-flow is initialized in tools/run.js, so process.env is already populated
-
-  // Find all environment variables with the specified prefix
   const envVars = Object.keys(process.env)
-    .filter(key => key.startsWith('XNAPIFY_'))
+    .filter(key => key.startsWith('XNAPIFY_PUBLIC_'))
     .reduce((acc, key) => {
-      // Create DefinePlugin definition: process.env.XNAPIFY_* = 'value'
       acc[`process.env.${key}`] = JSON.stringify(process.env[key]);
       return acc;
     }, {});
 
-  // Log found variables in verbose mode
   if (verbose && Object.keys(envVars).length > 0) {
-    logInfo('🔧 Dotenv Plugin: Found environment variables:');
+    logInfo('🔧 Dotenv Plugin: Public environment variables:');
     Object.keys(envVars).forEach(key => {
       const value = envVars[key];
-      // Mask sensitive values (show only first 4 chars)
       const maskedValue =
         value.length > 10
           ? `${value.substring(0, 6)}...${value.substring(value.length - 2)}`
@@ -50,7 +44,7 @@ function loadDotenv(options = {}) {
     });
   } else if (verbose) {
     logWarn(
-      `⚠️ Dotenv Plugin: No environment variables found with prefix "XNAPIFY_"`,
+      `⚠️ Dotenv Plugin: No public environment variables found (need _PUBLIC_ in key name)`,
     );
   }
 

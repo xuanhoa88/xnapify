@@ -57,7 +57,7 @@ const {
   writeSummary,
 } = require('./reporter');
 
-const ROOT_DIR = config.CWD || path.resolve(__dirname, '..', '..');
+const ROOT_DIR = config.CWD || process.cwd();
 
 // ── Config ────────────────────────────────────────────────────────
 

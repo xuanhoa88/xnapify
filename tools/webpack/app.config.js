@@ -221,7 +221,6 @@ const serverConfig = createWebpackConfig('server', {
     rules: [createCSSRule({ exportOnlyLocals: true })],
   },
   plugins: [
-    createEnvDefine(),
     ...(isDev
       ? [
           new webpack.BannerPlugin({

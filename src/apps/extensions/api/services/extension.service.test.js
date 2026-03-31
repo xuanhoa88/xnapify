@@ -44,11 +44,6 @@ jest.mock('fs/promises', () => ({
   readFile: jest.fn(),
 }));
 
-jest.mock('../utils/crypto', () => ({
-  encryptExtensionId: jest.fn(id => `enc_${id}`),
-  decryptExtensionId: jest.fn(id => id.replace('enc_', '')),
-}));
-
 import fs from 'fs';
 import path from 'path';
 
