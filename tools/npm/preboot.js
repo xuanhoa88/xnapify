@@ -34,7 +34,11 @@ const path = require('path');
 const ROOT = process.cwd();
 const ENV_PATH = path.join(ROOT, '.env');
 const ENV_TEMPLATE = path.join(ROOT, '.env.xnapify');
-const PG_DATA_DIR = path.join(ROOT, '.postgres');
+const PG_DATA_DIR =
+  process.env.XNAPIFY_PG_DATA_DIR ||
+  (process.env.NODE_ENV === 'production'
+    ? path.join(os.homedir(), '.xnapify', '.postgres')
+    : path.join(ROOT, '.postgres'));
 
 const PG_DEFAULTS = {
   port: 5433,
