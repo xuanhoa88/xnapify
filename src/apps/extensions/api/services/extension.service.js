@@ -365,7 +365,7 @@ export async function getExtensionById(
 /**
  * Get extension static files directory path
  * @param {object} context - Context with cwd and models
- * @param {string} id - Extension ID (DB UUID or encrypted key)
+ * @param {string} id - Extension key (manifest.id)
  * @returns {Promise<string|null>} Extension static files directory path or null if invalid
  */
 export async function getExtensionStaticDir({ extensionManager, models }, id) {

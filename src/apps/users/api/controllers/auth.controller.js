@@ -118,6 +118,7 @@ export async function login(req, res) {
     }
 
     // Authenticate user - returns complete user data with RBAC in one query
+    const auth = container.resolve('auth');
     const userData = await authService.authenticateUser(email, password, {
       activitiesData: {
         ip_address: http.getClientIP(req),
@@ -125,6 +126,10 @@ export async function login(req, res) {
       },
       models: container.resolve('models'),
       hook: container.resolve('hook'),
+      defaultRoleName: auth.DEFAULT_ROLE,
+      adminRoleName: auth.ADMIN_ROLE,
+      defaultResources: auth.DEFAULT_RESOURCES,
+      defaultActions: auth.DEFAULT_ACTIONS,
     });
 
     // Generate token pair using configured JWT instance
@@ -138,7 +143,6 @@ export async function login(req, res) {
     // If rememberMe is false, don't set maxAge (session cookie - expires on browser close)
     // If rememberMe is true, use default maxAge from cookie config
     const cookieOptions = rememberMe ? {} : { maxAge: null };
-    const auth = container.resolve('auth');
     auth.setTokenCookie(res, tokens.accessToken, cookieOptions);
     auth.setRefreshTokenCookie(res, tokens.refreshToken, cookieOptions);
 
