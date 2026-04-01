@@ -1,0 +1,6 @@
+{
+  "name": "@xnapify-extension/worker-demo",
+  "version": "1.0.0",
+  "main": "api/index.js",
+  "description": "Demo extension exercising the Worker Engine (Piscina thread pool) with text and math workers"
+}

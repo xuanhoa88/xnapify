@@ -112,20 +112,21 @@ export function createWorkerPool(engineName, workersContext, options = {}) {
     workerTimeout = DEFAULT_WORKER_CONFIG.workerTimeout,
   } = options;
 
+  // Pre-cache file keys and worker name → context key mapping
+  const workerKeyMap = new Map(); // workerName → contextKey
+  for (const key of adapter.files()) {
+    const match = key.match(/^\.\/(.*)\.worker\.[cm]?[jt]s$/i);
+    if (match) workerKeyMap.set(match[1], key);
+  }
+
   // Cache for imported worker modules for same-process execution
   const workerModuleCache = new Map();
 
   /**
-   * Get available worker types from context adapter
+   * Get available worker type names
    */
   function getAvailableWorkers() {
-    return adapter
-      .files()
-      .map(key => {
-        const match = key.match(/^\.\/(.+)\.worker\.[cm]?[jt]s$/i);
-        return match ? match[1] : null;
-      })
-      .filter(Boolean);
+    return Array.from(workerKeyMap.keys());
   }
 
   /**
@@ -136,9 +137,8 @@ export function createWorkerPool(engineName, workersContext, options = {}) {
       return workerModuleCache.get(workerName);
     }
 
-    const workerKey = `./${workerName}.worker.js`;
-
-    if (!adapter.files().includes(workerKey)) {
+    const workerKey = workerKeyMap.get(workerName);
+    if (!workerKey) {
       return null;
     }
 
@@ -159,12 +159,11 @@ export function createWorkerPool(engineName, workersContext, options = {}) {
    * Get worker file absolute path for Piscina
    */
   function getWorkerPath(workerName) {
-    const workerKey = `./${workerName}.worker.js`;
-
-    if (!adapter.files().includes(workerKey)) {
-      const availableWorkers = getAvailableWorkers().join(', ');
+    const workerKey = workerKeyMap.get(workerName);
+    if (!workerKey) {
+      const available = getAvailableWorkers().join(', ');
       throw new ErrorHandler(
-        `Worker '${workerName}' not found. Available workers: ${availableWorkers}`,
+        `Worker '${workerName}' not found. Available workers: ${available}`,
       );
     }
 
@@ -182,6 +181,7 @@ export function createWorkerPool(engineName, workersContext, options = {}) {
 
       this.knownWorkers = getAvailableWorkers();
       this.piscinaPoolInstance = null;
+      this.piscinaLoadFailed = false;
 
       // Log discovered workers in development
       if (__DEV__) {
@@ -192,11 +192,12 @@ export function createWorkerPool(engineName, workersContext, options = {}) {
     }
 
     /**
-     * Get or initialize legal piscina pool
+     * Get or initialize lazy piscina pool
      * @private
      */
     get pool() {
       if (this.piscinaPoolInstance) return this.piscinaPoolInstance;
+      if (this.piscinaLoadFailed) return null;
 
       try {
         const LoadedPiscina = loadPiscina();
@@ -206,9 +207,12 @@ export function createWorkerPool(engineName, workersContext, options = {}) {
         });
         return this.piscinaPoolInstance;
       } catch (error) {
-        // If we fail to load Piscina (e.g. wrong node version),
-        // we'll just return null and the run() method will handle it
-        // by throwing an error if forceFork is requested.
+        console.error(
+          `${this.engineName}: Failed to initialize Piscina pool:`,
+          error.message,
+        );
+        // Cache failure to prevent repeated initialization attempts
+        this.piscinaLoadFailed = true;
         return null;
       }
     }
@@ -246,7 +250,7 @@ export function createWorkerPool(engineName, workersContext, options = {}) {
               error.message,
             );
             // If it threw an error and strict throwOnError was requested
-            if (throwOnError && !shouldForceFork) {
+            if (throwOnError) {
               throw error;
             }
           }
@@ -277,7 +281,7 @@ export function createWorkerPool(engineName, workersContext, options = {}) {
             message: forkError.message,
             code: forkError.code || 'WORKER_ERROR',
             statusCode: forkError.statusCode || 500,
-            stack: forkError.stack,
+            stack: __DEV__ ? forkError.stack : undefined,
           },
         };
       }
@@ -361,17 +365,21 @@ export function createWorkerPool(engineName, workersContext, options = {}) {
      */
     async cleanup() {
       if (this.piscinaPoolInstance) {
-        console.info('Sweep cleaning up worker pool threads...');
+        console.info(`${this.engineName}: cleaning up worker pool threads...`);
         await this.piscinaPoolInstance.destroy();
         this.piscinaPoolInstance = null;
       }
+      // Remove from registry so the engine name can be re-used
+      poolRegistry.delete(this.engineName);
+      workerModuleCache.clear();
     }
 
     /**
      * Get service statistics
      */
     getStats() {
-      if (!this.piscinaPoolInstance) {
+      const pool = this.piscinaPoolInstance;
+      if (!pool) {
         return {
           totalWorkers: 0,
           utilization: 0,
@@ -384,10 +392,10 @@ export function createWorkerPool(engineName, workersContext, options = {}) {
         };
       }
       return {
-        totalWorkers: this.pool.threads.length,
-        utilization: this.pool.utilization,
-        completedTasks: this.pool.completed,
-        runTimeInfo: this.pool.runTime,
+        totalWorkers: pool.threads.length,
+        utilization: pool.utilization,
+        completedTasks: pool.completed,
+        runTimeInfo: pool.runTime,
       };
     }
   }

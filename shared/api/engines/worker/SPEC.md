@@ -58,7 +58,7 @@ Uses `Error.captureStackTrace` for clean stack traces.
 **File:** `createWorkerPool.js` (module-level helpers)
 
 - `isPiscinaSupported()` — checks `process.versions.node >= 16.14.0`.
-- `loadPiscina()` — uses `__non_webpack_require__` (or `require`) to load Piscina at runtime, hidden from Webpack static analysis. Result is cached in module-level `Piscina` variable.
+- `loadPiscina()` — uses `createNativeRequire(__filename)` to load Piscina at runtime, hidden from Webpack static analysis. Result is cached in module-level `Piscina` variable.
 - Piscina is **never bundled** — always resolved at runtime.
 
 ## 4. Worker Discovery
