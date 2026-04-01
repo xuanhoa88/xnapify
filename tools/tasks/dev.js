@@ -241,7 +241,15 @@ async function prepareDevServer(
   const { listen: startServer } = await bootstrapApp(newApp, activeServer, {
     port,
     host,
-    static: () => express.static(config.PUBLIC_DIR),
+    static: () =>
+      express.static(config.PUBLIC_DIR, {
+        etag: false,
+        lastModified: false,
+        cacheControl: true,
+        setHeaders(res) {
+          res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+        },
+      }),
   });
 
   // Commit mutations only after async work succeeds
