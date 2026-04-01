@@ -301,7 +301,9 @@ await db.connection.revertMigrations(); // Rollback last
 | `ENOSPC` (Linux)                   | File watcher limit                 | Increase `fs.inotify.max_user_watches`                                 |
 | `Cannot find module 'sqlite3'`     | DB driver not installed            | Run `npm run dev` (preboot installs it) or `node tools/npm/preboot.js` |
 | `Cannot find module 'pg'`          | PG driver not installed            | Set `XNAPIFY_DB_URL=postgres` in `.env`, run `npm run dev`             |
-| PostgreSQL connection refused      | PG daemon not running              | `node tools/npm/preboot.js --start`                                    |
+| `Cannot find module 'mysql2'`      | MySQL driver not installed         | Set `XNAPIFY_DB_URL=mysql` in `.env`, run `npm run dev`               |
+| PostgreSQL connection refused      | PG daemon not running              | `node tools/npm/preboot.js --db postgres --start`                      |
+| MySQL connection refused           | MySQL daemon not running           | `node tools/npm/preboot.js --db mysql --start`                         |
 | `SQLITE_BUSY: database is locked`  | Parallel extension migrations      | Serialize loads in `ServerExtensionManager.sync()` (see Part 10)       |
 | Extension active in DB but not loaded | Crash during toggle or stale DB | Deactivate via admin UI, then re-toggle                                |
 | Test: `Database setup failed: Please install sqlite3` | Used `npx jest` directly | Use `npm test -- --testPathPattern=...` (runs `pretest` hook)     |

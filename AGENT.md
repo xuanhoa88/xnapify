@@ -728,7 +728,7 @@ XNAPIFY_PUBLIC_APP_NAME="xnapify"
 XNAPIFY_PUBLIC_APP_DESC="Snap your API, Stream your React"
 
 # Database (drivers installed on-demand by preboot.js)
-# Use shorthand 'postgres' or full URL
+# Use shorthand 'sqlite', 'postgres', 'mysql' or full URL
 XNAPIFY_DB_URL=sqlite:database.sqlite
 
 # Authentication
@@ -747,22 +747,31 @@ WEBPACK_PROFILE=false
 1. **Install dependencies:** `npm run setup` (root + all sub-packages)
 2. **Start development:** `npm run dev` (auto-creates `.env`, installs DB driver)
 3. **Switch to PostgreSQL:** Set `XNAPIFY_DB_URL=postgres` in `.env`, then `npm run dev`
-4. **Make changes:** Edit files in `src/`
-5. **See updates:** HMR updates browser automatically
-6. **Run tests:** `npm run test` or `npm run test:watch`
-7. **Lint code:** `npm run lint` or `npm run fix`
-8. **Build production:** `npm run build`
-9. **Deploy:** Use Docker or direct Node.js deployment
+4. **Switch to MySQL:** Set `XNAPIFY_DB_URL=mysql` in `.env`, then `npm run dev`
+5. **Make changes:** Edit files in `src/`
+6. **See updates:** HMR updates browser automatically
+7. **Run tests:** `npm run test` or `npm run test:watch`
+8. **Lint code:** `npm run lint` or `npm run fix`
+9. **Build production:** `npm run build`
+10. **Deploy:** Use Docker or direct Node.js deployment
 
-### Database Resolution (PostgreSQL)
+### Database Resolution
 
-When `XNAPIFY_DB_URL=postgres` (or an unreachable full URL), preboot resolves PG servers with this priority:
+Preboot resolves database servers with a 3-tier priority chain for both PostgreSQL and MySQL:
 
 1. **Configured URL** — if `XNAPIFY_DB_URL` points to a reachable server (remote or local), use it
-2. **Local system PG** (port 5432) — if a system PostgreSQL is running, auto-switch URL
-3. **Embedded PG** (port 5433) — auto-downloads and starts a portable PostgreSQL
+2. **Local system server** — if a system PostgreSQL (5432) or MySQL (3306) is running, auto-switch URL
+3. **Embedded server** — auto-downloads and starts a portable daemon (PG on 5433, MySQL on 3307)
 
-Manual control: `node tools/npm/preboot.js --start | --stop | --status`
+Manual control:
+
+```bash
+node tools/npm/preboot.js --status                # Show DB status (auto-detects dialect)
+node tools/npm/preboot.js --start                 # Start embedded DB (auto-detects dialect)
+node tools/npm/preboot.js --stop                  # Stop embedded DB (auto-detects dialect)
+node tools/npm/preboot.js --db mysql --start      # Force MySQL start
+node tools/npm/preboot.js --db postgres --stop    # Force PostgreSQL stop
+```
 
 ## Production Deployment
 

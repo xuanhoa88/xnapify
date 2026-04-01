@@ -244,7 +244,7 @@ XNAPIFY_PUBLIC_APP_NAME="xnapify"
 XNAPIFY_PUBLIC_APP_DESC="Snap your API, Stream your React"
 
 # Database (drivers installed on-demand by preboot.js)
-# Use shorthand 'postgres' or full URL
+# Use shorthand 'sqlite', 'postgres', 'mysql' or full URL
 XNAPIFY_DB_URL=sqlite:database.sqlite
 
 # Authentication
@@ -258,17 +258,25 @@ XNAPIFY_JWT_EXPIRY=7d
 
 **Default:** SQLite (zero-config). Drivers are installed on-demand — no DB packages in `package.json`.
 
-**Switch to PostgreSQL:** Set `XNAPIFY_DB_URL=postgres` in `.env`, then `npm run dev`. Preboot resolves PG servers with this priority:
+**Switch databases:** Set `XNAPIFY_DB_URL` in `.env`, then `npm run dev`:
+- `XNAPIFY_DB_URL=postgres` — PostgreSQL (embedded auto-download on port 5433)
+- `XNAPIFY_DB_URL=mysql` — MySQL (embedded auto-download on port 3307)
+- Full URLs also supported (e.g., `postgresql://user:pass@host:5432/db`)
 
-1. **Configured URL** — if `XNAPIFY_DB_URL` points to a reachable server, use it
-2. **Local system PG** (port 5432) — if a system PostgreSQL is running, auto-switch
-3. **Embedded PG** (port 5433) — auto-downloads and starts a portable PostgreSQL
+Preboot resolves servers with a 3-tier priority chain:
+1. **Configured URL** — if reachable, use it
+2. **Local system server** — auto-detect PG (5432) or MySQL (3306)
+3. **Embedded server** — auto-download + start portable daemon
 
 ```bash
-# Manual control
-node tools/npm/preboot.js --status   # Show DB status
-node tools/npm/preboot.js --start    # Start embedded PG
-node tools/npm/preboot.js --stop     # Stop embedded PG (drains connections)
+# Manual control (auto-detects dialect from XNAPIFY_DB_URL)
+node tools/npm/preboot.js --status                # Show DB status
+node tools/npm/preboot.js --start                 # Start embedded DB
+node tools/npm/preboot.js --stop                  # Stop embedded DB
+
+# Override dialect
+node tools/npm/preboot.js --db mysql --start      # Force MySQL
+node tools/npm/preboot.js --db postgres --stop    # Force PostgreSQL
 ```
 
 ## 🐳 Docker
@@ -277,11 +285,24 @@ node tools/npm/preboot.js --stop     # Stop embedded PG (drains connections)
 # Build image
 docker build -t xnapify .
 
-# Run container
+# Run container (SQLite default)
+docker run -p 1337:1337 \
+  -e NODE_ENV=production \
+  -e XNAPIFY_KEY=$(openssl rand -base64 32) \
+  xnapify
+
+# With PostgreSQL
 docker run -p 1337:1337 \
   -e NODE_ENV=production \
   -e XNAPIFY_KEY=$(openssl rand -base64 32) \
   -e XNAPIFY_DB_URL=postgresql://user:pass@host:5432/dbname \
+  xnapify
+
+# With MySQL
+docker run -p 1337:1337 \
+  -e NODE_ENV=production \
+  -e XNAPIFY_KEY=$(openssl rand -base64 32) \
+  -e XNAPIFY_DB_URL=mysql://user:pass@host:3306/dbname \
   xnapify
 ```
 

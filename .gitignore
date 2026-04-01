@@ -200,3 +200,6 @@ tools/e2e/.step-cache.json
 
 # Embedded PostgreSQL data
 .postgres/
+
+# Embedded MySQL data
+.mysql/

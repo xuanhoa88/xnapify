@@ -75,6 +75,19 @@ If switching from SQLite to Postgres/MySQL for Docker:
 1. Change `XNAPIFY_DB_URL` in `.env.xnapify` (baked at build time by Webpack)
 2. Or set it as a build arg: `RUN XNAPIFY_DB_URL=postgresql://... npm run build`
 3. The `prestart` hook auto-installs the correct driver at container startup
+4. For embedded databases, `XNAPIFY_PG_DATA_DIR` / `XNAPIFY_MYSQL_DATA_DIR` control data location
+
+Manual DB control inside the container:
+
+```bash
+# Auto-detect from env
+node tools/npm/preboot.js --start
+node tools/npm/preboot.js --stop
+
+# Force specific dialect
+node tools/npm/preboot.js --db mysql --start
+node tools/npm/preboot.js --db postgres --stop
+```
 
 ## Debugging
 

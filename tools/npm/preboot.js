@@ -17,8 +17,12 @@
  *   - "pretest"  in root package.json   (npm test)
  *   - "prestart" in build package.json  (npm start — production)
  *
- * Auto mode (no flags): ensure .env → install driver → resolve PG server
- * Manual mode: node tools/npm/preboot.js --start | --stop | --status
+ * Auto mode (no flags): ensure .env → install driver → resolve DB server
+ * Manual mode: node tools/npm/preboot.js [--db <type>] --start | --stop | --status
+ *
+ * Supported embedded databases:
+ *   - PostgreSQL (via @embedded-postgres platform packages)
+ *   - MySQL 8.4 LTS (via portable binary download from dev.mysql.com)
  *
  * Cross-platform: macOS, Linux, Windows (x64 + arm64)
  */
@@ -46,6 +50,26 @@ const PG_DEFAULTS = {
   password: 'postgres',
   database: 'xnapify_dev',
 };
+
+const MYSQL_VERSION = '8.4.8';
+const MYSQL_EMBEDDED_PORT = 3307;
+const MYSQL_DATA_DIR =
+  process.env.XNAPIFY_MYSQL_DATA_DIR ||
+  (process.env.NODE_ENV === 'production'
+    ? path.join(os.homedir(), '.xnapify', '.mysql')
+    : path.join(ROOT, '.mysql'));
+
+const MYSQL_DEFAULTS = {
+  port: MYSQL_EMBEDDED_PORT,
+  user: 'root',
+  password: '',
+  database: 'xnapify_dev',
+};
+
+/** @constant {number} Standard system PostgreSQL port */
+const PG_DEFAULT_PORT = 5432;
+/** @constant {number} Standard system MySQL port */
+const MYSQL_DEFAULT_PORT = 3306;
 
 const DIALECT_DEPS = (() => {
   const platMap = { darwin: 'darwin', linux: 'linux', win32: 'windows' };
@@ -280,10 +304,10 @@ function parsePostgresUrl(url) {
  * @returns {string}
  */
 function buildPostgresUrl(cfg) {
-  const user = cfg.user || PG_DEFAULTS.user;
-  const password = cfg.password || PG_DEFAULTS.password;
+  const user = encodeURIComponent(cfg.user || PG_DEFAULTS.user);
+  const password = encodeURIComponent(cfg.password || PG_DEFAULTS.password);
   const port = cfg.port || PG_DEFAULTS.port;
-  const database = cfg.database || PG_DEFAULTS.database;
+  const database = encodeURIComponent(cfg.database || PG_DEFAULTS.database);
   return `postgresql://${user}:${password}@127.0.0.1:${port}/${database}`;
 }
 
@@ -523,6 +547,521 @@ async function stopPostgres() {
   }
 }
 
+// ─── MySQL Lifecycle ────────────────────────────────────────────────────────
+
+/**
+ * Get platform-specific MySQL download info.
+ * @returns {{ url: string, dirName: string, archiveExt: string }}
+ */
+function getMysqlDownloadInfo() {
+  const plat = os.platform();
+  const arch = os.arch();
+  const ver = MYSQL_VERSION;
+  const base = `https://dev.mysql.com/get/Downloads/MySQL-8.4`;
+
+  /** @type {Record<string, Record<string, { url: string, dirName: string, archiveExt: string }>>} */
+  const matrix = {
+    linux: {
+      x64: {
+        url: `${base}/mysql-${ver}-linux-glibc2.28-x86_64.tar.xz`,
+        dirName: `mysql-${ver}-linux-glibc2.28-x86_64`,
+        archiveExt: '.tar.xz',
+      },
+      arm64: {
+        url: `${base}/mysql-${ver}-linux-glibc2.28-aarch64.tar.xz`,
+        dirName: `mysql-${ver}-linux-glibc2.28-aarch64`,
+        archiveExt: '.tar.xz',
+      },
+    },
+    darwin: {
+      arm64: {
+        url: `${base}/mysql-${ver}-macos15-arm64.tar.gz`,
+        dirName: `mysql-${ver}-macos15-arm64`,
+        archiveExt: '.tar.gz',
+      },
+      x64: {
+        url: `${base}/mysql-${ver}-macos15-x86_64.tar.gz`,
+        dirName: `mysql-${ver}-macos15-x86_64`,
+        archiveExt: '.tar.gz',
+      },
+    },
+    win32: {
+      x64: {
+        url: `${base}/mysql-${ver}-winx64.zip`,
+        dirName: `mysql-${ver}-winx64`,
+        archiveExt: '.zip',
+      },
+    },
+  };
+
+  const platInfo = matrix[plat];
+  if (!platInfo) {
+    throw new Error(`Unsupported platform for embedded MySQL: ${plat}`);
+  }
+  const archInfo = platInfo[arch];
+  if (!archInfo) {
+    throw new Error(
+      `Unsupported architecture for embedded MySQL: ${plat}/${arch}`,
+    );
+  }
+  return archInfo;
+}
+
+/**
+ * Download a file via curl (or PowerShell on Windows).
+ *
+ * We use an external tool instead of Node.js built-in `https` because
+ * some CDNs (e.g. dev.mysql.com) require HTTP/2 for proper redirect
+ * negotiation, which the Node.js http/https modules do not support.
+ *
+ * @param {string} url - URL to download
+ * @param {string} dest - Destination file path
+ * @returns {Promise<void>}
+ */
+function downloadFile(url, dest) {
+  return new Promise((resolve, reject) => {
+    const isWin = os.platform() === 'win32';
+
+    // Build download command — curl on Unix/macOS, PowerShell on Windows
+    const cmd = isWin
+      ? `powershell -Command "Invoke-WebRequest -Uri '${url}' -OutFile '${dest}' -UseBasicParsing"`
+      : `curl -fSL --retry 3 --retry-delay 5 -o "${dest}" "${url}"`;
+
+    console.log(`   📥 Downloading from ${new URL(url).hostname}...`);
+
+    try {
+      execSync(cmd, {
+        cwd: ROOT,
+        stdio: 'inherit',
+        timeout: 600_000, // 10 min for large MySQL archives
+        shell: true,
+      });
+      if (!fs.existsSync(dest)) {
+        return reject(
+          new Error(`Download completed but file not found: ${dest}`),
+        );
+      }
+      resolve();
+    } catch (err) {
+      // Cleanup partial downloads
+      if (fs.existsSync(dest)) fs.unlinkSync(dest);
+      reject(new Error(`Download failed from ${url}: ${err.message}`));
+    }
+  });
+}
+
+/**
+ * Extract an archive to a destination directory.
+ * Supports .tar.gz, .tar.xz (via tar) and .zip (via unzip/powershell).
+ * @param {string} archivePath
+ * @param {string} destDir
+ */
+function extractArchive(archivePath, destDir) {
+  fs.mkdirSync(destDir, { recursive: true });
+
+  if (archivePath.endsWith('.zip')) {
+    if (os.platform() === 'win32') {
+      execSync(
+        `powershell -Command "Expand-Archive -Path '${archivePath}' -DestinationPath '${destDir}' -Force"`,
+        { stdio: 'inherit', timeout: 120_000, shell: true },
+      );
+    } else {
+      execSync(`unzip -qo "${archivePath}" -d "${destDir}"`, {
+        stdio: 'inherit',
+        timeout: 120_000,
+        shell: true,
+      });
+    }
+  } else {
+    // .tar.gz or .tar.xz
+    if (archivePath.endsWith('.tar.xz')) {
+      // Verify xz is available (not present on Alpine/slim Docker images)
+      try {
+        execSync('xz --version', { stdio: 'pipe', timeout: 5_000 });
+      } catch {
+        throw new Error(
+          "Extraction of .tar.xz requires 'xz'. Install with: apt-get install xz-utils",
+        );
+      }
+    }
+    execSync(`tar xf "${archivePath}" -C "${destDir}"`, {
+      stdio: 'inherit',
+      timeout: 300_000, // 5 min — MySQL archives are 300–600 MB
+      shell: true,
+    });
+  }
+}
+
+/**
+ * Ensure MySQL binaries are downloaded and extracted.
+ * Idempotent — skips if basedir already exists.
+ * @returns {string} basedir — path to extracted MySQL directory
+ */
+async function ensureMysqlBinaries() {
+  const info = getMysqlDownloadInfo();
+  const basedir = path.join(MYSQL_DATA_DIR, info.dirName);
+  const mysqldBin = path.join(
+    basedir,
+    'bin',
+    os.platform() === 'win32' ? 'mysqld.exe' : 'mysqld',
+  );
+
+  if (fs.existsSync(mysqldBin)) return basedir;
+
+  console.log(
+    `🐬 Downloading MySQL ${MYSQL_VERSION} for ${os.platform()}/${os.arch()}...`,
+  );
+  fs.mkdirSync(MYSQL_DATA_DIR, { recursive: true });
+
+  const archiveName = `mysql-${MYSQL_VERSION}${info.archiveExt}`;
+  const archivePath = path.join(MYSQL_DATA_DIR, archiveName);
+
+  try {
+    await downloadFile(info.url, archivePath);
+    console.log('📦 Extracting MySQL binaries...');
+    extractArchive(archivePath, MYSQL_DATA_DIR);
+
+    // Cleanup archive
+    fs.unlinkSync(archivePath);
+
+    if (!fs.existsSync(mysqldBin)) {
+      throw new Error(
+        `Extraction completed but mysqld not found at ${mysqldBin}`,
+      );
+    }
+
+    // Ensure bin executables are executable on Unix
+    if (os.platform() !== 'win32') {
+      const binDir = path.join(basedir, 'bin');
+      for (const file of fs.readdirSync(binDir)) {
+        fs.chmodSync(path.join(binDir, file), 0o755);
+      }
+    }
+
+    console.log('✅ MySQL binaries ready');
+  } catch (err) {
+    // Cleanup partial downloads
+    if (fs.existsSync(archivePath)) fs.unlinkSync(archivePath);
+    throw err;
+  }
+
+  return basedir;
+}
+
+/**
+ * Resolve a MySQL binary path from the extracted installation.
+ * @param {string} binName - Binary name (e.g. 'mysqld', 'mysqladmin', 'mysql')
+ * @returns {string} Absolute path to the binary
+ */
+function resolveMysqlBin(binName) {
+  const isWin = os.platform() === 'win32';
+  const fileName = isWin ? `${binName}.exe` : binName;
+
+  const info = getMysqlDownloadInfo();
+  const basedir = path.join(MYSQL_DATA_DIR, info.dirName);
+  const bin = path.join(basedir, 'bin', fileName);
+
+  if (fs.existsSync(bin)) return bin;
+
+  // Fallback: scan top-level dirs in MYSQL_DATA_DIR for any mysql-* directory
+  if (fs.existsSync(MYSQL_DATA_DIR)) {
+    for (const entry of fs.readdirSync(MYSQL_DATA_DIR)) {
+      if (!entry.startsWith('mysql-')) continue;
+      const candidate = path.join(MYSQL_DATA_DIR, entry, 'bin', fileName);
+      if (fs.existsSync(candidate)) return candidate;
+    }
+  }
+
+  throw new Error(
+    `Could not locate '${binName}' binary. Run with --db mysql --start to download.`,
+  );
+}
+
+/**
+ * Generate my.cnf for portable MySQL operation.
+ * @param {{ port?: number }} [cfg]
+ * @param {string} basedir - Path to extracted MySQL directory
+ * @returns {string} Path to generated my.cnf
+ */
+function generateMyCnf(cfg = MYSQL_DEFAULTS, basedir) {
+  const port = cfg.port || MYSQL_DEFAULTS.port;
+  // MySQL my.cnf requires forward slashes even on Windows
+  const fwd = p => p.replace(/\\/g, '/');
+  const datadir = path.join(MYSQL_DATA_DIR, 'data');
+  const socketPath = path.join(MYSQL_DATA_DIR, 'mysql.sock');
+  const pidFile = path.join(MYSQL_DATA_DIR, 'mysql.pid');
+  const errorLog = path.join(MYSQL_DATA_DIR, 'error.log');
+  const cnfPath = path.join(MYSQL_DATA_DIR, 'my.cnf');
+
+  const content = `# Auto-generated by xnapify preboot — do not edit manually
+[mysqld]
+basedir       = ${fwd(basedir)}
+datadir       = ${fwd(datadir)}
+port          = ${port}
+socket        = ${fwd(socketPath)}
+pid-file      = ${fwd(pidFile)}
+log-error     = ${fwd(errorLog)}
+bind-address  = 127.0.0.1
+mysqlx        = 0
+skip-name-resolve
+
+# Character set
+character-set-server = utf8mb4
+collation-server = utf8mb4_0900_ai_ci
+
+# Performance (conservative dev defaults)
+innodb_buffer_pool_size = 128M
+innodb_redo_log_capacity = 96M
+innodb_flush_log_at_trx_commit = 2
+max_connections = 100
+
+[client]
+socket        = ${fwd(socketPath)}
+port          = ${port}
+`;
+
+  fs.writeFileSync(cnfPath, content, 'utf-8');
+  return cnfPath;
+}
+
+/**
+ * Build a mysql:// URL from config.
+ * @param {{ user: string, password: string, port: number, database: string }} cfg
+ * @returns {string}
+ */
+function buildMysqlUrl(cfg) {
+  const user = encodeURIComponent(cfg.user || MYSQL_DEFAULTS.user);
+  const password = cfg.password || MYSQL_DEFAULTS.password;
+  const port = cfg.port || MYSQL_DEFAULTS.port;
+  const database = encodeURIComponent(cfg.database || MYSQL_DEFAULTS.database);
+  const auth = password ? `${user}:${encodeURIComponent(password)}` : user;
+  return `mysql://${auth}@127.0.0.1:${port}/${database}`;
+}
+
+/**
+ * Start embedded MySQL daemon. Idempotent — checks port first.
+ *
+ * Downloads MySQL binaries from dev.mysql.com, initialises data directory
+ * via mysqld --initialize-insecure, writes my.cnf, and starts the daemon.
+ *
+ * @param {{ port?: number, user?: string, password?: string, database?: string }} [cfg]
+ * @returns {Promise<void>}
+ */
+async function startMysql(cfg = MYSQL_DEFAULTS) {
+  const port = cfg.port || MYSQL_DEFAULTS.port;
+
+  if (await isPortReachable(port)) {
+    console.log(`🐬 MySQL already running on port ${port}`);
+    return;
+  }
+
+  console.log(`🐬 Starting embedded MySQL on port ${port}...`);
+
+  // Step 1: Ensure binaries are downloaded
+  const basedir = await ensureMysqlBinaries();
+  const mysqld = resolveMysqlBin('mysqld');
+  const datadir = path.join(MYSQL_DATA_DIR, 'data');
+
+  // Step 2: Initialise data directory (idempotent — skip if already exists)
+  if (!fs.existsSync(path.join(datadir, 'mysql'))) {
+    console.log('🐬 Initialising MySQL data directory...');
+    fs.mkdirSync(datadir, { recursive: true });
+    const initArgs = [
+      '--no-defaults',
+      '--initialize-insecure',
+      `--basedir=${basedir}`,
+      `--datadir=${datadir}`,
+    ];
+    // --user is Unix-only; Windows ignores it and usernames may have spaces
+    if (os.platform() !== 'win32') {
+      initArgs.push(`--user=${os.userInfo().username}`);
+    }
+    execSync(`"${mysqld}" ${initArgs.join(' ')}`, {
+      cwd: ROOT,
+      stdio: 'inherit',
+      timeout: 60_000,
+      shell: true,
+    });
+  }
+
+  // Step 3: Generate my.cnf
+  const cnfPath = generateMyCnf(cfg, basedir);
+
+  // Step 4: Clean up stale socket from previous crash (Unix only)
+  const socketPath = path.join(MYSQL_DATA_DIR, 'mysql.sock');
+  if (
+    os.platform() !== 'win32' &&
+    fs.existsSync(socketPath) &&
+    !(await isPortReachable(port))
+  ) {
+    fs.unlinkSync(socketPath);
+  }
+
+  // Step 5: Start daemon
+  if (os.platform() === 'win32') {
+    // Windows: start detached
+    execSync(`start /B "" "${mysqld}" --defaults-file="${cnfPath}"`, {
+      cwd: ROOT,
+      stdio: 'ignore',
+      timeout: 10_000,
+      shell: true,
+    });
+  } else {
+    // Unix: use --daemonize (MySQL 8.4+ built-in)
+    execSync(`"${mysqld}" --defaults-file="${cnfPath}" --daemonize`, {
+      cwd: ROOT,
+      stdio: 'inherit',
+      timeout: 30_000,
+      shell: true,
+    });
+  }
+
+  // Step 5: Wait for MySQL to become reachable
+  const maxWait = 15_000;
+  const start = Date.now();
+  while (!(await isPortReachable(port)) && Date.now() - start < maxWait) {
+    await new Promise(r => setTimeout(r, 300));
+  }
+
+  if (!(await isPortReachable(port))) {
+    const errorLog = path.join(MYSQL_DATA_DIR, 'error.log');
+    if (fs.existsSync(errorLog)) {
+      const tail = fs
+        .readFileSync(errorLog, 'utf-8')
+        .split('\n')
+        .slice(-10)
+        .join('\n');
+      console.error(`Last 10 lines of error.log:\n${tail}`);
+    }
+    throw new Error(`MySQL did not become reachable on port ${port}`);
+  }
+
+  // Step 7: Grant TCP access + create database (idempotent)
+  // --initialize-insecure creates root@localhost (socket only). Sequelize
+  // connects via TCP (host: 127.0.0.1) which MySQL treats as a different
+  // user. We use the mysql CLI over socket to bootstrap root@'%'.
+  const dbName = cfg.database || MYSQL_DEFAULTS.database;
+  try {
+    const mysqlCli = resolveMysqlBin('mysql');
+    const socketPath = path.join(MYSQL_DATA_DIR, 'mysql.sock');
+    const connectArgs =
+      os.platform() === 'win32'
+        ? `--host=127.0.0.1 --port=${port}`
+        : `--socket="${socketPath}"`;
+    const baseCmd = `"${mysqlCli}" ${connectArgs} --user=root`;
+
+    // Write setup SQL to a temp file to avoid shell escaping issues
+    // with backticks, single quotes, and empty strings.
+    const sqlFile = path.join(MYSQL_DATA_DIR, '_setup.sql');
+    fs.writeFileSync(
+      sqlFile,
+      [
+        "CREATE USER IF NOT EXISTS 'root'@'%' IDENTIFIED BY '';",
+        "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION;",
+        'FLUSH PRIVILEGES;',
+        `CREATE DATABASE IF NOT EXISTS \`${dbName}\`;`,
+      ].join('\n'),
+      'utf-8',
+    );
+    execSync(`${baseCmd} < "${sqlFile}"`, {
+      cwd: ROOT,
+      stdio: 'pipe',
+      timeout: 10_000,
+      shell: true,
+    });
+    fs.unlinkSync(sqlFile);
+
+    // Populate timezone tables so SET time_zone = 'UTC' works.
+    // Portable MySQL doesn't ship with timezone data loaded.
+    const zoneinfoDir = '/usr/share/zoneinfo';
+    if (os.platform() !== 'win32' && fs.existsSync(zoneinfoDir)) {
+      try {
+        const tzSql = resolveMysqlBin('mysql_tzinfo_to_sql');
+        execSync(`"${tzSql}" "${zoneinfoDir}" | ${baseCmd} mysql`, {
+          cwd: ROOT,
+          stdio: 'pipe',
+          timeout: 30_000,
+          shell: true,
+        });
+      } catch {
+        // Non-fatal — offset format (+00:00) still works
+      }
+    }
+  } catch (err) {
+    // Non-fatal — grants might already exist
+    const msg = err.stderr ? err.stderr.toString().trim() : err.message;
+    if (msg) console.warn(`   ⚠️  MySQL setup: ${msg}`);
+  }
+
+  console.log(
+    `✅ MySQL ready — ${buildMysqlUrl({ ...MYSQL_DEFAULTS, ...cfg })}`,
+  );
+}
+
+/**
+ * Stop embedded MySQL daemon if running.
+ * Uses mysqladmin shutdown for graceful stop.
+ * @returns {Promise<void>}
+ */
+async function stopMysql() {
+  const embeddedPort = MYSQL_DEFAULTS.port;
+  const embeddedRunning = await isPortReachable(embeddedPort);
+  const systemRunning = await isPortReachable(MYSQL_DEFAULT_PORT);
+
+  if (!embeddedRunning && !systemRunning) {
+    console.log('🐬 No MySQL servers running');
+    return;
+  }
+
+  if (systemRunning) {
+    console.log(
+      `🐬 System MySQL on port ${MYSQL_DEFAULT_PORT} is running (not managed by preboot)`,
+    );
+  }
+
+  if (!embeddedRunning) {
+    return;
+  }
+
+  try {
+    const socketPath = path.join(MYSQL_DATA_DIR, 'mysql.sock');
+    const mysqladmin = resolveMysqlBin('mysqladmin');
+    console.log('🐬 Stopping embedded MySQL...');
+
+    const shutdownArgs = [
+      `--user=${MYSQL_DEFAULTS.user}`,
+      `--port=${embeddedPort}`,
+      'shutdown',
+    ];
+    // Prefer socket on Unix for reliability
+    if (os.platform() !== 'win32' && fs.existsSync(socketPath)) {
+      shutdownArgs.unshift(`--socket=${socketPath}`);
+    }
+
+    execSync(`"${mysqladmin}" ${shutdownArgs.join(' ')}`, {
+      cwd: ROOT,
+      stdio: 'inherit',
+      timeout: 15_000,
+      shell: true,
+    });
+
+    // Wait for port to become unreachable
+    const maxWait = 5_000;
+    const start = Date.now();
+    while (
+      (await isPortReachable(embeddedPort)) &&
+      Date.now() - start < maxWait
+    ) {
+      await new Promise(r => setTimeout(r, 300));
+    }
+
+    console.log('✅ MySQL stopped');
+  } catch (err) {
+    console.warn(`⚠️  Could not stop cleanly: ${err.message}`);
+    console.warn(`   Try manually: kill the process on port ${embeddedPort}`);
+  }
+}
+
 // ─── Main Flows ─────────────────────────────────────────────────────────────
 
 /**
@@ -564,9 +1103,6 @@ async function autoMode() {
     await resolveMysql(url);
   }
 }
-
-/** @constant {number} Standard system PostgreSQL port */
-const PG_DEFAULT_PORT = 5432;
 
 /**
  * Resolve PostgreSQL connection with priority chain:
@@ -625,13 +1161,10 @@ async function pgFallbackChain() {
 
 // ─── MySQL Resolution ───────────────────────────────────────────────────────
 
-/** @constant {number} Standard MySQL port */
-const MYSQL_DEFAULT_PORT = 3306;
-
 /**
  * Parse connection details from a mysql:// URL.
  * @param {string} url
- * @returns {{ host: string, port: number, user: string, database: string }}
+ * @returns {{ host: string, port: number, user: string, password: string, database: string }}
  */
 function parseMysqlUrl(url) {
   try {
@@ -640,6 +1173,7 @@ function parseMysqlUrl(url) {
       host: parsed.hostname || '127.0.0.1',
       port: parseInt(parsed.port, 10) || MYSQL_DEFAULT_PORT,
       user: parsed.username || 'root',
+      password: parsed.password || '',
       database: parsed.pathname.replace(/^\//, '') || '',
     };
   } catch {
@@ -647,71 +1181,75 @@ function parseMysqlUrl(url) {
       host: '127.0.0.1',
       port: MYSQL_DEFAULT_PORT,
       user: 'root',
+      password: '',
       database: '',
     };
   }
 }
 
 /**
- * Resolve MySQL connection:
- *   - Shorthand (XNAPIFY_DB_URL=mysql): check localhost:3306
- *   - Full URL: check if server is reachable
- * No embedded MySQL — warn if unreachable.
- * @param {string} url
+ * Resolve MySQL connection with priority chain:
+ *   1. Configured URL (remote or local) — if reachable, use it
+ *   2. Local system MySQL/MariaDB (port 3306) — if running, auto-switch
+ *   3. Embedded MySQL (port 3307) — last resort, auto-start
+ * @param {string} url - Current XNAPIFY_DB_URL
  */
 async function resolveMysql(url) {
-  // Shorthand — check local MySQL
+  // Shorthand (e.g. XNAPIFY_DB_URL=mysql) → skip to fallback chain
   if (!url.includes('://')) {
-    if (await isPortReachable(MYSQL_DEFAULT_PORT)) {
-      console.log(`🐬 Using local MySQL on port ${MYSQL_DEFAULT_PORT}`);
-      console.log(
-        '📄 Set XNAPIFY_DB_URL=mysql://user:pass@127.0.0.1:3306/dbname',
-      );
-    } else {
-      console.warn(`⚠️  MySQL not found on port ${MYSQL_DEFAULT_PORT}`);
-      console.warn(
-        '   Install MySQL/MariaDB and set XNAPIFY_DB_URL to a full URL',
-      );
-    }
-    return;
+    console.log('🐬 Resolving MySQL server...');
+    return mysqlFallbackChain();
   }
 
-  // Full URL — verify reachability
+  // ── Priority 1: Configured URL ──
   const cfg = parseMysqlUrl(url);
   if (await isPortReachable(cfg.port, cfg.host)) {
     console.log(`🐬 Using MySQL at ${cfg.host}:${cfg.port}`);
-  } else {
-    console.warn(`⚠️  MySQL at ${cfg.host}:${cfg.port} is not reachable`);
+    return;
   }
+
+  // Configured URL not reachable
+  if (cfg.host !== '127.0.0.1' && cfg.host !== 'localhost') {
+    console.warn(`⚠️  Remote MySQL at ${cfg.host}:${cfg.port} not reachable`);
+  }
+
+  return mysqlFallbackChain();
 }
 
 /**
- * Show current database status.
+ * Fallback chain: local system MySQL (3306) → embedded MySQL (3307).
  */
-async function showStatus() {
+async function mysqlFallbackChain() {
+  // ── Priority 2: Local system MySQL/MariaDB (port 3306) ──
+  if (await isPortReachable(MYSQL_DEFAULT_PORT)) {
+    const systemUrl = buildMysqlUrl({
+      ...MYSQL_DEFAULTS,
+      port: MYSQL_DEFAULT_PORT,
+    });
+    updateEnvDbUrl(systemUrl);
+    console.log(`🐬 Using local system MySQL on port ${MYSQL_DEFAULT_PORT}`);
+    console.log(`📄 Updated XNAPIFY_DB_URL=${systemUrl}`);
+    return;
+  }
+
+  // ── Priority 3: Embedded MySQL (port 3307) ──
+  const embeddedUrl = buildMysqlUrl(MYSQL_DEFAULTS);
+  await startMysql(MYSQL_DEFAULTS);
+  updateEnvDbUrl(embeddedUrl);
+  console.log(`📄 Updated XNAPIFY_DB_URL=${embeddedUrl}`);
+}
+
+/**
+ * Show database status — dialect-aware.
+ * @param {string} [dialectOverride] - Optional dialect override from --db flag
+ */
+async function showStatus(dialectOverride) {
   ensureEnvFile();
   loadEnv();
 
   const url = process.env.XNAPIFY_DB_URL || 'sqlite:database.sqlite';
-  const dialect = detectDialect(url);
-  const systemPg = await isPortReachable(PG_DEFAULT_PORT);
-  const embeddedPg = await isPortReachable(PG_DEFAULTS.port);
-
+  const dialect = dialectOverride || detectDialect(url);
   const separator = '─'.repeat(50);
-
-  console.log(separator);
-  console.log('📊 Database Status');
-  console.log(separator);
-  console.log(`   Dialect  : ${dialect}`);
-  console.log(`   URL      : ${url}`);
-  console.log(
-    `   System PG: ${systemPg ? '🟢 Running' : '🔴 Stopped'} (port ${PG_DEFAULT_PORT})`,
-  );
-  console.log(
-    `   Embed  PG: ${embeddedPg ? '🟢 Running' : '🔴 Stopped'} (port ${PG_DEFAULTS.port})`,
-  );
-  console.log(`   PG Data  : ${PG_DATA_DIR}`);
-  console.log(separator);
 
   // Check if deps are installed
   const deps = DIALECT_DEPS[dialect] || [];
@@ -723,17 +1261,53 @@ async function showStatus() {
       return false;
     }
   });
+  const depsLine =
+    installed.length === deps.length
+      ? `✅ All installed (${deps.map(d => d.name).join(', ')})`
+      : `⚠️  Missing: ${deps
+          .filter(d => !installed.includes(d))
+          .map(d => d.name)
+          .join(', ')} (auto-installed on next boot)`;
 
-  if (installed.length === deps.length) {
+  console.log(separator);
+
+  if (dialect === 'postgres') {
+    const systemPg = await isPortReachable(PG_DEFAULT_PORT);
+    const embeddedPg = await isPortReachable(PG_DEFAULTS.port);
+    console.log('📊 Database Status (PostgreSQL)');
+    console.log(separator);
+    console.log(`   Dialect  : ${dialect}`);
+    console.log(`   URL      : ${url}`);
     console.log(
-      `   Deps     : ✅ All installed (${deps.map(d => d.name).join(', ')})`,
+      `   System PG: ${systemPg ? '🟢 Running' : '🔴 Stopped'} (port ${PG_DEFAULT_PORT})`,
     );
+    console.log(
+      `   Embed  PG: ${embeddedPg ? '🟢 Running' : '🔴 Stopped'} (port ${PG_DEFAULTS.port})`,
+    );
+    console.log(`   PG Data  : ${PG_DATA_DIR}`);
+  } else if (dialect === 'mysql') {
+    const systemMy = await isPortReachable(MYSQL_DEFAULT_PORT);
+    const embeddedMy = await isPortReachable(MYSQL_EMBEDDED_PORT);
+    console.log('📊 Database Status (MySQL)');
+    console.log(separator);
+    console.log(`   Dialect   : ${dialect}`);
+    console.log(`   URL       : ${url}`);
+    console.log(
+      `   System SQL: ${systemMy ? '🟢 Running' : '🔴 Stopped'} (port ${MYSQL_DEFAULT_PORT})`,
+    );
+    console.log(
+      `   Embed  SQL: ${embeddedMy ? '🟢 Running' : '🔴 Stopped'} (port ${MYSQL_EMBEDDED_PORT})`,
+    );
+    console.log(`   MySQL Data: ${MYSQL_DATA_DIR}`);
   } else {
-    const missing = deps.filter(d => !installed.includes(d));
-    console.log(
-      `   Deps     : ⚠️  Missing: ${missing.map(d => d.name).join(', ')} (auto-installed on next boot)`,
-    );
+    console.log('📊 Database Status (SQLite)');
+    console.log(separator);
+    console.log(`   Dialect  : ${dialect}`);
+    console.log(`   URL      : ${url}`);
+    console.log('   Mode     : In-process (no daemon)');
   }
+
+  console.log(`   Deps     : ${depsLine}`);
   console.log(separator);
 }
 
@@ -744,33 +1318,81 @@ async function showStatus() {
  */
 function showHelp() {
   console.log(`
-Usage: node tools/npm/preboot.js [command]
+Usage: node tools/npm/preboot.js [options] [command]
 
 Commands:
   (none)      Auto mode — detect dialect, install deps, resolve server
-  --start     Start embedded PostgreSQL daemon
-  --stop      Stop embedded PostgreSQL daemon (drains connections)
-  --status    Show database status
+  --start     Start embedded database daemon (auto-detects from XNAPIFY_DB_URL)
+  --stop      Stop embedded database daemon (auto-detects from XNAPIFY_DB_URL)
+  --status    Show database status (auto-detects from XNAPIFY_DB_URL)
   --help      Show this help
+
+Options:
+  --db <type> Override database type (postgres, mysql, sqlite)
+              Takes precedence over XNAPIFY_DB_URL detection
 
 Environment:
   XNAPIFY_DB_URL   Database URL or shorthand (sqlite, postgres, mysql)
+
+Examples:
+  node tools/npm/preboot.js --start              # start DB detected from env
+  node tools/npm/preboot.js --db mysql --start   # force MySQL start
+  node tools/npm/preboot.js --db postgres --stop  # force PostgreSQL stop
 `);
 }
 
+/**
+ * Resolve the active dialect from --db flag or environment.
+ * @param {string|null} dbOverride - Value of --db flag, or null
+ * @returns {string} 'sqlite' | 'postgres' | 'mysql'
+ */
+function resolveDialect(dbOverride) {
+  if (dbOverride) return dbOverride;
+  ensureEnvFile();
+  loadEnv();
+  return detectDialect(process.env.XNAPIFY_DB_URL || '');
+}
+
+// Parse CLI arguments
 const args = process.argv.slice(2);
-const flag = args.find(a => a.startsWith('--'));
+const dbIdx = args.indexOf('--db');
+const dbOverride = dbIdx !== -1 ? args[dbIdx + 1] : null;
+const flag = args.find(
+  a => a.startsWith('--') && a !== '--db' && a !== dbOverride,
+);
 
 const COMMANDS = {
   '--start': async () => {
-    ensureEnvFile();
-    loadEnv();
-    ensureDeps('postgres');
-    ensureDeps('_embedded');
-    return startPostgres(PG_DEFAULTS);
+    const dialect = resolveDialect(dbOverride);
+    if (dialect === 'sqlite') {
+      console.log('💡 SQLite is in-process — no daemon needed');
+      return;
+    }
+    if (dialect === 'postgres') {
+      ensureDeps('postgres');
+      ensureDeps('_embedded');
+      return startPostgres(PG_DEFAULTS);
+    }
+    if (dialect === 'mysql') {
+      ensureDeps('mysql');
+      return startMysql(MYSQL_DEFAULTS);
+    }
+    console.warn(`⚠️  Unknown dialect: ${dialect}`);
   },
-  '--stop': stopPostgres,
-  '--status': showStatus,
+  '--stop': async () => {
+    const dialect = resolveDialect(dbOverride);
+    if (dialect === 'sqlite') {
+      console.log('💡 SQLite is in-process — no daemon needed');
+      return;
+    }
+    if (dialect === 'postgres') return stopPostgres();
+    if (dialect === 'mysql') return stopMysql();
+    console.warn(`⚠️  Unknown dialect: ${dialect}`);
+  },
+  '--status': async () => {
+    const dialect = resolveDialect(dbOverride);
+    return showStatus(dialect);
+  },
   '--help': async () => showHelp(),
 };
 
