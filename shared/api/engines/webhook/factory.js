@@ -7,6 +7,7 @@
 
 import { WebhookValidationError } from './errors';
 import { WEBHOOK_EVENTS } from './utils/constants';
+import { parseSignatureHeader, verifySignature } from './utils/signature';
 
 // Private symbols
 const HOOK = Symbol('__xnapify.webhook.channel__');
@@ -186,24 +187,29 @@ class WebhookManager {
   async dispatch(provider, payload, context) {
     // Merge container so handlers get (payload, { headers, query, ip, container })
     const enrichedContext = { ...context, container: this[CONTEXT] };
+    const hook = this[HOOK];
 
-    // beforeHandle lifecycle hook
-    await this[HOOK].emit(WEBHOOK_EVENTS.BEFORE_HANDLE, {
-      provider,
-      payload,
-      ...enrichedContext,
-    });
+    // beforeHandle lifecycle hook (skip allocation if no listeners)
+    if (hook.handlers.has(WEBHOOK_EVENTS.BEFORE_HANDLE)) {
+      await hook.emit(WEBHOOK_EVENTS.BEFORE_HANDLE, {
+        provider,
+        payload,
+        ...enrichedContext,
+      });
+    }
 
     // Provider handler(s)
     const hookId = `${WEBHOOK_EVENTS.HANDLER}:${provider}`;
-    await this[HOOK].emit(hookId, payload, enrichedContext);
+    await hook.emit(hookId, payload, enrichedContext);
 
-    // afterHandle lifecycle hook
-    await this[HOOK].emit(WEBHOOK_EVENTS.AFTER_HANDLE, {
-      provider,
-      payload,
-      ...enrichedContext,
-    });
+    // afterHandle lifecycle hook (skip allocation if no listeners)
+    if (hook.handlers.has(WEBHOOK_EVENTS.AFTER_HANDLE)) {
+      await hook.emit(WEBHOOK_EVENTS.AFTER_HANDLE, {
+        provider,
+        payload,
+        ...enrichedContext,
+      });
+    }
   }
 
   /**
@@ -245,6 +251,29 @@ class WebhookManager {
     }
     this[PROVIDERS].clear();
     console.info('🧹 Webhook engine cleanup complete');
+  }
+
+  /**
+   * Parse a signature header value (e.g. "sha256=deadbeef").
+   *
+   * @param {string} header - Raw header value
+   * @returns {{ algorithm: string, signature: string }}
+   */
+  parseSignatureHeader(header) {
+    return parseSignatureHeader(header);
+  }
+
+  /**
+   * Verify an HMAC signature against a payload (timing-safe).
+   *
+   * @param {string|Object} payload - Request body
+   * @param {string} signature - Hex-encoded signature
+   * @param {string} secret - Shared secret key
+   * @param {string} [algorithm='sha256'] - HMAC algorithm
+   * @returns {boolean}
+   */
+  verifySignature(payload, signature, secret, algorithm) {
+    return verifySignature(payload, signature, secret, algorithm);
   }
 }
 

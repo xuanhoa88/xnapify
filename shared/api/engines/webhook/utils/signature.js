@@ -59,13 +59,16 @@ export function verifySignature(
   if (!signature || !secret) return false;
 
   const data = typeof payload === 'string' ? payload : JSON.stringify(payload);
-  const expected = crypto
+  const expectedBuf = crypto
     .createHmac(algorithm, secret)
     .update(data)
-    .digest('hex');
+    .digest();
+
+  // Decode hex signature directly to buffer (single alloc)
+  const signatureBuf = Buffer.from(signature, 'hex');
 
   // Guard against length mismatch (timingSafeEqual requires equal lengths)
-  if (signature.length !== expected.length) return false;
+  if (signatureBuf.length !== expectedBuf.length) return false;
 
-  return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+  return crypto.timingSafeEqual(signatureBuf, expectedBuf);
 }

@@ -39,6 +39,8 @@ describe('Webhook Engine', () => {
       expect(webhook).toHaveProperty('on');
       expect(webhook).toHaveProperty('off');
       expect(webhook).toHaveProperty('cleanup');
+      expect(webhook).toHaveProperty('parseSignatureHeader');
+      expect(webhook).toHaveProperty('verifySignature');
       webhook.cleanup();
     });
   });
@@ -431,6 +433,56 @@ describe('Webhook Engine', () => {
         .on('afterHandle', async () => {});
 
       expect(result).toBe(testWebhook);
+    });
+  });
+  describe('Instance Proxy Methods', () => {
+    let testWebhook;
+
+    beforeEach(() => {
+      testWebhook = createWebhook();
+    });
+
+    afterEach(() => {
+      testWebhook.cleanup();
+    });
+
+    it('should parse signature header via instance method', () => {
+      const result = testWebhook.parseSignatureHeader('sha256=deadbeef');
+      expect(result.algorithm).toBe('sha256');
+      expect(result.signature).toBe('deadbeef');
+    });
+
+    it('should handle null header via instance method', () => {
+      const result = testWebhook.parseSignatureHeader(null);
+      expect(result.algorithm).toBe('sha256');
+      expect(result.signature).toBe('');
+    });
+
+    it('should verify valid signature via instance method', () => {
+      const payload = { event: 'test' };
+      const secret = 'my-secret';
+      const sig = sign(payload, secret, 'sha256');
+
+      expect(testWebhook.verifySignature(payload, sig, secret, 'sha256')).toBe(
+        true,
+      );
+    });
+
+    it('should reject invalid signature via instance method', () => {
+      const payload = { event: 'test' };
+      const secret = 'my-secret';
+
+      expect(
+        testWebhook.verifySignature(payload, 'invalid', secret, 'sha256'),
+      ).toBe(false);
+    });
+
+    it('should produce same results as standalone utils', () => {
+      const header = 'sha512=cafebabe';
+      const instanceResult = testWebhook.parseSignatureHeader(header);
+      const standaloneResult = parseSignatureHeader(header);
+
+      expect(instanceResult).toEqual(standaloneResult);
     });
   });
 });

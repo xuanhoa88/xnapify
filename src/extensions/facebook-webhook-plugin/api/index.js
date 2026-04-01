@@ -64,45 +64,47 @@ export default {
 
       console.info(`${TAG} Received event: object=${object}`);
 
-      if (object === 'page' && Array.isArray(entry)) {
-        for (const event of entry) {
-          const { id, time, messaging, changes } = event;
+      if (object !== 'page' || !Array.isArray(entry)) return;
 
-          // Process messaging events (e.g. messages, postbacks)
-          if (Array.isArray(messaging)) {
-            for (const msg of messaging) {
-              console.info(
-                `${TAG} Messaging event from page ${id}:`,
-                msg.message ? 'message' : 'postback',
-              );
+      // Resolve once outside loops to avoid repeated DI lookups
+      const hook = container.resolve('hook');
+      const facebookChannel = hook ? hook('facebook') : null;
 
-              // Emit to hook engine so other modules can observe
-              const hook = container.resolve('hook');
-              if (hook) {
-                hook('facebook').emit('messaging', {
-                  pageId: id,
-                  timestamp: time,
-                  ...msg,
-                });
-              }
+      for (const event of entry) {
+        const { id, time, messaging, changes } = event;
+
+        // Process messaging events (e.g. messages, postbacks)
+        if (Array.isArray(messaging)) {
+          for (const msg of messaging) {
+            console.info(
+              `${TAG} Messaging event from page ${id}:`,
+              msg.message ? 'message' : 'postback',
+            );
+
+            // Emit to hook engine so other modules can observe
+            if (facebookChannel) {
+              await facebookChannel.emit('messaging', {
+                pageId: id,
+                timestamp: time,
+                ...msg,
+              });
             }
           }
+        }
 
-          // Process feed/page changes
-          if (Array.isArray(changes)) {
-            for (const change of changes) {
-              console.info(
-                `${TAG} Change event: field=${change.field} from page ${id}`,
-              );
+        // Process feed/page changes
+        if (Array.isArray(changes)) {
+          for (const change of changes) {
+            console.info(
+              `${TAG} Change event: field=${change.field} from page ${id}`,
+            );
 
-              const hook = container.resolve('hook');
-              if (hook) {
-                hook('facebook').emit('change', {
-                  pageId: id,
-                  timestamp: time,
-                  ...change,
-                });
-              }
+            if (facebookChannel) {
+              await facebookChannel.emit('change', {
+                pageId: id,
+                timestamp: time,
+                ...change,
+              });
             }
           }
         }

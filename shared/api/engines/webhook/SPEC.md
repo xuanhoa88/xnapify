@@ -79,7 +79,8 @@ Parses header values in `algorithm=signature` format (e.g. `sha256=deadbeef`).
 Verifies an HMAC signature against a payload using **timing-safe comparison**.
 
 - Stringifies object payloads via `JSON.stringify`.
-- Creates HMAC with `crypto.createHmac(algorithm, secret).update(data).digest('hex')`.
+- Creates HMAC with `crypto.createHmac(algorithm, secret).update(data).digest()` (raw Buffer).
+- Decodes the hex signature via `Buffer.from(signature, 'hex')` (single allocation).
 - Guards against length mismatch before calling `crypto.timingSafeEqual`.
 - Returns `false` for empty signature or empty secret.
 - Default algorithm: `sha256`.
@@ -145,9 +146,11 @@ Returns array of registered provider names.
 Called by the controller after signature verification passes. Executes the lifecycle in sequence:
 
 1. **Enrich context:** merges `context` with `{ container: this[CONTEXT] }`.
-2. **`beforeHandle`:** emits `WEBHOOK_EVENTS.BEFORE_HANDLE` with `{ provider, payload, ...enrichedContext }`.
+2. **`beforeHandle`:** emits `WEBHOOK_EVENTS.BEFORE_HANDLE` with `{ provider, payload, ...enrichedContext }`. Skipped if no listeners are registered.
 3. **Provider handler:** emits `handler:<provider>` with `(payload, enrichedContext)`.
-4. **`afterHandle`:** emits `WEBHOOK_EVENTS.AFTER_HANDLE` with `{ provider, payload, ...enrichedContext }`.
+4. **`afterHandle`:** emits `WEBHOOK_EVENTS.AFTER_HANDLE` with `{ provider, payload, ...enrichedContext }`. Skipped if no listeners are registered.
+
+**Performance:** Uses `hook.handlers.has()` to skip lifecycle emit calls and object spread allocations when no listeners exist (the common case).
 
 **Context shape passed to handlers:**
 ```javascript
@@ -172,6 +175,14 @@ Remove a lifecycle hook. Delegates to `HookChannel.off()`. Returns `this` for ch
 ### `cleanup()`
 
 Calls `hook.off()` (clears all handlers) and clears the providers map. Safe for multiple calls.
+
+### `parseSignatureHeader(header) → { algorithm, signature }`
+
+Proxy to `utils/signature.js`. Parses a signature header value (e.g. `sha256=deadbeef`). Exposed as an instance method so consumers can call it via the DI-resolved instance without a direct engine import.
+
+### `verifySignature(payload, signature, secret, algorithm?) → boolean`
+
+Proxy to `utils/signature.js`. Timing-safe HMAC verification. Exposed as an instance method for DI convenience.
 
 ## 6. Factory Function: `createFactory()`
 
@@ -202,10 +213,10 @@ The singleton is registered on the DI container via `container.instance('webhook
 
 Uses a helper `createWebhook()` that creates a factory instance and binds it with `withContext({ resolve: () => createHookFactory() })` to simulate bootstrap.
 
-### Test Coverage (8 describe blocks)
+### Test Coverage (9 describe blocks)
 
 **Default Instance:**
-- Has all expected methods (`handler`, `removeHandler`, `hasHandler`, `getProviders`, `getProviderConfig`, `dispatch`, `on`, `off`, `cleanup`).
+- Has all expected methods (`handler`, `removeHandler`, `hasHandler`, `getProviders`, `getProviderConfig`, `dispatch`, `on`, `off`, `cleanup`, `parseSignatureHeader`, `verifySignature`).
 
 **createFactory():**
 - Independent instances don't share state.

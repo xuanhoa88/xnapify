@@ -73,6 +73,14 @@ webhook.off('beforeHandle', myHandler);
 
 Clear all providers and handlers.
 
+### `webhook.parseSignatureHeader(header) → { algorithm, signature }`
+
+Parse a signature header value (e.g. `sha256=deadbeef`). Returns `{ algorithm: 'sha256', signature: 'deadbeef' }`. Defaults to `sha256` when no prefix is present.
+
+### `webhook.verifySignature(payload, signature, secret, algorithm?) → boolean`
+
+Timing-safe HMAC verification. Returns `true` if the signature matches. Default algorithm: `sha256`.
+
 ## Signature Verification
 
 The controller layer automatically verifies signatures. Utilities are also exported for custom use:
