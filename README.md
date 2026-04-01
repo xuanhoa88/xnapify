@@ -260,8 +260,16 @@ XNAPIFY_JWT_EXPIRY=7d
 
 **Switch databases:** Set `XNAPIFY_DB_URL` in `.env`, then `npm run dev`:
 - `XNAPIFY_DB_URL=postgres` — PostgreSQL (embedded auto-download on port 5433)
-- `XNAPIFY_DB_URL=mysql` — MySQL (embedded auto-download on port 3307)
+- `XNAPIFY_DB_URL=mysql` — MySQL 8.4 LTS (embedded auto-download on port 3307)
 - Full URLs also supported (e.g., `postgresql://user:pass@host:5432/db`)
+
+**On-demand override** (does NOT modify `.env` — uses session-scoped `.env.local`):
+
+```bash
+XNAPIFY_DB=mysql npm run dev        # Dev with MySQL (one-shot)
+XNAPIFY_DB=postgres npm run dev     # Dev with PostgreSQL (one-shot)
+XNAPIFY_DB=mysql npm start          # Production with MySQL (one-shot)
+```
 
 Preboot resolves servers with a 3-tier priority chain:
 1. **Configured URL** — if reachable, use it

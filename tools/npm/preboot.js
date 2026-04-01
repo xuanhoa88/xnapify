@@ -37,7 +37,14 @@ const path = require('path');
 
 const ROOT = process.cwd();
 const ENV_PATH = path.join(ROOT, '.env');
+const ENV_LOCAL_PATH = path.join(ROOT, '.env.local');
 const ENV_TEMPLATE = path.join(ROOT, '.env.xnapify');
+
+/**
+ * When true, DB URL writes go to .env.local (session override)
+ * instead of .env (persistent). Set when --db or XNAPIFY_DB is used.
+ */
+let useLocalEnv = false;
 const PG_DATA_DIR =
   process.env.XNAPIFY_PG_DATA_DIR ||
   (process.env.NODE_ENV === 'production'
@@ -134,33 +141,80 @@ function ensureEnvFile() {
 }
 
 /**
- * Update XNAPIFY_DB_URL in .env. Creates .env from template if missing.
+ * Update XNAPIFY_DB_URL in the appropriate env file.
+ *
+ * When `useLocalEnv` is true (--db / XNAPIFY_DB override), writes to
+ * `.env.local` so the override is session-scoped and does NOT mutate
+ * the user's `.env`. dotenv-flow reads `.env.local` automatically and
+ * it takes precedence over `.env`.
+ *
+ * When `useLocalEnv` is false (normal auto mode), writes to `.env`
+ * for persistent configuration.
+ *
  * @param {string} newUrl - New database URL value
  */
 function updateEnvDbUrl(newUrl) {
-  ensureEnvFile();
+  const targetFile = useLocalEnv ? ENV_LOCAL_PATH : ENV_PATH;
 
-  if (!fs.existsSync(ENV_PATH)) {
-    // No template either — create minimal .env
-    fs.writeFileSync(ENV_PATH, `XNAPIFY_DB_URL=${newUrl}\n`, 'utf-8');
+  // For .env.local — simple: just write/replace the single variable
+  if (useLocalEnv) {
+    upsertEnvVar(targetFile, 'XNAPIFY_DB_URL', newUrl);
     return;
   }
 
-  const content = fs.readFileSync(ENV_PATH, 'utf-8');
-  const pattern = /^XNAPIFY_DB_URL=.*/m;
+  // For .env — existing behavior: create from template if missing
+  ensureEnvFile();
+
+  if (!fs.existsSync(targetFile)) {
+    fs.writeFileSync(targetFile, `XNAPIFY_DB_URL=${newUrl}\n`, 'utf-8');
+    return;
+  }
+
+  upsertEnvVar(targetFile, 'XNAPIFY_DB_URL', newUrl);
+}
+
+/**
+ * Upsert a KEY=VALUE in an env file. Creates the file if missing.
+ * @param {string} filePath - Path to the env file
+ * @param {string} key - Environment variable name
+ * @param {string} value - New value
+ */
+function upsertEnvVar(filePath, key, value) {
+  if (!fs.existsSync(filePath)) {
+    fs.writeFileSync(filePath, `${key}=${value}\n`, 'utf-8');
+    return;
+  }
+
+  const content = fs.readFileSync(filePath, 'utf-8');
+  const pattern = new RegExp(`^${key}=.*`, 'm');
 
   if (pattern.test(content)) {
-    // Replace existing line
-    const updated = content.replace(pattern, `XNAPIFY_DB_URL=${newUrl}`);
-    fs.writeFileSync(ENV_PATH, updated, 'utf-8');
+    const updated = content.replace(pattern, `${key}=${value}`);
+    fs.writeFileSync(filePath, updated, 'utf-8');
   } else {
-    // Append
     const separator = content.endsWith('\n') ? '' : '\n';
     fs.writeFileSync(
-      ENV_PATH,
-      `${content}${separator}XNAPIFY_DB_URL=${newUrl}\n`,
+      filePath,
+      `${content}${separator}${key}=${value}\n`,
       'utf-8',
     );
+  }
+}
+
+/**
+ * Remove XNAPIFY_DB_URL from .env.local (cleanup after override session).
+ * Deletes the file entirely if XNAPIFY_DB_URL was the only content.
+ */
+function cleanupEnvLocal() {
+  if (!fs.existsSync(ENV_LOCAL_PATH)) return;
+
+  const content = fs.readFileSync(ENV_LOCAL_PATH, 'utf-8');
+  const cleaned = content.replace(/^XNAPIFY_DB_URL=.*\n?/m, '');
+
+  if (cleaned.trim() === '') {
+    fs.unlinkSync(ENV_LOCAL_PATH);
+  } else {
+    fs.writeFileSync(ENV_LOCAL_PATH, cleaned, 'utf-8');
   }
 }
 
@@ -652,7 +706,8 @@ function downloadFile(url, dest) {
 
 /**
  * Extract an archive to a destination directory.
- * Supports .tar.gz, .tar.xz (via tar) and .zip (via unzip/powershell).
+ * Supports .tar.gz, .tar.xz (via tar) and .zip (via PowerShell on Windows,
+ * bsdtar/unzip on Unix).
  * @param {string} archivePath
  * @param {string} destDir
  */
@@ -666,11 +721,20 @@ function extractArchive(archivePath, destDir) {
         { stdio: 'inherit', timeout: 120_000, shell: true },
       );
     } else {
-      execSync(`unzip -qo "${archivePath}" -d "${destDir}"`, {
-        stdio: 'inherit',
-        timeout: 120_000,
-        shell: true,
-      });
+      // macOS bsdtar handles .zip natively; fall back to unzip if needed
+      try {
+        execSync(`tar xf "${archivePath}" -C "${destDir}"`, {
+          stdio: 'inherit',
+          timeout: 120_000,
+          shell: true,
+        });
+      } catch {
+        execSync(`unzip -qo "${archivePath}" -d "${destDir}"`, {
+          stdio: 'inherit',
+          timeout: 120_000,
+          shell: true,
+        });
+      }
     }
   } else {
     // .tar.gz or .tar.xz
@@ -1092,7 +1156,9 @@ async function autoMode() {
     return;
   }
 
-  const url = process.env.XNAPIFY_DB_URL || 'sqlite:database.sqlite';
+  // --db <type> overrides XNAPIFY_DB_URL dialect detection
+  const url =
+    dbOverride || process.env.XNAPIFY_DB_URL || 'sqlite:database.sqlite';
   const dialect = detectDialect(url);
 
   ensureDeps(dialect);
@@ -1333,11 +1399,14 @@ Options:
 
 Environment:
   XNAPIFY_DB_URL   Database URL or shorthand (sqlite, postgres, mysql)
+  XNAPIFY_DB       Override dialect (same as --db, for npm lifecycle hooks)
 
 Examples:
   node tools/npm/preboot.js --start              # start DB detected from env
   node tools/npm/preboot.js --db mysql --start   # force MySQL start
   node tools/npm/preboot.js --db postgres --stop  # force PostgreSQL stop
+  XNAPIFY_DB=mysql npm run dev                   # dev with MySQL
+  XNAPIFY_DB=postgres npm start                  # start with PostgreSQL
 `);
 }
 
@@ -1354,9 +1423,18 @@ function resolveDialect(dbOverride) {
 }
 
 // Parse CLI arguments
+// --db <type> or XNAPIFY_DB env var overrides dialect detection.
+// XNAPIFY_DB env works with npm lifecycle hooks (predev/prestart)
+// where CLI args are not forwarded.
 const args = process.argv.slice(2);
 const dbIdx = args.indexOf('--db');
-const dbOverride = dbIdx !== -1 ? args[dbIdx + 1] : null;
+const dbOverride =
+  (dbIdx !== -1 ? args[dbIdx + 1] : null) || process.env.XNAPIFY_DB || null;
+
+// When override is active, route DB URL writes to .env.local
+// so the user's .env is not permanently mutated.
+if (dbOverride) useLocalEnv = true;
+
 const flag = args.find(
   a => a.startsWith('--') && a !== '--db' && a !== dbOverride,
 );
@@ -1385,6 +1463,8 @@ const COMMANDS = {
       console.log('💡 SQLite is in-process — no daemon needed');
       return;
     }
+    // Clean up .env.local override if present
+    cleanupEnvLocal();
     if (dialect === 'postgres') return stopPostgres();
     if (dialect === 'mysql') return stopMysql();
     console.warn(`⚠️  Unknown dialect: ${dialect}`);

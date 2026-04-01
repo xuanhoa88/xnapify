@@ -304,9 +304,13 @@ await db.connection.revertMigrations(); // Rollback last
 | `Cannot find module 'mysql2'`      | MySQL driver not installed         | Set `XNAPIFY_DB_URL=mysql` in `.env`, run `npm run dev`               |
 | PostgreSQL connection refused      | PG daemon not running              | `node tools/npm/preboot.js --db postgres --start`                      |
 | MySQL connection refused           | MySQL daemon not running           | `node tools/npm/preboot.js --db mysql --start`                         |
+| MySQL `ER_HOST_NOT_PRIVILEGED`     | `root@'%'` not created             | Reset: stop MySQL, `rm -rf .mysql/data`, restart                       |
+| MySQL `Unknown time zone: 'UTC'`   | Timezone tables not populated      | Reset: stop MySQL, `rm -rf .mysql/data`, restart                       |
+| MySQL download 403                 | CDN requires HTTP/2                | Ensure `curl` is installed (preboot uses curl, not Node.js https)      |
 | `SQLITE_BUSY: database is locked`  | Parallel extension migrations      | Serialize loads in `ServerExtensionManager.sync()` (see Part 10)       |
 | Extension active in DB but not loaded | Crash during toggle or stale DB | Deactivate via admin UI, then re-toggle                                |
 | Test: `Database setup failed: Please install sqlite3` | Used `npx jest` directly | Use `npm test -- --testPathPattern=...` (runs `pretest` hook)     |
+| DB still uses MySQL after override | `.env.local` left from override    | Delete `.env.local` or run `node tools/npm/preboot.js --stop`          |
 
 ---
 

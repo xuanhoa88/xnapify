@@ -731,6 +731,10 @@ XNAPIFY_PUBLIC_APP_DESC="Snap your API, Stream your React"
 # Use shorthand 'sqlite', 'postgres', 'mysql' or full URL
 XNAPIFY_DB_URL=sqlite:database.sqlite
 
+# On-demand dialect override (session-scoped, writes to .env.local)
+# Usage: XNAPIFY_DB=mysql npm run dev
+# XNAPIFY_DB=                 # Not set by default
+
 # Authentication
 XNAPIFY_KEY=                # Auto-generated on first run
 XNAPIFY_JWT_EXPIRY=7d
@@ -748,12 +752,13 @@ WEBPACK_PROFILE=false
 2. **Start development:** `npm run dev` (auto-creates `.env`, installs DB driver)
 3. **Switch to PostgreSQL:** Set `XNAPIFY_DB_URL=postgres` in `.env`, then `npm run dev`
 4. **Switch to MySQL:** Set `XNAPIFY_DB_URL=mysql` in `.env`, then `npm run dev`
-5. **Make changes:** Edit files in `src/`
-6. **See updates:** HMR updates browser automatically
-7. **Run tests:** `npm run test` or `npm run test:watch`
-8. **Lint code:** `npm run lint` or `npm run fix`
-9. **Build production:** `npm run build`
-10. **Deploy:** Use Docker or direct Node.js deployment
+5. **On-demand override:** `XNAPIFY_DB=mysql npm run dev` (session-scoped, writes to `.env.local`)
+6. **Make changes:** Edit files in `src/`
+7. **See updates:** HMR updates browser automatically
+8. **Run tests:** `npm run test` or `npm run test:watch`
+9. **Lint code:** `npm run lint` or `npm run fix`
+10. **Build production:** `npm run build`
+11. **Deploy:** Use Docker or direct Node.js deployment
 
 ### Database Resolution
 
@@ -772,6 +777,17 @@ node tools/npm/preboot.js --stop                  # Stop embedded DB (auto-detec
 node tools/npm/preboot.js --db mysql --start      # Force MySQL start
 node tools/npm/preboot.js --db postgres --stop    # Force PostgreSQL stop
 ```
+
+On-demand override (session-scoped — does NOT mutate `.env`):
+
+```bash
+XNAPIFY_DB=mysql npm run dev                     # Dev with MySQL
+XNAPIFY_DB=postgres npm start                    # Production with PostgreSQL
+```
+
+> **Session isolation:** When `XNAPIFY_DB` or `--db` is used, the resolved URL
+> is written to `.env.local` (read by dotenv-flow with higher priority than `.env`).
+> The `--stop` command cleans up `.env.local`, restoring `.env` as the source of truth.
 
 ## Production Deployment
 

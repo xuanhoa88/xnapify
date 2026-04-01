@@ -87,6 +87,9 @@ node tools/npm/preboot.js --stop
 # Force specific dialect
 node tools/npm/preboot.js --db mysql --start
 node tools/npm/preboot.js --db postgres --stop
+
+# On-demand override (local dev only — uses .env.local, not applicable in Docker)
+XNAPIFY_DB=mysql npm run dev
 ```
 
 ## Debugging
