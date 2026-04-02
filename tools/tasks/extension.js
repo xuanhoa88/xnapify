@@ -14,7 +14,7 @@ const semver = require('semver');
 const webpack = require('webpack');
 
 const config = require('../config');
-const { computeChecksum, generateKey } = require('../utils/checksum');
+const { computeChecksum } = require('../utils/checksum');
 const { copyDir, pathExists } = require('../utils/fs');
 const { logInfo, logError, formatDuration } = require('../utils/logger');
 const createExtensionConfig = require('../webpack/extension.config');
@@ -43,13 +43,6 @@ const MANIFEST_FIELDS = [
   'screenshots',
   'slots',
   'autoload',
-];
-
-const WATCH_IGNORED = [
-  '**/node_modules/**',
-  '**/*.test.js',
-  '**/*.spec.js',
-  '**/__tests__/**',
 ];
 
 // ---------------------------------------------------------------------------
@@ -252,8 +245,9 @@ function watchForNewExtensions(options) {
 
   const watcher = webpack(watchConfig);
   return new Promise(resolve => {
-    watcher.watch({ ignored: WATCH_IGNORED, aggregateTimeout: 300 }, () =>
-      resolve(),
+    watcher.watch(
+      { ignored: config.hmrWatchIgnored, aggregateTimeout: 300 },
+      () => resolve(),
     );
   });
 }
@@ -324,7 +318,7 @@ async function buildExtensions(options = {}) {
     if (isWatch) {
       logInfo('👀 Watching for extension changes...');
       compiler.watch(
-        { ignored: WATCH_IGNORED, aggregateTimeout: 300 },
+        { ignored: config.hmrWatchIgnored, aggregateTimeout: 300 },
         onBuild,
       );
     } else {

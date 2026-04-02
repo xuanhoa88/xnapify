@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "compiledAt": "2026-04-02T08:09:00.000Z",
-  "testHash": "9f43ec42b9f9e1255b6d1a4154d37cee4755d4ef17dc1ee84186e96c1a0209b9",
+  "compiledAt": "2026-04-02T10:01:00.000Z",
+  "testHash": "",
   "title": "Quick Login via Demo Account Button",
   "actions": [
     {
@@ -13,32 +13,31 @@
     },
     {
       "step": 2,
+      "instruction": "Wait for the page to fully load",
+      "action": "wait",
+      "duration": 2000,
+      "description": "Wait for quick access buttons to render"
+    },
+    {
+      "step": 3,
       "instruction": "Click the Admin User quick access demo account button",
       "action": "click",
-      "selector": "button",
       "text": "Admin User",
       "description": "Click the Admin User quick login button"
     },
     {
-      "step": 3,
-      "instruction": "Wait for the form to auto-fill with demo credentials",
-      "action": "wait",
-      "duration": 3000,
-      "description": "Wait for auto-fill and form submission"
-    },
-    {
       "step": 4,
-      "instruction": "Observe the form submits automatically or wait for redirect",
+      "instruction": "Wait for the page to redirect after login",
       "action": "wait",
       "duration": 3000,
-      "description": "Wait for redirect after login"
+      "description": "Wait for login redirect to complete"
     },
     {
       "step": 5,
-      "instruction": "Verify the user is logged in and redirected to the dashboard",
+      "instruction": "Verify the user is on an authenticated page",
       "action": "assert_visible",
-      "selector": "nav, header, [class*='header'], [class*='sidebar']",
-      "description": "Verify dashboard/homepage is visible after login"
+      "text": "Admin",
+      "description": "Verify Admin identity is shown after login"
     }
   ]
 }

@@ -8,7 +8,7 @@
 import fs from 'fs';
 import path from 'path';
 
-import workerPool from '../workers';
+import { computeChecksum, verifyExtensionChecksum } from '../utils/checksum';
 
 import {
   installExtensionDependencies,
@@ -39,8 +39,8 @@ async function handleInstallJob(container, job) {
     });
     job.updateProgress(50);
 
-    // Compute integrity hash in worker thread (avoids blocking event loop)
-    const integrity = await workerPool.computeChecksum(extensionDir);
+    // Compute integrity hash after npm install
+    const integrity = await computeChecksum(extensionDir);
     const { Extension } = container.resolve('models');
     await Extension.update({ integrity }, { where: { key: extensionKey } });
     job.updateProgress(60);
@@ -164,8 +164,8 @@ async function handleToggleJob(container, job) {
         { required: false },
       );
       if (dbExtension && dbExtension.integrity) {
-        // Verify integrity in worker thread (avoids blocking event loop)
-        const { valid, actual } = await workerPool.verifyChecksum(
+        // Verify integrity before activating
+        const { valid, actual } = await verifyExtensionChecksum(
           extensionDir,
           dbExtension.integrity,
         );
@@ -182,11 +182,13 @@ async function handleToggleJob(container, job) {
       }
     }
 
+    // Install runtime dependencies in the bundle folder (build/extensions/<key>).
+    // The server HMR watcher ignores BUILD_DIR so this won't trigger recompilation.
     if (extensionDir && isActive) {
       await installExtensionDependencies(extensionDir, { name: extensionKey });
 
-      // Recompute integrity hash in worker thread after fresh npm install
-      const integrity = await workerPool.computeChecksum(extensionDir);
+      // Recompute integrity hash after fresh npm install
+      const integrity = await computeChecksum(extensionDir);
       await models.Extension.update(
         { integrity },
         { where: { key: extensionKey } },

@@ -444,12 +444,7 @@ function setupServerBundleWatcher(serverCompiler) {
   // Start watch mode on the server compiler
   serverCompiler.watch(
     {
-      ignored: [
-        '**/node_modules/**',
-        '**/*.test.js',
-        '**/*.spec.js',
-        '**/__tests__/**',
-      ],
+      ignored: config.hmrWatchIgnored,
       aggregateTimeout: 200,
       followSymlinks: false,
       poll: process.env.CHOKIDAR_USEPOLLING === 'true' ? 500 : false,

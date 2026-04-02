@@ -57,4 +57,15 @@ module.exports = {
   get bundleMaxAssetSize() {
     return env('WEBPACK_MAX_ASSET_SIZE', 250_000); // 250KB
   },
+
+  get hmrWatchIgnored() {
+    return [
+      '**/node_modules/**',
+      '**/*.test.js',
+      '**/*.spec.js',
+      '**/__tests__/**',
+      '**/e2e/**',
+      this.BUILD_DIR + '/**',
+    ];
+  },
 };
