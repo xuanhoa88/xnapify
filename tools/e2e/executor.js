@@ -19,6 +19,9 @@
 
 /* eslint-disable no-console, no-underscore-dangle */
 
+const http = require('http');
+const https = require('https');
+
 const config = require('../config');
 
 // ── SPA Stability Engine ──────────────────────────────────────────
@@ -798,6 +801,177 @@ const ACTIONS = {
       await page.screenshot({ path: action.path, fullPage: true });
     }
   },
+
+  // ── API Actions (no browser required) ────────────────────────────
+
+  async api_request({ apiState, baseUrl }, action) {
+    const method = (action.method || 'GET').toUpperCase();
+    const url = action.url.startsWith('http')
+      ? action.url
+      : `${baseUrl}${action.url}`;
+
+    const headers = {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      ...apiState.headers,
+      ...(action.headers || {}),
+    };
+
+    // Interpolate stored variables in URL, body, and headers
+    const interpolate = str => interpolateVars(str, apiState.variables);
+    const finalUrl = interpolate(url);
+
+    let body = null;
+    if (action.body) {
+      const bodyStr = JSON.stringify(action.body);
+      body = interpolate(bodyStr);
+    }
+
+    // Interpolate header values
+    for (const [key, val] of Object.entries(headers)) {
+      if (typeof val === 'string') headers[key] = interpolate(val);
+    }
+
+    const response = await apiRequest(finalUrl, {
+      method,
+      headers,
+      body,
+    });
+
+    // Store the response for subsequent assertions
+    apiState.lastResponse = response;
+  },
+
+  async assert_status({ apiState }, action) {
+    const { lastResponse } = apiState;
+    if (!lastResponse) {
+      throw new Error('No API response — call api_request first');
+    }
+
+    const { expected } = action;
+    if (lastResponse.statusCode !== expected) {
+      throw new Error(
+        `Expected status ${expected}, got ${lastResponse.statusCode}: ${lastResponse.body.slice(0, 200)}`,
+      );
+    }
+  },
+
+  async assert_body({ apiState }, action) {
+    const { lastResponse } = apiState;
+    if (!lastResponse) {
+      throw new Error('No API response — call api_request first');
+    }
+
+    let data;
+    try {
+      data = JSON.parse(lastResponse.body);
+    } catch {
+      throw new Error(
+        `Response body is not valid JSON: ${lastResponse.body.slice(0, 200)}`,
+      );
+    }
+
+    const value = getNestedValue(data, action.path);
+
+    if (action.exists !== undefined) {
+      if (action.exists && value === undefined) {
+        throw new Error(`Expected "${action.path}" to exist in response`);
+      }
+      if (!action.exists && value !== undefined) {
+        throw new Error(`Expected "${action.path}" to NOT exist in response`);
+      }
+      return;
+    }
+
+    if (action.equals !== undefined) {
+      const expected = interpolateVars(
+        String(action.equals),
+        apiState.variables,
+      );
+      if (String(value) !== expected) {
+        throw new Error(
+          `Expected "${action.path}" = "${expected}", got "${value}"`,
+        );
+      }
+      return;
+    }
+
+    if (action.contains !== undefined) {
+      const expected = interpolateVars(
+        String(action.contains),
+        apiState.variables,
+      );
+      if (!String(value).includes(expected)) {
+        throw new Error(
+          `Expected "${action.path}" to contain "${expected}", got "${value}"`,
+        );
+      }
+    }
+  },
+
+  async assert_header({ apiState }, action) {
+    const { lastResponse } = apiState;
+    if (!lastResponse) {
+      throw new Error('No API response — call api_request first');
+    }
+
+    const headerName = action.name.toLowerCase();
+    const actual = lastResponse.headers[headerName];
+
+    if (action.exists !== undefined) {
+      if (action.exists && !actual) {
+        throw new Error(`Expected header "${action.name}" to exist`);
+      }
+      if (!action.exists && actual) {
+        throw new Error(`Expected header "${action.name}" to NOT exist`);
+      }
+      return;
+    }
+
+    if (action.contains !== undefined) {
+      if (!actual || !actual.includes(action.contains)) {
+        throw new Error(
+          `Expected header "${action.name}" to contain "${action.contains}", got "${actual}"`,
+        );
+      }
+    }
+  },
+
+  async store_value({ apiState }, action) {
+    const { lastResponse } = apiState;
+    if (!lastResponse) {
+      throw new Error('No API response — call api_request first');
+    }
+
+    let source;
+    if (action.from.startsWith('response.header.')) {
+      const hdrName = action.from.replace('response.header.', '').toLowerCase();
+      source = lastResponse.headers[hdrName];
+    } else if (action.from.startsWith('response.status')) {
+      source = lastResponse.statusCode;
+    } else {
+      // response.body path (e.g., "response.token" → path "token")
+      const bodyPath = action.from.replace(/^response\./, '');
+      let data;
+      try {
+        data = JSON.parse(lastResponse.body);
+      } catch {
+        throw new Error('Response body is not valid JSON');
+      }
+      source = getNestedValue(data, bodyPath);
+    }
+
+    if (source === undefined) {
+      throw new Error(`Cannot store — "${action.from}" not found in response`);
+    }
+
+    apiState.variables[action.as] = String(source);
+  },
+
+  async set_header({ apiState }, action) {
+    const value = interpolateVars(action.value, apiState.variables);
+    apiState.headers[action.name] = value;
+  },
 };
 
 /**
@@ -821,8 +995,85 @@ async function executeAction(action, context) {
   }
 }
 
+// ── API Helpers ───────────────────────────────────────────────────
+
+/**
+ * Create a fresh API state object for API/system tests.
+ * Holds persistent headers, stored variables, and the last response.
+ */
+function createAPIState() {
+  return {
+    headers: {},
+    variables: {},
+    lastResponse: null,
+  };
+}
+
+/**
+ * Make an HTTP request and return { statusCode, headers, body }.
+ */
+function apiRequest(url, options) {
+  return new Promise((resolve, reject) => {
+    const parsedUrl = new URL(url);
+    const lib = parsedUrl.protocol === 'https:' ? https : http;
+
+    const reqOpts = {
+      method: options.method || 'GET',
+      headers: options.headers || {},
+      timeout: options.timeout || 30000,
+    };
+
+    const req = lib.request(parsedUrl, reqOpts, res => {
+      let body = '';
+      res.on('data', chunk => {
+        body += chunk;
+      });
+      res.on('end', () => {
+        resolve({
+          statusCode: res.statusCode,
+          headers: res.headers,
+          body,
+        });
+      });
+    });
+
+    req.on('error', reject);
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error('API request timeout'));
+    });
+
+    if (options.body) req.write(options.body);
+    req.end();
+  });
+}
+
+/**
+ * Get a nested value from an object using dot notation.
+ * e.g., getNestedValue({ user: { email: 'a' } }, 'user.email') → 'a'
+ */
+function getNestedValue(obj, path) {
+  if (!path) return obj;
+  return path.split('.').reduce((o, key) => {
+    if (o === undefined || o === null) return undefined;
+    return o[key];
+  }, obj);
+}
+
+/**
+ * Interpolate {{variableName}} placeholders in a string.
+ */
+function interpolateVars(str, variables) {
+  if (!str || typeof str !== 'string') return str;
+  return str.replace(/\{\{(\w+)\}\}/g, (match, name) => {
+    if (variables[name] !== undefined) return variables[name];
+    return match; // leave unresolved placeholders as-is
+  });
+}
+
 module.exports = {
   executeAction,
+  createAPIState,
   waitForSPAStable,
   waitForRouteReady,
   installSPAInstrumentation,

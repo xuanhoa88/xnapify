@@ -88,12 +88,17 @@ const PROVIDERS = {
 
 // ── System Prompt ─────────────────────────────────────────────────
 
-const SYSTEM_PROMPT = `You are a browser automation interpreter for E2E testing.
+const SYSTEM_PROMPT = `You are a test automation interpreter for E2E testing.
 
-Given a test step written in natural English and the current page context,
-return a JSON action that the test runner can execute via Puppeteer.
+Given a test step written in natural English and the current page/API context,
+return a JSON action that the test runner can execute.
 
-## Available Actions
+The test type will be provided in context:
+- "ui" → use browser actions (navigate, click, type, assert_visible, etc.)
+- "api" → use HTTP actions (api_request, assert_status, assert_body, etc.)
+- "system" → use both browser and HTTP actions as needed
+
+## Browser Actions (for ui and system tests)
 
 {
   "action": "navigate",
@@ -189,16 +194,71 @@ return a JSON action that the test runner can execute via Puppeteer.
   "description": "Take a screenshot"
 }
 
+## API Actions (for api and system tests)
+
+{
+  "action": "api_request",
+  "method": "POST",
+  "url": "/api/auth/login",
+  "body": { "email": "admin@example.com", "password": "admin123" },
+  "description": "Login with admin credentials"
+}
+
+{
+  "action": "assert_status",
+  "expected": 200,
+  "description": "Verify response status is 200"
+}
+
+{
+  "action": "assert_body",
+  "path": "token",
+  "exists": true,
+  "description": "Verify token field exists in response"
+}
+
+{
+  "action": "assert_body",
+  "path": "user.email",
+  "equals": "admin@example.com",
+  "description": "Verify user email matches"
+}
+
+{
+  "action": "assert_header",
+  "name": "Content-Type",
+  "contains": "application/json",
+  "description": "Verify JSON content type"
+}
+
+{
+  "action": "store_value",
+  "from": "response.token",
+  "as": "authToken",
+  "description": "Store the JWT token for later use"
+}
+
+{
+  "action": "set_header",
+  "name": "Authorization",
+  "value": "Bearer {{authToken}}",
+  "description": "Set Authorization header with stored token"
+}
+
 ## Rules
 - Return ONLY valid JSON, no markdown, no explanation
 - Use the most specific action type available
+- For "api" test type: ONLY use api_request, assert_status, assert_body, assert_header, store_value, set_header
+- For "ui" test type: ONLY use browser actions (navigate, click, type, assert_visible, etc.)
+- For "system" test type: use whichever action type fits the step
 - For elements inside cards/containers, use "click_within" with container context
 - For assertions, use "assert_visible", "assert_not_visible", "assert_checked"
 - "text" fields should match visible text content on the page
 - Prefer text-based selectors over CSS class selectors when possible
 - If the step is observational (e.g., "Observe the shimmer animation"), return a "wait" action with 1000ms
 - For login steps, use the "login" action with credentials from the test prerequisites
-- Prerequisites provide context like email, password, role, url — use them in your actions`;
+- Prerequisites provide context like email, password, role, url — use them in your actions
+- Use {{variableName}} to reference stored values in API actions`;
 
 // ── Note: Caching is handled by compiler.js (per-test script.json) ──
 // interpretStep is now a pure LLM call used at compile time.

@@ -2,7 +2,7 @@
 description: Run E2E test cases from a module's e2e/ folder using AI agent browser automation
 ---
 
-Run browser-based E2E tests by reading natural language test cases from `test.md` files colocated inside each module's `e2e/` directory.
+Run E2E tests by reading natural language test cases from `test.md` files colocated inside each module's `e2e/` directory. Supports **3 test types**: browser UI tests, HTTP API integration tests, and mixed system tests.
 
 ## Quick Start (CLI)
 
@@ -24,17 +24,26 @@ node tools/e2e/runner.js --mode=run
 # Force recompile even if test.md hasn't changed
 node tools/e2e/runner.js --mode=compile --force
 
-# Run a specific module
+# Run a specific module (all test types)
 node tools/e2e/runner.js extensions
 
-# Run a specific extension
+# Run a specific extension (all test types)
 node tools/e2e/runner.js posts-module
 
 # Run a specific category within a module
 node tools/e2e/runner.js extensions/install
 
-# Run a single test case
+# Run a single test case (UI)
 node tools/e2e/runner.js quick-access-plugin/login/01-buttons-visible
+
+# Run all API tests for a module
+node tools/e2e/runner.js quick-access-plugin/api
+
+# Run a specific API test category
+node tools/e2e/runner.js quick-access-plugin/api/auth
+
+# Run a single API test case
+node tools/e2e/runner.js quick-access-plugin/api/auth/01-login-jwt
 ```
 
 > [!TIP]
@@ -60,19 +69,36 @@ node tools/e2e/runner.js quick-access-plugin/login/01-buttons-visible
 
 The CLI tool (`tools/e2e/runner.js`) uses a **compile-once, run-many** architecture:
 
+### Test Types
+
+Test type is **auto-detected from the directory structure**:
+
+| Directory | Type | What it does | Browser? | Speed |
+|-----------|------|-------------|----------|-------|
+| `e2e/{category}/{case}/` | 🌐 UI | Browser automation via Puppeteer | ✅ Yes | ~12s |
+| `e2e/ui/{category}/{case}/` | 🌐 UI | Explicit browser test | ✅ Yes | ~12s |
+| `e2e/api/{category}/{case}/` | 🔌 API | HTTP requests only (no browser) | ❌ No | ~0.5s |
+| `e2e/system/{category}/{case}/` | 🔗 System | Browser + HTTP combined | ✅ Yes | ~12s |
+
+> [!TIP]
+> API tests are ~25x faster than UI tests. Use them for endpoint validation, auth flows, RBAC checks.
+
 ### Compilation (LLM → script.json)
-1. Discover `test.md` files in the nested `e2e/{category}/{case}/test.md` hierarchy
+1. Discover `test.md` files in the nested `e2e/` hierarchy
 2. Parse YAML front-matter (credentials) + markdown AST (test steps) via `front-matter` + `markdown-it`
 3. Auto-detect an LLM provider from IDE/CLI env vars (or use `stdin` for agent callback)
 4. Send each English step to the LLM for interpretation into a structured JSON action
-5. Save the compiled script as `script.json` + a `.test-hash` (SHA256 of `test.md`)
+5. The LLM receives the **test type** and generates appropriate actions (browser or API)
+6. Save the compiled script as `script.json` + a `.test-hash` (SHA256 of `test.md`)
 
-### Execution (script.json → Puppeteer)
+### Execution (script.json → Puppeteer / HTTP)
 1. Load the pre-compiled `script.json` (no LLM needed!)
-2. Execute each action via Puppeteer with SPA stability detection (5-signal engine)
-3. Take per-step screenshots (`step-01.png`, `step-02.png`, ...) and final state (`final.png`)
-4. Write per-test `result.md` and module-level `_summary.md`
-5. Auto-recompile any failed step via LLM and retry once (self-healing)
+2. Detect test types and launch browser **only if UI/system tests exist**
+3. For UI: execute via Puppeteer with SPA stability detection (5-signal engine)
+4. For API: execute via Node.js HTTP client (zero dependencies, no browser)
+5. Take per-step screenshots for UI tests (`step-01.png`, `step-02.png`, ...) and final state (`final.png`)
+6. Write per-test `result.md` and module-level `_summary.md`
+7. Auto-recompile any failed step via LLM and retry once (self-healing)
 
 ### When compilation happens
 | Scenario | LLM called? |
@@ -93,26 +119,39 @@ AI agents can also execute `test.md` test cases directly using their browser aut
 
 ## Test Case Format
 
-Each module's `e2e/` directory uses a **nested structure**: one `test.md` per test case, organized by category.
+Each module's `e2e/` directory uses a **nested structure**: one `test.md` per test case, organized by type and category.
 
 ```
 e2e/
-  {category}/
+  {category}/                ← UI tests (legacy, backward compatible)
     {NN-name}/
-      test.md              ← test case definition (tester writes this)
-      script.json          ← compiled automation actions (LLM generates, committed)
-      .test-hash           ← sha256 of test.md at compile time (gitignored)
-      scripts/             ← archived old scripts (committed for history)
-        2026-04-02_13-49.json
-      results/             ← test run results
-        2026-04-02_13-49/
-          result.md        ← text report (committed for audit)
-          step-01.png      ← screenshots (gitignored, binary)
-          step-02.png
-          final.png
+      test.md
+      script.json
+  ui/                        ← Explicit UI tests
+    {category}/
+      {NN-name}/
+        test.md
+        script.json
+  api/                       ← API integration tests (no browser)
+    {category}/
+      {NN-name}/
+        test.md
+        script.json
+  system/                    ← Mixed browser + API tests
+    {category}/
+      {NN-name}/
+        test.md
+        script.json
 ```
 
-### test.md format
+Each test case directory contains:
+- `test.md` — test case definition (tester writes this)
+- `script.json` — compiled automation actions (LLM generates, committed)
+- `.test-hash` — sha256 of test.md at compile time (gitignored)
+- `scripts/` — archived old scripts (committed for history)
+- `results/` — test run results (text committed, binary gitignored)
+
+### UI test.md format (browser tests)
 
 ```markdown
 ---
@@ -143,6 +182,35 @@ Description of what this test validates.
 - The new extension card is visible in the grid
 ```
 
+### API test.md format (HTTP integration tests)
+
+```markdown
+---
+email: admin@example.com
+password: admin123
+---
+
+# Login API Returns Valid JWT
+
+Verify the authentication endpoint returns a valid JWT token.
+
+## Steps
+
+1. Send POST request to /api/auth/login with email and password from prerequisites
+2. Assert response status is 200
+3. Assert response body contains "accessToken" field
+4. Use the token to send GET request to /api/auth/profile
+5. Assert response status is 200
+6. Assert response body field "user.email" equals "admin@example.com"
+
+## Expected Results
+
+- Login returns HTTP 200 with a JWT token
+- Profile endpoint accepts the token and returns user data
+```
+
+### Syntax Reference
+
 - **YAML front-matter** (`---`) = Prerequisites (credentials, fixtures)
 - **H1 (`#`)** = Test case title (one per file)
 - **Paragraph text** = Description (not executed)
@@ -152,23 +220,25 @@ Description of what this test validates.
 
 ### Directory Naming Convention
 
-Test cases use **category** and **NN-name** directories:
+Test cases use optional **type**, **category**, and **NN-name** directories:
 
 ```
 e2e/
-  install/
-    01-upload/test.md
-    02-verify-persists/test.md
-  activate/
-    01-toggle/test.md
-    02-verify-persists/test.md
-    03-filter-tab/test.md
-  login/
+  login/                          ← UI tests (legacy layout, backward compatible)
     01-buttons-visible/test.md
     02-demo-login/test.md
+  api/                            ← API integration tests
+    auth/
+      01-login-jwt/test.md
+      02-invalid-creds/test.md
+    users/
+      01-list-pagination/test.md
+  system/                         ← Mixed tests
+    user-flow/
+      01-register-login-profile/test.md
 ```
 
-Categories group related tests (e.g., `install`, `activate`, `login`).
+Categories group related tests (e.g., `auth`, `login`, `install`).
 Cases use `NN-name` numbering for execution order.
 
 ## Execution Steps
@@ -267,6 +337,7 @@ Contents:
 # {Test Case Title}
 
 **Source:** {path to test.md file}
+**Type:** 🌐 UI | 🔌 API | 🔗 System
 **Date:** {ISO timestamp}
 **Result:** ✅ PASS | ❌ FAIL
 **Duration:** {ms}
@@ -332,7 +403,7 @@ After ALL test cases in a module are executed, a module-level summary is created
 
 ```
 src/extensions/quick-access-plugin/e2e/
-├── login/                                   ← Category
+├── login/                                   ← UI tests (legacy layout)
 │   ├── 01-buttons-visible/                  ← Test case
 │   │   ├── test.md                          ← Test definition (committed)
 │   │   ├── script.json                      ← Compiled automation (committed)
@@ -349,6 +420,14 @@ src/extensions/quick-access-plugin/e2e/
 │   └── 02-demo-login/
 │       ├── test.md
 │       └── script.json
+├── api/                                     ← API integration tests
+│   └── auth/
+│       └── 01-login-jwt/
+│           ├── test.md
+│           ├── script.json
+│           └── results/
+│               └── 2026-04-02_09-06/
+│                   └── result.md            ← No screenshots (API-only)
 └── _results/                                ← Module-level summaries
     └── 2026-04-02_13-49/
         └── _summary.md                      ← Text summary (committed)
@@ -358,6 +437,8 @@ src/extensions/quick-access-plugin/e2e/
 
 Each test case gets a `script.json` — a compiled automation script:
 
+### UI script example
+
 ```json
 {
   "version": 1,
@@ -365,23 +446,45 @@ Each test case gets a `script.json` — a compiled automation script:
   "testHash": "a1b2c3d4e5f6...",
   "title": "Quick Access Buttons Visible on Login Page",
   "actions": [
-    {
-      "step": 1,
-      "instruction": "Navigate to the login page",
-      "action": "navigate",
-      "target": "/login",
-      "description": "Open the login page"
-    },
-    {
-      "step": 2,
-      "instruction": "Wait for the page to fully load",
-      "action": "wait",
-      "waitFor": "networkidle",
-      "description": "Wait for all resources to load"
-    }
+    { "step": 1, "action": "navigate", "url": "/login", "description": "Open the login page" },
+    { "step": 2, "action": "wait", "duration": 2000, "description": "Wait for page load" },
+    { "step": 3, "action": "assert_visible", "text": "Admin User", "description": "Verify button" }
   ]
 }
 ```
+
+### API script example
+
+```json
+{
+  "version": 1,
+  "compiledAt": "2026-04-02T09:06:00.000Z",
+  "testHash": "691e7a81aaf0...",
+  "title": "Login API Returns Valid JWT",
+  "actions": [
+    { "step": 1, "action": "api_request", "method": "POST", "url": "/api/auth/login",
+      "body": { "email": "admin@example.com", "password": "admin123" } },
+    { "step": 2, "action": "assert_status", "expected": 200 },
+    { "step": 3, "action": "assert_body", "path": "data.accessToken", "exists": true },
+    { "step": 4, "action": "store_value", "from": "response.data.accessToken", "as": "authToken" },
+    { "step": 5, "action": "set_header", "name": "Authorization", "value": "Bearer {{authToken}}" },
+    { "step": 6, "action": "api_request", "method": "GET", "url": "/api/auth/profile" },
+    { "step": 7, "action": "assert_status", "expected": 200 },
+    { "step": 8, "action": "assert_body", "path": "data.user.email", "equals": "admin@example.com" }
+  ]
+}
+```
+
+### Available API actions
+
+| Action | Description | Key Fields |
+|--------|-------------|------------|
+| `api_request` | Send HTTP request | `method`, `url`, `body`, `headers` |
+| `assert_status` | Check status code | `expected` (number) |
+| `assert_body` | Check JSON response | `path`, `exists`/`equals`/`contains` |
+| `assert_header` | Check response header | `name`, `exists`/`contains` |
+| `store_value` | Save value for reuse | `from` (e.g. `response.data.token`), `as` |
+| `set_header` | Set persistent header | `name`, `value` (supports `{{var}}`) |
 
 - **Committed to git** — teammates run tests without needing LLM API keys
 - **Auto-archived** — when `test.md` changes, old script moves to `scripts/` for history
@@ -428,6 +531,8 @@ When the user asks:
 - `run e2e for oauth-google` → Discover `src/extensions/oauth-google-plugin/e2e/**/test.md` and execute
 - `run e2e for posts` → Discover `src/extensions/posts-module/e2e/**/test.md` and execute
 - `run the login tests for quick-access` → Run `src/extensions/quick-access-plugin/e2e/login/*/test.md`
+- `run API tests for quick-access` → Run `node tools/e2e/runner.js quick-access-plugin/api`
+- `run the auth API tests` → Run `node tools/e2e/runner.js quick-access-plugin/api/auth`
 - `compile e2e scripts` → Run `node tools/e2e/runner.js --mode=compile`
 - `run all e2e tests` → Find ALL `e2e/` folders in both `src/apps/` and `src/extensions/`, run each
 - `/run-e2e` → Same as "run all e2e tests"

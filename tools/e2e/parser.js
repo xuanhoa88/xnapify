@@ -185,16 +185,27 @@ function parseTestFile(filePath) {
   // Merge file-level YAML prerequisites with inline ones
   const mergedPrereqs = { ...filePrereqs, ...prerequisites };
 
+  // Compute file path relative to e2e/ directory
+  // For typed: e2e/api/auth/01-login → "api/auth/01-login/test.md"
+  // For legacy: e2e/login/01-buttons → "login/01-buttons/test.md"
+  let relativeFile = `${category}/${caseName}/test.md`;
+  const parts = testCaseDir.split(path.sep);
+  const e2eIdx = parts.lastIndexOf('e2e');
+  if (e2eIdx !== -1 && e2eIdx + 1 < parts.length) {
+    relativeFile = parts.slice(e2eIdx + 1).join('/') + '/test.md';
+  }
+
   return {
     title,
     description,
     prerequisites: mergedPrereqs,
     steps,
     expectedResults,
-    file: `${category}/${caseName}/test.md`,
+    file: relativeFile,
     category,
     caseName,
     testCaseDir,
+    testType: detectTestType(testCaseDir),
   };
 }
 
@@ -266,4 +277,31 @@ function findAllE2eDirs(rootDir) {
   return results.sort();
 }
 
-module.exports = { parseTestFile, discoverTestFiles, findAllE2eDirs };
+/**
+ * Detect the test type from the directory structure.
+ *
+ * Convention:
+ *   e2e/api/{category}/{case}     → 'api'   (HTTP-only, no browser)
+ *   e2e/ui/{category}/{case}      → 'ui'    (browser via Puppeteer)
+ *   e2e/system/{category}/{case}  → 'system' (browser + HTTP combined)
+ *   e2e/{category}/{case}         → 'ui'    (backward compatible default)
+ *
+ * @param {string} testCaseDir  Absolute path to test case directory
+ * @returns {'ui'|'api'|'system'}
+ */
+function detectTestType(testCaseDir) {
+  const parts = testCaseDir.split(path.sep);
+  const e2eIdx = parts.lastIndexOf('e2e');
+  if (e2eIdx === -1 || e2eIdx + 1 >= parts.length) return 'ui';
+
+  const typeDir = parts[e2eIdx + 1];
+  if (['api', 'ui', 'system'].includes(typeDir)) return typeDir;
+  return 'ui'; // backward compatible default
+}
+
+module.exports = {
+  parseTestFile,
+  discoverTestFiles,
+  findAllE2eDirs,
+  detectTestType,
+};

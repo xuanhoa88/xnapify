@@ -51,12 +51,13 @@ const {
   compileTestCase,
   recompileStep,
 } = require('./compiler');
-const { executeAction } = require('./executor');
+const { executeAction, createAPIState } = require('./executor');
 const { interpretStep } = require('./llm-interpreter');
 const {
   parseTestFile,
   discoverTestFiles,
   findAllE2eDirs,
+  detectTestType,
 } = require('./parser');
 const {
   createTestCaseResultsDir,
@@ -66,6 +67,8 @@ const {
 } = require('./reporter');
 
 const ROOT_DIR = config.CWD || process.cwd();
+
+const TYPE_ICONS = { ui: '🌐', api: '🔌', system: '🔗' };
 
 // ── Config ────────────────────────────────────────────────────────
 
@@ -91,11 +94,14 @@ function resolveTarget(arg) {
   if (!arg) return findAllE2eDirs(ROOT_DIR);
 
   // Supports:
-  //   "extensions"                              → run all in extensions module
-  //   "quick-access-plugin"                     → run all in quick-access-plugin
-  //   "extensions/install"                      → run all in install category
-  //   "extensions/install/01-upload"             → run single test case
-  //   "quick-access-plugin/login/01-buttons-visible" → run single test case
+  //   "extensions"                                    → run all in extensions module
+  //   "quick-access-plugin"                           → run all in quick-access-plugin
+  //   "extensions/install"                            → run all in install category
+  //   "extensions/install/01-upload"                  → run single test case
+  //   "quick-access-plugin/login/01-buttons-visible"  → run single test case
+  //   "quick-access-plugin/api"                       → run all API tests
+  //   "quick-access-plugin/api/auth"                  → run all in api/auth category
+  //   "quick-access-plugin/api/auth/01-login-jwt"     → run single API test case
   const parts = arg.split('/');
   const mod = parts[0];
 
@@ -110,34 +116,34 @@ function resolveTarget(arg) {
     process.exit(1);
   }
 
-  // Single test case: module/category/case
-  if (parts.length === 3) {
-    const testFile = path.join(e2eDir, parts[1], parts[2], 'test.md');
-    if (!fs.existsSync(testFile)) {
-      console.error(`❌ Test case not found: ${testFile}`);
-      process.exit(1);
-    }
+  // Remaining path after module name
+  const rest = parts.slice(1);
+
+  // Build the actual sub-path within e2e/
+  const subPath = rest.join(path.sep);
+  const fullPath = path.join(e2eDir, subPath);
+
+  // Single test case: resolve to test.md
+  const testFile = path.join(fullPath, 'test.md');
+  if (fs.existsSync(testFile)) {
     return [{ dir: e2eDir, files: [testFile] }];
   }
 
-  // Category: module/category → discover all cases in that category
-  if (parts.length === 2) {
-    const catDir = path.join(e2eDir, parts[1]);
-    if (!fs.existsSync(catDir)) {
-      console.error(`❌ Category not found: ${catDir}`);
-      process.exit(1);
-    }
-    const cases = fs
-      .readdirSync(catDir, { withFileTypes: true })
-      .filter(d => d.isDirectory() && !d.name.startsWith('_'));
-    const files = cases
-      .map(c => path.join(catDir, c.name, 'test.md'))
-      .filter(f => fs.existsSync(f));
+  // Category or type directory: discover all cases beneath it
+  if (rest.length >= 1 && fs.existsSync(fullPath)) {
+    const files = discoverTestFiles([fullPath]);
     if (files.length === 0) {
-      console.error(`❌ No test cases found in category: ${parts[1]}`);
+      console.error(`❌ No test cases found in: ${subPath}`);
       process.exit(1);
     }
     return [{ dir: e2eDir, files }];
+  }
+
+  // Invalid sub-path
+  if (rest.length >= 1) {
+    console.error(`❌ Path not found: ${subPath}`);
+    console.error(`   Searched: ${fullPath}`);
+    process.exit(1);
   }
 
   // Module only: discover all
@@ -275,12 +281,21 @@ async function run() {
   testFiles.forEach(t => console.log(`   ${path.relative(ROOT_DIR, t.file)}`));
   console.log('');
 
-  // Launch browser (skip for compile-only mode)
+  // Launch browser only if needed (skip for compile-only or API-only tests)
   let browser = null;
   let page = null;
-  if (mode !== 'compile') {
+  const needsBrowser =
+    mode !== 'compile' &&
+    testFiles.some(t => {
+      const type = detectTestType(path.dirname(t.file));
+      return type === 'ui' || type === 'system';
+    });
+
+  if (needsBrowser) {
     browser = await launchBrowser({ headless });
     page = await createPage(browser);
+  } else if (mode !== 'compile') {
+    console.log('  🔌 API-only tests — no browser launched');
   }
 
   // Group files by e2e directory (module)
@@ -310,7 +325,8 @@ async function run() {
       let testPassed = true;
       let testError = '';
 
-      console.log(`\n  📄 ${tc.file} — ${tc.title}`);
+      const typeIcon = TYPE_ICONS[tc.testType] || '🌐';
+      console.log(`\n  📄 ${tc.file} — ${typeIcon} ${tc.title}`);
       if (resultsDir) {
         console.log(`     📁 Results: ${path.relative(ROOT_DIR, resultsDir)}`);
       }
@@ -328,6 +344,7 @@ async function run() {
 
       const context = {
         page,
+        apiState: createAPIState(),
         baseUrl,
         currentCard: null,
         prerequisites: tc.prerequisites || {},
@@ -404,7 +421,7 @@ async function run() {
               );
               try {
                 const newAction = await recompileStep(tc, s, interpretStep, {
-                  currentUrl: page.url(),
+                  currentUrl: page ? page.url() : baseUrl,
                 });
                 actionResult = await executeAction(newAction, context);
               } catch (retryErr) {
@@ -416,8 +433,8 @@ async function run() {
               throw new Error(actionResult.error);
             }
 
-            // Per-step screenshot
-            if (resultsDir) {
+            // Per-step screenshot (browser tests only)
+            if (page && resultsDir) {
               const stepNum = String(s + 1).padStart(2, '0');
               try {
                 await page.screenshot({

@@ -107,9 +107,13 @@ function writeTestResult(resultsDir, testCase, result) {
     evidenceText = 'No evidence captured.';
   }
 
+  const typeIcons = { ui: '🌐 UI', api: '🔌 API', system: '🔗 System' };
+  const typeLabel = typeIcons[testCase.testType] || '🌐 UI';
+
   const content = `# ${testCase.title}
 
 **Source:** ${result.sourceFile}
+**Type:** ${typeLabel}
 **Date:** ${result.timestamp}
 **Result:** ${result.passed ? '✅ PASS' : '❌ FAIL'}
 **Duration:** ${result.duration}ms
