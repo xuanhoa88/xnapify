@@ -167,6 +167,40 @@ async function copyStaticAssets(extensions) {
 }
 
 // ---------------------------------------------------------------------------
+// Extension Node Modules
+// ---------------------------------------------------------------------------
+
+/**
+ * Symlink each extension's source `node_modules` into the build output.
+ *
+ * Webpack's `nodeExternals` marks extension-local dependencies as externals
+ * (e.g. `passport-google-oauth20`). At runtime the built bundle `require()`s
+ * them, but Node resolves from the *output* directory — which has no
+ * `node_modules`. A symlink bridges the gap without duplicating files.
+ */
+async function linkExtensionNodeModules(extensions) {
+  for (const { dirName, path: extensionPath } of extensions) {
+    const source = path.join(extensionPath, 'node_modules');
+    const target = path.join(EXTENSIONS_BUILD_DIR, dirName, 'node_modules');
+
+    if (!(await pathExists(source))) continue;
+
+    // Remove stale link or directory before creating a fresh symlink
+    try {
+      const stat = await fs.promises.lstat(target);
+      if (stat.isSymbolicLink() || stat.isDirectory()) {
+        await fs.promises.rm(target, { recursive: true, force: true });
+      }
+    } catch {
+      // target doesn't exist — nothing to remove
+    }
+
+    await fs.promises.symlink(source, target, 'junction');
+    logInfo(`🔗 Linked node_modules for ${dirName}`);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Webpack Helpers
 // ---------------------------------------------------------------------------
 
@@ -298,6 +332,7 @@ async function buildExtensions(options = {}) {
 
       await generateManifests(extensions);
       await copyStaticAssets(extensions);
+      await linkExtensionNodeModules(extensions);
 
       logInfo(
         `✅ Extension build completed in ${formatDuration(Date.now() - start)}`,

@@ -17,6 +17,7 @@ import { createNativeRequire } from '@shared/utils/createNativeRequire';
 
 import {
   BaseExtensionManager,
+  ExtensionState,
   EXTENSION_METADATA,
   BUFFERED_ROUTES,
   STORED_ADAPTERS,
@@ -674,7 +675,15 @@ class ServerExtensionManager extends BaseExtensionManager {
         try {
           // eslint-disable-next-line no-await-in-loop
           await this.loadExtension(id, manifest);
-          loaded++;
+
+          // loadExtension catches errors internally and returns undefined
+          // (does not re-throw), so check metadata state for accurate count
+          const meta = this[EXTENSION_METADATA].get(id);
+          if (meta && meta.state === ExtensionState.FAILED) {
+            failed++;
+          } else {
+            loaded++;
+          }
         } catch (err) {
           failed++;
           console.warn(
@@ -742,7 +751,7 @@ class ServerExtensionManager extends BaseExtensionManager {
     await this.emit('extensions:refreshing', { extensionIds: resolvedIds });
 
     // Unload all targeted extensions in parallel
-    await Promise.all(
+    await Promise.allSettled(
       resolvedIds.map(async id => {
         await this.unloadExtension(id);
         this[EXTENSION_METADATA].delete(id);

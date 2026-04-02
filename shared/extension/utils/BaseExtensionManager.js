@@ -807,7 +807,7 @@ export class BaseExtensionManager {
         error,
       );
       await this.emit('extension:activate-failed', { id, error });
-      throw error;
+      return false;
     }
   }
 
@@ -861,7 +861,7 @@ export class BaseExtensionManager {
         error,
       );
       await this.emit('extension:deactivate-failed', { id, error });
-      throw error;
+      return false;
     }
   }
 
@@ -1298,7 +1298,7 @@ export class BaseExtensionManager {
     await this.emit('extensions:refreshing', { extensionIds: null });
 
     const allIds = Array.from(this[ACTIVE_EXTENSIONS].keys());
-    await Promise.all(allIds.map(id => this.unloadExtension(id)));
+    await Promise.allSettled(allIds.map(id => this.unloadExtension(id)));
 
     this[ACTIVE_EXTENSIONS].clear();
     this[EXTENSION_METADATA].clear();
@@ -1476,7 +1476,7 @@ export class BaseExtensionManager {
 
     // Unload all extensions
     const extensionIds = Array.from(this[ACTIVE_EXTENSIONS].keys());
-    await Promise.all(extensionIds.map(id => this.unloadExtension(id)));
+    await Promise.allSettled(extensionIds.map(id => this.unloadExtension(id)));
 
     // Clear all base state
     this[ACTIVE_EXTENSIONS].clear();
