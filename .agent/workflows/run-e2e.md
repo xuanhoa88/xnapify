@@ -102,12 +102,12 @@ e2e/
       test.md              ← test case definition (tester writes this)
       script.json          ← compiled automation actions (LLM generates, committed)
       .test-hash           ← sha256 of test.md at compile time (gitignored)
-      scripts/             ← archived old scripts (history)
+      scripts/             ← archived old scripts (committed for history)
         2026-04-02_13-49.json
-      results/             ← test run results (gitignored)
+      results/             ← test run results
         2026-04-02_13-49/
-          result.md
-          step-01.png
+          result.md        ← text report (committed for audit)
+          step-01.png      ← screenshots (gitignored, binary)
           step-02.png
           final.png
 ```
@@ -339,19 +339,19 @@ src/extensions/quick-access-plugin/e2e/
 │   │   ├── .test-hash                       ← Hash of test.md (gitignored)
 │   │   ├── scripts/                         ← Archived old scripts (committed)
 │   │   │   └── 2026-04-01_10-03.json
-│   │   └── results/                         ← Test run results (gitignored)
+│   │   └── results/                         ← Test run results
 │   │       └── 2026-04-02_13-49/
-│   │           ├── result.md
-│   │           ├── step-01.png
-│   │           ├── step-02.png
-│   │           ├── final.png
-│   │           └── recording.webp
+│   │           ├── result.md                ← Text report (committed)
+│   │           ├── step-01.png              ← Binary evidence (gitignored)
+│   │           ├── step-02.png              ← Binary evidence (gitignored)
+│   │           ├── final.png                ← Binary evidence (gitignored)
+│   │           └── recording.webp           ← Binary evidence (gitignored)
 │   └── 02-demo-login/
 │       ├── test.md
 │       └── script.json
-└── _results/                                ← Module-level summaries (gitignored)
+└── _results/                                ← Module-level summaries
     └── 2026-04-02_13-49/
-        └── _summary.md
+        └── _summary.md                      ← Text summary (committed)
 ```
 
 ## Compiled Scripts (script.json)

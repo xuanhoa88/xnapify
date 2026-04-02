@@ -79,10 +79,27 @@ function needsCompile(testCaseDir) {
   if (!fs.existsSync(scriptFile)) return true;
 
   const storedHash = getStoredHash(testCaseDir);
-  if (!storedHash) return true;
-
   const currentHash = getTestHash(testCaseDir);
-  return storedHash !== currentHash;
+
+  // Primary: check .test-hash file
+  if (storedHash) {
+    return storedHash !== currentHash;
+  }
+
+  // Fallback: .test-hash is gitignored, check testHash inside script.json
+  // This handles fresh clones where script.json was committed but .test-hash wasn't
+  try {
+    const script = JSON.parse(fs.readFileSync(scriptFile, 'utf-8'));
+    if (script.testHash && script.testHash === currentHash) {
+      // Restore .test-hash for future runs
+      fs.writeFileSync(path.join(testCaseDir, HASH_FILE), currentHash);
+      return false;
+    }
+  } catch {
+    // Corrupted script.json — needs recompile
+  }
+
+  return true;
 }
 
 /**

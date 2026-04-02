@@ -181,55 +181,69 @@ async function run() {
   }
   console.log('');
 
-  // Validate LLM connectivity before launching browser
-  // Resolve auto-detect early to check if Ollama is needed
+  // ── Deferred LLM validation ──
+  // Only validate when compilation is actually needed (not upfront).
   let resolvedLLM = llmProvider;
-  if (llmProvider === 'auto') {
-    // Peek at which provider auto-detect will choose
-    const hasGemini =
-      config.env('GEMINI_API_KEY') || config.env('GOOGLE_API_KEY');
-    const hasOpenAI = config.env('OPENAI_API_KEY');
-    const hasAnthropic = config.env('ANTHROPIC_API_KEY');
-    resolvedLLM = hasGemini
-      ? 'google'
-      : hasOpenAI
-        ? 'openai'
-        : hasAnthropic
-          ? 'anthropic'
-          : 'ollama';
-    console.log(`  🔍 Auto-detected LLM: ${resolvedLLM}`);
-  }
+  let llmValidated = false;
 
-  if (resolvedLLM === 'ollama') {
-    const ollamaUrl =
-      config.env('E2E_LLM_BASE_URL') || 'http://localhost:11434';
-    try {
-      await new Promise((resolve, reject) => {
-        const req = http.request(
-          `${ollamaUrl}/api/tags`,
-          { method: 'GET', timeout: 5000 },
-          res => {
-            res.resume();
-            resolve();
-          },
-        );
-        req.on('error', reject);
-        req.on('timeout', () => {
-          req.destroy();
-          reject(new Error('timeout'));
+  async function ensureLLMAvailable() {
+    if (llmValidated || mode === 'run') return;
+    llmValidated = true;
+
+    if (llmProvider === 'auto') {
+      const hasGemini =
+        config.env('GEMINI_API_KEY') || config.env('GOOGLE_API_KEY');
+      const hasOpenAI = config.env('OPENAI_API_KEY');
+      const hasAnthropic = config.env('ANTHROPIC_API_KEY');
+      resolvedLLM = hasGemini
+        ? 'google'
+        : hasOpenAI
+          ? 'openai'
+          : hasAnthropic
+            ? 'anthropic'
+            : 'ollama';
+      console.log(`  🔍 Auto-detected LLM: ${resolvedLLM}`);
+    }
+
+    if (resolvedLLM === 'ollama') {
+      const ollamaUrl =
+        config.env('E2E_LLM_BASE_URL') || 'http://localhost:11434';
+      try {
+        await new Promise((resolve, reject) => {
+          const req = http.request(
+            `${ollamaUrl}/api/tags`,
+            { method: 'GET', timeout: 5000 },
+            res => {
+              res.resume();
+              resolve();
+            },
+          );
+          req.on('error', reject);
+          req.on('timeout', () => {
+            req.destroy();
+            reject(new Error('timeout'));
+          });
+          req.end();
         });
-        req.end();
-      });
-      console.log('  ✅ Ollama is running');
-    } catch {
-      console.error(`  ❌ Ollama not reachable at ${ollamaUrl}`);
-      console.error('     Start with: ollama serve');
-      console.error(
-        '     Or set GEMINI_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY',
-      );
-      process.exit(1);
+        console.log('  ✅ Ollama is running');
+      } catch {
+        console.error(`  ❌ Ollama not reachable at ${ollamaUrl}`);
+        console.error('     Start with: ollama serve');
+        console.error(
+          '     Or set GEMINI_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY',
+        );
+        process.exit(1);
+      }
     }
   }
+
+  // For compile mode, validate LLM immediately (we know we'll need it)
+  if (mode === 'compile') {
+    await ensureLLMAvailable();
+  } else if (mode === 'run') {
+    console.log('  📜 Run mode — LLM not needed');
+  }
+  // auto mode: deferred — validate only when a test needs compilation
   console.log('');
 
   // Resolve target directories
@@ -287,14 +301,19 @@ async function run() {
 
     for (const file of files) {
       const tc = parseTestFile(file);
-      const resultsDir = createTestCaseResultsDir(tc.testCaseDir, timestamp);
+      const resultsDir =
+        mode !== 'compile'
+          ? createTestCaseResultsDir(tc.testCaseDir, timestamp)
+          : null;
       const startTime = Date.now();
       const stepResults = [];
       let testPassed = true;
       let testError = '';
 
       console.log(`\n  📄 ${tc.file} — ${tc.title}`);
-      console.log(`     📁 Results: ${path.relative(ROOT_DIR, resultsDir)}`);
+      if (resultsDir) {
+        console.log(`     📁 Results: ${path.relative(ROOT_DIR, resultsDir)}`);
+      }
       if (Object.keys(tc.prerequisites || {}).length > 0) {
         const prereqStr = Object.entries(tc.prerequisites)
           .map(([k, v]) => `${k}=${k === 'password' ? '***' : v}`)
@@ -340,11 +359,12 @@ async function run() {
         testError = 'No compiled script. Run --mode=compile first.';
       } else if (mode === 'compile' || (mode === 'auto' && shouldCompile)) {
         // Compile mode: call LLM for each step, save script.json
+        await ensureLLMAvailable();
         try {
           script = await compileTestCase(
             tc,
             interpretStep,
-            { currentUrl: page.url() },
+            { currentUrl: page ? page.url() : 'about:blank' },
             timestamp,
           );
           if (mode === 'compile') {
@@ -364,8 +384,8 @@ async function run() {
         );
       }
 
-      // ── Execute actions ──
-      if (script && testPassed) {
+      // ── Execute actions (skip for compile-only mode) ──
+      if (script && testPassed && mode !== 'compile') {
         const stepsPromise = (async () => {
           for (let s = 0; s < script.actions.length; s++) {
             const action = script.actions[s];
@@ -397,14 +417,16 @@ async function run() {
             }
 
             // Per-step screenshot
-            const stepNum = String(s + 1).padStart(2, '0');
-            try {
-              await page.screenshot({
-                path: path.join(resultsDir, `step-${stepNum}.png`),
-                fullPage: true,
-              });
-            } catch {
-              // Screenshot may fail
+            if (resultsDir) {
+              const stepNum = String(s + 1).padStart(2, '0');
+              try {
+                await page.screenshot({
+                  path: path.join(resultsDir, `step-${stepNum}.png`),
+                  fullPage: true,
+                });
+              } catch {
+                // Screenshot may fail
+              }
             }
 
             stepResults.push({
@@ -425,16 +447,20 @@ async function run() {
         } finally {
           clearTimeout(timeoutId);
         }
+      } else {
+        clearTimeout(timeoutId);
       }
 
       // Final screenshot
-      try {
-        await page.screenshot({
-          path: path.join(resultsDir, 'final.png'),
-          fullPage: true,
-        });
-      } catch {
-        // Screenshot may fail
+      if (page && resultsDir) {
+        try {
+          await page.screenshot({
+            path: path.join(resultsDir, 'final.png'),
+            fullPage: true,
+          });
+        } catch {
+          // Screenshot may fail
+        }
       }
 
       const duration = Date.now() - startTime;
@@ -452,7 +478,9 @@ async function run() {
         timestamp: new Date().toISOString(),
       };
 
-      writeTestResult(resultsDir, tc, result);
+      if (resultsDir) {
+        writeTestResult(resultsDir, tc, result);
+      }
       moduleResults.push(result);
       allResults.push(result);
 

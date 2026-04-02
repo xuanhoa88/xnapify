@@ -63,8 +63,8 @@ function writeTestResult(resultsDir, testCase, result) {
   const stepsText = result.steps
     .map((s, i) => {
       const icon = s.success ? '✅' : s.skipped ? '⏭️' : '❌';
-      const note = s.error ? ` — ${s.error}` : s.note || '';
-      return `${i + 1}. ${icon} ${testCase.steps[i] || '(not executed)'}${note}`;
+      const detail = s.error ? ` — ${s.error}` : s.note ? ` — ${s.note}` : '';
+      return `${i + 1}. ${icon} ${testCase.steps[i] || '(not executed)'}${detail}`;
     })
     .join('\n');
 

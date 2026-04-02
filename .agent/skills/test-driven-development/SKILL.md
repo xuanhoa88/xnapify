@@ -375,7 +375,8 @@ No exceptions without your human partner's permission.
 ## Related Skills & Workflows
 
 | Need | Skill / Workflow |
-|------|-----------------|
+|------|--------------------|
+| Spec requirement traceability | `requirement-traceability` skill |
 | xnapify test patterns (Redux, components, API) | `/add-test` workflow |
 | Browser-based E2E testing | `browser-test` skill, `/run-e2e` workflow |
 | Code quality review | `code-reviewer` skill |

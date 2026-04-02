@@ -20,7 +20,30 @@ npm run lint
 
 If tests or linting fail, fix them first. Do NOT commit broken code.
 
-## 2. Review Changes
+## 2. Secret Scanning
+
+The pre-commit hook automatically runs `tools/git/secret-scanner.js` on all staged files. It blocks commits containing:
+
+- Hardcoded API keys (AWS, Google, Stripe, SendGrid, etc.)
+- Private keys (RSA, DSA, EC, PGP)
+- Platform tokens (GitHub, GitLab, Slack, npm)
+- Hardcoded passwords, secrets, and connection strings with credentials
+- JWT tokens embedded in source code
+
+**If the scanner blocks your commit:**
+
+1. Move the secret to `.env` and reference via `process.env.XNAPIFY_*`
+2. If it's a false positive, add `// secret-scanner-ignore` to that line
+3. Test fixtures with fake keys should go in `__tests__/fixtures/` (auto-skipped)
+
+**Manual scan (full repo):**
+
+// turbo
+```bash
+node tools/git/secret-scanner.js --all --fix
+```
+
+## 3. Review Changes
 
 // turbo
 ```bash
@@ -34,7 +57,7 @@ git diff --stat
 
 Review what will be committed. Group related changes into a single commit. If changes span unrelated features, split into multiple commits.
 
-## 3. Stage Files
+## 4. Stage Files
 
 Stage only the files related to the current change:
 
@@ -46,7 +69,7 @@ git add <file1> <file2> ...
 
 **Never commit:** `.env`, `database.sqlite`, `node_modules/`, `build/`, `.DS_Store`
 
-## 4. Write Commit Message
+## 5. Write Commit Message
 
 Use [Conventional Commits](https://www.conventionalcommits.org/) format:
 
@@ -85,7 +108,7 @@ git commit -m "chore: upgrade sequelize to 6.38"
 - No period at end
 - Lowercase after type prefix
 
-## 5. Create Branch (if on main)
+## 6. Create Branch (if on main)
 
 // turbo
 ```bash
@@ -104,13 +127,13 @@ git checkout -b <type>/<short-description>
 - `refactor/webhook-engine`
 - `docs/update-readme`
 
-## 6. Commit
+## 7. Commit
 
 ```bash
 git commit -m "<type>(<scope>): <description>"
 ```
 
-## 7. Push (if requested)
+## 8. Push (if requested)
 
 ```bash
 git push origin <branch-name>

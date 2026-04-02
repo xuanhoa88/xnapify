@@ -516,6 +516,7 @@ The code-reviewer checks that other skills' output is correct:
 | **extension-developer** | `boot`/`shutdown` symmetry, IPC uses `__EXTENSION_ID__`, no `src/apps/` imports |
 | **security-auditor** | Zod validation present, RBAC guards, env var prefix, no raw SQL, CSP compliance |
 | **clean-code** | SRP, DRY, naming, syntax restrictions (`??`, `?.`), functions under 20 lines |
+| **requirement-traceability** | Code traces to spec requirements, no unauthorized additions, amendments documented |
 | **i18n-localization** | No hardcoded strings, translation hook exists, fallback strings provided |
 | **frontend-design** | CSS Modules used, no inline styles, responsive considerations |
 

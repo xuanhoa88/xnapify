@@ -139,6 +139,7 @@ After saving the plan, offer execution choice:
 
 Proceed with task-by-task execution:
 - Use `using-git-worktrees` skill for workspace isolation
-- Follow `test-driven-development` skill for each task
+- Follow `requirement-traceability` skill to ensure every task traces to a spec requirement
+- Follow `test-driven-development` skill for each task's coding
 - Use `/git-commit` workflow for commits between tasks
 - Use `/update-code` workflow if modifying existing code

@@ -196,7 +196,19 @@ uploads/
 .node-red/
 
 # E2E test infrastructure
-tools/e2e/.step-cache.json
+# Compile hash (regenerated on each compile)
+**/.test-hash
+
+# Binary evidence files (screenshots, videos) — too large for git
+**/e2e/**/results/**/*.png
+**/e2e/**/results/**/*.jpg
+**/e2e/**/results/**/*.jpeg
+**/e2e/**/results/**/*.webp
+**/e2e/**/results/**/*.gif
+**/e2e/**/results/**/*.mp4
+**/e2e/**/results/**/*.webm
+
+# Text reports (result.md, _summary.md) are COMMITTED for audit history
 
 # Embedded PostgreSQL data
 .postgres/
