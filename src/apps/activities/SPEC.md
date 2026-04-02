@@ -31,7 +31,7 @@ The Activities module serves as the central audit logging system. It asynchronou
 
 ## 3. Background Workers (`api/workers`)
 *Defines background processing functions.*
-- **Implementation:** `activities.worker.js` exports `LOG_ACTIVITY` which handles the actual database write (`Activity.create()`).
+- **Implementation:** `activities.worker.js` exports `logActivity` (default export) which handles the actual database write (`Activity.create()`).
 - **Execution:** `index.js` exports a `logActivity(container, payload)` utility that calls the worker function directly (same-process) for non-blocking I/O.
 
 ## 4. Frontend SSR Rendering (`views/`)

@@ -32,15 +32,7 @@ shared/api/engines/fs/
 │   ├── zip-utils.js      # ZIP creation/extraction utilities
 │   └── index.js          # Re-exports all utils
 ├── workers/
-│   ├── index.js          # Utility barrel with high-level function exports
-│   ├── upload.worker.js  # Upload worker handler
-│   ├── download.worker.js
-│   ├── delete.worker.js
-│   ├── copy.worker.js
-│   ├── rename.worker.js
-│   ├── sync.worker.js
-│   ├── info.worker.js
-│   └── zip.worker.js     # ZIP create/extract worker
+│   └── index.js          # All FS operations (calls factory directly)
 ├── fs.test.js            # Main Jest tests
 └── fs.extract.test.js    # Extraction tests
 ```
@@ -58,7 +50,7 @@ index.js
     └── utils/* (crypto, os, path)
 
 workers/index.js
-└── workers/*.worker.js (direct imports)
+└── factory.js + utils/* (direct calls)
 ```
 
 ## 2. FilesystemManager Class (`factory.js`)
@@ -218,22 +210,22 @@ All providers implement: `store`, `retrieve`, `delete`, `exists`, `getMetadata`,
 
 ## 6. Worker Functions (`workers/index.js`)
 
-Worker functions are called directly (same-process) via utility exports from `workers/index.js`. Each function dispatches to the underlying `*.worker.js` file.
+Worker functions are defined directly in `workers/index.js`. Each function calls the FS factory methods with `useWorker: false` to prevent recursion.
 
 ### High-Level Utility Functions
 
-| Function | Worker File | Message Type |
+| Function | FS Method Called | Auto-Detects |
 |---|---|---|
-| `processUpload(filesData, options)` | `upload.worker.js` | `UPLOAD_SINGLE/BATCH` |
-| `processDownload(fileNames, options)` | `download.worker.js` | `DOWNLOAD_SINGLE/BATCH` |
-| `processDelete(fileNames, options)` | `delete.worker.js` | `DELETE_SINGLE/BATCH` |
-| `processRename(operations, options)` | `rename.worker.js` | `RENAME_SINGLE/BATCH` |
-| `processCopy(operations, options)` | `copy.worker.js` | `COPY_SINGLE/BATCH` |
-| `processSync(operations, options)` | `sync.worker.js` | `SYNC_SINGLE/BATCH` |
-| `processInfo(fileName, options)` | `info.worker.js` | `GET_FILE_INFO` |
-| `processPreview(fileName, options)` | `info.worker.js` | `PREVIEW_FILE` |
-| `createZipFile(fileInfos, outputPath, options)` | `zip.worker.js` | `CREATE_ZIP` |
-| `extractZip(zipSource, extractPath, options)` | `zip.worker.js` | `EXTRACT_ZIP` |
+| `processUpload(filesData, options)` | `fs.upload()` | Single vs Batch |
+| `processDownload(fileNames, options)` | `fs.download()` | Single vs Batch |
+| `processDelete(fileNames, options)` | `fs.remove()` | — |
+| `processRename(operations, options)` | `fs.rename()` | Single vs Batch |
+| `processCopy(operations, options)` | `fs.copy()` | Single vs Batch |
+| `processSync(operations, options)` | `fs.sync()` | Single vs Batch |
+| `processInfo(fileName, options)` | `fs.info()` | — |
+| `processPreview(fileName, options)` | `fs.preview()` | — |
+| `createZipFile(fileInfos, outputPath, options)` | `createZip()` | — |
+| `extractZip(zipSource, extractPath, options)` | `extractZip()` | — |
 
 All functions auto-detect `SINGLE` vs `BATCH` based on array length.
 
