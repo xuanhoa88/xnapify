@@ -466,25 +466,35 @@ async function retryUntilFound(finder, timeout = 10000, interval = 300) {
  */
 async function findByText(page, text, selector, timeout = 10000) {
   return retryUntilFound(async () => {
-    const elements = await page.$$(selector || '*');
-    for (const el of elements) {
-      const visible = await el.evaluate(e => e.offsetParent !== null);
-      if (!visible) continue;
-      const content = await el.evaluate(e => e.textContent.trim());
-      if (content.includes(text)) return el;
-    }
-
-    // Broader search
-    const fallback = await page.evaluateHandle(searchText => {
-      const all = document.querySelectorAll(
-        'a, button, span, div, li, h1, h2, h3, h4, label, p, td',
+    // Priority 1: search interactive elements (button, a, [role=button])
+    const interactive = await page.evaluateHandle(searchText => {
+      const btns = document.querySelectorAll(
+        'button, a, [role="button"], input[type="submit"], input[type="button"]',
       );
-      for (const node of all) {
+      for (const node of btns) {
         if (node.offsetParent === null) continue;
         if (node.textContent.trim().includes(searchText)) return node;
       }
       return null;
     }, text);
+    const interactiveEl = interactive.asElement();
+    if (interactiveEl) return interactiveEl;
+
+    // Priority 2: search within specified selector or common text elements
+    const querySelector =
+      selector || 'span, div, li, h1, h2, h3, h4, label, p, td';
+    const fallback = await page.evaluateHandle(
+      (searchText, sel) => {
+        const all = document.querySelectorAll(sel);
+        for (const node of all) {
+          if (node.offsetParent === null) continue;
+          if (node.textContent.trim().includes(searchText)) return node;
+        }
+        return null;
+      },
+      text,
+      querySelector,
+    );
     return fallback.asElement();
   }, timeout);
 }
@@ -587,7 +597,26 @@ const ACTIONS = {
     if (action.text) {
       const el = await findByText(page, action.text, action.selector);
       if (!el) throw new Error(`Element with text "${action.text}" not found`);
-      await el.click();
+
+      // If the matched element is not natively clickable, walk up to the
+      // nearest interactive ancestor (button, a, [role=button], etc.)
+      const clickTarget = await el.evaluateHandle(node => {
+        const interactive = ['BUTTON', 'A', 'INPUT', 'SELECT', 'TEXTAREA'];
+        let current = node;
+        while (current && current !== document.body) {
+          if (
+            interactive.includes(current.tagName) ||
+            current.getAttribute('role') === 'button' ||
+            current.onclick
+          ) {
+            return current;
+          }
+          current = current.parentElement;
+        }
+        return node; // fallback to original if no interactive parent
+      });
+      const target = clickTarget.asElement() || el;
+      await target.click();
       return;
     }
     if (action.selector) {
