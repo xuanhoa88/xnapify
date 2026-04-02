@@ -905,7 +905,7 @@ class ServerExtensionManager extends BaseExtensionManager {
         }
       }
 
-      // 3. Check installed dir
+      // 2. Check installed dir
       const baseDir = this.getInstalledExtensionsDir();
       if (baseDir && (await fileExists(baseDir, extensionKey))) {
         return { dir: path.join(baseDir, extensionKey), isDevExtension: false };
@@ -919,6 +919,7 @@ class ServerExtensionManager extends BaseExtensionManager {
 
     return { dir: null, isDevExtension: false };
   }
+
   /**
    * Derive the canonical extension ID from a manifest name.
    * Always computes from snakeCase(manifest.name) — the ID is never
