@@ -37,6 +37,19 @@ shared/api/engines/db/
 | `XNAPIFY_DB_POOL_MAX` | `5` | Maximum connection pool size |
 | `XNAPIFY_DB_POOL_MIN` | `0` | Minimum connection pool size |
 
+### SQLite Concurrency Tuning
+
+When the connection URL starts with `sqlite:`, Sequelize's `afterConnect` hook applies PRAGMAs on every new pool connection:
+
+| PRAGMA | Value | Purpose |
+|--------|-------|---------|
+| `journal_mode` | `WAL` | Concurrent readers + single writer |
+| `busy_timeout` | `5000` | Wait 5 s on lock instead of `SQLITE_BUSY` |
+| `synchronous` | `NORMAL` | Safe with WAL, reduces fsync |
+| `cache_size` | `-64000` | 64 MB page cache |
+| `foreign_keys` | `ON` | Enforce FK constraints |
+| `mmap_size` | `268435456` | 256 MB memory-mapped I/O |
+
 ## 3. Migrator (`migrator.js`)
 
 - `runMigrations(migrations, sequelize, options)` — executes pending migrations using Umzug.

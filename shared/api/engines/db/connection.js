@@ -24,6 +24,29 @@ import {
 const DEFAULT_DB_URL = 'sqlite:database.sqlite';
 const SQLITE_PREFIX = 'sqlite:';
 
+// SQLite performance tuning PRAGMAs (applied per-connection via afterConnect)
+const SQLITE_PRAGMAS = [
+  'PRAGMA journal_mode = WAL', // concurrent readers + single writer
+  'PRAGMA busy_timeout = 5000', // wait 5 s on lock instead of failing
+  'PRAGMA synchronous = NORMAL', // safe with WAL, less fsync overhead
+  'PRAGMA cache_size = -64000', // 64 MB page cache
+  'PRAGMA foreign_keys = ON', // enforce FK constraints
+  'PRAGMA mmap_size = 268435456', // 256 MB memory-mapped I/O
+];
+
+/**
+ * Promisified PRAGMA execution on a raw sqlite3 driver connection.
+ *
+ * @param {object} connection - Raw sqlite3.Database handle from the pool
+ * @param {string} sql        - PRAGMA statement to execute
+ * @returns {Promise<void>}
+ */
+function runSqlitePragma(connection, sql) {
+  return new Promise((resolve, reject) => {
+    connection.run(sql, err => (err ? reject(err) : resolve()));
+  });
+}
+
 /**
  * Build default Sequelize options.
  * Returns a fresh object each call to prevent cross-connection mutation.
@@ -151,9 +174,19 @@ export function createConnection(url, options) {
   // Deep merge with fresh defaults
   const config = merge({}, getDefaultOptions(), opts);
 
-  // SQLite does not support custom connection timezones in Sequelize
+  // SQLite-specific tuning
   if (databaseUrl.startsWith(SQLITE_PREFIX)) {
-    delete config.timezone;
+    delete config.timezone; // SQLite ignores connection timezones
+
+    // Apply WAL mode and performance PRAGMAs on every new pool connection
+    config.hooks = {
+      ...config.hooks,
+      afterConnect: async connection => {
+        for (const pragma of SQLITE_PRAGMAS) {
+          await runSqlitePragma(connection, pragma);
+        }
+      },
+    };
   }
 
   // Create connection and attach migration methods
