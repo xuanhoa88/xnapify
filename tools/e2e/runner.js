@@ -14,12 +14,13 @@
  * launches Chromium via Puppeteer, and executes them step by step.
  *
  * Usage:
- *   node tools/e2e/runner.js                        # Run all e2e tests
- *   node tools/e2e/runner.js extensions              # Run extensions module
- *   node tools/e2e/runner.js oauth-google-plugin     # Run specific extension
- *   node tools/e2e/runner.js extensions/02-activate  # Run specific file
- *   node tools/e2e/runner.js --headed                # Show browser window
- *   node tools/e2e/runner.js --clear-cache            # Clear LLM cache + run all
+ *   node tools/e2e/runner.js                         # Auto: compile if needed, run
+ *   node tools/e2e/runner.js --mode=compile           # Compile scripts via LLM
+ *   node tools/e2e/runner.js --mode=run               # Run from compiled scripts
+ *   node tools/e2e/runner.js --mode=compile --force   # Force recompile
+ *   node tools/e2e/runner.js extensions               # Run extensions module
+ *   node tools/e2e/runner.js quick-access-plugin      # Run specific extension
+ *   node tools/e2e/runner.js --headed                 # Show browser window
  *
  * Environment:
  *   E2E_PORT=1337          # App port (auto-detected from .env)
@@ -41,10 +42,15 @@ const fs = require('fs');
 const http = require('http');
 const path = require('path');
 
-const puppeteer = require('puppeteer');
-
 const config = require('../config');
 
+const { launchBrowser, createPage, closeBrowser } = require('./browser');
+const {
+  needsCompile,
+  loadScript,
+  compileTestCase,
+  recompileStep,
+} = require('./compiler');
 const { executeAction } = require('./executor');
 const { interpretStep } = require('./llm-interpreter');
 const {
@@ -53,7 +59,8 @@ const {
   findAllE2eDirs,
 } = require('./parser');
 const {
-  createResultsDir,
+  createTestCaseResultsDir,
+  createSummaryDir,
   writeTestResult,
   writeSummary,
 } = require('./reporter');
@@ -83,41 +90,68 @@ function resolvePort() {
 function resolveTarget(arg) {
   if (!arg) return findAllE2eDirs(ROOT_DIR);
 
-  // Check if it's a specific file path like "extensions/02-activate"
-  if (arg.includes('/')) {
-    const [mod, file] = arg.split('/');
-    const dirs = [
-      path.join(ROOT_DIR, 'src', 'apps', mod, 'e2e'),
-      path.join(ROOT_DIR, 'src', 'extensions', mod, 'e2e'),
-    ];
-    for (const dir of dirs) {
-      const filePath = path.join(dir, `${file}.md`);
-      if (fs.existsSync(filePath)) return [{ dir, files: [filePath] }];
-    }
-    console.error(`❌ Test file not found: ${arg}`);
+  // Supports:
+  //   "extensions"                              → run all in extensions module
+  //   "quick-access-plugin"                     → run all in quick-access-plugin
+  //   "extensions/install"                      → run all in install category
+  //   "extensions/install/01-upload"             → run single test case
+  //   "quick-access-plugin/login/01-buttons-visible" → run single test case
+  const parts = arg.split('/');
+  const mod = parts[0];
+
+  const e2eDirs = [
+    path.join(ROOT_DIR, 'src', 'apps', mod, 'e2e'),
+    path.join(ROOT_DIR, 'src', 'extensions', mod, 'e2e'),
+  ];
+  const e2eDir = e2eDirs.find(d => fs.existsSync(d));
+  if (!e2eDir) {
+    console.error(`❌ No e2e/ directory found for: ${mod}`);
+    console.error(`   Searched: ${e2eDirs.join(', ')}`);
     process.exit(1);
   }
 
-  // Module or extension name
-  const dirs = [
-    path.join(ROOT_DIR, 'src', 'apps', arg, 'e2e'),
-    path.join(ROOT_DIR, 'src', 'extensions', arg, 'e2e'),
-  ];
-  const found = dirs.filter(d => fs.existsSync(d));
-  if (found.length === 0) {
-    console.error(`❌ No e2e/ directory found for: ${arg}`);
-    console.error(`   Searched: ${dirs.join(', ')}`);
-    process.exit(1);
+  // Single test case: module/category/case
+  if (parts.length === 3) {
+    const testFile = path.join(e2eDir, parts[1], parts[2], 'test.md');
+    if (!fs.existsSync(testFile)) {
+      console.error(`❌ Test case not found: ${testFile}`);
+      process.exit(1);
+    }
+    return [{ dir: e2eDir, files: [testFile] }];
   }
-  return found;
+
+  // Category: module/category → discover all cases in that category
+  if (parts.length === 2) {
+    const catDir = path.join(e2eDir, parts[1]);
+    if (!fs.existsSync(catDir)) {
+      console.error(`❌ Category not found: ${catDir}`);
+      process.exit(1);
+    }
+    const cases = fs
+      .readdirSync(catDir, { withFileTypes: true })
+      .filter(d => d.isDirectory() && !d.name.startsWith('_'));
+    const files = cases
+      .map(c => path.join(catDir, c.name, 'test.md'))
+      .filter(f => fs.existsSync(f));
+    if (files.length === 0) {
+      console.error(`❌ No test cases found in category: ${parts[1]}`);
+      process.exit(1);
+    }
+    return [{ dir: e2eDir, files }];
+  }
+
+  // Module only: discover all
+  return [e2eDir];
 }
 
 // ── Main ──────────────────────────────────────────────────────────
 
 async function run() {
   const args = process.argv.slice(2);
-  const clearCache = args.includes('--clear-cache');
   const headed = args.includes('--headed');
+  const force = args.includes('--force');
+  const modeArg = args.find(a => a.startsWith('--mode='));
+  const mode = modeArg ? modeArg.split('=')[1] : 'auto'; // compile | run | auto
   const targetArg = args.find(a => !a.startsWith('--'));
   const port = resolvePort();
   const baseUrl = `http://localhost:${port}`;
@@ -128,15 +162,6 @@ async function run() {
     .replace(/[T:]/g, '_')
     .replace(/-/g, '-');
 
-  // Clear LLM step cache if requested
-  if (clearCache) {
-    const cacheFile = path.join(__dirname, '.step-cache.json');
-    if (fs.existsSync(cacheFile)) {
-      fs.unlinkSync(cacheFile);
-      console.log('🗑️  Cleared LLM step cache');
-    }
-  }
-
   const llmProvider = config.env('E2E_LLM_PROVIDER') || 'auto';
 
   console.log('');
@@ -145,6 +170,7 @@ async function run() {
   console.log('╚══════════════════════════════════════╝');
   console.log(`  Port:     ${port}`);
   console.log(`  Base URL: ${baseUrl}`);
+  console.log(`  Mode:     ${mode}${force ? ' (force)' : ''}`);
   console.log(`  Headless: ${headless}`);
   console.log(`  Target:   ${targetArg || 'all'}`);
   console.log(`  LLM:      ${llmProvider}`);
@@ -235,19 +261,13 @@ async function run() {
   testFiles.forEach(t => console.log(`   ${path.relative(ROOT_DIR, t.file)}`));
   console.log('');
 
-  // Launch browser
-  const browser = await puppeteer.launch({
-    headless,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--window-size=1280,900',
-    ],
-    defaultViewport: { width: 1280, height: 900 },
-  });
-
-  const page = await browser.newPage();
-  page.setDefaultTimeout(30000);
+  // Launch browser (skip for compile-only mode)
+  let browser = null;
+  let page = null;
+  if (mode !== 'compile') {
+    browser = await launchBrowser({ headless });
+    page = await createPage(browser);
+  }
 
   // Group files by e2e directory (module)
   const byModule = new Map();
@@ -260,78 +280,138 @@ async function run() {
 
   for (const [e2eDir, files] of byModule) {
     const moduleName = path.basename(path.dirname(e2eDir));
-    const resultsDir = createResultsDir(e2eDir, timestamp);
 
     console.log(`\n━━━ Module: ${moduleName} ━━━`);
-    console.log(`    Results: ${path.relative(ROOT_DIR, resultsDir)}`);
 
     const moduleResults = [];
 
     for (const file of files) {
-      const suite = parseTestFile(file);
-      const filePrefix = path.basename(file, '.md');
+      const tc = parseTestFile(file);
+      const resultsDir = createTestCaseResultsDir(tc.testCaseDir, timestamp);
+      const startTime = Date.now();
+      const stepResults = [];
+      let testPassed = true;
+      let testError = '';
 
-      console.log(`\n  📄 ${suite.file} — ${suite.phase}`);
+      console.log(`\n  📄 ${tc.file} — ${tc.title}`);
+      console.log(`     📁 Results: ${path.relative(ROOT_DIR, resultsDir)}`);
+      if (Object.keys(tc.prerequisites || {}).length > 0) {
+        const prereqStr = Object.entries(tc.prerequisites)
+          .map(([k, v]) => `${k}=${k === 'password' ? '***' : v}`)
+          .join(', ');
+        console.log(`     📋 Prerequisites: ${prereqStr}`);
+      }
+      if (tc.expectedResults.length > 0) {
+        console.log(
+          `     🎯 Expected: ${tc.expectedResults.length} acceptance criteria`,
+        );
+      }
 
-      for (let i = 0; i < suite.tests.length; i++) {
-        const tc = suite.tests[i];
-        const startTime = Date.now();
-        const stepResults = [];
-        let testPassed = true;
-        let testError = '';
+      const context = {
+        page,
+        baseUrl,
+        currentCard: null,
+        prerequisites: tc.prerequisites || {},
+        fixtureZip:
+          (tc.prerequisites || {}).fixture_zip || config.env('E2E_FIXTURE_ZIP'),
+      };
 
-        console.log(`    🧪 ${tc.name}`);
-        if (Object.keys(tc.prerequisites || {}).length > 0) {
-          const prereqStr = Object.entries(tc.prerequisites)
-            .map(([k, v]) => `${k}=${k === 'password' ? '***' : v}`)
-            .join(', ');
-          console.log(`       📋 Prerequisites: ${prereqStr}`);
-        }
+      const TEST_TIMEOUT = 120000; // 2 minutes per test case
+      let timeoutId;
+      const timeoutPromise = new Promise((_, reject) => {
+        timeoutId = setTimeout(
+          () =>
+            reject(
+              new Error(`Test case timed out after ${TEST_TIMEOUT / 1000}s`),
+            ),
+          TEST_TIMEOUT,
+        );
+      });
 
-        const context = {
-          page,
-          baseUrl,
-          currentCard: null,
-          prerequisites: tc.prerequisites || {},
-          fixtureZip:
-            (tc.prerequisites || {}).fixture_zip ||
-            config.env('E2E_FIXTURE_ZIP'),
-        };
+      // ── Resolve script (compile or load) ──
+      let script = null;
+      const shouldCompile =
+        mode === 'compile' || force || needsCompile(tc.testCaseDir);
 
-        const TEST_TIMEOUT = 120000; // 2 minutes per test case
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(
-            () =>
-              reject(
-                new Error(`Test case timed out after ${TEST_TIMEOUT / 1000}s`),
-              ),
-            TEST_TIMEOUT,
+      if (mode === 'run' && !loadScript(tc.testCaseDir)) {
+        console.log(`    ❌ No script.json found — run "--mode=compile" first`);
+        stepResults.push({ success: false, error: 'No compiled script found' });
+        testPassed = false;
+        testError = 'No compiled script. Run --mode=compile first.';
+      } else if (mode === 'compile' || (mode === 'auto' && shouldCompile)) {
+        // Compile mode: call LLM for each step, save script.json
+        try {
+          script = await compileTestCase(
+            tc,
+            interpretStep,
+            { currentUrl: page.url() },
+            timestamp,
           );
-        });
+          if (mode === 'compile') {
+            console.log(`  ✅ ${tc.title} — compiled`);
+          }
+        } catch (err) {
+          stepResults.push({ success: false, error: err.message });
+          testPassed = false;
+          testError = `Compilation failed: ${err.message}`;
+          console.log(`    ❌ Compile failed: ${err.message}`);
+        }
+      } else {
+        // Run mode: load pre-compiled script
+        script = loadScript(tc.testCaseDir);
+        console.log(
+          `    📜 Using compiled script (${script.actions.length} actions)`,
+        );
+      }
 
+      // ── Execute actions ──
+      if (script && testPassed) {
         const stepsPromise = (async () => {
-          for (let s = 0; s < tc.steps.length; s++) {
-            const step = tc.steps[s];
-            console.log(`      🤖 Step ${s + 1}: "${step}"`);
-            const llmContext = {
-              phase: suite.phase,
-              testName: tc.name,
-              currentUrl: page.url(),
-              prerequisites: tc.prerequisites || {},
-            };
-            const action = await interpretStep(step, llmContext);
+          for (let s = 0; s < script.actions.length; s++) {
+            const action = script.actions[s];
+            const stepLabel = action.instruction || `Step ${s + 1}`;
+            console.log(`    🤖 Step ${s + 1}: "${stepLabel}"`);
             console.log(
-              `         → ${action.action}: ${action.description || ''}`,
+              `       → ${action.action}: ${action.description || ''}`,
             );
-            const actionResult = await executeAction(action, context);
+
+            let actionResult = await executeAction(action, context);
+
+            // Auto-recompile on failure: reinterpret via LLM and retry once
+            if (!actionResult.success && mode !== 'run') {
+              console.log(
+                `    🔄 Step ${s + 1} failed — recompiling via LLM...`,
+              );
+              try {
+                const newAction = await recompileStep(tc, s, interpretStep, {
+                  currentUrl: page.url(),
+                });
+                actionResult = await executeAction(newAction, context);
+              } catch (retryErr) {
+                throw new Error(`Retry failed: ${retryErr.message}`);
+              }
+            }
+
             if (!actionResult.success) {
               throw new Error(actionResult.error);
             }
+
+            // Per-step screenshot
+            const stepNum = String(s + 1).padStart(2, '0');
+            try {
+              await page.screenshot({
+                path: path.join(resultsDir, `step-${stepNum}.png`),
+                fullPage: true,
+              });
+            } catch {
+              // Screenshot may fail
+            }
+
             stepResults.push({
               success: true,
               note: `${action.action}: ${action.description || ''}`,
             });
-            console.log(`      ✅ Step ${s + 1}: done`);
+            console.log(`    ✅ Step ${s + 1}: done`);
           }
         })();
 
@@ -341,49 +421,55 @@ async function run() {
           stepResults.push({ success: false, error: err.message });
           testPassed = false;
           testError = err.message;
-          console.log(`      ❌ Failed: ${err.message}`);
+          console.log(`    ❌ Failed: ${err.message}`);
+        } finally {
+          clearTimeout(timeoutId);
         }
-
-        // Screenshot
-        const screenshotName = `${filePrefix}_${i + 1}.png`;
-        const screenshotPath = path.join(resultsDir, screenshotName);
-        try {
-          await page.screenshot({ path: screenshotPath, fullPage: true });
-        } catch {
-          // Screenshot may fail in some states
-        }
-
-        const duration = Date.now() - startTime;
-        const result = {
-          testName: tc.name,
-          filePrefix,
-          passed: testPassed,
-          error: testError,
-          duration,
-          steps: stepResults,
-          screenshotPath,
-          sourceFile: path.relative(ROOT_DIR, file),
-          timestamp: new Date().toISOString(),
-        };
-
-        writeTestResult(resultsDir, filePrefix, tc, result);
-        moduleResults.push(result);
-        allResults.push(result);
-
-        const icon = testPassed ? '✅' : '❌';
-        console.log(`    ${icon} ${tc.name} (${duration}ms)`);
       }
+
+      // Final screenshot
+      try {
+        await page.screenshot({
+          path: path.join(resultsDir, 'final.png'),
+          fullPage: true,
+        });
+      } catch {
+        // Screenshot may fail
+      }
+
+      const duration = Date.now() - startTime;
+      const result = {
+        testName: tc.title,
+        category: tc.category,
+        caseName: tc.caseName,
+        passed: testPassed,
+        error: testError,
+        duration,
+        steps: stepResults,
+        expectedResults: tc.expectedResults,
+        resultsDir,
+        sourceFile: path.relative(ROOT_DIR, file),
+        timestamp: new Date().toISOString(),
+      };
+
+      writeTestResult(resultsDir, tc, result);
+      moduleResults.push(result);
+      allResults.push(result);
+
+      const icon = testPassed ? '✅' : '❌';
+      console.log(`  ${icon} ${tc.title} (${duration}ms)`);
     }
 
-    // Module summary
-    writeSummary(resultsDir, moduleName, moduleResults, { timestamp, port });
+    // Module summary — in e2e/_results/timestamp/
+    const summaryDir = createSummaryDir(e2eDir, timestamp);
+    writeSummary(summaryDir, moduleName, moduleResults, { timestamp, port });
     const passed = moduleResults.filter(r => r.passed).length;
     console.log(
       `\n  📊 ${moduleName}: ${passed}/${moduleResults.length} passed`,
     );
   }
 
-  await browser.close();
+  if (browser) await closeBrowser(browser);
 
   // Final summary
   const totalPassed = allResults.filter(r => r.passed).length;

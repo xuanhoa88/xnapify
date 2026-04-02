@@ -10,7 +10,7 @@
  * Uses the shared worker engine for worker pool management
  *
  * Features:
- * - Build-time worker discovery via webpack require.context
+ * - Worker discovery from pre-compiled standalone CJS files
  * - Hybrid execution: same-process first, fork fallback
  * - Worker pool management with automatic scaling
  * - Comprehensive error handling and recovery
@@ -19,11 +19,9 @@
 import { createWorkerPool } from '../../worker';
 import { FilesystemWorkerError } from '../utils';
 
-// Auto-load workers via require.context (*.worker.js or *.worker.ts)
-const workersContext = require.context('./', false, /\.worker\.[cm]?[jt]s$/i);
-
-// Create worker pool with filesystem-specific configuration
-const workerPool = createWorkerPool('Filesystem', workersContext, {
+// Workers are discovered from pre-compiled standalone CJS files at
+// `<bundleDir>/workers/`
+const workerPool = createWorkerPool('Filesystem', {
   ErrorHandler: FilesystemWorkerError,
 });
 

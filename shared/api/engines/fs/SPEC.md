@@ -218,9 +218,9 @@ All providers implement: `store`, `retrieve`, `delete`, `exists`, `getMetadata`,
 
 ## 6. Worker Pool (`workers/index.js`)
 
-Uses `createWorkerPool('📁 Filesystem', workersContext, { ErrorHandler: FilesystemWorkerError })`.
+Uses `createWorkerPool('📁 Filesystem', { ErrorHandler: FilesystemWorkerError })`.
 
-Workers auto-discovered via `require.context('./', false, /\.worker\.[cm]?[jt]s$/i)`.
+Workers are pre-compiled as standalone CJS files and discovered from the `workers/` directory at runtime via `fs.readdirSync`.
 
 ### High-Level Worker Methods
 

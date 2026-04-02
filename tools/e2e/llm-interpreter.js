@@ -38,10 +38,8 @@
 
 /* eslint-disable no-console */
 
-const fs = require('fs');
 const http = require('http');
 const https = require('https');
-const path = require('path');
 const readline = require('readline');
 
 const config = require('../config');
@@ -202,28 +200,8 @@ return a JSON action that the test runner can execute via Puppeteer.
 - For login steps, use the "login" action with credentials from the test prerequisites
 - Prerequisites provide context like email, password, role, url — use them in your actions`;
 
-// ── Cache ─────────────────────────────────────────────────────────
-
-const CACHE_FILE = path.join(__dirname, '.step-cache.json');
-
-function loadCache() {
-  try {
-    if (fs.existsSync(CACHE_FILE)) {
-      return JSON.parse(fs.readFileSync(CACHE_FILE, 'utf-8'));
-    }
-  } catch {
-    // Corrupted cache — ignore
-  }
-  return {};
-}
-
-function saveCache(cache) {
-  fs.writeFileSync(CACHE_FILE, JSON.stringify(cache, null, 2));
-}
-
-function getCacheKey(step, contextHint, urlHint) {
-  return `${contextHint || ''}::${urlHint || ''}::${step}`.toLowerCase().trim();
-}
+// ── Note: Caching is handled by compiler.js (per-test script.json) ──
+// interpretStep is now a pure LLM call used at compile time.
 
 // ── HTTP Request Helper ───────────────────────────────────────────
 
@@ -453,13 +431,6 @@ async function interpretStep(step, context) {
     apiKey = apiKey || detected.apiKey;
   }
 
-  // Check cache first
-  const cache = loadCache();
-  const cacheKey = getCacheKey(step, context.phase, context.currentUrl);
-  if (cache[cacheKey]) {
-    return cache[cacheKey];
-  }
-
   // Build prompt with page context + prerequisites
   const prereqs = context.prerequisites || {};
   let prereqText = '';
@@ -471,9 +442,8 @@ async function interpretStep(step, context) {
   }
 
   const prompt = `Current page: ${context.currentUrl || 'unknown'}
-Phase: ${context.phase || 'unknown'}
 Test case: ${context.testName || 'unknown'}
-${prereqText}
+${prereqText}${context.expectedResults && context.expectedResults.length > 0 ? `\nExpected Results:\n${context.expectedResults.map(e => `  - ${e}`).join('\n')}\n` : ''}
 Step to interpret:
 "${step}"
 
@@ -519,10 +489,6 @@ Return the JSON action to perform this step.`;
       }
     }
   }
-
-  // Cache the result
-  cache[cacheKey] = action;
-  saveCache(cache);
 
   return action;
 }

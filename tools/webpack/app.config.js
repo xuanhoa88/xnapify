@@ -17,6 +17,7 @@ const AsyncModuleFederationPlugin = require('./AsyncModuleFederationPlugin');
 const {
   createCacheGroups,
   createWebpackConfig,
+  createWorkerConfig,
   createCSSRule,
   createEnvDefine,
   createHostProvidedCSSPlugins,
@@ -237,11 +238,46 @@ const serverConfig = createWebpackConfig('server', {
 });
 
 // =============================================================================
+// WORKER CONFIGS (Core Apps)
+// =============================================================================
+
+/**
+ * Discover and compile worker files from all core app modules.
+ * Uses the same `createWorkerConfig({ workersDir })` pattern as extensions.
+ *
+ * Scans `src/apps/<appName>/api/workers/` directories.
+ * Output is namespaced: `build/workers/<appName>/<name>.worker.js`
+ */
+const workerConfigs = (() => {
+  const appsDir = path.join(config.APP_DIR, 'apps');
+  const configs = [];
+
+  try {
+    const appDirs = fs.readdirSync(appsDir, { withFileTypes: true });
+    for (const appDir of appDirs) {
+      if (!appDir.isDirectory()) continue;
+
+      const workerCfg = createWorkerConfig({
+        workersDir: path.join(appsDir, appDir.name, 'api', 'workers'),
+        outputPath: config.BUILD_DIR,
+        prefix: `workers/${appDir.name}`,
+      });
+      if (workerCfg) configs.push(workerCfg);
+    }
+  } catch {
+    // No apps directory — skip
+  }
+
+  return configs;
+})();
+
+// =============================================================================
 // EXPORTS
 // =============================================================================
 
 module.exports = {
   clientConfig,
   serverConfig,
+  workerConfigs,
   SERVER_BUNDLE_PATH,
 };

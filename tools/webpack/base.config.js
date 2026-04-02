@@ -724,6 +724,94 @@ function createWebpackConfig(name, options = {}) {
 }
 
 // =============================================================================
+// WORKER CONFIG BUILDER
+// =============================================================================
+
+/**
+ * Discover `*.worker.js` files recursively in a directory and return webpack
+ * entry descriptors. Each entry gets `library: { type: 'commonjs2' }` so the
+ * output is a standalone CJS file loadable by Piscina's `forceFork` mode.
+ *
+ * @param {string} workersDir - Absolute path to the workers directory
+ * @param {string} [prefix='workers'] - Output subdirectory prefix
+ * @returns {Object} Webpack entry map (entryName → entry descriptor)
+ */
+function discoverWorkerEntries(workersDir, prefix = 'workers') {
+  const entries = {};
+
+  try {
+    const files = fs.readdirSync(workersDir, {
+      withFileTypes: true,
+      recursive: true,
+    });
+    for (const file of files) {
+      if (!file.isFile()) continue;
+      const match = file.name.match(/^(.+\.worker)\.[cm]?[jt]s$/i);
+      if (match) {
+        // Dirent.parentPath exists in Node 21+, Dirent.path in Node 20+
+        // For older versions, fall back to workersDir (flat scan)
+        const fileDir = file.parentPath || file.path || workersDir;
+        const relDir = path.relative(workersDir, fileDir);
+        const entryName = relDir
+          ? `${prefix}/${relDir}/${match[1]}`
+          : `${prefix}/${match[1]}`;
+        entries[entryName] = {
+          import: path.join(fileDir, file.name),
+          library: { type: 'commonjs2' },
+        };
+      }
+    }
+  } catch {
+    // Directory doesn't exist — skip
+  }
+
+  return entries;
+}
+
+/**
+ * Create a webpack configuration that compiles `*.worker.js` files as
+ * standalone CJS modules for Piscina's `forceFork` thread execution.
+ *
+ * Reusable by both core apps (`app.config.js`) and extensions
+ * (`extension.config.js`). Returns `null` if no workers are found.
+ *
+ * @param {Object} options
+ * @param {string} options.workersDir - Absolute path to the workers source directory
+ * @param {string} options.outputPath - Absolute path for the output directory
+ * @param {string} [options.prefix='workers'] - Subdirectory prefix for output filenames
+ * @param {import('webpack').WebpackPluginInstance[]} [options.plugins=[]] - Additional plugins
+ * @param {Object} [options.overrides={}] - Extra webpack config to deep-merge
+ * @returns {Object|null} Webpack config or null if no workers found
+ */
+function createWorkerConfig({
+  workersDir,
+  outputPath,
+  prefix = 'workers',
+  plugins = [],
+  overrides = {},
+}) {
+  const entries = discoverWorkerEntries(workersDir, prefix);
+
+  // Skip if no workers found
+  if (Object.keys(entries).length === 0) return null;
+
+  return createWebpackConfig(
+    'server',
+    merge(
+      {
+        entry: entries,
+        output: {
+          path: outputPath,
+          filename: '[name].js',
+        },
+        plugins: [createEnvDefine(), ...plugins].filter(Boolean),
+      },
+      overrides,
+    ),
+  );
+}
+
+// =============================================================================
 // EXPORTS
 // =============================================================================
 
@@ -753,4 +841,5 @@ module.exports = {
   createProgressPlugin,
   createSharedDependencies,
   createWebpackConfig,
+  createWorkerConfig,
 };

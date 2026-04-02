@@ -457,7 +457,7 @@ src/apps/[module_name]/
 | Rule | What to Check |
 |------|---------------|
 | **Directory** | `api/workers/index.js` for pool, `*.worker.js` for handlers |
-| **Pool creation** | `createWorkerPool('Name', workersContext, { maxWorkers })` |
+| **Pool creation** | `createWorkerPool('Name', { maxWorkers })` |
 | **SCREAMING_SNAKE exports** | Handler functions exported as `TASK_NAME` |
 | **No `app`/`container` access** | Workers run in separate threads — cannot access singletons |
 | **Serializable payloads** | No functions, class instances, or circular refs |

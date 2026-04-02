@@ -360,7 +360,7 @@ async function collectStabilitySignals(page, opts) {
 /**
  * Wait until ALL stability signals report quiet for the settle window.
  *
- * @param {import('puppeteer').Page} page
+ * @param {import('puppeteer').Page} page  — provided via browser.js abstraction
  * @param {object} [opts] Override SPA_DEFAULTS
  * @param {number} [opts.timeout=15000]     Max total wait
  * @param {number} [opts.settleWindow=300]  How long all signals must be quiet

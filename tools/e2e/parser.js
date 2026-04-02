@@ -8,20 +8,37 @@
 /**
  * E2E Test Runner — Markdown Parser
  *
- * Parses .md test files using front-matter (YAML) and markdown-it (AST).
+ * Parses test.md files using front-matter (YAML) and markdown-it (AST).
  *
- * Format:
+ * Directory structure:
+ *   e2e/
+ *     {category}/
+ *       {NN-name}/
+ *         test.md              → test case definition
+ *         script.json          → compiled automation actions
+ *         .test-hash           → sha256 of test.md at compile time
+ *         results/             → test run results
+ *           {timestamp}/       → grouped by execution time
+ *             result.md
+ *             step-01.png
+ *             final.png
+ *
+ * test.md format:
  *   ---
- *   email: admin@test.com      → file-level prerequisites (shared)
+ *   email: admin@test.com      → prerequisites (credentials, fixtures)
  *   password: admin123
  *   role: admin
  *   ---
- *   # Phase Name               → suite name
- *   Description text            → suite description
- *   ## Test Case Title          → test case
- *   ### Prerequisite            → per-test prerequisites (merged with file-level)
+ *   # Test Case Title          → the test case name (one per file)
+ *   Description text            → what this test validates
+ *   ## Steps                    → executable steps (numbered list)
+ *   1. Navigate to the page
+ *   2. Click the button
+ *   ## Expected Results         → acceptance criteria (bullet list)
+ *   - The page shows a success message
+ *   - The item appears in the list
+ *   ### Prerequisite            → per-test prerequisites (merged with YAML)
  *   - fixture_zip: ./path.zip
- *   1. Step instruction         → executable step
  */
 
 const fs = require('fs');
@@ -33,58 +50,72 @@ const MarkdownIt = require('markdown-it');
 const md = new MarkdownIt();
 
 /**
- * Parse a single .md test file into a structured test suite.
+ * Parse a single test.md file into a structured test case.
  *
- * @param {string} filePath Absolute path to the .md file
- * @returns {{ phase, description, prerequisites, tests, file }}
+ * @param {string} filePath Absolute path to the test.md file
+ * @returns {{ title, description, prerequisites, steps, expectedResults, file, category, caseName, testCaseDir }}
  */
 function parseTestFile(filePath) {
   const raw = fs.readFileSync(filePath, 'utf-8');
 
-  // Extract YAML front-matter (file-level prerequisites)
+  // Extract YAML front-matter (prerequisites)
   const { attributes: filePrereqs, body } = fm(raw);
 
   // Parse markdown body into tokens
   const tokens = md.parse(body, {});
 
-  let phase = path.basename(filePath, '.md');
-  let phaseDescription = '';
-  const tests = [];
-  let currentTest = null;
+  // Derive category and case name from directory structure
+  // e.g., /path/e2e/login/01-buttons-visible/test.md
+  const testCaseDir = path.dirname(filePath);
+  const caseName = path.basename(testCaseDir);
+  const category = path.basename(path.dirname(testCaseDir));
+
+  let title = caseName;
+  let description = '';
+  const steps = [];
+  const expectedResults = [];
+  const prerequisites = {};
+
+  // Track which H2 section we're inside
+  let currentSection = null; // 'steps' | 'expected' | null
   let inPrerequisite = false;
 
   for (let i = 0; i < tokens.length; i++) {
     const token = tokens[i];
 
-    // H1 — phase/suite name
+    // H1 — test case title (one per file)
     if (token.type === 'heading_open' && token.tag === 'h1') {
       const inline = tokens[i + 1];
       if (inline && inline.type === 'inline') {
-        phase = inline.content.trim();
+        title = inline.content.trim();
       }
-      i += 2; // skip inline + heading_close
+      i += 2;
+      currentSection = null;
       inPrerequisite = false;
       continue;
     }
 
-    // H2 — new test case
+    // H2 — section headers (Steps, Expected Results)
     if (token.type === 'heading_open' && token.tag === 'h2') {
-      if (currentTest) tests.push(currentTest);
       const inline = tokens[i + 1];
-      const name =
-        inline && inline.type === 'inline' ? inline.content.trim() : '';
-      currentTest = {
-        name,
-        description: '',
-        prerequisites: {},
-        steps: [],
-      };
+      const heading =
+        inline && inline.type === 'inline'
+          ? inline.content.trim().toLowerCase()
+          : '';
+
+      if (/^(steps?|test\s+steps?)$/i.test(heading)) {
+        currentSection = 'steps';
+      } else if (/^expected\s+results?$/i.test(heading)) {
+        currentSection = 'expected';
+      } else {
+        currentSection = null;
+      }
       i += 2;
       inPrerequisite = false;
       continue;
     }
 
-    // H3 — section headers (Prerequisite, etc.)
+    // H3 — sub-section headers (Prerequisite)
     if (token.type === 'heading_open' && token.tag === 'h3') {
       const inline = tokens[i + 1];
       const heading =
@@ -96,25 +127,22 @@ function parseTestFile(filePath) {
       continue;
     }
 
-    // Ordered list — test steps (always treated as steps)
-    if (token.type === 'ordered_list_open' && currentTest) {
-      // Collect all list_item children
+    // Ordered list — test steps (inside ## Steps section)
+    if (token.type === 'ordered_list_open' && currentSection === 'steps') {
       i++;
       while (i < tokens.length && tokens[i].type !== 'ordered_list_close') {
         if (tokens[i].type === 'list_item_open') {
-          // Next token is paragraph_open, then inline with content
           const contentToken = findInlineContent(tokens, i);
           if (contentToken) {
-            currentTest.steps.push(contentToken.content.trim());
+            steps.push(contentToken.content.trim());
           }
         }
         i++;
       }
-      inPrerequisite = false;
       continue;
     }
 
-    // Bullet list — prerequisite key:value pairs OR steps
+    // Bullet list — expected results OR prerequisites
     if (token.type === 'bullet_list_open') {
       i++;
       while (i < tokens.length && tokens[i].type !== 'bullet_list_close') {
@@ -122,19 +150,18 @@ function parseTestFile(filePath) {
           const contentToken = findInlineContent(tokens, i);
           if (contentToken) {
             const text = contentToken.content.trim();
-            if (inPrerequisite && currentTest) {
-              // Parse "key: value"
+
+            if (inPrerequisite) {
               const kvMatch = text.match(/^(\w[\w\s]*?):\s+(.+)$/);
               if (kvMatch) {
                 const key = kvMatch[1]
                   .trim()
                   .toLowerCase()
                   .replace(/\s+/g, '_');
-                currentTest.prerequisites[key] = kvMatch[2].trim();
+                prerequisites[key] = kvMatch[2].trim();
               }
-            } else if (currentTest) {
-              // Bullet steps
-              currentTest.steps.push(text);
+            } else if (currentSection === 'expected') {
+              expectedResults.push(text);
             }
           }
         }
@@ -143,37 +170,31 @@ function parseTestFile(filePath) {
       continue;
     }
 
-    // Paragraph — description text
-    if (token.type === 'paragraph_open') {
+    // Paragraph — description text (only before any H2 section)
+    if (token.type === 'paragraph_open' && currentSection === null) {
       const inline = tokens[i + 1];
       if (inline && inline.type === 'inline') {
         const text = inline.content.trim();
-        if (currentTest) {
-          currentTest.description +=
-            (currentTest.description ? ' ' : '') + text;
-        } else {
-          phaseDescription += (phaseDescription ? ' ' : '') + text;
-        }
+        description += (description ? ' ' : '') + text;
       }
       i += 2;
       continue;
     }
   }
 
-  if (currentTest) tests.push(currentTest);
-
-  // Merge file-level prerequisites into each test case
-  // Per-test prerequisites override file-level ones
-  for (const test of tests) {
-    test.prerequisites = { ...filePrereqs, ...test.prerequisites };
-  }
+  // Merge file-level YAML prerequisites with inline ones
+  const mergedPrereqs = { ...filePrereqs, ...prerequisites };
 
   return {
-    phase,
-    description: phaseDescription,
-    prerequisites: filePrereqs,
-    tests,
-    file: path.basename(filePath),
+    title,
+    description,
+    prerequisites: mergedPrereqs,
+    steps,
+    expectedResults,
+    file: `${category}/${caseName}/test.md`,
+    category,
+    caseName,
+    testCaseDir,
   };
 }
 
@@ -188,19 +209,39 @@ function findInlineContent(tokens, startIdx) {
   return null;
 }
 
+/**
+ * Discover all test.md files inside an e2e directory.
+ *
+ * Walks: e2e/{category}/{case}/test.md
+ *
+ * @param {string[]} dirs Array of e2e directory paths
+ * @returns {string[]} Sorted array of absolute paths to test.md files
+ */
 function discoverTestFiles(dirs) {
   const files = [];
   for (const dir of dirs) {
     if (!fs.existsSync(dir)) continue;
-    const entries = fs
-      .readdirSync(dir)
-      .filter(f => f.endsWith('.md') && !f.startsWith('_'))
-      .sort();
-    for (const entry of entries) {
-      files.push(path.join(dir, entry));
+
+    // Walk category directories
+    const categories = fs
+      .readdirSync(dir, { withFileTypes: true })
+      .filter(d => d.isDirectory() && !d.name.startsWith('_'));
+
+    for (const cat of categories) {
+      const catDir = path.join(dir, cat.name);
+      const cases = fs
+        .readdirSync(catDir, { withFileTypes: true })
+        .filter(d => d.isDirectory() && !d.name.startsWith('_'));
+
+      for (const tc of cases) {
+        const testFile = path.join(catDir, tc.name, 'test.md');
+        if (fs.existsSync(testFile)) {
+          files.push(testFile);
+        }
+      }
     }
   }
-  return files;
+  return files.sort();
 }
 
 function findAllE2eDirs(rootDir) {

@@ -461,7 +461,7 @@ Directory naming uses `snakeCase(manifest.name)`:
 ```bash
 # Check which extensions are active in DB
 // turbo
-sqlite3 .cache/dev/database.sqlite "SELECT key, is_active FROM extensions"
+sqlite3 database.sqlite "SELECT key, is_active FROM extensions"
 
 # Check built extension manifests
 // turbo
@@ -471,3 +471,90 @@ for d in .cache/dev/extensions/*/; do echo "--- $(basename $d) ---"; cat "$d/pac
 ## Queue Concurrency
 
 Admin-triggered extension operations (install/toggle/delete) go through the queue with `concurrency: 1` — already serialized. SQLITE_BUSY only occurs from the **boot path** (`sync()`) which bypasses the queue.
+
+---
+
+# Part 11: SQLite Optimization
+
+## WAL Mode (Write-Ahead Logging)
+
+SQLite defaults to rollback journal mode, which blocks all readers during writes. WAL mode enables concurrent reads during writes.
+
+### Check current journal mode
+
+// turbo
+```bash
+sqlite3 database.sqlite "PRAGMA journal_mode;"
+```
+
+### Enable WAL mode
+
+WAL mode is configured in `shared/api/engines/db/connection.js` via Sequelize `dialectOptions`:
+
+```javascript
+dialectOptions: {
+  // Enable WAL for concurrent read/write
+  pragmas: {
+    'journal_mode': 'WAL',
+    'busy_timeout': '5000',       // 5s retry on lock
+    'synchronous': 'NORMAL',      // Balanced durability/performance
+    'cache_size': '-20000',       // 20MB page cache
+    'foreign_keys': 'ON',         // Enforce FK constraints
+  },
+},
+```
+
+### Verify WAL is active
+
+// turbo
+```bash
+sqlite3 database.sqlite "PRAGMA journal_mode; PRAGMA busy_timeout; PRAGMA synchronous;"
+```
+
+Expected output:
+```
+wal
+5000
+1
+```
+
+## SQLITE_BUSY Diagnostics
+
+| Symptom | Root Cause | Fix |
+|---------|-----------|-----|
+| `SQLITE_BUSY: database is locked` during boot | Parallel extension migrations via `Promise.allSettled` | Serialize loads in `ServerExtensionManager.sync()` |
+| `SQLITE_BUSY` during admin operations | Concurrent queue jobs | Queue already uses `concurrency: 1` — check for rogue direct DB calls |
+| `SQLITE_BUSY` in tests | Parallel test suites hitting same DB | Use `--runInBand` flag or separate test databases |
+| Intermittent `SQLITE_BUSY` | Missing `busy_timeout` pragma | Set `busy_timeout` to 5000+ ms in connection config |
+
+### Debug lock contention
+
+// turbo
+```bash
+# Check for WAL checkpoint status
+sqlite3 database.sqlite "PRAGMA wal_checkpoint(PASSIVE);"
+
+# Check if WAL file is growing (indicates checkpoint not running)
+ls -la database.sqlite*
+```
+
+### Force WAL checkpoint
+
+```bash
+sqlite3 database.sqlite "PRAGMA wal_checkpoint(TRUNCATE);"
+```
+
+## Connection Pool Settings
+
+For SQLite, the connection pool should be restricted to avoid lock contention:
+
+```javascript
+pool: {
+  max: 1,     // SQLite only supports one writer
+  min: 0,
+  acquire: 30000,
+  idle: 10000,
+}
+```
+
+> **Note:** PostgreSQL and MySQL can use higher pool sizes (default: `max: 5`).

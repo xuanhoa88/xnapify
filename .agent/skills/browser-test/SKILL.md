@@ -108,17 +108,17 @@ Navigate to http://localhost:{PORT}/{page}.
 Return: What error message appeared? Where was it displayed?
 ```
 
-### 5. E2E Lifecycle Test (from `.md` file)
+### 5. E2E Lifecycle Test (from `test.md` file)
 
-When executing test cases from `/run-e2e`, inject the parsed steps:
+When executing test cases from `/run-e2e`, inject the parsed steps from `e2e/{category}/{case}/test.md`:
 
 ```
 Navigate to http://localhost:{PORT}/admin/{module-page}.
 
 Steps:
 1. Wait for the page to fully load (look for the page header or main content).
-2. {step 1 from the .md file}
-3. {step 2 from the .md file}
+2. {step 1 from the test.md file}
+3. {step 2 from the test.md file}
 ...
 N. Take a screenshot of the final state.
 
@@ -163,3 +163,15 @@ If the page redirects to login:
 | Use vague element descriptions | Use exact text, IDs, or roles |
 | Ignore login/auth redirects | Handle auth flow first |
 | Guess admin passwords | Ask the user if credentials are not known |
+
+---
+
+## Related Skills & Workflows
+
+| Need | Skill / Workflow |
+|------|-----------------|
+| E2E test case files | `/run-e2e` workflow |
+| Unit/integration tests | `test-driven-development` skill |
+| xnapify test patterns | `/add-test` workflow |
+| Debugging runtime issues | `/debug` workflow |
+| WebSocket testing | `websocket-developer` skill |

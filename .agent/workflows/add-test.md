@@ -4,6 +4,8 @@ description: Add Jest unit or integration tests for a module
 
 Add tests using Jest and React Test Renderer.
 
+> **Methodology:** This workflow provides xnapify-specific test patterns and templates. For test-first methodology (Red-Green-Refactor), read the `test-driven-development` skill first. When implementing new features or bug fixes, **always write the failing test before writing implementation code**.
+
 ## Run Tests
 
 > **⚠️ NEVER use `npx jest` directly.** Always use `npm test` (or `npm run test:*` variants).
@@ -481,6 +483,12 @@ describe('[api] cache', () => {
 
 ## Mocking
 
+> **⚠️ Anti-Pattern Warning:** Before adding mocks, read `test-driven-development/testing-anti-patterns.md` to avoid common pitfalls:
+> - Never assert on mock elements (`*-mock` test IDs) — test real behavior
+> - Never add test-only methods to production classes — use test utilities
+> - Never mock without understanding dependencies — run real code first, then mock minimally
+> - Always mirror complete API response structures — partial mocks fail silently
+
 ### 1. Mocking Shared Feature Selectors
 
 Mock global selectors (like User or UI) from `shared/renderer`:
@@ -520,13 +528,26 @@ store.injectReducer(SLICE_NAME, reducer);
 
 ## Best Practices
 
-1. **Colocate tests** - Place `.test.js` files next to source files
-2. **Use `act()` for state updates** - Wrap async operations and renders
-3. **Unmount components** - Prevent memory leaks and async errors
-4. **Test thunk actions directly** - Use `thunk.pending()`, `thunk.fulfilled()`, `thunk.rejected()`
-5. **Inject reducers** - Use `store.injectReducer(SLICE_NAME, reducer)` for module tests
-6. **Use `mockStore` for components** - Use `redux-mock-store` for component tests
-7. **Use real `configureStore` for thunks** - Test full integration with selectors
-8. **Mock `fetch` via helpers** - Pass `{ fetch: mockFetch }` to `configureStore`
-9. **Test behavior, not implementation** - Focus on observable outcomes
-10. **Use `describe` blocks** - Group tests by feature (Initial State, Actions, Thunks)
+1. **Follow TDD** - Write the failing test first, then implement (see `test-driven-development` skill)
+2. **Colocate tests** - Place `.test.js` files next to source files
+3. **Use `act()` for state updates** - Wrap async operations and renders
+4. **Unmount components** - Prevent memory leaks and async errors
+5. **Test thunk actions directly** - Use `thunk.pending()`, `thunk.fulfilled()`, `thunk.rejected()`
+6. **Inject reducers** - Use `store.injectReducer(SLICE_NAME, reducer)` for module tests
+7. **Use `mockStore` for components** - Use `redux-mock-store` for component tests
+8. **Use real `configureStore` for thunks** - Test full integration with selectors
+9. **Mock `fetch` via helpers** - Pass `{ fetch: mockFetch }` to `configureStore`
+10. **Test behavior, not implementation** - Focus on observable outcomes (see `testing-anti-patterns.md`)
+11. **Use `describe` blocks** - Group tests by feature (Initial State, Actions, Thunks)
+12. **Minimal mocking** - Mock only what's slow or external; prefer real implementations
+
+---
+
+## See Also
+
+- `/add-module` — Full-stack module that requires test coverage
+- `/add-redux` — Redux patterns (slice, thunks, selectors) with test examples
+- `/add-extension` — Extension testing for boot/shutdown symmetry
+- `/add-worker` — Worker handler testing (direct function calls)
+- `/update-code` — Modify code with mandatory test verification
+- `/run-e2e` — Browser-based E2E tests for user flows

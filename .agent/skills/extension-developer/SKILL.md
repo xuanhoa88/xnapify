@@ -155,10 +155,92 @@ Webpack injects a single compile-time constant for each extension:
 | `__EXTENSION_ID__` | `snakeCase(manifest.name)` (e.g. `xnapify_extension_profile`) | Everything: IPC hook IDs, URL paths, i18n namespaces, logging, migration prefixes |
 
 
+## Piscina Worker Pools in Extensions
+
+Extensions can create Piscina-backed worker pools to offload CPU-intensive tasks to background threads. Worker files are discovered from pre-compiled CJS files at `<bundleDir>/workers/`.
+
+### Pattern: Lazy Factory (Recommended)
+
+```javascript
+// api/workers/index.js
+import { createWorkerPool } from '@shared/api/engines/worker';
+
+export function createMyWorkerPool() {
+  const pool = createWorkerPool('ExtensionName', {
+    maxWorkers: 2,
+    workerTimeout: 30_000,
+    forceFork: true,  // Force thread mode for extensions
+  });
+
+  // Attach convenience methods over sendRequest
+  pool.processData = async function processData(input) {
+    const { result } = await this.sendRequest(
+      'processor',       // maps to processor.worker.js
+      'PROCESS_DATA',    // exported function name
+      { input },
+      { throwOnError: true },
+    );
+    return result;
+  };
+
+  return pool;
+}
+```
+
+### Lifecycle Wiring
+
+```javascript
+// api/index.js
+let workerPool = null;
+
+export default {
+  boot({ container }) {
+    const { createMyWorkerPool } = require('./workers');
+    workerPool = createMyWorkerPool();
+  },
+
+  shutdown({ container, registry }) {
+    // MUST destroy worker pool to release threads
+    if (workerPool) {
+      workerPool.cleanup();
+      workerPool = null;
+    }
+    // ... also unregister hooks, slots, etc.
+  },
+};
+```
+
+### Key Rules
+
+| Rule | Why |
+|------|-----|
+| Use lazy factory (function, not top-level) | Avoids blocking event loop when extension bundle loads |
+| Call `pool.cleanup()` in `shutdown()` | Releases Piscina threads — leaked threads crash HMR |
+| Use `forceFork: true` | Extensions should always use thread pool (not same-process) |
+| `sendRequest(workerType, messageType, data)` | Standard API — workerType maps to `<name>.worker.js` |
+
+---
+
 ## Critical Requirements
 
 - NEVER directly modify `src/apps/` files from an extension.
 - Ensure every event listener registered in `boot` is explicitly cleaned up in `shutdown`. Memory leaks will crash the hot-reloading pipeline.
+- **Worker pools** created in `boot()` MUST be destroyed in `shutdown()` via `pool.cleanup()`.
 - Make all database interactions within `install/uninstall` defensively coded (`try/catch`), as they execute during sensitive state transitions.
 - Use `providers()` for Redux reducer injection — NOT `boot()`. The store is only available after `runProviders()`.
+
+---
+
+## Related Skills & Workflows
+
+| Need | Skill / Workflow |
+|------|-----------------|
+| Core module patterns | `module-developer` skill |
+| Coding standards | `clean-code` skill |
+| Security review | `security-auditor` skill |
+| Code review checklist | `code-reviewer` skill (`checklists/extension-review.md`) |
+| Adding extension tests | `/add-test` workflow |
+| Full extension scaffolding | `/add-extension` workflow |
+| Database patterns | `database-developer` skill |
+| Engine development | `engine-developer` skill |
 

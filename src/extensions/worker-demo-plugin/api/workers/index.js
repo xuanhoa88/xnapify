@@ -7,16 +7,15 @@
 
 /**
  * Worker Demo Pool — Creates a Piscina-backed worker pool for the demo extension.
- * Discovers text.worker.js and math.worker.js via require.context.
+ *
+ * Workers are discovered from pre-compiled standalone CJS files at
+ * `<bundleDir>/workers/`.
  *
  * IMPORTANT: Pool creation is lazy (via factory) to avoid blocking the event
  * loop at module-load time when the extension bundle is loaded by nativeRequire.
  */
 
 import { createWorkerPool } from '@shared/api/engines/worker';
-
-// Auto-discover *.worker.js files in this directory
-const workersContext = require.context('./', false, /\.worker\.[cm]?[jt]s$/i);
 
 const WORKER_TIMEOUT_MS = 30_000;
 
@@ -27,7 +26,7 @@ const WORKER_TIMEOUT_MS = 30_000;
  * @returns {Object} Worker pool instance with domain-specific methods
  */
 export function createDemoWorkerPool() {
-  const pool = createWorkerPool('WorkerDemo', workersContext, {
+  const pool = createWorkerPool('WorkerDemo', {
     maxWorkers: 2,
     workerTimeout: WORKER_TIMEOUT_MS,
     forceFork: true,

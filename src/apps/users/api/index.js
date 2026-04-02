@@ -22,11 +22,6 @@ const migrationsContext = require.context(
 
 const modelsContext = require.context('./models', false, /\.[cm]?[jt]s$/i);
 const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
-const workersContext = require.context(
-  './workers',
-  false,
-  /\.worker\.[cm]?[jt]s$/i,
-);
 
 // =============================================================================
 // LOGGING
@@ -69,7 +64,7 @@ export default {
     const worker = container.resolve('worker');
     if (worker) {
       const { default: attachSearchMethods } = require('./workers');
-      const pool = worker.createWorkerPool('UsersSearch', workersContext, {
+      const pool = worker.createWorkerPool('UsersSearch', {
         maxWorkers: 1,
       });
       const searchWorkerPool = attachSearchMethods(pool);

@@ -770,3 +770,12 @@ export default PostsList;
 4. **Dispatch refresh after mutations** - Call `fetchList()` after create/update to sync data
 5. **Guard with `initialized`** - Prevent duplicate fetches on component remounts
 6. **Export via index.js** - Centralized public API per redux folder
+
+---
+
+## See Also
+
+- `/add-view` — View routes and lifecycle hooks that consume Redux state
+- `/add-module` — Full-stack module including Redux setup
+- `/add-test` — Jest patterns for testing slices, thunks, and selectors
+- `/update-code` — Modify existing Redux code with test verification

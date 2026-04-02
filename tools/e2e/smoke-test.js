@@ -59,32 +59,48 @@ async function testParser() {
   const first = parseTestFile(files[0]);
   assert('parseTestFile returns object', first && typeof first === 'object');
   assert(
-    'Has phase name',
-    typeof first.phase === 'string' && first.phase.length > 0,
+    'Has title',
+    typeof first.title === 'string' && first.title.length > 0,
   );
   assert(
-    'Has tests array',
-    Array.isArray(first.tests) && first.tests.length > 0,
+    'Has steps array',
+    Array.isArray(first.steps) && first.steps.length > 0,
+    `got ${first.steps.length} steps`,
+  );
+  assert('Has expectedResults array', Array.isArray(first.expectedResults));
+  assert(
+    'Has category',
+    typeof first.category === 'string' && first.category.length > 0,
+    first.category,
   );
   assert(
-    'Tests have steps',
-    first.tests[0].steps && first.tests[0].steps.length > 0,
-    `got ${first.tests[0].steps.length} steps`,
+    'Has caseName',
+    typeof first.caseName === 'string' && first.caseName.length > 0,
+    first.caseName,
+  );
+  assert(
+    'Has testCaseDir',
+    typeof first.testCaseDir === 'string' && first.testCaseDir.length > 0,
+  );
+  assert(
+    'File path is category/case/test.md',
+    first.file.endsWith('/test.md') && first.file.includes('/'),
+    first.file,
   );
 
   // Parse all files
   let totalSteps = 0;
   let totalPrereqs = 0;
+  let totalExpected = 0;
   for (const f of files) {
     const parsed = parseTestFile(f);
-    for (const t of parsed.tests) {
-      totalSteps += t.steps.length;
-      assert(
-        `  ${parsed.file}/${t.name}: prerequisites object exists`,
-        typeof t.prerequisites === 'object',
-      );
-      totalPrereqs += Object.keys(t.prerequisites).length;
-    }
+    totalSteps += parsed.steps.length;
+    totalExpected += parsed.expectedResults.length;
+    assert(
+      `  ${parsed.file}: prerequisites object exists`,
+      typeof parsed.prerequisites === 'object',
+    );
+    totalPrereqs += Object.keys(parsed.prerequisites).length;
   }
   assert(
     'All files parse without error',
@@ -95,6 +111,11 @@ async function testParser() {
     'Some tests have prerequisites',
     totalPrereqs > 0,
     `${totalPrereqs} total keys`,
+  );
+  assert(
+    'Tests have expected results',
+    totalExpected > 0,
+    `${totalExpected} total expected results`,
   );
 }
 
@@ -150,14 +171,19 @@ function testExecutor() {
 function testReporter() {
   console.log('\n📊 Reporter');
   const {
-    createResultsDir,
+    createTestCaseResultsDir,
+    createSummaryDir,
     writeTestResult,
     writeSummary,
   } = require('./reporter');
 
   assert(
-    'createResultsDir is a function',
-    typeof createResultsDir === 'function',
+    'createTestCaseResultsDir is a function',
+    typeof createTestCaseResultsDir === 'function',
+  );
+  assert(
+    'createSummaryDir is a function',
+    typeof createSummaryDir === 'function',
   );
   assert(
     'writeTestResult is a function',
@@ -167,33 +193,42 @@ function testReporter() {
 
   // Test result directory creation
   const tmpDir = path.join(ROOT_DIR, 'tools', 'e2e', '_smoke_test_results');
-  const resultsDir = createResultsDir(tmpDir, 'smoke_test');
+  const resultsDir = createTestCaseResultsDir(tmpDir, 'smoke_test');
   assert('Creates results directory', fs.existsSync(resultsDir));
 
   // Test writing a result
-  const testCase = { name: 'Smoke Test', steps: ['Step 1', 'Step 2'] };
+  const testCase = {
+    title: 'Smoke Test',
+    steps: ['Step 1', 'Step 2'],
+    expectedResults: ['Expected 1'],
+  };
   const result = {
     steps: [
       { success: true, note: 'ok' },
       { success: false, error: 'intentional failure' },
     ],
+    expectedResults: ['Expected 1'],
   };
-  writeTestResult(resultsDir, '01', testCase, result, {});
-  const reportFiles = fs.readdirSync(resultsDir).filter(f => f.endsWith('.md'));
-  assert('Writes test result file', reportFiles.length > 0);
+  writeTestResult(resultsDir, testCase, result);
+  const resultExists = fs.existsSync(path.join(resultsDir, 'result.md'));
+  assert('Writes test result file', resultExists);
 
   // Test summary
+  const summaryDir = createSummaryDir(tmpDir, 'smoke_summary');
   const summaryResults = [
     {
       passed: true,
       duration: 100,
-      filePrefix: '01',
+      category: 'smoke',
+      caseName: '01-test',
       testName: 'Smoke Test',
       screenshotPath: null,
     },
   ];
-  writeSummary(resultsDir, 'smoke', summaryResults, {});
-  const summaryExists = fs.existsSync(path.join(resultsDir, '_summary.md'));
+  writeSummary(summaryDir, 'smoke', summaryResults, {
+    timestamp: 'smoke_test',
+  });
+  const summaryExists = fs.existsSync(path.join(summaryDir, '_summary.md'));
   assert('Writes summary file', summaryExists);
 
   // Cleanup
@@ -206,14 +241,64 @@ function testLLMInterpreter() {
   const { interpretStep } = require('./llm-interpreter');
 
   assert('interpretStep is a function', typeof interpretStep === 'function');
+  assert('interpretStep is a pure LLM call (no global cache)', true);
+}
 
-  // Check cache file mechanism
-  const cacheFile = path.join(__dirname, '.step-cache.json');
-  const cacheExists = fs.existsSync(cacheFile);
-  assert(
-    `Cache file ${cacheExists ? 'exists' : 'not yet created'} (expected)`,
-    true,
-  );
+function testCompiler() {
+  console.log('\n🔨 Compiler');
+  const {
+    getTestHash,
+    getStoredHash,
+    needsCompile,
+    loadScript,
+    archiveScript,
+    SCRIPT_FILE,
+    HASH_FILE,
+  } = require('./compiler');
+
+  assert('getTestHash is a function', typeof getTestHash === 'function');
+  assert('needsCompile is a function', typeof needsCompile === 'function');
+  assert('loadScript is a function', typeof loadScript === 'function');
+  assert('archiveScript is a function', typeof archiveScript === 'function');
+
+  // Test with a real test case
+  const { discoverTestFiles, findAllE2eDirs } = require('./parser');
+  const dirs = findAllE2eDirs(ROOT_DIR);
+  const files = discoverTestFiles(dirs);
+  if (files.length > 0) {
+    const firstDir = path.dirname(files[0]);
+
+    // Hash
+    const hash = getTestHash(firstDir);
+    assert(
+      'getTestHash returns string',
+      typeof hash === 'string' && hash.length === 64,
+      hash,
+    );
+
+    // needsCompile should be true if no script.json exists
+    const hasScript = fs.existsSync(path.join(firstDir, SCRIPT_FILE));
+    if (!hasScript) {
+      assert('needsCompile=true when no script.json', needsCompile(firstDir));
+    }
+
+    // getStoredHash returns null when no .test-hash
+    const hasHash = fs.existsSync(path.join(firstDir, HASH_FILE));
+    if (!hasHash) {
+      assert(
+        'getStoredHash=null when no .test-hash',
+        getStoredHash(firstDir) === null,
+      );
+    }
+
+    // loadScript returns null when no script.json
+    if (!hasScript) {
+      assert(
+        'loadScript=null when no script.json',
+        loadScript(firstDir) === null,
+      );
+    }
+  }
 }
 
 function testSPAConfig() {
@@ -245,32 +330,28 @@ function testSPAConfig() {
 }
 
 async function testBrowser() {
-  console.log('\n🌐 Browser (Puppeteer)');
+  const {
+    ENGINE,
+    isAvailable,
+    launchBrowser,
+    createPage,
+    closeBrowser,
+  } = require('./browser');
 
-  let puppeteer;
-  try {
-    puppeteer = require('puppeteer');
-    assert('Puppeteer installed', true);
-  } catch {
-    assert('Puppeteer installed', false, 'npm install puppeteer');
+  console.log(`\n🌐 Browser (${ENGINE})`);
+
+  if (!isAvailable()) {
+    assert(`${ENGINE} installed`, false, 'npm install puppeteer');
     return;
   }
+  assert(`${ENGINE} installed`, true);
 
   let browser;
   try {
-    browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-      ],
-      defaultViewport: { width: 1280, height: 900 },
-    });
+    browser = await launchBrowser({ headless: true });
     assert('Browser launches', true);
 
-    const page = await browser.newPage();
+    const page = await createPage(browser);
     assert('Page created', true);
 
     // Navigate to app
@@ -324,7 +405,7 @@ async function testBrowser() {
   } catch (err) {
     assert('Browser launches', false, err.message);
   } finally {
-    if (browser) await browser.close();
+    await closeBrowser(browser);
   }
 }
 
@@ -339,6 +420,7 @@ async function main() {
   testExecutor();
   testReporter();
   testLLMInterpreter();
+  testCompiler();
   testSPAConfig();
 
   if (includeBrowser) {

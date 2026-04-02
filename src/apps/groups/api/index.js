@@ -24,13 +24,6 @@ const seedsContext = require.context(
 const modelsContext = require.context('./models', false, /\.[cm]?[jt]s$/i);
 const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
 
-// Auto-load workers via require.context
-const workersContext = require.context(
-  './workers',
-  false,
-  /\.worker\.[cm]?[jt]s$/i,
-);
-
 // =============================================================================
 // LIFECYCLE HOOKS
 // =============================================================================
@@ -47,7 +40,7 @@ export default {
     const worker = container.resolve('worker');
     if (worker) {
       const { default: attachSearchMethods } = require('./workers');
-      const pool = worker.createWorkerPool('GroupsSearch', workersContext, {
+      const pool = worker.createWorkerPool('GroupsSearch', {
         maxWorkers: 1,
       });
       const searchWorkerPool = attachSearchMethods(pool);

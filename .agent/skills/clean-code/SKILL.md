@@ -266,3 +266,90 @@ npm run test -- <pat> # Run tests matching a pattern
 ```
 
 > 🔴 **Rule:** Never mark a task complete with failing lint or tests.
+
+---
+
+## Additional Patterns
+
+### Queue Worker Registration Pattern
+
+```javascript
+// api/workers/index.js — attach methods to worker pool
+export default function registerXxxWorkers(pool) {
+  pool.doTask = async function doTask(data) {
+    const { result } = await this.sendRequest(
+      'taskType',
+      'DO_TASK',
+      data,
+      { throwOnError: true },
+    );
+    return result;
+  };
+  return pool;
+}
+```
+
+### Service Error Classes
+
+```javascript
+// api/services/errors.js
+class XxxError extends Error {
+  constructor(message, code, statusCode) {
+    super(message);
+    this.name = 'XxxError';
+    this.code = code || 'XXX_ERROR';
+    this.statusCode = statusCode || 500;
+  }
+  static notFound(msg) { return new XxxError(msg || 'Not found', 'NOT_FOUND', 404); }
+  static conflict(msg) { return new XxxError(msg || 'Conflict', 'CONFLICT', 409); }
+  static forbidden(msg) { return new XxxError(msg || 'Forbidden', 'FORBIDDEN', 403); }
+}
+```
+
+### Sequelize Model Pattern
+
+```javascript
+// api/models/User.js
+export default function defineModel({ connection, DataTypes }) {
+  const User = connection.define('User', {
+    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    email: { type: DataTypes.STRING, allowNull: false, unique: true },
+    name: { type: DataTypes.STRING(255), allowNull: false },
+  }, {
+    tableName: 'users',
+    timestamps: true,
+  });
+
+  User.associate = (models) => {
+    User.hasMany(models.Post, { as: 'posts', foreignKey: 'userId' });
+  };
+
+  return User;
+}
+```
+
+### CSS Module Composition
+
+```css
+/* Components compose from shared styles via composes: */
+.button {
+  composes: baseButton from '../shared/buttons.css';
+  background-color: var(--color-primary);
+}
+```
+
+> Remember: Always use `import s from './Component.css'` and `className={s.xxx}`. Never use inline styles or global class names.
+
+---
+
+## Related Skills & Workflows
+
+| Need | Skill / Workflow |
+|------|-----------------|
+| Module architecture | `module-developer` skill |
+| Extension architecture | `extension-developer` skill |
+| Security compliance | `security-auditor` skill |
+| Code review | `code-reviewer` skill |
+| Database patterns | `database-developer` skill |
+| Engine patterns | `engine-developer` skill |
+| i18n strings | `i18n-localization` skill |

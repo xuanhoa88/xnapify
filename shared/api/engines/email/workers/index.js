@@ -10,7 +10,7 @@
  * Uses the shared worker engine for worker pool management
  *
  * Features:
- * - Build-time worker discovery via webpack require.context
+ * - Worker discovery from pre-compiled standalone CJS files
  * - Hybrid execution: same-process first, fork fallback
  * - Worker pool management with automatic scaling
  * - Comprehensive error handling and recovery
@@ -27,11 +27,9 @@ const WORKER_CONFIG = Object.freeze({
     parseInt(process.env.XNAPIFY_MAIL_WORKER_MAX_REQ, 10) || 100,
 });
 
-// Auto-load workers via require.context (*.worker.js or *.worker.ts)
-const workersContext = require.context('./', false, /\.worker\.[cm]?[jt]s$/i);
-
-// Create worker pool with email-specific configuration
-const workerPool = createWorkerPool('Email', workersContext, {
+// Workers are discovered from pre-compiled standalone CJS files at
+// `<bundleDir>/workers/`
+const workerPool = createWorkerPool('Email', {
   ErrorHandler: EmailWorkerError,
   maxWorkers: WORKER_CONFIG.maxWorkers,
   workerTimeout: WORKER_CONFIG.workerTimeout,

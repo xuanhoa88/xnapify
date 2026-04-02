@@ -99,6 +99,14 @@ If your changes modified:
 
 Follow the testing patterns in `.agent/workflows/add-test.md`.
 
+## 9. Post-Change Review
+
+After all tests pass, consider running these skills for quality assurance:
+
+- **`code-reviewer` skill** — Validates architecture, conventions, and test coverage
+- **`security-auditor` skill** — Audits for Zod validation, RBAC, and security compliance
+- **`/security-audit` workflow** — Systematic grep-based security scan
+
 ## Summary Checklist
 
 Before reporting the task as complete, confirm:
@@ -124,3 +132,13 @@ Before reporting the task as complete, confirm:
 | `npm run format`            | Format code with Prettier          |
 | `npm run format:check`      | Check formatting without modifying |
 | `npm run test:benchmark`    | Run performance benchmarks         |
+
+---
+
+## See Also
+
+- `/add-test` — Add new tests for changed code
+- `/add-api-route` — Add a single API route to an existing module
+- `/security-audit` — Run security audit on modified code
+- `/git-commit` — Commit changes using Conventional Commits
+- `/debug` — Diagnose build or runtime issues after changes

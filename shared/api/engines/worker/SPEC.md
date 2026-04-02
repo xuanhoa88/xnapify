@@ -8,7 +8,7 @@
 
 ## Objective
 
-Provide a factory-based thread pool that each module instantiates independently, with dynamic worker discovery via Webpack `require.context`, hybrid execution strategy, and automatic timeout management.
+Provide a factory-based thread pool that each module instantiates independently, with dynamic worker discovery from pre-compiled standalone CJS files, hybrid execution strategy, and automatic timeout management.
 
 ## 1. Architecture
 
@@ -24,7 +24,7 @@ shared/api/engines/worker/
 ```
 index.js
 ├── createWorkerPool.js
-│   ├── @shared/utils/contextAdapter
+│   ├── @shared/utils/createNativeRequire
 │   ├── piscina (runtime-loaded, not bundled)
 │   └── errors.js
 └── errors.js
@@ -49,6 +49,7 @@ Uses `Error.captureStackTrace` for clean stack traces.
 
 | Code | Thrown By | Meaning |
 |---|---|---|
+| `INVALID_ARGUMENT` | `createWorkerPool()` | Missing or invalid `engineName` argument |
 | `UNSUPPORTED_NODE_VERSION` | `isPiscinaSupported()`, `sendRequestToThread()` | Node.js < 16.14.0, Piscina unavailable |
 | `INITIALIZATION_ERROR` | `loadPiscina()` | `require('piscina')` failed at runtime |
 | `WORKER_REQUEST_TIMEOUT` | `sendRequestToThread()` | Task exceeded `workerTimeout` (AbortController fired) |
@@ -65,12 +66,22 @@ Uses `Error.captureStackTrace` for clean stack traces.
 
 **File:** `createWorkerPool.js` (closure-level helpers)
 
-- `createWebpackContextAdapter(workersContext)` — wraps Webpack's `require.context` into a portable `{ files(), load(key), resolve(key) }` adapter (from `@shared/utils/contextAdapter`).
-- `getAvailableWorkers()` — extracts worker names from `*.worker.[cm]?[jt]s` pattern via `adapter.files()`.
-- `tryImportWorkerModule(workerName)` — loads and caches worker modules in a `Map` (`workerModuleCache`) for same-process execution. Returns `null` on failure (triggers thread fallback).
-- `getWorkerPath(workerName)` — resolves absolute filesystem path via `adapter.resolve()` for Piscina thread execution.
+Workers are discovered from the filesystem at pool creation time. The build pipeline compiles `*.worker.js` source files into standalone CommonJS modules:
+- Core apps: `build/workers/<appName>/<name>.worker.js`
+- Extensions: `build/extensions/<extDir>/workers/<name>.worker.js`
 
-## 5. Factory Function: `createWorkerPool(engineName, workersContext, options?)`
+At runtime, `createWorkerPool` resolves the `workers/` directory relative to the bundle file (`__filename`) and scans it recursively with `fs.readdirSync({ recursive: true })`.
+
+- `workerPathMap` (Map) — stores `workerName → absolute path` for each discovered `*.worker.[cm]?[jt]s` file.
+- `getAvailableWorkers()` — returns worker names from `workerPathMap.keys()`.
+- `tryImportWorkerModule(workerName)` — loads and caches worker modules via `moduleRequire()` (native `require()`) for same-process execution. Returns `null` on failure (triggers thread fallback).
+- `getWorkerPath(workerName)` — returns the absolute filesystem path from `workerPathMap` for Piscina thread execution.
+
+### Node Version Compatibility
+
+`Dirent.parentPath` is available in Node 21+, `Dirent.path` in Node 20+. For older versions, the scanner falls back to the root `workersDir` (flat scan).
+
+## 5. Factory Function: `createWorkerPool(engineName, options?)`
 
 **File:** `createWorkerPool.js`
 
@@ -80,8 +91,7 @@ Creates and returns a bound `WorkerPool` instance. Each module creates its own p
 
 | Param | Type | Default | Description |
 |---|---|---|---|
-| `engineName` | `string` | *required* | Name used in log messages (e.g. `'Search'`, `'🔌 Extension'`) |
-| `workersContext` | `require.context` | *required* | Webpack context matching `*.worker.js` files |
+| `engineName` | `string` | *required* | Name used in log messages (e.g. `'Search'`, `'Extensions'`) |
 | `options.maxWorkers` | `number` | `min(os.cpus().length, 4)` | Maximum Piscina threads |
 | `options.workerTimeout` | `number` | `60000` | Per-task timeout in ms |
 | `options.forceFork` | `boolean` | `false` | Skip same-process execution globally |
@@ -91,9 +101,10 @@ Creates and returns a bound `WorkerPool` instance. Each module creates its own p
 
 Returns a `WorkerPool` instance with `sendRequest` pre-bound to the instance (safe for destructured use).
 
-### Static Property
+### Static Properties
 
-`createWorkerPool.options` — exposes `DEFAULT_WORKER_CONFIG` (`maxWorkers`, `workerTimeout`, `workerCreationTimeout`, `forceFork`).
+- `createWorkerPool.options` — exposes `DEFAULT_WORKER_CONFIG` (`maxWorkers`, `workerTimeout`, `workerCreationTimeout`, `forceFork`).
+- `createWorkerPool.registry` — exposes `poolRegistry` (Map) for testing / inspection.
 
 ## 6. WorkerPool Class
 
@@ -101,16 +112,16 @@ Returns a `WorkerPool` instance with `sendRequest` pre-bound to the instance (sa
 
 ### Constructor
 
-- Reads `maxWorkers`, `workerTimeout`, `forceFork`, `ErrorHandler` from closure and options.
+- Reads `maxWorkers`, `workerTimeout`, `forceFork`, `ErrorHandler` from destructured options.
 - Calls `getAvailableWorkers()` — stores discovered worker names in `this.knownWorkers`.
-- Logs discovered workers in non-production environments.
+- Logs discovered workers in development mode.
 - `this.piscinaPoolInstance` initialized as `null` (lazy).
 
 ### Lazy Pool Initialization (`get pool`)
 
 A getter property that creates the Piscina pool on first access:
 - Calls `loadPiscina()`, creates `new Piscina({ maxThreads, workerCreationTimeout })`.
-- Returns `null` if Piscina cannot be loaded (error is swallowed; `sendRequestToThread` will throw).
+- Returns `null` if Piscina cannot be loaded (error is cached via `piscinaLoadFailed` to prevent repeated attempts).
 
 ### Methods
 
@@ -129,9 +140,9 @@ Primary dispatch method with hybrid execution strategy.
 **`throwOnError` resolution:** Checks `requestOptions.throwOnError` first; falls back to `data.options.throwOnError` if the request option is `undefined`.
 
 **Execution flow:**
-1. If `forceFork` is not set (neither global nor per-call): try same-process execution via `tryImportWorkerModule()` → call `module[messageType](data)`.
+1. If `forceFork` is not set AND `workerType` is in `knownWorkers`: try same-process execution via `tryImportWorkerModule()` → call `module[messageType](data)`.
 2. If same-process fails (module not found, export missing, or throws): falls back to thread.
-   - **Exception:** If same-process throws AND `throwOnError` is `true` AND `forceFork` is not set → re-throws immediately without fallback.
+   - **Exception:** If same-process throws AND `throwOnError` is `true` → re-throws immediately without fallback.
 3. Thread execution via `sendRequestToThread()`.
 4. Returns `{ success: true, result }` on success.
 5. On thread failure: throws if `throwOnError`, otherwise returns `{ success: false, error: { message, code, statusCode, stack } }`.
@@ -141,6 +152,7 @@ Primary dispatch method with hybrid execution strategy.
 Forces Piscina thread execution. Called internally by `sendRequest` or directly by consumers.
 
 - Validates `workerType` is in `this.knownWorkers` — throws `ErrorHandler` if not.
+- Checks that the Piscina pool is available — throws `WorkerError` if not.
 - Resolves worker file path via `getWorkerPath()`.
 - Creates `AbortController` with `setTimeout` for `workerTimeout`.
 - Calls `pool.run(data, { filename, name: messageType, signal })`.
@@ -149,11 +161,11 @@ Forces Piscina thread execution. Called internally by `sendRequest` or directly 
 
 #### `unregisterWorker(workerType) → boolean`
 
-Removes from `knownWorkers` and clears `workerModuleCache`. Returns `false` if not found. Logs in non-production.
+Removes from `knownWorkers`, `workerModuleCache`, and `workerPathMap`. Returns `false` if not found. Logs in development mode.
 
 #### `getStats() → StatsObject`
 
-Returns pool statistics. If no Piscina pool exists yet, returns zeroed stats.
+Returns pool statistics. If no Piscina pool exists yet, returns zeroed stats (does **not** trigger lazy initialization).
 
 ```javascript
 {
@@ -166,11 +178,11 @@ Returns pool statistics. If no Piscina pool exists yet, returns zeroed stats.
 
 #### `cleanup() → Promise<void>`
 
-Destroys the Piscina pool and sets `piscinaPoolInstance` to `null`. Logs cleanup. No-op if pool was never created.
+Destroys the Piscina pool, clears the module cache, and removes the pool from the registry. No-op if pool was never created. After cleanup, the same `engineName` can be used to create a fresh pool.
 
 ## 7. No Default Singleton
 
-Unlike other engines (`schedule`, `hook`), the worker engine exports only the `createWorkerPool` factory. Each module creates its own pool instance scoped to its own `require.context`. The engine is registered on the DI container as `container.resolve('worker')` which exposes the `{ createWorkerPool, WorkerError }` exports.
+Unlike other engines (`schedule`, `hook`), the worker engine exports only the `createWorkerPool` factory. Each module creates its own pool instance scoped to its own `workers/` directory. The engine is registered on the DI container as `container.resolve('worker')` which exposes the `{ createWorkerPool, WorkerError }` exports.
 
 ## 8. Usage Patterns in the Codebase
 
@@ -178,15 +190,14 @@ Unlike other engines (`schedule`, `hook`), the worker engine exports only the `c
 
 ```javascript
 import { createWorkerPool } from '@shared/api/engines/worker';
-const workersContext = require.context('./', false, /\.worker\.[cm]?[jt]s$/i);
-const workerPool = createWorkerPool('🔌 Extension', workersContext, { maxWorkers: 2 });
+const workerPool = createWorkerPool('Extensions', { maxWorkers: 2 });
 ```
 
 ### DI-based (search, activities modules)
 
 ```javascript
 const { createWorkerPool } = container.resolve('worker');
-const workerPool = createWorkerPool('Search', workersContext, { maxWorkers: 1 });
+const workerPool = createWorkerPool('Search', { maxWorkers: 1 });
 ```
 
 ### Convenience Method Pattern
@@ -208,7 +219,17 @@ await workerPool.sendRequest('flexsearch', 'INDEX_USER',
   { search, user }, { forceFork: true });
 ```
 
-## 9. Integration Points
+## 9. Build Pipeline
+
+Workers are compiled as standalone CommonJS modules at build time by the shared `createWorkerConfig` factory in `tools/webpack/base.config.js`. Both core apps (`app.config.js`) and extensions (`extension.config.js`) use the same factory.
+
+Workers are emitted to:
+- Core apps: `build/workers/<appName>/<name>.worker.js`
+- Extensions: `build/extensions/<extDir>/workers/<name>.worker.js`
+
+Workers must be **stateless** — they run as standalone CJS files with no access to the Webpack runtime, `@shared/` aliases, or application state. They are loaded via native `require()` and cannot import from the main bundle.
+
+## 10. Integration Points
 
 - **Module `boot({ container })`**: Access via `container.resolve('worker')` to get the factory, then create module-specific pools.
 - **Schedule Engine**: Cron handlers can dispatch heavy work to worker pools.

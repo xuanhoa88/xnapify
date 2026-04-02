@@ -82,6 +82,15 @@ Whenever you provide assistance to a Developer on this codebase, you MUST adhere
 
 ---
 
+## 9. API Stability
+
+- **No breaking changes** to existing API response shapes without a migration path. Adding new fields to a response is safe; removing or renaming fields is a breaking change.
+- **Versioning** (when needed): Use URL prefix `/api/v2/{resource}` alongside the original `/api/{resource}`. Both versions must coexist until consumers migrate.
+- **Deprecation**: Mark deprecated endpoints with a response header `X-Deprecated: true` and a `deprecatedAt` field in the response body. Log usage for tracking.
+- **Backward-compatible additions**: New optional query parameters, new response fields, and new endpoints are always safe to add without versioning.
+
+---
+
 ## Instructing the AI
 
 If you are a Developer reading this, you can append these rules to your AI prompts natively using the context commands depending on your IDE (e.g. `@rules.md` in Cursor, adding this file to Claude Projects).

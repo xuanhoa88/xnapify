@@ -4,15 +4,16 @@
  * Worker Service - Piscina Thread Pool implementation
  *
  * Features:
- * - Dynamic worker discovery via require.context
+ * - Dynamic worker discovery from pre-compiled standalone CJS files
  * - Hybrid execution: same-process first, piscina background threads fallback
  * - Worker pool management with automatic scaling
  * - Comprehensive error handling and recovery
  */
 
+import fs from 'fs';
 import os from 'os';
+import path from 'path';
 
-import { createWebpackContextAdapter } from '@shared/utils/contextAdapter';
 import { createNativeRequire } from '@shared/utils/createNativeRequire';
 
 import { WorkerError } from './errors';
@@ -83,14 +84,15 @@ const poolRegistry = new Map();
  * Create a WorkerPool instance for a specific engine using Piscina
  *
  * @param {string} engineName - Name of the engine (e.g. Email, Filesystem)
- * @param {Object} workersContext - webpack require.context for worker files
  * @param {Object} options - Configuration options
  * @returns {WorkerPool} Worker service instance
  */
-export function createWorkerPool(engineName, workersContext, options = {}) {
+export function createWorkerPool(engineName, options = {}) {
   if (!engineName || typeof engineName !== 'string') {
-    throw new Error(
+    throw new WorkerError(
       'createWorkerPool requires an engineName string as its first argument',
+      'INVALID_ARGUMENT',
+      400,
     );
   }
 
@@ -104,19 +106,38 @@ export function createWorkerPool(engineName, workersContext, options = {}) {
     return poolRegistry.get(engineName);
   }
 
-  const adapter = createWebpackContextAdapter(workersContext);
+  // Resolve the workers directory relative to the bundle (__filename).
+  // Standalone CJS files are emitted at:
+  //   <bundleDir>/workers/<name>.worker.js  (extensions)
+  //   <buildDir>/workers/<appName>/<name>.worker.js  (core apps)
+  const bundleDir = path.dirname(__filename);
+  const workersDir = path.join(bundleDir, 'workers');
 
   const {
     ErrorHandler = WorkerError,
     maxWorkers = DEFAULT_WORKER_CONFIG.maxWorkers,
     workerTimeout = DEFAULT_WORKER_CONFIG.workerTimeout,
+    forceFork = DEFAULT_WORKER_CONFIG.forceFork,
   } = options;
 
-  // Pre-cache file keys and worker name → context key mapping
-  const workerKeyMap = new Map(); // workerName → contextKey
-  for (const key of adapter.files()) {
-    const match = key.match(/^\.\/(.*)\.worker\.[cm]?[jt]s$/i);
-    if (match) workerKeyMap.set(match[1], key);
+  // Discover available workers from the filesystem (recursive)
+  const workerPathMap = new Map(); // workerName → absolute path
+  try {
+    const files = fs.readdirSync(workersDir, {
+      withFileTypes: true,
+      recursive: true,
+    });
+    for (const file of files) {
+      if (!file.isFile()) continue;
+      const match = file.name.match(/^(.+)\.worker\.[cm]?[jt]s$/i);
+      if (match) {
+        // Dirent.parentPath (Node 21+) / Dirent.path (Node 20+)
+        const fileDir = file.parentPath || file.path || workersDir;
+        workerPathMap.set(match[1], path.join(fileDir, file.name));
+      }
+    }
+  } catch {
+    // Workers directory doesn't exist — pool has no workers
   }
 
   // Cache for imported worker modules for same-process execution
@@ -126,24 +147,23 @@ export function createWorkerPool(engineName, workersContext, options = {}) {
    * Get available worker type names
    */
   function getAvailableWorkers() {
-    return Array.from(workerKeyMap.keys());
+    return Array.from(workerPathMap.keys());
   }
 
   /**
-   * Try to import worker module for same-process execution
+   * Try to import worker module for same-process execution.
+   * Uses native require() on the standalone CJS file.
    */
   function tryImportWorkerModule(workerName) {
     if (workerModuleCache.has(workerName)) {
       return workerModuleCache.get(workerName);
     }
 
-    const workerKey = workerKeyMap.get(workerName);
-    if (!workerKey) {
-      return null;
-    }
+    const workerPath = workerPathMap.get(workerName);
+    if (!workerPath) return null;
 
     try {
-      const workerModule = adapter.load(workerKey);
+      const workerModule = moduleRequire(workerPath);
       workerModuleCache.set(workerName, workerModule);
       return workerModule;
     } catch (error) {
@@ -156,18 +176,18 @@ export function createWorkerPool(engineName, workersContext, options = {}) {
   }
 
   /**
-   * Get worker file absolute path for Piscina
+   * Get worker file absolute path for Piscina's forceFork mode.
+   * Returns the pre-compiled standalone CJS file path directly.
    */
   function getWorkerPath(workerName) {
-    const workerKey = workerKeyMap.get(workerName);
-    if (!workerKey) {
+    const workerPath = workerPathMap.get(workerName);
+    if (!workerPath) {
       const available = getAvailableWorkers().join(', ');
       throw new ErrorHandler(
         `Worker '${workerName}' not found. Available workers: ${available}`,
       );
     }
-
-    return adapter.resolve(workerKey);
+    return workerPath;
   }
 
   class WorkerPool {
@@ -175,7 +195,7 @@ export function createWorkerPool(engineName, workersContext, options = {}) {
       // Configuration
       this.maxWorkers = maxWorkers;
       this.workerTimeout = workerTimeout;
-      this.forceFork = options.forceFork || DEFAULT_WORKER_CONFIG.forceFork;
+      this.forceFork = forceFork;
       this.engineName = engineName;
       this.ErrorHandler = ErrorHandler;
 
@@ -230,16 +250,13 @@ export function createWorkerPool(engineName, workersContext, options = {}) {
       const shouldForceFork = forceForkOption || this.forceFork;
 
       // Try same-process execution first (fast, no IPC overhead)
-      if (!shouldForceFork) {
+      if (!shouldForceFork && this.knownWorkers.includes(workerType)) {
         const workerModule = tryImportWorkerModule(workerType);
 
         if (workerModule && typeof workerModule[messageType] === 'function') {
           try {
-            // Unpack promise directly. The worker returns standard results.
             const result = await workerModule[messageType](data);
 
-            // Same-process usually returns direct domain payloads.
-            // We'll wrap it to standardize with what old engines expected.
             return {
               success: true,
               result,
@@ -249,7 +266,6 @@ export function createWorkerPool(engineName, workersContext, options = {}) {
               `Same-process worker '${workerType}' failed, falling back to thread:`,
               error.message,
             );
-            // If it threw an error and strict throwOnError was requested
             if (throwOnError) {
               throw error;
             }
@@ -296,23 +312,22 @@ export function createWorkerPool(engineName, workersContext, options = {}) {
       }
 
       const workerPath = getWorkerPath(workerType);
+      const { pool } = this;
 
-      // Create an abort controller to handle custom timeouts
+      if (!pool) {
+        throw new WorkerError(
+          `Worker threads (Piscina) are not available in this environment (Node ${process.version}).`,
+          'UNSUPPORTED_NODE_VERSION',
+          500,
+        );
+      }
+
       const abortController = new AbortController();
       const timeoutToken = setTimeout(() => {
         abortController.abort();
       }, this.workerTimeout);
 
-      // 2. Offload to background thread via Piscina
       try {
-        const { pool } = this;
-        if (!pool) {
-          throw new WorkerError(
-            `Worker threads (Piscina) are not available in this environment (Node ${process.version}).`,
-            'UNSUPPORTED_NODE_VERSION',
-            500,
-          );
-        }
         const result = await pool.run(data, {
           filename: workerPath,
           name: messageType,
@@ -350,6 +365,7 @@ export function createWorkerPool(engineName, workersContext, options = {}) {
 
       this.knownWorkers.splice(index, 1);
       workerModuleCache.delete(workerType);
+      workerPathMap.delete(workerType);
 
       if (__DEV__) {
         console.log(

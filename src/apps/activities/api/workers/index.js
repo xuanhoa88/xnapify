@@ -9,12 +9,11 @@
  * Activity Worker Pool - Manages background activities logging tasks
  */
 
-// Auto-load workers via require.context (*.worker.js)
-const workersContext = require.context('./', false, /\.worker\.[cm]?[jt]s$/i);
+// Workers are discovered from pre-compiled standalone CJS files at build time
 
 export default function getActivityWorkerPool(container) {
   const { createWorkerPool } = container.resolve('worker');
-  const workerPool = createWorkerPool('Activities', workersContext, {
+  const workerPool = createWorkerPool('Activities', {
     maxWorkers: 1, // Logging is sequential and low-impact
   });
 

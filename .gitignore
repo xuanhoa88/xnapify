@@ -195,7 +195,7 @@ uploads/
 # Node-RED
 .node-red/
 
-# E2E LLM step cache
+# E2E test infrastructure
 tools/e2e/.step-cache.json
 
 # Embedded PostgreSQL data

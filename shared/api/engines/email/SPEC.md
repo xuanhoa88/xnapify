@@ -217,7 +217,7 @@ Similar pattern. Env vars: `XNAPIFY_SENDGRID_KEY` / `XNAPIFY_MAILGUN_KEY` + `XNA
 ## 7. Worker Pool (`workers/index.js`)
 
 ```javascript
-createWorkerPool('📧 Email', workersContext, { ErrorHandler: EmailWorkerError, ...WORKER_CONFIG })
+createWorkerPool('📧 Email', { ErrorHandler: EmailWorkerError, ...WORKER_CONFIG })
 ```
 
 ### Worker Configuration (env vars)

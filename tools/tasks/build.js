@@ -37,6 +37,7 @@ const { withBuildRetry } = require('../utils/retry');
 const {
   clientConfig: webpackClientConfig,
   serverConfig: webpackServerConfig,
+  workerConfigs: webpackWorkerConfigs,
 } = require('../webpack/app.config');
 const { createWebpackConfig } = require('../webpack/base.config');
 
@@ -333,7 +334,11 @@ function createBundle() {
 
     logInfo(`🔨 Compiling webpack bundles...`);
 
-    const compiler = webpack([webpackClientConfig, webpackServerConfig]);
+    const compiler = webpack([
+      webpackClientConfig,
+      webpackServerConfig,
+      ...webpackWorkerConfigs,
+    ]);
 
     compiler.run(async (err, stats) => {
       const duration = Date.now() - startTime;

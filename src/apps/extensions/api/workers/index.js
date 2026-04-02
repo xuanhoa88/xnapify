@@ -13,10 +13,9 @@
 
 import { createWorkerPool } from '@shared/api/engines/worker';
 
-// Auto-load workers via require.context (*.worker.js)
-const workersContext = require.context('./', false, /\.worker\.[cm]?[jt]s$/i);
+// Workers are discovered from pre-compiled standalone CJS files at build time
 
-const workerPool = createWorkerPool('Extensions', workersContext, {
+const workerPool = createWorkerPool('Extensions', {
   maxWorkers: 2,
   workerTimeout: 120_000, // large extension dirs may take time
 });

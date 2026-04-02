@@ -261,7 +261,7 @@ Controlled via `shared/node-red/settings.js` and environment variables.
 For heavy processing, use the Worker Engine:
 
 ```javascript
-// 1. Define worker handler
+// 1. Define worker handler (standalone CJS file — no @shared/ imports)
 const myTaskLogic = async payload => {
   // Heavy processing
   return { success: true };
@@ -271,10 +271,9 @@ const myTaskLogic = async payload => {
 export { myTaskLogic as MY_TASK_TYPE };
 
 // 2. Create worker pool
-import { createWorkerPool } from '@shared/api/worker';
+import { createWorkerPool } from '@shared/api/engines/worker';
 
-const workersContext = require.context('.', false, /\.worker\.js$/);
-const workerPool = createWorkerPool('MyDomain', workersContext, {
+const workerPool = createWorkerPool('MyDomain', {
   maxWorkers: 2, // Concurrency limit
   // Optional: forceFork: true (to skip same-process execution)
 });

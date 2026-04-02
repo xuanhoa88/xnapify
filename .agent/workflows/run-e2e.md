@@ -2,18 +2,27 @@
 description: Run E2E test cases from a module's e2e/ folder using AI agent browser automation
 ---
 
-Run browser-based E2E tests by reading natural language test cases from `.md` files colocated inside each module's `e2e/` directory.
+Run browser-based E2E tests by reading natural language test cases from `test.md` files colocated inside each module's `e2e/` directory.
 
 ## Quick Start (CLI)
 
 The primary way to run E2E tests is via the **Chromium CLI tool**:
 
 ```bash
-# Run ALL e2e tests (headless Chromium)
+# Auto mode (default): compile if needed, then run
 npm run test:e2e
 
 # Run with visible browser
 npm run test:e2e:headed
+
+# Compile all test cases (generates script.json via LLM, no browser)
+node tools/e2e/runner.js --mode=compile
+
+# Run using compiled scripts only (no LLM calls, fast)
+node tools/e2e/runner.js --mode=run
+
+# Force recompile even if test.md hasn't changed
+node tools/e2e/runner.js --mode=compile --force
 
 # Run a specific module
 node tools/e2e/runner.js extensions
@@ -21,11 +30,11 @@ node tools/e2e/runner.js extensions
 # Run a specific extension
 node tools/e2e/runner.js posts-module
 
-# Run a specific test file
-node tools/e2e/runner.js extensions/02-activate
+# Run a specific category within a module
+node tools/e2e/runner.js extensions/install
 
-# Clear LLM step cache before running
-node tools/e2e/runner.js --clear-cache
+# Run a single test case
+node tools/e2e/runner.js quick-access-plugin/login/01-buttons-visible
 ```
 
 > [!TIP]
@@ -49,27 +58,61 @@ node tools/e2e/runner.js --clear-cache
 
 ## How it works
 
-The CLI tool (`tools/e2e/runner.js`) uses **Puppeteer + Chromium** to:
-1. Discover `.md` test files in `e2e/` directories
+The CLI tool (`tools/e2e/runner.js`) uses a **compile-once, run-many** architecture:
+
+### Compilation (LLM → script.json)
+1. Discover `test.md` files in the nested `e2e/{category}/{case}/test.md` hierarchy
 2. Parse YAML front-matter (credentials) + markdown AST (test steps) via `front-matter` + `markdown-it`
 3. Auto-detect an LLM provider from IDE/CLI env vars (or use `stdin` for agent callback)
 4. Send each English step to the LLM for interpretation into a structured JSON action
-5. Execute the action via Puppeteer with SPA stability detection (5-signal engine)
-6. Take screenshots, write per-test results and `_summary.md`
+5. Save the compiled script as `script.json` + a `.test-hash` (SHA256 of `test.md`)
 
-This works from **any terminal, any IDE, any CI/CD pipeline**.
+### Execution (script.json → Puppeteer)
+1. Load the pre-compiled `script.json` (no LLM needed!)
+2. Execute each action via Puppeteer with SPA stability detection (5-signal engine)
+3. Take per-step screenshots (`step-01.png`, `step-02.png`, ...) and final state (`final.png`)
+4. Write per-test `result.md` and module-level `_summary.md`
+5. Auto-recompile any failed step via LLM and retry once (self-healing)
+
+### When compilation happens
+| Scenario | LLM called? |
+|----------|------------|
+| First run (no `script.json`) | ✅ Yes — compiles via LLM |
+| Subsequent runs (hash matches) | ❌ No — uses `script.json` |
+| `test.md` edited (hash mismatch) | ✅ Yes — archives old script, recompiles |
+| `--mode=compile --force` | ✅ Yes — force recompile |
+| Compiled step fails at runtime | ✅ Yes — recompiles that step only, retries once |
 
 ## AI Agent Fallback
 
 If the CLI tool doesn't support a specific step pattern, or for exploratory testing,
-AI agents can also execute `.md` test cases directly using their browser automation:
+AI agents can also execute `test.md` test cases directly using their browser automation:
 
 > [!IMPORTANT]
 > Read the `browser-test` skill (`view_file .agent/skills/browser-test/SKILL.md`) for port discovery, task formatting, and auth handling rules.
 
 ## Test Case Format
 
-Each `.md` file in a module's `e2e/` directory follows this structure:
+Each module's `e2e/` directory uses a **nested structure**: one `test.md` per test case, organized by category.
+
+```
+e2e/
+  {category}/
+    {NN-name}/
+      test.md              ← test case definition (tester writes this)
+      script.json          ← compiled automation actions (LLM generates, committed)
+      .test-hash           ← sha256 of test.md at compile time (gitignored)
+      scripts/             ← archived old scripts (history)
+        2026-04-02_13-49.json
+      results/             ← test run results (gitignored)
+        2026-04-02_13-49/
+          result.md
+          step-01.png
+          step-02.png
+          final.png
+```
+
+### test.md format
 
 ```markdown
 ---
@@ -78,33 +121,55 @@ password: admin123
 role: admin
 ---
 
-# Phase Name (e.g., "Activate Extension")
+# Test Case Title
 
-Optional description of what this phase tests.
-
-## Test Case Title
+Description of what this test validates.
 
 ### Prerequisite
 
 - fixture_zip: ./test-fixtures/sample-extension.zip
+
+## Steps
 
 1. Log in as admin
 2. Navigate to the extensions admin page
 3. Step instruction in natural English
 4. ...
 
-## Another Test Case (inherits YAML front-matter credentials)
+## Expected Results
 
-1. ...
+- The extensions page loads with an upload button visible
+- A success toast appears after installation
+- The new extension card is visible in the grid
 ```
 
-- **YAML front-matter** (`---`) = File-level prerequisites (shared across all tests)
-- **H1 (`#`)** = Test phase / suite name
-- **H2 (`##`)** = Individual test case
+- **YAML front-matter** (`---`) = Prerequisites (credentials, fixtures)
+- **H1 (`#`)** = Test case title (one per file)
+- **Paragraph text** = Description (not executed)
 - **H3 `### Prerequisite`** = Per-test overrides (merged with front-matter)
-- **Bullet list** under `### Prerequisite` = Key-value pairs (`key: value`)
-- **Numbered list (`1.`, `2.`, ...)** = Steps to execute in order
-- **Paragraph text** = Context/description (not executed)
+- **`## Steps`** = Executable actions (numbered list, `1.`, `2.`, ...)
+- **`## Expected Results`** = Acceptance criteria (bullet list)
+
+### Directory Naming Convention
+
+Test cases use **category** and **NN-name** directories:
+
+```
+e2e/
+  install/
+    01-upload/test.md
+    02-verify-persists/test.md
+  activate/
+    01-toggle/test.md
+    02-verify-persists/test.md
+    03-filter-tab/test.md
+  login/
+    01-buttons-visible/test.md
+    02-demo-login/test.md
+```
+
+Categories group related tests (e.g., `install`, `activate`, `login`).
+Cases use `NN-name` numbering for execution order.
 
 ## Execution Steps
 
@@ -124,30 +189,28 @@ Follow the `browser-test` skill port discovery rules — same priority order:
 // turbo
 ### 2. Discover test case files
 
-Find all `.md` files in the target module or extension's `e2e/` directory.
+Find all `test.md` files in the target module or extension's `e2e/` directory.
 
 **For a specific module or extension:**
 ```bash
 # Core module (e.g., extensions, users)
-find src/apps/{module}/e2e -name "*.md" -type f 2>/dev/null | sort
+find src/apps/{module}/e2e -name "test.md" -type f 2>/dev/null | sort
 
 # Installed extension (e.g., posts-module, oauth-google-plugin)
-find src/extensions/{extension}/e2e -name "*.md" -type f 2>/dev/null | sort
+find src/extensions/{extension}/e2e -name "test.md" -type f 2>/dev/null | sort
 ```
 
 **For ALL e2e tests across the project:**
 ```bash
-find src/apps src/extensions -type d -name "e2e" -exec find {} -name "*.md" -type f \; 2>/dev/null | sort
+find src/apps src/extensions -path "*/e2e/*/test.md" -type f 2>/dev/null | sort
 ```
-
-Sort by filename prefix (e.g., `01-install.md`, `02-activate.md`) to get lifecycle order.
 
 ### 3. Read and parse each test case file
 
-Use your file reading tool to read each `.md` file. Parse into structured data:
-- **H1 line** → Phase / suite name
-- **H2 lines** → Individual test case names
-- **Numbered list items** → Steps for that test case
+Use your file reading tool to read each `test.md` file. Parse into structured data:
+- **H1 line** → Test case title
+- **`## Steps`** → Numbered list of actions to execute
+- **`## Expected Results`** → Bullet list of acceptance criteria to verify
 - **Non-heading, non-list paragraphs** → Description (skip during execution)
 
 ### 4. Handle authentication FIRST
@@ -161,132 +224,168 @@ Follow the `browser-test` skill auth rules:
 4. Ask the user for credentials if not known — **do NOT guess passwords**
 5. Keep the browser session open for subsequent tests
 
-### 5. Create results directory
+### 5. Execute each test case
 
-Before executing tests, create a timestamped results directory inside the module's `e2e/` folder:
+For each test case, use your browser automation tool to execute **ONE test case at a time**.
 
-```bash
-# Format: e2e/results/YYYY-MM-DD_HH-MM/
-mkdir -p src/apps/{module}/e2e/results/{timestamp}/
-# or for extensions:
-mkdir -p src/extensions/{extension}/e2e/results/{timestamp}/
-```
-
-Example: `src/apps/extensions/e2e/results/2026-03-31_10-03/`
-
-### 6. Execute each test case
-
-For each test case (H2 block), use your browser automation tool to execute **ONE test case at a time**.
-
-Build the task from the parsed steps following the `browser-test` skill template:
+Build the task from the parsed steps and expected results following the `browser-test` skill template:
 
 ```
 Navigate to http://localhost:{PORT}/{admin-page}.
 
 Steps:
 1. Wait for the page to fully load (look for the page header or main content).
-2. {step 1 from the .md file}
-3. {step 2 from the .md file}
+2. {step 1 from the test.md file}
+3. {step 2 from the test.md file}
 ...
 N. Take a screenshot of the final state.
 
+Expected Results:
+- {expected result 1 from the test.md file}
+- {expected result 2 from the test.md file}
+...
+
 Return: Describe what happened at each step. Did all steps succeed?
-Report any errors, unexpected UI states, or missing elements.
+Verify each expected result was met. Report any failures or unexpected UI states.
 ```
 
-### 7. Store individual test case results
+### 6. Store individual test case results
 
-After each test case completes, create a result file:
+Results are stored inside each test case's directory:
 
-**Result file path:** `e2e/results/{timestamp}/{file_prefix}_{test_slug}.md`
+**Result directory:** `e2e/{category}/{NN-name}/results/{timestamp}/`
 
-Example: `e2e/results/2026-03-31_10-03/02_activate_toggle_switch.md`
+Contents:
+- `result.md` — Structured pass/fail report
+- `step-01.png`, `step-02.png`, ... — Per-step screenshots
+- `final.png` — Final state screenshot
+- `*.webp` — Video evidence (if captured by agent)
 
 **Result file format:**
 
 ```markdown
 # {Test Case Title}
 
-**Source:** {path to .md test case file}
+**Source:** {path to test.md file}
 **Date:** {ISO timestamp}
 **Result:** ✅ PASS | ❌ FAIL
+**Duration:** {ms}
 
 ## Steps Executed
 
-1. ✅ Navigate to extensions admin page — page loaded successfully
-2. ✅ Find inactive extension card — found "oauth-google"
-3. ✅ Click toggle switch — modal appeared
-4. ✅ Confirm modal — "Activating..." tag shown
-5. ✅ Wait for toast — "Extension activated successfully" appeared
-6. ✅ Verify toggle checked — toggle is ON
+1. ✅ Navigate to extensions admin page — navigate: Open admin page
+2. ✅ Click toggle switch — click: Toggle activation switch
+3. ❌ Wait for toast — Timeout waiting for element
+
+## Expected Results
+
+- The extension shows as active
 
 ## Notes
 
-{Any observations, warnings, or failure details from the browser automation report}
+{Any observations, warnings, or failure details}
 
 ## Evidence
 
-- Video: [02_activate_toggle.webp](./02_activate_toggle.webp)
-- Screenshot: [02_activate_toggle.png](./02_activate_toggle.png)
+### Screenshots
+
+- [step-01.png](./step-01.png)
+- [step-02.png](./step-02.png)
+- [final.png](./final.png)
+
+### Videos
+
+- [recording.webp](./recording.webp)
 ```
 
-**Save evidence files:**
-Copy any recordings or screenshots produced by your browser automation tool into the results folder.
+### 7. Create summary report
 
-### 8. Create summary report
+After ALL test cases in a module are executed, a module-level summary is created:
 
-After ALL test cases in a module are executed, create a summary file:
-
-**Summary file path:** `e2e/results/{timestamp}/_summary.md`
+**Summary path:** `e2e/_results/{timestamp}/_summary.md`
 
 **Summary format:**
 
 ```markdown
 # E2E Test Results: {module or extension name}
 
-**Date:** {ISO timestamp}
+**Date:** {timestamp}
 **Port:** {resolved port}
 **Total:** {passed}/{total} passed
-**Duration:** {total time}
+**Duration:** {total time}ms
 
 ## Results
 
-| # | File | Test Case | Result | Evidence |
-|---|------|-----------|--------|----------|
-| 1 | 01-install | Upload valid package | ✅ PASS | [video](./01_install_upload.webp) |
-| 2 | 01-install | Persist after refresh | ✅ PASS | [video](./01_install_persist.webp) |
-| 3 | 02-activate | Toggle switch | ✅ PASS | [video](./02_activate_toggle.webp) |
-| 4 | 03-deactivate | Toggle switch | ❌ FAIL | [video](./03_deactivate_toggle.webp) |
+| # | Test Case | Title | Result | Details |
+|---|-----------|-------|--------|---------|
+| 1 | install/01-upload | Upload valid package | ✅ PASS | [result](../../install/01-upload/results/{timestamp}/result.md) |
+| 2 | activate/01-toggle | Toggle switch | ❌ FAIL | [result](../../activate/01-toggle/results/{timestamp}/result.md) |
 
 ## Failed Tests
 
-### 03-deactivate: Toggle switch
-- **Expected:** Modal appears after clicking toggle
-- **Actual:** No modal appeared, toggle state unchanged
-- **Evidence:** [03_deactivate_toggle.webp](./03_deactivate_toggle.webp)
+### activate/01-toggle: Toggle switch
+- **Error:** Timeout waiting for element
+- **Result:** [result](../../activate/01-toggle/results/{timestamp}/result.md)
 ```
 
 ## Results Directory Structure
 
 ```
-src/apps/extensions/e2e/
-├── 01-install.md                           ← Test case definition (committed)
-├── 02-activate.md
-├── 03-deactivate.md
-├── 04-upgrade.md
-├── 05-uninstall.md
-└── results/                                ← Test run results (committed as test history)
-    ├── 2026-03-31_10-03/                   ← One directory per test run
-    │   ├── _summary.md                     ← Overall run summary
-    │   ├── 01_install_upload.md            ← Individual result + notes
-    │   ├── 01_install_upload.webp          ← Video evidence
-    │   ├── 02_activate_toggle.md
-    │   ├── 02_activate_toggle.webp
-    │   └── ...
-    └── 2026-03-31_14-30/                   ← Another test run
-        ├── _summary.md
-        └── ...
+src/extensions/quick-access-plugin/e2e/
+├── login/                                   ← Category
+│   ├── 01-buttons-visible/                  ← Test case
+│   │   ├── test.md                          ← Test definition (committed)
+│   │   ├── script.json                      ← Compiled automation (committed)
+│   │   ├── .test-hash                       ← Hash of test.md (gitignored)
+│   │   ├── scripts/                         ← Archived old scripts (committed)
+│   │   │   └── 2026-04-01_10-03.json
+│   │   └── results/                         ← Test run results (gitignored)
+│   │       └── 2026-04-02_13-49/
+│   │           ├── result.md
+│   │           ├── step-01.png
+│   │           ├── step-02.png
+│   │           ├── final.png
+│   │           └── recording.webp
+│   └── 02-demo-login/
+│       ├── test.md
+│       └── script.json
+└── _results/                                ← Module-level summaries (gitignored)
+    └── 2026-04-02_13-49/
+        └── _summary.md
 ```
+
+## Compiled Scripts (script.json)
+
+Each test case gets a `script.json` — a compiled automation script:
+
+```json
+{
+  "version": 1,
+  "compiledAt": "2026-04-02T07:00:00.000Z",
+  "testHash": "a1b2c3d4e5f6...",
+  "title": "Quick Access Buttons Visible on Login Page",
+  "actions": [
+    {
+      "step": 1,
+      "instruction": "Navigate to the login page",
+      "action": "navigate",
+      "target": "/login",
+      "description": "Open the login page"
+    },
+    {
+      "step": 2,
+      "instruction": "Wait for the page to fully load",
+      "action": "wait",
+      "waitFor": "networkidle",
+      "description": "Wait for all resources to load"
+    }
+  ]
+}
+```
+
+- **Committed to git** — teammates run tests without needing LLM API keys
+- **Auto-archived** — when `test.md` changes, old script moves to `scripts/` for history
+- **Self-healing** — if a compiled action fails, runner auto-recompiles via LLM and retries
 
 ## Rules
 
@@ -296,36 +395,40 @@ These rules extend the `browser-test` skill rules:
 |------|-------------|
 | **Skill first** | Read `browser-test` skill before starting — it defines port discovery, task format, and auth handling |
 | **Port first** | Resolve port using the 3-priority system before building any URL |
-| **One flow per call** | Execute ONE test case (H2 block) per browser automation call |
+| **One flow per call** | Execute ONE test case per browser automation call |
 | **Serial execution** | Run test cases in file order (01 → 02 → 03...) since later phases depend on earlier state |
 | **Screenshot proof** | Always request a screenshot at the end of each test case |
 | **Wait for load** | Always prepend "Wait for the page to fully load" as the first step |
 | **Auth first** | Handle login before any test case |
-| **Store results** | Write a result `.md` file + copy evidence for every test case |
+| **Store results** | Write results inside each test case's `results/{timestamp}/` directory |
 | **Report clearly** | Create `_summary.md` with ✅/❌ table after all tests complete |
 | **No guessing** | Ask the user for credentials / URLs if not known — never assume |
+| **Compile first** | Run `--mode=compile` before `--mode=run` if no `script.json` exists |
 
 ## Anti-Patterns
 
 | ❌ Don't | ✅ Do |
 |----------|------|
 | Hardcode port 3000 | Resolve via `.env` or user context |
-| Test multiple H2 cases in one call | One browser automation call per H2 block |
+| Test multiple cases in one call | One browser automation call per test case |
 | Skip page load wait | Always wait for specific content first |
 | Use vague "click the button" | Use exact text: `Click the "Upload Extension" button` |
 | Ignore auth redirects | Handle login in a dedicated pre-test step |
-| Run tests in random order | Follow file prefix order (01 → 02 → 03...) |
+| Run tests in random order | Follow directory numbering order (01 → 02 → 03...) |
 | Guess admin passwords | Ask the user if credentials are not known |
 | Only search `src/apps/` | Search BOTH `src/apps/` and `src/extensions/` for `e2e/` folders |
-| Discard test results | Always write result files + copy evidence into results/ |
+| Use flat `.md` files | Use nested `e2e/{category}/{NN-name}/test.md` structure |
+| Call LLM on every run | Use compiled `script.json` — only recompile when `test.md` changes |
+| Discard test results | Store results in `results/{timestamp}/` with screenshots |
 
 ## Example Usage
 
 When the user asks:
-- `run e2e for extensions` → Read `src/apps/extensions/e2e/*.md` (core extensions manager) and execute all
-- `run e2e for oauth-google` → Read `src/extensions/oauth-google-plugin/e2e/*.md` and execute
-- `run e2e for posts` → Read `src/extensions/posts-module/e2e/*.md` and execute
-- `run the activate test for extensions` → Read only `src/apps/extensions/e2e/02-activate.md`
+- `run e2e for extensions` → Discover `src/apps/extensions/e2e/**/test.md` and execute all
+- `run e2e for oauth-google` → Discover `src/extensions/oauth-google-plugin/e2e/**/test.md` and execute
+- `run e2e for posts` → Discover `src/extensions/posts-module/e2e/**/test.md` and execute
+- `run the login tests for quick-access` → Run `src/extensions/quick-access-plugin/e2e/login/*/test.md`
+- `compile e2e scripts` → Run `node tools/e2e/runner.js --mode=compile`
 - `run all e2e tests` → Find ALL `e2e/` folders in both `src/apps/` and `src/extensions/`, run each
 - `/run-e2e` → Same as "run all e2e tests"
 

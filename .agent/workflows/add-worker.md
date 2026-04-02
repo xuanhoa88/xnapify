@@ -68,12 +68,12 @@ export { generateReportLogic as GENERATE_REPORT };
 ## 2. Create Worker Pool
 
 ```javascript
-// @apps/posts/workers/index.js
-import { createWorkerPool } from '@shared/api/worker';
+// @apps/posts/api/workers/index.js
+import { createWorkerPool } from '@shared/api/engines/worker';
 
-const workersContext = require.context('.', false, /\.worker\.js$/);
-
-const workerPool = createWorkerPool('Posts', workersContext, {
+// Workers are discovered from pre-compiled standalone CJS files at
+// `<bundleDir>/workers/` — no require.context needed.
+const workerPool = createWorkerPool('Posts', {
   maxWorkers: 2, // Controls concurrency
 });
 
@@ -215,13 +215,11 @@ describe('[worker] generate-report', () => {
 
 ```javascript
 // Advanced worker pool configuration
-const workerPool = createWorkerPool('Posts', workersContext, {
-  maxWorkers: 4, // Maximum concurrent workers
-  timeout: 30000, // Worker timeout (30s)
-  retries: 2, // Retry failed jobs
-  onError: (error, job) => {
-    console.error(`Worker error for job ${job.name}:`, error);
-  },
+const workerPool = createWorkerPool('Posts', {
+  maxWorkers: 4,           // Maximum concurrent workers
+  workerTimeout: 30_000,   // Per-task timeout (30s)
+  forceFork: false,        // Skip same-process execution globally
+  ErrorHandler: MyError,   // Custom error class (extends WorkerError)
 });
 ```
 
@@ -229,12 +227,14 @@ const workerPool = createWorkerPool('Posts', workersContext, {
 
 ```javascript
 // Check worker pool status
-const status = workerPool.getStatus();
-console.log('Active workers:', status.activeWorkers);
-console.log('Queued jobs:', status.queuedJobs);
+const stats = workerPool.getStats();
+console.log('Total workers:', stats.totalWorkers);
+console.log('Utilization:', stats.utilization);
+console.log('Completed tasks:', stats.completedTasks);
+console.log('Run time info:', stats.runTimeInfo);
 
-// Wait for all workers to complete
-await workerPool.drain();
+// Cleanup pool (destroys threads)
+await workerPool.cleanup();
 ```
 
 ## Best Practices
@@ -242,11 +242,12 @@ await workerPool.drain();
 1. **Use workers for heavy tasks** - Don't block the main process
 2. **Set appropriate maxWorkers** - Balance concurrency vs resources
 3. **Handle errors natively** - Use `{ throwOnError: true }` and `try/catch` at the dispatch site
-4. **Test worker logic** - Workers are just async functions
-5. **Monitor worker status** - Track active workers and queue
+4. **Test worker logic** - Workers are just async functions (import and call directly)
+5. **Monitor worker status** - Use `workerPool.getStats()` to track utilization
 6. **Use with Schedule Engine** - For recurring background jobs
 7. **Keep payloads serializable** - Workers use IPC, no functions/classes
-8. **Set timeouts** - Prevent workers from hanging indefinitely
+8. **Set timeouts** - Use `workerTimeout` option to prevent workers from hanging
+9. **Workers are standalone CJS** - No `@shared/` imports or Webpack runtime access
 
 ## Common Patterns
 
@@ -362,3 +363,12 @@ async function handleProcessJob(app, job) {
 
 See `src/apps/extensions/api/` for the canonical reference implementation.
 
+---
+
+## See Also
+
+- `/add-module` — Full-stack module where workers are registered in `boot()`
+- `/add-test` — Jest patterns for testing worker handler functions
+- `/add-engine` — Worker engine internals (`shared/api/engines/worker/`)
+- `/debug` — Part 10 covers extension lifecycle and SQLITE_BUSY with workers
+- `/update-code` — Modify existing workers with test verification

@@ -16,6 +16,7 @@ const { logWarn } = require('../utils/logger');
 const {
   createCacheGroups,
   createWebpackConfig,
+  createWorkerConfig,
   createCSSRule,
   createDefinePlugin,
   createEnvDefine,
@@ -228,14 +229,15 @@ function createClientConfig(extensionData, extensionDefines, buildPath) {
 }
 
 /**
- * Create API server config (if extension has API entry)
+ * Create API server config and worker configs (if extension has API entry)
  */
 function createApiConfig(extensionData, extensionDefines, buildPath) {
-  const { dirName, apiPath } = extensionData;
+  const { dirName, apiPath, extensionPath } = extensionData;
 
   if (!apiPath) return [];
 
-  const extNodeModules = path.join(extensionData.extensionPath, 'node_modules');
+  const extNodeModules = path.join(extensionPath, 'node_modules');
+  const outputDir = path.join(buildPath, dirName);
 
   const apiConfig = createWebpackConfig('server', {
     entry: apiPath,
@@ -247,7 +249,7 @@ function createApiConfig(extensionData, extensionDefines, buildPath) {
       }),
     ],
     output: {
-      path: path.join(buildPath, dirName),
+      path: outputDir,
       filename: 'api.js',
     },
     plugins: [
@@ -259,7 +261,28 @@ function createApiConfig(extensionData, extensionDefines, buildPath) {
 
   apiConfig.resolve.modules.unshift(extNodeModules);
 
-  return [apiConfig];
+  const configs = [apiConfig];
+
+  // Compile workers as standalone CJS (for Piscina forceFork)
+  const workerCfg = createWorkerConfig({
+    workersDir: path.join(path.dirname(apiPath), 'workers'),
+    outputPath: outputDir,
+    plugins: [extensionDefines, createProgressPlugin()],
+    overrides: {
+      externals: [
+        nodeExternals({
+          additionalModuleDirs: [extNodeModules],
+          allowlist: [/^\.\.\?\//],
+        }),
+      ],
+    },
+  });
+  if (workerCfg) {
+    workerCfg.resolve.modules.unshift(extNodeModules);
+    configs.push(workerCfg);
+  }
+
+  return configs;
 }
 
 // =============================================================================
@@ -296,12 +319,12 @@ function createExtensionConfig({ extensions = [], buildPath }) {
       ),
     });
 
-    // Create browser and server builds
+    // Create browser builds
     configs.push(
       ...createClientConfig(extensionData, extensionDefines, buildPath),
     );
 
-    // Optionally create API build
+    // Create API + worker builds
     configs.push(
       ...createApiConfig(extensionData, extensionDefines, buildPath),
     );

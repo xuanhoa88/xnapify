@@ -23,6 +23,7 @@ const {
   SERVER_BUNDLE_PATH: WEBPACK_SERVER_BUNDLE_PATH,
   clientConfig: webpackClientConfig,
   serverConfig: webpackServerConfig,
+  workerConfigs: webpackWorkerConfigs,
 } = require('../webpack/app.config');
 const {
   start: startBrowserSync,
@@ -283,7 +284,11 @@ function setupWebpackCompilers() {
   configureWebpackForDev(webpackServerConfig, false);
 
   // Create webpack compilers
-  const multiCompiler = webpack([webpackClientConfig, webpackServerConfig]);
+  const multiCompiler = webpack([
+    webpackClientConfig,
+    webpackServerConfig,
+    ...webpackWorkerConfigs,
+  ]);
   const clientCompiler = multiCompiler.compilers.find(c => c.name === 'client');
   const serverCompiler = multiCompiler.compilers.find(c => c.name === 'server');
 

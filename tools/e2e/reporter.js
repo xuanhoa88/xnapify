@@ -9,28 +9,56 @@
  * E2E Test Runner — Reporter
  *
  * Creates result files and summary reports for each test run.
+ *
+ * Results are grouped by test case and execution time:
+ *
+ *   e2e/
+ *     {category}/
+ *       {NN-name}/
+ *         test.md                   ← test case definition
+ *         script.json               ← compiled automation actions
+ *         results/
+ *           {timestamp}/            ← grouped by execution time
+ *             result.md             ← structured test result
+ *             step-01.png           ← per-step screenshots
+ *             step-02.png
+ *             final.png             ← final state screenshot
+ *
+ * Evidence files (.png, .webp, .mp4, etc.) are auto-discovered
+ * and listed in the Evidence section of result.md.
  */
 
 const fs = require('fs');
 const path = require('path');
 
-function createResultsDir(e2eDir, timestamp) {
-  const resultsDir = path.join(e2eDir, 'results', timestamp);
+/**
+ * Create a timestamped results directory for a specific test case.
+ *
+ * @param {string} testCaseDir  The test case directory (e.g., e2e/login/01-buttons-visible)
+ * @param {string} timestamp    Run timestamp
+ * @returns {string} Absolute path to the results directory
+ */
+function createTestCaseResultsDir(testCaseDir, timestamp) {
+  const resultsDir = path.join(testCaseDir, 'results', timestamp);
   fs.mkdirSync(resultsDir, { recursive: true });
   return resultsDir;
 }
 
-function slugify(text) {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_|_$/g, '')
-    .slice(0, 60);
+/**
+ * Create a module-level summary directory for a run.
+ *
+ * @param {string} e2eDir     The module's e2e/ directory
+ * @param {string} timestamp  Run timestamp
+ * @returns {string} Absolute path to the summary directory
+ */
+function createSummaryDir(e2eDir, timestamp) {
+  const summaryDir = path.join(e2eDir, '_results', timestamp);
+  fs.mkdirSync(summaryDir, { recursive: true });
+  return summaryDir;
 }
 
-function writeTestResult(resultsDir, filePrefix, testCase, result) {
-  const slug = `${filePrefix}_${slugify(testCase.name)}`;
-  const filePath = path.join(resultsDir, `${slug}.md`);
+function writeTestResult(resultsDir, testCase, result) {
+  const filePath = path.join(resultsDir, 'result.md');
 
   const stepsText = result.steps
     .map((s, i) => {
@@ -40,7 +68,46 @@ function writeTestResult(resultsDir, filePrefix, testCase, result) {
     })
     .join('\n');
 
-  const content = `# ${testCase.name}
+  const expectedText =
+    (result.expectedResults || []).length > 0
+      ? (result.expectedResults || []).map(e => `- ${e}`).join('\n')
+      : 'No expected results defined.';
+
+  // Auto-discover all evidence files (screenshots, videos)
+  const mediaExts = ['.png', '.jpg', '.jpeg', '.webp', '.gif', '.mp4', '.webm'];
+  let evidenceText = '';
+  try {
+    const files = fs
+      .readdirSync(resultsDir)
+      .filter(f => {
+        const ext = path.extname(f).toLowerCase();
+        return mediaExts.includes(ext);
+      })
+      .sort();
+
+    if (files.length > 0) {
+      const screenshots = files.filter(f =>
+        /\.(png|jpg|jpeg|webp|gif)$/i.test(f),
+      );
+      const videos = files.filter(f => /\.(mp4|webm)$/i.test(f));
+
+      if (screenshots.length > 0) {
+        evidenceText += '### Screenshots\n\n';
+        evidenceText += screenshots.map(f => `- [${f}](./${f})`).join('\n');
+      }
+      if (videos.length > 0) {
+        evidenceText +=
+          (screenshots.length > 0 ? '\n\n' : '') + '### Videos\n\n';
+        evidenceText += videos.map(f => `- [${f}](./${f})`).join('\n');
+      }
+    } else {
+      evidenceText = 'No evidence captured.';
+    }
+  } catch {
+    evidenceText = 'No evidence captured.';
+  }
+
+  const content = `# ${testCase.title}
 
 **Source:** ${result.sourceFile}
 **Date:** ${result.timestamp}
@@ -51,20 +118,24 @@ function writeTestResult(resultsDir, filePrefix, testCase, result) {
 
 ${stepsText}
 
+## Expected Results
+
+${expectedText}
+
 ## Notes
 
 ${result.error || 'All steps completed successfully.'}
 
 ## Evidence
 
-${result.screenshotPath ? `- Screenshot: [${path.basename(result.screenshotPath)}](./${path.basename(result.screenshotPath)})` : '- No screenshot captured'}
+${evidenceText}
 `;
 
   fs.writeFileSync(filePath, content);
-  return { slug, filePath };
+  return { filePath };
 }
 
-function writeSummary(resultsDir, moduleName, results, config) {
+function writeSummary(summaryDir, moduleName, results, config) {
   const passed = results.filter(r => r.passed).length;
   const total = results.length;
   const totalDuration = results.reduce((sum, r) => sum + (r.duration || 0), 0);
@@ -72,10 +143,8 @@ function writeSummary(resultsDir, moduleName, results, config) {
   const rowsText = results
     .map((r, i) => {
       const icon = r.passed ? '✅ PASS' : '❌ FAIL';
-      const evidence = r.screenshotPath
-        ? `[screenshot](./${path.basename(r.screenshotPath)})`
-        : '-';
-      return `| ${i + 1} | ${r.filePrefix} | ${r.testName} | ${icon} | ${evidence} |`;
+      const resultLink = `[result](../../${r.category}/${r.caseName}/results/${config.timestamp}/result.md)`;
+      return `| ${i + 1} | ${r.category}/${r.caseName} | ${r.testName} | ${icon} | ${resultLink} |`;
     })
     .join('\n');
 
@@ -83,7 +152,7 @@ function writeSummary(resultsDir, moduleName, results, config) {
     .filter(r => !r.passed)
     .map(
       r =>
-        `### ${r.filePrefix}: ${r.testName}\n- **Error:** ${r.error}\n- **Evidence:** ${r.screenshotPath ? `[screenshot](./${path.basename(r.screenshotPath)})` : 'none'}`,
+        `### ${r.category}/${r.caseName}: ${r.testName}\n- **Error:** ${r.error}\n- **Result:** [result](../../${r.category}/${r.caseName}/results/${config.timestamp}/result.md)`,
     )
     .join('\n\n');
 
@@ -96,15 +165,20 @@ function writeSummary(resultsDir, moduleName, results, config) {
 
 ## Results
 
-| # | File | Test Case | Result | Evidence |
-|---|------|-----------|--------|----------|
+| # | Test Case | Title | Result | Details |
+|---|-----------|-------|--------|---------|
 ${rowsText}
 ${failedSection ? `\n## Failed Tests\n\n${failedSection}` : ''}
 `;
 
-  const summaryPath = path.join(resultsDir, '_summary.md');
+  const summaryPath = path.join(summaryDir, '_summary.md');
   fs.writeFileSync(summaryPath, content);
   return summaryPath;
 }
 
-module.exports = { createResultsDir, writeTestResult, writeSummary, slugify };
+module.exports = {
+  createTestCaseResultsDir,
+  createSummaryDir,
+  writeTestResult,
+  writeSummary,
+};

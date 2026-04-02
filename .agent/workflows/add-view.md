@@ -319,3 +319,13 @@ export default {ComponentName};
 | `PropTypes.oneOfType([...])` | Union types |
 
 Append `.isRequired` to make any prop mandatory.
+
+---
+
+## See Also
+
+- `/add-module` — Full-stack module with API, views, models, and auto-discovery
+- `/add-redux` — Redux Toolkit slice, thunks, and selectors for the view
+- `/add-test` — Jest tests for view components
+- `/add-extension` — Extension views with slots and hooks
+- `/update-code` — Modify existing views with test verification

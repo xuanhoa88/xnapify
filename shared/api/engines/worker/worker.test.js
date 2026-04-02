@@ -5,16 +5,27 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-// Mock piscina and native require before any imports
+import fs from 'fs';
+
+// In-memory worker module registry (populated by createMockWorkers)
+let mockWorkerModules = {};
+
+// Mock createNativeRequire — returns a require function that loads from
+// our in-memory mock registry instead of the real filesystem.
+// NOTE: jest.mock is hoisted, but the closure captures mockWorkerModules
+// by reference so updates in createMockWorkers() are visible.
 jest.mock('@shared/utils/createNativeRequire', () => ({
-  createNativeRequire: () => jest.fn(),
+  createNativeRequire: () => {
+    return filePath => {
+      // Extract basename without importing path (jest.mock is hoisted)
+      const basename = filePath.split('/').pop();
+      if (mockWorkerModules[basename]) {
+        return mockWorkerModules[basename];
+      }
+      throw new Error(`Mock require: module not found: ${filePath}`);
+    };
+  },
 }));
-
-jest.mock('@shared/utils/contextAdapter', () => ({
-  createWebpackContextAdapter: jest.fn(),
-}));
-
-import { createWebpackContextAdapter } from '@shared/utils/contextAdapter';
 
 import { createWorkerPool } from './createWorkerPool';
 import { WorkerError } from './errors';
@@ -23,35 +34,37 @@ import { WorkerError } from './errors';
 // Helpers
 // ======================================================================
 
-/**
- * Build a fake webpack require.context adapter for testing
- */
-function createMockAdapter(workerFiles = {}) {
-  const keys = Object.keys(workerFiles);
-
-  const adapter = {
-    files: () => keys,
-    load: jest.fn(key => {
-      if (!workerFiles[key]) {
-        throw new Error(`Module not found: ${key}`);
-      }
-      return workerFiles[key];
-    }),
-    resolve: jest.fn(key => `/absolute/path/to/${key.replace('./', '')}`),
-  };
-
-  createWebpackContextAdapter.mockReturnValue(adapter);
-  return adapter;
-}
+const FAKE_WORKERS_DIR = '/fake/bundle/workers';
+const originalReaddirSync = fs.readdirSync;
 
 /**
- * Returns a dummy webpack require.context function (just needs to be truthy)
+ * Set up mock workers for discovery and same-process execution.
+ *
+ * @param {Object} workerDefinitions - { workerName: { HANDLER: fn, ... } }
  */
-function dummyContext() {
-  const ctx = () => {};
-  ctx.keys = () => [];
-  ctx.resolve = () => '';
-  return ctx;
+function createMockWorkers(workerDefinitions = {}) {
+  mockWorkerModules = {};
+  const mockDirents = [];
+
+  for (const [name, exports] of Object.entries(workerDefinitions)) {
+    const filename = `${name}.worker.js`;
+    mockWorkerModules[filename] = exports;
+    mockDirents.push({
+      name: filename,
+      isFile: () => true,
+      isDirectory: () => false,
+      parentPath: FAKE_WORKERS_DIR,
+      path: FAKE_WORKERS_DIR,
+    });
+  }
+
+  // Mock fs.readdirSync — return our mock dirents for any workers/ dir
+  jest.spyOn(fs, 'readdirSync').mockImplementation((dir, opts) => {
+    if (typeof dir === 'string' && dir.endsWith('/workers')) {
+      return mockDirents;
+    }
+    return originalReaddirSync(dir, opts);
+  });
 }
 
 // ======================================================================
@@ -98,23 +111,25 @@ describe('createWorkerPool', () => {
   // ====================================================================
 
   describe('factory validation', () => {
-    it('should throw if engineName is missing', () => {
-      createMockAdapter();
+    it('should throw WorkerError if engineName is missing', () => {
+      createMockWorkers();
 
-      expect(() => createWorkerPool('', dummyContext())).toThrow(
+      expect(() => createWorkerPool('')).toThrow(WorkerError);
+      expect(() => createWorkerPool('')).toThrow(
         'createWorkerPool requires an engineName string',
       );
-      expect(() => createWorkerPool(null, dummyContext())).toThrow(
+      expect(() => createWorkerPool(null)).toThrow(WorkerError);
+      expect(() => createWorkerPool(null)).toThrow(
         'createWorkerPool requires an engineName string',
       );
     });
 
     it('should return cached pool for same engineName', () => {
-      createMockAdapter();
+      createMockWorkers();
       const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
 
-      const pool1 = createWorkerPool('TestEngine', dummyContext());
-      const pool2 = createWorkerPool('TestEngine', dummyContext());
+      const pool1 = createWorkerPool('TestEngine');
+      const pool2 = createWorkerPool('TestEngine');
 
       expect(pool1).toBe(pool2);
 
@@ -122,12 +137,12 @@ describe('createWorkerPool', () => {
     });
 
     it('should create separate pools for different engineNames', () => {
-      createMockAdapter();
+      createMockWorkers();
 
-      const pool1 = createWorkerPool('Engine1', dummyContext());
+      const pool1 = createWorkerPool('Engine1');
 
-      createMockAdapter();
-      const pool2 = createWorkerPool('Engine2', dummyContext());
+      createMockWorkers();
+      const pool2 = createWorkerPool('Engine2');
 
       expect(pool1).not.toBe(pool2);
     });
@@ -139,12 +154,12 @@ describe('createWorkerPool', () => {
 
   describe('worker discovery', () => {
     it('should discover .worker.js files', () => {
-      createMockAdapter({
-        './checksum.worker.js': { COMPUTE: jest.fn() },
-        './search.worker.js': { INDEX: jest.fn() },
+      createMockWorkers({
+        checksum: { COMPUTE: jest.fn() },
+        search: { INDEX: jest.fn() },
       });
 
-      const pool = createWorkerPool('Discovery', dummyContext());
+      const pool = createWorkerPool('Discovery');
 
       expect(pool.knownWorkers).toEqual(
         expect.arrayContaining(['checksum', 'search']),
@@ -152,31 +167,15 @@ describe('createWorkerPool', () => {
       expect(pool.knownWorkers).toHaveLength(2);
     });
 
-    it('should discover .worker.ts and .worker.mjs files', () => {
-      createMockAdapter({
-        './task.worker.ts': { RUN: jest.fn() },
-        './job.worker.mjs': { EXEC: jest.fn() },
-        './legacy.worker.cjs': { CALL: jest.fn() },
+    it('should return empty workers when directory does not exist', () => {
+      // Don't mock readdirSync — let it fail naturally
+      jest.spyOn(fs, 'readdirSync').mockImplementation(() => {
+        throw new Error('ENOENT');
       });
 
-      const pool = createWorkerPool('MultiExt', dummyContext());
+      const pool = createWorkerPool('EmptyPool');
 
-      expect(pool.knownWorkers).toEqual(
-        expect.arrayContaining(['task', 'job', 'legacy']),
-      );
-      expect(pool.knownWorkers).toHaveLength(3);
-    });
-
-    it('should ignore non-worker files', () => {
-      createMockAdapter({
-        './checksum.worker.js': { COMPUTE: jest.fn() },
-        './utils.js': { helper: jest.fn() },
-        './README.md': {},
-      });
-
-      const pool = createWorkerPool('FilterTest', dummyContext());
-
-      expect(pool.knownWorkers).toEqual(['checksum']);
+      expect(pool.knownWorkers).toEqual([]);
     });
   });
 
@@ -188,11 +187,11 @@ describe('createWorkerPool', () => {
     it('should execute worker function in same process', async () => {
       const handler = jest.fn().mockResolvedValue({ data: 42 });
 
-      createMockAdapter({
-        './math.worker.js': { COMPUTE: handler },
+      createMockWorkers({
+        math: { COMPUTE: handler },
       });
 
-      const pool = createWorkerPool('SameProc', dummyContext());
+      const pool = createWorkerPool('SameProc');
       const result = await pool.sendRequest('math', 'COMPUTE', {
         input: 10,
       });
@@ -204,31 +203,16 @@ describe('createWorkerPool', () => {
       expect(handler).toHaveBeenCalledWith({ input: 10 });
     });
 
-    it('should cache worker module after first import', async () => {
-      const handler = jest.fn().mockResolvedValue('ok');
-      const adapter = createMockAdapter({
-        './task.worker.js': { RUN: handler },
-      });
-
-      const pool = createWorkerPool('CacheTest', dummyContext());
-
-      await pool.sendRequest('task', 'RUN', {});
-      await pool.sendRequest('task', 'RUN', {});
-
-      // load() should only be called once — second call uses cache
-      expect(adapter.load).toHaveBeenCalledTimes(1);
-    });
-
     it('should throw immediately if throwOnError is true and same-process fails', async () => {
       const error = new Error('computation failed');
       const handler = jest.fn().mockRejectedValue(error);
       jest.spyOn(console, 'warn').mockImplementation();
 
-      createMockAdapter({
-        './failing.worker.js': { FAIL: handler },
+      createMockWorkers({
+        failing: { FAIL: handler },
       });
 
-      const pool = createWorkerPool('ThrowTest', dummyContext());
+      const pool = createWorkerPool('ThrowTest');
 
       await expect(
         pool.sendRequest('failing', 'FAIL', {}, { throwOnError: true }),
@@ -240,11 +224,11 @@ describe('createWorkerPool', () => {
       const handler = jest.fn().mockRejectedValue(error);
       jest.spyOn(console, 'warn').mockImplementation();
 
-      createMockAdapter({
-        './failing.worker.js': { FAIL: handler },
+      createMockWorkers({
+        failing: { FAIL: handler },
       });
 
-      const pool = createWorkerPool('DataThrow', dummyContext());
+      const pool = createWorkerPool('DataThrow');
 
       await expect(
         pool.sendRequest('failing', 'FAIL', {
@@ -257,13 +241,11 @@ describe('createWorkerPool', () => {
       const handler = jest.fn().mockRejectedValue(new Error('same-proc fail'));
       jest.spyOn(console, 'warn').mockImplementation();
 
-      // Only provide a worker that will fail in same-process,
-      // and no piscina available so thread also fails
-      createMockAdapter({
-        './flaky.worker.js': { TASK: handler },
+      createMockWorkers({
+        flaky: { TASK: handler },
       });
 
-      const pool = createWorkerPool('ErrorObj', dummyContext());
+      const pool = createWorkerPool('ErrorObj');
       const result = await pool.sendRequest('flaky', 'TASK', {});
 
       expect(result.success).toBe(false);
@@ -281,11 +263,11 @@ describe('createWorkerPool', () => {
     it('should skip same-process when forceFork is set per-call', async () => {
       const handler = jest.fn();
 
-      createMockAdapter({
-        './task.worker.js': { RUN: handler },
+      createMockWorkers({
+        task: { RUN: handler },
       });
 
-      const pool = createWorkerPool('ForceFork', dummyContext());
+      const pool = createWorkerPool('ForceFork');
 
       // This will fail (no Piscina) but should NOT call the same-process handler
       const result = await pool.sendRequest(
@@ -302,11 +284,11 @@ describe('createWorkerPool', () => {
     it('should skip same-process when forceFork is set globally', async () => {
       const handler = jest.fn();
 
-      createMockAdapter({
-        './task.worker.js': { RUN: handler },
+      createMockWorkers({
+        task: { RUN: handler },
       });
 
-      const pool = createWorkerPool('GlobalFork', dummyContext(), {
+      const pool = createWorkerPool('GlobalFork', {
         forceFork: true,
       });
 
@@ -323,11 +305,11 @@ describe('createWorkerPool', () => {
 
   describe('sendRequestToThread()', () => {
     it('should throw for unknown worker type', async () => {
-      createMockAdapter({
-        './known.worker.js': { TASK: jest.fn() },
+      createMockWorkers({
+        known: { TASK: jest.fn() },
       });
 
-      const pool = createWorkerPool('ThreadTest', dummyContext());
+      const pool = createWorkerPool('ThreadTest');
 
       await expect(
         pool.sendRequestToThread('unknown', 'TASK', {}),
@@ -337,13 +319,13 @@ describe('createWorkerPool', () => {
     it('should throw WorkerError when Piscina is not available', async () => {
       jest.spyOn(console, 'warn').mockImplementation();
 
-      createMockAdapter({
-        './task.worker.js': {
+      createMockWorkers({
+        task: {
           RUN: jest.fn().mockRejectedValue(new Error('fail')),
         },
       });
 
-      const pool = createWorkerPool('NoPiscina', dummyContext());
+      const pool = createWorkerPool('NoPiscina');
 
       // Use sendRequest with forceFork — the thread path will fail
       // because Piscina is not installed in the test environment
@@ -365,12 +347,12 @@ describe('createWorkerPool', () => {
 
   describe('unregisterWorker()', () => {
     it('should remove worker from known workers', () => {
-      createMockAdapter({
-        './a.worker.js': { TASK: jest.fn() },
-        './b.worker.js': { TASK: jest.fn() },
+      createMockWorkers({
+        a: { TASK: jest.fn() },
+        b: { TASK: jest.fn() },
       });
 
-      const pool = createWorkerPool('Unreg', dummyContext());
+      const pool = createWorkerPool('Unreg');
 
       expect(pool.knownWorkers).toContain('a');
 
@@ -382,9 +364,9 @@ describe('createWorkerPool', () => {
     });
 
     it('should return false for non-existing worker', () => {
-      createMockAdapter();
+      createMockWorkers();
 
-      const pool = createWorkerPool('UnregFalse', dummyContext());
+      const pool = createWorkerPool('UnregFalse');
 
       expect(pool.unregisterWorker('nonexistent')).toBe(false);
     });
@@ -393,11 +375,11 @@ describe('createWorkerPool', () => {
       const handler = jest.fn().mockResolvedValue('ok');
       jest.spyOn(console, 'warn').mockImplementation();
 
-      createMockAdapter({
-        './task.worker.js': { RUN: handler },
+      createMockWorkers({
+        task: { RUN: handler },
       });
 
-      const pool = createWorkerPool('UnregBlock', dummyContext());
+      const pool = createWorkerPool('UnregBlock');
 
       // First call succeeds via same-process
       const result1 = await pool.sendRequest('task', 'RUN', {});
@@ -405,11 +387,6 @@ describe('createWorkerPool', () => {
 
       pool.unregisterWorker('task');
 
-      // After unregister, workerModuleCache is cleared so same-process
-      // returns null (workerKeyMap still has the key, but the module
-      // cache was cleared). However, tryImportWorkerModule will re-load
-      // from workerKeyMap. The real guard is in sendRequestToThread
-      // which checks knownWorkers.
       // Force thread path to verify the unregister takes effect there
       const result2 = await pool.sendRequest(
         'task',
@@ -421,6 +398,46 @@ describe('createWorkerPool', () => {
       expect(result2.success).toBe(false);
       expect(result2.error.message).toContain('Unknown worker type');
     });
+
+    it('should prevent same-process execution after unregister', async () => {
+      const handler = jest.fn().mockResolvedValue('ok');
+      jest.spyOn(console, 'warn').mockImplementation();
+
+      createMockWorkers({
+        task: { RUN: handler },
+      });
+
+      const pool = createWorkerPool('UnregSameProc');
+
+      // First call succeeds via same-process
+      const result1 = await pool.sendRequest('task', 'RUN', {});
+      expect(result1.success).toBe(true);
+      expect(handler).toHaveBeenCalledTimes(1);
+
+      pool.unregisterWorker('task');
+      handler.mockClear();
+
+      // After unregister, same-process path should also be blocked
+      const result2 = await pool.sendRequest('task', 'RUN', {});
+
+      expect(handler).not.toHaveBeenCalled();
+      expect(result2.success).toBe(false);
+    });
+
+    it('should not execute unknown workerType via same-process path', async () => {
+      jest.spyOn(console, 'warn').mockImplementation();
+
+      createMockWorkers({
+        known: { RUN: jest.fn().mockResolvedValue('ok') },
+      });
+
+      const pool = createWorkerPool('UnknownSameProc');
+
+      // Unknown worker falls through to thread path which also fails
+      const result = await pool.sendRequest('unknown', 'RUN', {});
+
+      expect(result.success).toBe(false);
+    });
   });
 
   // ====================================================================
@@ -429,9 +446,9 @@ describe('createWorkerPool', () => {
 
   describe('getStats()', () => {
     it('should return zeroed stats when no pool exists', () => {
-      createMockAdapter();
+      createMockWorkers();
 
-      const pool = createWorkerPool('StatsEmpty', dummyContext());
+      const pool = createWorkerPool('StatsEmpty');
       const stats = pool.getStats();
 
       expect(stats).toEqual({
@@ -447,9 +464,9 @@ describe('createWorkerPool', () => {
     });
 
     it('should not trigger lazy pool initialization', () => {
-      createMockAdapter();
+      createMockWorkers();
 
-      const pool = createWorkerPool('StatsNoInit', dummyContext());
+      const pool = createWorkerPool('StatsNoInit');
 
       // Call getStats — pool should remain null
       pool.getStats();
@@ -464,17 +481,17 @@ describe('createWorkerPool', () => {
 
   describe('cleanup()', () => {
     it('should be a no-op when pool was never created', async () => {
-      createMockAdapter();
+      createMockWorkers();
 
-      const pool = createWorkerPool('CleanNoop', dummyContext());
+      const pool = createWorkerPool('CleanNoop');
 
       await expect(pool.cleanup()).resolves.not.toThrow();
     });
 
     it('should remove pool from registry', async () => {
-      createMockAdapter();
+      createMockWorkers();
 
-      const pool = createWorkerPool('CleanReg', dummyContext());
+      const pool = createWorkerPool('CleanReg');
 
       expect(createWorkerPool.registry.has('CleanReg')).toBe(true);
 
@@ -484,18 +501,18 @@ describe('createWorkerPool', () => {
     });
 
     it('should allow re-creation after cleanup', async () => {
-      createMockAdapter({
-        './task.worker.js': { RUN: jest.fn() },
+      createMockWorkers({
+        task: { RUN: jest.fn() },
       });
 
-      const pool1 = createWorkerPool('Recreate', dummyContext());
+      const pool1 = createWorkerPool('Recreate');
       await pool1.cleanup();
 
-      createMockAdapter({
-        './task.worker.js': { RUN: jest.fn() },
+      createMockWorkers({
+        task: { RUN: jest.fn() },
       });
 
-      const pool2 = createWorkerPool('Recreate', dummyContext());
+      const pool2 = createWorkerPool('Recreate');
 
       expect(pool2).not.toBe(pool1);
       expect(createWorkerPool.registry.has('Recreate')).toBe(true);
@@ -510,9 +527,9 @@ describe('createWorkerPool', () => {
     it('should cache Piscina load failure to prevent repeated attempts', () => {
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
 
-      createMockAdapter();
+      createMockWorkers();
 
-      const pool = createWorkerPool('FailCache', dummyContext());
+      const pool = createWorkerPool('FailCache');
 
       // Access pool getter twice — should log error only once
       // (Piscina not installed, so loadPiscina will throw)

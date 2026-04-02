@@ -445,7 +445,52 @@ The autoloader handles execution order: `migrations → models → seeds`.
 
 ---
 
-## Related Commands
+# Part 5: Database-Specific Considerations
 
-- `/add-module` - Full-stack module with API, views, and auto-discovery
-- `/add-test` - Add tests for model and service layers
+## SQLite
+
+| Concern | Details |
+|---------|---------|
+| **ENUM type** | SQLite does not support `ENUM`. Sequelize emulates it with `CHECK` constraints. Use `DataTypes.STRING` with validation if you need portability. |
+| **SQLITE_BUSY** | Concurrent writes cause `SQLITE_BUSY`. Enable WAL mode and set `busy_timeout` in connection config. See `/debug` Part 11. |
+| **Concurrent migrations** | Extension migrations run in parallel during boot → serialize with `for...of` instead of `Promise.allSettled`. |
+| **ALTER TABLE limits** | SQLite has limited `ALTER TABLE` support. Changing column types or dropping columns requires table recreation. Use `queryInterface.changeColumn()` carefully — Sequelize handles the workaround. |
+| **Boolean storage** | SQLite stores booleans as `0`/`1` integers. Sequelize normalizes this, but raw queries must use `0`/`1`. |
+| **WAL mode** | Enable WAL for concurrent read/write: `PRAGMA journal_mode=WAL`. See `shared/api/engines/db/connection.js`. |
+
+## PostgreSQL
+
+| Concern | Details |
+|---------|---------|
+| **ENUM handling** | PostgreSQL `ENUM` types are persistent. Dropping an enum value requires: `ALTER TYPE ... RENAME`, create new type, migrate data, drop old type. Prefer `DataTypes.STRING` with Zod validation for flexibility. |
+| **Connection pooling** | Default pool `max: 5`. Increase for high-concurrency. Monitor with `SELECT * FROM pg_stat_activity`. |
+| **Case sensitivity** | PostgreSQL identifiers are case-sensitive when quoted. Sequelize quotes all column names → ensure `underscored: true` matches actual column casing. |
+| **UUID generation** | Use `DataTypes.UUIDV4` or install `uuid-ossp` extension for `gen_random_uuid()`. |
+| **JSONB** | Prefer `DataTypes.JSONB` over `DataTypes.JSON` — supports indexing and operators. |
+
+## MySQL
+
+| Concern | Details |
+|---------|---------|
+| **Timezone** | MySQL requires timezone tables populated. If you see `Unknown time zone: 'UTC'`, reset the data directory (see `/debug` Part 8). |
+| **Charset/Collation** | Default to `utf8mb4` / `utf8mb4_unicode_ci` for full Unicode support (emojis, CJK). Set via Sequelize `dialectOptions`. |
+| **ENUM handling** | MySQL supports native `ENUM` but adding values requires `ALTER TABLE`. Backward-compatible: always add to the end of the enum list. |
+| **Row size limits** | InnoDB has a ~8KB row size limit. `TEXT`/`BLOB` columns store pointers, but many `VARCHAR(255)` columns can exceed the limit. |
+| **Connection refused** | MySQL daemon may not be running. Use `node tools/npm/preboot.js --db mysql --start`. |
+
+## Cross-Dialect Tips
+
+1. **Test migrations on all target dialects.** SQLite is forgiving, PostgreSQL is strict.
+2. **Avoid dialect-specific SQL** in migrations. Use `queryInterface` methods exclusively.
+3. **Use `DataTypes.STRING`** instead of `ENUM` for maximum portability across SQLite/PG/MySQL.
+4. **Always specify column lengths:** `STRING(255)` not `STRING` (MySQL defaults vary).
+5. **Use `underscored: true`** consistently — mixed casing breaks cross-dialect queries.
+
+---
+
+## See Also
+
+- `/add-module` — Full-stack module with API, views, models, and auto-discovery
+- `/add-test` — Add tests for model and service layers
+- `/add-engine` — Add engines like a custom DB adapter
+- `/debug` — Part 11 covers SQLite WAL mode and SQLITE_BUSY diagnostics

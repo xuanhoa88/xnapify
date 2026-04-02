@@ -394,3 +394,17 @@ For deeper guidance on specific areas:
 ---
 
 > **Remember:** Design is THINKING, not copying. Every project deserves fresh consideration based on its unique context and users. **Avoid the Modern SaaS Safe Harbor!**
+
+---
+
+## Related Skills & Workflows
+
+| Need | Skill / Workflow |
+|------|-----------------|
+| CSS Modules (class naming) | `clean-code` skill |
+| i18n for user-facing text | `i18n-localization` skill |
+| React component patterns | `module-developer` skill |
+| Extension UI injection (slots) | `extension-developer` skill |
+| Accessibility validation | `scripts/accessibility_checker.py` (this skill) |
+| Code review (CSS section) | `code-reviewer` skill (§8) |
+| Adding a page route | `/add-view` workflow |
