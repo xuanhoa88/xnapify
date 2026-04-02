@@ -20,8 +20,15 @@ const migrationsContext = require.context(
 // Auto-load seeds via require.context
 const seedsContext = require.context('./seeds', false, /\.[cm]?[jt]s$/i);
 
+// ======================================================================
+// Internal helpers
+// ======================================================================
+
 /**
  * Extract filename from require.context key: './filename.js' -> 'filename'
+ *
+ * @param {string} key - Webpack context key (e.g. './2026.01.12T00.00.00.create-users.js')
+ * @returns {string} Filename without extension
  */
 function extractFileName(key) {
   return key
@@ -32,29 +39,33 @@ function extractFileName(key) {
 }
 
 /**
- * Resolve absolute path from context adapter
+ * Resolve absolute path from context adapter.
+ *
+ * @param {Object} adapter - Context adapter
+ * @param {string} key - Module key
+ * @returns {string} Resolved path (absolute if possible, otherwise relative)
  */
 function resolveAbsolutePath(adapter, key) {
-  // Method 1: Use adapter.resolve() if available
   if (typeof adapter.resolve === 'function') {
     try {
       return adapter.resolve(key);
-    } catch {
-      // Fall through to alternative methods
+    } catch (_err) {
+      // adapter.resolve() unavailable — fall through to relative path
     }
   }
 
-  // Method 2: Fallback to relative path if absolute path cannot be determined
   return key;
 }
 
 /**
- * Convert context adapter to umzug migrations (auto-deduplicated by filename)
+ * Convert context adapter to umzug migrations (auto-deduplicated by filename).
+ *
+ * Throws if a migration file does not export a valid `up` function, preventing
+ * silent no-ops from being recorded as "executed" in the storage table.
  *
  * @param {Object} adapter - Context adapter
- * @param {string} prefix - Module prefix
+ * @param {string} [prefix] - Module prefix
  * @param {Object} [options] - Optional configuration
- * @param {Console|Object} [options.logger] - Logger instance (default: console)
  * @returns {Array} Array of migration objects
  */
 function adapterToMigrations(adapter, prefix, options = {}) {
@@ -70,12 +81,21 @@ function adapterToMigrations(adapter, prefix, options = {}) {
 
     // Keep first occurrence of each unique name
     if (!uniqueMigrations.has(name)) {
+      // Validate: every migration MUST export a valid `up` function
+      if (typeof migration.up !== 'function') {
+        const error = new Error(
+          `Migration "${name}" does not export a valid "up" function`,
+        );
+        error.name = 'InvalidMigrationError';
+        error.status = 400;
+        throw error;
+      }
+
       uniqueMigrations.set(name, {
         name,
-        path: resolveAbsolutePath(adapter, key), // Use absolute path
+        path: resolveAbsolutePath(adapter, key),
         up: async ({ context }) =>
-          typeof migration.up === 'function' &&
-          (await migration.up({ name, context, Sequelize }, options)),
+          migration.up({ name, context, Sequelize }, options),
         down: async ({ context }) =>
           typeof migration.down === 'function' &&
           (await migration.down({ name, context, Sequelize }, options)),
@@ -87,8 +107,8 @@ function adapterToMigrations(adapter, prefix, options = {}) {
 }
 
 /**
- * Merge multiple migration sources into a single array
- * Ensures no duplicate names across modules
+ * Merge multiple migration sources into a single array.
+ * Ensures no duplicate names across modules.
  *
  * @param {Array} migrationSources - Array of {context, prefix} objects
  * @param {Object} [options] - Optional configuration
@@ -157,7 +177,7 @@ function mergeMigrations(migrationSources, options = {}) {
 }
 
 /**
- * Validate required parameters
+ * Validate that a Sequelize connection instance is valid.
  *
  * @param {Sequelize} connection - Sequelize connection instance
  * @throws {Error} If connection is not provided or invalid
@@ -176,6 +196,10 @@ function validateConnection(connection) {
     throw error;
   }
 }
+
+// ======================================================================
+// Umzug factory functions
+// ======================================================================
 
 /**
  * Create migration umzug instance
@@ -269,6 +293,10 @@ function createSeedUmzug(seeds, connection, options = {}) {
   });
 }
 
+// ======================================================================
+// Public API
+// ======================================================================
+
 /**
  * Get migration status
  *
@@ -283,8 +311,6 @@ export async function getMigrationStatus(
   connection,
   options = {},
 ) {
-  validateConnection(connection);
-
   const umzug = createMigrationUmzug(migrations, connection, options);
   const [executed, pending] = await Promise.all([
     umzug.executed(),
@@ -307,8 +333,6 @@ export async function getMigrationStatus(
  * @returns {Promise<{executed: Array, pending: Array}>} Seed status
  */
 export async function getSeedStatus(seeds = null, connection, options = {}) {
-  validateConnection(connection);
-
   const umzug = createSeedUmzug(seeds, connection, options);
   const [executed, pending] = await Promise.all([
     umzug.executed(),
@@ -335,8 +359,6 @@ export async function runMigrations(
   connection,
   options = {},
 ) {
-  validateConnection(connection);
-
   const logger = options.logger || console;
 
   try {
@@ -372,8 +394,6 @@ export async function runMigrations(
  * @returns {Promise<void>}
  */
 export async function runSeeds(seeds = null, connection, options = {}) {
-  validateConnection(connection);
-
   const logger = options.logger || console;
 
   try {
@@ -413,8 +433,6 @@ export async function revertMigrations(
   connection,
   options = {},
 ) {
-  validateConnection(connection);
-
   const logger = options.logger || console;
 
   try {
@@ -429,8 +447,8 @@ export async function revertMigrations(
       return;
     }
 
-    await umzug.down();
-    logger.log(`✅ Reverted migration: ${executed[executed.length - 1].name}`);
+    const [reverted] = await umzug.down();
+    logger.log(`✅ Reverted migration: ${reverted.name}`);
   } catch (error) {
     logger.error('❌ Revert failed:', error);
     throw error;
@@ -447,8 +465,6 @@ export async function revertMigrations(
  * @returns {Promise<void>}
  */
 export async function undoSeeds(seeds = null, connection, options = {}) {
-  validateConnection(connection);
-
   const logger = options.logger || console;
 
   try {
@@ -463,8 +479,8 @@ export async function undoSeeds(seeds = null, connection, options = {}) {
       return;
     }
 
-    await umzug.down();
-    logger.log(`✅ Undo seed: ${executed[executed.length - 1].name}`);
+    const [reverted] = await umzug.down();
+    logger.log(`✅ Undo seed: ${reverted.name}`);
   } catch (error) {
     logger.error('❌ Failed to undo seed:', error);
     throw error;

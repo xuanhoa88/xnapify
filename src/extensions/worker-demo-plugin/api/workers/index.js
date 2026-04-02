@@ -30,6 +30,7 @@ export function createDemoWorkerPool() {
   const pool = createWorkerPool('WorkerDemo', workersContext, {
     maxWorkers: 2,
     workerTimeout: WORKER_TIMEOUT_MS,
+    forceFork: true,
   });
 
   // =========================================================================

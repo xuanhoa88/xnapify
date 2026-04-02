@@ -17,29 +17,52 @@ import {
   getSeedStatus,
 } from './migrator';
 
-/**
- * Default Sequelize connection options
- */
-const DEFAULT_SEQUELIZE_OPTIONS = Object.freeze({
-  // Timezone configuration (defaults to UTC)
-  timezone: process.env.XNAPIFY_DB_TZ || '+00:00',
-  // Connection pooling for better performance
-  pool: {
-    max: 5,
-    min: 0,
-    acquire: 30_000,
-    idle: 10_000,
-  },
-  // Logging configuration
-  logging: process.env.XNAPIFY_DB_LOG === 'true' ? console.log : false,
-  define: {
-    freezeTableName: true,
-    timestamps: true,
-  },
-});
+// ======================================================================
+// Constants
+// ======================================================================
+
+const DEFAULT_DB_URL = 'sqlite:database.sqlite';
+const SQLITE_PREFIX = 'sqlite:';
 
 /**
- * Attach migration convenience methods to a Sequelize connection instance
+ * Build default Sequelize options.
+ * Returns a fresh object each call to prevent cross-connection mutation.
+ *
+ * @returns {Object} Default Sequelize configuration
+ */
+function getDefaultOptions() {
+  return {
+    // Timezone configuration (defaults to UTC)
+    timezone: process.env.XNAPIFY_DB_TZ || '+00:00',
+    // Connection pool — configurable via env vars
+    pool: {
+      max: parseInt(process.env.XNAPIFY_DB_POOL_MAX, 10) || 5,
+      min: parseInt(process.env.XNAPIFY_DB_POOL_MIN, 10) || 0,
+      acquire: 30_000,
+      idle: 10_000,
+    },
+    // Logging — disabled in production even if XNAPIFY_DB_LOG is set
+    logging:
+      process.env.XNAPIFY_DB_LOG === 'true' &&
+      process.env.NODE_ENV !== 'production'
+        ? console.log
+        : false,
+    define: {
+      freezeTableName: true,
+      timestamps: true,
+    },
+  };
+}
+
+// ======================================================================
+// Migration method attachment
+// ======================================================================
+
+/**
+ * Attach migration convenience methods to a Sequelize connection instance.
+ *
+ * Intentional instance extension — method names are prefixed to avoid
+ * collision with Sequelize's own API surface.
  *
  * @param {Sequelize} sequelize - Sequelize connection instance
  * @returns {Sequelize} Enhanced connection with migration methods
@@ -102,39 +125,53 @@ function attachMigrationMethods(sequelize) {
   return sequelize;
 }
 
+// ======================================================================
+// Public API
+// ======================================================================
+
 /**
  * Create a new Sequelize connection instance with migration methods attached
  *
- * @param {string} [url] - Database URL (optional)
- * @param {Object} [options] - Sequelize options
+ * @param {string} [url] - Database URL (optional, defaults to XNAPIFY_DB_URL)
+ * @param {Object} [options] - Sequelize options (deep-merged with defaults)
  * @returns {Sequelize} Sequelize connection instance with migration methods
  */
-export function createConnection(...args) {
-  let databaseUrl = process.env.XNAPIFY_DB_URL || 'sqlite:database.sqlite';
-  let options = {};
+export function createConnection(url, options) {
+  let databaseUrl = process.env.XNAPIFY_DB_URL || DEFAULT_DB_URL;
+  let opts = {};
 
-  // Handle variable arguments
-  if (args.length === 1) {
-    if (typeof args[0] === 'string') {
-      databaseUrl = args[0];
-    } else {
-      options = args[0];
-    }
-  } else if (args.length === 2) {
-    [databaseUrl, options] = args;
+  // Handle overloaded arguments: (url), (options), or (url, options)
+  if (typeof url === 'string') {
+    databaseUrl = url;
+    opts = options && typeof options === 'object' ? options : {};
+  } else if (url && typeof url === 'object') {
+    opts = url;
   }
 
-  // Deep merge options
-  const config = merge({}, DEFAULT_SEQUELIZE_OPTIONS, options);
+  // Deep merge with fresh defaults
+  const config = merge({}, getDefaultOptions(), opts);
 
   // SQLite does not support custom connection timezones in Sequelize
-  if (databaseUrl.startsWith('sqlite:')) {
+  if (databaseUrl.startsWith(SQLITE_PREFIX)) {
     delete config.timezone;
   }
 
   // Create connection and attach migration methods
   const sequelize = new Sequelize(databaseUrl, config);
   return attachMigrationMethods(sequelize);
+}
+
+/**
+ * Close and drain the connection pool.
+ * Call during graceful shutdown (SIGTERM/SIGINT) to release file locks (SQLite)
+ * and drain TCP connections (PostgreSQL/MySQL).
+ *
+ * @returns {Promise<void>}
+ */
+export async function closeConnection() {
+  if (connection) {
+    await connection.close();
+  }
 }
 
 /**

@@ -14,7 +14,7 @@ Provide a pre-configured Sequelize connection with migration/seed lifecycle meth
 ```
 shared/api/engines/db/
 ├── index.js          # Re-exports Sequelize, connection, migrator
-├── connection.js     # createConnection(), default singleton, migration method attachment
+├── connection.js     # createConnection(), closeConnection(), default singleton, migration method attachment
 ├── migrator.js       # runMigrations, runSeeds, revertMigrations, undoSeeds, status methods
 ├── migrations/       # Engine-level migrations
 └── seeds/            # Engine-level seeds
@@ -22,9 +22,20 @@ shared/api/engines/db/
 
 ## 2. Connection (`connection.js`)
 
-- `createConnection(url?, options?)` — creates Sequelize instance, deep-merges `DEFAULT_SEQUELIZE_OPTIONS`, removes timezone for SQLite, attaches migration convenience methods.
+- `createConnection(url?, options?)` — creates Sequelize instance, deep-merges `getDefaultOptions()`, removes timezone for SQLite, attaches migration convenience methods.
+- `closeConnection()` — drains the connection pool. Must be called during graceful shutdown (SIGTERM/SIGINT) to release file locks (SQLite) and TCP connections (PostgreSQL/MySQL).
 - `connection` — default singleton using `XNAPIFY_DB_URL` env var.
 - `attachMigrationMethods(sequelize)` — adds `runMigrations`, `runSeeds`, `revertMigrations`, `undoSeeds`, `getMigrationStatus`, `getSeedStatus` directly to the Sequelize instance.
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `XNAPIFY_DB_URL` | `sqlite:database.sqlite` | Database connection URL |
+| `XNAPIFY_DB_TZ` | `+00:00` | Connection timezone (ignored for SQLite) |
+| `XNAPIFY_DB_LOG` | `false` | Enable SQL query logging (disabled in production) |
+| `XNAPIFY_DB_POOL_MAX` | `5` | Maximum connection pool size |
+| `XNAPIFY_DB_POOL_MIN` | `0` | Minimum connection pool size |
 
 ## 3. Migrator (`migrator.js`)
 
@@ -33,6 +44,7 @@ shared/api/engines/db/
 - `revertMigrations` / `undoSeeds` — undo last migration/seed.
 - `getMigrationStatus` / `getSeedStatus` — returns `{ executed, pending }`.
 - Migration sources come from Webpack `require.context` passed by module autoloader.
+- **Validation:** Throws `InvalidMigrationError` if a migration file does not export a valid `up` function.
 
 ## 4. Module Integration
 

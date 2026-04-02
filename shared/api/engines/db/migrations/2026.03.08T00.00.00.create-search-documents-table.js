@@ -10,8 +10,8 @@
  * - **Other dialects**: No FTS structures (fallback to LIKE queries at runtime)
  */
 export async function up({ context, Sequelize }) {
-  const queryInterface = context.getQueryInterface();
-  const dialect = queryInterface.sequelize.getDialect();
+  const { queryInterface } = context;
+  const dialect = context.getDialect();
 
   await queryInterface.createTable('search_documents', {
     id: {
@@ -61,6 +61,7 @@ export async function up({ context, Sequelize }) {
   });
 
   // Native Full-Text Search Optimizations depending on the SQL Engine
+  // Safe: migration-only DDL, no user input
   switch (dialect) {
     case 'sqlite': {
       // SQLite FTS Table
@@ -157,8 +158,8 @@ export async function up({ context, Sequelize }) {
 }
 
 export async function down({ context }) {
-  const queryInterface = context.getQueryInterface();
-  const dialect = queryInterface.sequelize.getDialect();
+  const { queryInterface } = context;
+  const dialect = context.getDialect();
 
   switch (dialect) {
     case 'sqlite': {

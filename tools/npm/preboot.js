@@ -1167,6 +1167,13 @@ async function autoMode() {
     await resolvePostgres(url);
   } else if (dialect === 'mysql') {
     await resolveMysql(url);
+  } else if (dialect === 'sqlite' && dbOverride) {
+    // Override active (--db sqlite / XNAPIFY_DB=sqlite) — write the SQLite
+    // URL to .env.local so it takes precedence over any existing
+    // postgres/mysql URL in .env or .env.local.
+    const sqliteUrl = 'sqlite:database.sqlite';
+    updateEnvDbUrl(sqliteUrl);
+    console.log(`📄 Updated XNAPIFY_DB_URL=${sqliteUrl}`);
   }
 }
 
