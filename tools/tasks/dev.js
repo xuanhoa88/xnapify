@@ -24,6 +24,7 @@ const {
   clientConfig: webpackClientConfig,
   serverConfig: webpackServerConfig,
   workerConfigs: webpackWorkerConfigs,
+  getHmrWatchIgnored,
 } = require('../webpack/app.config');
 const {
   start: startBrowserSync,
@@ -444,7 +445,7 @@ function setupServerBundleWatcher(serverCompiler) {
   // Start watch mode on the server compiler
   serverCompiler.watch(
     {
-      ignored: config.hmrWatchIgnored,
+      ignored: getHmrWatchIgnored(),
       aggregateTimeout: 200,
       followSymlinks: false,
       poll: process.env.CHOKIDAR_USEPOLLING === 'true' ? 500 : false,

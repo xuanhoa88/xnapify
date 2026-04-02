@@ -23,6 +23,7 @@ const {
   createHostProvidedCSSPlugins,
   createProgressPlugin,
   createSharedDependencies,
+  getHmrWatchIgnored,
   isDev,
   pkg,
 } = require('./base.config');
@@ -279,5 +280,6 @@ module.exports = {
   clientConfig,
   serverConfig,
   workerConfigs,
+  getHmrWatchIgnored,
   SERVER_BUNDLE_PATH,
 };

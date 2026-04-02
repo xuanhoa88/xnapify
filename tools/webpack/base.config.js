@@ -811,6 +811,21 @@ function createWorkerConfig({
   );
 }
 
+/**
+ * Get the HMR watch ignored paths
+ * @returns {string[]} Array of ignored paths
+ */
+function getHmrWatchIgnored() {
+  return [
+    '**/node_modules/**',
+    '**/*.test.js',
+    '**/*.spec.js',
+    '**/__tests__/**',
+    '**/e2e/**',
+    config.BUILD_DIR + '/**',
+  ];
+}
+
 // =============================================================================
 // EXPORTS
 // =============================================================================
@@ -842,4 +857,5 @@ module.exports = {
   createSharedDependencies,
   createWebpackConfig,
   createWorkerConfig,
+  getHmrWatchIgnored,
 };

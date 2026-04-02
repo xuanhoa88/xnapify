@@ -17,7 +17,10 @@ const config = require('../config');
 const { computeChecksum } = require('../utils/checksum');
 const { copyDir, pathExists } = require('../utils/fs');
 const { logInfo, logError, formatDuration } = require('../utils/logger');
-const createExtensionConfig = require('../webpack/extension.config');
+const {
+  createExtensionConfig,
+  getHmrWatchIgnored,
+} = require('../webpack/extension.config');
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -246,7 +249,7 @@ function watchForNewExtensions(options) {
   const watcher = webpack(watchConfig);
   return new Promise(resolve => {
     watcher.watch(
-      { ignored: config.hmrWatchIgnored, aggregateTimeout: 300 },
+      { ignored: getHmrWatchIgnored(), aggregateTimeout: 300 },
       () => resolve(),
     );
   });
@@ -318,7 +321,7 @@ async function buildExtensions(options = {}) {
     if (isWatch) {
       logInfo('👀 Watching for extension changes...');
       compiler.watch(
-        { ignored: config.hmrWatchIgnored, aggregateTimeout: 300 },
+        { ignored: getHmrWatchIgnored(), aggregateTimeout: 300 },
         onBuild,
       );
     } else {
