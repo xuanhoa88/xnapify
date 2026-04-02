@@ -262,16 +262,16 @@ Worker functions are defined in `*.worker.js` files and called directly (same-pr
 
 ```javascript
 // 1. Define worker function (api/workers/myTask.worker.js)
-export async function MY_TASK_TYPE(data) {
+export default async function myTask(data) {
   // Heavy processing
   return { success: true };
 }
 
 // 2. Create utility barrel (api/workers/index.js)
-import { MY_TASK_TYPE } from './myTask.worker';
+import myTaskWorker from './myTask.worker';
 
 export async function runMyTask(payload) {
-  return await MY_TASK_TYPE(payload);
+  return await myTaskWorker(payload);
 }
 
 // 3. Call from service or hook

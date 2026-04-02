@@ -50,7 +50,7 @@ const NEWS_ITEMS = [
     title: 'Production-Ready Tooling',
     link: '/features/full-stack-tooling',
     contentSnippet:
-      'Webpack 5 bundles with code splitting, Sequelize ORM with multi-database support, Redux Toolkit with dynamic injection, Piscina worker pools, and multi-stage Docker deployment.',
+      'Webpack 5 bundles with code splitting, Sequelize ORM with multi-database support, Redux Toolkit with dynamic injection, background worker functions, and multi-stage Docker deployment.',
   },
 ];
 

@@ -179,7 +179,7 @@ export function createUploadMiddleware(provider, options = {}) {
         try {
           // Add worker processing flag to result
           uploadResult.workerProcessed = true;
-          // Worker pool can be used for additional processing here
+          // Worker functions can be used for additional processing here
           // e.g., image resizing, thumbnail generation, etc.
         } catch (workerError) {
           console.warn('Worker processing failed:', workerError.message);

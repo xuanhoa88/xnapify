@@ -37,7 +37,7 @@ Use workers for:
  * @param {Object} data.models - Sequelize models
  * @returns {Object} Report data
  */
-export async function GENERATE_REPORT(data) {
+export default async function generateReport(data) {
   const { startDate, endDate, models } = data;
   const { Post } = models;
   const { sequelize } = Post;
@@ -64,7 +64,7 @@ export async function GENERATE_REPORT(data) {
 
 ```javascript
 // @apps/posts/api/workers/index.js
-import { GENERATE_REPORT } from './generate-report.worker';
+import generateReportWorker from './generate-report.worker';
 
 /**
  * Generate a posts report.
@@ -74,7 +74,7 @@ import { GENERATE_REPORT } from './generate-report.worker';
  * @returns {Promise<Object>} Report result
  */
 export async function generateReport(models, startDate, endDate) {
-  return await GENERATE_REPORT({ models, startDate, endDate });
+  return await generateReportWorker({ models, startDate, endDate });
 }
 ```
 
@@ -152,7 +152,7 @@ export function registerPostHooks(container) {
 
 ```javascript
 // @apps/posts/api/workers/generate-report.worker.test.js
-import { GENERATE_REPORT } from './generate-report.worker';
+import generateReport from './generate-report.worker';
 
 describe('[worker] generate-report', () => {
   it('should generate report successfully', async () => {
@@ -166,7 +166,7 @@ describe('[worker] generate-report', () => {
       },
     };
 
-    const result = await GENERATE_REPORT({
+    const result = await generateReport({
       startDate: new Date('2024-01-01'),
       endDate: new Date('2024-01-31'),
       models: mockModels,

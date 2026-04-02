@@ -456,9 +456,9 @@ src/apps/[module_name]/
 
 | Rule | What to Check |
 |------|---------------|
-| **Directory** | `api/workers/index.js` for utility barrel, `*.worker.js` for handler functions |
-| **Barrel pattern** | `index.js` exports convenience functions that call underlying `*.worker.js` exports |
-| **SCREAMING_SNAKE exports** | Handler functions exported as `TASK_NAME` from `*.worker.js` |
+| **Directory** | `api/workers/index.js` for barrel, `*.worker.js` for standalone functions |
+| **Barrel pattern** | `index.js` calls the FS factory or search engine directly (FS workers are merged into barrel) |
+| **Exports** | Single-function workers: `export default` (camelCase). Multi-function: named `export` (camelCase) |
 | **Dependencies as args** | Pass `models`, `search`, `container` as function args — not imported at module level |
 
 ### 10.2 Queue-Based Workers (Stateful)

@@ -264,7 +264,7 @@ function createApiConfig(extensionData, extensionDefines, buildPath) {
 
   const configs = [apiConfig];
 
-  // Compile workers as standalone CJS (for Piscina forceFork)
+  // Compile workers as standalone CJS modules
   const workerCfg = createWorkerConfig({
     workersDir: path.join(path.dirname(apiPath), 'workers'),
     outputPath: outputDir,

@@ -324,7 +324,7 @@ describe('Filesystem Engine', () => {
       });
 
       it('should handle useWorker: true option', async () => {
-        // Note: Worker functionality depends on worker pool being available
+        // Note: Worker functionality depends on worker functions being available
         // This test ensures the option is accepted
         const result = await testFs.upload(
           {

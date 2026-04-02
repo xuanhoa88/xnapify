@@ -16,7 +16,7 @@ import { createNativeRequire } from '@shared/utils/createNativeRequire';
 
 import { createNodeRedAuth, createNodeRedLogoutConfig } from './auth';
 
-// Use native require to load Piscina
+// Use native require to load Node-RED packages and optional modules
 const moduleRequire = createNativeRequire(__filename);
 
 // Auto-discover all custom Node-RED node modules in ./nodes/

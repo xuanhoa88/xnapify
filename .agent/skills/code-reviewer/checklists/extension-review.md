@@ -45,7 +45,7 @@ Count and match:
 
 - [ ] No N+1 queries — batch with `findAll` and `Op.in`
 - [ ] Cache invalidated after mutations: `invalidateCache(cache, id)`
-- [ ] CPU-intensive work offloaded to Piscina workers
+- [ ] CPU-intensive work offloaded to worker functions
 - [ ] Frontend: `useCallback` on prop handlers, `useMemo` on derived data
 - [ ] WS handlers debounced to prevent rapid re-fetching
 - [ ] Timers cleaned up on unmount

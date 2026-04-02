@@ -33,7 +33,7 @@ export const featuresData = [
     description:
       'Centralized DI container with singleton bindings, factory methods, and ownership keys. Services resolve dependencies at runtime, never via static imports.',
     details:
-      'The DI container (container.bind / container.resolve) is the backbone of inter-module communication. Modules register services, controllers, and worker pools during the providers lifecycle phase. Controllers resolve dependencies from req.app.get("container") — never importing across module boundaries. Ownership keys (Symbol) prevent accidental overwrites. The hook system (container.resolve("hook")) enables event-driven communication between decoupled modules.',
+      'The DI container (container.bind / container.resolve) is the backbone of inter-module communication. Modules register services, controllers, and worker functions during the providers lifecycle phase. Controllers resolve dependencies from req.app.get("container") — never importing across module boundaries. Ownership keys (Symbol) prevent accidental overwrites. The hook system (container.resolve("hook")) enables event-driven communication between decoupled modules.',
     tags: ['Container', 'Providers', 'Singletons', 'Decoupling'],
   },
   {
@@ -61,9 +61,9 @@ export const featuresData = [
     name: 'Full-Stack Tooling',
     icon: '🛠️',
     description:
-      'Webpack 5 builds, Sequelize ORM with migrations, Redux Toolkit with dynamic injection, Piscina worker pools, queue-based workers, and Docker deployment.',
+      'Webpack 5 builds, Sequelize ORM with migrations, Redux Toolkit with dynamic injection, background worker functions, queue-based workers, and Docker deployment.',
     details:
-      'The build system uses Webpack 5 for both server and client bundles with automatic code splitting, CSS Modules, and hot module replacement. The backend runs on Express with Sequelize ORM supporting SQLite, PostgreSQL, and MySQL via runtime driver installation. Redux Toolkit powers frontend state with dynamic slice injection via store.injectReducer(). CPU-intensive work offloads to Piscina worker pools, while queue-based workers handle background jobs. Production deployment uses multi-stage Docker builds with preboot hooks for driver installation.',
+      'The build system uses Webpack 5 for both server and client bundles with automatic code splitting, CSS Modules, and hot module replacement. The backend runs on Express with Sequelize ORM supporting SQLite, PostgreSQL, and MySQL via runtime driver installation. Redux Toolkit powers frontend state with dynamic slice injection via store.injectReducer(). Background tasks run as direct worker functions in the same process, while queue-based workers handle job scheduling. Production deployment uses multi-stage Docker builds with preboot hooks for driver installation.',
     tags: ['Webpack 5', 'Sequelize', 'Redux', 'Docker'],
   },
 ];

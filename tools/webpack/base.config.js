@@ -730,7 +730,7 @@ function createWebpackConfig(name, options = {}) {
 /**
  * Discover `*.worker.js` files recursively in a directory and return webpack
  * entry descriptors. Each entry gets `library: { type: 'commonjs2' }` so the
- * output is a standalone CJS file loadable by Piscina's `forceFork` mode.
+ * output is a standalone CJS file for worker function isolation.
  *
  * @param {string} workersDir - Absolute path to the workers directory
  * @param {string} [prefix='workers'] - Output subdirectory prefix
@@ -770,7 +770,7 @@ function discoverWorkerEntries(workersDir, prefix = 'workers') {
 
 /**
  * Create a webpack configuration that compiles `*.worker.js` files as
- * standalone CJS modules for Piscina's `forceFork` thread execution.
+ * standalone CJS modules for isolated worker function execution.
  *
  * Reusable by both core apps (`app.config.js`) and extensions
  * (`extension.config.js`). Returns `null` if no workers are found.

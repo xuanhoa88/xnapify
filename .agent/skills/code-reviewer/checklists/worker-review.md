@@ -6,16 +6,18 @@ Quick-reference for reviewing worker functions and queue workers.
 
 ### Barrel File (`workers/index.js`)
 
-- [ ] Exports convenience functions wrapping underlying `*.worker.js` exports
+- [ ] Exports convenience functions that call the FS factory or search engine directly
+- [ ] For FS: all operations merged into `workers/index.js` (no separate `*.worker.js` files)
 - [ ] Functions accept explicit dependencies (models, search, container) as args
 - [ ] No side effects at module level — all work inside function bodies
 - [ ] Function names are descriptive domain actions (e.g., `indexAllUsers`, `logActivity`)
 
 ### Worker Files
 
-- [ ] Named `<type>.worker.js` (e.g., `checksum.worker.js`)
+- [ ] Named `<type>.worker.js` (e.g., `search.worker.js`, `activities.worker.js`)
 - [ ] Located in `api/workers/` directory
-- [ ] Exported as SCREAMING_SNAKE functions (e.g., `COMPUTE_CHECKSUM`, `LOG_ACTIVITY`)
+- [ ] Single-function workers use `export default` (camelCase)
+- [ ] Multi-function workers use named `export` (camelCase, e.g., `indexAllUsers`)
 - [ ] Pure async functions — dependencies passed as args, not imported globally
 
 ### Lifecycle

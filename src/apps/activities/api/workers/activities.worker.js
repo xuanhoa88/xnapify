@@ -12,7 +12,7 @@
 import { v4 as uuidv4 } from 'uuid';
 
 /**
- * Handle LOG_ACTIVITY request
+ * Handle logActivity request
  *
  * Worker handlers receive a SINGLE data argument from the caller.
  * The caller must include `models` in the payload.

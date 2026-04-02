@@ -39,10 +39,10 @@
  * });
  *
  * @example <caption>Using with Workers - Offload heavy processing</caption>
- * // In your module where workerPool is defined
+ * // In your module where worker functions are defined
  * schedule.register('weekly-maintenance', '0 0 * * 0', async () => {
- *   // Offload to background worker
- *   await workerPool.sendRequest('maintenance', 'RUN_MAINTENANCE', { mode: 'full' });
+ *   // Call worker function directly
+ *   await runMaintenance({ mode: 'full' });
  * });
  *
  * @example <caption>Managing Tasks</caption>
