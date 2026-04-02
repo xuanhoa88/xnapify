@@ -115,7 +115,7 @@ All providers implement: `store`, `retrieve`, `delete`, `exists`, `getMetadata`,
 import { FilesystemError } from '@shared/api/engines/fs/utils';
 
 // FilesystemError — base (code: 'PROVIDER_ERROR', statusCode: 500)
-// FilesystemWorkerError — worker operations (extends WorkerError)
+// FilesystemWorkerError — worker operations (extends Error)
 ```
 
 ## Isolated Instances

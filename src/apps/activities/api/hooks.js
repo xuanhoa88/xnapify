@@ -5,6 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import logActivity from './workers/activities.worker';
+
 /**
  * Activity Hooks - Observes system events and dispatches log tasks
  */
@@ -15,10 +17,10 @@
  */
 export function registerActivityHooks(container) {
   const hook = container.resolve('hook');
-  const activitiesWorker = container.resolve('activities:worker');
+  const models = container.resolve('models');
 
-  if (!hook || !activitiesWorker) {
-    console.warn('[Activity] ⚠️ Hook engine or worker pool not available');
+  if (!hook) {
+    console.warn('[Activity] ⚠️ Hook engine not available');
     return;
   }
 
@@ -31,7 +33,7 @@ export function registerActivityHooks(container) {
     try {
       const activitiesRecord = transformer(payload);
       if (activitiesRecord) {
-        await activitiesWorker.log(activitiesRecord);
+        await logActivity({ models, ...activitiesRecord });
       }
     } catch (error) {
       const message =

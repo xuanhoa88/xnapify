@@ -18,7 +18,7 @@ import { EMAIL_VALIDATED } from '../utils/constants';
 import { EmailError, createOperationResult } from '../utils/errors';
 import { processEmails } from '../utils/processing';
 import { validateEmails } from '../utils/validation';
-import workerPool from '../workers';
+import sendEmail from '../workers/send.worker';
 
 /**
  * Thresholds for auto-detection of worker usage
@@ -133,34 +133,34 @@ export async function send(manager, emails, options = {}) {
     (options.useWorker !== false && decision.useWorker);
 
   if (shouldUseWorker) {
-    const workerResult = await workerPool.processSend(emailList, {
+    const sendOptions = {
       ...options,
       // If no provider specified, use the manager's default
       provider: options.provider || manager.defaultProvider,
       // Mark as validated to avoid double validation in worker
       [EMAIL_VALIDATED]: true,
-    });
+    };
 
-    // Map worker result to standard OperationResult format
-    // Note: throwOnError is handled by the core worker engine natively
-    if (workerResult && !workerResult.success) {
-      const errorMsg =
-        (workerResult.error && workerResult.error.message) ||
-        'Worker processing failed';
-      const errorCode =
-        (workerResult.error && workerResult.error.code) || 'WORKER_ERROR';
-
+    let workerResult;
+    try {
+      workerResult = await sendEmail({
+        emails: emailList,
+        options: sendOptions,
+      });
+    } catch (err) {
+      const errorMsg = err.message || 'Worker processing failed';
+      const errorCode = err.code || 'WORKER_ERROR';
       return createOperationResult(false, null, errorMsg, {
         message: errorMsg,
         code: errorCode,
-        statusCode: 500,
+        statusCode: err.statusCode || 500,
       });
     }
 
     return createOperationResult(
       true,
-      workerResult && workerResult.result,
-      'Email processed by worker successfully',
+      workerResult,
+      'Email processed successfully',
     );
   }
 

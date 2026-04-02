@@ -121,7 +121,6 @@ npm test
 | `search` | Full-text search |
 | `template` | LiquidJS template engine |
 | `webhook` | Webhook engine |
-| `worker` | Piscina worker pools |
 
 ---
 
@@ -129,5 +128,5 @@ npm test
 
 - `/add-module` — Modules that consume engines via DI
 - `/add-test` — Jest tests colocated with engine source
-- `/add-worker` — Worker engine usage patterns
+- `/add-worker` — Worker function patterns
 - `/debug` — Part 2 covers build output inspection

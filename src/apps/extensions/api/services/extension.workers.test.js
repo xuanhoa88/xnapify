@@ -1,12 +1,9 @@
-jest.mock('../workers', () => {
-  const pool = {
-    computeChecksum: jest.fn().mockResolvedValue('abc123hash'),
-    verifyChecksum: jest
-      .fn()
-      .mockResolvedValue({ valid: true, actual: 'abc123hash' }),
-  };
-  return { __esModule: true, default: pool };
-});
+jest.mock('../utils/checksum', () => ({
+  computeChecksum: jest.fn().mockResolvedValue('abc123hash'),
+  verifyExtensionChecksum: jest
+    .fn()
+    .mockResolvedValue({ valid: true, actual: 'abc123hash' }),
+}));
 
 jest.mock('./extension.helpers', () => ({
   installExtensionDependencies: jest.fn().mockResolvedValue(undefined),
@@ -34,7 +31,7 @@ jest.mock('fs', () => {
   };
 });
 
-import workerPool from '../workers';
+import { computeChecksum, verifyExtensionChecksum } from '../utils/checksum';
 
 import {
   installExtensionDependencies,
@@ -166,7 +163,7 @@ describe('Extension Workers', () => {
       );
 
       // integrity
-      expect(workerPool.computeChecksum).toHaveBeenCalledWith(
+      expect(computeChecksum).toHaveBeenCalledWith(
         '/extensions/test-extension',
       );
       expect(
@@ -335,7 +332,7 @@ describe('Extension Workers', () => {
         extensionKey: 'test-extension',
       });
 
-      workerPool.verifyChecksum.mockResolvedValueOnce({
+      verifyExtensionChecksum.mockResolvedValueOnce({
         valid: true,
         actual: 'expected-hash',
       });
@@ -347,7 +344,7 @@ describe('Extension Workers', () => {
 
       const result = await handlers.toggle(job);
 
-      expect(workerPool.verifyChecksum).toHaveBeenCalledWith(
+      expect(verifyExtensionChecksum).toHaveBeenCalledWith(
         '/extensions/test-extension',
         'expected-hash',
       );
@@ -365,7 +362,7 @@ describe('Extension Workers', () => {
         extensionKey: 'test-extension',
       });
 
-      workerPool.verifyChecksum.mockResolvedValueOnce({
+      verifyExtensionChecksum.mockResolvedValueOnce({
         valid: false,
         actual: 'tampered-hash',
       });
@@ -397,11 +394,11 @@ describe('Extension Workers', () => {
 
       await handlers.toggle(job);
 
-      expect(workerPool.verifyChecksum).not.toHaveBeenCalled();
+      expect(verifyExtensionChecksum).not.toHaveBeenCalled();
     });
 
     it('should compute and store integrity after activating', async () => {
-      workerPool.computeChecksum.mockResolvedValueOnce('new-hash');
+      computeChecksum.mockResolvedValueOnce('new-hash');
 
       const job = createMockJob({
         isActive: true,
@@ -410,7 +407,7 @@ describe('Extension Workers', () => {
 
       await handlers.toggle(job);
 
-      expect(workerPool.computeChecksum).toHaveBeenCalledWith(
+      expect(computeChecksum).toHaveBeenCalledWith(
         '/extensions/test-extension',
       );
       expect(

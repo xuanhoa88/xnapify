@@ -6,6 +6,7 @@
  */
 
 import { SEED_GROUPS } from './constants';
+import { indexAllGroups, registerSearchHooks } from './workers';
 
 /** @type {Symbol} Ownership key for this module's persistent bindings */
 const OWNER_KEY = Symbol('__xnapify.module.groups.api__');
@@ -36,34 +37,19 @@ export default {
 
   async providers({ container }) {
     container.bind('groups:seed_constants', () => SEED_GROUPS, OWNER_KEY);
-
-    const worker = container.resolve('worker');
-    if (worker) {
-      const { default: attachSearchMethods } = require('./workers');
-      const pool = worker.createWorkerPool('GroupsSearch', {
-        maxWorkers: 1,
-      });
-      const searchWorkerPool = attachSearchMethods(pool);
-      container.bind('groups:search:worker', () => searchWorkerPool, OWNER_KEY);
-    }
   },
 
   async boot({ container }) {
     const search = container.resolve('search');
-    const searchWorkerPool = container.has('groups:search:worker')
-      ? container.make('groups:search:worker')
-      : null;
 
-    if (searchWorkerPool && search) {
-      searchWorkerPool.setSearch(search);
-      searchWorkerPool.registerSearchHooks(container);
+    if (search) {
+      registerSearchHooks(container, search);
 
       const groupsCount = await search.withNamespace('groups').count();
       if (groupsCount === 0) {
-        searchWorkerPool
-          .indexAllGroups(search, container.resolve('models'))
+        indexAllGroups(search, container.resolve('models'))
           .then(r => {
-            const count = r && r.result ? r.result.groupsCount : 0;
+            const count = r ? r.groupsCount : 0;
             console.info(`[Groups] Indexed ${count} group(s) for search`);
           })
           .catch(e =>

@@ -27,8 +27,8 @@ xnapify/
 │   │   │   ├── hook/             # Channel-based event system
 │   │   │   ├── schedule/         # Cron scheduling
 │   │   │   ├── webhook/          # Webhook engine
-│   │   │   ├── worker/           # Piscina worker pools
 │   │   │   └── ...               # email, fs, http, queue, search, template
+
 │   │   ├── router/               # File-based API routing engine
 │   │   └── index.js              # Engine auto-loader
 │   ├── container/                # Dependency injection container
@@ -154,7 +154,7 @@ The application uses an auto-discovery system for both API modules and page comp
 
 **Shared API** (`shared/api/engines/` & `shared/jwt/`):
 
-- Core infrastructure: `auth`, `cache`, `db`, `email`, `fs`, `hook`, `http`, `queue`, `schedule`, `search`, `template`, `webhook`, `worker`
+- Core infrastructure: `auth`, `cache`, `db`, `email`, `fs`, `hook`, `http`, `queue`, `schedule`, `search`, `template`, `webhook`
 - Auto-loaded from `shared/api/engines/*/index.js` and re-exported via `shared/api/index.js`
 - Provide reusable capabilities for modules — should not contain business logic
 
@@ -258,39 +258,30 @@ Controlled via `shared/node-red/settings.js` and environment variables.
 
 ### 9. Worker Pattern
 
-For heavy processing, use the Worker Engine:
+Worker functions are defined in `*.worker.js` files and called directly (same-process). No worker pool abstraction is needed — all operations are I/O-bound (DB, filesystem, search indexing).
 
 ```javascript
-// 1. Define worker handler (standalone CJS file — no @shared/ imports)
-const myTaskLogic = async payload => {
+// 1. Define worker function (api/workers/myTask.worker.js)
+export async function MY_TASK_TYPE(data) {
   // Heavy processing
   return { success: true };
-};
+}
 
-// Export as a named function matching the messageType
-export { myTaskLogic as MY_TASK_TYPE };
+// 2. Create utility barrel (api/workers/index.js)
+import { MY_TASK_TYPE } from './myTask.worker';
 
-// 2. Create worker pool
-import { createWorkerPool } from '@shared/api/engines/worker';
+export async function runMyTask(payload) {
+  return await MY_TASK_TYPE(payload);
+}
 
-const workerPool = createWorkerPool('MyDomain', {
-  maxWorkers: 2, // Concurrency limit
-  // Optional: forceFork: true (to skip same-process execution)
-});
+// 3. Call from service or hook
+import { runMyTask } from './workers';
 
-// 3. Dispatch jobs
 try {
-  const result = await workerPool.sendRequest(
-    'task-name',
-    'MY_TASK_TYPE',
-    payload,
-    {
-      throwOnError: true, // Native robust error propagation
-    },
-  );
-  console.log('Worker result:', result);
+  const result = await runMyTask(payload);
+  console.log('Result:', result);
 } catch (error) {
-  console.error('Worker failed natively:', error);
+  console.error('Failed:', error);
 }
 ```
 
@@ -316,7 +307,7 @@ const { models } = container.resolve('db');
 
 > **Convention:** In module code (`init`, services), use `container.resolve('name')` directly. In route handlers/controllers, use `req.app.get('container').resolve('name')`. Direct imports are reserved for shared libraries.
 
-**Available Engines:** `auth`, `cache`, `db`, `email`, `fs`, `hook`, `http`, `queue`, `schedule`, `search`, `template`, `webhook`, `worker`
+**Available Engines:** `auth`, `cache`, `db`, `email`, `fs`, `hook`, `http`, `queue`, `schedule`, `search`, `template`, `webhook`
 
 **Adding a New Engine:**
 
@@ -834,10 +825,10 @@ docker run -p 1337:1337 \
 - Automatic reconnection handling
 - Client API in `shared/ws/`
 
-### Worker Processes
+### Worker Functions
 
-- Background job processing
-- Concurrency control with worker pools
+- Background job processing via direct function calls
+- Worker functions in `*.worker.js` files called same-process
 - Queue management for heavy tasks
 - Integration with Schedule Engine for cron jobs
 

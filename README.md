@@ -21,7 +21,7 @@
 - **RBAC** — Built-in users, roles, groups, and granular permissions with middleware guards
 - **Extension System** — Extend functionality through UI Slots and logic Hooks without touching core code
 - **Node-RED Integration** — Embedded visual workflow automation with versioned flow migrations
-- **Worker Pools** — Background job processing with concurrency control via [Piscina](https://github.com/piscinajs/piscina)
+- **Background Workers** — Direct function calls for processing tasks (search indexing, checksum, file ops)
 - **WebSocket** — Real-time communication with token-based authentication
 - **Rich Editor** — [Tiptap 3](https://tiptap.dev/) WYSIWYG editor with collaboration support
 - **i18n** — Internationalization powered by i18next
@@ -85,8 +85,7 @@ xnapify/
 │   │   │   ├── schedule/       # Cron scheduling
 │   │   │   ├── search/         # Full-text search
 │   │   │   ├── template/       # Template engine (LiquidJS)
-│   │   │   ├── webhook/        # Webhook engine
-│   │   │   └── worker/         # Worker pool engine
+│   │   │   └── webhook/        # Webhook engine
 │   │   ├── autoloader.js       # Module auto-discovery
 │   │   └── index.js            # Re-exports all engines
 │   ├── container/              # Dependency injection container
@@ -133,7 +132,6 @@ xnapify/
 | ws              | WebSocket server                            |
 | Nodemailer      | Email delivery                              |
 | node-cron       | Scheduled tasks                             |
-| Piscina         | Worker thread pools                         |
 | Node-RED        | Visual workflow automation                  |
 
 ### Tooling

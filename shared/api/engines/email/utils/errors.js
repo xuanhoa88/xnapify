@@ -9,8 +9,6 @@
  * Email Error Handling and Response Utilities
  */
 
-import { WorkerError } from '../../worker';
-
 /**
  * Custom email error class
  */
@@ -22,7 +20,6 @@ export class EmailError extends Error {
     this.statusCode = statusCode;
     this.timestamp = new Date().toISOString();
 
-    // Maintain proper stack trace for where our error was thrown
     if (Error.captureStackTrace) {
       Error.captureStackTrace(this, EmailError);
     }
@@ -32,10 +29,17 @@ export class EmailError extends Error {
 /**
  * Custom email worker error class
  */
-export class EmailWorkerError extends WorkerError {
+export class EmailWorkerError extends Error {
   constructor(message, code = 'WORKER_ERROR', statusCode = 500) {
-    super(message, code, statusCode);
+    super(message);
     this.name = 'EmailWorkerError';
+    this.code = code;
+    this.statusCode = statusCode;
+    this.timestamp = new Date().toISOString();
+
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, EmailWorkerError);
+    }
   }
 }
 

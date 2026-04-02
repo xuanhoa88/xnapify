@@ -23,6 +23,7 @@ const {
   createHostProvidedCSSPlugins,
   createProgressPlugin,
   createSharedDependencies,
+  getHmrWatchIgnored,
   reStyle,
   reImage,
   reFont,
@@ -333,4 +334,4 @@ function createExtensionConfig({ extensions = [], buildPath }) {
   return [...new Set(configs)];
 }
 
-module.exports = createExtensionConfig;
+module.exports = { createExtensionConfig, getHmrWatchIgnored };

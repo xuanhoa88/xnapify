@@ -6,9 +6,9 @@
  */
 
 /**
- * Text Processing Worker — Stateless Piscina worker for CPU-bound text tasks.
+ * Text Processing Worker — Utility functions for CPU-bound text tasks.
  *
- * Each named export maps to a messageType in sendRequest().
+ * Each named export is a standalone async/sync function called directly.
  * Workers receive a SINGLE data argument and must return serializable results.
  */
 
@@ -20,7 +20,7 @@ import crypto from 'crypto';
  * @param {{ text: string }} data
  * @returns {{ words: number, characters: number, lines: number, sentences: number }}
  */
-export function COUNT_STATS(data) {
+export function countStats(data) {
   const { text } = data;
   if (!text || typeof text !== 'string') {
     return { words: 0, characters: 0, lines: 0, sentences: 0 };
@@ -41,12 +41,12 @@ export function COUNT_STATS(data) {
 
 /**
  * Compute SHA-256 hash of a text string.
- * Demonstrates a CPU-bound crypto operation suitable for worker threads.
+ * Demonstrates a CPU-bound crypto operation.
  *
  * @param {{ text: string, algorithm?: string }} data
  * @returns {{ hash: string, algorithm: string }}
  */
-export function HASH_TEXT(data) {
+export function hashText(data) {
   const { text, algorithm } = data;
   const algo = algorithm || 'sha256';
   const hash = crypto
@@ -62,7 +62,7 @@ export function HASH_TEXT(data) {
  * @param {{ text: string, pattern: string, caseSensitive?: boolean }} data
  * @returns {{ matches: Array<{ index: number, match: string }>, count: number }}
  */
-export function FIND_PATTERN(data) {
+export function findPattern(data) {
   const { text, pattern, caseSensitive } = data;
   if (!text || !pattern) {
     return { matches: [], count: 0 };

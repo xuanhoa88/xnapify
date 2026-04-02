@@ -27,7 +27,6 @@ Engines are singleton services registered on the DI container during application
 | `search` | `'search'` | Full-text search (FlexSearch/MeiliSearch) |
 | `template` | `'template'` | LiquidJS template rendering |
 | `webhook` | `'webhook'` | HMAC-signed webhook dispatch/verification |
-| `worker` | `'worker'` | Piscina thread pool factory |
 
 ---
 
@@ -49,7 +48,7 @@ shared/api/engines/<engine-name>/
 │   └── *.js
 ├── providers/            # Backend providers (optional, e.g. email)
 │   └── *.js
-├── workers/              # Worker pool files (optional)
+├── workers/              # Worker function files (optional)
 │   ├── index.js
 │   └── *.worker.js
 └── utils/                # Shared utilities (optional)

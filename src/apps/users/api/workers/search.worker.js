@@ -14,7 +14,7 @@
  * @param {boolean} [data.force=false] - Clear namespace before indexing
  * @returns {Promise<Object>} Indexing result with count
  */
-export async function INDEX_ALL_USERS({ search, models, force = false }) {
+export async function indexAllUsers({ search, models, force = false }) {
   if (!models.User) return { usersCount: 0 };
 
   const { User, UserProfile } = models;
@@ -54,7 +54,7 @@ export async function INDEX_ALL_USERS({ search, models, force = false }) {
  * @param {Object} data.search - Search engine instance
  * @param {Object} data.user - Sequelize user instance (with profile, roles)
  */
-export async function INDEX_USER({ search, user }) {
+export async function indexUser({ search, user }) {
   if (!user) return;
   const userSearch = search.withNamespace('users');
   await userSearch.index({
@@ -84,7 +84,7 @@ export async function INDEX_USER({ search, user }) {
  * @param {Object} data.search - Search engine instance
  * @param {string} data.userId - User ID to remove
  */
-export async function REMOVE_USER({ search, userId }) {
+export async function removeUser({ search, userId }) {
   if (!userId) return;
   await search.withNamespace('users').remove('user', userId);
   return true;

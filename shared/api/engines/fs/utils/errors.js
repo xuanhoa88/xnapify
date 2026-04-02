@@ -9,8 +9,6 @@
  * Error Handling and Response Utilities
  */
 
-import { WorkerError } from '../../worker';
-
 import { ERROR_CODES } from './constants';
 
 /**
@@ -24,7 +22,6 @@ export class FilesystemError extends Error {
     this.statusCode = statusCode;
     this.timestamp = new Date().toISOString();
 
-    // Maintain proper stack trace for where our error was thrown
     if (Error.captureStackTrace) {
       Error.captureStackTrace(this, FilesystemError);
     }
@@ -34,10 +31,17 @@ export class FilesystemError extends Error {
 /**
  * Custom filesystem worker error class
  */
-export class FilesystemWorkerError extends WorkerError {
+export class FilesystemWorkerError extends Error {
   constructor(message, code = ERROR_CODES.WORKER_ERROR, statusCode = 500) {
-    super(message, code, statusCode);
+    super(message);
     this.name = 'FilesystemWorkerError';
+    this.code = code;
+    this.statusCode = statusCode;
+    this.timestamp = new Date().toISOString();
+
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, FilesystemWorkerError);
+    }
   }
 }
 

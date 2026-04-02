@@ -30,9 +30,9 @@ The Activities module serves as the central audit logging system. It asynchronou
 - **Controller Logic:** `activities.controller.js` queries the `Activity` model, applying pagination (limit/offset) and any optional `where` clause filters derived from the query parameters, ordered by `created_at DESC`.
 
 ## 3. Background Workers (`api/workers`)
-*Defines off-main-thread processing.*
-- **Implementation:** `activities.worker.js` handles the actual database write (`Activity.create()`). 
-- **Pool Management:** `index.js` creates a dedicated `piscina` worker pool specifically for the Activities module to ensure non-blocking IO for the main HTTP process.
+*Defines background processing functions.*
+- **Implementation:** `activities.worker.js` exports `LOG_ACTIVITY` which handles the actual database write (`Activity.create()`).
+- **Execution:** `index.js` exports a `logActivity(container, payload)` utility that calls the worker function directly (same-process) for non-blocking I/O.
 
 ## 4. Frontend SSR Rendering (`views/`)
 *Defines the React views and data fetching lifecycle.*

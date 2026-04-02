@@ -7,7 +7,6 @@
 
 /**
  * Send Email Worker - Handles email sending operations
- * Supports both same-process and child process execution
  */
 
 import { MailgunEmailProvider } from '../providers/mailgun';
@@ -162,8 +161,8 @@ function createProvider(options = {}) {
 async function processSend(data) {
   const { emails, options = {} } = data;
 
-  // Validate only if not already validated by service
-  // (defense in depth for forked workers, avoid double validation for same-process)
+  // Validate only if not already validated by service layer
+  // (defense in depth — avoid double validation when called from service)
   if (!options[EMAIL_VALIDATED]) {
     const validationResult = validateEmails(emails);
     if (!validationResult.success) {
@@ -181,7 +180,4 @@ async function processSend(data) {
   return processEmails(provider, emails, options);
 }
 
-// Create worker function using helper
-
-export { processSend as SEND_EMAIL };
 export default processSend;

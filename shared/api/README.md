@@ -30,7 +30,6 @@ All engines live in `engines/` and are auto-discovered at startup. Each engine i
 | **search** | Full-text search | `await search.search('hello')` |
 | **template** | LiquidJS rendering | `await template.render(html, variables)` |
 | **webhook** | Inbound webhooks | `webhook.handler('stripe', { secret, handler })` |
-| **worker** | Thread pools | `workerPool.sendRequest({ type, data })` |
 
 ## Module Autoloader
 

@@ -10,10 +10,6 @@
  */
 
 import { registerActivityHooks } from './hooks';
-import getActivityWorkerPool from './workers';
-
-/** @type {Symbol} Ownership key for this module's persistent bindings */
-const OWNER_KEY = Symbol('__xnapify.module.activities.api__');
 
 // Auto-load contexts
 const migrationsContext = require.context(
@@ -38,11 +34,6 @@ export default {
   seeds: () => seedsContext,
   models: () => modelsContext,
   routes: () => routesContext,
-
-  async providers({ container }) {
-    const workerPool = getActivityWorkerPool(container);
-    container.bind('activities:worker', () => workerPool, OWNER_KEY);
-  },
 
   async boot({ container }) {
     registerActivityHooks(container);

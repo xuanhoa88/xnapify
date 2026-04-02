@@ -3,7 +3,7 @@
  */
 
 import { upload as uploadOperation } from '../operations/upload';
-import workerPool from '../workers';
+import { processUpload } from '../workers';
 
 /**
  * Thresholds for auto-detection of worker usage
@@ -65,7 +65,7 @@ export async function upload(manager, files, options = {}) {
   const totalSize = fileList.reduce((sum, f) => sum + (f.size || 0), 0);
 
   if (shouldUseWorker(options, fileList.length, totalSize)) {
-    return await workerPool.processUpload(fileList, options);
+    return await processUpload(fileList, options);
   }
 
   return await uploadOperation(manager, files, options);

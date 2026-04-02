@@ -899,10 +899,11 @@ schedule.register('{module}:daily-cleanup', '0 0 * * *', async () => {
   });
 });
 
-// Heavy task — dispatch to worker pool
+// Heavy task — call worker function directly
 schedule.register('{module}:weekly-report', '0 9 * * 1', async () => {
-  const workerPool = container.resolve('{module}:workerPool');
-  await workerPool.sendRequest('report', 'GENERATE_REPORT', { week: getCurrentWeek() });
+  const { generateReport } = require('./workers');
+  const models = container.resolve('models');
+  await generateReport(models, { week: getCurrentWeek() });
 });
 ```
 
@@ -919,7 +920,7 @@ schedule.register('{module}:weekly-report', '0 9 * * 1', async () => {
 
 ### Guidelines
 
-- **Keep handlers lightweight.** For heavy processing, dispatch to a worker pool.
+- **Keep handlers lightweight.** For heavy processing, call worker functions directly.
 - **Use descriptive task names.** Format: `{module}:{action}` (e.g., `billing:invoice-reminders`).
 - **Log execution.** Always log start/completion for debugging cron issues.
 - **Handle errors.** Wrap handler body in try-catch — uncaught errors in cron handlers are silent.
@@ -958,7 +959,7 @@ webhook.register('{provider-name}', {
 
 - **Always verify signatures.** The webhook engine handles HMAC verification automatically when `secret` is provided.
 - **Use descriptive provider names.** E.g., `stripe`, `github`, `sendgrid`.
-- **Return quickly.** Acknowledge the webhook and process asynchronously if needed (dispatch to worker).
+- **Return quickly.** Acknowledge the webhook and process asynchronously if needed (dispatch to queue or call worker function).
 - **Store the secret** in an env var ending with `_KEY` (e.g., `XNAPIFY_{PROVIDER}_WEBHOOK_KEY`). The `_KEY` suffix auto-excludes it from client bundles.
 
 ---
@@ -968,7 +969,7 @@ webhook.register('{provider-name}', {
 - `/add-data` — Models, migrations, and seeds in detail
 - `/add-view` — View routes with lifecycle hooks and layouts
 - `/add-redux` — Redux Toolkit slice, thunks, and selectors
-- `/add-worker` — Background workers with pool and concurrency control
+- `/add-worker` — Background workers with direct function calls
 - `/add-api-route` — Lightweight single-route addition (no full scaffold)
 - `/add-test` — Jest unit and integration tests
 - `/add-extension` — Extension development with slots and hooks

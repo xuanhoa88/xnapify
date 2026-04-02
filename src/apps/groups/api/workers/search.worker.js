@@ -14,7 +14,7 @@
  * @param {boolean} [data.force=false] - Clear namespace before indexing
  * @returns {Promise<Object>} Indexing result with count
  */
-export async function INDEX_ALL_GROUPS({ search, models, force = false }) {
+export async function indexAllGroups({ search, models, force = false }) {
   if (!models.Group) return { groupsCount: 0 };
 
   const { Group } = models;
@@ -46,7 +46,7 @@ export async function INDEX_ALL_GROUPS({ search, models, force = false }) {
  * @param {Object} data.search - Search engine instance
  * @param {Object} data.group - Sequelize group instance
  */
-export async function INDEX_GROUP({ search, group }) {
+export async function indexGroup({ search, group }) {
   if (!group) return;
   const groupSearch = search.withNamespace('groups');
   await groupSearch.index({
@@ -66,7 +66,7 @@ export async function INDEX_GROUP({ search, group }) {
  * @param {Object} data.search - Search engine instance
  * @param {string} data.groupId - Group ID to remove
  */
-export async function REMOVE_GROUP({ search, groupId }) {
+export async function removeGroup({ search, groupId }) {
   if (!groupId) return;
   await search.withNamespace('groups').remove('group', groupId);
   return true;

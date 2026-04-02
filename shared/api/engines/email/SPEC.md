@@ -24,15 +24,15 @@ shared/api/engines/email/
 │   └── mailgun.js        # Mailgun API
 ├── services/
 │   ├── index.js          # Re-exports
-│   └── send.js           # Worker-enabled send service
+│   └── send.js           # Send service with smart offloading
 ├── utils/
 │   ├── constants.js      # EMAIL_VALIDATED symbol
 │   ├── errors.js         # EmailError + EmailWorkerError
 │   ├── validation.js     # Zod schemas + EMAIL_LIMITS
 │   └── processing.js     # Template rendering, retry, bulk processing
 ├── workers/
-│   ├── index.js          # Worker pool with processSend()
-│   └── send.worker.js    # Worker handler
+│   ├── index.js          # Re-exports SEND_EMAIL
+│   └── send.worker.js    # Direct send function
 └── email.test.js         # Jest tests
 ```
 
@@ -45,8 +45,8 @@ index.js
     └── services/send.js
         ├── utils/validation.js (@shared/validator → zod)
         ├── utils/processing.js (@shared/api/engines/template)
-        ├── utils/errors.js (@shared/api/engines/worker → WorkerError)
-        └── workers/index.js (@shared/api/engines/worker → createWorkerPool)
+        ├── utils/errors.js
+        └── workers/send.worker.js (direct import)
 ```
 
 ## 2. EmailManager Class (`factory.js`)
@@ -103,7 +103,7 @@ Delegates to `services/send.js`. See §3.
 1. **Normalize** — wraps single email in array.
 2. **Validate** — `validateEmails()` via Zod schema. Returns `createOperationResult(false, ...)` on failure.
 3. **Worker decision** — `makeSendDecision()`.
-4. **Execute** — worker pool or direct via `processEmails()`.
+4. **Execute** — direct `SEND_EMAIL()` call or via `processEmails()`.
 
 ### Worker Auto-Decision
 
@@ -214,35 +214,16 @@ HTTP API via `node-fetch`. `verify()` tests against `/api-keys` endpoint.
 
 Similar pattern. Env vars: `XNAPIFY_SENDGRID_KEY` / `XNAPIFY_MAILGUN_KEY` + `XNAPIFY_MAILGUN_DOMAIN` + `XNAPIFY_MAILGUN_REGION`.
 
-## 7. Worker Pool (`workers/index.js`)
+## 7. Worker Function (`workers/send.worker.js`)
 
-```javascript
-createWorkerPool('📧 Email', { ErrorHandler: EmailWorkerError, ...WORKER_CONFIG })
-```
-
-### Worker Configuration (env vars)
-
-| Env Var | Default | Description |
-|---|---|---|
-| `XNAPIFY_MAIL_WORKERS` | `4` | Max workers |
-| `XNAPIFY_MAIL_WORKER_TIMEOUT` | `60000` ms | Worker timeout |
-| `XNAPIFY_MAIL_WORKER_MAX_REQ` | `100` | Max requests per worker |
-
-### Methods
-
-| Method | Worker | Message | `forceFork` |
-|---|---|---|---|
-| `processSend(emails, options)` | `send` | `SEND_EMAIL` | ✅ |
-| `unregisterSend()` | `send` | — | — |
-
-The `EMAIL_VALIDATED` flag is passed in options so the worker skips re-validation.
+The send service calls `SEND_EMAIL({ emails, options })` directly (same-process) for batch or large emails. The `EMAIL_VALIDATED` flag is passed in options so the worker function skips re-validation.
 
 ## 8. Error Classes
 
 | Class | Extends | Code Default | Status |
 |---|---|---|---|
 | `EmailError` | `Error` | `'PROVIDER_ERROR'` | `500` |
-| `EmailWorkerError` | `WorkerError` | `'WORKER_ERROR'` | `500` |
+| `EmailWorkerError` | `Error` | `'WORKER_ERROR'` | `500` |
 
 ### `createOperationResult(success, data?, message?, error?)`
 
@@ -277,9 +258,6 @@ const email = createFactory();
 | `XNAPIFY_MAILGUN_KEY` | — | Mailgun provider |
 | `XNAPIFY_MAILGUN_DOMAIN` | — | Mailgun provider |
 | `XNAPIFY_MAILGUN_REGION` | `'us'` | Mailgun region |
-| `XNAPIFY_MAIL_WORKERS` | `4` | Worker pool |
-| `XNAPIFY_MAIL_WORKER_TIMEOUT` | `60000` | Worker timeout |
-| `XNAPIFY_MAIL_WORKER_MAX_REQ` | `100` | Worker max requests |
 
 ---
 

@@ -1,47 +1,48 @@
 ---
-description: Add a background worker with pool and concurrency control
+description: Add a background worker with direct function calls
 ---
 
-Add a background worker for heavy processing tasks.
+Add a background worker for processing tasks.
 
 ## When to Use Workers
 
 Use workers for:
 
-- Heavy data processing
-- Long-running operations
-- Tasks that shouldn't block the main process
-- Scheduled background jobs
+- Data processing (search indexing, checksum computation)
+- Database-heavy operations (bulk inserts, reporting)
+- File operations (batch uploads, ZIP creation)
+- Tasks that benefit from clean separation of concerns
+
+> **Note:** Worker functions run same-process via direct function calls. There is no Piscina thread pool — all operations are I/O-bound and work efficiently in the main process.
 
 ## Structure
 
 ```
-@apps/{module}/workers/
-├── index.js                    # Worker pool
-├── {task-name}.worker.js       # Worker handler
+@apps/{module}/api/workers/
+├── index.js                    # Utility barrel (exports convenience functions)
+├── {task-name}.worker.js       # Worker function
 └── {task-name}.worker.test.js  # Worker tests
 ```
 
-## 1. Create Worker Handler
+## 1. Create Worker Function
 
 ```javascript
-// @apps/posts/workers/generate-report.worker.js
+// @apps/posts/api/workers/generate-report.worker.js
 
 /**
  * Generate posts report
- * @param {Object} payload - Job payload
- * @param {Date} payload.startDate - Report start date
- * @param {Date} payload.endDate - Report end date
+ * @param {Object} data - Job payload
+ * @param {Date} data.startDate - Report start date
+ * @param {Date} data.endDate - Report end date
+ * @param {Object} data.models - Sequelize models
  * @returns {Object} Report data
  */
-async function generateReportLogic(payload) {
-  const { startDate, endDate } = payload;
-
-  // Heavy processing here
-  const { connection } = require('@shared/api/db');
-  const { Post } = connection.models;
+export async function GENERATE_REPORT(data) {
+  const { startDate, endDate, models } = data;
+  const { Post } = models;
   const { sequelize } = Post;
   const { Op } = sequelize.Sequelize;
+
   const posts = await Post.findAll({
     where: {
       createdAt: {
@@ -50,58 +51,48 @@ async function generateReportLogic(payload) {
     },
   });
 
-  // Process data
-  const report = {
+  return {
     totalPosts: posts.length,
     publishedPosts: posts.filter(p => p.published).length,
     authors: [...new Set(posts.map(p => p.authorId))].length,
     generatedAt: new Date(),
   };
-
-  return report;
 }
-
-// Export as a named function matching the message type
-export { generateReportLogic as GENERATE_REPORT };
 ```
 
-## 2. Create Worker Pool
+## 2. Create Utility Barrel
 
 ```javascript
 // @apps/posts/api/workers/index.js
-import { createWorkerPool } from '@shared/api/engines/worker';
+import { GENERATE_REPORT } from './generate-report.worker';
 
-// Workers are discovered from pre-compiled standalone CJS files at
-// `<bundleDir>/workers/` — no require.context needed.
-const workerPool = createWorkerPool('Posts', {
-  maxWorkers: 2, // Controls concurrency
-});
-
-export default workerPool;
+/**
+ * Generate a posts report.
+ * @param {Object} models - Sequelize models
+ * @param {Date} startDate - Report start date
+ * @param {Date} endDate - Report end date
+ * @returns {Promise<Object>} Report result
+ */
+export async function generateReport(models, startDate, endDate) {
+  return await GENERATE_REPORT({ models, startDate, endDate });
+}
 ```
 
-## 3. Dispatch Jobs to Workers
+## 3. Call Worker Functions
 
 ### From API Endpoint
 
 ```javascript
-// @apps/posts/controllers/report.controller.js
-import workerPool from '../workers';
+// @apps/posts/api/controllers/report.controller.js
+import { generateReport } from '../workers';
 
-export async function generateReport(req, res) {
+export async function get(req, res) {
   const http = req.container.resolve('http');
 
   try {
-    const { startDate, endDate } = req.body;
-
-    // Dispatch to worker (non-blocking) using throwOnError for standard error handling
-    const result = await workerPool.sendRequest(
-      'generate-report',
-      'GENERATE_REPORT',
-      { startDate, endDate },
-      { throwOnError: true }
-    );
-
+    const { startDate, endDate } = req.query;
+    const models = req.container.resolve('models');
+    const result = await generateReport(models, startDate, endDate);
     return http.sendSuccess(res, { data: result });
   } catch (error) {
     return http.sendServerError(res, 'Failed to generate report');
@@ -109,206 +100,134 @@ export async function generateReport(req, res) {
 }
 ```
 
-### From Scheduled Task
+### From Boot Lifecycle
 
 ```javascript
-// @apps/posts/index.js
-import schedule from '@shared/api/schedule';
-import workerPool from './workers';
+// @apps/posts/api/index.js
+export default {
+  // ...context loaders...
 
-export default async function postsModule(deps, app) {
-  // ... other module setup
+  async boot({ container }) {
+    const search = container.resolve('search');
 
-  // Schedule daily report generation
-  schedule.register('daily-posts-report', '0 0 * * *', async () => {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    yesterday.setHours(0, 0, 0, 0);
+    if (search) {
+      const { indexAllPosts, registerSearchHooks } = require('./workers');
+      registerSearchHooks(container, search);
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+      const count = await search.withNamespace('posts').count();
+      if (count === 0) {
+        indexAllPosts(search, container.resolve('models'))
+          .then(r => console.info(`[Posts] Indexed ${r.count} post(s)`))
+          .catch(e => console.error('[Posts] Indexing failed:', e.message));
+      }
+    }
+  },
+};
+```
 
-    // Dispatch to worker pool using native error handling
-    await workerPool.sendRequest('daily-report', 'GENERATE_REPORT', {
-      startDate: yesterday,
-      endDate: today,
-    }, { throwOnError: true });
+### From Hook Listener
 
-    console.info('✅ Daily report generation dispatched');
+```javascript
+// @apps/posts/api/hooks.js
+export function registerPostHooks(container) {
+  const hook = container.resolve('hook');
+  const { logPostActivity } = require('./workers');
+
+  if (!hook) return;
+
+  hook('posts').on('created', async ({ post }) => {
+    try {
+      await logPostActivity(container, {
+        event: 'post.created',
+        entity_id: post.id,
+      });
+    } catch (err) {
+      console.warn(`[Posts] Hook error: ${err.message}`);
+    }
   });
-
-  console.info('✅ Posts module loaded');
-  return router;
 }
 ```
 
-## 4. Worker with Error Handling
+## 4. Testing Workers
 
 ```javascript
-// @apps/posts/workers/process-images.worker.js
-
-async function processImagesLogic(payload) {
-  const { postId, images } = payload;
-
-  const processedImages = [];
-
-  for (const image of images) {
-    // Simulate heavy image processing
-    const processed = await processImage(image);
-    processedImages.push(processed);
-  }
-
-  return {
-    success: true,
-    postId,
-    processedImages,
-  };
-  // Note: No need for a global try/catch here!
-  // The Worker Engine handles uncaught errors gracefully and returns them to the caller,
-  // or throws them directly if `throwOnError: true` is set in the request.
-}
-
-async function processImage(image) {
-  // Heavy processing logic
-  return { ...image, processed: true };
-}
-
-export { processImagesLogic as PROCESS_IMAGES };
-```
-
-## 5. Testing Workers
-
-```javascript
-// @apps/posts/workers/generate-report.worker.test.js
+// @apps/posts/api/workers/generate-report.worker.test.js
 import { GENERATE_REPORT } from './generate-report.worker';
 
 describe('[worker] generate-report', () => {
   it('should generate report successfully', async () => {
-    const payload = {
+    const mockModels = {
+      Post: {
+        findAll: jest.fn().mockResolvedValue([
+          { published: true, authorId: 'a1' },
+          { published: false, authorId: 'a2' },
+        ]),
+        sequelize: { Sequelize: { Op: {} } },
+      },
+    };
+
+    const result = await GENERATE_REPORT({
       startDate: new Date('2024-01-01'),
       endDate: new Date('2024-01-31'),
-    };
+      models: mockModels,
+    });
 
-    // Workers export their core handler directly
-    const result = await GENERATE_REPORT(payload);
-
-    expect(result).toHaveProperty('totalPosts');
-    expect(result).toHaveProperty('publishedPosts');
-    expect(result).toHaveProperty('authors');
+    expect(result).toHaveProperty('totalPosts', 2);
+    expect(result).toHaveProperty('publishedPosts', 1);
+    expect(result).toHaveProperty('authors', 2);
     expect(result).toHaveProperty('generatedAt');
   });
-
-  it('should handle empty date range', async () => {
-    const payload = {
-      startDate: new Date('2024-01-01'),
-      endDate: new Date('2024-01-01'),
-    };
-
-    const result = await GENERATE_REPORT(payload);
-
-    expect(result.totalPosts).toBe(0);
-  });
 });
-```
-
-## Worker Pool Configuration
-
-```javascript
-// Advanced worker pool configuration
-const workerPool = createWorkerPool('Posts', {
-  maxWorkers: 4,           // Maximum concurrent workers
-  workerTimeout: 30_000,   // Per-task timeout (30s)
-  forceFork: false,        // Skip same-process execution globally
-  ErrorHandler: MyError,   // Custom error class (extends WorkerError)
-});
-```
-
-## Monitoring Workers
-
-```javascript
-// Check worker pool status
-const stats = workerPool.getStats();
-console.log('Total workers:', stats.totalWorkers);
-console.log('Utilization:', stats.utilization);
-console.log('Completed tasks:', stats.completedTasks);
-console.log('Run time info:', stats.runTimeInfo);
-
-// Cleanup pool (destroys threads)
-await workerPool.cleanup();
 ```
 
 ## Best Practices
 
-1. **Use workers for heavy tasks** - Don't block the main process
-2. **Set appropriate maxWorkers** - Balance concurrency vs resources
-3. **Handle errors natively** - Use `{ throwOnError: true }` and `try/catch` at the dispatch site
-4. **Test worker logic** - Workers are just async functions (import and call directly)
-5. **Monitor worker status** - Use `workerPool.getStats()` to track utilization
-6. **Use with Schedule Engine** - For recurring background jobs
-7. **Keep payloads serializable** - Workers use IPC, no functions/classes
-8. **Set timeouts** - Use `workerTimeout` option to prevent workers from hanging
-9. **Workers are standalone CJS** - No `@shared/` imports or Webpack runtime access
+1. **Worker functions are pure async functions** — import and call directly, no pool abstraction
+2. **Pass dependencies explicitly** — models, search, container as function args (not DI resolution inside worker)
+3. **Utility barrel pattern** — `workers/index.js` wraps raw worker functions with clean API
+4. **Handle errors at call site** — use `try/catch` where you call the worker function
+5. **Test worker logic directly** — import the exported function and call it with mock data
+6. **Keep worker files focused** — one concern per `*.worker.js` file
+7. **Use with Schedule Engine** — for recurring background jobs via queue
 
 ## Common Patterns
 
 ### Fire and Forget
 
 ```javascript
-// Don't wait for result, but handle possible rejection internally if not throwing
-workerPool.sendRequest('task', 'TASK_TYPE', payload).catch(console.error);
-```
-
-### Wait for Result
-
-```javascript
-// Wait for worker to complete securely with proper try/catch
-try {
-  const result = await workerPool.sendRequest('task', 'TASK_TYPE', payload, { throwOnError: true });
-  console.log('Result:', result);
-} catch (error) {
-  console.error('Worker failed natively:', error);
-}
+// Don't await, but handle rejection
+generateReport(models, startDate, endDate).catch(console.error);
 ```
 
 ### Batch Processing
 
 ```javascript
-// Process multiple items securely
+// Process multiple items
 const items = [1, 2, 3, 4, 5];
-const promises = items.map(item =>
-  workerPool.sendRequest(`process-${item}`, 'PROCESS_ITEM', { item }, { throwOnError: true })
+const results = await Promise.all(
+  items.map(item => processItem({ item, models })),
 );
-
-const results = await Promise.all(promises);
 ```
 
 ## Queue-Based Workers (Stateful)
 
-When your worker needs `app` access (models, hooks, extension manager, WebSocket), use the **Queue Engine** instead. Piscina workers run in separate threads and **cannot** access `app` singletons.
-
-### Structure
-
-```
-@apps/{module}/api/services/
-└── {module}.workers.js      # Queue-based handlers (stateful)
-@apps/{module}/api/workers/
-├── index.js                  # Piscina pool for CPU subtasks (optional)
-└── {task}.worker.js          # Stateless Piscina worker (optional)
-```
+When your worker needs `app` access with lifecycle awareness (e.g., extension activation/deactivation), use the **Queue Engine** for orchestration.
 
 ### When to Use Which Pattern
 
 | Need | Pattern |
 |------|---------|
-| Stateless, CPU-heavy work | Piscina worker (`createWorkerPool`) |
-| Needs `container.resolve('models')`, hooks, WS | Queue-based handler |
-| Both: stateful orchestration + CPU offload | Hybrid (queue calls Piscina) |
+| Database/FS operations | Direct worker function call |
+| Search indexing hooks | Worker barrel with `registerSearchHooks()` |
+| Needs lifecycle events (activate, deactivate) | Queue-based handler |
+| Complex multi-step workflow | Queue handler calling worker functions |
 
-### Queue-Based Handler
+### Queue-Based Handler Example
 
 ```javascript
 // @apps/posts/api/services/post.workers.js
 async function handlePublishJob(app, job) {
+  const container = app.get('container');
   const { postId, actorId } = job.data;
   const { Post } = container.resolve('models');
   const hook = container.resolve('hook');
@@ -330,37 +249,6 @@ export function registerPostWorkers(container) {
 }
 ```
 
-Register in the module's `boot()` lifecycle hook:
-
-```javascript
-// @apps/posts/api/index.js
-import { registerPostWorkers } from './services/post.workers';
-
-export async function boot(container) {
-  registerPostWorkers(container);
-}
-```
-
-### Hybrid Pattern (Queue + Piscina)
-
-For workers needing both `app` and CPU offloading, combine both:
-
-```javascript
-// Queue handler delegates CPU work to Piscina
-import workerPool from '../workers';
-
-async function handleProcessJob(app, job) {
-  const { itemId } = job.data;
-
-  // CPU-bound → Piscina thread
-  const hash = await workerPool.computeHash(job.data.filePath);
-
-  // Stateful → main process (app access)
-  const { Item } = container.resolve('models');
-  await Item.update({ hash }, { where: { id: itemId } });
-}
-```
-
 See `src/apps/extensions/api/` for the canonical reference implementation.
 
 ---
@@ -369,6 +257,5 @@ See `src/apps/extensions/api/` for the canonical reference implementation.
 
 - `/add-module` — Full-stack module where workers are registered in `boot()`
 - `/add-test` — Jest patterns for testing worker handler functions
-- `/add-engine` — Worker engine internals (`shared/api/engines/worker/`)
 - `/debug` — Part 10 covers extension lifecycle and SQLITE_BUSY with workers
 - `/update-code` — Modify existing workers with test verification

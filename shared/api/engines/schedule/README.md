@@ -103,14 +103,13 @@ import { ScheduleError } from '@shared/api/engines/schedule';
 
 ## Worker Integration
 
-Keep cron handlers lightweight — dispatch heavy processing to a worker pool:
+Keep cron handlers lightweight — call worker functions directly for heavy processing:
 
 ```javascript
 schedule.register('reports:weekly', '0 9 * * 1', async () => {
-  const workerPool = container.resolve('reports:workerPool');
-  await workerPool.sendRequest('weekly', 'GENERATE_REPORT', {
-    week: getCurrentWeek(),
-  });
+  const { generateReport } = require('./workers');
+  const models = container.resolve('models');
+  await generateReport(models, { week: getCurrentWeek() });
 });
 ```
 

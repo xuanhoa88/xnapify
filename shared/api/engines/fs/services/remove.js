@@ -3,7 +3,7 @@
  */
 
 import { remove as removeOperation } from '../operations/remove';
-import workerPool from '../workers';
+import { processDelete } from '../workers';
 
 /**
  * Thresholds for auto-detection of worker usage
@@ -53,7 +53,7 @@ export async function remove(manager, fileNames, options = {}) {
   const fileList = Array.isArray(fileNames) ? fileNames : [fileNames];
 
   if (shouldUseWorker(options, fileList.length)) {
-    return await workerPool.processDelete(fileList, options);
+    return await processDelete(fileList, options);
   }
 
   return await removeOperation(manager, fileNames, options);

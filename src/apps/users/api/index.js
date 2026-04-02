@@ -9,6 +9,7 @@ import * as authController from './controllers/auth.controller';
 import * as profileController from './controllers/profile.controller';
 import { authenticate as handleApiKeyStrategy } from './utils/apiKey';
 import { getUserRBACData } from './utils/rbac/fetcher';
+import { indexAllUsers, registerSearchHooks } from './workers';
 
 /** @type {Symbol} Ownership key for this module's persistent bindings */
 const OWNER_KEY = Symbol('__xnapify.module.users.api__');
@@ -60,36 +61,21 @@ export default {
       }),
       OWNER_KEY,
     );
-
-    const worker = container.resolve('worker');
-    if (worker) {
-      const { default: attachSearchMethods } = require('./workers');
-      const pool = worker.createWorkerPool('UsersSearch', {
-        maxWorkers: 1,
-      });
-      const searchWorkerPool = attachSearchMethods(pool);
-      container.bind('users:search:worker', () => searchWorkerPool, OWNER_KEY);
-    }
   },
 
   async boot({ container }) {
     await registerAuthHooks(container);
 
     const search = container.resolve('search');
-    const searchWorkerPool = container.has('users:search:worker')
-      ? container.make('users:search:worker')
-      : null;
 
-    if (searchWorkerPool && search) {
-      searchWorkerPool.setSearch(search);
-      searchWorkerPool.registerSearchHooks(container);
+    if (search) {
+      registerSearchHooks(container, search);
 
       const usersCount = await search.withNamespace('users').count();
       if (usersCount === 0) {
-        searchWorkerPool
-          .indexAllUsers(search, container.resolve('models'))
+        indexAllUsers(search, container.resolve('models'))
           .then(r => {
-            const count = r && r.result ? r.result.usersCount : 0;
+            const count = r ? r.usersCount : 0;
             console.info(`[Users] Indexed ${count} user(s) for search`);
           })
           .catch(e =>

@@ -42,10 +42,10 @@
 - **Description:** [e.g., "Allows other modules to generate invoices via `container.resolve('billing:invoices')`."]
 
 ## 6. Workers & Background Processing (optional)
-*Define any worker pools or queue-based handlers for heavy processing.*
+*Define any worker functions or queue-based handlers for processing.*
 - **Worker File:** [e.g., `api/workers/report.worker.js`]
 - **Task Type:** [e.g., `GENERATE_REPORT`]
-- **Pool Config:** [e.g., `maxWorkers: 2`]
+- **Barrel Export:** [e.g., `generateReport(models, options)` in `api/workers/index.js`]
 - **Queue Handlers:** [e.g., "Register `install` and `delete` handlers in `boot()` via the queue engine."]
 
 ---

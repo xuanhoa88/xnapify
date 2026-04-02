@@ -1,46 +1,42 @@
 # Worker Review Checklist
 
-Quick-reference for reviewing Piscina worker pools and queue workers.
+Quick-reference for reviewing worker functions and queue workers.
 
-## Piscina Worker Pool
+## Worker Functions (Direct Calls)
 
-### Pool Creation
+### Barrel File (`workers/index.js`)
 
-- [ ] Uses `createWorkerPool(name, options)` from `@shared/api/engines/worker`
-- [ ] Pool name is descriptive and unique (e.g., `'Extensions'`, `'UsersSearch'`)
-- [ ] `maxWorkers` set appropriately (1-4, not unlimited)
-- [ ] `workerTimeout` set for expected workload duration
-- [ ] Extensions use `forceFork: true` (always thread pool, not same-process)
+- [ ] Exports convenience functions wrapping underlying `*.worker.js` exports
+- [ ] Functions accept explicit dependencies (models, search, container) as args
+- [ ] No side effects at module level — all work inside function bodies
+- [ ] Function names are descriptive domain actions (e.g., `indexAllUsers`, `logActivity`)
 
 ### Worker Files
 
 - [ ] Named `<type>.worker.js` (e.g., `checksum.worker.js`)
 - [ ] Located in `api/workers/` directory
-- [ ] Exported functions match message types used in `sendRequest()`
-- [ ] Pure functions — no global state, no side effects
-- [ ] Data is serializable (no functions, classes, or circular references)
-
-### Convenience Methods
-
-- [ ] Attached via `pool.methodName = async function methodName(...) { ... }`
-- [ ] Uses `this.sendRequest(workerType, messageType, data, { throwOnError: true })`
-- [ ] Method name matches domain action (e.g., `computeChecksum`, `indexAllUsers`)
+- [ ] Exported as SCREAMING_SNAKE functions (e.g., `COMPUTE_CHECKSUM`, `LOG_ACTIVITY`)
+- [ ] Pure async functions — dependencies passed as args, not imported globally
 
 ### Lifecycle
 
-- [ ] Core modules: pool created in `providers()`, used in `boot()`
-- [ ] Extensions: pool created lazily in `boot()` via factory function
-- [ ] Extensions: `pool.cleanup()` called in `shutdown()` — leaked threads crash HMR
-- [ ] Pool bound to DI container with `OWNER_KEY` symbol
+- [ ] Core modules: worker functions called from `boot()` or hook listeners
+- [ ] Extensions: worker functions imported via `require('./workers')` in `boot()`
+- [ ] No pool creation, no DI binding — just direct function calls
+- [ ] Search hooks registered via `registerSearchHooks(container, search)` pattern
 
 ```javascript
 // Core module pattern:
-container.bind('moduleName:worker', () => workerPool, OWNER_KEY);
+async boot({ container }) {
+  const { indexAllItems, registerSearchHooks } = require('./workers');
+  registerSearchHooks(container, search);
+}
 
 // Extension pattern:
-let pool = null;
-boot() { pool = createPool(); }
-shutdown() { pool.cleanup(); pool = null; }
+boot({ container }) {
+  const { computeHash } = require('./workers');
+  // use in IPC handlers
+}
 ```
 
 ## Queue Workers
@@ -66,7 +62,6 @@ shutdown() { pool.cleanup(); pool = null; }
 ## Testing
 
 - [ ] Worker handler tested directly (call exported function)
-- [ ] Pool methods tested via `sendRequest()` mock
-- [ ] Error cases tested (timeout, worker crash, invalid input)
-- [ ] No real Piscina threads in unit tests (mock the pool)
-- [ ] Tests clean up pools in `afterEach`
+- [ ] Dependencies mocked (models, search, container)
+- [ ] Error cases tested (invalid input, DB failure)
+- [ ] Tests don't require real infrastructure (DB, search engine)

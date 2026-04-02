@@ -20,7 +20,7 @@ Provide a unified, ultra-fast search interface across all system entities (users
     - `entityType`: Filter by specific model (e.g., `User`).
     - `namespace`: Filter by application domain (e.g., `files`).
     - `limit` / `offset`: Pagination controls.
-  - **Logic:** Dispatches query to the `FlexSearch` worker pool and returns ranked results with metadata.
+  - **Logic:** Dispatches query to the `FlexSearch` search engine and returns ranked results with metadata.
 
 ## 3. Background Workers (`api/workers/`)
 - **Worker:** `flexsearch.worker.js`

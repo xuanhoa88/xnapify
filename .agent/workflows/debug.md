@@ -406,7 +406,7 @@ export const getFilteredUsers = createSelector(
 - [ ] Use `React.memo`, `useMemo`, `useCallback` for expensive renders
 - [ ] Add database indexes for queried columns
 - [ ] Use eager loading to avoid N+1 queries
-- [ ] Offload heavy tasks to worker pools
+- [ ] Offload heavy tasks to worker functions
 - [ ] Debounce search inputs and frequent events
 - [ ] Lazy load images with `loading="lazy"`
 

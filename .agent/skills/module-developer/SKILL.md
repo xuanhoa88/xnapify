@@ -25,7 +25,7 @@ Modules interact with the core framework by exporting a **default object** with 
    - `migrations()`: returns the Webpack context for migrations (declarative — autoloader executes).
    - `models()`: returns the Webpack context for models (declarative — autoloader registers into ORM).
    - `seeds()`: returns the Webpack context for seeds (declarative — autoloader executes).
-   - `boot({ container })`: registers hooks, schedules, queue-based workers, or Piscina worker pools. Runs after all models are loaded.
+   - `boot({ container })`: registers hooks, schedules, queue-based workers, or background worker functions. Runs after all models are loaded.
    - `routes()`: returns the Webpack context directly (e.g., `() => routesContext`).
 
    *Phase order: `translations → providers → migrations → models → seeds → boot → routes` (defined in `shared/utils/lifecycle.js`)*
@@ -68,57 +68,58 @@ Modules interact with the core framework by exporting a **default object** with 
 
 ---
 
-## Worker Pool Registration
+## Worker Function Registration
 
-Modules can offload CPU-bound tasks to Piscina worker threads. Register pools in `providers()` (for binding) and use in `boot()` (for setup).
+Modules can offload processing to dedicated worker functions. Register and call them in `boot()` directly.
 
-### Pattern: Core Module Worker Pool
+### Pattern: Direct Worker Functions
 
 ```javascript
-// api/index.js — providers hook
-async providers({ container }) {
-  const worker = container.resolve('worker');
-  if (worker) {
-    const { default: attachMethods } = require('./workers');
-    const pool = worker.createWorkerPool('ModuleName', {
-      maxWorkers: 1,
-    });
-    const enrichedPool = attachMethods(pool);
-    container.bind('moduleName:worker', () => enrichedPool, OWNER_KEY);
-  }
-}
-
 // api/index.js — boot hook
 async boot({ container }) {
-  const workerPool = container.has('moduleName:worker')
-    ? container.make('moduleName:worker')
-    : null;
+  const search = container.resolve('search');
 
-  if (workerPool) {
-    workerPool.registerSearchHooks(container);
+  if (search) {
+    const { indexAllItems, registerSearchHooks } = require('./workers');
+    registerSearchHooks(container, search);
+
+    const count = await search.withNamespace('moduleName').count();
+    if (count === 0) {
+      const models = container.resolve('models');
+      indexAllItems(search, models)
+        .then(r => console.info(`[ModuleName] Indexed ${r.count} item(s)`))
+        .catch(e => console.error('[ModuleName] Indexing failed:', e.message));
+    }
   }
 }
 ```
 
-### Pattern: Worker Methods File
+### Pattern: Worker Barrel File
 
 ```javascript
 // api/workers/index.js
-export default function attachMethods(pool) {
-  pool.doExpensiveWork = async function doExpensiveWork(data) {
-    const { result } = await this.sendRequest(
-      'workerType',        // maps to workerType.worker.js
-      'MESSAGE_TYPE',      // exported function name
-      { ...data },
-      { throwOnError: true },
-    );
-    return result;
-  };
-  return pool;
+import { INDEX_ALL } from './search.worker';
+import { PROCESS_TASK } from './task.worker';
+
+export async function indexAllItems(search, models) {
+  return await INDEX_ALL({ search, models });
+}
+
+export function registerSearchHooks(container, search) {
+  const hook = container.resolve('hook');
+  if (!hook) return;
+
+  hook('moduleName').on('created', async ({ id }) => {
+    await search.withNamespace('moduleName').index({ id });
+  });
+}
+
+export async function processTask(data) {
+  return await PROCESS_TASK(data);
 }
 ```
 
-> **Important:** Workers are discovered from pre-compiled standalone CJS files at `<bundleDir>/workers/<name>.worker.js`. Use `sendRequest(workerType, messageType, data)` — not direct imports.
+> **Note:** Worker functions run same-process. No pool abstraction or CJS constraints.
 
 ---
 
@@ -250,7 +251,6 @@ async boot({ container }) {
 | `'emails:send'` | Email | Direct send function (module-registered) |
 | `'schedule'` | Schedule | ScheduleManager with `register()` |
 | `'search'` | Search | Search engine (FlexSearch/MeiliSearch) |
-| `'worker'` | Worker | Worker engine with `createWorkerPool()` |
 | `'http'` | HTTP | Request helpers `sendSuccess`, `sendError` |
 | `'template'` | Template | LiquidJS template renderer |
 | `'fs'` | Filesystem | File operations with path guards |

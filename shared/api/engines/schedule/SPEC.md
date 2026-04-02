@@ -36,7 +36,7 @@ index.js
 
 **File:** `errors.js`
 
-Extends `Error` with structured properties for consistent error handling, following the same pattern as the worker engine's `WorkerError`.
+Extends `Error` with structured properties for consistent error handling across engines.
 
 | Property | Type | Default | Description |
 |---|---|---|---|
@@ -202,7 +202,7 @@ Tests instantiate `ScheduleManager` directly with `{ autoStart: false }` to avoi
 ## 7. Integration Points
 
 - **Module `boot({ container })`**: Primary registration point. Access via `container.resolve('schedule')`.
-- **Worker Engine**: Cron handlers can dispatch heavy work to worker pools (keep handlers lightweight, offload to `workerPool.sendRequest()`).
+- **Worker Functions**: Cron handlers can call worker functions directly for processing (keep handlers lightweight, offload to imported worker functions).
 - **Extension lifecycle**: Extensions can create isolated instances via `createFactory()` and manage their own teardown.
 
 ---

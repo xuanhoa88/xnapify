@@ -3,7 +3,7 @@
  */
 
 import { copy as copyOperation } from '../operations/copy';
-import workerPool from '../workers';
+import { processCopy } from '../workers';
 
 /**
  * Thresholds for auto-detection of worker usage
@@ -55,7 +55,7 @@ export async function copy(manager, copyOperations, options = {}) {
     : [copyOperations];
 
   if (shouldUseWorker(options, opList.length)) {
-    return await workerPool.processCopy(opList, options);
+    return await processCopy(opList, options);
   }
 
   return await copyOperation(manager, copyOperations, options);

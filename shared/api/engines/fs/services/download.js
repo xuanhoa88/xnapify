@@ -3,7 +3,7 @@
  */
 
 import { download as downloadOperation } from '../operations/download';
-import workerPool from '../workers';
+import { processDownload } from '../workers';
 
 /**
  * Thresholds for auto-detection of worker usage
@@ -53,7 +53,7 @@ export async function download(manager, fileNames, options = {}) {
   const fileList = Array.isArray(fileNames) ? fileNames : [fileNames];
 
   if (shouldUseWorker(options, fileList.length)) {
-    return await workerPool.processDownload(fileList, options);
+    return await processDownload(fileList, options);
   }
 
   return await downloadOperation(manager, fileNames, options);

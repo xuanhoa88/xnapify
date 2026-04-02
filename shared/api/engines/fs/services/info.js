@@ -3,7 +3,7 @@
  */
 
 import { info as infoOperation } from '../operations/info';
-import workerPool from '../workers';
+import { processInfo } from '../workers';
 
 /**
  * Get file info with optional worker processing
@@ -28,7 +28,7 @@ import workerPool from '../workers';
 export async function info(manager, fileName, options = {}) {
   // Info is typically a quick operation, only use worker if explicitly requested
   if (options.useWorker === true) {
-    return await workerPool.processInfo(fileName, options);
+    return await processInfo(fileName, options);
   }
 
   return await infoOperation(manager, fileName, options);

@@ -3,7 +3,7 @@
  */
 
 import { sync as syncOperation } from '../operations/sync';
-import workerPool from '../workers';
+import { processSync } from '../workers';
 
 /**
  * Thresholds for auto-detection of worker usage
@@ -55,7 +55,7 @@ export async function sync(manager, syncOperations, options = {}) {
     : [syncOperations];
 
   if (shouldUseWorker(options, opList.length)) {
-    return await workerPool.processSync(opList, options);
+    return await processSync(opList, options);
   }
 
   return await syncOperation(manager, syncOperations, options);

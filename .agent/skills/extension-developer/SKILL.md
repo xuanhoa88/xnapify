@@ -155,35 +155,23 @@ Webpack injects a single compile-time constant for each extension:
 | `__EXTENSION_ID__` | `snakeCase(manifest.name)` (e.g. `xnapify_extension_profile`) | Everything: IPC hook IDs, URL paths, i18n namespaces, logging, migration prefixes |
 
 
-## Piscina Worker Pools in Extensions
+## Worker Functions in Extensions
 
-Extensions can create Piscina-backed worker pools to offload CPU-intensive tasks to background threads. Worker files are discovered from pre-compiled CJS files at `<bundleDir>/workers/`.
+Extensions can use worker functions for processing tasks. Worker functions run same-process via direct imports — no pool abstraction needed.
 
-### Pattern: Lazy Factory (Recommended)
+### Pattern: Direct Worker Functions
 
 ```javascript
 // api/workers/index.js
-import { createWorkerPool } from '@shared/api/engines/worker';
+import { PROCESS_DATA } from './processor.worker';
+import { COMPUTE_HASH } from './hash.worker';
 
-export function createMyWorkerPool() {
-  const pool = createWorkerPool('ExtensionName', {
-    maxWorkers: 2,
-    workerTimeout: 30_000,
-    forceFork: true,  // Force thread mode for extensions
-  });
+export async function processData(input) {
+  return await PROCESS_DATA({ input });
+}
 
-  // Attach convenience methods over sendRequest
-  pool.processData = async function processData(input) {
-    const { result } = await this.sendRequest(
-      'processor',       // maps to processor.worker.js
-      'PROCESS_DATA',    // exported function name
-      { input },
-      { throwOnError: true },
-    );
-    return result;
-  };
-
-  return pool;
+export async function computeHash(filePath) {
+  return await COMPUTE_HASH({ filePath });
 }
 ```
 
@@ -191,33 +179,26 @@ export function createMyWorkerPool() {
 
 ```javascript
 // api/index.js
-let workerPool = null;
-
 export default {
-  boot({ container }) {
-    const { createMyWorkerPool } = require('./workers');
-    workerPool = createMyWorkerPool();
+  boot({ container, registry }) {
+    const { computeHash } = require('./workers');
+
+    // Use worker function in IPC handler
+    registry.registerHook(
+      `ipc:${__EXTENSION_ID__}:compute-hash`,
+      registry.createPipeline(async (ctx) => {
+        ctx.result = await computeHash(ctx.data.filePath);
+      }),
+      __EXTENSION_ID__,
+    );
   },
 
   shutdown({ container, registry }) {
-    // MUST destroy worker pool to release threads
-    if (workerPool) {
-      workerPool.cleanup();
-      workerPool = null;
-    }
+    registry.unregisterHook(`ipc:${__EXTENSION_ID__}:compute-hash`, __EXTENSION_ID__);
     // ... also unregister hooks, slots, etc.
   },
 };
 ```
-
-### Key Rules
-
-| Rule | Why |
-|------|-----|
-| Use lazy factory (function, not top-level) | Avoids blocking event loop when extension bundle loads |
-| Call `pool.cleanup()` in `shutdown()` | Releases Piscina threads — leaked threads crash HMR |
-| Use `forceFork: true` | Extensions should always use thread pool (not same-process) |
-| `sendRequest(workerType, messageType, data)` | Standard API — workerType maps to `<name>.worker.js` |
 
 ---
 
@@ -225,7 +206,6 @@ export default {
 
 - NEVER directly modify `src/apps/` files from an extension.
 - Ensure every event listener registered in `boot` is explicitly cleaned up in `shutdown`. Memory leaks will crash the hot-reloading pipeline.
-- **Worker pools** created in `boot()` MUST be destroyed in `shutdown()` via `pool.cleanup()`.
 - Make all database interactions within `install/uninstall` defensively coded (`try/catch`), as they execute during sensitive state transitions.
 - Use `providers()` for Redux reducer injection — NOT `boot()`. The store is only available after `runProviders()`.
 

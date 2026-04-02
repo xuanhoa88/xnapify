@@ -14,8 +14,8 @@ import { v4 as uuidv4 } from 'uuid';
 /**
  * Handle LOG_ACTIVITY request
  *
- * Worker handlers receive a SINGLE data argument from createWorkerPool.
- * The caller (workerPool.log) must include `models` in the payload.
+ * Worker handlers receive a SINGLE data argument from the caller.
+ * The caller must include `models` in the payload.
  *
  * @param {Object} data - Activity data including models reference
  * @param {Object} data.models - Sequelize models
@@ -42,5 +42,4 @@ async function logActivity({ models, ...payload }) {
   }
 }
 
-export { logActivity as LOG_ACTIVITY };
 export default logActivity;

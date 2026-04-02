@@ -105,7 +105,7 @@ models/       → Sequelize model definitions
 database/
   migrations/ → Schema changes
   seeds/      → Seed data
-workers/      → Piscina worker pool (stateless CPU work)
+workers/      → Worker functions (direct calls, same-process)
 routes/       → Express route definitions (_route.js files)
 validator/    → Zod schemas
 ```
@@ -170,7 +170,7 @@ export const listItems = async (req, res) => {
 | **Controller** | `try/catch` → `http.sendServerError(res, msg, err)` | Throwing without Express error handler |
 | **Service** | Let errors bubble up. Use custom error classes with `.status`. | Silent `catch {}` that swallows errors |
 | **Worker (queue)** | Log + re-throw so queue marks job failed | `catch {}` that reports success |
-| **Worker (Piscina)** | Let error propagate — engine handles via `throwOnError: true` | Wrapping in unnecessary `try/catch` |
+| **Worker (function)** | Let error propagate to caller | Wrapping in unnecessary `try/catch` |
 | **Extension lifecycle** | `try/catch` in `install()` / `uninstall()` | Unguarded DB ops in state transitions |
 | **Frontend thunks** | `rejectWithValue(error.message)` | `return undefined` on error |
 
@@ -271,21 +271,14 @@ npm run test -- <pat> # Run tests matching a pattern
 
 ## Additional Patterns
 
-### Queue Worker Registration Pattern
+### Worker Barrel Pattern
 
 ```javascript
-// api/workers/index.js — attach methods to worker pool
-export default function registerXxxWorkers(pool) {
-  pool.doTask = async function doTask(data) {
-    const { result } = await this.sendRequest(
-      'taskType',
-      'DO_TASK',
-      data,
-      { throwOnError: true },
-    );
-    return result;
-  };
-  return pool;
+// api/workers/index.js — export convenience functions
+import { DO_TASK } from './task.worker';
+
+export async function doTask(data) {
+  return await DO_TASK(data);
 }
 ```
 

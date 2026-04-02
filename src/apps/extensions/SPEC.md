@@ -49,22 +49,22 @@ Provide a unified framework for installing, managing, and executing system exten
 - **Keys:** `extensions.status.active`, `extensions.actions.install`, `extensions.errors.invalid_checksum`.
 - **Note:** Extension descriptions and UI labels may come from the extension's own translation files, which are merged into the global i18next instance.
 
-## 5. Workers & Background Processing (`api/workers/`, `api/services/extension.workers.js`)
+## 5. Workers & Background Processing (`api/utils/`, `api/services/extension.workers.js`)
 
-### Piscina Worker Pool (`api/workers/`)
+### Checksum Utilities (`api/utils/checksum.js`)
 
-CPU-bound operations are offloaded to Piscina worker threads via `createWorkerPool`:
+Checksum operations are called directly (same-process):
 
-- **`checksum.worker.js`**: Stateless worker exporting `COMPUTE_CHECKSUM` and `VERIFY_CHECKSUM` for SHA-256 directory hashing.
-- **`index.js`**: Worker pool setup with `computeChecksum(dir)` and `verifyChecksum(dir, expected)` high-level methods.
+- **`computeChecksum(dir)`**: Computes SHA-256 hash of an extension directory.
+- **`verifyChecksum(dir, expected)`**: Verifies a directory's checksum matches an expected value.
 
 ### Queue-Based Handlers (`api/services/extension.workers.js`)
 
 Stateful operations that need `app` access (models, hooks, extension manager, WebSocket) use the Queue Engine:
 
-- **`install`**: Runs npm install, computes checksum (via worker pool), reloads extension, emits hooks.
+- **`install`**: Runs npm install, computes checksum (via direct function call), reloads extension, emits hooks.
 - **`delete`**: Unloads extension, removes files (with path traversal guard), destroys DB record.
-- **`toggle`**: Verifies checksum (via worker pool) before activation, installs/uninstalls deps, manages extension load state.
+- **`toggle`**: Verifies checksum (via direct function call) before activation, installs/uninstalls deps, manages extension load state.
 
 Handlers are registered in the `boot({ container })` lifecycle hook and capture `app` via closure.
 

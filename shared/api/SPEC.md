@@ -31,8 +31,7 @@ shared/api/
     ├── schedule/       # Cron-based task scheduling
     ├── search/         # Full-text search (memory, database FTS)
     ├── template/       # LiquidJS template rendering
-    ├── webhook/        # Inbound webhook handler with HMAC verification
-    └── worker/         # Piscina-based worker thread pools
+    └── webhook/        # Inbound webhook handler with HMAC verification
 ```
 
 ## Components
@@ -135,12 +134,10 @@ router.add(adapter);
 | `search` | `search` | Full-text search (memory FTS / database FTS5) |
 | `template` | `template` | LiquidJS template rendering |
 | `webhook` | `webhook` | Inbound webhook handler with HMAC verification |
-| `worker` | `worker` | Piscina-based worker thread pools |
 
 ## Dependencies
 
 - **Sequelize** — ORM, migrations, model definition
-- **Piscina** — Worker thread pools
 - **LiquidJS** — Template rendering
 - **node-cron** — Task scheduling
 - **crypto** — HMAC signature verification (Node.js built-in)

@@ -127,7 +127,7 @@ Defer to the **security-auditor** skill for deep checks. At minimum verify:
 | **Missing DB indexes** | New columns in `where` or `order` without migration index | Add index in migration file |
 | **Unbounded queries** | `findAll()` without `limit` on large tables | Always set `limit` or paginate |
 | **Sequential where parallel** | Multiple independent DB/API calls chained with `await` | `Promise.all([callA(), callB()])` |
-| **Blocking event loop** | CPU work in request handler (hashing, parsing, checksum) | Use Piscina worker pool: `createWorkerPool()` |
+| **Blocking event loop** | CPU work in request handler (hashing, parsing, checksum) | Offload to worker function: `import { fn } from './workers'` |
 | **Cache misses** | Repeated expensive lookups without caching | Use `cache.get(key)` / `cache.set(key, val, TTL)` pattern |
 | **Cache not invalidated** | State-changing operations without `invalidateCache()` | Call `invalidateCache(cache, id)` after mutations |
 | **Temp file leaks** | `fs.promises.mkdir` in upload without `finally` cleanup | Always use `try/finally` to clean temp files |
@@ -245,7 +245,7 @@ export const listItems = async (req, res) => {
 | **Controller** | `try/catch` → `http.sendServerError(res, msg, err)` | `throw new Error()` without handler |
 | **Service** | Let errors bubble up. Use custom error classes with `.status`. | Silent `catch {}` |
 | **Worker (Queue)** | Log + re-throw so queue marks job failed | `catch {}` that silently succeeds |
-| **Worker (Piscina)** | Let error propagate — engine handles it | Wrapping in unnecessary `try/catch` |
+| **Worker (Function)** | Let error propagate to caller | Wrapping in unnecessary `try/catch` |
 | **Extension lifecycle** | `try/catch` in `install()` / `uninstall()` | Unguarded DB ops |
 | **Frontend thunks** | `rejectWithValue(error.data && error.data.message \|\| error.message)` | `return undefined` on error |
 | **Frontend AbortError** | `if (error.name === 'AbortError') return []` | Treating abort as failure |
@@ -280,7 +280,7 @@ src/apps/[module_name]/
 │   ├── database/
 │   │   ├── migrations/
 │   │   └── seeds/
-│   └── workers/              # (optional) Piscina pool
+│   └── workers/              # (optional) Worker functions
 ├── views/
 │   ├── index.js              # View lifecycle hooks (default export)
 │   ├── (admin)/(default)/    # Nested routes
@@ -452,15 +452,14 @@ src/apps/[module_name]/
 
 ## 10. Worker Conventions
 
-### 10.1 Piscina Workers (Stateless CPU Work)
+### 10.1 Worker Functions (Direct Calls)
 
 | Rule | What to Check |
 |------|---------------|
-| **Directory** | `api/workers/index.js` for pool, `*.worker.js` for handlers |
-| **Pool creation** | `createWorkerPool('Name', { maxWorkers })` |
-| **SCREAMING_SNAKE exports** | Handler functions exported as `TASK_NAME` |
-| **No `app`/`container` access** | Workers run in separate threads — cannot access singletons |
-| **Serializable payloads** | No functions, class instances, or circular refs |
+| **Directory** | `api/workers/index.js` for utility barrel, `*.worker.js` for handler functions |
+| **Barrel pattern** | `index.js` exports convenience functions that call underlying `*.worker.js` exports |
+| **SCREAMING_SNAKE exports** | Handler functions exported as `TASK_NAME` from `*.worker.js` |
+| **Dependencies as args** | Pass `models`, `search`, `container` as function args — not imported at module level |
 
 ### 10.2 Queue-Based Workers (Stateful)
 

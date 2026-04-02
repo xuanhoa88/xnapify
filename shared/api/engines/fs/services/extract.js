@@ -3,7 +3,7 @@
  */
 
 import { extract as extractOperation } from '../operations/extract';
-import workerPool from '../workers';
+import { extractZip } from '../workers';
 
 /**
  * Extract ZIP archive with optional worker processing
@@ -25,7 +25,7 @@ export async function extract(manager, zipSource, extractPath, options = {}) {
   const { useWorker } = options;
 
   if (useWorker === true) {
-    return await workerPool.extractZip(zipSource, extractPath, options);
+    return await extractZip(zipSource, extractPath, options);
   }
 
   // If useWorker is false or undefined (and we don't have auto-detection logic yet), use direct operation

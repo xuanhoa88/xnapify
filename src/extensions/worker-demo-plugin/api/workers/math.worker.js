@@ -6,20 +6,20 @@
  */
 
 /**
- * Math Computation Worker — Stateless Piscina worker for CPU-bound math tasks.
+ * Math Computation Worker — Utility functions for CPU-bound math tasks.
  *
- * Each named export maps to a messageType in sendRequest().
+ * Each named export is a standalone async/sync function called directly.
  * Workers receive a SINGLE data argument and must return serializable results.
  */
 
 /**
  * Compute the Nth Fibonacci number using iterative approach.
- * Deliberately CPU-intensive for large N to demonstrate worker thread benefit.
+ * Deliberately CPU-intensive for large N to demonstrate offloading.
  *
  * @param {{ n: number }} data
  * @returns {{ n: number, result: number, elapsed: number }}
  */
-export function FIBONACCI(data) {
+export function fibonacci(data) {
   const { n } = data;
   const start = Date.now();
 
@@ -47,7 +47,7 @@ export function FIBONACCI(data) {
  * @param {{ number: number }} data
  * @returns {{ number: number, isPrime: boolean, elapsed: number }}
  */
-export function IS_PRIME(data) {
+export function isPrime(data) {
   const { number } = data;
   const start = Date.now();
 
@@ -72,12 +72,12 @@ export function IS_PRIME(data) {
 
 /**
  * Generate prime numbers up to a limit using Sieve of Eratosthenes.
- * CPU-intensive for large limits — perfect for worker thread offloading.
+ * CPU-intensive for large limits — good candidate for offloading.
  *
  * @param {{ limit: number }} data
  * @returns {{ limit: number, primes: number[], count: number, elapsed: number }}
  */
-export function SIEVE_PRIMES(data) {
+export function sievePrimes(data) {
   const { limit } = data;
   const start = Date.now();
 

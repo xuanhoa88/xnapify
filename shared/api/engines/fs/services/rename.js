@@ -3,7 +3,7 @@
  */
 
 import { rename as renameOperation } from '../operations/rename';
-import workerPool from '../workers';
+import { processRename } from '../workers';
 
 /**
  * Thresholds for auto-detection of worker usage
@@ -55,7 +55,7 @@ export async function rename(manager, renameOperations, options = {}) {
     : [renameOperations];
 
   if (shouldUseWorker(options, opList.length)) {
-    return await workerPool.processRename(opList, options);
+    return await processRename(opList, options);
   }
 
   return await renameOperation(manager, renameOperations, options);

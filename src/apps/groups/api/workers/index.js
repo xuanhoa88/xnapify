@@ -6,102 +6,76 @@
  */
 
 /**
- * Groups Search Worker Pool
+ * Groups Search Utilities
  *
- * Creates a worker pool with convenience methods for group search operations.
- *
- * @param {Object} workerPool - Base worker pool from the worker engine
- * @returns {Object} Worker pool with group-specific search methods
+ * Provides search indexing and real-time hook registration for groups.
  */
-export default function attachSearchMethods(workerPool) {
-  /**
-   * Bind the search engine instance to the worker pool.
-   *
-   * @param {Object} search - Search engine instance
-   */
-  workerPool.setSearch = function setSearch(search) {
-    this.searchEngine = search;
+
+import {
+  indexAllGroups as _indexAll,
+  indexGroup as _indexOne,
+  removeGroup as _remove,
+} from './search.worker';
+
+/**
+ * Index all existing groups in the background.
+ *
+ * @param {Object} search - Search engine instance
+ * @param {Object} models - Database models
+ * @param {boolean} [force=false] - Clear namespace before indexing
+ * @returns {Promise<Object>} Indexing result
+ */
+export async function indexAllGroups(search, models, force = false) {
+  return await _indexAll({ search, models, force });
+}
+
+/**
+ * Index a single group in the search engine.
+ *
+ * @param {Object} search - Search engine instance
+ * @param {Object} group - Sequelize group instance
+ */
+export async function indexGroup(search, group) {
+  return await _indexOne({ search, group });
+}
+
+/**
+ * Remove a single group from the search index.
+ *
+ * @param {Object} search - Search engine instance
+ * @param {string} groupId - Group ID to remove
+ */
+export async function removeGroup(search, groupId) {
+  return await _remove({ search, groupId });
+}
+
+/**
+ * Register hooks to keep the groups search index in sync with mutations.
+ *
+ * @param {Object} container - DI container instance
+ * @param {Object} search - Search engine instance
+ */
+export function registerSearchHooks(container, search) {
+  const hook = container.resolve('hook');
+  if (!hook) return;
+
+  const safeExec = (label, fn) => async payload => {
+    try {
+      await fn(payload);
+    } catch (err) {
+      console.warn(`⚠️ Search hook [${label}]: ${err.message}`);
+    }
   };
 
-  /**
-   * Index all existing groups in the background.
-   *
-   * @param {Object} search - Search engine instance
-   * @param {Object} models - Database models
-   * @param {boolean} [force=false] - Clear namespace before indexing
-   * @returns {Promise<Object>} Indexing result
-   */
-  workerPool.indexAllGroups = async function indexAllGroups(
-    search,
-    models,
-    force = false,
-  ) {
-    return await this.sendRequest('search', 'INDEX_ALL_GROUPS', {
-      search,
-      models,
-      force,
-    });
-  };
+  const onIndex = safeExec('indexGroup', async ({ group }) => {
+    if (group) await indexGroup(search, group);
+  });
 
-  /**
-   * Index a single group in the search engine.
-   *
-   * @param {Object} group - Sequelize group instance
-   */
-  workerPool.indexGroup = async function indexGroup(group) {
-    return await this.sendRequest(
-      'search',
-      'INDEX_GROUP',
-      { search: this.searchEngine, group },
-      { forceFork: true },
-    );
-  };
+  const onRemove = safeExec('removeGroup', async ({ group_id }) => {
+    if (group_id) await removeGroup(search, group_id);
+  });
 
-  /**
-   * Remove a single group from the search index.
-   *
-   * @param {string} groupId - Group ID to remove
-   */
-  workerPool.removeGroup = async function removeGroup(groupId) {
-    return await this.sendRequest(
-      'search',
-      'REMOVE_GROUP',
-      { search: this.searchEngine, groupId },
-      { forceFork: true },
-    );
-  };
-
-  /**
-   * Register hooks to keep the groups search index in sync with mutations.
-   *
-   * @param {Object} container - DI container instance
-   */
-  workerPool.registerSearchHooks = function registerSearchHooks(container) {
-    const hook = container.resolve('hook');
-    if (!hook) return;
-
-    const pool = this;
-
-    const safeExec = (label, fn) => async payload => {
-      try {
-        await fn(payload);
-      } catch (err) {
-        console.warn(`⚠️ Search hook [${label}]: ${err.message}`);
-      }
-    };
-
-    const indexGroup = safeExec('indexGroup', async ({ group }) => {
-      if (group) await pool.indexGroup(group);
-    });
-
-    const removeGroup = safeExec('removeGroup', async ({ group_id }) => {
-      if (group_id) await pool.removeGroup(group_id);
-    });
-
-    hook('admin:groups').on('created', indexGroup);
-    hook('admin:groups').on('updated', indexGroup);
-    hook('admin:groups').on('deleted', removeGroup);
-  };
-
-  return workerPool;
+  hook('admin:groups').on('created', onIndex);
+  hook('admin:groups').on('updated', onIndex);
+  hook('admin:groups').on('deleted', onRemove);
 }

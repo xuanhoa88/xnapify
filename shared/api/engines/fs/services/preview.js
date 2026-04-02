@@ -3,7 +3,7 @@
  */
 
 import { preview as previewOperation } from '../operations/preview';
-import workerPool from '../workers';
+import { processPreview } from '../workers';
 
 /**
  * Preview file with optional worker processing
@@ -28,7 +28,7 @@ import workerPool from '../workers';
 export async function preview(manager, fileName, options = {}) {
   // Preview is typically a quick operation, only use worker if explicitly requested
   if (options.useWorker === true) {
-    return await workerPool.processPreview(fileName, options);
+    return await processPreview(fileName, options);
   }
 
   return await previewOperation(manager, fileName, options);

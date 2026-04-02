@@ -8,7 +8,7 @@
 
 ## Objective
 
-Provide a unified file operations layer with pluggable storage providers (local, memory, selfhost), Multer-based Express upload middleware, worker pool integration for batch operations, and comprehensive file utilities.
+Provide a unified file operations layer with pluggable storage providers (local, memory, selfhost), Multer-based Express upload middleware, direct worker function calls for batch operations, and comprehensive file utilities.
 
 ## 1. Architecture
 
@@ -32,7 +32,7 @@ shared/api/engines/fs/
 │   ├── zip-utils.js      # ZIP creation/extraction utilities
 │   └── index.js          # Re-exports all utils
 ├── workers/
-│   ├── index.js          # Worker pool with high-level operation methods
+│   ├── index.js          # Utility barrel with high-level function exports
 │   ├── upload.worker.js  # Upload worker handler
 │   ├── download.worker.js
 │   ├── delete.worker.js
@@ -58,7 +58,7 @@ index.js
     └── utils/* (crypto, os, path)
 
 workers/index.js
-└── @shared/api/engines/worker (createWorkerPool)
+└── workers/*.worker.js (direct imports)
 ```
 
 ## 2. FilesystemManager Class (`factory.js`)
@@ -216,39 +216,33 @@ All providers implement: `store`, `retrieve`, `delete`, `exists`, `getMetadata`,
 - Streams collected to buffer for HTTP `Content-Length`.
 - Converts web ReadableStream to Node.js Readable for downloads.
 
-## 6. Worker Pool (`workers/index.js`)
+## 6. Worker Functions (`workers/index.js`)
 
-Uses `createWorkerPool('📁 Filesystem', { ErrorHandler: FilesystemWorkerError })`.
+Worker functions are called directly (same-process) via utility exports from `workers/index.js`. Each function dispatches to the underlying `*.worker.js` file.
 
-Workers are pre-compiled as standalone CJS files and discovered from the `workers/` directory at runtime via `fs.readdirSync`.
+### High-Level Utility Functions
 
-### High-Level Worker Methods
+| Function | Worker File | Message Type |
+|---|---|---|
+| `processUpload(filesData, options)` | `upload.worker.js` | `UPLOAD_SINGLE/BATCH` |
+| `processDownload(fileNames, options)` | `download.worker.js` | `DOWNLOAD_SINGLE/BATCH` |
+| `processDelete(fileNames, options)` | `delete.worker.js` | `DELETE_SINGLE/BATCH` |
+| `processRename(operations, options)` | `rename.worker.js` | `RENAME_SINGLE/BATCH` |
+| `processCopy(operations, options)` | `copy.worker.js` | `COPY_SINGLE/BATCH` |
+| `processSync(operations, options)` | `sync.worker.js` | `SYNC_SINGLE/BATCH` |
+| `processInfo(fileName, options)` | `info.worker.js` | `GET_FILE_INFO` |
+| `processPreview(fileName, options)` | `info.worker.js` | `PREVIEW_FILE` |
+| `createZipFile(fileInfos, outputPath, options)` | `zip.worker.js` | `CREATE_ZIP` |
+| `extractZip(zipSource, extractPath, options)` | `zip.worker.js` | `EXTRACT_ZIP` |
 
-| Method | Worker | Message Type | Supports `forceFork` |
-|---|---|---|---|
-| `processUpload(filesData, options)` | `upload` | `UPLOAD_SINGLE/BATCH` | ✅ |
-| `processDownload(fileNames, options)` | `download` | `DOWNLOAD_SINGLE/BATCH` | — |
-| `processDelete(fileNames, options)` | `delete` | `DELETE_SINGLE/BATCH` | ✅ |
-| `processRename(operations, options)` | `rename` | `RENAME_SINGLE/BATCH` | ✅ |
-| `processCopy(operations, options)` | `copy` | `COPY_SINGLE/BATCH` | ✅ |
-| `processSync(operations, options)` | `sync` | `SYNC_SINGLE/BATCH` | — |
-| `processInfo(fileName, options)` | `info` | `GET_FILE_INFO` | — |
-| `processPreview(fileName, options)` | `info` | `PREVIEW_FILE` | — |
-| `createZipFile(fileInfos, outputPath, options)` | `zip` | `CREATE_ZIP` | — |
-| `extractZip(zipSource, extractPath, options)` | `zip` | `EXTRACT_ZIP` | — |
-
-All methods auto-detect `SINGLE` vs `BATCH` based on array length.
-
-### Unregister Methods
-
-Each worker type has dedicated `unregisterX()` methods (e.g., `unregisterUpload()`, `unregisterZip()`).
+All functions auto-detect `SINGLE` vs `BATCH` based on array length.
 
 ## 7. Error Classes (`utils/errors.js`)
 
 | Class | Extends | Code Default | Status | Extra Props |
 |---|---|---|---|---|
 | `FilesystemError` | `Error` | `'PROVIDER_ERROR'` | `500` | `timestamp` |
-| `FilesystemWorkerError` | `WorkerError` | `'WORKER_ERROR'` | `500` | inherits from WorkerError |
+| `FilesystemWorkerError` | `Error` | `'WORKER_ERROR'` | `500` | `timestamp` |
 
 ### `createOperationResult(success, data?, message?, error?)`
 
@@ -293,7 +287,7 @@ export default fs;
 ## 10. Integration Points
 
 - **Express routes**: Use `fs.useUploadMiddleware()` for file upload endpoints.
-- **Worker engine**: Services auto-offload to the filesystem worker pool for batch operations.
+- **Worker functions**: Services auto-offload to direct worker function calls for batch operations.
 - **Schedule engine**: Schedule periodic file cleanup with `fs.list()` + `fs.remove()`.
 - **Queue engine**: Queue file processing jobs (image resize, thumbnail generation).
 - **Modules**: Access via `container.resolve('fs')` in module `init()`.
