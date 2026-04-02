@@ -50,7 +50,9 @@
     "test:ci": "node tools/run test --ci",
     "test:benchmark": "node tools/run benchmark",
     "test:e2e": "node tools/e2e/runner.js",
-    "test:e2e:headed": "npm run test:e2e -- --headed"
+    "test:e2e:headed": "npm run test:e2e -- --headed",
+    "test:e2e:template": "node tools/e2e/create-template.js",
+    "test:e2e:import": "node tools/e2e/excel-to-md.js"
   },
   "dependencies": {
     "@hookform/resolvers": "3.9.1",
@@ -238,6 +240,7 @@
     "webpack-hot-middleware": "2.26.1",
     "webpack-merge": "5.10.0",
     "webpack-node-externals": "3.0.0",
+    "xlsx": "0.18.5",
     "youch": "3.3.4"
   },
   "overrides": {

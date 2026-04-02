@@ -569,3 +569,64 @@ To find ALL modules and extensions with e2e tests:
 ```bash
 find src/apps src/extensions -type d -name "e2e" 2>/dev/null | sort
 ```
+
+## Excel Import (for QA Teams)
+
+QA testers can write test cases in Excel and convert them to `test.md` files automatically.
+
+### Excel template
+
+Generate a template with sample data and an Instructions sheet:
+
+```bash
+npm run test:e2e:template
+# Output: tools/e2e/test-cases-template.xlsx
+```
+
+### Excel format
+
+| Column | Header | Required | Description |
+|--------|--------|----------|-------------|
+| A | Test ID | Yes | Unique ID, e.g. `TC-QA-001`, `TC-API-002` |
+| B | Module | Yes | Module/extension name, e.g. `quick-access-plugin` |
+| C | Type | No | `ui` (default), `api`, or `system` |
+| D | Category | Yes | Test category, e.g. `login`, `auth` |
+| E | Title | Yes | Test case title (becomes `# Heading`) |
+| F | Description | No | Description paragraph |
+| G | Prerequisites | No | Semicolon-separated `key=value` pairs |
+| H-Q | Step 1-10 | Yes (1+) | Steps in natural English |
+| R-V | Expected 1-5 | No | Acceptance criteria |
+| W | Priority | No | High / Medium / Low (metadata) |
+| X | Status | No | Draft / Ready / Automated (metadata) |
+
+**Prerequisites format:** `email=admin@example.com; password=admin123; role=admin`
+
+### Convert Excel to test.md
+
+```bash
+# Preview what would be created (safe, no files written)
+npm run test:e2e:import -- my-tests.xlsx --dry-run
+
+# Create the test.md files
+npm run test:e2e:import -- my-tests.xlsx
+
+# Overwrite existing test.md files
+npm run test:e2e:import -- my-tests.xlsx --force
+```
+
+### Full QA workflow
+
+```
+1. QA opens tools/e2e/test-cases-template.xlsx in Excel
+2. Fills in test cases (one row per test)
+3. Saves as my-tests.xlsx
+4. Runs: npm run test:e2e:import -- my-tests.xlsx --dry-run
+5. Reviews the output paths
+6. Runs: npm run test:e2e:import -- my-tests.xlsx
+7. Runs: npm run test:e2e  (compiles via LLM + executes)
+8. Reviews results in e2e/{type}/{category}/{case}/results/
+```
+
+> [!TIP]
+> The converter auto-detects whether a module lives in `src/apps/` or `src/extensions/`.
+> UI tests (`type=ui`) place files directly under `e2e/{category}/` (no `ui/` prefix) for backward compatibility.
