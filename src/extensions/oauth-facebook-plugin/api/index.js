@@ -22,7 +22,8 @@ export default {
       return;
     }
 
-    const appUrl = process.env.XNAPIFY_PUBLIC_APP_URL || 'http://localhost:1337';
+    const appUrl =
+      process.env.XNAPIFY_PUBLIC_APP_URL || 'http://localhost:1337';
     const oauth = container.resolve('oauth');
 
     oauth.registerProvider('facebook', {

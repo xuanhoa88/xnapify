@@ -14,7 +14,7 @@ const semver = require('semver');
 const webpack = require('webpack');
 
 const config = require('../config');
-const { computeChecksum } = require('../utils/checksum');
+const { computeChecksum, generateKey } = require('../utils/checksum');
 const { copyDir, pathExists } = require('../utils/fs');
 const { logInfo, logError, formatDuration } = require('../utils/logger');
 const createExtensionConfig = require('../webpack/extension.config');
@@ -142,6 +142,7 @@ async function generateManifests(extensions) {
       ...(manifest.main && { main: './api.js' }),
       ...(manifest.browser && { browser: './browser.js' }),
       // Build metadata
+      // id: generateKey(name),
       integrity: checksum,
       builtAt: Date.now(),
     };

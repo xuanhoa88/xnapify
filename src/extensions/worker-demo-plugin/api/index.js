@@ -15,10 +15,13 @@
  * - Properly cleaning up on shutdown
  */
 
-import workerPool from './workers';
+import { createDemoWorkerPool } from './workers';
 
 // Private symbol for handler storage (cleanup symmetry)
 const HANDLERS = Symbol('handlers');
+
+// Private symbol for pool reference
+const POOL = Symbol('pool');
 
 // Maximum limits for IPC safety
 const MAX_FIBONACCI_N = 10_000;
@@ -27,9 +30,24 @@ const MAX_TEXT_LENGTH = 100_000;
 
 export default {
   [HANDLERS]: {},
+  [POOL]: null,
 
   async boot({ registry }) {
     console.log(`[${__EXTENSION_ID__}] Booting worker demo extension`);
+
+    // Create the worker pool lazily — NOT at module load time
+    let pool;
+    try {
+      pool = createDemoWorkerPool();
+      this[POOL] = pool;
+      console.log(`[${__EXTENSION_ID__}] Worker pool created`);
+    } catch (err) {
+      console.error(
+        `[${__EXTENSION_ID__}] Failed to create worker pool:`,
+        err.message,
+      );
+      return;
+    }
 
     // =======================================================================
     // IPC: Text workers
@@ -45,7 +63,7 @@ export default {
           error: `Text exceeds maximum length of ${MAX_TEXT_LENGTH} characters`,
         };
       }
-      return workerPool.countStats(text);
+      return pool.countStats(text);
     });
 
     this[HANDLERS].ipcTextHash = registry.createPipeline(async data => {
@@ -58,7 +76,7 @@ export default {
           error: `Text exceeds maximum length of ${MAX_TEXT_LENGTH} characters`,
         };
       }
-      return workerPool.hashText(text, data.algorithm);
+      return pool.hashText(text, data.algorithm);
     });
 
     this[HANDLERS].ipcTextFind = registry.createPipeline(async data => {
@@ -72,7 +90,7 @@ export default {
           error: `Text exceeds maximum length of ${MAX_TEXT_LENGTH} characters`,
         };
       }
-      return workerPool.findPattern(text, pattern, data.caseSensitive);
+      return pool.findPattern(text, pattern, data.caseSensitive);
     });
 
     // =======================================================================
@@ -87,7 +105,7 @@ export default {
       if (n > MAX_FIBONACCI_N) {
         return { error: `Field "n" exceeds maximum of ${MAX_FIBONACCI_N}` };
       }
-      return workerPool.fibonacci(n);
+      return pool.fibonacci(n);
     });
 
     this[HANDLERS].ipcIsPrime = registry.createPipeline(async data => {
@@ -95,7 +113,7 @@ export default {
       if (typeof number !== 'number' || !Number.isInteger(number)) {
         return { error: 'Field "number" must be an integer' };
       }
-      return workerPool.isPrime(number);
+      return pool.isPrime(number);
     });
 
     this[HANDLERS].ipcSievePrimes = registry.createPipeline(async data => {
@@ -108,7 +126,7 @@ export default {
           error: `Field "limit" exceeds maximum of ${MAX_SIEVE_LIMIT}`,
         };
       }
-      return workerPool.sievePrimes(limit);
+      return pool.sievePrimes(limit);
     });
 
     // =======================================================================
@@ -116,7 +134,7 @@ export default {
     // =======================================================================
 
     this[HANDLERS].ipcPoolStats = registry.createPipeline(async () => {
-      return workerPool.getStats();
+      return pool.getStats();
     });
 
     // =======================================================================
@@ -168,7 +186,14 @@ export default {
     console.log(`[${__EXTENSION_ID__}] Shutting down worker demo extension`);
 
     // Cleanup worker pool threads
-    await workerPool.cleanup();
+    if (this[POOL]) {
+      try {
+        await this[POOL].cleanup();
+      } catch (err) {
+        console.error(`[${__EXTENSION_ID__}] Pool cleanup error:`, err.message);
+      }
+      this[POOL] = null;
+    }
 
     // Clear handler references
     this[HANDLERS] = {};

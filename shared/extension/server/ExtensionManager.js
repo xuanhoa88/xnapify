@@ -299,7 +299,7 @@ class ServerExtensionManager extends BaseExtensionManager {
       // Always return a non-null object so the base class emits
       // 'extension:loaded' and triggers _onExtensionLoaded → activateExtension.
       // Without this, API-only or view-failed extensions would never activate.
-      return viewModule || { setup() {} };
+      return viewModule || { boot() {} };
     } catch (error) {
       console.error(
         `[ServerExtensionManager] Failed to load view module for ${id}:`,
@@ -314,7 +314,7 @@ class ServerExtensionManager extends BaseExtensionManager {
 
     // Even on error, return a minimal object so the extension lifecycle
     // continues and API routes can still be registered.
-    return { setup() {} };
+    return { boot() {} };
   }
 
   // ---------------------------------------------------------------------------

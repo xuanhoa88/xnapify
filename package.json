@@ -239,5 +239,10 @@
     "webpack-merge": "5.10.0",
     "webpack-node-externals": "3.0.0",
     "youch": "3.3.4"
+  },
+  "overrides": {
+    "stylelint": {
+      "postcss": "8.4.0"
+    }
   }
 }
