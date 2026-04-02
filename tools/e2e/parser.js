@@ -221,36 +221,36 @@ function findInlineContent(tokens, startIdx) {
 }
 
 /**
- * Discover all test.md files inside an e2e directory.
+ * Discover all test.md files inside a directory (recursive).
  *
- * Walks: e2e/{category}/{case}/test.md
+ * Works at any depth: e2e root, type dir, category dir, or case dir.
  *
- * @param {string[]} dirs Array of e2e directory paths
+ * @param {string[]} dirs Array of directory paths to search
  * @returns {string[]} Sorted array of absolute paths to test.md files
  */
 function discoverTestFiles(dirs) {
   const files = [];
-  for (const dir of dirs) {
-    if (!fs.existsSync(dir)) continue;
 
-    // Walk category directories
-    const categories = fs
+  function walk(dir) {
+    if (!fs.existsSync(dir)) return;
+
+    const testFile = path.join(dir, 'test.md');
+    if (fs.existsSync(testFile)) {
+      files.push(testFile);
+      return; // test.md found — don't recurse deeper
+    }
+
+    const entries = fs
       .readdirSync(dir, { withFileTypes: true })
       .filter(d => d.isDirectory() && !d.name.startsWith('_'));
 
-    for (const cat of categories) {
-      const catDir = path.join(dir, cat.name);
-      const cases = fs
-        .readdirSync(catDir, { withFileTypes: true })
-        .filter(d => d.isDirectory() && !d.name.startsWith('_'));
-
-      for (const tc of cases) {
-        const testFile = path.join(catDir, tc.name, 'test.md');
-        if (fs.existsSync(testFile)) {
-          files.push(testFile);
-        }
-      }
+    for (const entry of entries) {
+      walk(path.join(dir, entry.name));
     }
+  }
+
+  for (const dir of dirs) {
+    walk(dir);
   }
   return files.sort();
 }
