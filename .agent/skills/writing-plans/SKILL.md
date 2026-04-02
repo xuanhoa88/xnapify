@@ -15,7 +15,10 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 
 **Context:** This should be run in a dedicated worktree (created by brainstorming skill).
 
-**Save plans to:** `docs/plans/YYYY-MM-DD-<feature-name>.md`
+**Save plans to:** `<module>/plans/YYYY-MM-DD-<feature-name>.md` (colocated with the module)
+- For modules: `src/apps/<module>/plans/`
+- For extensions: `src/extensions/<ext>/plans/`
+- For engines: `shared/api/engines/<engine>/plans/`
 - (User preferences for plan location override this default)
 
 ## Scope Check
@@ -135,7 +138,7 @@ If you find issues, fix them inline. No need to re-review — just fix and move 
 
 After saving the plan, offer execution choice:
 
-**"Plan complete and saved to `docs/plans/<filename>.md`. Ready to begin implementation?"**
+**"Plan complete and saved to `<module>/plans/<filename>.md`. Ready to begin implementation?"**
 
 Proceed with task-by-task execution:
 - Use `using-git-worktrees` skill for workspace isolation
