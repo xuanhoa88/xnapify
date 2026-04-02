@@ -472,6 +472,17 @@ src/apps/[module_name]/
 | **Failed job recovery** | DB state reverted on failure (e.g., `is_active` rollback) |
 | **WS notifications** | `notifyExtensionChange()` or equivalent called after job completes/fails |
 
+### 10.3 Thread Pool Workers (Tier 2)
+
+| Rule | What to Check |
+|------|---------------|
+| **`THREADED` flag** | Worker file exports `THREADED = true` |
+| **No DI dependencies** | No imports of `container`, `models`, `search`, `db` |
+| **Serializable I/O** | All inputs and outputs are JSON-serializable (no functions, classes, Buffers) |
+| **Pure functions** | No side effects on shared state |
+| **Called via engine** | `worker.run('name', 'fn', data)` from barrel, not direct import |
+| **Manifest registered** | Worker compiled by webpack and appears in `worker-manifest.json` |
+
 ---
 
 ## 11. Testing

@@ -13,7 +13,7 @@ Use workers for:
 - File operations (batch uploads, ZIP creation)
 - Tasks that benefit from clean separation of concerns
 
-> **Note:** Worker functions run same-process via direct function calls. There is no Piscina thread pool — all operations are I/O-bound and work efficiently in the main process.
+> **Note:** Tier 1 workers run same-process via direct function calls. For **CPU-bound** workers (Tier 2), use the `worker` engine which delegates to a piscina thread pool. See the **Thread Pool Workers** section below.
 
 ## Structure
 
@@ -189,6 +189,49 @@ describe('[worker] generate-report', () => {
 5. **Test worker logic directly** — import the exported function and call it with mock data
 6. **Keep worker files focused** — one concern per `*.worker.js` file
 7. **Use with Schedule Engine** — for recurring background jobs via queue
+8. **Use thread pool for CPU-bound only** — see Thread Pool Workers below
+
+## Thread Pool Workers (CPU-Bound)
+
+For **pure, CPU-bound** workers with serializable I/O (no DI, no models, no container), use the `worker` engine thread pool to avoid blocking the event loop.
+
+### Mark Worker as Threadable
+
+```javascript
+// @apps/analytics/api/workers/compute.worker.js
+/** Marks this worker as eligible for thread pool execution. */
+export const THREADED = true;
+
+export function heavyCompute(data) {
+  // CPU-intensive work — runs in isolated worker_thread
+  const { input } = data;
+  return { result: expensiveCalculation(input) };
+}
+```
+
+### Call via Worker Engine
+
+```javascript
+// @apps/analytics/api/workers/index.js
+export async function computeAnalytics(container, input) {
+  const worker = container.resolve('worker');
+  return await worker.run('compute', 'heavyCompute', { input });
+}
+```
+
+### Requirements
+
+- Export `THREADED = true` in the worker file
+- All inputs and outputs must be JSON-serializable
+- No imports of DI-dependent modules (`container`, `models`, `search`, `db`)
+- Pure functions only — no side effects on shared state
+
+### Choosing Between Direct and Thread Pool
+
+| Worker needs... | Use |
+|-----------------|-----|
+| `models`, `search`, `db`, `container` | Direct function call (Tier 1) |
+| Only serializable data, CPU-heavy | Thread pool via `worker.run()` (Tier 2) |
 
 ## Common Patterns
 

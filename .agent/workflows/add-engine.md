@@ -121,6 +121,7 @@ npm test
 | `search` | Full-text search |
 | `template` | LiquidJS template engine |
 | `webhook` | Webhook engine |
+| `worker` | Elastic thread pool for CPU-bound `worker_threads` |
 
 ---
 

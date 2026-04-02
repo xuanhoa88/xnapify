@@ -31,13 +31,14 @@ export default {
   [HANDLERS]: {},
   [WORKERS]: null,
 
-  async boot({ registry }) {
+  async boot({ container, registry }) {
     console.log(`[${__EXTENSION_ID__}] Booting worker demo extension`);
 
-    // Create the workers lazily — NOT at module load time
+    // Resolve the Worker engine (thread pool) from DI
+    const worker = container.resolve('worker');
     let workers;
     try {
-      workers = createDemoWorkers();
+      workers = createDemoWorkers(worker);
       this[WORKERS] = workers;
       console.log(`[${__EXTENSION_ID__}] Workers created`);
     } catch (err) {
@@ -135,6 +136,7 @@ export default {
     this[HANDLERS].ipcStats = registry.createPipeline(async () => {
       return {
         available: true,
+        pool: worker.getStats(),
         functions: [
           'countStats',
           'hashText',

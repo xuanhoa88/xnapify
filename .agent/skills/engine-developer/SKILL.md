@@ -27,6 +27,7 @@ Engines are singleton services registered on the DI container during application
 | `search` | `'search'` | Full-text search (FlexSearch/MeiliSearch) |
 | `template` | `'template'` | LiquidJS template rendering |
 | `webhook` | `'webhook'` | HMAC-signed webhook dispatch/verification |
+| `worker` | `'worker'` | Elastic thread pool for CPU-bound worker functions |
 
 ---
 

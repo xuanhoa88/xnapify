@@ -274,11 +274,19 @@ npm run test -- <pat> # Run tests matching a pattern
 ### Worker Barrel Pattern
 
 ```javascript
-// api/workers/index.js — export convenience functions
-import { DO_TASK } from './task.worker';
+// Tier 1 (DI-dependent — direct call):
+// api/workers/index.js
+import doTaskWorker from './task.worker';
 
 export async function doTask(data) {
-  return await DO_TASK(data);
+  return await doTaskWorker(data);
+}
+
+// Tier 2 (CPU-bound — thread pool):
+// api/workers/index.js
+export async function heavyCompute(container, input) {
+  const worker = container.resolve('worker');
+  return await worker.run('compute', 'heavyCompute', { input });
 }
 ```
 

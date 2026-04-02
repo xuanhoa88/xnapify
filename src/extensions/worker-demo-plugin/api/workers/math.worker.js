@@ -12,6 +12,9 @@
  * Workers receive a SINGLE data argument and must return serializable results.
  */
 
+/** Marks this worker as eligible for thread pool execution. */
+export const THREADED = true;
+
 /**
  * Compute the Nth Fibonacci number using iterative approach.
  * Deliberately CPU-intensive for large N to demonstrate offloading.

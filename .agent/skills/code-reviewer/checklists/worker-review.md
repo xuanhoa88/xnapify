@@ -61,6 +61,24 @@ boot({ container }) {
 - [ ] SQLite: `concurrency: 1` to avoid SQLITE_BUSY
 - [ ] PostgreSQL/MySQL: higher concurrency OK
 
+## Thread Pool Workers (Tier 2)
+
+### Eligibility
+
+- [ ] Worker is CPU-bound (not I/O-bound)
+- [ ] Worker exports `THREADED = true`
+- [ ] No DI imports (`container`, `models`, `search`, `db`)
+- [ ] All inputs are JSON-serializable (no functions, classes, Buffers)
+- [ ] All outputs are JSON-serializable
+- [ ] Pure functions only — no shared mutable state
+
+### Integration
+
+- [ ] Called via `worker.run('workerName', 'fnName', data)` from barrel
+- [ ] Worker engine resolved from DI: `container.resolve('worker')`
+- [ ] Worker file compiled by webpack as standalone CJS
+- [ ] Worker file outputs to `BUILD_DIR` as `*.worker.js` (auto-discovered at startup)
+
 ## Testing
 
 - [ ] Worker handler tested directly (call exported function)

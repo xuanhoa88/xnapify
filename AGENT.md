@@ -27,6 +27,7 @@ xnapify/
 │   │   │   ├── hook/             # Channel-based event system
 │   │   │   ├── schedule/         # Cron scheduling
 │   │   │   ├── webhook/          # Webhook engine
+│   │   │   └── worker/           # Worker thread pool engine
 │   │   │   └── ...               # email, fs, http, queue, search, template
 
 │   │   ├── router/               # File-based API routing engine
@@ -154,7 +155,7 @@ The application uses an auto-discovery system for both API modules and page comp
 
 **Shared API** (`shared/api/engines/` & `shared/jwt/`):
 
-- Core infrastructure: `auth`, `cache`, `db`, `email`, `fs`, `hook`, `http`, `queue`, `schedule`, `search`, `template`, `webhook`
+- Core infrastructure: `auth`, `cache`, `db`, `email`, `fs`, `hook`, `http`, `queue`, `schedule`, `search`, `template`, `webhook`, `worker`
 - Auto-loaded from `shared/api/engines/*/index.js` and re-exported via `shared/api/index.js`
 - Provide reusable capabilities for modules — should not contain business logic
 
@@ -256,14 +257,16 @@ Controlled via `shared/node-red/settings.js` and environment variables.
 - **Dev:** Verbose logging, diagnostic endpoints enabled.
 - **Prod:** Minimal logging, metrics enabled, admin endpoints secured.
 
-### 9. Worker Pattern
+### 9. Worker Pattern (Two-Tier System)
 
-Worker functions are defined in `*.worker.js` files and called directly (same-process). No worker pool abstraction is needed — all operations are I/O-bound (DB, filesystem, search indexing).
+Worker functions are defined in `*.worker.js` files.
+
+**Tier 1 — Direct Workers** (DI-dependent, I/O-bound): Called as direct function imports in the main process. Use when the worker needs `container`, `models`, `search`, or `db`.
 
 ```javascript
 // 1. Define worker function (api/workers/myTask.worker.js)
 export default async function myTask(data) {
-  // Heavy processing
+  // I/O-bound processing (DB, filesystem, etc.)
   return { success: true };
 }
 
@@ -273,16 +276,22 @@ import myTaskWorker from './myTask.worker';
 export async function runMyTask(payload) {
   return await myTaskWorker(payload);
 }
+```
 
-// 3. Call from service or hook
-import { runMyTask } from './workers';
+**Tier 2 — Thread Pool Workers** (pure, CPU-bound): Executed in `worker_threads` via the `worker` engine. Use for CPU-intensive pure functions with serializable I/O only.
 
-try {
-  const result = await runMyTask(payload);
-  console.log('Result:', result);
-} catch (error) {
-  console.error('Failed:', error);
+```javascript
+// 1. Define worker function (api/workers/compute.worker.js)
+export const THREADED = true;  // Marks as thread-pool eligible
+
+export function heavyCompute(data) {
+  // CPU-bound work — runs in isolated thread
+  return { result: computedValue };
 }
+
+// 2. Call via worker engine
+const worker = container.resolve('worker');
+const result = await worker.run('compute', 'heavyCompute', { input: 42 });
 ```
 
 ### 10. Engine Auto-Loader
@@ -307,7 +316,7 @@ const { models } = container.resolve('db');
 
 > **Convention:** In module code (`init`, services), use `container.resolve('name')` directly. In route handlers/controllers, use `req.app.get('container').resolve('name')`. Direct imports are reserved for shared libraries.
 
-**Available Engines:** `auth`, `cache`, `db`, `email`, `fs`, `hook`, `http`, `queue`, `schedule`, `search`, `template`, `webhook`
+**Available Engines:** `auth`, `cache`, `db`, `email`, `fs`, `hook`, `http`, `queue`, `schedule`, `search`, `template`, `webhook`, `worker`
 
 **Adding a New Engine:**
 
