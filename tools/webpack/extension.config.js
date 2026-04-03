@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+const fs = require('fs');
 const path = require('path');
 
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
@@ -63,6 +64,78 @@ class StripRootCSSPlugin {
           });
         },
       );
+    });
+  }
+}
+
+/**
+ * Webpack plugin that writes a build-manifest.json after each compilation.
+ * Maps logical filenames (e.g. 'api.js') to their content-hashed physical
+ * filenames (e.g. 'api.a1b2c3d4.js'). This enables runtime resolution of
+ * extension bundles without hardcoded filenames, solving browser and Node.js
+ * caching issues.
+ *
+ * Each compilation config should specify `logicalName` in the plugin
+ * constructor to define which logical name this build's output maps to.
+ */
+class BuildManifestPlugin {
+  /**
+   * @param {Object} options
+   * @param {string} options.logicalName - Logical filename key (e.g. 'api.js')
+   */
+  constructor({ logicalName }) {
+    this.logicalName = logicalName;
+  }
+
+  apply(compiler) {
+    const { logicalName } = this;
+
+    compiler.hooks.done.tap('BuildManifestPlugin', stats => {
+      if (stats.hasErrors()) return;
+
+      const outputPath = compiler.outputPath;
+      const manifestPath = path.join(outputPath, 'build-manifest.json');
+
+      // Read existing manifest (other compilers may have already written)
+      let manifest = {};
+      try {
+        manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+      } catch {
+        // File doesn't exist yet — start fresh
+      }
+
+      // Find the emitted asset matching this logical name's base
+      // e.g. logicalName='api.js' matches 'api.a1b2c3d4.js'
+      const logicalBase = logicalName.replace(/\.[^.]+$/, ''); // 'api'
+      const logicalExt = path.extname(logicalName); // '.js'
+
+      const statsData = stats.toJson({ all: false, assets: true });
+      const assets = (statsData.assets || []).map(a => a.name);
+
+      // Match pattern: <logicalBase>.<hash><logicalExt>
+      const hashPattern = new RegExp(
+        `^${logicalBase}\\.[a-f0-9]{8}\\${logicalExt}$`,
+      );
+      const matched = assets.find(name => hashPattern.test(name));
+
+      if (matched) {
+        manifest[logicalName] = matched;
+      } else {
+        // Fallback: exact match (for non-hashed builds)
+        const exact = assets.find(name => name === logicalName);
+        if (exact) manifest[logicalName] = exact;
+      }
+
+      manifest.builtAt = Date.now();
+
+      fs.mkdirSync(outputPath, { recursive: true });
+      fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+
+      if (verbose) {
+        console.log(
+          `[BuildManifestPlugin] ${logicalName} → ${manifest[logicalName] || '(not found)'}`,
+        );
+      }
     });
   }
 }
@@ -143,10 +216,8 @@ function createClientConfig(extensionData, extensionDefines, buildPath) {
     experiments: { outputModule: false },
     output: {
       path: outputPath,
-      filename: 'browser.js',
-      chunkFilename: isDev
-        ? '[name].chunk.js'
-        : '[name].[contenthash:8].chunk.js',
+      filename: 'browser.[contenthash:8].js',
+      chunkFilename: '[name].[contenthash:8].chunk.js',
       publicPath: 'auto',
       uniqueName: libraryName,
     },
@@ -175,7 +246,7 @@ function createClientConfig(extensionData, extensionDefines, buildPath) {
       createEnvDefine(),
       new webpack.container.ModuleFederationPlugin({
         name: libraryName,
-        filename: 'remote.js',
+        filename: 'remote.[contenthash:8].js',
         exposes: {
           './extension': clientPath,
         },
@@ -185,6 +256,8 @@ function createClientConfig(extensionData, extensionDefines, buildPath) {
           strictVersion: false,
         }),
       }),
+      new BuildManifestPlugin({ logicalName: 'remote.js' }),
+      new BuildManifestPlugin({ logicalName: 'browser.js' }),
       createProgressPlugin(),
     ].filter(Boolean),
   });
@@ -199,7 +272,7 @@ function createClientConfig(extensionData, extensionDefines, buildPath) {
     experiments: { outputModule: false },
     output: {
       path: outputPath,
-      filename: 'server.js',
+      filename: 'server.[contenthash:8].js',
     },
     module: {
       rules: [
@@ -214,10 +287,12 @@ function createClientConfig(extensionData, extensionDefines, buildPath) {
       extensionDefines,
       createEnvDefine(),
       new MiniCssExtractPlugin({
-        filename: 'extension.css',
+        filename: 'extension.[contenthash:8].css',
         ignoreOrder: isDev,
       }),
       new StripRootCSSPlugin(),
+      new BuildManifestPlugin({ logicalName: 'server.js' }),
+      new BuildManifestPlugin({ logicalName: 'extension.css' }),
       createProgressPlugin(),
     ].filter(Boolean),
   });
@@ -251,11 +326,12 @@ function createApiConfig(extensionData, extensionDefines, buildPath) {
     ],
     output: {
       path: outputDir,
-      filename: 'api.js',
+      filename: 'api.[contenthash:8].js',
     },
     plugins: [
       extensionDefines,
       createEnvDefine(),
+      new BuildManifestPlugin({ logicalName: 'api.js' }),
       createProgressPlugin(),
     ].filter(Boolean),
   });

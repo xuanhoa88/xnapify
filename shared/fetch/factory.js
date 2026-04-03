@@ -6,6 +6,7 @@
  */
 
 import { createFetchError } from './error';
+import { createSSEStream } from './stream';
 import {
   isPayloadMethod,
   isJSONSerializable,
@@ -326,6 +327,32 @@ export function createFetch(fetch, globalOptions = {}) {
         ...defaultOptions,
       },
     });
+
+  /**
+   * SSE streaming fetch — returns an AsyncGenerator<SSEMessage>
+   * Reuses the full pipeline (hooks, timeout, retry, baseUrl, headers).
+   * Auto-reconnects on mid-stream disconnections using SSE protocol.
+   *
+   * @param {string} request - URL to fetch
+   * @param {Object} [options] - Fetch options + SSE-specific options
+   * @param {number} [options.maxRetries=3] - Max reconnection attempts
+   * @param {number} [options.retryInterval=1000] - Default reconnect delay (ms)
+   * @returns {AsyncGenerator<Object, void, unknown>}
+   */
+  $fetch.stream = function (request, options) {
+    const { maxRetries, retryInterval, ...fetchOptions } = options || {};
+
+    return createSSEStream($factory, request, {
+      ...fetchOptions,
+      responseType: 'stream',
+      maxRetries,
+      retryInterval,
+      headers: {
+        accept: 'text/event-stream',
+        ...fetchOptions.headers,
+      },
+    });
+  };
 
   return $fetch;
 }

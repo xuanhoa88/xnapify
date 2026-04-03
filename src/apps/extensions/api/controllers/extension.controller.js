@@ -82,7 +82,9 @@ export const getExtension = async (req, res) => {
 };
 
 /**
- * Serve extension static files
+ * Serve extension static files.
+ * Content-hashed assets (e.g. 'remote.a1b2c3d4.js') get immutable caching.
+ * Non-hashed assets get no-cache to ensure freshness.
  */
 export const serveExtensionStatic = async (req, res, next) => {
   const container = req.app.get('container');
@@ -101,7 +103,18 @@ export const serveExtensionStatic = async (req, res, next) => {
 
   // Use the catch-all :path* param from [id]/static/[...path]/_route.js
   const originalUrl = req.url;
-  req.url = `/${req.params.path}`.replace(/\/+/g, '/');
+  const filePath = `/${req.params.path}`.replace(/\/+/g, '/');
+  req.url = filePath;
+
+  // Content-hashed files are immutable — cache forever.
+  // Pattern: <name>.<8-char-hex>.<ext> (e.g. 'remote.a1b2c3d4.js')
+  const isHashed = /\.[a-f0-9]{8}\.\w+$/.test(filePath);
+
+  if (isHashed) {
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  } else {
+    res.setHeader('Cache-Control', 'no-cache');
+  }
 
   return express.static(staticDir)(req, res, (...args) => {
     req.url = originalUrl;

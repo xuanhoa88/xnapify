@@ -31,15 +31,13 @@ class ClientExtensionManager extends BaseExtensionManager {
     this.on('extension:loaded', ({ id, manifest }) => {
       if (!manifest) return;
 
-      const version = manifest.version || '0.0.0';
+      const bm = manifest.buildManifest || {};
 
-      // Inject extension.css
+      // Inject extension.css (content-hashed filename from buildManifest)
       if (manifest.hasClientCss) {
         if (!document.querySelector(`link[data-extension-id="${id}"]`)) {
-          const url = this.getExtensionAssetUrl(
-            id,
-            `extension.css?v=${version}`,
-          );
+          const cssFile = bm['extension.css'] || 'extension.css';
+          const url = this.getExtensionAssetUrl(id, cssFile);
           const link = document.createElement('link');
           link.rel = 'stylesheet';
           link.href = url;
@@ -51,10 +49,11 @@ class ClientExtensionManager extends BaseExtensionManager {
         }
       }
 
-      // Inject remote.js (MF container)
+      // Inject remote.js (MF container, content-hashed filename)
       if (manifest.hasClientScript) {
         if (!document.querySelector(`script[data-extension-id="${id}"]`)) {
-          const url = this.getExtensionAssetUrl(id, `remote.js?v=${version}`);
+          const scriptFile = bm['remote.js'] || 'remote.js';
+          const url = this.getExtensionAssetUrl(id, scriptFile);
           const script = document.createElement('script');
           script.src = url;
           script.async = true;
@@ -133,7 +132,12 @@ class ClientExtensionManager extends BaseExtensionManager {
    */
   _resolveEntryPoint(manifest) {
     // If the build produced a remote.js, load it as the Webpack MF container
-    return manifest && manifest.hasClientScript ? 'remote.js' : null;
+    // Resolve the hashed filename from buildManifest
+    if (manifest && manifest.hasClientScript) {
+      const bm = manifest.buildManifest;
+      return (bm && bm['remote.js']) || 'remote.js';
+    }
+    return null;
   }
 
   // ---------------------------------------------------------------------------

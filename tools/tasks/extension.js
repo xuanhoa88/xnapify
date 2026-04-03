@@ -108,6 +108,9 @@ function discoverExtensions() {
  * (Re-)generate the built package.json for each extension.
  * Re-reads source manifest on every call so watch-mode picks up metadata changes.
  *
+ * Reads `build-manifest.json` (written by BuildManifestPlugin) to resolve
+ * content-hashed filenames for entry points.
+ *
  * Note: `id` is intentionally omitted — `readManifest()` always auto-generates
  * it at runtime from `snakeCase(name)`. Writing it here would be redundant.
  */
@@ -127,6 +130,18 @@ async function generateManifests(extensions) {
       continue;
     }
 
+    // Read build-manifest.json for content-hashed filenames
+    let buildManifest = {};
+    try {
+      buildManifest = JSON.parse(
+        fs.readFileSync(path.join(outputDir, 'build-manifest.json'), 'utf8'),
+      );
+    } catch {
+      logInfo(
+        `No build-manifest.json for ${name} — entry points will use logical names`,
+      );
+    }
+
     const checksum = await computeChecksum(outputDir);
 
     const outputManifest = {
@@ -134,9 +149,13 @@ async function generateManifests(extensions) {
       // Canonical identity
       name,
       version,
-      // Entry points (rewritten to built filenames)
-      ...(manifest.main && { main: './api.js' }),
-      ...(manifest.browser && { browser: './browser.js' }),
+      // Entry points (resolved from build-manifest.json hashed filenames)
+      ...(manifest.main && {
+        main: `./${buildManifest['api.js'] || 'api.js'}`,
+      }),
+      ...(manifest.browser && {
+        browser: `./${buildManifest['browser.js'] || 'browser.js'}`,
+      }),
       // Build metadata
       // id: generateKey(name),
       integrity: checksum,

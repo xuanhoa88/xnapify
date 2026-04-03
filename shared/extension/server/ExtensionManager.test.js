@@ -47,11 +47,80 @@ describe('ServerExtensionManager', () => {
   });
 
   // ---------------------------------------------------------------------------
+  // Manifest Reading
+  // ---------------------------------------------------------------------------
+
+  describe('readManifest', () => {
+    let mockFs;
+    beforeEach(() => {
+      // Import the fs module to mock it
+      mockFs = require('fs').promises;
+      jest.spyOn(mockFs, 'readFile');
+    });
+
+    it('loads package.json and parses build-manifest.json if present', async () => {
+      mockFs.readFile.mockImplementation(async pathStr => {
+        if (pathStr.endsWith('package.json')) {
+          return JSON.stringify({ name: 'test_extension' });
+        }
+        if (pathStr.endsWith('build-manifest.json')) {
+          return JSON.stringify({
+            'extension.css': 'extension.abcd.css',
+            'remote.js': 'remote.1234.js',
+          });
+        }
+        throw new Error('File not found');
+      });
+
+      const manifest = await serverManager.readManifest('/tmp/ext');
+
+      expect(manifest.id).toBe('test_extension');
+      expect(manifest.buildManifest).toEqual({
+        'extension.css': 'extension.abcd.css',
+        'remote.js': 'remote.1234.js',
+      });
+      expect(manifest.hasClientCss).toBe(true);
+      expect(manifest.hasClientScript).toBe(true);
+    });
+
+    it('falls back to file existence if build-manifest.json is missing', async () => {
+      mockFs.readFile.mockImplementation(async pathStr => {
+        if (pathStr.endsWith('package.json')) {
+          return JSON.stringify({ name: 'test_dev_ext' });
+        }
+        throw new Error('File not found'); // build-manifest.json missing
+      });
+
+      // When build-manifest.json is missing, readManifest falls back to
+      // fileExists() checks. Since the test paths don't exist on disk,
+      // hasClientCss / hasClientScript will be false — the key assertion
+      // is that buildManifest is null and the method doesn't throw.
+      const manifest = await serverManager.readManifest('/tmp/ext');
+
+      expect(manifest.id).toBe('test_dev_ext');
+      expect(manifest.buildManifest).toBeNull();
+      expect(manifest.hasClientCss).toBeUndefined();
+      expect(manifest.hasClientScript).toBeUndefined();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
   // Entry Point Resolution
   // ---------------------------------------------------------------------------
 
   describe('_resolveEntryPoint', () => {
-    it('resolves server.js for browser extensions', () => {
+    it('resolves server.js for browser extensions via buildManifest', () => {
+      const manifest = {
+        browser: 'index.js',
+        buildManifest: { 'server.js': 'server.hash123.js' },
+      };
+      // eslint-disable-next-line no-underscore-dangle
+      expect(serverManager._resolveEntryPoint(manifest)).toBe(
+        'server.hash123.js',
+      );
+    });
+
+    it('resolves server.js gracefully if buildManifest is missing', () => {
       // eslint-disable-next-line no-underscore-dangle
       expect(serverManager._resolveEntryPoint({ browser: 'index.js' })).toBe(
         'server.js',
@@ -59,9 +128,10 @@ describe('ServerExtensionManager', () => {
     });
 
     it('resolves api.js for main-only extensions', () => {
+      const manifest = { main: './api.a1b2c3d4.js' };
       // eslint-disable-next-line no-underscore-dangle
-      expect(serverManager._resolveEntryPoint({ main: 'api.js' })).toBe(
-        'api.js',
+      expect(serverManager._resolveEntryPoint(manifest)).toBe(
+        'api.a1b2c3d4.js',
       );
     });
   });

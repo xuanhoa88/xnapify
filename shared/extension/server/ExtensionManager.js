@@ -95,9 +95,17 @@ class ServerExtensionManager extends BaseExtensionManager {
    * @returns {string|null} Entry point filename or null
    */
   _resolveEntryPoint(manifest) {
-    // If browser exists, we have a View (server.js) generated from it
-    if (manifest && manifest.browser) return 'server.js';
-    if (manifest && manifest.main) return 'api.js';
+    // The manifest's entry points now contain content-hashed filenames
+    // (e.g. './server.a1b2c3d4.js') from the build-manifest.json.
+    if (manifest && manifest.browser) {
+      // The server loads the SSR bundle (server.js), resolved via buildManifest
+      const bm = manifest.buildManifest;
+      return (bm && bm['server.js']) || 'server.js';
+    }
+    if (manifest && manifest.main) {
+      // API-only extension — use the main entry point directly
+      return path.basename(manifest.main);
+    }
     return null;
   }
 
@@ -113,19 +121,22 @@ class ServerExtensionManager extends BaseExtensionManager {
     await this.activateExtension(id, manifest);
 
     // Store CSS/Script asset URLs for SSR injection
+    // Uses content-hashed filenames from buildManifest for cache busting
     try {
-      const version = (manifest && manifest.version) || '0.0.0';
+      const bm = (manifest && manifest.buildManifest) || {};
 
       if (manifest && manifest.hasClientCss) {
+        const cssFile = bm['extension.css'] || 'extension.css';
         this[EXTENSION_CSS_ENTRY_POINTS].set(
           id,
-          this.getExtensionAssetUrl(id, `extension.css?v=${version}`),
+          this.getExtensionAssetUrl(id, cssFile),
         );
       }
       if (manifest && manifest.hasClientScript) {
+        const scriptFile = bm['remote.js'] || 'remote.js';
         this[EXTENSION_SCRIPT_ENTRY_POINTS].set(
           id,
-          this.getExtensionAssetUrl(id, `remote.js?v=${version}`),
+          this.getExtensionAssetUrl(id, scriptFile),
         );
       }
     } catch (err) {
@@ -202,10 +213,13 @@ class ServerExtensionManager extends BaseExtensionManager {
   async _requireApiModule(manifest) {
     if (!manifest || !manifest.main || !manifest.id) return null;
 
+    // manifest.main now contains the hashed filename (e.g. './api.a1b2c3d4.js')
+    const apiFilename = path.basename(manifest.main);
+
     // eslint-disable-next-line no-underscore-dangle
     const bundlePath = await this._getExtensionBundlePath(
       manifest.id,
-      manifest.main,
+      apiFilename,
     );
     if (!bundlePath) return null;
 
@@ -230,10 +244,14 @@ class ServerExtensionManager extends BaseExtensionManager {
     try {
       if (!manifest || !manifest.browser || !manifest.id) return null;
 
+      // Resolve server bundle filename from buildManifest
+      const bm = manifest.buildManifest || {};
+      const serverFilename = bm['server.js'] || 'server.js';
+
       // eslint-disable-next-line no-underscore-dangle
       const bundlePath = await this._getExtensionBundlePath(
-        path.join(manifest.id, path.dirname(manifest.browser)),
-        'server.js',
+        manifest.id,
+        serverFilename,
       );
       if (!bundlePath) {
         if (__DEV__) {
@@ -944,8 +962,9 @@ class ServerExtensionManager extends BaseExtensionManager {
 
   /**
    * Read an extension's package.json manifest from its directory on disk.
-   * Always auto-generates `manifest.id` from `manifest.name` and detects
-   * built client assets (`extension.css`, `remote.js`).
+   * Always auto-generates `manifest.id` from `manifest.name` and loads the
+   * sibling `build-manifest.json` for content-hashed filename resolution.
+   * Detects built client assets from the build manifest.
    * @param {...string} extensionDirs - Absolute path to the extension directory
    * @returns {Object|null} Parsed manifest or null on failure
    */
@@ -962,12 +981,31 @@ class ServerExtensionManager extends BaseExtensionManager {
       // eslint-disable-next-line no-underscore-dangle
       manifest.id = this._resolveExtensionId(manifest);
 
-      // Detect built client assets
-      if (await fileExists(extDir, 'extension.css')) {
-        manifest.hasClientCss = true;
+      // Load build-manifest.json for content-hashed filename resolution
+      let buildManifest = null;
+      try {
+        const bmContent = await fs.promises.readFile(
+          path.join(extDir, 'build-manifest.json'),
+          'utf8',
+        );
+        buildManifest = JSON.parse(bmContent);
+      } catch {
+        // No build manifest — extension may not be built yet (dev source)
       }
-      if (await fileExists(extDir, 'remote.js')) {
-        manifest.hasClientScript = true;
+      manifest.buildManifest = buildManifest;
+
+      // Detect built client assets from build manifest
+      if (buildManifest) {
+        manifest.hasClientCss = !!buildManifest['extension.css'];
+        manifest.hasClientScript = !!buildManifest['remote.js'];
+      } else {
+        // Fallback: detect by file existence (for unbuilt dev extensions)
+        if (await fileExists(extDir, 'extension.css')) {
+          manifest.hasClientCss = true;
+        }
+        if (await fileExists(extDir, 'remote.js')) {
+          manifest.hasClientScript = true;
+        }
       }
 
       return manifest;

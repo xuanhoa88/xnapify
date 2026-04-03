@@ -87,6 +87,42 @@ describe('ClientExtensionManager', () => {
       expect(script.src).toContain('/api/extensions/test-p/static/remote.js');
     });
 
+    it('uses hashed CSS filename from buildManifest', async () => {
+      await clientManager.emit('extension:loaded', {
+        id: 'test-hash',
+        manifest: {
+          hasClientCss: true,
+          buildManifest: { 'extension.css': 'extension.abc12345.css' },
+        },
+      });
+
+      const link = document.querySelector(
+        'link[data-extension-id="test-hash"]',
+      );
+      expect(link).toBeTruthy();
+      expect(link.href).toContain(
+        '/api/extensions/test-hash/static/extension.abc12345.css',
+      );
+    });
+
+    it('uses hashed script filename from buildManifest', async () => {
+      await clientManager.emit('extension:loaded', {
+        id: 'test-hash',
+        manifest: {
+          hasClientScript: true,
+          buildManifest: { 'remote.js': 'remote.def67890.js' },
+        },
+      });
+
+      const script = document.querySelector(
+        'script[data-extension-id="test-hash"]',
+      );
+      expect(script).toBeTruthy();
+      expect(script.src).toContain(
+        '/api/extensions/test-hash/static/remote.def67890.js',
+      );
+    });
+
     it('skips if manifest is null', async () => {
       await clientManager.emit('extension:loaded', { id: 'test-p' });
 

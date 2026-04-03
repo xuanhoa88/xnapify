@@ -7,3 +7,4 @@
 
 export * from './factory';
 export * from './error';
+export { parseSSEStream, createSSEStream } from './stream';
