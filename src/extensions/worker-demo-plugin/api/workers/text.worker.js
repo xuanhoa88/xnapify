@@ -15,7 +15,7 @@
 import crypto from 'crypto';
 
 /** Marks this worker as eligible for thread pool execution. */
-export const THREADED = true;
+export const WORKER_POOL = true;
 
 /**
  * Count words, characters, lines, and sentences in a text body.

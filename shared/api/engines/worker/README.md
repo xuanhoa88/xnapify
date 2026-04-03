@@ -44,11 +44,11 @@ Manually register a worker file path.
 
 ### `worker.discoverWorkers(baseDir)`
 
-Scan a directory recursively for `*.worker.js` files that contain the `THREADED` marker and register them with:
+Scan a directory recursively for `*.worker.js` files that contain the `WORKER_POOL` marker and register them with:
 - **Namespaced key** (relative path, e.g., `extensions/my_plugin/math`) — always unique
 - **Short alias** (basename, e.g., `math`) — only when the basename is unique across all files
 
-> Workers without `THREADED` in their compiled output are skipped (they're Tier 1 — direct import only).
+> Workers without `WORKER_POOL` in their compiled output are skipped (they're Tier 1 — direct import only).
 
 ### `worker.getStats()`
 
@@ -82,7 +82,7 @@ Gracefully terminate all threads and reject queued tasks.
 // my-task.worker.js
 
 /** Marks this worker as eligible for thread pool execution. */
-export const THREADED = true;
+export const WORKER_POOL = true;
 
 /**
  * @param {{ input: string }} data - Must be JSON-serializable
@@ -95,7 +95,7 @@ export function processTask(data) {
 ```
 
 **Requirements for thread pool workers:**
-1. Export `THREADED = true`
+1. Export `WORKER_POOL = true`
 2. All inputs/outputs must be JSON-serializable
 3. No imports of DI-dependent modules (`container`, `models`, `search`)
 4. Pure functions only — no side effects on shared state
@@ -104,7 +104,7 @@ export function processTask(data) {
 
 ### `WORKER_NOT_FOUND`
 The worker wasn't discovered. Check:
-- Does the worker file `export const THREADED = true`?
+- Does the worker file `export const WORKER_POOL = true`?
 - Was the `*.worker.js` file compiled by webpack?
 - Is the file in `BUILD_DIR` or a subdirectory?
 - Does the filename end with `.worker.js`?

@@ -754,15 +754,15 @@ function discoverWorkerEntries(workersDir, prefix = 'workers') {
         const filePath = path.join(fileDir, file.name);
 
         // Only compile workers that opt in to thread pool execution.
-        // Workers without `THREADED = true` remain Tier 1 (direct import
+        // Workers without `WORKER_POOL = true` remain Tier 1 (direct import
         // in server.js, same-process execution).
         // Strip comments before checking to avoid false positives from
-        // commented-out `// export const THREADED = true;` lines.
+        // commented-out `// export const WORKER_POOL = true;` lines.
         const content = fs.readFileSync(filePath, 'utf8');
         const stripped = content
           .replace(/\/\/.*$/gm, '') // strip single-line comments
           .replace(/\/\*[\s\S]*?\*\//g, ''); // strip block comments
-        if (!/\bTHREADED\s*=\s*true\b/.test(stripped)) continue;
+        if (!/\bWORKER_POOL\s*=\s*true\b/.test(stripped)) continue;
 
         const relDir = path.relative(workersDir, fileDir);
         const entryName = relDir

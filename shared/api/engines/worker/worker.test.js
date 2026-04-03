@@ -147,20 +147,20 @@ describe('[engine] Worker Pool', () => {
   // -------------------------------------------------------------------------
 
   describe('discoverWorkers()', () => {
-    it('should register namespaced keys and short aliases for THREADED workers', () => {
+    it('should register namespaced keys and short aliases for WORKER_POOL workers', () => {
       const fs = require('fs');
       const workersDir = path.join(FIXTURES_DIR, 'workers');
       const nestedDir = path.join(workersDir, 'nested');
 
-      // Create fixture worker files WITH THREADED marker
+      // Create fixture worker files WITH WORKER_POOL marker
       fs.mkdirSync(nestedDir, { recursive: true });
       fs.writeFileSync(
         path.join(workersDir, 'math.worker.js'),
-        'exports.THREADED = true;\nexports.add = () => {};',
+        'exports.WORKER_POOL = true;\nexports.add = () => {};',
       );
       fs.writeFileSync(
         path.join(nestedDir, 'text.worker.js'),
-        'exports.THREADED = true;\nexports.upper = () => {};',
+        'exports.WORKER_POOL = true;\nexports.upper = () => {};',
       );
 
       pool.discoverWorkers(workersDir);
@@ -202,11 +202,11 @@ describe('[engine] Worker Pool', () => {
       fs.mkdirSync(usersDir, { recursive: true });
       fs.writeFileSync(
         path.join(groupsDir, 'search.worker.js'),
-        'exports.THREADED = true;\nexports.indexAll = () => {};',
+        'exports.WORKER_POOL = true;\nexports.indexAll = () => {};',
       );
       fs.writeFileSync(
         path.join(usersDir, 'search.worker.js'),
-        'exports.THREADED = true;\nexports.indexAll = () => {};',
+        'exports.WORKER_POOL = true;\nexports.indexAll = () => {};',
       );
 
       const spy = jest.spyOn(console, 'warn').mockImplementation();
@@ -230,28 +230,28 @@ describe('[engine] Worker Pool', () => {
       }
     });
 
-    it('should skip workers without THREADED marker', () => {
+    it('should skip workers without WORKER_POOL marker', () => {
       const fs = require('fs');
       const workersDir = path.join(FIXTURES_DIR, 'threaded-check');
 
       fs.mkdirSync(workersDir, { recursive: true });
 
-      // Worker WITH THREADED — should be registered
+      // Worker WITH WORKER_POOL — should be registered
       fs.writeFileSync(
         path.join(workersDir, 'yes.worker.js'),
-        'exports.THREADED = true;\nexports.doStuff = () => {};',
+        'exports.WORKER_POOL = true;\nexports.doStuff = () => {};',
       );
 
-      // Worker WITHOUT THREADED — should be skipped
+      // Worker WITHOUT WORKER_POOL — should be skipped
       fs.writeFileSync(
         path.join(workersDir, 'nope.worker.js'),
         'exports.doStuff = () => {};',
       );
 
-      // Worker with THREADED = false — should be skipped
+      // Worker with WORKER_POOL = false — should be skipped
       fs.writeFileSync(
         path.join(workersDir, 'disabled.worker.js'),
-        'exports.THREADED = false;\nexports.doStuff = () => {};',
+        'exports.WORKER_POOL = false;\nexports.doStuff = () => {};',
       );
 
       pool.discoverWorkers(workersDir);
@@ -279,7 +279,7 @@ describe('[engine] Worker Pool', () => {
       // Valid worker
       fs.writeFileSync(
         path.join(workersDir, 'valid.worker.js'),
-        'exports.THREADED = true;\nexports.fn = () => {};',
+        'exports.WORKER_POOL = true;\nexports.fn = () => {};',
       );
 
       // Broken file (syntax error)

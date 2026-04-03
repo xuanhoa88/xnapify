@@ -282,7 +282,7 @@ export async function runMyTask(payload) {
 
 ```javascript
 // 1. Define worker function (api/workers/compute.worker.js)
-export const THREADED = true;  // Marks as thread-pool eligible
+export const WORKER_POOL = true;  // Marks as thread-pool eligible
 
 export function heavyCompute(data) {
   // CPU-bound work — runs in isolated thread

@@ -145,16 +145,16 @@ export class WorkerPoolManager {
       if (entry.isDirectory()) {
         results.push(...this.scanDir(fullPath, baseDir));
       } else if (/\.worker\.js$/i.test(entry.name)) {
-        // Verify THREADED marker in compiled output.
+        // Verify WORKER_POOL marker in compiled output.
         // BUILD_DIR files are webpack-compiled CJS — safe to require().
         // This ensures only Tier 2 (thread-safe, pure-data) workers are
-        // registered, even if a non-THREADED worker ends up in BUILD_DIR.
+        // registered, even if a non-pool worker ends up in BUILD_DIR.
         try {
           // Clear cache to ensure fresh read after recompilation
           delete require.cache[require.resolve(fullPath)];
           // eslint-disable-next-line import/no-dynamic-require, global-require
           const mod = require(fullPath);
-          if (!mod.THREADED) continue;
+          if (!mod.WORKER_POOL) continue;
         } catch {
           // Broken or non-CJS file — skip silently
           continue;

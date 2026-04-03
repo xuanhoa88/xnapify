@@ -13,7 +13,7 @@
  */
 
 /** Marks this worker as eligible for thread pool execution. */
-export const THREADED = true;
+export const WORKER_POOL = true;
 
 /**
  * Compute the Nth Fibonacci number using iterative approach.

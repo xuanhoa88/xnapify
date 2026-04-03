@@ -22,7 +22,7 @@ The project has two categories of workers:
 **Tier 1 examples**: `search.worker.js`, `activities.worker.js`, `fs/workers/index.js`, `send.worker.js`
 **Tier 2 examples**: `math.worker.js`, `text.worker.js`
 
-Tier 2 workers export `THREADED = true` to signal pool eligibility.
+Tier 2 workers export `WORKER_POOL = true` to signal pool eligibility.
 
 ## 1. Architecture
 
@@ -110,7 +110,7 @@ The constructor creates a shared `Piscina` instance with these options. Thread l
 
 ## 4. Worker Discovery
 
-At startup, `createFactory()` calls `discoverWorkers(BUILD_DIR)` which recursively scans the build output for `*.worker.js` files. Each file is `require()`'d to verify `exports.THREADED === true` before registration — non-THREADED workers (Tier 1) are skipped. Worker names are derived from filenames (e.g., `math.worker.js` → `'math'`).
+At startup, `createFactory()` calls `discoverWorkers(BUILD_DIR)` which recursively scans the build output for `*.worker.js` files. Each file is `require()`'d to verify `exports.WORKER_POOL === true` before registration — non-pool workers (Tier 1) are skipped. Worker names are derived from filenames (e.g., `math.worker.js` → `'math'`).
 
 Typical build output structure:
 
@@ -157,7 +157,7 @@ export async function computeExpensive(data) {
 
 ```javascript
 // In *.worker.js:
-export const THREADED = true;  // Signal to reviewers and tooling
+export const WORKER_POOL = true;  // Signal to reviewers and tooling
 ```
 
 ## 7. Testing
