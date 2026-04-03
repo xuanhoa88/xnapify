@@ -49,6 +49,7 @@ class MemoryQueue {
     // Internal state
     this.jobs = new Map();
     this.processors = [];
+    this.timers = new Set();
     this.isProcessing = false;
     this.isPaused = false;
     this.activeJobs = 0;
@@ -107,18 +108,27 @@ class MemoryQueue {
 
     // Schedule delayed job
     if (job.status === JOB_STATUS.DELAYED) {
-      setTimeout(() => {
+      const timerId = setTimeout(() => {
+        this.timers.delete(timerId);
         const delayedJob = this.jobs.get(job.id);
         if (delayedJob && delayedJob.status === JOB_STATUS.DELAYED) {
           delayedJob.status = JOB_STATUS.PENDING;
           delayedJob.scheduledFor = null;
-          this.processNext();
+          this.processNext().catch(err => {
+            console.error(
+              `Queue '${this.name}': processNext error:`,
+              err.message,
+            );
+          });
         }
       }, jobOptions.delay);
+      this.timers.add(timerId);
     }
 
     // Trigger processing
-    this.processNext();
+    this.processNext().catch(err => {
+      console.error(`Queue '${this.name}': processNext error:`, err.message);
+    });
 
     return job;
   }
@@ -146,7 +156,9 @@ class MemoryQueue {
     }
 
     // Start processing if not already running
-    this.processNext();
+    this.processNext().catch(err => {
+      console.error(`Queue '${this.name}': processNext error:`, err.message);
+    });
   }
 
   /**
@@ -231,14 +243,21 @@ class MemoryQueue {
         job.status = JOB_STATUS.DELAYED;
         job.scheduledFor = Date.now() + backoffDelay;
 
-        setTimeout(() => {
+        const timerId = setTimeout(() => {
+          this.timers.delete(timerId);
           const retryJob = this.jobs.get(job.id);
           if (retryJob && retryJob.status === JOB_STATUS.DELAYED) {
             retryJob.status = JOB_STATUS.PENDING;
             retryJob.scheduledFor = null;
-            this.processNext();
+            this.processNext().catch(err => {
+              console.error(
+                `Queue '${this.name}': processNext error:`,
+                err.message,
+              );
+            });
           }
         }, backoffDelay);
+        this.timers.add(timerId);
       } else {
         // Max attempts reached
         job.status = JOB_STATUS.FAILED;
@@ -257,7 +276,9 @@ class MemoryQueue {
     } finally {
       this.activeJobs--;
       // Continue processing
-      this.processNext();
+      this.processNext().catch(err => {
+        console.error(`Queue '${this.name}': processNext error:`, err.message);
+      });
     }
   }
 
@@ -323,10 +344,7 @@ class MemoryQueue {
   retryJob(jobId) {
     const job = this.getJob(jobId);
     if (job.status !== JOB_STATUS.FAILED) {
-      throw new JobProcessingError(
-        jobId,
-        new Error('Only failed jobs can be retried'),
-      );
+      throw new JobProcessingError(jobId, 'Only failed jobs can be retried');
     }
 
     job.status = JOB_STATUS.PENDING;
@@ -334,7 +352,9 @@ class MemoryQueue {
     job.error = null;
     job.failedAt = null;
 
-    this.processNext();
+    this.processNext().catch(err => {
+      console.error(`Queue '${this.name}': processNext error:`, err.message);
+    });
     return job;
   }
 
@@ -350,7 +370,9 @@ class MemoryQueue {
    */
   resume() {
     this.isPaused = false;
-    this.processNext();
+    this.processNext().catch(err => {
+      console.error(`Queue '${this.name}': processNext error:`, err.message);
+    });
   }
 
   /**
@@ -384,11 +406,10 @@ class MemoryQueue {
 
     for (const [id, job] of this.jobs.entries()) {
       const shouldClean =
-        (status === 'all' ||
-          status === JOB_STATUS.COMPLETED ||
-          status === JOB_STATUS.FAILED) &&
-        (job.status === JOB_STATUS.COMPLETED ||
-          job.status === JOB_STATUS.FAILED);
+        status === 'all'
+          ? job.status === JOB_STATUS.COMPLETED ||
+            job.status === JOB_STATUS.FAILED
+          : job.status === status;
 
       if (shouldClean) {
         const jobTime = job.completedAt || job.failedAt;
@@ -408,6 +429,10 @@ class MemoryQueue {
   async close() {
     this.isPaused = true;
     this.processors = [];
+    for (const timerId of this.timers) {
+      clearTimeout(timerId);
+    }
+    this.timers.clear();
     this.jobs.clear();
   }
 
@@ -416,20 +441,25 @@ class MemoryQueue {
    * @returns {Object} Statistics
    */
   getStats() {
-    const jobs = Array.from(this.jobs.values());
+    const counts = {
+      pending: 0,
+      active: 0,
+      completed: 0,
+      failed: 0,
+      delayed: 0,
+    };
+    for (const job of this.jobs.values()) {
+      if (counts[job.status] !== undefined) {
+        counts[job.status]++;
+      }
+    }
 
     return {
       name: this.name,
       concurrency: this.concurrency,
       isPaused: this.isPaused,
       activeJobs: this.activeJobs,
-      counts: {
-        pending: jobs.filter(j => j.status === JOB_STATUS.PENDING).length,
-        active: jobs.filter(j => j.status === JOB_STATUS.ACTIVE).length,
-        completed: jobs.filter(j => j.status === JOB_STATUS.COMPLETED).length,
-        failed: jobs.filter(j => j.status === JOB_STATUS.FAILED).length,
-        delayed: jobs.filter(j => j.status === JOB_STATUS.DELAYED).length,
-      },
+      counts,
       stats: { ...this.stats },
     };
   }

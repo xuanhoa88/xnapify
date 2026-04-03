@@ -53,7 +53,7 @@ Four error classes forming an inheritance hierarchy:
 | `JobProcessingError` | `'JOB_PROCESSING_ERROR'` | `500` | `jobId`, `originalError` | Handler failed |
 | `QueueConnectionError` | `'QUEUE_CONNECTION_ERROR'` | `503` | — | Adapter connection failure |
 
-**Note:** `QueueError` uses `status` (not `statusCode`) unlike the worker/schedule engines.
+All error classes include `statusCode`, `code`, `timestamp`, and `Error.captureStackTrace`.
 
 ## 3. Constants: `JOB_STATUS`
 
@@ -95,6 +95,7 @@ Public export. Calls `buildFactory` with:
 - Fresh `Map` for channels
 - Fresh `Map` with `'memory' → MemoryQueue` pre-registered
 - Merged `DEFAULT_OPTIONS` (`{ type: 'memory', concurrency: 1 }`) with caller options
+- Registers `process.once('SIGTERM')` and `process.once('SIGINT')` handlers for graceful shutdown
 
 ### Key difference from `factory(name)` vs `factory.channel(name)`
 
@@ -195,6 +196,8 @@ DELAYED → PENDING (after delay timer fires)
 5. On failure with retries remaining: sets `DELAYED` with exponential backoff (`backoff * 2^(attempts-1)`), schedules `setTimeout` to re-pend.
 6. On failure at max attempts: sets `FAILED`, emits `'failed'` event, optionally removes job.
 7. Always decrements `activeJobs` and calls `processNext()` recursively.
+
+All `setTimeout` timer IDs are tracked in `this.timers` (a `Set`) and cleared on `close()` to prevent resource leaks.
 
 ### Adapter Methods
 

@@ -39,6 +39,11 @@ export class Channel {
     }
 
     try {
+      if (this.handlers.has(eventName)) {
+        console.warn(
+          `Channel '${this.name}': Overwriting existing handler for '${eventName}'`,
+        );
+      }
       this.handlers.set(eventName, handler);
       console.info(
         `✅ Channel '${this.name}': Registered handler for '${eventName}'`,
@@ -60,15 +65,11 @@ export class Channel {
    * @returns {Channel} This channel for chaining
    */
   off(eventName) {
-    try {
-      const deleted = this.handlers.delete(eventName);
-      if (deleted) {
-        console.info(
-          `✅ Channel '${this.name}': Removed handler for '${eventName}'`,
-        );
-      }
-    } catch {
-      // Ignore errors
+    const deleted = this.handlers.delete(eventName);
+    if (deleted) {
+      console.info(
+        `✅ Channel '${this.name}': Removed handler for '${eventName}'`,
+      );
     }
     return this;
   }
@@ -164,7 +165,10 @@ export class Channel {
         handlers: Array.from(this.handlers.keys()),
         handlerCount: this.handlers.size,
         isProcessing: this.isProcessing,
-        queue: this.queue && this.queue.getStats ? this.queue.getStats() : null,
+        queue:
+          this.queue && typeof this.queue.getStats === 'function'
+            ? this.queue.getStats()
+            : null,
       };
     } catch (error) {
       return {

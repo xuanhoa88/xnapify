@@ -6,13 +6,6 @@
  */
 
 /**
- * xnapify (https://github.com/xuanhoa88/xnapify/)
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE.txt file in the root directory of this source tree.
- */
-
-/**
  * Queue Engine - Channel-based pub/sub for background jobs
  *
  * ## Features
@@ -100,6 +93,17 @@ import { createFactory } from './factory';
 
 // Constants
 export { JOB_STATUS } from './utils/constants';
+
+// Error classes
+export {
+  QueueError,
+  JobNotFoundError,
+  JobProcessingError,
+  QueueConnectionError,
+} from './errors';
+
+// Channel class
+export { Channel } from './channel';
 
 // Export factory for creating instances
 export { createFactory };

@@ -9,11 +9,16 @@
  * Base Queue Error
  */
 export class QueueError extends Error {
-  constructor(message, code = 'QUEUE_ERROR', status = 500) {
+  constructor(message, code = 'QUEUE_ERROR', statusCode = 500) {
     super(message);
     this.name = 'QueueError';
     this.code = code;
-    this.status = status;
+    this.statusCode = statusCode;
+    this.timestamp = new Date().toISOString();
+
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, this.constructor);
+    }
   }
 }
 

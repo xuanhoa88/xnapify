@@ -139,8 +139,8 @@ function buildFactory(channelsMap, adaptersMap, baseOptions) {
       try {
         await channel.close();
         console.info(`✅ Removed queue channel: ${name}`);
-      } catch {
-        // Ignore close errors
+      } catch (error) {
+        console.warn(`Queue channel '${name}' close error:`, error.message);
       }
       return channelsMap.delete(String(name).trim());
     }
@@ -158,8 +158,8 @@ function buildFactory(channelsMap, adaptersMap, baseOptions) {
       try {
         await channel.close();
         console.info(`✅ Closed queue channel: ${name}`);
-      } catch {
-        // Ignore close errors
+      } catch (error) {
+        console.warn(`Queue channel '${name}' close error:`, error.message);
       }
     }
     channelsMap.clear();
@@ -183,6 +183,8 @@ export function createFactory(options = {}) {
   });
 
   // Register cleanup with global coordinator
+  process.once('SIGTERM', () => factory.cleanup());
+  process.once('SIGINT', () => factory.cleanup());
 
   return factory;
 }

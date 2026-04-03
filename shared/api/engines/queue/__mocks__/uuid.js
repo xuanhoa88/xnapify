@@ -5,6 +5,10 @@
 
 let counter = 0;
 
+export const resetCounter = () => {
+  counter = 0;
+};
+
 export const v4 = jest.fn(() => {
   counter++;
   return `mock-uuid-${counter}`;
@@ -12,4 +16,5 @@ export const v4 = jest.fn(() => {
 
 export default {
   v4,
+  resetCounter,
 };
