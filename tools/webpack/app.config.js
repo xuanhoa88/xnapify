@@ -244,12 +244,13 @@ const serverConfig = createWebpackConfig('server', {
 
 /**
  * Discover and compile worker files from all core app modules.
- * Uses the same `createWorkerConfig({ workersDir })` pattern as extensions.
+ * Each app gets a unique webpack compiler name (`workers-<appName>`) so the
+ * dev server can watch them independently.
  *
  * Scans `src/apps/<appName>/api/workers/` directories.
- * Output is namespaced: `build/workers/<appName>/<name>.worker.js`
+ * Output: `BUILD_DIR/workers/<appName>/<name>.worker.js`
  */
-const workerConfigs = (() => {
+const workerConfig = (() => {
   const appsDir = path.join(config.APP_DIR, 'apps');
   const configs = [];
 
@@ -262,6 +263,7 @@ const workerConfigs = (() => {
         workersDir: path.join(appsDir, appDir.name, 'api', 'workers'),
         outputPath: config.BUILD_DIR,
         prefix: `workers/${appDir.name}`,
+        name: `workers-${appDir.name}`,
       });
       if (workerCfg) configs.push(workerCfg);
     }
@@ -279,7 +281,7 @@ const workerConfigs = (() => {
 module.exports = {
   clientConfig,
   serverConfig,
-  workerConfigs,
+  workerConfig,
   getHmrWatchIgnored,
   SERVER_BUNDLE_PATH,
 };

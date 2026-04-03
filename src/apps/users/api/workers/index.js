@@ -30,26 +30,6 @@ export async function indexAllUsers(search, models, force = false) {
 }
 
 /**
- * Index a single user in the search engine.
- *
- * @param {Object} search - Search engine instance
- * @param {Object} user - Sequelize user instance
- */
-export async function indexUser(search, user) {
-  return await _indexOne({ search, user });
-}
-
-/**
- * Remove a single user from the search index.
- *
- * @param {Object} search - Search engine instance
- * @param {string} userId - User ID to remove
- */
-export async function removeUser(search, userId) {
-  return await _remove({ search, userId });
-}
-
-/**
  * Register hooks to keep the users search index in sync with mutations.
  *
  * @param {Object} container - DI container instance
@@ -68,11 +48,11 @@ export function registerSearchHooks(container, search) {
   };
 
   const onIndex = safeExec('indexUser', async ({ user }) => {
-    if (user) await indexUser(search, user);
+    if (user) await _indexOne({ search, user });
   });
 
   const onRemove = safeExec('removeUser', async ({ user_id }) => {
-    if (user_id) await removeUser(search, user_id);
+    if (user_id) await _remove({ search, userId: user_id });
   });
 
   hook('auth').on('registered', onIndex);

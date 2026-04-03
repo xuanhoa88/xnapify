@@ -73,29 +73,44 @@ export class WorkerPoolManager {
 
   /**
    * Discover worker files by scanning a directory recursively.
-   * Finds all `*.worker.js` files and registers them by basename.
+   * Registers each `*.worker.js` file with:
+   *   1. A **namespaced key** (relative path from baseDir, e.g., `extensions/my_plugin/math`)
+   *   2. A **short alias** (basename only, e.g., `math`) — only when unique
    *
-   * Collision handling: if two files share the same basename (e.g.,
-   * `groups/search.worker.js` and `users/search.worker.js`), the first
-   * one found is kept and a warning is logged.
+   * Callers can use either key:
+   *   worker.run('math', ...)                       // short alias (unique)
+   *   worker.run('extensions/my_plugin/math', ...)  // namespaced (disambiguation)
    *
    * @param {string} baseDir - Directory to scan (e.g., BUILD_DIR)
    */
   discoverWorkers(baseDir) {
     try {
-      const workers = this.scanDir(baseDir);
-      let registered = 0;
+      const workers = this.scanDir(baseDir, baseDir);
 
-      for (const [name, absPath] of workers) {
-        if (this.manifest.has(name)) {
-          console.warn(
-            `[WorkerPool] Name collision: "${name}" already registered ` +
-              `(${this.manifest.get(name)}). Skipping ${absPath}`,
-          );
-          continue;
-        }
-        this.manifest.set(name, absPath);
+      // Track short names to detect collisions
+      const shortNameCounts = new Map();
+      for (const [, , shortName] of workers) {
+        shortNameCounts.set(
+          shortName,
+          (shortNameCounts.get(shortName) || 0) + 1,
+        );
+      }
+
+      let registered = 0;
+      for (const [nsKey, absPath, shortName] of workers) {
+        // Always register the namespaced key (guaranteed unique by path)
+        this.manifest.set(nsKey, absPath);
         registered++;
+
+        // Register short alias only when basename is unique
+        if (shortNameCounts.get(shortName) === 1) {
+          this.manifest.set(shortName, absPath);
+        } else if (__DEV__) {
+          console.warn(
+            `[WorkerPool] Short alias "${shortName}" has collisions — ` +
+              `use namespaced key "${nsKey}" instead`,
+          );
+        }
       }
 
       if (__DEV__ && registered > 0) {
@@ -116,24 +131,44 @@ export class WorkerPoolManager {
 
   /**
    * Recursively scan a directory for *.worker.js files.
-   * @param {string} dir - Directory to scan
-   * @returns {Array<[string, string]>} Array of [name, absolutePath] pairs
+   * @param {string} dir - Current directory being scanned
+   * @param {string} baseDir - Root scan directory (for computing relative paths)
+   * @returns {Array<[string, string, string]>} [namespacedKey, absolutePath, shortName]
    * @private
    */
-  scanDir(dir) {
+  scanDir(dir, baseDir) {
     const results = [];
     const entries = fs.readdirSync(dir, { withFileTypes: true });
 
     for (const entry of entries) {
       const fullPath = path.join(dir, entry.name);
       if (entry.isDirectory()) {
-        results.push(...this.scanDir(fullPath));
-      } else if (
-        entry.name.endsWith('.worker.js') &&
-        !entry.name.endsWith('.map')
-      ) {
-        const name = path.basename(entry.name, '.worker.js');
-        results.push([name, fullPath]);
+        results.push(...this.scanDir(fullPath, baseDir));
+      } else if (/\.worker\.js$/i.test(entry.name)) {
+        // Verify THREADED marker in compiled output.
+        // BUILD_DIR files are webpack-compiled CJS — safe to require().
+        // This ensures only Tier 2 (thread-safe, pure-data) workers are
+        // registered, even if a non-THREADED worker ends up in BUILD_DIR.
+        try {
+          // Clear cache to ensure fresh read after recompilation
+          delete require.cache[require.resolve(fullPath)];
+          // eslint-disable-next-line import/no-dynamic-require, global-require
+          const mod = require(fullPath);
+          if (!mod.THREADED) continue;
+        } catch {
+          // Broken or non-CJS file — skip silently
+          continue;
+        }
+
+        const shortName = path.basename(entry.name, '.worker.js');
+        const relPath = path.relative(baseDir, fullPath);
+        // Strip `.worker.js`, normalize separators, and remove structural
+        // `workers/` segments (convention folder, not a meaningful namespace).
+        const nsKey = relPath
+          .replace(/\.worker\.js$/i, '')
+          .replace(/\\/g, '/')
+          .replace(/(^|\/)workers\//g, '$1');
+        results.push([nsKey, fullPath, shortName]);
       }
     }
 

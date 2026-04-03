@@ -110,7 +110,7 @@ The constructor creates a shared `Piscina` instance with these options. Thread l
 
 ## 4. Worker Discovery
 
-At startup, `createFactory()` calls `discoverWorkers(BUILD_DIR)` which recursively scans the build output for `*.worker.js` files. Worker names are derived from filenames (e.g., `math.worker.js` → `'math'`).
+At startup, `createFactory()` calls `discoverWorkers(BUILD_DIR)` which recursively scans the build output for `*.worker.js` files. Each file is `require()`'d to verify `exports.THREADED === true` before registration — non-THREADED workers (Tier 1) are skipped. Worker names are derived from filenames (e.g., `math.worker.js` → `'math'`).
 
 Typical build output structure:
 

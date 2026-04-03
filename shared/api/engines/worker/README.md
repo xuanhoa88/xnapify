@@ -44,7 +44,11 @@ Manually register a worker file path.
 
 ### `worker.discoverWorkers(baseDir)`
 
-Scan a directory recursively for `*.worker.js` files and register them.
+Scan a directory recursively for `*.worker.js` files that contain the `THREADED` marker and register them with:
+- **Namespaced key** (relative path, e.g., `extensions/my_plugin/math`) — always unique
+- **Short alias** (basename, e.g., `math`) — only when the basename is unique across all files
+
+> Workers without `THREADED` in their compiled output are skipped (they're Tier 1 — direct import only).
 
 ### `worker.getStats()`
 
@@ -100,6 +104,7 @@ export function processTask(data) {
 
 ### `WORKER_NOT_FOUND`
 The worker wasn't discovered. Check:
+- Does the worker file `export const THREADED = true`?
 - Was the `*.worker.js` file compiled by webpack?
 - Is the file in `BUILD_DIR` or a subdirectory?
 - Does the filename end with `.worker.js`?

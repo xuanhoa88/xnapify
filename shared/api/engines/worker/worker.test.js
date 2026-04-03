@@ -147,36 +147,35 @@ describe('[engine] Worker Pool', () => {
   // -------------------------------------------------------------------------
 
   describe('discoverWorkers()', () => {
-    it('should discover *.worker.js files recursively', () => {
+    it('should register namespaced keys and short aliases for THREADED workers', () => {
       const fs = require('fs');
       const workersDir = path.join(FIXTURES_DIR, 'workers');
       const nestedDir = path.join(workersDir, 'nested');
 
-      // Create fixture worker files
+      // Create fixture worker files WITH THREADED marker
       fs.mkdirSync(nestedDir, { recursive: true });
       fs.writeFileSync(
         path.join(workersDir, 'math.worker.js'),
-        'module.exports.add = () => {};',
+        'exports.THREADED = true;\nexports.add = () => {};',
       );
       fs.writeFileSync(
         path.join(nestedDir, 'text.worker.js'),
-        'module.exports.upper = () => {};',
+        'exports.THREADED = true;\nexports.upper = () => {};',
       );
 
       pool.discoverWorkers(workersDir);
 
+      // Namespaced keys (relative path from scan root)
+      expect(pool.hasWorker('math')).toBe(true);
+      expect(pool.hasWorker('nested/text')).toBe(true);
+
+      // Short aliases (basename, unique so both registered)
       expect(pool.hasWorker('math')).toBe(true);
       expect(pool.hasWorker('text')).toBe(true);
-      expect(pool.getWorkerNames()).toEqual(
-        expect.arrayContaining(['math', 'text']),
-      );
 
       // Cleanup
-      fs.unlinkSync(path.join(workersDir, 'math.worker.js'));
-      fs.unlinkSync(path.join(nestedDir, 'text.worker.js'));
+      fs.rmSync(workersDir, { recursive: true, force: true });
       try {
-        fs.rmdirSync(nestedDir);
-        fs.rmdirSync(workersDir);
         fs.rmdirSync(FIXTURES_DIR);
         fs.rmdirSync(path.dirname(FIXTURES_DIR));
       } catch {
@@ -192,43 +191,111 @@ describe('[engine] Worker Pool', () => {
       spy.mockRestore();
     });
 
-    it('should warn on name collisions and keep first registration', () => {
+    it('should skip short alias on collision but keep namespaced keys', () => {
       const fs = require('fs');
-      const workersDir = path.join(FIXTURES_DIR, 'collision');
-      const groupsDir = path.join(workersDir, 'groups');
-      const usersDir = path.join(workersDir, 'users');
+      // Mirror actual build output: BUILD_DIR/workers/{app}/search.worker.js
+      const buildDir = path.join(FIXTURES_DIR, 'build');
+      const groupsDir = path.join(buildDir, 'workers', 'groups');
+      const usersDir = path.join(buildDir, 'workers', 'users');
 
-      // Create two search.worker.js files in different directories
       fs.mkdirSync(groupsDir, { recursive: true });
       fs.mkdirSync(usersDir, { recursive: true });
       fs.writeFileSync(
         path.join(groupsDir, 'search.worker.js'),
-        'module.exports.indexAll = () => {};',
+        'exports.THREADED = true;\nexports.indexAll = () => {};',
       );
       fs.writeFileSync(
         path.join(usersDir, 'search.worker.js'),
-        'module.exports.indexAll = () => {};',
+        'exports.THREADED = true;\nexports.indexAll = () => {};',
       );
 
       const spy = jest.spyOn(console, 'warn').mockImplementation();
-      pool.discoverWorkers(workersDir);
+      pool.discoverWorkers(buildDir);
 
-      // First registration wins
-      expect(pool.hasWorker('search')).toBe(true);
+      // Short alias NOT registered (collision)
+      expect(pool.hasWorker('search')).toBe(false);
 
-      // Collision warning logged (single concatenated string)
-      expect(spy).toHaveBeenCalledWith(
-        expect.stringContaining('Name collision: "search"'),
-      );
+      // Namespaced keys strip "workers/" and ARE registered
+      expect(pool.hasWorker('groups/search')).toBe(true);
+      expect(pool.hasWorker('users/search')).toBe(true);
       spy.mockRestore();
 
       // Cleanup
-      fs.unlinkSync(path.join(groupsDir, 'search.worker.js'));
-      fs.unlinkSync(path.join(usersDir, 'search.worker.js'));
+      fs.rmSync(buildDir, { recursive: true, force: true });
       try {
-        fs.rmdirSync(groupsDir);
-        fs.rmdirSync(usersDir);
-        fs.rmdirSync(workersDir);
+        fs.rmdirSync(FIXTURES_DIR);
+        fs.rmdirSync(path.dirname(FIXTURES_DIR));
+      } catch {
+        // Ignore if not empty
+      }
+    });
+
+    it('should skip workers without THREADED marker', () => {
+      const fs = require('fs');
+      const workersDir = path.join(FIXTURES_DIR, 'threaded-check');
+
+      fs.mkdirSync(workersDir, { recursive: true });
+
+      // Worker WITH THREADED — should be registered
+      fs.writeFileSync(
+        path.join(workersDir, 'yes.worker.js'),
+        'exports.THREADED = true;\nexports.doStuff = () => {};',
+      );
+
+      // Worker WITHOUT THREADED — should be skipped
+      fs.writeFileSync(
+        path.join(workersDir, 'nope.worker.js'),
+        'exports.doStuff = () => {};',
+      );
+
+      // Worker with THREADED = false — should be skipped
+      fs.writeFileSync(
+        path.join(workersDir, 'disabled.worker.js'),
+        'exports.THREADED = false;\nexports.doStuff = () => {};',
+      );
+
+      pool.discoverWorkers(workersDir);
+
+      expect(pool.hasWorker('yes')).toBe(true);
+      expect(pool.hasWorker('nope')).toBe(false);
+      expect(pool.hasWorker('disabled')).toBe(false);
+
+      // Cleanup
+      fs.rmSync(workersDir, { recursive: true, force: true });
+      try {
+        fs.rmdirSync(FIXTURES_DIR);
+        fs.rmdirSync(path.dirname(FIXTURES_DIR));
+      } catch {
+        // Ignore if not empty
+      }
+    });
+
+    it('should skip broken or unparseable worker files', () => {
+      const fs = require('fs');
+      const workersDir = path.join(FIXTURES_DIR, 'broken-check');
+
+      fs.mkdirSync(workersDir, { recursive: true });
+
+      // Valid worker
+      fs.writeFileSync(
+        path.join(workersDir, 'valid.worker.js'),
+        'exports.THREADED = true;\nexports.fn = () => {};',
+      );
+
+      // Broken file (syntax error)
+      fs.writeFileSync(
+        path.join(workersDir, 'broken.worker.js'),
+        'this is not valid javascript {{{{',
+      );
+
+      pool.discoverWorkers(workersDir);
+
+      expect(pool.hasWorker('valid')).toBe(true);
+      expect(pool.hasWorker('broken')).toBe(false);
+
+      // Cleanup
+      fs.rmSync(workersDir, { recursive: true, force: true });
+      try {
         fs.rmdirSync(FIXTURES_DIR);
         fs.rmdirSync(path.dirname(FIXTURES_DIR));
       } catch {

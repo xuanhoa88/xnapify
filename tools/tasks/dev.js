@@ -23,7 +23,7 @@ const {
   SERVER_BUNDLE_PATH: WEBPACK_SERVER_BUNDLE_PATH,
   clientConfig: webpackClientConfig,
   serverConfig: webpackServerConfig,
-  workerConfigs: webpackWorkerConfigs,
+  workerConfig: webpackWorkerConfig,
   getHmrWatchIgnored,
 } = require('../webpack/app.config');
 const {
@@ -285,19 +285,24 @@ function setupWebpackCompilers() {
   configureWebpackForDev(webpackServerConfig, false);
 
   // Create webpack compilers
+  // Worker configs have unique names (workers-<appName>) to avoid
+  // collisions with the main 'server' compiler.
   const multiCompiler = webpack([
     webpackClientConfig,
     webpackServerConfig,
-    ...webpackWorkerConfigs,
+    ...webpackWorkerConfig,
   ]);
   const clientCompiler = multiCompiler.compilers.find(c => c.name === 'client');
   const serverCompiler = multiCompiler.compilers.find(c => c.name === 'server');
+  const workerCompilers = multiCompiler.compilers.filter(c =>
+    c.name.startsWith('workers-'),
+  );
 
   if (!clientCompiler || !serverCompiler) {
     throw new BuildError('Failed to create webpack compilers');
   }
 
-  return { clientCompiler, serverCompiler };
+  return { clientCompiler, serverCompiler, workerCompilers };
 }
 
 /**
@@ -561,11 +566,28 @@ async function main() {
 
   try {
     // Setup webpack compilers
-    const { clientCompiler, serverCompiler } = setupWebpackCompilers();
+    const { clientCompiler, serverCompiler, workerCompilers } =
+      setupWebpackCompilers();
 
     // Watch for server bundle changes to enable HMR for server code
     // This allows server-side code to be updated without restarting the dev server
     setupServerBundleWatcher(serverCompiler);
+
+    // Watch worker compilers — compile on change, no HMR needed
+    for (const wc of workerCompilers) {
+      wc.watch(
+        { ignored: getHmrWatchIgnored(), aggregateTimeout: 300 },
+        (err, stats) => {
+          if (err) {
+            logError(`❌ Worker '${wc.name}' failed: ${err.message}`);
+          } else if (stats && stats.hasErrors()) {
+            logError(`❌ Worker '${wc.name}' has errors`);
+          } else if (verbose) {
+            logInfo(`✅ Worker '${wc.name}' compiled`);
+          }
+        },
+      );
+    }
 
     // Create compilation promises
     const clientPromise = createCompilationPromise('client', clientCompiler);

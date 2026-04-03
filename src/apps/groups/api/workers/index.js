@@ -30,26 +30,6 @@ export async function indexAllGroups(search, models, force = false) {
 }
 
 /**
- * Index a single group in the search engine.
- *
- * @param {Object} search - Search engine instance
- * @param {Object} group - Sequelize group instance
- */
-export async function indexGroup(search, group) {
-  return await _indexOne({ search, group });
-}
-
-/**
- * Remove a single group from the search index.
- *
- * @param {Object} search - Search engine instance
- * @param {string} groupId - Group ID to remove
- */
-export async function removeGroup(search, groupId) {
-  return await _remove({ search, groupId });
-}
-
-/**
  * Register hooks to keep the groups search index in sync with mutations.
  *
  * @param {Object} container - DI container instance
@@ -68,11 +48,11 @@ export function registerSearchHooks(container, search) {
   };
 
   const onIndex = safeExec('indexGroup', async ({ group }) => {
-    if (group) await indexGroup(search, group);
+    if (group) await _indexOne({ search, group });
   });
 
   const onRemove = safeExec('removeGroup', async ({ group_id }) => {
-    if (group_id) await removeGroup(search, group_id);
+    if (group_id) await _remove({ search, groupId: group_id });
   });
 
   hook('admin:groups').on('created', onIndex);
