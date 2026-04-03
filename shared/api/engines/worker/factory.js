@@ -75,18 +75,32 @@ export class WorkerPoolManager {
    * Discover worker files by scanning a directory recursively.
    * Finds all `*.worker.js` files and registers them by basename.
    *
+   * Collision handling: if two files share the same basename (e.g.,
+   * `groups/search.worker.js` and `users/search.worker.js`), the first
+   * one found is kept and a warning is logged.
+   *
    * @param {string} baseDir - Directory to scan (e.g., BUILD_DIR)
    */
   discoverWorkers(baseDir) {
     try {
       const workers = this.scanDir(baseDir);
+      let registered = 0;
+
       for (const [name, absPath] of workers) {
+        if (this.manifest.has(name)) {
+          console.warn(
+            `[WorkerPool] Name collision: "${name}" already registered ` +
+              `(${this.manifest.get(name)}). Skipping ${absPath}`,
+          );
+          continue;
+        }
         this.manifest.set(name, absPath);
+        registered++;
       }
 
-      if (__DEV__ && workers.length > 0) {
+      if (__DEV__ && registered > 0) {
         console.info(
-          `[WorkerPool] Discovered ${workers.length} worker(s) in ${baseDir}`,
+          `[WorkerPool] Discovered ${registered} worker(s) in ${baseDir}`,
         );
       }
     } catch (error) {

@@ -191,6 +191,50 @@ describe('[engine] Worker Pool', () => {
       expect(spy).not.toHaveBeenCalled();
       spy.mockRestore();
     });
+
+    it('should warn on name collisions and keep first registration', () => {
+      const fs = require('fs');
+      const workersDir = path.join(FIXTURES_DIR, 'collision');
+      const groupsDir = path.join(workersDir, 'groups');
+      const usersDir = path.join(workersDir, 'users');
+
+      // Create two search.worker.js files in different directories
+      fs.mkdirSync(groupsDir, { recursive: true });
+      fs.mkdirSync(usersDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(groupsDir, 'search.worker.js'),
+        'module.exports.indexAll = () => {};',
+      );
+      fs.writeFileSync(
+        path.join(usersDir, 'search.worker.js'),
+        'module.exports.indexAll = () => {};',
+      );
+
+      const spy = jest.spyOn(console, 'warn').mockImplementation();
+      pool.discoverWorkers(workersDir);
+
+      // First registration wins
+      expect(pool.hasWorker('search')).toBe(true);
+
+      // Collision warning logged (single concatenated string)
+      expect(spy).toHaveBeenCalledWith(
+        expect.stringContaining('Name collision: "search"'),
+      );
+      spy.mockRestore();
+
+      // Cleanup
+      fs.unlinkSync(path.join(groupsDir, 'search.worker.js'));
+      fs.unlinkSync(path.join(usersDir, 'search.worker.js'));
+      try {
+        fs.rmdirSync(groupsDir);
+        fs.rmdirSync(usersDir);
+        fs.rmdirSync(workersDir);
+        fs.rmdirSync(FIXTURES_DIR);
+        fs.rmdirSync(path.dirname(FIXTURES_DIR));
+      } catch {
+        // Ignore if not empty
+      }
+    });
   });
 
   // -------------------------------------------------------------------------
