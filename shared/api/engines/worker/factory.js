@@ -51,6 +51,9 @@ export class WorkerPoolManager {
     /** @type {Map<string, string>} workerName → absolutePath */
     this.manifest = new Map();
 
+    /** @type {Map<string, Set<AbortController>>} workerName → active controllers */
+    this.activeTasks = new Map();
+
     /** @type {boolean} */
     this.terminated = false;
 
@@ -210,10 +213,32 @@ export class WorkerPoolManager {
   /**
    * Unregister a worker by name.
    *
+   * Cancels all in-flight tasks for this worker (piscina terminates the
+   * worker thread on abort), clears the require.cache entry, and removes
+   * the worker from the manifest.
+   *
    * @param {string} name - Worker name
    * @returns {boolean} True if the worker was found and removed
    */
   unregisterWorker(name) {
+    // 1. Cancel all in-flight tasks for this worker
+    const activeTasks = this.activeTasks.get(name);
+    if (activeTasks) {
+      for (const ac of activeTasks) ac.abort();
+      this.activeTasks.delete(name);
+    }
+
+    // 2. Clear require.cache to free memory
+    const workerPath = this.manifest.get(name);
+    if (workerPath) {
+      try {
+        delete require.cache[require.resolve(workerPath)];
+      } catch {
+        // File may no longer exist — ignore
+      }
+    }
+
+    // 3. Remove from manifest
     return this.manifest.delete(name);
   }
 
@@ -243,7 +268,9 @@ export class WorkerPoolManager {
   /**
    * Run a worker function in a thread.
    *
-   * Delegates to piscina with per-task `filename` and `name`.
+   * Delegates to piscina with per-task `filename`, `name`, and `signal`.
+   * Uses AbortController for both timeout and cancellation — when aborted,
+   * piscina terminates the worker thread (no zombie tasks).
    *
    * @param {string} workerName - Registered worker name (e.g., 'math')
    * @param {string} fnName - Export function name (e.g., 'fibonacci')
@@ -251,7 +278,7 @@ export class WorkerPoolManager {
    * @param {Object} [options]
    * @param {number} [options.timeout] - Override task timeout (ms)
    * @returns {Promise<*>} Worker function return value
-   * @throws {WorkerError} On not found, timeout, crash, or pool terminated
+   * @throws {WorkerError} On not found, timeout, cancellation, or pool terminated
    */
   async run(workerName, fnName, data, options = {}) {
     if (this.terminated) {
@@ -272,29 +299,34 @@ export class WorkerPoolManager {
     }
 
     const timeout = options.timeout || this.config.taskTimeout;
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), timeout);
 
-    // Use Promise.race for timeout (compatible with all Node.js versions)
-    let timer;
-    const timeoutPromise = new Promise((_, reject) => {
-      timer = setTimeout(() => {
-        reject(
-          new WorkerError(
-            `Worker "${workerName}.${fnName}" timed out after ${timeout}ms`,
-            'WORKER_TIMEOUT',
-            408,
-          ),
-        );
-      }, timeout);
-    });
+    // Track this task so unregisterWorker() can cancel it
+    let tasks = this.activeTasks.get(workerName);
+    if (!tasks) {
+      tasks = new Set();
+      this.activeTasks.set(workerName, tasks);
+    }
+    tasks.add(ac);
 
     try {
-      const result = await Promise.race([
-        this.pool.run(data, { filename: workerPath, name: fnName }),
-        timeoutPromise,
-      ]);
+      const result = await this.pool.run(data, {
+        filename: workerPath,
+        name: fnName,
+        signal: ac.signal,
+      });
       return result;
     } catch (error) {
       if (error instanceof WorkerError) throw error;
+      // AbortError from piscina means timeout or explicit cancellation
+      if (error.name === 'AbortError') {
+        throw new WorkerError(
+          `Worker "${workerName}.${fnName}" timed out or was cancelled`,
+          'WORKER_TIMEOUT',
+          408,
+        );
+      }
       throw new WorkerError(
         error.message,
         error.code || 'WORKER_EXECUTION_ERROR',
@@ -302,6 +334,8 @@ export class WorkerPoolManager {
       );
     } finally {
       clearTimeout(timer);
+      tasks.delete(ac);
+      if (tasks.size === 0) this.activeTasks.delete(workerName);
     }
   }
 
@@ -350,6 +384,12 @@ export class WorkerPoolManager {
     this.terminated = true;
 
     console.info('🧹 Cleaning up worker pool...');
+
+    // Cancel all in-flight tasks across all workers
+    for (const [, tasks] of this.activeTasks) {
+      for (const ac of tasks) ac.abort();
+    }
+    this.activeTasks.clear();
 
     try {
       await this.pool.destroy();

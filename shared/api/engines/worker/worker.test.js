@@ -28,6 +28,12 @@ jest.mock('piscina', () => {
       if (this.destroyed) {
         throw new Error('Pool has been destroyed');
       }
+      // Support AbortController signal for cancellation tests
+      if (opts.signal && opts.signal.aborted) {
+        const err = new Error('The task has been aborted');
+        err.name = 'AbortError';
+        throw err;
+      }
       // Return a standardized mock result for testing
       return { data, filename: opts.filename, name: opts.name };
     }
@@ -351,7 +357,7 @@ describe('[engine] Worker Pool', () => {
       pool.pool.run = originalRun;
     });
 
-    it('should handle timeout via Promise.race', async () => {
+    it('should handle timeout via AbortController', async () => {
       const shortPool = new WorkerPoolManager({
         minThreads: 1,
         maxThreads: 1,
@@ -359,8 +365,19 @@ describe('[engine] Worker Pool', () => {
       });
       shortPool.registerWorker('slow', '/path/to/slow.worker.js');
 
-      // Make mock run take forever
-      shortPool.pool.run = () => new Promise(() => {}); // Never resolves
+      // Make mock run hang but respect signal
+      shortPool.pool.run = (data, opts) =>
+        new Promise((resolve, reject) => {
+          const onAbort = () => {
+            const err = new Error('The task has been aborted');
+            err.name = 'AbortError';
+            reject(err);
+          };
+          if (opts.signal) {
+            if (opts.signal.aborted) return onAbort();
+            opts.signal.addEventListener('abort', onAbort, { once: true });
+          }
+        });
 
       await expect(shortPool.run('slow', 'fn', {})).rejects.toMatchObject({
         code: 'WORKER_TIMEOUT',
@@ -368,6 +385,42 @@ describe('[engine] Worker Pool', () => {
 
       shortPool.pool.run = async () => ({});
       await shortPool.cleanup();
+    });
+
+    it('should cancel in-flight tasks on unregisterWorker', async () => {
+      pool.registerWorker('math', '/path/to/math.worker.js');
+
+      // Make mock run hang but respect signal
+      pool.pool.run = (data, opts) =>
+        new Promise((resolve, reject) => {
+          const onAbort = () => {
+            const err = new Error('The task has been aborted');
+            err.name = 'AbortError';
+            reject(err);
+          };
+          if (opts.signal) {
+            if (opts.signal.aborted) return onAbort();
+            opts.signal.addEventListener('abort', onAbort, { once: true });
+          }
+        });
+
+      // Start a task but don't await yet
+      const taskPromise = pool.run('math', 'fibonacci', { n: 42 });
+
+      // Verify task is tracked
+      expect(pool.activeTasks.has('math')).toBe(true);
+
+      // Unregister should abort the in-flight task
+      pool.unregisterWorker('math');
+
+      // Task should reject with WORKER_TIMEOUT (abort)
+      await expect(taskPromise).rejects.toMatchObject({
+        code: 'WORKER_TIMEOUT',
+      });
+
+      // Worker should be gone
+      expect(pool.hasWorker('math')).toBe(false);
+      expect(pool.activeTasks.has('math')).toBe(false);
     });
   });
 

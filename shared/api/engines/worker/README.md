@@ -15,14 +15,14 @@ const result = await worker.run('math', 'fibonacci', { n: 42 });
 
 ## When to Use
 
-| Scenario | Use Thread Pool? | Why |
-|----------|-----------------|-----|
-| Fibonacci, prime sieve, hashing | ✅ Yes | CPU-bound, blocks event loop |
-| Image/PDF processing | ✅ Yes | CPU-intensive transforms |
-| Database queries | ❌ No | I/O-bound, needs `models` |
-| Search indexing | ❌ No | Needs DI container |
-| File upload/download | ❌ No | I/O-bound, needs FS engine |
-| Email sending | ❌ No | I/O-bound, needs provider |
+| Scenario                        | Use Thread Pool? | Why                          |
+| ------------------------------- | ---------------- | ---------------------------- |
+| Fibonacci, prime sieve, hashing | ✅ Yes           | CPU-bound, blocks event loop |
+| Image/PDF processing            | ✅ Yes           | CPU-intensive transforms     |
+| Database queries                | ❌ No            | I/O-bound, needs `models`    |
+| Search indexing                 | ❌ No            | Needs DI container           |
+| File upload/download            | ❌ No            | I/O-bound, needs FS engine   |
+| Email sending                   | ❌ No            | I/O-bound, needs provider    |
 
 **Rule of thumb**: If the worker needs `container`, `models`, `search`, or `db`, it must stay as a direct function call.
 
@@ -30,7 +30,8 @@ const result = await worker.run('math', 'fibonacci', { n: 42 });
 
 ### `worker.run(workerName, fnName, data, options)`
 
-Run a function in a thread.
+Run a function in a thread. Uses `AbortController` for timeout and cancellation —
+when aborted, piscina terminates the worker thread (no zombie tasks).
 
 - **workerName** `string` — Registered worker name (e.g., `'math'`)
 - **fnName** `string` — Export function name (e.g., `'fibonacci'`)
@@ -42,9 +43,18 @@ Run a function in a thread.
 
 Manually register a worker file path.
 
+### `worker.unregisterWorker(name)`
+
+Unregister a worker by name. This:
+
+1. **Cancels all in-flight tasks** for this worker (piscina terminates the thread)
+2. **Clears `require.cache`** for the worker file to free memory
+3. **Removes the worker** from the manifest
+
 ### `worker.discoverWorkers(baseDir)`
 
 Scan a directory recursively for `*.worker.js` files that contain the `WORKER_POOL` marker and register them with:
+
 - **Namespaced key** (relative path, e.g., `extensions/my_plugin/math`) — always unique
 - **Short alias** (basename, e.g., `math`) — only when the basename is unique across all files
 
@@ -64,17 +74,17 @@ Returns pool statistics:
 
 ### `worker.cleanup()`
 
-Gracefully terminate all threads and reject queued tasks.
+Gracefully terminate all threads. Aborts all in-flight tasks and rejects queued tasks.
 
 ## Configuration
 
-| Environment Variable | Default | Description |
-|---------------------|---------|-------------|
-| `XNAPIFY_WORKER_MIN_THREADS` | `1` | Always-warm threads |
-| `XNAPIFY_WORKER_MAX_THREADS` | `cpus - 1` | Thread ceiling |
-| `XNAPIFY_WORKER_IDLE_TIMEOUT` | `30000` | Idle termination (ms) |
-| `XNAPIFY_WORKER_TASK_TIMEOUT` | `30000` | Per-task timeout (ms) |
-| `XNAPIFY_WORKER_QUEUE_MAX` | `100` | Max queued tasks |
+| Environment Variable          | Default    | Description           |
+| ----------------------------- | ---------- | --------------------- |
+| `XNAPIFY_WORKER_MIN_THREADS`  | `1`        | Always-warm threads   |
+| `XNAPIFY_WORKER_MAX_THREADS`  | `cpus - 1` | Thread ceiling        |
+| `XNAPIFY_WORKER_IDLE_TIMEOUT` | `30000`    | Idle termination (ms) |
+| `XNAPIFY_WORKER_TASK_TIMEOUT` | `30000`    | Per-task timeout (ms) |
+| `XNAPIFY_WORKER_QUEUE_MAX`    | `100`      | Max queued tasks      |
 
 ## Writing a Threadable Worker
 
@@ -95,6 +105,7 @@ export function processTask(data) {
 ```
 
 **Requirements for thread pool workers:**
+
 1. Export `WORKER_POOL = true`
 2. All inputs/outputs must be JSON-serializable
 3. No imports of DI-dependent modules (`container`, `models`, `search`)
@@ -103,20 +114,31 @@ export function processTask(data) {
 ## Troubleshooting
 
 ### `WORKER_NOT_FOUND`
+
 The worker wasn't discovered. Check:
+
 - Does the worker file `export const WORKER_POOL = true`?
 - Was the `*.worker.js` file compiled by webpack?
 - Is the file in `BUILD_DIR` or a subdirectory?
 - Does the filename end with `.worker.js`?
 
 ### `WORKER_TIMEOUT`
-The worker function took too long. Options:
+
+The worker function timed out or was cancelled. This happens when:
+
+- The task exceeded `XNAPIFY_WORKER_TASK_TIMEOUT`
+- `unregisterWorker()` was called while the task was running
+
+Options:
+
 - Increase `XNAPIFY_WORKER_TASK_TIMEOUT`
 - Pass `{ timeout: 60000 }` as options to `run()`
 - Optimize the worker function
 
 ### `QUEUE_FULL`
+
 All threads are busy and the queue is full. Options:
+
 - Increase `XNAPIFY_WORKER_MAX_THREADS`
 - Increase `XNAPIFY_WORKER_QUEUE_MAX`
 - Rate-limit incoming requests

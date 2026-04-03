@@ -14,10 +14,10 @@ The Worker engine provides an elastic thread pool for executing CPU-bound worker
 
 The project has two categories of workers:
 
-| Tier | Type | Execution | When to Use |
-|------|------|-----------|-------------|
-| **Tier 1: Direct** | DI-dependent, I/O-bound | Same-process function call | Workers needing `container`, `models`, `search`, `db` |
-| **Tier 2: Thread Pool** | Pure functions, CPU-bound | `worker_threads` via this engine | Workers with serializable I/O only |
+| Tier                    | Type                      | Execution                        | When to Use                                           |
+| ----------------------- | ------------------------- | -------------------------------- | ----------------------------------------------------- |
+| **Tier 1: Direct**      | DI-dependent, I/O-bound   | Same-process function call       | Workers needing `container`, `models`, `search`, `db` |
+| **Tier 2: Thread Pool** | Pure functions, CPU-bound | `worker_threads` via this engine | Workers with serializable I/O only                    |
 
 **Tier 1 examples**: `search.worker.js`, `activities.worker.js`, `fs/workers/index.js`, `send.worker.js`
 **Tier 2 examples**: `math.worker.js`, `text.worker.js`
@@ -75,11 +75,11 @@ Result or WorkerError
 
 ```javascript
 new WorkerPoolManager({
-  minThreads: 1,           // Always-warm threads
-  maxThreads: cpus - 1,    // Elastic ceiling
-  idleTimeout: 30000,      // Idle thread termination (ms)
-  taskTimeout: 30000,      // Per-task timeout (ms)
-  maxQueueSize: 100,       // Max queued tasks before rejection
+  minThreads: 1, // Always-warm threads
+  maxThreads: cpus - 1, // Elastic ceiling
+  idleTimeout: 30000, // Idle thread termination (ms)
+  taskTimeout: 30000, // Per-task timeout (ms)
+  maxQueueSize: 100, // Max queued tasks before rejection
 });
 ```
 
@@ -87,26 +87,26 @@ The constructor creates a shared `Piscina` instance with these options. Thread l
 
 ### Key Methods
 
-| Method | Description |
-|--------|-------------|
-| `discoverWorkers(baseDir)` | Scan directory recursively for `*.worker.js` files |
+| Method                          | Description                                               |
+| ------------------------------- | --------------------------------------------------------- |
+| `discoverWorkers(baseDir)`      | Scan directory recursively for `*.worker.js` files        |
 | `registerWorker(name, absPath)` | Manually register a worker file (validates absolute path) |
-| `unregisterWorker(name)` | Remove a registered worker |
-| `hasWorker(name)` | Check if worker is registered |
-| `getWorkerNames()` | List all registered worker names |
-| `run(worker, fn, data, opts)` | Execute function in thread pool via piscina |
-| `getStats()` | Pool statistics (threads, tasks, workers) |
-| `cleanup()` | Graceful shutdown via `piscina.destroy()` |
+| `unregisterWorker(name)`        | Remove a registered worker                                |
+| `hasWorker(name)`               | Check if worker is registered                             |
+| `getWorkerNames()`              | List all registered worker names                          |
+| `run(worker, fn, data, opts)`   | Execute function in thread pool via piscina               |
+| `getStats()`                    | Pool statistics (threads, tasks, workers)                 |
+| `cleanup()`                     | Graceful shutdown via `piscina.destroy()`                 |
 
 ## 3. Configuration / Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `XNAPIFY_WORKER_MIN_THREADS` | `1` | Minimum always-warm threads |
-| `XNAPIFY_WORKER_MAX_THREADS` | `cpus - 1` | Maximum threads |
-| `XNAPIFY_WORKER_IDLE_TIMEOUT` | `30000` | Idle thread timeout (ms) |
-| `XNAPIFY_WORKER_TASK_TIMEOUT` | `30000` | Per-task timeout (ms) |
-| `XNAPIFY_WORKER_QUEUE_MAX` | `100` | Max queued tasks |
+| Variable                      | Default    | Description                 |
+| ----------------------------- | ---------- | --------------------------- |
+| `XNAPIFY_WORKER_MIN_THREADS`  | `1`        | Minimum always-warm threads |
+| `XNAPIFY_WORKER_MAX_THREADS`  | `cpus - 1` | Maximum threads             |
+| `XNAPIFY_WORKER_IDLE_TIMEOUT` | `30000`    | Idle thread timeout (ms)    |
+| `XNAPIFY_WORKER_TASK_TIMEOUT` | `30000`    | Per-task timeout (ms)       |
+| `XNAPIFY_WORKER_QUEUE_MAX`    | `100`      | Max queued tasks            |
 
 ## 4. Worker Discovery
 
@@ -122,16 +122,24 @@ BUILD_DIR/
 
 Extensions can also call `registerWorker()` directly for dynamic registration.
 
+### Unregistration
+
+`unregisterWorker(name)` performs a clean teardown:
+
+1. **Cancels in-flight tasks** via `AbortController.abort()` — piscina terminates the worker thread
+2. **Clears `require.cache`** for the worker file to free memory
+3. **Removes the name→path mapping** from the manifest
+
 ## 5. Error Handling
 
-| Code | Status | Description |
-|------|--------|-------------|
-| `WORKER_NOT_FOUND` | 404 | Worker name not in manifest |
-| `WORKER_TIMEOUT` | 408 | Task exceeded timeout |
-| `WORKER_EXECUTION_ERROR` | 500 | Worker function threw an error |
-| `POOL_TERMINATED` | 503 | Pool was shut down |
-| `INVALID_ARGUMENT` | 400 | Invalid worker name/path |
-| `INVALID_PATH` | 400 | Relative path (must be absolute) |
+| Code                     | Status | Description                                              |
+| ------------------------ | ------ | -------------------------------------------------------- |
+| `WORKER_NOT_FOUND`       | 404    | Worker name not in manifest                              |
+| `WORKER_TIMEOUT`         | 408    | Task timed out or was cancelled via `unregisterWorker()` |
+| `WORKER_EXECUTION_ERROR` | 500    | Worker function threw an error                           |
+| `POOL_TERMINATED`        | 503    | Pool was shut down                                       |
+| `INVALID_ARGUMENT`       | 400    | Invalid worker name/path                                 |
+| `INVALID_PATH`           | 400    | Relative path (must be absolute)                         |
 
 ## 6. Integration Points
 
@@ -157,12 +165,13 @@ export async function computeExpensive(data) {
 
 ```javascript
 // In *.worker.js:
-export const WORKER_POOL = true;  // Signal to reviewers and tooling
+export const WORKER_POOL = true; // Signal to reviewers and tooling
 ```
 
 ## 7. Testing
 
 Test file: `worker.test.js` — 22 tests covering:
+
 - Constructor & config clamping
 - Piscina pool creation
 - Manifest loading (file + manual registration)
@@ -175,4 +184,5 @@ Test file: `worker.test.js` — 22 tests covering:
 - WorkerError class
 
 ---
-*Note: This spec reflects the CURRENT piscina-based implementation.*
+
+_Note: This spec reflects the CURRENT piscina-based implementation._
