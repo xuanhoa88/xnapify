@@ -10,6 +10,7 @@ The `shared/fetch/` library provides an isomorphic HTTP data fetching wrapper bu
 shared/fetch/
 ├── index.js      # Public API exports
 ├── factory.js    # Core `$fetch` factory & request pipeline
+├── stream.js     # SSE stream parsing & auto-reconnection
 ├── error.js      # Custom `FetchError` class implementation
 └── utils.js      # Payload, parameter merging, URL manipulations, and header utils
 ```
@@ -38,6 +39,63 @@ When a request is initiated via `$fetch` (or `$factory` internally):
    - Parses stream to `context.response._data` (via `.json()`, `.text()`, etc.).
 9. **`onResponse` Hook**: Dispatched after successful fetch and data hydration.
 10. **Error Checking**: Checks if `status >= 400`. If so, triggers `onResponseError` and proceeds to the Error Flow. Otherwise, returns `context.response` (for `.raw()`) or `context.response._data` (for `$fetch()`).
+
+## SSE Streaming (`stream.js`)
+
+The streaming layer adds native Server-Sent Events support on top of the existing fetch pipeline. Zero external dependencies — all parsing is self-contained.
+
+### Data Flow
+
+```
+ReadableStream<Uint8Array>
+  → TextDecoderStream (bytes → UTF-8 strings)
+    → TextLineStream (chunks → individual lines, inlined ~20 lines)
+      → SSE Field Parser (lines → field/value pairs)
+        → AsyncGenerator<SSEMessage> (accumulated events on empty-line delimiter)
+```
+
+### SSEMessage Shape
+
+```javascript
+{
+  event: string,    // Event type (e.g. "message", "error")
+  data: string,     // Event payload (multi-line data fields joined by \n)
+  id: number|string, // Last event ID (numeric if parseable, string otherwise)
+  retry: number     // Reconnection interval hint in ms
+}
+```
+
+### Components
+
+#### `TextLineStream` (internal class)
+
+Inlined `TransformStream` that splits text chunks on `\n`, `\r\n`, or `\r` boundaries. Equivalent to Deno's `@std/streams/text-line-stream`. Buffers partial lines across chunks and flushes any trailing content on stream close.
+
+#### `parseField(line)` (internal function)
+
+Parses a single SSE field line (`field: value`) into a `[field, value]` tuple. Returns `undefined` for comment lines (starting with `:`) and lines without a `:` separator.
+
+#### `parseSSEStream(body, signal?)`
+
+Core AsyncGenerator. Pipes a `ReadableStream<Uint8Array>` through `TextDecoderStream` → `TextLineStream`, then iterates lines to accumulate SSE events. Yields an `SSEMessage` each time an empty line is encountered (per SSE spec). Respects `AbortSignal` for cancellation and releases the reader lock in a `finally` block.
+
+#### `createSSEStream(fetchFn, request, options?)`
+
+Auto-reconnecting wrapper around `parseSSEStream`. Tracks protocol-level `id` and `retry` fields across events. On mid-stream network error:
+
+1. Checks if `AbortSignal` was aborted → stops immediately
+2. Checks if `maxRetries` (default: 3) is exhausted → throws the error
+3. Waits `retryInterval` ms (default: 1000, updated by SSE `retry` field)
+4. Re-fetches with `Last-Event-ID` header set to the last received `id`
+5. Resumes yielding events from the new stream
+
+Connection failures on initial fetch propagate immediately on the first attempt, and retry on subsequent attempts.
+
+#### `$fetch.stream(request, options?)` (on factory)
+
+Convenience method on the `$fetch` instance. Delegates to `createSSEStream` using the internal `$factory` function, ensuring the full pipeline (hooks, timeout, baseUrl, headers) is applied. Forces `responseType: 'stream'` and sets `Accept: text/event-stream` by default (overridable). Separates `maxRetries` and `retryInterval` from fetch options to avoid polluting the native call.
+
+Available on child instances created via `$fetch.create()` since `create()` calls `createFetch()` internally.
 
 ## Retry Mechanism & Error Handling
 

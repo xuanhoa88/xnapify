@@ -34,6 +34,7 @@ const user = await $fetch('/users', {
 - **Isomorphic**: Works flawlessly on both browser and Node.js.
 - **Auto-Serialization**: Automatically stringifies standard objects to JSON and sets `Content-Type: application/json`.
 - **Response Parsing**: Automatically detects `Content-Type` and parses the response (JSON, Text, Blob, Stream).
+- **SSE Streaming**: Native Server-Sent Events support with auto-reconnection via `$fetch.stream()`.
 - **URL & Query Builder**: Merges `baseUrl` and dynamically constructs query strings from objects.
 - **Hook Lifecycle**: Tap into `onRequest`, `onResponse`, `onRequestError`, and `onResponseError`.
 - **Retry Mechanism**: Built-in, configurable retry logic for transient errors (e.g., 502, 503, 504, 429).
@@ -54,6 +55,7 @@ The returned `$fetch` instance has additional properties:
 - `$fetch.raw(input, options)`: Returns the complete `Response` object instead of just the data payload.
 - `$fetch.native(input, options)`: Bypasses to the original native `fetch`.
 - `$fetch.create(defaults)`: Creates a new cloned instance extending the current configuration.
+- `$fetch.stream(url, options)`: Returns an `AsyncGenerator<SSEMessage>` for Server-Sent Events streaming.
 
 ### Options
 
@@ -85,6 +87,85 @@ const $fetch = createFetch(fetch, {
     }
   }
 });
+```
+
+### SSE Streaming
+
+The `$fetch.stream()` method provides native Server-Sent Events support with auto-reconnection. It reuses the full fetch pipeline (hooks, timeout, baseUrl, headers).
+
+#### Basic Usage
+
+```javascript
+import { createFetch } from '@shared/fetch';
+
+const $fetch = createFetch(fetch, {
+  defaults: { baseUrl: 'https://api.example.com' },
+});
+
+const stream = $fetch.stream('/events', {
+  method: 'POST',
+  body: { model: 'gpt-4', messages: [...], stream: true },
+  headers: { authorization: 'Bearer sk-...' },
+});
+
+for await (const event of stream) {
+  if (event.data === '[DONE]') break;
+  const chunk = JSON.parse(event.data);
+  process.stdout.write(chunk.choices[0].delta.content || '');
+}
+```
+
+#### Stream Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `maxRetries` | `number` | `3` | Max reconnection attempts on mid-stream disconnect |
+| `retryInterval` | `number` | `1000` | Default reconnect delay in ms (overridden by SSE `retry` field) |
+
+All standard fetch options (`timeout`, `signal`, `headers`, hooks, etc.) are also supported.
+
+#### Cancellation with AbortController
+
+```javascript
+const abort = new AbortController();
+setTimeout(function () { abort.abort(); }, 30000);
+
+const stream = $fetch.stream('/events', {
+  signal: abort.signal,
+  timeout: 60000,
+});
+
+for await (const event of stream) {
+  console.log(event.event, event.data);
+}
+```
+
+#### Low-Level: Using `parseSSEStream` Directly
+
+For cases where you already have a `Response` or a raw `ReadableStream<Uint8Array>`:
+
+```javascript
+import { parseSSEStream } from '@shared/fetch';
+
+const res = await fetch('/sse-endpoint');
+const stream = parseSSEStream(res.body, controller.signal);
+
+for await (const event of stream) {
+  handleEvent(event);
+}
+```
+
+#### SSEMessage Shape
+
+Each yielded event has this shape (all fields are optional):
+
+```javascript
+{
+  event: string,     // Event type (e.g. "message", "error")
+  data: string,      // Payload (multi-line data joined by \n)
+  id: number|string, // Last event ID
+  retry: number      // Reconnection interval hint (ms)
+}
 ```
 
 ## See Also
