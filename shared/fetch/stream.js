@@ -6,6 +6,28 @@
  */
 
 // ========================================================================
+// Web Streams resolution (isomorphic — browser globals / Node 16 stream/web)
+// ========================================================================
+
+/* eslint-disable no-underscore-dangle */
+let _TransformStream = globalThis.TransformStream;
+let _TextDecoderStream = globalThis.TextDecoderStream;
+
+// Node 16 does not expose Web Streams as globals.
+// Use dynamic require to avoid webpack bundling stream/web for the client.
+if (!_TransformStream || !_TextDecoderStream) {
+  try {
+    // eslint-disable-next-line global-require, no-eval
+    const webStreams = eval("require('stream/web')");
+    if (!_TransformStream) _TransformStream = webStreams.TransformStream;
+    if (!_TextDecoderStream) _TextDecoderStream = webStreams.TextDecoderStream;
+  } catch (_e) {
+    // Browser environment — globals must already exist
+  }
+}
+/* eslint-enable no-underscore-dangle */
+
+// ========================================================================
 // Constants
 // ========================================================================
 
@@ -20,7 +42,7 @@ const DEFAULT_MAX_RETRIES = 3;
  * TransformStream that splits text chunks into individual lines.
  * Handles \n, \r\n, and \r line endings.
  */
-class TextLineStream extends TransformStream {
+class TextLineStream extends _TransformStream {
   constructor() {
     let buffer = '';
 
@@ -94,7 +116,7 @@ export async function* parseSSEStream(body, signal) {
   if (!body) return;
 
   const decoded = body
-    .pipeThrough(new TextDecoderStream())
+    .pipeThrough(new _TextDecoderStream())
     .pipeThrough(new TextLineStream());
 
   const reader = decoded.getReader();

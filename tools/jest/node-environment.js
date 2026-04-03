@@ -12,7 +12,6 @@
  * Jest 24's default jest-environment-node was written before these
  * globals existed in Node 16+, so they're missing from the vm context.
  */
-const webStreams = require('stream/web');
 
 const NodeEnvironment = require('jest-environment-node');
 
@@ -30,6 +29,7 @@ class XnapifyNodeEnvironment extends NodeEnvironment {
 
     // Forward Web Streams APIs (Node 16+ via stream/web)
     try {
+      const webStreams = require('stream/web');
       const streamGlobals = [
         'ReadableStream',
         'WritableStream',
