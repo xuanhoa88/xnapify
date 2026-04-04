@@ -18,8 +18,8 @@ import {
   SIZE_LIMITS,
   MAX_FILE_SIZE,
 } from './constants';
-import { FILE_TYPES } from './file-types';
-import { UPLOAD_PRESETS } from './upload-presets';
+import { FILE_TYPES } from './fileTypes';
+import { UPLOAD_PRESETS } from './uploadPresets';
 
 /**
  * Sanitize filename to remove dangerous characters

@@ -106,7 +106,7 @@ module.exports = {
    * The test environment that will be used for testing.
    * jsdom simulates a browser environment for React component testing.
    */
-  testEnvironment: '<rootDir>/tools/jest/node-environment.js',
+  testEnvironment: '<rootDir>/tools/jest/nodeEnvironment.js',
 
   /**
    * Test environment options for jsdom.

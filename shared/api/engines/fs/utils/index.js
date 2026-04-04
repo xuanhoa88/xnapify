@@ -16,16 +16,16 @@
 export * from './constants';
 
 // File Types and MIME Types
-export * from './file-types';
+export * from './fileTypes';
 
 // File Utilities
-export * from './file-utils';
+export * from './fileUtils';
 
 // Upload Presets
-export * from './upload-presets';
+export * from './uploadPresets';
 
 // Error Handling
 export * from './errors';
 
 // ZIP Utilities
-export * from './zip-utils';
+export * from './zipUtils';

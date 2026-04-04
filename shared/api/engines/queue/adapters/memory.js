@@ -7,9 +7,9 @@
 
 import { JobNotFoundError, JobProcessingError } from '../errors';
 import { JOB_STATUS } from '../utils/constants';
-import { createJob } from '../utils/create-job';
-import { applyEventMixin } from '../utils/event-mixin';
-import { findProcessor } from '../utils/find-processor';
+import { createJob } from '../utils/createJob';
+import { applyEventMixin } from '../utils/eventMixin';
+import { findProcessor } from '../utils/findProcessor';
 
 /**
  * Memory Queue Adapter

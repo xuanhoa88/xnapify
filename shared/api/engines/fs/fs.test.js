@@ -6,7 +6,7 @@
  */
 
 // Mock zip-utils to avoid archiver dependency issues with Jest
-jest.mock('./utils/zip-utils', () => ({
+jest.mock('./utils/zipUtils', () => ({
   createZip: jest.fn(),
   extractZip: jest.fn(),
 }));
@@ -23,7 +23,7 @@ import {
   isArchiveFile,
   getFileCategory,
   generateSecureFileName,
-} from './utils/file-utils';
+} from './utils/fileUtils';
 
 import fs, { createFactory } from '.';
 

@@ -10,7 +10,7 @@ import * as extractService from './services/extract';
 import fs from '.';
 
 // Mock zip-utils to avoid archiver dependency issues
-jest.mock('./utils/zip-utils', () => ({
+jest.mock('./utils/zipUtils', () => ({
   createZip: jest.fn(),
   extractZip: jest.fn(),
 }));

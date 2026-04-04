@@ -238,7 +238,7 @@ function testReporter() {
 
 function testLLMInterpreter() {
   console.log('\n🤖 LLM Interpreter');
-  const { interpretStep } = require('./llm-interpreter');
+  const { interpretStep } = require('./llmInterpreter');
 
   assert('interpretStep is a function', typeof interpretStep === 'function');
   assert('interpretStep is a pure LLM call (no global cache)', true);

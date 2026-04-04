@@ -263,6 +263,8 @@ npm run format:check  # Check Prettier formatting
 npm run format        # Auto-fix formatting
 npm test              # Run all tests
 npm run test -- <pat> # Run tests matching a pattern
+node .agent/skills/clean-code/scripts/bannedSyntaxCheck.js    # Enforce syntax restrictions
+node .agent/skills/clean-code/scripts/fileNamingFormatCheck.js # Enforce camelCase file naming
 ```
 
 > 🔴 **Rule:** Never mark a task complete with failing lint or tests.

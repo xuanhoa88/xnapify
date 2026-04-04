@@ -26,10 +26,10 @@ shared/api/engines/fs/
 ├── utils/
 │   ├── constants.js      # SIZE_LIMITS, ERROR_CODES, env config
 │   ├── errors.js         # FilesystemError + FilesystemWorkerError
-│   ├── file-types.js     # MIME type mappings
-│   ├── file-utils.js     # File utility functions
-│   ├── upload-presets.js  # Upload configuration presets
-│   ├── zip-utils.js      # ZIP creation/extraction utilities
+│   ├── fileTypes.js      # MIME type mappings
+│   ├── fileUtils.js      # File utility functions
+│   ├── uploadPresets.js  # Upload configuration presets
+│   ├── zipUtils.js       # ZIP creation/extraction utilities
 │   └── index.js          # Re-exports all utils
 ├── workers/
 │   └── index.js          # All FS operations (calls factory directly)

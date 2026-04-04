@@ -31,12 +31,12 @@ Notes
 
 Standalone runner
 
-- A standalone runner is available at `tools/bench/extension-ipc-prod.runner.js`. It runs outside Jest and records a small summary JSON file when `BENCH_RECORD` is set.
+- A standalone runner is available at `tools/bench/extensionIpcProd.runner.js`. It runs outside Jest and records a small summary JSON file when `BENCH_RECORD` is set.
 
 Example (standalone run with recording):
 
 ```bash
 BENCH_HANDLERS=100 BENCH_REQUESTS=5000 BENCH_CONCURRENCY=500 BENCH_PAYLOAD_BYTES=1024 \
   BENCH_IO_MS=10 BENCH_RECORD=build/bench-results/extension-ipc-prod.json \
-  node tools/bench/extension-ipc-prod.runner.js
+  node tools/bench/extensionIpcProd.runner.js
 ```

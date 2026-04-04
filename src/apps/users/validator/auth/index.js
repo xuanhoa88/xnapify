@@ -7,6 +7,6 @@
 
 export * from './login';
 export * from './registration';
-export * from './email-verification';
-export * from './password-reset';
+export * from './emailVerification';
+export * from './passwordReset';
 export * from './profile';

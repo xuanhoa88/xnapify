@@ -23,13 +23,13 @@ shared/api/engines/queue/
 │   └── file.js           # Persistent file-based adapter
 ├── utils/
 │   ├── constants.js      # JOB_STATUS enum
-│   ├── create-job.js     # Job creation factory utility
-│   ├── event-mixin.js    # Shared EventEmitter mixin
-│   └── find-processor.js # Job matching router
+│   ├── createJob.js      # Job creation factory utility
+│   ├── eventMixin.js     # Shared EventEmitter mixin
+│   └── findProcessor.js  # Job matching router
 ├── __mocks__/
 │   └── uuid.js           # Jest mock for uuid
 ├── queue.test.js         # Fast unit tests
-├── file-queue.test.js    # Persistent storage tests
+├── fileQueue.test.js     # Persistent storage tests
 └── queue.perf.test.js    # Throughput benchmark suites
 ```
 
@@ -45,9 +45,9 @@ index.js
 │       ├── uuid (external)
 │       ├── errors.js
 │       ├── utils/constants.js
-│       ├── utils/create-job.js
-│       ├── utils/event-mixin.js
-│       └── utils/find-processor.js
+│       ├── utils/createJob.js
+│       ├── utils/eventMixin.js
+│       └── utils/findProcessor.js
 └── utils/constants.js
 ```
 

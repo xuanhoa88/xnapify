@@ -8,7 +8,7 @@
  * - ??= (nullish assignment)
  * - ?. (optional chaining)
  *
- * Usage: node .agent/skills/clean-code/scripts/banned-syntax-check.js [srcDir]
+ * Usage: node .agent/skills/clean-code/scripts/bannedSyntaxCheck.js [srcDir]
  * Default: src/
  */
 

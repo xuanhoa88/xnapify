@@ -6,7 +6,7 @@
  * Finds _route.js files missing requirePermission middleware
  * or missing the middleware export entirely.
  *
- * Usage: node .agent/skills/security-auditor/scripts/rbac-coverage-check.js [appsDir]
+ * Usage: node .agent/skills/security-auditor/scripts/rbacCoverageCheck.js [appsDir]
  * Default: src/apps/
  */
 

@@ -6,7 +6,7 @@
  * Scans src/apps/ modules for illegal cross-domain imports.
  * Each module should only import from its own directory or shared/.
  *
- * Usage: node .agent/skills/code-reviewer/scripts/cross-domain-import-check.js [appsDir]
+ * Usage: node .agent/skills/code-reviewer/scripts/crossDomainImportCheck.js [appsDir]
  * Default: src/apps/
  */
 

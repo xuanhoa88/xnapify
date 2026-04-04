@@ -52,7 +52,7 @@ const {
   recompileStep,
 } = require('./compiler');
 const { executeAction, createAPIState } = require('./executor');
-const { interpretStep } = require('./llm-interpreter');
+const { interpretStep } = require('./llmInterpreter');
 const {
   parseTestFile,
   discoverTestFiles,

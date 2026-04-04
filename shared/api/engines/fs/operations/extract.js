@@ -11,7 +11,7 @@
  * @returns {Promise<Object>} Extraction result
  */
 
-import { extractZip } from '../utils/zip-utils';
+import { extractZip } from '../utils/zipUtils';
 
 export async function extract(
   manager,

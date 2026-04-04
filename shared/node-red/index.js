@@ -8,7 +8,7 @@
 
 import { createWebpackContextAdapter } from '@shared/utils/contextAdapter';
 
-import initFlowSplitter from './flow-splitter';
+import initFlowSplitter from './flowSplitter';
 import {
   createProductionSettings,
   createDevelopmentSettings,

@@ -12,7 +12,7 @@
 import path from 'path';
 
 import { SIZE_LIMITS, UPLOAD_DIR } from './constants';
-import { getMimeTypesForCategories } from './file-types';
+import { getMimeTypesForCategories } from './fileTypes';
 
 export const UPLOAD_PRESETS = Object.freeze({
   avatar: {

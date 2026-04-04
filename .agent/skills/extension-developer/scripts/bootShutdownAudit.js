@@ -6,7 +6,7 @@
  * Scans extension directories for boot() and shutdown() hooks,
  * counts registrations vs unregistrations, and flags mismatches.
  *
- * Usage: node .agent/skills/extension-developer/scripts/boot-shutdown-audit.js [extensionsDir]
+ * Usage: node .agent/skills/extension-developer/scripts/bootShutdownAudit.js [extensionsDir]
  * Default: src/extensions/
  */
 
