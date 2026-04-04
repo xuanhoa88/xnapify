@@ -122,16 +122,16 @@ describe('Queue Engine', () => {
     });
 
     describe('getStats()', () => {
-      it('should return empty stats when no channels', () => {
-        const stats = queue.getStats();
+      it('should return empty stats when no channels', async () => {
+        const stats = await queue.getStats();
         expect(stats).toEqual({});
       });
 
-      it('should return stats for all channels', () => {
+      it('should return stats for all channels', async () => {
         queue('channel-1');
         queue('channel-2');
 
-        const stats = queue.getStats();
+        const stats = await queue.getStats();
 
         expect(stats).toHaveProperty('channel-1');
         expect(stats).toHaveProperty('channel-2');
@@ -286,11 +286,11 @@ describe('Queue Engine', () => {
     });
 
     describe('getStats()', () => {
-      it('should return channel stats', () => {
+      it('should return channel stats', async () => {
         channel.on('event-1', jest.fn());
         channel.on('event-2', jest.fn());
 
-        const stats = channel.getStats();
+        const stats = await channel.getStats();
 
         expect(stats.name).toBe('test-channel');
         expect(stats.handlers).toContain('event-1');
@@ -302,11 +302,11 @@ describe('Queue Engine', () => {
     });
 
     describe('emit()', () => {
-      it('should emit event to queue', () => {
+      it('should emit event to queue', async () => {
         const handler = jest.fn();
         channel.on('test-event', handler);
 
-        const job = channel.emit('test-event', { message: 'Hello' });
+        const job = await channel.emit('test-event', { message: 'Hello' });
 
         expect(job).toBeDefined();
         expect(job).toHaveProperty('id');
@@ -314,18 +314,18 @@ describe('Queue Engine', () => {
         expect(job.data).toEqual({ message: 'Hello' });
       });
 
-      it('should return null for invalid event names', () => {
-        expect(channel.emit('')).toBeNull();
-        expect(channel.emit(null)).toBeNull();
+      it('should return null for invalid event names', async () => {
+        expect(await channel.emit('')).toBeNull();
+        expect(await channel.emit(null)).toBeNull();
       });
     });
 
     describe('emitBulk()', () => {
-      it('should emit multiple events', () => {
+      it('should emit multiple events', async () => {
         const handler = jest.fn();
         channel.on('test-event', handler);
 
-        const jobs = channel.emitBulk([
+        const jobs = await channel.emitBulk([
           { event: 'test-event', data: { id: 1 } },
           { event: 'test-event', data: { id: 2 } },
           { event: 'test-event', data: { id: 3 } },
@@ -334,9 +334,9 @@ describe('Queue Engine', () => {
         expect(jobs).toHaveLength(3);
       });
 
-      it('should return empty array for invalid bulk input', () => {
-        expect(channel.emitBulk(null)).toEqual([]);
-        expect(channel.emitBulk('not-an-array')).toEqual([]);
+      it('should return empty array for invalid bulk input', async () => {
+        expect(await channel.emitBulk(null)).toEqual([]);
+        expect(await channel.emitBulk('not-an-array')).toEqual([]);
       });
     });
 
@@ -377,8 +377,8 @@ describe('MemoryQueue Adapter', () => {
   // ====== Job Creation ======
 
   describe('add()', () => {
-    it('should create a job with correct properties', () => {
-      const job = queue.add('test-job', { key: 'value' });
+    it('should create a job with correct properties', async () => {
+      const job = await queue.add('test-job', { key: 'value' });
 
       expect(job.id).toBeDefined();
       expect(job.name).toBe('test-job');
@@ -393,15 +393,15 @@ describe('MemoryQueue Adapter', () => {
       expect(job.createdAt).toBeDefined();
     });
 
-    it('should create delayed job when delay > 0', () => {
-      const job = queue.add('delayed', {}, { delay: 5000 });
+    it('should create delayed job when delay > 0', async () => {
+      const job = await queue.add('delayed', {}, { delay: 5000 });
 
       expect(job.status).toBe('delayed');
       expect(job.scheduledFor).toBeGreaterThan(Date.now() - 100);
     });
 
-    it('should merge job-level options with defaults', () => {
-      const job = queue.add('custom', {}, { attempts: 5, priority: 10 });
+    it('should merge job-level options with defaults', async () => {
+      const job = await queue.add('custom', {}, { attempts: 5, priority: 10 });
 
       expect(job.maxAttempts).toBe(5);
       expect(job.priority).toBe(10);
@@ -411,8 +411,8 @@ describe('MemoryQueue Adapter', () => {
   // ====== Bulk ======
 
   describe('addBulk()', () => {
-    it('should add multiple jobs', () => {
-      const jobs = queue.addBulk([
+    it('should add multiple jobs', async () => {
+      const jobs = await queue.addBulk([
         { name: 'job-1', data: { id: 1 } },
         { name: 'job-2', data: { id: 2 } },
         { name: 'job-3', data: { id: 3 } },
@@ -431,9 +431,9 @@ describe('MemoryQueue Adapter', () => {
       const order = [];
 
       // Add jobs with different priorities (no processor yet)
-      queue.add('low', {}, { priority: 1 });
-      queue.add('high', {}, { priority: 10 });
-      queue.add('medium', {}, { priority: 5 });
+      await queue.add('low', {}, { priority: 1 });
+      await queue.add('high', {}, { priority: 10 });
+      await queue.add('medium', {}, { priority: 5 });
 
       // Register processor — will pick up pending jobs in priority order
       queue.process(async job => {
@@ -441,7 +441,7 @@ describe('MemoryQueue Adapter', () => {
       });
 
       // Allow async processing
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       expect(order[0]).toBe('high');
       expect(order[1]).toBe('medium');
@@ -451,15 +451,15 @@ describe('MemoryQueue Adapter', () => {
     it('should process same-priority jobs in FIFO order', async () => {
       const order = [];
 
-      queue.add('first', {}, { priority: 0 });
-      queue.add('second', {}, { priority: 0 });
-      queue.add('third', {}, { priority: 0 });
+      await queue.add('first', {}, { priority: 0 });
+      await queue.add('second', {}, { priority: 0 });
+      await queue.add('third', {}, { priority: 0 });
 
       queue.process(async job => {
         order.push(job.name);
       });
 
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       expect(order).toEqual(['first', 'second', 'third']);
     });
@@ -472,13 +472,13 @@ describe('MemoryQueue Adapter', () => {
       const completedHandler = jest.fn();
       queue.on('completed', completedHandler);
 
-      queue.add('task', { value: 42 }, { removeOnComplete: false });
+      await queue.add('task', { value: 42 }, { removeOnComplete: false });
 
       queue.process(async job => {
         return { processed: job.data.value };
       });
 
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       expect(completedHandler).toHaveBeenCalled();
       const completedJob = completedHandler.mock.calls[0][0];
@@ -489,27 +489,27 @@ describe('MemoryQueue Adapter', () => {
     });
 
     it('should remove completed jobs when removeOnComplete is true', async () => {
-      queue.add('temp', {}, { removeOnComplete: true });
+      await queue.add('temp', {}, { removeOnComplete: true });
 
       queue.process(async () => 'done');
 
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise(resolve => setTimeout(resolve, 100));
 
-      expect(queue.getJobs()).toHaveLength(0);
+      expect(await queue.getJobs()).toHaveLength(0);
     });
 
     it('should support progress reporting via updateProgress', async () => {
       const progressHandler = jest.fn();
       queue.on('progress', progressHandler);
 
-      queue.add('progress-job', {});
+      await queue.add('progress-job', {});
 
       queue.process(async job => {
         job.updateProgress(50);
         job.updateProgress(100);
       });
 
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       expect(progressHandler).toHaveBeenCalledTimes(2);
     });
@@ -528,9 +528,9 @@ describe('MemoryQueue Adapter', () => {
         results.push(`wildcard:${job.name}`);
       });
 
-      queue.add('specific', {});
+      await queue.add('specific', {});
 
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       expect(results).toEqual(['named']);
     });
@@ -542,9 +542,9 @@ describe('MemoryQueue Adapter', () => {
         results.push(`wildcard:${job.name}`);
       });
 
-      queue.add('other', {});
+      await queue.add('other', {});
 
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       expect(results).toEqual(['wildcard:other']);
     });
@@ -558,7 +558,7 @@ describe('MemoryQueue Adapter', () => {
       const failedHandler = jest.fn();
       queue.on('failed', failedHandler);
 
-      queue.add('fail-job', {}, { attempts: 3, backoff: 10 });
+      await queue.add('fail-job', {}, { attempts: 3, backoff: 10 });
 
       queue.process(async () => {
         attemptCount++;
@@ -566,7 +566,7 @@ describe('MemoryQueue Adapter', () => {
       });
 
       // Wait long enough for retries (10ms + 20ms + processing)
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise(resolve => setTimeout(resolve, 300));
 
       expect(attemptCount).toBe(3);
       expect(failedHandler).toHaveBeenCalledTimes(1);
@@ -607,10 +607,10 @@ describe('MemoryQueue Adapter', () => {
 
       // Add 5 jobs
       for (let i = 0; i < 5; i++) {
-        concurrentQueue.add(`job-${i}`, {});
+        await concurrentQueue.add(`job-${i}`, {});
       }
 
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       expect(maxConcurrent).toBeLessThanOrEqual(2);
 
@@ -628,12 +628,12 @@ describe('MemoryQueue Adapter', () => {
         results.push(job.name);
       });
 
-      queue.add('before-pause', {});
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await queue.add('before-pause', {});
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       queue.pause();
-      queue.add('during-pause', {});
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await queue.add('during-pause', {});
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       // "during-pause" should NOT have been processed
       expect(results).toEqual(['before-pause']);
@@ -648,13 +648,13 @@ describe('MemoryQueue Adapter', () => {
       });
 
       queue.pause();
-      queue.add('queued', {});
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await queue.add('queued', {});
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       expect(results).toEqual([]);
 
       queue.resume();
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       expect(results).toEqual(['queued']);
       expect(queue.isPausedState()).toBe(false);
@@ -664,28 +664,30 @@ describe('MemoryQueue Adapter', () => {
   // ====== Job Lookup ======
 
   describe('getJob()', () => {
-    it('should return job by ID', () => {
-      const added = queue.add('lookup', { key: 'val' });
-      const found = queue.getJob(added.id);
+    it('should return job by ID', async () => {
+      const added = await queue.add('lookup', { key: 'val' });
+      const found = await queue.getJob(added.id);
 
       expect(found).toBe(added);
     });
 
-    it('should throw JobNotFoundError for unknown ID', () => {
+    it('should throw JobNotFoundError for unknown ID', async () => {
       const { JobNotFoundError } = require('./errors');
 
-      expect(() => queue.getJob('nonexistent')).toThrow(JobNotFoundError);
+      await expect(queue.getJob('nonexistent')).rejects.toThrow(
+        JobNotFoundError,
+      );
     });
   });
 
   describe('getJobsByStatus()', () => {
-    it('should filter jobs by status', () => {
-      queue.add('a', {});
-      queue.add('b', {});
-      queue.add('c', {}, { delay: 5000 });
+    it('should filter jobs by status', async () => {
+      await queue.add('a', {});
+      await queue.add('b', {});
+      await queue.add('c', {}, { delay: 5000 });
 
-      const pending = queue.getJobsByStatus('pending');
-      const delayed = queue.getJobsByStatus('delayed');
+      const pending = await queue.getJobsByStatus('pending');
+      const delayed = await queue.getJobsByStatus('delayed');
 
       expect(pending).toHaveLength(2);
       expect(delayed).toHaveLength(1);
@@ -693,25 +695,25 @@ describe('MemoryQueue Adapter', () => {
   });
 
   describe('getJobs()', () => {
-    it('should return all jobs', () => {
-      queue.add('a', {});
-      queue.add('b', {});
+    it('should return all jobs', async () => {
+      await queue.add('a', {});
+      await queue.add('b', {});
 
-      expect(queue.getJobs()).toHaveLength(2);
+      expect(await queue.getJobs()).toHaveLength(2);
     });
   });
 
   // ====== Remove ======
 
   describe('removeJob()', () => {
-    it('should remove job by ID', () => {
-      const job = queue.add('removable', {});
-      expect(queue.removeJob(job.id)).toBe(true);
-      expect(queue.getJobs()).toHaveLength(0);
+    it('should remove job by ID', async () => {
+      const job = await queue.add('removable', {});
+      expect(await queue.removeJob(job.id)).toBe(true);
+      expect(await queue.getJobs()).toHaveLength(0);
     });
 
-    it('should return false for non-existing ID', () => {
-      expect(queue.removeJob('nonexistent')).toBe(false);
+    it('should return false for non-existing ID', async () => {
+      expect(await queue.removeJob('nonexistent')).toBe(false);
     });
   });
 
@@ -719,49 +721,47 @@ describe('MemoryQueue Adapter', () => {
 
   describe('retryJob()', () => {
     it('should retry a failed job', async () => {
-      require('./errors');
-
-      queue.add('retry-me', {}, { attempts: 1, backoff: 1 });
+      await queue.add('retry-me', {}, { attempts: 1, backoff: 1 });
 
       queue.process(async () => {
         throw new Error('fail');
       });
 
       // Wait for job to fail
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise(resolve => setTimeout(resolve, 100));
 
-      const failedJobs = queue.getJobsByStatus('failed');
+      const failedJobs = await queue.getJobsByStatus('failed');
       expect(failedJobs).toHaveLength(1);
 
       // Pause queue so retried job stays in pending state
       queue.pause();
 
-      const retriedJob = queue.retryJob(failedJobs[0].id);
+      const retriedJob = await queue.retryJob(failedJobs[0].id);
       expect(retriedJob.status).toBe('pending');
       expect(retriedJob.attempts).toBe(0);
       expect(retriedJob.error).toBeNull();
     });
 
-    it('should throw JobProcessingError for non-failed job', () => {
+    it('should throw JobProcessingError for non-failed job', async () => {
       const { JobProcessingError } = require('./errors');
-      const job = queue.add('not-failed', {});
+      const job = await queue.add('not-failed', {});
 
-      expect(() => queue.retryJob(job.id)).toThrow(JobProcessingError);
+      await expect(queue.retryJob(job.id)).rejects.toThrow(JobProcessingError);
     });
   });
 
   // ====== Empty ======
 
   describe('empty()', () => {
-    it('should remove all pending jobs', () => {
-      queue.add('a', {});
-      queue.add('b', {});
-      queue.add('c', {}, { delay: 5000 });
+    it('should remove all pending jobs', async () => {
+      await queue.add('a', {});
+      await queue.add('b', {});
+      await queue.add('c', {}, { delay: 5000 });
 
-      queue.empty();
+      await queue.empty();
 
-      const pending = queue.getJobsByStatus('pending');
-      const delayed = queue.getJobsByStatus('delayed');
+      const pending = await queue.getJobsByStatus('pending');
+      const delayed = await queue.getJobsByStatus('delayed');
 
       expect(pending).toHaveLength(0);
       // Delayed jobs should NOT be removed by empty()
@@ -773,56 +773,56 @@ describe('MemoryQueue Adapter', () => {
 
   describe('clean()', () => {
     it('should clean only completed jobs when status is completed', async () => {
-      queue.add('success', {}, { removeOnComplete: false, attempts: 1 });
-      queue.add('failure', {}, { removeOnFail: false, attempts: 1 });
+      await queue.add('success', {}, { removeOnComplete: false, attempts: 1 });
+      await queue.add('failure', {}, { removeOnFail: false, attempts: 1 });
 
       queue.process(async job => {
         if (job.name === 'failure') throw new Error('fail');
       });
 
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       // Backdate timestamps so grace period passes
-      for (const job of queue.getJobs()) {
+      for (const job of await queue.getJobs()) {
         if (job.completedAt) job.completedAt = Date.now() - 10000;
         if (job.failedAt) job.failedAt = Date.now() - 10000;
       }
 
-      const cleaned = queue.clean('completed', 0);
+      const cleaned = await queue.clean('completed', 0);
 
       // Should only clean completed, NOT failed
       expect(cleaned).toBe(1);
-      const remaining = queue.getJobs();
+      const remaining = await queue.getJobs();
       expect(remaining).toHaveLength(1);
       expect(remaining[0].status).toBe('failed');
     });
 
     it('should clean all completed and failed with status=all', async () => {
-      queue.add('s', {}, { removeOnComplete: false, attempts: 1 });
-      queue.add('f', {}, { removeOnFail: false, attempts: 1 });
+      await queue.add('s', {}, { removeOnComplete: false, attempts: 1 });
+      await queue.add('f', {}, { removeOnFail: false, attempts: 1 });
 
       queue.process(async job => {
         if (job.name === 'f') throw new Error('fail');
       });
 
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise(resolve => setTimeout(resolve, 100));
 
-      for (const job of queue.getJobs()) {
+      for (const job of await queue.getJobs()) {
         if (job.completedAt) job.completedAt = Date.now() - 10000;
         if (job.failedAt) job.failedAt = Date.now() - 10000;
       }
 
-      const cleaned = queue.clean('all', 0);
+      const cleaned = await queue.clean('all', 0);
       expect(cleaned).toBe(2);
     });
 
-    it('should respect grace period', () => {
-      const job = queue.add('old', {}, { removeOnComplete: false });
+    it('should respect grace period', async () => {
+      const job = await queue.add('old', {}, { removeOnComplete: false });
       job.status = 'completed';
       job.completedAt = Date.now() - 1000;
 
       // Grace = 5000ms — job is only 1000ms old, should NOT be cleaned
-      const cleaned = queue.clean('completed', 5000);
+      const cleaned = await queue.clean('completed', 5000);
       expect(cleaned).toBe(0);
     });
   });
@@ -832,8 +832,8 @@ describe('MemoryQueue Adapter', () => {
   describe('close()', () => {
     it('should clear all timers on close', async () => {
       // Add delayed jobs that create timers
-      queue.add('delayed-1', {}, { delay: 60000 });
-      queue.add('delayed-2', {}, { delay: 60000 });
+      await queue.add('delayed-1', {}, { delay: 60000 });
+      await queue.add('delayed-2', {}, { delay: 60000 });
 
       expect(queue.timers.size).toBe(2);
 
@@ -849,12 +849,12 @@ describe('MemoryQueue Adapter', () => {
   // ====== Stats ======
 
   describe('getStats()', () => {
-    it('should return accurate single-pass counts', () => {
-      queue.add('a', {});
-      queue.add('b', {});
-      queue.add('c', {}, { delay: 5000 });
+    it('should return accurate single-pass counts', async () => {
+      await queue.add('a', {});
+      await queue.add('b', {});
+      await queue.add('c', {}, { delay: 5000 });
 
-      const stats = queue.getStats();
+      const stats = await queue.getStats();
 
       expect(stats.name).toBe('test-queue');
       expect(stats.concurrency).toBe(1);

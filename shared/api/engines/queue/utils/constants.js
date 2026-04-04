@@ -14,5 +14,4 @@ export const JOB_STATUS = Object.freeze({
   COMPLETED: 'completed',
   FAILED: 'failed',
   DELAYED: 'delayed',
-  PAUSED: 'paused',
 });

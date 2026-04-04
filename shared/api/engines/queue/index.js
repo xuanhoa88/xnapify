@@ -105,6 +105,10 @@ export {
 // Channel class
 export { Channel } from './channel';
 
+// Adapter classes
+export { default as MemoryQueue } from './adapters/memory';
+export { default as FileQueue } from './adapters/file';
+
 // Export factory for creating instances
 export { createFactory };
 

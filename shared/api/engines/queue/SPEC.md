@@ -12,31 +12,42 @@ Provide a channel-based job queue for background processing where producers `emi
 
 ## 1. Architecture
 
-```
+```text
 shared/api/engines/queue/
 ├── index.js              # Default singleton, re-exports JOB_STATUS
 ├── factory.js            # buildFactory() + createFactory()
 ├── channel.js            # Channel class (pub/sub wrapper)
 ├── errors.js             # QueueError + subclasses
 ├── adapters/
-│   └── memory.js         # In-memory adapter (default)
+│   ├── memory.js         # In-memory adapter (default)
+│   └── file.js           # Persistent file-based adapter
 ├── utils/
-│   └── constants.js      # JOB_STATUS enum
+│   ├── constants.js      # JOB_STATUS enum
+│   ├── create-job.js     # Job creation factory utility
+│   ├── event-mixin.js    # Shared EventEmitter mixin
+│   └── find-processor.js # Job matching router
 ├── __mocks__/
 │   └── uuid.js           # Jest mock for uuid
-└── queue.test.js         # Tests
+├── queue.test.js         # Fast unit tests
+├── file-queue.test.js    # Persistent storage tests
+└── queue.perf.test.js    # Throughput benchmark suites
 ```
 
 ### Dependency Graph
 
-```
+```text
 index.js
 ├── factory.js
 │   ├── channel.js
-│   └── adapters/memory.js
+│   ├── adapters/memory.js
+│   └── adapters/file.js
+│       ├── (both adapters share)
 │       ├── uuid (external)
 │       ├── errors.js
-│       └── utils/constants.js
+│       ├── utils/constants.js
+│       ├── utils/create-job.js
+│       ├── utils/event-mixin.js
+│       └── utils/find-processor.js
 └── utils/constants.js
 ```
 
@@ -60,7 +71,7 @@ All error classes include `statusCode`, `code`, `timestamp`, and `Error.captureS
 **File:** `utils/constants.js`
 
 ```javascript
-{ PENDING, ACTIVE, COMPLETED, FAILED, DELAYED, PAUSED }
+{ PENDING, ACTIVE, COMPLETED, FAILED, DELAYED }
 ```
 
 Frozen enum. Exported by `index.js` as a named export.

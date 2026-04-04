@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import FileQueue from './adapters/file';
 import MemoryQueue from './adapters/memory';
 import { Channel } from './channel';
 
@@ -75,7 +76,12 @@ function buildFactory(channelsMap, adaptersMap, baseOptions) {
    * @returns {boolean} True if registered, false if already exists
    */
   factory.registerAdapter = function (type, AdapterClass) {
-    if (type && typeof AdapterClass === 'function' && !adaptersMap.has(type)) {
+    if (
+      typeof type === 'string' &&
+      type.trim().length > 0 &&
+      typeof AdapterClass === 'function' &&
+      !adaptersMap.has(type)
+    ) {
       adaptersMap.set(type, AdapterClass);
       console.info(`✅ Registered queue adapter: ${type}`);
       return true;
@@ -112,13 +118,13 @@ function buildFactory(channelsMap, adaptersMap, baseOptions) {
 
   /**
    * Get stats for all channels
-   * @returns {Object} Stats object keyed by channel name
+   * @returns {Promise<Object>} Stats object keyed by channel name
    */
-  factory.getStats = function () {
+  factory.getStats = async function () {
     const stats = {};
     for (const [name, channel] of channelsMap) {
       try {
-        stats[name] = channel.getStats();
+        stats[name] = await channel.getStats();
       } catch (error) {
         stats[name] = { error: error.message };
       }
@@ -153,6 +159,12 @@ function buildFactory(channelsMap, adaptersMap, baseOptions) {
    * @returns {Promise<void>}
    */
   factory.cleanup = async function () {
+    // Remove signal handlers to prevent listener leaks
+    if (factory.signalHandler) {
+      process.removeListener('SIGTERM', factory.signalHandler);
+      process.removeListener('SIGINT', factory.signalHandler);
+    }
+
     console.info('🧹 Closing all queue channels...');
     for (const [name, channel] of channelsMap) {
       try {
@@ -177,14 +189,20 @@ function buildFactory(channelsMap, adaptersMap, baseOptions) {
  * @returns {Function} New factory function with its own state
  */
 export function createFactory(options = {}) {
-  const factory = buildFactory(new Map(), new Map([['memory', MemoryQueue]]), {
+  const adaptersMap = new Map();
+  adaptersMap.set('memory', MemoryQueue);
+  adaptersMap.set('file', FileQueue);
+
+  const factory = buildFactory(new Map(), adaptersMap, {
     ...DEFAULT_OPTIONS,
     ...options,
   });
 
-  // Register cleanup with global coordinator
-  process.once('SIGTERM', () => factory.cleanup());
-  process.once('SIGINT', () => factory.cleanup());
+  // Register cleanup with global coordinator (named ref for removability)
+  const onSignal = () => factory.cleanup();
+  factory.signalHandler = onSignal;
+  process.once('SIGTERM', onSignal);
+  process.once('SIGINT', onSignal);
 
   return factory;
 }

@@ -83,7 +83,7 @@ notifications.on('email', async (job) => {
 
 ```javascript
 import { JOB_STATUS } from '@shared/api/engines/queue';
-// { PENDING, ACTIVE, COMPLETED, FAILED, DELAYED, PAUSED }
+// { PENDING, ACTIVE, COMPLETED, FAILED, DELAYED }
 ```
 
 ### Error Classes

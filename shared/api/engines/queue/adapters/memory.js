@@ -5,10 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { v4 as uuidv4 } from 'uuid';
-
 import { JobNotFoundError, JobProcessingError } from '../errors';
 import { JOB_STATUS } from '../utils/constants';
+import { createJob } from '../utils/create-job';
+import { applyEventMixin } from '../utils/event-mixin';
+import { findProcessor } from '../utils/find-processor';
 
 /**
  * Memory Queue Adapter
@@ -54,21 +55,15 @@ class MemoryQueue {
     this.isPaused = false;
     this.activeJobs = 0;
 
-    // Event handlers
-    this.eventHandlers = {
-      completed: [],
-      failed: [],
-      progress: [],
-      active: [],
-      stalled: [],
-    };
-
     // Stats
     this.stats = {
       processed: 0,
       failed: 0,
       completed: 0,
     };
+
+    // Apply shared event mixin (on/off/emit)
+    applyEventMixin(this);
   }
 
   /**
@@ -76,33 +71,11 @@ class MemoryQueue {
    * @param {string} name - Job name/type
    * @param {Object} data - Job payload data
    * @param {Object} options - Job-specific options
-   * @returns {Object} Job object
+   * @returns {Promise<Object>} Job object
    */
-  add(name, data, options = {}) {
+  async add(name, data, options = {}) {
     const jobOptions = { ...this.defaultJobOptions, ...options };
-
-    const job = {
-      id: uuidv4(),
-      name,
-      data,
-      queue: this.name,
-      status: jobOptions.delay > 0 ? JOB_STATUS.DELAYED : JOB_STATUS.PENDING,
-      priority: jobOptions.priority,
-      attempts: 0,
-      maxAttempts: jobOptions.attempts,
-      backoff: jobOptions.backoff,
-      delay: jobOptions.delay,
-      removeOnComplete: jobOptions.removeOnComplete,
-      removeOnFail: jobOptions.removeOnFail,
-      progress: 0,
-      result: null,
-      error: null,
-      createdAt: Date.now(),
-      processedAt: null,
-      completedAt: null,
-      failedAt: null,
-      scheduledFor: jobOptions.delay > 0 ? Date.now() + jobOptions.delay : null,
-    };
+    const job = createJob(name, data, this.name, jobOptions);
 
     this.jobs.set(job.id, job);
 
@@ -136,10 +109,42 @@ class MemoryQueue {
   /**
    * Add multiple jobs to the queue
    * @param {Array} jobs - Array of {name, data, options} objects
-   * @returns {Array} Array of job objects
+   * @returns {Promise<Array>} Array of job objects
    */
-  addBulk(jobs) {
-    return jobs.map(({ name, data, options }) => this.add(name, data, options));
+  async addBulk(jobs) {
+    const results = [];
+    for (const { name, data, options } of jobs) {
+      const jobOptions = { ...this.defaultJobOptions, ...options };
+      const job = createJob(name, data, this.name, jobOptions);
+      this.jobs.set(job.id, job);
+
+      // Schedule delayed job timer (but don't trigger processNext yet)
+      if (job.status === JOB_STATUS.DELAYED) {
+        const timerId = setTimeout(() => {
+          this.timers.delete(timerId);
+          const delayedJob = this.jobs.get(job.id);
+          if (delayedJob && delayedJob.status === JOB_STATUS.DELAYED) {
+            delayedJob.status = JOB_STATUS.PENDING;
+            delayedJob.scheduledFor = null;
+            this.processNext().catch(err => {
+              console.error(
+                `Queue '${this.name}': processNext error:`,
+                err.message,
+              );
+            });
+          }
+        }, jobOptions.delay);
+        this.timers.add(timerId);
+      }
+
+      results.push(job);
+    }
+
+    // B09: Single processNext after all jobs are added
+    this.processNext().catch(err => {
+      console.error(`Queue '${this.name}': processNext error:`, err.message);
+    });
+    return results;
   }
 
   /**
@@ -186,7 +191,7 @@ class MemoryQueue {
     }
 
     const job = pendingJobs[0];
-    const processor = this.findProcessor(job.name);
+    const processor = findProcessor(job.name, this.processors);
 
     if (!processor) {
       return;
@@ -275,34 +280,24 @@ class MemoryQueue {
       }
     } finally {
       this.activeJobs--;
-      // Continue processing
-      this.processNext().catch(err => {
-        console.error(`Queue '${this.name}': processNext error:`, err.message);
+      // B01 fix: break recursion with setImmediate to avoid stack overflow
+      setImmediate(() => {
+        this.processNext().catch(err => {
+          console.error(
+            `Queue '${this.name}': processNext error:`,
+            err.message,
+          );
+        });
       });
     }
   }
 
   /**
-   * Find a processor for a job
-   * @param {string} jobName - Job name
-   * @returns {Object|null} Processor or null
-   * @private
-   */
-  findProcessor(jobName) {
-    // Find specific processor first, then fallback to wildcard
-    return (
-      this.processors.find(p => p.name === jobName) ||
-      this.processors.find(p => p.name === '*') ||
-      null
-    );
-  }
-
-  /**
    * Get a job by ID
    * @param {string} jobId - Job ID
-   * @returns {Object} Job object
+   * @returns {Promise<Object>} Job object
    */
-  getJob(jobId) {
+  async getJob(jobId) {
     const job = this.jobs.get(jobId);
     if (!job) {
       throw new JobNotFoundError(jobId);
@@ -313,36 +308,36 @@ class MemoryQueue {
   /**
    * Get jobs by status
    * @param {string} status - Job status
-   * @returns {Array} Array of jobs
+   * @returns {Promise<Array>} Array of jobs
    */
-  getJobsByStatus(status) {
+  async getJobsByStatus(status) {
     return Array.from(this.jobs.values()).filter(job => job.status === status);
   }
 
   /**
    * Get all jobs
-   * @returns {Array} Array of all jobs
+   * @returns {Promise<Array>} Array of all jobs
    */
-  getJobs() {
+  async getJobs() {
     return Array.from(this.jobs.values());
   }
 
   /**
    * Remove a job by ID
    * @param {string} jobId - Job ID
-   * @returns {boolean} True if removed
+   * @returns {Promise<boolean>} True if removed
    */
-  removeJob(jobId) {
+  async removeJob(jobId) {
     return this.jobs.delete(jobId);
   }
 
   /**
    * Retry a failed job
    * @param {string} jobId - Job ID
-   * @returns {Object} Updated job
+   * @returns {Promise<Object>} Updated job
    */
-  retryJob(jobId) {
-    const job = this.getJob(jobId);
+  async retryJob(jobId) {
+    const job = await this.getJob(jobId);
     if (job.status !== JOB_STATUS.FAILED) {
       throw new JobProcessingError(jobId, 'Only failed jobs can be retried');
     }
@@ -385,12 +380,15 @@ class MemoryQueue {
 
   /**
    * Empty the queue (remove all pending jobs)
+   * @returns {Promise<void>}
    */
-  empty() {
-    for (const [id, job] of this.jobs.entries()) {
-      if (job.status === JOB_STATUS.PENDING) {
-        this.jobs.delete(id);
-      }
+  async empty() {
+    const pendingIds = [];
+    for (const [id, job] of this.jobs) {
+      if (job.status === JOB_STATUS.PENDING) pendingIds.push(id);
+    }
+    for (const id of pendingIds) {
+      this.jobs.delete(id);
     }
   }
 
@@ -398,9 +396,9 @@ class MemoryQueue {
    * Clean completed/failed jobs
    * @param {string} status - Status to clean ('completed', 'failed', or 'all')
    * @param {number} grace - Only clean jobs older than grace period (ms)
-   * @returns {number} Number of jobs cleaned
+   * @returns {Promise<number>} Number of jobs cleaned
    */
-  clean(status = 'completed', grace = 0) {
+  async clean(status = 'completed', grace = 0) {
     const cutoff = Date.now() - grace;
     let cleaned = 0;
 
@@ -425,6 +423,7 @@ class MemoryQueue {
 
   /**
    * Close the queue
+   * @returns {Promise<void>}
    */
   async close() {
     this.isPaused = true;
@@ -438,9 +437,9 @@ class MemoryQueue {
 
   /**
    * Get queue statistics
-   * @returns {Object} Statistics
+   * @returns {Promise<Object>} Statistics
    */
-  getStats() {
+  async getStats() {
     const counts = {
       pending: 0,
       active: 0,
@@ -462,49 +461,6 @@ class MemoryQueue {
       counts,
       stats: { ...this.stats },
     };
-  }
-
-  /**
-   * Register event handler
-   * @param {string} event - Event name
-   * @param {Function} handler - Event handler
-   */
-  on(event, handler) {
-    if (this.eventHandlers[event]) {
-      this.eventHandlers[event].push(handler);
-    }
-  }
-
-  /**
-   * Remove event handler
-   * @param {string} event - Event name
-   * @param {Function} handler - Event handler
-   */
-  off(event, handler) {
-    if (this.eventHandlers[event]) {
-      const index = this.eventHandlers[event].indexOf(handler);
-      if (index > -1) {
-        this.eventHandlers[event].splice(index, 1);
-      }
-    }
-  }
-
-  /**
-   * Emit event
-   * @param {string} event - Event name
-   * @param {...*} args - Event arguments
-   * @private
-   */
-  emit(event, ...args) {
-    if (this.eventHandlers[event]) {
-      for (const handler of this.eventHandlers[event]) {
-        try {
-          handler(...args);
-        } catch (error) {
-          console.error(`Error in queue ${event} event handler:`, error);
-        }
-      }
-    }
   }
 }
 

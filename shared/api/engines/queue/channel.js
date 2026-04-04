@@ -76,12 +76,16 @@ export class Channel {
 
   /**
    * Emit an event (adds job to queue)
+   * @param {string} eventName - Event name
+   * @param {Object} data - Event data
+   * @param {Object} options - Job options
+   * @returns {Promise<Object|null>} Job or null on failure
    */
-  emit(eventName, data = {}, options = {}) {
-    if (!eventName || !this.queue) return null;
+  async emit(eventName, data = {}, options = {}) {
+    if (!eventName || typeof eventName !== 'string' || !this.queue) return null;
 
     try {
-      return this.queue.add(eventName, data, options);
+      return await this.queue.add(eventName, data, options);
     } catch (error) {
       console.error(`Channel '${this.name}': emit failed:`, error.message);
       return null;
@@ -90,13 +94,16 @@ export class Channel {
 
   /**
    * Emit multiple events
+   * @param {Array} events - Array of {event, data, options}
+   * @returns {Promise<Array>} Array of jobs (nulls filtered)
    */
-  emitBulk(events = []) {
+  async emitBulk(events = []) {
     if (!Array.isArray(events)) return [];
 
-    return events
-      .map(({ event, data, options }) => this.emit(event, data, options))
-      .filter(Boolean);
+    const jobs = await Promise.all(
+      events.map(({ event, data, options }) => this.emit(event, data, options)),
+    );
+    return jobs.filter(Boolean);
   }
 
   /**
@@ -115,7 +122,10 @@ export class Channel {
       this.queue.process(async job => {
         const handler = this.handlers.get(job.name);
         if (!handler) {
-          return { skipped: true };
+          // Throw so the adapter retries instead of silently consuming the job
+          throw new Error(
+            `No handler registered for '${job.name}' on channel '${this.name}'`,
+          );
         }
 
         try {
@@ -156,19 +166,20 @@ export class Channel {
 
   /**
    * Get channel stats
-   * @returns {Object} Channel statistics
+   * @returns {Promise<Object>} Channel statistics
    */
-  getStats() {
+  async getStats() {
     try {
+      const queueStats =
+        this.queue && typeof this.queue.getStats === 'function'
+          ? await this.queue.getStats()
+          : null;
       return {
         name: this.name,
         handlers: Array.from(this.handlers.keys()),
         handlerCount: this.handlers.size,
         isProcessing: this.isProcessing,
-        queue:
-          this.queue && typeof this.queue.getStats === 'function'
-            ? this.queue.getStats()
-            : null,
+        queue: queueStats,
       };
     } catch (error) {
       return {
