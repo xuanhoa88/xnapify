@@ -9,12 +9,11 @@ const fs = require('fs');
 const path = require('path');
 
 const pick = require('lodash/pick');
-const snakeCase = require('lodash/snakeCase');
 const semver = require('semver');
 const webpack = require('webpack');
 
 const config = require('../config');
-const { computeChecksum } = require('../utils/checksum');
+const { computeChecksum, generateExtensionId } = require('../utils/extension');
 const { copyDir, pathExists } = require('../utils/fs');
 const { logInfo, logError, formatDuration } = require('../utils/logger');
 const {
@@ -89,7 +88,7 @@ function discoverExtensions() {
         return {
           manifest,
           name: manifest.name,
-          dirName: snakeCase(manifest.name),
+          dirName: generateExtensionId(manifest.name),
           version: semver.clean(manifest.version) || '0.0.0',
           path: extensionPath,
         };
@@ -111,8 +110,8 @@ function discoverExtensions() {
  * Reads `build-manifest.json` (written by BuildManifestPlugin) to resolve
  * content-hashed filenames for entry points.
  *
- * Note: `id` is intentionally omitted — `readManifest()` always auto-generates
- * it at runtime from `snakeCase(name)`. Writing it here would be redundant.
+ * The `id` field is generated at build time via `generateExtensionId(name)`
+ * and written into the output manifest. Runtime managers read it directly.
  */
 async function generateManifests(extensions) {
   for (const { name, dirName, version, path: extensionPath } of extensions) {
@@ -157,7 +156,7 @@ async function generateManifests(extensions) {
         browser: `./${buildManifest['browser.js'] || 'browser.js'}`,
       }),
       // Build metadata
-      // id: generateKey(name),
+      id: generateExtensionId(name),
       integrity: checksum,
       builtAt: Date.now(),
     };
@@ -330,6 +329,26 @@ async function buildExtensions(options = {}) {
 
   logInfo(`🚀 Building ${extensions.length} extension(s)...`);
   const start = Date.now();
+
+  // Auto-cleanup: remove stale build directories that no longer match
+  // any current extension (e.g. after ID scheme migration).
+  try {
+    if (fs.existsSync(EXTENSIONS_BUILD_DIR)) {
+      const validDirNames = new Set(extensions.map(e => e.dirName));
+      const existing = fs.readdirSync(EXTENSIONS_BUILD_DIR, {
+        withFileTypes: true,
+      });
+      for (const entry of existing) {
+        if (entry.isDirectory() && !validDirNames.has(entry.name)) {
+          const stale = path.join(EXTENSIONS_BUILD_DIR, entry.name);
+          fs.rmSync(stale, { recursive: true, force: true });
+          logInfo(`🧹 Removed stale build directory: ${entry.name}`);
+        }
+      }
+    }
+  } catch (cleanupErr) {
+    logError(`Failed to clean stale build directories: ${cleanupErr.message}`);
+  }
 
   const compiler = webpack(
     createExtensionConfig({

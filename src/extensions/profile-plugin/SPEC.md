@@ -35,7 +35,7 @@ All hook listeners are stored on `this[HANDLERS]` and explicitly unsubscribed in
 
 IPC handlers are registered on the `registry` in `boot()` and accessible via `POST /api/extensions/:id/ipc`.
 
-> **Identity note:** IPC hook IDs and URLs use `__EXTENSION_ID__` (`snakeCase(manifest.name)`), which is URL-safe.
+> **Identity note:** IPC hook IDs and URLs use `__EXTENSION_ID__` (sqids-based, generated at build time), which is URL-safe.
 
 | Action | Hook ID | Purpose |
 |--------|----------|---------|

@@ -54,7 +54,7 @@ The extension system contains universal utilities, client-specific managers, and
 
 Each extension has a single compile-time identifier injected by Webpack:
 
-- **`__EXTENSION_ID__`** — `snakeCase(manifest.name)` (e.g. `xnapify_extension_profile`). Used for all purposes: IPC hook IDs, URL paths, i18n namespaces, logging, and migration prefixes.
+- **`__EXTENSION_ID__`** — Generated at build time via `sqids(charCodes(manifest.name))` (e.g. `4ayO6ElAvIRLrgn...`). URL-safe, alphanumeric. Used for all purposes: IPC hook IDs, URL paths, i18n namespaces, logging, and migration prefixes.
 
 
 ## Creating a Extension

@@ -439,7 +439,7 @@ class ClientExtensionManager extends BaseExtensionManager {
   /**
    * Resolve the internal loaded ID for an extension.
    * Handles mismatch between WS event IDs (manifest.name) and internal
-   * map keys (manifest.id = snakeCase(name)).
+   * map keys (manifest.id = build-time sqids ID).
    *
    * @param {string} id - Extension identifier (DB key or manifest.name)
    * @returns {string|null}

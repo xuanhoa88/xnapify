@@ -9,8 +9,6 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
-import snakeCase from 'lodash/snakeCase';
-
 import { getTranslations } from '@shared/i18n/loader';
 import { addNamespace, removeNamespace } from '@shared/i18n/utils';
 import { createNativeRequire } from '@shared/utils/createNativeRequire';
@@ -951,22 +949,23 @@ class ServerExtensionManager extends BaseExtensionManager {
   }
 
   /**
-   * Derive the canonical extension ID from a manifest name.
-   * Always computes from snakeCase(manifest.name) — the ID is never
-   * read from the manifest itself, it is always auto-generated.
+   * Derive the canonical extension ID from a manifest.
+   * The ID is generated at build time via `generateExtensionId(name)` and
+   * written into the output package.json. This method simply reads it.
    *
    * @param {Object} manifest - Extension manifest (package.json)
    * @returns {string|null}
    */
   _resolveExtensionId(manifest) {
-    if (manifest && manifest.name) return snakeCase(manifest.name);
+    if (manifest && manifest.id) return manifest.id;
     return null;
   }
 
   /**
    * Read an extension's package.json manifest from its directory on disk.
-   * Always auto-generates `manifest.id` from `manifest.name` and loads the
-   * sibling `build-manifest.json` for content-hashed filename resolution.
+   * Trusts the `manifest.id` field written at build time by the extension
+   * build pipeline. Loads the sibling `build-manifest.json` for
+   * content-hashed filename resolution.
    * Detects built client assets from the build manifest.
    * @param {...string} extensionDirs - Absolute path to the extension directory
    * @returns {Object|null} Parsed manifest or null on failure
@@ -980,9 +979,12 @@ class ServerExtensionManager extends BaseExtensionManager {
       );
       const manifest = JSON.parse(manifestContent);
 
-      // Always auto-generate id from name
-      // eslint-disable-next-line no-underscore-dangle
-      manifest.id = this._resolveExtensionId(manifest);
+      // Trust id from built manifest. Fall back to _resolveExtensionId()
+      // for unbuilt source extensions that lack a pre-generated id.
+      if (!manifest.id) {
+        // eslint-disable-next-line no-underscore-dangle
+        manifest.id = this._resolveExtensionId(manifest);
+      }
 
       // Load build-manifest.json for content-hashed filename resolution
       let buildManifest = null;

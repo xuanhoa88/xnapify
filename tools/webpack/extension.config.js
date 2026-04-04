@@ -93,7 +93,7 @@ class BuildManifestPlugin {
     compiler.hooks.done.tap('BuildManifestPlugin', stats => {
       if (stats.hasErrors()) return;
 
-      const outputPath = compiler.outputPath;
+      const { outputPath } = compiler;
       const manifestPath = path.join(outputPath, 'build-manifest.json');
 
       // Read existing manifest (other compilers may have already written)

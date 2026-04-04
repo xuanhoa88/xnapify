@@ -61,7 +61,10 @@ describe('ServerExtensionManager', () => {
     it('loads package.json and parses build-manifest.json if present', async () => {
       mockFs.readFile.mockImplementation(async pathStr => {
         if (pathStr.endsWith('package.json')) {
-          return JSON.stringify({ name: 'test_extension' });
+          return JSON.stringify({
+            name: 'test_extension',
+            id: 'built_ext_id',
+          });
         }
         if (pathStr.endsWith('build-manifest.json')) {
           return JSON.stringify({
@@ -74,7 +77,8 @@ describe('ServerExtensionManager', () => {
 
       const manifest = await serverManager.readManifest('/tmp/ext');
 
-      expect(manifest.id).toBe('test_extension');
+      // id comes from the built manifest (written at build time)
+      expect(manifest.id).toBe('built_ext_id');
       expect(manifest.buildManifest).toEqual({
         'extension.css': 'extension.abcd.css',
         'remote.js': 'remote.1234.js',
@@ -95,9 +99,10 @@ describe('ServerExtensionManager', () => {
       // fileExists() checks. Since the test paths don't exist on disk,
       // hasClientCss / hasClientScript will be false — the key assertion
       // is that buildManifest is null and the method doesn't throw.
+      // id is undefined for unbuilt source extensions with no pre-generated id.
       const manifest = await serverManager.readManifest('/tmp/ext');
 
-      expect(manifest.id).toBe('test_dev_ext');
+      expect(manifest.id).toBeNull();
       expect(manifest.buildManifest).toBeNull();
       expect(manifest.hasClientCss).toBeUndefined();
       expect(manifest.hasClientScript).toBeUndefined();

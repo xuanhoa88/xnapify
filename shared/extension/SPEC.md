@@ -29,11 +29,11 @@ Each extension has a single compile-time identifier injected by Webpack:
 
 | Constant | Source | Example |
 |---|---|---|
-| `__EXTENSION_ID__` | `snakeCase(manifest.name)` | `xnapify_extension_profile` |
+| `__EXTENSION_ID__` | `sqids(charCodes(manifest.name))` — generated at build time | `4ayO6ElAvIRLrgn...` |
 
-This is URL-safe and used consistently for IPC hook IDs, URL paths, route params, i18n namespaces, migration prefixes, and logging.
+This is URL-safe (alphanumeric only) and used consistently for IPC hook IDs, URL paths, route params, i18n namespaces, migration prefixes, and logging.
 
-The server-side `_resolveExtensionId(manifest)` computes `snakeCase(manifest.name)` — identical to `__EXTENSION_ID__`.
+The build pipeline generates `id` via `generateExtensionId(name)` (sqids) and writes it into the output `package.json`. The server-side `readManifest()` reads `manifest.id` directly.
 
 
 ## Lifecycle Phases

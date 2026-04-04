@@ -369,7 +369,7 @@ export class BaseExtensionManager {
       }
 
       // Derive MF container name from manifest.id (written at build time).
-      // Format: extension_<snakeCase(name)>, matching webpack MF library name.
+      // Format: extension_<id>, matching webpack MF library name.
       let containerName =
         manifest && manifest.id ? `extension_${manifest.id}` : null;
 
