@@ -200,7 +200,7 @@
     "open": "8.4.2",
     "pixrem": "4.0.1",
     "pleeease-filters": "4.0.0",
-    "postcss": "6.0.20",
+    "postcss": "8.4.31",
     "postcss-calc": "6.0.1",
     "postcss-color-function": "4.0.1",
     "postcss-custom-media": "6.0.0",
@@ -243,10 +243,5 @@
     "webpack-node-externals": "3.0.0",
     "xlsx": "0.18.5",
     "youch": "3.3.4"
-  },
-  "overrides": {
-    "stylelint": {
-      "postcss": "8.4.0"
-    }
   }
 }

@@ -6,10 +6,8 @@
  */
 
 const filePatterns = {
-  all: 'src/**/*.{css,less,styl,scss,sass,sss}',
+  all: 'src/**/*.css',
   css: 'src/**/*.css',
-  scss: 'src/**/*.scss',
-  sass: 'src/**/*.sass',
 };
 
 module.exports = {
@@ -43,11 +41,4 @@ module.exports = {
     // Allow any naming style: CamelCase, PascalCase, kebab-case, etc.
     'keyframes-name-pattern': null,
   },
-
-  overrides: [
-    {
-      files: ['**/*.scss'],
-      customSyntax: 'postcss-scss',
-    },
-  ],
 };

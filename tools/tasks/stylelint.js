@@ -60,16 +60,7 @@ async function main() {
     const filesToLint =
       patterns.length > 0
         ? patterns
-        : [
-            `${appDir}/**/*.css`,
-            `${appDir}/**/*.scss`,
-            `${appDir}/**/*.sass`,
-            `${appDir}/**/*.less`,
-            `${sharedDir}/**/*.css`,
-            `${sharedDir}/**/*.scss`,
-            `${sharedDir}/**/*.sass`,
-            `${sharedDir}/**/*.less`,
-          ];
+        : [`${appDir}/**/*.css`, `${sharedDir}/**/*.css`];
 
     logVerbose(`📂 Linting patterns: ${filesToLint.join(', ')}`);
     if (shouldFix) {
