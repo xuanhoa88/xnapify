@@ -362,7 +362,7 @@ async function loadSsrResources$() {
     return null;
   };
 
-  const dedup = entries => {
+  const dedupEntries = entries => {
     const seen = new Set();
     return entries.filter(entry => {
       if (entry == null) return false;
@@ -395,8 +395,8 @@ async function loadSsrResources$() {
   ]);
 
   return {
-    scriptLinks: dedup(rawScripts.map(normaliseEntry)),
-    styleLinks: dedup(rawStyles.map(normaliseEntry)),
+    scriptLinks: dedupEntries(rawScripts.map(normaliseEntry)),
+    styleLinks: dedupEntries(rawStyles.map(normaliseEntry)),
     App,
     Html,
   };

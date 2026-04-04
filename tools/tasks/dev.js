@@ -593,18 +593,16 @@ async function main() {
     const clientPromise = createCompilationPromise('client', clientCompiler);
     const serverPromise = createCompilationPromise('server', serverCompiler);
 
-    // Wait for server compilation first
-    await serverPromise;
+    // Create webpack middlewares (triggering client compilation in parallel with server)
+    ({ devMiddleware, hotMiddleware } =
+      createWebpackMiddlewares(clientCompiler));
+
+    // Wait for both server and client bundle compilations to finish (they run in parallel)
+    await Promise.all([serverPromise, clientPromise]);
 
     // Load server bundle
     let createServer, bootstrapApp;
     ({ createServer, bootstrapApp, disposeApp: dispose } = loadServerBundle());
-
-    // Create webpack middlewares (triggering client compilation)
-    ({ devMiddleware, hotMiddleware } =
-      createWebpackMiddlewares(clientCompiler));
-
-    await clientPromise;
 
     // Start server
     const startServer = await prepareDevServer(
