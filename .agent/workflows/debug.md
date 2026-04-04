@@ -288,29 +288,29 @@ await db.connection.revertMigrations(); // Rollback last
 
 # Part 8: Common Issues
 
-| Symptom                            | Cause                              | Fix                                                                    |
-| ---------------------------------- | ---------------------------------- | ---------------------------------------------------------------------- |
-| Port 1337 already in use           | Previous process still running     | `npx kill-port -p 1337`                                                |
-| `Cannot find module`               | Stale require cache or missing dep | `npm run setup` or restart                                             |
-| Breakpoints not hit                | Source maps misconfigured          | Ensure `sourceMaps: true` in launch.json                               |
-| HMR says "connected" but no reload | Server compilation error           | Check terminal for Webpack errors                                      |
-| Slow recompilation                 | Large watched file tree            | Check `ignored` patterns in dev.js                                     |
-| API returns HTML instead of JSON   | SSR middleware intercepting `/api` | Ensure API routes mounted before SSR                                   |
-| SSR hydration mismatch             | Browser-only code in render        | Use `useEffect` for browser-only logic                                 |
-| Redux state not updating           | Reducer not returning new object   | Use Redux DevTools to inspect                                          |
-| `ENOSPC` (Linux)                   | File watcher limit                 | Increase `fs.inotify.max_user_watches`                                 |
-| `Cannot find module 'sqlite3'`     | DB driver not installed            | Run `npm run dev` (preboot installs it) or `node tools/npm/preboot.js` |
-| `Cannot find module 'pg'`          | PG driver not installed            | Set `XNAPIFY_DB_URL=postgres` in `.env`, run `npm run dev`             |
-| `Cannot find module 'mysql2'`      | MySQL driver not installed         | Set `XNAPIFY_DB_URL=mysql` in `.env`, run `npm run dev`               |
-| PostgreSQL connection refused      | PG daemon not running              | `node tools/npm/preboot.js --db postgres --start`                      |
-| MySQL connection refused           | MySQL daemon not running           | `node tools/npm/preboot.js --db mysql --start`                         |
-| MySQL `ER_HOST_NOT_PRIVILEGED`     | `root@'%'` not created             | Reset: stop MySQL, `rm -rf .mysql/data`, restart                       |
-| MySQL `Unknown time zone: 'UTC'`   | Timezone tables not populated      | Reset: stop MySQL, `rm -rf .mysql/data`, restart                       |
-| MySQL download 403                 | CDN requires HTTP/2                | Ensure `curl` is installed (preboot uses curl, not Node.js https)      |
-| `SQLITE_BUSY: database is locked`  | Parallel extension migrations      | Serialize loads in `ServerExtensionManager.sync()` (see Part 10)       |
-| Extension active in DB but not loaded | Crash during toggle or stale DB | Deactivate via admin UI, then re-toggle                                |
-| Test: `Database setup failed: Please install sqlite3` | Used `npx jest` directly | Use `npm test -- --testPathPattern=...` (runs `pretest` hook)     |
-| DB still uses MySQL after override | `.env.local` left from override    | Delete `.env.local` or run `node tools/npm/preboot.js --stop`          |
+| Symptom                                               | Cause                              | Fix                                                                    |
+| ----------------------------------------------------- | ---------------------------------- | ---------------------------------------------------------------------- |
+| Port 1337 already in use                              | Previous process still running     | `npx kill-port -p 1337`                                                |
+| `Cannot find module`                                  | Stale require cache or missing dep | `npm run setup` or restart                                             |
+| Breakpoints not hit                                   | Source maps misconfigured          | Ensure `sourceMaps: true` in launch.json                               |
+| HMR says "connected" but no reload                    | Server compilation error           | Check terminal for Webpack errors                                      |
+| Slow recompilation                                    | Large watched file tree            | Check `ignored` patterns in dev.js                                     |
+| API returns HTML instead of JSON                      | SSR middleware intercepting `/api` | Ensure API routes mounted before SSR                                   |
+| SSR hydration mismatch                                | Browser-only code in render        | Use `useEffect` for browser-only logic                                 |
+| Redux state not updating                              | Reducer not returning new object   | Use Redux DevTools to inspect                                          |
+| `ENOSPC` (Linux)                                      | File watcher limit                 | Increase `fs.inotify.max_user_watches`                                 |
+| `Cannot find module 'sqlite3'`                        | DB driver not installed            | Run `npm run dev` (preboot installs it) or `node tools/npm/preboot.js` |
+| `Cannot find module 'pg'`                             | PG driver not installed            | Set `XNAPIFY_DB_URL=postgres` in `.env`, run `npm run dev`             |
+| `Cannot find module 'mysql2'`                         | MySQL driver not installed         | Set `XNAPIFY_DB_URL=mysql` in `.env`, run `npm run dev`                |
+| PostgreSQL connection refused                         | PG daemon not running              | `node tools/npm/preboot.js --db postgres --start`                      |
+| MySQL connection refused                              | MySQL daemon not running           | `node tools/npm/preboot.js --db mysql --start`                         |
+| MySQL `ER_HOST_NOT_PRIVILEGED`                        | `root@'%'` not created             | Reset: stop MySQL, `rm -rf .data/mysql/data`, restart                  |
+| MySQL `Unknown time zone: 'UTC'`                      | Timezone tables not populated      | Reset: stop MySQL, `rm -rf .data/mysql/data`, restart                  |
+| MySQL download 403                                    | CDN requires HTTP/2                | Ensure `curl` is installed (preboot uses curl, not Node.js https)      |
+| `SQLITE_BUSY: database is locked`                     | Parallel extension migrations      | Serialize loads in `ServerExtensionManager.sync()` (see Part 10)       |
+| Extension active in DB but not loaded                 | Crash during toggle or stale DB    | Deactivate via admin UI, then re-toggle                                |
+| Test: `Database setup failed: Please install sqlite3` | Used `npx jest` directly           | Use `npm test -- --testPathPattern=...` (runs `pretest` hook)          |
+| DB still uses MySQL after override                    | `.env.local` left from override    | Delete `.env.local` or run `node tools/npm/preboot.js --stop`          |
 
 ---
 
@@ -435,13 +435,14 @@ Seed file: `src/apps/extensions/api/database/seeds/2026.03.01T00.00.00.default-a
 
 ## Extension Directory Resolution
 
-| Environment | Extension dirs on disk | Resolved via |
-|---|---|---|
-| Dev (`npm run dev`) | `.cache/dev/extensions/xnapify_extension_*/` | `getDevExtensionsDir()` = `<BUILD_DIR>/extensions/` |
-| Production (`npm start`) | `build/extensions/xnapify_extension_*/` | `getDevExtensionsDir()` = `build/extensions/` |
-| Installed (admin upload) | `~/.xnapify/extensions/<key>/` | `getInstalledExtensionsDir()` |
+| Environment              | Extension dirs on disk                       | Resolved via                                        |
+| ------------------------ | -------------------------------------------- | --------------------------------------------------- |
+| Dev (`npm run dev`)      | `.cache/dev/extensions/xnapify_extension_*/` | `getDevExtensionsDir()` = `<BUILD_DIR>/extensions/` |
+| Production (`npm start`) | `build/extensions/xnapify_extension_*/`      | `getDevExtensionsDir()` = `build/extensions/`       |
+| Installed (admin upload) | `~/.xnapify/extensions/<key>/` (prod)<br/>`.data/extensions/<key>/` (dev) | `getInstalledExtensionsDir()`                       |
 
 Directory naming uses `snakeCase(manifest.name)`:
+
 - Source: `src/extensions/quick-access-plugin/` (`name: @xnapify-extension/quick-access`)
 - Built: `.cache/dev/extensions/xnapify_extension_quick_access/`
 
@@ -452,6 +453,7 @@ Directory naming uses `snakeCase(manifest.name)`:
 **Fix**: `ServerExtensionManager` must serialize extension loads (sequential `for...of` instead of `Promise.allSettled`). The client-side `BaseExtensionManager.sync()` keeps parallel loading (no SQLite).
 
 **Files involved**:
+
 - `shared/extension/server/ExtensionManager.js` — `sync()` override, `_refreshExtensions()`, `_discoverDevExtensions()`
 - `shared/extension/utils/BaseExtensionManager.js` — base `sync()` (parallel, OK for client)
 - `shared/api/engines/db/migrator.js` — Umzug migration runner
@@ -483,6 +485,7 @@ SQLite defaults to rollback journal mode, which blocks all readers during writes
 ### Check current journal mode
 
 // turbo
+
 ```bash
 sqlite3 database.sqlite "PRAGMA journal_mode;"
 ```
@@ -507,11 +510,13 @@ dialectOptions: {
 ### Verify WAL is active
 
 // turbo
+
 ```bash
 sqlite3 database.sqlite "PRAGMA journal_mode; PRAGMA busy_timeout; PRAGMA synchronous;"
 ```
 
 Expected output:
+
 ```
 wal
 5000
@@ -520,16 +525,17 @@ wal
 
 ## SQLITE_BUSY Diagnostics
 
-| Symptom | Root Cause | Fix |
-|---------|-----------|-----|
-| `SQLITE_BUSY: database is locked` during boot | Parallel extension migrations via `Promise.allSettled` | Serialize loads in `ServerExtensionManager.sync()` |
-| `SQLITE_BUSY` during admin operations | Concurrent queue jobs | Queue already uses `concurrency: 1` — check for rogue direct DB calls |
-| `SQLITE_BUSY` in tests | Parallel test suites hitting same DB | Use `--runInBand` flag or separate test databases |
-| Intermittent `SQLITE_BUSY` | Missing `busy_timeout` pragma | Set `busy_timeout` to 5000+ ms in connection config |
+| Symptom                                       | Root Cause                                             | Fix                                                                   |
+| --------------------------------------------- | ------------------------------------------------------ | --------------------------------------------------------------------- |
+| `SQLITE_BUSY: database is locked` during boot | Parallel extension migrations via `Promise.allSettled` | Serialize loads in `ServerExtensionManager.sync()`                    |
+| `SQLITE_BUSY` during admin operations         | Concurrent queue jobs                                  | Queue already uses `concurrency: 1` — check for rogue direct DB calls |
+| `SQLITE_BUSY` in tests                        | Parallel test suites hitting same DB                   | Use `--runInBand` flag or separate test databases                     |
+| Intermittent `SQLITE_BUSY`                    | Missing `busy_timeout` pragma                          | Set `busy_timeout` to 5000+ ms in connection config                   |
 
 ### Debug lock contention
 
 // turbo
+
 ```bash
 # Check for WAL checkpoint status
 sqlite3 database.sqlite "PRAGMA wal_checkpoint(PASSIVE);"

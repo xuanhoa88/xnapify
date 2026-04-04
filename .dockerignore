@@ -70,12 +70,4 @@ logs/
 .cache/
 .temp/
 tmp/
-
-# Uploads
-uploads/
-
-# Node-RED
-.node-red/
-
-# Embedded PostgreSQL data
-.postgres/
+.data/

@@ -105,7 +105,7 @@ function dirsAreEqual(dirA, dirB) {
 
 /**
  * Save current split files as a timestamped migration snapshot
- * @param {string} splitDir - The split files source (.node-red/src)
+ * @param {string} splitDir - The split files source (~/.xnapify/node-red/src)
  * @param {object} adapter - Webpack context adapter with files(), load(), resolve()
  * @param {object} RED - Node-RED runtime (for logging)
  */
@@ -156,7 +156,7 @@ function saveMigration(splitDir, adapter, RED) {
 
 /**
  * Apply the latest migration to the split files directory using webpack context adapter
- * @param {string} splitDir - The split files destination (.node-red/src)
+ * @param {string} splitDir - The split files destination (~/.xnapify/node-red/src)
  * @param {object} adapter - Webpack context adapter with files(), load(), resolve()
  * @param {object} RED - Node-RED runtime (for logging)
  * @returns {boolean} True if a migration was applied

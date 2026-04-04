@@ -230,7 +230,7 @@ function validateConfig(options) {
  * @param {string} [options.host='127.0.0.1'] - Server host
  * @param {number} [options.port=1337] - Server port
  * @param {string} [options.protocol='http'] - Server protocol (http|https)
- * @param {string} [options.userDir] - Custom user directory (defaults to .node-red in cwd)
+ * @param {string} [options.userDir] - Custom user directory (defaults to ~/.xnapify/node-red in cwd)
  * @param {string} [options.httpAdminRoot='/~/red/admin'] - Admin UI root path
  * @param {string} [options.httpNodeRoot='/~/red'] - Node HTTP endpoints root path
  * @param {string} [options.logLevel='info'] - Logging level (fatal|error|warn|info|debug|trace)
@@ -253,7 +253,9 @@ export default function createSettings(options = {}) {
     port = 1337,
     protocol = 'http',
     userDir = process.env.XNAPIFY_NODERED_HOME ||
-      path.join(os.homedir(), '.xnapify', '.node-red'),
+      (process.env.NODE_ENV === 'production'
+        ? path.join(os.homedir(), '.xnapify', 'node-red')
+        : path.join(process.cwd(), '.data', 'node-red')),
     logLevel = process.env.XNAPIFY_NODERED_LOG_LEVEL || 'info',
     enableProjects = process.env.XNAPIFY_NODERED_PROJECTS === 'true',
     httpAdminRoot = '/~/red/admin',

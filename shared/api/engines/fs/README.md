@@ -92,7 +92,7 @@ await fs.cleanup();                 // close all providers
 
 | Provider | Storage | Default Dir | Features |
 |---|---|---|---|
-| `local` | Disk | `~/.xnapify/uploads` | Stream-to-disk, recursive listing, extension validation |
+| `local` | Disk | `~/.xnapify/uploads` (prod)<br/>`.data/uploads` (dev) | Stream-to-disk, recursive listing, extension validation |
 | `memory` | In-memory Map | — | Max 1000 files, for testing/dev |
 | `selfhost` | HTTP REST | — | Configurable routes, API key auth, 30s timeout |
 
@@ -106,7 +106,7 @@ All providers implement: `store`, `retrieve`, `delete`, `exists`, `getMetadata`,
 |---|---|---|
 | `XNAPIFY_UPLOAD_FILE_SIZE` | `50MB` | Max upload size |
 | `XNAPIFY_UPLOAD_FILE_LENGTH` | `255` | Max filename length |
-| `XNAPIFY_UPLOAD_DIR` | `~/.xnapify/uploads` | Upload directory |
+| `XNAPIFY_UPLOAD_DIR` | `~/.xnapify/uploads` (prod)<br/>`.data/uploads` (dev) | Upload directory |
 | `XNAPIFY_UPLOAD_FILE_EXT` | all | Comma-separated allowed extensions |
 
 ## Error Handling

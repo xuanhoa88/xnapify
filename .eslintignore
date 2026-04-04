@@ -27,6 +27,7 @@ workbox-*.js
 # Temporary files
 *.tmp
 *.temp
+.data/
 
 # OS files
 .DS_Store
@@ -54,9 +55,3 @@ pnpm-lock.yaml
 
 # JSON files (not JavaScript)
 *.json
-
-# Uploads
-uploads/
-
-# Node-RED
-.node-red/

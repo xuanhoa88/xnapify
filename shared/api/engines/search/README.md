@@ -77,7 +77,7 @@ const draftSearch = blogSearch.withNamespace('drafts');
 
 | Type | Description | Config |
 |---|---|---|
-| `memory` | File-backed in-memory search (default) | `{ directory?: string }` (default: `~/.xnapify/fts`) |
+| `memory` | File-backed in-memory search (default) | `{ directory?: string }`<br/>(default: `~/.xnapify/fts` in prod, `.data/fts` in dev) |
 | `database` | Native FTS — SQLite FTS5, PostgreSQL tsvector, MySQL FULLTEXT | `{ connection, DataTypes }` (auto-injected) |
 
 Configure via `XNAPIFY_SEARCH_TYPE` env var (`'memory'` or `'database'`).

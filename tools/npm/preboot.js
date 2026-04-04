@@ -48,8 +48,8 @@ let useLocalEnv = false;
 const PG_DATA_DIR =
   process.env.XNAPIFY_PG_DATA_DIR ||
   (process.env.NODE_ENV === 'production'
-    ? path.join(os.homedir(), '.xnapify', '.postgres')
-    : path.join(ROOT, '.postgres'));
+    ? path.join(os.homedir(), '.xnapify', 'postgres')
+    : path.join(ROOT, '.data', 'postgres'));
 
 const PG_DEFAULTS = {
   port: 5433,
@@ -63,8 +63,8 @@ const MYSQL_EMBEDDED_PORT = 3307;
 const MYSQL_DATA_DIR =
   process.env.XNAPIFY_MYSQL_DATA_DIR ||
   (process.env.NODE_ENV === 'production'
-    ? path.join(os.homedir(), '.xnapify', '.mysql')
-    : path.join(ROOT, '.mysql'));
+    ? path.join(os.homedir(), '.xnapify', 'mysql')
+    : path.join(ROOT, '.data', 'mysql'));
 
 const MYSQL_DEFAULTS = {
   port: MYSQL_EMBEDDED_PORT,

@@ -38,6 +38,7 @@ lerna-debug.log*
 .pnpm-debug.log*
 
 # Runtime data
+.data/
 pids
 *.pid
 *.seed
@@ -189,12 +190,6 @@ docker-compose.override.yml
 # Misc
 .DS_Store
 
-# Uploads
-uploads/
-
-# Node-RED
-.node-red/
-
 # E2E test infrastructure
 # Compile hash (regenerated on each compile)
 **/.test-hash
@@ -209,9 +204,3 @@ uploads/
 **/e2e/**/results/**/*.webm
 
 # Text reports (result.md, _summary.md) are COMMITTED for audit history
-
-# Embedded PostgreSQL data
-.postgres/
-
-# Embedded MySQL data
-.mysql/

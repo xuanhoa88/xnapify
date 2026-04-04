@@ -15,6 +15,7 @@ out/
 .nuxt/
 .cache/
 coverage/
+.data/
 
 # Generated files
 *.min.js
@@ -67,8 +68,4 @@ Thumbs.db
 # Docker
 .docker/
 
-# Uploads
-uploads/
 
-# Node-RED
-.node-red/
