@@ -13,33 +13,40 @@ import fs from 'fs';
  */
 const DEFAULT_EXTENSIONS = ['@xnapify-extension/quick-access'];
 
-async function findExtensionManifest(container, targetName) {
+async function discoverAllExtensionManifests(container) {
   const cwd = container.resolve('cwd');
-  const extensionManager = container.resolve('extensionManager');
+  const extensionManager = container.resolve('extension');
   const dirsToScan = [
     extensionManager.getInstalledExtensionsDir(),
     extensionManager.getDevExtensionsDir(cwd),
   ].filter(Boolean);
 
-  // Scan directories for the built manifest matching the target name
+  const manifests = new Map();
+
   for (const dirPath of [...new Set(dirsToScan)]) {
     try {
       const files = await fs.promises.readdir(dirPath, { withFileTypes: true });
-      for (const dirent of files) {
-        if (!dirent.isDirectory()) continue;
-        const manifest = await extensionManager.readManifest(
-          dirPath,
-          dirent.name,
-        );
-        if (manifest && manifest.name === targetName) {
-          return manifest;
-        }
-      }
+
+      const readPromises = files
+        .filter(dirent => dirent.isDirectory())
+        .map(async dirent => {
+          const manifest = await extensionManager.readManifest(
+            dirPath,
+            dirent.name,
+          );
+          // Only add the first occurrence to the map
+          if (manifest && manifest.name && !manifests.has(manifest.name)) {
+            manifests.set(manifest.name, manifest);
+          }
+        });
+
+      await Promise.all(readPromises);
     } catch {
       // Ignore directory read errors
     }
   }
-  return null;
+
+  return manifests;
 }
 
 /**
@@ -49,8 +56,11 @@ export async function up(_, { container }) {
   const { Extension } = container.resolve('models');
   const now = new Date();
 
+  // Scan filesystem once for all manifests
+  const manifests = await discoverAllExtensionManifests(container);
+
   for (const extName of DEFAULT_EXTENSIONS) {
-    const manifest = await findExtensionManifest(container, extName);
+    const manifest = manifests.get(extName);
 
     if (!manifest || !manifest.id) {
       console.warn(
@@ -78,13 +88,13 @@ export async function up(_, { container }) {
  */
 export async function down({ Sequelize }, { container }) {
   const { Extension } = container.resolve('models');
-  const extensionManager = container.resolve('extensionManager');
   const { Op } = Sequelize;
 
+  const manifests = await discoverAllExtensionManifests(container);
   const keysToDelete = [];
 
   for (const extName of DEFAULT_EXTENSIONS) {
-    const manifest = await findExtensionManifest(extensionManager, extName);
+    const manifest = manifests.get(extName);
     if (manifest && manifest.id) {
       keysToDelete.push(manifest.id);
     }
