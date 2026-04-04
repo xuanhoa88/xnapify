@@ -206,6 +206,19 @@ export class BaseExtensionManager {
   }
 
   /**
+   * Returns a human readable display name for logging purposes.
+   * @param {string} id - Extension ID
+   * @param {Object} [providedManifest] - Optional manifest if available
+   * @returns {string} Human readable string, e.g. "@xnapify-extension/demo (1PBWr)"
+   * @protected
+   */
+  _formatDisplayName(id, providedManifest = null) {
+    const metadata = this.getExtensionMetadata(id);
+    const manifest = providedManifest || (metadata && metadata.manifest);
+    return manifest && manifest.name ? `${manifest.name} (${id})` : id;
+  }
+
+  /**
    * Post-load hook called after an extension is successfully loaded.
    * Subclasses override to perform environment-specific work.
    * Client uses this to eagerly activate module-type namespaces.
@@ -338,7 +351,9 @@ export class BaseExtensionManager {
     // Check if already loaded
     if (this[ACTIVE_EXTENSIONS].has(id)) {
       if (__DEV__) {
-        console.warn(`[ExtensionManager] Extension "${id}" is already loaded`);
+        console.warn(
+          `[ExtensionManager] Extension "${this._formatDisplayName(id)}" is already loaded`,
+        );
       }
       return this[ACTIVE_EXTENSIONS].get(id);
     }
@@ -403,7 +418,7 @@ export class BaseExtensionManager {
       if (!entryPoint) {
         if (__DEV__) {
           console.log(
-            `[ExtensionManager] Skipping execution for ${id} (no entry point for environment)`,
+            `[ExtensionManager] Skipping execution for ${this._formatDisplayName(id, manifest)} (no entry point for environment)`,
           );
         }
 
@@ -446,7 +461,9 @@ export class BaseExtensionManager {
 
       // Register with registry
       if (__DEV__) {
-        console.log(`[ExtensionManager] Defining extension in registry: ${id}`);
+        console.log(
+          `[ExtensionManager] Defining extension in registry: ${this._formatDisplayName(id, manifest)}`,
+        );
       }
 
       // eslint-disable-next-line no-underscore-dangle
@@ -478,14 +495,16 @@ export class BaseExtensionManager {
       metadata.manifest = { ...manifest };
 
       if (__DEV__) {
-        console.log(`[ExtensionManager] Successfully loaded extension: ${id}`);
+        console.log(
+          `[ExtensionManager] Successfully loaded extension: ${this._formatDisplayName(id, manifest)}`,
+        );
       }
       await this.emit('extension:loaded', { id, ext, manifest });
 
       return ext;
     } catch (error) {
       console.error(
-        `[ExtensionManager] Failed to load extension "${id}":`,
+        `[ExtensionManager] Failed to load extension "${this._formatDisplayName(id, manifest)}":`,
         error.message,
       );
 
@@ -511,7 +530,9 @@ export class BaseExtensionManager {
     }
 
     if (!this[ACTIVE_EXTENSIONS].has(id)) {
-      console.warn(`[ExtensionManager] Extension "${id}" is not loaded`);
+      console.warn(
+        `[ExtensionManager] Extension "${this._formatDisplayName(id)}" is not loaded`,
+      );
       return;
     }
 
@@ -538,11 +559,13 @@ export class BaseExtensionManager {
         metadata.state = ExtensionState.UNLOADED;
       }
 
-      console.log(`[ExtensionManager] Successfully unloaded extension: ${id}`);
+      console.log(
+        `[ExtensionManager] Successfully unloaded extension: ${this._formatDisplayName(id)}`,
+      );
       await this.emit('extension:unloaded', { id });
     } catch (error) {
       console.error(
-        `[ExtensionManager] Failed to unload extension "${id}":`,
+        `[ExtensionManager] Failed to unload extension "${this._formatDisplayName(id)}":`,
         error,
       );
 
@@ -608,15 +631,15 @@ export class BaseExtensionManager {
 
       if (__DEV__) {
         console.log(
-          `[ExtensionManager] Updated extension: ${id} (${oldVersion} → ${newVersion})`,
+          `[ExtensionManager] Updated extension: ${this._formatDisplayName(id)} (${oldVersion} → ${newVersion})`,
         );
       }
 
       await this.emit('extension:updated', { id, oldVersion, newVersion });
     } catch (error) {
       console.error(
-        `[ExtensionManager] Failed to update extension "${id}":`,
-        error,
+        `[ExtensionManager] Failed to update extension "${this._formatDisplayName(id)}":`,
+        error.message,
       );
       await this.emit('extension:update-failed', { id, error });
       console.error(error);
@@ -653,7 +676,7 @@ export class BaseExtensionManager {
         meta.state === ExtensionState.ACTIVE)
     ) {
       const error = new Error(
-        `Extension "${id}" is already installed. Uninstall it first.`,
+        `Extension "${this._formatDisplayName(id)}" is already installed. Uninstall it first.`,
       );
       error.name = 'ExtensionManagerError';
       await this.emit('extension:install-failed', { id, error });
@@ -668,15 +691,17 @@ export class BaseExtensionManager {
       const result = await this._performInstall(id, manifest);
       if (result) {
         if (__DEV__) {
-          console.log(`[ExtensionManager] Installed extension: ${id}`);
+          console.log(
+            `[ExtensionManager] Installed extension: ${this._formatDisplayName(id)}`,
+          );
         }
         await this.emit('extension:installed', { id });
       }
       return result;
     } catch (error) {
       console.error(
-        `[ExtensionManager] Failed to install extension "${id}":`,
-        error,
+        `[ExtensionManager] Failed to install extension "${this._formatDisplayName(id)}":`,
+        error.message,
       );
       await this.emit('extension:install-failed', { id, error });
       throw error;
@@ -719,7 +744,7 @@ export class BaseExtensionManager {
     const meta = this[EXTENSION_METADATA].get(id);
     if (meta && meta.state === ExtensionState.ACTIVE) {
       const error = new Error(
-        `Cannot uninstall active extension "${id}". Deactivate it first.`,
+        `Cannot uninstall active extension "${this._formatDisplayName(id)}". Deactivate it first.`,
       );
       error.name = 'ExtensionManagerError';
       await this.emit('extension:uninstall-failed', { id, error });
@@ -734,15 +759,17 @@ export class BaseExtensionManager {
       const result = await this._performUninstall(id, manifest);
       if (result) {
         if (__DEV__) {
-          console.log(`[ExtensionManager] Uninstalled extension: ${id}`);
+          console.log(
+            `[ExtensionManager] Uninstalled extension: ${this._formatDisplayName(id)}`,
+          );
         }
         await this.emit('extension:uninstalled', { id });
       }
       return result;
     } catch (error) {
       console.error(
-        `[ExtensionManager] Failed to uninstall extension "${id}":`,
-        error,
+        `[ExtensionManager] Failed to uninstall extension "${this._formatDisplayName(id)}":`,
+        error.message,
       );
       await this.emit('extension:uninstall-failed', { id, error });
       throw error;
@@ -796,15 +823,17 @@ export class BaseExtensionManager {
         if (meta) meta.state = ExtensionState.ACTIVE;
 
         if (__DEV__) {
-          console.log(`[ExtensionManager] Activated extension: ${id}`);
+          console.log(
+            `[ExtensionManager] Activated extension: ${this._formatDisplayName(id)}`,
+          );
         }
         await this.emit('extension:activated', { id });
       }
       return result;
     } catch (error) {
       console.error(
-        `[ExtensionManager] Failed to activate extension "${id}":`,
-        error,
+        `[ExtensionManager] Failed to activate extension "${this._formatDisplayName(id)}":`,
+        error.message,
       );
       await this.emit('extension:activate-failed', { id, error });
       return false;
@@ -850,15 +879,17 @@ export class BaseExtensionManager {
       const result = await this._performDeactivate(id, manifest);
       if (result) {
         if (__DEV__) {
-          console.log(`[ExtensionManager] Deactivated extension: ${id}`);
+          console.log(
+            `[ExtensionManager] Deactivated extension: ${this._formatDisplayName(id)}`,
+          );
         }
         await this.emit('extension:deactivated', { id });
       }
       return result;
     } catch (error) {
       console.error(
-        `[ExtensionManager] Failed to deactivate extension "${id}":`,
-        error,
+        `[ExtensionManager] Failed to deactivate extension "${this._formatDisplayName(id)}":`,
+        error.message,
       );
       await this.emit('extension:deactivate-failed', { id, error });
       return false;
@@ -1243,7 +1274,7 @@ export class BaseExtensionManager {
           }
         } catch (error) {
           console.error(
-            `[ExtensionManager] Failed to remove route adapters for ${id}:`,
+            `[ExtensionManager] Failed to remove route adapters for ${this._formatDisplayName(id)}:`,
             error,
           );
           await this.emit('extension:remove-route-adapters-error', {
@@ -1259,7 +1290,9 @@ export class BaseExtensionManager {
     this[STORED_ADAPTERS].delete(id);
 
     if (__DEV__) {
-      console.log(`[ExtensionManager] Removed route adapters for: ${id}`);
+      console.log(
+        `[ExtensionManager] Removed route adapters for: ${this._formatDisplayName(id)}`,
+      );
     }
   }
 

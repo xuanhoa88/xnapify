@@ -79,7 +79,9 @@ class ClientExtensionManager extends BaseExtensionManager {
         .forEach(el => el.remove());
 
       if (__DEV__) {
-        console.log(`[ExtensionManager] Removed resources for: ${id}`);
+        console.log(
+          `[ExtensionManager] Removed resources for: ${this._formatDisplayName(id)}`,
+        );
       }
     });
   }
@@ -118,7 +120,7 @@ class ClientExtensionManager extends BaseExtensionManager {
     for (let i = 0; i < results.length; i++) {
       if (results[i].status === 'rejected') {
         console.warn(
-          `[ClientExtensionManager] Namespace "${subs[i]}" activation failed for ${id}:`,
+          `[ClientExtensionManager] Namespace "${subs[i]}" activation failed for ${this._formatDisplayName(id)}:`,
           results[i].reason.message,
         );
       }
@@ -287,14 +289,14 @@ class ClientExtensionManager extends BaseExtensionManager {
 
       if (__DEV__) {
         console.log(
-          `[ClientExtensionManager] Successfully loaded extension: ${id}`,
+          `[ClientExtensionManager] Successfully loaded extension: ${this._formatDisplayName(id, manifest)}`,
         );
       }
 
       return ext;
     } catch (err) {
       console.error(
-        `[ClientExtensionManager] Failed to load view module for ${id}:`,
+        `[ClientExtensionManager] Failed to load view module for ${this._formatDisplayName(id, manifest)}:`,
         err.message,
       );
       this.emit('extension:error', {
@@ -325,7 +327,7 @@ class ClientExtensionManager extends BaseExtensionManager {
       this[BUFFERED_ROUTES].push({ id, adapter, type: 'views' });
       if (__DEV__) {
         console.log(
-          `[ClientExtensionManager] Buffered view route(s) for ${id} (router not ready)`,
+          `[ClientExtensionManager] Buffered view route(s) for ${this._formatDisplayName(id)} (router not ready)`,
         );
       }
       return;
@@ -343,7 +345,9 @@ class ClientExtensionManager extends BaseExtensionManager {
     this[STORED_ADAPTERS].get(id).views = adapter;
 
     if (__DEV__) {
-      console.log(`[ClientExtensionManager] Injected view route(s) for ${id}`);
+      console.log(
+        `[ClientExtensionManager] Injected view route(s) for ${this._formatDisplayName(id)}`,
+      );
     }
   }
 
@@ -360,7 +364,9 @@ class ClientExtensionManager extends BaseExtensionManager {
     this._connectRouter('views', viewRouter, (router, adapter, id) => {
       router.add(adapter, undefined, id);
       if (__DEV__) {
-        console.log(`[ClientExtensionManager] Flushed view route(s) for ${id}`);
+        console.log(
+          `[ClientExtensionManager] Flushed view route(s) for ${this._formatDisplayName(id)}`,
+        );
       }
     });
   }

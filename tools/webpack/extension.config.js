@@ -69,7 +69,7 @@ class StripRootCSSPlugin {
 }
 
 /**
- * Webpack plugin that writes a build-manifest.json after each compilation.
+ * Webpack plugin that writes a manifest.json after each compilation.
  * Maps logical filenames (e.g. 'api.js') to their content-hashed physical
  * filenames (e.g. 'api.a1b2c3d4.js'). This enables runtime resolution of
  * extension bundles without hardcoded filenames, solving browser and Node.js
@@ -94,7 +94,7 @@ class BuildManifestPlugin {
       if (stats.hasErrors()) return;
 
       const { outputPath } = compiler;
-      const manifestPath = path.join(outputPath, 'build-manifest.json');
+      const manifestPath = path.join(outputPath, 'manifest.json');
 
       // Read existing manifest (other compilers may have already written)
       let manifest = {};

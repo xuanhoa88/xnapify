@@ -107,7 +107,7 @@ function discoverExtensions() {
  * (Re-)generate the built package.json for each extension.
  * Re-reads source manifest on every call so watch-mode picks up metadata changes.
  *
- * Reads `build-manifest.json` (written by BuildManifestPlugin) to resolve
+ * Reads `manifest.json` (written by BuildManifestPlugin) to resolve
  * content-hashed filenames for entry points.
  *
  * The `id` field is generated at build time via `generateExtensionId(name)`
@@ -129,15 +129,15 @@ async function generateManifests(extensions) {
       continue;
     }
 
-    // Read build-manifest.json for content-hashed filenames
+    // Read manifest.json for content-hashed filenames
     let buildManifest = {};
     try {
       buildManifest = JSON.parse(
-        fs.readFileSync(path.join(outputDir, 'build-manifest.json'), 'utf8'),
+        fs.readFileSync(path.join(outputDir, 'manifest.json'), 'utf8'),
       );
     } catch {
       logInfo(
-        `No build-manifest.json for ${name} — entry points will use logical names`,
+        `No manifest.json for ${name} — entry points will use logical names`,
       );
     }
 
@@ -148,7 +148,7 @@ async function generateManifests(extensions) {
       // Canonical identity
       name,
       version,
-      // Entry points (resolved from build-manifest.json hashed filenames)
+      // Entry points (resolved from manifest.json hashed filenames)
       ...(manifest.main && {
         main: `./${buildManifest['api.js'] || 'api.js'}`,
       }),
@@ -173,13 +173,13 @@ async function generateManifests(extensions) {
 // ---------------------------------------------------------------------------
 
 async function copyStaticAssets(extensions) {
-  for (const { dirName, path: extensionPath } of extensions) {
+  for (const { name, dirName, path: extensionPath } of extensions) {
     const source = path.join(extensionPath, 'assets');
     const target = path.join(EXTENSIONS_BUILD_DIR, dirName, 'assets');
 
     if (await pathExists(source)) {
       await copyDir(source, target);
-      logInfo(`📁 Copied static assets for ${dirName}`);
+      logInfo(`📁 Copied static assets for ${name}`);
     }
   }
 }
@@ -197,7 +197,7 @@ async function copyStaticAssets(extensions) {
  * `node_modules`. A symlink bridges the gap without duplicating files.
  */
 async function linkExtensionNodeModules(extensions) {
-  for (const { dirName, path: extensionPath } of extensions) {
+  for (const { name, dirName, path: extensionPath } of extensions) {
     const source = path.join(extensionPath, 'node_modules');
     const target = path.join(EXTENSIONS_BUILD_DIR, dirName, 'node_modules');
 
@@ -214,7 +214,7 @@ async function linkExtensionNodeModules(extensions) {
     }
 
     await fs.promises.symlink(source, target, 'junction');
-    logInfo(`🔗 Linked node_modules for ${dirName}`);
+    logInfo(`🔗 Linked node_modules for ${name}`);
   }
 }
 

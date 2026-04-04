@@ -94,7 +94,7 @@ class ServerExtensionManager extends BaseExtensionManager {
    */
   _resolveEntryPoint(manifest) {
     // The manifest's entry points now contain content-hashed filenames
-    // (e.g. './server.a1b2c3d4.js') from the build-manifest.json.
+    // (e.g. './server.a1b2c3d4.js') from the manifest.json.
     if (manifest && manifest.browser) {
       // The server loads the SSR bundle (server.js), resolved via buildManifest
       const bm = manifest.buildManifest;
@@ -139,7 +139,7 @@ class ServerExtensionManager extends BaseExtensionManager {
       }
     } catch (err) {
       console.error(
-        `[ServerExtensionManager] Failed to store asset URLs for ${id}:`,
+        `[ServerExtensionManager] Failed to store asset URLs for ${this._formatDisplayName(id)}:`,
         err,
       );
       this.emit('extension:error', { id, error: err, phase: 'script-setup' });
@@ -254,14 +254,14 @@ class ServerExtensionManager extends BaseExtensionManager {
       if (!bundlePath) {
         if (__DEV__) {
           console.warn(
-            `[ServerExtensionManager] No view bundle path resolved for ${id} (name=${manifest.name}, browser=${manifest.browser})`,
+            `[ServerExtensionManager] No view bundle path resolved for ${this._formatDisplayName(id)} (name=${manifest.name}, browser=${manifest.browser})`,
           );
         }
         return null;
       }
       if (__DEV__) {
         console.log(
-          `[ServerExtensionManager] Loading view module for ${id} from ${bundlePath}`,
+          `[ServerExtensionManager] Loading view module for ${this._formatDisplayName(id)} from ${bundlePath}`,
         );
       }
 
@@ -271,13 +271,15 @@ class ServerExtensionManager extends BaseExtensionManager {
       const extensionView = viewModule.default || viewModule;
 
       if (__DEV__) {
-        console.log(`[ServerExtensionManager] Loaded view module for ${id}`);
+        console.log(
+          `[ServerExtensionManager] Loaded view module for ${this._formatDisplayName(id)}`,
+        );
       }
 
       return extensionView;
     } catch (err) {
       console.error(
-        `[ServerExtensionManager] Failed to load view module for ${id}:`,
+        `[ServerExtensionManager] Failed to load view module for ${this._formatDisplayName(id)}:`,
         err.message,
       );
       this.emit('extension:error', {
@@ -309,7 +311,7 @@ class ServerExtensionManager extends BaseExtensionManager {
       if (viewModule && __DEV__) {
         const version = (manifest && manifest.version) || '0.0.0';
         console.log(
-          `[ServerExtensionManager] Loaded view for ${id} v${version}`,
+          `[ServerExtensionManager] Loaded view for ${this._formatDisplayName(id)} v${version}`,
         );
       }
 
@@ -319,7 +321,7 @@ class ServerExtensionManager extends BaseExtensionManager {
       return viewModule || { setup() {} };
     } catch (error) {
       console.error(
-        `[ServerExtensionManager] Failed to load view module for ${id}:`,
+        `[ServerExtensionManager] Failed to load view module for ${this._formatDisplayName(id)}:`,
         error.message,
       );
       this.emit('extension:error', {
@@ -353,7 +355,7 @@ class ServerExtensionManager extends BaseExtensionManager {
     if (!apiModule || typeof apiModule.install !== 'function') {
       if (__DEV__) {
         console.log(
-          `[ServerExtensionManager] ${id} has no install hook. Skipping.`,
+          `[ServerExtensionManager] ${this._formatDisplayName(id)} has no install hook. Skipping.`,
         );
       }
       return true;
@@ -361,7 +363,7 @@ class ServerExtensionManager extends BaseExtensionManager {
 
     if (__DEV__) {
       console.log(
-        `[ServerExtensionManager] Running install for ${id} (v${manifest.version || '0.0.0'})`,
+        `[ServerExtensionManager] Running install for ${this._formatDisplayName(id)} (v${manifest.version || '0.0.0'})`,
       );
     }
 
@@ -370,7 +372,9 @@ class ServerExtensionManager extends BaseExtensionManager {
       registry: this.registry,
     });
 
-    console.log(`[ServerExtensionManager] install completed for ${id}`);
+    console.log(
+      `[ServerExtensionManager] install completed for ${this._formatDisplayName(id)}`,
+    );
     return true;
   }
 
@@ -415,7 +419,7 @@ class ServerExtensionManager extends BaseExtensionManager {
         }
       } catch (revertErr) {
         console.error(
-          `[ServerExtensionManager] Auto-revert failed for ${id}:`,
+          `[ServerExtensionManager] Auto-revert failed for ${this._formatDisplayName(id)}:`,
           revertErr.message,
         );
       }
@@ -425,7 +429,7 @@ class ServerExtensionManager extends BaseExtensionManager {
     if (typeof apiModule.uninstall === 'function') {
       if (__DEV__) {
         console.log(
-          `[ServerExtensionManager] Running uninstall for ${id} (v${manifest.version || '0.0.0'})`,
+          `[ServerExtensionManager] Running uninstall for ${this._formatDisplayName(id)} (v${manifest.version || '0.0.0'})`,
         );
       }
 
@@ -434,10 +438,12 @@ class ServerExtensionManager extends BaseExtensionManager {
         registry: this.registry,
       });
 
-      console.log(`[ServerExtensionManager] uninstall completed for ${id}`);
+      console.log(
+        `[ServerExtensionManager] uninstall completed for ${this._formatDisplayName(id)}`,
+      );
     } else if (__DEV__) {
       console.log(
-        `[ServerExtensionManager] ${id} has no uninstall hook. Skipping.`,
+        `[ServerExtensionManager] ${this._formatDisplayName(id)} has no uninstall hook. Skipping.`,
       );
     }
 
@@ -470,7 +476,9 @@ class ServerExtensionManager extends BaseExtensionManager {
       const db = this.apiContainer.resolve('db');
 
       if (__DEV__) {
-        console.log(`[ServerExtensionManager] Booting API for ${id}`);
+        console.log(
+          `[ServerExtensionManager] Booting API for ${this._formatDisplayName(id)}`,
+        );
       }
 
       // 1. Translations — register i18n namespaces
@@ -540,7 +548,7 @@ class ServerExtensionManager extends BaseExtensionManager {
       }
     } catch (bootErr) {
       console.error(
-        `[ServerExtensionManager] Activate failed for ${id}:`,
+        `[ServerExtensionManager] Activate failed for ${this._formatDisplayName(id)}:`,
         bootErr.message,
       );
       this.emit('extension:error', {
@@ -572,7 +580,9 @@ class ServerExtensionManager extends BaseExtensionManager {
           registry: this.registry,
         });
         if (__DEV__) {
-          console.log(`[ServerExtensionManager] Shut down API for: ${id}`);
+          console.log(
+            `[ServerExtensionManager] Shut down API for: ${this._formatDisplayName(id)}`,
+          );
         }
       }
 
@@ -593,7 +603,7 @@ class ServerExtensionManager extends BaseExtensionManager {
       this[EXTENSION_API_ENTRY_POINTS].delete(id);
     } catch (err) {
       console.error(
-        `[ServerExtensionManager] Deactivate failed for ${id}:`,
+        `[ServerExtensionManager] Deactivate failed for ${this._formatDisplayName(id)}:`,
         err.message,
       );
       this.emit('extension:error', {
@@ -627,7 +637,7 @@ class ServerExtensionManager extends BaseExtensionManager {
       this[BUFFERED_ROUTES].push({ id, adapter, type: routerKey });
       if (__DEV__) {
         console.log(
-          `[ServerExtensionManager] Buffered ${type} route(s) for ${id} (router not ready)`,
+          `[ServerExtensionManager] Buffered ${type} route(s) for ${this._formatDisplayName(id)} (router not ready)`,
         );
       }
       return;
@@ -642,7 +652,7 @@ class ServerExtensionManager extends BaseExtensionManager {
 
     if (__DEV__) {
       console.log(
-        `[ServerExtensionManager] Injected ${added.length} ${type} route(s) for ${id}`,
+        `[ServerExtensionManager] Injected ${added.length} ${type} route(s) for ${this._formatDisplayName(id)}`,
       );
     }
   }
@@ -703,7 +713,7 @@ class ServerExtensionManager extends BaseExtensionManager {
         } catch (err) {
           failed++;
           console.warn(
-            `[ServerExtensionManager] Failed to load extension "${id}":`,
+            `[ServerExtensionManager] Failed to load extension "${this._formatDisplayName(id)}":`,
             err.message,
           );
         }
@@ -760,7 +770,7 @@ class ServerExtensionManager extends BaseExtensionManager {
 
     if (__DEV__) {
       console.log(
-        `[ServerExtensionManager] Refreshing: ${resolvedIds.join(', ')}`,
+        `[ServerExtensionManager] Refreshing: ${resolvedIds.map(id => this._formatDisplayName(id)).join(', ')}`,
       );
     }
 
@@ -781,7 +791,7 @@ class ServerExtensionManager extends BaseExtensionManager {
         await this.loadExtension(id);
       } catch (err) {
         console.warn(
-          `[ServerExtensionManager] Failed to reload extension "${id}":`,
+          `[ServerExtensionManager] Failed to reload extension "${this._formatDisplayName(id)}":`,
           err.message,
         );
       }
@@ -834,7 +844,7 @@ class ServerExtensionManager extends BaseExtensionManager {
       if (devExtensions.length > 0) {
         if (__DEV__) {
           console.log(
-            `[ServerExtensionManager] Discovered dev extensions: ${devExtensions.map(m => m.id).join(', ')}`,
+            `[ServerExtensionManager] Discovered dev extensions: ${devExtensions.map(m => this._formatDisplayName(m.id)).join(', ')}`,
           );
         }
         // Sequential loading — prevents concurrent SQLite writes
@@ -844,7 +854,7 @@ class ServerExtensionManager extends BaseExtensionManager {
             await this.loadExtension(manifest.id, manifest);
           } catch (err) {
             console.warn(
-              `[ServerExtensionManager] Failed to load dev extension "${manifest.id}":`,
+              `[ServerExtensionManager] Failed to load dev extension "${this._formatDisplayName(manifest.id)}":`,
               err.message,
             );
           }
@@ -964,7 +974,7 @@ class ServerExtensionManager extends BaseExtensionManager {
   /**
    * Read an extension's package.json manifest from its directory on disk.
    * Trusts the `manifest.id` field written at build time by the extension
-   * build pipeline. Loads the sibling `build-manifest.json` for
+   * build pipeline. Loads the sibling `manifest.json` for
    * content-hashed filename resolution.
    * Detects built client assets from the build manifest.
    * @param {...string} extensionDirs - Absolute path to the extension directory
@@ -986,11 +996,11 @@ class ServerExtensionManager extends BaseExtensionManager {
         manifest.id = this._resolveExtensionId(manifest);
       }
 
-      // Load build-manifest.json for content-hashed filename resolution
+      // Load manifest.json for content-hashed filename resolution
       let buildManifest = null;
       try {
         const bmContent = await fs.promises.readFile(
-          path.join(extDir, 'build-manifest.json'),
+          path.join(extDir, 'manifest.json'),
           'utf8',
         );
         buildManifest = JSON.parse(bmContent);

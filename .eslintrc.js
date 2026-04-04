@@ -83,7 +83,7 @@ const config = {
     'no-underscore-dangle': [
       'error',
       {
-        allow: ['__typename'],
+        allow: ['__typename', '_formatDisplayName'],
       },
     ],
 

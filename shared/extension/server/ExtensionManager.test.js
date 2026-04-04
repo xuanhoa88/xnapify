@@ -58,7 +58,7 @@ describe('ServerExtensionManager', () => {
       jest.spyOn(mockFs, 'readFile');
     });
 
-    it('loads package.json and parses build-manifest.json if present', async () => {
+    it('loads package.json and parses manifest.json if present', async () => {
       mockFs.readFile.mockImplementation(async pathStr => {
         if (pathStr.endsWith('package.json')) {
           return JSON.stringify({
@@ -66,7 +66,7 @@ describe('ServerExtensionManager', () => {
             id: 'built_ext_id',
           });
         }
-        if (pathStr.endsWith('build-manifest.json')) {
+        if (pathStr.endsWith('manifest.json')) {
           return JSON.stringify({
             'extension.css': 'extension.abcd.css',
             'remote.js': 'remote.1234.js',
@@ -87,15 +87,15 @@ describe('ServerExtensionManager', () => {
       expect(manifest.hasClientScript).toBe(true);
     });
 
-    it('falls back to file existence if build-manifest.json is missing', async () => {
+    it('falls back to file existence if manifest.json is missing', async () => {
       mockFs.readFile.mockImplementation(async pathStr => {
         if (pathStr.endsWith('package.json')) {
           return JSON.stringify({ name: 'test_dev_ext' });
         }
-        throw new Error('File not found'); // build-manifest.json missing
+        throw new Error('File not found'); // manifest.json missing
       });
 
-      // When build-manifest.json is missing, readManifest falls back to
+      // When manifest.json is missing, readManifest falls back to
       // fileExists() checks. Since the test paths don't exist on disk,
       // hasClientCss / hasClientScript will be false — the key assertion
       // is that buildManifest is null and the method doesn't throw.
