@@ -99,7 +99,7 @@ const DEFAULT_ALPHABET =
   'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 
 /** Minimum output length for generated extension IDs. */
-const MIN_LENGTH = 8;
+const MIN_LENGTH = 5;
 
 /**
  * Derive a deterministically shuffled alphabet from a secret key.
@@ -131,21 +131,28 @@ const sqids = new Sqids({
 });
 
 /**
- * Generate a deterministic, URL-safe, obfuscated extension ID from a
- * manifest name. Uses sqids to encode the full character code sequence,
- * guaranteeing collision-free output.
+ * Generate a deterministic, short, URL-safe extension ID from a manifest name.
+ *
+ * Strategy: SHA-256 hash the name into a fixed 32-byte digest, then extract
+ * two 32-bit unsigned integers from the first 8 bytes. Sqids encodes these
+ * two numbers into a compact ~13-character string (similar to YouTube IDs).
+ *
+ * This gives a 2^64 collision space (~18 quintillion) — more than sufficient
+ * for extension identity while keeping IDs short and filesystem-friendly.
+ *
+ * Previous approach encoded every character code of the name, producing
+ * ~90-character IDs for a typical scoped package name.
  *
  * When `XNAPIFY_KEY` is set, the sqids alphabet is derived from the key
- * via HMAC-SHA256, making IDs unique per deployment. Without the key,
- * the default sqids alphabet is used.
+ * via HMAC-SHA256, making IDs unique per deployment.
  *
  * @param {string} name - Extension manifest name (e.g. '@xnapify-extension/profile')
- * @returns {string|null} Encoded extension ID or null if name is invalid
+ * @returns {string|null} Compact encoded extension ID (~13 chars) or null if name is invalid
  */
 function generateExtensionId(name) {
   if (!name || typeof name !== 'string') return null;
-  const codes = [...name].map(c => c.charCodeAt(0));
-  return sqids.encode(codes);
+  const hash = crypto.createHash('sha256').update(name).digest();
+  return sqids.encode([hash.readUInt32BE(0), hash.readUInt32BE(4)]);
 }
 
 module.exports = { computeChecksum, generateExtensionId };
