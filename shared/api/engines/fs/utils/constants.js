@@ -36,9 +36,13 @@ export const MAX_FILE_SIZE =
 export const MAX_FILE_LENGTH =
   parseInt(process.env.XNAPIFY_UPLOAD_FILE_LENGTH, 10) || 255;
 
+const isProd = process.env.NODE_ENV === 'production';
+
 export const UPLOAD_DIR =
   process.env.XNAPIFY_UPLOAD_DIR ||
-  path.join(os.homedir(), '.xnapify', 'uploads');
+  (isProd
+    ? path.join(os.homedir(), '.xnapify', 'uploads')
+    : path.join(process.cwd(), '.data', 'uploads'));
 
 export const ALLOWED_EXTENSIONS = process.env.XNAPIFY_UPLOAD_FILE_EXT
   ? process.env.XNAPIFY_UPLOAD_FILE_EXT.split(',').map(ext => ext.trim())

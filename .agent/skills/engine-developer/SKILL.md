@@ -22,7 +22,7 @@ Engines are singleton services registered on the DI container during application
 | `fs` | `'fs'` | File operations with path traversal guards |
 | `hook` | `'hook'` | Event hook factory for pub/sub |
 | `http` | `'http'` | HTTP response helpers (`sendSuccess`, `sendError`) |
-| `queue` | `'queue'` | BullMQ-compatible job queue |
+| `queue` | `'queue'` | Channel-based pub/sub job queue |
 | `schedule` | `'schedule'` | Cron-based task scheduling |
 | `search` | `'search'` | Full-text search (FlexSearch/MeiliSearch) |
 | `template` | `'template'` | LiquidJS template rendering |

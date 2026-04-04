@@ -34,7 +34,9 @@ export default class MemorySearch {
     this.directory =
       options.directory ||
       process.env.XNAPIFY_FTS_DIR ||
-      path.join(os.homedir(), '.xnapify', 'fts');
+      (process.env.NODE_ENV === 'production'
+        ? path.join(os.homedir(), '.xnapify', 'fts')
+        : path.join(process.cwd(), '.data', 'fts'));
     this.memoryIndex = new Map(); // Key: `${entityType}_${entityId}` -> Value: Document
     this.isInitialized = false;
     this._initPromise = null;

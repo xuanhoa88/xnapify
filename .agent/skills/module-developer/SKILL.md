@@ -254,7 +254,7 @@ async boot({ container }) {
 | `'http'` | HTTP | Request helpers `sendSuccess`, `sendError` |
 | `'template'` | Template | LiquidJS template renderer |
 | `'fs'` | Filesystem | File operations with path guards |
-| `'queue'` | Queue | BullMQ-compatible job queue |
+| `'queue'` | Queue | Channel-based pub/sub job queue |
 | `'webhook'` | Webhook | WebhookManager with dispatch/verify |
 | `'ws'` | WebSocket | WebSocket server instance |
 

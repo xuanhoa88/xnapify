@@ -44,8 +44,10 @@ export default class FileCache {
     this.directory =
       options.directory ||
       process.env.XNAPIFY_CACHE_DIR ||
-      path.join(os.homedir(), '.xnapify', 'caches');
-    this.maxSize = options.maxSize || 10000;
+      (process.env.NODE_ENV === 'production'
+        ? path.join(os.homedir(), '.xnapify', 'caches')
+        : path.join(process.cwd(), '.data', 'caches'));
+    this.maxSize = options.maxSize || 10_000;
     this.defaultTTL = options.ttl || 5 * 60 * 1000; // 5 minutes
     this.locks = new Map(); // In-memory locks for race condition prevention
 

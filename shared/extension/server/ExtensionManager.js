@@ -872,9 +872,12 @@ class ServerExtensionManager extends BaseExtensionManager {
    */
   getInstalledExtensionsDir() {
     try {
+      const isProd = process.env.NODE_ENV === 'production';
       return path.resolve(
         process.env.XNAPIFY_EXTENSION_DIR ||
-          path.join(os.homedir(), '.xnapify', 'extensions'),
+          (isProd
+            ? path.join(os.homedir(), '.xnapify', 'extensions')
+            : path.join(process.cwd(), '.data', 'extensions')),
       );
     } catch (err) {
       console.error(`Failed to get extension path:`, err);
