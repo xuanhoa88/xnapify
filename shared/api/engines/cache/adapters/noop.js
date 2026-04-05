@@ -18,7 +18,7 @@
  * - has() always returns false
  * - clear() is a no-op
  * - stats() returns empty stats
- * - cleanup() is a no-op
+ * - cleanup() returns 0
  * - keys() returns empty array
  */
 export default class NoOpCache {
@@ -98,15 +98,18 @@ export default class NoOpCache {
 
   /**
    * Get cache statistics
-   * Returns empty stats object
+   * Returns standardized empty stats object
    *
    * @returns {Object} Empty stats
    */
   stats() {
     return {
-      entries: 0,
-      hits: 0,
-      misses: 0,
+      type: 'noop',
+      totalEntries: 0,
+      validEntries: 0,
+      expiredEntries: 0,
+      maxSize: 0,
+      defaultTTL: 0,
     };
   }
 
@@ -114,10 +117,10 @@ export default class NoOpCache {
    * Cleanup expired entries
    * No-op, there are no entries to clean up
    *
-   * @returns {Promise<void>}
+   * @returns {number} Always 0
    */
   cleanup() {
-    return Promise.resolve();
+    return 0;
   }
 
   /**

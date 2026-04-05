@@ -80,10 +80,11 @@ export default class MemoryCache {
       this.cache.delete(oldestKey);
     }
 
+    const now = Date.now();
     this.cache.set(key, {
       value,
-      expiresAt: Date.now() + ttl,
-      createdAt: Date.now(),
+      expiresAt: now + ttl,
+      createdAt: now,
     });
   }
 
@@ -156,22 +157,28 @@ export default class MemoryCache {
    * @returns {number} Number of entries removed
    */
   cleanup() {
-    console.info('🧹 Cleaning up expired memory cache entries...');
     const now = Date.now();
     let removed = 0;
+    const expiredKeys = [];
 
     this.cache.forEach((entry, key) => {
-      if (now > entry.expiresAt) {
-        this.cache.delete(key);
-        removed++;
-      }
+      if (now > entry.expiresAt) expiredKeys.push(key);
     });
+
+    for (const key of expiredKeys) {
+      this.cache.delete(key);
+      removed++;
+    }
+
+    if (removed > 0) {
+      console.info(`[Cache:memory] Removed ${removed} expired entries`);
+    }
 
     return removed;
   }
 
   /**
-   * Get all keys (for debugging)
+   * Get all keys
    *
    * @returns {string[]} Array of keys
    */

@@ -30,6 +30,8 @@ await cache.delete('key');               // true/false
 | `cleanup()` | `number` | Remove expired entries, returns count |
 | `size` | `number` | Current entry count |
 
+> **Note:** File cache methods are async (return Promises). Memory cache methods are synchronous.
+
 ### Namespacing
 
 Isolate modules with key prefixing:
@@ -59,13 +61,15 @@ userCache.clear(); // Removes "users:*", leaves "posts:*" etc.
 - **LRU eviction**: Oldest entries removed when `maxSize` reached.
 - **Lazy expiration**: Expired entries deleted on `get()` / `has()` access.
 - Access (`get`) and update (`set`) refresh LRU position.
+- **Synchronous** operations.
 
 ### File Adapter
 
-- Each key stored as `<md5-hash>.json` with atomic writes (temp + rename).
-- Spin lock per key prevents race conditions.
+- Each key stored as `<sha256-hash>.json` with atomic writes (temp + rename).
+- **Async mutex per key** — no busy-wait, Promise-based operation queuing.
 - Eviction removes oldest **10%** of files when `maxSize` reached.
-- `cleanup()` also removes corrupted files and stale locks (>30s).
+- `cleanup()` also removes corrupted files.
+- **All operations are async** (use `await`).
 
 ### Custom Instances
 
@@ -75,6 +79,23 @@ import { createFactory } from '@shared/api/engines/cache';
 const fileCache = createFactory({ type: 'file', directory: '/tmp/cache' });
 const memCache = createFactory({ type: 'memory', maxSize: 500, ttl: 10000 });
 ```
+
+## Error Classes
+
+```javascript
+import { CacheError, InvalidCacheTypeError, InvalidNamespaceError } from '@shared/api/engines/cache';
+```
+
+| Class | Code | Status | When |
+|---|---|---|---|
+| `CacheError` | `CACHE_ERROR` | `500` | Base error |
+| `InvalidCacheTypeError` | `INVALID_CACHE_TYPE` | `400` | Unknown adapter type |
+| `InvalidNamespaceError` | `INVALID_NAMESPACE` | `400` | Invalid namespace |
+| `InvalidCacheError` | `INVALID_CACHE` | `400` | Missing/invalid base cache |
+
+## Signal Handling
+
+`createFactory()` registers `SIGTERM` and `SIGINT` handlers that call `adapter.cleanup()` for graceful shutdown.
 
 ## See Also
 

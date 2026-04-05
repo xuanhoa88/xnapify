@@ -10,6 +10,12 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
+// ======================================================================
+// Constants
+// ======================================================================
+
+const EVICTION_PERCENT = 0.1;
+
 /**
  * File Cache Adapter
  *
@@ -17,7 +23,7 @@ import path from 'path';
  * - Persistent storage across restarts
  * - TTL-based expiration
  * - Atomic writes (temp file + rename)
- * - In-memory lock to prevent race conditions
+ * - Async mutex per key to prevent race conditions
  * - Max size limit with LRU-like eviction
  *
  * Common Cache Interface:
@@ -29,7 +35,7 @@ import path from 'path';
  * - stats(): Get cache statistics
  * - cleanup(): Remove expired entries
  * - keys(): Get all cache keys
- * - size: Get number of entries
+ * - size: (getter, sync fallback)
  */
 export default class FileCache {
   /**
@@ -49,87 +55,177 @@ export default class FileCache {
         : path.join(process.cwd(), '.data', 'caches'));
     this.maxSize = options.maxSize || 10_000;
     this.defaultTTL = options.ttl || 5 * 60 * 1000; // 5 minutes
-    this.locks = new Map(); // In-memory locks for race condition prevention
 
-    // Ensure cache directory exists
-    this.ensureDirectory();
+    // Async mutex: maps key → Promise chain
+    this.lockQueues = new Map();
+
+    // Track pending initialization
+    this.ready = this.ensureDirectory();
   }
+
+  // ====================================================================
+  // Directory & File Helpers
+  // ====================================================================
 
   /**
    * Ensure cache directory exists
+   * @returns {Promise<void>}
    */
-  ensureDirectory() {
-    if (!fs.existsSync(this.directory)) {
-      fs.mkdirSync(this.directory, { recursive: true });
+  async ensureDirectory() {
+    try {
+      await fs.promises.access(this.directory);
+    } catch {
+      await fs.promises.mkdir(this.directory, { recursive: true });
     }
   }
 
   /**
-   * Generate safe filename from key
+   * Generate safe filename from key using SHA-256
    *
    * @param {string} key - Cache key
-   * @returns {string} Safe filename
+   * @returns {string} Safe filename path
    */
   getFilename(key) {
-    const hash = crypto.createHash('md5').update(key).digest('hex');
+    const hash = crypto
+      .createHash('sha256')
+      .update(key)
+      .digest('hex')
+      .slice(0, 32);
     return path.join(this.directory, `${hash}.json`);
   }
 
+  // ====================================================================
+  // Async Mutex (per-key)
+  // ====================================================================
+
   /**
-   * Acquire lock for a key (simple spin lock)
+   * Execute a function with an exclusive lock on the given key.
+   * Queues concurrent calls for the same key — no busy-wait.
    *
-   * @param {string} key - Cache key
-   * @param {number} timeout - Max wait time in ms
-   * @returns {boolean} True if lock acquired
+   * @param {string} key - Lock key
+   * @param {Function} fn - Async function to execute under lock
+   * @returns {Promise<*>} Result of fn
    */
-  acquireLock(key, timeout = 5000) {
-    const start = Date.now();
-    while (this.locks.has(key)) {
-      if (Date.now() - start > timeout) return false;
-      // Busy wait (synchronous - minimal overhead for short locks)
+  async withLock(key, fn) {
+    // Chain this operation after the current pending operation for this key
+    const prev = this.lockQueues.get(key) || Promise.resolve();
+    let releaseFn;
+
+    const next = new Promise(resolve => {
+      releaseFn = resolve;
+    });
+
+    // Register our lock in the queue before awaiting
+    const operation = prev.then(async () => {
+      try {
+        return await fn();
+      } finally {
+        releaseFn();
+      }
+    });
+
+    this.lockQueues.set(key, next);
+
+    // Clean up the queue entry when our lock is released
+    next.then(() => {
+      if (this.lockQueues.get(key) === next) {
+        this.lockQueues.delete(key);
+      }
+    });
+
+    return operation;
+  }
+
+  // ====================================================================
+  // File I/O Helpers
+  // ====================================================================
+
+  /**
+   * Read and parse a cache file
+   *
+   * @param {string} filename - File path
+   * @returns {Promise<Object|null>} Parsed data or null
+   */
+  async readFile(filename) {
+    try {
+      const content = await fs.promises.readFile(filename, 'utf8');
+      return JSON.parse(content);
+    } catch (err) {
+      if (err.code === 'ENOENT') return null;
+      // Corrupted file
+      if (err instanceof SyntaxError) return null;
+      throw err;
     }
-    this.locks.set(key, Date.now());
-    return true;
   }
 
   /**
-   * Release lock for a key
+   * Atomically write a cache file (temp + rename)
    *
-   * @param {string} key - Cache key
+   * @param {string} filename - Target file path
+   * @param {Object} data - Data to write
+   * @returns {Promise<void>}
    */
-  releaseLock(key) {
-    this.locks.delete(key);
+  async writeFile(filename, data) {
+    const tmpFile = `${filename}.tmp.${Date.now()}`;
+    await fs.promises.writeFile(tmpFile, JSON.stringify(data), 'utf8');
+    await fs.promises.rename(tmpFile, filename);
   }
+
+  /**
+   * Delete a cache file safely
+   *
+   * @param {string} filename - File path
+   * @returns {Promise<boolean>} True if deleted
+   */
+  async deleteFile(filename) {
+    try {
+      await fs.promises.unlink(filename);
+      return true;
+    } catch (err) {
+      if (err.code === 'ENOENT') return false;
+      throw err;
+    }
+  }
+
+  /**
+   * Get list of cache files
+   *
+   * @returns {Promise<string[]>} Array of filenames
+   */
+  async getCacheFiles() {
+    try {
+      const files = await fs.promises.readdir(this.directory);
+      return files.filter(f => f.endsWith('.json'));
+    } catch {
+      return [];
+    }
+  }
+
+  // ====================================================================
+  // Public API — Cache Interface
+  // ====================================================================
 
   /**
    * Get a value from cache
    *
    * @param {string} key - Cache key
-   * @returns {*} Cached value or null if not found/expired
+   * @returns {Promise<*>} Cached value or null if not found/expired
    */
-  get(key) {
-    if (!this.acquireLock(key)) return null;
-
-    try {
+  async get(key) {
+    await this.ready;
+    return this.withLock(key, async () => {
       const filename = this.getFilename(key);
-
-      if (!fs.existsSync(filename)) return null;
-
-      const data = JSON.parse(fs.readFileSync(filename, 'utf8'));
+      const data = await this.readFile(filename);
+      if (!data) return null;
 
       // Check if expired
       if (Date.now() > data.expiresAt) {
-        this.deleteFile(filename);
+        await this.deleteFile(filename);
         return null;
       }
 
       return data.value;
-    } catch (error) {
-      console.error('FileCache get error:', error.message);
-      return null;
-    } finally {
-      this.releaseLock(key);
-    }
+    });
   }
 
   /**
@@ -138,187 +234,139 @@ export default class FileCache {
    * @param {string} key - Cache key
    * @param {*} value - Value to cache
    * @param {number} [ttl] - TTL in ms (optional, uses default)
+   * @returns {Promise<void>}
    */
-  set(key, value, ttl = this.defaultTTL) {
-    if (!this.acquireLock(key)) {
-      console.error('FileCache set: Could not acquire lock for key:', key);
-      return;
-    }
-
-    try {
+  async set(key, value, ttl = this.defaultTTL) {
+    await this.ready;
+    return this.withLock(key, async () => {
       // Check max size and evict if needed
-      this.evictIfNeeded();
+      await this.evictIfNeeded();
 
       const filename = this.getFilename(key);
-      const tempFile = `${filename}.tmp.${Date.now()}`;
+      const now = Date.now();
       const data = {
         key,
         value,
-        expiresAt: Date.now() + ttl,
-        createdAt: Date.now(),
+        expiresAt: now + ttl,
+        createdAt: now,
       };
 
-      // Atomic write: write to temp file, then rename
-      fs.writeFileSync(tempFile, JSON.stringify(data), 'utf8');
-      fs.renameSync(tempFile, filename);
-    } catch (error) {
-      console.error('FileCache set error:', error.message);
-    } finally {
-      this.releaseLock(key);
-    }
-  }
-
-  /**
-   * Delete a cache file safely
-   *
-   * @param {string} filename - File path
-   * @returns {boolean} True if deleted
-   */
-  deleteFile(filename) {
-    try {
-      if (fs.existsSync(filename)) {
-        fs.unlinkSync(filename);
-        return true;
-      }
-      return false;
-    } catch {
-      return false;
-    }
+      await this.writeFile(filename, data);
+    });
   }
 
   /**
    * Delete a value from cache
    *
    * @param {string} key - Cache key
-   * @returns {boolean} True if deleted
+   * @returns {Promise<boolean>} True if deleted
    */
-  delete(key) {
-    if (!this.acquireLock(key)) return false;
-
-    try {
+  async delete(key) {
+    await this.ready;
+    return this.withLock(key, async () => {
       return this.deleteFile(this.getFilename(key));
-    } finally {
-      this.releaseLock(key);
-    }
+    });
   }
 
   /**
    * Check if key exists and is not expired
    *
    * @param {string} key - Cache key
-   * @returns {boolean}
+   * @returns {Promise<boolean>}
    */
-  has(key) {
-    if (!this.acquireLock(key)) return false;
-
-    try {
+  async has(key) {
+    await this.ready;
+    return this.withLock(key, async () => {
       const filename = this.getFilename(key);
-
-      if (!fs.existsSync(filename)) return false;
-
-      const data = JSON.parse(fs.readFileSync(filename, 'utf8'));
+      const data = await this.readFile(filename);
+      if (!data) return false;
 
       if (Date.now() > data.expiresAt) {
-        this.deleteFile(filename);
+        await this.deleteFile(filename);
         return false;
       }
 
       return true;
-    } catch {
-      return false;
-    } finally {
-      this.releaseLock(key);
-    }
+    });
   }
 
   /**
    * Clear all entries
+   *
+   * @returns {Promise<void>}
    */
-  clear() {
+  async clear() {
+    await this.ready;
     try {
-      const files = fs.readdirSync(this.directory);
-      files.forEach(file => {
-        if (file.endsWith('.json')) {
-          this.deleteFile(path.join(this.directory, file));
-        }
-      });
-      this.locks.clear();
+      const files = await this.getCacheFiles();
+      await Promise.all(
+        files.map(file => this.deleteFile(path.join(this.directory, file))),
+      );
+      this.lockQueues.clear();
     } catch (error) {
-      console.error('FileCache clear error:', error.message);
+      console.error('[Cache:file] Clear error:', error.message);
     }
   }
 
   /**
    * Evict oldest entries if at max size
+   *
+   * @returns {Promise<void>}
    */
-  evictIfNeeded() {
+  async evictIfNeeded() {
     try {
-      const files = this.getCacheFiles();
-
+      const files = await this.getCacheFiles();
       if (files.length < this.maxSize) return;
 
-      // Sort by creation time (oldest first)
-      const fileStats = files.map(file => {
+      // Read all files to sort by creation time
+      const fileEntries = [];
+      for (const file of files) {
         const filepath = path.join(this.directory, file);
         try {
-          const data = JSON.parse(fs.readFileSync(filepath, 'utf8'));
-          return { file, createdAt: data.createdAt || 0, filepath };
+          const data = await this.readFile(filepath);
+          fileEntries.push({
+            file,
+            createdAt: (data && data.createdAt) || 0,
+            filepath,
+          });
         } catch {
-          return { file, createdAt: 0, filepath };
+          fileEntries.push({ file, createdAt: 0, filepath });
         }
-      });
+      }
 
-      fileStats.sort((a, b) => a.createdAt - b.createdAt);
+      fileEntries.sort((a, b) => a.createdAt - b.createdAt);
 
       // Remove oldest 10% or at least 1 entry
-      const toRemove = Math.max(1, Math.floor(files.length * 0.1));
-      for (let i = 0; i < toRemove && i < fileStats.length; i++) {
-        this.deleteFile(fileStats[i].filepath);
+      const toRemove = Math.max(1, Math.floor(files.length * EVICTION_PERCENT));
+      for (let i = 0; i < toRemove && i < fileEntries.length; i++) {
+        await this.deleteFile(fileEntries[i].filepath);
       }
     } catch (error) {
-      console.error('FileCache evict error:', error.message);
-    }
-  }
-
-  /**
-   * Get list of cache files
-   *
-   * @returns {string[]} Array of filenames
-   */
-  getCacheFiles() {
-    try {
-      return fs.readdirSync(this.directory).filter(f => f.endsWith('.json'));
-    } catch {
-      return [];
+      console.error('[Cache:file] Evict error:', error.message);
     }
   }
 
   /**
    * Get cache statistics
    *
-   * @returns {Object} Cache stats
+   * @returns {Promise<Object>} Cache stats
    */
-  stats() {
+  async stats() {
+    await this.ready;
     try {
-      const files = this.getCacheFiles();
+      const files = await this.getCacheFiles();
       let validCount = 0;
       let expiredCount = 0;
       const now = Date.now();
 
-      files.forEach(file => {
-        try {
-          const data = JSON.parse(
-            fs.readFileSync(path.join(this.directory, file), 'utf8'),
-          );
-          if (now > data.expiresAt) {
-            expiredCount++;
-          } else {
-            validCount++;
-          }
-        } catch (e) {
+      for (const file of files) {
+        const data = await this.readFile(path.join(this.directory, file));
+        if (!data || now > data.expiresAt) {
           expiredCount++;
+        } else {
+          validCount++;
         }
-      });
+      }
 
       return {
         type: 'file',
@@ -328,7 +376,7 @@ export default class FileCache {
         expiredEntries: expiredCount,
         maxSize: this.maxSize,
         defaultTTL: this.defaultTTL,
-        activeLocks: this.locks.size,
+        activeLocks: this.lockQueues.size,
       };
     } catch (error) {
       return {
@@ -342,42 +390,42 @@ export default class FileCache {
   /**
    * Clean up expired entries
    *
-   * @returns {number} Number of entries removed
+   * @returns {Promise<number>} Number of entries removed
    */
-  cleanup() {
-    console.info('🧹 Cleaning up expired file cache entries...');
+  async cleanup() {
+    await this.ready;
     try {
-      const files = this.getCacheFiles();
+      const files = await this.getCacheFiles();
       const now = Date.now();
       let removed = 0;
 
-      files.forEach(file => {
+      for (const file of files) {
         const filepath = path.join(this.directory, file);
-        try {
-          const data = JSON.parse(fs.readFileSync(filepath, 'utf8'));
+        const data = await this.readFile(filepath);
 
-          if (now > data.expiresAt) {
-            this.deleteFile(filepath);
-            removed++;
-          }
-        } catch {
+        if (!data) {
           // Remove corrupted files
-          this.deleteFile(filepath);
+          await this.deleteFile(filepath);
+          removed++;
+        } else if (now > data.expiresAt) {
+          await this.deleteFile(filepath);
           removed++;
         }
+      }
+
+      // Clean up stale lock queues
+      const staleKeys = [];
+      this.lockQueues.forEach((_promise, key) => {
+        staleKeys.push(key);
       });
 
-      // Clean up stale locks (older than 30 seconds)
-      const lockTimeout = 30000;
-      this.locks.forEach((timestamp, key) => {
-        if (now - timestamp > lockTimeout) {
-          this.locks.delete(key);
-        }
-      });
+      if (removed > 0) {
+        console.info(`[Cache:file] Removed ${removed} expired entries`);
+      }
 
       return removed;
     } catch (error) {
-      console.error('FileCache cleanup error:', error.message);
+      console.error('[Cache:file] Cleanup error:', error.message);
       return 0;
     }
   }
@@ -385,23 +433,18 @@ export default class FileCache {
   /**
    * Get all keys
    *
-   * @returns {string[]} Array of keys
+   * @returns {Promise<string[]>} Array of original cache keys
    */
-  keys() {
+  async keys() {
+    await this.ready;
     try {
-      const files = this.getCacheFiles();
+      const files = await this.getCacheFiles();
       const keys = [];
 
-      files.forEach(file => {
-        try {
-          const data = JSON.parse(
-            fs.readFileSync(path.join(this.directory, file), 'utf8'),
-          );
-          if (data.key) keys.push(data.key);
-        } catch {
-          // Skip corrupted files
-        }
-      });
+      for (const file of files) {
+        const data = await this.readFile(path.join(this.directory, file));
+        if (data && data.key) keys.push(data.key);
+      }
 
       return keys;
     } catch {
@@ -410,11 +453,28 @@ export default class FileCache {
   }
 
   /**
-   * Get cache size
+   * Get cache size (async)
+   *
+   * @returns {Promise<number>} Current number of entries
+   */
+  async getSize() {
+    await this.ready;
+    const files = await this.getCacheFiles();
+    return files.length;
+  }
+
+  /**
+   * Get cache size (sync fallback — uses readdirSync)
+   * Prefer getSize() for non-blocking usage.
    *
    * @returns {number} Current number of entries
    */
   get size() {
-    return this.getCacheFiles().length;
+    try {
+      return fs.readdirSync(this.directory).filter(f => f.endsWith('.json'))
+        .length;
+    } catch {
+      return 0;
+    }
   }
 }

@@ -46,8 +46,21 @@ import { createFactory, withNamespace } from './factory';
  * await userApiCache.set('123', data); // Stored as "api:users:123"
  */
 
-// Export the class and factory for external use
+// Export factory and namespace utility
 export { createFactory, withNamespace };
+
+// Export error classes
+export {
+  CacheError,
+  InvalidCacheError,
+  InvalidCacheTypeError,
+  InvalidNamespaceError,
+} from './errors';
+
+// Export adapter classes
+export { default as MemoryCache } from './adapters/memory';
+export { default as FileCache } from './adapters/file';
+export { default as NoOpCache } from './adapters/noop';
 
 /**
  * Singleton instance of Cache Engine

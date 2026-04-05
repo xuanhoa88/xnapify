@@ -8,6 +8,11 @@
 import FileCache from './adapters/file';
 import MemoryCache from './adapters/memory';
 import NoOpCache from './adapters/noop';
+import {
+  InvalidCacheError,
+  InvalidCacheTypeError,
+  InvalidNamespaceError,
+} from './errors';
 
 /**
  * Supported cache adapter types
@@ -29,9 +34,9 @@ import NoOpCache from './adapters/noop';
  * @property {(key: string) => Promise<boolean>} delete - Delete key
  * @property {(key: string) => Promise<boolean>} has - Check if key exists
  * @property {() => Promise<void>} clear - Clear all entries
- * @property {() => Array<string>} [keys] - Get all keys (optional)
+ * @property {() => string[]} [keys] - Get all keys (optional)
  * @property {() => Object} [stats] - Get cache statistics (optional)
- * @property {() => Promise<void>} [cleanup] - Cleanup expired entries (optional)
+ * @property {() => number} [cleanup] - Cleanup expired entries (optional)
  * @property {(namespace: string) => CacheAdapter} withNamespace - Create namespaced cache
  */
 
@@ -50,8 +55,8 @@ import NoOpCache from './adapters/noop';
  * @param {string} namespace - Namespace prefix for keys (must be non-empty)
  * @param {CacheAdapter} baseCache - Base cache instance (required)
  * @returns {CacheAdapter} Namespaced cache wrapper
- * @throws {Error} If namespace is empty, whitespace-only, or invalid
- * @throws {Error} If baseCache is not provided or invalid
+ * @throws {InvalidNamespaceError} If namespace is empty, whitespace-only, or invalid
+ * @throws {InvalidCacheError} If baseCache is not provided or invalid
  *
  * @example
  * // Preferred: Use instance method
@@ -68,44 +73,31 @@ import NoOpCache from './adapters/noop';
 export function withNamespace(namespace, baseCache) {
   // Validate namespace
   if (!namespace || typeof namespace !== 'string') {
-    const err = new Error('Namespace must be a non-empty string');
-    err.name = 'InvalidNamespaceError';
-    err.status = 400;
-    throw err;
+    throw new InvalidNamespaceError('Namespace must be a non-empty string');
   }
 
   const trimmed = namespace.trim();
   if (trimmed.length === 0) {
-    const err = new Error('Namespace cannot be whitespace-only');
-    err.name = 'InvalidNamespaceError';
-    err.status = 400;
-    throw err;
+    throw new InvalidNamespaceError('Namespace cannot be whitespace-only');
   }
 
   if (trimmed.length > 100) {
-    const err = new Error('Namespace too long (maximum 100 characters)');
-    err.name = 'InvalidNamespaceError';
-    err.status = 400;
-    throw err;
+    throw new InvalidNamespaceError(
+      'Namespace too long (maximum 100 characters)',
+    );
   }
 
   // Validate base cache
   if (!baseCache) {
-    const err = new Error(
+    throw new InvalidCacheError(
       'Base cache is required. Use cache.withNamespace() or provide a cache instance.',
     );
-    err.name = 'InvalidCacheError';
-    err.status = 400;
-    throw err;
   }
 
   if (typeof baseCache.get !== 'function') {
-    const err = new Error(
+    throw new InvalidCacheError(
       'Base cache must be a valid cache adapter with required methods',
     );
-    err.name = 'InvalidCacheError';
-    err.status = 400;
-    throw err;
   }
 
   const prefix = `${trimmed}:`;
@@ -170,8 +162,7 @@ export function withNamespace(namespace, baseCache) {
       if (typeof baseCache.cleanup === 'function') {
         return baseCache.cleanup();
       }
-      // Return resolved promise for consistent async behavior
-      return Promise.resolve();
+      return 0;
     },
 
     // Nested namespacing support
@@ -196,7 +187,7 @@ export function withNamespace(namespace, baseCache) {
  *
  * @param {CacheOptions} [options={}] - Cache configuration
  * @returns {CacheAdapter} Cache instance with withNamespace method
- * @throws {Error} If invalid cache type is specified (production mode only)
+ * @throws {InvalidCacheTypeError} If invalid cache type is specified (production mode only)
  *
  * @example
  * // Create memory cache (or NoOp cache if __DEV__ is true)
@@ -235,14 +226,8 @@ export function createFactory(options = {}) {
         adapter = new MemoryCache(config);
         break;
 
-      default: {
-        const err = new Error(
-          `Invalid cache type: "${type}". Supported types: memory, file`,
-        );
-        err.name = 'InvalidCacheTypeError';
-        err.status = 400;
-        throw err;
-      }
+      default:
+        throw new InvalidCacheTypeError(type);
     }
   }
 
@@ -250,6 +235,13 @@ export function createFactory(options = {}) {
   adapter.withNamespace = function (namespace) {
     return withNamespace(namespace, adapter);
   };
+
+  // Register process signal handlers for graceful shutdown
+  if (typeof adapter.cleanup === 'function') {
+    const onSignal = () => adapter.cleanup();
+    process.once('SIGTERM', onSignal);
+    process.once('SIGINT', onSignal);
+  }
 
   return adapter;
 }

@@ -5,12 +5,47 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import cache, { createFactory, withNamespace } from '.';
+import fs from 'fs';
+import path from 'path';
+
+import cache, {
+  createFactory,
+  FileCache,
+  InvalidCacheError,
+  InvalidCacheTypeError,
+  InvalidNamespaceError,
+  MemoryCache,
+  NoOpCache,
+  withNamespace,
+} from '.';
+
+// ======================================================================
+// Helpers
+// ======================================================================
+
+const TEST_CACHE_DIR = path.join(process.cwd(), '.data', 'test-caches');
+
+function cleanDir(dir) {
+  try {
+    if (fs.existsSync(dir)) {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  } catch {
+    // Ignore
+  }
+}
+
+// ======================================================================
+// Tests
+// ======================================================================
 
 describe('Cache Engine', () => {
+  // ====================================================================
+  // Default Instance (Memory Cache)
+  // ====================================================================
+
   describe('Default Instance', () => {
     beforeEach(() => {
-      // Clear cache before each test
       cache.clear();
     });
 
@@ -43,10 +78,8 @@ describe('Cache Engine', () => {
       });
 
       it('should return null for expired key', () => {
-        // Set with very short TTL
         cache.set('expired-key', 'value', 1);
 
-        // Wait for expiration
         return new Promise(resolve => {
           setTimeout(() => {
             const value = cache.get('expired-key');
@@ -82,7 +115,6 @@ describe('Cache Engine', () => {
       });
 
       it('should enforce max size', () => {
-        // Create cache with small max size
         const smallCache = createFactory({ maxSize: 3 });
 
         smallCache.set('key1', 'value1');
@@ -234,6 +266,10 @@ describe('Cache Engine', () => {
     });
   });
 
+  // ====================================================================
+  // createFactory()
+  // ====================================================================
+
   describe('createFactory()', () => {
     it('should create memory cache by default', () => {
       const instance = createFactory();
@@ -257,11 +293,10 @@ describe('Cache Engine', () => {
     it('should create file cache when specified', () => {
       const instance = createFactory({
         type: 'file',
-        directory: '/tmp/test-cache',
+        directory: path.join(TEST_CACHE_DIR, 'factory-test'),
       });
 
       expect(instance).toBeDefined();
-      // File cache should have the same interface
       expect(instance).toHaveProperty('get');
       expect(instance).toHaveProperty('set');
     });
@@ -276,7 +311,25 @@ describe('Cache Engine', () => {
       expect(cache1.get('key')).toBe('value1');
       expect(cache2.get('key')).toBe('value2');
     });
+
+    it('should throw InvalidCacheTypeError for unsupported type', () => {
+      expect(() => createFactory({ type: 'redis' })).toThrow(
+        InvalidCacheTypeError,
+      );
+    });
+
+    it('should register signal handlers', () => {
+      const spy = jest.spyOn(process, 'once');
+      createFactory();
+      expect(spy).toHaveBeenCalledWith('SIGTERM', expect.any(Function));
+      expect(spy).toHaveBeenCalledWith('SIGINT', expect.any(Function));
+      spy.mockRestore();
+    });
   });
+
+  // ====================================================================
+  // withNamespace()
+  // ====================================================================
 
   describe('withNamespace()', () => {
     beforeEach(() => {
@@ -368,7 +421,58 @@ describe('Cache Engine', () => {
         }, 10);
       });
     });
+
+    it('should support nested namespaces', () => {
+      const apiCache = cache.withNamespace('api');
+      const userApiCache = apiCache.withNamespace('users');
+
+      userApiCache.set('123', 'nested-data');
+
+      // Should be stored with full prefix in base cache
+      const keys = cache.keys();
+      expect(keys).toContain('api:users:123');
+
+      // Should be retrievable via nested namespaced cache
+      expect(userApiCache.get('123')).toBe('nested-data');
+    });
+
+    describe('validation', () => {
+      it('should throw InvalidNamespaceError for empty string', () => {
+        expect(() => withNamespace('', cache)).toThrow(InvalidNamespaceError);
+      });
+
+      it('should throw InvalidNamespaceError for null', () => {
+        expect(() => withNamespace(null, cache)).toThrow(InvalidNamespaceError);
+      });
+
+      it('should throw InvalidNamespaceError for whitespace-only', () => {
+        expect(() => withNamespace('   ', cache)).toThrow(
+          InvalidNamespaceError,
+        );
+      });
+
+      it('should throw InvalidNamespaceError for too-long namespace', () => {
+        const longNamespace = 'a'.repeat(101);
+        expect(() => withNamespace(longNamespace, cache)).toThrow(
+          InvalidNamespaceError,
+        );
+      });
+
+      it('should throw InvalidCacheError for missing base cache', () => {
+        expect(() => withNamespace('test', null)).toThrow(InvalidCacheError);
+      });
+
+      it('should throw InvalidCacheError for invalid base cache', () => {
+        expect(() => withNamespace('test', { foo: 'bar' })).toThrow(
+          InvalidCacheError,
+        );
+      });
+    });
   });
+
+  // ====================================================================
+  // LRU Eviction
+  // ====================================================================
 
   describe('LRU Eviction', () => {
     it('should evict least recently used entries', () => {
@@ -405,6 +509,384 @@ describe('Cache Engine', () => {
 
       expect(lruCache.get('b')).toBeNull();
       expect(lruCache.get('a')).toBe('updated');
+    });
+  });
+
+  // ====================================================================
+  // File Cache Adapter
+  // ====================================================================
+
+  describe('FileCache', () => {
+    let fileCache;
+    const fileCacheDir = path.join(TEST_CACHE_DIR, 'file-adapter-test');
+
+    beforeEach(async () => {
+      cleanDir(fileCacheDir);
+      fileCache = new FileCache({
+        directory: fileCacheDir,
+        maxSize: 100,
+        ttl: 60000,
+      });
+      await fileCache.ready;
+    });
+
+    afterEach(async () => {
+      await fileCache.clear();
+      cleanDir(fileCacheDir);
+    });
+
+    it('should create cache directory on construction', async () => {
+      expect(fs.existsSync(fileCacheDir)).toBe(true);
+    });
+
+    describe('get()', () => {
+      it('should return null for non-existent key', async () => {
+        const value = await fileCache.get('missing');
+        expect(value).toBeNull();
+      });
+
+      it('should return stored value', async () => {
+        await fileCache.set('key', 'value');
+        const result = await fileCache.get('key');
+        expect(result).toBe('value');
+      });
+
+      it('should return null for expired key', async () => {
+        await fileCache.set('expired', 'value', 1);
+
+        await new Promise(resolve => setTimeout(resolve, 10));
+        const result = await fileCache.get('expired');
+        expect(result).toBeNull();
+      });
+
+      it('should handle complex objects', async () => {
+        const obj = { name: 'test', nested: { arr: [1, 2, 3] } };
+        await fileCache.set('complex', obj);
+        const result = await fileCache.get('complex');
+        expect(result).toEqual(obj);
+      });
+    });
+
+    describe('set()', () => {
+      it('should store value to disk', async () => {
+        await fileCache.set('persist', 'disk-value');
+
+        // Verify file exists on disk
+        const files = fs.readdirSync(fileCacheDir);
+        const jsonFiles = files.filter(f => f.endsWith('.json'));
+        expect(jsonFiles.length).toBe(1);
+
+        // Verify content
+        const content = JSON.parse(
+          fs.readFileSync(path.join(fileCacheDir, jsonFiles[0]), 'utf8'),
+        );
+        expect(content.key).toBe('persist');
+        expect(content.value).toBe('disk-value');
+      });
+
+      it('should update existing value', async () => {
+        await fileCache.set('key', 'old');
+        await fileCache.set('key', 'new');
+        const result = await fileCache.get('key');
+        expect(result).toBe('new');
+      });
+
+      it('should use atomic writes (temp + rename)', async () => {
+        await fileCache.set('atomic-test', 'safe-write');
+
+        // No .tmp files should remain
+        const files = fs.readdirSync(fileCacheDir);
+        const tmpFiles = files.filter(f => f.includes('.tmp'));
+        expect(tmpFiles.length).toBe(0);
+      });
+    });
+
+    describe('delete()', () => {
+      it('should delete existing key', async () => {
+        await fileCache.set('del-key', 'value');
+        const result = await fileCache.delete('del-key');
+        expect(result).toBe(true);
+
+        const value = await fileCache.get('del-key');
+        expect(value).toBeNull();
+      });
+
+      it('should return false for non-existent key', async () => {
+        const result = await fileCache.delete('non-existent');
+        expect(result).toBe(false);
+      });
+    });
+
+    describe('has()', () => {
+      it('should return true for existing key', async () => {
+        await fileCache.set('exists', 'value');
+        const result = await fileCache.has('exists');
+        expect(result).toBe(true);
+      });
+
+      it('should return false for missing key', async () => {
+        const result = await fileCache.has('missing');
+        expect(result).toBe(false);
+      });
+
+      it('should return false for expired key', async () => {
+        await fileCache.set('expired', 'value', 1);
+        await new Promise(resolve => setTimeout(resolve, 10));
+        const result = await fileCache.has('expired');
+        expect(result).toBe(false);
+      });
+    });
+
+    describe('clear()', () => {
+      it('should remove all entries', async () => {
+        await fileCache.set('a', 1);
+        await fileCache.set('b', 2);
+        await fileCache.set('c', 3);
+
+        await fileCache.clear();
+
+        const keys = await fileCache.keys();
+        expect(keys).toEqual([]);
+      });
+    });
+
+    describe('keys()', () => {
+      it('should return original cache keys', async () => {
+        await fileCache.set('user:1', 'data1');
+        await fileCache.set('user:2', 'data2');
+
+        const keys = await fileCache.keys();
+        expect(keys).toContain('user:1');
+        expect(keys).toContain('user:2');
+        expect(keys.length).toBe(2);
+      });
+
+      it('should return empty array for empty cache', async () => {
+        const keys = await fileCache.keys();
+        expect(keys).toEqual([]);
+      });
+    });
+
+    describe('stats()', () => {
+      it('should return file cache statistics', async () => {
+        await fileCache.set('valid-key', 'value', 60000);
+
+        const stats = await fileCache.stats();
+        expect(stats.type).toBe('file');
+        expect(stats.directory).toBe(fileCacheDir);
+        expect(stats.totalEntries).toBe(1);
+        expect(stats.validEntries).toBe(1);
+        expect(stats.expiredEntries).toBe(0);
+        expect(stats).toHaveProperty('maxSize');
+        expect(stats).toHaveProperty('defaultTTL');
+        expect(stats).toHaveProperty('activeLocks');
+      });
+    });
+
+    describe('cleanup()', () => {
+      it('should remove expired entries', async () => {
+        await fileCache.set('valid', 'value', 60000);
+        await fileCache.set('expired1', 'value', 1);
+        await fileCache.set('expired2', 'value', 1);
+
+        await new Promise(resolve => setTimeout(resolve, 10));
+        const removed = await fileCache.cleanup();
+
+        expect(removed).toBe(2);
+        const keys = await fileCache.keys();
+        expect(keys).toContain('valid');
+        expect(keys.length).toBe(1);
+      });
+
+      it('should return 0 when no expired entries', async () => {
+        await fileCache.set('key', 'value', 60000);
+        const removed = await fileCache.cleanup();
+        expect(removed).toBe(0);
+      });
+    });
+
+    describe('getSize()', () => {
+      it('should return entry count', async () => {
+        expect(await fileCache.getSize()).toBe(0);
+
+        await fileCache.set('a', 1);
+        expect(await fileCache.getSize()).toBe(1);
+
+        await fileCache.set('b', 2);
+        expect(await fileCache.getSize()).toBe(2);
+
+        await fileCache.delete('a');
+        expect(await fileCache.getSize()).toBe(1);
+      });
+    });
+
+    describe('concurrency (async mutex)', () => {
+      it('should handle concurrent writes to same key', async () => {
+        const promises = [];
+        for (let i = 0; i < 10; i++) {
+          promises.push(fileCache.set('race-key', `value-${i}`));
+        }
+        await Promise.all(promises);
+
+        // Should have exactly one file, with the last writer winning
+        const value = await fileCache.get('race-key');
+        expect(value).toBeDefined();
+        expect(value).not.toBeNull();
+      });
+
+      it('should handle concurrent operations on different keys', async () => {
+        await Promise.all([
+          fileCache.set('key-a', 'value-a'),
+          fileCache.set('key-b', 'value-b'),
+          fileCache.set('key-c', 'value-c'),
+        ]);
+
+        const [a, b, c] = await Promise.all([
+          fileCache.get('key-a'),
+          fileCache.get('key-b'),
+          fileCache.get('key-c'),
+        ]);
+
+        expect(a).toBe('value-a');
+        expect(b).toBe('value-b');
+        expect(c).toBe('value-c');
+      });
+    });
+
+    describe('eviction', () => {
+      it('should evict oldest entries when at max size', async () => {
+        const tinyCache = new FileCache({
+          directory: path.join(TEST_CACHE_DIR, 'eviction-test'),
+          maxSize: 3,
+          ttl: 60000,
+        });
+        await tinyCache.ready;
+
+        await tinyCache.set('old1', 'value1');
+        await tinyCache.set('old2', 'value2');
+        await tinyCache.set('old3', 'value3');
+        // This should trigger eviction
+        await tinyCache.set('new1', 'value4');
+
+        const size = await tinyCache.getSize();
+        // After eviction of 10% (min 1), size should be <= maxSize
+        expect(size).toBeLessThanOrEqual(3);
+
+        await tinyCache.clear();
+        cleanDir(path.join(TEST_CACHE_DIR, 'eviction-test'));
+      });
+    });
+  });
+
+  // ====================================================================
+  // NoOp Cache Adapter
+  // ====================================================================
+
+  describe('NoOpCache', () => {
+    let noopCache;
+
+    beforeEach(() => {
+      noopCache = new NoOpCache();
+    });
+
+    it('get() should return null', () => {
+      expect(noopCache.get('any-key')).toBeNull();
+    });
+
+    it('set() should be a no-op', () => {
+      noopCache.set('key', 'value');
+      expect(noopCache.get('key')).toBeNull();
+    });
+
+    it('delete() should return true', () => {
+      expect(noopCache.delete('key')).toBe(true);
+    });
+
+    it('has() should return false', () => {
+      expect(noopCache.has('key')).toBe(false);
+    });
+
+    it('keys() should return empty array', () => {
+      expect(noopCache.keys()).toEqual([]);
+    });
+
+    it('size should return 0', () => {
+      expect(noopCache.size).toBe(0);
+    });
+
+    it('cleanup() should return 0', () => {
+      expect(noopCache.cleanup()).toBe(0);
+    });
+
+    it('stats() should match standardized shape', () => {
+      const stats = noopCache.stats();
+      expect(stats.type).toBe('noop');
+      expect(stats.totalEntries).toBe(0);
+      expect(stats.validEntries).toBe(0);
+      expect(stats.expiredEntries).toBe(0);
+      expect(stats.maxSize).toBe(0);
+      expect(stats.defaultTTL).toBe(0);
+    });
+  });
+
+  // ====================================================================
+  // Error Classes
+  // ====================================================================
+
+  describe('Error Classes', () => {
+    it('InvalidCacheTypeError should have correct properties', () => {
+      const err = new InvalidCacheTypeError('redis');
+      expect(err.name).toBe('InvalidCacheTypeError');
+      expect(err.code).toBe('INVALID_CACHE_TYPE');
+      expect(err.statusCode).toBe(400);
+      expect(err.timestamp).toBeDefined();
+      expect(err.message).toContain('redis');
+      expect(err).toBeInstanceOf(Error);
+    });
+
+    it('InvalidNamespaceError should have correct properties', () => {
+      const err = new InvalidNamespaceError('empty namespace');
+      expect(err.name).toBe('InvalidNamespaceError');
+      expect(err.code).toBe('INVALID_NAMESPACE');
+      expect(err.statusCode).toBe(400);
+      expect(err.timestamp).toBeDefined();
+    });
+
+    it('InvalidCacheError should have correct properties', () => {
+      const err = new InvalidCacheError('missing cache');
+      expect(err.name).toBe('InvalidCacheError');
+      expect(err.code).toBe('INVALID_CACHE');
+      expect(err.statusCode).toBe(400);
+    });
+  });
+
+  // ====================================================================
+  // Exports
+  // ====================================================================
+
+  describe('Exports', () => {
+    it('should export MemoryCache class', () => {
+      expect(MemoryCache).toBeDefined();
+      const instance = new MemoryCache({ maxSize: 10 });
+      expect(instance).toBeInstanceOf(MemoryCache);
+    });
+
+    it('should export FileCache class', () => {
+      expect(FileCache).toBeDefined();
+    });
+
+    it('should export NoOpCache class', () => {
+      expect(NoOpCache).toBeDefined();
+      const instance = new NoOpCache();
+      expect(instance).toBeInstanceOf(NoOpCache);
+    });
+
+    it('should export createFactory function', () => {
+      expect(typeof createFactory).toBe('function');
+    });
+
+    it('should export withNamespace function', () => {
+      expect(typeof withNamespace).toBe('function');
     });
   });
 });
