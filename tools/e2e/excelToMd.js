@@ -47,31 +47,28 @@ const COLUMNS = {
   title: 'E',
   description: 'F',
   prerequisites: 'G',
-  // Steps: H through Q (10 max)
-  stepStart: 'H',
-  stepEnd: 'Q',
-  // Expected results: R through V (5 max)
-  expectedStart: 'R',
-  expectedEnd: 'V',
-  priority: 'W',
-  status: 'X',
+  steps: 'H',
+  expectedResults: 'I',
+  priority: 'J',
+  status: 'K',
 };
 
 // ── Helpers ───────────────────────────────────────────────────────
 
 /**
- * Get column letters from start to end (inclusive).
- * e.g., colRange('H', 'Q') => ['H','I','J','K','L','M','N','O','P','Q']
+ * Clean up a multi-line string into an array of lines.
+ * Removes empty lines and leading numbers/bullets (e.g. "1. ", "- ").
  */
-function colRange(start, end) {
-  const cols = [];
-  let code = start.charCodeAt(0);
-  const endCode = end.charCodeAt(0);
-  while (code <= endCode) {
-    cols.push(String.fromCharCode(code));
-    code++;
-  }
-  return cols;
+function parseMultiLineText(str) {
+  if (!str) return [];
+  return (
+    str
+      .split(/\r?\n/)
+      .map(line => line.trim())
+      // Remove leading numbers (e.g. "1. ", "1) ") or bullets (e.g. "- ", "* ")
+      .map(line => line.replace(/^(\d+[.)]\s+|[-*]\s+)/, ''))
+      .filter(Boolean)
+  );
 }
 
 /**
@@ -208,8 +205,6 @@ function main() {
 
   // Get range
   const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1');
-  const stepCols = colRange(COLUMNS.stepStart, COLUMNS.stepEnd);
-  const expectedCols = colRange(COLUMNS.expectedStart, COLUMNS.expectedEnd);
 
   console.log(`📊 Reading "${sheetName}" from ${inputFile}`);
   console.log(`   Rows: ${range.e.r} (excluding header)`);
@@ -243,7 +238,9 @@ function main() {
     }
 
     // Collect steps (non-empty)
-    const steps = stepCols.map(col => cell(col)).filter(Boolean);
+    const stepsStr = cell(COLUMNS.steps);
+    const steps = parseMultiLineText(stepsStr);
+
     if (steps.length === 0) {
       console.error(`  ❌ Row ${r + 1} (${testId}): No steps defined`);
       results.errors++;
@@ -251,7 +248,8 @@ function main() {
     }
 
     // Collect expected results (non-empty)
-    const expectedResults = expectedCols.map(col => cell(col)).filter(Boolean);
+    const expectedStr = cell(COLUMNS.expectedResults);
+    const expectedResults = parseMultiLineText(expectedStr);
 
     const row = {
       testId,

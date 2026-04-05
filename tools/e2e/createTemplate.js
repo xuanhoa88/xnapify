@@ -23,21 +23,8 @@ const HEADERS = [
   'Title',
   'Description',
   'Prerequisites',
-  'Step 1',
-  'Step 2',
-  'Step 3',
-  'Step 4',
-  'Step 5',
-  'Step 6',
-  'Step 7',
-  'Step 8',
-  'Step 9',
-  'Step 10',
-  'Expected Result 1',
-  'Expected Result 2',
-  'Expected Result 3',
-  'Expected Result 4',
-  'Expected Result 5',
+  'Steps',
+  'Expected Results',
   'Priority',
   'Status',
 ];
@@ -183,15 +170,11 @@ function buildRow(sample) {
     sample.prerequisites,
   ];
 
-  // Steps (pad to 10)
-  for (let i = 0; i < 10; i++) {
-    row.push(sample.steps[i] || '');
-  }
+  // Steps (multi-line string)
+  row.push(sample.steps.map((s, i) => `${i + 1}. ${s}`).join('\n'));
 
-  // Expected results (pad to 5)
-  for (let i = 0; i < 5; i++) {
-    row.push(sample.expected[i] || '');
-  }
+  // Expected results (multi-line string)
+  row.push(sample.expected.map(e => `- ${e}`).join('\n'));
 
   row.push(sample.priority || '');
   row.push(sample.status || '');
@@ -214,21 +197,8 @@ function main() {
     { wch: 40 }, // Title
     { wch: 50 }, // Description
     { wch: 50 }, // Prerequisites
-    { wch: 50 }, // Steps 1-10
-    { wch: 50 },
-    { wch: 50 },
-    { wch: 50 },
-    { wch: 50 },
-    { wch: 50 },
-    { wch: 50 },
-    { wch: 50 },
-    { wch: 50 },
-    { wch: 50 },
-    { wch: 40 }, // Expected 1-5
-    { wch: 40 },
-    { wch: 40 },
-    { wch: 40 },
-    { wch: 40 },
+    { wch: 80 }, // Steps
+    { wch: 80 }, // Expected Results
     { wch: 10 }, // Priority
     { wch: 12 }, // Status
   ];
@@ -259,19 +229,19 @@ function main() {
       'Semicolon-separated key=value pairs (e.g., email=admin@example.com; password=admin123)',
     ],
     [
-      'H-Q',
-      'Step 1-10',
-      'Yes (1+)',
-      'Test steps in natural English — empty cells are ignored',
+      'H',
+      'Steps',
+      'Yes',
+      'Test steps in natural English, separated by newlines within the cell. You can use Alt+Enter (or Cmd+Option+Enter on Mac) to add a new line in Excel.',
     ],
     [
-      'R-V',
-      'Expected Result 1-5',
+      'I',
+      'Expected Results',
       'No',
-      'Acceptance criteria — empty cells are ignored',
+      'Acceptance criteria, separated by newlines within the cell.',
     ],
-    ['W', 'Priority', 'No', 'High, Medium, or Low (metadata only)'],
-    ['X', 'Status', 'No', 'Draft, Ready, or Automated (metadata only)'],
+    ['J', 'Priority', 'No', 'High, Medium, or Low (metadata only)'],
+    ['K', 'Status', 'No', 'Draft, Ready, or Automated (metadata only)'],
     [''],
     ['Test Types:'],
     [
