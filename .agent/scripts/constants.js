@@ -13,6 +13,9 @@
 
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
+
 // ── Directories to skip during recursive file walks ─────────────────
 const SKIP_DIRS = new Set([
   // Build / tooling artifacts
@@ -32,6 +35,15 @@ const SKIP_DIRS = new Set([
 
   // Static assets (not auditable source)
   'translations', 'benchmarks',
+]);
+
+// ── Files to skip during recursive file walks (exact match) ──────────
+const SKIP_FILES = new Set([
+  'jest-setuptest.js',
+  '.eslintrc.js',
+  'package-lock.json',
+  'babel.config.js',
+  'jest.config.js',
 ]);
 
 // ── File extension sets (by audit scope) ────────────────────────────
@@ -63,26 +75,26 @@ const UI_EXTENSIONS = new Set([
  * @returns {string[]}
  */
 function walkFiles(dir, extensions, opts = {}) {
-  const { limit = Infinity, skipFiles, excludePattern } = opts;
+  const { limit = Infinity, skipFiles = SKIP_FILES, excludePattern } = opts;
   const results = [];
 
   function walk(d) {
     if (results.length >= limit) return;
     let entries;
     try {
-      entries = require('fs').readdirSync(d, { withFileTypes: true });
+      entries = fs.readdirSync(d, { withFileTypes: true });
     } catch {
       return;
     }
 
     for (const entry of entries) {
       if (results.length >= limit) return;
-      const fullPath = require('path').join(d, entry.name);
+      const fullPath = path.join(d, entry.name);
 
       if (entry.isDirectory()) {
         if (!SKIP_DIRS.has(entry.name)) walk(fullPath);
       } else if (entry.isFile()) {
-        const ext = require('path').extname(entry.name);
+        const ext = path.extname(entry.name);
         if (!extensions.has(ext)) continue;
         if (skipFiles && skipFiles.has(entry.name)) continue;
         if (excludePattern && excludePattern.test(entry.name)) continue;
@@ -97,6 +109,7 @@ function walkFiles(dir, extensions, opts = {}) {
 
 module.exports = {
   SKIP_DIRS,
+  SKIP_FILES,
   JS_EXTENSIONS,
   VIEW_EXTENSIONS,
   UI_EXTENSIONS,

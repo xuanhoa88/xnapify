@@ -18,11 +18,8 @@ const targetDirs = process.argv.length > 2
     ? process.argv.slice(2) 
     : ['src', 'shared', 'tools', '.agent'].map(d => path.join(process.cwd(), d));
 
-// Exact filenames to ignore
-const SKIP_FILES = new Set(['jest-setuptest.js', '.eslintrc.js', 'package-lock.json', 'babel.config.js', 'jest.config.js']);
-
 function findJSFiles(dir) {
-    return walkFiles(dir, JS_EXTENSIONS, { skipFiles: SKIP_FILES });
+    return walkFiles(dir, JS_EXTENSIONS);
 }
 
 console.log('═══════════════════════════════════════════════════');

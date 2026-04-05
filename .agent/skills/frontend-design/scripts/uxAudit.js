@@ -20,7 +20,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { SKIP_DIRS, UI_EXTENSIONS } = require('../../scripts/constants');
+const { SKIP_DIRS, UI_EXTENSIONS, walkFiles } = require('../../scripts/constants');
 
 
 class UXAuditor {
@@ -360,24 +360,10 @@ class UXAuditor {
   }
 
   auditDirectory(directory) {
-    const walk = dir => {
-      let entries;
-      try {
-        entries = fs.readdirSync(dir, { withFileTypes: true });
-      } catch {
-        return;
-      }
-
-      for (const entry of entries) {
-        const fullPath = path.join(dir, entry.name);
-        if (entry.isDirectory()) {
-          if (!SKIP_DIRS.has(entry.name)) walk(fullPath);
-        } else if (UI_EXTENSIONS.has(path.extname(entry.name))) {
-          this.auditFile(fullPath);
-        }
-      }
-    };
-    walk(directory);
+    const files = walkFiles(directory, UI_EXTENSIONS);
+    for (const file of files) {
+      this.auditFile(file);
+    }
   }
 
   getReport() {
