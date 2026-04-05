@@ -70,6 +70,33 @@ async function scanDirectory(dirPath, source, metadata, extensionManager) {
   await Promise.all(dirPromises);
 }
 
+/**
+ * Find a disk-only extension by its ID.
+ * Since disk directories are named by `manifest.name`, we must scan all manifests to find by `id`.
+ * @param {object} extensionManager - Extension manager
+ * @param {string} cwd - Current working directory
+ * @param {string} id - Extension ID
+ * @returns {Promise<Object|null>} Manifest object if found
+ */
+async function getDiskExtensionById(extensionManager, cwd, id) {
+  if (!id) return null;
+  const installedExtensionsDir = extensionManager.getInstalledExtensionsDir();
+  const localExtensionsDir = extensionManager.getDevExtensionsDir(cwd);
+
+  const metadata = new Map();
+  const scanTasks = [
+    scanDirectory(installedExtensionsDir, 'remote', metadata, extensionManager),
+  ];
+  if (localExtensionsDir && localExtensionsDir !== installedExtensionsDir) {
+    scanTasks.push(
+      scanDirectory(localExtensionsDir, 'local', metadata, extensionManager),
+    );
+  }
+  await Promise.all(scanTasks);
+
+  return metadata.get(id) || null;
+}
+
 // ========================================================================
 // Service Functions
 // ========================================================================
@@ -293,7 +320,7 @@ export async function getActiveExtensions({
  */
 export async function deleteExtension(
   id,
-  { models, cache, cwd, actorId, queue },
+  { extensionManager, models, cache, cwd, actorId, queue },
 ) {
   const { extension } = await resolveExtension(models, id, {
     required: false,
@@ -301,6 +328,14 @@ export async function deleteExtension(
 
   // Canonical key: DB record's key, or raw ID for disk-only extensions
   const key = extension ? extension.key : id;
+
+  let extensionName = extension ? extension.name : key;
+  if (!extension) {
+    const diskExt = await getDiskExtensionById(extensionManager, cwd, id);
+    if (diskExt) {
+      extensionName = diskExt.name;
+    }
+  }
 
   // Guard: must deactivate before uninstall/delete
   if (extension && extension.is_active) {
@@ -316,7 +351,7 @@ export async function deleteExtension(
     const queueChannel = queue('extensions');
     queueChannel.emit('delete', {
       extensionKey: key,
-      extensionName: extension ? extension.name : key,
+      extensionName,
       actorId,
     });
   } else if (extension) {
@@ -337,7 +372,7 @@ export async function deleteExtension(
  * @throws {ExtensionError} If extension ID is invalid or extension not found
  */
 export async function getExtensionById(
-  { extensionManager, models, cache },
+  { extensionManager, models, cache, cwd },
   id,
 ) {
   const cacheKey = `extensions:detail:${id}`;
@@ -352,15 +387,21 @@ export async function getExtensionById(
   const { extension: dbRecord } = await resolveExtension(models, id, {
     required: false,
   });
-  const extensionKey = dbRecord ? dbRecord.name : id;
 
-  if (!extensionKey) {
+  let extensionName = dbRecord ? dbRecord.name : null;
+  if (!extensionName) {
+    const diskExt = await getDiskExtensionById(extensionManager, cwd, id);
+    if (!diskExt) throw ExtensionError.notFound('on disk');
+    extensionName = diskExt.name;
+  }
+
+  if (!extensionName) {
     throw ExtensionError.invalidId();
   }
 
   // Resolve directory and manifest — directories are named by manifest.name
   const { dir: resolvedDir } =
-    await extensionManager.resolveExtensionDir(extensionKey);
+    await extensionManager.resolveExtensionDir(extensionName);
 
   let manifest = null;
   if (resolvedDir) {
@@ -368,7 +409,7 @@ export async function getExtensionById(
   }
 
   if (!manifest) {
-    throw ExtensionError.notFound(extensionKey);
+    throw ExtensionError.notFound(extensionName);
   }
 
   const result = {
@@ -389,11 +430,21 @@ export async function getExtensionById(
  * @param {string} id - Extension key (manifest.id)
  * @returns {Promise<string|null>} Extension static files directory path or null if invalid
  */
-export async function getExtensionStaticDir({ extensionManager, models }, id) {
+export async function getExtensionStaticDir(
+  { extensionManager, models, cwd },
+  id,
+) {
   const { extension } = await resolveExtension(models, id, {
     required: false,
   });
-  const extensionKey = extension ? extension.name : id;
+
+  let extensionKey = extension ? extension.name : null;
+  if (!extensionKey) {
+    const diskExt = await getDiskExtensionById(extensionManager, cwd, id);
+    if (!diskExt) return null;
+    extensionKey = diskExt.name;
+  }
+
   if (!extensionKey) return null;
 
   const { dir } = await extensionManager.resolveExtensionDir(extensionKey);
@@ -596,20 +647,7 @@ export async function toggleExtensionStatus(
 
   // FS-only extension with no DB record yet — create one
   if (!extension && key && cwd) {
-    const localExtensionsDir = extensionManager.getDevExtensionsDir(cwd);
-    const installedExtensionsDir = extensionManager.getInstalledExtensionsDir();
-
-    // Check local/dev first (dev override), then installed
-    let manifest = null;
-    if (localExtensionsDir) {
-      manifest = await extensionManager.readManifest(localExtensionsDir, key);
-    }
-    if (!manifest && installedExtensionsDir) {
-      manifest = await extensionManager.readManifest(
-        installedExtensionsDir,
-        key,
-      );
-    }
+    const manifest = await getDiskExtensionById(extensionManager, cwd, key);
 
     if (!manifest) {
       throw ExtensionError.notFound('on disk');

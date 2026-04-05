@@ -179,7 +179,8 @@ class FileQueue {
   async writeJob(status, job) {
     const filename = this.buildFilename(job);
     const filePath = this.jobPath(status, filename);
-    const tmpPath = filePath + '.tmp';
+    const tmpPath =
+      filePath + `-${process.pid}-${Math.random().toString(36).slice(2)}.tmp`;
     await fs.promises.writeFile(tmpPath, JSON.stringify(job), 'utf8');
     await fs.promises.rename(tmpPath, filePath);
     this.jobIndex.set(job.id, { status, filename });
@@ -373,7 +374,8 @@ class FileQueue {
   async saveMeta() {
     const metaPath = path.join(this.queueDir, 'meta.json');
     const meta = { stats: this.stats, updatedAt: Date.now() };
-    const tmpPath = metaPath + '.tmp';
+    const tmpPath =
+      metaPath + `-${process.pid}-${Math.random().toString(36).slice(2)}.tmp`;
     await fs.promises.writeFile(tmpPath, JSON.stringify(meta), 'utf8');
     await fs.promises.rename(tmpPath, metaPath);
   }
@@ -429,7 +431,9 @@ class FileQueue {
         job.processedAt = null;
 
         const pendingPath = this.jobPath('pending', filename);
-        const tmpPath = pendingPath + '.tmp';
+        const tmpPath =
+          pendingPath +
+          `-${process.pid}-${Math.random().toString(36).slice(2)}.tmp`;
         fs.writeFileSync(tmpPath, JSON.stringify(job), 'utf8');
         fs.renameSync(tmpPath, pendingPath);
         fs.unlinkSync(filePath);
@@ -482,7 +486,9 @@ class FileQueue {
           job.scheduledFor = null;
 
           const pendingPath = this.jobPath('pending', filename);
-          const tmpPath = pendingPath + '.tmp';
+          const tmpPath =
+            pendingPath +
+            `-${process.pid}-${Math.random().toString(36).slice(2)}.tmp`;
           fs.writeFileSync(tmpPath, JSON.stringify(job), 'utf8');
           fs.renameSync(tmpPath, pendingPath);
           fs.unlinkSync(filePath);
@@ -506,23 +512,34 @@ class FileQueue {
 
     for (const filename of delayedFiles) {
       try {
-        const job = await this.readJob('delayed', filename);
-        if (job && job.scheduledFor && job.scheduledFor <= now) {
-          job.status = JOB_STATUS.PENDING;
-          job.scheduledFor = null;
-          // B11: Atomic move prevents duplicates on crash
-          // Update job content in-place first, then move atomically
-          const filePath = this.jobPath('delayed', filename);
-          const tmpPath = filePath + '.tmp';
-          await fs.promises.writeFile(tmpPath, JSON.stringify(job), 'utf8');
-          await fs.promises.rename(tmpPath, filePath);
-          await this.moveJob('delayed', 'pending', filename);
+        const lockAcquired = await this.acquireLock(filename);
+        if (!lockAcquired) continue;
+
+        try {
+          const job = await this.readJob('delayed', filename);
+          if (job && job.scheduledFor && job.scheduledFor <= now) {
+            job.status = JOB_STATUS.PENDING;
+            job.scheduledFor = null;
+            // B11: Atomic move prevents duplicates on crash
+            // Update job content in-place first, then move atomically
+            const filePath = this.jobPath('delayed', filename);
+            const tmpPath =
+              filePath +
+              `-${process.pid}-${Math.random().toString(36).slice(2)}.tmp`;
+            await fs.promises.writeFile(tmpPath, JSON.stringify(job), 'utf8');
+            await fs.promises.rename(tmpPath, filePath);
+            await this.moveJob('delayed', 'pending', filename);
+          }
+        } finally {
+          await this.releaseLock(filename);
         }
       } catch (err) {
-        console.error(
-          `FileQueue '${this.name}': Delayed promotion error:`,
-          err.message,
-        );
+        if (err.code !== 'ENOENT') {
+          console.error(
+            `FileQueue '${this.name}': Delayed promotion error:`,
+            err.message,
+          );
+        }
       }
     }
   }

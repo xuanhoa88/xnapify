@@ -161,6 +161,7 @@ export const deleteExtension = async (req, res) => {
 
     await extensionService.deleteExtension(id, {
       models,
+      extensionManager: container.resolve('extension'),
       cache: container.resolve('cache'),
       cwd: container.resolve('cwd'),
       actorId: req.user && req.user.id,

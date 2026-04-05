@@ -8,6 +8,7 @@
 // Private symbols for internal state
 const HOOK_NAME = Symbol('__xnapify.hook.name__');
 const HOOK_HANDLERS = Symbol('__xnapify.hook.handlers__');
+const ORIGINAL_HANDLER = Symbol('__xnapify.hook.original__');
 
 /**
  * Hook Channel - Async middleware hooks with priority support
@@ -75,11 +76,35 @@ class HookChannel {
    * @returns {Promise<void>}
    */
   async emit(event, ...args) {
-    const list = this[HOOK_HANDLERS].get(event);
-    if (!list) return;
+    const handlersList = this[HOOK_HANDLERS].get(event);
+    if (!handlersList) return;
+
+    // Clone the array to prevent iteration errors if handlers remove themselves
+    const list = [...handlersList];
+    const errors = [];
 
     for (const { handler } of list) {
-      await handler(...args);
+      try {
+        await handler(...args);
+      } catch (err) {
+        errors.push(err);
+      }
+    }
+
+    if (errors.length === 1) {
+      throw errors[0];
+    }
+
+    if (errors.length > 1) {
+      const msg = `Multiple errors occurred in hook channel '${this.name}' event '${event}'`;
+      if (typeof AggregateError !== 'undefined') {
+        throw new AggregateError(errors, msg);
+      }
+
+      const err = new Error(msg);
+      err.name = 'AggregateError';
+      err.errors = errors;
+      throw err;
     }
   }
 
@@ -102,13 +127,17 @@ class HookChannel {
     // Remove specific handler
     const list = this[HOOK_HANDLERS].get(event);
     if (list) {
-      const idx = list.findIndex(h => h.handler === handler);
-      if (idx !== -1) {
-        list.splice(idx, 1);
-      }
-      // Clean up empty arrays
-      if (list.length === 0) {
+      // Filter out all instances of the handler, in case it was added multiple times
+      // Also check against ORIGINAL_HANDLER to smoothly detach bounded proxy wrappers
+      const filtered = list.filter(
+        h => h.handler !== handler && h.handler[ORIGINAL_HANDLER] !== handler,
+      );
+
+      if (filtered.length === 0) {
         this[HOOK_HANDLERS].delete(event);
+      } else if (filtered.length !== list.length) {
+        // Re-assign the filtered array
+        this[HOOK_HANDLERS].set(event, filtered);
       }
     }
   }
@@ -123,7 +152,6 @@ class HookChannel {
    */
   withContext(context) {
     const channel = this;
-    const wrapperMap = new WeakMap();
 
     return {
       on(event, handler, priority = 10) {
@@ -133,7 +161,10 @@ class HookChannel {
 
         // Wrap handler so it runs with the provided context as `this`
         const wrapped = (...args) => handler.call(context, ...args);
-        wrapperMap.set(handler, wrapped);
+
+        // Track the original handler reference recursively to allow O(1) removal.
+        // This solves the WeakMap bounded tracking memory leak gracefully.
+        wrapped[ORIGINAL_HANDLER] = handler;
 
         channel.on(event, wrapped, priority);
         return this;
@@ -143,8 +174,16 @@ class HookChannel {
         return channel.emit(event, ...args);
       },
 
-      off(event) {
-        return channel.off(event);
+      off(event, handler) {
+        if (!handler) {
+          return channel.off(event);
+        }
+
+        return channel.off(event, handler);
+      },
+
+      withContext(newContext) {
+        return channel.withContext(newContext);
       },
 
       get name() {

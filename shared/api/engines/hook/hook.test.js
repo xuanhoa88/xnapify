@@ -52,6 +52,107 @@ describe('Hook Engine', () => {
 
       expect(channel.events).toEqual(['event1', 'event2']);
     });
+
+    test('should not skip handlers if a handler removes itself during emit', async () => {
+      const order = [];
+
+      const handlerA = async () => {
+        order.push('A');
+        channel.off('mutation', handlerA);
+      };
+
+      const handlerB = async () => {
+        order.push('B');
+      };
+
+      channel.on('mutation', handlerA, 1);
+      channel.on('mutation', handlerB, 2);
+
+      await channel.emit('mutation');
+
+      expect(order).toEqual(['A', 'B']);
+    });
+
+    test('should remove all identical handlers if registered multiple times', async () => {
+      let count = 0;
+      const handler = async () => count++;
+
+      channel.on('multi', handler, 1);
+      channel.on('multi', handler, 2);
+
+      channel.off('multi', handler);
+
+      await channel.emit('multi');
+
+      expect(count).toBe(0);
+    });
+
+    test('should execute all handlers even if one throws, then propagate the error', async () => {
+      const order = [];
+
+      channel.on(
+        'error-test',
+        async () => {
+          order.push('A');
+          throw new Error('Handler A error');
+        },
+        1,
+      );
+
+      channel.on(
+        'error-test',
+        async () => {
+          order.push('B');
+        },
+        2,
+      );
+
+      await expect(channel.emit('error-test')).rejects.toThrow(
+        'Handler A error',
+      );
+
+      // Despite throwing, B was still executed
+      expect(order).toEqual(['A', 'B']);
+    });
+
+    test('should throw AggregateError if multiple handlers fail', async () => {
+      const order = [];
+
+      channel.on(
+        'agg-test',
+        async () => {
+          order.push('A');
+          throw new Error('Error A');
+        },
+        1,
+      );
+
+      channel.on(
+        'agg-test',
+        async () => {
+          order.push('B');
+          throw new Error('Error B');
+        },
+        2,
+      );
+
+      try {
+        await channel.emit('agg-test');
+        // If we reach here, the promise resolved unexpectedly
+        throw new Error('Should have thrown');
+      } catch (err) {
+        // For the unexpected resolution, bubble it
+        if (err.message === 'Should have thrown') throw err;
+
+        // Depending on Node version, it might be an AggregateError or standard Error with .errors
+        expect(err.errors).toBeDefined();
+        expect(err.errors.length).toBe(2);
+        expect(err.errors[0].message).toBe('Error A');
+        expect(err.errors[1].message).toBe('Error B');
+      }
+
+      expect(order).toEqual(['A', 'B']);
+    });
   });
 
   describe('Factory', () => {
