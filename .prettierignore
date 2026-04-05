@@ -11,11 +11,9 @@ build/
 release/
 dist/
 out/
-.next/
-.nuxt/
 .cache/
-coverage/
 .data/
+coverage/
 
 # Generated files
 *.min.js

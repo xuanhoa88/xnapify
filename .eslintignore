@@ -11,9 +11,8 @@ build/
 release/
 dist/
 out/
-.next/
-.nuxt/
 .cache/
+.data/
 coverage/
 
 # Generated files
@@ -27,7 +26,6 @@ workbox-*.js
 # Temporary files
 *.tmp
 *.temp
-.data/
 
 # OS files
 .DS_Store

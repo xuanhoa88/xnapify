@@ -2,9 +2,21 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@shared/*": ["shared/*"]
-    }
+      "@shared/*": ["shared/*"],
+      "*": ["src/*", "*"]
+    },
+    "jsx": "react-jsx",
+    "moduleResolution": "node",
+    "target": "esnext"
   },
-  "include": ["src/**/*", "shared/**/*"],
-  "exclude": ["node_modules", "build", "coverage", ".cache"]
+  "include": ["src/**/*", "shared/**/*", "tools/**/*"],
+  "exclude": [
+    "node_modules",
+    "build",
+    "coverage",
+    ".cache",
+    ".agent",
+    ".data",
+    "dist"
+  ]
 }

@@ -38,7 +38,6 @@ lerna-debug.log*
 .pnpm-debug.log*
 
 # Runtime data
-.data/
 pids
 *.pid
 *.seed
@@ -93,18 +92,13 @@ web_modules/
 .rts2_cache/
 .eslintcache
 .cache/
+.data/
 .parcel-cache/
 
 # Sensitive credentials
 *.pem
 *.key
 *.cert
-
-# Next.js build output
-.next
-
-# Nuxt.js build / generate output
-.nuxt
 
 # Storybook build outputs
 .out
