@@ -34,10 +34,29 @@ async function scanDirectory(dirPath, source, metadata, extensionManager) {
     return;
   }
 
-  const dirPromises = files.map(async dirent => {
+  const processDirent = async (dirent, parentScope = '') => {
     if (!dirent.isDirectory()) return;
 
-    const manifest = await extensionManager.readManifest(dirPath, dirent.name);
+    if (!parentScope && dirent.name.startsWith('@')) {
+      const scopePath = path.join(dirPath, dirent.name);
+      let scopeFiles;
+      try {
+        scopeFiles = await fs.promises.readdir(scopePath, {
+          withFileTypes: true,
+        });
+      } catch {
+        return;
+      }
+      await Promise.all(
+        scopeFiles.map(scopeDirent => processDirent(scopeDirent, dirent.name)),
+      );
+      return;
+    }
+
+    const manifestArgs = parentScope
+      ? [dirPath, parentScope, dirent.name]
+      : [dirPath, dirent.name];
+    const manifest = await extensionManager.readManifest(...manifestArgs);
     if (!manifest) return;
 
     metadata.set(manifest.id, {
@@ -45,8 +64,9 @@ async function scanDirectory(dirPath, source, metadata, extensionManager) {
       isInstalled: false,
       source,
     });
-  });
+  };
 
+  const dirPromises = files.map(dirent => processDirent(dirent));
   await Promise.all(dirPromises);
 }
 
@@ -227,13 +247,13 @@ export async function getActiveExtensions({
 
   // 2. Process each active extension
   for (const dbExtension of dbExtensions) {
-    const { key } = dbExtension;
+    const { name, key } = dbExtension;
 
-    // Resolve the actual FS directory — handles dev dir name mismatches
+    // Resolve the actual FS directory — directories are named by manifest.name
     const { dir: extDir, isDevExtension } =
-      await extensionManager.resolveExtensionDir(key);
+      await extensionManager.resolveExtensionDir(name);
     if (!extDir) {
-      console.warn(`Active extension ${key} missing from disk.`);
+      console.warn(`Active extension ${name} (${key}) missing from disk.`);
       continue;
     }
 
@@ -296,6 +316,7 @@ export async function deleteExtension(
     const queueChannel = queue('extensions');
     queueChannel.emit('delete', {
       extensionKey: key,
+      extensionName: extension ? extension.name : key,
       actorId,
     });
   } else if (extension) {
@@ -331,13 +352,13 @@ export async function getExtensionById(
   const { extension: dbRecord } = await resolveExtension(models, id, {
     required: false,
   });
-  const extensionKey = dbRecord ? dbRecord.key : id;
+  const extensionKey = dbRecord ? dbRecord.name : id;
 
   if (!extensionKey) {
     throw ExtensionError.invalidId();
   }
 
-  // Resolve directory and manifest
+  // Resolve directory and manifest — directories are named by manifest.name
   const { dir: resolvedDir } =
     await extensionManager.resolveExtensionDir(extensionKey);
 
@@ -372,7 +393,7 @@ export async function getExtensionStaticDir({ extensionManager, models }, id) {
   const { extension } = await resolveExtension(models, id, {
     required: false,
   });
-  const extensionKey = extension ? extension.key : id;
+  const extensionKey = extension ? extension.name : id;
   if (!extensionKey) return null;
 
   const { dir } = await extensionManager.resolveExtensionDir(extensionKey);
@@ -493,9 +514,13 @@ export async function installExtensionFromPackage(
       );
     }
 
-    // 6. Move to final destination (use manifest.id for filesystem-safe dir name)
-    const finalExtensionDir = path.join(extensionsDir, manifest.id);
+    // 6. Move to final destination (use manifest.name for directory — supports @org/name)
+    const finalExtensionDir = path.join(extensionsDir, extensionName);
 
+    // Ensure parent scope directory exists for scoped names (e.g. @xnapify-extension/)
+    await fs.promises.mkdir(path.dirname(finalExtensionDir), {
+      recursive: true,
+    });
     await fs.promises.rm(finalExtensionDir, { recursive: true, force: true });
 
     await fs.promises.rename(extensionRoot, finalExtensionDir);
@@ -609,9 +634,9 @@ export async function toggleExtensionStatus(
     throw ExtensionError.notFound();
   }
 
-  // Resolve extension physical directory on disk
+  // Resolve extension physical directory on disk — uses manifest name
   const { dir: extensionDir, isDevExtension } =
-    await extensionManager.resolveExtensionDir(extension.key);
+    await extensionManager.resolveExtensionDir(extension.name);
 
   // Update extension status
   await extension.update({ is_active: isActive });

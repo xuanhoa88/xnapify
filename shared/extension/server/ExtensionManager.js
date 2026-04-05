@@ -216,7 +216,7 @@ class ServerExtensionManager extends BaseExtensionManager {
 
     // eslint-disable-next-line no-underscore-dangle
     const bundlePath = await this._getExtensionBundlePath(
-      manifest.id,
+      manifest.name,
       apiFilename,
     );
     if (!bundlePath) return null;
@@ -248,7 +248,7 @@ class ServerExtensionManager extends BaseExtensionManager {
 
       // eslint-disable-next-line no-underscore-dangle
       const bundlePath = await this._getExtensionBundlePath(
-        manifest.id,
+        manifest.name,
         serverFilename,
       );
       if (!bundlePath) {
@@ -922,10 +922,13 @@ class ServerExtensionManager extends BaseExtensionManager {
    * Resolve the physical directory of an extension on disk.
    * Checks local/dev path first (dev override), then installed/remote path.
    *
+   * Supports both flat (my-ext/) and scoped (@org/name/) layouts.
+   * For scoped names, uses path.join which correctly handles the nested structure.
+   *
    * This is the single source of truth for extension path resolution — used
    * internally by `_getExtensionBundlePath` and externally by the service layer
    *
-   * @param {string} extensionKey - Extension directory name / key
+   * @param {string} extensionKey - Extension directory name / key (e.g. '@xnapify-extension/quick-access')
    * @returns {{ dir: string|null, isDevExtension: boolean }}
    */
   async resolveExtensionDir(extensionKey) {
@@ -935,18 +938,24 @@ class ServerExtensionManager extends BaseExtensionManager {
       // 1. Check dev/local dir
       if (this[SERVER_CWD]) {
         const devBaseDir = this.getDevExtensionsDir(this[SERVER_CWD]);
-        if (devBaseDir && (await fileExists(devBaseDir, extensionKey))) {
-          return {
-            dir: path.join(devBaseDir, extensionKey),
-            isDevExtension: true,
-          };
+        if (devBaseDir) {
+          const devDir = path.join(devBaseDir, extensionKey);
+          if (await fileExists(devDir)) {
+            return {
+              dir: devDir,
+              isDevExtension: true,
+            };
+          }
         }
       }
 
       // 2. Check installed dir
       const baseDir = this.getInstalledExtensionsDir();
-      if (baseDir && (await fileExists(baseDir, extensionKey))) {
-        return { dir: path.join(baseDir, extensionKey), isDevExtension: false };
+      if (baseDir) {
+        const installedDir = path.join(baseDir, extensionKey);
+        if (await fileExists(installedDir)) {
+          return { dir: installedDir, isDevExtension: false };
+        }
       }
     } catch (err) {
       console.error(
@@ -1105,10 +1114,16 @@ class ServerExtensionManager extends BaseExtensionManager {
       const extensionVersion = manifest.version || '0.0.0';
 
       // 4. Security: prevent path traversal
+      // Allow scoped names (exactly one '/' after '@'), block everything else
+      const isScopedName =
+        extensionName.startsWith('@') &&
+        extensionName.indexOf('/') === extensionName.lastIndexOf('/') &&
+        extensionName.indexOf('/') > 1;
+
       if (
         extensionName.includes('..') ||
-        extensionName.includes('/') ||
-        extensionName.includes('\\')
+        extensionName.includes('\\') ||
+        (!isScopedName && extensionName.includes('/'))
       ) {
         const error = new Error(
           `Extension name "${extensionName}" contains invalid path characters`,

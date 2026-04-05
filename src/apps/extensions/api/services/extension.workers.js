@@ -6,7 +6,6 @@
  */
 
 import fs from 'fs';
-import path from 'path';
 
 import { computeChecksum, verifyExtensionChecksum } from '../utils/checksum';
 
@@ -78,10 +77,11 @@ async function handleInstallJob(container, job) {
  * @param {Object} job - Queue job
  */
 async function handleDeleteJob(container, job) {
-  const { extensionKey, actorId } = job.data;
+  const { extensionKey, extensionName, actorId } = job.data;
+  // Use manifest name for FS resolution; fall back to key for pre-migration jobs
+  const fsName = extensionName || extensionKey;
 
   try {
-    const cwd = container.resolve('cwd');
     const extensionManager = container.resolve('extension');
     const hook = container.resolve('hook');
     const { Extension } = container.resolve('models');
@@ -101,26 +101,12 @@ async function handleDeleteJob(container, job) {
       }
     }
 
-    // Remove files from both directories (with path traversal guard)
-    if (cwd && extensionManager) {
-      const dirs = [
-        extensionManager.getInstalledExtensionsDir(),
-        extensionManager.getDevExtensionsDir(cwd),
-      ].filter(Boolean);
-      for (const baseDir of dirs) {
-        try {
-          const pDir = path.join(baseDir, extensionKey);
-          const relative = path.relative(baseDir, pDir);
-          if (
-            relative &&
-            !relative.startsWith('..') &&
-            !path.isAbsolute(relative)
-          ) {
-            await fs.promises.rm(pDir, { recursive: true, force: true });
-          }
-        } catch {
-          // Non-fatal — directory may not exist
-        }
+    // Remove files from both directories using resolveExtensionDir
+    // (handles both flat and scoped @org/name layouts, dev and prod paths)
+    if (extensionManager) {
+      const { dir } = await extensionManager.resolveExtensionDir(fsName);
+      if (dir) {
+        await fs.promises.rm(dir, { recursive: true, force: true });
       }
     }
 

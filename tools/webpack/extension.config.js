@@ -167,19 +167,23 @@ function validateExtension(extension) {
   }
 
   const { dirName } = extension;
+  // MF library name must be a valid JS identifier — use the sqid-based id
+  // (e.g. 'extension_TJO7Yw61SwQzV'), not the scoped manifest name.
+  const extensionId = extension.id || dirName;
 
   return {
     extensionName: extension.name,
     extensionPath: extension.path,
     extensionDescription: extension.manifest.description || extension.name,
     dirName,
+    extensionId,
     clientPath: extension.manifest.browser
       ? path.resolve(extension.path, extension.manifest.browser)
       : null,
     apiPath: extension.manifest.main
       ? path.resolve(extension.path, extension.manifest.main)
       : null,
-    libraryName: `extension_${dirName}`,
+    libraryName: `extension_${extensionId}`,
   };
 }
 
@@ -390,7 +394,7 @@ function createExtensionConfig({ extensions = [], buildPath }) {
 
     // Create shared extension defines once
     const extensionDefines = createDefinePlugin({
-      __EXTENSION_ID__: JSON.stringify(extensionData.dirName),
+      __EXTENSION_ID__: JSON.stringify(extensionData.extensionId),
       __EXTENSION_DESCRIPTION__: JSON.stringify(
         extensionData.extensionDescription,
       ),

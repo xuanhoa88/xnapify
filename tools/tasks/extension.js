@@ -88,7 +88,8 @@ function discoverExtensions() {
         return {
           manifest,
           name: manifest.name,
-          dirName: generateExtensionId(manifest.name),
+          dirName: manifest.name,
+          id: generateExtensionId(manifest.name),
           version: semver.clean(manifest.version) || '0.0.0',
           path: extensionPath,
         };
@@ -332,6 +333,7 @@ async function buildExtensions(options = {}) {
 
   // Auto-cleanup: remove stale build directories that no longer match
   // any current extension (e.g. after ID scheme migration).
+  // Handles both flat (my-ext/) and scoped (@org/name/) layouts.
   try {
     if (fs.existsSync(EXTENSIONS_BUILD_DIR)) {
       const validDirNames = new Set(extensions.map(e => e.dirName));
@@ -339,7 +341,29 @@ async function buildExtensions(options = {}) {
         withFileTypes: true,
       });
       for (const entry of existing) {
-        if (entry.isDirectory() && !validDirNames.has(entry.name)) {
+        if (!entry.isDirectory()) continue;
+
+        if (entry.name.startsWith('@')) {
+          // Scoped directory: check each child (@org/name)
+          const scopeDir = path.join(EXTENSIONS_BUILD_DIR, entry.name);
+          const scopeChildren = fs.readdirSync(scopeDir, {
+            withFileTypes: true,
+          });
+          for (const child of scopeChildren) {
+            if (!child.isDirectory()) continue;
+            const scopedName = `${entry.name}/${child.name}`;
+            if (!validDirNames.has(scopedName)) {
+              const stale = path.join(scopeDir, child.name);
+              fs.rmSync(stale, { recursive: true, force: true });
+              logInfo(`🧹 Removed stale build directory: ${scopedName}`);
+            }
+          }
+          // Remove empty scope directory
+          const remaining = fs.readdirSync(scopeDir);
+          if (remaining.length === 0) {
+            fs.rmSync(scopeDir, { recursive: true, force: true });
+          }
+        } else if (!validDirNames.has(entry.name)) {
           const stale = path.join(EXTENSIONS_BUILD_DIR, entry.name);
           fs.rmSync(stale, { recursive: true, force: true });
           logInfo(`🧹 Removed stale build directory: ${entry.name}`);

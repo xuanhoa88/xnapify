@@ -168,6 +168,7 @@ describe('Extension Service', () => {
       mockModels.Extension.findAll.mockResolvedValue([
         {
           id: 'db-1',
+          name: 'db-extension',
           key: 'db-extension',
           is_active: true,
           update: mockDbUpdate,
@@ -206,6 +207,7 @@ describe('Extension Service', () => {
       mockModels.Extension.findAll.mockResolvedValue([
         {
           id: 'db-1',
+          name: 'missing-extension',
           key: 'missing-extension',
           is_active: true,
           update: mockUpdate,
@@ -258,6 +260,7 @@ describe('Extension Service', () => {
       mockModels.Extension.findAll.mockResolvedValue([
         {
           id: 'active-1',
+          name: 'active-p',
           key: 'active-p',
           is_active: true,
           toJSON: () => ({ name: 'Active', key: 'active-p', is_active: true }),

@@ -75,6 +75,10 @@ function createMockContainer(overrides = {}) {
       emit: jest.fn().mockResolvedValue(undefined),
       getInstalledExtensionsDir: jest.fn(() => '/extensions'),
       getDevExtensionsDir: jest.fn(() => '/dev-extensions'),
+      resolveExtensionDir: jest.fn().mockResolvedValue({
+        dir: '/extensions/test-extension',
+        isDevExtension: false,
+      }),
     },
     hook: jest.fn(() => ({ emit: jest.fn() })),
     ws: { sendToPublicChannel: jest.fn() },

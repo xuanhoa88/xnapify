@@ -10,6 +10,14 @@ import path from 'path';
 
 import { JOB_STATUS } from './utils/constants';
 
+const waitFor = async (conditionFn, timeout = 3000) => {
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
+    if (conditionFn()) return;
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }
+};
+
 jest.mock('uuid');
 
 describe('FileQueue Adapter', () => {
@@ -172,8 +180,8 @@ describe('FileQueue Adapter', () => {
         return { processed: job.data.value };
       });
 
-      // Wait for polling + processing
-      await new Promise(resolve => setTimeout(resolve, 200));
+      // Wait for processing
+      await waitFor(() => completed.length === 1);
 
       expect(completed).toHaveLength(1);
       expect(completed[0].status).toBe(JOB_STATUS.COMPLETED);
@@ -185,10 +193,14 @@ describe('FileQueue Adapter', () => {
 
       queue.process(async () => 'done');
 
-      await new Promise(resolve => setTimeout(resolve, 200));
-
+      let files = [];
       const completedDir = path.join(TEST_DATA_DIR, 'test-queue', 'completed');
-      const files = fs.readdirSync(completedDir);
+      await waitFor(() => {
+        if (!fs.existsSync(completedDir)) return false;
+        files = fs.readdirSync(completedDir);
+        return files.length === 1;
+      });
+
       expect(files.length).toBe(1);
     });
 
@@ -226,7 +238,7 @@ describe('FileQueue Adapter', () => {
       });
 
       queue.resume();
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await waitFor(() => order.length === 3);
 
       expect(order[0]).toBe('high');
       expect(order[1]).toBe('medium');
@@ -249,7 +261,7 @@ describe('FileQueue Adapter', () => {
       });
 
       // Wait enough for retries
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await waitFor(() => attemptCount >= 3);
 
       expect(attemptCount).toBe(3);
     });
