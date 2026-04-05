@@ -427,7 +427,7 @@ export async function updateUserById(
   }
 
   // Invalidate RBAC cache (roles/groups may have changed)
-  rbacCache.invalidateUser(user_id);
+  await rbacCache.invalidateUser(user_id);
 
   // Reload user with updated data
   await user.reload({
@@ -597,7 +597,7 @@ export async function bulkUpdateStatus(ids, is_active, { models, hook }) {
   await Promise.all(
     users.map(async user => {
       // Invalidate RBAC cache
-      rbacCache.invalidateUser(user.id);
+      await rbacCache.invalidateUser(user.id);
 
       // Emit hook event
       await hook('admin:users').emit('status_updated', {
@@ -647,7 +647,7 @@ export async function bulkDelete(ids, { models, hook }) {
     await Promise.all(
       deletedIds.map(async (id, i) => {
         // Invalidate RBAC cache
-        rbacCache.invalidateUser(id);
+        await rbacCache.invalidateUser(id);
 
         const deletedEmail = deletedEmails[i];
 

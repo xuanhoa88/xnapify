@@ -118,48 +118,66 @@ function getInstance(appCache) {
 
 /**
  * Get cached user data
+ * @param {string} userId - User ID
+ * @param {Object} [appCache] - Cache instance
+ * @returns {Promise<Object|null>} Cached user data
  */
-export function getUser(userId, appCache) {
+export async function getUser(userId, appCache) {
   if (!userId) return null;
   const c = getInstance(appCache);
   if (!c || typeof c.get !== 'function') return null;
-  return c.get(userId);
+  return await c.get(userId);
 }
 
 /**
  * Set cached user data
+ * @param {string} userId - User ID
+ * @param {Object} data - User data
+ * @param {Object} [appCache] - Cache instance
+ * @param {number} [ttl] - Optional TTL in milliseconds
+ * @returns {Promise<void>}
  */
-export function setUser(userId, data, appCache, ttl) {
+export async function setUser(userId, data, appCache, ttl) {
   if (!userId || !data) return;
   const c = getInstance(appCache);
   if (!c || typeof c.set !== 'function') return;
-  ttl ? c.set(userId, data, ttl) : c.set(userId, data);
+  return ttl ? await c.set(userId, data, ttl) : await c.set(userId, data);
 }
 
 /**
  * Invalidate cache for a user
+ * @param {string} userId - User ID
+ * @param {Object} [appCache] - Cache instance
+ * @returns {Promise<void>}
  */
-export function invalidateUser(userId, appCache = null) {
+export async function invalidateUser(userId, appCache = null) {
   if (!userId) return;
   const c = getInstance(appCache);
-  if (c && typeof c.delete === 'function') c.delete(userId);
+  if (c && typeof c.delete === 'function') await c.delete(userId);
 }
 
 /**
  * Invalidate cache for multiple users
+ * @param {string[]} userIds - Array of user IDs
+ * @param {Object} [appCache] - Cache instance
+ * @returns {Promise<void>}
  */
-export function invalidateUsers(userIds, appCache = null) {
+export async function invalidateUsers(userIds, appCache = null) {
   if (!Array.isArray(userIds) || userIds.length === 0) return;
   const c = getInstance(appCache);
-  if (c && typeof c.delete === 'function') userIds.forEach(id => c.delete(id));
+  if (c && typeof c.delete === 'function') {
+    await Promise.all(userIds.map(id => c.delete(id)));
+  }
 }
 
 /**
  * Invalidate all cached data
+ * @param {Object} [appCache] - Cache instance
+ * @returns {Promise<void>}
  */
-export function invalidateAll(appCache = null) {
+export async function invalidateAll(appCache = null) {
   const c = getInstance(appCache);
-  if (c && typeof c.clear === 'function') c.clear();
+  if (c && typeof c.clear === 'function') await c.clear();
 }
 
 // ========================================================================
@@ -168,16 +186,20 @@ export function invalidateAll(appCache = null) {
 
 /**
  * Get cache statistics
+ * @param {Object} [appCache] - Cache instance
+ * @returns {Promise<Object|null>} Cache statistics
  */
-export function stats(appCache) {
+export async function stats(appCache) {
   const c = getInstance(appCache);
-  return c && typeof c.stats === 'function' ? c.stats() : null;
+  return c && typeof c.stats === 'function' ? await c.stats() : null;
 }
 
 /**
  * Cleanup expired entries
+ * @param {Object} [appCache] - Cache instance
+ * @returns {Promise<number>} Number of deleted entries
  */
-export function cleanup(appCache) {
+export async function cleanup(appCache) {
   const c = getInstance(appCache);
-  return c && typeof c.cleanup === 'function' ? c.cleanup() : 0;
+  return c && typeof c.cleanup === 'function' ? await c.cleanup() : 0;
 }

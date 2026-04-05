@@ -308,7 +308,7 @@ export async function assignRolesToUser(user_id, role_names, { models, hook }) {
   }
 
   // Invalidate RBAC cache for this user
-  rbacCache.invalidateUser(user_id);
+  await rbacCache.invalidateUser(user_id);
 
   return {
     id: user.id,
@@ -370,7 +370,7 @@ export async function assignGroupsToUser(user_id, group_ids, options = {}) {
   }
 
   // Invalidate RBAC cache for this user
-  rbacCache.invalidateUser(user_id);
+  await rbacCache.invalidateUser(user_id);
 
   return {
     id: user.id,
@@ -425,7 +425,7 @@ export async function addRoleToUser(user_id, role_id, { models, hook }) {
   }
 
   // Invalidate RBAC cache for this user
-  rbacCache.invalidateUser(user_id);
+  await rbacCache.invalidateUser(user_id);
 
   return user;
 }
@@ -472,7 +472,7 @@ export async function removeRoleFromUser(user_id, role_id, { models, hook }) {
   }
 
   // Invalidate RBAC cache for this user
-  rbacCache.invalidateUser(user_id);
+  await rbacCache.invalidateUser(user_id);
 
   return user;
 }
@@ -519,7 +519,7 @@ export async function addGroupToUser(user_id, group_id, { models, hook }) {
   }
 
   // Invalidate RBAC cache for this user
-  rbacCache.invalidateUser(user_id);
+  await rbacCache.invalidateUser(user_id);
 
   return user;
 }
@@ -566,7 +566,7 @@ export async function removeGroupFromUser(user_id, group_id, { models, hook }) {
   }
 
   // Invalidate RBAC cache for this user
-  rbacCache.invalidateUser(user_id);
+  await rbacCache.invalidateUser(user_id);
 
   return user;
 }
@@ -586,7 +586,7 @@ export async function getUserPermissions(user_id, options = {}) {
   const { User, Role, Group, Permission } = models;
 
   // 1. Try to get from cache
-  const cachedData = rbacCache.getUser(user_id, cache);
+  const cachedData = await rbacCache.getUser(user_id, cache);
   if (cachedData && cachedData.permissions) {
     return cachedData.permissions;
   }
@@ -677,7 +677,7 @@ export async function getUserPermissions(user_id, options = {}) {
 
   // 4. Update cache
   const existingCache = cachedData || {};
-  rbacCache.setUser(
+  await rbacCache.setUser(
     user_id,
     {
       ...existingCache,
@@ -999,7 +999,7 @@ export async function assignRolesToGroup(
     raw: true,
   });
   if (groupUsers.length > 0) {
-    rbacCache.invalidateUsers(groupUsers.map(gu => gu.user_id));
+    await rbacCache.invalidateUsers(groupUsers.map(gu => gu.user_id));
   }
 
   // Emit hook event
@@ -1072,7 +1072,7 @@ export async function addRoleToGroup(group_id, role_id, { models, hook }) {
     raw: true,
   });
   if (groupUsers.length > 0) {
-    rbacCache.invalidateUsers(groupUsers.map(gu => gu.user_id));
+    await rbacCache.invalidateUsers(groupUsers.map(gu => gu.user_id));
   }
 
   // Emit hook event
@@ -1146,7 +1146,7 @@ export async function removeRoleFromGroup(group_id, role_id, { models, hook }) {
     raw: true,
   });
   if (groupUsers.length > 0) {
-    rbacCache.invalidateUsers(groupUsers.map(gu => gu.user_id));
+    await rbacCache.invalidateUsers(groupUsers.map(gu => gu.user_id));
   }
 
   // Emit hook event
@@ -1218,7 +1218,7 @@ export async function addUserToGroup(group_id, user_id, { models, hook }) {
   await group.addUser(user);
 
   // Invalidate RBAC cache for this user (they now inherit group's roles)
-  rbacCache.invalidateUser(user_id);
+  await rbacCache.invalidateUser(user_id);
 
   // Emit hook event
   if (hook) {
@@ -1266,7 +1266,7 @@ export async function removeUserFromGroup(group_id, user_id, { models, hook }) {
   await group.removeUser(user);
 
   // Invalidate RBAC cache for this user (they no longer inherit group's roles)
-  rbacCache.invalidateUser(user_id);
+  await rbacCache.invalidateUser(user_id);
 
   // Emit hook event
   if (hook) {
@@ -1404,7 +1404,7 @@ export async function manageRolePermissions(
     raw: true,
   });
   if (userRoles.length > 0) {
-    rbacCache.invalidateUsers(userRoles.map(ur => ur.user_id));
+    await rbacCache.invalidateUsers(userRoles.map(ur => ur.user_id));
   }
 
   // Emit hook event

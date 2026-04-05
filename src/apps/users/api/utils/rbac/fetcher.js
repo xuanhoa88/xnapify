@@ -88,7 +88,7 @@ export async function fetchUserWithRBAC(userId, models) {
  * @returns {Promise<Object>} Object containing { roles: string[], groups: string[], permissions: string[] }
  */
 export async function fetchUserRBACData(userId, { models, cache }) {
-  const cached = rbacCache.getUser(userId, cache);
+  const cached = await rbacCache.getUser(userId, cache);
   if (cached) return cached;
 
   if (!models) {
@@ -105,7 +105,7 @@ export async function fetchUserRBACData(userId, { models, cache }) {
       try {
         const user = await fetchUserWithRBAC(userId, models);
         const rbacData = collectUserRBACData(user);
-        rbacCache.setUser(userId, rbacData, cache);
+        await rbacCache.setUser(userId, rbacData, cache);
         return rbacData;
       } finally {
         activeFetches.delete(userId); // ensure cleanup

@@ -384,7 +384,7 @@ export async function deleteRole(role_id, { models, hook, systemRoles }) {
 
   // Invalidate RBAC cache for affected users
   if (userRoles.length > 0) {
-    rbacCache.invalidateUsers(userRoles.map(ur => ur.user_id));
+    await rbacCache.invalidateUsers(userRoles.map(ur => ur.user_id));
   }
 
   // Emit hook event

@@ -159,8 +159,8 @@ Defer to the **security-auditor** skill for deep checks. At minimum verify:
 | **Unbounded queries** | `findAll()` without `limit` on large tables | Always set `limit` or paginate |
 | **Sequential where parallel** | Multiple independent DB/API calls chained with `await` | `Promise.all([callA(), callB()])` |
 | **Blocking event loop** | CPU work in request handler (hashing, parsing, checksum) | Offload to worker function: `import { fn } from './workers'` |
-| **Cache misses** | Repeated expensive lookups without caching | Use `cache.get(key)` / `cache.set(key, val, TTL)` pattern |
-| **Cache not invalidated** | State-changing operations without `invalidateCache()` | Call `invalidateCache(cache, id)` after mutations |
+| **Cache misses** | Repeated expensive lookups without caching | Use `await cache.get(key)` / `await cache.set(key, val, TTL)` pattern |
+| **Cache not invalidated** | State-changing operations without `invalidateCache()` | Call `await invalidateCache(cache, id)` after mutations |
 | **Temp file leaks** | `fs.promises.mkdir` in upload without `finally` cleanup | Always use `try/finally` to clean temp files |
 
 ### 4.2 Frontend Performance

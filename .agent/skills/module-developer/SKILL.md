@@ -197,11 +197,11 @@ async boot({ container }) {
   const moduleCache = cache.withNamespace('moduleName');
 
   // In service methods:
-  const cached = moduleCache.get('key');
+  const cached = await moduleCache.get('key');
   if (cached) return cached;
 
   const data = await fetchExpensiveData();
-  moduleCache.set('key', data, 60_000); // 60s TTL
+  await moduleCache.set('key', data, 60_000); // 60s TTL
   return data;
 }
 ```
