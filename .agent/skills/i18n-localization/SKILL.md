@@ -165,7 +165,7 @@ Before shipping:
 
 | Script                    | Purpose                                         | Command                                         |
 | ------------------------- | ----------------------------------------------- | ----------------------------------------------- |
-| `scripts/i18n_checker.py` | Detect hardcoded strings & missing translations | `python scripts/i18n_checker.py <project_path>` |
+| `scripts/i18nCheck.js` | Detect hardcoded strings & missing translations | `node scripts/i18nCheck.js <project_path>` |
 
 ---
 
@@ -173,8 +173,8 @@ Before shipping:
 
 | Need | Skill / Workflow |
 |------|-----------------|
-| Module translation hooks | `module-developer` skill |
-| Extension translations | `extension-developer` skill |
-| Code review i18n checks | `code-reviewer` skill (§12) |
+| Module translation hooks | `module-development` skill |
+| Extension translations | `extension-development` skill |
+| Code review i18n checks | `code-review` skill (§12) |
 | Frontend design (text, fonts) | `frontend-design` skill |
-| Clean code (no hardcoded strings) | `clean-code` skill |
+| Clean code (no hardcoded strings) | `coding-standards` skill |

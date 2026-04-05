@@ -35,7 +35,7 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 
 | Script | Purpose | Usage |
 |--------|---------|-------|
-| `scripts/ux_audit.py` | UX Psychology & Accessibility Audit | `python scripts/ux_audit.py <project_path>` |
+| `scripts/uxAudit.js` | UX Psychology & Accessibility Audit | `node scripts/uxAudit.js <project_path>` |
 
 ---
 
@@ -401,10 +401,10 @@ For deeper guidance on specific areas:
 
 | Need | Skill / Workflow |
 |------|-----------------|
-| CSS Modules (class naming) | `clean-code` skill |
+| CSS Modules (class naming) | `coding-standards` skill |
 | i18n for user-facing text | `i18n-localization` skill |
-| React component patterns | `module-developer` skill |
-| Extension UI injection (slots) | `extension-developer` skill |
-| Accessibility validation | `scripts/accessibility_checker.py` (this skill) |
-| Code review (CSS section) | `code-reviewer` skill (§8) |
+| React component patterns | `module-development` skill |
+| Extension UI injection (slots) | `extension-development` skill |
+| Accessibility validation | `scripts/a11yCheck.js` (this skill) |
+| Code review (CSS section) | `code-review` skill (§8) |
 | Adding a page route | `/add-view` workflow |

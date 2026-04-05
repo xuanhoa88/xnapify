@@ -51,9 +51,9 @@ xnapify/
 ├── build/                        # Production build output
 ├── public/                       # Static assets
 ├── .agent/                       # AI assistant configuration
-│   ├── rules.md                  # Coding rules & constraints
-│   ├── workflows/                # Step-by-step development guides (23)
-│   ├── skills/                   # AI persona skills (12)
+│   ├── RULES.md                  # Coding rules & constraints
+│   ├── workflows/                # Step-by-step development guides (22)
+│   ├── skills/                   # AI persona skills (17)
 │   └── templates/                # SPEC.md template
 ├── database.sqlite               # Local SQLite database (dev)
 └── .env.xnapify                  # Environment variable template
@@ -979,9 +979,9 @@ polluting the regular test suite.
 
 - **README.md** — Quick start and overview
 - **AGENT.md** — This file; full architecture guide for AI agents
-- **.agent/rules.md** — Hard rules and coding constraints
-- **.agent/workflows/** — 25 step-by-step development guides
-- **.agent/skills/** — 14 specialized AI persona skills
+- **.agent/RULES.md** — Hard rules and coding constraints
+- **.agent/workflows/** — 22 step-by-step development guides
+- **.agent/skills/** — 17 specialized AI persona skills
 - **.agent/templates/SPEC.template.md** — Feature specification template
 - **.env.xnapify** — Environment variable documentation
 - **CONTRIBUTING.md** — Contribution guidelines and commit conventions

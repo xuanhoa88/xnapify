@@ -483,7 +483,7 @@ describe('[api] cache', () => {
 
 ## Mocking
 
-> **⚠️ Anti-Pattern Warning:** Before adding mocks, read `test-driven-development/testing-anti-patterns.md` to avoid common pitfalls:
+> **⚠️ Anti-Pattern Warning:** Before adding mocks, read `test-driven-development/anti-patterns.md` to avoid common pitfalls:
 > - Never assert on mock elements (`*-mock` test IDs) — test real behavior
 > - Never add test-only methods to production classes — use test utilities
 > - Never mock without understanding dependencies — run real code first, then mock minimally
@@ -537,7 +537,7 @@ store.injectReducer(SLICE_NAME, reducer);
 7. **Use `mockStore` for components** - Use `redux-mock-store` for component tests
 8. **Use real `configureStore` for thunks** - Test full integration with selectors
 9. **Mock `fetch` via helpers** - Pass `{ fetch: mockFetch }` to `configureStore`
-10. **Test behavior, not implementation** - Focus on observable outcomes (see `testing-anti-patterns.md`)
+10. **Test behavior, not implementation** - Focus on observable outcomes (see `anti-patterns.md`)
 11. **Use `describe` blocks** - Group tests by feature (Initial State, Actions, Thunks)
 12. **Minimal mocking** - Mock only what's slow or external; prefer real implementations
 
@@ -549,5 +549,5 @@ store.injectReducer(SLICE_NAME, reducer);
 - `/add-redux` — Redux patterns (slice, thunks, selectors) with test examples
 - `/add-extension` — Extension testing for boot/shutdown symmetry
 - `/add-worker` — Worker handler testing (direct function calls)
-- `/update-code` — Modify code with mandatory test verification
-- `/run-e2e` — Browser-based E2E tests for user flows
+- `/modify` — Modify code with mandatory test verification
+- `/test-e2e` — Browser-based E2E tests for user flows

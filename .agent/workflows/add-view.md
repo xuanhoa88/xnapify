@@ -328,4 +328,4 @@ Append `.isRequired` to make any prop mandatory.
 - `/add-redux` — Redux Toolkit slice, thunks, and selectors for the view
 - `/add-test` — Jest tests for view components
 - `/add-extension` — Extension views with slots and hooks
-- `/update-code` — Modify existing views with test verification
+- `/modify` — Modify existing views with test verification

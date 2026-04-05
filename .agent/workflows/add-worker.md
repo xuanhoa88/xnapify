@@ -301,4 +301,4 @@ See `src/apps/extensions/api/` for the canonical reference implementation.
 - `/add-module` — Full-stack module where workers are registered in `boot()`
 - `/add-test` — Jest patterns for testing worker handler functions
 - `/debug` — Part 10 covers extension lifecycle and SQLITE_BUSY with workers
-- `/update-code` — Modify existing workers with test verification
+- `/modify` — Modify existing workers with test verification

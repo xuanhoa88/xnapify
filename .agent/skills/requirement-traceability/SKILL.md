@@ -17,8 +17,8 @@ The spec is the source of truth. Every line of code you write must trace back to
 
 **Always when:**
 - Modifying an existing module or engine that has a colocated `SPEC.md`
-- Executing tasks from an implementation plan (created by `writing-plans` skill)
-- Building a new feature from a design spec (created by `brainstorming` skill)
+- Executing tasks from an implementation plan (created by `implementation-planning` skill)
+- Building a new feature from a design spec (created by `design-thinking` skill)
 
 **Exceptions (ask your human partner):**
 - Hotfixes with no spec (write a retroactive spec after)
@@ -29,21 +29,21 @@ The spec is the source of truth. Every line of code you write must trace back to
 ```dot
 digraph rt_pipeline {
     rankdir=LR;
-    brainstorming [label="brainstorming\n(ideation)", shape=box];
-    writing_plans [label="writing-plans\n(decomposition)", shape=box];
+    design_thinking [label="design-thinking\n(ideation)", shape=box];
+    implementation_planning [label="implementation-planning\n(decomposition)", shape=box];
     rt [label="requirement-traceability\n(execution governance)", shape=box, style=filled, fillcolor="#ffffcc"];
     tdd [label="TDD\n(coding discipline)", shape=box];
 
-    brainstorming -> writing_plans [label="spec"];
-    writing_plans -> rt [label="plan"];
+    design_thinking -> implementation_planning [label="spec"];
+    implementation_planning -> rt [label="plan"];
     rt -> tdd [label="each task"];
 }
 ```
 
 | Skill | Governs |
 |-------|---------|
-| **brainstorming** | What to build, why, and how (design) |
-| **writing-plans** | How to break it into bite-sized tasks |
+| **design-thinking** | What to build, why, and how (design) |
+| **implementation-planning** | How to break it into bite-sized tasks |
 | **requirement-traceability** | That each task traces to the spec, nothing is missed, nothing is added |
 | **TDD** | That each piece of code has a failing test first |
 
@@ -93,7 +93,7 @@ Every module, engine, shared library, and extension has a `SPEC.md` colocated in
 
 ### Tier 2: Design Specs (New Features)
 
-For greenfield work, the `brainstorming` skill produces design specs and the `writing-plans` skill produces implementation plans — both saved **colocated** with the module:
+For greenfield work, the `design-thinking` skill produces design specs and the `implementation-planning` skill produces implementation plans — both saved **colocated** with the module:
 
 ```
 src/apps/<module>/
@@ -106,7 +106,7 @@ src/apps/<module>/
 └── views/
 ```
 
-**Use Tier 2 when:** Building new features from scratch via the brainstorming → writing-plans pipeline.
+**Use Tier 2 when:** Building new features from scratch via the design-thinking → implementation-planning pipeline.
 
 ### Which tier applies?
 
@@ -114,8 +114,8 @@ src/apps/<module>/
 |-----------|------------|-------|
 | Modifying `src/apps/auth/` | Colocated SPEC.md | `src/apps/auth/SPEC.md` |
 | Adding a feature to `shared/api/engines/db/` | Colocated SPEC.md | `shared/api/engines/db/SPEC.md` |
-| Building a brand-new module from brainstorming | Design spec | `src/apps/<module>/specs/YYYY-MM-DD-*.md` |
-| Implementing a plan from `writing-plans` | Plan + design spec | `src/apps/<module>/plans/YYYY-MM-DD-*.md` |
+| Building a brand-new module from design-thinking | Design spec | `src/apps/<module>/specs/YYYY-MM-DD-*.md` |
+| Implementing a plan from `implementation-planning` | Plan + design spec | `src/apps/<module>/plans/YYYY-MM-DD-*.md` |
 
 ---
 
@@ -138,11 +138,11 @@ Every module/engine has one. If it doesn't, create one from `.agent/templates/SP
 **For new features (Tier 2):**
 
 ```bash
-ls src/apps/<module>/specs/    # Find the design spec (from brainstorming)
-ls src/apps/<module>/plans/    # Find the implementation plan (from writing-plans)
+ls src/apps/<module>/specs/    # Find the design spec (from design-thinking)
+ls src/apps/<module>/plans/    # Find the implementation plan (from implementation-planning)
 ```
 
-If neither exists and you're building something new, stop and use the `brainstorming` skill first.
+If neither exists and you're building something new, stop and use the `design-thinking` skill first.
 
 ### Step 2: Build the Traceability Map
 
@@ -163,7 +163,7 @@ Create a mental (or written) map connecting spec sections → code files:
 | "Users can upload avatars" | Task 3 | `api/controllers/avatar.controller.js` | ☐ |
 | "Avatars resize to 200×200" | Task 4 | `api/workers/avatar.worker.js` | ☐ |
 
-For large specs, write this to a `task.md` artifact and track it as you go. See `traceability-template.md` in this skill folder for a reusable template.
+For large specs, write this to a `task.md` artifact and track it as you go. See `tracking-template.md` in this skill folder for a reusable template.
 
 ### Step 3: Identify Gaps Before Starting
 
@@ -364,7 +364,7 @@ Before marking a feature complete:
 
 - [ ] All tests pass (`npm test`)
 - [ ] Lint passes (`npm run lint`)
-- [ ] Code review (use `code-reviewer` skill)
+- [ ] Code review (use `code-review` skill)
 - [ ] Spec and code are in sync
 
 Can't check all boxes? You have drift. Fix it.
@@ -463,21 +463,21 @@ test('forgot-password generates token and sends email', async () => {
 
 | Need | Skill / Workflow |
 |------|-----------------|
-| Design and requirements exploration | `brainstorming` skill |
-| Breaking spec into implementation tasks | `writing-plans` skill |
+| Design and requirements exploration | `design-thinking` skill |
+| Breaking spec into implementation tasks | `implementation-planning` skill |
 | Coding discipline (test-first) | `test-driven-development` skill |
-| Code quality review | `code-reviewer` skill |
-| Coding standards | `clean-code` skill |
-| Modify existing spec-driven code | `/update-code` workflow |
-| Git workflow for commits | `/git-commit` workflow |
-| Workspace isolation | `using-git-worktrees` skill |
+| Code quality review | `code-review` skill |
+| Coding standards | `coding-standards` skill |
+| Modify existing spec-driven code | `/modify` workflow |
+| Git workflow for commits | `/commit` workflow |
+| Workspace isolation | `workspace-isolation` skill |
 
 ## xnapify-Specific Notes
 
 - **Colocated specs:** Every module/engine has a `SPEC.md` in its root directory
 - **SPEC.md template:** `.agent/templates/SPEC.template.md`
-- **Design specs (new features):** `<module>/specs/YYYY-MM-DD-<topic>-design.md` (created by `brainstorming`)
-- **Plans:** `<module>/plans/YYYY-MM-DD-<feature-name>.md` (created by `writing-plans`)
+- **Design specs (new features):** `<module>/specs/YYYY-MM-DD-<topic>-design.md` (created by `design-thinking`)
+- **Plans:** `<module>/plans/YYYY-MM-DD-<feature-name>.md` (created by `implementation-planning`)
 - **Always use `npm test`** — never `npx jest`. The `pretest` hook installs the SQLite driver.
 - **File extension:** `.test.js` (not `.ts`) — the project uses JavaScript.
 - **Amendments require human approval** — never amend a spec unilaterally.

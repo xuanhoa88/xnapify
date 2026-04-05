@@ -93,6 +93,6 @@ Whenever you provide assistance to a Developer on this codebase, you MUST adhere
 
 ## Instructing the AI
 
-If you are a Developer reading this, you can append these rules to your AI prompts natively using the context commands depending on your IDE (e.g. `@rules.md` in Cursor, adding this file to Claude Projects).
+If you are a Developer reading this, you can append these rules to your AI prompts natively using the context commands depending on your IDE (e.g. `@RULES.md` in Cursor, adding this file to Claude Projects).
 
 *If utilizing the unified .agent system defined in `AGENT.md`, these conventions are automatically absorbed!*

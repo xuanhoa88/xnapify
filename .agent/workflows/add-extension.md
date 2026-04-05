@@ -4,7 +4,7 @@ description: Add an extension with slots, hooks, and optional API endpoints
 
 Add a new extension with API endpoints, UI components, validation, and database support.
 
-> **Prerequisites:** Before starting, consider using the `brainstorming` skill for design exploration and the `writing-plans` skill for implementation planning. Use the `test-driven-development` skill during implementation.
+> **Prerequisites:** Before starting, consider using the `design-thinking` skill for design exploration and the `implementation-planning` skill for implementation planning. Use the `test-driven-development` skill during implementation.
 
 Extensions come in two types:
 - **Plugin-type** — Extends existing modules via slots, hooks, and IPC (e.g., `profile-plugin`)
@@ -1122,6 +1122,6 @@ See `src/extensions/posts-module/` for a complete working module-type extension 
 - `/add-data` — Models, migrations, and seeds for extension database schema
 - `/add-test` — Jest tests for extension components and IPC handlers
 - `/add-worker` — Background workers for heavy extension processing
-- `/add-api-route` — Lightweight route addition for module-type extensions
-- `/security-audit` — Audit extension for isolation, IPC, and integrity compliance
-- `/update-code` — Modify existing extension code with test verification
+- `/add-route` — Lightweight route addition for module-type extensions
+- `/audit-security` — Audit extension for isolation, IPC, and integrity compliance
+- `/modify` — Modify existing extension code with test verification

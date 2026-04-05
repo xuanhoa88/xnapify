@@ -4,7 +4,7 @@ description: Add a full-stack module with API, views, models, and auto-discovery
 
 Add a new module with backend API routes, frontend views, database models, and auto-discovery.
 
-> **Prerequisites:** Before starting, consider using the `brainstorming` skill for design exploration and the `writing-plans` skill for implementation planning. Use the `test-driven-development` skill during implementation.
+> **Prerequisites:** Before starting, consider using the `design-thinking` skill for design exploration and the `implementation-planning` skill for implementation planning. Use the `test-driven-development` skill during implementation.
 
 ## Module Overview
 
@@ -970,8 +970,8 @@ webhook.register('{provider-name}', {
 - `/add-view` — View routes with lifecycle hooks and layouts
 - `/add-redux` — Redux Toolkit slice, thunks, and selectors
 - `/add-worker` — Background workers with direct function calls
-- `/add-api-route` — Lightweight single-route addition (no full scaffold)
+- `/add-route` — Lightweight single-route addition (no full scaffold)
 - `/add-test` — Jest unit and integration tests
 - `/add-extension` — Extension development with slots and hooks
-- `/security-audit` — Audit the new module for security compliance
-- `/update-code` — Modify existing module code with test verification
+- `/audit-security` — Audit the new module for security compliance
+- `/modify` — Modify existing module code with test verification

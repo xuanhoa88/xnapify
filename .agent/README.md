@@ -8,7 +8,7 @@ The `xnapify` application is officially engineered to support intelligent develo
 xnapify/
 ├── .agent/                       # Main AI Intelligence Engine
 │   ├── README.md                 # This guide
-│   ├── rules.md                  # Coding rules & constraints
+│   ├── RULES.md                  # Coding rules & constraints
 │   ├── workflows/                # Explicit guides on HOW to do things
 │   ├── skills/                   # Personas and Rulesets on WHAT is allowed
 │   └── templates/                # SPEC.md template for feature specs
@@ -31,7 +31,7 @@ xnapify/
 
 ## 2. `.agent/workflows/` (Actionable Guides)
 
-Workflows are highly-detailed, step-by-step markdown guides stored as **Slash Commands** (12 total).
+Workflows are highly-detailed, step-by-step markdown guides stored as **Slash Commands** (22 total).
 
 Each file includes `description:` YAML frontmatter so the AI knows strictly when to use it.
 
@@ -40,29 +40,23 @@ Each file includes `description:` YAML frontmatter so the AI knows strictly when
 
 **Available Workflows:**
 
-- Core: `/add-module` (includes schedule & webhook appendix), `/add-extension`, `/add-engine`
-- Data: `/add-data` (models, migrations, seeds)
-- Frontend: `/add-view` (includes component patterns), `/add-redux`
-- Infrastructure: `/add-worker`
-- Quality: `/add-test`, `/update-code` (includes lint & benchmark checks)
-- Operations: `/debug` (includes performance optimization), `/docker-deploy`, `/git-commit`
+- Orchestrators: `/build`, `/fix`, `/plan`
+- Scaffold: `/add-module`, `/add-extension`, `/add-engine`, `/add-route`, `/add-view`, `/add-data`, `/add-redux`, `/add-worker`, `/add-test`
+- Quality: `/modify` (includes lint & benchmark checks), `/audit-security`, `/test-e2e`, `/refactor`
+- Operations: `/debug`, `/deploy`, `/commit`, `/lookup`, `/scout`, `/recap`
 
 ---
 
 ## 3. `.agent/skills/` (Rulesets & Personas)
 
-Skills dictate HOW the AI behaves during complex tasks (e.g., refactoring or code reviewing) rather than providing a literal script. There are **8 skills** in total.
+Skills dictate HOW the AI behaves during complex tasks (e.g., refactoring or code reviewing) rather than providing a literal script. There are **17 skills** in total.
 
 **Available Skills:**
 
-- **`module-developer`**: Trains the AI on correct lifecycle hooks, auto-discovery, declarative contexts, and dependency wiring for `src/apps/` modules.
-- **`extension-developer`**: Trains the AI on the explicit differences between a core module (declarative migrations) and an extension (slots, hooks, IPC, shutdown cleanup). Covers both plugin-type and module-type extensions.
-- **`code-reviewer`**: Instructs the AI on exact architectural violations — flags static imports between domains, missing RBAC guards, incorrect lifecycle patterns, and CSS Module enforcement.
-- **`security-auditor`**: Audits routes and controllers for Zod validation, RBAC guards, rate limiting, and env var conventions.
-- **`clean-code`**: Pragmatic coding standards — concise, direct, no over-engineering, no unnecessary comments.
-- **`browser-test`**: Browser automation testing patterns using the browser subagent tool.
-- **`i18n-localization`**: Internationalization patterns — detecting hardcoded strings, managing translations, locale files.
-- **`frontend-design`**: Design thinking and decision-making for web UI — components, layouts, color schemes, typography, UX psychology.
+- Process: **`design-thinking`**, **`architecture-planning`**, **`implementation-planning`**, **`requirement-traceability`**, **`test-driven-development`**
+- Domain: **`module-development`**, **`extension-development`**, **`database-development`**, **`engine-development`**, **`websocket-development`**
+- Quality: **`coding-standards`**, **`code-review`**, **`security-compliance`**
+- Specialized: **`frontend-design`**, **`i18n-localization`**, **`browser-testing`**, **`workspace-isolation`**
 
 ---
 

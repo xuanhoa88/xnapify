@@ -778,4 +778,4 @@ export default PostsList;
 - `/add-view` — View routes and lifecycle hooks that consume Redux state
 - `/add-module` — Full-stack module including Redux setup
 - `/add-test` — Jest patterns for testing slices, thunks, and selectors
-- `/update-code` — Modify existing Redux code with test verification
+- `/modify` — Modify existing Redux code with test verification

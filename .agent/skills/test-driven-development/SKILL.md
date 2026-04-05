@@ -356,7 +356,7 @@ Never fix bugs without a test.
 
 ## Testing Anti-Patterns
 
-When adding mocks or test utilities, read @testing-anti-patterns.md to avoid common pitfalls:
+When adding mocks or test utilities, read @anti-patterns.md to avoid common pitfalls:
 - Testing mock behavior instead of real behavior
 - Adding test-only methods to production classes
 - Mocking without understanding dependencies
@@ -378,15 +378,15 @@ No exceptions without your human partner's permission.
 |------|--------------------|
 | Spec requirement traceability | `requirement-traceability` skill |
 | xnapify test patterns (Redux, components, API) | `/add-test` workflow |
-| Browser-based E2E testing | `browser-test` skill, `/run-e2e` workflow |
-| Code quality review | `code-reviewer` skill |
-| Coding standards | `clean-code` skill |
-| Testing anti-patterns reference | `testing-anti-patterns.md` (this skill) |
-| Modify existing code with tests | `/update-code` workflow |
+| Browser-based E2E testing | `browser-testing` skill, `/test-e2e` workflow |
+| Code quality review | `code-review` skill |
+| Coding standards | `coding-standards` skill |
+| Testing anti-patterns reference | `anti-patterns.md` (this skill) |
+| Modify existing code with tests | `/modify` workflow |
 
 ## xnapify-Specific Notes
 
 - **Always use `npm test`** — never `npx jest`. The `pretest` hook installs the SQLite driver.
 - **File extension:** `.test.js` (not `.ts`) — the project uses JavaScript.
 - **Test patterns:** For xnapify-specific templates (slice tests, thunk tests, component tests with App context, selector tests, mocking patterns), see the `/add-test` workflow.
-- **Anti-patterns:** Read `testing-anti-patterns.md` in this skill directory before adding mocks.
+- **Anti-patterns:** Read `anti-patterns.md` in this skill directory before adding mocks.
