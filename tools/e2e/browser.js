@@ -9,7 +9,7 @@
  * E2E Test Runner — Browser Abstraction
  *
  * Centralises all Puppeteer-specific calls behind a thin adapter.
- * To swap the underlying library (e.g. to Playwright), only this
+ * To swap the underlying library (e.g. to Puppeteer), only this
  * file needs to change — every other E2E module consumes the
  * generic helpers exported here.
  *
