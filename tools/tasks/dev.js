@@ -118,14 +118,14 @@ function configureWebpackForDev(cfg, isClient = true) {
     );
   }
 
+  // Initialize plugins array if it doesn't exist
+  cfg.plugins = Array.isArray(cfg.plugins) ? cfg.plugins : [];
+
   // Add HotModuleReplacementPlugin (required for both client and server)
   cfg.plugins.push(new HotModuleReplacementPlugin());
 
   // Client-specific HMR configuration
   if (isClient) {
-    // Initialize plugins array if it doesn't exist
-    cfg.plugins = cfg.plugins || [];
-
     // Add React Refresh Webpack Plugin with overlay configuration
     cfg.plugins.push(
       new ReactRefreshWebpackPlugin({
