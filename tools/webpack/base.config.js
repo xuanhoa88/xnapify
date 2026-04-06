@@ -620,6 +620,10 @@ function createWebpackConfig(name, options = {}) {
       mode: nodeEnv,
       stats: 'errors-only',
 
+      watchOptions: {
+        ignored: getHmrWatchIgnored(),
+      },
+
       optimization: {
         concatenateModules: !isDev,
         usedExports: !isDev,
@@ -830,11 +834,15 @@ function createWorkerConfig({
  * @returns {string[]} Array of ignored paths
  */
 function getHmrWatchIgnored() {
-  const buildDir = config.BUILD_DIR.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp(
-    `[\\\\/](?:node_modules|__tests__|e2e)(?:[\\\\/]|$)|\\.(?:test|spec)\\.[cm]?[jt]sx?$|^${buildDir}(?:[\\\\/]|$)`,
-    'i',
-  );
+  const buildDirGlob = config.BUILD_DIR.replace(/\\/g, '/');
+  return [
+    '**/node_modules/**',
+    '**/__tests__/**',
+    '**/e2e/**',
+    '**/*.test.*',
+    '**/*.spec.*',
+    `${buildDirGlob}/**`,
+  ];
 }
 
 // =============================================================================
