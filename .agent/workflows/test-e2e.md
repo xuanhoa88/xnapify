@@ -153,7 +153,7 @@ Each test case directory contains:
 - `script.json` — compiled automation actions (LLM generates, committed)
 - `.test-hash` — sha256 of test.md at compile time (gitignored)
 - `scripts/` — archived old scripts (committed for history)
-- `results/` — test run results (text committed, binary gitignored)
+- `_reports/` — test run reports (text committed, binary gitignored)
 
 ### UI test.md format (browser tests)
 
@@ -245,9 +245,15 @@ e2e/
 Categories group related tests (e.g., `auth`, `login`, `install`).
 Cases use `NN-name` numbering for execution order.
 
-## Execution Steps
+### 1. Ensure the app is running (MANDATORY)
 
-### 1. Resolve the port (MANDATORY)
+The E2E suite requires a running application. If the app is not reachable at the resolved port, the runner will wait for up to 30s (configurable via `E2E_STARTUP_TIMEOUT`) before failing.
+
+**Pre-flight check:**
+- Ensure `npm run dev` is running in a separate terminal.
+- Verify the app is reachable at `http://localhost:{PORT}`.
+
+### 2. Resolve the port (MANDATORY)
 
 Follow the `browser-testing` skill port discovery rules — same priority order:
 
@@ -331,7 +337,7 @@ Verify each expected result was met. Report any failures or unexpected UI states
 
 Results are stored inside each test case's directory:
 
-**Result directory:** `e2e/{category}/{NN-name}/results/{timestamp}/`
+**Result directory:** `e2e/{category}/{NN-name}/_reports/{timestamp}/`
 
 Contents:
 
@@ -382,7 +388,7 @@ Contents:
 
 After ALL test cases in a module are executed, a module-level summary is created:
 
-**Summary path:** `e2e/_results/{timestamp}/_summary.md`
+**Summary path:** `e2e/_reports/{timestamp}/_summary.md`
 
 **Summary format:**
 
@@ -398,15 +404,15 @@ After ALL test cases in a module are executed, a module-level summary is created
 
 | #   | Test Case          | Title                | Result  | Details                                                          |
 | --- | ------------------ | -------------------- | ------- | ---------------------------------------------------------------- |
-| 1   | install/01-upload  | Upload valid package | ✅ PASS | [result](../../install/01-upload/results/{timestamp}/result.md)  |
-| 2   | activate/01-toggle | Toggle switch        | ❌ FAIL | [result](../../activate/01-toggle/results/{timestamp}/result.md) |
+| 1   | install/01-upload  | Upload valid package | ✅ PASS | [result](../../install/01-upload/_reports/{timestamp}/result.md)  |
+| 2   | activate/01-toggle | Toggle switch        | ❌ FAIL | [result](../../activate/01-toggle/_reports/{timestamp}/result.md) |
 
 ## Failed Tests
 
 ### activate/01-toggle: Toggle switch
 
 - **Error:** Timeout waiting for element
-- **Result:** [result](../../activate/01-toggle/results/{timestamp}/result.md)
+- **Result:** [result](../../activate/01-toggle/_reports/{timestamp}/result.md)
 ```
 
 ## Results Directory Structure
@@ -420,7 +426,7 @@ src/extensions/quick-access-plugin/e2e/
 │   │   ├── .test-hash                       ← Hash of test.md (gitignored)
 │   │   ├── scripts/                         ← Archived old scripts (committed)
 │   │   │   └── 2026-04-01_10-03.json
-│   │   └── results/                         ← Test run results
+│   │   └── _reports/                        ← Test run reports
 │   │       └── 2026-04-02_13-49/
 │   │           ├── result.md                ← Text report (committed)
 │   │           ├── step-01.png              ← Binary evidence (gitignored)
@@ -435,10 +441,10 @@ src/extensions/quick-access-plugin/e2e/
 │       └── 01-login-jwt/
 │           ├── test.md
 │           ├── script.json
-│           └── results/
+│           └── _reports/
 │               └── 2026-04-02_09-06/
 │                   └── result.md            ← No screenshots (API-only)
-└── _results/                                ← Module-level summaries
+└── _reports/                                ← Module-level summaries
     └── 2026-04-02_13-49/
         └── _summary.md                      ← Text summary (committed)
 ```
@@ -552,13 +558,14 @@ These rules extend the `browser-testing` skill rules:
 | Rule                  | Description                                                                                              |
 | --------------------- | -------------------------------------------------------------------------------------------------------- |
 | **Skill first**       | Read `browser-testing` skill before starting — it defines port discovery, task format, and auth handling |
-| **Port first**        | Resolve port using the 3-priority system before building any URL                                         |
+| **App first**        | Verify the app is reachable at the base URL before starting any tests                    |
+| **Port first**       | Resolve port using the 3-priority system before building any URL                         |
 | **One flow per call** | Execute ONE test case per browser automation call                                                        |
 | **Serial execution**  | Run test cases in file order (01 → 02 → 03...) since later phases depend on earlier state                |
 | **Screenshot proof**  | Always request a screenshot at the end of each test case                                                 |
 | **Wait for load**     | Always prepend "Wait for the page to fully load" as the first step                                       |
 | **Auth first**        | Handle login before any test case                                                                        |
-| **Store results**     | Write results inside each test case's `results/{timestamp}/` directory                                   |
+| **Store results**     | Write results inside each test case's `_reports/{timestamp}/` directory                                   |
 | **Report clearly**    | Create `_summary.md` with ✅/❌ table after all tests complete                                           |
 | **No guessing**       | Ask the user for credentials / URLs if not known — never assume                                          |
 | **Compile first**     | Run `--mode=compile` before `--mode=run` if no `script.json` exists                                      |
@@ -577,7 +584,7 @@ These rules extend the `browser-testing` skill rules:
 | Only search `src/apps/`         | Search BOTH `src/apps/` and `src/extensions/` for `e2e/` folders   |
 | Use flat `.md` files            | Use nested `e2e/{category}/{NN-name}/test.md` structure            |
 | Call LLM on every run           | Use compiled `script.json` — only recompile when `test.md` changes |
-| Discard test results            | Store results in `results/{timestamp}/` with screenshots           |
+| Discard test results            | Store results in `_reports/{timestamp}/` with screenshots           |
 
 ## Example Usage
 
@@ -680,7 +687,7 @@ npm run test:e2e:import -- my-tests.xlsx --force
 5. Reviews the output paths
 6. Runs: npm run test:e2e:import -- my-tests.xlsx
 7. Runs: npm run test:e2e  (compiles via LLM + executes)
-8. Reviews results in e2e/{type}/{category}/{case}/results/
+8. Reviews results in e2e/{type}/{category}/{case}/_reports/
 ```
 
 > [!TIP]

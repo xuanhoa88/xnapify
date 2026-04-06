@@ -189,12 +189,12 @@ docker-compose.override.yml
 **/.test-hash
 
 # Binary evidence files (screenshots, videos) — too large for git
-**/e2e/**/results/**/*.png
-**/e2e/**/results/**/*.jpg
-**/e2e/**/results/**/*.jpeg
-**/e2e/**/results/**/*.webp
-**/e2e/**/results/**/*.gif
-**/e2e/**/results/**/*.mp4
-**/e2e/**/results/**/*.webm
+**/e2e/**/_reports/**/*.png
+**/e2e/**/_reports/**/*.jpg
+**/e2e/**/_reports/**/*.jpeg
+**/e2e/**/_reports/**/*.webp
+**/e2e/**/_reports/**/*.gif
+**/e2e/**/_reports/**/*.mp4
+**/e2e/**/_reports/**/*.webm
 
 # Text reports (result.md, _summary.md) are COMMITTED for audit history

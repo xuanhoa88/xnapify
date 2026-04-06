@@ -30,6 +30,13 @@ This skill enables comprehensive testing and debugging of the local `xnapify` we
 | 3 | Default fallback | `1337` |
 
 > 🔴 **NEVER guess or assume port 3000.** Always resolve from user context or `.env` files first.
+33: 
+34: **Reachability Check (MANDATORY)**
+35: 
+36: Before launching browser automation, verify the app is actually responding at the resolved URL:
+37: 1. Use `http.get` (in scripts) or navigation (in interactive mode).
+38: 2. If the app is not reachable, ensure the development server is running (`npm run dev`).
+39: 3. Wait for the app to fully boot (shimmer/loading states) before interacting.
 
 ---
 

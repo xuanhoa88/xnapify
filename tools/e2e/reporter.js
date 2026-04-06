@@ -32,29 +32,16 @@ const fs = require('fs');
 const path = require('path');
 
 /**
- * Create a timestamped results directory for a specific test case.
+ * Create a timestamped reports directory.
  *
- * @param {string} testCaseDir  The test case directory (e.g., e2e/login/01-buttons-visible)
- * @param {string} timestamp    Run timestamp
- * @returns {string} Absolute path to the results directory
- */
-function createTestCaseResultsDir(testCaseDir, timestamp) {
-  const resultsDir = path.join(testCaseDir, 'results', timestamp);
-  fs.mkdirSync(resultsDir, { recursive: true });
-  return resultsDir;
-}
-
-/**
- * Create a module-level summary directory for a run.
- *
- * @param {string} e2eDir     The module's e2e/ directory
+ * @param {string} baseDir     The base directory (e.g., e2e/login/01-buttons-visible or module e2e/ dir)
  * @param {string} timestamp  Run timestamp
- * @returns {string} Absolute path to the summary directory
+ * @returns {string} Absolute path to the results/summary directory
  */
-function createSummaryDir(e2eDir, timestamp) {
-  const summaryDir = path.join(e2eDir, '_results', timestamp);
-  fs.mkdirSync(summaryDir, { recursive: true });
-  return summaryDir;
+function createReportDir(baseDir, timestamp) {
+  const dirPath = path.join(baseDir, '_reports', timestamp);
+  fs.mkdirSync(dirPath, { recursive: true });
+  return dirPath;
 }
 
 function writeTestResult(resultsDir, testCase, result) {
@@ -147,7 +134,7 @@ function writeSummary(summaryDir, moduleName, results, config) {
   const rowsText = results
     .map((r, i) => {
       const icon = r.passed ? '✅ PASS' : '❌ FAIL';
-      const resultLink = `[result](../../${r.category}/${r.caseName}/results/${config.timestamp}/result.md)`;
+      const resultLink = `[result](../../${r.category}/${r.caseName}/_reports/${config.timestamp}/result.md)`;
       return `| ${i + 1} | ${r.category}/${r.caseName} | ${r.testName} | ${icon} | ${resultLink} |`;
     })
     .join('\n');
@@ -156,7 +143,7 @@ function writeSummary(summaryDir, moduleName, results, config) {
     .filter(r => !r.passed)
     .map(
       r =>
-        `### ${r.category}/${r.caseName}: ${r.testName}\n- **Error:** ${r.error}\n- **Result:** [result](../../${r.category}/${r.caseName}/results/${config.timestamp}/result.md)`,
+        `### ${r.category}/${r.caseName}: ${r.testName}\n- **Error:** ${r.error}\n- **Result:** [result](../../${r.category}/${r.caseName}/_reports/${config.timestamp}/result.md)`,
     )
     .join('\n\n');
 
@@ -181,8 +168,7 @@ ${failedSection ? `\n## Failed Tests\n\n${failedSection}` : ''}
 }
 
 module.exports = {
-  createTestCaseResultsDir,
-  createSummaryDir,
+  createReportDir,
   writeTestResult,
   writeSummary,
 };

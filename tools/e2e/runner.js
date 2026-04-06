@@ -60,8 +60,7 @@ const {
   detectTestType,
 } = require('./parser');
 const {
-  createTestCaseResultsDir,
-  createSummaryDir,
+  createReportDir,
   writeTestResult,
   writeSummary,
 } = require('./reporter');
@@ -150,6 +149,43 @@ function resolveTarget(arg) {
   return [e2eDir];
 }
 
+/**
+ * Wait for the application to be reachable at the given URL.
+ * Pings the URL until it returns a response or times out.
+ */
+async function waitForAppReady(url, timeoutMs = 30000) {
+  const start = Date.now();
+  const interval = 2000;
+
+  process.stdout.write(`  ⏳ Waiting for app to be ready at ${url}...`);
+
+  while (Date.now() - start < timeoutMs) {
+    try {
+      await new Promise((resolve, reject) => {
+        const req = http.get(url, { timeout: 2000 }, res => {
+          res.on('data', () => {}); // consume data
+          res.on('end', () => resolve());
+        });
+        req.on('error', reject);
+        req.on('timeout', () => {
+          req.destroy();
+          reject(new Error('timeout'));
+        });
+      });
+      console.log(' ✅ Ready!');
+      return true;
+    } catch (err) {
+      process.stdout.write('.');
+      await new Promise(r => setTimeout(r, interval));
+    }
+  }
+
+  console.log('\n');
+  console.error(`❌ App not reachable at ${url} after ${timeoutMs / 1000}s`);
+  console.error('   Ensure the development server is running (npm run dev).');
+  process.exit(1);
+}
+
 // ── Main ──────────────────────────────────────────────────────────
 
 async function run() {
@@ -161,6 +197,10 @@ async function run() {
   const targetArg = args.find(a => !a.startsWith('--'));
   const port = resolvePort();
   const baseUrl = `http://127.0.0.1:${port}`;
+  const startupTimeout = parseInt(
+    config.env('E2E_STARTUP_TIMEOUT') || '30000',
+    10,
+  );
   const headless = headed ? false : config.env('E2E_HEADLESS') !== 'false';
   const timestamp = new Date()
     .toISOString()
@@ -186,6 +226,11 @@ async function run() {
     );
   }
   console.log('');
+
+  // ── Pre-flight check: App Reachability ──
+  if (mode !== 'compile') {
+    await waitForAppReady(baseUrl, startupTimeout);
+  }
 
   // ── Deferred LLM validation ──
   // Only validate when compilation is actually needed (not upfront).
@@ -317,9 +362,7 @@ async function run() {
     for (const file of files) {
       const tc = parseTestFile(file);
       const resultsDir =
-        mode !== 'compile'
-          ? createTestCaseResultsDir(tc.testCaseDir, timestamp)
-          : null;
+        mode !== 'compile' ? createReportDir(tc.testCaseDir, timestamp) : null;
       const startTime = Date.now();
       const stepResults = [];
       let testPassed = true;
@@ -519,8 +562,8 @@ async function run() {
       console.log(`  ${icon} ${tc.title} (${duration}ms)`);
     }
 
-    // Module summary — in e2e/_results/timestamp/
-    const summaryDir = createSummaryDir(e2eDir, timestamp);
+    // Module summary — in e2e/_reports/timestamp/
+    const summaryDir = createReportDir(e2eDir, timestamp);
     writeSummary(summaryDir, moduleName, moduleResults, { timestamp, port });
     const passed = moduleResults.filter(r => r.passed).length;
     console.log(
