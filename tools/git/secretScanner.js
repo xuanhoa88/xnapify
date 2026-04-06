@@ -8,9 +8,9 @@
  * positives via entropy analysis on ambiguous matches.
  *
  * Usage:
- *   node tools/git/secret-scanner.js          # Scan staged files (default)
- *   node tools/git/secret-scanner.js --all    # Scan entire working tree
- *   node tools/git/secret-scanner.js --fix    # Show remediation hints
+ *   node tools/git/secretScanner.js          # Scan staged files (default)
+ *   node tools/git/secretScanner.js --all    # Scan entire working tree
+ *   node tools/git/secretScanner.js --fix    # Show remediation hints
  *
  * Exit codes:
  *   0 — No secrets found
@@ -234,7 +234,7 @@ const SKIP_PATTERNS = [
   /\.env\.template$/,
 
   // This file itself
-  /secret-scanner\.js$/,
+  /secretScanner\.js$/,
 
   // Agent / skill docs
   /^\.agent\//,

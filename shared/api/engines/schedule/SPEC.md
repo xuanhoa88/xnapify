@@ -19,7 +19,7 @@ shared/api/engines/schedule/
 ├── errors.js             # ScheduleError class
 ├── schedule.test.js      # Jest unit tests
 └── __mocks__/
-    └── node-cron.js      # Manual Jest mock for node-cron
+    └── nodeCron.js      # Manual Jest mock for node-cron
 ```
 
 ### Dependency Graph
@@ -38,22 +38,22 @@ index.js
 
 Extends `Error` with structured properties for consistent error handling across engines.
 
-| Property | Type | Default | Description |
-|---|---|---|---|
-| `name` | `string` | `'ScheduleError'` | Error name for `instanceof` checks |
-| `code` | `string` | `'SCHEDULE_ERROR'` | Machine-readable error code |
-| `statusCode` | `number` | `400` | HTTP-compatible status code |
-| `timestamp` | `string` | ISO 8601 | When the error was created |
+| Property     | Type     | Default            | Description                        |
+| ------------ | -------- | ------------------ | ---------------------------------- |
+| `name`       | `string` | `'ScheduleError'`  | Error name for `instanceof` checks |
+| `code`       | `string` | `'SCHEDULE_ERROR'` | Machine-readable error code        |
+| `statusCode` | `number` | `400`              | HTTP-compatible status code        |
+| `timestamp`  | `string` | ISO 8601           | When the error was created         |
 
 Uses `Error.captureStackTrace` for clean stack traces.
 
 ### Error Codes
 
-| Code | Thrown By | Meaning |
-|---|---|---|
-| `INVALID_TASK_NAME` | `register()` | Name is falsy or not a string |
+| Code                      | Thrown By    | Meaning                                                       |
+| ------------------------- | ------------ | ------------------------------------------------------------- |
+| `INVALID_TASK_NAME`       | `register()` | Name is falsy or not a string                                 |
 | `INVALID_CRON_EXPRESSION` | `register()` | Expression is falsy, not a string, or fails `cron.validate()` |
-| `INVALID_HANDLER` | `register()` | Handler is not a function |
+| `INVALID_HANDLER`         | `register()` | Handler is not a function                                     |
 
 ## 3. Core Class: `ScheduleManager`
 
@@ -107,6 +107,7 @@ Returns `task.getStatus() === 'scheduled'` if found, `false` otherwise.
 #### `getStats() → StatsObject`
 
 Iterates all tasks and returns:
+
 ```javascript
 {
   total: number,
@@ -167,7 +168,8 @@ The `index.js` file also contains comprehensive JSDoc with `@example` blocks cov
 
 ### Mock Setup
 
-Uses a manual mock at `__mocks__/node-cron.js`:
+Uses a manual mock at `__mocks__/nodeCron.js`:
+
 - `cron.schedule(expression, callback, options)` — returns a mock task with `start()`, `stop()`, `getStatus()` (tracks `'scheduled'` / `'stopped'` state), and the stored `_callback` for direct invocation in tests.
 - `cron.validate(expression)` — validates field count (5 or 6 space-separated fields).
 - `__getMockTasks()` / `__clearMockTasks()` — test helpers.
@@ -177,6 +179,7 @@ Tests instantiate `ScheduleManager` directly with `{ autoStart: false }` to avoi
 ### Test Coverage (4 describe blocks)
 
 **ScheduleManager:**
+
 - Input validation: name (empty, `null`, non-string), cron expression (empty, invalid), handler (string, `null`).
 - `ScheduleError` assertions: `instanceof`, `code`, `statusCode`.
 - Task registration with options, timezone, `registeredAt` timestamp.
@@ -189,11 +192,13 @@ Tests instantiate `ScheduleManager` directly with `{ autoStart: false }` to avoi
 - Handler wrapping: invocation on cron tick, error catch + `console.error` logging without propagation.
 
 **ScheduleError:**
+
 - Default properties (`name`, `code`, `statusCode`, `timestamp`).
 - Custom `code` and `statusCode`.
 - Stack trace presence.
 
 **createFactory():**
+
 - Returns `ScheduleManager` instance.
 - Registers `SIGTERM` and `SIGINT` via `process.once`.
 - Default `autoStart: true` vs. explicit `autoStart: false`.
@@ -207,4 +212,4 @@ Tests instantiate `ScheduleManager` directly with `{ autoStart: false }` to avoi
 
 ---
 
-*Note: This spec reflects the CURRENT implementation of the schedule engine.*
+_Note: This spec reflects the CURRENT implementation of the schedule engine._

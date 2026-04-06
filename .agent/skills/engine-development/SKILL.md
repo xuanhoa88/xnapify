@@ -13,21 +13,21 @@ Engines are singleton services registered on the DI container during application
 
 ### Engine Inventory
 
-| Engine | Service Key | Description |
-|--------|-------------|-------------|
-| `auth` | `'auth'` | JWT, RBAC helpers, permission resolution |
-| `cache` | `'cache'` | Key-value cache with LRU, TTL, namespaces |
-| `db` | `'db'`, `'models'` | Sequelize ORM connection + model registry |
-| `email` | `'email'` | Multi-provider email delivery |
-| `fs` | `'fs'` | File operations with path traversal guards |
-| `hook` | `'hook'` | Event hook factory for pub/sub |
-| `http` | `'http'` | HTTP response helpers (`sendSuccess`, `sendError`) |
-| `queue` | `'queue'` | Channel-based pub/sub job queue |
-| `schedule` | `'schedule'` | Cron-based task scheduling |
-| `search` | `'search'` | Full-text search (FlexSearch/MeiliSearch) |
-| `template` | `'template'` | LiquidJS template rendering |
-| `webhook` | `'webhook'` | HMAC-signed webhook dispatch/verification |
-| `worker` | `'worker'` | Elastic thread pool for CPU-bound worker functions |
+| Engine     | Service Key        | Description                                        |
+| ---------- | ------------------ | -------------------------------------------------- |
+| `auth`     | `'auth'`           | JWT, RBAC helpers, permission resolution           |
+| `cache`    | `'cache'`          | Key-value cache with LRU, TTL, namespaces          |
+| `db`       | `'db'`, `'models'` | Sequelize ORM connection + model registry          |
+| `email`    | `'email'`          | Multi-provider email delivery                      |
+| `fs`       | `'fs'`             | File operations with path traversal guards         |
+| `hook`     | `'hook'`           | Event hook factory for pub/sub                     |
+| `http`     | `'http'`           | HTTP response helpers (`sendSuccess`, `sendError`) |
+| `queue`    | `'queue'`          | Channel-based pub/sub job queue                    |
+| `schedule` | `'schedule'`       | Cron-based task scheduling                         |
+| `search`   | `'search'`         | Full-text search (FlexSearch/MeiliSearch)          |
+| `template` | `'template'`       | LiquidJS template rendering                        |
+| `webhook`  | `'webhook'`        | HMAC-signed webhook dispatch/verification          |
+| `worker`   | `'worker'`         | Elastic thread pool for CPU-bound worker functions |
 
 ---
 
@@ -71,13 +71,21 @@ export class EngineManager {
   }
 
   // Public API methods
-  async doWork(input) { /* ... */ }
+  async doWork(input) {
+    /* ... */
+  }
 
   // Stats for monitoring
-  getStats() { return { /* ... */ }; }
+  getStats() {
+    return {
+      /* ... */
+    };
+  }
 
   // Cleanup resources on shutdown
-  async cleanup() { /* ... */ }
+  async cleanup() {
+    /* ... */
+  }
 }
 
 export function createFactory(config) {
@@ -131,12 +139,12 @@ export class EngineError extends Error {
 
 ### Error Conventions
 
-| Property | Type | Purpose |
-|----------|------|---------|
-| `name` | `string` | Class name for `instanceof` checks |
-| `code` | `string` | Machine-readable code (e.g., `'INVALID_INPUT'`) |
-| `statusCode` | `number` | HTTP-compatible status (400, 404, 500) |
-| `timestamp` | `string` | ISO 8601 creation time |
+| Property     | Type     | Purpose                                         |
+| ------------ | -------- | ----------------------------------------------- |
+| `name`       | `string` | Class name for `instanceof` checks              |
+| `code`       | `string` | Machine-readable code (e.g., `'INVALID_INPUT'`) |
+| `statusCode` | `number` | HTTP-compatible status (400, 404, 500)          |
+| `timestamp`  | `string` | ISO 8601 creation time                          |
 
 ---
 
@@ -186,28 +194,36 @@ Every engine MUST have a `SPEC.md` for AI context. Follow this structure:
 ---
 
 ## Objective
+
 [One paragraph describing what the engine does]
 
 ## 1. Architecture
+
 [Directory tree + dependency graph]
 
 ## 2. Core Class
+
 [Constructor, methods, configuration]
 
 ## 3. Configuration / Environment Variables
+
 [Table of env vars with defaults]
 
 ## 4. Error Handling
+
 [Error classes, codes, status codes]
 
 ## 5. Testing
+
 [Test file location, coverage description, mock setup]
 
 ## 6. Integration Points
+
 [How modules/extensions consume this engine]
 
 ---
-*Note: This spec reflects the CURRENT implementation.*
+
+_Note: This spec reflects the CURRENT implementation._
 ```
 
 ---
@@ -264,7 +280,9 @@ describe('[engine] EngineName', () => {
   let engine;
 
   beforeEach(() => {
-    engine = new EngineManager({ /* test config */ });
+    engine = new EngineManager({
+      /* test config */
+    });
   });
 
   afterEach(async () => {
@@ -304,7 +322,7 @@ describe('[engine] EngineName', () => {
 Place manual mocks in `__mocks__/` for external dependencies:
 
 ```javascript
-// __mocks__/node-cron.js
+// __mocks__/nodeCron.js
 const tasks = [];
 module.exports = {
   schedule: jest.fn((expr, cb, opts) => {
@@ -312,9 +330,9 @@ module.exports = {
     tasks.push(task);
     return task;
   }),
-  validate: jest.fn((expr) => expr.split(' ').length >= 5),
+  validate: jest.fn(expr => expr.split(' ').length >= 5),
   __getMockTasks: () => tasks,
-  __clearMockTasks: () => tasks.length = 0,
+  __clearMockTasks: () => (tasks.length = 0),
 };
 ```
 
@@ -336,11 +354,11 @@ module.exports = {
 
 ## Related Skills & Workflows
 
-| Need | Skill / Workflow |
-|------|-----------------|
-| Consuming engines from modules | `module-development` skill |
-| Consuming engines from extensions | `extension-development` skill |
-| Adding a new engine | `/add-engine` workflow |
-| Coding standards | `coding-standards` skill |
-| Testing patterns | `test-driven-development` skill |
-| Security requirements | `security-compliance` skill |
+| Need                              | Skill / Workflow                |
+| --------------------------------- | ------------------------------- |
+| Consuming engines from modules    | `module-development` skill      |
+| Consuming engines from extensions | `extension-development` skill   |
+| Adding a new engine               | `/add-engine` workflow          |
+| Coding standards                  | `coding-standards` skill        |
+| Testing patterns                  | `test-driven-development` skill |
+| Security requirements             | `security-compliance` skill     |

@@ -22,7 +22,7 @@ If tests or linting fail, fix them first. Do NOT commit broken code.
 
 ## 2. Secret Scanning
 
-The pre-commit hook automatically runs `tools/git/secret-scanner.js` on all staged files. It blocks commits containing:
+The pre-commit hook automatically runs `tools/git/secretScanner.js` on all staged files. It blocks commits containing:
 
 - Hardcoded API keys (AWS, Google, Stripe, SendGrid, etc.)
 - Private keys (RSA, DSA, EC, PGP)
@@ -40,7 +40,7 @@ The pre-commit hook automatically runs `tools/git/secret-scanner.js` on all stag
 
 // turbo
 ```bash
-node tools/git/secret-scanner.js --all --fix
+node tools/git/secretScanner.js --all --fix
 ```
 
 ## 3. Review Changes
@@ -68,6 +68,20 @@ git add <file1> <file2> ...
 **Do NOT** blindly `git add .` — this risks committing unrelated files, build artifacts, or environment secrets.
 
 **Never commit:** `.env`, `database.sqlite`, `node_modules/`, `build/`, `.DS_Store`
+
+> [!WARNING]
+> **File Renaming & Case Sensitivity**
+> If you are renaming a file where *only* the capitalization changes (e.g., `file.md` to `FILE.md` or vice versa), macOS and Windows filesystems will trick Git into ignoring the change. You **MUST** force Git to register the casing change via terminal:
+> ```bash
+> git mv -f <old_name> <new_name>
+> ```
+
+**Run the auto-fixer to detect and correct case mismatches implicitly:**
+
+// turbo
+```bash
+node tools/git/checkCasing.js
+```
 
 ## 5. Write Commit Message
 
