@@ -17,6 +17,7 @@ class ScheduleManager {
   constructor(config = {}) {
     this.tasks = new Map();
     this.autoStart = config.autoStart !== false;
+    this.cleanupTimeout = config.cleanupTimeout || 5000;
   }
 
   /**
@@ -65,11 +66,31 @@ class ScheduleManager {
     const task = cron.schedule(
       cronExpression,
       async () => {
+        const item = this.tasks.get(name);
+        if (!item || item.isExecuting) {
+          if (item) {
+            console.warn(
+              `⚠️ Skipping overlap for task '${name}' (still executing)`,
+            );
+          }
+          return;
+        }
+
+        item.isExecuting = true;
+        item.abortController = new AbortController();
+
         try {
           console.info(`⏱️ Running schedule task: ${name}`);
-          await handler();
+          item.activePromise = Promise.resolve(
+            handler({ signal: item.abortController.signal }),
+          );
+          await item.activePromise;
         } catch (error) {
           console.error(`❌ Error in schedule task '${name}':`, error);
+        } finally {
+          item.isExecuting = false;
+          item.abortController = null;
+          item.activePromise = null;
         }
       },
       {
@@ -86,10 +107,30 @@ class ScheduleManager {
       expression: cronExpression,
       options,
       registeredAt: new Date().toISOString(),
+      isExecuting: false,
+      abortController: null,
+      activePromise: null,
     });
 
     console.info(`✅ Registered schedule task: ${name} (${cronExpression})`);
     return task;
+  }
+
+  /**
+   * Manually abort the currently active execution of a task.
+   * This does NOT unregister the underlying cron schedule.
+   *
+   * @param {string} name - Task name
+   * @returns {boolean} True if task execution was aborted
+   */
+  abort(name) {
+    const item = this.tasks.get(name);
+    if (item && item.isExecuting && item.abortController) {
+      item.abortController.abort();
+      console.info(`✅ Aborted active execution for task: ${name}`);
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -102,6 +143,7 @@ class ScheduleManager {
     const item = this.tasks.get(name);
     if (item) {
       item.task.stop();
+      this.abort(name); // Abort active run if any
       this.tasks.delete(name);
       console.info(`✅ Stopped and unregistered schedule task: ${name}`);
       return true;
@@ -129,14 +171,34 @@ class ScheduleManager {
   }
 
   /**
-   * Check if a task is currently running
+   * Check if a task's cron is currently active/scheduled
    *
    * @param {string} name - Task name
-   * @returns {boolean} True if task exists and is running
+   * @returns {boolean} True if task exists and is scheduled
    */
-  isTaskRunning(name) {
+  isTaskScheduled(name) {
     const item = this.tasks.get(name);
     return item ? item.task.getStatus() === 'scheduled' : false;
+  }
+
+  /**
+   * Check if a task's logic is currently executing
+   *
+   * @param {string} name - Task name
+   * @returns {boolean} True if task exists and is executing
+   */
+  isTaskExecuting(name) {
+    const item = this.tasks.get(name);
+    return item ? item.isExecuting : false;
+  }
+
+  /**
+   * Alias for backwards compatibility maps to isTaskScheduled
+   *
+   * @deprecated Use isTaskScheduled or isTaskExecuting instead
+   */
+  isTaskRunning(name) {
+    return this.isTaskScheduled(name);
   }
 
   /**
@@ -197,16 +259,51 @@ class ScheduleManager {
   }
 
   /**
-   * Cleanup - stop and remove all tasks
+   * Cleanup - stop and remove all tasks, aborting running ones
    * Called automatically on process termination
    */
-  cleanup() {
+  async cleanup() {
     console.info('🧹 Cleaning up schedule engine...');
-    this.tasks.forEach(({ task }, name) => {
-      task.stop();
+    const activePromises = [];
+
+    this.tasks.forEach((item, name) => {
+      item.task.stop();
+      if (item.isExecuting && item.abortController) {
+        item.abortController.abort();
+        if (item.activePromise) {
+          // Add to wait array, catching errors to avoid unhandled rejections during cleanup
+          activePromises.push(item.activePromise.catch(() => {}));
+        }
+      }
       console.info(`✅ Stopped schedule task: ${name}`);
     });
+
     this.tasks.clear();
+
+    if (activePromises.length > 0) {
+      console.info(
+        `⏳ Waiting for ${activePromises.length} active schedule tasks to abort...`,
+      );
+      let timeoutTimer;
+      try {
+        await Promise.race([
+          Promise.allSettled(activePromises),
+          new Promise((_, reject) => {
+            timeoutTimer = setTimeout(
+              () => reject(new Error('Cleanup timeout')),
+              this.cleanupTimeout,
+            );
+          }),
+        ]);
+      } catch (err) {
+        console.warn(
+          `⚠️ Schedule cleanup timed out after ${this.cleanupTimeout}ms`,
+        );
+      } finally {
+        if (timeoutTimer) clearTimeout(timeoutTimer);
+      }
+    }
+
     console.info('✅ Schedule engine cleanup complete');
   }
 }
@@ -225,9 +322,18 @@ export function createFactory(config = {}) {
   const schedule = new ScheduleManager(config);
 
   // Register cleanup on process termination signals
-  const onExit = () => schedule.cleanup();
-  process.once('SIGTERM', onExit);
-  process.once('SIGINT', onExit);
+  schedule.onExitHandler = () => schedule.cleanup().catch(console.error);
+  process.once('SIGTERM', schedule.onExitHandler);
+  process.once('SIGINT', schedule.onExitHandler);
+
+  /**
+   * Destroy the instance, remove process listeners, and stop tasks
+   */
+  schedule.destroy = async () => {
+    process.removeListener('SIGTERM', schedule.onExitHandler);
+    process.removeListener('SIGINT', schedule.onExitHandler);
+    await schedule.cleanup();
+  };
 
   return schedule;
 }

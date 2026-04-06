@@ -5,8 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-// Mock node-cron to avoid Jest compatibility issues
-jest.mock('node-cron');
+// Mock node-cron to avoid Jest compatibility issues with the renamed file
+jest.mock('node-cron', () => require('./__mocks__/nodeCron'));
 
 import cron from 'node-cron';
 
@@ -208,24 +208,25 @@ describe('ScheduleManager', () => {
     });
   });
 
-  describe('isTaskRunning()', () => {
+  describe('isTaskScheduled()', () => {
     it('should return true for running task', () => {
       const handler = jest.fn();
       manager.register('test-task', '* * * * *', handler, { scheduled: true });
       manager.start();
 
-      expect(manager.isTaskRunning('test-task')).toBe(true);
+      expect(manager.isTaskScheduled('test-task')).toBe(true);
+      expect(manager.isTaskRunning('test-task')).toBe(true); // check alias
     });
 
     it('should return false for stopped task', () => {
       const handler = jest.fn();
       manager.register('test-task', '* * * * *', handler, { scheduled: false });
 
-      expect(manager.isTaskRunning('test-task')).toBe(false);
+      expect(manager.isTaskScheduled('test-task')).toBe(false);
     });
 
     it('should return false for non-existing task', () => {
-      expect(manager.isTaskRunning('non-existing')).toBe(false);
+      expect(manager.isTaskScheduled('non-existing')).toBe(false);
     });
   });
 
@@ -269,8 +270,8 @@ describe('ScheduleManager', () => {
       manager.start();
 
       expect(manager.autoStart).toBe(true);
-      expect(manager.isTaskRunning('task1')).toBe(true);
-      expect(manager.isTaskRunning('task2')).toBe(true);
+      expect(manager.isTaskScheduled('task1')).toBe(true);
+      expect(manager.isTaskScheduled('task2')).toBe(true);
     });
   });
 
@@ -283,8 +284,8 @@ describe('ScheduleManager', () => {
       manager.stop();
 
       expect(manager.autoStart).toBe(false);
-      expect(manager.isTaskRunning('task1')).toBe(false);
-      expect(manager.isTaskRunning('task2')).toBe(false);
+      expect(manager.isTaskScheduled('task1')).toBe(false);
+      expect(manager.isTaskScheduled('task2')).toBe(false);
     });
 
     it('should set autoStart to false for future registrations', () => {
@@ -307,10 +308,42 @@ describe('ScheduleManager', () => {
       expect(manager.getStats().total).toBe(0);
     });
 
-    it('should handle cleanup on empty manager', () => {
-      expect(() => {
-        manager.cleanup();
-      }).not.toThrow();
+    it('should handle cleanup on empty manager', async () => {
+      await expect(manager.cleanup()).resolves.not.toThrow();
+    });
+
+    it('should correctly clear timeout timers to prevent event loop leaks', async () => {
+      const handler = jest.fn().mockImplementation(() => new Promise(() => {})); // pending forever
+      manager.register('frozen', '* * * * *', handler);
+
+      const clearTimeoutSpy = jest.spyOn(global, 'clearTimeout');
+
+      // Trigger execution to mock it "running"
+      const registeredCall =
+        cron.schedule.mock.calls[cron.schedule.mock.calls.length - 1];
+      registeredCall[1]();
+
+      // Cleanup with a tiny timeout to race faster
+      manager.cleanupTimeout = 10;
+      await manager.cleanup();
+
+      expect(clearTimeoutSpy).toHaveBeenCalled();
+      clearTimeoutSpy.mockRestore();
+    });
+
+    it('should wrap synchronous handlers to avoid cleanup TypeError crashes', async () => {
+      // Returns a normal object, not a promise
+      const handler = jest.fn().mockReturnValue({ data: true });
+      manager.register('sync-task', '* * * * *', handler);
+
+      const registeredCall =
+        cron.schedule.mock.calls[cron.schedule.mock.calls.length - 1];
+      const p = registeredCall[1]();
+
+      // Call cleanup immediately which resolves activePromises array.
+      // If activePromise was purely the object `{ data: true }`, it would crash here on `.catch()`.
+      await expect(manager.cleanup()).resolves.not.toThrow();
+      await p;
     });
   });
 
@@ -329,7 +362,7 @@ describe('ScheduleManager', () => {
       consoleErrorSpy.mockRestore();
     });
 
-    it('should invoke handler on cron tick', async () => {
+    it('should invoke handler on cron tick and pass signal', async () => {
       const handler = jest.fn().mockResolvedValue('done');
       const consoleInfoSpy = jest.spyOn(console, 'info').mockImplementation();
 
@@ -340,14 +373,95 @@ describe('ScheduleManager', () => {
         cron.schedule.mock.calls[cron.schedule.mock.calls.length - 1];
       const wrappedCallback = registeredCall[1];
 
-      await wrappedCallback();
+      const p = wrappedCallback();
+      expect(manager.isTaskExecuting('test-task')).toBe(true);
 
-      expect(handler).toHaveBeenCalled();
+      await p;
+      expect(manager.isTaskExecuting('test-task')).toBe(false);
+
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({ signal: expect.any(Object) }),
+      );
       expect(consoleInfoSpy).toHaveBeenCalledWith(
         expect.stringContaining('Running schedule task: test-task'),
       );
 
       consoleInfoSpy.mockRestore();
+    });
+
+    it('should prevent overlapping executions', async () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      let resolveFirst;
+      const handler = jest.fn().mockImplementation(
+        () =>
+          new Promise(resolve => {
+            resolveFirst = resolve;
+          }),
+      );
+
+      manager.register('overlap-task', '* * * * *', handler);
+
+      const registeredCall =
+        cron.schedule.mock.calls[cron.schedule.mock.calls.length - 1];
+      const wrappedCallback = registeredCall[1];
+
+      // First tick starts executing
+      const p1 = wrappedCallback();
+      expect(manager.isTaskExecuting('overlap-task')).toBe(true);
+
+      // Second tick should be skipped
+      await wrappedCallback();
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Skipping overlap for task 'overlap-task'"),
+      );
+      expect(handler).toHaveBeenCalledTimes(1);
+
+      // Finish first tick
+      resolveFirst('done');
+      await p1;
+      expect(manager.isTaskExecuting('overlap-task')).toBe(false);
+
+      consoleWarnSpy.mockRestore();
+    });
+
+    it('should allow aborting an active execution', async () => {
+      const handler = jest.fn().mockImplementation(
+        ({ signal }) =>
+          new Promise((resolve, reject) => {
+            signal.addEventListener('abort', () =>
+              reject(new Error('Aborted')),
+            );
+          }),
+      );
+
+      manager.register('abort-task', '* * * * *', handler);
+      const registeredCall =
+        cron.schedule.mock.calls[cron.schedule.mock.calls.length - 1];
+      const wrappedCallback = registeredCall[1];
+
+      const consoleInfoSpy = jest.spyOn(console, 'info').mockImplementation();
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+      const p = wrappedCallback();
+      expect(manager.isTaskExecuting('abort-task')).toBe(true);
+
+      const aborted = manager.abort('abort-task');
+      expect(aborted).toBe(true);
+
+      await expect(p).resolves.not.toThrow(); // wrapper catches it
+
+      expect(consoleInfoSpy).toHaveBeenCalledWith(
+        expect.stringContaining(
+          'Aborted active execution for task: abort-task',
+        ),
+      );
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Error in schedule task 'abort-task'"),
+        expect.any(Error),
+      );
+
+      consoleInfoSpy.mockRestore();
+      consoleErrorSpy.mockRestore();
     });
 
     it('should catch and log handler errors without throwing', async () => {
@@ -477,5 +591,25 @@ describe('createFactory()', () => {
 
     cleanupFn();
     expect(schedule.getAllTasks()).toHaveLength(0);
+  });
+
+  it('should support destroy() to clean process listeners', async () => {
+    const processRemoveListenerSpy = jest
+      .spyOn(process, 'removeListener')
+      .mockImplementation();
+    const schedule = createFactory({ autoStart: false });
+
+    await schedule.destroy();
+
+    expect(processRemoveListenerSpy).toHaveBeenCalledWith(
+      'SIGTERM',
+      expect.any(Function),
+    );
+    expect(processRemoveListenerSpy).toHaveBeenCalledWith(
+      'SIGINT',
+      expect.any(Function),
+    );
+
+    processRemoveListenerSpy.mockRestore();
   });
 });

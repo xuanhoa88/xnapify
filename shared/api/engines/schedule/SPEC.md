@@ -68,9 +68,10 @@ Uses `Error.captureStackTrace` for clean stack traces.
 
 - `this.tasks` — `Map<string, TaskEntry>` where `TaskEntry` is:
   ```
-  { task: CronTask, expression: string, options: object, registeredAt: string }
+  { task: CronTask, expression: string, options: object, registeredAt: string, isExecuting: boolean, abortController: AbortController | null, activePromise: Promise | null }
   ```
 - `this.autoStart` — mutable flag; set to `true` by `start()`, `false` by `stop()`.
+- `this.cleanupTimeout` — wait limit for gracefully aborting active tasks during cleanup (default: 5000ms).
 
 ### Methods
 
@@ -82,15 +83,21 @@ Registers a cron task with two-phase validation:
 2. **Overwrite check** — if a task with the same `name` exists, logs a warning and calls `unregister(name)` to stop and remove the old task before proceeding.
 3. **Cron validation** — calls `cron.validate(cronExpression)`. Throws `ScheduleError` with code `INVALID_CRON_EXPRESSION` if invalid.
 4. **Scheduling** — calls `cron.schedule()` with:
-   - The handler wrapped in `async () => try { await handler() } catch { console.error(...) }` — errors are caught and logged, never propagated to `node-cron`.
+   - The handler wrapped in an overlapping execution guard (`if (item.isExecuting) return;`).
+   - Generates an `AbortController` and executes `handler({ signal: abortController.signal })`.
+   - Errors are caught and logged, never propagated to `node-cron`.
    - `scheduled`: `options.scheduled` if explicitly set, otherwise falls back to `this.autoStart`.
    - `timezone`: `options.timezone || 'UTC'`.
-5. **Storage** — stores `{ task, expression, options, registeredAt }` in `this.tasks`.
+5. **Storage** — stores `{ task, expression, options, registeredAt, isExecuting, abortController, activePromise }` in `this.tasks`.
 6. Logs registration via `console.info`.
+
+#### `abort(name) → boolean`
+
+Triggers the `abortController.abort()` for a currently running handler, allowing you to forcefully cancel its asynchronous operation without dropping its cron cadence. Returns `true` if it effectively invoked abort on an active task.
 
 #### `unregister(name) → boolean`
 
-Calls `task.stop()`, removes from map. Returns `false` if name not found. Logs via `console.info`.
+Calls `task.stop()`, aborts any active execution via `this.abort(name)`, and removes from map. Returns `false` if name not found. Logs via `console.info`.
 
 #### `get(name) → TaskEntry | undefined`
 
@@ -100,9 +107,13 @@ Direct `Map.get` lookup. Returns the full entry object.
 
 Returns `Array.from(this.tasks.keys())`.
 
-#### `isTaskRunning(name) → boolean`
+#### `isTaskScheduled(name) → boolean` (formerly `isTaskRunning`)
 
-Returns `task.getStatus() === 'scheduled'` if found, `false` otherwise.
+Returns `true` if `task.getStatus() === 'scheduled'` if found, `false` otherwise.
+
+#### `isTaskExecuting(name) → boolean`
+
+Returns `true` if the cron's asynchronous handler logic is currently resolving (via `item.isExecuting`).
 
 #### `getStats() → StatsObject`
 
@@ -129,16 +140,19 @@ Sets `this.autoStart = true`, calls `task.start()` on all entries. Logs each sta
 
 Sets `this.autoStart = false`, calls `task.stop()` on all entries. **Side effect:** tasks registered after `stop()` will NOT auto-start until `start()` is called again.
 
-#### `cleanup() → void`
+#### `cleanup() → Promise<void>`
 
-Stops all tasks via `task.stop()`, then clears the entire map. Called automatically on process termination signals.
+Stops all tasks via `task.stop()`. Then aborts any active execution controllers.
+Awaits all `activePromise` entries using `Promise.allSettled()` up to a racing `this.cleanupTimeout` limit before forcefully wiping the tasks map. 
+Called automatically on process termination signals.
 
 ## 4. Factory Function: `createFactory(config?)`
 
 **File:** `factory.js`
 
 - Creates a `ScheduleManager` instance with the given config.
-- Registers `process.once('SIGTERM')` and `process.once('SIGINT')` handlers that call `schedule.cleanup()` on process termination.
+- Registers `process.once('SIGTERM')` and `process.once('SIGINT')` handlers that trigger `schedule.cleanup().catch(console.error)`.
+- Replaces standard instance destruction by exposing a `schedule.destroy()` function that cleans up `process` event listeners and safely invokes `schedule.cleanup()` tracking completion.
 - Returns the instance.
 
 ## 5. Default Singleton

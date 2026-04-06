@@ -250,11 +250,43 @@ async cleanup() {
     await this.pool.destroy();
     this.pool = null;
   }
+  
+  // Await active async routines gracefully (with timeout)
+  if (this.activePromises.length > 0) {
+    let timeoutTimer;
+    try {
+      await Promise.race([
+        Promise.allSettled(this.activePromises),
+        new Promise((_, reject) => {
+          // ALWAYS assign and clear timeout to prevent zombie event loop leaks
+          timeoutTimer = setTimeout(() => reject(new Error('Timeout')), 5000);
+        })
+      ]);
+    } catch {
+      console.warn('Cleanup timed out');
+    } finally {
+      if (timeoutTimer) clearTimeout(timeoutTimer);
+    }
+  }
+
   // Clear internal state
   this.tasks.clear();
   // Log shutdown
   console.info(`[EngineName] Cleaned up`);
 }
+```
+
+### Async Handler Flattening
+
+When an Engine accepts arbitrary callback handlers from extensions, they cannot be trusted to strictly return a `Promise`. Synchronous callbacks generating raw truthy outputs (like objects) will crash graceful shutdown maps attempting to call `.catch()`. 
+**Always flatten unpredictable callback invocations via `Promise.resolve()`**:
+
+```javascript
+// Unsafe (crashes if handler returns a sync object & `.catch()` is fired)
+item.activePromise = handler({ signal }); 
+
+// Safe (normalizes non-promise and promise outputs natively)
+item.activePromise = Promise.resolve(handler({ signal }));
 ```
 
 ### Signal Registration

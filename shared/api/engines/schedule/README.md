@@ -57,9 +57,13 @@ Get task info: `{ task, expression, options, registeredAt }`.
 
 Returns array of registered task names.
 
-### `schedule.isTaskRunning(name) → boolean`
+### `schedule.isTaskScheduled(name) → boolean`
 
-Returns `true` if the task's status is `'scheduled'`.
+Returns `true` if the task's cron is currently active/scheduled. Note: `isTaskRunning` is maintained as a deprecated alias.
+
+### `schedule.isTaskExecuting(name) → boolean`
+
+Returns `true` if the scheduled handler logic is currently executing (awaiting an async resolution).
 
 ### `schedule.getStats() → StatsObject`
 
@@ -74,13 +78,21 @@ Returns `true` if the task's status is `'scheduled'`.
 }
 ```
 
+### `schedule.abort(name) → boolean`
+
+Manually aborts a currently active asynchronous task execution by signaling its `AbortController`. This does NOT stop the underlying cron schedule. Returns `true` if it aborted an active task.
+
 ### `schedule.start()` / `schedule.stop()`
 
 Bulk start or stop all registered tasks. Note: `stop()` also sets `autoStart = false`, so tasks registered afterward will not auto-start until `start()` is called again.
 
-### `schedule.cleanup()`
+### `schedule.cleanup() → Promise<void>`
 
-Stop and remove all tasks. Called automatically on `SIGTERM` and `SIGINT`.
+Stop and remove all tasks. Awaits all active execution promises up to a maximum safety timeout (5000ms), and aborts their signals to forcefully conclude them. Called automatically on `SIGTERM` and `SIGINT`.
+
+### `schedule.destroy() → Promise<void>`
+
+Removes built-in `process` event listeners and calls `cleanup()`. Use this for dynamically spawned instances to prevent memory leaks in the Node process handler map.
 
 ### `ScheduleError`
 
@@ -121,7 +133,7 @@ For isolated scheduling (e.g., extensions with their own lifecycle):
 import { createFactory } from '@shared/api/engines/schedule';
 
 const extensionSchedule = createFactory({ autoStart: false });
-extensionSchedule.register extension:sync', '*/10 * * * *', syncHandler);
+extensionSchedule.register('extension:sync', '*/10 * * * *', syncHandler);
 extensionSchedule.start(); // manually start when ready
 ```
 
