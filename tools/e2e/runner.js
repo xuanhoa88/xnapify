@@ -23,7 +23,7 @@
  *   node tools/e2e/runner.js --headed                 # Show browser window
  *
  * Environment:
- *   E2E_PORT=1337          # App port (auto-detected from .env)
+ *   XNAPIFY_PORT=1337          # App port (auto-detected from .env)
  *   E2E_HEADLESS=false     # Show browser (fallback; prefer --headed flag)
  *   E2E_FIXTURE_ZIP=...    # Path to test extension .zip
  *   E2E_EMAIL=admin@...    # Login email (fallback — prefer YAML front-matter)
@@ -74,7 +74,7 @@ const TYPE_ICONS = { ui: '🌐', api: '🔌', system: '🔗' };
 
 function resolvePort() {
   // Priority 1: env var
-  const e2ePort = config.env('E2E_PORT');
+  const e2ePort = config.env('XNAPIFY_PORT');
   if (e2ePort) return e2ePort;
 
   // Priority 2: .env files

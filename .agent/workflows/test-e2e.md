@@ -54,7 +54,7 @@ node tools/e2e/runner.js quick-access-plugin/api/auth/01-login-jwt
 
 | Variable           | Required | Description                                                                    |
 | ------------------ | -------- | ------------------------------------------------------------------------------ |
-| `E2E_PORT`         | No       | App port (auto-detected from `.env`, default: `1337`)                          |
+| `XNAPIFY_PORT`     | No       | App port (auto-detected from `.env`, default: `1337`)                          |
 | `E2E_HEADLESS`     | No       | `false` to show browser (default: `true`)                                      |
 | `E2E_FIXTURE_ZIP`  | No       | Path to test extension `.zip` for install tests                                |
 | `E2E_EMAIL`        | No       | Login email fallback (prefer YAML front-matter in test files)                  |
