@@ -55,13 +55,8 @@ async function main() {
     // Log jest command in debug mode
     logDebug(`Running: jest ${jestArgs.join(' ')}`);
 
-    // Resolve local jest binary dynamically from package.json (avoids hardcoding paths)
-    const path = require('path');
-    const jestPkgPath = require.resolve('jest/package.json');
-    const jestPkg = require(jestPkgPath);
-    const binPath =
-      typeof jestPkg.bin === 'string' ? jestPkg.bin : jestPkg.bin.jest;
-    const jestBin = path.join(path.dirname(jestPkgPath), binPath);
+    // Resolve local jest binary directly to the .js file (avoids CI/PnP package.json export restrictions)
+    const jestBin = require.resolve('jest/bin/jest.js');
 
     // Spawn Jest process
     const jestProcess = spawn(process.execPath, [jestBin, ...jestArgs], {
