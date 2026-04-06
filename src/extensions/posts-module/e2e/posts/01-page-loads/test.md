@@ -1,5 +1,5 @@
 ---
-email: admin@test.com
+email: admin@example.com
 password: admin123
 role: admin
 ---

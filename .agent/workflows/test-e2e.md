@@ -52,18 +52,18 @@ node tools/e2e/runner.js quick-access-plugin/api/auth/01-login-jwt
 
 **Environment variables:**
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `E2E_PORT` | No | App port (auto-detected from `.env`, default: `1337`) |
-| `E2E_HEADLESS` | No | `false` to show browser (default: `true`) |
-| `E2E_FIXTURE_ZIP` | No | Path to test extension `.zip` for install tests |
-| `E2E_EMAIL` | No | Login email fallback (prefer YAML front-matter in test files) |
-| `E2E_PASSWORD` | No | Login password fallback (prefer YAML front-matter in test files) |
-| `E2E_LLM_PROVIDER` | No | `auto` (default), `stdin`, `openai`, `anthropic`, `google`, `ollama`, `custom` |
-| `E2E_LLM_API_KEY` | No | Override auto-detected API key |
-| `E2E_LLM_MODEL` | No | Model name override (each provider has a default) |
-| `E2E_LLM_BASE_URL` | No | Base URL override (for custom/ollama) |
-| `E2E_DEBUG` | No | `true` to show SPA stability diagnostics |
+| Variable           | Required | Description                                                                    |
+| ------------------ | -------- | ------------------------------------------------------------------------------ |
+| `E2E_PORT`         | No       | App port (auto-detected from `.env`, default: `1337`)                          |
+| `E2E_HEADLESS`     | No       | `false` to show browser (default: `true`)                                      |
+| `E2E_FIXTURE_ZIP`  | No       | Path to test extension `.zip` for install tests                                |
+| `E2E_EMAIL`        | No       | Login email fallback (prefer YAML front-matter in test files)                  |
+| `E2E_PASSWORD`     | No       | Login password fallback (prefer YAML front-matter in test files)               |
+| `E2E_LLM_PROVIDER` | No       | `auto` (default), `stdin`, `openai`, `anthropic`, `google`, `ollama`, `custom` |
+| `E2E_LLM_API_KEY`  | No       | Override auto-detected API key                                                 |
+| `E2E_LLM_MODEL`    | No       | Model name override (each provider has a default)                              |
+| `E2E_LLM_BASE_URL` | No       | Base URL override (for custom/ollama)                                          |
+| `E2E_DEBUG`        | No       | `true` to show SPA stability diagnostics                                       |
 
 ## How it works
 
@@ -73,17 +73,18 @@ The CLI tool (`tools/e2e/runner.js`) uses a **compile-once, run-many** architect
 
 Test type is **auto-detected from the directory structure**:
 
-| Directory | Type | What it does | Browser? | Speed |
-|-----------|------|-------------|----------|-------|
-| `e2e/{category}/{case}/` | 🌐 UI | Browser automation via Puppeteer | ✅ Yes | ~12s |
-| `e2e/ui/{category}/{case}/` | 🌐 UI | Explicit browser test | ✅ Yes | ~12s |
-| `e2e/api/{category}/{case}/` | 🔌 API | HTTP requests only (no browser) | ❌ No | ~0.5s |
-| `e2e/system/{category}/{case}/` | 🔗 System | Browser + HTTP combined | ✅ Yes | ~12s |
+| Directory                       | Type      | What it does                     | Browser? | Speed |
+| ------------------------------- | --------- | -------------------------------- | -------- | ----- |
+| `e2e/{category}/{case}/`        | 🌐 UI     | Browser automation via Puppeteer | ✅ Yes   | ~12s  |
+| `e2e/ui/{category}/{case}/`     | 🌐 UI     | Explicit browser test            | ✅ Yes   | ~12s  |
+| `e2e/api/{category}/{case}/`    | 🔌 API    | HTTP requests only (no browser)  | ❌ No    | ~0.5s |
+| `e2e/system/{category}/{case}/` | 🔗 System | Browser + HTTP combined          | ✅ Yes   | ~12s  |
 
 > [!TIP]
 > API tests are ~25x faster than UI tests. Use them for endpoint validation, auth flows, RBAC checks.
 
 ### Compilation (LLM → script.json)
+
 1. Discover `test.md` files in the nested `e2e/` hierarchy
 2. Parse YAML front-matter (credentials) + markdown AST (test steps) via `front-matter` + `markdown-it`
 3. Auto-detect an LLM provider from IDE/CLI env vars (or use `stdin` for agent callback)
@@ -92,6 +93,7 @@ Test type is **auto-detected from the directory structure**:
 6. Save the compiled script as `script.json` + a `.test-hash` (SHA256 of `test.md`)
 
 ### Execution (script.json → Puppeteer / HTTP)
+
 1. Load the pre-compiled `script.json` (no LLM needed!)
 2. Detect test types and launch browser **only if UI/system tests exist**
 3. For UI: execute via Puppeteer with SPA stability detection (5-signal engine)
@@ -101,13 +103,14 @@ Test type is **auto-detected from the directory structure**:
 7. Auto-recompile any failed step via LLM and retry once (self-healing)
 
 ### When compilation happens
-| Scenario | LLM called? |
-|----------|------------|
-| First run (no `script.json`) | ✅ Yes — compiles via LLM |
-| Subsequent runs (hash matches) | ❌ No — uses `script.json` |
-| `test.md` edited (hash mismatch) | ✅ Yes — archives old script, recompiles |
-| `--mode=compile --force` | ✅ Yes — force recompile |
-| Compiled step fails at runtime | ✅ Yes — recompiles that step only, retries once |
+
+| Scenario                         | LLM called?                                      |
+| -------------------------------- | ------------------------------------------------ |
+| First run (no `script.json`)     | ✅ Yes — compiles via LLM                        |
+| Subsequent runs (hash matches)   | ❌ No — uses `script.json`                       |
+| `test.md` edited (hash mismatch) | ✅ Yes — archives old script, recompiles         |
+| `--mode=compile --force`         | ✅ Yes — force recompile                         |
+| Compiled step fails at runtime   | ✅ Yes — recompiles that step only, retries once |
 
 ## AI Agent Fallback
 
@@ -145,6 +148,7 @@ e2e/
 ```
 
 Each test case directory contains:
+
 - `test.md` — test case definition (tester writes this)
 - `script.json` — compiled automation actions (LLM generates, committed)
 - `.test-hash` — sha256 of test.md at compile time (gitignored)
@@ -155,7 +159,7 @@ Each test case directory contains:
 
 ```markdown
 ---
-email: admin@test.com
+email: admin@example.com
 password: admin123
 role: admin
 ---
@@ -247,21 +251,22 @@ Cases use `NN-name` numbering for execution order.
 
 Follow the `browser-testing` skill port discovery rules — same priority order:
 
-| Priority | Source | How |
-|----------|--------|-----|
-| 1 | User context | Check running terminal outputs for `localhost:XXXX` |
-| 2 | `.env` files | `grep XNAPIFY_PORT .env .env.* 2>/dev/null` — use the **last** match |
-| 3 | Default fallback | `1337` |
+| Priority | Source           | How                                                                  |
+| -------- | ---------------- | -------------------------------------------------------------------- |
+| 1        | User context     | Check running terminal outputs for `localhost:XXXX`                  |
+| 2        | `.env` files     | `grep XNAPIFY_PORT .env .env.* 2>/dev/null` — use the **last** match |
+| 3        | Default fallback | `1337`                                                               |
 
-> [!CAUTION]
-> **NEVER** guess or assume port 3000. Always resolve from user context or `.env` files first.
+> [!CAUTION] > **NEVER** guess or assume port 3000. Always resolve from user context or `.env` files first.
 
 // turbo
+
 ### 2. Discover test case files
 
 Find all `test.md` files in the target module or extension's `e2e/` directory.
 
 **For a specific module or extension:**
+
 ```bash
 # Core module (e.g., extensions, users)
 find src/apps/{module}/e2e -name "test.md" -type f 2>/dev/null | sort
@@ -271,6 +276,7 @@ find src/extensions/{extension}/e2e -name "test.md" -type f 2>/dev/null | sort
 ```
 
 **For ALL e2e tests across the project:**
+
 ```bash
 find src/apps src/extensions -path "*/e2e/*/test.md" -type f 2>/dev/null | sort
 ```
@@ -278,6 +284,7 @@ find src/apps src/extensions -path "*/e2e/*/test.md" -type f 2>/dev/null | sort
 ### 3. Read and parse each test case file
 
 Use your file reading tool to read each `test.md` file. Parse into structured data:
+
 - **H1 line** → Test case title
 - **`## Steps`** → Numbered list of actions to execute
 - **`## Expected Results`** → Bullet list of acceptance criteria to verify
@@ -288,6 +295,7 @@ Use your file reading tool to read each `test.md` file. Parse into structured da
 Before executing any test case, ensure the browser is authenticated.
 
 Follow the `browser-testing` skill auth rules:
+
 1. Open the browser to the target admin page
 2. If redirected to `/login`, fill in admin credentials and submit
 3. Wait for redirect back to the authenticated page
@@ -326,6 +334,7 @@ Results are stored inside each test case's directory:
 **Result directory:** `e2e/{category}/{NN-name}/results/{timestamp}/`
 
 Contents:
+
 - `result.md` — Structured pass/fail report
 - `step-01.png`, `step-02.png`, ... — Per-step screenshots
 - `final.png` — Final state screenshot
@@ -387,14 +396,15 @@ After ALL test cases in a module are executed, a module-level summary is created
 
 ## Results
 
-| # | Test Case | Title | Result | Details |
-|---|-----------|-------|--------|---------|
-| 1 | install/01-upload | Upload valid package | ✅ PASS | [result](../../install/01-upload/results/{timestamp}/result.md) |
-| 2 | activate/01-toggle | Toggle switch | ❌ FAIL | [result](../../activate/01-toggle/results/{timestamp}/result.md) |
+| #   | Test Case          | Title                | Result  | Details                                                          |
+| --- | ------------------ | -------------------- | ------- | ---------------------------------------------------------------- |
+| 1   | install/01-upload  | Upload valid package | ✅ PASS | [result](../../install/01-upload/results/{timestamp}/result.md)  |
+| 2   | activate/01-toggle | Toggle switch        | ❌ FAIL | [result](../../activate/01-toggle/results/{timestamp}/result.md) |
 
 ## Failed Tests
 
 ### activate/01-toggle: Toggle switch
+
 - **Error:** Timeout waiting for element
 - **Result:** [result](../../activate/01-toggle/results/{timestamp}/result.md)
 ```
@@ -446,9 +456,24 @@ Each test case gets a `script.json` — a compiled automation script:
   "testHash": "a1b2c3d4e5f6...",
   "title": "Quick Access Buttons Visible on Login Page",
   "actions": [
-    { "step": 1, "action": "navigate", "url": "/login", "description": "Open the login page" },
-    { "step": 2, "action": "wait", "duration": 2000, "description": "Wait for page load" },
-    { "step": 3, "action": "assert_visible", "text": "Admin User", "description": "Verify button" }
+    {
+      "step": 1,
+      "action": "navigate",
+      "url": "/login",
+      "description": "Open the login page"
+    },
+    {
+      "step": 2,
+      "action": "wait",
+      "duration": 2000,
+      "description": "Wait for page load"
+    },
+    {
+      "step": 3,
+      "action": "assert_visible",
+      "text": "Admin User",
+      "description": "Verify button"
+    }
   ]
 }
 ```
@@ -462,29 +487,59 @@ Each test case gets a `script.json` — a compiled automation script:
   "testHash": "691e7a81aaf0...",
   "title": "Login API Returns Valid JWT",
   "actions": [
-    { "step": 1, "action": "api_request", "method": "POST", "url": "/api/auth/login",
-      "body": { "email": "admin@example.com", "password": "admin123" } },
+    {
+      "step": 1,
+      "action": "api_request",
+      "method": "POST",
+      "url": "/api/auth/login",
+      "body": { "email": "admin@example.com", "password": "admin123" }
+    },
     { "step": 2, "action": "assert_status", "expected": 200 },
-    { "step": 3, "action": "assert_body", "path": "data.accessToken", "exists": true },
-    { "step": 4, "action": "store_value", "from": "response.data.accessToken", "as": "authToken" },
-    { "step": 5, "action": "set_header", "name": "Authorization", "value": "Bearer {{authToken}}" },
-    { "step": 6, "action": "api_request", "method": "GET", "url": "/api/auth/profile" },
+    {
+      "step": 3,
+      "action": "assert_body",
+      "path": "data.accessToken",
+      "exists": true
+    },
+    {
+      "step": 4,
+      "action": "store_value",
+      "from": "response.data.accessToken",
+      "as": "authToken"
+    },
+    {
+      "step": 5,
+      "action": "set_header",
+      "name": "Authorization",
+      "value": "Bearer {{authToken}}"
+    },
+    {
+      "step": 6,
+      "action": "api_request",
+      "method": "GET",
+      "url": "/api/auth/profile"
+    },
     { "step": 7, "action": "assert_status", "expected": 200 },
-    { "step": 8, "action": "assert_body", "path": "data.user.email", "equals": "admin@example.com" }
+    {
+      "step": 8,
+      "action": "assert_body",
+      "path": "data.user.email",
+      "equals": "admin@example.com"
+    }
   ]
 }
 ```
 
 ### Available API actions
 
-| Action | Description | Key Fields |
-|--------|-------------|------------|
-| `api_request` | Send HTTP request | `method`, `url`, `body`, `headers` |
-| `assert_status` | Check status code | `expected` (number) |
-| `assert_body` | Check JSON response | `path`, `exists`/`equals`/`contains` |
-| `assert_header` | Check response header | `name`, `exists`/`contains` |
-| `store_value` | Save value for reuse | `from` (e.g. `response.data.token`), `as` |
-| `set_header` | Set persistent header | `name`, `value` (supports `{{var}}`) |
+| Action          | Description           | Key Fields                                |
+| --------------- | --------------------- | ----------------------------------------- |
+| `api_request`   | Send HTTP request     | `method`, `url`, `body`, `headers`        |
+| `assert_status` | Check status code     | `expected` (number)                       |
+| `assert_body`   | Check JSON response   | `path`, `exists`/`equals`/`contains`      |
+| `assert_header` | Check response header | `name`, `exists`/`contains`               |
+| `store_value`   | Save value for reuse  | `from` (e.g. `response.data.token`), `as` |
+| `set_header`    | Set persistent header | `name`, `value` (supports `{{var}}`)      |
 
 - **Committed to git** — teammates run tests without needing LLM API keys
 - **Auto-archived** — when `test.md` changes, old script moves to `scripts/` for history
@@ -494,39 +549,40 @@ Each test case gets a `script.json` — a compiled automation script:
 
 These rules extend the `browser-testing` skill rules:
 
-| Rule | Description |
-|------|-------------|
-| **Skill first** | Read `browser-testing` skill before starting — it defines port discovery, task format, and auth handling |
-| **Port first** | Resolve port using the 3-priority system before building any URL |
-| **One flow per call** | Execute ONE test case per browser automation call |
-| **Serial execution** | Run test cases in file order (01 → 02 → 03...) since later phases depend on earlier state |
-| **Screenshot proof** | Always request a screenshot at the end of each test case |
-| **Wait for load** | Always prepend "Wait for the page to fully load" as the first step |
-| **Auth first** | Handle login before any test case |
-| **Store results** | Write results inside each test case's `results/{timestamp}/` directory |
-| **Report clearly** | Create `_summary.md` with ✅/❌ table after all tests complete |
-| **No guessing** | Ask the user for credentials / URLs if not known — never assume |
-| **Compile first** | Run `--mode=compile` before `--mode=run` if no `script.json` exists |
+| Rule                  | Description                                                                                              |
+| --------------------- | -------------------------------------------------------------------------------------------------------- |
+| **Skill first**       | Read `browser-testing` skill before starting — it defines port discovery, task format, and auth handling |
+| **Port first**        | Resolve port using the 3-priority system before building any URL                                         |
+| **One flow per call** | Execute ONE test case per browser automation call                                                        |
+| **Serial execution**  | Run test cases in file order (01 → 02 → 03...) since later phases depend on earlier state                |
+| **Screenshot proof**  | Always request a screenshot at the end of each test case                                                 |
+| **Wait for load**     | Always prepend "Wait for the page to fully load" as the first step                                       |
+| **Auth first**        | Handle login before any test case                                                                        |
+| **Store results**     | Write results inside each test case's `results/{timestamp}/` directory                                   |
+| **Report clearly**    | Create `_summary.md` with ✅/❌ table after all tests complete                                           |
+| **No guessing**       | Ask the user for credentials / URLs if not known — never assume                                          |
+| **Compile first**     | Run `--mode=compile` before `--mode=run` if no `script.json` exists                                      |
 
 ## Anti-Patterns
 
-| ❌ Don't | ✅ Do |
-|----------|------|
-| Hardcode port 3000 | Resolve via `.env` or user context |
-| Test multiple cases in one call | One browser automation call per test case |
-| Skip page load wait | Always wait for specific content first |
-| Use vague "click the button" | Use exact text: `Click the "Upload Extension" button` |
-| Ignore auth redirects | Handle login in a dedicated pre-test step |
-| Run tests in random order | Follow directory numbering order (01 → 02 → 03...) |
-| Guess admin passwords | Ask the user if credentials are not known |
-| Only search `src/apps/` | Search BOTH `src/apps/` and `src/extensions/` for `e2e/` folders |
-| Use flat `.md` files | Use nested `e2e/{category}/{NN-name}/test.md` structure |
-| Call LLM on every run | Use compiled `script.json` — only recompile when `test.md` changes |
-| Discard test results | Store results in `results/{timestamp}/` with screenshots |
+| ❌ Don't                        | ✅ Do                                                              |
+| ------------------------------- | ------------------------------------------------------------------ |
+| Hardcode port 3000              | Resolve via `.env` or user context                                 |
+| Test multiple cases in one call | One browser automation call per test case                          |
+| Skip page load wait             | Always wait for specific content first                             |
+| Use vague "click the button"    | Use exact text: `Click the "Upload Extension" button`              |
+| Ignore auth redirects           | Handle login in a dedicated pre-test step                          |
+| Run tests in random order       | Follow directory numbering order (01 → 02 → 03...)                 |
+| Guess admin passwords           | Ask the user if credentials are not known                          |
+| Only search `src/apps/`         | Search BOTH `src/apps/` and `src/extensions/` for `e2e/` folders   |
+| Use flat `.md` files            | Use nested `e2e/{category}/{NN-name}/test.md` structure            |
+| Call LLM on every run           | Use compiled `script.json` — only recompile when `test.md` changes |
+| Discard test results            | Store results in `results/{timestamp}/` with screenshots           |
 
 ## Example Usage
 
 When the user asks:
+
 - `run e2e for extensions` → Discover `src/apps/extensions/e2e/**/test.md` and execute all
 - `run e2e for oauth-google` → Discover `src/extensions/oauth-google-plugin/e2e/**/test.md` and execute
 - `run e2e for posts` → Discover `src/extensions/posts-module/e2e/**/test.md` and execute
@@ -585,19 +641,19 @@ npm run test:e2e:template
 
 ### Excel format
 
-| Column | Header | Required | Description |
-|--------|--------|----------|-------------|
-| A | Test ID | Yes | Unique ID, e.g. `TC-QA-001`, `TC-API-002` |
-| B | Module | Yes | Module/extension name, e.g. `quick-access-plugin` |
-| C | Type | No | `ui` (default), `api`, or `system` |
-| D | Category | Yes | Test category, e.g. `login`, `auth` |
-| E | Title | Yes | Test case title (becomes `# Heading`) |
-| F | Description | No | Description paragraph |
-| G | Prerequisites | No | Semicolon-separated `key=value` pairs |
-| H-Q | Step 1-10 | Yes (1+) | Steps in natural English |
-| R-V | Expected 1-5 | No | Acceptance criteria |
-| W | Priority | No | High / Medium / Low (metadata) |
-| X | Status | No | Draft / Ready / Automated (metadata) |
+| Column | Header        | Required | Description                                       |
+| ------ | ------------- | -------- | ------------------------------------------------- |
+| A      | Test ID       | Yes      | Unique ID, e.g. `TC-QA-001`, `TC-API-002`         |
+| B      | Module        | Yes      | Module/extension name, e.g. `quick-access-plugin` |
+| C      | Type          | No       | `ui` (default), `api`, or `system`                |
+| D      | Category      | Yes      | Test category, e.g. `login`, `auth`               |
+| E      | Title         | Yes      | Test case title (becomes `# Heading`)             |
+| F      | Description   | No       | Description paragraph                             |
+| G      | Prerequisites | No       | Semicolon-separated `key=value` pairs             |
+| H-Q    | Step 1-10     | Yes (1+) | Steps in natural English                          |
+| R-V    | Expected 1-5  | No       | Acceptance criteria                               |
+| W      | Priority      | No       | High / Medium / Low (metadata)                    |
+| X      | Status        | No       | Draft / Ready / Automated (metadata)              |
 
 **Prerequisites format:** `email=admin@example.com; password=admin123; role=admin`
 

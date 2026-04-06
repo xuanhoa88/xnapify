@@ -99,7 +99,8 @@ async function launchBrowser(opts = {}) {
  * @returns {Promise<import('puppeteer').Page>}
  */
 async function createPage(browser, opts = {}) {
-  const page = await browser.newPage();
+  const context = await browser.createIncognitoBrowserContext();
+  const page = await context.newPage();
   page.setDefaultTimeout(opts.timeout || DEFAULT_PAGE_TIMEOUT);
   return page;
 }

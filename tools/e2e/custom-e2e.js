@@ -16,7 +16,7 @@ const puppeteer = require('puppeteer');
 
     console.log('Logging in...');
     await page.waitForSelector('input[name="email"]');
-    await page.type('input[name="email"]', 'admin@test.com');
+    await page.type('input[name="email"]', 'admin@example.com');
     await page.type('input[name="password"]', 'admin123');
 
     await Promise.all([

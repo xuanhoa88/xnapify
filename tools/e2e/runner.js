@@ -342,8 +342,14 @@ async function run() {
         );
       }
 
+      // Get a fresh page for each test to ensure cookie and state isolation
+      let testPage = page;
+      if (needsBrowser && browser) {
+        testPage = await createPage(browser);
+      }
+
       const context = {
-        page,
+        page: testPage,
         apiState: createAPIState(),
         baseUrl,
         currentCard: null,
@@ -381,7 +387,7 @@ async function run() {
           script = await compileTestCase(
             tc,
             interpretStep,
-            { currentUrl: page ? page.url() : 'about:blank' },
+            { currentUrl: testPage ? testPage.url() : 'about:blank' },
             timestamp,
           );
           if (mode === 'compile') {
@@ -421,7 +427,7 @@ async function run() {
               );
               try {
                 const newAction = await recompileStep(tc, s, interpretStep, {
-                  currentUrl: page ? page.url() : baseUrl,
+                  currentUrl: testPage ? testPage.url() : baseUrl,
                 });
                 actionResult = await executeAction(newAction, context);
               } catch (retryErr) {
@@ -434,10 +440,10 @@ async function run() {
             }
 
             // Per-step screenshot (browser tests only)
-            if (page && resultsDir) {
+            if (testPage && resultsDir) {
               const stepNum = String(s + 1).padStart(2, '0');
               try {
-                await page.screenshot({
+                await testPage.screenshot({
                   path: path.join(resultsDir, `step-${stepNum}.png`),
                   fullPage: true,
                 });
@@ -469,14 +475,22 @@ async function run() {
       }
 
       // Final screenshot
-      if (page && resultsDir) {
+      if (testPage && resultsDir) {
         try {
-          await page.screenshot({
+          await testPage.screenshot({
             path: path.join(resultsDir, 'final.png'),
             fullPage: true,
           });
         } catch {
           // Screenshot may fail
+        }
+      }
+
+      if (needsBrowser && browser && testPage && testPage !== page) {
+        try {
+          await testPage.close();
+        } catch {
+          // Page already closed or crashed
         }
       }
 

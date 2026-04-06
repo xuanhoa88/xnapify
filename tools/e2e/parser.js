@@ -25,7 +25,7 @@
  *
  * test.md format:
  *   ---
- *   email: admin@test.com      → prerequisites (credentials, fixtures)
+ *   email: admin@example.com      → prerequisites (credentials, fixtures)
  *   password: admin123
  *   role: admin
  *   ---

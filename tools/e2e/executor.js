@@ -565,7 +565,11 @@ const ACTIONS = {
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
     await waitForRouteReady(page);
 
-    // Poll for login form (SPA may lazy-load it)
+    // Wait generously for SPA rendering, chunk downloading, and React hydration on cold starts MUST HAPPEN BEFORE QUERYING DOM!
+    await waitForSPAStable(page);
+    await new Promise(r => setTimeout(r, 6000));
+
+    // Poll for login form (SPA may lazy-load it and hydrate it)
     const emailInput = await retryUntilFound(
       () => page.$('input[type="email"], input[name="email"]'),
       10000,
@@ -575,19 +579,27 @@ const ACTIONS = {
       5000,
     );
 
-    await emailInput.type(email, { delay: 30 });
-    await passwordInput.type(password, { delay: 30 });
+    await emailInput.focus();
+    await emailInput.type(email, { delay: 50 });
+
+    await passwordInput.focus();
+    await passwordInput.type(password, { delay: 100 });
 
     const submitBtn = await page.$('button[type="submit"]');
     if (submitBtn) {
       await submitBtn.click();
-      await waitForRouteReady(page);
+    } else {
+      await page.keyboard.press('Enter');
     }
 
-    if (page.url().includes('/login')) {
+    try {
+      await page.waitForFunction(
+        () => !window.location.pathname.includes('/login'),
+        { timeout: 15000 },
+      );
+    } catch (err) {
       throw new Error('Login failed — still on login page');
     }
-    await waitForSPAStable(page);
   },
 
   // ── Click ───────────────────────────────────────────────────────
