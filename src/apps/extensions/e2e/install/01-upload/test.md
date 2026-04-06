@@ -16,11 +16,10 @@ Verify that an admin can upload and install a new extension via the upload flow.
 
 1. Log in as admin
 2. Navigate to the extensions admin page
-3. Click the "Upload Extension" button
-4. Select a `.zip` extension file for upload
-5. Confirm the install modal
-6. Wait for the success toast "Extension installed successfully"
-7. Verify the new extension card is visible in the grid
+3. Upload the `.zip` extension file directly to the hidden file input (do not click the upload button to prevent OS dialog blocks)
+4. Confirm the install modal
+5. Wait for the success toast "Extension installed successfully"
+6. Verify the new extension card is visible in the grid
 
 ## Expected Results
 

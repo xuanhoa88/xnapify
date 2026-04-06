@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "compiledAt": "2026-04-06T00:00:00.000Z",
+  "testHash": "dummy",
+  "title": "Verify Installed Extension Persists After Refresh",
+  "actions": [
+    { "step": 1, "action": "login", "description": "Log in as admin" },
+    {
+      "step": 2,
+      "action": "navigate",
+      "url": "/admin/extensions",
+      "description": "Navigate to the extensions admin page"
+    },
+    { "step": 3, "action": "reload", "description": "Refresh the page" },
+    {
+      "step": 4,
+      "action": "assert_visible",
+      "text": "sample-extension",
+      "description": "Verify the previously installed extension card is still visible"
+    }
+  ]
+}

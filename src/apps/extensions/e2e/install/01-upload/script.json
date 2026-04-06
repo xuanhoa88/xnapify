@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "compiledAt": "2026-04-06T00:00:00.000Z",
+  "testHash": "dummy",
+  "title": "Upload Extension Package",
+  "actions": [
+    { "step": 1, "action": "login", "description": "Log in as admin" },
+    { "step": 2, "action": "navigate", "url": "/admin/extensions", "description": "Navigate to the extensions admin page" },
+    { "step": 3, "action": "upload_file", "selector": "input[type='file']", "description": "Select a .zip extension file for upload" },
+    { "step": 4, "action": "confirm_modal", "description": "Confirm the install modal" },
+    { "step": 5, "action": "wait_for_text", "text": "Extension installed successfully", "timeout": 15000, "description": "Wait for the success toast" },
+    { "step": 6, "action": "assert_visible", "text": "sample-extension", "description": "Verify the new extension card is visible" }
+  ]
+}

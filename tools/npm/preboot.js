@@ -87,7 +87,7 @@ const DIALECT_DEPS = (() => {
 
   return {
     // Pin sqlite3@5 — v6+ requires Node >= 20
-    sqlite: [{ name: 'sqlite3', spec: 'sqlite3@^5.0.11' }],
+    sqlite: [{ name: 'sqlite3', spec: 'sqlite3@^5.1.7' }],
     // pg + pg-hstore are always needed
     postgres: [
       { name: 'pg', spec: 'pg@^8.20.0' },
@@ -275,32 +275,72 @@ function ensureDeps(dialect) {
 
   console.log(`📦 Installing ${dialect} dependencies: ${names.join(', ')}...`);
 
-  try {
-    execSync(`npm install --no-save ${specs.join(' ')}`, {
-      cwd: ROOT,
-      stdio: 'pipe',
-      timeout: 120_000,
-      shell: true, // Required for Windows (cmd.exe)
-    });
-    // Bust Node's module resolution cache so require() finds the new packages
-    // within this same process (avoids stale _pathCache from prior resolve())
-    // eslint-disable-next-line no-underscore-dangle
-    const pathCache = require('module')._pathCache;
-    if (pathCache) {
-      for (const key of Object.keys(pathCache)) {
-        for (const dep of missing) {
-          if (key.includes(dep.name)) {
-            delete pathCache[key];
-          }
+  let attempts = 0;
+  const maxAttempts = 3;
+  let success = false;
+  let lastError = null;
+
+  while (attempts < maxAttempts) {
+    try {
+      const buildOpts =
+        dialect === 'sqlite' ? ['--build-from-source=sqlite3'] : [];
+
+      const env = { ...process.env };
+
+      // Add NODE_DIR to env
+      if (process.env.XNAPIFY_NODE_DIR) {
+        env.npm_config_nodedir = process.env.XNAPIFY_NODE_DIR;
+      }
+
+      execSync(`npm install --no-save ${[...specs, ...buildOpts].join(' ')}`, {
+        env,
+        cwd: ROOT,
+        stdio: 'pipe',
+        timeout: 300_000,
+        shell: os.platform() === 'win32' ? 'powershell.exe' : true,
+      });
+      success = true;
+      break;
+    } catch (err) {
+      attempts++;
+      lastError = err;
+      const message = err.stderr ? err.stderr.toString().trim() : err.message;
+      if (attempts < maxAttempts) {
+        console.warn(
+          `\n⚠️  [Attempt ${attempts}/${maxAttempts}] Install failed: ${message}`,
+        );
+        console.warn(`   Retrying in 5 seconds...\n`);
+        execSync(
+          os.platform() === 'win32' ? 'timeout /t 5 /nobreak > NUL' : 'sleep 5',
+          { shell: true },
+        );
+      }
+    }
+  }
+
+  if (!success) {
+    const message = lastError.stderr
+      ? lastError.stderr.toString().trim()
+      : lastError.message;
+    throw new Error(
+      `Failed to install ${dialect} deps after ${maxAttempts} attempts: ${message}`,
+    );
+  }
+  // Bust Node's module resolution cache so require() finds the new packages
+  // within this same process (avoids stale _pathCache from prior resolve())
+  // eslint-disable-next-line no-underscore-dangle
+  const pathCache = require('module')._pathCache;
+  if (pathCache) {
+    for (const key of Object.keys(pathCache)) {
+      for (const dep of missing) {
+        if (key.includes(dep.name)) {
+          delete pathCache[key];
         }
       }
     }
-
-    console.log(`✅ ${dialect} dependencies installed`);
-  } catch (err) {
-    const message = err.stderr ? err.stderr.toString().trim() : err.message;
-    throw new Error(`Failed to install ${dialect} deps: ${message}`);
   }
+
+  console.log(`✅ ${dialect} dependencies installed`);
 }
 
 // ─── PostgreSQL Lifecycle ───────────────────────────────────────────────────

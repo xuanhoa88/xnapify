@@ -160,7 +160,7 @@ async function run() {
   const mode = modeArg ? modeArg.split('=')[1] : 'auto'; // compile | run | auto
   const targetArg = args.find(a => !a.startsWith('--'));
   const port = resolvePort();
-  const baseUrl = `http://localhost:${port}`;
+  const baseUrl = `http://127.0.0.1:${port}`;
   const headless = headed ? false : config.env('E2E_HEADLESS') !== 'false';
   const timestamp = new Date()
     .toISOString()

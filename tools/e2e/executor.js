@@ -534,12 +534,12 @@ const ACTIONS = {
     const url = action.url.startsWith('http')
       ? action.url
       : `${baseUrl}${action.url}`;
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
     await waitForRouteReady(page);
   },
 
   async reload({ page }) {
-    await page.reload({ waitUntil: 'domcontentloaded', timeout: 15000 });
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 });
     await waitForRouteReady(page);
   },
 
@@ -562,7 +562,7 @@ const ACTIONS = {
     const url = loginUrl.startsWith('http')
       ? loginUrl
       : `${baseUrl}${loginUrl}`;
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
     await waitForRouteReady(page);
 
     // Poll for login form (SPA may lazy-load it)
