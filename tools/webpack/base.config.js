@@ -830,14 +830,11 @@ function createWorkerConfig({
  * @returns {string[]} Array of ignored paths
  */
 function getHmrWatchIgnored() {
-  return [
-    /[\\/]node_modules[\\/]/,
-    /\.test\.[cm]?[jt]sx?$/,
-    /\.spec\.[cm]?[jt]sx?$/,
-    /[\\/]__tests__[\\/]/,
-    /[\\/]e2e[\\/]/,
-    new RegExp(config.BUILD_DIR.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
-  ];
+  const buildDir = config.BUILD_DIR.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(
+    `[\\\\/](?:node_modules|__tests__|e2e)(?:[\\\\/]|$)|\\.(?:test|spec)\\.[cm]?[jt]sx?$|^${buildDir}(?:[\\\\/]|$)`,
+    'i',
+  );
 }
 
 // =============================================================================
