@@ -831,12 +831,12 @@ function createWorkerConfig({
  */
 function getHmrWatchIgnored() {
   return [
-    '**/node_modules/**',
-    '**/*.test.js',
-    '**/*.spec.js',
-    '**/__tests__/**',
-    '**/e2e/**',
-    config.BUILD_DIR + '/**',
+    /[\\/]node_modules[\\/]/,
+    /\.test\.[cm]?[jt]sx?$/,
+    /\.spec\.[cm]?[jt]sx?$/,
+    /[\\/]__tests__[\\/]/,
+    /[\\/]e2e[\\/]/,
+    new RegExp(config.BUILD_DIR.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
   ];
 }
 
