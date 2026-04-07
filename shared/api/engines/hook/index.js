@@ -61,6 +61,13 @@ export { createFactory };
 // Export channel class for direct use
 export { HookChannel } from './channel';
 
+// Export error classes
+export {
+  InvalidChannelNameError,
+  HookAbortError,
+  createAggregateError,
+} from './errors';
+
 /**
  * Singleton factory instance
  */

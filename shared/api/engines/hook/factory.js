@@ -6,6 +6,7 @@
  */
 
 import { HookChannel } from './channel';
+import { InvalidChannelNameError } from './errors';
 
 // Private symbols for internal state
 const HOOK_CHANNELS = Symbol('__xnapify.hook.channels__');
@@ -28,10 +29,7 @@ class HookFactory {
     const key = name && typeof name === 'string' ? name.trim() : '';
 
     if (!key) {
-      const err = new Error('Channel name must be a non-empty string');
-      err.name = 'InvalidChannelNameError';
-      err.code = 'ERR_INVALID_CHANNEL_NAME';
-      throw err;
+      throw new InvalidChannelNameError();
     }
 
     if (!this[HOOK_CHANNELS].has(key)) {
@@ -130,6 +128,11 @@ export function createFactory() {
 
     return boundFactory;
   };
+
+  // Register graceful shutdown handlers
+  const onShutdown = () => manager.cleanup();
+  process.once('SIGTERM', onShutdown);
+  process.once('SIGINT', onShutdown);
 
   return factory;
 }

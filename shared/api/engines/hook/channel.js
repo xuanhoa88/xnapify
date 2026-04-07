@@ -5,6 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { HookAbortError, createAggregateError } from './errors';
+
 // Private symbols for internal state
 const HOOK_NAME = Symbol('__xnapify.hook.name__');
 const HOOK_HANDLERS = Symbol('__xnapify.hook.handlers__');
@@ -98,9 +100,7 @@ class HookChannel {
 
     for (const { handler } of list) {
       if (signal && signal.aborted) {
-        const abortErr = new Error('Execution aborted');
-        abortErr.name = 'AbortError';
-        errors.push(abortErr);
+        errors.push(new HookAbortError());
         break;
       }
 
@@ -116,15 +116,10 @@ class HookChannel {
     }
 
     if (errors.length > 1) {
-      const msg = `Multiple errors occurred in hook channel '${this.name}' event '${event}'`;
-      if (typeof AggregateError !== 'undefined') {
-        throw new AggregateError(errors, msg);
-      }
-
-      const err = new Error(msg);
-      err.name = 'AggregateError';
-      err.errors = errors;
-      throw err;
+      throw createAggregateError(
+        errors,
+        `Multiple errors occurred in hook channel '${this.name}' event '${event}'`,
+      );
     }
   }
 
@@ -148,9 +143,7 @@ class HookChannel {
 
     for (const { handler } of list) {
       if (signal && signal.aborted) {
-        const err = new Error('Execution aborted');
-        err.name = 'AbortError';
-        throw err;
+        throw new HookAbortError();
       }
 
       // No wrapper - fails fast on first rejection

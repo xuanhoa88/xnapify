@@ -1,4 +1,9 @@
-import hook, { createFactory, HookChannel } from '.';
+import hook, {
+  createFactory,
+  HookChannel,
+  InvalidChannelNameError,
+  HookAbortError,
+} from '.';
 
 describe('Hook Engine', () => {
   describe('HookChannel', () => {
@@ -210,6 +215,96 @@ describe('Hook Engine', () => {
       }
       expect(order).toEqual(['A']);
     });
+
+    // --- Edge case tests ---
+
+    test('should resolve immediately when emitting event with no handlers', async () => {
+      // No handlers registered for this event
+      await expect(channel.emit('no-handlers')).resolves.toBeUndefined();
+    });
+
+    test('should resolve immediately when invoking event with no handlers', async () => {
+      await expect(channel.invoke('no-handlers')).resolves.toBeUndefined();
+    });
+
+    test('should throw AbortError when invoke() detects pre-aborted signal', async () => {
+      const controller = new AbortController();
+      controller.abort(); // Pre-abort before invoke
+
+      channel.on('abort-invoke', jest.fn());
+
+      await expect(
+        channel.invoke('abort-invoke', controller.signal),
+      ).rejects.toThrow('Execution aborted');
+    });
+
+    test('should throw AbortError on invoke() when signal aborts mid-flight', async () => {
+      const order = [];
+      const controller = new AbortController();
+
+      channel.on(
+        'abort-invoke-mid',
+        async () => {
+          order.push('A');
+          controller.abort();
+        },
+        1,
+      );
+
+      channel.on(
+        'abort-invoke-mid',
+        async () => {
+          order.push('B');
+        },
+        2,
+      );
+
+      try {
+        await channel.invoke('abort-invoke-mid', controller.signal);
+      } catch (err) {
+        expect(err.name).toBe('AbortError');
+      }
+
+      // B should NOT be executed — invoke stops at abort
+      expect(order).toEqual(['A']);
+    });
+
+    test('should clear all handlers on all events when off() is called with no args', async () => {
+      const handlerA = jest.fn();
+      const handlerB = jest.fn();
+
+      channel.on('event1', handlerA);
+      channel.on('event2', handlerB);
+
+      expect(channel.events.length).toBe(2);
+
+      channel.off(); // Clear all
+
+      expect(channel.events).toEqual([]);
+
+      await channel.emit('event1');
+      await channel.emit('event2');
+
+      expect(handlerA).not.toHaveBeenCalled();
+      expect(handlerB).not.toHaveBeenCalled();
+    });
+
+    test('should throw TypeError when handler is not a function', () => {
+      expect(() => channel.on('test', 'not-a-function')).toThrow(TypeError);
+      expect(() => channel.on('test', null)).toThrow(TypeError);
+      expect(() => channel.on('test', 123)).toThrow(TypeError);
+    });
+
+    test('should not throw when off() targets a non-existent event', () => {
+      expect(() => channel.off('never-registered')).not.toThrow();
+    });
+
+    test('should not throw when off() targets non-existent handler on existing event', async () => {
+      channel.on('exists', jest.fn());
+      const unregistered = jest.fn();
+
+      expect(() => channel.off('exists', unregistered)).not.toThrow();
+    });
   });
 
   describe('Factory', () => {
@@ -262,12 +357,59 @@ describe('Hook Engine', () => {
 
       expect(factory.getChannelNames()).toEqual([]);
     });
+
+    test('should throw InvalidChannelNameError for invalid names', () => {
+      const factory = createFactory();
+
+      try {
+        factory('');
+      } catch (err) {
+        expect(err).toBeInstanceOf(InvalidChannelNameError);
+        expect(err.code).toBe('ERR_INVALID_CHANNEL_NAME');
+        expect(err.statusCode).toBe(400);
+      }
+    });
+
+    test('should register SIGTERM and SIGINT handlers', () => {
+      const spy = jest.spyOn(process, 'once');
+      createFactory();
+
+      expect(spy).toHaveBeenCalledWith('SIGTERM', expect.any(Function));
+      expect(spy).toHaveBeenCalledWith('SIGINT', expect.any(Function));
+
+      spy.mockRestore();
+    });
   });
 
   describe('Default Export', () => {
     test('should be a callable factory', () => {
       const ch = hook('default-test');
       expect(ch).toBeInstanceOf(HookChannel);
+    });
+  });
+
+  describe('Error Classes', () => {
+    test('InvalidChannelNameError should have correct properties', () => {
+      const err = new InvalidChannelNameError();
+      expect(err).toBeInstanceOf(Error);
+      expect(err.name).toBe('InvalidChannelNameError');
+      expect(err.code).toBe('ERR_INVALID_CHANNEL_NAME');
+      expect(err.statusCode).toBe(400);
+      expect(err.message).toBe('Channel name must be a non-empty string');
+    });
+
+    test('InvalidChannelNameError should accept custom message', () => {
+      const err = new InvalidChannelNameError('Custom msg');
+      expect(err.message).toBe('Custom msg');
+    });
+
+    test('HookAbortError should have correct properties', () => {
+      const err = new HookAbortError();
+      expect(err).toBeInstanceOf(Error);
+      expect(err.name).toBe('AbortError');
+      expect(err.code).toBe('ERR_HOOK_ABORTED');
+      expect(err.statusCode).toBe(499);
+      expect(err.message).toBe('Execution aborted');
     });
   });
 });

@@ -17,6 +17,7 @@ shared/api/engines/hook/
 ├── index.js             # Default singleton, re-exports
 ├── factory.js           # HookFactory class + createFactory()
 ├── channel.js           # HookChannel class
+├── errors.js            # InvalidChannelNameError, HookAbortError, createAggregateError
 ├── hook.test.js         # Core tests
 └── hook.binding.test.js # Context binding tests
 ```
@@ -26,11 +27,14 @@ shared/api/engines/hook/
 ```
 index.js
 ├── factory.js
-│   └── channel.js
-└── channel.js
+│   ├── channel.js
+│   └── errors.js
+├── channel.js
+│   └── errors.js
+└── errors.js
 ```
 
-No external dependencies. No error classes file — errors are thrown inline.
+No external dependencies.
 
 ## 2. HookChannel Class (`channel.js`)
 
@@ -82,7 +86,7 @@ Three-mode removal:
 
 1. **No arguments** `off()` — clears ALL handlers on ALL events (`handlers.clear()`).
 2. **Event only** `off(event)` — removes ALL handlers for that event (`handlers.delete(event)`).
-3. **Event + handler** `off(event, handler)` — removes a **specific handler** by reference equality (`findIndex` + `splice`). Cleans up empty arrays.
+3. **Event + handler** `off(event, handler)` — removes a **specific handler** by reference equality (`filter`). Also checks against `ORIGINAL_HANDLER` symbol to match wrapped (bound) handlers to their originals. Cleans up empty arrays.
 
 #### `withContext(context) → BoundChannelWrapper`
 
@@ -91,18 +95,19 @@ Returns a proxy-like object where handlers registered via `on()` are invoked wit
 **Wrapper shape:**
 ```javascript
 {
-  on(event, handler, priority?) → this,  // wraps handler, stores in WeakMap
+  on(event, handler, priority?) → this,  // wraps handler with ORIGINAL_HANDLER tracking
   emit(event, ...args),                  // delegates to channel.emit()
   invoke(event, ...args),                // delegates to channel.invoke()
-  off(event),                            // delegates to channel.off(event)
+  off(event, handler?),                  // delegates to channel.off(event, handler?)
+  withContext(newContext),               // creates a new bound wrapper with new context
   get name,                              // channel.name
   get events,                            // channel.events
 }
 ```
 
-**Implementation detail:** Uses a `WeakMap` to track the mapping from original handler → wrapped handler, so the wrapper doesn't leak references.
+**Implementation detail:** Each wrapped handler stores a `Symbol('__xnapify.hook.original__')` property pointing to the original handler function. This allows `off(event, handler)` to match the original reference against wrapped handlers without leaking references (no WeakMap needed).
 
-**Limitation:** The bound wrapper's `off()` only accepts `event` (not `event, handler`), so individual handler removal is not supported through the bound interface.
+**Individual handler removal is fully supported** through the bound interface via `off(event, handler)`. The `ORIGINAL_HANDLER` symbol on the wrapped function enables O(1) lookup of the original handler reference during removal.
 
 ## 3. HookFactory Class (`factory.js`)
 
@@ -124,7 +129,7 @@ Returns a proxy-like object where handlers registered via `on()` are invoked wit
 
 **File:** `factory.js`
 
-Creates a `HookFactory` instance and returns a callable function with all methods attached:
+Creates a `HookFactory` instance, registers graceful shutdown handlers, and returns a callable function with all methods attached:
 
 - `factory(name)` — shorthand for `factory.channel(name)`.
 - `factory.channel(name)` — delegates to `manager.channel(name)`.
@@ -141,6 +146,16 @@ boundFactory.channel('users')  // → same
 ```
 
 The bound factory has all the same methods (`has`, `remove`, `getChannelNames`, `cleanup`), which delegate to the **same underlying manager**. The bound factory supports chaining: `boundFactory.withContext(newContext)` creates a new factory bound to the new context.
+
+### Signal Handlers
+
+`createFactory()` registers graceful shutdown handlers:
+```javascript
+process.once('SIGTERM', () => manager.cleanup());
+process.once('SIGINT', () => manager.cleanup());
+```
+
+This ensures all hook channels are cleaned up on process termination.
 
 ## 5. Default Singleton
 
@@ -160,38 +175,65 @@ The singleton is registered on the DI container as `container.resolve('hook')` d
 
 ## 6. Error Handling
 
-Unlike other engines, the hook engine has **no dedicated error class file**:
+**File:** `errors.js`
 
-| Error | Thrown By | When |
-|---|---|---|
-| `TypeError('Handler must be a function')` | `HookChannel.on()`, bound wrapper `on()` | Non-function handler |
-| `Error` with `name: 'InvalidChannelNameError'`, `status: 400` | `HookFactory.channel()` | Falsy or non-string name |
+| Error Class | `name` | `code` | `statusCode` | Thrown By | When |
+|---|---|---|---|---|---|
+| `InvalidChannelNameError` | `'InvalidChannelNameError'` | `'ERR_INVALID_CHANNEL_NAME'` | `400` | `HookFactory.channel()` | Falsy or non-string name |
+| `HookAbortError` | `'AbortError'` | `'ERR_HOOK_ABORTED'` | `499` | `emit()`, `invoke()` | AbortSignal detected as aborted |
+| `TypeError` (built-in) | `'TypeError'` | — | — | `HookChannel.on()`, bound `on()` | Non-function handler |
+
+### `createAggregateError(errors, message)`
+
+Factory function that returns a native `AggregateError` on Node 17+, or a plain `Error` with `.errors` array on Node 16 (where `AggregateError` is undefined). Used by `emit()` when multiple handlers fail.
 
 ## 7. Testing
 
-### `hook.test.js` (3 describe blocks)
+### `hook.test.js` (4 describe blocks, 31 tests)
 
-**HookChannel:**
+**HookChannel (18 tests):**
 - Priority-ordered execution (lower priority first)
 - Mutable data by reference
 - Method chaining
-- Handler removal (`off`)
+- Handler removal (`off` — all modes)
 - Event listing (`.events`)
+- Self-modifying handler list (mutation-safe iteration)
+- Duplicate handler removal
+- Single error propagation in `emit()`
+- AggregateError in `emit()` with multiple failures
+- Fail-fast `invoke()`
+- AbortSignal cancellation in `emit()`
+- No-handler `emit()` / `invoke()` (no-op resolution)
+- Pre-aborted signal in `invoke()`
+- Mid-flight abort in `invoke()`
+- Clear-all `off()` (no args)
+- TypeError for non-function handlers
+- Safe `off()` on non-existent event/handler
 
-**Factory:**
+**Factory (8 tests):**
 - Channel creation via callable factory
 - Singleton instance return
 - Channel tracking (`has`, `getChannelNames`)
 - Channel removal
 - Cleanup
+- Invalid name rejection
+- `InvalidChannelNameError` properties (code, statusCode)
+- SIGTERM/SIGINT signal handler registration
 
-**Default Export:**
+**Default Export (1 test):**
 - Callable factory returning `HookChannel` instance
 
-### `hook.binding.test.js`
+**Error Classes (3 tests):**
+- `InvalidChannelNameError` properties and custom message
+- `HookAbortError` properties
+
+### `hook.binding.test.js` (4 tests)
 
 - `withContext()` handler receives context as `this`
 - Payload passed through correctly
+- Individual handler removal via bound wrapper
+- Multi-event handler removal
+- `withContext` chaining
 
 ## 8. Integration Points
 
