@@ -215,7 +215,9 @@ Compiled scripts are committed to git — teammates run tests without needing LL
 | `E2E_LLM_PROVIDER` | `auto`, `stdin`, `openai`, `anthropic`, `google`, `ollama`, `custom` |
 | `E2E_LLM_API_KEY`  | Override auto-detected API key                                       |
 | `E2E_LLM_MODEL`    | Model name override                                                  |
-| `E2E_LLM_BASE_URL` | Base URL for custom/ollama providers                                 |
+| `E2E_LLM_BASE_URL` | Base URL for custom LLM provider                                     |
+| `E2E_OLLAMA_HOST`  | Ollama host override (fallback: `XNAPIFY_HOST` or `127.0.0.1`)       |
+| `E2E_OLLAMA_PORT`  | Ollama port override (fallback: `11434`)                             |
 | `E2E_DEBUG`        | `true` to show SPA stability diagnostics                             |
 | `E2E_VIA_TASK`     | Internal — set by `tools/tasks/e2e.js` to authorize execution        |
 

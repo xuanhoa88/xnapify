@@ -834,6 +834,9 @@ export async function bootstrapApp(app, server, options = {}) {
   // e.g. '0.0.0.0' → '127.0.0.1', 'localhost' → '127.0.0.1'
   // The raw `host` is kept for server.listen() so Docker can bind to all interfaces.
   const resolvedHost = await sanitizeHost(host);
+  set(process.env, 'XNAPIFY_HOST', resolvedHost);
+
+  // Set base URL for self-fetch URLs
   const baseUrl = `http://${resolvedHost}:${port}`;
 
   // Ensure an absolute XNAPIFY_PUBLIC_APP_URL exists (used by OAuth callbacks, Passport, etc.)

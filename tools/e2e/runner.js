@@ -35,7 +35,7 @@
 //   E2E_LLM_PROVIDER=auto  # auto (default) | stdin | openai | anthropic | google | ollama | custom
 //   E2E_LLM_API_KEY=...    # Override auto-detected key
 //   E2E_LLM_MODEL=...      # Model name (optional, has defaults)
-//   E2E_LLM_BASE_URL=...   # Base URL (for custom/ollama)
+//   E2E_LLM_BASE_URL=...   # Base URL (for custom LLM provider)
 //
 
 // Guard: must be launched via tools/tasks/e2e.js (npm run test:e2e)
@@ -75,7 +75,7 @@ const {
   recompileStep,
 } = require('./compiler');
 const { executeAction, createAPIState } = require('./executor');
-const { interpretStep } = require('./llmInterpreter');
+const { interpretStep, LLM_PROVIDERS } = require('./llmInterpreter');
 const {
   parseTestFile,
   discoverTestFiles,
@@ -267,7 +267,7 @@ async function run() {
   console.log(`  LLM:      ${llmProvider}`);
   if (llmProvider === 'auto') {
     console.log(
-      '  Note:     Auto-detecting LLM from env (GEMINI_API_KEY, OPENAI_API_KEY, etc.)',
+      '  Note:     Auto-detecting LLM from env (E2E_GEMINI_API_KEY, E2E_OPENAI_API_KEY, etc.)',
     );
   }
   console.log('');
@@ -286,10 +286,9 @@ async function run() {
     if (llmValidated || mode === 'run') return;
 
     if (llmProvider === 'auto') {
-      const hasGemini =
-        process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-      const hasOpenAI = process.env.OPENAI_API_KEY;
-      const hasAnthropic = process.env.ANTHROPIC_API_KEY;
+      const hasGemini = process.env.E2E_GEMINI_API_KEY;
+      const hasOpenAI = process.env.E2E_OPENAI_API_KEY;
+      const hasAnthropic = process.env.E2E_ANTHROPIC_API_KEY;
       resolvedLLM = hasGemini
         ? 'google'
         : hasOpenAI
@@ -302,15 +301,22 @@ async function run() {
 
     if (resolvedLLM === 'ollama') {
       const ollamaUrl =
-        process.env.E2E_LLM_BASE_URL || 'http://localhost:11434';
+        LLM_PROVIDERS.ollama.baseUrl || 'http://localhost:11434';
       try {
         await new Promise((resolve, reject) => {
+          // LLM baseUrl has /v1 appended, we need the root domain for /api/tags
+          const rootUrl = new URL(ollamaUrl).origin;
+
           const req = http.request(
-            `${ollamaUrl}/api/tags`,
+            `${rootUrl}/api/tags`,
             { method: 'GET', timeout: 5000 },
             res => {
               res.resume();
-              resolve();
+              if (res.statusCode === 200) {
+                resolve();
+              } else {
+                reject(new Error(`Ollama returned status ${res.statusCode}`));
+              }
             },
           );
           req.on('error', reject);
@@ -325,7 +331,7 @@ async function run() {
         console.error(`  ❌ Ollama not reachable at ${ollamaUrl}`);
         console.error('     Start with: ollama serve');
         console.error(
-          '     Or set GEMINI_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY',
+          '     Or set E2E_GEMINI_API_KEY, E2E_OPENAI_API_KEY, or E2E_ANTHROPIC_API_KEY',
         );
         process.exit(1);
       }

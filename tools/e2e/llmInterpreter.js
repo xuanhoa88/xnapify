@@ -21,10 +21,10 @@
  *   E2E_LLM_PROVIDER=custom     → Custom endpoint
  *
  * The "auto" provider scans these env vars in order:
- *   GEMINI_API_KEY | GOOGLE_API_KEY → google
- *   OPENAI_API_KEY                  → openai
- *   ANTHROPIC_API_KEY               → anthropic
- *   (fallback)                      → ollama
+ *   E2E_GEMINI_API_KEY                  → google
+ *   E2E_OPENAI_API_KEY                  → openai
+ *   E2E_ANTHROPIC_API_KEY               → anthropic
+ *   (fallback)                          → ollama
  *
  * The "stdin" provider enables AI IDE agents (Gemini, Claude, Copilot)
  * to be the LLM. The runner writes a JSON request to stdout and reads
@@ -33,7 +33,7 @@
  * Optional env:
  *   E2E_LLM_API_KEY  → API key (override auto-detected key)
  *   E2E_LLM_MODEL    → Model name (optional, has defaults)
- *   E2E_LLM_BASE_URL → Base URL (for custom/ollama)
+ *   E2E_LLM_BASE_URL → Base URL (for custom LLM provider)
  */
 
 const http = require('http');
@@ -47,7 +47,7 @@ let stdinFirstCall = true;
 
 // ── LLM Provider Config ──────────────────────────────────────────
 
-const PROVIDERS = {
+const LLM_PROVIDERS = {
   openai: {
     baseUrl: 'https://api.openai.com/v1',
     model: 'gpt-4o-mini',
@@ -69,8 +69,8 @@ const PROVIDERS = {
     authParam: 'key',
   },
   ollama: {
-    baseUrl: 'http://localhost:11434/v1',
-    model: 'llama3.2',
+    baseUrl: `http://${process.env.E2E_OLLAMA_HOST || `${process.env.XNAPIFY_HOST || '127.0.0.1'}:${process.env.E2E_OLLAMA_PORT || 11434}`}/v1`,
+    model: process.env.E2E_OLLAMA_MODEL || 'llama3.2',
     endpoint: '/chat/completions',
     authHeader: () => '',
   },
@@ -384,22 +384,21 @@ function autoDetectProvider() {
   if (cachedProvider) return cachedProvider;
 
   // Gemini / Google
-  const geminiKey =
-    process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
+  const geminiKey = process.env.E2E_GEMINI_API_KEY || '';
   if (geminiKey) {
     cachedProvider = { provider: 'google', apiKey: geminiKey };
     return cachedProvider;
   }
 
   // OpenAI / Copilot
-  const openaiKey = process.env.OPENAI_API_KEY || '';
+  const openaiKey = process.env.E2E_OPENAI_API_KEY || '';
   if (openaiKey) {
     cachedProvider = { provider: 'openai', apiKey: openaiKey };
     return cachedProvider;
   }
 
   // Anthropic / Claude
-  const anthropicKey = process.env.ANTHROPIC_API_KEY || '';
+  const anthropicKey = process.env.E2E_ANTHROPIC_API_KEY || '';
   if (anthropicKey) {
     cachedProvider = { provider: 'anthropic', apiKey: anthropicKey };
     return cachedProvider;
@@ -539,7 +538,7 @@ Return the JSON action to perform this step.`;
     // Stdin mode — delegate to IDE agent, no retry
     action = await callStdin(prompt, step, context);
   } else {
-    const providerConfig = { ...PROVIDERS[provider] };
+    const providerConfig = { ...LLM_PROVIDERS[provider] };
     if (!providerConfig) {
       throw new Error(
         `Unknown LLM provider: ${provider}. Use: auto, stdin, openai, anthropic, google, ollama, custom`,
@@ -554,7 +553,7 @@ Return the JSON action to perform this step.`;
 
     if (provider !== 'ollama' && !providerConfig.apiKey) {
       throw new Error(
-        `API key required for ${provider}. Set E2E_LLM_API_KEY or provider env var (e.g., GOOGLE_API_KEY).`,
+        `API key required for ${provider}. Set E2E_LLM_API_KEY or provider env var (e.g., E2E_GEMINI_API_KEY).`,
       );
     }
 
@@ -575,4 +574,4 @@ Return the JSON action to perform this step.`;
   return action;
 }
 
-module.exports = { interpretStep, SYSTEM_PROMPT };
+module.exports = { interpretStep, SYSTEM_PROMPT, LLM_PROVIDERS };

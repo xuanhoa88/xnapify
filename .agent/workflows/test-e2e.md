@@ -59,7 +59,7 @@ npm run test:e2e -- --parallel --filter="**/login/**" --headed
 
 > [!TIP]
 > Credentials are defined per-test in YAML front-matter. No env vars needed for auth!
-> LLM auto-detects from existing IDE API keys (`GEMINI_API_KEY`, `OPENAI_API_KEY`, etc.)
+> LLM auto-detects from existing IDE API keys (`E2E_GEMINI_API_KEY`, `E2E_OPENAI_API_KEY`, etc.)
 
 **Environment variables:**
 
@@ -73,7 +73,9 @@ npm run test:e2e -- --parallel --filter="**/login/**" --headed
 | `E2E_LLM_PROVIDER` | No       | `auto` (default), `stdin`, `openai`, `anthropic`, `google`, `ollama`, `custom` |
 | `E2E_LLM_API_KEY`  | No       | Override auto-detected API key                                                 |
 | `E2E_LLM_MODEL`    | No       | Model name override (each provider has a default)                              |
-| `E2E_LLM_BASE_URL` | No       | Base URL override (for custom/ollama)                                          |
+| `E2E_LLM_BASE_URL` | No       | Base URL override (for custom LLM provider)                                    |
+| `E2E_OLLAMA_HOST`  | No       | Ollama host override (fallback: `XNAPIFY_HOST` or `127.0.0.1`)                 |
+| `E2E_OLLAMA_PORT`  | No       | Ollama port override (fallback: `11434`)                                       |
 | `E2E_DEBUG`        | No       | `true` to show SPA stability diagnostics                                       |
 
 **CLI flags:**
