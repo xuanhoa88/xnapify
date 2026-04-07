@@ -74,44 +74,12 @@ Structure your final review using the [Response Format](#response-format) at the
 
 ## 1. Code Quality & Style
 
-### 1.1 Naming
-
-| Element           | Convention                                            | Anti-pattern                             |
-| ----------------- | ----------------------------------------------------- | ---------------------------------------- |
-| **Variables**     | Reveal intent: `userCount`                            | `n`, `tmp`, `data2`                      |
-| **Functions**     | Verb + noun: `getUserById()`                          | `user()`, `process()`                    |
-| **Booleans**      | Question form: `isActive`, `hasPermission`, `canEdit` | `active`, `status`                       |
-| **Constants**     | SCREAMING_SNAKE: `MAX_RETRY_COUNT`, `CACHE_TTL`       | `maxRetries`, inline `30000`             |
-| **Unused params** | Prefix with `_`: `(_req, res)`                        | Unnamed or ESLint-ignored without prefix |
-| **Slice names**   | Scoped namespace: `@admin/posts`                      | `posts`, `extensionSlice`                |
-
-### 1.2 Function Design
-
-| Rule                | Guideline                                                                   |
-| ------------------- | --------------------------------------------------------------------------- |
-| **Small**           | Max ~20 lines, ideally 5–10                                                 |
-| **One Thing**       | Does one thing, does it well                                                |
-| **One Level**       | One level of abstraction per function                                       |
-| **Few Args**        | Max 3 positional. 4+ → use options object: `fn(id, { models, cache, cwd })` |
-| **Guard Clauses**   | Early returns. Max 2 nesting levels.                                        |
-| **No Side Effects** | Don't mutate inputs unexpectedly                                            |
-
-### 1.3 Clean Code
-
-| Rule                        | What to Check                                                                            |
-| --------------------------- | ---------------------------------------------------------------------------------------- |
-| **DRY**                     | No duplicated logic. Extract at 3+ occurrences.                                          |
-| **No magic numbers**        | Named constants: `const ACTION_TIMEOUT_MS = 120_000`                                     |
-| **Unused code**             | Dead imports, unreachable code, unused variables                                         |
-| **No unnecessary comments** | Flag comments restating obvious logic (`// Loop through array`)                          |
-| **Useful comments**         | JSDoc on exports, `@route` on controllers, `// ======` section separators in large files |
-| **License header**          | First 6 lines of every file must contain the xnapify license header                      |
-
-### 1.4 Syntax Restrictions
-
-> ⚠️ Always enforce the `Syntax Restrictions` rules found inside the `coding-standards` skill (such as banned Node 17+ APIs, `.at()`, `structuredClone()`, global `fetch()`, `node:` prefixes, etc.).
-
-**Do not duplicate the bounds here, reference `coding-standards` directly as the single source of truth.**
+> ⚠️ **Always enforce the rules defined in the `coding-standards` skill.** 
+> Do not evaluate style rules natively in this file. Cross-reference `coding-standards` as the single source of truth for:
+> - Naming Conventions (Variables, Functions, Booleans)
+> - Function Design (Size, Arguments, Guard Clauses)
+> - Clean Code Principles (DRY, Licenses, Comments)
+> - Syntax Restrictions (Banned APIs like Node 17+, `??`, etc.)
 
 ---
 
@@ -189,25 +157,9 @@ Defer to the **security-compliance** skill for deep checks. At minimum verify:
 
 ## 5. Conventions
 
-### 5.1 Import Order (ESLint-Enforced)
+### 5.1 Import Order
 
-ESLint enforces strict grouping with blank lines between groups:
-
-```
-1. Built-in modules (fs, path, crypto)
-
-2. External packages (react, lodash, express)
-
-3. Internal aliases (@shared/...)
-
-4. Parent imports (../)
-
-5. Sibling imports (./)
-
-6. Style imports (*.css — always last)
-```
-
-Within groups: **alphabetical**, case-insensitive. Run `npm run fix` to auto-sort.
+> ⚠️ Always enforce the `Import Order` rules found inside the `coding-standards` skill. Do not duplicate them here.
 
 ### 5.2 HTTP Response Format
 
@@ -537,14 +489,7 @@ src/apps/[module_name]/
 
 ## 12. i18n & Localization
 
-| Rule                        | What to Check                                                                    |
-| --------------------------- | -------------------------------------------------------------------------------- |
-| **No hardcoded strings**    | All user-facing text uses `t('namespace:key', 'Default fallback')`               |
-| **Default fallback**        | `t()` calls always include a fallback string as second argument                  |
-| **Translation files exist** | `translations/en-US.json` (and `vi-VN.json` if applicable)                       |
-| **Translations hook**       | `translations()` returns `require.context('../translations', false, /\.json$/i)` |
-| **Namespace isolation**     | Translation keys use module-specific namespaces                                  |
-| **Interpolation**           | `t('key', 'Hello {{name}}', { name })` — not string concatenation                |
+> ⚠️ Always enforce the rules defined in the `i18n-localization` skill. Do not duplicate the checks here. Cross-reference it for detecting hardcoded strings, translations hooks, interpolation patterns, etc.
 
 ---
 
