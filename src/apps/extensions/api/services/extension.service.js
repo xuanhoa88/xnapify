@@ -514,17 +514,24 @@ export async function installExtensionFromPackage(
     ) {
       // Deeply search for package.json through single subdirectories (handles scoped formats as well as package/)
       let currentDir = tempExtractDir;
-      while (currentDir) {
+      let depth = 0;
+      while (currentDir && depth < 5) {
+        depth++;
         const entries = await fs.promises.readdir(currentDir, {
           withFileTypes: true,
         });
         const subdirs = entries.filter(d => d.isDirectory());
 
-        console.debug('[installExtensionFromPackage] Extracted contents:', {
-          currentDir,
-          entries: entries.map(e => ({ name: e.name, isDir: e.isDirectory() })),
-          subdirs: subdirs.map(d => d.name),
-        });
+        if (depth === 1) {
+          console.debug('[installExtensionFromPackage] Extracted contents:', {
+            currentDir,
+            entries: entries.map(e => ({
+              name: e.name,
+              isDir: e.isDirectory(),
+            })),
+            subdirs: subdirs.map(d => d.name),
+          });
+        }
 
         if (subdirs.length === 1) {
           currentDir = path.join(currentDir, subdirs[0].name);

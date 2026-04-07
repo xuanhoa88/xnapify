@@ -1112,7 +1112,9 @@ class ServerExtensionManager extends BaseExtensionManager {
       if (!manifest) {
         // Deeply search for package.json through single subdirectories (handles scoped formats as well as package/)
         let currentDir = tempDir;
-        while (currentDir) {
+        let depth = 0;
+        while (currentDir && depth < 5) {
+          depth++;
           const entries = await fs.promises.readdir(currentDir, {
             withFileTypes: true,
           });
