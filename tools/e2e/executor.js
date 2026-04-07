@@ -1051,11 +1051,14 @@ async function executeAction(action, context) {
 /**
  * Create a fresh API state object for API/system tests.
  * Holds persistent headers, stored variables, and the last response.
+ *
+ * @param {object} [prerequisites] Test prerequisites (email, password, etc.)
+ *   Seeded into variables so {{email}} interpolation works in request bodies.
  */
-function createAPIState() {
+function createAPIState(prerequisites) {
   return {
     headers: {},
-    variables: {},
+    variables: { ...(prerequisites || {}) },
     lastResponse: null,
   };
 }

@@ -20,7 +20,7 @@
  *     test.md          ← manual test case
  *     script.json      ← compiled automation actions
  *     .test-hash       ← sha256 of test.md at compile time
- *     scripts/         ← archived old scripts
+ *     _scripts/        ← archived old scripts
  *       {timestamp}.json
  */
 
@@ -31,7 +31,7 @@ const path = require('path');
 const SCRIPT_FILE = 'script.json';
 const HASH_FILE = '.test-hash';
 const TEST_FILE = 'test.md';
-const ARCHIVE_DIR = 'scripts';
+const ARCHIVE_DIR = '_scripts';
 const SCRIPT_VERSION = 1;
 const MAX_ARCHIVES = 5;
 
@@ -138,7 +138,7 @@ function loadScript(testCaseDir) {
 }
 
 /**
- * Archive the current script.json to scripts/{timestamp}.json
+ * Archive the current script.json to _scripts/{timestamp}.json
  *
  * @param {string} testCaseDir
  * @param {string} timestamp

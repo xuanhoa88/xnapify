@@ -31,7 +31,8 @@ const DEFAULT_ARGS = [
   '--disable-dev-shm-usage',
   '--disable-gpu',
   '--disable-software-rasterizer',
-  '--no-zygote',
+  // --no-zygote crashes bundled Chromium on macOS (UniversalExceptionRaise)
+  ...(process.platform !== 'darwin' ? ['--no-zygote'] : []),
 ];
 
 const DEFAULT_PAGE_TIMEOUT = 30000;
@@ -68,7 +69,7 @@ function isAvailable() {
 async function launchBrowser(opts = {}) {
   const puppeteer = require('puppeteer');
 
-  const headless = opts.headless !== undefined ? opts.headless : true;
+  const headless = opts.headless !== undefined ? opts.headless : 'new';
   const viewport = opts.viewport || DEFAULT_VIEWPORT;
   const extraArgs = opts.args || [];
 
@@ -78,11 +79,40 @@ async function launchBrowser(opts = {}) {
     ...extraArgs,
   ];
 
-  return puppeteer.launch({
-    headless,
+  const launchOpts = {
+    headless: headless === true ? 'new' : headless,
     args,
     defaultViewport: viewport,
+  };
+
+  // On MacOS, bundled Chromium often crashes in headed mode with 'UniversalExceptionRaise'.
+  // Using the system's Chrome prevents this fatal WebSocket hang up.
+  if (process.platform === 'darwin' && launchOpts.headless === false) {
+    launchOpts.channel = 'chrome';
+  }
+
+  let browser;
+  try {
+    browser = await puppeteer.launch(launchOpts);
+  } catch (err) {
+    if (launchOpts.channel) {
+      console.warn(
+        '   [Puppeteer] Failed to launch with channel, falling back to default...',
+      );
+      delete launchOpts.channel;
+      browser = await puppeteer.launch(launchOpts);
+    } else {
+      throw err;
+    }
+  }
+
+  // Prevent unhandled WebSocket ErrorEvent from crashing the process.
+  // Puppeteer's CDP connection emits 'disconnected' when the browser dies.
+  browser.on('disconnected', () => {
+    console.warn('   [Puppeteer] Browser disconnected unexpectedly');
   });
+
+  return browser;
 }
 
 // ── Page ──────────────────────────────────────────────────────────

@@ -281,7 +281,11 @@ function httpRequest(url, options, body) {
         if (res.statusCode >= 400) {
           reject(new Error(`HTTP ${res.statusCode}: ${data.slice(0, 200)}`));
         } else {
-          resolve(JSON.parse(data));
+          try {
+            resolve(JSON.parse(data));
+          } catch {
+            reject(new Error(`LLM returned non-JSON: ${data.slice(0, 200)}`));
+          }
         }
       });
     });

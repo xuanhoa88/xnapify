@@ -25,11 +25,11 @@
 //   npm run test:e2e -- --parallel                       # Run modules concurrently
 //
 // Environment:
-//   XNAPIFY_PORT=1337      # App port (auto-detected from .env)
-//   E2E_HEADLESS=false     # Show browser (fallback; prefer --headed flag)
-//   E2E_FIXTURE_ZIP=...    # Path to test extension .zip
-//   E2E_EMAIL=admin@...    # Login email (fallback — prefer YAML front-matter)
-//   E2E_PASSWORD=secret    # Login password (fallback — prefer YAML front-matter)
+//   XNAPIFY_PORT|E2E_PORT|PORT=1337      # App port (auto-detected from .env)
+//   E2E_HEADLESS=false                   # Show browser (fallback; prefer --headed flag)
+//   E2E_FIXTURE_ZIP=...                  # Path to test extension .zip
+//   E2E_EMAIL=admin@...                  # Login email (fallback — prefer YAML front-matter)
+//   E2E_PASSWORD=secret                  # Login password (fallback — prefer YAML front-matter)
 //
 // LLM Interpreter:
 //   E2E_LLM_PROVIDER=auto  # auto (default) | stdin | openai | anthropic | google | ollama | custom
@@ -52,6 +52,16 @@ if (!process.env.E2E_VIA_TASK) {
   console.error('');
   process.exit(1);
 }
+
+// Global safety net for Puppeteer WebSocket disconnected events
+process.on('unhandledRejection', reason => {
+  if (reason && reason.message && reason.message.includes('socket hang up')) {
+    console.error('   ⚠ Browser connection lost — continuing...');
+    return;
+  }
+  console.error('Fatal error:', reason);
+  process.exit(1);
+});
 
 const fs = require('fs');
 const http = require('http');
@@ -274,7 +284,6 @@ async function run() {
 
   async function ensureLLMAvailable() {
     if (llmValidated || mode === 'run') return;
-    llmValidated = true;
 
     if (llmProvider === 'auto') {
       const hasGemini =
@@ -321,6 +330,7 @@ async function run() {
         process.exit(1);
       }
     }
+    llmValidated = true;
   }
 
   // For compile mode, validate LLM immediately (we know we'll need it)
@@ -451,6 +461,15 @@ async function run() {
         // Compile mode: call LLM for each step, save script.json
         await ensureLLMAvailable();
         try {
+          // Prevent ECONNRESET during slow LLM compilations by closing any idle browser
+          if (browser) {
+            console.log(
+              '    ⏳ Closing browser during compilation to prevent idle timeout...',
+            );
+            await closeBrowser(browser);
+            browser = null; // Will be lazily re-launched
+          }
+
           script = await compileTestCase(
             tc,
             interpretStep,
@@ -494,7 +513,7 @@ async function run() {
 
         const context = {
           page: testPage,
-          apiState: createAPIState(),
+          apiState: createAPIState(tc.prerequisites),
           baseUrl,
           currentCard: null,
           prerequisites: tc.prerequisites || {},
@@ -581,7 +600,9 @@ async function run() {
 
       if (needsBrowser && browser && testPage) {
         try {
+          const ctx = testPage.browserContext();
           await testPage.close();
+          await ctx.close();
         } catch {
           // Page already closed or crashed
         }
