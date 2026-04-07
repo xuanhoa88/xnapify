@@ -18,12 +18,14 @@
  *   E2E_LLM_PROVIDER=anthropic  → Anthropic API (Claude)
  *   E2E_LLM_PROVIDER=google     → Google Gemini API
  *   E2E_LLM_PROVIDER=ollama     → Local Ollama (free, private)
+ *   E2E_LLM_PROVIDER=azure      → Microsoft Azure OpenAI Service
  *   E2E_LLM_PROVIDER=custom     → Custom endpoint
  *
  * The "auto" provider scans these env vars in order:
  *   E2E_GEMINI_API_KEY                  → google
  *   E2E_OPENAI_API_KEY                  → openai
  *   E2E_ANTHROPIC_API_KEY               → anthropic
+ *   E2E_AZURE_API_KEY                   → azure
  *   (fallback)                          → ollama
  *
  * The "stdin" provider enables AI IDE agents (Gemini, Claude, Copilot)
@@ -69,10 +71,17 @@ const LLM_PROVIDERS = {
     authParam: 'key',
   },
   ollama: {
-    baseUrl: `http://${process.env.E2E_OLLAMA_HOST || `${process.env.XNAPIFY_HOST || '127.0.0.1'}:${process.env.E2E_OLLAMA_PORT || 11434}`}/v1`,
+    baseUrl: `http://${process.env.E2E_OLLAMA_HOST || process.env.XNAPIFY_HOST || '127.0.0.1'}:${process.env.E2E_OLLAMA_PORT || 11434}/v1`,
     model: process.env.E2E_OLLAMA_MODEL || 'llama3.2',
     endpoint: '/chat/completions',
     authHeader: () => '',
+  },
+  azure: {
+    baseUrl: process.env.E2E_LLM_BASE_URL || '',
+    model: process.env.E2E_LLM_MODEL || '',
+    endpoint: '',
+    authHeader: key => key,
+    authHeaderName: 'api-key',
   },
   custom: {
     baseUrl: '',
@@ -481,7 +490,8 @@ async function callOpenAI(config, prompt) {
   const headers = { 'Content-Type': 'application/json' };
   if (typeof config.authHeader === 'function') {
     const authValue = config.authHeader(config.apiKey);
-    if (authValue) headers.Authorization = authValue;
+    const headerName = config.authHeaderName || 'Authorization';
+    if (authValue) headers[headerName] = authValue;
   }
 
   const result = await httpRequest(url, { method: 'POST', headers }, body);
@@ -544,6 +554,7 @@ const PROVIDER_ENV_KEYS = {
   google: 'E2E_GEMINI_API_KEY',
   openai: 'E2E_OPENAI_API_KEY',
   anthropic: 'E2E_ANTHROPIC_API_KEY',
+  azure: 'E2E_AZURE_API_KEY',
 };
 
 /**
@@ -662,6 +673,7 @@ const CALLERS = {
   google: callGoogle,
   ollama: callOpenAI, // Ollama uses OpenAI-compatible API
   custom: callOpenAI, // Custom also uses OpenAI-compatible API
+  azure: callOpenAI, // Azure uses OpenAI-compatible API with api-key header
 };
 
 // ── Main: Interpret Step ──────────────────────────────────────────
@@ -702,7 +714,7 @@ Return the JSON action to perform this step.`;
     const providerConfig = { ...LLM_PROVIDERS[provider] };
     if (!providerConfig) {
       throw new Error(
-        `Unknown LLM provider: ${provider}.Use: auto, stdin, openai, anthropic, google, ollama, custom`,
+        `Unknown LLM provider: ${provider}.Use: auto, stdin, openai, anthropic, google, ollama, azure, custom`,
       );
     }
 
@@ -714,7 +726,7 @@ Return the JSON action to perform this step.`;
 
     if (provider !== 'ollama' && !providerConfig.apiKey) {
       throw new Error(
-        `API key required for ${provider}.Set E2E_LLM_API_KEY or provider env var (e.g., E2E_GEMINI_API_KEY).`,
+        `API key required for ${provider}.Set E2E_LLM_API_KEY or provider env var (e.g., E2E_AZURE_API_KEY).`,
       );
     }
 

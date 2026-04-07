@@ -59,7 +59,7 @@ npm run test:e2e -- --parallel --filter="**/login/**" --headed
 
 > [!TIP]
 > Credentials are defined per-test in YAML front-matter. No env vars needed for auth!
-> LLM auto-detects from existing IDE API keys (`E2E_GEMINI_API_KEY`, `E2E_OPENAI_API_KEY`, etc.)
+> LLM auto-detects from existing IDE API keys (`E2E_AZURE_API_KEY`, `E2E_GEMINI_API_KEY`, `E2E_OPENAI_API_KEY`, etc.)
 
 **Environment variables:**
 
@@ -70,7 +70,7 @@ npm run test:e2e -- --parallel --filter="**/login/**" --headed
 | `E2E_FIXTURE_ZIP`  | No       | Path to test extension `.zip` for install tests                                |
 | `E2E_EMAIL`        | No       | Login email fallback (prefer YAML front-matter in test files)                  |
 | `E2E_PASSWORD`     | No       | Login password fallback (prefer YAML front-matter in test files)               |
-| `E2E_LLM_PROVIDER` | No       | `auto` (default), `stdin`, `openai`, `anthropic`, `google`, `ollama`, `custom` |
+| `E2E_LLM_PROVIDER` | No       | `auto` (default), `stdin`, `openai`, `anthropic`, `google`, `ollama`, `azure`, `custom` |
 | `E2E_LLM_API_KEY`  | No       | Override auto-detected API key                                                 |
 | `E2E_LLM_MODEL`    | No       | Model name override (each provider has a default)                              |
 | `E2E_LLM_BASE_URL` | No       | Base URL override (for custom LLM provider)                                    |
@@ -569,12 +569,12 @@ Each test case gets a `script.json` — a compiled automation script:
 | `assert_status` | Check status code     | `expected` (number)                       |
 | `assert_body`   | Check JSON response   | `path`, `exists`/`equals`/`contains`      |
 | `assert_header` | Check response header | `name`, `exists`/`contains`               |
-| `store_value`   | Save value for reuse  | `from` (e.g. `response.data.token`), `as` |
+| `store_value`   | Save value for reuse  | `from` (API body, DOM property), `value` (static), `as` |
 | `set_header`    | Set persistent header | `name`, `value` (supports `{{var}}`)      |
 
 - **Committed to git** — teammates run tests without needing LLM API keys
 - **Auto-archived** — when `test.md` changes, old script moves to `scripts/` for history
-- **Self-healing** — if a compiled action fails, runner auto-recompiles via LLM and retries
+- **Self-healing** — if a compiled action fails, runner auto-recompiles via LLM, injecting the exact runtime error back into the prompt so the AI can correct its mistake before retrying.
 
 ## Rules
 
