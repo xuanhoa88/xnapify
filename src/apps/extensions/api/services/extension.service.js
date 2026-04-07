@@ -512,20 +512,36 @@ export async function installExtensionFromPackage(
         .then(() => true)
         .catch(() => false))
     ) {
-      const entries = await fs.promises.readdir(tempExtractDir, {
-        withFileTypes: true,
-      });
-      const subdirs = entries.filter(d => d.isDirectory());
+      // Deeply search for package.json through single subdirectories (handles scoped formats as well as package/)
+      let currentDir = tempExtractDir;
+      while (currentDir) {
+        const entries = await fs.promises.readdir(currentDir, {
+          withFileTypes: true,
+        });
+        const subdirs = entries.filter(d => d.isDirectory());
 
-      console.debug('[installExtensionFromPackage] Extracted contents:', {
-        tempExtractDir,
-        entries: entries.map(e => ({ name: e.name, isDir: e.isDirectory() })),
-        subdirs: subdirs.map(d => d.name),
-      });
+        console.debug('[installExtensionFromPackage] Extracted contents:', {
+          currentDir,
+          entries: entries.map(e => ({ name: e.name, isDir: e.isDirectory() })),
+          subdirs: subdirs.map(d => d.name),
+        });
 
-      if (subdirs.length === 1) {
-        extensionRoot = path.join(tempExtractDir, subdirs[0].name);
-        manifestPath = path.join(extensionRoot, 'package.json');
+        if (subdirs.length === 1) {
+          currentDir = path.join(currentDir, subdirs[0].name);
+          const currentManifestPath = path.join(currentDir, 'package.json');
+          const hasManifest = await fs.promises
+            .access(currentManifestPath)
+            .then(() => true)
+            .catch(() => false);
+
+          if (hasManifest) {
+            extensionRoot = currentDir;
+            manifestPath = currentManifestPath;
+            break;
+          }
+        } else {
+          break;
+        }
       }
     }
 

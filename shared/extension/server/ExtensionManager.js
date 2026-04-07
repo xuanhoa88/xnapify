@@ -826,18 +826,37 @@ class ServerExtensionManager extends BaseExtensionManager {
           .filter(Boolean),
       );
 
+      const extDirs = [];
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+        if (entry.name.startsWith('@')) {
+          const scopeDir = path.join(devBaseDir, entry.name);
+          try {
+            const scopeEntries = await fs.promises.readdir(scopeDir, {
+              withFileTypes: true,
+            });
+            for (const subEntry of scopeEntries) {
+              if (subEntry.isDirectory()) {
+                extDirs.push(path.join(scopeDir, subEntry.name));
+              }
+            }
+          } catch {
+            // skip
+          }
+        } else {
+          extDirs.push(path.join(devBaseDir, entry.name));
+        }
+      }
+
       const devExtensions = (
         await Promise.all(
-          entries
-            .filter(entry => entry.isDirectory())
-            .map(async entry => {
-              const extDir = path.join(devBaseDir, entry.name);
-              const manifest = await this.readManifest(extDir);
-              if (!manifest || !manifest.id) return null;
-              if (loadedNames.has(manifest.name)) return null;
+          extDirs.map(async extDir => {
+            const manifest = await this.readManifest(extDir);
+            if (!manifest || !manifest.id) return null;
+            if (loadedNames.has(manifest.name)) return null;
 
-              return { ...manifest, fromDisk: true };
-            }),
+            return { ...manifest, fromDisk: true };
+          }),
         )
       ).filter(Boolean);
 
@@ -1091,14 +1110,23 @@ class ServerExtensionManager extends BaseExtensionManager {
       let manifest = await this.readManifest(extensionRoot);
 
       if (!manifest) {
-        // Check single subdirectory (common tarball layout: package/...)
-        const entries = await fs.promises.readdir(tempDir, {
-          withFileTypes: true,
-        });
-        const subdirs = entries.filter(d => d.isDirectory());
-        if (subdirs.length === 1) {
-          extensionRoot = path.join(tempDir, subdirs[0].name);
-          manifest = await this.readManifest(extensionRoot);
+        // Deeply search for package.json through single subdirectories (handles scoped formats as well as package/)
+        let currentDir = tempDir;
+        while (currentDir) {
+          const entries = await fs.promises.readdir(currentDir, {
+            withFileTypes: true,
+          });
+          const subdirs = entries.filter(d => d.isDirectory());
+          if (subdirs.length === 1) {
+            currentDir = path.join(currentDir, subdirs[0].name);
+            manifest = await this.readManifest(currentDir);
+            if (manifest) {
+              extensionRoot = currentDir;
+              break;
+            }
+          } else {
+            break;
+          }
         }
       }
 

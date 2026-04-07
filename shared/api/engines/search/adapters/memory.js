@@ -100,6 +100,18 @@ export default class MemorySearch {
             const data = await fs.readFile(filePath, 'utf8');
             const document = JSON.parse(data);
             const key = `${document.entityType}_${document.entityId}`;
+            const safeFilename = `${encodeURIComponent(key)}.json`;
+
+            // Migrate any old filenames to safe filenames on the fly
+            if (file !== safeFilename) {
+              const safePath = path.join(this.directory, safeFilename);
+              try {
+                await fs.rename(filePath, safePath);
+              } catch (renameErr) {
+                // Ignore rename errors during load
+              }
+            }
+
             this.memoryIndex.set(key, document);
           } catch (err) {
             console.error(`Error loading search file ${file}:`, err);
@@ -142,7 +154,8 @@ export default class MemorySearch {
     // Update memory map immediately for next readers
     this.memoryIndex.set(key, document);
 
-    const filePath = path.join(this.directory, `${key}.json`);
+    const safeFilename = encodeURIComponent(key);
+    const filePath = path.join(this.directory, `${safeFilename}.json`);
 
     // Use concurrency queue to write to file safely
     await this._enqueue(key, async () => {
@@ -222,7 +235,8 @@ export default class MemorySearch {
 
     this.memoryIndex.delete(key);
 
-    const filePath = path.join(this.directory, `${key}.json`);
+    const safeFilename = encodeURIComponent(key);
+    const filePath = path.join(this.directory, `${safeFilename}.json`);
 
     await this._enqueue(key, async () => {
       try {
@@ -256,7 +270,8 @@ export default class MemorySearch {
       keys.map(key =>
         this._enqueue(key, async () => {
           this.memoryIndex.delete(key);
-          const filePath = path.join(this.directory, `${key}.json`);
+          const safeFilename = encodeURIComponent(key);
+          const filePath = path.join(this.directory, `${safeFilename}.json`);
           try {
             await fs.unlink(filePath);
           } catch {

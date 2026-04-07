@@ -6,6 +6,7 @@
  */
 
 import fs from 'fs';
+import path from 'path';
 
 /**
  * Default active extensions — seeded as active on first run.
@@ -27,18 +28,35 @@ async function discoverAllExtensionManifests(container) {
     try {
       const files = await fs.promises.readdir(dirPath, { withFileTypes: true });
 
-      const readPromises = files
-        .filter(dirent => dirent.isDirectory())
-        .map(async dirent => {
-          const manifest = await extensionManager.readManifest(
-            dirPath,
-            dirent.name,
-          );
-          // Only add the first occurrence to the map
-          if (manifest && manifest.name && !manifests.has(manifest.name)) {
-            manifests.set(manifest.name, manifest);
+      const allExtensionPaths = [];
+      for (const dirent of files) {
+        if (!dirent.isDirectory()) continue;
+        if (dirent.name.startsWith('@')) {
+          const scopeDir = path.join(dirPath, dirent.name);
+          try {
+            const scopeFiles = await fs.promises.readdir(scopeDir, {
+              withFileTypes: true,
+            });
+            for (const subDirent of scopeFiles) {
+              if (subDirent.isDirectory()) {
+                allExtensionPaths.push([dirPath, dirent.name, subDirent.name]);
+              }
+            }
+          } catch {
+            // ignore
           }
-        });
+        } else {
+          allExtensionPaths.push([dirPath, dirent.name]);
+        }
+      }
+
+      const readPromises = allExtensionPaths.map(async manifestArgs => {
+        const manifest = await extensionManager.readManifest(...manifestArgs);
+        // Only add the first occurrence to the map
+        if (manifest && manifest.name && !manifests.has(manifest.name)) {
+          manifests.set(manifest.name, manifest);
+        }
+      });
 
       await Promise.all(readPromises);
     } catch {
