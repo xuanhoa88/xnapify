@@ -5,8 +5,6 @@
  * Output: tools/e2e/test-cases-template.xlsx
  */
 
-/* eslint-disable no-console */
-
 const path = require('path');
 
 const XLSX = require('xlsx');

@@ -17,12 +17,10 @@
  * Actions are simple, safe, pre-built handlers — no eval/exec.
  */
 
-/* eslint-disable no-console, no-underscore-dangle */
+/* eslint-disable no-underscore-dangle */
 
 const http = require('http');
 const https = require('https');
-
-const config = require('../config');
 
 // ── SPA Stability Engine ──────────────────────────────────────────
 //
@@ -42,7 +40,7 @@ const SPA_DEFAULTS = {
   timeout: 15000,
   settleWindow: 300,
   pollInterval: 100,
-  debug: config.env('E2E_DEBUG') === 'true',
+  debug: process.env.E2E_DEBUG === 'true',
 
   // CSS class patterns that indicate loading state
   loadingPatterns: [
@@ -547,10 +545,9 @@ const ACTIONS = {
   async login({ page, baseUrl, prerequisites }, action) {
     // Resolve credentials: action > prerequisites > env (last resort)
     const prereqs = prerequisites || {};
-    const email =
-      action.email || prereqs.email || config.env('E2E_EMAIL') || '';
+    const email = action.email || prereqs.email || process.env.E2E_EMAIL || '';
     const password =
-      action.password || prereqs.password || config.env('E2E_PASSWORD') || '';
+      action.password || prereqs.password || process.env.E2E_PASSWORD || '';
 
     if (!email || !password) {
       throw new Error(

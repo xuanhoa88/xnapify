@@ -47,6 +47,9 @@ const path = require('path');
 const fm = require('front-matter');
 const MarkdownIt = require('markdown-it');
 
+const SOURCE_BASES = ['src'];
+const SKIP_DIRS = new Set(['node_modules', 'e2e']);
+
 const md = new MarkdownIt();
 
 /**
@@ -255,26 +258,37 @@ function discoverTestFiles(dirs) {
   return files.sort();
 }
 
-function findAllE2eDirs(rootDir) {
-  const results = [];
-  const searchDirs = [
-    path.join(rootDir, 'src', 'apps'),
-    path.join(rootDir, 'src', 'extensions'),
-  ];
+function getSearchDirs(rootDir) {
+  return SOURCE_BASES.map(sub => path.join(rootDir, sub));
+}
 
-  for (const searchDir of searchDirs) {
-    if (!fs.existsSync(searchDir)) continue;
-    const modules = fs.readdirSync(searchDir, { withFileTypes: true });
-    for (const mod of modules) {
-      if (!mod.isDirectory()) continue;
-      const e2eDir = path.join(searchDir, mod.name, 'e2e');
-      if (fs.existsSync(e2eDir)) {
-        results.push(e2eDir);
-      }
-    }
+function shouldSkip(name) {
+  return SKIP_DIRS.has(name) || name.startsWith('.');
+}
+
+async function walkDir(dir) {
+  try {
+    const entries = await fs.promises.readdir(dir, { withFileTypes: true });
+    const dirs = entries.filter(e => e.isDirectory());
+
+    const results = await Promise.all(
+      dirs.map(entry => {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.name === 'e2e') return [fullPath];
+        if (shouldSkip(entry.name)) return [];
+        return walkDir(fullPath);
+      }),
+    );
+
+    return results.flat();
+  } catch {
+    return [];
   }
+}
 
-  return results.sort();
+async function findAllE2eDirs(rootDir) {
+  const results = await Promise.all(getSearchDirs(rootDir).map(walkDir));
+  return results.flat().sort();
 }
 
 /**
@@ -304,4 +318,5 @@ module.exports = {
   discoverTestFiles,
   findAllE2eDirs,
   detectTestType,
+  SOURCE_BASES,
 };

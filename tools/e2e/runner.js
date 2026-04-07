@@ -14,7 +14,7 @@
  * launches Chromium via Puppeteer, and executes them step by step.
  *
  * Usage:
- *   node tools/e2e/runner.js                         # Auto: compile if needed, run
+ *   node tools/e2e/runner.js                          # Auto: compile if needed, run
  *   node tools/e2e/runner.js --mode=compile           # Compile scripts via LLM
  *   node tools/e2e/runner.js --mode=run               # Run from compiled scripts
  *   node tools/e2e/runner.js --mode=compile --force   # Force recompile
@@ -23,7 +23,7 @@
  *   node tools/e2e/runner.js --headed                 # Show browser window
  *
  * Environment:
- *   XNAPIFY_PORT=1337          # App port (auto-detected from .env)
+ *   XNAPIFY_PORT=1337      # App port (auto-detected from .env)
  *   E2E_HEADLESS=false     # Show browser (fallback; prefer --headed flag)
  *   E2E_FIXTURE_ZIP=...    # Path to test extension .zip
  *   E2E_EMAIL=admin@...    # Login email (fallback — prefer YAML front-matter)
@@ -36,13 +36,9 @@
  *   E2E_LLM_BASE_URL=...   # Base URL (for custom/ollama)
  */
 
-/* eslint-disable no-console */
-
 const fs = require('fs');
 const http = require('http');
 const path = require('path');
-
-const config = require('../config');
 
 const { launchBrowser, createPage, closeBrowser } = require('./browser');
 const {
@@ -58,6 +54,7 @@ const {
   discoverTestFiles,
   findAllE2eDirs,
   detectTestType,
+  SOURCE_BASES,
 } = require('./parser');
 const {
   createReportDir,
@@ -65,7 +62,7 @@ const {
   writeSummary,
 } = require('./reporter');
 
-const ROOT_DIR = config.CWD || process.cwd();
+const ROOT_DIR = process.env.CWD || process.cwd();
 
 const TYPE_ICONS = { ui: '🌐', api: '🔌', system: '🔗' };
 
@@ -73,82 +70,73 @@ const TYPE_ICONS = { ui: '🌐', api: '🔌', system: '🔗' };
 
 function resolvePort() {
   // Priority 1: env var
-  const e2ePort = config.env('XNAPIFY_PORT');
+  const e2ePort = process.env.XNAPIFY_PORT;
   if (e2ePort) return e2ePort;
 
   // Priority 2: .env files
-  const envFiles = ['.env', '.env.test', '.env.development', '.env.local'];
-  let port = '1337';
-  for (const file of envFiles) {
-    const filePath = path.join(ROOT_DIR, file);
-    if (!fs.existsSync(filePath)) continue;
-    const content = fs.readFileSync(filePath, 'utf-8');
-    const match = content.match(/^XNAPIFY_PORT=(\d+)/m);
-    if (match) port = match[1];
-  }
-  return port;
+  return process.env.PORT || '1337';
 }
 
-function resolveTarget(arg) {
-  if (!arg) return findAllE2eDirs(ROOT_DIR);
-
-  // Supports:
-  //   "extensions"                                    → run all in extensions module
-  //   "quick-access-plugin"                           → run all in quick-access-plugin
-  //   "extensions/install"                            → run all in install category
-  //   "extensions/install/01-upload"                  → run single test case
-  //   "quick-access-plugin/login/01-buttons-visible"  → run single test case
-  //   "quick-access-plugin/api"                       → run all API tests
-  //   "quick-access-plugin/api/auth"                  → run all in api/auth category
-  //   "quick-access-plugin/api/auth/01-login-jwt"     → run single API test case
-  const parts = arg.split('/');
-  const mod = parts[0];
-
-  const e2eDirs = [
-    path.join(ROOT_DIR, 'src', 'apps', mod, 'e2e'),
-    path.join(ROOT_DIR, 'src', 'extensions', mod, 'e2e'),
-  ];
-  const e2eDir = e2eDirs.find(d => fs.existsSync(d));
-  if (!e2eDir) {
-    console.error(`❌ No e2e/ directory found for: ${mod}`);
-    console.error(`   Searched: ${e2eDirs.join(', ')}`);
-    process.exit(1);
+function getModuleName(rootDir, e2eDir) {
+  for (const base of SOURCE_BASES) {
+    const rel = path.relative(path.join(rootDir, base), path.dirname(e2eDir));
+    if (!rel.startsWith('..') && !path.isAbsolute(rel)) return rel;
   }
+  return null;
+}
 
-  // Remaining path after module name
-  const rest = parts.slice(1);
+function findMatchingE2eDir(allE2eDirs, rootDir, arg) {
+  for (const dir of allE2eDirs) {
+    const modName = getModuleName(rootDir, dir);
+    if (!modName) continue;
+    if (arg === modName || arg.startsWith(modName + '/')) {
+      const subPath = arg === modName ? '' : arg.slice(modName.length + 1);
+      return { e2eDir: dir, subPath };
+    }
+  }
+  return null;
+}
 
-  // Build the actual sub-path within e2e/
-  const subPath = rest.join(path.sep);
+function resolveSubPath(e2eDir, subPath) {
   const fullPath = path.join(e2eDir, subPath);
 
-  // Single test case: resolve to test.md
   const testFile = path.join(fullPath, 'test.md');
   if (fs.existsSync(testFile)) {
-    return [{ dir: e2eDir, files: [testFile] }];
+    return { dir: e2eDir, files: [testFile] };
   }
 
-  // Category or type directory: discover all cases beneath it
-  if (rest.length >= 1 && fs.existsSync(fullPath)) {
+  if (fs.existsSync(fullPath)) {
     const files = discoverTestFiles([fullPath]);
     if (files.length === 0) {
       console.error(`❌ No test cases found in: ${subPath}`);
       process.exit(1);
     }
-    return [{ dir: e2eDir, files }];
+    return { dir: e2eDir, files };
   }
 
-  // Invalid sub-path
-  if (rest.length >= 1) {
-    console.error(`❌ Path not found: ${subPath}`);
-    console.error(`   Searched: ${fullPath}`);
+  console.error(`❌ Path not found: ${subPath}`);
+  console.error(`   Searched: ${fullPath}`);
+  process.exit(1);
+}
+
+async function resolveTarget(arg) {
+  const allE2eDirs = await findAllE2eDirs(ROOT_DIR);
+  if (!arg) return allE2eDirs;
+
+  const match = findMatchingE2eDir(allE2eDirs, ROOT_DIR, arg);
+  if (!match) {
+    console.error(`❌ No e2e/ directory found matching: ${arg}`);
+    console.error(
+      `   Make sure the module exists in src/apps or src/extensions.`,
+    );
     process.exit(1);
   }
 
-  // Module only: discover all
-  return [e2eDir];
-}
+  const { e2eDir, subPath } = match;
+  if (!subPath) return [e2eDir];
 
+  return [resolveSubPath(e2eDir, subPath)];
+}
 /**
  * Wait for the application to be reachable at the given URL.
  * Pings the URL until it returns a response or times out.
@@ -198,17 +186,17 @@ async function run() {
   const port = resolvePort();
   const baseUrl = `http://127.0.0.1:${port}`;
   const startupTimeout = parseInt(
-    config.env('E2E_STARTUP_TIMEOUT') || '30000',
+    process.env.E2E_STARTUP_TIMEOUT || '30000',
     10,
   );
-  const headless = headed ? false : config.env('E2E_HEADLESS') !== 'false';
+  const headless = headed ? false : process.env.E2E_HEADLESS !== 'false';
   const timestamp = new Date()
     .toISOString()
     .slice(0, 16)
     .replace(/[T:]/g, '_')
     .replace(/-/g, '-');
 
-  const llmProvider = config.env('E2E_LLM_PROVIDER') || 'auto';
+  const llmProvider = process.env.E2E_LLM_PROVIDER || 'auto';
 
   console.log('');
   console.log('╔══════════════════════════════════════╗');
@@ -243,9 +231,9 @@ async function run() {
 
     if (llmProvider === 'auto') {
       const hasGemini =
-        config.env('GEMINI_API_KEY') || config.env('GOOGLE_API_KEY');
-      const hasOpenAI = config.env('OPENAI_API_KEY');
-      const hasAnthropic = config.env('ANTHROPIC_API_KEY');
+        process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+      const hasOpenAI = process.env.OPENAI_API_KEY;
+      const hasAnthropic = process.env.ANTHROPIC_API_KEY;
       resolvedLLM = hasGemini
         ? 'google'
         : hasOpenAI
@@ -258,7 +246,7 @@ async function run() {
 
     if (resolvedLLM === 'ollama') {
       const ollamaUrl =
-        config.env('E2E_LLM_BASE_URL') || 'http://localhost:11434';
+        process.env.E2E_LLM_BASE_URL || 'http://localhost:11434';
       try {
         await new Promise((resolve, reject) => {
           const req = http.request(
@@ -298,7 +286,7 @@ async function run() {
   console.log('');
 
   // Resolve target directories
-  const targetDirs = resolveTarget(targetArg);
+  const targetDirs = await resolveTarget(targetArg);
   if (Array.isArray(targetDirs) && targetDirs.length === 0) {
     console.log('No e2e/ directories found. Nothing to test.');
     return;
@@ -326,22 +314,11 @@ async function run() {
   testFiles.forEach(t => console.log(`   ${path.relative(ROOT_DIR, t.file)}`));
   console.log('');
 
-  // Launch browser only if needed (skip for compile-only or API-only tests)
+  // Deferred browser launching: We MUST wait until AFTER LLM compilation.
+  // Slow local LLMs (Ollama) can take 5+ minutes to compile a test case.
+  // If we launch Chromium upfront, the idle WebSocket connection will drop with ECONNRESET.
   let browser = null;
   let page = null;
-  const needsBrowser =
-    mode !== 'compile' &&
-    testFiles.some(t => {
-      const type = detectTestType(path.dirname(t.file));
-      return type === 'ui' || type === 'system';
-    });
-
-  if (needsBrowser) {
-    browser = await launchBrowser({ headless });
-    page = await createPage(browser);
-  } else if (mode !== 'compile') {
-    console.log('  🔌 API-only tests — no browser launched');
-  }
 
   // Group files by e2e directory (module)
   const byModule = new Map();
@@ -385,22 +362,6 @@ async function run() {
         );
       }
 
-      // Get a fresh page for each test to ensure cookie and state isolation
-      let testPage = page;
-      if (needsBrowser && browser) {
-        testPage = await createPage(browser);
-      }
-
-      const context = {
-        page: testPage,
-        apiState: createAPIState(),
-        baseUrl,
-        currentCard: null,
-        prerequisites: tc.prerequisites || {},
-        fixtureZip:
-          (tc.prerequisites || {}).fixture_zip || config.env('E2E_FIXTURE_ZIP'),
-      };
-
       const TEST_TIMEOUT = 600000; // 10 minutes per test case
       let timeoutId;
       const timeoutPromise = new Promise((_, reject) => {
@@ -430,7 +391,7 @@ async function run() {
           script = await compileTestCase(
             tc,
             interpretStep,
-            { currentUrl: testPage ? testPage.url() : 'about:blank' },
+            { currentUrl: baseUrl },
             timestamp,
           );
           if (mode === 'compile') {
@@ -452,6 +413,31 @@ async function run() {
 
       // ── Execute actions (skip for compile-only mode) ──
       if (script && testPassed && mode !== 'compile') {
+        // Lazy launch the browser ONLY exactly when we are ready to execute UI tests.
+        const type = detectTestType(tc.testCaseDir);
+        const needsBrowser = type === 'ui' || type === 'system';
+
+        if (needsBrowser && !browser) {
+          browser = await launchBrowser({ headless });
+          page = await createPage(browser);
+        }
+
+        // Get a fresh page for each test to ensure cookie and state isolation
+        let testPage = null;
+        if (needsBrowser && browser) {
+          testPage = await createPage(browser);
+        }
+
+        const context = {
+          page: testPage,
+          apiState: createAPIState(),
+          baseUrl,
+          currentCard: null,
+          prerequisites: tc.prerequisites || {},
+          fixtureZip:
+            (tc.prerequisites || {}).fixture_zip || process.env.E2E_FIXTURE_ZIP,
+        };
+
         const stepsPromise = (async () => {
           for (let s = 0; s < script.actions.length; s++) {
             const action = script.actions[s];

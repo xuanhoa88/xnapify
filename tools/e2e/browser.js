@@ -21,8 +21,6 @@
  *   ENGINE                  → string label for logs / reports
  */
 
-/* eslint-disable no-console */
-
 // ── Defaults ──────────────────────────────────────────────────────
 
 const DEFAULT_VIEWPORT = { width: 1280, height: 900 };
@@ -46,7 +44,6 @@ const ENGINE = 'Puppeteer';
 
 /**
  * Returns `true` when the browser library can be resolved.
- * Used by smokeTest to validate the environment before launching.
  */
 function isAvailable() {
   try {

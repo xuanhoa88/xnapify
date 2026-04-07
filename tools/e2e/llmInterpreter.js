@@ -36,13 +36,9 @@
  *   E2E_LLM_BASE_URL → Base URL (for custom/ollama)
  */
 
-/* eslint-disable no-console */
-
 const http = require('http');
 const https = require('https');
 const readline = require('readline');
-
-const config = require('../config');
 
 // Module-level state
 let cachedProvider = null;
@@ -363,21 +359,21 @@ function autoDetectProvider() {
 
   // Gemini / Google
   const geminiKey =
-    config.env('GEMINI_API_KEY') || config.env('GOOGLE_API_KEY') || '';
+    process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
   if (geminiKey) {
     cachedProvider = { provider: 'google', apiKey: geminiKey };
     return cachedProvider;
   }
 
   // OpenAI / Copilot
-  const openaiKey = config.env('OPENAI_API_KEY') || '';
+  const openaiKey = process.env.OPENAI_API_KEY || '';
   if (openaiKey) {
     cachedProvider = { provider: 'openai', apiKey: openaiKey };
     return cachedProvider;
   }
 
   // Anthropic / Claude
-  const anthropicKey = config.env('ANTHROPIC_API_KEY') || '';
+  const anthropicKey = process.env.ANTHROPIC_API_KEY || '';
   if (anthropicKey) {
     cachedProvider = { provider: 'anthropic', apiKey: anthropicKey };
     return cachedProvider;
@@ -481,8 +477,8 @@ const CALLERS = {
 // ── Main: Interpret Step ──────────────────────────────────────────
 
 async function interpretStep(step, context) {
-  let provider = config.env('E2E_LLM_PROVIDER') || 'auto';
-  let apiKey = config.env('E2E_LLM_API_KEY') || '';
+  let provider = process.env.E2E_LLM_PROVIDER || 'auto';
+  let apiKey = process.env.E2E_LLM_API_KEY || '';
 
   // Auto-detect provider from IDE/CLI env keys
   if (provider === 'auto') {
@@ -525,10 +521,10 @@ Return the JSON action to perform this step.`;
     }
 
     providerConfig.apiKey = apiKey;
-    if (config.env('E2E_LLM_MODEL'))
-      providerConfig.model = config.env('E2E_LLM_MODEL');
-    if (config.env('E2E_LLM_BASE_URL'))
-      providerConfig.baseUrl = config.env('E2E_LLM_BASE_URL');
+    if (process.env.E2E_LLM_MODEL)
+      providerConfig.model = process.env.E2E_LLM_MODEL;
+    if (process.env.E2E_LLM_BASE_URL)
+      providerConfig.baseUrl = process.env.E2E_LLM_BASE_URL;
 
     if (provider !== 'ollama' && !providerConfig.apiKey) {
       throw new Error(

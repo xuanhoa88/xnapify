@@ -287,6 +287,10 @@ function ensureDeps(dialect) {
 
       const env = { ...process.env };
 
+      // Prevent debug port collisions and unsupported flag errors by explicitly removing
+      // NODE_OPTIONS from spawned npm steps.
+      delete env.NODE_OPTIONS;
+
       // Add NODE_DIR to env
       if (process.env.XNAPIFY_NODE_DIR) {
         env.npm_config_nodedir = process.env.XNAPIFY_NODE_DIR;
