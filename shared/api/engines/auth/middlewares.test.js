@@ -53,7 +53,7 @@ describe('requireAuth', () => {
     };
 
     const channelMock = {
-      emit: jest.fn(),
+      invoke: jest.fn(),
       on: jest.fn(),
     };
 
@@ -167,7 +167,7 @@ describe('requireAuth', () => {
 
       // Mock hook
       hookMock.has.mockReturnValue(true);
-      hookMock().emit.mockImplementation(async (event, req) => {
+      hookMock().invoke.mockImplementation(async (event, req) => {
         Object.assign(req, {
           user: decodedKey,
           authMethod: 'api_key',
@@ -182,7 +182,7 @@ describe('requireAuth', () => {
 
       expect(hookMock.has).toHaveBeenCalledWith('auth.strategy.api_key');
       expect(hookMock).toHaveBeenCalledWith('auth.strategy.api_key');
-      expect(hookMock().emit).toHaveBeenCalledWith(
+      expect(hookMock().invoke).toHaveBeenCalledWith(
         'authenticate',
         req,
         expect.objectContaining({
@@ -226,7 +226,7 @@ describe('requireAuth', () => {
       dbError.status = 500;
 
       hookMock.has.mockReturnValue(true);
-      hookMock().emit.mockRejectedValue(dbError);
+      hookMock().invoke.mockRejectedValue(dbError);
 
       const middleware = requireAuth();
       await middleware(req, res, next);
@@ -281,7 +281,7 @@ describe('optionalAuth', () => {
     };
 
     const channelMock = {
-      emit: jest.fn(),
+      invoke: jest.fn(),
       on: jest.fn(),
     };
 
@@ -333,7 +333,7 @@ describe('optionalAuth', () => {
     jwtMock.decodeToken.mockReturnValue({ payload: { type: 'api_key' } });
 
     hookMock.has.mockReturnValue(true);
-    hookMock().emit.mockImplementation(async (event, req) => {
+    hookMock().invoke.mockImplementation(async (event, req) => {
       Object.assign(req, {
         user: { id: 1, type: 'api_key' },
         authMethod: 'api_key',
@@ -344,7 +344,7 @@ describe('optionalAuth', () => {
     await middleware(req, res, next);
 
     expect(hookMock).toHaveBeenCalledWith('auth.strategy.api_key');
-    expect(hookMock().emit).toHaveBeenCalledWith(
+    expect(hookMock().invoke).toHaveBeenCalledWith(
       'authenticate',
       req,
       expect.objectContaining({
@@ -369,7 +369,7 @@ describe('requirePermission', () => {
   let req, res, next, hookMock;
 
   beforeEach(() => {
-    const channelMock = { emit: jest.fn() };
+    const channelMock = { invoke: jest.fn() };
     hookMock = jest.fn().mockReturnValue(channelMock);
     hookMock.has = jest.fn().mockReturnValue(false);
 
@@ -487,9 +487,9 @@ describe('requirePermission', () => {
     expect(next.mock.calls[0][0].message).toContain('users:write');
   });
 
-  test('should emit hook to resolve permissions when registered', async () => {
+  test('should invoke hook to resolve permissions when registered', async () => {
     hookMock.has.mockReturnValue(true);
-    hookMock().emit.mockImplementation(async (event, r) => {
+    hookMock().invoke.mockImplementation(async (event, r) => {
       r.user.permissions = ['users:read'];
     });
 
@@ -499,7 +499,7 @@ describe('requirePermission', () => {
 
     expect(hookMock.has).toHaveBeenCalledWith('auth.permissions');
     expect(hookMock).toHaveBeenCalledWith('auth.permissions');
-    expect(hookMock().emit).toHaveBeenCalledWith('resolve', req);
+    expect(hookMock().invoke).toHaveBeenCalledWith('resolve', req);
     expect(next).toHaveBeenCalledWith();
   });
 });
@@ -508,7 +508,7 @@ describe('requireAnyPermission', () => {
   let req, res, next, hookMock;
 
   beforeEach(() => {
-    const channelMock = { emit: jest.fn() };
+    const channelMock = { invoke: jest.fn() };
     hookMock = jest.fn().mockReturnValue(channelMock);
     hookMock.has = jest.fn().mockReturnValue(false);
 
@@ -588,7 +588,7 @@ describe('requireRole', () => {
   let req, res, next, hookMock;
 
   beforeEach(() => {
-    const channelMock = { emit: jest.fn() };
+    const channelMock = { invoke: jest.fn() };
     hookMock = jest.fn().mockReturnValue(channelMock);
     hookMock.has = jest.fn().mockReturnValue(false);
 
@@ -658,9 +658,9 @@ describe('requireRole', () => {
     expect(next).toHaveBeenCalledWith();
   });
 
-  test('should emit hook to resolve roles when registered', async () => {
+  test('should invoke hook to resolve roles when registered', async () => {
     hookMock.has.mockReturnValue(true);
-    hookMock().emit.mockImplementation(async (event, r) => {
+    hookMock().invoke.mockImplementation(async (event, r) => {
       r.user.roles = ['editor'];
     });
 
@@ -670,7 +670,7 @@ describe('requireRole', () => {
 
     expect(hookMock.has).toHaveBeenCalledWith('auth.roles');
     expect(hookMock).toHaveBeenCalledWith('auth.roles');
-    expect(hookMock().emit).toHaveBeenCalledWith('resolve', req);
+    expect(hookMock().invoke).toHaveBeenCalledWith('resolve', req);
     expect(next).toHaveBeenCalledWith();
   });
 });
@@ -679,7 +679,7 @@ describe('requireAnyRole', () => {
   let req, res, next, hookMock;
 
   beforeEach(() => {
-    const channelMock = { emit: jest.fn() };
+    const channelMock = { invoke: jest.fn() };
     hookMock = jest.fn().mockReturnValue(channelMock);
     hookMock.has = jest.fn().mockReturnValue(false);
 
@@ -820,7 +820,7 @@ describe('requireDynamicRole', () => {
   let req, res, next, hookMock;
 
   beforeEach(() => {
-    const channelMock = { emit: jest.fn() };
+    const channelMock = { invoke: jest.fn() };
     hookMock = jest.fn().mockReturnValue(channelMock);
     hookMock.has = jest.fn().mockReturnValue(false);
 
@@ -889,7 +889,7 @@ describe('requireDynamicRole', () => {
     req.user.roles = ['admin'];
     hookMock.has.mockReturnValue(true);
     hookMock.mockReturnValue({
-      emit: jest.fn().mockImplementation(async (event, r) => {
+      invoke: jest.fn().mockImplementation(async (event, r) => {
         r.requiredRoles = ['admin'];
       }),
     });
@@ -950,7 +950,7 @@ describe('requireOwnership', () => {
   let req, res, next, hookMock;
 
   beforeEach(() => {
-    const channelMock = { emit: jest.fn() };
+    const channelMock = { invoke: jest.fn() };
     hookMock = jest.fn().mockReturnValue(channelMock);
     hookMock.has = jest.fn().mockReturnValue(false);
 
@@ -1036,7 +1036,7 @@ describe('requireOwnership', () => {
 
   test('should use hook-based resolution with resourceType', async () => {
     hookMock.has.mockReturnValue(true);
-    hookMock().emit.mockImplementation(async (event, r) => {
+    hookMock().invoke.mockImplementation(async (event, r) => {
       r.isOwner = true;
     });
 
@@ -1046,7 +1046,7 @@ describe('requireOwnership', () => {
 
     expect(hookMock.has).toHaveBeenCalledWith('auth.ownership');
     expect(hookMock).toHaveBeenCalledWith('auth.ownership');
-    expect(hookMock().emit).toHaveBeenCalledWith('resolve', req, {
+    expect(hookMock().invoke).toHaveBeenCalledWith('resolve', req, {
       resourceType: 'post',
     });
     expect(next).toHaveBeenCalledWith();
@@ -1054,7 +1054,7 @@ describe('requireOwnership', () => {
 
   test('should deny via hook when isOwner is false', async () => {
     hookMock.has.mockReturnValue(true);
-    hookMock().emit.mockImplementation(async (event, r) => {
+    hookMock().invoke.mockImplementation(async (event, r) => {
       r.isOwner = false;
     });
 
@@ -1072,7 +1072,7 @@ describe('requireFlexibleOwnership', () => {
   let req, res, next, hookMock;
 
   beforeEach(() => {
-    const channelMock = { emit: jest.fn() };
+    const channelMock = { invoke: jest.fn() };
     hookMock = jest.fn().mockReturnValue(channelMock);
     hookMock.has = jest.fn().mockReturnValue(false);
 
@@ -1143,7 +1143,7 @@ describe('requireFlexibleOwnership', () => {
   test('should allow via hook-based strategy', async () => {
     hookMock.has.mockReturnValue(true);
     hookMock.mockReturnValue({
-      emit: jest.fn().mockImplementation(async (event, r) => {
+      invoke: jest.fn().mockImplementation(async (event, r) => {
         r.isOwner = true;
       }),
     });
@@ -1160,7 +1160,7 @@ describe('requireFlexibleOwnership', () => {
     hookMock.has.mockReturnValue(true);
     let callCount = 0;
     hookMock.mockReturnValue({
-      emit: jest.fn().mockImplementation(async (event, r) => {
+      invoke: jest.fn().mockImplementation(async (event, r) => {
         callCount++;
         // First strategy denies, second allows
         r.isOwner = callCount === 2;
@@ -1201,7 +1201,7 @@ describe('requireSharedOwnership', () => {
   let req, res, next, hookMock;
 
   beforeEach(() => {
-    const channelMock = { emit: jest.fn() };
+    const channelMock = { invoke: jest.fn() };
     hookMock = jest.fn().mockReturnValue(channelMock);
     hookMock.has = jest.fn().mockReturnValue(false);
 
@@ -1248,7 +1248,7 @@ describe('requireSharedOwnership', () => {
   test('should allow when user is among shared owners', async () => {
     hookMock.has.mockReturnValue(true);
     hookMock.mockReturnValue({
-      emit: jest.fn().mockImplementation(async (event, r) => {
+      invoke: jest.fn().mockImplementation(async (event, r) => {
         r.sharedOwners = [1, 2, 3];
       }),
     });
@@ -1262,7 +1262,7 @@ describe('requireSharedOwnership', () => {
   test('should deny when user is not among shared owners', async () => {
     hookMock.has.mockReturnValue(true);
     hookMock.mockReturnValue({
-      emit: jest.fn().mockImplementation(async (event, r) => {
+      invoke: jest.fn().mockImplementation(async (event, r) => {
         r.sharedOwners = [2, 3, 4];
       }),
     });
@@ -1279,7 +1279,7 @@ describe('requireSharedOwnership', () => {
   test('should deny when sharedOwners is empty', async () => {
     hookMock.has.mockReturnValue(true);
     hookMock.mockReturnValue({
-      emit: jest.fn().mockImplementation(async (event, r) => {
+      invoke: jest.fn().mockImplementation(async (event, r) => {
         r.sharedOwners = [];
       }),
     });
@@ -1305,7 +1305,7 @@ describe('requireSharedOwnership', () => {
     req.user.id = '123';
     hookMock.has.mockReturnValue(true);
     hookMock.mockReturnValue({
-      emit: jest.fn().mockImplementation(async (event, r) => {
+      invoke: jest.fn().mockImplementation(async (event, r) => {
         r.sharedOwners = [123, 456];
       }),
     });
@@ -1321,7 +1321,7 @@ describe('requireHierarchicalOwnership', () => {
   let req, res, next, hookMock;
 
   beforeEach(() => {
-    const channelMock = { emit: jest.fn() };
+    const channelMock = { invoke: jest.fn() };
     hookMock = jest.fn().mockReturnValue(channelMock);
     hookMock.has = jest.fn().mockReturnValue(false);
 
@@ -1368,7 +1368,7 @@ describe('requireHierarchicalOwnership', () => {
   test('should allow when user is the direct owner in chain', async () => {
     hookMock.has.mockReturnValue(true);
     hookMock.mockReturnValue({
-      emit: jest.fn().mockImplementation(async (event, r) => {
+      invoke: jest.fn().mockImplementation(async (event, r) => {
         r.ownerChain = ['user-1', 'manager-1', 'director-1'];
       }),
     });
@@ -1383,7 +1383,7 @@ describe('requireHierarchicalOwnership', () => {
     req.user.id = 'director-1';
     hookMock.has.mockReturnValue(true);
     hookMock.mockReturnValue({
-      emit: jest.fn().mockImplementation(async (event, r) => {
+      invoke: jest.fn().mockImplementation(async (event, r) => {
         r.ownerChain = ['author-1', 'manager-1', 'director-1'];
       }),
     });
@@ -1398,7 +1398,7 @@ describe('requireHierarchicalOwnership', () => {
     req.user.id = 'other-user';
     hookMock.has.mockReturnValue(true);
     hookMock.mockReturnValue({
-      emit: jest.fn().mockImplementation(async (event, r) => {
+      invoke: jest.fn().mockImplementation(async (event, r) => {
         r.ownerChain = ['author-1', 'manager-1', 'director-1'];
       }),
     });
@@ -1415,7 +1415,7 @@ describe('requireHierarchicalOwnership', () => {
   test('should deny when ownerChain is empty', async () => {
     hookMock.has.mockReturnValue(true);
     hookMock.mockReturnValue({
-      emit: jest.fn().mockImplementation(async (event, r) => {
+      invoke: jest.fn().mockImplementation(async (event, r) => {
         r.ownerChain = [];
       }),
     });
@@ -1441,7 +1441,7 @@ describe('requireHierarchicalOwnership', () => {
     req.user.id = 42;
     hookMock.has.mockReturnValue(true);
     hookMock.mockReturnValue({
-      emit: jest.fn().mockImplementation(async (event, r) => {
+      invoke: jest.fn().mockImplementation(async (event, r) => {
         r.ownerChain = ['42', '100', '200'];
       }),
     });
@@ -1457,7 +1457,7 @@ describe('requireTimeBasedOwnership', () => {
   let req, res, next, hookMock;
 
   beforeEach(() => {
-    const channelMock = { emit: jest.fn() };
+    const channelMock = { invoke: jest.fn() };
     hookMock = jest.fn().mockReturnValue(channelMock);
     hookMock.has = jest.fn().mockReturnValue(false);
 
@@ -1504,7 +1504,7 @@ describe('requireTimeBasedOwnership', () => {
   test('should allow when user is owner and within time window', async () => {
     hookMock.has.mockReturnValue(true);
     hookMock.mockReturnValue({
-      emit: jest.fn().mockImplementation(async (event, r) => {
+      invoke: jest.fn().mockImplementation(async (event, r) => {
         r.isOwner = true;
         r.ownershipExpiresAt = Date.now() + 60000; // 1 min from now
       }),
@@ -1519,7 +1519,7 @@ describe('requireTimeBasedOwnership', () => {
   test('should deny when user is owner but window has expired', async () => {
     hookMock.has.mockReturnValue(true);
     hookMock.mockReturnValue({
-      emit: jest.fn().mockImplementation(async (event, r) => {
+      invoke: jest.fn().mockImplementation(async (event, r) => {
         r.isOwner = true;
         r.ownershipExpiresAt = Date.now() - 1000; // 1 sec ago
       }),
@@ -1537,7 +1537,7 @@ describe('requireTimeBasedOwnership', () => {
   test('should deny when user is not the owner', async () => {
     hookMock.has.mockReturnValue(true);
     hookMock.mockReturnValue({
-      emit: jest.fn().mockImplementation(async (event, r) => {
+      invoke: jest.fn().mockImplementation(async (event, r) => {
         r.isOwner = false;
         r.ownershipExpiresAt = Date.now() + 60000;
       }),
@@ -1554,7 +1554,7 @@ describe('requireTimeBasedOwnership', () => {
   test('should allow owner when no expiresAt is set (no time constraint)', async () => {
     hookMock.has.mockReturnValue(true);
     hookMock.mockReturnValue({
-      emit: jest.fn().mockImplementation(async (event, r) => {
+      invoke: jest.fn().mockImplementation(async (event, r) => {
         r.isOwner = true;
         // no ownershipExpiresAt set
       }),
@@ -1569,7 +1569,7 @@ describe('requireTimeBasedOwnership', () => {
   test('should handle Date object for ownershipExpiresAt', async () => {
     hookMock.has.mockReturnValue(true);
     hookMock.mockReturnValue({
-      emit: jest.fn().mockImplementation(async (event, r) => {
+      invoke: jest.fn().mockImplementation(async (event, r) => {
         r.isOwner = true;
         r.ownershipExpiresAt = new Date(Date.now() - 5000); // expired Date
       }),
@@ -1598,7 +1598,7 @@ describe('requireGroup', () => {
   let req, res, next, hookMock;
 
   beforeEach(() => {
-    const channelMock = { emit: jest.fn() };
+    const channelMock = { invoke: jest.fn() };
     hookMock = jest.fn().mockReturnValue(channelMock);
     hookMock.has = jest.fn().mockReturnValue(false);
 
@@ -1677,9 +1677,9 @@ describe('requireGroup', () => {
     expect(next).toHaveBeenCalledWith();
   });
 
-  test('should emit hook to resolve groups when registered', async () => {
+  test('should invoke hook to resolve groups when registered', async () => {
     hookMock.has.mockReturnValue(true);
-    hookMock().emit.mockImplementation(async (event, r) => {
+    hookMock().invoke.mockImplementation(async (event, r) => {
       r.user.groups = ['engineering'];
     });
 
@@ -1689,7 +1689,7 @@ describe('requireGroup', () => {
 
     expect(hookMock.has).toHaveBeenCalledWith('auth.groups');
     expect(hookMock).toHaveBeenCalledWith('auth.groups');
-    expect(hookMock().emit).toHaveBeenCalledWith('resolve', req);
+    expect(hookMock().invoke).toHaveBeenCalledWith('resolve', req);
     expect(next).toHaveBeenCalledWith();
   });
 });
@@ -1698,7 +1698,7 @@ describe('requireAnyGroup', () => {
   let req, res, next, hookMock;
 
   beforeEach(() => {
-    const channelMock = { emit: jest.fn() };
+    const channelMock = { invoke: jest.fn() };
     hookMock = jest.fn().mockReturnValue(channelMock);
     hookMock.has = jest.fn().mockReturnValue(false);
 

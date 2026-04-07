@@ -123,7 +123,7 @@ describe('Profile Controller', () => {
         expect.any(Object),
       );
       expect(formatUserResponse).toHaveBeenCalled();
-      expect(mockHookInstance.emit).toHaveBeenCalledWith(
+      expect(mockHookInstance.invoke).toHaveBeenCalledWith(
         'retrieved',
         expect.any(Object),
       );

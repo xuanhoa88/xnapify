@@ -1,7 +1,7 @@
 {
   "version": 1,
   "compiledAt": "2026-04-07T01:40:00.000Z",
-  "testHash": "mock-hash-due-to-manual-execution",
+  "testHash": "9f43ec42b9f9e1255b6d1a4154d37cee4755d4ef17dc1ee84186e96c1a0209b9",
   "title": "Quick Login via Demo Account Button",
   "actions": [
     {
