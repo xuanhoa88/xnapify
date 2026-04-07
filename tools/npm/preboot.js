@@ -299,7 +299,7 @@ function ensureDeps(dialect) {
       // --- ISOLATED SANDBOX ARCHITECTURE ---
       // Execute the database backend install locked cleanly inside a .data sandbox
       // to guarantee NPM v9+ never traverses into the project root and drops packages
-      const driverDir = path.join(ROOT, '.data', 'sequelize-drivers');
+      const driverDir = path.join(ROOT, '.data', 'sequelize-drivers', dialect);
       if (!fs.existsSync(driverDir))
         fs.mkdirSync(driverDir, { recursive: true });
 
