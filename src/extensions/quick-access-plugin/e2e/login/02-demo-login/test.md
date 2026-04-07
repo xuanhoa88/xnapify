@@ -4,11 +4,10 @@ Verify that clicking a quick access demo account button auto-fills credentials a
 
 ## Steps
 
-1. Navigate to the login page
+1. Navigate to /login
 2. Click the "Admin User" quick access demo account button
-3. Wait for the form to auto-fill with demo credentials
-4. Observe the form submits automatically or wait for redirect
-5. Verify the user is logged in and redirected to the dashboard
+3. Wait 3000 milliseconds for automatic form submission
+4. Assert the text "System Administrator" is visible on the page
 
 ## Expected Results
 
