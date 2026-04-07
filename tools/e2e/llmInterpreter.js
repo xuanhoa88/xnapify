@@ -142,6 +142,13 @@ The test type will be provided in context:
 }
 
 {
+  "action": "select",
+  "selector": "select[name='role']",
+  "value": "admin",
+  "description": "Select 'admin' from the role dropdown"
+}
+
+{
   "action": "wait_for_text",
   "text": "Extension activated successfully",
   "timeout": 60000,
@@ -309,7 +316,12 @@ async function callOpenAI(config, prompt) {
   }
 
   const result = await httpRequest(url, { method: 'POST', headers }, body);
-  return JSON.parse(result.choices[0].message.content);
+  const raw = result.choices[0].message.content;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    throw new Error(`LLM returned invalid JSON (openai): ${raw.slice(0, 300)}`);
+  }
 }
 
 async function callAnthropic(config, prompt) {
@@ -328,8 +340,14 @@ async function callAnthropic(config, prompt) {
   };
 
   const result = await httpRequest(url, { method: 'POST', headers }, body);
-  const { text } = result.content[0];
-  return JSON.parse(text);
+  const raw = result.content[0].text;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    throw new Error(
+      `LLM returned invalid JSON (anthropic): ${raw.slice(0, 300)}`,
+    );
+  }
 }
 
 async function callGoogle(config, prompt) {
@@ -343,8 +361,12 @@ async function callGoogle(config, prompt) {
 
   const headers = { 'Content-Type': 'application/json' };
   const result = await httpRequest(url, { method: 'POST', headers }, body);
-  const { text } = result.candidates[0].content.parts[0];
-  return JSON.parse(text);
+  const raw = result.candidates[0].content.parts[0].text;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    throw new Error(`LLM returned invalid JSON (google): ${raw.slice(0, 300)}`);
+  }
 }
 
 // ── Auto-Detect Provider ──────────────────────────────────────────

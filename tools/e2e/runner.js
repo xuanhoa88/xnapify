@@ -69,12 +69,33 @@ const TYPE_ICONS = { ui: '🌐', api: '🔌', system: '🔗' };
 // ── Config ────────────────────────────────────────────────────────
 
 function resolvePort() {
-  // Priority 1: env var
+  // Priority 1: env var (already set by caller or system)
   const e2ePort = process.env.XNAPIFY_PORT;
   if (e2ePort) return e2ePort;
 
-  // Priority 2: .env files
-  return process.env.PORT || '1337';
+  // Priority 2: .env files (manually parsed — no dotenv dependency)
+  // Later files override earlier ones; XNAPIFY_PORT overrides PORT
+  const envFiles = ['.env', '.env.development', '.env.local'];
+  let port = null;
+
+  for (const envFile of envFiles) {
+    const filePath = path.join(ROOT_DIR, envFile);
+    try {
+      const content = fs.readFileSync(filePath, 'utf-8');
+      for (const line of content.split('\n')) {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('#') || !trimmed.includes('=')) continue;
+        const [key, ...rest] = trimmed.split('=');
+        const value = rest.join('=').trim().replace(/^["']|["']$/g, '');
+        if (key.trim() === 'XNAPIFY_PORT' && value) port = value;
+        else if (key.trim() === 'PORT' && value && !port) port = value;
+      }
+    } catch {
+      // File doesn't exist — skip
+    }
+  }
+
+  return port || process.env.PORT || '1337';
 }
 
 function getModuleName(rootDir, e2eDir) {
@@ -190,11 +211,7 @@ async function run() {
     10,
   );
   const headless = headed ? false : process.env.E2E_HEADLESS !== 'false';
-  const timestamp = new Date()
-    .toISOString()
-    .slice(0, 16)
-    .replace(/[T:]/g, '_')
-    .replace(/-/g, '-');
+  const timestamp = new Date().toISOString().slice(0, 16).replace(/[T:]/g, '_');
 
   const llmProvider = process.env.E2E_LLM_PROVIDER || 'auto';
 
@@ -318,7 +335,6 @@ async function run() {
   // Slow local LLMs (Ollama) can take 5+ minutes to compile a test case.
   // If we launch Chromium upfront, the idle WebSocket connection will drop with ECONNRESET.
   let browser = null;
-  let page = null;
 
   // Group files by e2e directory (module)
   const byModule = new Map();
@@ -412,18 +428,19 @@ async function run() {
       }
 
       // ── Execute actions (skip for compile-only mode) ──
+      let testPage = null;
+      let needsBrowser = false;
+
       if (script && testPassed && mode !== 'compile') {
         // Lazy launch the browser ONLY exactly when we are ready to execute UI tests.
         const type = detectTestType(tc.testCaseDir);
-        const needsBrowser = type === 'ui' || type === 'system';
+        needsBrowser = type === 'ui' || type === 'system';
 
         if (needsBrowser && !browser) {
           browser = await launchBrowser({ headless });
-          page = await createPage(browser);
         }
 
         // Get a fresh page for each test to ensure cookie and state isolation
-        let testPage = null;
         if (needsBrowser && browser) {
           testPage = await createPage(browser);
         }
@@ -515,7 +532,7 @@ async function run() {
         }
       }
 
-      if (needsBrowser && browser && testPage && testPage !== page) {
+      if (needsBrowser && browser && testPage) {
         try {
           await testPage.close();
         } catch {

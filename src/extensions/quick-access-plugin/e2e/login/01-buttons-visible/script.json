@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "compiledAt": "2026-04-07T13:30:16.559Z",
+  "testHash": "07d120e69ee56f0c0b212754ccef718c36cb74451487388e2d47601a12e52d3e",
+  "title": "Quick Access Buttons Visible on Login Page",
+  "actions": [
+    {
+      "step": 1,
+      "instruction": "Navigate to the login page",
+      "action": "navigate",
+      "url": "/login"
+    },
+    {
+      "step": 2,
+      "instruction": "Wait for the page to fully load",
+      "action": "wait",
+      "duration": 2000
+    },
+    {
+      "step": 3,
+      "instruction": "Verify the quick access login buttons are visible below the login form",
+      "action": "assert_visible",
+      "selector": "button",
+      "text": "Admin User",
+      "description": "Verify 'Admin User' button is visible"
+    },
+    {
+      "step": 4,
+      "instruction": "Verify there are demo account buttons rendered by the extension slot",
+      "action": "assert_visible",
+      "selector": "button",
+      "text": "Admin User",
+      "description": "Verify 'Admin User' button is visible"
+    }
+  ]
+}

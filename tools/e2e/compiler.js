@@ -33,6 +33,7 @@ const HASH_FILE = '.test-hash';
 const TEST_FILE = 'test.md';
 const ARCHIVE_DIR = 'scripts';
 const SCRIPT_VERSION = 1;
+const MAX_ARCHIVES = 5;
 
 const { parseTestFile } = require('./parser');
 
@@ -152,6 +153,23 @@ function archiveScript(testCaseDir, timestamp) {
   const archiveFile = path.join(archiveDir, `${timestamp}.json`);
   fs.copyFileSync(scriptFile, archiveFile);
   console.log(`    📦 Archived old script → ${path.basename(archiveFile)}`);
+
+  // Prune old archives — keep only the last MAX_ARCHIVES files
+  try {
+    const archives = fs
+      .readdirSync(archiveDir)
+      .filter(f => f.endsWith('.json'))
+      .sort();
+    if (archives.length > MAX_ARCHIVES) {
+      const toDelete = archives.slice(0, archives.length - MAX_ARCHIVES);
+      for (const file of toDelete) {
+        fs.unlinkSync(path.join(archiveDir, file));
+      }
+      console.log(`    🗑️  Pruned ${toDelete.length} old archive(s)`);
+    }
+  } catch {
+    // Non-critical — skip pruning on error
+  }
 }
 
 /**

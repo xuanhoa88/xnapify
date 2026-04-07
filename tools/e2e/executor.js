@@ -215,8 +215,13 @@ async function collectStabilitySignals(page, opts) {
       // ── Signal 3: CSS Animations ───────────────────────────
       let runningAnimations = 0;
       try {
-        const allElements = document.querySelectorAll('*');
-        for (const el of allElements) {
+        // Scope to visible interactive areas only (not the entire DOM)
+        const candidates = document.querySelectorAll(
+          'main *, [role="main"] *, [class*="content"] *, [class*="modal"] *, [role="dialog"] *',
+        );
+        const elements =
+          candidates.length > 0 ? candidates : document.body.children;
+        for (const el of elements) {
           if (el.offsetParent === null) continue;
           const anims = el.getAnimations ? el.getAnimations() : [];
           for (const a of anims) {
@@ -562,9 +567,8 @@ const ACTIONS = {
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
     await waitForRouteReady(page);
 
-    // Wait generously for SPA rendering, chunk downloading, and React hydration on cold starts MUST HAPPEN BEFORE QUERYING DOM!
-    await waitForSPAStable(page);
-    await new Promise(r => setTimeout(r, 6000));
+    // Wait for SPA rendering, chunk downloading, and React hydration
+    await waitForSPAStable(page, { settleWindow: 500 });
 
     // Poll for login form (SPA may lazy-load it and hydrate it)
     const emailInput = await retryUntilFound(
@@ -685,6 +689,16 @@ const ACTIONS = {
     await input.uploadFile(fixtureZip);
   },
 
+  // ── Select (Dropdown) ───────────────────────────────────────────
+  async select({ page }, action) {
+    await waitForSPAStable(page);
+    await page.waitForSelector(action.selector, {
+      visible: true,
+      timeout: 10000,
+    });
+    await page.select(action.selector, action.value);
+  },
+
   // ── Wait ────────────────────────────────────────────────────────
   async wait(_ctx, action) {
     await new Promise(r => setTimeout(r, action.duration || 1000));
@@ -778,7 +792,6 @@ const ACTIONS = {
     // For negative assertions, wait a bit for SPA to settle,
     // then verify the element is truly gone
     await waitForSPAStable(page);
-    await new Promise(r => setTimeout(r, 1000));
 
     if (action.text) {
       const found = await page.evaluate(

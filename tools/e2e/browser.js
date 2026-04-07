@@ -96,7 +96,11 @@ async function launchBrowser(opts = {}) {
  * @returns {Promise<import('puppeteer').Page>}
  */
 async function createPage(browser, opts = {}) {
-  const context = await browser.createIncognitoBrowserContext();
+  // createBrowserContext replaces deprecated createIncognitoBrowserContext (Puppeteer 21+)
+  const context =
+    typeof browser.createBrowserContext === 'function'
+      ? await browser.createBrowserContext()
+      : await browser.createIncognitoBrowserContext();
   const page = await context.newPage();
   page.setDefaultTimeout(opts.timeout || DEFAULT_PAGE_TIMEOUT);
   return page;
@@ -111,7 +115,11 @@ async function createPage(browser, opts = {}) {
  */
 async function closeBrowser(browser) {
   if (browser) {
-    await browser.close();
+    try {
+      await browser.close();
+    } catch {
+      // Browser may have already crashed or been disconnected
+    }
   }
 }
 

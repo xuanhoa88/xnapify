@@ -14,7 +14,7 @@
  * Usage:
  *   node tools/e2e/excelToMd.js <input.xlsx> [--dry-run] [--force]
  *
- * Excel columns:
+ * Excel columns (11 total — A through K):
  *   A: Test ID        (e.g. TC-QA-001)
  *   B: Module         (e.g. quick-access-plugin)
  *   C: Type           (ui, api, system — default: ui)
@@ -22,10 +22,10 @@
  *   E: Title          (e.g. Login API Returns Valid JWT)
  *   F: Description    (optional paragraph)
  *   G: Prerequisites  (key=value; key=value)
- *   H-Q: Step 1-10    (natural language test steps)
- *   R-V: Expected 1-5 (acceptance criteria)
- *   W: Priority       (High/Medium/Low — metadata only)
- *   X: Status         (Draft/Ready/Automated — metadata only)
+ *   H: Steps          (multi-line: newlines separate steps)
+ *   I: Expected       (multi-line: newlines separate criteria)
+ *   J: Priority       (High/Medium/Low — metadata only)
+ *   K: Status         (Draft/Ready/Automated — metadata only)
  */
 
 const fs = require('fs');
