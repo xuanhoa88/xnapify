@@ -283,9 +283,9 @@ function httpRequest(url, options, body) {
       });
     });
     req.on('error', reject);
-    req.setTimeout(30000, () => {
+    req.setTimeout(120000, () => {
       req.destroy();
-      reject(new Error('LLM request timeout (30s)'));
+      reject(new Error('LLM request timeout (120s)'));
     });
     if (body) req.write(body);
     req.end();

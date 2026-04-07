@@ -401,7 +401,7 @@ async function run() {
           (tc.prerequisites || {}).fixture_zip || config.env('E2E_FIXTURE_ZIP'),
       };
 
-      const TEST_TIMEOUT = 120000; // 2 minutes per test case
+      const TEST_TIMEOUT = 600000; // 10 minutes per test case
       let timeoutId;
       const timeoutPromise = new Promise((_, reject) => {
         timeoutId = setTimeout(
