@@ -9,8 +9,8 @@
  * 5. Browser — Puppeteer launches and navigates
  *
  * Usage:
- *   node tools/e2e/smoke-test.js
- *   node tools/e2e/smoke-test.js --browser   # Include browser test
+ *   node tools/e2e/smokeTest.js
+ *   node tools/e2e/smokeTest.js --browser   # Include browser test
  */
 
 /* eslint-disable no-console */

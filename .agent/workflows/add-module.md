@@ -554,9 +554,7 @@ export function setup({ store, i18n }) {
  * Teardown — unregister menus (runs when route unloaded)
  */
 export function teardown({ store }) {
-  store.dispatch(
-    unregisterMenu({ ns: 'admin', path: '/admin/{module-name}' }),
-  );
+  store.dispatch(unregisterMenu({ ns: 'admin', path: '/admin/{module-name}' }));
 }
 
 /**
@@ -775,23 +773,23 @@ Modules are auto-discovered during application bootstrap:
 
 ### Backend (API)
 
-| Hook                       | Purpose                                | Called When              | Async |
-| -------------------------- | -------------------------------------- | ------------------------ | ----- |
-| `translations()`           | Provide webpack context for i18n files | Module loaded            | No    |
-| `providers({ container })` | Bind services to container             | After translations       | Yes   |
-| `migrations()`             | Return migrations webpack context      | After providers          | No    |
-| `models()`                 | Return models webpack context          | After migrations         | No    |
-| `seeds()`                  | Return seeds webpack context           | After models             | No    |
-| `boot({ container })`      | Initialize module (hooks, schedules)   | After seeds              | Yes   |
-| `routes()`                 | Return routes webpack context          | After boot               | No    |
+| Hook                       | Purpose                                | Called When        | Async |
+| -------------------------- | -------------------------------------- | ------------------ | ----- |
+| `translations()`           | Provide webpack context for i18n files | Module loaded      | No    |
+| `providers({ container })` | Bind services to container             | After translations | Yes   |
+| `migrations()`             | Return migrations webpack context      | After providers    | No    |
+| `models()`                 | Return models webpack context          | After migrations   | No    |
+| `seeds()`                  | Return seeds webpack context           | After models       | No    |
+| `boot({ container })`      | Initialize module (hooks, schedules)   | After seeds        | Yes   |
+| `routes()`                 | Return routes webpack context          | After boot         | No    |
 
 ### Frontend (Views)
 
-| Hook                       | Purpose                        | Called When          | Async |
-| -------------------------- | ------------------------------ | -------------------- | ----- |
-| `translations()`           | Provide webpack context for i18n files | Module loaded | No    |
-| `providers({ container })` | Bind client services           | After translations   | No    |
-| `routes()`                 | Return views webpack context   | After providers      | No    |
+| Hook                       | Purpose                                | Called When        | Async |
+| -------------------------- | -------------------------------------- | ------------------ | ----- |
+| `translations()`           | Provide webpack context for i18n files | Module loaded      | No    |
+| `providers({ container })` | Bind client services                   | After translations | No    |
+| `routes()`                 | Return views webpack context           | After providers    | No    |
 
 ## API File-Based Routing
 
@@ -877,7 +875,7 @@ See `src/apps/users/` for a complete working example with:
 
 Each module can optionally include a `SPEC.md` file in its root directory to document specific features for AI assistance. To avoid duplication, start from the global template:
 
-- **Template:** [.agent/templates/SPEC.template.md](file:///Users/xuanguyen/Workspaces/react-starter-kit/.agent/templates/SPEC.template.md)
+- **Template:** [.agent/templates/SPEC.template.md](../templates/SPEC.template.md)
 
 Copy this template to `src/apps/{module-name}/SPEC.md` when planning a new feature.
 
@@ -909,14 +907,14 @@ schedule.register('{module}:weekly-report', '0 9 * * 1', async () => {
 
 ### Common Cron Expressions
 
-| Expression | Schedule |
-|---|---|
-| `* * * * *` | Every minute |
-| `*/5 * * * *` | Every 5 minutes |
-| `0 * * * *` | Every hour |
-| `0 0 * * *` | Daily at midnight |
-| `0 9 * * 1` | Monday at 9 AM |
-| `0 0 1 * *` | First of each month |
+| Expression    | Schedule            |
+| ------------- | ------------------- |
+| `* * * * *`   | Every minute        |
+| `*/5 * * * *` | Every 5 minutes     |
+| `0 * * * *`   | Every hour          |
+| `0 0 * * *`   | Daily at midnight   |
+| `0 9 * * 1`   | Monday at 9 AM      |
+| `0 0 1 * *`   | First of each month |
 
 ### Guidelines
 

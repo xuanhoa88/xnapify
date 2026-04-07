@@ -3,8 +3,8 @@ Extension IPC Benchmarks
 This folder contains several benchmarks for extension IPC and renderer:
 
 - `composer.benchmark.js` - middleware composition stress tests
-- `extension-ipc.benchmark.js` - in-process registry stress test (fast, no HTTP)
-- `extension-ipc-prod.benchmark.js` - production-grade HTTP-level stress test
+- `extensionIpc.benchmark.js` - in-process registry stress test (fast, no HTTP)
+- `extensionIpcProd.benchmark.js` - production-grade HTTP-level stress test
 - `renderer.benchmark.js`, `example.benchmark.js` - renderer and example tests
 
 Running
@@ -20,7 +20,7 @@ npm run test:benchmark
 ```bash
 # optional env overrides
 BENCH_HANDLERS=100 BENCH_REQUESTS=5000 BENCH_CONCURRENCY=500 BENCH_PAYLOAD_BYTES=1024 \
-  npm run test:benchmark -- --testNamePattern=extension-ipc-prod
+  npm run test:benchmark -- --testNamePattern=extensionIpcProd
 ```
 
 Notes
@@ -37,6 +37,6 @@ Example (standalone run with recording):
 
 ```bash
 BENCH_HANDLERS=100 BENCH_REQUESTS=5000 BENCH_CONCURRENCY=500 BENCH_PAYLOAD_BYTES=1024 \
-  BENCH_IO_MS=10 BENCH_RECORD=build/bench-results/extension-ipc-prod.json \
+  BENCH_IO_MS=10 BENCH_RECORD=build/bench-results/extensionIpcProd.json \
   node tools/bench/extensionIpcProd.runner.js
 ```

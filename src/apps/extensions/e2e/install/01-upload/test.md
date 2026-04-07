@@ -10,7 +10,7 @@ Verify that an admin can upload and install a new extension via the upload flow.
 
 ### Prerequisite
 
-- fixture_zip: ./test-fixtures/sample-extension.zip
+- fixture_zip: ./src/__tests__/fixtures/sample-extension.zip
 
 ## Steps
 

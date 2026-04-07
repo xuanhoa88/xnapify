@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Standalone production-grade extension IPC benchmark runner
 // Usage (defaults):
-//   node tools/bench/extension-ipc-prod.runner.js
+//   node tools/bench/extensionIpcProd.runner.js
 // Environment variables:
 //   BENCH_HANDLERS, BENCH_REQUESTS, BENCH_CONCURRENCY, BENCH_PAYLOAD_BYTES
 //   BENCH_EXTENSION_ID, BENCH_IO_MS (avg simulated I/O in ms), BENCH_RECORD (path)

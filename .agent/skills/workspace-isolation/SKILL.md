@@ -62,6 +62,7 @@ git check-ignore -q .worktrees 2>/dev/null || git check-ignore -q worktrees 2>/d
 **If NOT ignored:**
 
 Per project convention:
+
 1. Add appropriate line to .gitignore
 2. Commit the change
 3. Proceed with worktree creation
@@ -127,15 +128,15 @@ Ready to implement <feature-name>
 
 ## Quick Reference
 
-| Situation | Action |
-|-----------|--------|
-| `.worktrees/` exists | Use it (verify ignored) |
-| `worktrees/` exists | Use it (verify ignored) |
-| Both exist | Use `.worktrees/` |
-| Neither exists | Check AGENT.md → Ask user |
-| Directory not ignored | Add to .gitignore + commit |
-| Tests fail during baseline | Report failures + ask |
-| No package.json | Skip dependency install |
+| Situation                  | Action                     |
+| -------------------------- | -------------------------- |
+| `.worktrees/` exists       | Use it (verify ignored)    |
+| `worktrees/` exists        | Use it (verify ignored)    |
+| Both exist                 | Use `.worktrees/`          |
+| Neither exists             | Check AGENT.md → Ask user  |
+| Directory not ignored      | Add to .gitignore + commit |
+| Tests fail during baseline | Report failures + ask      |
+| No package.json            | Skip dependency install    |
 
 ## Common Mistakes
 
@@ -170,7 +171,7 @@ You: I'm using the workspace-isolation skill to set up an isolated workspace.
 [Run npm install]
 [Run npm test - 47 passing]
 
-Worktree ready at /Users/dev/react-starter-kit/.worktrees/auth
+Worktree ready at .worktrees/auth
 Tests passing (47 tests, 0 failures)
 Ready to implement auth feature
 ```
@@ -178,6 +179,7 @@ Ready to implement auth feature
 ## Red Flags
 
 **Never:**
+
 - Create worktree without verifying it's ignored (project-local)
 - Skip baseline test verification
 - Proceed with failing tests without asking
@@ -185,6 +187,7 @@ Ready to implement auth feature
 - Skip AGENT.md check
 
 **Always:**
+
 - Follow directory priority: existing > AGENT.md > ask
 - Verify directory is ignored for project-local
 - Auto-detect and run project setup
@@ -193,11 +196,13 @@ Ready to implement auth feature
 ## Integration
 
 **Called by:**
+
 - **design-thinking** skill (after design approved, before implementation)
 - **implementation-planning** skill (before plan execution)
 - Any skill needing isolated workspace
 
 **Pairs with:**
+
 - `/commit` workflow — Conventional Commits when work is complete
 - `/add-module` / `/add-extension` — Feature scaffolding after worktree setup
 - `test-driven-development` skill — TDD cycle within the worktree

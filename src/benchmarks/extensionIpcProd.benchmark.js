@@ -56,7 +56,7 @@ function createApp(registry) {
   return app;
 }
 
-describe('extension-ipc-prod', () => {
+describe('extensionIpcProd', () => {
   let server;
   let url;
   let registry;

@@ -170,7 +170,7 @@ Description of what this test validates.
 
 ### Prerequisite
 
-- fixture_zip: ./test-fixtures/sample-extension.zip
+- fixture_zip: ./src/__tests__/fixtures/sample-extension.zip
 
 ## Steps
 
@@ -250,6 +250,7 @@ Cases use `NN-name` numbering for execution order.
 The E2E suite requires a running application. If the app is not reachable at the resolved port, the runner will wait for up to 30s (configurable via `E2E_STARTUP_TIMEOUT`) before failing.
 
 **Pre-flight check:**
+
 - Ensure `npm run dev` is running in a separate terminal.
 - Verify the app is reachable at `http://localhost:{PORT}`.
 
@@ -402,8 +403,8 @@ After ALL test cases in a module are executed, a module-level summary is created
 
 ## Results
 
-| #   | Test Case          | Title                | Result  | Details                                                          |
-| --- | ------------------ | -------------------- | ------- | ---------------------------------------------------------------- |
+| #   | Test Case          | Title                | Result  | Details                                                           |
+| --- | ------------------ | -------------------- | ------- | ----------------------------------------------------------------- |
 | 1   | install/01-upload  | Upload valid package | ✅ PASS | [result](../../install/01-upload/_results/{timestamp}/result.md)  |
 | 2   | activate/01-toggle | Toggle switch        | ❌ FAIL | [result](../../activate/01-toggle/_results/{timestamp}/result.md) |
 
@@ -558,14 +559,14 @@ These rules extend the `browser-testing` skill rules:
 | Rule                  | Description                                                                                              |
 | --------------------- | -------------------------------------------------------------------------------------------------------- |
 | **Skill first**       | Read `browser-testing` skill before starting — it defines port discovery, task format, and auth handling |
-| **App first**        | Verify the app is reachable at the base URL before starting any tests                    |
-| **Port first**       | Resolve port using the 3-priority system before building any URL                         |
+| **App first**         | Verify the app is reachable at the base URL before starting any tests                                    |
+| **Port first**        | Resolve port using the 3-priority system before building any URL                                         |
 | **One flow per call** | Execute ONE test case per browser automation call                                                        |
 | **Serial execution**  | Run test cases in file order (01 → 02 → 03...) since later phases depend on earlier state                |
 | **Screenshot proof**  | Always request a screenshot at the end of each test case                                                 |
 | **Wait for load**     | Always prepend "Wait for the page to fully load" as the first step                                       |
 | **Auth first**        | Handle login before any test case                                                                        |
-| **Store results**     | Write results inside each test case's `_results/{timestamp}/` directory                                   |
+| **Store results**     | Write results inside each test case's `_results/{timestamp}/` directory                                  |
 | **Report clearly**    | Create `_summary.md` with ✅/❌ table after all tests complete                                           |
 | **No guessing**       | Ask the user for credentials / URLs if not known — never assume                                          |
 | **Compile first**     | Run `--mode=compile` before `--mode=run` if no `script.json` exists                                      |
@@ -584,7 +585,7 @@ These rules extend the `browser-testing` skill rules:
 | Only search `src/apps/`         | Search BOTH `src/apps/` and `src/extensions/` for `e2e/` folders   |
 | Use flat `.md` files            | Use nested `e2e/{category}/{NN-name}/test.md` structure            |
 | Call LLM on every run           | Use compiled `script.json` — only recompile when `test.md` changes |
-| Discard test results            | Store results in `_results/{timestamp}/` with screenshots           |
+| Discard test results            | Store results in `_results/{timestamp}/` with screenshots          |
 
 ## Example Usage
 

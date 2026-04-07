@@ -9,10 +9,10 @@
  * Send Email Worker - Handles email sending operations
  */
 
-import { createProviderByName } from '../utils/providers';
 import { EMAIL_VALIDATED } from '../utils/constants';
 import { EmailError } from '../utils/errors';
 import { processEmails } from '../utils/processing';
+import { createProviderByName } from '../utils/providers';
 import { validateEmails } from '../utils/validation';
 
 /**

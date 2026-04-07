@@ -1,7 +1,7 @@
 /**
  * Generate the E2E test cases Excel template.
  *
- * Usage: node tools/e2e/create-template.js
+ * Usage: node tools/e2e/createTemplate.js
  * Output: tools/e2e/test-cases-template.xlsx
  */
 
@@ -259,9 +259,9 @@ function main() {
     ['system', '', '', 'Mixed browser + HTTP — uses both action types'],
     [''],
     ['Usage:'],
-    ['', '', '', 'node tools/e2e/excel-to-md.js test-cases.xlsx --dry-run'],
-    ['', '', '', 'node tools/e2e/excel-to-md.js test-cases.xlsx'],
-    ['', '', '', 'node tools/e2e/excel-to-md.js test-cases.xlsx --force'],
+    ['', '', '', 'node tools/e2e/excelToMd.js test-cases.xlsx --dry-run'],
+    ['', '', '', 'node tools/e2e/excelToMd.js test-cases.xlsx'],
+    ['', '', '', 'node tools/e2e/excelToMd.js test-cases.xlsx --force'],
   ];
 
   const wsInstructions = XLSX.utils.aoa_to_sheet(instructions);

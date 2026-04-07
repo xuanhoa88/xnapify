@@ -10,6 +10,7 @@ import { MemoryEmailProvider } from '../providers/memory';
 import { ResendEmailProvider } from '../providers/resend';
 import { SendGridEmailProvider } from '../providers/sendgrid';
 import { SmtpEmailProvider } from '../providers/smtp';
+
 import { EmailError } from './errors';
 
 /**

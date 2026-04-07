@@ -12,7 +12,7 @@
  * test.md files in the standard e2e directory structure.
  *
  * Usage:
- *   node tools/e2e/excel-to-md.js <input.xlsx> [--dry-run] [--force]
+ *   node tools/e2e/excelToMd.js <input.xlsx> [--dry-run] [--force]
  *
  * Excel columns:
  *   A: Test ID        (e.g. TC-QA-001)
@@ -173,7 +173,7 @@ function main() {
 
   if (!inputFile) {
     console.log(
-      'Usage: node tools/e2e/excel-to-md.js <input.xlsx> [--dry-run] [--force]',
+      'Usage: node tools/e2e/excelToMd.js <input.xlsx> [--dry-run] [--force]',
     );
     console.log('');
     console.log('Options:');

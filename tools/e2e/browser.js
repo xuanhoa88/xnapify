@@ -46,7 +46,7 @@ const ENGINE = 'Puppeteer';
 
 /**
  * Returns `true` when the browser library can be resolved.
- * Used by smoke-test to validate the environment before launching.
+ * Used by smokeTest to validate the environment before launching.
  */
 function isAvailable() {
   try {
