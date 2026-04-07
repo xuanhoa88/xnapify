@@ -73,7 +73,7 @@ digraph tdd_cycle {
 Write one minimal test showing what should happen.
 
 <Good>
-```typescript
+```javascript
 test('retries failed operations 3 times', async () => {
   let attempts = 0;
   const operation = () => {
@@ -92,7 +92,7 @@ Clear name, tests real behavior, one thing
 </Good>
 
 <Bad>
-```typescript
+```javascript
 test('retry works', async () => {
   const mock = jest.fn()
     .mockRejectedValueOnce(new Error())
@@ -132,8 +132,8 @@ Confirm:
 Write simplest code to pass the test.
 
 <Good>
-```typescript
-async function retryOperation<T>(fn: () => Promise<T>): Promise<T> {
+```javascript
+async function retryOperation(fn) {
   for (let i = 0; i < 3; i++) {
     try {
       return await fn();
@@ -148,15 +148,8 @@ Just enough to pass
 </Good>
 
 <Bad>
-```typescript
-async function retryOperation<T>(
-  fn: () => Promise<T>,
-  options?: {
-    maxRetries?: number;
-    backoff?: 'linear' | 'exponential';
-    onRetry?: (attempt: number) => void;
-  }
-): Promise<T> {
+```javascript
+async function retryOperation(fn, options = {}) {
   // YAGNI
 }
 ```
@@ -292,7 +285,7 @@ Tests-first force edge case discovery before implementing. Tests-after verify yo
 **Bug:** Empty email accepted
 
 **RED**
-```typescript
+```javascript
 test('rejects empty email', async () => {
   const result = await submitForm({ email: '' });
   expect(result.error).toBe('Email required');
@@ -306,8 +299,8 @@ FAIL: expected 'Email required', got undefined
 ```
 
 **GREEN**
-```typescript
-function submitForm(data: FormData) {
+```javascript
+function submitForm(data) {
   if (!data.email?.trim()) {
     return { error: 'Email required' };
   }
@@ -386,6 +379,7 @@ No exceptions without your human partner's permission.
 
 ## xnapify-Specific Notes
 
+- **Node 16+ Compatibility:** Adhere to all `coding-standards` bans. Do **NOT** use `node:test`; use the global `jest` / `test` functions. Do not use natively absent APIs (`fetch`, `structuredClone`) inside tests unless mocked.
 - **Always use `npm test`** — never `npx jest`. The `pretest` hook installs the SQLite driver.
 - **File extension:** `.test.js` (not `.ts`) — the project uses JavaScript.
 - **Test patterns:** For xnapify-specific templates (slice tests, thunk tests, component tests with App context, selector tests, mocking patterns), see the `/add-test` workflow.

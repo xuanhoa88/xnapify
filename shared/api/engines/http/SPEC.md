@@ -13,11 +13,12 @@ Provide standardized Express utilities for request parsing, response formatting,
 
 ```
 shared/api/engines/http/
-├── index.js        # Re-exports all modules
+├── index.js        # Default singleton export + re-exports
+├── factory.js      # EngineManager + createFactory()
 ├── constants.js    # HTTP_STATUS enum
 ├── response.js     # Response helpers + error sanitization
 ├── request.js      # Request utility functions
-└── errors/         # Error class definitions
+└── errors.js       # Error class definitions and utilities
 ```
 
 ## 2. Response Format
@@ -56,5 +57,3 @@ Error responses add `errors` and `errorId` fields.
 - `getBaseUrl(req)` — constructs `protocol://host`.
 
 ---
-
-*Note: This spec reflects the CURRENT implementation of the http engine.*

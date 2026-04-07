@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { HTTP_STATUS } from '../constants';
+import { HTTP_STATUS } from './constants';
 
 /**
  * Base HTTP Error class
@@ -19,8 +19,12 @@ export class HttpError extends Error {
     super(message);
     this.name = 'HttpError';
     this.statusCode = statusCode;
-    this.code = code;
+    this.code = code || 'HTTP_ERROR';
     this.timestamp = new Date().toISOString();
+
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, this.constructor);
+    }
   }
 
   toJSON() {
@@ -255,3 +259,106 @@ export class ExternalServiceError extends InternalServerError {
     this.service = service;
   }
 }
+
+/**
+ * Error factory functions
+ */
+export const createError = Object.freeze({
+  badRequest: (message, code) => new BadRequestError(message, code),
+  unauthorized: (message, code) => new UnauthorizedError(message, code),
+  forbidden: (message, code) => new ForbiddenError(message, code),
+  notFound: (message, code) => new NotFoundError(message, code),
+  methodNotAllowed: (message, allowedMethods, code) =>
+    new MethodNotAllowedError(message, allowedMethods, code),
+  conflict: (message, code) => new ConflictError(message, code),
+  validation: (message, errors, code) =>
+    new ValidationError(message, errors, code),
+  tooManyRequests: (message, retryAfter, code) =>
+    new TooManyRequestsError(message, retryAfter, code),
+  internalServer: (message, code) => new InternalServerError(message, code),
+  serviceUnavailable: (message, retryAfter, code) =>
+    new ServiceUnavailableError(message, retryAfter, code),
+  database: (message, originalError, code) =>
+    new DatabaseError(message, originalError, code),
+  authentication: (message, code) => new AuthenticationError(message, code),
+  authorization: (message, code) => new AuthorizationError(message, code),
+  resource: (resource, id, code) => new ResourceError(resource, id, code),
+  businessLogic: (message, code) => new BusinessLogicError(message, code),
+  externalService: (service, message, code) =>
+    new ExternalServiceError(service, message, code),
+});
+
+/**
+ * Async error wrapper
+ * @param {Function} fn - Async function to wrap
+ * @returns {Function} Wrapped function
+ */
+export function asyncErrorHandler(fn) {
+  return (req, res, next) => {
+    Promise.resolve(fn(req, res, next)).catch(next);
+  };
+}
+
+/**
+ * Create validation error from validation result
+ * @param {Object} validationResult - Validation result object
+ * @returns {ValidationError} Validation error
+ */
+export function createValidationError(validationResult) {
+  const error = new ValidationError(
+    'Validation failed',
+    validationResult.errors,
+  );
+  return error;
+}
+
+/**
+ * Assert condition and throw error if false
+ * @param {boolean} condition - Condition to check
+ * @param {Error|string} error - Error to throw or error message
+ * @param {number} statusCode - HTTP status code (if error is string)
+ */
+export function assert(condition, error, statusCode = HTTP_STATUS.BAD_REQUEST) {
+  if (!condition) {
+    if (typeof error === 'string') {
+      throw new HttpError(error, statusCode);
+    }
+    throw error;
+  }
+}
+
+/**
+ * Throw not found error for resource
+ * @param {string} resource - Resource name
+ * @param {*} id - Resource ID
+ */
+export function throwNotFound(resource, id = null) {
+  throw new ResourceError(resource, id);
+}
+
+/**
+ * Throw unauthorized error
+ * @param {string} message - Error message
+ */
+export function throwUnauthorized(message = 'Authentication required') {
+  throw new UnauthorizedError(message);
+}
+
+/**
+ * Throw forbidden error
+ * @param {string} message - Error message
+ */
+export function throwForbidden(message = 'Access denied') {
+  throw new ForbiddenError(message);
+}
+
+/**
+ * Throw validation error
+ * @param {string} message - Error message
+ * @param {Array} errors - Validation errors
+ */
+export function throwValidation(message = 'Validation failed', errors = []) {
+  throw new ValidationError(message, errors);
+}
+
+export class EngineError extends HttpError {}

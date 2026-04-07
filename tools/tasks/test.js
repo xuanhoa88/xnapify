@@ -8,6 +8,7 @@
  */
 
 const { spawn } = require('child_process');
+const path = require('path');
 
 const config = require('../config');
 const { BuildError } = require('../utils/error');
@@ -59,9 +60,8 @@ async function main() {
     let jestBin;
     try {
       jestBin = require.resolve('jest/bin/jest.js');
-    } catch (err) {
-      const path = require('path');
-      jestBin = path.resolve(require.resolve('jest'), '../../bin/jest.js');
+    } catch {
+      jestBin = path.resolve(config.CWD, 'node_modules/jest/bin/jest.js');
     }
 
     // Spawn Jest process

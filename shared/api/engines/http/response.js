@@ -6,6 +6,7 @@
  */
 
 import { randomUUID } from 'crypto';
+import { pipeline } from 'stream/promises';
 
 import { HTTP_STATUS } from './constants';
 
@@ -376,7 +377,7 @@ export function sendRedirect(res, url, permanent = false) {
  * @param {string} contentType - Content type
  * @param {Object} headers - Additional headers
  */
-export function sendStream(
+export async function sendStream(
   res,
   stream,
   contentType = 'application/octet-stream',
@@ -388,14 +389,12 @@ export function sendStream(
     res.set(key, value);
   });
 
-  stream.on('error', err => {
+  try {
+    await pipeline(stream, res);
+  } catch (err) {
     if (!res.headersSent) {
       console.error('Stream error:', err);
-      res
-        .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
-        .json(createResponse(false, null, 'Stream error'));
+      return sendServerError(res, 'Stream error', err);
     }
-  });
-
-  return stream.pipe(res);
+  }
 }
