@@ -292,13 +292,49 @@ function ensureDeps(dialect) {
         env.npm_config_nodedir = process.env.XNAPIFY_NODE_DIR;
       }
 
-      execSync(`npm install --no-save ${[...specs, ...buildOpts].join(' ')}`, {
-        env,
-        cwd: ROOT,
-        stdio: 'pipe',
-        timeout: 300_000,
-        shell: os.platform() === 'win32' ? 'powershell.exe' : true,
+      // --- ISOLATED SANDBOX ARCHITECTURE ---
+      // Execute the database backend install locked cleanly inside a .data sandbox
+      // to guarantee NPM v9+ never traverses into the project root and drops packages
+      const driverDir = path.join(ROOT, '.data', 'sequelize-drivers');
+      if (!fs.existsSync(driverDir))
+        fs.mkdirSync(driverDir, { recursive: true });
+
+      // Force a dummy package.json to disable NPM upward traversal hooks
+      fs.writeFileSync(
+        path.join(driverDir, 'package.json'),
+        JSON.stringify(
+          {
+            name: `@xnapify-sandbox/${dialect}`,
+            version: '1.0.0',
+            private: true,
+          },
+          null,
+          2,
+        ),
+      );
+
+      execSync(
+        `npm install --no-save --prefix "${driverDir}" ${[...specs, ...buildOpts].join(' ')}`,
+        {
+          env,
+          cwd: driverDir,
+          stdio: 'pipe',
+          timeout: 300_000,
+          shell: os.platform() === 'win32' ? 'powershell.exe' : true,
+        },
+      );
+
+      // Bind the securely compiled library back natively into module resolution
+      // using directory junctions (admin bypasses Windows symlink restriction).
+      names.forEach(name => {
+        const srcPath = path.join(driverDir, 'node_modules', name);
+        const destPath = path.join(ROOT, 'node_modules', name);
+
+        // Clear previous corrupted or orphaned directory paths
+        fs.rmSync(destPath, { recursive: true, force: true });
+        fs.symlinkSync(srcPath, destPath, 'junction');
       });
+
       success = true;
       break;
     } catch (err) {
