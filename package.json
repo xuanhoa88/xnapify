@@ -102,7 +102,7 @@
     "express-jwt": "8.4.1",
     "express-rate-limit": "8.2.1",
     "express-request-language": "1.1.15",
-    "folder-hash": "4.1.1",
+    "folder-hash": "4.1.2",
     "form-data": "4.0.5",
     "history": "4.7.2",
     "i18next": "23.15.2",
