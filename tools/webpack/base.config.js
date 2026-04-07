@@ -458,6 +458,9 @@ const createScriptRule = () => ({
         comments: false,
         cacheDirectory: false,
         configFile: path.resolve(config.CWD, 'babel.config.js'),
+        // Override babel-loader's default sourceRoot (process.cwd()) to prevent
+        // Windows-specific Invalid URL TypeError in @pmmmwh/react-refresh-webpack-plugin
+        sourceRoot: '',
       },
     },
   ],
