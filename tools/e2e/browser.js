@@ -85,9 +85,9 @@ async function launchBrowser(opts = {}) {
     defaultViewport: viewport,
   };
 
-  // On MacOS, bundled Chromium often crashes in headed mode with 'UniversalExceptionRaise'.
+  // On MacOS, bundled Chromium often crashes in both modes with 'UniversalExceptionRaise'.
   // Using the system's Chrome prevents this fatal WebSocket hang up.
-  if (process.platform === 'darwin' && launchOpts.headless === false) {
+  if (process.platform === 'darwin') {
     launchOpts.channel = 'chrome';
   }
 

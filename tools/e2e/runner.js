@@ -55,7 +55,14 @@ if (!process.env.E2E_VIA_TASK) {
 
 // Global safety net for Puppeteer WebSocket disconnected events
 process.on('unhandledRejection', reason => {
-  if (reason && reason.message && reason.message.includes('socket hang up')) {
+  const util = require('util');
+  const str = util.inspect(reason);
+  if (
+    str.includes('socket hang up') ||
+    str.includes('ECONNRESET') ||
+    str.includes('Target closed') ||
+    str.includes('Session closed')
+  ) {
     console.error('   ⚠ Browser connection lost — continuing...');
     return;
   }
@@ -205,7 +212,7 @@ async function waitForAppReady(url, timeoutMs = 30000) {
     try {
       await new Promise((resolve, reject) => {
         const req = http.get(url, { timeout: 2000 }, res => {
-          res.on('data', () => {}); // consume data
+          res.on('data', () => { }); // consume data
           res.on('end', () => resolve());
         });
         req.on('error', reject);

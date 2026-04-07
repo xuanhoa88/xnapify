@@ -64,7 +64,7 @@ const LLM_PROVIDERS = {
   },
   google: {
     baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
-    model: 'gemini-2.0-flash',
+    model: 'gemini-3-flash-preview',
     endpoint: '/models/{model}:generateContent',
     authParam: 'key',
   },
@@ -215,7 +215,7 @@ The test type will be provided in context:
 
 {
   "action": "assert_body",
-  "path": "token",
+  "path": "accessToken",
   "exists": true,
   "description": "Verify token field exists in response"
 }
@@ -236,7 +236,7 @@ The test type will be provided in context:
 
 {
   "action": "store_value",
-  "from": "response.token",
+  "from": "response.accessToken",
   "as": "authToken",
   "description": "Store the JWT token for later use"
 }
@@ -260,8 +260,9 @@ The test type will be provided in context:
 - Prefer text-based selectors over CSS class selectors when possible
 - If the step is observational (e.g., "Observe the shimmer animation"), return a "wait" action with 1000ms
 - For login steps, use the "login" action with credentials from the test prerequisites
-- Prerequisites provide context like email, password, role, url — use them in your actions
-- Use {{variableName}} to reference stored values in API actions`;
+- Prerequisites provide context like email, password, role, url.
+- CRITICAL: Instead of hardcoding prerequisite values into your actions, YOU MUST use the interpolation syntax {{variableName}} (e.g., {{email}}, {{password}}). DO NOT write "from prerequisites" or the literal text.
+- Use {{variableName}} to reference stored values in API actions too.`;
 
 // ── Note: Caching is handled by compiler.js (per-test script.json) ──
 // interpretStep is now a pure LLM call used at compile time.
@@ -375,37 +376,37 @@ async function callGoogle(config, prompt) {
 
 // ── Auto-Detect Provider ──────────────────────────────────────────
 
+const PROVIDER_ENV_KEYS = {
+  google: 'E2E_GEMINI_API_KEY',
+  openai: 'E2E_OPENAI_API_KEY',
+  anthropic: 'E2E_ANTHROPIC_API_KEY',
+};
+
 /**
- * Scan env vars for existing API keys from IDE/CLI tools.
- * Returns { provider, apiKey } or falls back to ollama.
+ * Scan env vars for LLM provider and API keys.
+ * Returns { provider, apiKey } and caches the result.
  */
-function autoDetectProvider() {
-  // Return cached result if already detected
+function getProviderCredentials() {
   if (cachedProvider) return cachedProvider;
 
-  // Gemini / Google
-  const geminiKey = process.env.E2E_GEMINI_API_KEY || '';
-  if (geminiKey) {
-    cachedProvider = { provider: 'google', apiKey: geminiKey };
-    return cachedProvider;
+  let provider = process.env.E2E_LLM_PROVIDER || 'auto';
+  let apiKey = process.env.E2E_LLM_API_KEY || '';
+
+  if (provider === 'auto') {
+    for (const [p, k] of Object.entries(PROVIDER_ENV_KEYS)) {
+      if (process.env[k]) {
+        provider = p;
+        apiKey = apiKey || process.env[k];
+        break;
+      }
+    }
+    if (provider === 'auto') provider = 'ollama';
+  } else if (!apiKey) {
+    const envKey = PROVIDER_ENV_KEYS[provider];
+    if (envKey) apiKey = process.env[envKey] || '';
   }
 
-  // OpenAI / Copilot
-  const openaiKey = process.env.E2E_OPENAI_API_KEY || '';
-  if (openaiKey) {
-    cachedProvider = { provider: 'openai', apiKey: openaiKey };
-    return cachedProvider;
-  }
-
-  // Anthropic / Claude
-  const anthropicKey = process.env.E2E_ANTHROPIC_API_KEY || '';
-  if (anthropicKey) {
-    cachedProvider = { provider: 'anthropic', apiKey: anthropicKey };
-    return cachedProvider;
-  }
-
-  // Fallback to Ollama (local, free)
-  cachedProvider = { provider: 'ollama', apiKey: '' };
+  cachedProvider = { provider, apiKey };
   return cachedProvider;
 }
 
@@ -502,15 +503,7 @@ const CALLERS = {
 // ── Main: Interpret Step ──────────────────────────────────────────
 
 async function interpretStep(step, context) {
-  let provider = process.env.E2E_LLM_PROVIDER || 'auto';
-  let apiKey = process.env.E2E_LLM_API_KEY || '';
-
-  // Auto-detect provider from IDE/CLI env keys
-  if (provider === 'auto') {
-    const detected = autoDetectProvider();
-    provider = detected.provider;
-    apiKey = apiKey || detected.apiKey;
-  }
+  const { provider, apiKey } = getProviderCredentials();
 
   // Build prompt with page context + prerequisites
   const prereqs = context.prerequisites || {};
@@ -561,6 +554,22 @@ Return the JSON action to perform this step.`;
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         action = await caller(providerConfig, prompt);
+
+        // Validate that LLM respected the action schema
+        const actionList = Array.isArray(action) ? action : [action];
+        for (const act of actionList) {
+          if (
+            !act ||
+            typeof act !== 'object' ||
+            Array.isArray(act) ||
+            !act.action
+          ) {
+            throw new Error(
+              `LLM returned invalid schema: expected action object with 'action' property, got ${JSON.stringify(act)}`,
+            );
+          }
+        }
+
         break;
       } catch (err) {
         if (attempt === maxRetries) throw err;

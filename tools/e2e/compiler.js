@@ -202,15 +202,21 @@ async function compileTestCase(testCase, interpretStep, context, timestamp) {
       expectedResults: testCase.expectedResults,
     };
 
-    const action = await interpretStep(step, llmContext);
-    actions.push({
-      step: i + 1,
-      instruction: step,
-      ...action,
-    });
-    console.log(
-      `      Step ${i + 1}: ${action.action} → ${action.description || ''}`,
-    );
+    const compiledResult = await interpretStep(step, llmContext);
+    const resolvedActions = Array.isArray(compiledResult)
+      ? compiledResult
+      : [compiledResult];
+
+    for (const act of resolvedActions) {
+      actions.push({
+        step: i + 1,
+        instruction: step,
+        ...act,
+      });
+      console.log(
+        `      Step ${i + 1}: ${act.action} → ${act.description || ''}`,
+      );
+    }
   }
 
   const testHash = getTestHash(testCaseDir);
@@ -258,26 +264,33 @@ async function recompileStep(testCase, stepIndex, interpretStep, context) {
     expectedResults: testCase.expectedResults,
   };
 
-  const action = await interpretStep(step, llmContext);
-  const newAction = {
+  const compiledResult = await interpretStep(step, llmContext);
+  const resolvedActions = Array.isArray(compiledResult)
+    ? compiledResult
+    : [compiledResult];
+
+  // Usually for recompile, we just map 1:1, but if it returned an array, we replace the single failed step with multiple actions
+  const replacementActions = resolvedActions.map(act => ({
     step: stepIndex + 1,
     instruction: step,
-    ...action,
-  };
+    ...act,
+  }));
 
-  // Patch script.json
+  // Patch script.json (using splice to replace 1 act with N acts)
   const script = loadScript(testCase.testCaseDir);
   if (script && script.actions[stepIndex]) {
-    script.actions[stepIndex] = newAction;
+    script.actions.splice(stepIndex, 1, ...replacementActions);
     script.compiledAt = new Date().toISOString();
     const scriptFile = path.join(testCase.testCaseDir, SCRIPT_FILE);
     fs.writeFileSync(scriptFile, JSON.stringify(script, null, 2));
   }
 
-  console.log(
-    `    ✅ Recompiled step ${stepIndex + 1}: ${action.action} → ${action.description || ''}`,
-  );
-  return newAction;
+  for (const act of replacementActions) {
+    console.log(
+      `    ✅ Recompiled step ${stepIndex + 1}: ${act.action} → ${act.description || ''}`,
+    );
+  }
+  return replacementActions[0]; // returning first for legacy runner logic compatibility
 }
 
 module.exports = {

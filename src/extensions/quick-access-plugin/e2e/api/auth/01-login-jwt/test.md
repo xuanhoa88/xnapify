@@ -11,8 +11,8 @@ Verify the authentication endpoint returns a valid JWT token for valid credentia
 
 1. Send POST request to /api/auth/login with email and password from prerequisites
 2. Assert response status is 200
-3. Assert response body contains "token" field
-4. Store the token from response body field "token" as "authToken"
+3. Assert response body contains "accessToken" field
+4. Store the token from response body field "accessToken" as "authToken"
 5. Set Authorization header to "Bearer {{authToken}}"
 6. Send GET request to /api/auth/profile
 7. Assert response status is 200

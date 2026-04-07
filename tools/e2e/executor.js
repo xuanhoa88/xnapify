@@ -22,6 +22,8 @@
 const http = require('http');
 const https = require('https');
 
+const jp = require('jsonpath');
+
 // ── SPA Stability Engine ──────────────────────────────────────────
 //
 // Enterprise-grade page stability detection for React SPAs.
@@ -1103,15 +1105,42 @@ function apiRequest(url, options) {
 }
 
 /**
- * Get a nested value from an object using dot notation.
+ * Get a nested value from an object using jsonpath.
  * e.g., getNestedValue({ user: { email: 'a' } }, 'user.email') → 'a'
  */
 function getNestedValue(obj, path) {
   if (!path) return obj;
-  return path.split('.').reduce((o, key) => {
-    if (o === undefined || o === null) return undefined;
-    return o[key];
-  }, obj);
+
+  let jpPath = path;
+  if (!jpPath.startsWith('$')) {
+    // Auto-prefix root designator if omitted
+    jpPath = jpPath.startsWith('.') ? '$' + jpPath : '$.' + jpPath;
+  }
+
+  let val;
+  try {
+    val = jp.value(obj, jpPath);
+  } catch (e) {
+    // If parse fails
+    val = undefined;
+  }
+
+  // Auto-unwrap generic API envelopes if direct path misses
+  if (val === undefined && obj && typeof obj === 'object') {
+    const rawPath = path.startsWith('$.') ? path.slice(2) : path;
+    for (const key of Object.keys(obj)) {
+      if (
+        typeof obj[key] === 'object' &&
+        obj[key] !== null &&
+        !Array.isArray(obj[key])
+      ) {
+        const deepVal = getNestedValue(obj[key], rawPath);
+        if (deepVal !== undefined) return deepVal;
+      }
+    }
+  }
+
+  return val;
 }
 
 /**
