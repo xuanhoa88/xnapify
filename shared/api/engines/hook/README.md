@@ -38,7 +38,8 @@ await userHooks.emit('created', { id: 1, name: 'John' });
 | Method | Returns | Description |
 |---|---|---|
 | `on(event, handler, priority?)` | `this` | Register handler (lower priority runs first, default `10`) |
-| `emit(event, ...args)` | `Promise<void>` | Execute all handlers sequentially |
+| `emit(event, ...args)` | `Promise<void>` | Execute handlers sequentially (Multicast, aggregates errors) |
+| `invoke(event, ...args)`| `Promise<void>` | Execute handlers sequentially (Pipeline, fails fast on error) |
 | `off()` | — | Remove ALL handlers on ALL events |
 | `off(event)` | — | Remove all handlers for one event |
 | `off(event, handler)` | — | Remove specific handler (by reference) |
@@ -90,11 +91,27 @@ import { createFactory } from '@shared/api/engines/hook';
 const customHook = createFactory();
 ```
 
+## Execution Modes & Cancellation
+
+The engine provides two execution modes depending on your use case:
+
+1. **`emit(event, ...args)` (Multicast/Pub-Sub)**: Evaluates all registered handlers. If one handler throws an error, it is safely caught and aggregated securely. Once all handlers finish executing, an `AggregateError` is thrown containing all caught errors.
+2. **`invoke(event, ...args)` (Middleware/Pipeline)**: Evaluates handlers but **fails fast**. The very first handler to throw an error immediately halts the execution chain and propagates the error directly to the caller.
+
+**Cancellation (`AbortSignal`)**:
+Both `.emit()` and `.invoke()` automatically search for cancellation signals. If any argument has an `aborted` property set to `true` (such as `controller.signal.aborted`), the engine will cleanly bail out and push an `AbortError`.
+
+```javascript
+await hook('users').invoke('process', user, req.signal);
+```
+
 ## Error Handling
 
 - **Non-function handler:** `on()` throws `TypeError('Handler must be a function')`
 - **Invalid channel name:** `channel()` throws `Error` with `name: 'InvalidChannelNameError'`
-- **Handler errors:** `emit()` does **not** catch errors — they propagate to the caller
+- **Handler errors:** 
+  - `invoke()`: **Fails fast**. The first error thrown by a handler immediately propagates to the caller.
+  - `emit()`: **Aggregates errors**. Catches all handler errors, ensures all hooks still run, and throws an `AggregateError` at the end.
 
 ## See Also
 

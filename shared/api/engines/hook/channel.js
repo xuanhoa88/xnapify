@@ -62,14 +62,22 @@ class HookChannel {
       this[HOOK_HANDLERS].set(event, []);
     }
 
-    this[HOOK_HANDLERS].get(event).push({ handler, priority });
-    this[HOOK_HANDLERS].get(event).sort((a, b) => a.priority - b.priority);
+    const list = this[HOOK_HANDLERS].get(event);
+    const item = { handler, priority };
+
+    // O(N) Insertion based on priority
+    const insertIndex = list.findIndex(h => h.priority > priority);
+    if (insertIndex === -1) {
+      list.push(item);
+    } else {
+      list.splice(insertIndex, 0, item);
+    }
 
     return this;
   }
 
   /**
-   * Execute all handlers for an event sequentially
+   * Execute all handlers for an event sequentially (Multicast)
    *
    * @param {string} event - Event name
    * @param {...any} args - Arguments passed to handlers (mutable)
@@ -83,7 +91,19 @@ class HookChannel {
     const list = [...handlersList];
     const errors = [];
 
+    // Detect abort signal
+    const signal = args.find(
+      arg => arg && typeof arg === 'object' && arg.aborted !== undefined,
+    );
+
     for (const { handler } of list) {
+      if (signal && signal.aborted) {
+        const abortErr = new Error('Execution aborted');
+        abortErr.name = 'AbortError';
+        errors.push(abortErr);
+        break;
+      }
+
       try {
         await handler(...args);
       } catch (err) {
@@ -105,6 +125,36 @@ class HookChannel {
       err.name = 'AggregateError';
       err.errors = errors;
       throw err;
+    }
+  }
+
+  /**
+   * Execute handlers sequentially and fail fast if an error occurs (Pipeline)
+   *
+   * @param {string} event - Event name
+   * @param {...any} args - Arguments passed to handlers (mutable)
+   * @returns {Promise<void>}
+   */
+  async invoke(event, ...args) {
+    const handlersList = this[HOOK_HANDLERS].get(event);
+    if (!handlersList) return;
+
+    const list = [...handlersList];
+
+    // Detect abort signal
+    const signal = args.find(
+      arg => arg && typeof arg === 'object' && arg.aborted !== undefined,
+    );
+
+    for (const { handler } of list) {
+      if (signal && signal.aborted) {
+        const err = new Error('Execution aborted');
+        err.name = 'AbortError';
+        throw err;
+      }
+
+      // No wrapper - fails fast on first rejection
+      await handler(...args);
     }
   }
 
@@ -148,7 +198,7 @@ class HookChannel {
    * the provided context as `this` (handler.call(context, ...args)).
    *
    * @param {Object} context
-   * @returns {{on: Function, emit: Function, off: Function, name: string, events: string[]}}
+   * @returns {{on: Function, emit: Function, invoke: Function, off: Function, name: string, events: string[]}}
    */
   withContext(context) {
     const channel = this;
@@ -172,6 +222,10 @@ class HookChannel {
 
       emit(event, ...args) {
         return channel.emit(event, ...args);
+      },
+
+      invoke(event, ...args) {
+        return channel.invoke(event, ...args);
       },
 
       off(event, handler) {

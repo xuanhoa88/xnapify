@@ -21,6 +21,7 @@ Quick-reference checklist for reviewing `src/extensions/[extension-name]` code.
 - [ ] `shutdown({ container, registry })` unsubscribes **every** hook registered in `boot()`
 - [ ] `install({ container })` and `uninstall({ container })` wrap all DB ops in `try/catch`
 - [ ] IPC registered as: `registry.registerHook('ipc:${__EXTENSION_ID__}:action', ...)`
+- [ ] Pre-flight validation hooks use `.invoke()` (fail-fast); post-action hooks use `.emit()` (aggregate errors)
 
 ## Frontend Lifecycle
 

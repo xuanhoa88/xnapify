@@ -96,7 +96,7 @@ class XnapifyAuthStrategy extends Strategy {
         try {
           const hook = container.resolve('hook');
           if (hook && hook.has('auth.permissions')) {
-            await hook('auth.permissions').emit('resolve', req);
+            await hook('auth.permissions').invoke('resolve', req);
           }
           permissions = req.user.permissions || [];
 
@@ -189,7 +189,7 @@ async function getUserWithPermissions(app, username) {
     // Get permissions using hook system
     const hook = container.resolve('hook');
     if (hook && hook.has('auth.permissions')) {
-      await hook('auth.permissions').emit('resolve', req);
+      await hook('auth.permissions').invoke('resolve', req);
     }
     const permissions = req.user.permissions || [];
 

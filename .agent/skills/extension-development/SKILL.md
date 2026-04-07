@@ -109,7 +109,7 @@ Extensions can resolve these services from the DI container in `boot()`:
 
 | Service Key   | Type           | Description                                                                                  |
 | ------------- | -------------- | -------------------------------------------------------------------------------------------- |
-| `hook`        | `Function`     | Event hook engine — `hook('namespace').on('event', handler)`                                 |
+| `hook`        | `Function`     | Event hook engine — `.emit` (PubSub) or `.invoke` (Pipeline)                                 |
 | `email`       | `EmailManager` | Low-level email engine (direct provider access)                                              |
 | `emails:send` | `Function`     | High-level templated email service with base variables                                       |
 | `models`      | `Object`       | Sequelize model registry — `container.resolve('db').models` or `container.resolve('models')` |

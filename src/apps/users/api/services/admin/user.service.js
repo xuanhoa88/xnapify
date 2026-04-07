@@ -260,7 +260,7 @@ export async function getUserList(options, ctx) {
   );
 
   // Emit event for extensions to modify formatted users
-  await ctx.hook('admin:users').emit('list:after', formattedUsers);
+  await ctx.hook('admin:users').invoke('list:after', formattedUsers);
 
   return {
     users: formattedUsers,

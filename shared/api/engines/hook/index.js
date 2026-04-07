@@ -29,7 +29,12 @@
  *
  * // Trigger handlers
  * const user = { name: 'John' };
- * await userHooks.emit('create', user);
+ * await userHooks.emit('create', user); // Executes all handlers
+ * await userHooks.invoke('validate', user); // Fails fast on error
+ *
+ * @example <caption>Cancellation</caption>
+ * const controller = new AbortController();
+ * await userHooks.invoke('process', user, controller.signal);
  *
  * @example <caption>Priority Control</caption>
  * userHooks.on('save', validateUser, 1);   // Runs first

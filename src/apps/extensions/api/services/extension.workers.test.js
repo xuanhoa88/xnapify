@@ -73,6 +73,7 @@ function createMockContainer(overrides = {}) {
       isExtensionLoaded: jest.fn(() => false),
       unloadExtension: jest.fn().mockResolvedValue(undefined),
       emit: jest.fn().mockResolvedValue(undefined),
+      invoke: jest.fn().mockResolvedValue(undefined),
       getInstalledExtensionsDir: jest.fn(() => '/extensions'),
       getDevExtensionsDir: jest.fn(() => '/dev-extensions'),
       resolveExtensionDir: jest.fn().mockResolvedValue({
@@ -80,12 +81,13 @@ function createMockContainer(overrides = {}) {
         isDevExtension: false,
       }),
     },
-    hook: jest.fn(() => ({ emit: jest.fn() })),
+    hook: jest.fn(() => ({ emit: jest.fn(), invoke: jest.fn() })),
     ws: { sendToPublicChannel: jest.fn() },
     cwd: '/test/cwd',
     queue: jest.fn(() => ({
       on: jest.fn(),
       emit: jest.fn(),
+      invoke: jest.fn(),
     })),
     ...overrides,
   };

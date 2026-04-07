@@ -51,7 +51,7 @@ export async function getProfile(req, res) {
     });
 
     // Emit hook event for extensions to modify the response
-    await hook('profile').emit('retrieved', normalizedUser);
+    await hook('profile').invoke('retrieved', normalizedUser);
 
     return http.sendSuccess(res, {
       user: normalizedUser,
@@ -88,7 +88,7 @@ export async function updateProfile(req, res) {
       z,
     };
 
-    await hook('profile').emit('validation:update', context);
+    await hook('profile').invoke('validation:update', context);
 
     // 3. Validate using the (potentially extended) schema
     // We wrap it in a factory because validateForm expects a function

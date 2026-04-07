@@ -58,7 +58,7 @@ describe('Admin User Controller', () => {
     mockJwt = {};
     mockCache = {};
 
-    mockHookInstance = { emit: jest.fn() };
+    mockHookInstance = { emit: jest.fn(), invoke: jest.fn() };
     mockHook = jest.fn().mockReturnValue(mockHookInstance);
 
     req = {

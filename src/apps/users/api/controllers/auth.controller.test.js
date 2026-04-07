@@ -74,7 +74,7 @@ describe('Auth Controller', () => {
 
     mockModels = {};
 
-    mockHookInstance = { emit: jest.fn() };
+    mockHookInstance = { emit: jest.fn(), invoke: jest.fn() };
     mockHook = jest.fn().mockReturnValue(mockHookInstance);
 
     // Setting up global req/res

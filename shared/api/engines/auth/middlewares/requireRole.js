@@ -40,7 +40,7 @@ async function resolveRoles(req, adminBypass = false) {
   if (!req.user.roles) {
     const hook = req.app.get('container').resolve('hook');
     if (hook && hook.has(HOOK_CHANNEL)) {
-      await hook(HOOK_CHANNEL).emit('resolve', req);
+      await hook(HOOK_CHANNEL).invoke('resolve', req);
     }
   }
 
@@ -273,7 +273,9 @@ export function requireDynamicRole(options = {}) {
     } else if (resourceType) {
       const hook = req.app.get('container').resolve('hook');
       if (hook && hook.has(DYNAMIC_HOOK_CHANNEL)) {
-        await hook(DYNAMIC_HOOK_CHANNEL).emit('resolve', req, { resourceType });
+        await hook(DYNAMIC_HOOK_CHANNEL).invoke('resolve', req, {
+          resourceType,
+        });
       }
       requiredRoles = req.requiredRoles || [];
     }

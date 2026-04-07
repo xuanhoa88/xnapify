@@ -69,6 +69,7 @@ const mockModels = {
 
 const mockQueueChannel = {
   emit: jest.fn(),
+  invoke: jest.fn(),
   on: jest.fn(),
   queue: {
     getJobs: jest.fn(() => []),

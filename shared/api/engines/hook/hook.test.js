@@ -153,9 +153,74 @@ describe('Hook Engine', () => {
 
       expect(order).toEqual(['A', 'B']);
     });
+
+    test('should fail fast with invoke()', async () => {
+      const order = [];
+
+      channel.on(
+        'invoke-test',
+        async () => {
+          order.push('A');
+          throw new Error('Invoke Error A');
+        },
+        1,
+      );
+
+      channel.on(
+        'invoke-test',
+        async () => {
+          order.push('B');
+        },
+        2,
+      );
+
+      await expect(channel.invoke('invoke-test')).rejects.toThrow(
+        'Invoke Error A',
+      );
+
+      // B should NOT be executed
+      expect(order).toEqual(['A']);
+    });
+
+    test('should support AbortSignal cancellation', async () => {
+      const order = [];
+      const controller = new AbortController();
+
+      channel.on(
+        'abort-test',
+        async () => {
+          order.push('A');
+          controller.abort(); // abort mid-flight
+        },
+        1,
+      );
+
+      channel.on(
+        'abort-test',
+        async () => {
+          order.push('B');
+        },
+        2,
+      );
+
+      try {
+        await channel.emit('abort-test', controller.signal);
+      } catch (err) {
+        expect(err.name).toBe('AbortError');
+      }
+      expect(order).toEqual(['A']);
+    });
   });
 
   describe('Factory', () => {
+    test('should reject empty or whitespace channel names', () => {
+      const factory = createFactory();
+      expect(() => factory('   ')).toThrow(
+        'Channel name must be a non-empty string',
+      );
+      expect(factory.has(' ')).toBe(false);
+      expect(factory.remove('\t')).toBe(false);
+    });
     test('should create channels via factory call', () => {
       const factory = createFactory();
       const ch = factory('my-channel');

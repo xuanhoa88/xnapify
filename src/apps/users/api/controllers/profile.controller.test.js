@@ -75,7 +75,7 @@ describe('Profile Controller', () => {
 
     mockI18n = {};
 
-    mockHookInstance = { emit: jest.fn() };
+    mockHookInstance = { emit: jest.fn(), invoke: jest.fn() };
     mockHook = jest.fn().mockReturnValue(mockHookInstance);
 
     req = {

@@ -25,14 +25,14 @@ class HookFactory {
    * @returns {HookChannel}
    */
   channel(name) {
-    if (!name || typeof name !== 'string') {
+    const key = name && typeof name === 'string' ? name.trim() : '';
+
+    if (!key) {
       const err = new Error('Channel name must be a non-empty string');
       err.name = 'InvalidChannelNameError';
       err.code = 'ERR_INVALID_CHANNEL_NAME';
       throw err;
     }
-
-    const key = name.trim();
 
     if (!this[HOOK_CHANNELS].has(key)) {
       this[HOOK_CHANNELS].set(key, new HookChannel(key));
@@ -48,6 +48,7 @@ class HookFactory {
    */
   has(name) {
     const key = name && typeof name === 'string' ? name.trim() : '';
+    if (!key) return false;
     return this[HOOK_CHANNELS].has(key);
   }
 
@@ -57,9 +58,9 @@ class HookFactory {
    * @returns {boolean}
    */
   remove(name) {
-    if (!name || typeof name !== 'string') return false;
+    const key = name && typeof name === 'string' ? name.trim() : '';
+    if (!key) return false;
 
-    const key = name.trim();
     const channel = this[HOOK_CHANNELS].get(key);
     if (channel) {
       channel.off();

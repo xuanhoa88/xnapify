@@ -94,7 +94,7 @@ export function requireOwnership(options = {}) {
       if (req.isOwner == null) {
         const hook = req.app.get('container').resolve('hook');
         if (hook && hook.has(HOOK_CHANNEL)) {
-          await hook(HOOK_CHANNEL).emit('resolve', req, { resourceType });
+          await hook(HOOK_CHANNEL).invoke('resolve', req, { resourceType });
         }
       }
 
@@ -196,7 +196,7 @@ export function requireFlexibleOwnership(options = {}) {
 
         const hook = req.app.get('container').resolve('hook');
         if (hook && hook.has(HOOK_CHANNEL)) {
-          await hook(HOOK_CHANNEL).emit('resolve', req, { resourceType });
+          await hook(HOOK_CHANNEL).invoke('resolve', req, { resourceType });
         }
         if (req.isOwner === true) {
           return next();
@@ -275,7 +275,9 @@ export function requireSharedOwnership(options = {}) {
     if (!req.sharedOwners) {
       const hook = req.app.get('container').resolve('hook');
       if (hook && hook.has(SHARED_HOOK_CHANNEL)) {
-        await hook(SHARED_HOOK_CHANNEL).emit('resolve', req, { resourceType });
+        await hook(SHARED_HOOK_CHANNEL).invoke('resolve', req, {
+          resourceType,
+        });
       }
     }
 
@@ -355,7 +357,7 @@ export function requireHierarchicalOwnership(options = {}) {
     // 3. Emit hook to populate req.ownerChain
     const hook = req.app.get('container').resolve('hook');
     if (hook && hook.has(HIERARCHICAL_HOOK_CHANNEL)) {
-      await hook(HIERARCHICAL_HOOK_CHANNEL).emit('resolve', req, {
+      await hook(HIERARCHICAL_HOOK_CHANNEL).invoke('resolve', req, {
         resourceType,
       });
     }
@@ -438,7 +440,7 @@ export function requireTimeBasedOwnership(options = {}) {
     // 3. Emit hook to resolve ownership + expiry
     const hook = req.app.get('container').resolve('hook');
     if (hook && hook.has(TIME_BASED_HOOK_CHANNEL)) {
-      await hook(TIME_BASED_HOOK_CHANNEL).emit('resolve', req, {
+      await hook(TIME_BASED_HOOK_CHANNEL).invoke('resolve', req, {
         resourceType,
         windowMs,
       });

@@ -6,7 +6,7 @@ const {
 
 // simple hook stub
 // eslint-disable-next-line no-unused-vars
-const hook = name => ({ emit: async () => {} });
+const hook = name => ({ emit: async () => {}, invoke: async () => {} });
 
 describe('concurrent profile updates', () => {
   it('handles many simultaneous profile writes without loss', async () => {

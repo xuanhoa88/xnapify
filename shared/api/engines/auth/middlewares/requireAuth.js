@@ -57,7 +57,7 @@ export function requireAuth(options = {}) {
         const hook = container.resolve('hook');
         if (strategyKey && hook.has(strategyKey)) {
           // Delegate to registered strategy (event-based)
-          await hook(strategyKey).emit('authenticate', req, {
+          await hook(strategyKey).invoke('authenticate', req, {
             jwt,
             token,
             payload,

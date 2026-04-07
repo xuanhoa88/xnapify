@@ -72,7 +72,7 @@ export async function updateUserProfile(user_id, formData, { models, hook }) {
   }
 
   // Run hooks before updating
-  await hook('profile').emit('updating', formData, { user_id, user });
+  await hook('profile').invoke('updating', formData, { user_id, user });
 
   // Update profile data via EAV bulk upserts
   const updates = [];
@@ -214,7 +214,10 @@ export async function getUserPreferences(user_id, { models, hook }) {
     preferences[row.attribute_key] = row.attribute_value;
   });
 
-  await hook('profile').emit('preferences_retrieved', { preferences, user_id });
+  await hook('profile').invoke('preferences_retrieved', {
+    preferences,
+    user_id,
+  });
 
   return {
     language: preferences.language || 'en',

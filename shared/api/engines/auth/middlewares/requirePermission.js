@@ -109,7 +109,7 @@ async function resolvePermissions(req, adminBypass = true) {
   if (!req.user.permissions) {
     const hook = req.app.get('container').resolve('hook');
     if (hook && hook.has(HOOK_CHANNEL)) {
-      await hook(HOOK_CHANNEL).emit('resolve', req);
+      await hook(HOOK_CHANNEL).invoke('resolve', req);
     }
   }
 

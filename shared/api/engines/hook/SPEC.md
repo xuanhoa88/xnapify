@@ -55,17 +55,26 @@ Internal state is stored via Symbols to prevent external access:
 Registers a handler for an event. Returns `this` for chaining.
 
 - `priority` defaults to `10`. **Lower values run first.**
-- Pushes `{ handler, priority }` to the event's array, then **sorts ascending by priority** after every registration.
+- Uses **O(N) sequential insertion** to place `{ handler, priority }` directly in the correct priority order without re-sorting the entire array.
 - Throws `TypeError('Handler must be a function')` if handler is not a function.
 - Multiple handlers per event allowed (array of entries).
 
 #### `emit(event, ...args) → Promise<void>`
 
-Executes all handlers for the given event **sequentially** (one `await` at a time, in priority order).
+Executes all handlers for the given event **sequentially** (one `await` at a time, in priority order). Best used for **Multicast / Pub-Sub** functionality where all handlers should run.
 
 - If no handlers registered for the event, returns immediately.
 - Arguments are passed by reference — handlers can mutate objects.
-- **No error catching** — if a handler throws, the error propagates to the caller.
+- **Cancellation Support**: If any of the `args` contains an `AbortSignal` (or any object with `.aborted` property set to `true`), the loop will break early and push an `AbortError`.
+- **Aggregate Error Handling**: If a handler throws, the error is caught, and the rest of the handlers **still execute**. All caught errors are thrown at the end as an `AggregateError`.
+
+#### `invoke(event, ...args) → Promise<void>`
+
+Executes handlers **sequentially and fails fast** if any handler throws an exception. Best used for **Middleware Pipelines** (e.g. Auth checks, Validation).
+
+- Functions identical to `emit()`, but **does not catch and aggregate errors**.
+- The first handler to throw will immediately reject the promise and halt execution of subsequent hooks.
+- **Cancellation Support**: Like `emit`, if `args` contains an aborted signal, halts immediately and throws an `AbortError`.
 
 #### `off(event?, handler?)`
 
@@ -83,7 +92,8 @@ Returns a proxy-like object where handlers registered via `on()` are invoked wit
 ```javascript
 {
   on(event, handler, priority?) → this,  // wraps handler, stores in WeakMap
-  emit(event, ...args),                   // delegates to channel.emit()
+  emit(event, ...args),                  // delegates to channel.emit()
+  invoke(event, ...args),                // delegates to channel.invoke()
   off(event),                            // delegates to channel.off(event)
   get name,                              // channel.name
   get events,                            // channel.events

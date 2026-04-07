@@ -60,6 +60,7 @@ Quick-reference checklist for reviewing `src/apps/[module_name]` code.
 
 - [ ] No cross-domain imports between `src/apps/` modules
 - [ ] Auth via DI: `container.resolve('auth')` or `req.app.get('container').resolve('auth')`
+- [ ] Pre-flight and validation hooks use `.invoke()` (fail-fast). `.emit()` is reserved for post-action side-effects.
 - [ ] Emails via `hook('emails').emit('send', ...)` or `container.resolve('emails:send')`
 - [ ] All routes have RBAC guards or explicit `export const middleware = false`
 - [ ] User-facing strings use `t('namespace:key', 'Default fallback')`
