@@ -1,6 +1,6 @@
 ---
 name: frontend-design
-description: Design thinking and decision-making for web UI. Use when designing components, layouts, color schemes, typography, or creating aesthetic interfaces. Teaches principles, not fixed values.
+description: Create distinctive, production-grade frontend interfaces with high design quality. Use when designing components, layouts, color schemes, typography, or creating aesthetic interfaces. Generates creative, polished code and UI design that avoids generic AI aesthetics.
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 ---
 
@@ -8,6 +8,8 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 
 > **Philosophy:** Every pixel has purpose. Restraint is luxury. User psychology drives decisions.
 > **Core Principle:** THINK, don't memorize. ASK, don't assume.
+
+This skill guides creation of distinctive, production-grade frontend interfaces that avoid generic "AI slop" aesthetics. Implement real working code with exceptional attention to aesthetic details and creative choices.
 
 ---
 
@@ -71,17 +73,20 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash
 
 ---
 
-## 1. Constraint Analysis (ALWAYS FIRST)
+## 1. Constraint Analysis & Design Thinking (ALWAYS FIRST)
 
-Before any design work, ANSWER THESE or ASK USER:
+Before coding, understand the context and commit to a BOLD aesthetic direction:
 
 | Constraint | Question | Why It Matters |
 |------------|----------|----------------|
-| **Timeline** | How much time? | Determines complexity |
+| **Purpose** | What problem does this solve? | Drives feature prioritization |
+| **Tone** | What's the aesthetic extreme? | Brutally minimal, maximalist chaos, retro-futuristic, elegant luxury? |
 | **Content** | Ready or placeholder? | Affects layout flexibility |
 | **Brand** | Existing guidelines? | May dictate colors/fonts |
 | **Tech** | What stack? | Affects capabilities |
-| **Audience** | Who exactly? | Drives all visual decisions |
+| **Differentiation** | What makes it UNFORGETTABLE? | What's the one thing someone will remember? |
+
+**CRITICAL**: Choose a clear conceptual direction and execute it with precision. Bold maximalism and refined minimalism both work - the key is intentionality, not intensity.
 
 ### Audience → Design Approach
 
@@ -116,17 +121,13 @@ BEHAVIORAL (use)    → Using it: speed, feedback, efficiency
 REFLECTIVE (memory) → After: "I like what this says about me"
 ```
 
-### Trust Building
-
-- Security indicators on sensitive actions
-- Social proof where relevant
-- Clear contact/support access
-- Consistent, professional design
-- Transparent policies
-
 ---
 
-## 3. Layout Principles
+## 3. Layout Principles & Spatial Composition
+
+### Spatial Composition
+
+Focus on unexpected layouts rather than safe formulas: Asymmetry, overlap, diagonal flow, and grid-breaking elements. Choose between generous negative space OR controlled density. Match the implementation complexity to the aesthetic vision. Elegance comes from executing the vision well.
 
 ### Golden Ratio (φ = 1.618)
 
@@ -149,19 +150,11 @@ All spacing and sizing in multiples of 8:
 └── Adjust based on content density
 ```
 
-### Key Sizing Principles
-
-| Element | Consideration |
-|---------|---------------|
-| **Touch targets** | Minimum comfortable tap size |
-| **Buttons** | Height based on importance hierarchy |
-| **Inputs** | Match button height for alignment |
-| **Cards** | Consistent padding, breathable |
-| **Reading width** | 45-75 characters optimal |
-
 ---
 
-## 4. Color Principles
+## 4. Color & Theme Principles
+
+Commit to a cohesive aesthetic. Dominant colors with sharp accents outperform timid, evenly-distributed palettes. Vary between light and dark themes—never converge on common choices across projects.
 
 ### 60-30-10 Rule
 
@@ -171,16 +164,6 @@ All spacing and sizing in multiples of 8:
 10% → Accent (CTAs, highlights, attention)
 ```
 
-### Color Psychology (For Decision Making)
-
-| If You Need... | Consider Hues | Avoid |
-|----------------|---------------|-------|
-| Trust, calm | Blue family | Aggressive reds |
-| Growth, nature | Green family | Industrial grays |
-| Energy, urgency | Orange, red | Passive blues |
-| Luxury, creativity | Deep Teal, Gold, Emerald | Cheap-feeling brights |
-| Clean, minimal | Neutrals | Overwhelming color |
-
 ### Selection Process
 
 1. **What's the industry?** (narrows options)
@@ -188,42 +171,31 @@ All spacing and sizing in multiples of 8:
 3. **Light or dark mode?** (sets foundation)
 4. **ASK USER** if not specified
 
-For detailed color theory: [color-system.md](color-system.md)
-
 ---
 
 ## 5. Typography Principles
+
+Choose fonts that are beautiful, unique, and interesting. Avoid generic fonts like Arial, Inter, Roboto, or system fonts; opt instead for unexpected, characterful font choices that elevate the frontend's aesthetics. Pair a distinctive display font with a refined body font.
 
 ### Scale Selection
 
 | Content Type | Scale Ratio | Feel |
 |--------------|-------------|------|
-| Dense UI | 1.125-1.2 | Compact, efficient |
 | General web | 1.25 | Balanced (most common) |
 | Editorial | 1.333 | Readable, spacious |
 | Hero/display | 1.5-1.618 | Dramatic impact |
-
-### Pairing Concept
-
-```
-Contrast + Harmony:
-├── DIFFERENT enough for hierarchy
-├── SIMILAR enough for cohesion
-└── Usually: display + neutral, or serif + sans
-```
 
 ### Readability Rules
 
 - **Line length**: 45-75 characters optimal
 - **Line height**: 1.4-1.6 for body text
 - **Contrast**: Check WCAG requirements
-- **Size**: 16px+ for body on web
-
-For detailed typography: [typography-system.md](typography-system.md)
 
 ---
 
-## 6. Visual Effects Principles
+## 6. Visual Details & Backgrounds
+
+Create atmosphere and depth rather than defaulting to solid colors. Add contextual effects and textures that match the overall aesthetic. Apply creative forms like noise textures, geometric patterns, layered transparencies, dramatic shadows, decorative borders, custom cursors, and grain overlays.
 
 ### Glassmorphism (When Appropriate)
 
@@ -231,7 +203,6 @@ For detailed typography: [typography-system.md](typography-system.md)
 Key properties:
 ├── Semi-transparent background
 ├── Backdrop blur
-├── Subtle border for definition
 └── ⚠️ **WARNING:** Standard blue/white glassmorphism is a modern cliché. Use it radically or not at all.
 ```
 
@@ -240,27 +211,15 @@ Key properties:
 ```
 Elevation concept:
 ├── Higher elements = larger shadows
-├── Y-offset > X-offset (light from above)
-├── Multiple layers = more realistic
-└── Dark mode: may need glow instead
+└── Y-offset > X-offset (light from above)
 ```
-
-### Gradient Usage
-
-```
-Harmonious gradients:
-├── Adjacent colors on wheel (analogous)
-├── OR same hue, different lightness
-├── Avoid harsh complementary pairs
-├── 🚫 **NO Mesh/Aurora Gradients** (floating blobs)
-└── VARY from project to project radically
-```
-
-For complete effects guide: [visual-effects.md](visual-effects.md)
 
 ---
 
-## 7. Animation Principles
+## 7. Animation Principles & Motion
+
+Use animations for effects and micro-interactions. Prioritize CSS-only solutions for HTML, or motion libraries when available. 
+Focus on high-impact moments: one well-orchestrated page load with staggered reveals (animation-delay) creates more delight than scattered micro-interactions. Use scroll-triggering and hover states that surprise.
 
 ### Timing Concept
 
@@ -268,7 +227,6 @@ For complete effects guide: [visual-effects.md](visual-effects.md)
 Duration based on:
 ├── Distance (further = longer)
 ├── Size (larger = slower)
-├── Importance (critical = clear)
 └── Context (urgent = fast, luxury = slow)
 ```
 
@@ -278,75 +236,42 @@ Duration based on:
 |--------|--------|-----|
 | Entering | Ease-out | Decelerate, settle in |
 | Leaving | Ease-in | Accelerate, exit |
-| Emphasis | Ease-in-out | Smooth, deliberate |
-| Playful | Bounce | Fun, energetic |
-
-### Performance
-
-- Animate only transform and opacity
-- Respect reduced-motion preference
-- Test on low-end devices
-
-For animation patterns: [animation-guide.md](animation-guide.md), for advanced: [motion-graphics.md](motion-graphics.md)
 
 ---
 
 ## 8. "Wow Factor" Checklist
 
 ### Premium Indicators
-
-- [ ] Generous whitespace (luxury = breathing room)
-- [ ] Subtle depth and dimension
-- [ ] Smooth, purposeful animations
-- [ ] Attention to detail (alignment, consistency)
+- [ ] Generous whitespace OR clearly intentional maximalist density
+- [ ] Distinctive, non-default typography choices
+- [ ] Smooth, purposeful high-impact animations
+- [ ] Attention to detail (alignment, consistency, custom cursors)
 - [ ] Cohesive visual rhythm
-- [ ] Custom elements (not all defaults)
+- [ ] Atmospheric backgrounds with textures or intentional shadows
 
 ### Trust Builders
-
-- [ ] Security cues where appropriate
-- [ ] Social proof / testimonials
 - [ ] Clear value proposition
-- [ ] Professional imagery
+- [ ] Professional aesthetics
 - [ ] Consistent design language
-
-### Emotional Triggers
-
-- [ ] Hero that evokes intended emotion
-- [ ] Human elements (faces, stories)
-- [ ] Progress/achievement indicators
-- [ ] Moments of delight
 
 ---
 
 ## 9. Anti-Patterns (What NOT to Do)
 
+### ❌ Generic AI Slop Aesthetics (AVOID!)
+- Overusing **Inter, Roboto, Arial, Space Grotesk, or system fonts**.
+- **Purple gradients on white backgrounds.**
+- Cookie-cutter design that lacks context-specific character.
+- Same layout structure / clone patterns.
+- Not asking user preferences.
+- Dark + neon default for everything.
+
 ### ❌ Lazy Design Indicators
-
-- Default system fonts without consideration
-- Stock imagery that doesn't match
-- Inconsistent spacing
-- Too many competing colors
-- Walls of text without hierarchy
-- Inaccessible contrast
-
-### ❌ AI Tendency Patterns (AVOID!)
-
-- **Same colors every project**
-- **Dark + neon as default**
-- **Purple/violet everything (PURPLE BAN ✅)**
-- **Bento grids for simple landing pages**
-- **Mesh Gradients & Glow Effects**
-- **Same layout structure / Vercel clone**
-- **Not asking user preferences**
-
-### ❌ Dark Patterns (Unethical)
-
-- Hidden costs
-- Fake urgency
-- Forced actions
-- Deceptive UI
-- Confirmshaming
+- Default system fonts without consideration.
+- Stock imagery that doesn't match the vibe.
+- Inconsistent spacing.
+- Too many competing colors without a dominant hierarchy.
+- Inaccessible contrast.
 
 ---
 
@@ -355,8 +280,8 @@ For animation patterns: [animation-guide.md](animation-guide.md), for advanced: 
 ```
 For EVERY design task:
 
-1. CONSTRAINTS
-   └── What's the timeline, brand, tech, audience?
+1. CONSTRAINTS & TONE
+   └── What's the audience, brand, tech, and aesthetic extreme?
    └── If unclear → ASK
 
 2. CONTENT
@@ -368,8 +293,8 @@ For EVERY design task:
    └── If unclear → ASK (don't default!)
 
 4. EXECUTION
-   └── Apply principles above
-   └── Check against anti-patterns
+   └── Apply principles above (Typography, Spatial Layout, Motion)
+   └── Check against AI-slop anti-patterns
 
 5. REVIEW
    └── "Does this serve the user?"
@@ -393,7 +318,7 @@ For deeper guidance on specific areas:
 
 ---
 
-> **Remember:** Design is THINKING, not copying. Every project deserves fresh consideration based on its unique context and users. **Avoid the Modern SaaS Safe Harbor!**
+> **Remember:** Claude is capable of extraordinary creative work. Don't hold back. Every project deserves fresh consideration based on its unique context and users. **Avoid the Modern SaaS Safe Harbor and generic AI aesthetics!**
 
 ---
 
