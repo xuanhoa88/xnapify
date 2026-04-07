@@ -36,16 +36,32 @@ const TEST_FILE = 'test.md';
 const ARCHIVE_DIR = 'scripts';
 const SCRIPT_VERSION = 1;
 
+const { parseTestFile } = require('./parser');
+
 /**
- * Compute SHA256 hash of test.md content.
+ * Compute a logical SHA256 hash of the test.md content.
+ * Hashes ONLY execution-critical sections (Steps, Expected Results, Prerequisites)
+ * by parsing the markdown AST, effectively ignoring typos or changes in descriptions/notes.
  *
  * @param {string} testCaseDir Absolute path to test case directory
  * @returns {string} Hex-encoded SHA256 hash
  */
 function getTestHash(testCaseDir) {
   const testFile = path.join(testCaseDir, TEST_FILE);
-  const content = fs.readFileSync(testFile, 'utf-8');
-  return crypto.createHash('sha256').update(content).digest('hex');
+
+  // 1. Parse the structural AST of the test
+  const tc = parseTestFile(testFile);
+
+  // 2. Extract only the mandatory execution sections
+  // Title is included because it provides semantic context to the LLM during generation
+  const logicalPayload = JSON.stringify({
+    title: tc.title,
+    prerequisites: tc.prerequisites,
+    steps: tc.steps,
+    expectedResults: tc.expectedResults,
+  });
+
+  return crypto.createHash('sha256').update(logicalPayload).digest('hex');
 }
 
 /**
