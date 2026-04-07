@@ -8,6 +8,7 @@
  */
 
 const { spawn } = require('child_process');
+const fs = require('fs');
 const path = require('path');
 
 const config = require('../config');
@@ -56,12 +57,32 @@ async function main() {
     // Log jest command in debug mode
     logDebug(`Running: jest ${jestArgs.join(' ')}`);
 
-    // Resolve local jest binary directly or fallback to path traversal (avoids CI/PnP export restrictions)
+    // Safely execute using Node itself if we can resolve the binary directly
     let jestBin;
-    try {
-      jestBin = require.resolve('jest/bin/jest.js');
-    } catch {
-      jestBin = path.resolve(config.CWD, 'node_modules/jest/bin/jest.js');
+
+    const jestBinTargets = ['jest/bin/jest.js', 'jest-cli/bin/jest.js'];
+    for (const target of jestBinTargets) {
+      try {
+        jestBin = require.resolve(target);
+        break;
+      } catch {
+        // Continue looking
+      }
+    }
+
+    if (!jestBin) {
+      const possiblePaths = [
+        path.resolve(require.resolve('jest'), '../../bin/jest.js'),
+        path.resolve(config.CWD, 'node_modules/jest/bin/jest.js'),
+        path.resolve(config.CWD, 'node_modules/jest-cli/bin/jest.js'),
+        path.resolve(config.CWD, 'node_modules/.bin/jest'),
+        path.resolve(config.CWD, 'node_modules/.bin/jest-cli'),
+      ];
+      jestBin = possiblePaths.find(p => fs.existsSync(p));
+    }
+
+    if (!jestBin) {
+      throw new BuildError('Could not find Jest binary', { exitCode: 1 });
     }
 
     // Spawn Jest process
