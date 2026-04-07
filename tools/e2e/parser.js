@@ -108,13 +108,18 @@ function parseTestFile(filePath) {
 
       if (/^(steps?|test\s+steps?)$/i.test(heading)) {
         currentSection = 'steps';
+        inPrerequisite = false;
       } else if (/^expected\s+results?$/i.test(heading)) {
         currentSection = 'expected';
+        inPrerequisite = false;
+      } else if (/^pre[-\s]?requisites?$/i.test(heading)) {
+        currentSection = null;
+        inPrerequisite = true;
       } else {
         currentSection = null;
+        inPrerequisite = false;
       }
       i += 2;
-      inPrerequisite = false;
       continue;
     }
 
