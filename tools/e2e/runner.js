@@ -1,40 +1,57 @@
-#!/usr/bin/env node
+/* eslint-disable no-console */
 
-/**
- * xnapify (https://github.com/xuanhoa88/xnapify/)
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE.txt file in the root directory of this source tree.
- */
+//
+// xnapify (https://github.com/xuanhoa88/xnapify/)
+//
+// This source code is licensed under the MIT license found in the
+// LICENSE.txt file in the root directory of this source tree.
+//
 
-/**
- * E2E Test Runner
- *
- * Reads natural language .md test cases from each module's e2e/ folder,
- * launches Chromium via Puppeteer, and executes them step by step.
- *
- * Usage:
- *   node tools/e2e/runner.js                          # Auto: compile if needed, run
- *   node tools/e2e/runner.js --mode=compile           # Compile scripts via LLM
- *   node tools/e2e/runner.js --mode=run               # Run from compiled scripts
- *   node tools/e2e/runner.js --mode=compile --force   # Force recompile
- *   node tools/e2e/runner.js extensions               # Run extensions module
- *   node tools/e2e/runner.js quick-access-plugin      # Run specific extension
- *   node tools/e2e/runner.js --headed                 # Show browser window
- *
- * Environment:
- *   XNAPIFY_PORT=1337      # App port (auto-detected from .env)
- *   E2E_HEADLESS=false     # Show browser (fallback; prefer --headed flag)
- *   E2E_FIXTURE_ZIP=...    # Path to test extension .zip
- *   E2E_EMAIL=admin@...    # Login email (fallback — prefer YAML front-matter)
- *   E2E_PASSWORD=secret    # Login password (fallback — prefer YAML front-matter)
- *
- * LLM Interpreter:
- *   E2E_LLM_PROVIDER=auto  # auto (default) | stdin | openai | anthropic | google | ollama | custom
- *   E2E_LLM_API_KEY=...    # Override auto-detected key
- *   E2E_LLM_MODEL=...      # Model name (optional, has defaults)
- *   E2E_LLM_BASE_URL=...   # Base URL (for custom/ollama)
- */
+//
+// E2E Test Runner
+//
+// Reads natural language .md test cases from each module's e2e/ folder,
+// launches Chromium via Puppeteer, and executes them step by step.
+//
+// Usage (via npm scripts — loads .env via dotenv-flow):
+//   npm run test:e2e                                     # Auto: compile if needed, run
+//   npm run test:e2e:headed                              # Show browser window
+//   npm run test:e2e -- --mode=compile                   # Compile scripts via LLM
+//   npm run test:e2e -- --mode=run                       # Run from compiled scripts
+//   npm run test:e2e -- --mode=compile --force           # Force recompile
+//   npm run test:e2e -- extensions                       # Run extensions module
+//   npm run test:e2e -- quick-access-plugin              # Run specific extension
+//   npm run test:e2e -- --filter="**/login/**"           # Filter by glob pattern
+//   npm run test:e2e -- --parallel                       # Run modules concurrently
+//
+// Environment:
+//   XNAPIFY_PORT=1337      # App port (auto-detected from .env)
+//   E2E_HEADLESS=false     # Show browser (fallback; prefer --headed flag)
+//   E2E_FIXTURE_ZIP=...    # Path to test extension .zip
+//   E2E_EMAIL=admin@...    # Login email (fallback — prefer YAML front-matter)
+//   E2E_PASSWORD=secret    # Login password (fallback — prefer YAML front-matter)
+//
+// LLM Interpreter:
+//   E2E_LLM_PROVIDER=auto  # auto (default) | stdin | openai | anthropic | google | ollama | custom
+//   E2E_LLM_API_KEY=...    # Override auto-detected key
+//   E2E_LLM_MODEL=...      # Model name (optional, has defaults)
+//   E2E_LLM_BASE_URL=...   # Base URL (for custom/ollama)
+//
+
+// Guard: must be launched via tools/tasks/e2e.js (npm run test:e2e)
+// Direct CLI invocation skips dotenv-flow config loading.
+if (!process.env.E2E_VIA_TASK) {
+  console.error('');
+  console.error('❌ Direct execution is not supported.');
+  console.error('   Use npm scripts to ensure .env config is loaded:');
+  console.error('');
+  console.error('   npm run test:e2e                    # auto mode');
+  console.error('   npm run test:e2e:headed             # visible browser');
+  console.error('   npm run test:e2e -- --mode=compile   # compile only');
+  console.error('   npm run test:e2e -- --parallel       # parallel modules');
+  console.error('');
+  process.exit(1);
+}
 
 const fs = require('fs');
 const http = require('http');
@@ -69,33 +86,13 @@ const TYPE_ICONS = { ui: '🌐', api: '🔌', system: '🔗' };
 // ── Config ────────────────────────────────────────────────────────
 
 function resolvePort() {
-  // Priority 1: env var (already set by caller or system)
-  const e2ePort = process.env.XNAPIFY_PORT;
-  if (e2ePort) return e2ePort;
-
-  // Priority 2: .env files (manually parsed — no dotenv dependency)
-  // Later files override earlier ones; XNAPIFY_PORT overrides PORT
-  const envFiles = ['.env', '.env.development', '.env.local'];
-  let port = null;
-
-  for (const envFile of envFiles) {
-    const filePath = path.join(ROOT_DIR, envFile);
-    try {
-      const content = fs.readFileSync(filePath, 'utf-8');
-      for (const line of content.split('\n')) {
-        const trimmed = line.trim();
-        if (trimmed.startsWith('#') || !trimmed.includes('=')) continue;
-        const [key, ...rest] = trimmed.split('=');
-        const value = rest.join('=').trim().replace(/^["']|["']$/g, '');
-        if (key.trim() === 'XNAPIFY_PORT' && value) port = value;
-        else if (key.trim() === 'PORT' && value && !port) port = value;
-      }
-    } catch {
-      // File doesn't exist — skip
-    }
-  }
-
-  return port || process.env.PORT || '1337';
+  // dotenv-flow is pre-loaded by tools/run.js → process.env has all .env values
+  return (
+    process.env.XNAPIFY_PORT ||
+    process.env.E2E_PORT ||
+    process.env.PORT ||
+    '1337'
+  );
 }
 
 function getModuleName(rootDir, e2eDir) {
@@ -158,6 +155,32 @@ async function resolveTarget(arg) {
 
   return [resolveSubPath(e2eDir, subPath)];
 }
+
+// Match a file path against a glob-like filter pattern.
+// Supports: * (any segment chars), ** (any path depth), ? (single char).
+// No external dependency — converts to regex internally.
+//
+// @param {string} filePath  Relative file path (forward slashes)
+// @param {string} pattern   Glob pattern (e.g. "**/login/**", "**/api/**")
+// @returns {boolean}
+function matchesFilter(filePath, pattern) {
+  // Normalize to forward slashes
+  const normalized = filePath.replace(/\\/g, '/');
+  const pat = pattern.replace(/\\/g, '/');
+
+  // Convert glob to regex
+  let regex = pat
+    .replace(/[.+^${}()|[\]]/g, '\\$&') // Escape regex specials (except * and ?)
+    .replace(/\*\*/g, '\0') // Temp placeholder for **
+    .replace(/\*/g, '[^/]*') // * = any chars except /
+    .replace(/\?/g, '[^/]') // ? = single char except /
+    .replace(/\0/g, '.*'); // ** = any chars including /
+
+  // Allow partial matching: pattern doesn't need to cover the full path
+  // e.g., "**/login/**" matches "src/extensions/foo/e2e/login/01-test/test.md"
+  return new RegExp(regex).test(normalized);
+}
+
 /**
  * Wait for the application to be reachable at the given URL.
  * Pings the URL until it returns a response or times out.
@@ -201,8 +224,11 @@ async function run() {
   const args = process.argv.slice(2);
   const headed = args.includes('--headed');
   const force = args.includes('--force');
+  const parallel = args.includes('--parallel');
   const modeArg = args.find(a => a.startsWith('--mode='));
   const mode = modeArg ? modeArg.split('=')[1] : 'auto'; // compile | run | auto
+  const filterArg = args.find(a => a.startsWith('--filter='));
+  const filterPattern = filterArg ? filterArg.split('=')[1] : null;
   const targetArg = args.find(a => !a.startsWith('--'));
   const port = resolvePort();
   const baseUrl = `http://127.0.0.1:${port}`;
@@ -223,7 +249,11 @@ async function run() {
   console.log(`  Base URL: ${baseUrl}`);
   console.log(`  Mode:     ${mode}${force ? ' (force)' : ''}`);
   console.log(`  Headless: ${headless}`);
+  console.log(`  Parallel: ${parallel}`);
   console.log(`  Target:   ${targetArg || 'all'}`);
+  if (filterPattern) {
+    console.log(`  Filter:   ${filterPattern}`);
+  }
   console.log(`  LLM:      ${llmProvider}`);
   if (llmProvider === 'auto') {
     console.log(
@@ -327,14 +357,30 @@ async function run() {
     return;
   }
 
-  console.log(`📋 Found ${testFiles.length} test file(s):`);
+  // ── Apply --filter glob ──
+  if (filterPattern) {
+    const before = testFiles.length;
+    testFiles = testFiles.filter(t => {
+      const rel = path.relative(ROOT_DIR, t.file);
+      return matchesFilter(rel, filterPattern);
+    });
+    if (testFiles.length === 0) {
+      console.log(`No test files match filter: ${filterPattern}`);
+      console.log(`  (${before} files were found before filtering)`);
+      return;
+    }
+    console.log(
+      `🔍 Filter matched ${testFiles.length}/${before} test file(s):`,
+    );
+  } else {
+    console.log(`📋 Found ${testFiles.length} test file(s):`);
+  }
   testFiles.forEach(t => console.log(`   ${path.relative(ROOT_DIR, t.file)}`));
   console.log('');
 
   // Deferred browser launching: We MUST wait until AFTER LLM compilation.
   // Slow local LLMs (Ollama) can take 5+ minutes to compile a test case.
   // If we launch Chromium upfront, the idle WebSocket connection will drop with ECONNRESET.
-  let browser = null;
 
   // Group files by e2e directory (module)
   const byModule = new Map();
@@ -343,14 +389,15 @@ async function run() {
     byModule.get(t.e2eDir).push(t.file);
   }
 
-  const allResults = [];
-
-  for (const [e2eDir, files] of byModule) {
+  // ── Per-module execution function ──
+  // Extracted so it can be called sequentially or in parallel.
+  // In parallel mode, each module gets its own browser instance.
+  async function runModule(e2eDir, files, sharedBrowser) {
     const moduleName = path.basename(path.dirname(e2eDir));
+    let browser = sharedBrowser;
+    const moduleResults = [];
 
     console.log(`\n━━━ Module: ${moduleName} ━━━`);
-
-    const moduleResults = [];
 
     for (const file of files) {
       const tc = parseTestFile(file);
@@ -559,22 +606,53 @@ async function run() {
         writeTestResult(resultsDir, tc, result);
       }
       moduleResults.push(result);
-      allResults.push(result);
 
       const icon = testPassed ? '✅' : '❌';
       console.log(`  ${icon} ${tc.title} (${duration}ms)`);
     }
 
-    // Module summary — in e2e/_reports/timestamp/
+    // Module summary
     const summaryDir = createReportDir(e2eDir, timestamp);
     writeSummary(summaryDir, moduleName, moduleResults, { timestamp, port });
     const passed = moduleResults.filter(r => r.passed).length;
     console.log(
       `\n  📊 ${moduleName}: ${passed}/${moduleResults.length} passed`,
     );
+
+    return { browser, results: moduleResults };
   }
 
-  if (browser) await closeBrowser(browser);
+  // ── Execute modules ──
+  const allResults = [];
+
+  if (parallel && byModule.size > 1) {
+    // Parallel mode: each module gets its own browser instance
+    console.log(`⚡ Running ${byModule.size} modules in parallel...`);
+
+    const modulePromises = Array.from(byModule.entries()).map(
+      ([e2eDir, files]) =>
+        runModule(e2eDir, files, null).then(async ({ browser: b, results }) => {
+          if (b) await closeBrowser(b);
+          return results;
+        }),
+    );
+
+    const moduleOutputs = await Promise.all(modulePromises);
+    for (const results of moduleOutputs) {
+      allResults.push(...results);
+    }
+  } else {
+    // Sequential mode: shared browser across modules
+    let browser = null;
+
+    for (const [e2eDir, files] of byModule) {
+      const output = await runModule(e2eDir, files, browser);
+      browser = output.browser;
+      allResults.push(...output.results);
+    }
+
+    if (browser) await closeBrowser(browser);
+  }
 
   // Final summary
   const totalPassed = allResults.filter(r => r.passed).length;
@@ -596,3 +674,5 @@ run().catch(err => {
   console.error('Fatal error:', err);
   process.exit(1);
 });
+
+module.exports = { run };

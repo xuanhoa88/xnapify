@@ -6,7 +6,7 @@ Run E2E tests by reading natural language test cases from `test.md` files coloca
 
 ## Quick Start (CLI)
 
-The primary way to run E2E tests is via the **Chromium CLI tool**:
+The primary way to run E2E tests is via the **npm scripts** (which load `.env` via `dotenv-flow`):
 
 ```bash
 # Auto mode (default): compile if needed, then run
@@ -16,34 +16,45 @@ npm run test:e2e
 npm run test:e2e:headed
 
 # Compile all test cases (generates script.json via LLM, no browser)
-node tools/e2e/runner.js --mode=compile
+npm run test:e2e -- --mode=compile
 
 # Run using compiled scripts only (no LLM calls, fast)
-node tools/e2e/runner.js --mode=run
+npm run test:e2e -- --mode=run
 
 # Force recompile even if test.md hasn't changed
-node tools/e2e/runner.js --mode=compile --force
+npm run test:e2e -- --mode=compile --force
 
 # Run a specific module (all test types)
-node tools/e2e/runner.js extensions
+npm run test:e2e -- extensions
 
 # Run a specific extension (all test types)
-node tools/e2e/runner.js posts-module
+npm run test:e2e -- posts-module
 
 # Run a specific category within a module
-node tools/e2e/runner.js extensions/install
+npm run test:e2e -- extensions/install
 
 # Run a single test case (UI)
-node tools/e2e/runner.js quick-access-plugin/login/01-buttons-visible
+npm run test:e2e -- quick-access-plugin/login/01-buttons-visible
 
 # Run all API tests for a module
-node tools/e2e/runner.js quick-access-plugin/api
+npm run test:e2e -- quick-access-plugin/api
 
 # Run a specific API test category
-node tools/e2e/runner.js quick-access-plugin/api/auth
+npm run test:e2e -- quick-access-plugin/api/auth
 
 # Run a single API test case
-node tools/e2e/runner.js quick-access-plugin/api/auth/01-login-jwt
+npm run test:e2e -- quick-access-plugin/api/auth/01-login-jwt
+
+# Filter tests by glob pattern
+npm run test:e2e -- --filter="**/login/**"
+npm run test:e2e -- --filter="**/api/**"
+npm run test:e2e -- --filter="**/*button*/**"
+
+# Run modules in parallel (each gets its own browser)
+npm run test:e2e -- --parallel
+
+# Combine flags
+npm run test:e2e -- --parallel --filter="**/login/**" --headed
 ```
 
 > [!TIP]
@@ -64,6 +75,17 @@ node tools/e2e/runner.js quick-access-plugin/api/auth/01-login-jwt
 | `E2E_LLM_MODEL`    | No       | Model name override (each provider has a default)                              |
 | `E2E_LLM_BASE_URL` | No       | Base URL override (for custom/ollama)                                          |
 | `E2E_DEBUG`        | No       | `true` to show SPA stability diagnostics                                       |
+
+**CLI flags:**
+
+| Flag              | Description                                                         |
+| ----------------- | ------------------------------------------------------------------- |
+| `--headed`        | Show the browser window (default: headless)                         |
+| `--force`         | Force recompile even if `test.md` hasn't changed                    |
+| `--mode=compile`  | Compile test scripts via LLM only (no execution)                    |
+| `--mode=run`      | Run from compiled scripts only (no LLM calls)                       |
+| `--filter=<glob>` | Filter test files by glob pattern (e.g. `**/login/**`, `**/api/**`) |
+| `--parallel`      | Run modules concurrently, each with its own browser instance        |
 
 ## How it works
 
@@ -170,7 +192,7 @@ Description of what this test validates.
 
 ### Prerequisite
 
-- fixture_zip: ./src/__tests__/fixtures/sample-extension.zip
+- fixture_zip: ./src/**tests**/fixtures/sample-extension.zip
 
 ## Steps
 
@@ -595,9 +617,9 @@ When the user asks:
 - `run e2e for oauth-google` → Discover `src/extensions/oauth-google-plugin/e2e/**/test.md` and execute
 - `run e2e for posts` → Discover `src/extensions/posts-module/e2e/**/test.md` and execute
 - `run the login tests for quick-access` → Run `src/extensions/quick-access-plugin/e2e/login/*/test.md`
-- `run API tests for quick-access` → Run `node tools/e2e/runner.js quick-access-plugin/api`
-- `run the auth API tests` → Run `node tools/e2e/runner.js quick-access-plugin/api/auth`
-- `compile e2e scripts` → Run `node tools/e2e/runner.js --mode=compile`
+- `run API tests for quick-access` → Run `npm run test:e2e -- quick-access-plugin/api`
+- `run the auth API tests` → Run `npm run test:e2e -- quick-access-plugin/api/auth`
+- `compile e2e scripts` → Run `npm run test:e2e -- --mode=compile`
 - `run all e2e tests` → Find ALL `e2e/` folders in both `src/apps/` and `src/extensions/`, run each
 - `/test-e2e` → Same as "run all e2e tests"
 

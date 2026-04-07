@@ -43,6 +43,7 @@ async function main() {
       env: {
         ...process.env,
         CWD: config.CWD,
+        E2E_VIA_TASK: '1',
       },
       cwd: config.CWD,
     });
