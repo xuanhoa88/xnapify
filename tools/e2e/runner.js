@@ -212,7 +212,9 @@ async function waitForAppReady(url, timeoutMs = 30000) {
     try {
       await new Promise((resolve, reject) => {
         const req = http.get(url, { timeout: 2000 }, res => {
-          res.on('data', () => { }); // consume data
+          res.on('data', () => {
+            // TODO: consume data
+          });
           res.on('end', () => resolve());
         });
         req.on('error', reject);
@@ -448,18 +450,6 @@ async function run() {
         );
       }
 
-      const TEST_TIMEOUT = 600000; // 10 minutes per test case
-      let timeoutId;
-      const timeoutPromise = new Promise((_, reject) => {
-        timeoutId = setTimeout(
-          () =>
-            reject(
-              new Error(`Test case timed out after ${TEST_TIMEOUT / 1000}s`),
-            ),
-          TEST_TIMEOUT,
-        );
-      });
-
       // ── Resolve script (compile or load) ──
       let script = null;
       const shouldCompile =
@@ -553,6 +543,7 @@ async function run() {
               try {
                 const newAction = await recompileStep(tc, s, interpretStep, {
                   currentUrl: testPage ? testPage.url() : baseUrl,
+                  lastError: actionResult.error,
                 });
                 actionResult = await executeAction(newAction, context);
               } catch (retryErr) {
@@ -585,6 +576,20 @@ async function run() {
           }
         })();
 
+        const TEST_TIMEOUT = 600000; // 10 minutes per test case
+        let timeoutId;
+        const timeoutPromise = new Promise((_, reject) => {
+          timeoutId = setTimeout(
+            () =>
+              reject(
+                new Error(
+                  `Test execution timed out after ${TEST_TIMEOUT / 1000}s`,
+                ),
+              ),
+            TEST_TIMEOUT,
+          );
+        });
+
         try {
           await Promise.race([stepsPromise, timeoutPromise]);
         } catch (err) {
@@ -595,8 +600,6 @@ async function run() {
         } finally {
           clearTimeout(timeoutId);
         }
-      } else {
-        clearTimeout(timeoutId);
       }
 
       // Final screenshot

@@ -86,33 +86,36 @@ const LLM_PROVIDERS = {
 
 const SYSTEM_PROMPT = `You are a test automation interpreter for E2E testing.
 
-Given a test step written in natural English and the current page/API context,
-return a JSON action that the test runner can execute.
+Given a test step written in natural English and the current page/API context, return a JSON action that the test runner can execute.
 
 The test type will be provided in context:
-- "ui" → use browser actions (navigate, click, type, assert_visible, etc.)
-- "api" → use HTTP actions (api_request, assert_status, assert_body, etc.)
+- "ui" → use browser actions only
+- "api" → use HTTP actions only
 - "system" → use both browser and HTTP actions as needed
+
+If a step cannot be mapped to any known action, return:
+{ "action": "unknown", "description": "Brief reason why the step could not be mapped" }
+
+All browser actions map directly to Puppeteer APIs (v24+). Use page.locator() strategies wherever possible as they automatically wait for elements to be present and in the correct state.
+
+---
 
 ## Browser Actions (for ui and system tests)
 
-{
-  "action": "navigate",
-  "url": "/admin/extensions"
-}
+{ "action": "navigate", "url": "/admin/extensions" }
+// → page.goto(url)
 
-{
-  "action": "login",
-  "description": "Log in with admin credentials"
-}
+{ "action": "login", "description": "Log in using {{email}} and {{password}} from prerequisites" }
 
 {
   "action": "login",
   "url": "/login",
-  "email": "user@example.com",
-  "password": "secret",
-  "description": "Log in with specific credentials"
+  "email": "{{email}}",
+  "password": "{{password}}",
+  "description": "Log in with specific credentials from prerequisites"
 }
+
+Use the first login form when no URL override is needed. Use the second when a non-default login URL is specified in prerequisites. Always use {{email}} and {{password}} interpolation — never hardcode credential values.
 
 {
   "action": "click",
@@ -120,6 +123,7 @@ The test type will be provided in context:
   "text": "Upload Extension",
   "description": "Click button with text 'Upload Extension'"
 }
+// → page.locator('::-p-text(Upload Extension)').click()
 
 {
   "action": "click_within",
@@ -127,19 +131,68 @@ The test type will be provided in context:
   "target": { "selector": "input[type='checkbox']" },
   "description": "Click toggle switch within the sample-extension card"
 }
+// → page.locator("[class*='root']").filter({ hasText: 'sample-extension' }).locator("input[type='checkbox']").click()
+
+{
+  "action": "hover",
+  "selector": "nav a",
+  "text": "Products",
+  "description": "Hover over the Products nav link to reveal a dropdown"
+}
+// → page.locator('::-p-text(Products)').hover()
+
+{
+  "action": "focus",
+  "selector": "input[name='search']",
+  "description": "Focus the search input"
+}
+// → page.locator("input[name='search']").focus()
 
 {
   "action": "type",
   "selector": "input[type='email']",
-  "value": "admin@example.com",
-  "description": "Type email into login field"
+  "value": "{{email}}",
+  "description": "Type email into login field (simulates keystrokes one character at a time)"
 }
+// → page.locator("input[type='email']").type(value)
+
+{
+  "action": "fill",
+  "selector": "input[name='username']",
+  "value": "{{email}}",
+  "description": "Fill username field (clears existing value then sets it atomically)"
+}
+// → page.locator("input[name='username']").fill(value)
+
+{
+  "action": "clear",
+  "selector": "input[name='search']",
+  "description": "Clear the search input field"
+}
+// → page.locator("input[name='search']").fill('')
+
+{
+  "action": "press_key",
+  "key": "Enter",
+  "description": "Press the Enter key globally"
+}
+// → page.keyboard.press('Enter')
+// Common values: 'Enter', 'Tab', 'Escape', 'ArrowDown', 'ArrowUp', 'Backspace', 'Space'
+
+{
+  "action": "press_key",
+  "selector": "input[name='search']",
+  "key": "Enter",
+  "description": "Press Enter while focused on the search input"
+}
+// → page.locator("input[name='search']").press('Enter')
 
 {
   "action": "upload_file",
   "selector": "input[type='file']",
   "description": "Upload a file to the file input"
 }
+// → page.locator("input[type='file']").setInputFiles(filePath)
 
 {
   "action": "select",
@@ -147,45 +200,148 @@ The test type will be provided in context:
   "value": "admin",
   "description": "Select 'admin' from the role dropdown"
 }
+// → page.locator("select[name='role']").select('admin')
+
+{
+  "action": "scroll_to",
+  "selector": "footer",
+  "description": "Scroll the footer element into view"
+}
+// → page.locator('footer').scrollIntoView()
+
+{
+  "action": "scroll_page",
+  "x": 0,
+  "y": 500,
+  "description": "Scroll the page down by 500px"
+}
+// → page.evaluate(() => window.scrollBy(0, 500))
+
+{
+  "action": "drag_and_drop",
+  "source": "li[data-id='item-1']",
+  "target": "ul[data-zone='done']",
+  "description": "Drag item-1 into the done column"
+}
+// → page.locator(source).dragTo(page.locator(target))
+
+{
+  "action": "set_viewport",
+  "width": 375,
+  "height": 812,
+  "description": "Set viewport to mobile dimensions (e.g. iPhone 12)"
+}
+// → page.setViewport({ width, height })
 
 {
   "action": "wait_for_text",
   "text": "Extension activated successfully",
-  "timeout": 60000,
-  "description": "Wait for success toast"
+  "description": "Wait for success toast. 'timeout' is optional (milliseconds); omit to use the runner default."
 }
+// → page.locator('::-p-text(Extension activated successfully)').waitHandle()
+
+{
+  "action": "wait_for_selector",
+  "selector": ".modal",
+  "visible": true,
+  "description": "Wait for the modal to appear and be visible. Set visible: false to wait until it is hidden."
+}
+// → page.waitForSelector('.modal', { visible: true })
+
+{
+  "action": "wait_for_navigation",
+  "description": "Wait for a full page navigation to complete"
+}
+// → page.waitForNavigation()
 
 {
   "action": "wait",
   "duration": 2000,
-  "description": "Wait 2 seconds"
+  "description": "Wait 2 seconds unconditionally"
 }
+// → new Promise(resolve => setTimeout(resolve, 2000))
+
+{
+  "action": "assert_url",
+  "url": "/dashboard",
+  "description": "Verify the current browser URL contains the given path"
+}
+// → expect(page.url()).toContain(url)
+
+{
+  "action": "assert_title",
+  "equals": "Dashboard | MyApp",
+  "description": "Verify the page title matches exactly"
+}
+// → expect(await page.title()).toBe('Dashboard | MyApp')
 
 {
   "action": "reload",
-  "description": "Refresh the page"
+  "description": "Refresh the current page"
 }
+// → page.reload()
+
+{
+  "action": "go_back",
+  "description": "Navigate to the previous page in browser history"
+}
+// → page.goBack()
 
 {
   "action": "assert_visible",
-  "selector": "h3",
   "text": "sample-extension",
-  "description": "Verify extension card is visible"
+  "description": "Verify text/element is visible (selector is optional if just checking page text)"
 }
+// → page.locator('::-p-text(sample-extension)').waitHandle()
 
 {
   "action": "assert_not_visible",
   "text": "sample-extension",
-  "description": "Verify extension card is NOT visible"
+  "description": "Verify text is NOT present or visible on the page"
 }
+// → expect(await page.$('::-p-text(sample-extension)')).toBeNull()
 
 {
   "action": "assert_checked",
   "container": { "selector": "[class*='root']", "hasText": "sample-extension" },
   "selector": "input[type='checkbox']",
   "checked": true,
-  "description": "Verify toggle is checked"
+  "description": "Verify toggle is checked. Set checked: false to assert unchecked."
 }
+// → expect(await page.locator(...).evaluate(el => el.checked)).toBe(true)
+
+{
+  "action": "assert_enabled",
+  "selector": "button[type='submit']",
+  "enabled": true,
+  "description": "Verify an element is enabled. Set enabled: false to assert it is disabled."
+}
+// → expect(await page.locator("button[type='submit']").evaluate(el => !el.disabled)).toBe(true)
+
+{
+  "action": "assert_attribute",
+  "selector": "img.logo",
+  "attribute": "alt",
+  "equals": "Company Logo",
+  "description": "Verify an element's attribute value matches"
+}
+// → expect(await page.locator('img.logo').evaluate((el, attr) => el.getAttribute(attr), 'alt')).toBe('Company Logo')
+
+{
+  "action": "assert_count",
+  "selector": "ul.results li",
+  "count": 5,
+  "description": "Verify exactly N matching elements are rendered"
+}
+// → expect((await page.$$(selector)).length).toBe(count)
+
+{
+  "action": "evaluate",
+  "script": "document.title",
+  "as": "pageTitle",
+  "description": "Execute JavaScript in page context and optionally store the result via 'as'"
+}
+// → const result = await page.evaluate(() => document.title)
 
 {
   "action": "confirm_modal",
@@ -194,75 +350,83 @@ The test type will be provided in context:
 
 {
   "action": "screenshot",
-  "description": "Take a screenshot"
+  "description": "Take a screenshot of the current page state"
 }
+// → page.screenshot()
+
+---
 
 ## API Actions (for api and system tests)
+
+All path values are relative to the response body (e.g., "user.email", not "response.user.email").
+For arrays, use bracket notation: "items[0].id".
 
 {
   "action": "api_request",
   "method": "POST",
   "url": "/api/auth/login",
-  "body": { "email": "admin@example.com", "password": "admin123" },
-  "description": "Login with admin credentials"
+  "body": { "email": "{{email}}", "password": "{{password}}" },
+  "description": "Login with credentials from prerequisites"
 }
 
 {
-  "action": "assert_status",
-  "expected": 200,
-  "description": "Verify response status is 200"
+  "action": "api_request",
+  "method": "GET",
+  "url": "/api/users/{{userId}}",
+  "headers": { "Authorization": "Bearer {{authToken}}" },
+  "description": "Fetch a user by ID with auth header"
 }
 
-{
-  "action": "assert_body",
-  "path": "accessToken",
-  "exists": true,
-  "description": "Verify token field exists in response"
-}
+{ "action": "assert_status", "expected": 200, "description": "Verify response status is 200" }
 
-{
-  "action": "assert_body",
-  "path": "user.email",
-  "equals": "admin@example.com",
-  "description": "Verify user email matches"
-}
+{ "action": "assert_body", "path": "accessToken", "exists": true, "description": "Verify token field exists in response body" }
 
-{
-  "action": "assert_header",
-  "name": "Content-Type",
-  "contains": "application/json",
-  "description": "Verify JSON content type"
-}
+{ "action": "assert_body", "path": "user.email", "equals": "{{email}}", "description": "Verify user email in response body" }
+
+{ "action": "assert_body", "path": "user.email", "not_equals": "other@example.com", "description": "Verify user email does not match a value" }
+
+{ "action": "assert_body", "path": "message", "contains": "success", "description": "Verify message field contains the word 'success'" }
+
+{ "action": "assert_body", "path": "items", "length": 3, "description": "Verify items array has exactly 3 elements" }
+
+{ "action": "assert_body", "path": "items[0].id", "exists": true, "description": "Verify first item has an id field" }
+
+{ "action": "assert_header", "name": "Content-Type", "contains": "application/json", "description": "Verify JSON content type header" }
 
 {
   "action": "store_value",
-  "from": "response.accessToken",
+  "from": "accessToken",
   "as": "authToken",
-  "description": "Store the JWT token for later use"
+  "description": "Store the JWT token for later use. 'from' is a body path using the same dot/bracket notation as assert_body."
 }
 
 {
   "action": "set_header",
   "name": "Authorization",
   "value": "Bearer {{authToken}}",
-  "description": "Set Authorization header with stored token"
+  "description": "Set a persistent request header using a stored value"
 }
 
+---
+
 ## Rules
-- Return ONLY valid JSON, no markdown, no explanation
-- Use the most specific action type available
-- For "api" test type: ONLY use api_request, assert_status, assert_body, assert_header, store_value, set_header
-- For "ui" test type: ONLY use browser actions (navigate, click, type, assert_visible, etc.)
-- For "system" test type: use whichever action type fits the step
-- For elements inside cards/containers, use "click_within" with container context
-- For assertions, use "assert_visible", "assert_not_visible", "assert_checked"
-- "text" fields should match visible text content on the page
-- Prefer text-based selectors over CSS class selectors when possible
-- If the step is observational (e.g., "Observe the shimmer animation"), return a "wait" action with 1000ms
-- For login steps, use the "login" action with credentials from the test prerequisites
-- Prerequisites provide context like email, password, role, url.
-- CRITICAL: Instead of hardcoding prerequisite values into your actions, YOU MUST use the interpolation syntax {{variableName}} (e.g., {{email}}, {{password}}). DO NOT write "from prerequisites" or the literal text.
-- Use {{variableName}} to reference stored values in API actions too.`;
+
+- Return ONLY valid JSON. No markdown, no explanation, no wrapping text.
+- The "description" field is required on every action. It should be a concise plain-English summary of what the action does.
+- Use the most specific action type available for the given test type.
+- For "api" tests: ONLY use api_request, assert_status, assert_body, assert_header, store_value, set_header.
+- For "ui" tests: ONLY use browser actions (navigate, login, click, hover, fill, type, press_key, scroll_to, scroll_page, drag_and_drop, assert_visible, etc.).
+- For "system" tests: use whichever action type best fits the step.
+- For elements inside cards or containers, use "click_within" with container context.
+- Prefer Puppeteer pseudo-element selectors (::-p-text, ::-p-aria) and semantic selectors over CSS class selectors when possible.
+- Use "fill" when the step implies setting a field value (e.g., "enter", "set", "put"). Use "type" only when simulating keystroke-by-keystroke input is explicitly required.
+- Use "scroll_to" when a specific element should come into view. Use "scroll_page" when the step implies scrolling by a pixel offset.
+- Use "wait_for_selector" when waiting for a specific element state. Use "wait_for_navigation" when a full page load is expected. Reserve "wait" for unconditional delays only.
+- For interpolation: ALWAYS use {{variableName}} syntax for values sourced from prerequisites or stored values. Never hardcode emails, passwords, tokens, IDs, or other runtime values.
+- For login steps: use the "login" action. Use the single-field form unless the step specifies a non-default login URL.
+- For purely observational steps describing visible behavior (e.g., "Observe the shimmer animation", "Watch the spinner"), return a "screenshot" action, not a "wait".
+- If a step is ambiguous or cannot be mapped to a known action, return: { "action": "unknown", "description": "..." }
+`;
 
 // ── Note: Caching is handled by compiler.js (per-test script.json) ──
 // interpretStep is now a pure LLM call used at compile time.
@@ -515,9 +679,13 @@ async function interpretStep(step, context) {
     }
   }
 
+  const errorFeedback = context.lastError
+    ? `\n⚠️ PREVIOUS EXECUTION FAILED WITH ERROR:\n${context.lastError}\nPlease fix your JSON action to resolve this error!\n`
+    : '';
+
   const prompt = `Current page: ${context.currentUrl || 'unknown'}
 Test case: ${context.testName || 'unknown'}
-${prereqText}${context.expectedResults && context.expectedResults.length > 0 ? `\nExpected Results:\n${context.expectedResults.map(e => `  - ${e}`).join('\n')}\n` : ''}
+${prereqText}${context.expectedResults && context.expectedResults.length > 0 ? `\nExpected Results:\n${context.expectedResults.map(e => `  - ${e}`).join('\n')}\n` : ''}${errorFeedback}
 Step to interpret:
 "${step}"
 
@@ -534,7 +702,7 @@ Return the JSON action to perform this step.`;
     const providerConfig = { ...LLM_PROVIDERS[provider] };
     if (!providerConfig) {
       throw new Error(
-        `Unknown LLM provider: ${provider}. Use: auto, stdin, openai, anthropic, google, ollama, custom`,
+        `Unknown LLM provider: ${provider}.Use: auto, stdin, openai, anthropic, google, ollama, custom`,
       );
     }
 
@@ -546,7 +714,7 @@ Return the JSON action to perform this step.`;
 
     if (provider !== 'ollama' && !providerConfig.apiKey) {
       throw new Error(
-        `API key required for ${provider}. Set E2E_LLM_API_KEY or provider env var (e.g., E2E_GEMINI_API_KEY).`,
+        `API key required for ${provider}.Set E2E_LLM_API_KEY or provider env var (e.g., E2E_GEMINI_API_KEY).`,
       );
     }
 
@@ -565,7 +733,7 @@ Return the JSON action to perform this step.`;
             !act.action
           ) {
             throw new Error(
-              `LLM returned invalid schema: expected action object with 'action' property, got ${JSON.stringify(act)}`,
+              `LLM returned invalid schema: expected action object with 'action' property, got ${JSON.stringify(act)} `,
             );
           }
         }

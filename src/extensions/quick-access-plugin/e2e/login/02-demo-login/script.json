@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "compiledAt": "2026-04-07T19:25:42.214Z",
+  "testHash": "00805778483cb7f86957e09c9966ea7831bdbdc567154c1945358d7eb6867b7e",
+  "title": "Quick Login via Demo Account Button",
+  "actions": [
+    {
+      "step": 1,
+      "instruction": "Navigate to /login",
+      "action": "navigate",
+      "url": "/login"
+    },
+    {
+      "step": 2,
+      "instruction": "Click the \"Admin User\" quick access demo account button",
+      "action": "click",
+      "selector": "button",
+      "text": "Admin User",
+      "description": "Click button with text 'Admin User'"
+    },
+    {
+      "step": 3,
+      "instruction": "Wait for the page to fully load",
+      "action": "wait_for_navigation",
+      "description": "Wait for a full page navigation to complete"
+    },
+    {
+      "step": 4,
+      "instruction": "Assert the text \"System Administrator\" is visible on the page",
+      "action": "assert_visible",
+      "text": "System Administrator",
+      "description": "Verify that the text 'System Administrator' is visible on the page"
+    }
+  ]
+}

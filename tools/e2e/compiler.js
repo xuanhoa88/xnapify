@@ -262,6 +262,7 @@ async function recompileStep(testCase, stepIndex, interpretStep, context) {
     currentUrl: context.currentUrl || 'unknown',
     prerequisites: testCase.prerequisites || {},
     expectedResults: testCase.expectedResults,
+    lastError: context.lastError,
   };
 
   const compiledResult = await interpretStep(step, llmContext);

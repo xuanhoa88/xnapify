@@ -457,8 +457,17 @@ async function retryUntilFound(finder, timeout = 10000, interval = 300) {
     try {
       const result = await finder();
       if (result) return result;
-    } catch (err) {
-      lastError = err;
+      // If it successfully executed but returned falsy, clear any old stale errors
+      lastError = null;
+    } catch (e) {
+      // Immediately abort on syntax errors (e.g. invalid CSS selector)
+      if (e.message && e.message.includes('not a valid selector')) {
+        throw new Error(
+          `Syntax Error: ${e.message}. Did you mistakenly put plain text into a 'selector' field?`,
+        );
+      }
+      // Ignore intermediate DOM disconnected/staleness errors
+      lastError = e;
     }
     await new Promise(r => setTimeout(r, interval));
   }
@@ -765,8 +774,49 @@ const ACTIONS = {
   },
 
   // ── Assertions ──────────────────────────────────────────────────
+  async assert_url({ page }, action) {
+    await waitForSPAStable(page);
+
+    const expectedPath = action.url.startsWith('http')
+      ? new URL(action.url).pathname
+      : action.url;
+
+    const matches = await retryUntilFound(async () => {
+      const currentPath = new URL(page.url()).pathname;
+      if (currentPath !== expectedPath) return null;
+      return true;
+    }, 10000);
+
+    if (!matches) {
+      const currentPath = new URL(page.url()).pathname;
+      throw new Error(
+        `Expected URL pathname to be "${expectedPath}", but got "${currentPath}"`,
+      );
+    }
+  },
+
   async assert_visible({ page }, action) {
     await waitForSPAStable(page);
+
+    if (action.selector && action.text) {
+      const el = await retryUntilFound(async () => {
+        const found = await page.$$(action.selector);
+        for (const e of found) {
+          const visible = await e.evaluate(node => node.offsetParent !== null);
+          if (!visible) continue;
+          const text = await e.evaluate(
+            node => node.innerText || node.textContent,
+          );
+          if (text.includes(action.text)) return e;
+        }
+        return null;
+      }, 10000);
+      if (!el)
+        throw new Error(
+          `Element "${action.selector}" with text "${action.text}" not visible`,
+        );
+      return;
+    }
 
     if (action.text) {
       await retryUntilFound(async () => {
@@ -779,6 +829,7 @@ const ACTIONS = {
       }, 10000);
       return;
     }
+
     if (action.selector) {
       const el = await retryUntilFound(async () => {
         const found = await page.$(action.selector);
@@ -819,23 +870,20 @@ const ACTIONS = {
   async assert_checked({ page }, action) {
     await waitForSPAStable(page);
 
-    const checkbox = await retryUntilFound(async () => {
-      if (action.container) {
-        const containers = await page.$$(
-          action.container.selector || '[class*="root"]',
-        );
-        for (const cont of containers) {
-          if (action.container.hasText) {
-            const text = await cont.evaluate(e => e.textContent);
-            if (!text.includes(action.container.hasText)) continue;
-          }
-          const cb = await cont.$(action.selector || 'input[type="checkbox"]');
-          if (cb) return cb;
-        }
-        return null;
-      }
-      return page.$(action.selector || 'input[type="checkbox"]');
-    }, 10000);
+    let checkbox;
+    if (action.container) {
+      checkbox = await findWithinContainer(
+        page,
+        action.container.selector,
+        action.container.hasText,
+        action.selector || 'input[type="checkbox"]',
+      );
+    } else {
+      checkbox = await retryUntilFound(
+        () => page.$(action.selector || 'input[type="checkbox"]'),
+        10000,
+      );
+    }
 
     if (!checkbox) throw new Error('Checkbox not found');
     const checked = await checkbox.evaluate(el => el.checked);
@@ -917,7 +965,10 @@ const ACTIONS = {
 
     let data;
     try {
-      data = JSON.parse(lastResponse.body);
+      if (!lastResponse.parsedBody) {
+        lastResponse.parsedBody = JSON.parse(lastResponse.body);
+      }
+      data = lastResponse.parsedBody;
     } catch {
       throw new Error(
         `Response body is not valid JSON: ${lastResponse.body.slice(0, 200)}`,
@@ -990,35 +1041,74 @@ const ACTIONS = {
     }
   },
 
-  async store_value({ apiState }, action) {
-    const { lastResponse } = apiState;
-    if (!lastResponse) {
-      throw new Error('No API response — call api_request first');
-    }
-
+  async store_value({ page, apiState }, action) {
     let source;
-    if (action.from.startsWith('response.header.')) {
-      const hdrName = action.from.replace('response.header.', '').toLowerCase();
-      source = lastResponse.headers[hdrName];
-    } else if (action.from.startsWith('response.status')) {
-      source = lastResponse.statusCode;
-    } else {
-      // response.body path (e.g., "response.token" → path "token")
-      const bodyPath = action.from.replace(/^response\./, '');
-      let data;
-      try {
-        data = JSON.parse(lastResponse.body);
-      } catch {
-        throw new Error('Response body is not valid JSON');
+
+    if (action.value !== undefined) {
+      // 1. Static custom string / interpolation
+      source = interpolateVars(action.value, apiState.variables);
+    } else if (action.selector) {
+      // 2. Browser DOM text scraping
+      if (!page)
+        throw new Error('Cannot store from DOM: No browser page active');
+      await waitForSPAStable(page);
+      const el = await retryUntilFound(() => page.$(action.selector), 10000);
+      if (!el)
+        throw new Error(
+          `Element "${action.selector}" not found to store value`,
+        );
+
+      if (action.property) {
+        source = await el.evaluate((n, prop) => n[prop], action.property);
+      } else {
+        source = await el.evaluate(n => n.innerText || n.textContent);
       }
-      source = getNestedValue(data, bodyPath);
+    } else if (action.from) {
+      // 3. API Response parsing
+      const { lastResponse } = apiState;
+      if (!lastResponse) {
+        throw new Error(
+          `Cannot store from response: call api_request first before fetching "${action.from}"`,
+        );
+      }
+
+      if (action.from.startsWith('response.header.')) {
+        const hdrName = action.from
+          .replace('response.header.', '')
+          .toLowerCase();
+        source = lastResponse.headers[hdrName];
+      } else if (action.from.startsWith('response.status')) {
+        source = lastResponse.statusCode;
+      } else {
+        const bodyPath = action.from.replace(/^response\./, '');
+        let data;
+        try {
+          if (!lastResponse.parsedBody) {
+            lastResponse.parsedBody = JSON.parse(lastResponse.body);
+          }
+          data = lastResponse.parsedBody;
+        } catch {
+          throw new Error('Response body is not valid JSON');
+        }
+        source = getNestedValue(data, bodyPath);
+      }
+    } else {
+      throw new Error(
+        'store_value requires "value", "selector", or "from" property',
+      );
     }
 
     if (source === undefined) {
-      throw new Error(`Cannot store — "${action.from}" not found in response`);
+      throw new Error(
+        `Cannot store variable "${action.as}" — source is undefined`,
+      );
     }
 
-    apiState.variables[action.as] = String(source);
+    // Safely serialize objects instead of outputting '[object Object]'
+    apiState.variables[action.as] =
+      typeof source === 'object' && source !== null
+        ? JSON.stringify(source)
+        : String(source).trim();
   },
 
   async set_header({ apiState }, action) {
@@ -1148,7 +1238,7 @@ function getNestedValue(obj, path) {
  */
 function interpolateVars(str, variables) {
   if (!str || typeof str !== 'string') return str;
-  return str.replace(/\{\{(\w+)\}\}/g, (match, name) => {
+  return str.replace(/\{\{([\w\\-]+)\}\}/g, (match, name) => {
     if (variables[name] !== undefined) return variables[name];
     return match; // leave unresolved placeholders as-is
   });
