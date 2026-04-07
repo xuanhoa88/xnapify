@@ -707,7 +707,11 @@ function createWebpackConfig(name, options = {}) {
       // Enable source maps for debugging
       devtool: config.env(
         'WEBPACK_DEVTOOL',
-        isDev ? (isServer ? 'source-map' : 'eval-source-map') : false,
+        isDev
+          ? isServer
+            ? 'source-map'
+            : 'eval-cheap-module-source-map'
+          : false,
       ),
 
       plugins: [new webpack.EnvironmentPlugin({ NODE_ENV: nodeEnv })],

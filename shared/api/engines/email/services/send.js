@@ -18,7 +18,7 @@ import { EMAIL_VALIDATED } from '../utils/constants';
 import { EmailError, createOperationResult } from '../utils/errors';
 import { processEmails } from '../utils/processing';
 import { validateEmails } from '../utils/validation';
-import sendEmail from '../workers/send.worker';
+import { sendEmail } from '../workers';
 
 /**
  * Thresholds for auto-detection of worker usage

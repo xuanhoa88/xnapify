@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import FormData from 'form-data';
 import fetch from 'node-fetch';
 
 import { EmailError } from '../utils/errors';
@@ -135,10 +136,10 @@ export class MailgunEmailProvider {
     // Add attachments if present
     if (email.attachments && email.attachments.length > 0) {
       email.attachments.forEach(att => {
-        const blob = new Blob([att.content], {
-          type: att.contentType || 'application/octet-stream',
+        formData.append('attachment', att.content, {
+          filename: att.filename,
+          contentType: att.contentType || 'application/octet-stream',
         });
-        formData.append('attachment', blob, att.filename);
       });
     }
 

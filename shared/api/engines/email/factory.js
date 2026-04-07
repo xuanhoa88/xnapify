@@ -5,12 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { MailgunEmailProvider } from './providers/mailgun';
-import { MemoryEmailProvider } from './providers/memory';
-import { ResendEmailProvider } from './providers/resend';
-import { SendGridEmailProvider } from './providers/sendgrid';
-import { SmtpEmailProvider } from './providers/smtp';
 import { send } from './services';
+import { createProviderByName } from './utils/providers';
 
 /**
  * Email Manager
@@ -33,7 +29,7 @@ export class EmailManager {
     // Always add memory provider (for testing)
     this.providers.set(
       'memory',
-      new MemoryEmailProvider(this.config.memory || {}),
+      createProviderByName('memory', this.config.memory || {}),
     );
   }
 
@@ -68,19 +64,7 @@ export class EmailManager {
       }
       this.providers.set(
         'smtp',
-        new SmtpEmailProvider(
-          this.config.smtp || {
-            host: process.env.XNAPIFY_SMTP_HOST,
-            port: parseInt(process.env.XNAPIFY_SMTP_PORT, 10) || 587,
-            secure: process.env.XNAPIFY_SMTP_SECURE === 'true',
-            user: process.env.XNAPIFY_SMTP_USER,
-            pass: process.env.XNAPIFY_SMTP_KEY,
-            defaultFrom: process.env.XNAPIFY_MAIL_FROM,
-            defaultFromName:
-              process.env.XNAPIFY_MAIL_FROM_NAME ||
-              process.env.XNAPIFY_PUBLIC_APP_NAME,
-          },
-        ),
+        createProviderByName('smtp', this.config.smtp || {}),
       );
     } else if (
       name === 'resend' &&
@@ -88,15 +72,7 @@ export class EmailManager {
     ) {
       this.providers.set(
         'resend',
-        new ResendEmailProvider(
-          this.config.resend || {
-            apiKey: process.env.XNAPIFY_RESEND_KEY,
-            defaultFrom: process.env.XNAPIFY_MAIL_FROM,
-            defaultFromName:
-              process.env.XNAPIFY_MAIL_FROM_NAME ||
-              process.env.XNAPIFY_PUBLIC_APP_NAME,
-          },
-        ),
+        createProviderByName('resend', this.config.resend || {}),
       );
     } else if (
       name === 'sendgrid' &&
@@ -104,15 +80,7 @@ export class EmailManager {
     ) {
       this.providers.set(
         'sendgrid',
-        new SendGridEmailProvider(
-          this.config.sendgrid || {
-            apiKey: process.env.XNAPIFY_SENDGRID_KEY,
-            defaultFrom: process.env.XNAPIFY_MAIL_FROM,
-            defaultFromName:
-              process.env.XNAPIFY_MAIL_FROM_NAME ||
-              process.env.XNAPIFY_PUBLIC_APP_NAME,
-          },
-        ),
+        createProviderByName('sendgrid', this.config.sendgrid || {}),
       );
     } else if (
       name === 'mailgun' &&
@@ -120,17 +88,7 @@ export class EmailManager {
     ) {
       this.providers.set(
         'mailgun',
-        new MailgunEmailProvider(
-          this.config.mailgun || {
-            apiKey: process.env.XNAPIFY_MAILGUN_KEY,
-            domain: process.env.XNAPIFY_MAILGUN_DOMAIN,
-            region: process.env.XNAPIFY_MAILGUN_REGION || 'us',
-            defaultFrom: process.env.XNAPIFY_MAIL_FROM,
-            defaultFromName:
-              process.env.XNAPIFY_MAIL_FROM_NAME ||
-              process.env.XNAPIFY_PUBLIC_APP_NAME,
-          },
-        ),
+        createProviderByName('mailgun', this.config.mailgun || {}),
       );
     }
   }
@@ -264,5 +222,17 @@ export class EmailManager {
  */
 export function createFactory(config = {}) {
   const manager = new EmailManager(config);
+
+  // Register graceful shutdown handlers
+  const onShutdown = () => manager.cleanup();
+  process.once('SIGTERM', onShutdown);
+  process.once('SIGINT', onShutdown);
+
+  // Expose for test cleanup
+  manager.removeCleanupHandlers = () => {
+    process.removeListener('SIGTERM', onShutdown);
+    process.removeListener('SIGINT', onShutdown);
+  };
+
   return manager;
 }

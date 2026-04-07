@@ -9,11 +9,7 @@
  * Send Email Worker - Handles email sending operations
  */
 
-import { MailgunEmailProvider } from '../providers/mailgun';
-import { MemoryEmailProvider } from '../providers/memory';
-import { ResendEmailProvider } from '../providers/resend';
-import { SendGridEmailProvider } from '../providers/sendgrid';
-import { SmtpEmailProvider } from '../providers/smtp';
+import { createProviderByName } from '../utils/providers';
 import { EMAIL_VALIDATED } from '../utils/constants';
 import { EmailError } from '../utils/errors';
 import { processEmails } from '../utils/processing';
@@ -78,79 +74,12 @@ function getCachedProvider(options = {}) {
   }
 
   // Create and cache new provider
-  const provider = createProvider(options);
+  const providerType = options.provider || 'memory';
+  const explicitConfig = options[providerType] || {};
+  const provider = createProviderByName(providerType, explicitConfig);
   providerCache.set(cacheKey, provider);
   cacheTimestamps.set(cacheKey, now);
   return provider;
-}
-
-/**
- * Create email provider based on configuration
- * Falls back to process.env for provider config (same as factory.js)
- * @param {Object} options - Provider options
- * @returns {Object} Provider instance
- */
-function createProvider(options = {}) {
-  const providerType = options.provider || 'memory';
-  const explicitConfig = options[providerType] || {};
-
-  switch (providerType) {
-    case 'memory':
-      return new MemoryEmailProvider(explicitConfig);
-
-    case 'smtp':
-      return new SmtpEmailProvider({
-        host: process.env.XNAPIFY_SMTP_HOST,
-        port: parseInt(process.env.XNAPIFY_SMTP_PORT, 10) || 587,
-        secure: process.env.XNAPIFY_SMTP_SECURE === 'true',
-        user: process.env.XNAPIFY_SMTP_USER,
-        pass: process.env.XNAPIFY_SMTP_KEY,
-        defaultFrom: process.env.XNAPIFY_MAIL_FROM,
-        defaultFromName:
-          process.env.XNAPIFY_MAIL_FROM_NAME ||
-          process.env.XNAPIFY_PUBLIC_APP_NAME,
-        ...explicitConfig,
-      });
-
-    case 'sendgrid':
-      return new SendGridEmailProvider({
-        apiKey: process.env.XNAPIFY_SENDGRID_KEY,
-        defaultFrom: process.env.XNAPIFY_MAIL_FROM,
-        defaultFromName:
-          process.env.XNAPIFY_MAIL_FROM_NAME ||
-          process.env.XNAPIFY_PUBLIC_APP_NAME,
-        ...explicitConfig,
-      });
-
-    case 'mailgun':
-      return new MailgunEmailProvider({
-        apiKey: process.env.XNAPIFY_MAILGUN_KEY,
-        domain: process.env.XNAPIFY_MAILGUN_DOMAIN,
-        region: process.env.XNAPIFY_MAILGUN_REGION,
-        defaultFrom: process.env.XNAPIFY_MAIL_FROM,
-        defaultFromName:
-          process.env.XNAPIFY_MAIL_FROM_NAME ||
-          process.env.XNAPIFY_PUBLIC_APP_NAME,
-        ...explicitConfig,
-      });
-
-    case 'resend':
-      return new ResendEmailProvider({
-        apiKey: process.env.XNAPIFY_RESEND_KEY,
-        defaultFrom: process.env.XNAPIFY_MAIL_FROM,
-        defaultFromName:
-          process.env.XNAPIFY_MAIL_FROM_NAME ||
-          process.env.XNAPIFY_PUBLIC_APP_NAME,
-        ...explicitConfig,
-      });
-
-    default:
-      throw new EmailError(
-        `Unknown provider type: ${providerType}`,
-        'INVALID_PROVIDER',
-        400,
-      );
-  }
 }
 
 /**

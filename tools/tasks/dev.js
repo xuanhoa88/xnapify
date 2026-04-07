@@ -129,7 +129,13 @@ function configureWebpackForDev(cfg, isClient = true) {
     // Add React Refresh Webpack Plugin with overlay configuration
     cfg.plugins.push(
       new ReactRefreshWebpackPlugin({
-        overlay: { sockIntegration: 'whm', sockPath: '/~/__webpack_hmr' },
+        overlay: {
+          sockIntegration: 'whm',
+          sockHost: host,
+          sockPort: port,
+          sockPath: '/~/__webpack_hmr',
+          sockProtocol: 'ws',
+        },
       }),
     );
 

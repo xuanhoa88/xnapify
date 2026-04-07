@@ -194,7 +194,7 @@ export async function processEmails(provider, emails, options = {}) {
   }
 
   return createOperationResult(
-    true,
+    results.successful.length > 0,
     {
       successful: results.successful,
       failed: results.failed,

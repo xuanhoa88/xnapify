@@ -287,6 +287,50 @@ describe('Email Engine', () => {
       });
     });
 
+    describe('Worker and Error Handling', () => {
+      it('should force worker path when useWorker is true', async () => {
+        const result = await testEmail.send(
+          {
+            to: 'worker@example.com',
+            subject: 'Worker Force',
+            html: '<p>Worker test</p>',
+          },
+          { useWorker: true, provider: 'memory' },
+        );
+        expect(result.success).toBe(true);
+      });
+
+      it('should throw error when missing provider and throwOnError is true', async () => {
+        await expect(
+          testEmail.send(
+            { to: 'test@test.com', subject: 'Subj', html: '<p>Test</p>' },
+            { useWorker: false, provider: 'non-existent', throwOnError: true },
+          ),
+        ).rejects.toThrow('Provider "non-existent" not found');
+      });
+
+      it('should return 100% failure gracefully via bulk response when all fail', async () => {
+        // Configure provider to fail 100%
+        const failProvider = new MemoryEmailProvider({ failureRate: 1.0 });
+        const failEmail = createFactory({ provider: 'memory' });
+        failEmail.providers.set('memory', failProvider);
+
+        const result = await failEmail.send(
+          [
+            { to: '1@test.com', subject: 'A', html: '<p>A</p>' },
+            { to: '2@test.com', subject: 'A', html: '<p>A</p>' },
+          ],
+          { useWorker: false, provider: 'memory', maxRetries: 1 },
+        );
+
+        expect(result.success).toBe(false);
+        expect(result.data.successCount).toBe(0);
+        expect(result.data.failCount).toBe(2);
+
+        if (failEmail.removeCleanupHandlers) failEmail.removeCleanupHandlers();
+      });
+    });
+
     describe('Bulk Emails', () => {
       it('should send multiple emails', async () => {
         const result = await testEmail.send(
