@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "compiledAt": "2026-04-07T01:40:00.000Z",
+  "testHash": "mock-hash-due-to-manual-execution",
+  "title": "Quick Login via Demo Account Button",
+  "actions": [
+    {
+      "step": 1,
+      "action": "navigate",
+      "url": "/login",
+      "description": "Navigate to the login page"
+    },
+    {
+      "step": 2,
+      "action": "click",
+      "text": "Admin User",
+      "description": "Click the Admin User quick access demo account button"
+    },
+    {
+      "step": 3,
+      "action": "wait",
+      "duration": 2000,
+      "description": "Wait for the form to auto-fill with demo credentials and submit"
+    },
+    {
+      "step": 4,
+      "action": "assert_url",
+      "url": "/",
+      "description": "Verify the user is logged in and redirected to the dashboard"
+    }
+  ]
+}

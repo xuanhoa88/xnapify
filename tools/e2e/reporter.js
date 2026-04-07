@@ -39,7 +39,7 @@ const path = require('path');
  * @returns {string} Absolute path to the results/summary directory
  */
 function createReportDir(baseDir, timestamp) {
-  const dirPath = path.join(baseDir, '_reports', timestamp);
+  const dirPath = path.join(baseDir, '_results', timestamp);
   fs.mkdirSync(dirPath, { recursive: true });
   return dirPath;
 }
@@ -134,7 +134,7 @@ function writeSummary(summaryDir, moduleName, results, config) {
   const rowsText = results
     .map((r, i) => {
       const icon = r.passed ? '✅ PASS' : '❌ FAIL';
-      const resultLink = `[result](../../${r.category}/${r.caseName}/_reports/${config.timestamp}/result.md)`;
+      const resultLink = `[result](../../${r.category}/${r.caseName}/_results/${config.timestamp}/result.md)`;
       return `| ${i + 1} | ${r.category}/${r.caseName} | ${r.testName} | ${icon} | ${resultLink} |`;
     })
     .join('\n');
@@ -143,7 +143,7 @@ function writeSummary(summaryDir, moduleName, results, config) {
     .filter(r => !r.passed)
     .map(
       r =>
-        `### ${r.category}/${r.caseName}: ${r.testName}\n- **Error:** ${r.error}\n- **Result:** [result](../../${r.category}/${r.caseName}/_reports/${config.timestamp}/result.md)`,
+        `### ${r.category}/${r.caseName}: ${r.testName}\n- **Error:** ${r.error}\n- **Result:** [result](../../${r.category}/${r.caseName}/_results/${config.timestamp}/result.md)`,
     )
     .join('\n\n');
 

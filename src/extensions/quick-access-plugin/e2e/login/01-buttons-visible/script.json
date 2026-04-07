@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "compiledAt": "2026-04-07T01:40:00.000Z",
+  "testHash": "mock-hash-due-to-manual-execution",
+  "title": "Quick Access Buttons Visible on Login Page",
+  "actions": [
+    {
+      "step": 1,
+      "action": "navigate",
+      "url": "/login",
+      "description": "Navigate to the login page"
+    },
+    {
+      "step": 2,
+      "action": "wait",
+      "duration": 2000,
+      "description": "Wait for the page to fully load"
+    },
+    {
+      "step": 3,
+      "action": "assert_visible",
+      "selector": ".quick-access",
+      "description": "Verify the quick access login buttons are visible below the login form"
+    },
+    {
+      "step": 4,
+      "action": "assert_visible",
+      "text": "Admin User",
+      "description": "Verify there are demo account buttons rendered"
+    }
+  ]
+}

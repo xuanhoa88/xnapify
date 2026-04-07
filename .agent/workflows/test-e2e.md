@@ -153,7 +153,7 @@ Each test case directory contains:
 - `script.json` — compiled automation actions (LLM generates, committed)
 - `.test-hash` — sha256 of test.md at compile time (gitignored)
 - `scripts/` — archived old scripts (committed for history)
-- `_reports/` — test run reports (text committed, binary gitignored)
+- `_results/` — test run reports (text committed, binary gitignored)
 
 ### UI test.md format (browser tests)
 
@@ -337,7 +337,7 @@ Verify each expected result was met. Report any failures or unexpected UI states
 
 Results are stored inside each test case's directory:
 
-**Result directory:** `e2e/{category}/{NN-name}/_reports/{timestamp}/`
+**Result directory:** `e2e/{category}/{NN-name}/_results/{timestamp}/`
 
 Contents:
 
@@ -388,7 +388,7 @@ Contents:
 
 After ALL test cases in a module are executed, a module-level summary is created:
 
-**Summary path:** `e2e/_reports/{timestamp}/_summary.md`
+**Summary path:** `e2e/_results/{timestamp}/_summary.md`
 
 **Summary format:**
 
@@ -404,15 +404,15 @@ After ALL test cases in a module are executed, a module-level summary is created
 
 | #   | Test Case          | Title                | Result  | Details                                                          |
 | --- | ------------------ | -------------------- | ------- | ---------------------------------------------------------------- |
-| 1   | install/01-upload  | Upload valid package | ✅ PASS | [result](../../install/01-upload/_reports/{timestamp}/result.md)  |
-| 2   | activate/01-toggle | Toggle switch        | ❌ FAIL | [result](../../activate/01-toggle/_reports/{timestamp}/result.md) |
+| 1   | install/01-upload  | Upload valid package | ✅ PASS | [result](../../install/01-upload/_results/{timestamp}/result.md)  |
+| 2   | activate/01-toggle | Toggle switch        | ❌ FAIL | [result](../../activate/01-toggle/_results/{timestamp}/result.md) |
 
 ## Failed Tests
 
 ### activate/01-toggle: Toggle switch
 
 - **Error:** Timeout waiting for element
-- **Result:** [result](../../activate/01-toggle/_reports/{timestamp}/result.md)
+- **Result:** [result](../../activate/01-toggle/_results/{timestamp}/result.md)
 ```
 
 ## Results Directory Structure
@@ -426,7 +426,7 @@ src/extensions/quick-access-plugin/e2e/
 │   │   ├── .test-hash                       ← Hash of test.md (gitignored)
 │   │   ├── scripts/                         ← Archived old scripts (committed)
 │   │   │   └── 2026-04-01_10-03.json
-│   │   └── _reports/                        ← Test run reports
+│   │   └── _results/                        ← Test run reports
 │   │       └── 2026-04-02_13-49/
 │   │           ├── result.md                ← Text report (committed)
 │   │           ├── step-01.png              ← Binary evidence (gitignored)
@@ -441,10 +441,10 @@ src/extensions/quick-access-plugin/e2e/
 │       └── 01-login-jwt/
 │           ├── test.md
 │           ├── script.json
-│           └── _reports/
+│           └── _results/
 │               └── 2026-04-02_09-06/
 │                   └── result.md            ← No screenshots (API-only)
-└── _reports/                                ← Module-level summaries
+└── _results/                                ← Module-level summaries
     └── 2026-04-02_13-49/
         └── _summary.md                      ← Text summary (committed)
 ```
@@ -565,7 +565,7 @@ These rules extend the `browser-testing` skill rules:
 | **Screenshot proof**  | Always request a screenshot at the end of each test case                                                 |
 | **Wait for load**     | Always prepend "Wait for the page to fully load" as the first step                                       |
 | **Auth first**        | Handle login before any test case                                                                        |
-| **Store results**     | Write results inside each test case's `_reports/{timestamp}/` directory                                   |
+| **Store results**     | Write results inside each test case's `_results/{timestamp}/` directory                                   |
 | **Report clearly**    | Create `_summary.md` with ✅/❌ table after all tests complete                                           |
 | **No guessing**       | Ask the user for credentials / URLs if not known — never assume                                          |
 | **Compile first**     | Run `--mode=compile` before `--mode=run` if no `script.json` exists                                      |
@@ -584,7 +584,7 @@ These rules extend the `browser-testing` skill rules:
 | Only search `src/apps/`         | Search BOTH `src/apps/` and `src/extensions/` for `e2e/` folders   |
 | Use flat `.md` files            | Use nested `e2e/{category}/{NN-name}/test.md` structure            |
 | Call LLM on every run           | Use compiled `script.json` — only recompile when `test.md` changes |
-| Discard test results            | Store results in `_reports/{timestamp}/` with screenshots           |
+| Discard test results            | Store results in `_results/{timestamp}/` with screenshots           |
 
 ## Example Usage
 
@@ -687,7 +687,7 @@ npm run test:e2e:import -- my-tests.xlsx --force
 5. Reviews the output paths
 6. Runs: npm run test:e2e:import -- my-tests.xlsx
 7. Runs: npm run test:e2e  (compiles via LLM + executes)
-8. Reviews results in e2e/{type}/{category}/{case}/_reports/
+8. Reviews results in e2e/{type}/{category}/{case}/_results/
 ```
 
 > [!TIP]
