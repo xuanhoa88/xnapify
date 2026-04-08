@@ -174,7 +174,9 @@ async function resolveTarget(arg) {
   const normArg = arg.replace(/\\/g, '/').replace(/\/$/, '');
   const prefixMatches = allE2eDirs.filter(d => {
     const posixDir = d.replace(/\\/g, '/');
-    return posixDir.includes(`/${normArg}/`) || posixDir.endsWith(`/${normArg}`);
+    return (
+      posixDir.includes(`/${normArg}/`) || posixDir.endsWith(`/${normArg}`)
+    );
   });
 
   if (prefixMatches.length > 0) {
