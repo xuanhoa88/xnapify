@@ -540,7 +540,12 @@ async function callOpenAI(config, prompt) {
     if (authValue) headers[headerName] = authValue;
   }
 
-  const result = await httpRequest(url, { method: 'POST', headers }, body, config.timeout);
+  const result = await httpRequest(
+    url,
+    { method: 'POST', headers },
+    body,
+    config.timeout,
+  );
   const raw = result.choices[0].message.content;
   return extractJSON(raw, name);
 }
@@ -561,7 +566,12 @@ async function callAnthropic(config, prompt) {
     ...config.extraHeaders,
   };
 
-  const result = await httpRequest(url, { method: 'POST', headers }, body, config.timeout);
+  const result = await httpRequest(
+    url,
+    { method: 'POST', headers },
+    body,
+    config.timeout,
+  );
   const raw = result.content[0].text;
   return extractJSON(raw, name);
 }
@@ -577,7 +587,12 @@ async function callGoogle(config, prompt) {
   });
 
   const headers = { 'Content-Type': 'application/json' };
-  const result = await httpRequest(url, { method: 'POST', headers }, body, config.timeout);
+  const result = await httpRequest(
+    url,
+    { method: 'POST', headers },
+    body,
+    config.timeout,
+  );
   const raw = result.candidates[0].content.parts[0].text;
   return extractJSON(raw, name);
 }
@@ -631,10 +646,7 @@ function getProviderCredentials() {
  *   Agent writes:  {"action": "click", "text": "Upload Extension"}
  */
 async function callStdin(prompt, step, context, lastAttemptError) {
-  const stdinTimeout = parseInt(
-    process.env.E2E_LLM_TIMEOUT || '300000',
-    10,
-  );
+  const stdinTimeout = parseInt(process.env.E2E_LLM_TIMEOUT || '300000', 10);
 
   const request = {
     e2e_request: 'interpret',
