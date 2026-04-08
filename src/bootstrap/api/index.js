@@ -84,18 +84,6 @@ function registerEngines(container) {
 }
 
 /**
- * Run core database migrations and seeds (framework-level).
- *
- * @returns {Promise<void>}
- */
-async function runCoreMigrations() {
-  if (engines.db && engines.db.connection) {
-    await engines.db.connection.runMigrations();
-    await engines.db.connection.runSeeds();
-  }
-}
-
-/**
  * Setup global middleware stack.
  *
  * @param {object} app - Express application
@@ -216,9 +204,6 @@ export default async function bootstrap(app, extension) {
     // Setup passport & OAuth registry (framework-level, before modules)
     const { oauth } = configurePassport();
     container.instance('oauth', oauth);
-
-    // Run core database migrations
-    await runCoreMigrations();
 
     // Setup global middleware
     setupGlobalMiddleware(app);
