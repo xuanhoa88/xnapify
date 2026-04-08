@@ -8,11 +8,10 @@
  */
 
 const { spawn } = require('child_process');
-const fs = require('fs');
-const path = require('path');
 
 const config = require('../config');
 const { BuildError } = require('../utils/error');
+const { resolveJestBin } = require('../utils/jest');
 const { isSilent, isVerbose, logDebug, logInfo } = require('../utils/logger');
 
 /**
@@ -61,42 +60,14 @@ async function main() {
     logDebug(`Running: jest ${jestArgs.join(' ')}`);
 
     // Safely execute using Node itself if we can resolve the binary directly
-    let jestBin;
-
-    const jestBinTargets = ['jest/bin/jest.js', 'jest-cli/bin/jest.js'];
-    for (const target of jestBinTargets) {
-      try {
-        jestBin = require.resolve(target);
-        break;
-      } catch {
-        // Continue looking
-      }
-    }
-
-    if (!jestBin) {
-      const possiblePaths = [
-        path.resolve(require.resolve('jest'), '../../bin/jest.js'),
-        path.resolve(config.CWD, 'node_modules/jest/bin/jest.js'),
-        path.resolve(config.CWD, 'node_modules/jest-cli/bin/jest.js'),
-        path.resolve(config.CWD, 'node_modules/.bin/jest'),
-        path.resolve(config.CWD, 'node_modules/.bin/jest-cli'),
-      ];
-      jestBin = possiblePaths.find(p => fs.existsSync(p));
-    }
-
-    if (!jestBin) {
-      throw new BuildError('Could not find Jest binary', { exitCode: 1 });
-    }
+    const jestBin = resolveJestBin(config.CWD);
 
     // Spawn Jest process
     const jestProcess = spawn(process.execPath, [jestBin, ...jestArgs], {
       stdio: 'inherit',
       env: {
         ...process.env,
-        NODE_ENV: 'test',
         CWD: config.CWD,
-        // Guarantee sqlite in-memory for tests, bypassing .env postgres unless overridden
-        XNAPIFY_DB_URL: 'sqlite::memory:',
         // Enable coverage if flag is set
         ...(isCoverage && { COVERAGE: 'true' }),
         // Enable watch mode flag

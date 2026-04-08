@@ -148,6 +148,9 @@ module.exports = {
    * with a single module (e.g., images, styles).
    */
   moduleNameMapper: {
+    // Resolve 'node:' prefixed built-in modules for Jest < 27 compatibility
+    '^node:(.*)$': '$1',
+
     // Resolve @shared alias to the shared directory
     // This ensures jest.mock('@shared/...') resolves the same way
     // as babel-plugin-module-resolver does for import statements
@@ -362,9 +365,9 @@ module.exports = {
 
   /**
    * The directory where Jest should store its cached dependency information.
-   * (Not used when cache is disabled)
+   * (Not used when cache is disabled, but can cause ENOENT race conditions if kept manually in older Jest)
    */
-  cacheDirectory: '<rootDir>/.cache/jest',
+  // cacheDirectory: '<rootDir>/.cache/jest',
 
   /**
    * An array of regexp patterns that are matched against all file paths before executing the test.
@@ -380,7 +383,7 @@ module.exports = {
   /**
    * This option allows the use of a custom resolver.
    */
-  // resolver: undefined,
+  resolver: '<rootDir>/tools/jest/resolver.js',
 
   /**
    * Allows you to use a custom runner instead of Jest's default test runner.

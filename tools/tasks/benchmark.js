@@ -12,6 +12,7 @@ const { spawn } = require('child_process');
 
 const config = require('../config');
 const { BuildError } = require('../utils/error');
+const { resolveJestBin } = require('../utils/jest');
 const { isSilent, logDebug, logInfo } = require('../utils/logger');
 
 async function main() {
@@ -28,21 +29,30 @@ async function main() {
     // more stable (no worker startup overhead), but users can override if
     // they like.
     const jestArgs = [
+      // Config file
       '--config',
       require.resolve('../jest'),
+
+      // Run in single thread
       '--runInBand',
+
+      // Disable cache
+      '--no-cache',
+
       // pass through user arguments (e.g. `--maxWorkers=2`)
       ...args,
     ];
 
+    // Resolve Jest binary path
+    const jestBin = resolveJestBin(config.CWD);
+
     // log command in debug mode
     logDebug(`Running benchmark jest ${jestArgs.join(' ')}`);
 
-    const jestProcess = spawn('jest', jestArgs, {
+    const jestProcess = spawn(process.execPath, [jestBin, ...jestArgs], {
       stdio: 'inherit',
       env: {
         ...process.env,
-        NODE_ENV: 'test',
         JEST_BENCHMARK: 'true',
       },
       cwd: config.CWD,

@@ -165,11 +165,6 @@ const AVAILABLE_TASKS = [
     name: 'stylelint',
     description: 'Lint CSS files with Stylelint',
   },
-  {
-    name: 'benchmark',
-    description: 'Run performance benchmarks (*.benchmark.js)',
-    processEnv: { NODE_ENV: 'test' },
-  },
 ];
 
 /**
@@ -231,6 +226,12 @@ function executeTask(taskName) {
 
   // Load environment-specific .env files (.env, .env.local, .env.{NODE_ENV}, etc.)
   require('dotenv-flow').config({ silent: true, default_node_env: nodeEnv });
+
+  // Guarantee SQLite in-memory for testing — set AFTER dotenv-flow so it
+  // unconditionally overrides any XNAPIFY_DB_URL loaded from env files.
+  if (nodeEnv === 'test') {
+    process.env.XNAPIFY_DB_URL = 'sqlite::memory:';
+  }
 
   // Build child process environment
   // Priority: taskConfig.processEnv > dotenv-flow-enhanced process.env
