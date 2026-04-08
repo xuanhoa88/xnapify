@@ -1089,11 +1089,13 @@ const ACTIONS = {
     }
 
     if (!checkbox) throw new Error('Checkbox not found');
-    const checked = await checkbox.evaluate(el => el.checked);
-    if (action.checked && !checked) {
+    const isChecked = await checkbox.evaluate(
+      el => el.checked || el.getAttribute('checked') !== null,
+    );
+    if (action.checked && !isChecked) {
       throw new Error('Checkbox NOT checked (expected checked)');
     }
-    if (!action.checked && checked) {
+    if (!action.checked && isChecked) {
       throw new Error('Checkbox IS checked (expected unchecked)');
     }
   },
