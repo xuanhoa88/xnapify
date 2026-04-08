@@ -61,7 +61,17 @@ export default function QuickAccess() {
 
   const handleKeyDown = useCallback(
     event => {
-      const { key } = event;
+      const { key, target } = event;
+
+      // Ignore if user is typing in an input
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+
       if (key >= '1' && key <= '3') {
         const userIndex = parseInt(key, 10) - 1;
         if (DEMO_USERS[userIndex]) {

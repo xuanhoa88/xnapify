@@ -580,6 +580,21 @@ const ACTIONS = {
     const url = loginUrl.startsWith('http')
       ? loginUrl
       : `${baseUrl}${loginUrl}`;
+
+    // Clear cookies and storage to ensure we don't inherit a session from a previous test
+    const client = await page.target().createCDPSession();
+    await client.send('Network.clearBrowserCookies');
+    await client.send('Network.clearBrowserCache');
+
+    await page.goto(`${baseUrl}/`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 30000,
+    });
+    await page.evaluate(() => {
+      localStorage.clear();
+      sessionStorage.clear();
+    });
+
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
     await waitForRouteReady(page);
 
@@ -596,11 +611,14 @@ const ACTIONS = {
       5000,
     );
 
-    await emailInput.focus();
+    // Ensure inputs are clear before typing
+    await emailInput.click({ clickCount: 3 });
+    await page.keyboard.press('Backspace');
     await emailInput.type(email, { delay: 50 });
 
-    await passwordInput.focus();
-    await passwordInput.type(password, { delay: 100 });
+    await passwordInput.click({ clickCount: 3 });
+    await page.keyboard.press('Backspace');
+    await passwordInput.type(password, { delay: 50 });
 
     const submitBtn = await page.$('button[type="submit"]');
     if (submitBtn) {
@@ -649,10 +667,32 @@ const ACTIONS = {
       return;
     }
     if (action.selector) {
-      await page.waitForSelector(action.selector, {
-        visible: true,
+      // Relax visibility requirement to handle styled/hidden inputs
+      const el = await page.waitForSelector(action.selector, {
+        visible: false,
         timeout: 10000,
       });
+
+      // If hidden or size 0, try to find an interactive parent or associated label
+      const box = await el.boundingBox();
+      if (!box || box.width === 0 || box.height === 0) {
+        const handled = await page.evaluate(sel => {
+          const input = document.querySelector(sel);
+          if (input && input.tagName === 'INPUT') {
+            const label =
+              input.closest('label') ||
+              document.querySelector(`label[for="${input.id}"]`);
+            if (label) {
+              label.click();
+              return true;
+            }
+          }
+          return false;
+        }, action.selector);
+
+        if (handled) return;
+      }
+
       await page.click(action.selector);
       return;
     }

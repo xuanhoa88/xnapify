@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "compiledAt": "2026-04-08T03:42:04.850Z",
+  "testHash": "577c3814ea14e9f8a3e04b55de33276eefeac273597474bb01e054f35384c5cc",
+  "title": "Activate Extension via Toggle Switch",
+  "actions": [
+    {
+      "step": 1,
+      "instruction": "Log in as admin",
+      "action": "login",
+      "description": "Log in using {{email}} and {{password}} from prerequisites"
+    },
+    {
+      "step": 2,
+      "instruction": "Navigate to the extensions admin page",
+      "action": "navigate",
+      "url": "/admin/extensions",
+      "description": "Navigate to extensions admin page"
+    },
+    {
+      "step": 3,
+      "instruction": "Find an inactive extension card (toggle switch is unchecked)",
+      "action": "wait_for_selector",
+      "selector": "[class*='switch'], [class*='toggle'], label[class*='switch']",
+      "visible": true,
+      "description": "Wait for a toggle switch element on extension cards"
+    },
+    {
+      "step": 4,
+      "instruction": "Click the toggle switch on that extension card",
+      "action": "click",
+      "selector": "input[type='checkbox']:not(:checked)",
+      "description": "Click the toggle switch on the inactive extension card"
+    },
+    {
+      "step": 5,
+      "instruction": "Confirm the \"Activate Extension\" modal",
+      "action": "confirm_modal",
+      "description": "Click the confirm button on the Activate Extension modal"
+    },
+    {
+      "step": 6,
+      "instruction": "Observe the action tag changes to \"Activating...\" with a shimmer animation",
+      "action": "screenshot",
+      "description": "Capture the Activating shimmer animation state"
+    },
+    {
+      "step": 7,
+      "instruction": "Wait for the success toast \"Extension activated successfully\"",
+      "action": "wait_for_text",
+      "text": "Extension activated successfully",
+      "description": "Wait for the activation success toast"
+    },
+    {
+      "step": 8,
+      "instruction": "Verify the toggle switch is now checked (on)",
+      "action": "assert_checked",
+      "selector": "input[type='checkbox']",
+      "checked": true,
+      "description": "Verify the extension toggle is now checked (on)"
+    }
+  ]
+}

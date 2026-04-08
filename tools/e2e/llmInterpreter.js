@@ -26,7 +26,7 @@
  *   E2E_OPENAI_API_KEY                  → openai
  *   E2E_ANTHROPIC_API_KEY               → anthropic
  *   E2E_AZURE_API_KEY                   → azure
- *   E2E_OPENROUTER_API_KEY              → custom (OpenRouter)
+ *   E2E_LLM_API_KEY                     → custom (Prefer OpenRouter)
  *   (fallback)                          → ollama
  *
  * The "stdin" provider enables AI IDE agents (Gemini, Claude, Copilot)
@@ -604,7 +604,7 @@ const PROVIDER_ENV_KEYS = {
   openai: 'E2E_OPENAI_API_KEY',
   anthropic: 'E2E_ANTHROPIC_API_KEY',
   azure: 'E2E_AZURE_API_KEY',
-  custom: 'E2E_OPENROUTER_API_KEY',
+  custom: 'E2E_LLM_API_KEY',
 };
 
 /**

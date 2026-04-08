@@ -71,6 +71,9 @@ Use this approach when you need to write and execute custom Node.js scripts to v
 
 ### Common Patterns & Usage Examples
 
+> [!TIP]
+> For advanced Puppeteer capabilities (network interception, stealth, multi-tab, iframes), see the `puppeteer-automation` skill (`view_file .agent/skills/puppeteer-automation/SKILL.md`).
+
 **Pattern: Navigation & Verification**
 ```javascript
 const browser = await puppeteer.launch();
@@ -81,12 +84,11 @@ console.log('Page title:', title);
 await browser.close();
 ```
 
-**Pattern: Form Interaction**
+**Pattern: Locator Form Interaction (Preferred for new scripts)**
 ```javascript
-await page.waitForSelector('input[name="email"]');
-await page.type('input[name="email"]', 'admin@example.com');
-await page.type('input[name="password"]', 'password123');
-await page.click('button[type="submit"]');
+await page.locator('input[name="email"]').fill('admin@example.com');
+await page.locator('input[name="password"]').fill('password123');
+await page.locator('button[type="submit"]').click();
 // Explicit wait for navigation context to update after submit
 await page.waitForNavigation({ waitUntil: 'networkidle0' });
 ```
@@ -94,8 +96,8 @@ await page.waitForNavigation({ waitUntil: 'networkidle0' });
 **Pattern: Wait for Element & Graceful Error Handling**
 ```javascript
 try {
-  // Wait for the specific element to be present and visible
-  await page.waitForSelector('.success-toast', { visible: true, timeout: 5000 });
+  // Locators automatically wait, but if you need explicit visibility checks:
+  await page.locator('.success-toast').wait();
   const exists = await page.locator('.success-toast').count() > 0;
 } catch (error) {
   await page.screenshot({ path: 'error-debug.png', fullPage: true });
@@ -169,6 +171,7 @@ When instructed to run manual tests from `e2e/{category}/{case}/test.md`, parse 
 | Need | Skill / Workflow |
 |------|-----------------|
 | E2E CLI test runner framework | `/test-e2e` workflow |
+| Deep-dive Puppeteer patterns (standalone) | `puppeteer-automation` skill |
 | Backend/Unit integration testing | `test-driven-development` skill |
 | Adding test templates to modules | `/add-test` workflow |
 | Debugging runtime or build issues | `/debug` workflow |
