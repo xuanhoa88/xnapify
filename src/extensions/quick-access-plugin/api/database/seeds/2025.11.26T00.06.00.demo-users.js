@@ -142,7 +142,7 @@ export async function up(_, { container }) {
     };
   });
 
-  await User.bulkCreate(formattedUsers, {
+  const createdUsers = await User.bulkCreate(formattedUsers, {
     // We must pass the include to correctly create the user_profiles
     include: [
       {
@@ -151,6 +151,19 @@ export async function up(_, { container }) {
       },
     ],
   });
+
+  // Re-fetch users completely to ensure profile objects are eager-loaded for the indexer
+  const completeUsers = await User.findAll({
+    where: { id: createdUsers.map(u => u.id) },
+    include: [{ model: UserProfile, as: 'profile' }],
+  });
+
+  const hook = container.resolve('hook');
+  if (hook) {
+    for (const user of completeUsers) {
+      await hook('admin:users').emit('created', { user });
+    }
+  }
 }
 
 /**
