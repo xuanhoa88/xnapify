@@ -82,7 +82,11 @@ const {
   recompileStep,
 } = require('./compiler');
 const { executeAction, createAPIState } = require('./executor');
-const { interpretStep, LLM_PROVIDERS } = require('./llmInterpreter');
+const {
+  interpretStep,
+  LLM_PROVIDERS,
+  PROVIDER_ENV_KEYS,
+} = require('./llmInterpreter');
 const {
   parseTestFile,
   discoverTestFiles,
@@ -295,22 +299,19 @@ async function run() {
     if (llmValidated || mode === 'run') return;
 
     if (llmProvider === 'auto') {
-      const hasGemini = process.env.E2E_GEMINI_API_KEY;
-      const hasOpenAI = process.env.E2E_OPENAI_API_KEY;
-      const hasAnthropic = process.env.E2E_ANTHROPIC_API_KEY;
-      resolvedLLM = hasGemini
-        ? 'google'
-        : hasOpenAI
-          ? 'openai'
-          : hasAnthropic
-            ? 'anthropic'
-            : 'ollama';
+      // Use canonical PROVIDER_ENV_KEYS to stay in sync with llmInterpreter
+      resolvedLLM = 'ollama'; // fallback
+      for (const [p, envKey] of Object.entries(PROVIDER_ENV_KEYS)) {
+        if (process.env[envKey]) {
+          resolvedLLM = p;
+          break;
+        }
+      }
       console.log(`  🔍 Auto-detected LLM: ${resolvedLLM}`);
     }
 
     if (resolvedLLM === 'ollama') {
-      const ollamaUrl =
-        LLM_PROVIDERS.ollama.baseUrl || 'http://localhost:11434';
+      const ollamaUrl = LLM_PROVIDERS.ollama.baseUrl;
       try {
         await new Promise((resolve, reject) => {
           // LLM baseUrl has /v1 appended, we need the root domain for /api/tags

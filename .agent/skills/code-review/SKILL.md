@@ -74,12 +74,13 @@ Structure your final review using the [Response Format](#response-format) at the
 
 ## 1. Code Quality & Style
 
-> ⚠️ **Always enforce the rules defined in the `coding-standards` skill.** 
+> ⚠️ **Always enforce the rules defined in the `coding-standards` skill.**
 > Do not evaluate style rules natively in this file. Cross-reference `coding-standards` as the single source of truth for:
+>
 > - Naming Conventions (Variables, Functions, Booleans)
 > - Function Design (Size, Arguments, Guard Clauses)
 > - Clean Code Principles (DRY, Licenses, Comments)
-> - Syntax Restrictions (Banned APIs like Node 17+, `??`, etc.)
+> - Syntax Restrictions (Banned APIs like Node 17+, `??`, `?.`, `??=`, etc.)
 
 ---
 
@@ -497,15 +498,15 @@ src/apps/[module_name]/
 
 The code-review checks that other skills' output is correct:
 
-| Skill                        | What to Verify                                                                     |
-| ---------------------------- | ---------------------------------------------------------------------------------- |
-| **module-development**       | Lifecycle hooks match phase order, route format correct, DI used properly          |
-| **extension-development**    | `boot`/`shutdown` symmetry, IPC uses `__EXTENSION_ID__`, no `src/apps/` imports    |
-| **security-compliance**      | Zod validation present, RBAC guards, env var prefix, no raw SQL, CSP compliance    |
-| **coding-standards**         | SRP, DRY, naming, syntax restrictions (`??`, `?.`), functions under 20 lines       |
-| **requirement-traceability** | Code traces to spec requirements, no unauthorized additions, amendments documented |
-| **i18n-localization**        | No hardcoded strings, translation hook exists, fallback strings provided           |
-| **frontend-design**          | CSS Modules used, no inline styles, responsive considerations                      |
+| Skill                        | What to Verify                                                                      |
+| ---------------------------- | ----------------------------------------------------------------------------------- |
+| **module-development**       | Lifecycle hooks match phase order, route format correct, DI used properly           |
+| **extension-development**    | `boot`/`shutdown` symmetry, IPC uses `__EXTENSION_ID__`, no `src/apps/` imports     |
+| **security-compliance**      | Zod validation present, RBAC guards, env var prefix, no raw SQL, CSP compliance     |
+| **coding-standards**         | SRP, DRY, naming, syntax restrictions (`??`, `?.`, `??=`), functions under 20 lines |
+| **requirement-traceability** | Code traces to spec requirements, no unauthorized additions, amendments documented  |
+| **i18n-localization**        | No hardcoded strings, translation hook exists, fallback strings provided            |
+| **frontend-design**          | CSS Modules used, no inline styles, responsive considerations                       |
 
 ---
 

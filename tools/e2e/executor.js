@@ -557,6 +557,11 @@ const ACTIONS = {
     await waitForRouteReady(page);
   },
 
+  async go_back({ page }) {
+    await page.goBack({ waitUntil: 'domcontentloaded', timeout: 30000 });
+    await waitForRouteReady(page);
+  },
+
   // ── Login ───────────────────────────────────────────────────────
   async login({ page, baseUrl, prerequisites }, action) {
     // Resolve credentials: action > prerequisites > env (last resort)
@@ -673,18 +678,97 @@ const ACTIONS = {
     await el.click();
   },
 
-  // ── Type / Input ────────────────────────────────────────────────
-  async type({ page }, action) {
+  // ── Hover ───────────────────────────────────────────────────────
+  async hover({ page }, action) {
+    await waitForSPAStable(page);
+    if (action.text) {
+      const el = await findByText(page, action.text, action.selector);
+      if (!el) throw new Error(`Element with text "${action.text}" not found`);
+      await el.hover();
+      return;
+    }
+    if (action.selector) {
+      await page.waitForSelector(action.selector, {
+        visible: true,
+        timeout: 10000,
+      });
+      await page.hover(action.selector);
+      return;
+    }
+    throw new Error('Hover action requires "text" or "selector"');
+  },
+
+  // ── Focus ───────────────────────────────────────────────────────
+  async focus({ page }, action) {
     await waitForSPAStable(page);
     await page.waitForSelector(action.selector, {
       visible: true,
       timeout: 10000,
     });
+    await page.focus(action.selector);
+  },
+
+  // ── Type / Input ────────────────────────────────────────────────
+  async type({ page, apiState }, action) {
+    await waitForSPAStable(page);
+    await page.waitForSelector(action.selector, {
+      visible: true,
+      timeout: 10000,
+    });
+    const value = interpolateVars(
+      action.value,
+      (apiState && apiState.variables) || {},
+    );
     if (action.clear) {
       await page.click(action.selector, { clickCount: 3 });
       await page.keyboard.press('Backspace');
     }
-    await page.type(action.selector, action.value, { delay: 30 });
+    await page.type(action.selector, value, { delay: 30 });
+  },
+
+  // ── Fill (atomic set, clears existing value) ────────────────────
+  async fill({ page, apiState }, action) {
+    await waitForSPAStable(page);
+    const el = await retryUntilFound(() => page.$(action.selector), 10000);
+    if (!el) throw new Error(`Element "${action.selector}" not found for fill`);
+    const value = interpolateVars(
+      action.value,
+      (apiState && apiState.variables) || {},
+    );
+    // Select all text reliably across platforms, then overwrite
+    await el.click();
+    const selectAll = process.platform === 'darwin' ? 'Meta' : 'Control';
+    await page.keyboard.down(selectAll);
+    await page.keyboard.press('a');
+    await page.keyboard.up(selectAll);
+    await el.type(value, { delay: 0 });
+  },
+
+  // ── Clear ───────────────────────────────────────────────────────
+  async clear({ page }, action) {
+    await waitForSPAStable(page);
+    const el = await retryUntilFound(() => page.$(action.selector), 10000);
+    if (!el)
+      throw new Error(`Element "${action.selector}" not found for clear`);
+    await el.click();
+    const selectAll = process.platform === 'darwin' ? 'Meta' : 'Control';
+    await page.keyboard.down(selectAll);
+    await page.keyboard.press('a');
+    await page.keyboard.up(selectAll);
+    await page.keyboard.press('Backspace');
+  },
+
+  // ── Press Key ───────────────────────────────────────────────────
+  async press_key({ page }, action) {
+    await waitForSPAStable(page);
+    if (action.selector) {
+      await page.waitForSelector(action.selector, {
+        visible: true,
+        timeout: 10000,
+      });
+      await page.focus(action.selector);
+    }
+    await page.keyboard.press(action.key);
   },
 
   // ── File Upload ─────────────────────────────────────────────────
@@ -710,6 +794,59 @@ const ACTIONS = {
     await page.select(action.selector, action.value);
   },
 
+  // ── Scroll ──────────────────────────────────────────────────────
+  async scroll_to({ page }, action) {
+    await waitForSPAStable(page);
+    const el = await retryUntilFound(() => page.$(action.selector), 10000);
+    if (!el)
+      throw new Error(`Element "${action.selector}" not found to scroll to`);
+    await el.evaluate(e =>
+      e.scrollIntoView({ behavior: 'smooth', block: 'center' }),
+    );
+  },
+
+  async scroll_page({ page }, action) {
+    await page.evaluate(
+      (x, y) => window.scrollBy(x, y),
+      action.x || 0,
+      action.y || 0,
+    );
+  },
+
+  // ── Drag and Drop ───────────────────────────────────────────────
+  async drag_and_drop({ page }, action) {
+    await waitForSPAStable(page);
+    const srcEl = await retryUntilFound(() => page.$(action.source), 10000);
+    if (!srcEl) throw new Error(`Drag source "${action.source}" not found`);
+    const tgtEl = await retryUntilFound(() => page.$(action.target), 10000);
+    if (!tgtEl) throw new Error(`Drop target "${action.target}" not found`);
+
+    const srcBox = await srcEl.boundingBox();
+    const tgtBox = await tgtEl.boundingBox();
+    if (!srcBox || !tgtBox)
+      throw new Error('Cannot get bounding box for drag elements');
+
+    await page.mouse.move(
+      srcBox.x + srcBox.width / 2,
+      srcBox.y + srcBox.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      tgtBox.x + tgtBox.width / 2,
+      tgtBox.y + tgtBox.height / 2,
+      { steps: 10 },
+    );
+    await page.mouse.up();
+  },
+
+  // ── Viewport ────────────────────────────────────────────────────
+  async set_viewport({ page }, action) {
+    await page.setViewport({
+      width: action.width || 1280,
+      height: action.height || 720,
+    });
+  },
+
   // ── Wait ────────────────────────────────────────────────────────
   async wait(_ctx, action) {
     await new Promise(r => setTimeout(r, action.duration || 1000));
@@ -729,6 +866,30 @@ const ACTIONS = {
       visible: true,
       timeout: action.timeout || 15000,
     });
+  },
+
+  async wait_for_selector({ page }, action) {
+    const visible = action.visible !== undefined ? action.visible : true;
+    await page.waitForSelector(action.selector, {
+      visible,
+      hidden: !visible,
+      timeout: action.timeout || 15000,
+    });
+  },
+
+  async wait_for_navigation({ page }, action) {
+    // Guard: navigation may have already completed before this step ran
+    // (e.g. click on step N triggers nav, this is step N+1).
+    // Use a short timeout and fall through silently on timeout.
+    try {
+      await page.waitForNavigation({
+        waitUntil: action.waitUntil || 'networkidle0',
+        timeout: action.timeout || 5000,
+      });
+    } catch {
+      // Navigation already completed — fall through
+    }
+    await waitForSPAStable(page);
   },
 
   // ── Modal ───────────────────────────────────────────────────────
@@ -781,13 +942,12 @@ const ACTIONS = {
       ? new URL(action.url).pathname
       : action.url;
 
-    const matches = await retryUntilFound(async () => {
-      const currentPath = new URL(page.url()).pathname;
-      if (currentPath !== expectedPath) return null;
-      return true;
-    }, 10000);
-
-    if (!matches) {
+    try {
+      await retryUntilFound(async () => {
+        const currentPath = new URL(page.url()).pathname;
+        return currentPath === expectedPath ? true : null;
+      }, 10000);
+    } catch {
       const currentPath = new URL(page.url()).pathname;
       throw new Error(
         `Expected URL pathname to be "${expectedPath}", but got "${currentPath}"`,
@@ -819,14 +979,17 @@ const ACTIONS = {
     }
 
     if (action.text) {
-      await retryUntilFound(async () => {
-        const found = await page.evaluate(
-          text => document.body.innerText.includes(text),
-          action.text,
-        );
-        if (!found) return null;
-        return true;
-      }, 10000);
+      try {
+        await retryUntilFound(async () => {
+          const found = await page.evaluate(
+            text => document.body.innerText.includes(text),
+            action.text,
+          );
+          return found ? true : null;
+        }, 10000);
+      } catch {
+        throw new Error(`Text "${action.text}" not visible on page`);
+      }
       return;
     }
 
@@ -892,6 +1055,106 @@ const ACTIONS = {
     }
     if (!action.checked && checked) {
       throw new Error('Checkbox IS checked (expected unchecked)');
+    }
+  },
+
+  async assert_title({ page }, action) {
+    await waitForSPAStable(page);
+    const title = await page.title();
+    if (action.equals !== undefined && title !== action.equals) {
+      throw new Error(`Expected page title "${action.equals}", got "${title}"`);
+    }
+    if (action.contains !== undefined && !title.includes(action.contains)) {
+      throw new Error(
+        `Expected page title to contain "${action.contains}", got "${title}"`,
+      );
+    }
+  },
+
+  async assert_enabled({ page }, action) {
+    await waitForSPAStable(page);
+    const expectEnabled = action.enabled !== undefined ? action.enabled : true;
+
+    try {
+      await retryUntilFound(async () => {
+        const el = await page.$(action.selector);
+        if (!el) return null;
+        const disabled = await el.evaluate(e => e.disabled);
+        // Return truthy only when state matches expectation
+        return expectEnabled ? !disabled : disabled ? true : null;
+      }, 10000);
+    } catch {
+      throw new Error(
+        `Element "${action.selector}" is ${expectEnabled ? 'disabled' : 'enabled'} (expected ${expectEnabled ? 'enabled' : 'disabled'})`,
+      );
+    }
+  },
+
+  async assert_attribute({ page }, action) {
+    await waitForSPAStable(page);
+    const el = await retryUntilFound(() => page.$(action.selector), 10000);
+    if (!el) throw new Error(`Element "${action.selector}" not found`);
+    const value = await el.evaluate(
+      (e, attr) => e.getAttribute(attr),
+      action.attribute,
+    );
+
+    // Check exists first — it's the most fundamental assertion
+    if (action.exists !== undefined) {
+      if (action.exists && value === null) {
+        throw new Error(`Expected attribute "${action.attribute}" to exist`);
+      }
+      if (!action.exists && value !== null) {
+        throw new Error(
+          `Expected attribute "${action.attribute}" to NOT exist`,
+        );
+      }
+      return;
+    }
+
+    if (action.equals !== undefined && value !== action.equals) {
+      throw new Error(
+        `Expected attribute "${action.attribute}" = "${action.equals}", got "${value}"`,
+      );
+    }
+    if (
+      action.contains !== undefined &&
+      (!value || !value.includes(action.contains))
+    ) {
+      throw new Error(
+        `Expected attribute "${action.attribute}" to contain "${action.contains}", got "${value}"`,
+      );
+    }
+  },
+
+  async assert_count({ page }, action) {
+    await waitForSPAStable(page);
+
+    try {
+      await retryUntilFound(async () => {
+        const elements = await page.$$(action.selector);
+        return elements.length === action.count ? true : null;
+      }, 10000);
+    } catch {
+      const actual = (await page.$$(action.selector)).length;
+      throw new Error(
+        `Expected ${action.count} elements matching "${action.selector}", found ${actual}`,
+      );
+    }
+  },
+
+  // ── Evaluate (run JS in page context) ───────────────────────────
+  async evaluate({ page, apiState }, action) {
+    await waitForSPAStable(page);
+    // Wrap in arrow function to safely handle both expressions and statements
+    const result = await page.evaluate(
+      `(()=>{try{return(${action.script})}catch(e){return e.message}})()`,
+    );
+    if (action.as) {
+      apiState.variables[action.as] =
+        typeof result === 'object' && result !== null
+          ? JSON.stringify(result)
+          : String(result || '');
     }
   },
 
@@ -1008,6 +1271,33 @@ const ACTIONS = {
       if (!String(value).includes(expected)) {
         throw new Error(
           `Expected "${action.path}" to contain "${expected}", got "${value}"`,
+        );
+      }
+      return;
+    }
+
+    if (action.not_equals !== undefined) {
+      const unexpected = interpolateVars(
+        String(action.not_equals),
+        apiState.variables,
+      );
+      if (String(value) === unexpected) {
+        throw new Error(
+          `Expected "${action.path}" to NOT equal "${unexpected}", but it does`,
+        );
+      }
+      return;
+    }
+
+    if (action.length !== undefined) {
+      if (!Array.isArray(value)) {
+        throw new Error(
+          `Expected "${action.path}" to be an array, got ${typeof value}`,
+        );
+      }
+      if (value.length !== action.length) {
+        throw new Error(
+          `Expected "${action.path}" array length ${action.length}, got ${value.length}`,
         );
       }
     }
@@ -1238,7 +1528,7 @@ function getNestedValue(obj, path) {
  */
 function interpolateVars(str, variables) {
   if (!str || typeof str !== 'string') return str;
-  return str.replace(/\{\{([\w\\-]+)\}\}/g, (match, name) => {
+  return str.replace(/\{\{([\w-]+)\}\}/g, (match, name) => {
     if (variables[name] !== undefined) return variables[name];
     return match; // leave unresolved placeholders as-is
   });
