@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "compiledAt": "2026-04-08T04:04:45.663Z",
+  "compiledAt": "2026-04-08T06:50:53.728Z",
   "testHash": "4a114340a6e9957a3b65c34891fb7c7a9771c79445d16c6812873a2b6b00e910",
   "title": "Verify Activated Extension Persists After Refresh",
   "actions": [
@@ -33,9 +33,8 @@
     {
       "step": 5,
       "instruction": "Verify the previously activated extension still has its toggle switch checked",
-      "action": "click",
-      "text": "Jane Smith",
-      "description": "Click user menu to reveal logout"
+      "action": "login",
+      "description": "Log in as admin"
     }
   ]
 }

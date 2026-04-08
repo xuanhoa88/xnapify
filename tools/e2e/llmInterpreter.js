@@ -102,7 +102,7 @@ const LLM_PROVIDERS = {
   },
   custom: {
     baseUrl: 'https://openrouter.ai/api/v1',
-    model: 'google/gemini-2.5-flash-preview',
+    model: 'google/gemini-3-flash-preview',
     endpoint: '/chat/completions',
     authHeader: key => `Bearer ${key}`,
     jsonMode: true,
