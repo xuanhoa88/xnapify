@@ -93,56 +93,56 @@ function getDefaultOptions() {
 function attachMigrationMethods(sequelize) {
   /**
    * Run pending migrations
-   * @param {Array|null} [migrations=null] - Migration source
+   * @param {Array} migrations - Migration sources from modules
    * @param {Object} [options] - Optional configuration
    * @returns {Promise<void>}
    */
-  sequelize.runMigrations = (migrations = null, options = {}) =>
+  sequelize.runMigrations = (migrations, options = {}) =>
     runMigrations(migrations, sequelize, options);
 
   /**
    * Run seeds
-   * @param {Array|null} [seeds=null] - Seed source
+   * @param {Array} seeds - Seed sources from modules
    * @param {Object} [options] - Optional configuration
    * @returns {Promise<void>}
    */
-  sequelize.runSeeds = (seeds = null, options = {}) =>
+  sequelize.runSeeds = (seeds, options = {}) =>
     runSeeds(seeds, sequelize, options);
 
   /**
    * Revert last migration
-   * @param {Array|null} [migrations=null] - Migration source
+   * @param {Array} migrations - Migration sources from modules
    * @param {Object} [options] - Optional configuration
    * @returns {Promise<void>}
    */
-  sequelize.revertMigrations = (migrations = null, options = {}) =>
+  sequelize.revertMigrations = (migrations, options = {}) =>
     revertMigrations(migrations, sequelize, options);
 
   /**
    * Undo last seed
-   * @param {Array|null} [seeds=null] - Seed source
+   * @param {Array} seeds - Seed sources from modules
    * @param {Object} [options] - Optional configuration
    * @returns {Promise<void>}
    */
-  sequelize.undoSeeds = (seeds = null, options = {}) =>
+  sequelize.undoSeeds = (seeds, options = {}) =>
     undoSeeds(seeds, sequelize, options);
 
   /**
    * Get migration status
-   * @param {Array|null} [migrations=null] - Migration source
+   * @param {Array} migrations - Migration sources from modules
    * @param {Object} [options] - Optional configuration
    * @returns {Promise<{executed: Array, pending: Array}>}
    */
-  sequelize.getMigrationStatus = (migrations = null, options = {}) =>
+  sequelize.getMigrationStatus = (migrations, options = {}) =>
     getMigrationStatus(migrations, sequelize, options);
 
   /**
    * Get seed status
-   * @param {Array|null} [seeds=null] - Seed source
+   * @param {Array} seeds - Seed sources from modules
    * @param {Object} [options] - Optional configuration
    * @returns {Promise<{executed: Array, pending: Array}>}
    */
-  sequelize.getSeedStatus = (seeds = null, options = {}) =>
+  sequelize.getSeedStatus = (seeds, options = {}) =>
     getSeedStatus(seeds, sequelize, options);
 
   return sequelize;

@@ -933,12 +933,13 @@ Register inbound webhook handlers in the module's `boot()` hook:
 // Inside boot({ container })
 const webhook = container.resolve('webhook');
 
-webhook.register('{provider-name}', {
+webhook.handler('{provider-name}', {
   // Secret for HMAC signature verification
   secret: process.env.XNAPIFY_{PROVIDER}_WEBHOOK_KEY,
 
   // Handle the verified payload
-  async handler({ event, payload, headers }) {
+  async handler(payload, context) {
+    const { event } = payload;
     switch (event) {
       case 'payment.completed':
         await handlePaymentCompleted(payload);
@@ -955,7 +956,7 @@ webhook.register('{provider-name}', {
 
 ### Guidelines
 
-- **Always verify signatures.** The webhook engine handles HMAC verification automatically when `secret` is provided.
+- **Always verify signatures.** The webhook module handles HMAC verification automatically when `secret` is provided.
 - **Use descriptive provider names.** E.g., `stripe`, `github`, `sendgrid`.
 - **Return quickly.** Acknowledge the webhook and process asynchronously if needed (dispatch to queue or call worker function).
 - **Store the secret** in an env var ending with `_KEY` (e.g., `XNAPIFY_{PROVIDER}_WEBHOOK_KEY`). The `_KEY` suffix auto-excludes it from client bundles.

@@ -10,16 +10,6 @@ import { Umzug, SequelizeStorage } from 'umzug';
 
 import { createWebpackContextAdapter } from '@shared/utils/contextAdapter';
 
-// Auto-load migrations via require.context
-const migrationsContext = require.context(
-  './migrations',
-  false,
-  /\.[cm]?[jt]s$/i,
-);
-
-// Auto-load seeds via require.context
-const seedsContext = require.context('./seeds', false, /\.[cm]?[jt]s$/i);
-
 // ======================================================================
 // Internal helpers
 // ======================================================================
@@ -204,9 +194,7 @@ function validateConnection(connection) {
 /**
  * Create migration umzug instance
  *
- * @param {Array|null} migrations - Migration source:
- *   - null: use built-in migrations
- *   - Array: [{context, prefix}, ...] for modules
+ * @param {Array} migrations - Migration sources: [{context, prefix}, ...] from modules
  * @param {Sequelize} connection - Sequelize connection instance
  * @param {Object} [options] - Optional configuration
  * @param {Console|Object} [options.logger] - Logger instance (default: console)
@@ -215,26 +203,18 @@ function validateConnection(connection) {
 function createMigrationUmzug(migrations, connection, options = {}) {
   validateConnection(connection);
 
-  let migrationsConfig;
   const logger = options.logger || console;
 
-  if (migrations == null) {
-    // Use built-in bundled migrations
-    const adapter = createWebpackContextAdapter(migrationsContext);
-    migrationsConfig = adapterToMigrations(adapter);
-  } else if (Array.isArray(migrations)) {
-    // Array of {context, prefix} objects
-    migrationsConfig = mergeMigrations(migrations, options);
-  } else {
+  if (!Array.isArray(migrations)) {
     const error = new Error(
-      'Invalid migrations parameter. Expected:\n' +
-        '  - null (use built-in migrations)\n' +
-        '  - [{context, prefix}, ...] (module migrations)',
+      'Invalid migrations parameter. Expected [{context, prefix}, ...]',
     );
     error.name = 'InvalidMigrationsError';
     error.status = 400;
     throw error;
   }
+
+  const migrationsConfig = mergeMigrations(migrations, options);
 
   return new Umzug({
     migrations: migrationsConfig,
@@ -250,9 +230,7 @@ function createMigrationUmzug(migrations, connection, options = {}) {
 /**
  * Create seed umzug instance
  *
- * @param {Array|null} seeds - Seed source:
- *   - null: use built-in seeds
- *   - Array: [{context, prefix}, ...] for modules
+ * @param {Array} seeds - Seed sources: [{context, prefix}, ...] from modules
  * @param {Sequelize} connection - Sequelize connection instance
  * @param {Object} [options] - Optional configuration
  * @param {Console|Object} [options.logger] - Logger instance (default: console)
@@ -261,26 +239,18 @@ function createMigrationUmzug(migrations, connection, options = {}) {
 function createSeedUmzug(seeds, connection, options = {}) {
   validateConnection(connection);
 
-  let seedsConfig;
   const logger = options.logger || console;
 
-  if (seeds == null) {
-    // Use built-in bundled seeds
-    const adapter = createWebpackContextAdapter(seedsContext);
-    seedsConfig = adapterToMigrations(adapter);
-  } else if (Array.isArray(seeds)) {
-    // Array of {context, prefix} objects
-    seedsConfig = mergeMigrations(seeds, options);
-  } else {
+  if (!Array.isArray(seeds)) {
     const error = new Error(
-      'Invalid seeds parameter. Expected:\n' +
-        '  - null (use built-in seeds)\n' +
-        '  - [{context, prefix}, ...] (module seeds)',
+      'Invalid seeds parameter. Expected [{context, prefix}, ...]',
     );
     error.name = 'InvalidSeedsError';
     error.status = 400;
     throw error;
   }
+
+  const seedsConfig = mergeMigrations(seeds, options);
 
   return new Umzug({
     migrations: seedsConfig,
@@ -300,17 +270,13 @@ function createSeedUmzug(seeds, connection, options = {}) {
 /**
  * Get migration status
  *
- * @param {Array|null} [migrations=null] - Migration source
+ * @param {Array} migrations - Migration sources from modules
  * @param {Sequelize} connection - Sequelize connection instance
  * @param {Object} [options] - Optional configuration
  * @param {Console|Object} [options.logger] - Logger instance
  * @returns {Promise<{executed: Array, pending: Array}>} Migration status
  */
-export async function getMigrationStatus(
-  migrations = null,
-  connection,
-  options = {},
-) {
+export async function getMigrationStatus(migrations, connection, options = {}) {
   const umzug = createMigrationUmzug(migrations, connection, options);
   const [executed, pending] = await Promise.all([
     umzug.executed(),
@@ -326,13 +292,13 @@ export async function getMigrationStatus(
 /**
  * Get seed status
  *
- * @param {Array|null} [seeds=null] - Seed source
+ * @param {Array} seeds - Seed sources from modules
  * @param {Sequelize} connection - Sequelize connection instance
  * @param {Object} [options] - Optional configuration
  * @param {Console|Object} [options.logger] - Logger instance
  * @returns {Promise<{executed: Array, pending: Array}>} Seed status
  */
-export async function getSeedStatus(seeds = null, connection, options = {}) {
+export async function getSeedStatus(seeds, connection, options = {}) {
   const umzug = createSeedUmzug(seeds, connection, options);
   const [executed, pending] = await Promise.all([
     umzug.executed(),
@@ -348,17 +314,13 @@ export async function getSeedStatus(seeds = null, connection, options = {}) {
 /**
  * Run pending migrations
  *
- * @param {Array|null} [migrations=null] - Migration source
+ * @param {Array} migrations - Migration sources from modules
  * @param {Sequelize} connection - Sequelize connection instance
  * @param {Object} [options] - Optional configuration
  * @param {Console|Object} [options.logger] - Logger instance
  * @returns {Promise<void>}
  */
-export async function runMigrations(
-  migrations = null,
-  connection,
-  options = {},
-) {
+export async function runMigrations(migrations, connection, options = {}) {
   const logger = options.logger || console;
 
   try {
@@ -387,13 +349,13 @@ export async function runMigrations(
 /**
  * Run seeds
  *
- * @param {Array|null} [seeds=null] - Seed source
+ * @param {Array} seeds - Seed sources from modules
  * @param {Sequelize} connection - Sequelize connection instance
  * @param {Object} [options] - Optional configuration
  * @param {Console|Object} [options.logger] - Logger instance
  * @returns {Promise<void>}
  */
-export async function runSeeds(seeds = null, connection, options = {}) {
+export async function runSeeds(seeds, connection, options = {}) {
   const logger = options.logger || console;
 
   try {
@@ -422,17 +384,13 @@ export async function runSeeds(seeds = null, connection, options = {}) {
 /**
  * Revert last migration
  *
- * @param {Array|null} [migrations=null] - Migration source
+ * @param {Array} migrations - Migration sources from modules
  * @param {Sequelize} connection - Sequelize connection instance
  * @param {Object} [options] - Optional configuration
  * @param {Console|Object} [options.logger] - Logger instance
  * @returns {Promise<void>}
  */
-export async function revertMigrations(
-  migrations = null,
-  connection,
-  options = {},
-) {
+export async function revertMigrations(migrations, connection, options = {}) {
   const logger = options.logger || console;
 
   try {
@@ -458,13 +416,13 @@ export async function revertMigrations(
 /**
  * Undo last seed
  *
- * @param {Array|null} [seeds=null] - Seed source
+ * @param {Array} seeds - Seed sources from modules
  * @param {Sequelize} connection - Sequelize connection instance
  * @param {Object} [options] - Optional configuration
  * @param {Console|Object} [options.logger] - Logger instance
  * @returns {Promise<void>}
  */
-export async function undoSeeds(seeds = null, connection, options = {}) {
+export async function undoSeeds(seeds, connection, options = {}) {
   const logger = options.logger || console;
 
   try {

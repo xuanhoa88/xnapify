@@ -110,7 +110,7 @@ Use [Conventional Commits](https://www.conventionalcommits.org/) format:
 # Examples
 git commit -m "feat(users): add password reset endpoint"
 git commit -m "fix(auth): handle expired refresh token"
-git commit -m "refactor(webhook): simplify handler registration"
+git commit -m "refactor(webhooks): simplify handler registration"
 git commit -m "docs: update README with Docker instructions"
 git commit -m "test(rbac): add permission edge case tests"
 git commit -m "chore: upgrade sequelize to 6.38"
@@ -138,7 +138,7 @@ git checkout -b <type>/<short-description>
 **Branch naming:**
 - `feat/password-reset`
 - `fix/session-cookie-domain`
-- `refactor/webhook-engine`
+- `refactor/webhooks-module`
 - `docs/update-readme`
 
 ## 7. Commit

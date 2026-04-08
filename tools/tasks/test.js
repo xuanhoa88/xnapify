@@ -40,6 +40,9 @@ async function main() {
       '--config',
       require.resolve('../jest'),
 
+      // Disable cache
+      '--no-cache',
+
       // Pass through user arguments
       ...args,
     ];
@@ -92,6 +95,8 @@ async function main() {
         ...process.env,
         NODE_ENV: 'test',
         CWD: config.CWD,
+        // Guarantee sqlite in-memory for tests, bypassing .env postgres unless overridden
+        XNAPIFY_DB_URL: 'sqlite::memory:',
         // Enable coverage if flag is set
         ...(isCoverage && { COVERAGE: 'true' }),
         // Enable watch mode flag

@@ -10,6 +10,7 @@ This skill equips you to build new modules for the `xnapify` application. Module
 ## Core Concepts
 
 In `xnapify`, the business logic is organized into domains placed under `src/apps/`. Each domain contains:
+
 - `api/` for all backend code (Express routes, Sequelize models, Services)
 - `views/` for all frontend code (React components, Redux slices)
 
@@ -20,6 +21,7 @@ Modules interact with the core framework by exporting a **default object** with 
 1. **Setup Directory:** Choose a domain name `[module_name]`. Create `src/apps/[module_name]/api/`.
 2. **Setup Subdirectories:** Always create `controllers`, `services`, `routes`, `models`, and `database/migrations` + `database/seeds`.
 3. **The Index File (`api/index.js`):** Export a `default` object with the following lifecycle hooks:
+
    - `translations()`: returns the Webpack context for locale JSON files.
    - `providers({ container })`: binds singletons/factories to the dependency injection `container`.
    - `migrations()`: returns the Webpack context for migrations (declarative — autoloader executes).
@@ -28,7 +30,7 @@ Modules interact with the core framework by exporting a **default object** with 
    - `boot({ container })`: registers hooks, schedules, queue-based workers, or background worker functions. Runs after all models are loaded.
    - `routes()`: returns the Webpack context directly (e.g., `() => routesContext`).
 
-   *Phase order: `translations → providers → migrations → models → seeds → boot → routes` (defined in `shared/utils/lifecycle.js`)*
+   _Phase order: `translations → providers → migrations → models → seeds → boot → routes` (defined in `shared/utils/lifecycle.js`)_
 
 4. **Models & Migrations:**
    Migrations run on every boot via the autoloader. Create standard Sequelize models and migrations. Models receive `{ connection, DataTypes }` as a destructured object. Ensure models have an `associate` method if they relate to other tables.
@@ -36,6 +38,7 @@ Modules interact with the core framework by exporting a **default object** with 
 5. **Routes:** Create files like `routes/(admin)/(default)/_route.js` exporting HTTP verb functions or middleware arrays.
 
    Route-level config exports (optional):
+
    - `export const middleware = false` — skip inherited middleware chain
    - `export const middleware = [mw1, mw2]` — inject route-specific middlewares
    - `export const useRateLimit = false` — skip rate limiting (e.g. static assets)
@@ -48,10 +51,11 @@ Modules interact with the core framework by exporting a **default object** with 
 
 1. **Setup Directory:** Create `src/apps/[module_name]/views/`.
 2. **The Index File (`views/index.js`):** Export a `default` object with the following hooks:
+
    - `providers({ container })`: bind UI components or Redux selectors/thunks to the container for cross-module usage.
    - `routes()`: returns the Webpack context directly (e.g., `() => viewsContext`).
 
-   *Phase order: `translations → providers → boot → routes` (defined in `shared/utils/lifecycle.js`)*
+   _Phase order: `translations → providers → boot → routes` (defined in `shared/utils/lifecycle.js`)_
 
 3. **Defining Pages:**
    Views are discovered via hierarchical `_route.js` files.
@@ -145,11 +149,11 @@ async boot({ container }) {
 }
 ```
 
-| Method | Description |
-|--------|-------------|
-| `schedule.register(name, cron, handler, opts?)` | Register a cron task |
-| `schedule.unregister(name)` | Stop and remove a task |
-| `schedule.getStats()` | Get all task statuses |
+| Method                                          | Description            |
+| ----------------------------------------------- | ---------------------- |
+| `schedule.register(name, cron, handler, opts?)` | Register a cron task   |
+| `schedule.unregister(name)`                     | Stop and remove a task |
+| `schedule.getStats()`                           | Get all task statuses  |
 
 ---
 
@@ -206,14 +210,14 @@ async boot({ container }) {
 }
 ```
 
-| Method | Description |
-|--------|-------------|
-| `cache.withNamespace(ns)` | Create scoped cache (keys prefixed with `ns:`) |
-| `cache.get(key)` | Get value or `null` |
-| `cache.set(key, value, ttl?)` | Set with optional TTL (ms) |
-| `cache.delete(key)` | Remove entry |
-| `cache.has(key)` | Check existence |
-| `cache.clear()` | Remove all namespaced entries |
+| Method                        | Description                                    |
+| ----------------------------- | ---------------------------------------------- |
+| `cache.withNamespace(ns)`     | Create scoped cache (keys prefixed with `ns:`) |
+| `cache.get(key)`              | Get value or `null`                            |
+| `cache.set(key, value, ttl?)` | Set with optional TTL (ms)                     |
+| `cache.delete(key)`           | Remove entry                                   |
+| `cache.has(key)`              | Check existence                                |
+| `cache.clear()`               | Remove all namespaced entries                  |
 
 > In `__DEV__` mode, cache is automatically a NoOp (returns `null` for all reads).
 
@@ -240,24 +244,21 @@ async boot({ container }) {
 
 ## DI Container Services Reference
 
-| Service Key | Engine | Returns |
-|-------------|--------|---------|
-| `'db'` | Database | Sequelize connection manager |
-| `'models'` | Database | All registered Sequelize models |
-| `'cache'` | Cache | Cache adapter with `withNamespace()` |
-| `'hook'` | Hook | Hook factory `hook(name)` |
-| `'auth'` | Auth | Auth service with JWT, RBAC helpers |
-| `'email'` | Email | EmailManager with `send()` |
-| `'emails:send'` | Email | Direct send function (module-registered) |
-| `'schedule'` | Schedule | ScheduleManager with `register()` |
-| `'search'` | Search Module | Database-backed FTS (SQLite FTS5 / PostgreSQL tsvector / MySQL FULLTEXT) |
-| `'search:registerAdapter'` | Search Module | Register custom search adapter for extensions |
-| `'http'` | HTTP | Request helpers `sendSuccess`, `sendError` |
-| `'template'` | Template | LiquidJS template renderer |
-| `'fs'` | Filesystem | File operations with path guards |
-| `'queue'` | Queue | Channel-based pub/sub job queue |
-| `'webhook'` | Webhooks Module | Inbound webhook handling with HMAC signature verification |
-| `'ws'` | WebSocket | WebSocket server instance |
+| Service Key     | Engine     | Returns                                    |
+| --------------- | ---------- | ------------------------------------------ |
+| `'db'`          | Database   | Sequelize connection manager               |
+| `'models'`      | Database   | All registered Sequelize models            |
+| `'cache'`       | Cache      | Cache adapter with `withNamespace()`       |
+| `'hook'`        | Hook       | Hook factory `hook(name)`                  |
+| `'auth'`        | Auth       | Auth service with JWT, RBAC helpers        |
+| `'email'`       | Email      | EmailManager with `send()`                 |
+| `'emails:send'` | Email      | Direct send function (module-registered)   |
+| `'schedule'`    | Schedule   | ScheduleManager with `register()`          |
+| `'http'`        | HTTP       | Request helpers `sendSuccess`, `sendError` |
+| `'template'`    | Template   | LiquidJS template renderer                 |
+| `'fs'`          | Filesystem | File operations with path guards           |
+| `'queue'`       | Queue      | Channel-based pub/sub job queue            |
+| `'ws'`          | WebSocket  | WebSocket server instance                  |
 
 ---
 
@@ -273,13 +274,13 @@ async boot({ container }) {
 
 ## Related Skills & Workflows
 
-| Need | Skill / Workflow |
-|------|-----------------|
-| Coding standards, syntax rules | `coding-standards` skill |
-| Security (Zod, RBAC) | `security-compliance` skill |
-| Adding tests | `/add-test` workflow |
-| Frontend design | `frontend-design` skill |
-| Adding a single route quickly | `/add-route` workflow |
-| Full module scaffolding | `/add-module` workflow |
-| Extension development | `extension-development` skill |
-| Database patterns | `database-development` skill |
+| Need                           | Skill / Workflow              |
+| ------------------------------ | ----------------------------- |
+| Coding standards, syntax rules | `coding-standards` skill      |
+| Security (Zod, RBAC)           | `security-compliance` skill   |
+| Adding tests                   | `/add-test` workflow          |
+| Frontend design                | `frontend-design` skill       |
+| Adding a single route quickly  | `/add-route` workflow         |
+| Full module scaffolding        | `/add-module` workflow        |
+| Extension development          | `extension-development` skill |
+| Database patterns              | `database-development` skill  |

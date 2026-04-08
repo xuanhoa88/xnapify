@@ -24,9 +24,7 @@ Engines are singleton services registered on the DI container during application
 | `http`     | `'http'`           | HTTP response helpers (`sendSuccess`, `sendError`) |
 | `queue`    | `'queue'`          | Channel-based pub/sub job queue                    |
 | `schedule` | `'schedule'`       | Cron-based task scheduling                         |
-| `search`   | `'search'`         | **Module-provided** — see `src/apps/search` (not a shared engine) |
 | `template` | `'template'`       | LiquidJS template rendering                        |
-| `webhook`  | `'webhook'`        | **Module-provided** — see `src/apps/webhooks` (not a shared engine) |
 | `worker`   | `'worker'`         | Elastic thread pool for CPU-bound worker functions |
 
 ---
@@ -250,7 +248,7 @@ async cleanup() {
     await this.pool.destroy();
     this.pool = null;
   }
-  
+
   // Await active async routines gracefully (with timeout)
   if (this.activePromises.length > 0) {
     let timeoutTimer;
@@ -278,12 +276,12 @@ async cleanup() {
 
 ### Async Handler Flattening
 
-When an Engine accepts arbitrary callback handlers from extensions, they cannot be trusted to strictly return a `Promise`. Synchronous callbacks generating raw truthy outputs (like objects) will crash graceful shutdown maps attempting to call `.catch()`. 
+When an Engine accepts arbitrary callback handlers from extensions, they cannot be trusted to strictly return a `Promise`. Synchronous callbacks generating raw truthy outputs (like objects) will crash graceful shutdown maps attempting to call `.catch()`.
 **Always flatten unpredictable callback invocations via `Promise.resolve()`**:
 
 ```javascript
 // Unsafe (crashes if handler returns a sync object & `.catch()` is fired)
-item.activePromise = handler({ signal }); 
+item.activePromise = handler({ signal });
 
 // Safe (normalizes non-promise and promise outputs natively)
 item.activePromise = Promise.resolve(handler({ signal }));

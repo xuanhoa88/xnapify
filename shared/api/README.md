@@ -6,10 +6,7 @@ Server-side infrastructure — engines, module autoloading, and file-based routi
 
 ```javascript
 // Import engines directly
-import { db, auth, hook, webhook } from '@shared/api';
-
-// Or import a specific engine
-import webhook from '@shared/api/engines/webhook';
+import { db, auth, hook } from '@shared/api';
 ```
 
 ## Engines
@@ -27,9 +24,7 @@ All engines live in `engines/` and are auto-discovered at startup. Each engine i
 | **http** | Request/response utils | `http.sendSuccess(res, { data })` |
 | **queue** | Background jobs | `queue('emails').publish({ to, template })` |
 | **schedule** | Cron tasks | `schedule.register('cleanup', '0 0 * * *', fn)` |
-| **search** | Full-text search | `await search.search('hello')` |
 | **template** | LiquidJS rendering | `await template.render(html, variables)` |
-| **webhook** | Inbound webhooks | `webhook.handler('stripe', { secret, handler })` |
 
 ## Module Autoloader
 

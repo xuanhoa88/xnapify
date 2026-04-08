@@ -1,6 +1,6 @@
 # DB Engine
 
-Sequelize ORM connection management with built-in migration and seed support. Re-exports all Sequelize utilities.
+Sequelize ORM connection management with migration and seed support for modules. Re-exports all Sequelize utilities.
 
 ## Quick Start
 
