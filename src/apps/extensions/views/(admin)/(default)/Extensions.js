@@ -510,7 +510,7 @@ function Extensions() {
       </Box.Header>
 
       {/* Toolbar: Filter Tabs + Search */}
-      <div className={s.toolbar}>
+      <div className={clsx(s.toolbar, 'extensions-toolbar')}>
         <div className={s.filterTabs}>
           {FILTER_TABS.map(tab => (
             <Button
@@ -543,28 +543,28 @@ function Extensions() {
           <p className={s.emptyTitle}>
             {search
               ? t(
-                  'admin:extensions.noSearchResults',
-                  'No extensions match your search',
-                )
+                'admin:extensions.noSearchResults',
+                'No extensions match your search',
+              )
               : t(
-                  'admin:extensions.noExtensionsInFilter',
-                  'No extensions in this category',
-                )}
+                'admin:extensions.noExtensionsInFilter',
+                'No extensions in this category',
+              )}
           </p>
           <p className={s.emptySubtitle}>
             {search
               ? t(
-                  'admin:extensions.tryDifferentSearch',
-                  'Try a different search term or clear the filter.',
-                )
+                'admin:extensions.tryDifferentSearch',
+                'Try a different search term or clear the filter.',
+              )
               : t(
-                  'admin:extensions.tryDifferentFilter',
-                  'Try selecting a different filter tab.',
-                )}
+                'admin:extensions.tryDifferentFilter',
+                'Try selecting a different filter tab.',
+              )}
           </p>
         </div>
       ) : (
-        <div className={s.grid}>
+        <div className={clsx(s.grid, 'card-grid')}>
           {filteredExtensions.map(extension => (
             <ExtensionCard
               key={extension.id}

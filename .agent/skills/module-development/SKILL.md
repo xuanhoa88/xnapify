@@ -250,12 +250,13 @@ async boot({ container }) {
 | `'email'` | Email | EmailManager with `send()` |
 | `'emails:send'` | Email | Direct send function (module-registered) |
 | `'schedule'` | Schedule | ScheduleManager with `register()` |
-| `'search'` | Search | Search engine (FlexSearch/MeiliSearch) |
+| `'search'` | Search Module | Database-backed FTS (SQLite FTS5 / PostgreSQL tsvector / MySQL FULLTEXT) |
+| `'search:registerAdapter'` | Search Module | Register custom search adapter for extensions |
 | `'http'` | HTTP | Request helpers `sendSuccess`, `sendError` |
 | `'template'` | Template | LiquidJS template renderer |
 | `'fs'` | Filesystem | File operations with path guards |
 | `'queue'` | Queue | Channel-based pub/sub job queue |
-| `'webhook'` | Webhook | WebhookManager with dispatch/verify |
+| `'webhook'` | Webhooks Module | Inbound webhook handling with HMAC signature verification |
 | `'ws'` | WebSocket | WebSocket server instance |
 
 ---

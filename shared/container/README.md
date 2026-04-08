@@ -6,8 +6,6 @@ Works identically on both client (browser) and server (Node.js) using standard E
 ## Quick Start
 
 ```javascript
-import container from '@shared/container';
-
 // Register a factory (new object each time)
 container.bind('logger', () => new Logger());
 
@@ -19,8 +17,8 @@ container.instance('config', { debug: true });
 
 // Resolve
 const logger = container.resolve('logger');
-const db     = container.resolve('db'); // same instance every time
-const cfg    = container.make('config'); // alias for resolve
+const db = container.resolve('db'); // same instance every time
+const cfg = container.make('config'); // alias for resolve
 ```
 
 ## Features

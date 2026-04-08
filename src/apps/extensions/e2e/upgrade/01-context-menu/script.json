@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "compiledAt": "2026-04-08T11:17:07.165Z",
+  "testHash": "76795459315f59d096172d9cabc15dd8be988adb7b0be6fb101383a26a6b1c1c",
+  "title": "Upgrade Extension via Context Menu",
+  "actions": [
+    {
+      "step": 1,
+      "instruction": "Log in as admin",
+      "action": "login",
+      "description": "Log in using admin@example.com and admin123 from prerequisites"
+    },
+    {
+      "step": 2,
+      "instruction": "Navigate to the extensions admin page",
+      "action": "navigate",
+      "url": "/admin/extensions",
+      "description": "Navigate to the extensions admin page"
+    },
+    {
+      "step": 3,
+      "instruction": "Find an installed extension card",
+      "action": "assert_visible",
+      "text": "installed extension",
+      "description": "Verify the installed extension card is visible"
+    },
+    {
+      "step": 4,
+      "instruction": "Click the \"...\" (more actions) button on that card to open the context menu",
+      "action": "click_within",
+      "container": {
+        "selector": "[class*='root']",
+        "hasText": "sample-extension"
+      },
+      "target": {
+        "selector": "button",
+        "text": "..."
+      },
+      "description": "Click the '...' (more actions) button on the extension card to open the context menu"
+    },
+    {
+      "step": 5,
+      "instruction": "Click \"Check for Updates\" in the context menu",
+      "action": "click",
+      "selector": "ul.context-menu li",
+      "text": "Check for Updates",
+      "description": "Click 'Check for Updates' in the context menu"
+    },
+    {
+      "step": 6,
+      "instruction": "Observe the action tag changes to \"Upgrading...\"",
+      "action": "screenshot",
+      "description": "Take a screenshot to observe the action tag changes to 'Upgrading...'"
+    },
+    {
+      "step": 7,
+      "instruction": "Wait for the success toast \"Extension upgraded successfully\"",
+      "action": "wait_for_text",
+      "text": "Extension upgraded successfully",
+      "description": "Wait for success toast indicating the extension has been upgraded successfully"
+    },
+    {
+      "step": 8,
+      "instruction": "Verify the extension card is still visible and functional",
+      "action": "assert_visible",
+      "text": "sample-extension",
+      "description": "Verify the extension card is still visible after the upgrade"
+    }
+  ]
+}

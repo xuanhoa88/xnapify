@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "compiledAt": "2026-04-08T10:09:59.800Z",
+  "testHash": "6ec11f686a66a6a44e814d3e9291ce912b91412b3a212db61d34be8b3d83382f",
+  "title": "Google OAuth Extension Test",
+  "actions": [
+    {
+      "step": 1,
+      "instruction": "Navigate to the login page",
+      "action": "navigate",
+      "url": "/login",
+      "description": "Navigate to the login page"
+    },
+    {
+      "step": 2,
+      "instruction": "Wait for the page to fully load",
+      "action": "wait_for_navigation",
+      "description": "Wait for a full page navigation to complete"
+    },
+    {
+      "step": 3,
+      "instruction": "Verify the page loads without errors",
+      "action": "screenshot",
+      "description": "Take a screenshot to verify the page loads without errors"
+    }
+  ]
+}

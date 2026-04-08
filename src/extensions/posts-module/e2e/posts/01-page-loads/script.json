@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "compiledAt": "2026-04-08T10:34:35.887Z",
+  "testHash": "9def468e71728bf9d143eff9fe7d64d59c0e1380c6b91d1b0a0e7b05ff088c96",
+  "title": "Posts Admin Page Loads",
+  "actions": [
+    {
+      "step": 1,
+      "instruction": "Log in as admin",
+      "action": "login",
+      "description": "Log in using admin@example.com and admin123 from prerequisites"
+    },
+    {
+      "step": 2,
+      "instruction": "Navigate to the posts admin page",
+      "action": "navigate",
+      "url": "/admin/posts",
+      "description": "Navigate to the posts admin page"
+    },
+    {
+      "step": 3,
+      "instruction": "Wait for the page to fully load",
+      "action": "wait_for_navigation",
+      "description": "Wait for a full page navigation to complete"
+    },
+    {
+      "step": 4,
+      "instruction": "Verify the posts list or empty state is visible",
+      "action": "assert_visible",
+      "text": "posts list or empty state",
+      "description": "Verify the posts list or empty state is visible on the page"
+    },
+    {
+      "step": 5,
+      "instruction": "Verify the \"Create Post\" or \"New Post\" button is visible",
+      "action": "assert_visible",
+      "text": "Create Post",
+      "description": "Verify the 'Create Post' button is visible"
+    }
+  ]
+}

@@ -118,9 +118,7 @@ npm test
 | `http` | HTTP client utilities |
 | `queue` | Job queue |
 | `schedule` | Cron scheduling |
-| `search` | Full-text search |
 | `template` | LiquidJS template engine |
-| `webhook` | Webhook engine |
 | `worker` | Elastic thread pool for CPU-bound `worker_threads` |
 
 ---

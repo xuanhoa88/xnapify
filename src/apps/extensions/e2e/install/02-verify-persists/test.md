@@ -14,7 +14,7 @@ Verify that a previously installed extension remains visible after a page refres
 2. Navigate to the extensions admin page
 3. Refresh the page
 4. Wait for the extension cards to load
-5. Verify the previously installed extension card is still visible
+5. Verify an element with selector `.extension-card` is visible
 
 ## Expected Results
 

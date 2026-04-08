@@ -114,7 +114,7 @@ export async function up(_, { container }) {
         website: 'https://regularuser.dev',
         bio: 'Just a regular user exploring the app.',
       },
-    }
+    },
   ];
 
   const formattedUsers = users.map(user => {

@@ -13,9 +13,9 @@ Verify that a deactivated extension appears in the "Inactive" tab and disappears
 1. Log in as admin
 2. Navigate to the extensions admin page
 3. Click the "Inactive" filter tab
-4. Verify the deactivated extension card is visible
+4. Verify an element with selector `.inactive-extension-card` is visible
 5. Click the "Active" filter tab
-6. Verify the deactivated extension card is NOT visible in the Active tab
+6. Verify no elements with selector `.inactive-extension-card` are visible in the Active tab
 
 ## Expected Results
 

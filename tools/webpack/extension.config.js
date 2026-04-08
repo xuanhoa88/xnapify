@@ -213,7 +213,7 @@ function createClientConfig(extensionData, extensionDefines, buildPath) {
   if (!clientPath) return [];
 
   const outputPath = path.join(buildPath, dirName);
-  const localIdentName = getExtensionLocalIdentName(dirName);
+  const localIdentName = getExtensionLocalIdentName(extensionData.extensionId);
 
   const clientConfig = createWebpackConfig('client', {
     entry: clientPath,

@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "compiledAt": "2026-04-08T11:16:44.375Z",
+  "testHash": "fc163a355c42ecb39140db8c1e5d2b4ab2f27beaf603f41b9eeb967e654f136b",
+  "title": "Verify Uninstalled Extension is Gone After Refresh",
+  "actions": [
+    {
+      "step": 1,
+      "instruction": "Log in as admin",
+      "action": "login",
+      "description": "Log in using admin@example.com and admin123 from prerequisites"
+    },
+    {
+      "step": 2,
+      "instruction": "Navigate to the extensions admin page",
+      "action": "navigate",
+      "url": "/admin/extensions",
+      "description": "Navigate to the extensions admin page"
+    },
+    {
+      "step": 3,
+      "instruction": "Refresh the page",
+      "action": "reload",
+      "description": "Refresh the current page"
+    },
+    {
+      "step": 4,
+      "instruction": "Wait for the extension cards to load",
+      "action": "wait_for_selector",
+      "selector": ".extension-card",
+      "visible": true,
+      "description": "Wait for the extension cards to load and be visible"
+    },
+    {
+      "step": 5,
+      "instruction": "Verify the uninstalled extension card is no longer visible",
+      "action": "assert_not_visible",
+      "text": "uninstalled-extension",
+      "description": "Verify the uninstalled extension card is NOT present or visible on the page"
+    }
+  ]
+}

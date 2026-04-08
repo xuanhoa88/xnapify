@@ -29,9 +29,7 @@ shared/api/
     ├── http/           # HTTP request/response utilities & error handling
     ├── queue/          # Channel-based pub/sub job queue
     ├── schedule/       # Cron-based task scheduling
-    ├── search/         # Full-text search (memory, database FTS)
     ├── template/       # LiquidJS template rendering
-    └── webhook/        # Inbound webhook handler with HMAC verification
 ```
 
 ## Components
@@ -131,9 +129,9 @@ router.add(adapter);
 | `http` | `http` | Request/response helpers, error classes |
 | `queue` | `queue` | Background job queue with retry/backoff |
 | `schedule` | `schedule` | Cron-based task scheduling |
-| `search` | `search` | Full-text search (memory FTS / database FTS5) |
+| `search` | `search` | **Module-provided** — see `src/apps/search` (database FTS) |
 | `template` | `template` | LiquidJS template rendering |
-| `webhook` | `webhook` | Inbound webhook handler with HMAC verification |
+| `webhook` | `webhook` | **Module-provided** — see `src/apps/webhooks` |
 
 ## Dependencies
 

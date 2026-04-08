@@ -7,13 +7,12 @@
 
 import crypto from 'crypto';
 
-import { createFactory as createHookFactory } from '../hook';
+import { createFactory as createHookFactory } from '@shared/api/engines/hook';
 
 import { WebhookError, WebhookValidationError } from './errors';
+import { createFactory } from './factory';
 import { WEBHOOK_EVENTS, SIGNATURE_ALGORITHMS } from './utils/constants';
 import { verifySignature, parseSignatureHeader } from './utils/signature';
-
-import { createFactory } from '.';
 
 // Helper: generate a valid HMAC signature for test payloads
 function sign(payload, secret, algorithm = 'sha256') {

@@ -442,7 +442,7 @@ src/apps/[module_name]/
 | Rule                     | What to Check                                                                                     |
 | ------------------------ | ------------------------------------------------------------------------------------------------- |
 | **Directory**            | `api/workers/index.js` for barrel, `*.worker.js` for standalone functions                         |
-| **Barrel pattern**       | `index.js` calls the FS factory or search engine directly (FS workers are merged into barrel)     |
+| **Barrel pattern**       | `index.js` calls the FS factory or search module directly (FS workers are merged into barrel)     |
 | **Exports**              | Single-function workers: `export default` (camelCase). Multi-function: named `export` (camelCase) |
 | **Dependencies as args** | Pass `models`, `search`, `container` as function args — not imported at module level              |
 

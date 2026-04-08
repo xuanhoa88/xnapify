@@ -12,12 +12,12 @@ Verify that an admin can deactivate an active extension using the toggle switch.
 
 1. Log in as admin
 2. Navigate to the extensions admin page
-3. Find an active extension card (toggle switch is checked)
-4. Click the toggle switch on that extension card
+3. Find an active extension card with selector `.active-extension-card`
+4. Click the toggle switch label inside that active extension card
 5. Confirm the "Deactivate Extension" modal
 6. Observe the action tag changes to "Deactivating..." with a shimmer animation
 7. Wait for the success toast "Extension deactivated successfully"
-8. Verify the toggle switch is now unchecked (off)
+8. Verify the checkbox inside the active extension card is now unchecked
 
 ## Expected Results
 

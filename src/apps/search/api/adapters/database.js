@@ -18,81 +18,34 @@
  * - **MySQL / MariaDB**: `FULLTEXT` index with `MATCH() AGAINST()` in boolean mode
  * - **Fallback**: Standard `LIKE` text matching for unsupported dialects
  *
- * The database migration creates the appropriate FTS structures per dialect.
- * This adapter is instantiated by the search factory with auto-injected
- * Sequelize connection and DataTypes.
+ * The adapter receives its Sequelize model from the module lifecycle
+ * (injected via the factory), not created inline.
  */
-
-/**
- * Create the SearchDocument Sequelize model.
- *
- * @param {Object} connection - Sequelize connection instance
- * @param {Object} DataTypes - Sequelize DataTypes
- * @returns {Model} SearchDocument model
- */
-function createSearchDocumentModel(connection, DataTypes) {
-  return connection.define(
-    'search_document',
-    {
-      entityType: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-      entityId: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-      title: DataTypes.TEXT,
-      content: DataTypes.TEXT,
-      tags: DataTypes.TEXT,
-      url: DataTypes.TEXT,
-      priority: {
-        type: DataTypes.INTEGER,
-        defaultValue: 0,
-      },
-      popularity: {
-        type: DataTypes.INTEGER,
-        defaultValue: 0,
-      },
-      visibility: {
-        type: DataTypes.STRING,
-        defaultValue: 'public',
-      },
-    },
-    {
-      tableName: 'search_documents',
-      timestamps: true,
-      underscored: true,
-    },
-  );
-}
 
 export default class DatabaseSearch {
   /**
    * @param {Object} options
-   * @param {Object} options.connection - Sequelize connection instance (injected by factory)
-   * @param {Object} options.DataTypes - Sequelize DataTypes (injected by factory)
+   * @param {Object} options.model - Sequelize SearchDocument model (injected by factory)
    */
   constructor(options = {}) {
-    if (!options.connection) {
+    if (!options.model) {
       throw new Error(
-        'DatabaseSearch requires a Sequelize connection. ' +
-          'Use createFactory({ type: "database" }) which auto-injects it.',
+        'DatabaseSearch requires a Sequelize model. ' +
+          'Use createFactory({ type: "database", model }) which auto-injects it.',
       );
     }
 
-    this.connection = options.connection;
-    this.model = createSearchDocumentModel(
-      options.connection,
-      options.DataTypes,
-    );
+    this.model = options.model;
+    this.connection = this.model.sequelize;
     this.dialect = this.connection.getDialect();
   }
 
   /**
    * Add or update a document in the search index
    *
-   * @param {import('../factory').SearchDocument} document - The document to index
+   * @param {Object} document - The document to index
+   * @param {string} document.entityType - Entity type (required)
+   * @param {string|number} document.entityId - Entity ID (required)
    */
   async index(document) {
     if (!document.entityType || document.entityId == null) {
@@ -124,6 +77,7 @@ export default class DatabaseSearch {
    * @param {Object} [options]
    * @param {number} [options.limit=20] - Maximum results
    * @param {number} [options.offset=0] - Result offset for pagination
+   * @param {string} [options.entityType] - Filter by entity type
    * @returns {Promise<Array<Object>>} Search results with snippet and rank
    */
   async search(query, options = {}) {
@@ -345,5 +299,23 @@ export default class DatabaseSearch {
       where,
       truncate: !prefix,
     });
+  }
+
+  /**
+   * Count documents in the index.
+   * If a prefix is provided, only documents matching the prefix are counted.
+   *
+   * @param {string} [prefix] - Optional prefix to filter by namespace
+   * @returns {Promise<number>} Number of matching documents
+   */
+  async count(prefix) {
+    const where = {};
+    if (prefix) {
+      where.entityType = {
+        [this.model.sequelize.Sequelize.Op.like]: `${prefix}%`,
+      };
+    }
+
+    return this.model.count({ where });
   }
 }

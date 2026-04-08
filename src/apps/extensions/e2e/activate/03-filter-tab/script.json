@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "compiledAt": "2026-04-08T11:15:32.098Z",
+  "testHash": "e01f837dd4263e5c4e50fa7df5514ba025bf33d7672145b832bdcfbdcc9bd32f",
+  "title": "Verify Activated Extension Appears in Active Filter Tab",
+  "actions": [
+    {
+      "step": 1,
+      "instruction": "Log in as admin",
+      "action": "login",
+      "description": "Log in using admin@example.com and admin123 from prerequisites"
+    },
+    {
+      "step": 2,
+      "instruction": "Navigate to the extensions admin page",
+      "action": "navigate",
+      "url": "/admin/extensions",
+      "description": "Navigate to the extensions admin page"
+    },
+    {
+      "step": 3,
+      "instruction": "Click the \"Active\" filter tab",
+      "action": "click",
+      "selector": "nav a",
+      "text": "Active",
+      "description": "Click the 'Active' filter tab"
+    },
+    {
+      "step": 4,
+      "instruction": "Verify an element with selector `.active-extension-card` is visible in the filtered list",
+      "action": "assert_visible",
+      "selector": ".active-extension-card",
+      "description": "Verify the activated extension card is visible in the filtered list"
+    },
+    {
+      "step": 5,
+      "instruction": "Verify the badge count on the \"Active\" tab includes this extension",
+      "action": "assert_visible",
+      "text": "badge count for Active tab",
+      "description": "Verify the badge count on the 'Active' tab includes the activated extension"
+    }
+  ]
+}

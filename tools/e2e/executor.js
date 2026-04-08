@@ -1137,19 +1137,16 @@ const ACTIONS = {
     await waitForSPAStable(page);
     const el = await retryUntilFound(() => page.$(action.selector), 10000);
     if (!el) throw new Error(`Element "${action.selector}" not found`);
-    const value = await el.evaluate(
-      (e, attr) => {
-        const tag = e.tagName.toLowerCase();
-        if (
-          attr === 'value' &&
-          (tag === 'input' || tag === 'textarea' || tag === 'select')
-        ) {
-          return e.value;
-        }
-        return e.getAttribute(attr);
-      },
-      action.attribute,
-    );
+    const value = await el.evaluate((e, attr) => {
+      const tag = e.tagName.toLowerCase();
+      if (
+        attr === 'value' &&
+        (tag === 'input' || tag === 'textarea' || tag === 'select')
+      ) {
+        return e.value;
+      }
+      return e.getAttribute(attr);
+    }, action.attribute);
 
     // Check exists first — it's the most fundamental assertion
     if (action.exists !== undefined) {

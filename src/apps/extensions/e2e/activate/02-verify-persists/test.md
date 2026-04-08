@@ -14,11 +14,11 @@ Verify that a previously activated extension retains its active state after page
 2. Navigate to the extensions admin page
 3. Refresh the page
 4. Wait for the extension cards to load
-5. Verify the previously activated extension still has its toggle switch checked
+5. Verify an element with selector `.active-extension-card input[type="checkbox"]` is checked
 
 ## Expected Results
 
 - The extensions admin page reloads completely after refresh
-- The previously activated extension card is visible
-- The toggle switch on the activated extension remains in the checked (on) position
+- The previously activated extension remains visible
+- The toggle switch on the active extension remains checked
 - The extension status indicator shows it is still active

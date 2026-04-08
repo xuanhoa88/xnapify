@@ -6,35 +6,42 @@
  */
 
 import DatabaseSearch from './adapters/database';
-import MemorySearch from './adapters/memory';
 
 /**
  * Adapter Registry
  * Allows dynamic registration of custom search engine adapters.
+ * Pre-loaded with 'database' adapter only. Extensions can register
+ * additional adapters (e.g., 'elasticsearch', 'meilisearch') via
+ * the `registerAdapter()` function exposed through the DI container.
  */
-const adapterRegistry = new Map([
-  ['memory', MemorySearch],
-  ['database', DatabaseSearch],
-]);
+const adapterRegistry = new Map([['database', DatabaseSearch]]);
 
 /**
  * Register a new search engine adapter class.
+ *
+ * Exposed to extensions via `container.resolve('search:registerAdapter')`.
+ * Once registered, set the adapter as default via `container.instance('search:type', 'name')`
+ * and it will be used when `container.resolve('search')` is called.
  *
  * @param {string} name - Identifier for the search engine (e.g., 'elasticsearch')
  * @param {Class} AdapterClass - Adapter class implementing the SearchAdapter interface
  *
  * @example
- * import { registerAdapter } from '@api/engines/search';
+ * // In an extension's providers():
+ * const registerAdapter = container.resolve('search:registerAdapter');
  *
  * class ElasticSearchAdapter {
  *   constructor(options) { ... }
  *   async index(document) { ... }
  *   async search(query, options) { ... }
  *   async remove(entityType, entityId) { ... }
- *   async clear() { ... }
+ *   async clear(prefix) { ... }
+ *   async count(prefix) { ... }
  * }
  *
  * registerAdapter('elasticsearch', ElasticSearchAdapter);
+ * container.instance('search:type', 'elasticsearch');
+ * container.instance('search:options', { nodes: ['http://localhost:9200'] });
  */
 export function registerAdapter(name, AdapterClass) {
   if (!name || typeof name !== 'string') {
@@ -48,15 +55,13 @@ export function registerAdapter(name, AdapterClass) {
 
 /**
  * Supported search adapter types
- * @typedef {'memory' | 'database' | string} SearchType
+ * @typedef {'database' | string} SearchType
  */
 
 /**
  * @typedef {Object} SearchOptions
- * @property {SearchType} [type='memory'] - Search adapter type
- * @property {string} [directory] - Cache directory path (memory only)
- * @property {Object} [connection] - Sequelize connection (database only, auto-injected)
- * @property {Object} [DataTypes] - Sequelize DataTypes (database only, auto-injected)
+ * @property {SearchType} [type='database'] - Search adapter type
+ * @property {Object} [model] - Sequelize SearchDocument model (auto-injected)
  * @property {*} [..other] - Other configuration options passed to the adapter
  */
 
@@ -79,6 +84,7 @@ export function registerAdapter(name, AdapterClass) {
  * @property {(query: string, options?: Object) => Promise<Array<any>>} search - Search for documents
  * @property {(entityType: string, entityId: string|number) => Promise<boolean>} remove - Remove a document
  * @property {() => Promise<void>} clear - Clear all documents
+ * @property {(prefix?: string) => Promise<number>} count - Count documents
  * @property {(namespace: string) => SearchAdapter} withNamespace - Create namespaced search
  */
 
@@ -161,30 +167,23 @@ export function withNamespace(namespace, baseSearch) {
  * Search Factory
  *
  * Creates a search instance with the specified adapter and configuration.
- * Adapters are resolved from the internal registry. For the 'database' adapter,
- * the Sequelize connection and DataTypes are automatically injected.
+ * Adapters are resolved from the internal registry.
  *
  * @param {SearchOptions} [options={}] - Search configuration
  * @returns {SearchAdapter} Search instance with withNamespace method
  *
  * @example
- * // Create default memory search
- * const search = createFactory();
- *
- * @example
- * // Create database search (auto-injects Sequelize connection)
- * const dbSearch = createFactory({ type: 'database' });
+ * // Create default database search
+ * const search = createFactory({ model: SearchDocumentModel });
  *
  * @example
  * // Create namespaced search
- * const search = createFactory({ type: 'memory' });
+ * const search = createFactory({ type: 'database', model: SearchDocumentModel });
  * const blogSearch = search.withNamespace('blog');
  * await blogSearch.index({ entityType: 'post', entityId: '1', title: 'Hello' });
  */
 export function createFactory(options = {}) {
-  // Determine default type from environment or fallback to memory
-  const defaultType = process.env.XNAPIFY_SEARCH_TYPE || 'memory';
-  const { type = defaultType, ...configOptions } = options;
+  const { type = 'database', ...configOptions } = options;
 
   const AdapterClass = adapterRegistry.get(type);
 
@@ -198,16 +197,7 @@ export function createFactory(options = {}) {
     throw err;
   }
 
-  // Validate database adapter configuration
-  if (type === 'database' && !configOptions.connection) {
-    const err = new Error(
-      'Database connection not available for search adapter. Ensure DB engine is initialized.',
-    );
-    err.name = 'InvalidSearchDatabaseAdapterError';
-    err.status = 400;
-    throw err;
-  }
-
+  // Create adapter instance
   const adapter = new AdapterClass(configOptions);
 
   // Attach withNamespace method to the adapter instance

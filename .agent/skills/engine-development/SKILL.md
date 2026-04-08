@@ -24,9 +24,9 @@ Engines are singleton services registered on the DI container during application
 | `http`     | `'http'`           | HTTP response helpers (`sendSuccess`, `sendError`) |
 | `queue`    | `'queue'`          | Channel-based pub/sub job queue                    |
 | `schedule` | `'schedule'`       | Cron-based task scheduling                         |
-| `search`   | `'search'`         | Full-text search (FlexSearch/MeiliSearch)          |
+| `search`   | `'search'`         | **Module-provided** — see `src/apps/search` (not a shared engine) |
 | `template` | `'template'`       | LiquidJS template rendering                        |
-| `webhook`  | `'webhook'`        | HMAC-signed webhook dispatch/verification          |
+| `webhook`  | `'webhook'`        | **Module-provided** — see `src/apps/webhooks` (not a shared engine) |
 | `worker`   | `'worker'`         | Elastic thread pool for CPU-bound worker functions |
 
 ---

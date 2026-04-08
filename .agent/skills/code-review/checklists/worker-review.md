@@ -6,7 +6,7 @@ Quick-reference for reviewing worker functions and queue workers.
 
 ### Barrel File (`workers/index.js`)
 
-- [ ] Exports convenience functions that call the FS factory or search engine directly
+- [ ] Exports convenience functions that call the FS factory or search module directly
 - [ ] For FS: all operations merged into `workers/index.js` (no separate `*.worker.js` files)
 - [ ] Functions accept explicit dependencies (models, search, container) as args
 - [ ] No side effects at module level — all work inside function bodies
@@ -84,4 +84,4 @@ boot({ container }) {
 - [ ] Worker handler tested directly (call exported function)
 - [ ] Dependencies mocked (models, search, container)
 - [ ] Error cases tested (invalid input, DB failure)
-- [ ] Tests don't require real infrastructure (DB, search engine)
+- [ ] Tests don't require real infrastructure (DB, search module)

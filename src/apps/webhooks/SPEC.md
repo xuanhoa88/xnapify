@@ -1,55 +1,115 @@
 # Webhooks Module AI Specification
 
 > **Instructions for the AI:**
-> Read this document to understand the webhook routing logic inside `src/apps/webhooks`.
-> This module provides admin management and inbound webhook handling for third-party integrations.
+> Read this document to understand the webhook architecture inside `src/apps/webhooks`.
+> This module owns the webhook engine: factory, errors, signature utilities, and API routes.
 
 ---
 
 ## Objective
 
-Expose admin endpoints for listing registered webhook providers and an inbound endpoint for receiving and verifying third-party webhook payloads via HMAC signature verification.
+Provide a unified inbound webhook handling system for third-party service integrations (Stripe, GitHub, Facebook, etc.) with HMAC signature verification, priority-based handler dispatch via the hook engine, and lifecycle hooks (beforeHandle/afterHandle).
 
-## 1. Database Modifications (`api/models`)
+## 1. Architecture
 
-*The webhooks module does not own its own models.* It relies on the shared `webhook` engine (`shared/api/engines/webhook`) for provider registration, signature verification, and handler dispatch.
+```
+src/apps/webhooks/
+├── package.json
+├── SPEC.md                              # This file
+└── api/
+    ├── index.js                         # Lifecycle hooks (providers, boot, routes)
+    ├── factory.js                       # WebhookManager class + createFactory()
+    ├── errors.js                        # WebhookError, WebhookValidationError
+    ├── webhook.test.js                  # Comprehensive test suite (489 lines)
+    ├── utils/
+    │   ├── constants.js                 # WEBHOOK_EVENTS, SIGNATURE_ALGORITHMS
+    │   └── signature.js                 # parseSignatureHeader(), verifySignature()
+    └── routes/
+        ├── (admin)/
+        │   └── (default)/
+        │       └── _route.js            # GET /api/admin/webhooks (list providers)
+        └── [provider]/
+            └── _route.js                # POST /api/webhooks/:provider (inbound handler)
+```
 
-## 2. API Routes & Controllers (`api/`)
+## 2. WebhookManager (`factory.js`)
+
+### Core Methods
+
+| Method | Signature | Description |
+|---|---|---|
+| `withContext(container)` | `(DI container) → this` | Binds to DI, creates hook channel |
+| `handler(provider, config)` | `(string, { secret, signatureHeader?, handler, priority? }) → this` | Register provider handler |
+| `removeHandler(provider)` | `(string) → this` | Remove a provider |
+| `hasHandler(provider)` | `(string) → boolean` | Check if provider exists |
+| `getProviderConfig(provider)` | `(string) → { secret, signatureHeader } \| null` | Get provider config |
+| `getProviders()` | `() → string[]` | List all provider names |
+| `dispatch(provider, payload, context)` | `(string, *, { headers, query, ip }) → Promise<void>` | Dispatch to handlers |
+| `on(event, handler, priority?)` | `(string, Function, number?) → this` | Register lifecycle hook |
+| `off(event, handler?)` | `(string, Function?) → this` | Remove lifecycle hook |
+| `cleanup()` | `() → void` | Clear all handlers + providers |
+| `parseSignatureHeader(header)` | `(string) → { algorithm, signature }` | Parse signature header |
+| `verifySignature(payload, sig, secret, algo?)` | `(...) → boolean` | HMAC verification |
+
+### Dispatch Flow
+
+```
+beforeHandle → handler:<provider> → afterHandle
+```
+
+Uses the `hook` engine's HookChannel for priority-based sequential execution.
+
+## 3. Signature Verification (`utils/signature.js`)
+
+- **`parseSignatureHeader(header)`** — Parses `sha256=deadbeef` into `{ algorithm, signature }`
+- **`verifySignature(payload, signature, secret, algorithm)`** — Timing-safe HMAC comparison using `crypto.timingSafeEqual()`
+
+Supported algorithms: `sha256`, `sha512`.
+
+## 4. Error Classes (`errors.js`)
+
+| Error | Status | When |
+|---|---|---|
+| `WebhookError` | 500 | Base error class |
+| `WebhookValidationError` | 400 | Invalid provider config, missing secret/handler |
+
+## 5. Module Lifecycle (`api/index.js`)
+
+| Phase | Hook | Description |
+|---|---|---|
+| `providers` | `providers({ container })` | Binds `'webhook'` via lazy `container.bind()` with `withContext()` |
+| `boot` | `boot({ container })` | Forces `resolve('webhook')` to initialize before extensions |
+| `routes` | `() => routesContext` | Mounts admin and inbound routes |
+
+## 6. API Routes
 
 ### Admin Route
-
-- **Method & Path:** `GET /api/admin/webhooks`
-  - **Security:** Requires `webhooks:read` permission.
-  - **Logic:** Lists all registered webhook providers retrieved from the webhook engine via `webhook.getProviders()`. Returns each provider's name and active handler status.
+- **`GET /api/admin/webhooks`** — Lists registered providers. Requires `webhooks:read` permission.
 
 ### Inbound Webhook Route
+- **`POST /api/webhooks/:provider`** — Inbound handler. `middleware = false` (uses HMAC instead of auth).
+  1. Check provider registered → 404
+  2. Read signature header → 401 if missing
+  3. Verify HMAC → 401 if invalid
+  4. Respond 202 Accepted + async dispatch
 
-- **Method & Path:** `POST /api/webhooks/:provider`
-  - **Security:** `export const middleware = false` — bypasses auth middleware. Uses HMAC signature verification instead.
-  - **Flow:**
-    1. Checks provider is registered → 404 if not
-    2. Reads signature from configured header (`config.signatureHeader`) → 401 if missing
-    3. Parses and verifies HMAC signature against secret → 401 if invalid
-    4. Responds `202 Accepted` immediately (fire-and-forget)
-    5. Dispatches to registered handler(s) asynchronously via `webhook.dispatch()`
-  - **Error handling:** Handler errors are caught and logged but do not affect the 202 response.
+## 7. Extension Integration
 
-## 3. Frontend SSR Rendering (`views/`)
+Extensions register webhook handlers in their `boot()`:
 
-*The webhooks module has no frontend views.* It is API-only. Admin webhook management UI can be added in the future.
-
-## 4. Integration with Webhook Engine
-
-The module routes are thin wrappers around the `webhook` engine service:
-
-| Engine Method | Used By | Purpose |
-|---|---|---|
-| `webhook.getProviders()` | Admin list route | Returns array of registered provider names |
-| `webhook.hasHandler(name)` | Both routes | Checks if a provider exists |
-| `webhook.getProviderConfig(name)` | Inbound route | Gets secret and signature header config |
-| `webhook.parseSignatureHeader(raw)` | Inbound route | Extracts algorithm and signature from header |
-| `webhook.verifySignature(body, sig, secret, algo)` | Inbound route | HMAC verification |
-| `webhook.dispatch(name, body, context)` | Inbound route | Async handler dispatch |
+```javascript
+async boot({ container }) {
+  const webhook = container.resolve('webhook');
+  webhook.handler('stripe', {
+    secret: process.env.STRIPE_WEBHOOK_SECRET,
+    signatureHeader: 'stripe-signature',
+    handler: async (payload, context) => {
+      await processStripeEvent(payload);
+    },
+  });
+}
+```
 
 ---
+
 *Note: This spec reflects the CURRENT implementation of the webhooks module.*
