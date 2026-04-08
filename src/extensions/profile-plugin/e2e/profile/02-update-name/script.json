@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "compiledAt": "2026-04-08T08:30:51.185Z",
+  "testHash": "ad75eeb5b60cf34b1e752a0e780c9bb3cacd5100e092ecd0a51138c39af9508a",
+  "title": "Update Display Name",
+  "actions": [
+    {
+      "step": 1,
+      "instruction": "Log in",
+      "action": "login",
+      "description": "Log in using user@test.com and user123 from prerequisites"
+    },
+    {
+      "step": 2,
+      "instruction": "Navigate to the profile page",
+      "action": "navigate",
+      "url": "/profile",
+      "description": "Navigate to the profile page"
+    },
+    {
+      "step": 3,
+      "instruction": "Wait for the input field with selector `input[name='profile.display_name']` to be visible",
+      "action": "wait_for_selector",
+      "selector": "input[name='profile.display_name']",
+      "visible": true,
+      "description": "Wait for the input field with name 'profile.display_name' to be visible"
+    },
+    {
+      "step": 4,
+      "instruction": "Clear the input field with selector `input[name='profile.display_name']`",
+      "action": "clear",
+      "selector": "input[name='profile.display_name']",
+      "description": "Clear the input field for the display name"
+    },
+    {
+      "step": 5,
+      "instruction": "Type \"Updated Display Name\" into the input field with selector `input[name='profile.display_name']`",
+      "action": "fill",
+      "selector": "input[name='profile.display_name']",
+      "value": "Updated Display Name",
+      "description": "Fill the display name input field with the new value 'Updated Display Name'"
+    },
+    {
+      "step": 6,
+      "instruction": "Click the button with text \"Save\" or type \"submit\"",
+      "action": "click",
+      "selector": "button",
+      "text": "Save",
+      "description": "Click the button with text 'Save' to submit the form"
+    },
+    {
+      "step": 7,
+      "instruction": "Wait for the success message or toast to appear",
+      "action": "wait_for_text",
+      "text": "success",
+      "description": "Wait for a success toast or confirmation message to appear"
+    },
+    {
+      "step": 8,
+      "instruction": "Refresh the current page",
+      "action": "reload",
+      "description": "Refresh the current page"
+    },
+    {
+      "step": 9,
+      "instruction": "Wait for the input field with selector `input[name='profile.display_name']` to be visible after reload",
+      "action": "wait_for_selector",
+      "selector": "input[name='profile.display_name']",
+      "visible": true,
+      "description": "Wait for the input field with name 'profile.display_name' to be visible after reload"
+    },
+    {
+      "step": 10,
+      "instruction": "Verify the input field with selector `input[name='profile.display_name']` contains \"Updated Display Name\"",
+      "action": "assert_attribute",
+      "selector": "input[name='profile.display_name']",
+      "attribute": "value",
+      "equals": "Updated Display Name",
+      "description": "Verify the input field with selector 'input[name=\"profile.display_name\"]' contains 'Updated Display Name'"
+    }
+  ]
+}

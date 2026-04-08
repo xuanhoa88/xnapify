@@ -55,6 +55,13 @@ export async function up(_, { container }) {
       user_id: SEED_USERS['locked.user'],
       group_id: SEED_GROUPS.support,
     },
+
+    // Regular user - No group memberships
+    {
+      id: uuidv4(),
+      user_id: SEED_USERS['user'],
+      group_id: null, // No group
+    },
   ];
 
   await UserGroup.bulkCreate(userGroups);

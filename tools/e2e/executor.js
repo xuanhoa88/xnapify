@@ -775,13 +775,14 @@ const ACTIONS = {
       action.value,
       (apiState && apiState.variables) || {},
     );
-    // Select all text reliably across platforms, then overwrite
-    await el.click();
-    const selectAll = process.platform === 'darwin' ? 'Meta' : 'Control';
-    await page.keyboard.down(selectAll);
-    await page.keyboard.press('a');
-    await page.keyboard.up(selectAll);
-    await el.type(value, { delay: 0 });
+
+    // Use direct DOM assignment plus event dispatch to avoid flaky keyboard input
+    await el.evaluate((input, text) => {
+      input.focus();
+      input.value = text;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    }, value);
   },
 
   // ── Clear ───────────────────────────────────────────────────────
@@ -790,12 +791,12 @@ const ACTIONS = {
     const el = await retryUntilFound(() => page.$(action.selector), 10000);
     if (!el)
       throw new Error(`Element "${action.selector}" not found for clear`);
-    await el.click();
-    const selectAll = process.platform === 'darwin' ? 'Meta' : 'Control';
-    await page.keyboard.down(selectAll);
-    await page.keyboard.press('a');
-    await page.keyboard.up(selectAll);
-    await page.keyboard.press('Backspace');
+    await el.evaluate(input => {
+      input.focus();
+      input.value = '';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    });
   },
 
   // ── Press Key ───────────────────────────────────────────────────
@@ -1137,7 +1138,16 @@ const ACTIONS = {
     const el = await retryUntilFound(() => page.$(action.selector), 10000);
     if (!el) throw new Error(`Element "${action.selector}" not found`);
     const value = await el.evaluate(
-      (e, attr) => e.getAttribute(attr),
+      (e, attr) => {
+        const tag = e.tagName.toLowerCase();
+        if (
+          attr === 'value' &&
+          (tag === 'input' || tag === 'textarea' || tag === 'select')
+        ) {
+          return e.value;
+        }
+        return e.getAttribute(attr);
+      },
       action.attribute,
     );
 

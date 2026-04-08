@@ -96,6 +96,25 @@ export async function up(_, { container }) {
         bio: 'This account has been locked due to security reasons.',
       },
     },
+    {
+      id: SEED_USERS['user'],
+      email: `user@test.com`,
+      email_confirmed: true,
+      password: 'user123', // Plain text - will be hashed by hook
+      is_active: true,
+      is_locked: false,
+      failed_login_attempts: 0,
+      last_login_at: new Date(now.getTime() - 86400000), // 1 day ago
+      password_changed_at: new Date(now.getTime() - 2592000000), // 30 days ago
+      profile: {
+        display_name: 'Regular User',
+        picture: 'https://i.pravatar.cc/150?img=13',
+        gender: 'prefer not to say',
+        location: 'Chicago, IL',
+        website: 'https://regularuser.dev',
+        bio: 'Just a regular user exploring the app.',
+      },
+    }
   ];
 
   const formattedUsers = users.map(user => {

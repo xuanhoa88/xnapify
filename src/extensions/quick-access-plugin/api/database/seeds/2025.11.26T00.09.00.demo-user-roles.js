@@ -55,6 +55,13 @@ export async function up(_, { container }) {
       user_id: SEED_USERS['locked.user'],
       role_id: SEED_ROLES.viewer,
     },
+
+    // Regular user - user role only
+    {
+      id: uuidv4(),
+      user_id: SEED_USERS['user'],
+      role_id: SEED_ROLES.user,
+    },
   ];
 
   await UserRole.bulkCreate(userRoles);

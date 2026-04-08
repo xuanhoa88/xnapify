@@ -102,7 +102,9 @@ const LLM_PROVIDERS = {
   },
   custom: {
     baseUrl: 'https://openrouter.ai/api/v1',
-    model: 'google/gemini-2.5-flash-lite-preview-09-2025',
+    get model() {
+      return process.env.E2E_LLM_MODEL || 'openai/gpt-4o-mini';
+    },
     endpoint: '/chat/completions',
     authHeader: key => `Bearer ${key}`,
     jsonMode: true,

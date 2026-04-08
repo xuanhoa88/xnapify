@@ -15,4 +15,5 @@ export const SEED_USERS = Object.freeze({
   'john.doe': uuidv5('xnapify.user.john.doe', NS),
   'jane.smith': uuidv5('xnapify.user.jane.smith', NS),
   'locked.user': uuidv5('xnapify.user.locked.user', NS),
+  'user': uuidv5('xnapify.user.user', NS),
 });
