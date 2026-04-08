@@ -56,6 +56,7 @@ const LLM_PROVIDERS = {
     model: 'gpt-4o-mini',
     endpoint: '/chat/completions',
     authHeader: key => `Bearer ${key}`,
+    jsonMode: true,
   },
   anthropic: {
     baseUrl: 'https://api.anthropic.com/v1',
@@ -80,19 +81,31 @@ const LLM_PROVIDERS = {
     },
     endpoint: '/chat/completions',
     authHeader: () => '',
+    jsonMode: false,
+    timeout: 300000,
   },
   azure: {
-    baseUrl: process.env.E2E_LLM_BASE_URL || '',
-    model: process.env.E2E_LLM_MODEL || '',
-    endpoint: '',
+    get baseUrl() {
+      return process.env.E2E_LLM_BASE_URL || '';
+    },
+    get model() {
+      return process.env.E2E_LLM_MODEL || '';
+    },
+    get endpoint() {
+      const deployment = process.env.E2E_LLM_MODEL || '';
+      const apiVersion = process.env.E2E_AZURE_API_VERSION || '2024-02-01';
+      return `/openai/deployments/${deployment}/chat/completions?api-version=${apiVersion}`;
+    },
     authHeader: key => key,
     authHeaderName: 'api-key',
+    jsonMode: true,
   },
   custom: {
     baseUrl: 'https://openrouter.ai/api/v1',
     model: 'google/gemini-2.5-flash-preview',
     endpoint: '/chat/completions',
     authHeader: key => `Bearer ${key}`,
+    jsonMode: true,
   },
 };
 
@@ -447,7 +460,7 @@ For arrays, use bracket notation: "items[0].id".
 
 // ── HTTP Request Helper ───────────────────────────────────────────
 
-function httpRequest(url, options, body) {
+function httpRequest(url, options, body, timeoutMs = 120000) {
   return new Promise((resolve, reject) => {
     const parsedUrl = new URL(url);
     const lib = parsedUrl.protocol === 'https:' ? https : http;
@@ -469,19 +482,41 @@ function httpRequest(url, options, body) {
       });
     });
     req.on('error', reject);
-    req.setTimeout(120000, () => {
+    req.setTimeout(timeoutMs, () => {
       req.destroy();
-      reject(new Error('LLM request timeout (120s)'));
+      reject(new Error(`LLM request timeout (${timeoutMs / 1000}s)`));
     });
     if (body) req.write(body);
     req.end();
   });
 }
 
+// ── JSON Extraction Helper ────────────────────────────────────────
+
+/**
+ * Extract JSON from LLM response, stripping markdown fences if present.
+ * Models (especially Ollama) sometimes wrap JSON in ```json ... ``` blocks.
+ */
+function extractJSON(raw, providerName) {
+  let cleaned = raw.trim();
+  const fenceMatch = cleaned.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?\s*```$/);
+  if (fenceMatch) {
+    cleaned = fenceMatch[1].trim();
+  }
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    throw new Error(
+      `LLM returned invalid JSON (${providerName}): ${cleaned.slice(0, 300)}`,
+    );
+  }
+}
+
 // ── LLM API Calls ─────────────────────────────────────────────────
 
 async function callOpenAI(config, prompt) {
   const url = `${config.baseUrl}${config.endpoint}`;
+  const name = config.providerName || 'openai';
   const payload = {
     model: config.model,
     messages: [
@@ -491,12 +526,8 @@ async function callOpenAI(config, prompt) {
     temperature: 0,
   };
 
-  // Only pass strict response_format for real OpenAI/Azure,
-  // as it causes 500s or hangs on Ollama and some custom endpoints
-  if (
-    config.baseUrl.includes('api.openai.com') ||
-    config.authHeaderName === 'api-key'
-  ) {
+  // Enable strict JSON mode only for providers that support it
+  if (config.jsonMode) {
     payload.response_format = { type: 'json_object' };
   }
 
@@ -509,17 +540,14 @@ async function callOpenAI(config, prompt) {
     if (authValue) headers[headerName] = authValue;
   }
 
-  const result = await httpRequest(url, { method: 'POST', headers }, body);
+  const result = await httpRequest(url, { method: 'POST', headers }, body, config.timeout);
   const raw = result.choices[0].message.content;
-  try {
-    return JSON.parse(raw);
-  } catch {
-    throw new Error(`LLM returned invalid JSON (openai): ${raw.slice(0, 300)}`);
-  }
+  return extractJSON(raw, name);
 }
 
 async function callAnthropic(config, prompt) {
   const url = `${config.baseUrl}${config.endpoint}`;
+  const name = config.providerName || 'anthropic';
   const body = JSON.stringify({
     model: config.model,
     max_tokens: 1024,
@@ -533,20 +561,15 @@ async function callAnthropic(config, prompt) {
     ...config.extraHeaders,
   };
 
-  const result = await httpRequest(url, { method: 'POST', headers }, body);
+  const result = await httpRequest(url, { method: 'POST', headers }, body, config.timeout);
   const raw = result.content[0].text;
-  try {
-    return JSON.parse(raw);
-  } catch {
-    throw new Error(
-      `LLM returned invalid JSON (anthropic): ${raw.slice(0, 300)}`,
-    );
-  }
+  return extractJSON(raw, name);
 }
 
 async function callGoogle(config, prompt) {
   const endpoint = config.endpoint.replace('{model}', config.model);
   const url = `${config.baseUrl}${endpoint}?${config.authParam}=${config.apiKey}`;
+  const name = config.providerName || 'google';
   const body = JSON.stringify({
     system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
     contents: [{ parts: [{ text: prompt }] }],
@@ -554,13 +577,9 @@ async function callGoogle(config, prompt) {
   });
 
   const headers = { 'Content-Type': 'application/json' };
-  const result = await httpRequest(url, { method: 'POST', headers }, body);
+  const result = await httpRequest(url, { method: 'POST', headers }, body, config.timeout);
   const raw = result.candidates[0].content.parts[0].text;
-  try {
-    return JSON.parse(raw);
-  } catch {
-    throw new Error(`LLM returned invalid JSON (google): ${raw.slice(0, 300)}`);
-  }
+  return extractJSON(raw, name);
 }
 
 // ── Auto-Detect Provider ──────────────────────────────────────────
@@ -611,7 +630,12 @@ function getProviderCredentials() {
  *   Runner writes: {"e2e_request": "interpret", "step": "...", "context": {...}}
  *   Agent writes:  {"action": "click", "text": "Upload Extension"}
  */
-async function callStdin(prompt, step, context) {
+async function callStdin(prompt, step, context, lastAttemptError) {
+  const stdinTimeout = parseInt(
+    process.env.E2E_LLM_TIMEOUT || '300000',
+    10,
+  );
+
   const request = {
     e2e_request: 'interpret',
     step,
@@ -630,6 +654,11 @@ async function callStdin(prompt, step, context) {
     stdinFirstCall = false;
   }
 
+  // Forward the last attempt's error so the agent can self-correct
+  if (lastAttemptError) {
+    request.last_error = lastAttemptError;
+  }
+
   // Write request using a protocol marker for easy parsing
   process.stdout.write(`\n[E2E:INTERPRET] ${JSON.stringify(request)}\n`);
 
@@ -644,8 +673,12 @@ async function callStdin(prompt, step, context) {
   // Read response from stdin
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
-      reject(new Error('stdin timeout: no response from agent after 60s'));
-    }, 60000);
+      reject(
+        new Error(
+          `stdin timeout: no response from agent after ${stdinTimeout / 1000}s`,
+        ),
+      );
+    }, stdinTimeout);
 
     const onLine = line => {
       const trimmed = line.trim();
@@ -656,24 +689,27 @@ async function callStdin(prompt, step, context) {
         stdinRl.removeListener('line', onLine);
         const json = trimmed.slice('[E2E:ACTION]'.length).trim();
         try {
-          resolve(JSON.parse(json));
-        } catch {
-          reject(new Error(`Invalid JSON from agent: ${json.slice(0, 200)}`));
+          resolve(extractJSON(json, 'stdin'));
+        } catch (err) {
+          reject(err);
         }
         return;
       }
 
       // Also accept raw JSON (for simpler integrations)
-      if (trimmed.startsWith('{')) {
+      if (trimmed.startsWith('{') || trimmed.startsWith('```')) {
         try {
-          const parsed = JSON.parse(trimmed);
+          const parsed = extractJSON(trimmed, 'stdin');
           if (parsed.action) {
             clearTimeout(timeout);
             stdinRl.removeListener('line', onLine);
             resolve(parsed);
           }
         } catch {
-          // Not valid JSON, keep waiting
+          // Malformed input — log hint and keep waiting
+          console.log(
+            `    ⚠ stdin: ignoring malformed input (${trimmed.slice(0, 80)}...)`,
+          );
         }
       }
     };
@@ -722,23 +758,25 @@ Return the JSON action to perform this step.`;
   // Call LLM with retry
   let action;
   const maxRetries = 2;
+  let lastAttemptError = null;
 
-  if (provider === 'stdin') {
-    // Stdin mode — delegate to IDE agent, no retry
-    action = await callStdin(prompt, step, context);
-  } else {
-    const providerConfig = { ...LLM_PROVIDERS[provider] };
+  let providerConfig, caller;
+  if (provider !== 'stdin') {
+    providerConfig = { ...LLM_PROVIDERS[provider] };
     if (!providerConfig) {
       throw new Error(
-        `Unknown LLM provider: ${provider}.Use: auto, stdin, openai, anthropic, google, ollama, azure, custom`,
+        `Unknown LLM provider: ${provider}. Use: auto, stdin, openai, anthropic, google, ollama, azure, custom`,
       );
     }
 
     providerConfig.apiKey = apiKey;
+    providerConfig.providerName = provider;
     if (process.env.E2E_LLM_MODEL)
       providerConfig.model = process.env.E2E_LLM_MODEL;
     if (process.env.E2E_LLM_BASE_URL)
       providerConfig.baseUrl = process.env.E2E_LLM_BASE_URL;
+    if (process.env.E2E_LLM_TIMEOUT)
+      providerConfig.timeout = parseInt(process.env.E2E_LLM_TIMEOUT, 10);
 
     // If authHeader('') produces output, the provider requires a real key
     if (providerConfig.authHeader('') && !providerConfig.apiKey) {
@@ -747,33 +785,41 @@ Return the JSON action to perform this step.`;
       );
     }
 
-    const caller = CALLERS[provider];
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      try {
+    caller = CALLERS[provider];
+  }
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      if (provider === 'stdin') {
+        action = await callStdin(prompt, step, context, lastAttemptError);
+      } else {
         action = await caller(providerConfig, prompt);
-
-        // Validate that LLM respected the action schema
-        const actionList = Array.isArray(action) ? action : [action];
-        for (const act of actionList) {
-          if (
-            !act ||
-            typeof act !== 'object' ||
-            Array.isArray(act) ||
-            !act.action
-          ) {
-            throw new Error(
-              `LLM returned invalid schema: expected action object with 'action' property, got ${JSON.stringify(act)} `,
-            );
-          }
-        }
-
-        break;
-      } catch (err) {
-        if (attempt === maxRetries) throw err;
-        const delay = 1000 * (attempt + 1);
-        console.log(`    ⏳ LLM retry in ${delay}ms... (${err.message})`);
-        await new Promise(r => setTimeout(r, delay));
       }
+
+      // Validate that LLM respected the action schema
+      const actionList = Array.isArray(action) ? action : [action];
+      for (const act of actionList) {
+        if (
+          !act ||
+          typeof act !== 'object' ||
+          Array.isArray(act) ||
+          !act.action
+        ) {
+          throw new Error(
+            `LLM returned invalid schema: expected action object with 'action' property, got ${JSON.stringify(act)} `,
+          );
+        }
+      }
+
+      break;
+    } catch (err) {
+      lastAttemptError = err.message;
+      if (attempt === maxRetries) throw err;
+      const delay = 1000 * (attempt + 1);
+      console.log(
+        `    ⏳ ${provider === 'stdin' ? 'stdin agent' : 'LLM'} retry in ${delay}ms... (${err.message})`,
+      );
+      await new Promise(r => setTimeout(r, delay));
     }
   }
 

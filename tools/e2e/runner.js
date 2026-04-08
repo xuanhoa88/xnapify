@@ -298,6 +298,13 @@ async function run() {
   async function ensureLLMAvailable() {
     if (llmValidated || mode === 'run') return;
 
+    // stdin mode — the IDE agent handles everything, no validation needed
+    if (llmProvider === 'stdin') {
+      console.log('  📝 Using stdin mode — IDE agent will interpret steps');
+      llmValidated = true;
+      return;
+    }
+
     if (llmProvider === 'auto') {
       // Use canonical PROVIDER_ENV_KEYS to stay in sync with llmInterpreter
       resolvedLLM = 'ollama'; // fallback
