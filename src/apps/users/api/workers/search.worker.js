@@ -26,13 +26,12 @@ export async function indexAllUsers({ search, models, force = false }) {
     include: [{ model: UserProfile, as: 'profile' }],
   });
 
-  await Promise.all(
-    users.map(user =>
-      userSearch.index({
+  for (const user of users) {
+    try {
+      await userSearch.index({
         entityType: 'user',
         entityId: user.id,
         title: (user.profile && user.profile.display_name) || user.email,
-        email: user.email,
         content: [
           user.email,
           user.profile && user.profile.first_name,
@@ -40,9 +39,15 @@ export async function indexAllUsers({ search, models, force = false }) {
         ]
           .filter(Boolean)
           .join(' '),
-      }),
-    ),
-  );
+      });
+    } catch (err) {
+      console.error(
+        '[Search Worker] Error indexing user:',
+        user.email,
+        err.message,
+      );
+    }
+  }
 
   return { usersCount: users.length };
 }
@@ -57,23 +62,30 @@ export async function indexAllUsers({ search, models, force = false }) {
 export async function indexUser({ search, user }) {
   if (!user) return;
   const userSearch = search.withNamespace('users');
-  await userSearch.index({
-    entityType: 'user',
-    entityId: user.id,
-    title: (user.profile && user.profile.display_name) || user.email,
-    email: user.email,
-    content: [
+  try {
+    await userSearch.index({
+      entityType: 'user',
+      entityId: user.id,
+      title: (user.profile && user.profile.display_name) || user.email,
+      content: [
+        user.email,
+        user.profile && user.profile.first_name,
+        user.profile && user.profile.last_name,
+        user.profile && user.profile.bio,
+      ]
+        .filter(Boolean)
+        .join(' '),
+      tags: (Array.isArray(user.roles) ? user.roles.map(r => r.name || r) : [])
+        .filter(Boolean)
+        .join(', '),
+    });
+  } catch (err) {
+    console.error(
+      '[Search Worker] Error indexing user:',
       user.email,
-      user.profile && user.profile.first_name,
-      user.profile && user.profile.last_name,
-      user.profile && user.profile.bio,
-    ]
-      .filter(Boolean)
-      .join(' '),
-    tags: (Array.isArray(user.roles) ? user.roles.map(r => r.name || r) : [])
-      .filter(Boolean)
-      .join(', '),
-  });
+      err.message,
+    );
+  }
   return true;
 }
 
@@ -86,6 +98,10 @@ export async function indexUser({ search, user }) {
  */
 export async function removeUser({ search, userId }) {
   if (!userId) return;
-  await search.withNamespace('users').remove('user', userId);
+  try {
+    await search.withNamespace('users').remove('user', userId);
+  } catch (err) {
+    console.error('[Search Worker] Error removing user:', userId, err.message);
+  }
   return true;
 }

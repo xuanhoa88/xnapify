@@ -24,17 +24,23 @@ export async function indexAllGroups({ search, models, force = false }) {
 
   const groups = await Group.findAll();
 
-  await Promise.all(
-    groups.map(group =>
-      groupSearch.index({
+  for (const group of groups) {
+    try {
+      await groupSearch.index({
         entityType: 'group',
         entityId: group.id,
         title: group.name,
         content: group.description || '',
         tags: [group.category, group.type].filter(Boolean).join(', '),
-      }),
-    ),
-  );
+      });
+    } catch (err) {
+      console.error(
+        '[Search Worker] Error indexing group:',
+        group.name,
+        err.message,
+      );
+    }
+  }
 
   return { groupsCount: groups.length };
 }
@@ -49,13 +55,21 @@ export async function indexAllGroups({ search, models, force = false }) {
 export async function indexGroup({ search, group }) {
   if (!group) return;
   const groupSearch = search.withNamespace('groups');
-  await groupSearch.index({
-    entityType: 'group',
-    entityId: group.id,
-    title: group.name,
-    content: group.description || '',
-    tags: [group.category, group.type].filter(Boolean).join(', '),
-  });
+  try {
+    await groupSearch.index({
+      entityType: 'group',
+      entityId: group.id,
+      title: group.name,
+      content: group.description || '',
+      tags: [group.category, group.type].filter(Boolean).join(', '),
+    });
+  } catch (err) {
+    console.error(
+      '[Search Worker] Error indexing group:',
+      group.name,
+      err.message,
+    );
+  }
   return true;
 }
 
@@ -68,6 +82,14 @@ export async function indexGroup({ search, group }) {
  */
 export async function removeGroup({ search, groupId }) {
   if (!groupId) return;
-  await search.withNamespace('groups').remove('group', groupId);
+  try {
+    await search.withNamespace('groups').remove('group', groupId);
+  } catch (err) {
+    console.error(
+      '[Search Worker] Error removing group:',
+      groupId,
+      err.message,
+    );
+  }
   return true;
 }

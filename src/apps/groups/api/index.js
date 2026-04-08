@@ -47,14 +47,13 @@ export default {
 
       const groupsCount = await search.withNamespace('groups').count();
       if (groupsCount === 0) {
-        indexAllGroups(search, container.resolve('models'))
-          .then(r => {
-            const count = r ? r.groupsCount : 0;
-            console.info(`[Groups] Indexed ${count} group(s) for search`);
-          })
-          .catch(e =>
-            console.error('[Groups] Search indexing failed:', e.message),
-          );
+        try {
+          const r = await indexAllGroups(search, container.resolve('models'));
+          const count = r ? r.groupsCount : 0;
+          console.info(`[Groups] Indexed ${count} group(s) for search`);
+        } catch (e) {
+          console.error('[Groups] Search indexing failed:', e.message);
+        }
       } else {
         console.info(
           `[Groups] Using cached search index (${groupsCount} group(s))`,

@@ -73,14 +73,13 @@ export default {
 
       const usersCount = await search.withNamespace('users').count();
       if (usersCount === 0) {
-        indexAllUsers(search, container.resolve('models'))
-          .then(r => {
-            const count = r ? r.usersCount : 0;
-            console.info(`[Users] Indexed ${count} user(s) for search`);
-          })
-          .catch(e =>
-            console.error('[Users] Search indexing failed:', e.message),
-          );
+        try {
+          const r = await indexAllUsers(search, container.resolve('models'));
+          const count = r ? r.usersCount : 0;
+          console.info(`[Users] Indexed ${count} user(s) for search`);
+        } catch (e) {
+          console.error('[Users] Search indexing failed:', e.message);
+        }
       } else {
         // prettier-ignore
         console.info(`[Users] Using cached search index (${usersCount} user(s))`);
