@@ -162,19 +162,30 @@ async function resolveTarget(arg) {
   const allE2eDirs = await findAllE2eDirs(ROOT_DIR);
   if (!arg) return allE2eDirs;
 
+  // 1. Try exact module path match
   const match = findMatchingE2eDir(allE2eDirs, ROOT_DIR, arg);
-  if (!match) {
-    console.error(`❌ No e2e/ directory found matching: ${arg}`);
-    console.error(
-      `   Make sure the module exists in src/apps or src/extensions.`,
-    );
-    process.exit(1);
+  if (match) {
+    const { e2eDir, subPath } = match;
+    if (!subPath) return [e2eDir];
+    return [resolveSubPath(e2eDir, subPath)];
   }
 
-  const { e2eDir, subPath } = match;
-  if (!subPath) return [e2eDir];
+  // 2. Try prefix/folder match (e.g., "extensions" or "src/extensions")
+  const normArg = arg.replace(/\\/g, '/').replace(/\/$/, '');
+  const prefixMatches = allE2eDirs.filter(d => {
+    const posixDir = d.replace(/\\/g, '/');
+    return posixDir.includes(`/${normArg}/`) || posixDir.endsWith(`/${normArg}`);
+  });
 
-  return [resolveSubPath(e2eDir, subPath)];
+  if (prefixMatches.length > 0) {
+    return prefixMatches;
+  }
+
+  console.error(`❌ No e2e/ directory found matching: ${arg}`);
+  console.error(
+    `   Make sure the module exists in src/apps or src/extensions.`,
+  );
+  process.exit(1);
 }
 
 // Match a file path against a glob-like filter pattern.
