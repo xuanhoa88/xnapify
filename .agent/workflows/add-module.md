@@ -148,7 +148,8 @@ export default {
 
   // -----------------------------------------------------------------------
   // Providers hook — share services with other modules via container.
-  // Called during API bootstrap before initialization.
+  // Called before migrations/seeds, making it the perfect place to register
+  // hook listeners that might need to trigger during the seeds() phase!
   // -----------------------------------------------------------------------
   async providers({ container }) {
     container.bind(
@@ -158,6 +159,15 @@ export default {
       }),
       true, // isSingleton
     );
+
+    const hook = container.resolve('hook');
+    if (hook) {
+      // Must use dynamic resolution inside the handler to prevent circular deps:
+      // eg. const { User } = container.resolve('models');
+      hook('{module-name}').on('created', async entity => {
+        console.log('Entity created:', entity);
+      });
+    }
   },
 
   // -----------------------------------------------------------------------
@@ -168,14 +178,11 @@ export default {
 
   // -----------------------------------------------------------------------
   // Boot hook — initialize module after all models are loaded.
-  // Register auth strategies, webhooks, scheduled tasks, etc.
+  // Good for: registering auth strategies, webhooks, and scheduled tasks.
+  // DO NOT use for hook listeners if seeds need to trigger them.
   // -----------------------------------------------------------------------
   async boot({ container }) {
-    const hook = container.resolve('hook');
-
-    hook('{module-name}').on('created', async entity => {
-      console.log('Entity created:', entity);
-    });
+    // const schedule = container.resolve('schedule');
   },
 };
 ```
@@ -776,11 +783,11 @@ Modules are auto-discovered during application bootstrap:
 | Hook                       | Purpose                                | Called When        | Async |
 | -------------------------- | -------------------------------------- | ------------------ | ----- |
 | `translations()`           | Provide webpack context for i18n files | Module loaded      | No    |
-| `providers({ container })` | Bind services to container             | After translations | Yes   |
+| `providers({ container })` | Bind services, register listener hooks | After translations | Yes   |
 | `migrations()`             | Return migrations webpack context      | After providers    | No    |
 | `models()`                 | Return models webpack context          | After migrations   | No    |
 | `seeds()`                  | Return seeds webpack context           | After models       | No    |
-| `boot({ container })`      | Initialize module (hooks, schedules)   | After seeds        | Yes   |
+| `boot({ container })`      | Initialize module (schedules, etc.)    | After seeds        | Yes   |
 | `routes()`                 | Return routes webpack context          | After boot         | No    |
 
 ### Frontend (Views)

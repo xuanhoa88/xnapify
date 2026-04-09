@@ -177,7 +177,7 @@ Each module lives under `src/apps/<module-name>/` and is automatically discovere
 ```
 src/apps/<module>/
 ├── api/                  # Backend
-│   ├── index.js          # Module entry — exports routes(), models(), init()
+│   ├── index.js          # Module entry — exports routes(), models(), providers(), boot()
 │   ├── routes/           # Express route definitions
 │   ├── controllers/      # Request handlers
 │   ├── services/         # Business logic

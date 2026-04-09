@@ -432,6 +432,38 @@ The autoloader handles execution order: `migrations → models → seeds`.
 
 ---
 
+# Part 5: Emitting Module Hooks in Seeds
+
+When seeding data that requires background processing (like search indexing or audit logs), **do not** directly invoke workers or background jobs. Instead, rely on the module's existing lifecycle hooks.
+
+Since hook listeners for modules are registered during the `providers()` phase, they are already active when the `seeds()` phase runs.
+
+## 5.1 Hook Emission Pattern
+
+```javascript
+export async function up(_, { container }) {
+  const { User } = container.resolve('models');
+  const createdUsers = await User.bulkCreate([
+    /* ... user data ... */
+  ]);
+
+  // Emit hooks to trigger search indexing — listeners are already registered
+  const hook = container.resolve('hook');
+  if (hook) {
+    for (const user of createdUsers) {
+      // Must fetch complex associations if the worker relies on them (e.g. profiles)
+      const fullUser = await User.findByPk(user.id, { include: ['profile'] });
+      await hook('admin:users').emit('created', { user: fullUser });
+    }
+  }
+}
+```
+
+> [!WARNING]
+> Ensure any associated data required by the `afterFind` or indexing logic is eagerly loaded. For instance, if the search worker relies on the `profile` association, you MUST use `User.findByPk(..., { include: ['profile'] })` before emitting the hook.
+
+---
+
 ## Best Practices
 
 1. **Factory Pattern**: Always use `create{ModelName}Model({ connection, DataTypes })` 
