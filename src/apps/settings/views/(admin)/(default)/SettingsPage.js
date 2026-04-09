@@ -8,6 +8,7 @@
 import { useEffect, useCallback, useState, useMemo } from 'react';
 
 import clsx from 'clsx';
+import sortBy from 'lodash/sortBy';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
@@ -165,40 +166,41 @@ SettingRow.propTypes = {
  * 4. Raw namespace string
  */
 function getNamespaceLabel(ns, t, labels, translationKeys) {
-  // 1. Extension-provided i18n key
+  // Hardcoded label fallback
+  const fallback = labels[ns] || ns;
+
+  // 1. Extension-provided i18n key overrides core translation
   if (translationKeys[ns]) {
-    const translated = t(translationKeys[ns]);
-    if (translated !== translationKeys[ns]) return translated;
+    // If the extension key exists in loaded bundles, use it.
+    // We try translationKeys[ns] first. If not found, we fallback to the core translation.
+    const extTranslated = t(translationKeys[ns], { defaultValue: '' });
+    if (extTranslated) return extTranslated;
   }
-  // 2. Core module i18n key
+
+  // 2. Core module i18n key, natively falling back to the hardcoded label
   const coreKey = `admin:settings.namespaces.${ns}`;
-  const coreTranslated = t(coreKey);
-  if (coreTranslated !== coreKey) return coreTranslated;
-  // 3. Hardcoded label fallback
-  return labels[ns] || ns;
+  return t(coreKey, { defaultValue: fallback });
 }
 
 function sortNamespaces(namespaces, order) {
-  return [...namespaces].sort((a, b) => {
-    const idxA = order.indexOf(a);
-    const idxB = order.indexOf(b);
-    if (idxA === -1 && idxB === -1) return a.localeCompare(b);
-    if (idxA === -1) return 1;
-    if (idxB === -1) return -1;
-    return idxA - idxB;
-  });
+  return sortBy(namespaces, [
+    ns => {
+      const idx = order.indexOf(ns);
+      return idx === -1 ? Infinity : idx;
+    },
+    ns => ns,
+  ]);
 }
 
 function sortSettingFields(namespace, settings, fieldOrder) {
   const order = (fieldOrder && fieldOrder[namespace]) || [];
-  return [...settings].sort((a, b) => {
-    const idxA = order.indexOf(a.key);
-    const idxB = order.indexOf(b.key);
-    if (idxA === -1 && idxB === -1) return a.key.localeCompare(b.key);
-    if (idxA === -1) return 1;
-    if (idxB === -1) return -1;
-    return idxA - idxB;
-  });
+  return sortBy(settings, [
+    setting => {
+      const idx = order.indexOf(setting.key);
+      return idx === -1 ? Infinity : idx;
+    },
+    setting => setting.key,
+  ]);
 }
 
 // =============================================================================
@@ -315,7 +317,8 @@ function SettingsPage({ context }) {
   const dispatch = useDispatch();
   const { hasPermission } = useRbac();
 
-  const { icons, labels, translationKeys, order, fieldOrder } = useSettingsTabConfig();
+  const { icons, labels, translationKeys, order, fieldOrder } =
+    useSettingsTabConfig(context.container.resolve('extension'));
 
   const groups = useSelector(selectGroups);
   const loading = useSelector(selectLoading);

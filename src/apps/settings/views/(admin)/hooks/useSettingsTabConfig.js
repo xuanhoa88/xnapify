@@ -5,9 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useState, useEffect, useCallback, useContext } from 'react';
-
-import { AppContext } from '@shared/renderer/AppContext';
+import { useState, useEffect, useCallback } from 'react';
 
 // =============================================================================
 // Core defaults — immutable baseline for built-in namespaces
@@ -73,12 +71,11 @@ const INITIAL_STATE = {
  *
  * Extensions return: `{ [namespace]: { icon, label, i18nKey, order, fieldOrder } }`
  *
- * @param {Object} registry - The extension registry instance
- * @returns {{ icons, labels, i18nKeys, order, fieldOrder, loading }}
+ * @param {Object} extension - The extension manager
+ * @returns {{ icons, labels, translationKeys, order, fieldOrder, loading }}
  */
-export function useSettingsTabConfig() {
-  const { container } = useContext(AppContext);
-  const { registry } = container.resolve('extension');
+export function useSettingsTabConfig(extension) {
+  const { registry } = extension;
 
   const [config, setConfig] = useState(INITIAL_STATE);
   const [loading, setLoading] = useState(true);
@@ -151,18 +148,13 @@ export function useSettingsTabConfig() {
   );
 
   useEffect(() => {
-    const mountedIndicator = { current: true };
-    resolve(mountedIndicator);
+    const mounted = { current: true };
+    resolve(mounted);
 
-    // Subscribe also needs to pass the mountedIndicator (or a dummy one)
-    // but registry.subscribe just calls the callback without args.
-    const sync = () => resolve(mountedIndicator);
-    const unsubscribe = registry?.subscribe
-      ? registry.subscribe(sync)
-      : () => {};
+    const unsubscribe = registry.subscribe(() => resolve(mounted));
 
     return () => {
-      mountedIndicator.current = false;
+      mounted.current = false;
       unsubscribe();
     };
   }, [resolve, registry]);
