@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "compiledAt": "2026-04-08T08:10:10.619Z",
+  "compiledAt": "2026-04-09T02:11:35.127Z",
   "testHash": "ac0a21a00ecc5346bc65fb21546d529b0b8aefeaba58995e7f80e563ff3c03ef",
   "title": "Profile Page is Accessible When Logged In",
   "actions": [
@@ -8,7 +8,7 @@
       "step": 1,
       "instruction": "Log in",
       "action": "login",
-      "description": "Log in using {{email}} and {{password}} from prerequisites"
+      "description": "Log in using user@test.com and user123 from prerequisites"
     },
     {
       "step": 2,

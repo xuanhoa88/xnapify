@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "compiledAt": "2026-04-08T11:16:44.375Z",
+  "compiledAt": "2026-04-09T02:11:16.688Z",
   "testHash": "fc163a355c42ecb39140db8c1e5d2b4ab2f27beaf603f41b9eeb967e654f136b",
   "title": "Verify Uninstalled Extension is Gone After Refresh",
   "actions": [

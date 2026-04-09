@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "compiledAt": "2026-04-08T10:09:59.800Z",
+  "compiledAt": "2026-04-09T02:11:23.978Z",
   "testHash": "6ec11f686a66a6a44e814d3e9291ce912b91412b3a212db61d34be8b3d83382f",
   "title": "Google OAuth Extension Test",
   "actions": [
@@ -8,7 +8,7 @@
       "step": 1,
       "instruction": "Navigate to the login page",
       "action": "navigate",
-      "url": "/login",
+      "url": "http://127.0.0.1:1337/login",
       "description": "Navigate to the login page"
     },
     {

@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "compiledAt": "2026-04-09T00:44:00.000Z",
+  "testHash": "5d7200157653aca04ebc180e4cb3f48582e8cba7c463d34a986bb02ac671b021",
+  "title": "Full Login and Profile Update Flow",
+  "actions": [
+    {
+      "step": 1,
+      "instruction": "Send POST request to /api/auth/login to get JWT token",
+      "action": "api_request",
+      "method": "POST",
+      "url": "/api/auth/login",
+      "body": {
+        "email": "{{email}}",
+        "password": "{{password}}"
+      },
+      "description": "Send POST request to /api/auth/login to get JWT token"
+    },
+    {
+      "step": 1,
+      "instruction": "Send POST request to /api/auth/login to get JWT token",
+      "action": "assert_status",
+      "expected": 200,
+      "description": "Verify login API returns success status"
+    },
+    {
+      "step": 1,
+      "instruction": "Send POST request to /api/auth/login to get JWT token",
+      "action": "store_value",
+      "from": "accessToken",
+      "as": "authToken",
+      "description": "Store the JWT token for later use"
+    },
+    {
+      "step": 2,
+      "instruction": "Navigate to the profile page in the browser",
+      "action": "navigate",
+      "url": "/profile",
+      "description": "Navigate to the profile page in the browser"
+    },
+    {
+      "step": 3,
+      "instruction": "Verify the profile page shows the current user name",
+      "action": "assert_visible",
+      "text": "admin@example.com",
+      "description": "Verify the profile page shows the current user email"
+    },
+    {
+      "step": 4,
+      "instruction": "Update the display name field to \"Test Admin\"",
+      "action": "fill",
+      "selector": "input[name='display_name']",
+      "value": "Test Admin",
+      "description": "Update the display name field to 'Test Admin'"
+    },
+    {
+      "step": 5,
+      "instruction": "Click the Save button",
+      "action": "click",
+      "selector": "button[type='submit']",
+      "text": "Save",
+      "description": "Click the Save button"
+    },
+    {
+      "step": 6,
+      "instruction": "Send GET request to /api/auth/profile to verify the change",
+      "action": "api_request",
+      "method": "GET",
+      "url": "/api/auth/profile",
+      "headers": {
+        "Authorization": "Bearer {{authToken}}"
+      },
+      "description": "Send GET request to /api/auth/profile to verify the change"
+    },
+    {
+      "step": 7,
+      "instruction": "Assert response body field \"user.display_name\" equals \"Test Admin\"",
+      "action": "assert_body",
+      "path": "user.display_name",
+      "equals": "Test Admin",
+      "description": "Assert response body field 'user.display_name' equals 'Test Admin'"
+    }
+  ]
+}

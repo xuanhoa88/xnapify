@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "compiledAt": "2026-04-08T08:30:51.185Z",
+  "compiledAt": "2026-04-09T02:11:38.229Z",
   "testHash": "ad75eeb5b60cf34b1e752a0e780c9bb3cacd5100e092ecd0a51138c39af9508a",
   "title": "Update Display Name",
   "actions": [
@@ -8,7 +8,7 @@
       "step": 1,
       "instruction": "Log in",
       "action": "login",
-      "description": "Log in using user@test.com and user123 from prerequisites"
+      "description": "Log in using {{email}} and {{password}} from prerequisites"
     },
     {
       "step": 2,
