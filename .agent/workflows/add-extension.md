@@ -558,7 +558,6 @@ export const profileSchema = zod => {
     "nickname_too_short": "Nickname must be at least 3 characters long",
     "birthdate_format": "Birthdate must be in DD/MM/YYYY format"
   }
-  }
 }
 ```
 

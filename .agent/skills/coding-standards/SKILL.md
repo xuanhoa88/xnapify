@@ -20,6 +20,7 @@ priority: CRITICAL
 | **KISS**      | Simplest solution that works          |
 | **YAGNI**     | Don't build features nobody asked for |
 | **Boy Scout** | Leave code cleaner than you found it  |
+| **i18n**      | NO HARDCODED text. Use i18n always.   |
 
 ---
 
@@ -193,6 +194,7 @@ export const listItems = async (req, res) => {
 | **useRef for timers**  | Store timeout/interval IDs in refs, clean up in `useEffect` return          |
 | **Cleanup on unmount** | Clear timers, abort controllers, unsubscribe listeners                      |
 | **i18n**               | `t('namespace:key', 'Default fallback')` — always include a fallback        |
+| **Forms**              | Always use `@shared/renderer/components/Form` tightly coupled to `react-hook-form` instead of raw `<input>` elements |
 | **Permissions**        | `const { hasPermission } = useRbac()` — guard UI actions                    |
 | **WebSocket**          | `useWebSocket()` hook — `ws.on('channel', handler)` with cleanup `ws.off()` |
 

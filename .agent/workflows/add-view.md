@@ -17,17 +17,22 @@ Add a new view/route to a module.
 
 ## 1. Create View Component
 
+> **Rule:** Never hardcode user-facing strings! Always use `useTranslation` and the `translations/en-US.json` file.
+
 ```javascript
 // @apps/(default)/views/my-view/MyView.js
 import React from 'react';
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 import s from './MyView.css';
 
 function MyView({ title }) {
+  const { t } = useTranslation('default'); // Use your module name
+
   return (
     <div className={s.container}>
       <h1 className={s.title}>{title}</h1>
-      <p>View content here</p>
+      <p>{t('myView.content', 'View content here')}</p>
     </div>
   );
 }
@@ -101,6 +106,51 @@ import { Link } from '@shared/renderer/components/History';
 
 <Link to='/my-view'>My View</Link>;
 ```
+
+## 5. Forms & Data Entry
+
+When building data entry views, settings panels, or forms, **always** use the unified `@shared/renderer/components/Form` system (built on `react-hook-form`) rather than building raw, custom controlled `<input>` elements or independent `useState` tracking.
+
+```javascript
+import Form, { useFormContext } from '@shared/renderer/components/Form';
+import Button from '@shared/renderer/components/Button';
+
+// 1. (Optional) Zod Schema Definition
+const schema = ({ z, i18n }) => z.object({
+  email: z.string().email(i18n.t('error.email', 'Invalid email')),
+});
+
+// 2. Context-Aware Submit Button
+function SaveButton() {
+  const { formState: { isDirty, isSubmitting } } = useFormContext();
+  return (
+    <Button type="submit" variant="primary" disabled={!isDirty || isSubmitting}>
+      {isSubmitting ? 'Saving...' : 'Save Changes'}
+    </Button>
+  );
+}
+
+// 3. Wrap in Form Provider
+function ProfileForm({ initialData }) {
+  const handleSave = async (data, methods) => {
+    // `data` contains fully validated form values
+    // `methods.formState.dirtyFields` contains exclusively edited fields
+    await apiCall(data);
+  };
+
+  return (
+    <Form defaultValues={initialData} schema={schema} onSubmit={handleSave}>
+      <Form.Input name="email" label="Email Address" />
+      <Form.Password name="password" label="New Password" />
+      <Form.Switch name="notifications" label="Enable Notifications" />
+      <Form.Textarea name="bio" rows={4} />
+      <SaveButton />
+    </Form>
+  );
+}
+```
+
+> **Important:** If fetching unstructured keys with dots (like `namespace.key`), `react-hook-form` will inherently interpret dots as deeply nested objects (`{ namespace: { key: ... } }`). If parsing flat configurations, use an alternative join like `namespace___key` for the `name=` prop, then parse them apart during `onSubmit()`.
 
 ## Route Configuration Options
 

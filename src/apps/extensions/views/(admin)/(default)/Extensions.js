@@ -403,8 +403,13 @@ function Extensions() {
   const handleInstallAction = useCallback(async () => {
     const file = pendingFileRef.current;
     if (!file) return;
-    await dispatch(uploadExtension(file)).unwrap();
-    pendingFileRef.current = null;
+    try {
+      await dispatch(uploadExtension(file)).unwrap();
+      pendingFileRef.current = null;
+    } catch {
+      pendingFileRef.current = null;
+      // Errors are handled by the upload thunk and UI state; avoid unhandled rejection.
+    }
     // Success toast deferred to WebSocket EXTENSION_INSTALLED handler
   }, [dispatch]);
 

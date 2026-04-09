@@ -23,8 +23,8 @@
  * ---
  *
  * @example <caption>Single Email</caption>
- * // Access singleton instance (via app.container.resolve('email') or import)
- * const email = app.container.resolve('email');
+ * // Access singleton instance (via app.get('container').resolve('email') or import)
+ * const email = app.get('container').resolve('email');
  *
  * // Single email (auto-decides, usually direct processing)
  * await email.send({
@@ -138,7 +138,7 @@ export { createFactory };
 
 /**
  * Singleton instance of EmailManager
- * Used by the application via app.container.resolve('email')
+ * Used by the application via app.get('container').resolve('email')
  */
 const email = createFactory();
 

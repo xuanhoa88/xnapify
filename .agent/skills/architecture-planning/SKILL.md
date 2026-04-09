@@ -83,6 +83,8 @@ Draft the technical architecture:
 - API routes, controllers, services, and DTO validations.
 - Event hooks, background workers, or websockets needed.
 - Frontend components, views, and state management logic.
+- **i18n & Localization:** Extracted strings, translation files (`en-US.json`), and hook registrations.
+- **Documentation & Tooling Sync:** Identify which `.agent/workflows`, `.agent/skills`, or `README.md` files must be updated to reflect the new architectural standards or conventions.
 
 ### 4. Red Team Review (Adversarial Review)
 If the feature is complex (Hard mode), deliberately attack your own design:

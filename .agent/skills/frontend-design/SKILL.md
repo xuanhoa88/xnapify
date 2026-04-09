@@ -253,6 +253,7 @@ Duration based on:
 - [ ] Clear value proposition
 - [ ] Professional aesthetics
 - [ ] Consistent design language
+- [ ] All user-facing text is localized via i18n (no hardcoded strings)
 
 ---
 
@@ -272,6 +273,7 @@ Duration based on:
 - Inconsistent spacing.
 - Too many competing colors without a dominant hierarchy.
 - Inaccessible contrast.
+- Hardcoded user-facing strings (Always use `i18n` translation hooks).
 
 ---
 

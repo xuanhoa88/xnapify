@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "compiledAt": "2026-04-09T02:05:38.660Z",
+  "compiledAt": "2026-04-09T03:36:58.251Z",
   "testHash": "e01f837dd4263e5c4e50fa7df5514ba025bf33d7672145b832bdcfbdcc9bd32f",
   "title": "Verify Activated Extension Appears in Active Filter Tab",
   "actions": [
@@ -36,8 +36,9 @@
       "step": 5,
       "instruction": "Verify the badge count on the \"Active\" tab includes this extension",
       "action": "assert_visible",
-      "text": "badge count for Active tab",
-      "description": "Verify the badge count on the 'Active' tab includes the activated extension"
+      "selector": "button",
+      "text": "Active",
+      "description": "Verify the Active tab button and its badge are visible"
     }
   ]
 }

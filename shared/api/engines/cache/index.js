@@ -64,7 +64,7 @@ export { default as NoOpCache } from './adapters/noop';
 
 /**
  * Singleton instance of Cache Engine
- * Used by the application via app.container.resolve('cache')
+ * Used by the application via app.get('container').resolve('cache')
  */
 const cache = createFactory({
   type: 'memory',

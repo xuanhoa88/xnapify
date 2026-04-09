@@ -55,7 +55,7 @@ import * as controller from '../../controllers/{resource}.controller';
 
 function requirePermission(permission) {
   return (req, res, next) => {
-    const auth = req.container.resolve('auth');
+    const auth = req.app.get('container').resolve('auth');
     return auth.middlewares.requirePermission(permission)(req, res, next);
   };
 }
@@ -77,9 +77,9 @@ export const post = [requirePermission('{module}:create'), controller.create];
 import { {resourceSchema} } from '../../validator';
 
 export async function list(req, res, next) {
-  const http = req.container.resolve('http');
+  const http = req.app.get('container').resolve('http');
   try {
-    const { models } = req.container.resolve('db');
+    const { models } = req.app.get('container').resolve('db');
     const items = await models.{Model}.findAll({ limit: 50 });
     return http.sendSuccess(res, { items });
   } catch (error) {
@@ -88,14 +88,14 @@ export async function list(req, res, next) {
 }
 
 export async function create(req, res, next) {
-  const http = req.container.resolve('http');
+  const http = req.app.get('container').resolve('http');
   try {
     const { validateForm, z } = require('@shared/validator');
     const schema = {resourceSchema}({ z });
     const [isValid, data] = validateForm(() => schema, req.body);
     if (!isValid) return http.sendValidationError(res, data);
 
-    const { models } = req.container.resolve('db');
+    const { models } = req.app.get('container').resolve('db');
     const item = await models.{Model}.create(data);
     return http.sendCreated(res, { item });
   } catch (error) {
@@ -164,7 +164,8 @@ npm run lint
 - [ ] RBAC guard via `requirePermission()` on all exports
 - [ ] Controller uses `http.sendSuccess()` / `http.sendServerError()` — never raw `res.json()`
 - [ ] Input validated with `validateForm` or `schema.parse` — never raw `req.body`
-- [ ] Auth resolved via DI: `req.container.resolve('auth')`
+- [ ] Auth resolved via DI: `req.app.get('container').resolve('auth')`
+- [ ] No hardcoded strings in API responses (use `i18n` translation keys)
 - [ ] Tests pass: `npm test`
 - [ ] Lint passes: `npm run lint`
 

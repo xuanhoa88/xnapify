@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "compiledAt": "2026-04-09T02:07:37.881Z",
+  "compiledAt": "2026-04-09T02:55:08.279Z",
   "testHash": "8df8bd81f2024a6823f89b4437d165dfacdfcbc3ffdc0f06273d31ad1c04a973",
   "title": "Verify Deactivated Extension Moves to Inactive Filter",
   "actions": [
@@ -44,8 +44,8 @@
       "step": 6,
       "instruction": "Verify no elements with selector `.inactive-extension-card` are visible in the Active tab",
       "action": "assert_not_visible",
-      "text": "inactive-extension-card",
-      "description": "Verify no elements with selector .inactive-extension-card are visible in the Active tab"
+      "selector": ".inactive-extension-card",
+      "description": "Verify no inactive extension cards are visible in the Active tab"
     }
   ]
 }

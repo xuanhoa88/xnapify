@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "compiledAt": "2026-04-09T02:11:26.857Z",
+  "compiledAt": "2026-04-09T03:00:51.535Z",
   "testHash": "3665248e2510ebce7654fedcb57adfa2eaaae6cff3d48316f020ec026518d096",
   "title": "Google OAuth Button Triggers Redirect",
   "actions": [
@@ -17,7 +17,7 @@
       "action": "click",
       "selector": "button",
       "text": "Sign in with Google",
-      "description": "Click the 'Sign in with Google' button"
+      "description": "Click the 'Sign in with Google' button to initiate the OAuth flow"
     },
     {
       "step": 3,

@@ -27,7 +27,7 @@ export { createFactory };
 
 /**
  * Singleton instance of TemplateManager
- * Used application-wide via import or app.container.resolve('template')
+ * Used application-wide via import or app.get('container').resolve('template')
  */
 const template = createFactory();
 

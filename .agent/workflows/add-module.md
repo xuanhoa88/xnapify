@@ -142,9 +142,9 @@ export default {
   // -----------------------------------------------------------------------
   // Translations hook — return webpack require.context for i18n files.
   // -----------------------------------------------------------------------
-  // translations() {
-  //   return require.context('./translations', false, /\.json$/i);
-  // },
+  translations() {
+    return require.context('../translations', false, /\.json$/i);
+  },
 
   // -----------------------------------------------------------------------
   // Providers hook — share services with other modules via container.
@@ -202,7 +202,7 @@ import * as controller from '../../../controllers/module.controller';
 
 function requirePermission(permission) {
   return (req, res, next) => {
-    const auth = req.container.resolve('auth');
+    const auth = req.app.get('container').resolve('auth');
     return auth.middlewares.requirePermission(permission)(req, res, next);
   };
 }
@@ -244,7 +244,7 @@ import * as controller from '../../../../controllers/module.controller';
 
 function requirePermission(permission) {
   return (req, res, next) => {
-    const auth = req.container.resolve('auth');
+    const auth = req.app.get('container').resolve('auth');
     return auth.middlewares.requirePermission(permission)(req, res, next);
   };
 }
@@ -287,9 +287,11 @@ export { del as delete };
 
 export async function list(req, res, next) {
   try {
-    const { models } = req.container.resolve('db');
+    const container = req.app.get('container');
+    const http = container.resolve('http');
+    const { models } = container.resolve('db');
     const items = await models.Module.findAll();
-    res.json(items);
+    return http.sendSuccess(res, items);
   } catch (error) {
     next(error);
   }
@@ -297,15 +299,17 @@ export async function list(req, res, next) {
 
 export async function getOne(req, res, next) {
   try {
+    const container = req.app.get('container');
+    const http = container.resolve('http');
     const { id } = req.params;
-    const { models } = req.container.resolve('db');
+    const { models } = container.resolve('db');
     const item = await models.Module.findByPk(id);
 
     if (!item) {
-      return res.status(404).json({ error: 'Not found' });
+      return http.sendError(res, 404, '{module-name}:errors.not_found');
     }
 
-    res.json(item);
+    return http.sendSuccess(res, item);
   } catch (error) {
     next(error);
   }
@@ -313,9 +317,11 @@ export async function getOne(req, res, next) {
 
 export async function create(req, res, next) {
   try {
-    const { models } = req.container.resolve('db');
+    const container = req.app.get('container');
+    const http = container.resolve('http');
+    const { models } = container.resolve('db');
     const item = await models.Module.create(req.body);
-    res.status(201).json(item);
+    return http.sendCreated(res, item);
   } catch (error) {
     next(error);
   }
@@ -323,16 +329,18 @@ export async function create(req, res, next) {
 
 export async function update(req, res, next) {
   try {
+    const container = req.app.get('container');
+    const http = container.resolve('http');
     const { id } = req.params;
-    const { models } = req.container.resolve('db');
+    const { models } = container.resolve('db');
     const item = await models.Module.findByPk(id);
 
     if (!item) {
-      return res.status(404).json({ error: 'Not found' });
+      return http.sendError(res, 404, '{module-name}:errors.not_found');
     }
 
     await item.update(req.body);
-    res.json(item);
+    return http.sendSuccess(res, item);
   } catch (error) {
     next(error);
   }
@@ -340,16 +348,18 @@ export async function update(req, res, next) {
 
 export async function delete(req, res, next) {
   try {
+    const container = req.app.get('container');
+    const http = container.resolve('http');
     const { id } = req.params;
-    const { models } = req.container.resolve('db');
+    const { models } = container.resolve('db');
     const item = await models.Module.findByPk(id);
 
     if (!item) {
-      return res.status(404).json({ error: 'Not found' });
+      return http.sendError(res, 404, '{module-name}:errors.not_found');
     }
 
     await item.destroy();
-    res.json({ success: true });
+    return http.sendSuccess(res, { success: true });
   } catch (error) {
     next(error);
   }
@@ -475,11 +485,21 @@ const viewsContext = require.context(
   /(?:\/_route|\/_layout|\(routes\)\/\([^)]+\)|\(layouts\)\/\([^)]+\)\/_layout)\.[cm]?[jt]sx?$/i,
 );
 
+// Auto-load translations
+const translationsContext = require.context(
+  '../translations',
+  false,
+  /\.json$/i,
+);
+
 // =============================================================================
 // LIFECYCLE HOOKS
 // =============================================================================
 
 export default {
+  translations() {
+    return translationsContext;
+  },
   /**
    * Providers hook — share client-side services with other modules.
    * Use for container bindings only. Redux injection goes in _route.js init().
@@ -636,7 +656,7 @@ function ModuleList({ items }) {
     }
   }, [dispatch, modules.length]);
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return <div>{t('loading', 'Loading...')}</div>;
 
   return (
     <div className={s.container}>
@@ -655,7 +675,7 @@ function ModuleList({ items }) {
               <td>{item.name}</td>
               <td>{item.status}</td>
               <td>
-                <a href={`/admin/{module-name}/${item.id}`}>Edit</a>
+                <a href={`/admin/{module-name}/${item.id}`}>{t('edit', 'Edit')}</a>
               </td>
             </tr>
           ))}
@@ -754,6 +774,28 @@ export const createModule = createAsyncThunk(
     }
   },
 );
+```
+
+### 11. Create Translations
+
+```json
+// src/apps/{module-name}/translations/en-US.json
+{
+  "title": "Modules",
+  "name": "Name",
+  "status": "Status",
+  "actions": "Actions"
+}
+```
+
+```json
+// src/apps/{module-name}/translations/vi-VN.json
+{
+  "title": "Mô đun",
+  "name": "Tên",
+  "status": "Trạng thái",
+  "actions": "Hành động"
+}
 ```
 
 ## Module Discovery

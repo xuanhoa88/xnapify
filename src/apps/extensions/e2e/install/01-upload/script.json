@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "compiledAt": "2026-04-09T02:09:21.142Z",
+  "compiledAt": "2026-04-09T02:57:12.444Z",
   "testHash": "a0e129a445d3f358a977dee55f24476c1868e2feecb4cb771899edbd764484c6",
   "title": "Upload Extension Package",
   "actions": [
@@ -32,10 +32,11 @@
     },
     {
       "step": 5,
-      "instruction": "Wait for the success toast \"Extension installed successfully\"",
+      "instruction": "Wait for the uploaded extension card to appear",
       "action": "wait_for_text",
-      "text": "Extension installed successfully",
-      "description": "Wait for success toast indicating the extension was installed successfully."
+      "text": "sample-extension",
+      "timeout": 120000,
+      "description": "Wait for the newly installed extension to be visible in the extensions list."
     },
     {
       "step": 6,

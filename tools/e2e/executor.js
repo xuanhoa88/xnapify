@@ -715,7 +715,37 @@ const ACTIONS = {
         `Target "${target.selector}" not found within container "${container.hasText || container.selector}"`,
       );
     }
-    await el.click();
+
+    try {
+      await el.click();
+    } catch (error) {
+      const clicked = await page.evaluate(targetEl => {
+        let node = targetEl;
+        while (node && node !== document.body) {
+          if (node.tagName === 'LABEL') {
+            node.click();
+            return true;
+          }
+          const style = window.getComputedStyle(node);
+          const rect = node.getBoundingClientRect();
+          if (
+            rect.width > 0 &&
+            rect.height > 0 &&
+            style.visibility !== 'hidden' &&
+            style.display !== 'none' &&
+            ['BUTTON', 'A', 'INPUT', 'SELECT', 'TEXTAREA'].includes(
+              node.tagName,
+            )
+          ) {
+            node.click();
+            return true;
+          }
+          node = node.parentElement;
+        }
+        return false;
+      }, el);
+      if (!clicked) throw error;
+    }
   },
 
   // ── Hover ───────────────────────────────────────────────────────

@@ -258,10 +258,8 @@ export class NodeRedManager {
 
     // Invalid state
     if (this._state !== LifecycleState.INITIALIZED) {
-      throw new NodeRedError(
-        `Cannot start from state: ${this._state}`,
-        'INVALID_STATE',
-      );
+      Logger.error(`Cannot start from state: ${this._state}`);
+      return;
     }
 
     return this._withStateLock(async () => {

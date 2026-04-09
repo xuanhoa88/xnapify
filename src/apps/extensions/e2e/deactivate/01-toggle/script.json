@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "compiledAt": "2026-04-09T02:06:34.938Z",
+  "compiledAt": "2026-04-09T02:54:10.530Z",
   "testHash": "1b86a895574404b17fff6ee4108e6ab60a3d2379c5d26c6d9dfbb401bc252464",
   "title": "Deactivate Extension via Toggle Switch",
   "actions": [
@@ -21,21 +21,20 @@
       "step": 3,
       "instruction": "Find an active extension card with selector `.active-extension-card`",
       "action": "assert_visible",
-      "text": "active-extension-card",
-      "description": "Verify that an active extension card is visible on the page"
+      "selector": ".active-extension-card",
+      "description": "Verify that the active extension card is visible on the page"
     },
     {
       "step": 4,
-      "instruction": "Click the toggle switch label inside that active extension card",
+      "instruction": "Click the toggle switch inside that active extension card",
       "action": "click_within",
       "container": {
-        "selector": "[class*='root']",
-        "hasText": "active-extension"
+        "selector": ".active-extension-card"
       },
       "target": {
-        "selector": "input[type='checkbox']"
+        "selector": "label"
       },
-      "description": "Click the toggle switch label within the active extension card"
+      "description": "Click the toggle switch within the active extension card"
     },
     {
       "step": 5,
@@ -53,7 +52,7 @@
       "step": 7,
       "instruction": "Wait for the success toast \"Extension deactivated successfully\"",
       "action": "wait_for_text",
-      "text": "Extension deactivated successfully",
+      "text": "Extension deactivated successfully.",
       "description": "Wait for success toast indicating the extension has been deactivated."
     },
     {
@@ -61,12 +60,11 @@
       "instruction": "Verify the checkbox inside the active extension card is now unchecked",
       "action": "assert_checked",
       "container": {
-        "selector": "[class*='root']",
-        "hasText": "active-extension"
+        "selector": ".inactive-extension-card"
       },
       "selector": "input[type='checkbox']",
       "checked": false,
-      "description": "Verify the toggle is unchecked for the active extension card"
+      "description": "Verify the toggle is unchecked for the inactive extension card"
     }
   ]
 }

@@ -87,11 +87,12 @@ export async function generateReport(models, startDate, endDate) {
 import { generateReport } from '../workers';
 
 export async function get(req, res) {
-  const http = req.container.resolve('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
 
   try {
     const { startDate, endDate } = req.query;
-    const models = req.container.resolve('models');
+    const models = container.resolve('models');
     const result = await generateReport(models, startDate, endDate);
     return http.sendSuccess(res, { data: result });
   } catch (error) {

@@ -561,6 +561,12 @@ Brief overall assessment (1-2 sentences).
 - 🟡 [file:line] Import order out of compliance — run `npm run fix`.
 - ✅ Clean separation of concerns.
 
+## i18n & Localization
+
+- 🔴 [file:line] Hardcoded string in component — use `t('namespace:key', 'Fallback')`.
+- 🔴 [file:line] Missing `translations()` hook in `views/index.js`.
+- ✅ All user-facing text is properly internationalized.
+
 ## Testing
 
 - 🔴 No tests for new service logic.

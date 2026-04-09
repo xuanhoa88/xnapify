@@ -28,7 +28,15 @@ If tests are already failing before your changes, note them separately so you do
 
 Apply your modifications following the project's coding standards (see `AGENT.md`).
 
-## 4. Run Targeted Tests (After Changes)
+## 4. Garbage Collection (MANDATORY)
+
+When refactoring, deleting, or entirely replacing components/code paths, you **must** clean up orphaned code in the same session:
+- **Unused CSS:** If you removed a `className` from the JSX/HTML, go to the corresponding `.css` file and delete those unused selectors immediately.
+- **Unused Imports:** Ensure `eslint-disable` isn't masking unused `import` statements; delete imports of components or tools you removed.
+- **Unused Variables:** Delete dead `useState`, `useSelector`, and internal component state bindings.
+Do **not** leave dead variables or stylesheets scattered behind.
+
+## 5. Run Targeted Tests (After Changes)
 
 // turbo
 Run the tests specific to the code you changed:

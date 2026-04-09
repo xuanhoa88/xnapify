@@ -43,8 +43,9 @@ When editing existing code:
 - If you notice unrelated dead code, mention it - don't delete it.
 
 When your changes create orphans:
-- Remove imports/variables/functions that YOUR changes made unused.
-- Don't remove pre-existing dead code unless asked.
+- **Mandatory sweeps**: Remove imports, variables, functions, and **CSS classes/selectors** that YOUR changes made unused.
+- Do not leave unused `className` definitions in `.css` files after removing them from the markup.
+- Don't remove pre-existing dead code unless asked, but always clean up the orphans YOU just created during a refactor.
 
 The test: Every changed line should trace directly to the user's request.
 

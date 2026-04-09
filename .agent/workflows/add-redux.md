@@ -627,6 +627,7 @@ export default PostsList;
 // @apps/blog/views/admin/posts/PostsList.js
 import { useEffect, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import {
   fetchPosts,
   createPost,
@@ -642,6 +643,7 @@ import {
 } from './redux';
 
 function PostsList() {
+  const { t } = useTranslation('default');
   const dispatch = useDispatch();
   const posts = useSelector(getPosts);
   const pagination = useSelector(getPostsPagination);
@@ -695,8 +697,8 @@ function PostsList() {
     [dispatch],
   );
 
-  if (!initialized && loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
+  if (!initialized && loading) return <div>{t('loading', 'Loading...')}</div>;
+  if (error) return <div>{t('error_msg', 'Error: {{error}}', { error })}</div>;
 
   return (
     <div>
@@ -704,29 +706,31 @@ function PostsList() {
         onClick={() => handleCreate({ title: 'New Post' })}
         disabled={creating}
       >
-        {creating ? 'Creating...' : 'Create Post'}
+        {creating ? t('creating', 'Creating...') : t('create_post', 'Create Post')}
       </button>
 
       {posts.map(post => (
         <div key={post.id}>
           <span>{post.title}</span>
           <button onClick={() => handleDelete(post.id)} disabled={deleting}>
-            Delete
+            {t('delete', 'Delete')}
           </button>
         </div>
       ))}
 
       {pagination && (
         <div>
-          Page {pagination.page} of{' '}
-          {Math.ceil(pagination.total / pagination.limit)}
+          {t('pagination_info', 'Page {{page}} of {{total}}', { 
+            page: pagination.page, 
+            total: Math.ceil(pagination.total / pagination.limit) 
+          })}
           <button
             onClick={() => handlePageChange(pagination.page + 1)}
             disabled={
               pagination.page >= Math.ceil(pagination.total / pagination.limit)
             }
           >
-            Next
+            {t('next', 'Next')}
           </button>
         </div>
       )}

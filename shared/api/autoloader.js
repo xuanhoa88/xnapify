@@ -72,6 +72,7 @@ const CORE_MODULES = new Set([
   'emails',
   'webhooks',
   'search',
+  'settings',
   'activities',
   ...parseEnvCoreModules(),
 ]);

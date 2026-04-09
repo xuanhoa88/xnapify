@@ -104,7 +104,7 @@ Every API route **must** have RBAC guards unless explicitly public.
 |-------|-------------|
 | 🔴 `_route.js` exports `get`/`post`/`put`/`delete` as plain functions | Must be middleware arrays: `[requirePermission('scope'), handler]` |
 | 🔴 Admin route under `(admin)/` without permission check | All admin routes MUST have RBAC |
-| 🔴 Auth imported directly instead of via DI | Must use `req.container.resolve('auth')` or `req.app.get('container').resolve('auth')` |
+| 🔴 Auth imported directly instead of via DI | Must use `req.app.get('container').resolve('auth')` |
 | 🟡 Public route without `export const middleware = false` + comment | Must be explicit about why no auth |
 
 ### Correct Pattern: API Route

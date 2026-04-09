@@ -5,7 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import path from 'path';
 import { createFactory, TemplateManager } from './factory';
 
 describe('Template Engine', () => {
@@ -47,7 +46,7 @@ describe('Template Engine', () => {
       });
       expect(html).toBe('');
       expect(warnSpy).toHaveBeenCalled();
-      
+
       warnSpy.mockRestore();
     });
 

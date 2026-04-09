@@ -106,6 +106,19 @@ git commit -m "feat: add specific feature"
 ```
 ````
 
+## Mandatory Final Task: Architecture & Tooling Sync
+
+Every implementation plan **MUST** end with a final task dedicated to updating external documentation or meta-codebase materials that are affected by this work. If no updates are needed, explicitly state why in the task description.
+
+### Task N: Workspace & Documentation Sync
+
+**Files:**
+- Modify: `.agent/workflows/xyz.md`
+- Modify: `README.md`
+
+- [ ] **Step 1: Update workflows and skills** (If the workflow/commands changed).
+- [ ] **Step 2: Update README or feature docs** (If the architecture changed).
+
 ## No Placeholders
 
 Every step must contain the actual content an engineer needs. These are **plan failures** — never write them:
@@ -131,6 +144,8 @@ After writing the complete plan, look at the spec with fresh eyes and check the 
 **2. Placeholder scan:** Search your plan for red flags — any of the patterns from the "No Placeholders" section above. Fix them.
 
 **3. Type consistency:** Do the types, method signatures, and property names you used in later tasks match what you defined in earlier tasks? A function called `clearLayers()` in Task 3 but `clearFullLayers()` in Task 7 is a bug.
+
+**4. Documentation Sync:** Does the plan end with a final task to update related `.agent/workflows/`, `.agent/skills/`, and `README.md`? If not, add it.
 
 If you find issues, fix them inline. No need to re-review — just fix and move on. If you find a spec requirement with no task, add the task.
 

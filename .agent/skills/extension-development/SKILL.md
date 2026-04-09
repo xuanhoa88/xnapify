@@ -214,6 +214,7 @@ export default {
 - Ensure every event listener registered in `boot` is explicitly cleaned up in `shutdown`. Memory leaks will crash the hot-reloading pipeline.
 - Make all database interactions within `install/uninstall` defensively coded (`try/catch`), as they execute during sensitive state transitions.
 - Use `providers()` for Redux reducer injection — NOT `boot()`. The store is only available after `runProviders()`.
+- **i18n & Localization:** Extracted strings and `translations/en-US.json` MUST be used. Do not hardcode raw strings into extension components or API responses.
 
 ---
 

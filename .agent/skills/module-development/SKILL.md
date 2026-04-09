@@ -52,6 +52,7 @@ Modules interact with the core framework by exporting a **default object** with 
 1. **Setup Directory:** Create `src/apps/[module_name]/views/`.
 2. **The Index File (`views/index.js`):** Export a `default` object with the following hooks:
 
+   - `translations()`: returns the Webpack context for frontend locale JSON files.
    - `providers({ container })`: bind UI components or Redux selectors/thunks to the container for cross-module usage.
    - `routes()`: returns the Webpack context directly (e.g., `() => viewsContext`).
 
@@ -269,6 +270,7 @@ async boot({ container }) {
 - Always use `const ContextName = require.context(...)` inside the `index.js` files precisely as described, because Webpack statically analyzes these strings.
 - **Redux injection** should happen in `_route.js` `init()` hooks, not in `views/index.js` `providers()`.
 - Guard optional services with `container.has()` before `container.make()` to avoid crashes when an engine is not loaded.
+- **i18n & Localization:** Extracted strings and `translations/en-US.json` MUST be used across all components and API responses. Do not hardcode user-facing strings.
 
 ---
 

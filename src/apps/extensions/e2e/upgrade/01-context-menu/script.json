@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "compiledAt": "2026-04-09T02:11:19.927Z",
+  "compiledAt": "2026-04-09T03:00:02.236Z",
   "testHash": "76795459315f59d096172d9cabc15dd8be988adb7b0be6fb101383a26a6b1c1c",
   "title": "Upgrade Extension via Context Menu",
   "actions": [
@@ -21,28 +21,26 @@
       "step": 3,
       "instruction": "Find an installed extension card",
       "action": "assert_visible",
-      "text": "installed extension",
-      "description": "Verify the installed extension card is visible"
+      "selector": ".extension-card",
+      "description": "Verify that an extension card is visible on the page"
     },
     {
       "step": 4,
       "instruction": "Click the \"...\" (more actions) button on that card to open the context menu",
       "action": "click_within",
       "container": {
-        "selector": "[class*='root']",
-        "hasText": "sample-extension"
+        "selector": ".extension-card"
       },
       "target": {
-        "selector": "button",
-        "text": "..."
+        "selector": "button[title='More actions']"
       },
-      "description": "Click the '...' (more actions) button on the extension card to open the context menu"
+      "description": "Click the 'More actions' button on the extension card to open the context menu"
     },
     {
       "step": 5,
       "instruction": "Click \"Check for Updates\" in the context menu",
       "action": "click",
-      "selector": "ul.context-menu li",
+      "selector": "[role='menuitem']",
       "text": "Check for Updates",
       "description": "Click 'Check for Updates' in the context menu"
     },
@@ -56,7 +54,7 @@
       "step": 7,
       "instruction": "Wait for the success toast \"Extension upgraded successfully\"",
       "action": "wait_for_text",
-      "text": "Extension upgraded successfully",
+      "text": "Extension upgraded successfully.",
       "description": "Wait for success toast indicating the extension has been upgraded successfully"
     },
     {

@@ -33,6 +33,7 @@ describe('shared/api/autoloader', () => {
         'emails',
         'webhooks',
         'search',
+        'settings',
         'activities',
         'other',
       ].map(p => `./${p}/api/index.js`);
@@ -69,6 +70,7 @@ describe('shared/api/autoloader', () => {
         'emails',
         'webhooks',
         'search',
+        'settings',
         'activities',
         'custom',
       ].map(p => `./${p}/api/index.js`);
@@ -157,6 +159,7 @@ describe('shared/api/autoloader', () => {
             'emails',
             'webhooks',
             'search',
+            'settings',
             'activities',
           ].map(p => `./${p}/api/index.js`),
         );
@@ -201,6 +204,7 @@ describe('shared/api/autoloader', () => {
             'emails',
             'webhooks',
             'search',
+            'settings',
             'activities',
           ].map(p => `./${p}/api/index.js`),
         );
@@ -255,6 +259,7 @@ describe('shared/api/autoloader', () => {
             'emails',
             'webhooks',
             'search',
+            'settings',
             'activities',
           ]
             .map(p => `./${p}/api/index.js`)
@@ -296,6 +301,7 @@ describe('shared/api/autoloader', () => {
             'emails',
             'webhooks',
             'search',
+            'settings',
             'activities',
           ].map(p => `./${p}/api/index.js`),
         );
@@ -332,6 +338,7 @@ describe('shared/api/autoloader', () => {
             'emails',
             'webhooks',
             'search',
+            'settings',
             'activities',
           ]
             .map(p => `./${p}/api/index.js`)
