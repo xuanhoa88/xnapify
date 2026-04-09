@@ -11,7 +11,7 @@ import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
-import { ExtensionSlot } from '@shared/extension/client';
+import { ExtensionSlot } from '../Extension';
 
 import CodeBlockActionsPopup from './CodeBlockActionsPopup';
 import ColorPickerPopup from './ColorPickerPopup';

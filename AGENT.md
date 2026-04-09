@@ -227,12 +227,12 @@ export default {
 };
 
 // Render a Slot (in your component)
-import { ExtensionSlot } from '@shared/extension/client';
+import { ExtensionSlot } from '@shared/renderer/components/Extension';
 
 <ExtensionSlot name='profile.actions' props={userData} />;
 
 // Execute Hooks (in your logic)
-import { useExtensionHooks } from '@shared/extension/client';
+import { useExtensionHooks } from '@shared/renderer/components/Extension';
 
 const hooks = useExtensionHooks();
 const results = await hooks.execute('user.validate', userData);
@@ -282,7 +282,7 @@ export async function runMyTask(payload) {
 
 ```javascript
 // 1. Define worker function (api/workers/compute.worker.js)
-export const WORKER_POOL = true;  // Marks as thread-pool eligible
+export const WORKER_POOL = true; // Marks as thread-pool eligible
 
 export function heavyCompute(data) {
   // CPU-bound work — runs in isolated thread

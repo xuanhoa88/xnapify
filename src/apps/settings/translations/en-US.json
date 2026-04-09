@@ -15,6 +15,13 @@
       "saving": "Saving...",
       "save": "Save Changes",
       "retry": "Retry"
+    },
+    "namespaces": {
+      "core": "General",
+      "auth": "Authentication",
+      "email": "Email",
+      "file": "File Storage",
+      "webhook": "Webhook"
     }
   }
 }

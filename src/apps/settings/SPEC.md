@@ -70,5 +70,35 @@ await settings.bulkUpdate([{ namespace, key, value }]);
 ## 6. Core Module Status
 `settings` is registered in `CORE_MODULES` in `shared/api/autoloader.js`. The application will fail to start if this module is missing.
 
+## 7. Extension Integration (Frontend Tab Config)
+While backend extensions can simply insert records into the `Setting` table to automatically get a tab in the admin UI, they can fully customize their tab's appearance via the frontend hook registry.
+
+**Hook ID**: `settings.tabs.config`
+
+Extensions use this in their `views/index.js` `boot()` method to return a configuration object specifying the tab's metadata:
+
+```javascript
+// Example: Extension views/index.js
+export default {
+  boot({ registry }) {
+    registry.registerHook('settings.tabs.config', () => ({
+      slack: {
+        icon: '/api/extensions/slack_plugin/static/icon.svg', // External URL, absolute path, or feather icon name (e.g., 'message-circle')
+        i18nKey: 'slack_plugin:settings.tabLabel', // Optional: Extension's own i18n translation key
+        label: 'Slack', // Hardcoded fallback label
+        order: 60, // Sort position
+        fieldOrder: ['WEBHOOK_URL', 'CHANNEL'], // Enforced field ordering
+      },
+    }));
+  }
+}
+```
+
+**Merge & Resolution Strategy:**
+- **Per-field deep merge:** Core defaults (e.g., `core`, `auth`, `webhook`) are immutable. Extension configurations apply per-field and merge dynamically.
+- **Icon Resolution:** Natively supports built-in feather names (`'zap'`), absolute paths to static extension assets, and external URLs (prefixed with `http`).
+- **Label i18n Cascade:** Resolves in the following order: `i18nKey` (from the extension's translations) -> Core i18n -> `label` -> Raw namespace string.
+- **Hot-Reload:** The UI automatically subscribes to registry changes, hot-reloading configurations when extensions are toggled.
+
 ---
 *Note: This spec reflects the CURRENT implementation of the settings module.*

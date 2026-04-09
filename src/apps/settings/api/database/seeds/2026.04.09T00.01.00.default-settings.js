@@ -82,9 +82,9 @@ const DEFAULT_SETTINGS = [
     description: 'Default sender display name',
   },
 
-  // ── Files ─────────────────────────────────────────────────────────────────
+  // ── File ─────────────────────────────────────────────────────────────────
   {
-    namespace: 'files',
+    namespace: 'file',
     key: 'STORAGE_PROVIDER',
     type: 'string',
     value: 'local',
@@ -93,7 +93,7 @@ const DEFAULT_SETTINGS = [
     description: 'Storage backend provider (e.g., local, s3, gcs)',
   },
   {
-    namespace: 'files',
+    namespace: 'file',
     key: 'MAX_UPLOAD_SIZE_MB',
     type: 'integer',
     value: 50,
@@ -102,7 +102,7 @@ const DEFAULT_SETTINGS = [
     description: 'Maximum permitted file upload size in MB',
   },
   {
-    namespace: 'files',
+    namespace: 'file',
     key: 'ALLOWED_EXTENSIONS',
     type: 'string',
     value: '.jpg,.png,.pdf,.docx',
@@ -111,38 +111,18 @@ const DEFAULT_SETTINGS = [
     description: 'Comma separated list of allowed file extensions',
   },
 
-  // ── Search ────────────────────────────────────────────────────────────────
+  // ── Webhook ──────────────────────────────────────────────────────────────
   {
-    namespace: 'search',
-    key: 'SEARCH_ENGINE',
-    type: 'string',
-    value: 'sqlite',
-    default_env_var: 'XNAPIFY_SEARCH_ENGINE',
-    is_public: false,
-    description: 'Search engine provider (sqlite, elasticsearch, meilisearch)',
-  },
-  {
-    namespace: 'search',
-    key: 'AUTO_INDEX',
-    type: 'boolean',
-    value: 'true',
-    default_env_var: null,
-    is_public: false,
-    description: 'Automatically index new records in the database',
-  },
-
-  // ── Webhooks ──────────────────────────────────────────────────────────────
-  {
-    namespace: 'webhooks',
+    namespace: 'webhook',
     key: 'WEBHOOK_TIMEOUT_MS',
     type: 'integer',
     value: 5000,
     default_env_var: null,
     is_public: false,
-    description: 'Timeout for dispatching webhooks in milliseconds',
+    description: 'Timeout for dispatching webhook in milliseconds',
   },
   {
-    namespace: 'webhooks',
+    namespace: 'webhook',
     key: 'MAX_RETRY_ATTEMPTS',
     type: 'integer',
     value: 3,
@@ -151,13 +131,14 @@ const DEFAULT_SETTINGS = [
     description: 'Number of times to retry failed webhook deliveries',
   },
   {
-    namespace: 'webhooks',
+    namespace: 'webhook',
     key: 'REQUIRE_SIGNATURE',
     type: 'boolean',
     value: 'true',
     default_env_var: null,
     is_public: true,
-    description: 'Require cryptographic payload signatures for webhook reception',
+    description:
+      'Require cryptographic payload signatures for webhook reception',
   },
 ];
 

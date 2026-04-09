@@ -17,8 +17,7 @@ import {
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
-import { ExtensionSlot } from '@shared/extension/client';
-
+import { ExtensionSlot } from '../Extension';
 import Modal from '../Modal';
 
 import s from './ToolbarPromptModal.css';

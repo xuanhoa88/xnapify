@@ -12,7 +12,7 @@
 
 import { v4 as uuidv4 } from 'uuid';
 
-const NAMESPACES = ['core', 'auth', 'email', 'files', 'search', 'webhooks'];
+const NAMESPACES = ['core', 'auth', 'email', 'file', 'webhook'];
 
 const PERMISSIONS = [
   ...NAMESPACES.flatMap(ns => [

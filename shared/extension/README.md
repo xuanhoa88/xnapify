@@ -21,7 +21,7 @@ registry.registerHook('users.created', async data => {
 **Frontend Extensibility (UI Slots):**
 
 ```jsx
-import { ExtensionSlot } from '@shared/extension/client';
+import { ExtensionSlot } from '@shared/renderer/components/Extension';
 
 // Define a slot in the main app
 export default function UserProfile() {

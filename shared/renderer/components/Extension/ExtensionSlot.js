@@ -16,9 +16,7 @@ import {
 
 import PropTypes from 'prop-types';
 
-import { AppContext } from '@shared/renderer/AppContext';
-
-import { registry } from './Registry';
+import { AppContext } from '../../AppContext';
 
 /**
  * Error boundary that catches render errors from extension components.
@@ -79,6 +77,7 @@ const ExtensionSlot = memo(function ExtensionSlot({ name, ...props }) {
   const [mounted, setMounted] = useState(false);
   const [components, setComponents] = useState([]);
   const context = useContext(AppContext);
+  const { registry } = context.container.resolve('extension');
 
   useEffect(() => {
     // Mark as mounted — this only runs on the client after hydration.
@@ -87,7 +86,7 @@ const ExtensionSlot = memo(function ExtensionSlot({ name, ...props }) {
 
   const syncComponents = useCallback(() => {
     setComponents(registry.getSlotEntries(name));
-  }, [name]);
+  }, [name, registry]);
 
   useEffect(() => {
     if (!mounted) return undefined;
@@ -97,7 +96,7 @@ const ExtensionSlot = memo(function ExtensionSlot({ name, ...props }) {
 
     // Subscribe to future changes (extensions loading later)
     return registry.subscribe(syncComponents);
-  }, [mounted, syncComponents]);
+  }, [mounted, syncComponents, registry]);
 
   return (
     <div data-slot={name}>

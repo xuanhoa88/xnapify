@@ -95,6 +95,9 @@ class AppRouter extends Router {
  * @returns {Promise<Router>} Configured router instance
  */
 export default async function initializeRouter(context, extension) {
+  // Make extension manager available in the UI container
+  context.container.instance('extension', extension);
+
   // Discover modules and run lifecycle phases (translations → providers → views)
   const { mergedAdapter } = await discoverModules(viewsContext, context);
 

@@ -206,6 +206,37 @@ export default {
 };
 ```
 
+## Settings UI Integration
+
+Extensions that add global configurations to the `Setting` table automatically receive a tab in the `/admin/settings` UI. To customize the appearance of this tab (icons, localization, field ordering), extensions should register a frontend config hook:
+
+```javascript
+// views/index.js
+export default {
+  translations() {
+    return require.context('../translations', false, /\.json$/i);
+  },
+  
+  boot({ registry }) {
+    // Inject tab metadata using the exact namespace inserted into the DB
+    registry.registerHook('settings.tabs.config', () => ({
+      my_extension: {
+        icon: '/api/extensions/my_extension/static/icon.svg', // Serves static asset
+        i18nKey: 'my_extension:settings.tabLabel',            // Uses your translations()
+        label: 'My Extension',                                // Fallback
+        order: 60,
+        fieldOrder: ['API_KEY', 'WEBHOOK_URL']
+      }
+    }));
+  },
+  
+  shutdown({ registry }) {
+    // Always cleanup!
+    registry.unregisterHook('settings.tabs.config');
+  }
+};
+```
+
 ---
 
 ## Critical Requirements

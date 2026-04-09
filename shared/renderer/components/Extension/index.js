@@ -5,4 +5,5 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-export { default } from './ExtensionManager';
+export { default as ExtensionSlot } from './ExtensionSlot';
+export * from './useExtension';

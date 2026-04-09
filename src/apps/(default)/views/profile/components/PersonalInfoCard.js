@@ -12,13 +12,13 @@ import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 
+import Button from '@shared/renderer/components/Button';
 import {
   ExtensionSlot,
   useExtensionHooks,
   useExtensionValidator,
   useExtensionFormData,
-} from '@shared/extension/client';
-import Button from '@shared/renderer/components/Button';
+} from '@shared/renderer/components/Extension';
 import Form, { useFormContext } from '@shared/renderer/components/Form';
 import Icon from '@shared/renderer/components/Icon';
 import {

@@ -80,7 +80,7 @@
 }
 
 .tabActive .tabCount {
-  background: rgba(0, 0, 0, 0.2);
+  background: rgb(0 0 0 / 20%);
   color: white;
 }
 
@@ -199,28 +199,6 @@
   min-height: 80px;
   font-family: var(--font-family-mono, 'SF Mono', Consolas, monospace);
   font-size: var(--font-size-xs);
-}
-
-
-/* Reset button */
-.resetBtn {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: 1px solid var(--color-border);
-  background: var(--color-background);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  color: var(--color-text-tertiary);
-  transition: all 0.15s ease;
-}
-
-.resetBtn:hover {
-  color: var(--color-warning);
-  border-color: var(--color-warning);
 }
 
 /* =============================================================================

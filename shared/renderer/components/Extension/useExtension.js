@@ -5,9 +5,16 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
+import {
+  useMemo,
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useContext,
+} from 'react';
 
-import { registry } from './Registry';
+import { AppContext } from '../../AppContext';
 
 /**
  * Hook to execute extension hooks
@@ -17,11 +24,14 @@ import { registry } from './Registry';
  *   await hooks.execute('profile.submit', formData);
  */
 export function useExtensionHooks() {
+  const { container } = useContext(AppContext);
+  const { registry } = container.resolve('extension');
+
   return useMemo(
     () => ({
       execute: (hookId, ...args) => registry.executeHook(hookId, ...args),
     }),
-    [],
+    [registry],
   );
 }
 
@@ -36,6 +46,9 @@ export function useExtensionHooks() {
  * @param {Object} validator - Zod instance (caller provides)
  */
 export function useExtensionValidator(hookId, baseSchema, validator) {
+  const { container } = useContext(AppContext);
+  const { registry } = container.resolve('extension');
+
   const [schema, setSchema] = useState(baseSchema);
   const [loading, setLoading] = useState(true);
 
@@ -81,7 +94,7 @@ export function useExtensionValidator(hookId, baseSchema, validator) {
     return () => {
       mounted = false;
     };
-  }, [hookId]); // Only re-run when hookId changes
+  }, [hookId, registry]); // Only re-run when hookId or registry changes
 
   return [schema, loading];
 }
@@ -96,6 +109,9 @@ export function useExtensionValidator(hookId, baseSchema, validator) {
  * @param {any} context - Context to pass to the hook
  */
 export function useExtensionFormData(hookId, context) {
+  const { container } = useContext(AppContext);
+  const { registry } = container.resolve('extension');
+
   const [formData, setFormData] = useState({});
   const [loading, setLoading] = useState(true);
 
@@ -136,7 +152,7 @@ export function useExtensionFormData(hookId, context) {
     return () => {
       mounted = false;
     };
-  }, [hookId, context]); // Re-run when hookId or context changes
+  }, [hookId, context, registry]); // Re-run when hookId, context, or registry changes
 
   return [formData, loading];
 }
@@ -155,18 +171,21 @@ export function useExtensionFormData(hookId, context) {
  * @returns {Array} Array of registered slot entries
  */
 export function useExtensionSlots(name) {
+  const { container } = useContext(AppContext);
+  const { registry } = container.resolve('extension');
+
   const [components, setComponents] = useState(() =>
     registry.getSlotEntries(name),
   );
 
   const sync = useCallback(() => {
     setComponents(registry.getSlotEntries(name));
-  }, [name]);
+  }, [name, registry]);
 
   useEffect(() => {
     sync();
     return registry.subscribe(sync);
-  }, [sync]);
+  }, [sync, registry]);
 
   return components;
 }

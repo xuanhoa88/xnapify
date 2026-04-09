@@ -21,6 +21,7 @@ import Loader from '@shared/renderer/components/Loader';
 import { useRbac } from '@shared/renderer/components/Rbac';
 import Table from '@shared/renderer/components/Table';
 
+import { useSettingsTabConfig } from '../hooks/useSettingsTabConfig';
 import {
   fetchSettings,
   saveNamespaceSettings,
@@ -55,40 +56,10 @@ function SaveButton() {
 
 function SettingRow({ setting, canWrite }) {
   const { t } = useTranslation();
-  const { setValue, watch } = useFormContext();
 
   const name = setting.key;
-  const currentValue = watch(name);
-
-  // Consider null, empty string, or NaN as "falling back to default env var"
-  const isOverridden =
-    currentValue !== null &&
-    currentValue !== '' &&
-    !(typeof currentValue === 'number' && Number.isNaN(currentValue));
-
-  const handleReset = useCallback(() => {
-    setValue(name, null, { shouldDirty: true, shouldValidate: true });
-  }, [name, setValue]);
 
   const renderInput = () => {
-    // Intelligent heuristic for textareas based on setting key naming convention
-    const upperKey = setting.key.toUpperCase();
-    const isDescriptive =
-      upperKey.includes('DESC') ||
-      upperKey.includes('MESSAGE') ||
-      upperKey.includes('TEXT');
-
-    if (setting.type === 'string' && isDescriptive) {
-      return (
-        <Form.Textarea
-          disabled={!canWrite}
-          rows={3}
-          spellCheck={false}
-          className={s.textarea}
-        />
-      );
-    }
-
     switch (setting.type) {
       case 'boolean':
         return <Form.Switch disabled={!canWrite} />;
@@ -105,8 +76,25 @@ function SettingRow({ setting, canWrite }) {
             className={s.textarea}
           />
         );
-      default:
+      default: {
+        // Intelligent heuristic for textareas based on setting key naming convention
+        const upperKey = setting.key.toUpperCase();
+        const isDescriptive =
+          upperKey.includes('DESC') ||
+          upperKey.includes('MESSAGE') ||
+          upperKey.includes('TEXT');
+        if (setting.type === 'string' && isDescriptive) {
+          return (
+            <Form.Textarea
+              disabled={!canWrite}
+              rows={3}
+              spellCheck={false}
+              className={s.textarea}
+            />
+          );
+        }
         return <Form.Input disabled={!canWrite} />;
+      }
     }
   };
 
@@ -147,16 +135,6 @@ function SettingRow({ setting, canWrite }) {
         <Form.Field name={name} showError={false} className={s.formFieldReset}>
           {renderInput()}
         </Form.Field>
-        {canWrite && setting.defaultEnvVar && isOverridden && (
-          <button
-            type='button'
-            className={s.resetBtn}
-            onClick={handleReset}
-            title={t('admin:settings.resetToDefault', 'Reset to env default')}
-          >
-            <Icon name='rotate-ccw' size={12} />
-          </button>
-        )}
       </div>
     </div>
   );
@@ -176,68 +154,43 @@ SettingRow.propTypes = {
 };
 
 // =============================================================================
-// Namespace icons — maps module names to feather icons
+// Namespace helpers
 // =============================================================================
 
-const NAMESPACE_ICONS = Object.freeze({
-  core: 'globe',
-  auth: 'lock',
-  email: 'mail',
-  files: 'folder',
-  search: 'search',
-  webhooks: 'zap',
-});
-
-function getNamespaceIcon(ns) {
-  return NAMESPACE_ICONS[ns] || 'settings';
+/**
+ * Resolve namespace label with i18n-first cascade:
+ * 1. Extension-provided i18nKey (extension owns its own translations)
+ * 2. Core i18n key (settings module translations)
+ * 3. Hardcoded label fallback from config
+ * 4. Raw namespace string
+ */
+function getNamespaceLabel(ns, t, labels, translationKeys) {
+  // 1. Extension-provided i18n key
+  if (translationKeys[ns]) {
+    const translated = t(translationKeys[ns]);
+    if (translated !== translationKeys[ns]) return translated;
+  }
+  // 2. Core module i18n key
+  const coreKey = `admin:settings.namespaces.${ns}`;
+  const coreTranslated = t(coreKey);
+  if (coreTranslated !== coreKey) return coreTranslated;
+  // 3. Hardcoded label fallback
+  return labels[ns] || ns;
 }
 
-// Enterprise-grade logical ordering for tabs
-const NAMESPACE_ORDER = [
-  'core',
-  'auth',
-  'email',
-  'files',
-  'search',
-  'webhooks',
-  'system',
-];
-
-function sortNamespaces(namespaces) {
+function sortNamespaces(namespaces, order) {
   return [...namespaces].sort((a, b) => {
-    const idxA = NAMESPACE_ORDER.indexOf(a);
-    const idxB = NAMESPACE_ORDER.indexOf(b);
+    const idxA = order.indexOf(a);
+    const idxB = order.indexOf(b);
     if (idxA === -1 && idxB === -1) return a.localeCompare(b);
-    if (idxA === -1) return 1; /* unlisted go to bottom */
+    if (idxA === -1) return 1;
     if (idxB === -1) return -1;
     return idxA - idxB;
   });
 }
 
-function getNamespaceLabel(ns, t) {
-  const defaultLabels = {
-    core: 'General',
-    auth: 'Authentication',
-    email: 'Email Configuration',
-    files: 'File Storage',
-    search: 'Search Engine',
-    webhooks: 'Webhooks',
-  };
-  return t(`admin:settings.namespaces.${ns}`, defaultLabels[ns] || ns);
-}
-
-// Enterprise-grade logical ordering for fields within namespaces
-const SETTING_FIELD_ORDER = Object.freeze({
-  core: ['APP_NAME', 'APP_DESCRIPTION', 'MAINTENANCE_MODE'],
-  auth: ['ALLOW_REGISTRATION', 'SESSION_TTL'],
-  email: ['FROM_NAME', 'FROM_ADDRESS'],
-  files: ['STORAGE_PROVIDER', 'ALLOWED_EXTENSIONS', 'MAX_UPLOAD_SIZE_MB'],
-  search: ['SEARCH_ENGINE', 'AUTO_INDEX'],
-  webhooks: ['REQUIRE_SIGNATURE', 'WEBHOOK_TIMEOUT_MS', 'MAX_RETRY_ATTEMPTS'],
-});
-
-function sortSettingFields(namespace, settings) {
-  const order = SETTING_FIELD_ORDER[namespace] || [];
+function sortSettingFields(namespace, settings, fieldOrder) {
+  const order = (fieldOrder && fieldOrder[namespace]) || [];
   return [...settings].sort((a, b) => {
     const idxA = order.indexOf(a.key);
     const idxB = order.indexOf(b.key);
@@ -252,7 +205,14 @@ function sortSettingFields(namespace, settings) {
 // Settings Builder Form
 // =============================================================================
 
-function SettingsBuilderForm({ namespace, settings }) {
+function SettingsBuilderForm({
+  namespace,
+  settings,
+  icons,
+  labels,
+  translationKeys,
+  fieldOrder,
+}) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const { hasPermission } = useRbac();
@@ -266,8 +226,8 @@ function SettingsBuilderForm({ namespace, settings }) {
   }, [namespace, hasPermission]);
 
   const sortedFields = useMemo(() => {
-    return sortSettingFields(namespace, settings);
-  }, [namespace, settings]);
+    return sortSettingFields(namespace, settings, fieldOrder);
+  }, [namespace, settings, fieldOrder]);
 
   const defaultValues = useMemo(() => {
     const vals = {};
@@ -306,13 +266,16 @@ function SettingsBuilderForm({ namespace, settings }) {
     [dispatch, namespace],
   );
 
+  const icon = (icons && icons[namespace]) || 'settings';
+  const label = getNamespaceLabel(namespace, t, labels, translationKeys);
+
   return (
     <Form defaultValues={defaultValues} onSubmit={handleSave}>
       <Card variant='default'>
         <Card.Header>
           <div className={s.panelHeader}>
-            <Icon name={getNamespaceIcon(namespace)} size={20} />
-            <h3 className={s.panelTitle}>{getNamespaceLabel(namespace, t)}</h3>
+            <Icon name={icon} size={20} />
+            <h3 className={s.panelTitle}>{label}</h3>
             {canWrite && (
               <div className={s.panelHeaderActions}>
                 <SaveButton />
@@ -337,16 +300,22 @@ function SettingsBuilderForm({ namespace, settings }) {
 SettingsBuilderForm.propTypes = {
   namespace: PropTypes.string.isRequired,
   settings: PropTypes.array.isRequired,
+  icons: PropTypes.object.isRequired,
+  labels: PropTypes.object.isRequired,
+  translationKeys: PropTypes.object.isRequired,
+  fieldOrder: PropTypes.object.isRequired,
 };
 
 // =============================================================================
 // Main component
 // =============================================================================
 
-function SettingsPage() {
+function SettingsPage({ context }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const { hasPermission } = useRbac();
+
+  const { icons, labels, translationKeys, order, fieldOrder } = useSettingsTabConfig();
 
   const groups = useSelector(selectGroups);
   const loading = useSelector(selectLoading);
@@ -356,8 +325,8 @@ function SettingsPage() {
   const [activeTab, setActiveTab] = useState(null);
 
   const rawNamespaces = useMemo(
-    () => (groups ? sortNamespaces(Object.keys(groups)) : []),
-    [groups],
+    () => (groups ? sortNamespaces(Object.keys(groups), order) : []),
+    [groups, order],
   );
 
   const namespaces = useMemo(() => {
@@ -440,26 +409,45 @@ function SettingsPage() {
               className={`${s.tab} ${activeTab === ns ? s.tabActive : ''}`}
               onClick={() => setActiveTab(ns)}
             >
-              <Icon name={getNamespaceIcon(ns)} size={16} />
-              <span className={s.tabLabel}>{getNamespaceLabel(ns, t)}</span>
+              <Icon name={icons[ns] || 'settings'} size={16} />
+              <span className={s.tabLabel}>
+                {getNamespaceLabel(ns, t, labels, translationKeys)}
+              </span>
               <span className={s.tabCount}>{groups[ns].length}</span>
             </button>
           ))}
         </nav>
 
-        {/* Settings panel */}
+        {/* Settings panels */}
         <div className={s.panel}>
-          {activeTab && groups[activeTab] && (
-            <SettingsBuilderForm
-              key={activeTab}
-              namespace={activeTab}
-              settings={groups[activeTab]}
-            />
-          )}
+          {namespaces.map(ns => {
+            if (!groups[ns]) return null;
+            return (
+              <div
+                key={ns}
+                style={{ display: activeTab === ns ? 'block' : 'none' }}
+              >
+                <SettingsBuilderForm
+                  namespace={ns}
+                  settings={groups[ns]}
+                  icons={icons}
+                  labels={labels}
+                  translationKeys={translationKeys}
+                  fieldOrder={fieldOrder}
+                />
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
   );
 }
+
+SettingsPage.propTypes = {
+  context: PropTypes.shape({
+    container: PropTypes.object.isRequired,
+  }).isRequired,
+};
 
 export default SettingsPage;
