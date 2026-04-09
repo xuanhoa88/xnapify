@@ -39,7 +39,11 @@ const FormNumberInput = forwardRef(function FormNumberInput$(
   const { id, name, error } = useFormField();
   const { register, setValue, watch } = useFormContext();
 
-  const currentValue = watch(name) || min;
+  const formValue = watch(name);
+  const numericValue =
+    formValue === '' || formValue == null || Number.isNaN(formValue)
+      ? min
+      : Number(formValue);
 
   // Get registration props including ref
   const { ref: registerRef, ...registerProps } = register(name, {
@@ -47,20 +51,19 @@ const FormNumberInput = forwardRef(function FormNumberInput$(
   });
 
   // Merge refs
-  // Merge refs
   const handleRef = useMergeRefs(registerRef, forwardedRef);
 
   const increment = () => {
-    const newValue = Number(currentValue) + step;
+    const newValue = numericValue + step;
     if (max === undefined || newValue <= max) {
-      setValue(name, newValue);
+      setValue(name, newValue, { shouldDirty: true, shouldValidate: true });
     }
   };
 
   const decrement = () => {
-    const newValue = Number(currentValue) - step;
+    const newValue = numericValue - step;
     if (newValue >= min) {
-      setValue(name, newValue);
+      setValue(name, newValue, { shouldDirty: true, shouldValidate: true });
     }
   };
 
@@ -70,7 +73,7 @@ const FormNumberInput = forwardRef(function FormNumberInput$(
         type='button'
         className={s.button}
         onClick={decrement}
-        disabled={disabled || Number(currentValue) <= min}
+        disabled={disabled || numericValue <= min}
         aria-label='Decrease'
         tabIndex={-1}
       >
@@ -95,7 +98,7 @@ const FormNumberInput = forwardRef(function FormNumberInput$(
         type='button'
         className={s.button}
         onClick={increment}
-        disabled={disabled || (max != null && Number(currentValue) >= max)}
+        disabled={disabled || (max != null && numericValue >= max)}
         aria-label='Increase'
         tabIndex={-1}
       >

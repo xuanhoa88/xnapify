@@ -7,6 +7,7 @@
 
 import { useEffect, useCallback, useState, useMemo } from 'react';
 
+import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
@@ -22,11 +23,10 @@ import Table from '@shared/renderer/components/Table';
 
 import {
   fetchSettings,
-  saveSettings,
+  saveNamespaceSettings,
   selectGroups,
   selectLoading,
   selectError,
-  selectSaving,
   selectInitialized,
 } from '../redux';
 
@@ -55,15 +55,40 @@ function SaveButton() {
 
 function SettingRow({ setting, canWrite }) {
   const { t } = useTranslation();
-  const { setValue } = useFormContext();
+  const { setValue, watch } = useFormContext();
 
-  const name = `${setting.namespace}___${setting.key}`;
+  const name = setting.key;
+  const currentValue = watch(name);
+
+  // Consider null, empty string, or NaN as "falling back to default env var"
+  const isOverridden =
+    currentValue !== null &&
+    currentValue !== '' &&
+    !(typeof currentValue === 'number' && Number.isNaN(currentValue));
 
   const handleReset = useCallback(() => {
-    setValue(name, null, { shouldDirty: true });
+    setValue(name, null, { shouldDirty: true, shouldValidate: true });
   }, [name, setValue]);
 
   const renderInput = () => {
+    // Intelligent heuristic for textareas based on setting key naming convention
+    const upperKey = setting.key.toUpperCase();
+    const isDescriptive =
+      upperKey.includes('DESC') ||
+      upperKey.includes('MESSAGE') ||
+      upperKey.includes('TEXT');
+
+    if (setting.type === 'string' && isDescriptive) {
+      return (
+        <Form.Textarea
+          disabled={!canWrite}
+          rows={3}
+          spellCheck={false}
+          className={s.textarea}
+        />
+      );
+    }
+
     switch (setting.type) {
       case 'boolean':
         return <Form.Switch disabled={!canWrite} />;
@@ -94,10 +119,14 @@ function SettingRow({ setting, canWrite }) {
             {setting.type}
           </span>
           {setting.isPublic && (
-            <span className={`${s.badge} ${s.badgePublic}`}>public</span>
+            <span className={`${s.badge} ${s.badgePublic}`}>
+              {t('admin:settings.badgePublic', 'public')}
+            </span>
           )}
           {setting.isDefault && (
-            <span className={`${s.badge} ${s.badgeDefault}`}>env default</span>
+            <span className={`${s.badge} ${s.badgeDefault}`}>
+              {t('admin:settings.badgeDefault', 'env default')}
+            </span>
           )}
         </div>
         {setting.description && (
@@ -105,15 +134,20 @@ function SettingRow({ setting, canWrite }) {
         )}
         {setting.defaultEnvVar && (
           <p className={s.settingEnvHint}>
-            Fallback: <code>{setting.defaultEnvVar}</code>
+            {t('admin:settings.fallback', 'Fallback: ')}
+            <code>{setting.defaultEnvVar}</code>
           </p>
         )}
       </div>
-      <div className={s.settingControl}>
+      <div
+        className={clsx(s.settingControl, {
+          [s.settingControlRight]: setting.type === 'boolean',
+        })}
+      >
         <Form.Field name={name} showError={false} className={s.formFieldReset}>
           {renderInput()}
         </Form.Field>
-        {canWrite && setting.defaultEnvVar && (
+        {canWrite && setting.defaultEnvVar && isOverridden && (
           <button
             type='button'
             className={s.resetBtn}
@@ -170,7 +204,7 @@ const NAMESPACE_ORDER = [
 ];
 
 function sortNamespaces(namespaces) {
-  return namespaces.sort((a, b) => {
+  return [...namespaces].sort((a, b) => {
     const idxA = NAMESPACE_ORDER.indexOf(a);
     const idxB = NAMESPACE_ORDER.indexOf(b);
     if (idxA === -1 && idxB === -1) return a.localeCompare(b);
@@ -192,6 +226,119 @@ function getNamespaceLabel(ns, t) {
   return t(`admin:settings.namespaces.${ns}`, defaultLabels[ns] || ns);
 }
 
+// Enterprise-grade logical ordering for fields within namespaces
+const SETTING_FIELD_ORDER = Object.freeze({
+  core: ['APP_NAME', 'APP_DESCRIPTION', 'MAINTENANCE_MODE'],
+  auth: ['ALLOW_REGISTRATION', 'SESSION_TTL'],
+  email: ['FROM_NAME', 'FROM_ADDRESS'],
+  files: ['STORAGE_PROVIDER', 'ALLOWED_EXTENSIONS', 'MAX_UPLOAD_SIZE_MB'],
+  search: ['SEARCH_ENGINE', 'AUTO_INDEX'],
+  webhooks: ['REQUIRE_SIGNATURE', 'WEBHOOK_TIMEOUT_MS', 'MAX_RETRY_ATTEMPTS'],
+});
+
+function sortSettingFields(namespace, settings) {
+  const order = SETTING_FIELD_ORDER[namespace] || [];
+  return [...settings].sort((a, b) => {
+    const idxA = order.indexOf(a.key);
+    const idxB = order.indexOf(b.key);
+    if (idxA === -1 && idxB === -1) return a.key.localeCompare(b.key);
+    if (idxA === -1) return 1;
+    if (idxB === -1) return -1;
+    return idxA - idxB;
+  });
+}
+
+// =============================================================================
+// Settings Builder Form
+// =============================================================================
+
+function SettingsBuilderForm({ namespace, settings }) {
+  const { t } = useTranslation();
+  const dispatch = useDispatch();
+  const { hasPermission } = useRbac();
+
+  const canWrite = useMemo(() => {
+    return (
+      hasPermission(`settings.${namespace}:write`) ||
+      hasPermission('settings:*') ||
+      hasPermission('*:*')
+    );
+  }, [namespace, hasPermission]);
+
+  const sortedFields = useMemo(() => {
+    return sortSettingFields(namespace, settings);
+  }, [namespace, settings]);
+
+  const defaultValues = useMemo(() => {
+    const vals = {};
+    settings.forEach(item => {
+      let val = item.value;
+      if (item.type === 'boolean') {
+        val = val === 'true' || val === true;
+      }
+      vals[item.key] = val;
+    });
+    return vals;
+  }, [settings]);
+
+  const handleSave = useCallback(
+    async (data, methods) => {
+      const dirty = methods.formState.dirtyFields;
+      if (Object.keys(dirty).length === 0) return;
+
+      const payload = {};
+      Object.keys(dirty).forEach(key => {
+        let val = data[key];
+        if (typeof val === 'number' && Number.isNaN(val)) val = null;
+        if (val === '') val = null;
+        payload[key] = val;
+      });
+
+      if (Object.keys(payload).length > 0) {
+        const result = await dispatch(
+          saveNamespaceSettings({ namespace, payload }),
+        );
+        if (!result.error) {
+          dispatch(fetchSettings());
+        }
+      }
+    },
+    [dispatch, namespace],
+  );
+
+  return (
+    <Form defaultValues={defaultValues} onSubmit={handleSave}>
+      <Card variant='default'>
+        <Card.Header>
+          <div className={s.panelHeader}>
+            <Icon name={getNamespaceIcon(namespace)} size={20} />
+            <h3 className={s.panelTitle}>{getNamespaceLabel(namespace, t)}</h3>
+            {canWrite && (
+              <div className={s.panelHeaderActions}>
+                <SaveButton />
+              </div>
+            )}
+          </div>
+        </Card.Header>
+        <Card.Body className={s.panelBody}>
+          {sortedFields.map(setting => (
+            <SettingRow
+              key={`${setting.namespace}___${setting.key}`}
+              setting={setting}
+              canWrite={canWrite}
+            />
+          ))}
+        </Card.Body>
+      </Card>
+    </Form>
+  );
+}
+
+SettingsBuilderForm.propTypes = {
+  namespace: PropTypes.string.isRequired,
+  settings: PropTypes.array.isRequired,
+};
+
 // =============================================================================
 // Main component
 // =============================================================================
@@ -200,15 +347,27 @@ function SettingsPage() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const { hasPermission } = useRbac();
-  const canWrite = hasPermission('settings:write');
 
   const groups = useSelector(selectGroups);
   const loading = useSelector(selectLoading);
-  const saving = useSelector(selectSaving);
   const initialized = useSelector(selectInitialized);
   const error = useSelector(selectError);
 
   const [activeTab, setActiveTab] = useState(null);
+
+  const rawNamespaces = useMemo(
+    () => (groups ? sortNamespaces(Object.keys(groups)) : []),
+    [groups],
+  );
+
+  const namespaces = useMemo(() => {
+    return rawNamespaces.filter(
+      ns =>
+        hasPermission(`settings.${ns}:read`) ||
+        hasPermission('settings:*') ||
+        hasPermission('*:*'),
+    );
+  }, [rawNamespaces, hasPermission]);
 
   useEffect(() => {
     dispatch(fetchSettings());
@@ -216,66 +375,10 @@ function SettingsPage() {
 
   // Set first namespace as active tab when data loads
   useEffect(() => {
-    if (!activeTab && groups) {
-      const sortedNamespaces = sortNamespaces(Object.keys(groups));
-      if (sortedNamespaces.length > 0) {
-        setActiveTab(sortedNamespaces[0]);
-      }
+    if (!activeTab && namespaces.length > 0) {
+      setActiveTab(namespaces[0]);
     }
-  }, [groups, activeTab]);
-
-  const defaultValues = useMemo(() => {
-    if (!groups) return {};
-    const vals = {};
-    Object.values(groups).forEach(settings => {
-      settings.forEach(item => {
-        let val = item.value;
-        if (item.type === 'boolean') {
-          val = val === 'true' || val === true;
-        }
-        vals[`${item.namespace}___${item.key}`] = val;
-      });
-    });
-    return vals;
-  }, [groups]);
-
-  const handleSave = useCallback(
-    async (data, methods) => {
-      const dirty = methods.formState.dirtyFields;
-      if (Object.keys(dirty).length === 0) return;
-
-      const updates = Object.keys(dirty).map(dirtyKey => {
-        const [namespace, ...keyParts] = dirtyKey.split('___');
-        const key = keyParts.join('___');
-        let value = data[dirtyKey];
-
-        if (value === null) {
-          // Keep as null
-        } else if (typeof value === 'boolean') {
-          value = value ? 'true' : 'false';
-        } else if (value === undefined) {
-          value = '';
-        } else {
-          value = String(value);
-        }
-
-        return { namespace, key, value };
-      });
-
-      if (updates.length > 0) {
-        const result = await dispatch(saveSettings(updates));
-        if (!result.error) {
-          dispatch(fetchSettings());
-        }
-      }
-    },
-    [dispatch],
-  );
-
-  const namespaces = useMemo(
-    () => (groups ? sortNamespaces(Object.keys(groups)) : []),
-    [groups],
-  );
+  }, [namespaces, activeTab]);
 
   // ── Loading ─────────────────────────────────────────────────────────────────
   if (!initialized || (loading && namespaces.length === 0)) {
@@ -317,11 +420,7 @@ function SettingsPage() {
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <Form
-      defaultValues={defaultValues}
-      onSubmit={handleSave}
-      className={s.root}
-    >
+    <div className={s.root}>
       <Box.Header
         icon={<Icon name='settings' size={24} />}
         title={t('admin:settings.title', 'Global Settings')}
@@ -329,9 +428,7 @@ function SettingsPage() {
           'admin:settings.subtitle',
           'Configure system-wide settings for all modules',
         )}
-      >
-        {canWrite && <SaveButton />}
-      </Box.Header>
+      />
 
       <div className={s.layout}>
         {/* Namespace tabs */}
@@ -353,29 +450,15 @@ function SettingsPage() {
         {/* Settings panel */}
         <div className={s.panel}>
           {activeTab && groups[activeTab] && (
-            <Card variant='default'>
-              <Card.Header>
-                <div className={s.panelHeader}>
-                  <Icon name={getNamespaceIcon(activeTab)} size={20} />
-                  <h3 className={s.panelTitle}>
-                    {getNamespaceLabel(activeTab, t)}
-                  </h3>
-                </div>
-              </Card.Header>
-              <Card.Body className={s.panelBody}>
-                {groups[activeTab].map(setting => (
-                  <SettingRow
-                    key={`${setting.namespace}___${setting.key}`}
-                    setting={setting}
-                    canWrite={canWrite}
-                  />
-                ))}
-              </Card.Body>
-            </Card>
+            <SettingsBuilderForm
+              key={activeTab}
+              namespace={activeTab}
+              settings={groups[activeTab]}
+            />
           )}
         </div>
       </div>
-    </Form>
+    </div>
   );
 }
 

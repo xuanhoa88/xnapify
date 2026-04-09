@@ -65,4 +65,13 @@ For multi-step tasks, state a brief plan:
 3. [Step] → verify: [check]
 ```
 
+## 5. Pre-Flight Verification & Linting
+
+**Never write blindly. Always verify syntax against project standards.**
+
+When writing or editing code, ALWAYS apply the `coding-standards` lint rules:
+- **No Optional Chaining (`?.`) or Nullish Coalescing (`??`)**: They are explicitly banned via `no-restricted-syntax` ESLint rules. Use fallback conditionals (`if (x && x.y)`).
+- **Mental Syntax Audit**: Ensure you natively self-check for unused variables, missing imports, and restricted syntax *before* presenting the final work. Because terminal `npm` constraints may periodically block you from running `npm run lint` automatically, you must rely on rigorous manual review.
+- Do not assume modern ES2020+ sugar is permitted. Always check the coding guidelines.
+
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.

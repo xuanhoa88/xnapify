@@ -81,6 +81,84 @@ const DEFAULT_SETTINGS = [
     is_public: false,
     description: 'Default sender display name',
   },
+
+  // ── Files ─────────────────────────────────────────────────────────────────
+  {
+    namespace: 'files',
+    key: 'STORAGE_PROVIDER',
+    type: 'string',
+    value: 'local',
+    default_env_var: 'XNAPIFY_STORAGE_PROVIDER',
+    is_public: true,
+    description: 'Storage backend provider (e.g., local, s3, gcs)',
+  },
+  {
+    namespace: 'files',
+    key: 'MAX_UPLOAD_SIZE_MB',
+    type: 'integer',
+    value: 50,
+    default_env_var: 'XNAPIFY_MAX_UPLOAD_SIZE',
+    is_public: true,
+    description: 'Maximum permitted file upload size in MB',
+  },
+  {
+    namespace: 'files',
+    key: 'ALLOWED_EXTENSIONS',
+    type: 'string',
+    value: '.jpg,.png,.pdf,.docx',
+    default_env_var: null,
+    is_public: true,
+    description: 'Comma separated list of allowed file extensions',
+  },
+
+  // ── Search ────────────────────────────────────────────────────────────────
+  {
+    namespace: 'search',
+    key: 'SEARCH_ENGINE',
+    type: 'string',
+    value: 'sqlite',
+    default_env_var: 'XNAPIFY_SEARCH_ENGINE',
+    is_public: false,
+    description: 'Search engine provider (sqlite, elasticsearch, meilisearch)',
+  },
+  {
+    namespace: 'search',
+    key: 'AUTO_INDEX',
+    type: 'boolean',
+    value: 'true',
+    default_env_var: null,
+    is_public: false,
+    description: 'Automatically index new records in the database',
+  },
+
+  // ── Webhooks ──────────────────────────────────────────────────────────────
+  {
+    namespace: 'webhooks',
+    key: 'WEBHOOK_TIMEOUT_MS',
+    type: 'integer',
+    value: 5000,
+    default_env_var: null,
+    is_public: false,
+    description: 'Timeout for dispatching webhooks in milliseconds',
+  },
+  {
+    namespace: 'webhooks',
+    key: 'MAX_RETRY_ATTEMPTS',
+    type: 'integer',
+    value: 3,
+    default_env_var: null,
+    is_public: false,
+    description: 'Number of times to retry failed webhook deliveries',
+  },
+  {
+    namespace: 'webhooks',
+    key: 'REQUIRE_SIGNATURE',
+    type: 'boolean',
+    value: 'true',
+    default_env_var: null,
+    is_public: true,
+    description: 'Require cryptographic payload signatures for webhook reception',
+  },
 ];
 
 export async function up(_, { container }) {

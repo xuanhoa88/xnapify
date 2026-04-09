@@ -80,7 +80,7 @@ Structure your final review using the [Response Format](#response-format) at the
 > - Naming Conventions (Variables, Functions, Booleans)
 > - Function Design (Size, Arguments, Guard Clauses)
 > - Clean Code Principles (DRY, Licenses, Comments)
-> - Syntax Restrictions (Banned APIs like Node 17+, `??`, `?.`, `??=`, etc.)
+> - Syntax Restrictions (Banned syntax like `??`, `?.`, `??=` due to Xnapify ESLint config, and missing Node 16 APIs)
 
 ---
 

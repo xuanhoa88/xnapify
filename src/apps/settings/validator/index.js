@@ -51,3 +51,8 @@ export const settingCreateSchema = z.object({
   is_public: z.boolean().default(false),
   description: z.string().nullable().optional(),
 });
+
+/**
+ * Schema for updating an arbitrary settings namespace payload
+ */
+export const namespaceUpdateSchema = z.record(z.union([z.string(), z.null()]));

@@ -292,14 +292,33 @@ export function createSettingsService(container) {
      * @returns {Promise<Object[]>} Updated settings
      */
     async bulkUpdate(updates) {
+      const { Setting, sequelize } = container.resolve('models');
       const results = [];
-      for (const update of updates) {
-        const result = await this.set(
-          update.namespace,
-          update.key,
-          update.value,
-        );
-        results.push(result);
+      await sequelize.transaction(async transaction => {
+        for (const update of updates) {
+          const row = await Setting.findOne({
+            where: { namespace: update.namespace, key: update.key },
+            transaction,
+          });
+
+          if (!row) {
+            const err = new Error(
+              `Setting not found: ${update.namespace}.${update.key}`,
+            );
+            err.name = 'SettingNotFoundError';
+            err.status = 404;
+            throw err;
+          }
+
+          row.value = update.value;
+          await row.save({ transaction });
+          results.push(formatRow(row));
+        }
+      });
+
+      // Invalidate cache after successful transaction commit
+      for (const result of results) {
+        invalidate(result.namespace, result.key);
       }
       return results;
     },

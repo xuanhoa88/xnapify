@@ -15,18 +15,19 @@ export const fetchSettings = createAsyncThunk(
   },
 );
 
+
 /**
- * Save (bulk update) settings.
+ * Save settings for a specific namespace.
  *
- * @param {Array<{namespace: string, key: string, value: string|null}>} updates
+ * @param {{namespace: string, payload: Object}} args
  */
-export const saveSettings = createAsyncThunk(
-  'settings/saveSettings',
-  async (updates, { extra: { fetch }, rejectWithValue }) => {
+export const saveNamespaceSettings = createAsyncThunk(
+  'settings/saveNamespaceSettings',
+  async ({ namespace, payload }, { extra: { fetch }, rejectWithValue }) => {
     try {
-      const { data } = await fetch('/api/admin/settings', {
+      const { data } = await fetch(`/api/admin/settings/${namespace}`, {
         method: 'PUT',
-        body: { updates },
+        body: payload,
       });
       return data;
     } catch (error) {

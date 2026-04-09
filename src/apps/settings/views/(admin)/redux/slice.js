@@ -1,6 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
 
-import { fetchSettings, saveSettings } from './thunks';
+import { fetchSettings, saveNamespaceSettings } from './thunks';
 
 export const SLICE_NAME = '@settings/admin';
 
@@ -39,11 +39,11 @@ const slice = createSlice({
         state.initialized = true; // Still mark initialized on error to show empty state/errors
       })
       // ── save ────────────────────────────────────────────────────────────
-      .addCase(saveSettings.pending, state => {
+      .addCase(saveNamespaceSettings.pending, state => {
         state.saving = true;
         state.error = null;
       })
-      .addCase(saveSettings.fulfilled, (state, action) => {
+      .addCase(saveNamespaceSettings.fulfilled, (state, action) => {
         // Merge updated settings back into groups
         const updated = action.payload;
         for (const item of updated) {
@@ -59,7 +59,7 @@ const slice = createSlice({
         }
         state.saving = false;
       })
-      .addCase(saveSettings.rejected, (state, action) => {
+      .addCase(saveNamespaceSettings.rejected, (state, action) => {
         state.error = action.payload;
         state.saving = false;
       });

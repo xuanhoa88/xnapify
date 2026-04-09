@@ -9,12 +9,24 @@
   align-items: center;
   gap: 1px;
   background: var(--color-border);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   overflow: hidden;
+  transition: var(--transition-base);
 }
 
 .numberWrapper.error {
   background: var(--color-error-border);
+  border-color: var(--color-error);
+}
+
+.numberWrapper:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 15%);
+}
+
+.numberWrapper.error:focus-within {
+  box-shadow: 0 0 0 3px rgb(239 68 68 / 15%);
 }
 
 .input {
@@ -22,6 +34,8 @@
   box-sizing: border-box;
   flex: 1;
   height: 44px;
+  /* Add min-width so it never fully collapses */
+  min-width: 60px;
   padding: 0 var(--spacing-3);
   border: none;
   outline: 0;
@@ -34,7 +48,7 @@
 }
 
 .input:focus {
-  box-shadow: inset 0 0 0 2px var(--color-primary);
+  /* Delegate focus outline to wrapper */
 }
 
 .input:disabled {

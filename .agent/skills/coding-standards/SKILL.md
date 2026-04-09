@@ -60,9 +60,9 @@ These are enforced by ESLint and **will fail lint**. Never use them:
 
 | ❌ Banned                  | Why                            | ✅ Use Instead                                                             |
 | -------------------------- | ------------------------------ | -------------------------------------------------------------------------- |
-| `??` (nullish coalescing)  | ESLint `no-restricted-syntax`  | `x != null ? x : fallback` or `x \|\| fallback`                            |
-| `??=` (nullish assignment) | ESLint `no-restricted-syntax`  | `if (x == null) x = value`                                                 |
-| `?.` (optional chaining)   | ESLint `no-restricted-syntax`  | `x && x.prop` or guard clause                                              |
+| `??` (nullish coalescing)  | Explicit ESLint config ban     | `x != null ? x : fallback` or `x \|\| fallback`                            |
+| `??=` (nullish assignment) | Explicit ESLint config ban     | `if (x == null) x = value`                                                 |
+| `?.` (optional chaining)   | Explicit ESLint config ban     | `x && x.prop` or guard clause                                              |
 | `__dangle` property access | ESLint `no-underscore-dangle`  | Rename, or add `// eslint-disable-line no-underscore-dangle` in tests only |
 | `node:` import prefix      | Fix compatibility for Node 16+ | Direct import (e.g. `import fs from 'fs'`)                                 |
 | Global `fetch()` (backend) | Missing natively in Node 16    | Use `node-fetch`, `axios`, or injected `extra.fetch`                       |

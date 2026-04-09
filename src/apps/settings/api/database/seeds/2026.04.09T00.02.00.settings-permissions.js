@@ -12,17 +12,21 @@
 
 import { v4 as uuidv4 } from 'uuid';
 
+const NAMESPACES = ['core', 'auth', 'email', 'files', 'search', 'webhooks'];
+
 const PERMISSIONS = [
-  {
-    resource: 'settings',
-    action: 'read',
-    description: 'View global settings',
-  },
-  {
-    resource: 'settings',
-    action: 'write',
-    description: 'Modify global settings',
-  },
+  ...NAMESPACES.flatMap(ns => [
+    {
+      resource: `settings.${ns}`,
+      action: 'read',
+      description: `View ${ns} settings`,
+    },
+    {
+      resource: `settings.${ns}`,
+      action: 'write',
+      description: `Modify ${ns} settings`,
+    },
+  ]),
 ];
 
 export async function up(_, { container }) {

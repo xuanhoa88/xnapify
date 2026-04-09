@@ -5,15 +5,14 @@
 
 import * as controller from '../../../controllers/settings.controller';
 
-function requirePermission(permission) {
+function requireAuth() {
   return (req, res, next) => {
     const auth = req.app.get('container').resolve('auth');
-    return auth.middlewares.requirePermission(permission)(req, res, next);
+    return auth.middlewares.requireAuth()(req, res, next);
   };
 }
 
 // GET /api/admin/settings
-export const get = [requirePermission('settings:read'), controller.list];
+export const get = [requireAuth(), controller.list];
 
-// PUT /api/admin/settings
-export const put = [requirePermission('settings:write'), controller.update];
+
