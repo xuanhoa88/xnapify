@@ -77,7 +77,9 @@ function ExtensionCard({
       variant='default'
       className={clsx(
         'extension-card',
-        extension.is_active ? 'active-extension-card' : 'inactive-extension-card',
+        extension.is_active
+          ? 'active-extension-card'
+          : 'inactive-extension-card',
         s.root,
         {
           [s.loading]: isLoading,
@@ -201,7 +203,7 @@ function ExtensionCard({
               <input
                 type='checkbox'
                 checked={extension.is_active}
-                onChange={() => { }}
+                onChange={() => {}}
                 onClick={handleToggleStatus}
                 disabled={!canUpdate}
                 aria-label={t('admin:common.toggleStatus', 'Toggle status')}

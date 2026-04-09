@@ -543,24 +543,24 @@ function Extensions() {
           <p className={s.emptyTitle}>
             {search
               ? t(
-                'admin:extensions.noSearchResults',
-                'No extensions match your search',
-              )
+                  'admin:extensions.noSearchResults',
+                  'No extensions match your search',
+                )
               : t(
-                'admin:extensions.noExtensionsInFilter',
-                'No extensions in this category',
-              )}
+                  'admin:extensions.noExtensionsInFilter',
+                  'No extensions in this category',
+                )}
           </p>
           <p className={s.emptySubtitle}>
             {search
               ? t(
-                'admin:extensions.tryDifferentSearch',
-                'Try a different search term or clear the filter.',
-              )
+                  'admin:extensions.tryDifferentSearch',
+                  'Try a different search term or clear the filter.',
+                )
               : t(
-                'admin:extensions.tryDifferentFilter',
-                'Try selecting a different filter tab.',
-              )}
+                  'admin:extensions.tryDifferentFilter',
+                  'Try selecting a different filter tab.',
+                )}
           </p>
         </div>
       ) : (

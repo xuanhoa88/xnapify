@@ -778,12 +778,35 @@ Return the JSON action to perform this step.`;
 
   let providerConfig, caller;
   if (provider !== 'stdin') {
-    providerConfig = { ...LLM_PROVIDERS[provider] };
-    if (!providerConfig) {
+    const baseProvider = LLM_PROVIDERS[provider];
+    if (!baseProvider) {
       throw new Error(
         `Unknown LLM provider: ${provider}. Use: auto, stdin, openai, anthropic, google, ollama, azure, custom`,
       );
     }
+
+    // Explicitly copy all properties from baseProvider to avoid getter issues with spread operator
+    providerConfig = {};
+    for (const key of Object.keys(baseProvider)) {
+      providerConfig[key] = baseProvider[key];
+    }
+
+    // Also copy properties that might be defined as getters
+    [
+      'baseUrl',
+      'model',
+      'endpoint',
+      'authHeader',
+      'authHeaderName',
+      'authParam',
+      'extraHeaders',
+      'jsonMode',
+      'timeout',
+    ].forEach(key => {
+      if (key in baseProvider && !(key in providerConfig)) {
+        providerConfig[key] = baseProvider[key];
+      }
+    });
 
     providerConfig.apiKey = apiKey;
     providerConfig.providerName = provider;
