@@ -24,7 +24,15 @@ import { createOperationResult, EmailError } from './errors';
  */
 async function renderTemplate(content, data) {
   if (!content || !data) return content;
-  return template.render(content, data);
+  try {
+    return await template.renderStrict(content, data);
+  } catch (error) {
+    throw new EmailError(
+      `Template compilation failed: ${error.message}`,
+      'TEMPLATE_ERROR',
+      400,
+    );
+  }
 }
 
 /**

@@ -57,9 +57,9 @@ export class TemplateManager {
       return await this.engine.parseAndRender(templateString, data);
     } catch (error) {
       console.warn(
-        `⚠️ Template rendering failed: ${error.message}. Using original content.`,
+        `⚠️ Template rendering failed: ${error.message}. Returning empty string.`,
       );
-      return templateString;
+      return '';
     }
   }
 
