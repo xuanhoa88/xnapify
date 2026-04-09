@@ -20,8 +20,6 @@ src/apps/search/
 └── api/
     ├── index.js                         # Lifecycle hooks (migrations, models, providers, boot, routes)
     ├── factory.js                       # createFactory(), registerAdapter(), withNamespace()
-    ├── hooks.js                         # search:indexers hook registration
-    ├── hooks.test.js                    # Hook tests
     ├── adapters/
     │   └── database.js                  # Native FTS adapter (SQLite, PostgreSQL, MySQL, fallback)
     ├── models/
@@ -42,7 +40,6 @@ src/apps/search/
 api/index.js
 ├── factory.js
 │   └── adapters/database.js (sequelize model)
-├── hooks.js
 ├── models/ (require.context → autoloader)
 ├── database/migrations/ (require.context → autoloader)
 └── routes/ (require.context → autoloader)
@@ -163,7 +160,7 @@ Uses `findOrCreate` — upserts by `(entityType, entityId)` unique pair.
 | `migrations` | `() => migrationsContext` | Creates `search_documents` table |
 | `models` | `() => modelsContext` | Registers `SearchDocument` model |
 | `providers` | `providers({ container })` | Binds `'search'` (lazy factory) and `'search:registerAdapter'` |
-| `boot` | `boot({ container })` | Emits `search:indexers` register hook |
+| `boot` | `boot()` | Logs initialization |
 | `routes` | `() => routesContext` | Mounts `GET /api/search` |
 
 ### Adapter Type Resolution (3-tier)
@@ -216,8 +213,8 @@ async providers({ container }) {
 ## 9. Integration Points
 
 - **Module `boot({ container })`**: Access via `container.resolve('search')`. Use `withNamespace()` to avoid collisions.
-- **Hook engine**: The search module listens for `search:indexers` hooks to trigger index registration.
-- **Consumer modules**: Users and Groups modules call `search.withNamespace('users').count()` and `indexAllUsers()` during boot.
+- **Module `providers()` hook listeners**: Consumer modules (Users, Groups) register `admin:*` hook listeners during `providers()` so they are active before seeds run (lifecycle: providers → migrations → models → seeds → boot).
+- **Seed-time indexing**: Seeds emit lifecycle hooks (e.g. `hook('admin:groups').emit('created', { group })`) which trigger search indexing via the listeners registered in `providers()`.
 
 ---
 

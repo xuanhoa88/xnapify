@@ -45,7 +45,15 @@ export async function up(_, { container }) {
     },
   ];
 
-  await Group.bulkCreate(groups);
+  const createdGroups = await Group.bulkCreate(groups);
+
+  // Emit hooks to trigger search indexing — listeners registered in providers() phase
+  const hook = container.resolve('hook');
+  if (hook) {
+    for (const group of createdGroups) {
+      await hook('admin:groups').emit('created', { group });
+    }
+  }
 }
 
 /**

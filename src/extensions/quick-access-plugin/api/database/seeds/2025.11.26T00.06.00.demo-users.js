@@ -158,6 +158,7 @@ export async function up(_, { container }) {
     include: [{ model: UserProfile, as: 'profile' }],
   });
 
+  // Emit hooks to trigger search indexing — listeners registered in providers() phase
   const hook = container.resolve('hook');
   if (hook) {
     for (const user of completeUsers) {

@@ -6,46 +6,6 @@
  */
 
 /**
- * Index all existing groups in the search engine.
- *
- * @param {Object} data - Worker data
- * @param {Object} data.search - Search engine instance
- * @param {Object} data.models - Database models
- * @param {boolean} [data.force=false] - Clear namespace before indexing
- * @returns {Promise<Object>} Indexing result with count
- */
-export async function indexAllGroups({ search, models, force = false }) {
-  if (!models.Group) return { groupsCount: 0 };
-
-  const { Group } = models;
-  const groupSearch = search.withNamespace('groups');
-
-  if (force) await groupSearch.clear();
-
-  const groups = await Group.findAll();
-
-  for (const group of groups) {
-    try {
-      await groupSearch.index({
-        entityType: 'group',
-        entityId: group.id,
-        title: group.name,
-        content: group.description || '',
-        tags: [group.category, group.type].filter(Boolean).join(', '),
-      });
-    } catch (err) {
-      console.error(
-        '[Search Worker] Error indexing group:',
-        group.name,
-        err.message,
-      );
-    }
-  }
-
-  return { groupsCount: groups.length };
-}
-
-/**
  * Index a single group in the search engine.
  *
  * @param {Object} data - Worker data

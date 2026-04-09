@@ -9,7 +9,7 @@ import * as authController from './controllers/auth.controller';
 import * as profileController from './controllers/profile.controller';
 import { authenticate as handleApiKeyStrategy } from './utils/apiKey';
 import { getUserRBACData } from './utils/rbac/fetcher';
-import { indexAllUsers, registerSearchHooks } from './workers';
+import { registerSearchHooks } from './workers';
 
 /** @type {Symbol} Ownership key for this module's persistent bindings */
 const OWNER_KEY = Symbol('__xnapify.module.users.api__');
@@ -61,29 +61,9 @@ export default {
       }),
       OWNER_KEY,
     );
-  },
 
-  async boot({ container }) {
     await registerAuthHooks(container);
 
-    const search = container.resolve('search');
-
-    if (search) {
-      registerSearchHooks(container, search);
-
-      const usersCount = await search.withNamespace('users').count();
-      if (usersCount === 0) {
-        try {
-          const r = await indexAllUsers(search, container.resolve('models'));
-          const count = r ? r.usersCount : 0;
-          console.info(`[Users] Indexed ${count} user(s) for search`);
-        } catch (e) {
-          console.error('[Users] Search indexing failed:', e.message);
-        }
-      } else {
-        // prettier-ignore
-        console.info(`[Users] Using cached search index (${usersCount} user(s))`);
-      }
-    }
+    registerSearchHooks(container);
   },
 };

@@ -6,7 +6,7 @@
  */
 
 import { SEED_GROUPS } from './constants';
-import { indexAllGroups, registerSearchHooks } from './workers';
+import { registerSearchHooks } from './workers';
 
 /** @type {Symbol} Ownership key for this module's persistent bindings */
 const OWNER_KEY = Symbol('__xnapify.module.groups.api__');
@@ -37,28 +37,7 @@ export default {
 
   async providers({ container }) {
     container.bind('groups:seed_constants', () => SEED_GROUPS, OWNER_KEY);
-  },
 
-  async boot({ container }) {
-    const search = container.resolve('search');
-
-    if (search) {
-      registerSearchHooks(container, search);
-
-      const groupsCount = await search.withNamespace('groups').count();
-      if (groupsCount === 0) {
-        try {
-          const r = await indexAllGroups(search, container.resolve('models'));
-          const count = r ? r.groupsCount : 0;
-          console.info(`[Groups] Indexed ${count} group(s) for search`);
-        } catch (e) {
-          console.error('[Groups] Search indexing failed:', e.message);
-        }
-      } else {
-        console.info(
-          `[Groups] Using cached search index (${groupsCount} group(s))`,
-        );
-      }
-    }
+    registerSearchHooks(container);
   },
 };

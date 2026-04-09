@@ -11,31 +11,14 @@
  * Provides search indexing and real-time hook registration for users.
  */
 
-import {
-  indexAllUsers as _indexAll,
-  indexUser as _indexOne,
-  removeUser as _remove,
-} from './search.worker';
-
-/**
- * Index all existing users in the background.
- *
- * @param {Object} search - Search engine instance
- * @param {Object} models - Database models
- * @param {boolean} [force=false] - Clear namespace before indexing
- * @returns {Promise<Object>} Indexing result
- */
-export async function indexAllUsers(search, models, force = false) {
-  return await _indexAll({ search, models, force });
-}
+import { indexUser as _indexOne, removeUser as _remove } from './search.worker';
 
 /**
  * Register hooks to keep the users search index in sync with mutations.
  *
  * @param {Object} container - DI container instance
- * @param {Object} search - Search engine instance
  */
-export function registerSearchHooks(container, search) {
+export function registerSearchHooks(container) {
   const hook = container.resolve('hook');
   if (!hook) return;
 
@@ -48,10 +31,12 @@ export function registerSearchHooks(container, search) {
   };
 
   const onIndex = safeExec('indexUser', async ({ user }) => {
+    const search = container.resolve('search');
     if (user) await _indexOne({ search, user });
   });
 
   const onRemove = safeExec('removeUser', async ({ user_id }) => {
+    const search = container.resolve('search');
     if (user_id) await _remove({ search, userId: user_id });
   });
 

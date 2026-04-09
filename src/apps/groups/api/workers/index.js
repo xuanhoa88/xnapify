@@ -12,30 +12,16 @@
  */
 
 import {
-  indexAllGroups as _indexAll,
   indexGroup as _indexOne,
   removeGroup as _remove,
 } from './search.worker';
 
 /**
- * Index all existing groups in the background.
- *
- * @param {Object} search - Search engine instance
- * @param {Object} models - Database models
- * @param {boolean} [force=false] - Clear namespace before indexing
- * @returns {Promise<Object>} Indexing result
- */
-export async function indexAllGroups(search, models, force = false) {
-  return await _indexAll({ search, models, force });
-}
-
-/**
  * Register hooks to keep the groups search index in sync with mutations.
  *
  * @param {Object} container - DI container instance
- * @param {Object} search - Search engine instance
  */
-export function registerSearchHooks(container, search) {
+export function registerSearchHooks(container) {
   const hook = container.resolve('hook');
   if (!hook) return;
 
@@ -48,10 +34,12 @@ export function registerSearchHooks(container, search) {
   };
 
   const onIndex = safeExec('indexGroup', async ({ group }) => {
+    const search = container.resolve('search');
     if (group) await _indexOne({ search, group });
   });
 
   const onRemove = safeExec('removeGroup', async ({ group_id }) => {
+    const search = container.resolve('search');
     if (group_id) await _remove({ search, groupId: group_id });
   });
 

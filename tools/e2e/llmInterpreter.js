@@ -564,7 +564,9 @@ async function callAnthropic(config, prompt) {
 
   const headers = {
     'Content-Type': 'application/json',
-    [config.authHeaderName]: config.authHeader(config.apiKey),
+    ...(config.authHeader && typeof config.authHeader === 'function'
+      ? { [config.authHeaderName]: config.authHeader(config.apiKey) }
+      : {}),
     ...config.extraHeaders,
   };
 
@@ -793,7 +795,12 @@ Return the JSON action to perform this step.`;
       providerConfig.timeout = parseInt(process.env.E2E_LLM_TIMEOUT, 10);
 
     // If authHeader('') produces output, the provider requires a real key
-    if (providerConfig.authHeader('') && !providerConfig.apiKey) {
+    if (
+      providerConfig.authHeader &&
+      typeof providerConfig.authHeader === 'function' &&
+      providerConfig.authHeader('') &&
+      !providerConfig.apiKey
+    ) {
       throw new Error(
         `API key required for ${provider}. Set E2E_LLM_API_KEY or provider env var (e.g., E2E_AZURE_API_KEY).`,
       );

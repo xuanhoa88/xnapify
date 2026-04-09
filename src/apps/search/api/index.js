@@ -58,17 +58,7 @@ export default {
     container.bind('search:registerAdapter', () => registerAdapter, OWNER_KEY);
   },
 
-  async boot({ container }) {
-    const hook = container.resolve('hook');
-    hook('search:indexers')
-      .emit('register', container)
-      .catch(err => {
-        console.error(
-          '[Search] Failed to emit search:indexers.register hook',
-          err,
-        );
-      });
-
+  async boot() {
     console.info('[Search] ✅ Initialized');
   },
 };

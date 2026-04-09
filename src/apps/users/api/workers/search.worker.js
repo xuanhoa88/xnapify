@@ -6,53 +6,6 @@
  */
 
 /**
- * Index all existing users in the search engine.
- *
- * @param {Object} data - Worker data
- * @param {Object} data.search - Search engine instance
- * @param {Object} data.models - Database models
- * @param {boolean} [data.force=false] - Clear namespace before indexing
- * @returns {Promise<Object>} Indexing result with count
- */
-export async function indexAllUsers({ search, models, force = false }) {
-  if (!models.User) return { usersCount: 0 };
-
-  const { User, UserProfile } = models;
-  const userSearch = search.withNamespace('users');
-
-  if (force) await userSearch.clear();
-
-  const users = await User.findAll({
-    include: [{ model: UserProfile, as: 'profile' }],
-  });
-
-  for (const user of users) {
-    try {
-      await userSearch.index({
-        entityType: 'user',
-        entityId: user.id,
-        title: (user.profile && user.profile.display_name) || user.email,
-        content: [
-          user.email,
-          user.profile && user.profile.first_name,
-          user.profile && user.profile.last_name,
-        ]
-          .filter(Boolean)
-          .join(' '),
-      });
-    } catch (err) {
-      console.error(
-        '[Search Worker] Error indexing user:',
-        user.email,
-        err.message,
-      );
-    }
-  }
-
-  return { usersCount: users.length };
-}
-
-/**
  * Index a single user in the search engine.
  *
  * @param {Object} data - Worker data
