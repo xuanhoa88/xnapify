@@ -405,7 +405,7 @@ describe('requirePermission', () => {
   });
 
   test('should allow access for admin role', async () => {
-    req.user.roles = ['admin'];
+    req.user.is_admin = true;
     const middleware = requirePermission('users:read');
     await middleware(req, res, next);
 
@@ -544,7 +544,7 @@ describe('requireAnyPermission', () => {
   });
 
   test('should allow access for admin role', async () => {
-    req.user.roles = ['admin'];
+    req.user.is_admin = true;
     const middleware = requireAnyPermission('users:read', 'users:write');
     await middleware(req, res, next);
 
@@ -642,7 +642,7 @@ describe('requireRole', () => {
   });
 
   test('should require ALL roles when multiple are specified', async () => {
-    req.user.roles = ['admin'];
+    req.user.is_admin = true;
     const middleware = requireRole('admin', 'superuser');
     await middleware(req, res, next);
 
@@ -797,7 +797,7 @@ describe('requireRoleLevel', () => {
   });
 
   test('should return 500 for invalid minimum role configuration', async () => {
-    req.user.roles = ['admin'];
+    req.user.is_admin = true;
     const middleware = requireRoleLevel('nonexistent', HIERARCHY);
     await middleware(req, res, next);
 
@@ -987,7 +987,7 @@ describe('requireOwnership', () => {
   });
 
   test('should allow access for admin role (bypass)', async () => {
-    req.user.roles = ['admin'];
+    req.user.is_admin = true;
     req.params.userId = '999';
     const middleware = requireOwnership();
     await middleware(req, res, next);
@@ -996,7 +996,7 @@ describe('requireOwnership', () => {
   });
 
   test('should not bypass for admin when adminBypass is false', async () => {
-    req.user.roles = ['admin'];
+    req.user.is_admin = true;
     req.params.userId = '999';
     const middleware = requireOwnership({ adminBypass: false });
     await middleware(req, res, next);
@@ -1111,7 +1111,7 @@ describe('requireFlexibleOwnership', () => {
   });
 
   test('should allow access for admin role (bypass)', async () => {
-    req.user.roles = ['admin'];
+    req.user.is_admin = true;
     const middleware = requireFlexibleOwnership({
       strategies: [{ param: 'userId' }],
     });
@@ -1238,7 +1238,7 @@ describe('requireSharedOwnership', () => {
   });
 
   test('should allow access for admin role (bypass)', async () => {
-    req.user.roles = ['admin'];
+    req.user.is_admin = true;
     const middleware = requireSharedOwnership({ resourceType: 'document' });
     await middleware(req, res, next);
 
@@ -1358,7 +1358,7 @@ describe('requireHierarchicalOwnership', () => {
   });
 
   test('should allow access for admin role (bypass)', async () => {
-    req.user.roles = ['admin'];
+    req.user.is_admin = true;
     const middleware = requireHierarchicalOwnership({ resourceType: 'report' });
     await middleware(req, res, next);
 
@@ -1494,7 +1494,7 @@ describe('requireTimeBasedOwnership', () => {
   });
 
   test('should allow access for admin role (bypass)', async () => {
-    req.user.roles = ['admin'];
+    req.user.is_admin = true;
     const middleware = requireTimeBasedOwnership({ resourceType: 'post' });
     await middleware(req, res, next);
 
@@ -1634,7 +1634,7 @@ describe('requireGroup', () => {
   });
 
   test('should allow access for admin role (bypass)', async () => {
-    req.user.roles = ['admin'];
+    req.user.is_admin = true;
     const middleware = requireGroup('engineering');
     await middleware(req, res, next);
 
@@ -1780,7 +1780,7 @@ describe('requireGroupLevel', () => {
   });
 
   test('should allow access for admin role (bypass)', async () => {
-    req.user.roles = ['admin'];
+    req.user.is_admin = true;
     const middleware = requireGroupLevel('manager', HIERARCHY);
     await middleware(req, res, next);
 

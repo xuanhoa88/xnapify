@@ -5,8 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { ADMIN_ROLE } from '../constants';
-
 /**
  * Hook channel name for permission resolution.
  * Modules can register a listener on this channel to populate `req.user.permissions`.
@@ -97,11 +95,7 @@ async function resolvePermissions(req, adminBypass = true) {
   }
 
   // 2. Admin role bypasses all checks (when enabled)
-  if (
-    adminBypass &&
-    Array.isArray(req.user.roles) &&
-    req.user.roles.includes(ADMIN_ROLE)
-  ) {
+  if (adminBypass && req.user.is_admin === true) {
     return { skip: true, isAdmin: true, error: null };
   }
 

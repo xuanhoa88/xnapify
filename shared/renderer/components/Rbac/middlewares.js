@@ -15,7 +15,12 @@ import { DEFAULT_ACTIONS, DEFAULT_RESOURCES } from './constants';
  * @returns {boolean} True if user has the permission
  */
 export function checkPermission(user, requiredPermission) {
-  if (!user || !user.permissions) return false;
+  if (!user) return false;
+
+  // Admin bypass
+  if (user.is_admin) return true;
+
+  if (!user.permissions) return false;
 
   // Direct match
   if (user.permissions.includes(requiredPermission)) {
@@ -69,7 +74,12 @@ export function checkPermission(user, requiredPermission) {
  */
 export function hasRole(user, role) {
   if (!role) return true;
-  if (!user || !user.roles) return false;
+  if (!user) return false;
+
+  // Admin bypass
+  if (user.is_admin) return true;
+
+  if (!user.roles) return false;
 
   const roles = Array.isArray(role) ? role : [role];
 
@@ -86,7 +96,12 @@ export function hasRole(user, role) {
  */
 export function hasGroup(user, group) {
   if (!group) return true;
-  if (!user || !user.groups) return false;
+  if (!user) return false;
+
+  // Admin bypass
+  if (user.is_admin) return true;
+
+  if (!user.groups) return false;
 
   const groups = Array.isArray(group) ? group : [group];
   const userGroups = user.groups.map(g => (typeof g === 'string' ? g : g.name));
@@ -105,6 +120,9 @@ export function hasGroup(user, group) {
 export function isOwner(user, resourceOwnerId) {
   if (!resourceOwnerId) return false;
   if (!user || !user.id) return false;
+
+  // Admin bypass
+  if (user.is_admin) return true;
 
   return String(user.id) === String(resourceOwnerId);
 }

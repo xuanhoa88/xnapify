@@ -217,7 +217,7 @@ requirePermission({ permissions: ['a:b'], adminBypass: false });    // object co
 ### Resolution Flow
 
 1. Check `req.user` exists → 401 if not.
-2. Admin bypass: `req.user.roles.includes('admin')` → skip (when enabled).
+2. Admin bypass: `req.user.is_admin === true` → skip (when enabled).
 3. If `req.user.permissions` not populated → emit `auth.permissions` hook `'resolve'` event.
 4. Check permissions via `hasPermission()`.
 
@@ -253,7 +253,7 @@ requireRoleLevel('moderator', hierarchy); // user must have 'moderator' or 'admi
 
 1. Check `req.user` exists → 401 if not.
 2. If `req.user.roles` not populated → emit `auth.roles` hook `'resolve'` event.
-3. Admin bypass (when enabled): `req.user.roles.includes('admin')` → skip.
+3. Admin bypass (when enabled): `req.user.is_admin === true` → skip.
 
 Error: `ForbiddenError` (403, codes: `ROLE_REQUIRED`, `ROLE_LEVEL_REQUIRED`, `DYNAMIC_ROLE_REQUIRED`).
 

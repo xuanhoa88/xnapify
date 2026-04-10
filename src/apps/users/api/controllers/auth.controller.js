@@ -70,6 +70,7 @@ export async function register(req, res) {
       id: userData.id,
       email: userData.email,
       picture: userData.picture || null,
+      is_admin: userData.is_admin === true,
     });
 
     // Set token cookies
@@ -137,6 +138,7 @@ export async function login(req, res) {
       id: userData.id,
       email: userData.email,
       picture: userData.picture || null,
+      is_admin: userData.is_admin === true,
     });
 
     // Set cookie options based on rememberMe
@@ -303,6 +305,7 @@ export async function emailVerification(req, res) {
         id: user.id,
         email: user.email,
         picture: userData.picture || null,
+        is_admin: userData.is_admin === true,
       });
 
     // Set token cookies
@@ -498,6 +501,7 @@ export async function oauthCallback(req, res) {
       id: userData.id,
       email: userData.email,
       picture: userData.picture || null,
+      is_admin: userData.is_admin === true,
     });
 
     // Set token cookies
@@ -547,6 +551,7 @@ export async function stopImpersonating(req, res) {
       id: userData.id,
       email: userData.email,
       picture: userData.picture || null,
+      is_admin: userData.is_admin === true,
     });
 
     // Set new token cookies

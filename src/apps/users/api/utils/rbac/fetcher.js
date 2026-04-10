@@ -6,7 +6,7 @@
  */
 
 import * as rbacCache from './cache';
-import { collectUserRBACData } from './collector';
+import { collectUserRbacData } from './collector';
 
 // Track in-flight promises to prevent cache stampedes (thundering herd)
 const activeFetches = new Map();
@@ -87,7 +87,7 @@ export async function fetchUserWithRBAC(userId, models) {
  * @param {Object} context.cache - Cache provider
  * @returns {Promise<Object>} Object containing { roles: string[], groups: string[], permissions: string[] }
  */
-export async function fetchUserRBACData(userId, { models, cache }) {
+export async function fetchUserRbacData(userId, { models, cache }) {
   const cached = await rbacCache.getUser(userId, cache);
   if (cached) return cached;
 
@@ -104,7 +104,7 @@ export async function fetchUserRBACData(userId, { models, cache }) {
     const fetchPromise = (async () => {
       try {
         const user = await fetchUserWithRBAC(userId, models);
-        const rbacData = collectUserRBACData(user);
+        const rbacData = collectUserRbacData(user);
         await rbacCache.setUser(userId, rbacData, cache);
         return rbacData;
       } finally {
@@ -128,7 +128,7 @@ export async function fetchUserRBACData(userId, { models, cache }) {
  * @returns {Promise<Object>} Object containing { roles: string[], groups: string[], permissions: string[] }
  * @throws {Error} If database models are not available or user is not found
  */
-export async function getUserRBACData(req) {
+export async function getUserRbacData(req) {
   // If authenticated via API Key, use scopes as permissions
   // Bypass DB lookup for user roles/permissions
   if (req.authMethod === 'api_key' && req.apiKey) {
@@ -156,7 +156,7 @@ export async function getUserRBACData(req) {
   let rbacData;
   try {
     // Use consolidated fetcher
-    rbacData = await fetchUserRBACData(userId, { models, cache });
+    rbacData = await fetchUserRbacData(userId, { models, cache });
   } catch (error) {
     // Never throw from a hook listener — unhandled rejections crash the server.
     // Return empty RBAC data so the permission middleware denies with 403.

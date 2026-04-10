@@ -5,8 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { ADMIN_ROLE } from '../constants';
-
 /**
  * Hook channel name for ownership resolution.
  * Modules can register a listener on this channel to resolve the resource owner.
@@ -81,11 +79,7 @@ export function requireOwnership(options = {}) {
     }
 
     // 2. Admin role bypasses ownership checks
-    if (
-      adminBypass &&
-      Array.isArray(req.user.roles) &&
-      req.user.roles.includes(ADMIN_ROLE)
-    ) {
+    if (adminBypass && req.user.is_admin === true) {
       return next();
     }
 
@@ -177,11 +171,7 @@ export function requireFlexibleOwnership(options = {}) {
     }
 
     // 2. Admin role bypasses ownership checks
-    if (
-      adminBypass &&
-      Array.isArray(req.user.roles) &&
-      req.user.roles.includes(ADMIN_ROLE)
-    ) {
+    if (adminBypass && req.user.is_admin === true) {
       return next();
     }
 
@@ -263,11 +253,7 @@ export function requireSharedOwnership(options = {}) {
     }
 
     // 2. Admin role bypasses ownership checks
-    if (
-      adminBypass &&
-      Array.isArray(req.user.roles) &&
-      req.user.roles.includes(ADMIN_ROLE)
-    ) {
+    if (adminBypass && req.user.is_admin === true) {
       return next();
     }
 
@@ -346,11 +332,7 @@ export function requireHierarchicalOwnership(options = {}) {
     }
 
     // 2. Admin role bypasses ownership checks
-    if (
-      adminBypass &&
-      Array.isArray(req.user.roles) &&
-      req.user.roles.includes(ADMIN_ROLE)
-    ) {
+    if (adminBypass && req.user.is_admin === true) {
       return next();
     }
 
@@ -429,11 +411,7 @@ export function requireTimeBasedOwnership(options = {}) {
     }
 
     // 2. Admin role bypasses all checks
-    if (
-      adminBypass &&
-      Array.isArray(req.user.roles) &&
-      req.user.roles.includes(ADMIN_ROLE)
-    ) {
+    if (adminBypass && req.user.is_admin === true) {
       return next();
     }
 

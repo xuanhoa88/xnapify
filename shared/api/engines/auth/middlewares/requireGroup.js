@@ -5,8 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { ADMIN_ROLE } from '../constants';
-
 /**
  * Hook channel name for group resolution.
  * Modules can register a listener on this channel to populate `req.user.groups`.
@@ -31,11 +29,7 @@ async function resolveGroups(req, adminBypass) {
   }
 
   // 2. Admin role bypasses all checks
-  if (
-    adminBypass &&
-    Array.isArray(req.user.roles) &&
-    req.user.roles.includes(ADMIN_ROLE)
-  ) {
+  if (adminBypass && req.user && req.user.is_admin === true) {
     return { skip: true, error: null };
   }
 

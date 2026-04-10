@@ -8,6 +8,9 @@
 import { checkPermission, hasRole, hasGroup, isOwner } from './middlewares';
 
 describe('RBAC Utilities', () => {
+  // Shared admin user fixture
+  const adminUser = { is_admin: true, id: '999' };
+
   describe('checkPermission', () => {
     const user = {
       permissions: ['posts:read', 'users:*', '*:delete'],
@@ -42,6 +45,16 @@ describe('RBAC Utilities', () => {
     it('should match super user wildcard', () => {
       expect(checkPermission(superAdmin, 'anything:action')).toBe(true);
     });
+
+    it('should bypass all permission checks for is_admin users', () => {
+      expect(checkPermission(adminUser, 'anything:whatever')).toBe(true);
+      expect(checkPermission(adminUser, 'posts:read')).toBe(true);
+      expect(checkPermission(adminUser, 'settings.general:write')).toBe(true);
+    });
+
+    it('should bypass permission checks for is_admin users without permissions array', () => {
+      expect(checkPermission({ is_admin: true }, 'posts:read')).toBe(true);
+    });
   });
 
   describe('hasRole', () => {
@@ -57,6 +70,15 @@ describe('RBAC Utilities', () => {
     it('should match array of roles (OR condition)', () => {
       expect(hasRole(user, ['admin', 'editor'])).toBe(true);
       expect(hasRole(user, ['admin', 'guest'])).toBe(false);
+    });
+
+    it('should bypass role checks for is_admin users', () => {
+      expect(hasRole(adminUser, 'moderator')).toBe(true);
+      expect(hasRole(adminUser, ['moderator', 'superadmin'])).toBe(true);
+    });
+
+    it('should bypass role checks for is_admin users without roles array', () => {
+      expect(hasRole({ is_admin: true }, 'moderator')).toBe(true);
     });
   });
 
@@ -79,6 +101,15 @@ describe('RBAC Utilities', () => {
     it('should handle missing groups', () => {
       expect(hasGroup({}, 'developers')).toBe(false);
     });
+
+    it('should bypass group checks for is_admin users', () => {
+      expect(hasGroup(adminUser, 'engineering')).toBe(true);
+      expect(hasGroup(adminUser, ['engineering', 'design'])).toBe(true);
+    });
+
+    it('should bypass group checks for is_admin users without groups array', () => {
+      expect(hasGroup({ is_admin: true }, 'engineering')).toBe(true);
+    });
   });
 
   describe('isOwner', () => {
@@ -95,6 +126,11 @@ describe('RBAC Utilities', () => {
 
     it('should return false if user is missing', () => {
       expect(isOwner(null, '123')).toBe(false);
+    });
+
+    it('should bypass ownership checks for is_admin users', () => {
+      expect(isOwner(adminUser, '456')).toBe(true);
+      expect(isOwner(adminUser, 'any-resource-id')).toBe(true);
     });
   });
 });

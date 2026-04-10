@@ -526,6 +526,7 @@ export async function impersonate(req, res) {
       id: user.id,
       email: user.email,
       picture: user.picture || null,
+      is_admin: user.is_admin === true,
       impersonator_id: req.user.id,
     });
 

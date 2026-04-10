@@ -30,7 +30,7 @@ function extractRoleData(role, roles, permissions) {
  * @param {Object} user - User with roles/groups associations
  * @returns {Object} { roles: string[], permissions: string[], groups: string[] }
  */
-export function collectUserRBACData(user) {
+export function collectUserRbacData(user) {
   const roles = new Set();
   const permissions = new Set();
   const groups = new Set();

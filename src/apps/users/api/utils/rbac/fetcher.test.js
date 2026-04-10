@@ -1,4 +1,4 @@
-import { getUserRBACData } from './fetcher';
+import { getUserRbacData } from './fetcher';
 
 // Mock dependencies
 jest.mock('./cache', () => ({
@@ -7,7 +7,7 @@ jest.mock('./cache', () => ({
 }));
 
 jest.mock('./collector', () => ({
-  collectUserRBACData: jest.fn(user => ({
+  collectUserRbacData: jest.fn(user => ({
     roles: user.roles ? user.roles.map(r => r.name) : [],
     groups: user.groups ? user.groups.map(g => g.name) : [],
     permissions: [],
@@ -48,7 +48,7 @@ describe('RBAC Fetcher', () => {
     jest.clearAllMocks();
   });
 
-  describe('getUserRBACData', () => {
+  describe('getUserRbacData', () => {
     it('should fetch data from DB for standard user', async () => {
       const mockUser = {
         id: 'user-123',
@@ -57,7 +57,7 @@ describe('RBAC Fetcher', () => {
       };
       modelsMock.User.findByPk.mockResolvedValue(mockUser);
 
-      const result = await getUserRBACData(req);
+      const result = await getUserRbacData(req);
 
       expect(modelsMock.User.findByPk).toHaveBeenCalled();
       expect(result.roles).toContain('admin');
@@ -74,7 +74,7 @@ describe('RBAC Fetcher', () => {
         new Error('Should not call DB'),
       );
 
-      const result = await getUserRBACData(req);
+      const result = await getUserRbacData(req);
 
       expect(modelsMock.User.findByPk).not.toHaveBeenCalled();
       expect(result).toEqual({
@@ -91,7 +91,7 @@ describe('RBAC Fetcher', () => {
         scopes: null, // or undefined
       };
 
-      const result = await getUserRBACData(req);
+      const result = await getUserRbacData(req);
 
       expect(result.permissions).toEqual([]);
     });

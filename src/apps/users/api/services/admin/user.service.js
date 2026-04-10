@@ -14,7 +14,7 @@ import {
   formatAdminUserResponse,
 } from '../../utils/includes';
 import * as rbacCache from '../../utils/rbac/cache';
-import { fetchUserRBACData } from '../../utils/rbac/fetcher';
+import { fetchUserRbacData } from '../../utils/rbac/fetcher';
 
 /**
  * Create a new user
@@ -699,7 +699,7 @@ export async function createApiKey(userId, data, { models, jwt, hook }) {
   const { UserApiKey } = models;
 
   // Fetch user's effective permissions (resource:action format)
-  const rbacData = await fetchUserRBACData(userId, { models, cache });
+  const rbacData = await fetchUserRbacData(userId, { models, cache });
   const userPermissions = rbacData.permissions;
 
   // Intersect requested scopes with user's permissions, or inherit all if none selected

@@ -8,7 +8,7 @@
 import * as authController from './controllers/auth.controller';
 import * as profileController from './controllers/profile.controller';
 import { authenticate as handleApiKeyStrategy } from './utils/apiKey';
-import { getUserRBACData } from './utils/rbac/fetcher';
+import { getUserRbacData } from './utils/rbac/fetcher';
 import { registerSearchHooks } from './workers';
 
 /** @type {Symbol} Ownership key for this module's persistent bindings */
@@ -37,10 +37,10 @@ async function registerAuthHooks(container) {
   const hook = container.resolve('hook');
 
   hook('auth.strategy.api_key').on('authenticate', handleApiKeyStrategy);
-  hook('auth.permissions').on('resolve', getUserRBACData);
-  hook('auth.roles').on('resolve', getUserRBACData);
-  hook('auth.groups').on('resolve', getUserRBACData);
-  hook('auth.ownership').on('resolve', getUserRBACData);
+  hook('auth.permissions').on('resolve', getUserRbacData);
+  hook('auth.roles').on('resolve', getUserRbacData);
+  hook('auth.groups').on('resolve', getUserRbacData);
+  hook('auth.ownership').on('resolve', getUserRbacData);
 }
 
 // =============================================================================

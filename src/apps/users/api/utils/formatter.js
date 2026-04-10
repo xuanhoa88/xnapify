@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { collectUserRBACData } from './rbac/collector';
+import { collectUserRbacData } from './rbac/collector';
 
 /**
  * Check if a user object is an admin (RBAC compatible)
@@ -22,7 +22,6 @@ function isAdmin(user, options = {}) {
   const { adminRoleName, defaultResources, defaultActions } = options;
   try {
     if (!user) return false;
-    if (user.is_admin === true) return true;
     if (Array.isArray(user.roles) && user.roles.includes(adminRoleName))
       return true;
     if (
@@ -66,7 +65,7 @@ export async function formatUserResponse(user, options = {}) {
   } = options;
 
   // Collect RBAC data if not provided
-  const rbac = rbacData || collectUserRBACData(user);
+  const rbac = rbacData || collectUserRbacData(user);
 
   // Ensure profile is a flat object
   const profile = user.profile || {};

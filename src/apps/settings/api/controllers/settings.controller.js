@@ -38,7 +38,7 @@ export async function list(req, res) {
       await hook('auth.permissions').invoke('resolve', req);
     }
 
-    const isAdmin = req.user && req.user.is_admin;
+    const isAdmin = req.user && req.user.is_admin === true;
     const userPermissions = (req.user && req.user.permissions) || [];
 
     const groupedSettings = await settings.getAll();
@@ -90,7 +90,7 @@ export async function getByNamespace(req, res) {
     ) {
       await hook('auth.permissions').invoke('resolve', req);
     }
-    const isAdmin = req.user && req.user.is_admin;
+    const isAdmin = req.user && req.user.is_admin === true;
     const userPermissions = (req.user && req.user.permissions) || [];
 
     const hasReadPerm =
@@ -180,7 +180,7 @@ export async function updateByNamespace(req, res) {
     ) {
       await hook('auth.permissions').invoke('resolve', req);
     }
-    const isAdmin = req.user && req.user.is_admin;
+    const isAdmin = req.user && req.user.is_admin === true;
     const userPermissions = (req.user && req.user.permissions) || [];
 
     const hasWritePerm =

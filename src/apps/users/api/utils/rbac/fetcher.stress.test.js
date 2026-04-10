@@ -1,10 +1,10 @@
 import { performance } from 'perf_hooks';
 
-import { fetchUserRBACData } from './fetcher';
+import { fetchUserRbacData } from './fetcher';
 
 // Mock collector to produce deterministic RBAC data
 jest.mock('./collector', () => ({
-  collectUserRBACData: jest.fn(user => ({
+  collectUserRbacData: jest.fn(user => ({
     roles: user.roles ? user.roles.map(r => r.name) : [],
     groups: user.groups ? user.groups.map(g => g.name) : [],
     permissions: [],
@@ -57,7 +57,7 @@ describe('RBAC Fetcher Stress Test', () => {
   it('handles high concurrency and benefits from caching', async () => {
     // Cold run (cache empty) — fire many concurrent requests
     const coldPromises = Array.from({ length: TOTAL_REQUESTS }, () =>
-      fetchUserRBACData('stress-user', {
+      fetchUserRbacData('stress-user', {
         models: modelsMock,
         cache: cacheMock,
       }),
@@ -70,7 +70,7 @@ describe('RBAC Fetcher Stress Test', () => {
 
     // Warm run: ensure cache returns value immediately
     const warmPromises = Array.from({ length: TOTAL_REQUESTS }, () =>
-      fetchUserRBACData('stress-user', {
+      fetchUserRbacData('stress-user', {
         models: modelsMock,
         cache: cacheMock,
       }),
