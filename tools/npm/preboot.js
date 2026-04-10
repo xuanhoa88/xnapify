@@ -334,6 +334,11 @@ function ensureDeps(dialect) {
         const srcPath = path.join(driverDir, 'node_modules', name);
         const destPath = path.join(ROOT, 'node_modules', name);
 
+        // Ensure parent directory exists for scoped packages
+        // e.g. @embedded-postgres/linux-x64 needs node_modules/@embedded-postgres/
+        const parentDir = path.dirname(destPath);
+        fs.mkdirSync(parentDir, { recursive: true });
+
         // Clear previous corrupted or orphaned directory paths
         fs.rmSync(destPath, { recursive: true, force: true });
         fs.symlinkSync(srcPath, destPath, 'junction');
@@ -468,11 +473,12 @@ async function startPostgres(cfg = PG_DEFAULTS) {
   if (!fs.existsSync(path.join(PG_DATA_DIR, 'PG_VERSION'))) {
     const initdb = resolvePgBin('initdb');
     const user = cfg.user || PG_DEFAULTS.user;
-    // --locale=C is universally available; --lc-messages may not exist on
-    // Windows or minimal containers, so we only add it on platforms that
-    // are likely to have the en_US.UTF-8 locale installed.
+    // --locale=C is universally available; --lc-messages=en_US.UTF-8 may not
+    // exist on Windows, Alpine/musl containers, or other minimal images.
+    // Detect musl (Alpine) by checking for /etc/alpine-release or ldd output.
     const localeFlags =
-      os.platform() === 'win32'
+      os.platform() === 'win32' ||
+      (os.platform() === 'linux' && fs.existsSync('/etc/alpine-release'))
         ? '--locale=C'
         : '--locale=C --lc-messages=en_US.UTF-8';
     execSync(
@@ -823,8 +829,11 @@ function extractArchive(archivePath, destDir) {
       try {
         execSync('xz --version', { stdio: 'pipe', timeout: 5_000 });
       } catch {
+        const installHint = fs.existsSync('/etc/alpine-release')
+          ? 'apk add xz'
+          : 'apt-get install xz-utils';
         throw new Error(
-          "Extraction of .tar.xz requires 'xz'. Install with: apt-get install xz-utils",
+          `Extraction of .tar.xz requires 'xz'. Install with: ${installHint}`,
         );
       }
     }

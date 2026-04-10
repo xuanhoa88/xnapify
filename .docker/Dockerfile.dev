@@ -3,6 +3,13 @@
 # =============================================================================
 FROM node:18-alpine
 
+# Runtime dependencies for embedded database engines (same as production).
+# gcompat: glibc shim for PG/MySQL binaries; curl+xz: MySQL download/extract;
+# lz4-libs+zstd-libs+libxml2: PG 18 compression/XML; tzdata: MySQL timezones.
+RUN apk add --no-cache gcompat libstdc++ icu-libs readline zlib openssl \
+    lz4-libs zstd-libs libxml2 \
+    curl xz libaio numactl ncurses-libs tzdata
+
 WORKDIR /app
 
 # Install dependencies first (layer cache optimisation)

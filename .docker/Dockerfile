@@ -28,8 +28,17 @@ RUN XNAPIFY_HOST=0.0.0.0 npm run build
 # =============================================================================
 FROM node:18-alpine
 
-# Install su-exec for dropping privileges at runtime
-RUN apk add --no-cache su-exec
+# Runtime dependencies for privilege dropping and embedded database engines.
+# - su-exec: drop root privileges in entrypoint
+# - gcompat: glibc shim so glibc-linked PG/MySQL binaries run on Alpine musl
+# - Shared libs for PostgreSQL: libstdc++ icu-libs readline zlib openssl
+#   PG 18+: lz4-libs zstd-libs (WAL/TOAST compression), libxml2 (SQL/XML)
+# - Shared libs for MySQL: libaio numactl ncurses-libs
+# - Tools for MySQL download/extract: curl xz
+# - tzdata: timezone tables for MySQL SET time_zone = 'UTC'
+RUN apk add --no-cache su-exec gcompat libstdc++ icu-libs readline zlib openssl \
+    lz4-libs zstd-libs libxml2 \
+    curl xz libaio numactl ncurses-libs tzdata
 
 WORKDIR /app
 

@@ -29,12 +29,7 @@ export async function list(req, res) {
 
   try {
     // 1. Resolve permissions if not already populated
-    if (
-      req.user &&
-      !req.user.permissions &&
-      hook &&
-      hook.has('auth.permissions')
-    ) {
+    if (req.user && !req.user.permissions && hook.has('auth.permissions')) {
       await hook('auth.permissions').invoke('resolve', req);
     }
 
@@ -82,12 +77,7 @@ export async function getByNamespace(req, res) {
     const { namespace } = req.params;
 
     // 1. Check permissions immediately
-    if (
-      req.user &&
-      !req.user.permissions &&
-      hook &&
-      hook.has('auth.permissions')
-    ) {
+    if (req.user && !req.user.permissions && hook.has('auth.permissions')) {
       await hook('auth.permissions').invoke('resolve', req);
     }
     const isAdmin = req.user && req.user.is_admin === true;
@@ -170,14 +160,10 @@ export async function updateByNamespace(req, res) {
     if (!parsedBody.success) {
       return http.sendValidationError(res, parsedBody.error);
     }
-    const cleanBody = parsedBody.data;
 
-    if (
-      req.user &&
-      !req.user.permissions &&
-      hook &&
-      hook.has('auth.permissions')
-    ) {
+    const { data: cleanBody } = parsedBody;
+
+    if (req.user && !req.user.permissions && hook.has('auth.permissions')) {
       await hook('auth.permissions').invoke('resolve', req);
     }
     const isAdmin = req.user && req.user.is_admin === true;

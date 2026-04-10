@@ -19,8 +19,6 @@ services:
       dockerfile: .docker/Dockerfile.dev
     container_name: xnapify-dev
     restart: unless-stopped
-    env_file:
-      - ../.env
     ports:
       - '${XNAPIFY_PORT:-1337}:1337'
     environment:
@@ -32,7 +30,6 @@ services:
       XNAPIFY_NODERED_HOME: /app/data/node-red
       XNAPIFY_EXTENSION_DIR: /app/data/extensions
       XNAPIFY_CACHE_DIR: /app/data/caches
-      XNAPIFY_FTS_DIR: /app/data/fts
       XNAPIFY_PG_DATA_DIR: /app/data/postgres
       XNAPIFY_MYSQL_DATA_DIR: /app/data/mysql
     volumes:
