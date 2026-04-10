@@ -375,10 +375,7 @@ async function buildExtensions(options = {}) {
   }
 
   const compiler = webpack(
-    createExtensionConfig({
-      extensions,
-      buildPath: EXTENSIONS_BUILD_DIR,
-    }),
+    createExtensionConfig(extensions, EXTENSIONS_BUILD_DIR),
   );
 
   return new Promise((resolve, reject) => {

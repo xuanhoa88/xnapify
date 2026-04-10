@@ -335,18 +335,11 @@ function createApiConfig(extensionData, extensionDefines, buildPath) {
   const workerCfg = createWorkerConfig({
     workersDir: path.join(path.dirname(apiPath), 'workers'),
     outputPath: outputDir,
+    name: `workers-${dirName}`,
+    additionalModuleDirs: [extNodeModules],
     plugins: [extensionDefines, createProgressPlugin()],
-    overrides: {
-      externals: [
-        nodeExternals({
-          additionalModuleDirs: [extNodeModules],
-          allowlist: [/^\.\.\?\//],
-        }),
-      ],
-    },
   });
   if (workerCfg) {
-    workerCfg.resolve.modules.unshift(extNodeModules);
     configs.push(workerCfg);
   }
 
@@ -359,12 +352,11 @@ function createApiConfig(extensionData, extensionDefines, buildPath) {
 
 /**
  * Create webpack configuration for extensions
- * @param {Object} options
- * @param {Array} options.extensions - Extension objects to build
- * @param {string} options.buildPath - Output directory
+ * @param {Array} extensions - Extension objects to build
+ * @param {string} buildPath - Output directory
  * @returns {Array} Array of webpack configurations
  */
-function createExtensionConfig({ extensions = [], buildPath }) {
+function createExtensionConfig(extensions = [], buildPath) {
   if (!Array.isArray(extensions)) {
     throw new Error('extensions must be an array');
   }

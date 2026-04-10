@@ -7,7 +7,7 @@ if [ "$(id -u)" = "0" ]; then
   # App build dir (SQLite DB lives here)
   chown node:node /app/build
 
-  # Bundled extensions dir (npm install runs here during extension activate)
+  # Bundled extensions dir (extension activation runs npm install --omit=dev here)
   # Only chown if ownership is wrong (avoids O(n) walk on every restart)
   if [ -d /app/build/extensions ] && [ "$(stat -c '%u' /app/build/extensions 2>/dev/null)" != "1000" ]; then
     chown -R node:node /app/build/extensions

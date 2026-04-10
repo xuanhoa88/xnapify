@@ -16,7 +16,7 @@ RUN npm run setup
 COPY . .
 
 # Install extension/sub-package dependencies
-RUN node tools/npm/setup.js --skip-root
+RUN npm run setup -- --skip-root
 
 # Build application
 # XNAPIFY_HOST must be 0.0.0.0 inside Docker so the server binds to all interfaces

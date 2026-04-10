@@ -309,7 +309,7 @@ Extensions run third-party code inside the application. Special security measure
 | Check | Description |
 |-------|-------------|
 | 🔴 Extension activated without integrity check | Must verify SHA-256 hash before activation (non-dev only) |
-| 🔴 Integrity hash never recomputed after dependency install | Must recompute after `npm install` |
+| 🔴 Integrity hash never recomputed after dependency install | Must recompute after `npm install --omit=dev` (or `npm run setup`) |
 | 🟡 Dev extensions skip integrity checks | Expected — but flag if running in production |
 
 ### Correct Flow
@@ -317,7 +317,7 @@ Extensions run third-party code inside the application. Special security measure
 ```
 Install → computeChecksum → store hash in DB
 Activate → verifyChecksum(storedHash) → reject on mismatch
-         → npm install → recomputeChecksum → update DB
+         → npm install --omit=dev → recomputeChecksum → update DB
 ```
 
 ### 8.2 Extension Isolation

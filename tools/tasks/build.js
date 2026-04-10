@@ -8,6 +8,7 @@
 const fsP = require('fs/promises');
 const path = require('path');
 
+const TerserPlugin = require('terser-webpack-plugin');
 const webpack = require('webpack');
 
 const config = require('../config');
@@ -59,7 +60,53 @@ async function copyFiles() {
   logInfo(`📁 Copying static files...`);
 
   try {
-    // 1. Generate package.json
+    // 1. Copy LICENSE.txt if it exists
+    const licensePath = path.join(config.CWD, 'LICENSE.txt');
+    if (await pathExists(licensePath)) {
+      await copyFile(licensePath, path.join(config.BUILD_DIR, 'LICENSE.txt'));
+      logDebug('Copied LICENSE.txt');
+    }
+
+    // 2. Copy public directory if it exists
+    if (await pathExists(config.PUBLIC_DIR)) {
+      await copyDir(config.PUBLIC_DIR, path.join(config.BUILD_DIR, 'public'));
+      logDebug('Copied public directory');
+    }
+
+    // 3. Generate JWT and copy .env to build directory
+    await generateJWT(config.CWD, config.BUILD_DIR);
+
+    // 4. Copy .npmrc if it exists
+    const npmrcPath = path.join(config.CWD, '.npmrc');
+    const normalizedNpmrcContent = [
+      '# Force production mode — npm run setup installs only production deps',
+      'production=true',
+    ];
+    if (await pathExists(npmrcPath)) {
+      const npmrcContent = await readFile(npmrcPath, 'utf-8');
+      normalizedNpmrcContent.unshift(
+        npmrcContent.replace(/^production\s*=\s*.+$/m, '').trimEnd(),
+      );
+    }
+    await writeFile(
+      path.join(config.BUILD_DIR, '.npmrc'),
+      normalizedNpmrcContent.join('\n'),
+    );
+    logDebug('Copied .npmrc');
+
+    // 5. Copy .env.xnapify template (preboot creates .env from it)
+    const envTemplatePath = path.join(config.CWD, '.env.xnapify');
+    if (await pathExists(envTemplatePath)) {
+      await copyFile(
+        envTemplatePath,
+        path.join(config.BUILD_DIR, '.env.xnapify'),
+      );
+      logDebug('Copied .env.xnapify');
+    }
+
+    logInfo('✅ Static files copied');
+
+    // 6. Generate package.json
     const manifest = await readFile(
       path.join(config.CWD, 'package.json'),
       'utf-8',
@@ -80,9 +127,9 @@ async function copyFiles() {
           engines: pkg.engines,
           dependencies: buildDeps,
           scripts: {
-            preinstall: 'node preinstall.js',
-            setup: 'node setup.js',
-            prestart: 'node preboot.js',
+            preinstall: 'node npm/preinstall.js',
+            setup: 'node npm/setup.js',
+            prestart: 'node npm/preboot.js',
             start: 'node server.js',
           },
         },
@@ -91,54 +138,6 @@ async function copyFiles() {
       ),
     );
     logDebug('Generated package.json');
-
-    // 2. Copy LICENSE.txt if it exists
-    const licensePath = path.join(config.CWD, 'LICENSE.txt');
-    if (await pathExists(licensePath)) {
-      await copyFile(licensePath, path.join(config.BUILD_DIR, 'LICENSE.txt'));
-      logDebug('Copied LICENSE.txt');
-    }
-
-    // 3. Copy public directory if it exists
-    if (await pathExists(config.PUBLIC_DIR)) {
-      await copyDir(config.PUBLIC_DIR, path.join(config.BUILD_DIR, 'public'));
-      logDebug('Copied public directory');
-    }
-
-    // 4. Generate JWT and copy .env to build directory
-    await generateJWT(config.CWD, config.BUILD_DIR);
-
-    // 5. Copy .npmrc if it exists
-    const npmrcPath = path.join(config.CWD, '.npmrc');
-    const normalizedNpmrcContent = [
-      '# Force production mode — npm run setup installs only production deps',
-      'production=true',
-    ];
-    if (await pathExists(npmrcPath)) {
-      const npmrcContent = await readFile(npmrcPath, 'utf-8');
-      normalizedNpmrcContent.unshift(
-        npmrcContent.replace(/^production\s*=\s*.+$/m, '').trimEnd(),
-      );
-    }
-    await writeFile(
-      path.join(config.BUILD_DIR, '.npmrc'),
-      normalizedNpmrcContent.join('\n'),
-    );
-    logDebug('Copied .npmrc');
-
-    // 6. npm scripts are bundled by createNpmScripts() step (setup, preinstall, preboot)
-
-    // 7. Copy .env.xnapify template (preboot creates .env from it)
-    const envTemplatePath = path.join(config.CWD, '.env.xnapify');
-    if (await pathExists(envTemplatePath)) {
-      await copyFile(
-        envTemplatePath,
-        path.join(config.BUILD_DIR, '.env.xnapify'),
-      );
-      logDebug('Copied .env.xnapify');
-    }
-
-    logInfo('✅ Static files copied');
   } catch (error) {
     throw new BuildError(`Copy failed: ${error.message}`, {
       originalError: error.message,
@@ -151,8 +150,8 @@ async function copyFiles() {
  * Reuses the shared server webpack config for consistency (node target,
  * externals, resolve, etc.) with lightweight overrides for npm scripts.
  */
-async function createNpmScripts() {
-  logInfo('📦 Bundling npm scripts...');
+async function buildNpmScripts() {
+  logInfo('📦 Building npm scripts...');
 
   // Auto-discover all .js files in tools/npm/
   const npmDir = path.join(config.CWD, 'tools/npm');
@@ -166,7 +165,7 @@ async function createNpmScripts() {
   const npmConfig = createWebpackConfig('server', {
     entry,
     output: {
-      path: config.BUILD_DIR,
+      path: path.join(config.BUILD_DIR, 'npm'),
       filename: '[name].js',
     },
     // npm scripts are plain CJS — no loaders, no transforms.
@@ -185,7 +184,18 @@ async function createNpmScripts() {
         },
       },
     },
-    optimization: { minimize: false },
+    optimization: {
+      minimize: true,
+      minimizer: [
+        new TerserPlugin({
+          terserOptions: {
+            compress: { drop_console: false, passes: 2 },
+            mangle: { toplevel: false },
+            output: { comments: false },
+          },
+        }),
+      ],
+    },
     devtool: false,
     // Externalize ALL non-relative imports. npm scripts run after
     // `npm install` in production — deps (including on-demand ones like
@@ -455,11 +465,11 @@ async function main() {
       {
         name: 'npm scripts',
         task: () =>
-          withBuildRetry(() => createNpmScripts(), {
-            operation: 'npm-scripts',
+          withBuildRetry(() => buildNpmScripts(), {
+            operation: 'build-npm-scripts',
             verbose,
           }),
-        description: 'Bundling npm scripts',
+        description: 'Building npm scripts',
       },
       {
         name: 'extensions',
@@ -471,13 +481,13 @@ async function main() {
         description: 'Building extensions',
       },
       {
-        name: 'bundle',
+        name: 'apps',
         task: () =>
           withBuildRetry(() => createBundle(), {
-            operation: 'webpack-bundle',
+            operation: 'build-apps',
             verbose,
           }),
-        description: 'Creating webpack bundles',
+        description: 'Building apps',
       },
     ];
 

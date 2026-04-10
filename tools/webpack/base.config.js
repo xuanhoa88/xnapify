@@ -814,12 +814,17 @@ function discoverWorkerEntries(workersDir, prefix = 'workers') {
  * Reusable by both core apps (`app.config.js`) and extensions
  * (`extension.config.js`). Returns `null` if no workers are found.
  *
+ * Always targets Node.js with proper `externals` regardless of the
+ * compiler `name`, so workers are never accidentally bundled for the
+ * browser or missing node_modules externalization.
+ *
  * @param {Object} options
  * @param {string} options.workersDir - Absolute path to the workers source directory
  * @param {string} options.outputPath - Absolute path for the output directory
  * @param {string} [options.prefix='workers'] - Subdirectory prefix for output filenames
+ * @param {string} [options.name='server'] - Webpack compiler name (must be unique per multi-compiler)
+ * @param {string[]} [options.additionalModuleDirs=[]] - Extra node_modules directories (e.g. extension-local)
  * @param {import('webpack').WebpackPluginInstance[]} [options.plugins=[]] - Additional plugins
- * @param {Object} [options.overrides={}] - Extra webpack config to deep-merge
  * @returns {Object|null} Webpack config or null if no workers found
  */
 function createWorkerConfig({
@@ -827,28 +832,39 @@ function createWorkerConfig({
   outputPath,
   prefix = 'workers',
   name = 'server',
+  additionalModuleDirs = [],
   plugins = [],
-  overrides = {},
 }) {
   const entries = discoverWorkerEntries(workersDir, prefix);
 
   // Skip if no workers found
   if (Object.keys(entries).length === 0) return null;
 
-  return createWebpackConfig(
-    name,
-    merge(
-      {
-        entry: entries,
-        output: {
-          path: outputPath,
-          filename: '[name].js',
-        },
-        plugins: [createEnvDefine(), ...plugins].filter(Boolean),
-      },
-      overrides,
-    ),
-  );
+  const cfg = createWebpackConfig(name, {
+    // Workers always run in Node — override target in case name !== 'server'
+    target: 'node',
+    entry: entries,
+    output: {
+      path: outputPath,
+      filename: '[name].js',
+    },
+    externals: [
+      nodeExternals({
+        additionalModuleDirs,
+        allowlist: [reStyle, reImage, reFont, reSvg, /^\.\.\?\//],
+      }),
+    ],
+    plugins: [createEnvDefine(), ...plugins].filter(Boolean),
+  });
+
+  // Ensure additional module dirs are resolvable at compile time
+  if (additionalModuleDirs.length > 0) {
+    for (const dir of additionalModuleDirs) {
+      cfg.resolve.modules.unshift(dir);
+    }
+  }
+
+  return cfg;
 }
 
 /**

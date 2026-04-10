@@ -12,6 +12,7 @@ const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const webpack = require('webpack');
 
 const config = require('../config');
+const { isVerbose, logInfo, logWarn } = require('../utils/logger');
 
 const AsyncModuleFederationPlugin = require('./AsyncModuleFederationPlugin');
 const {
@@ -29,10 +30,7 @@ const {
 } = require('./base.config');
 const StatsManifestPlugin = require('./StatsManifestPlugin');
 
-/**
- * Get the compiled server entry path from webpack output configuration
- */
-const SERVER_BUNDLE_PATH = path.join(config.BUILD_DIR, 'server');
+
 
 // =============================================================================
 // HELPER FUNCTIONS
@@ -252,27 +250,45 @@ const serverConfig = createWebpackConfig('server', {
  * Output: `BUILD_DIR/workers/<appName>/<name>.worker.js`
  */
 const workerConfig = (() => {
-  const appsDir = path.join(config.APP_DIR, 'apps');
   const configs = [];
 
   try {
+    const appsDir = path.join(config.APP_DIR, 'apps');
     const appDirs = fs.readdirSync(appsDir, { withFileTypes: true });
     for (const appDir of appDirs) {
-      if (!appDir.isDirectory()) continue;
+      // Skip files, hidden dirs, and route-group dirs like (default)
+      if (
+        !appDir.isDirectory() ||
+        appDir.name.startsWith('.') ||
+        appDir.name.startsWith('(')
+      )
+        continue;
 
-      const workerCfg = createWorkerConfig({
-        workersDir: path.join(appsDir, appDir.name, 'api', 'workers'),
-        outputPath: config.BUILD_DIR,
-        prefix: `workers/${appDir.name}`,
-        name: `workers-${appDir.name}`,
-      });
-      if (workerCfg) configs.push(workerCfg);
+      configs.push(
+        createWorkerConfig({
+          workersDir: path.join(appsDir, appDir.name, 'api', 'workers'),
+          outputPath: config.BUILD_DIR,
+          prefix: `workers/${appDir.name}`,
+          name: `workers-${appDir.name}`,
+        }),
+      );
     }
-  } catch {
-    // No apps directory — skip
+  } catch (err) {
+    // Missing apps directory is expected — anything else should be surfaced
+    if (err.code !== 'ENOENT') {
+      logWarn(`⚠️ Failed to scan app workers: ${err.message}`);
+    }
   }
 
-  return configs;
+  const result = configs.filter(Boolean);
+
+  if (isVerbose() && result.length > 0) {
+    logInfo(
+      `🔧 Discovered ${result.length} worker compiler(s): ${result.map(c => c.name).join(', ')}`,
+    );
+  }
+
+  return result;
 })();
 
 // =============================================================================
@@ -284,5 +300,4 @@ module.exports = {
   serverConfig,
   workerConfig,
   getHmrWatchIgnored,
-  SERVER_BUNDLE_PATH,
 };

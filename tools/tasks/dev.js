@@ -8,6 +8,7 @@
  */
 
 const http = require('http');
+const path = require('path');
 
 const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
 const express = require('express');
@@ -20,7 +21,6 @@ const { BuildError, setupGracefulShutdown } = require('../utils/error');
 const { generateJWT } = require('../utils/jwt');
 const { isSilent, isVerbose, logError, logInfo } = require('../utils/logger');
 const {
-  SERVER_BUNDLE_PATH: WEBPACK_SERVER_BUNDLE_PATH,
   clientConfig: webpackClientConfig,
   serverConfig: webpackServerConfig,
   workerConfig: webpackWorkerConfig,
@@ -202,7 +202,9 @@ function configureWebpackForDev(cfg, isClient = true) {
 function loadServerBundle() {
   try {
     // Get the absolute path to the server bundle
-    const serverBundlePath = require.resolve(WEBPACK_SERVER_BUNDLE_PATH);
+    const serverBundlePath = require.resolve(
+      path.join(config.BUILD_DIR, 'server'),
+    );
 
     // Only the server bundle entry needs clearing — framework singletons
     // (express, http, react) are injected from dev.js and never bundled.

@@ -98,7 +98,7 @@ cd "$path"
 Install dependencies in the new worktree:
 
 ```bash
-npm install
+npm run setup
 ```
 
 > **Note:** This project uses Node.js exclusively. The `pretest` hook in `package.json` runs `node tools/npm/preboot.js` which installs the SQLite driver.
@@ -168,7 +168,7 @@ You: I'm using the workspace-isolation skill to set up an isolated workspace.
 [Check .worktrees/ - exists]
 [Verify ignored - git check-ignore confirms .worktrees/ is ignored]
 [Create worktree: git worktree add .worktrees/auth -b feat/auth]
-[Run npm install]
+[Run npm run setup]
 [Run npm test - 47 passing]
 
 Worktree ready at .worktrees/auth

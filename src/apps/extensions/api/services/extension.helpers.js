@@ -155,10 +155,10 @@ export async function installExtensionDependencies(extensionDir, extension) {
       'npm',
       [
         'install',
+        '--omit=dev',
         '--no-audit',
         '--no-update-notifier',
         '--no-fund',
-        '--production',
         '--engine-strict',
         '--no-package-lock',
       ],
