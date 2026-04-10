@@ -18,6 +18,7 @@ import FormFileUpload from './FileUpload';
 import Form from './Form';
 import { useFormValidation, useFormField } from './FormContext';
 import FormInput from './Input';
+import FormJson from './Json';
 import FormInputMask from './InputMask';
 import FormLabel from './Label';
 import FormNumberInput from './Number';
@@ -50,6 +51,7 @@ Form.Radio = FormRadio;
 Form.FileUpload = FormFileUpload;
 Form.Error = FormError;
 Form.WYSIWYG = FormWYSIWYG;
+Form.Json = FormJson;
 
 // Export hooks for custom usage
 export {

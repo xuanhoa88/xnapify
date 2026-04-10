@@ -14,7 +14,6 @@ import Prompt from './Prompt';
  * ConfirmModal - Namespace for confirmation modal components
  *
  * Usage:
- *   import ConfirmModal from '@shared/components/ConfirmModal';
  *   <ConfirmModal.Action ref={actionModalRef} title="..." onConfirm={...} />
  *   <ConfirmModal.Back ref={confirmBackModalRef} onConfirm={handleConfirmBack} />
  *   <ConfirmModal.Delete ... />

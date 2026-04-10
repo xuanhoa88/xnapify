@@ -110,7 +110,9 @@ class BuildManifestPlugin {
       const logicalExt = path.extname(logicalName); // '.js'
 
       const statsData = stats.toJson({ all: false, assets: true });
-      const assets = (statsData.assets || []).map(a => a.name);
+      const assets = (statsData.assets || [])
+        .map(a => a && a.name)
+        .filter(n => typeof n === 'string');
 
       // Match pattern: <logicalBase>.<hash><logicalExt>
       const hashPattern = new RegExp(

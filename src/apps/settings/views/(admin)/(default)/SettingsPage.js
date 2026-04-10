@@ -70,11 +70,11 @@ function SettingRow({ setting, canWrite }) {
         return <Form.Password disabled={!canWrite} />;
       case 'json':
         return (
-          <Form.Textarea
+          <Form.Json
             disabled={!canWrite}
-            rows={4}
-            spellCheck={false}
-            className={s.textarea}
+            collapsed={1}
+            displayObjectSize
+            enableClipboard
           />
         );
       default: {
@@ -314,8 +314,16 @@ function SettingsPage({ context }) {
 
   const [activeTab, setActiveTab] = useState(null);
 
+  // Only show namespaces that are core or registered by active extensions.
+  // This hides settings from deactivated extensions while preserving their DB data.
   const rawNamespaces = useMemo(
-    () => (groups ? sortNamespaces(Object.keys(groups), order) : []),
+    () =>
+      groups
+        ? sortNamespaces(
+            Object.keys(groups).filter(ns => order.includes(ns)),
+            order,
+          )
+        : [],
     [groups, order],
   );
 

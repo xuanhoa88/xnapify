@@ -81,9 +81,8 @@ function createStatsWriterPlugin() {
           const isStylesheet = name => name.endsWith('.css');
 
           const addAsset = asset => {
-            const name =
-              typeof asset === 'object' && asset.name ? asset.name : asset;
-            if (!name || isHotUpdate(name) || isSourceMap(name)) return;
+            const name = typeof asset === 'string' ? asset : (asset && asset.name ? asset.name : null);
+            if (typeof name !== 'string' || isHotUpdate(name) || isSourceMap(name)) return;
             if (isScript(name)) scripts.add(name);
             if (isStylesheet(name)) stylesheets.add(name);
           };
@@ -109,8 +108,8 @@ function createStatsWriterPlugin() {
           //    captured above (e.g. async-imported CSS chunks). This prevents FOUC
           //    when MiniCssExtractPlugin emits chunks outside the main entrypoint.
           (statsData.assets || []).forEach(asset => {
-            const name = (typeof asset === 'object' && asset.name) || asset;
-            if (name && isStylesheet(name) && !isHotUpdate(name)) {
+            const name = typeof asset === 'string' ? asset : (asset && asset.name ? asset.name : null);
+            if (typeof name === 'string' && isStylesheet(name) && !isHotUpdate(name)) {
               stylesheets.add(name);
             }
           });

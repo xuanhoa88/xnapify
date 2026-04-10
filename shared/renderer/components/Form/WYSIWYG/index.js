@@ -10,8 +10,7 @@ import { forwardRef } from 'react';
 import PropTypes from 'prop-types';
 import { useController } from 'react-hook-form';
 
-import { WYSIWYG } from '@shared/renderer/components/WYSIWYG';
-
+import { WYSIWYG } from '../../WYSIWYG';
 import { useFormField, useMergeRefs } from '../FormContext';
 
 /**

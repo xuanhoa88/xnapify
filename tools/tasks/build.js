@@ -249,7 +249,8 @@ function analyzeStats(stats) {
 
   children.forEach(childStats => {
     (childStats.assets || []).forEach(asset => {
-      if (asset.name && !asset.name.endsWith('.map')) {
+      const name = typeof asset.name === 'string' ? asset.name : null;
+      if (name && !name.endsWith('.map')) {
         allAssets.push({
           name: asset.name,
           size: asset.size,
