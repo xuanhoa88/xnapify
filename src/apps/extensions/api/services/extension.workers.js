@@ -306,6 +306,28 @@ export function registerExtensionWorkers(container) {
         }
       }
 
+      // Log surviving state on failed delete for diagnosis.
+      // The DB record and/or FS directory may still exist — admin can retry.
+      if (job.name === 'delete') {
+        try {
+          const models = container.resolve('models');
+          const ext = await models.Extension.findOne({
+            where: { key: extensionKey },
+          });
+          if (ext) {
+            console.warn(
+              `[ExtensionWorker] Delete job failed for ${extensionKey} — DB record preserved (id=${ext.id}). ` +
+                'Admin can retry uninstall or manually clean up.',
+            );
+          }
+        } catch (checkErr) {
+          console.error(
+            `[ExtensionWorker] Failed to check post-delete state for ${extensionKey}:`,
+            checkErr,
+          );
+        }
+      }
+
       // Send *_FAILED notification types so the frontend can show error toasts
       // instead of false success messages.
       const type =

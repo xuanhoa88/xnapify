@@ -719,6 +719,34 @@ export async function toggleExtensionStatus(
   // Enqueue the background job for NPM dependencies and module reloading
   if (queue) {
     const queueChannel = queue('extensions');
+
+    // Cancel any pending/delayed toggle jobs for this extension to prevent
+    // stale jobs from overwriting the latest user intent during rapid toggling.
+    if (
+      queueChannel.queue &&
+      typeof queueChannel.queue.getJobs === 'function'
+    ) {
+      try {
+        const allJobs = await queueChannel.queue.getJobs();
+        for (const job of allJobs) {
+          if (
+            job.name === 'toggle' &&
+            job.data &&
+            job.data.extensionKey === extension.key &&
+            ['pending', 'delayed'].includes(job.status)
+          ) {
+            await queueChannel.queue.removeJob(job.id);
+          }
+        }
+      } catch (cleanupErr) {
+        // Non-fatal — log and proceed with the new job
+        console.warn(
+          `[toggleExtensionStatus] Failed to cancel stale toggle jobs for ${extension.key}:`,
+          cleanupErr.message,
+        );
+      }
+    }
+
     queueChannel.emit('toggle', {
       extensionKey: extension.key,
       extensionDir,
@@ -745,7 +773,14 @@ export async function upgradeExtension(
 ) {
   const { extension } = await resolveExtension(models, id);
 
-  await extension.update({ ...data, integrity: null });
+  // Only null integrity when version changes — forces re-verification on next
+  // activation since the code may have changed. Avoid nulling on metadata-only
+  // updates (name, description) to prevent bypassing the integrity check.
+  const updatePayload = { ...data };
+  if (data.version) {
+    updatePayload.integrity = null;
+  }
+  await extension.update(updatePayload);
   if (cache) await invalidateCaches(cache, id);
 
   if (hook) {

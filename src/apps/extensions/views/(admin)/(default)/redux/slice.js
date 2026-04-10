@@ -208,9 +208,10 @@ const extensionsSlice = createSlice({
       .addCase(uninstallExtension.fulfilled, (state, action) => {
         const normalized = normalizeState(state);
         normalized.operations.uninstall = createOperationState();
-        normalized.data.extensions = normalized.data.extensions.filter(
-          p => p.id !== action.payload,
-        );
+        // Don't remove from list — let the WS EXTENSION_UNINSTALLED event
+        // trigger a re-fetch which removes it once the backend confirms.
+        // The actionMap label ("Uninstalling...") provides visual feedback.
+        void action.payload;
         Object.assign(state, normalized);
       })
       .addCase(uninstallExtension.rejected, createRejectedHandler('uninstall'));

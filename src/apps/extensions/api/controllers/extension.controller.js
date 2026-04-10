@@ -215,7 +215,9 @@ export const uploadExtension = async (req, res) => {
       queue: container.resolve('queue'),
     });
 
-    // Convert to plain object and inject active job status for immediate frontend feedback
+    // Convert to plain object and inject active job status for immediate frontend feedback.
+    // Do NOT send a WS notification here — the worker's `completed` handler sends
+    // EXTENSION_INSTALLED after npm install + integrity hash are actually done.
     const extensionData = {
       ...(typeof extension.toJSON === 'function'
         ? extension.toJSON()
@@ -223,16 +225,12 @@ export const uploadExtension = async (req, res) => {
       job_status: 'INSTALLING',
     };
 
-    const ws = container.resolve('ws');
-    ws.sendToPublicChannel('extension:updated', {
-      type: 'EXTENSION_INSTALLED',
-      extensionId: extensionData.key,
-      data: { manifest: extensionData },
-    });
-
     return http.sendSuccess(
       res,
-      { extension: extensionData, message: 'Extension installed successfully' },
+      {
+        extension: extensionData,
+        message: 'Extension uploaded and queued for installation',
+      },
       201,
     );
   } catch (error) {
@@ -299,6 +297,7 @@ export const upgradeExtension = async (req, res) => {
     const extension = await extensionService.upgradeExtension(id, result, {
       models,
       cache: container.resolve('cache'),
+      hook: container.resolve('hook'),
       actorId: req.user && req.user.id,
     });
 

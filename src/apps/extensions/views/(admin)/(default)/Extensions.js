@@ -175,14 +175,11 @@ function Extensions() {
 
     const debouncedFetch = () => {
       if (debounceTimer) clearTimeout(debounceTimer);
-      return new Promise(resolve => {
-        debounceTimer = setTimeout(async () => {
-          if (!signal.aborted) {
-            await dispatch(fetchExtensions({ signal }));
-          }
-          resolve();
-        }, 500);
-      });
+      debounceTimer = setTimeout(() => {
+        if (!signal.aborted) {
+          dispatch(fetchExtensions({ signal }));
+        }
+      }, 500);
     };
 
     const handler = async data => {
@@ -193,8 +190,6 @@ function Extensions() {
           if (data.extensionId) {
             clearAction(data.extensionId);
           }
-          await debouncedFetch();
-          if (signal.aborted) return;
           if (data.type === 'EXTENSION_INSTALLED') {
             dispatch(
               showSuccessMessage({
@@ -205,24 +200,16 @@ function Extensions() {
               }),
             );
           }
-          if (data.type === 'EXTENSION_UPDATED') {
-            dispatch(
-              showSuccessMessage({
-                message: t(
-                  'admin:extensions.upgradeSuccess',
-                  'Extension upgraded successfully.',
-                ),
-              }),
-            );
-          }
+          // EXTENSION_UPDATED toast is handled inline in handleUpgrade —
+          // no need to show it again from WS. The debouncedFetch below
+          // still keeps other tabs/clients in sync.
+          debouncedFetch();
           break;
         }
         case 'EXTENSION_UNINSTALLED': {
           if (data.extensionId) {
             clearAction(data.extensionId);
           }
-          await debouncedFetch();
-          if (signal.aborted) return;
           dispatch(
             showSuccessMessage({
               message: t(
@@ -231,14 +218,13 @@ function Extensions() {
               ),
             }),
           );
+          debouncedFetch();
           break;
         }
         case 'EXTENSION_ACTIVATED': {
           if (data.extensionId) {
             clearAction(data.extensionId);
           }
-          await debouncedFetch();
-          if (signal.aborted) return;
           dispatch(
             showSuccessMessage({
               message: t(
@@ -247,14 +233,13 @@ function Extensions() {
               ),
             }),
           );
+          debouncedFetch();
           break;
         }
         case 'EXTENSION_DEACTIVATED': {
           if (data.extensionId) {
             clearAction(data.extensionId);
           }
-          await debouncedFetch();
-          if (signal.aborted) return;
           dispatch(
             showSuccessMessage({
               message: t(
@@ -263,6 +248,7 @@ function Extensions() {
               ),
             }),
           );
+          debouncedFetch();
           break;
         }
         case 'EXTENSION_INSTALL_FAILED':
@@ -272,8 +258,6 @@ function Extensions() {
           if (data.extensionId) {
             clearAction(data.extensionId);
           }
-          await debouncedFetch();
-          if (signal.aborted) return;
           dispatch(
             showWarningMessage({
               message: t(
@@ -282,11 +266,10 @@ function Extensions() {
               ),
             }),
           );
+          debouncedFetch();
           break;
         }
         case 'EXTENSION_TAMPERED': {
-          await debouncedFetch();
-          if (signal.aborted) return;
           dispatch(
             showWarningMessage({
               message: t(
@@ -295,6 +278,7 @@ function Extensions() {
               ),
             }),
           );
+          debouncedFetch();
           break;
         }
         default:
@@ -324,6 +308,7 @@ function Extensions() {
 
   const handleDeleteAction = useCallback(
     async item => {
+      if (actionMap[item.id]) return;
       setActionWithTimeout(
         item.id,
         t('admin:common.uninstalling', 'Uninstalling...'),
@@ -335,7 +320,7 @@ function Extensions() {
         clearAction(item.id);
       }
     },
-    [dispatch, t, setActionWithTimeout, clearAction],
+    [actionMap, dispatch, t, setActionWithTimeout, clearAction],
   );
 
   // --- Activate ---
@@ -345,6 +330,7 @@ function Extensions() {
 
   const handleActivateAction = useCallback(
     async item => {
+      if (actionMap[item.id]) return;
       setActionWithTimeout(
         item.id,
         t('admin:common.activating', 'Activating...'),
@@ -358,7 +344,7 @@ function Extensions() {
         clearAction(item.id);
       }
     },
-    [dispatch, t, setActionWithTimeout, clearAction],
+    [actionMap, dispatch, t, setActionWithTimeout, clearAction],
   );
 
   // --- Deactivate ---
@@ -368,6 +354,7 @@ function Extensions() {
 
   const handleDeactivateAction = useCallback(
     async item => {
+      if (actionMap[item.id]) return;
       setActionWithTimeout(
         item.id,
         t('admin:common.deactivating', 'Deactivating...'),
@@ -381,7 +368,7 @@ function Extensions() {
         clearAction(item.id);
       }
     },
-    [dispatch, t, setActionWithTimeout, clearAction],
+    [actionMap, dispatch, t, setActionWithTimeout, clearAction],
   );
 
   // --- Install (Upload) ---
@@ -419,6 +406,7 @@ function Extensions() {
 
   const handleUpgrade = useCallback(
     async extension => {
+      if (actionMap[extension.id]) return;
       setActionWithTimeout(
         extension.id,
         t('admin:common.upgrading', 'Upgrading...'),
@@ -427,12 +415,21 @@ function Extensions() {
         await dispatch(
           upgradeExtension({ id: extension.id, data: {} }),
         ).unwrap();
-        // Success toast deferred to WebSocket EXTENSION_UPDATED handler
+        // Upgrade is synchronous (no queue job) — show feedback immediately
+        clearAction(extension.id);
+        dispatch(
+          showSuccessMessage({
+            message: t(
+              'admin:extensions.upgradeSuccess',
+              'Extension upgraded successfully.',
+            ),
+          }),
+        );
       } catch {
         clearAction(extension.id);
       }
     },
-    [dispatch, t, setActionWithTimeout, clearAction],
+    [actionMap, dispatch, t, setActionWithTimeout, clearAction],
   );
 
   // Count per tab for badges
