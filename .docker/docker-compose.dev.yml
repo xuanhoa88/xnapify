@@ -30,6 +30,7 @@ services:
       XNAPIFY_NODERED_HOME: /app/data/node-red
       XNAPIFY_EXTENSION_DIR: /app/data/extensions
       XNAPIFY_CACHE_DIR: /app/data/caches
+      XNAPIFY_SQLITE_DATA_DIR: /app/data/sqlite
       XNAPIFY_PG_DATA_DIR: /app/data/postgres
       XNAPIFY_MYSQL_DATA_DIR: /app/data/mysql
     volumes:

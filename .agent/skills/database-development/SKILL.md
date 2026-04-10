@@ -29,6 +29,18 @@ Database operations in xnapify are managed through the `db` engine (`shared/api/
 
 Drivers are auto-installed by `tools/npm/preboot.js` at startup.
 
+### Data Directories
+
+Each database dialect has a configurable data directory. Defaults vary by environment:
+
+| Variable | Dev Default | Prod Default | Docker |
+|----------|-------------|--------------|--------|
+| `XNAPIFY_SQLITE_DATA_DIR` | `.data/sqlite` | `~/.xnapify/sqlite` | `/app/data/sqlite` |
+| `XNAPIFY_PG_DATA_DIR` | `.data/postgres` | `~/.xnapify/postgres` | `/app/data/postgres` |
+| `XNAPIFY_MYSQL_DATA_DIR` | `.data/mysql` | `~/.xnapify/mysql` | `/app/data/mysql` |
+
+> When `XNAPIFY_SQLITE_DATA_DIR` is set, relative paths in `XNAPIFY_DB_URL` (e.g., `sqlite:database.sqlite`) resolve against the data directory. Preboot also uses it to place the database file in the correct location.
+
 ---
 
 ## Migration Patterns

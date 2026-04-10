@@ -45,6 +45,13 @@ const ENV_TEMPLATE = path.join(ROOT, '.env.xnapify');
  * instead of .env (persistent). Set when --db or XNAPIFY_DB is used.
  */
 let useLocalEnv = false;
+
+const SQLITE_DATA_DIR =
+  process.env.XNAPIFY_SQLITE_DATA_DIR ||
+  (process.env.NODE_ENV === 'production'
+    ? path.join(os.homedir(), '.xnapify', 'sqlite')
+    : path.join(ROOT, '.data', 'sqlite'));
+
 const PG_DATA_DIR =
   process.env.XNAPIFY_PG_DATA_DIR ||
   (process.env.NODE_ENV === 'production'
@@ -1256,13 +1263,8 @@ async function autoMode() {
     await resolvePostgres(url);
   } else if (dialect === 'mysql') {
     await resolveMysql(url);
-  } else if (dialect === 'sqlite' && dbOverride) {
-    // Override active (--db sqlite / XNAPIFY_DB=sqlite) — write the SQLite
-    // URL to .env.local so it takes precedence over any existing
-    // postgres/mysql URL in .env or .env.local.
-    const sqliteUrl = 'sqlite:database.sqlite';
-    updateEnvDbUrl(sqliteUrl);
-    console.log(`📄 Updated XNAPIFY_DB_URL=${sqliteUrl}`);
+  } else if (dialect === 'sqlite') {
+    await resolveSqlite(url);
   }
 }
 
@@ -1319,6 +1321,48 @@ async function pgFallbackChain() {
   await startPostgres(PG_DEFAULTS);
   updateEnvDbUrl(embeddedUrl);
   console.log(`📄 Updated XNAPIFY_DB_URL=${embeddedUrl}`);
+}
+
+// ─── SQLite Resolution ──────────────────────────────────────────────────────
+
+/**
+ * Resolve SQLite database path.
+ *
+ * Ensures the data directory exists and resolves the SQLite URL to use
+ * XNAPIFY_SQLITE_DATA_DIR when:
+ *   - An explicit override is active (--db sqlite / XNAPIFY_DB=sqlite)
+ *   - The URL is the bare shorthand 'sqlite' (no path specified)
+ *   - The URL uses the default relative 'sqlite:database.sqlite'
+ *
+ * When a custom path is already specified (e.g. sqlite:/my/path/db.sqlite),
+ * it is preserved as-is.
+ *
+ * @param {string} url - Current XNAPIFY_DB_URL
+ */
+async function resolveSqlite(url) {
+  // Determine the file path from the URL
+  const isShorthand = url === 'sqlite' || url === 'sqlite:database.sqlite';
+  const isDefault = !dbOverride && !isShorthand;
+
+  if (isDefault && !isShorthand) {
+    // User specified a custom sqlite path — respect it as-is
+    const filePath = url.replace(/^sqlite:/, '');
+    if (path.isAbsolute(filePath)) {
+      // Ensure parent directory exists for absolute paths
+      fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    }
+    console.log(`📂 Using SQLite database: ${filePath}`);
+    return;
+  }
+
+  // Resolve database file inside the data directory
+  fs.mkdirSync(SQLITE_DATA_DIR, { recursive: true });
+  const dbFile = path.join(SQLITE_DATA_DIR, 'database.sqlite');
+  const sqliteUrl = `sqlite:${dbFile}`;
+
+  updateEnvDbUrl(sqliteUrl);
+  console.log(`📂 SQLite data dir: ${SQLITE_DATA_DIR}`);
+  console.log(`📄 Updated XNAPIFY_DB_URL=${sqliteUrl}`);
 }
 
 // ─── MySQL Resolution ───────────────────────────────────────────────────────
@@ -1462,10 +1506,23 @@ async function showStatus(dialectOverride) {
     );
     console.log(`   MySQL Data: ${MYSQL_DATA_DIR}`);
   } else {
+    const sqlitePath = url.replace(/^sqlite:/, '') || 'database.sqlite';
+    const resolvedPath = path.isAbsolute(sqlitePath)
+      ? sqlitePath
+      : path.resolve(ROOT, sqlitePath);
+    const fileExists = fs.existsSync(resolvedPath);
+    const fileSize = fileExists
+      ? `${(fs.statSync(resolvedPath).size / 1024).toFixed(1)} KB`
+      : 'N/A';
+
     console.log('📊 Database Status (SQLite)');
     console.log(separator);
     console.log(`   Dialect  : ${dialect}`);
     console.log(`   URL      : ${url}`);
+    console.log(`   File     : ${resolvedPath}`);
+    console.log(`   Exists   : ${fileExists ? '🟢 Yes' : '🔴 No'}`);
+    console.log(`   Size     : ${fileSize}`);
+    console.log(`   Data Dir : ${SQLITE_DATA_DIR}`);
     console.log('   Mode     : In-process (no daemon)');
   }
 

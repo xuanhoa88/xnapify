@@ -20,7 +20,7 @@ shared/api/engines/db/
 
 ## 2. Connection (`connection.js`)
 
-- `createConnection(url?, options?)` — creates Sequelize instance, deep-merges `getDefaultOptions()`, removes timezone for SQLite, attaches migration convenience methods.
+- `createConnection(url?, options?)` — creates Sequelize instance, deep-merges `getDefaultOptions()`, removes timezone for SQLite, resolves relative SQLite paths against `XNAPIFY_SQLITE_DATA_DIR`, attaches migration convenience methods.
 - `closeConnection()` — drains the connection pool. Must be called during graceful shutdown (SIGTERM/SIGINT) to release file locks (SQLite) and TCP connections (PostgreSQL/MySQL).
 - `connection` — default singleton using `XNAPIFY_DB_URL` env var.
 - `attachMigrationMethods(sequelize)` — adds `runMigrations`, `runSeeds`, `revertMigrations`, `undoSeeds`, `getMigrationStatus`, `getSeedStatus` directly to the Sequelize instance.
@@ -34,6 +34,9 @@ shared/api/engines/db/
 | `XNAPIFY_DB_LOG` | `false` | Enable SQL query logging (disabled in production) |
 | `XNAPIFY_DB_POOL_MAX` | `5` | Maximum connection pool size |
 | `XNAPIFY_DB_POOL_MIN` | `0` | Minimum connection pool size |
+| `XNAPIFY_SQLITE_DATA_DIR` | `.data/sqlite` (dev) / `~/.xnapify/sqlite` (prod) | Directory for SQLite database file (relative paths resolved against this) |
+| `XNAPIFY_PG_DATA_DIR` | `.data/postgres` (dev) / `~/.xnapify/postgres` (prod) | Directory for embedded PostgreSQL data |
+| `XNAPIFY_MYSQL_DATA_DIR` | `.data/mysql` (dev) / `~/.xnapify/mysql` (prod) | Directory for embedded MySQL data |
 
 ### SQLite Concurrency Tuning
 

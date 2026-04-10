@@ -5,6 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import path from 'path';
+
 import merge from 'lodash/merge';
 import Sequelize from 'sequelize';
 
@@ -176,6 +178,17 @@ export function createConnection(url, options) {
 
   // SQLite-specific tuning
   if (databaseUrl.startsWith(SQLITE_PREFIX)) {
+    // Resolve relative SQLite paths against XNAPIFY_SQLITE_DATA_DIR when set.
+    // This mirrors how PG_DATA_DIR and MYSQL_DATA_DIR control data placement.
+    const filePath = databaseUrl.slice(SQLITE_PREFIX.length);
+    if (
+      filePath &&
+      !path.isAbsolute(filePath) &&
+      process.env.XNAPIFY_SQLITE_DATA_DIR
+    ) {
+      databaseUrl = `${SQLITE_PREFIX}${path.join(process.env.XNAPIFY_SQLITE_DATA_DIR, filePath)}`;
+    }
+
     delete config.timezone; // SQLite ignores connection timezones
 
     // Apply WAL mode and performance PRAGMAs on every new pool connection

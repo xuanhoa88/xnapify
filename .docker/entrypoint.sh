@@ -4,7 +4,7 @@ set -e
 # Ensure writable directories for the node user (uid 1000)
 # Docker named volumes mount as root — fix ownership before dropping privileges
 if [ "$(id -u)" = "0" ]; then
-  # App build dir (SQLite DB lives here)
+  # App build dir (preboot installs DB drivers here)
   chown node:node /app/build
 
   # Bundled extensions dir (extension activation runs npm install --omit=dev here)

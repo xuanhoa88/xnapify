@@ -291,10 +291,11 @@ node tools/npm/preboot.js --db postgres --stop    # Force PostgreSQL
 # Build image
 docker build -t xnapify .
 
-# Run container (SQLite default)
+# Run container (SQLite default — persisted via data volume)
 docker run -p 1337:1337 \
   -e NODE_ENV=production \
   -e XNAPIFY_KEY=$(openssl rand -base64 32) \
+  -v xnapify_data:/app/data \
   xnapify
 
 # With PostgreSQL
@@ -311,6 +312,14 @@ docker run -p 1337:1337 \
   -e XNAPIFY_DB_URL=mysql://user:pass@host:3306/dbname \
   xnapify
 ```
+
+**Data directories** (control where each database stores its files):
+
+| Variable | Default (prod) | Docker Compose |
+|---|---|---|
+| `XNAPIFY_SQLITE_DATA_DIR` | `~/.xnapify/sqlite` | `/app/data/sqlite` |
+| `XNAPIFY_PG_DATA_DIR` | `~/.xnapify/postgres` | `/app/data/postgres` |
+| `XNAPIFY_MYSQL_DATA_DIR` | `~/.xnapify/mysql` | `/app/data/mysql` |
 
 ## 🚢 Production Deployment
 

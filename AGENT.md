@@ -730,6 +730,12 @@ XNAPIFY_PUBLIC_APP_DESC="Snap your API, Stream your React"
 # Use shorthand 'sqlite', 'postgres', 'mysql' or full URL
 XNAPIFY_DB_URL=sqlite:database.sqlite
 
+# Database data directories (control where each DB stores files)
+# Defaults: dev → .data/<dialect>, prod → ~/.xnapify/<dialect>
+# XNAPIFY_SQLITE_DATA_DIR=       # SQLite database file location
+# XNAPIFY_PG_DATA_DIR=           # PostgreSQL data directory
+# XNAPIFY_MYSQL_DATA_DIR=        # MySQL data directory
+
 # On-demand dialect override (session-scoped, writes to .env.local)
 # Usage: XNAPIFY_DB=mysql npm run dev
 # XNAPIFY_DB=                 # Not set by default
@@ -815,6 +821,14 @@ docker run -p 1337:1337 \
   -e XNAPIFY_DB_URL=postgresql://user:pass@host:5432/db \
   xnapify
 ```
+
+**Data directories** — control where each database stores its files in Docker:
+
+| Variable | Default (prod) | Docker Compose |
+|---|---|---|
+| `XNAPIFY_SQLITE_DATA_DIR` | `~/.xnapify/sqlite` | `/app/data/sqlite` |
+| `XNAPIFY_PG_DATA_DIR` | `~/.xnapify/postgres` | `/app/data/postgres` |
+| `XNAPIFY_MYSQL_DATA_DIR` | `~/.xnapify/mysql` | `/app/data/mysql` |
 
 ## Key Features
 
