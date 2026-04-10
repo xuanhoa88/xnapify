@@ -57,6 +57,7 @@ function createStatsWriterPlugin() {
   return new StatsManifestPlugin({
     filename: path.join(config.BUILD_DIR, 'stats.json'),
     incremental: false,
+    ignoreErrors: false,
     statsOptions: {
       all: false,
       entrypoints: true,
