@@ -11,7 +11,7 @@ import formatDistanceToNow from 'date-fns/formatDistanceToNow';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
-import Icons from './ToolbarIcon';
+import Icon from '../Icon';
 
 import s from './CommentActionsPopup.css';
 
@@ -79,7 +79,7 @@ const CommentActionsPopup = ({
                   )}
                   aria-label='Delete Comment'
                 >
-                  {Icons.trash}
+                  {<Icon name='trash' size={16} strokeWidth={2.5} />}
                 </button>
               </div>
               <p className={s.commentText}>{comment.text}</p>

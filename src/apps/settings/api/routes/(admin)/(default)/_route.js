@@ -14,5 +14,3 @@ function requireAuth() {
 
 // GET /api/admin/settings
 export const get = [requireAuth(), controller.list];
-
-

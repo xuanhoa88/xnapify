@@ -14,7 +14,7 @@ import {
   ExtensionError,
   resolveExtension,
   validateManifest,
-  invalidateCache,
+  invalidateCaches,
 } from './extension.helpers';
 
 /**
@@ -371,7 +371,7 @@ export async function deleteExtension(
     await extension.destroy();
   }
 
-  if (cache && extension) await invalidateCache(cache, extension.key);
+  if (cache && extension) await invalidateCaches(cache, extension.key);
 
   return true;
 }
@@ -633,7 +633,7 @@ export async function installExtensionFromPackage(
       actorId,
     });
 
-    if (cache) await invalidateCache(cache);
+    if (cache) await invalidateCaches(cache);
 
     return extension;
   } catch (err) {
@@ -714,7 +714,7 @@ export async function toggleExtensionStatus(
   // Update extension status
   await extension.update({ is_active: isActive });
 
-  if (cache) await invalidateCache(cache, id);
+  if (cache) await invalidateCaches(cache, id);
 
   // Enqueue the background job for NPM dependencies and module reloading
   if (queue) {
@@ -746,7 +746,7 @@ export async function upgradeExtension(
   const { extension } = await resolveExtension(models, id);
 
   await extension.update({ ...data, integrity: null });
-  if (cache) await invalidateCache(cache, id);
+  if (cache) await invalidateCaches(cache, id);
 
   if (hook) {
     hook('admin:extensions').emit('upgraded', {
@@ -757,4 +757,30 @@ export async function upgradeExtension(
   }
 
   return extension;
+}
+
+/**
+ * Reloads extension configurations and invalidates API caches.
+ *
+ * @param {Array<string>} extensionIds - Optional list of specific extension IDs to isolate the refresh
+ * @param {Object} context - App context holding DI modules
+ */
+export async function refreshExtensions(
+  extensionIds = [],
+  { extensionManager, cache, models },
+) {
+  const { Extension } = models;
+
+  // Refresh extensions
+  await extensionManager.refresh(...extensionIds);
+
+  // If this is a global refresh, derive ALL existing extension keys from the DB
+  // so we can systematically purge every possible individual detail cache `extensions:detail:*`
+  const allExtensions = await Extension.findAll({
+    attributes: ['key'],
+  });
+  await invalidateCaches(
+    cache,
+    ...new Set([...extensionIds, ...allExtensions.map(ext => ext.key)]),
+  );
 }

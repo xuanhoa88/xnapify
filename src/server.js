@@ -250,7 +250,6 @@ const appState = {
   youch: null,
   wsServer: null,
   nodeRed: new NodeRedManager(),
-  onExtensionRefreshed: null,
 };
 
 function invalidateCaches() {
@@ -1039,11 +1038,6 @@ export async function bootstrapApp(app, server, options = {}) {
 export async function disposeApp() {
   console.info('🛑 Stopping application services...');
 
-  if (appState.onExtensionRefreshed) {
-    process.removeListener('message', appState.onExtensionRefreshed);
-    appState.onExtensionRefreshed = null;
-  }
-
   const errors = [];
 
   try {
@@ -1115,9 +1109,6 @@ export async function destroyServer(server) {
 // ---------------------------------------------------------------------------
 
 if (module.hot) {
-  // Flag to prevent concurrent extension refreshes
-  let isRefreshingExtensions = false;
-
   module.hot.accept(err => {
     if (err) {
       console.error('❌ HMR error:', err);
@@ -1127,42 +1118,6 @@ if (module.hot) {
     invalidateCaches();
     console.log('🔄 HMR: Caches cleared');
   });
-
-  appState.onExtensionRefreshed = async msg => {
-    if (msg && msg.type === 'extensions-refreshed') {
-      if (isRefreshingExtensions) {
-        if (__DEV__) {
-          console.log('🔌 Extension refresh already in progress, skipping...');
-        }
-        return;
-      }
-
-      const extensionIds = Array.isArray(msg.extensions) ? msg.extensions : [];
-
-      console.log('🔌 Refreshing all extensions...');
-
-      isRefreshingExtensions = true;
-
-      const start = Date.now();
-
-      try {
-        // ServerExtensionManager.refresh() reads fresh manifests from disk
-        // for targeted reloads, bypassing the HTTP self-fetch cycle.
-        await extensionManager.refresh(...extensionIds);
-
-        invalidateCaches();
-
-        const duration = Date.now() - start;
-        console.log(`✅ Extensions refreshed in ${duration}ms`);
-      } catch (err) {
-        console.error('❌ Failed to refresh extensions:', err.message);
-      } finally {
-        isRefreshingExtensions = false;
-      }
-    }
-  };
-
-  process.on('message', appState.onExtensionRefreshed);
 
   exports.hot = module.hot;
 } else {

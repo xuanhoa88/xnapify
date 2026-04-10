@@ -15,7 +15,6 @@ export const fetchSettings = createAsyncThunk(
   },
 );
 
-
 /**
  * Save settings for a specific namespace.
  *

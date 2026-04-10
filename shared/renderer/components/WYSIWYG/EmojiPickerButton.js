@@ -8,17 +8,17 @@
 import PropTypes from 'prop-types';
 
 import ContextMenu from '../ContextMenu';
+import Icon from '../Icon';
 
 import { COMMON_EMOJIS } from './constants';
 import ToolbarButton from './ToolbarButton';
-import Icons from './ToolbarIcon';
 
 export default function EmojiPickerButton({ onSelect, title, disabled }) {
   return (
     <ContextMenu align='left'>
       <ContextMenu.Trigger
         as={ToolbarButton}
-        icon={Icons.emoji}
+        icon={<Icon name='emoji' size={16} strokeWidth={2.5} />}
         title={title}
         disabled={disabled}
       />

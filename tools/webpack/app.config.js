@@ -27,6 +27,7 @@ const {
   isDev,
   pkg,
 } = require('./base.config');
+const StatsManifestPlugin = require('./StatsManifestPlugin');
 
 /**
  * Get the compiled server entry path from webpack output configuration
@@ -36,6 +37,7 @@ const SERVER_BUNDLE_PATH = path.join(config.BUILD_DIR, 'server');
 // =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
+
 /**
  * Webpack plugin that writes a minimal stats.json containing only the asset
  * filenames needed by the SSR template to emit <script>, <link rel="stylesheet">,
@@ -52,85 +54,84 @@ const SERVER_BUNDLE_PATH = path.join(config.BUILD_DIR, 'server');
  * @returns {import('webpack').WebpackPluginInstance}
  */
 function createStatsWriterPlugin() {
-  return {
-    apply(compiler) {
-      compiler.hooks.done.tap('StatsWriterPlugin', stats => {
-        try {
-          const statsData = stats.toJson({
-            all: false,
-            entrypoints: true,
-            assets: true,
-            chunkGroups: true,
-            namedChunkGroups: true,
-            chunks: false,
-            modules: false,
-          });
+  return new StatsManifestPlugin({
+    filename: path.join(config.BUILD_DIR, 'stats.json'),
+    incremental: false,
+    statsOptions: {
+      all: false,
+      entrypoints: true,
+      assets: true,
+      chunkGroups: true,
+      namedChunkGroups: true,
+      chunks: false,
+      modules: false,
+    },
+    transform: statsData => {
+      const scripts = new Set();
+      const stylesheets = new Set();
 
-          if (stats.hasErrors()) {
-            console.warn(
-              '[StatsWriterPlugin] Build has errors — stats.json may be incomplete.',
-            );
-          }
+      const isHotUpdate = name => /\.hot-update\./i.test(name);
+      const isSourceMap = name => name.endsWith('.map');
+      const isScript = name => name.endsWith('.js');
+      const isStylesheet = name => name.endsWith('.css');
 
-          const scripts = new Set();
-          const stylesheets = new Set();
+      const addAsset = asset => {
+        const name =
+          typeof asset === 'object' && asset !== null && asset.name
+            ? asset.name
+            : asset;
+        if (
+          !name ||
+          typeof name !== 'string' ||
+          isHotUpdate(name) ||
+          isSourceMap(name)
+        )
+          return;
+        if (isScript(name)) scripts.add(name);
+        if (isStylesheet(name)) stylesheets.add(name);
+      };
 
-          const isHotUpdate = name => /\.hot-update\./i.test(name);
-          const isSourceMap = name => name.endsWith('.map');
-          const isScript = name => name.endsWith('.js');
-          const isStylesheet = name => name.endsWith('.css');
+      // 1. Ordered assets from the client entrypoint (preserves load order).
+      const clientEntry =
+        (statsData.entrypoints && statsData.entrypoints.client) || null;
+      if (clientEntry) {
+        (clientEntry.assets || []).forEach(addAsset);
 
-          const addAsset = asset => {
-            const name = typeof asset === 'string' ? asset : (asset && asset.name ? asset.name : null);
-            if (typeof name !== 'string' || isHotUpdate(name) || isSourceMap(name)) return;
-            if (isScript(name)) scripts.add(name);
-            if (isStylesheet(name)) stylesheets.add(name);
-          };
+        // Preloaded child chunks (e.g. async MF bootstrap wrapper).
+        (
+          (clientEntry.childAssets && clientEntry.childAssets.preload) ||
+          []
+        ).forEach(addAsset);
+      } else {
+        console.warn(
+          '[StatsWriterPlugin] No "client" entrypoint found in stats — scripts will be empty.',
+        );
+      }
 
-          // 1. Ordered assets from the client entrypoint (preserves load order).
-          const clientEntry =
-            (statsData.entrypoints && statsData.entrypoints.client) || null;
-          if (clientEntry) {
-            (clientEntry.assets || []).forEach(addAsset);
-
-            // Preloaded child chunks (e.g. async MF bootstrap wrapper).
-            (
-              (clientEntry.childAssets && clientEntry.childAssets.preload) ||
-              []
-            ).forEach(addAsset);
-          } else {
-            console.warn(
-              '[StatsWriterPlugin] No "client" entrypoint found in stats — scripts will be empty.',
-            );
-          }
-
-          // 2. CSS safety net: sweep all emitted assets for any CSS not already
-          //    captured above (e.g. async-imported CSS chunks). This prevents FOUC
-          //    when MiniCssExtractPlugin emits chunks outside the main entrypoint.
-          (statsData.assets || []).forEach(asset => {
-            const name = typeof asset === 'string' ? asset : (asset && asset.name ? asset.name : null);
-            if (typeof name === 'string' && isStylesheet(name) && !isHotUpdate(name)) {
-              stylesheets.add(name);
-            }
-          });
-
-          const output = {
-            scripts: Array.from(scripts),
-            stylesheets: Array.from(stylesheets),
-          };
-
-          const outPath = path.join(config.BUILD_DIR, 'stats.json');
-          fs.mkdirSync(path.dirname(outPath), { recursive: true });
-          fs.writeFileSync(outPath, JSON.stringify(output, null, 2));
-        } catch (err) {
-          // Surface the error without silently swallowing it — a missing or
-          // malformed stats.json will break SSR at runtime, so fail loudly.
-          console.error('[StatsWriterPlugin] Failed to write stats.json:', err);
-          throw err;
+      // 2. CSS safety net: sweep all emitted assets for any CSS not already
+      //    captured above (e.g. async-imported CSS chunks). This prevents FOUC
+      //    when MiniCssExtractPlugin emits chunks outside the main entrypoint.
+      (statsData.assets || []).forEach(asset => {
+        const name =
+          typeof asset === 'object' && asset !== null && asset.name
+            ? asset.name
+            : asset;
+        if (
+          name &&
+          typeof name === 'string' &&
+          isStylesheet(name) &&
+          !isHotUpdate(name)
+        ) {
+          stylesheets.add(name);
         }
       });
+
+      return {
+        scripts: Array.from(scripts),
+        stylesheets: Array.from(stylesheets),
+      };
     },
-  };
+  });
 }
 
 // =============================================================================

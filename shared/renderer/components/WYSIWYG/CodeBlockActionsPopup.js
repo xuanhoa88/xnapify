@@ -11,9 +11,9 @@ import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
 import ContextMenu from '../ContextMenu';
+import Icon from '../Icon';
 
 import ToolbarButton from './ToolbarButton';
-import Icons from './ToolbarIcon';
 
 import s from './CodeBlockActionsPopup.css';
 
@@ -58,7 +58,7 @@ export default function CodeBlockActionsPopup({
     <ContextMenu align='left'>
       <ContextMenu.Trigger
         as={ToolbarButton}
-        icon={Icons.code}
+        icon={<Icon name='code' size={16} strokeWidth={2.5} />}
         title={t('shared:form.wysiwyg.codeBlock', 'Code Block')}
         isActive={isActive}
         disabled={disabled}

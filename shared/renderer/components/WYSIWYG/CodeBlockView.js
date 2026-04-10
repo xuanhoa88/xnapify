@@ -11,7 +11,7 @@ import { NodeViewContent, NodeViewWrapper } from '@tiptap/react';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 
-import Icons from './ToolbarIcon';
+import Icon from '../Icon';
 
 import s from './CodeBlockView.css';
 
@@ -51,7 +51,11 @@ export default function CodeBlockView({ node }) {
           title={copied ? 'Copied!' : 'Copy code'}
         >
           <span className={s.copyIcon}>
-            {copied ? Icons.check : Icons.copy}
+            {copied ? (
+              <Icon name='check' size={16} strokeWidth={2.5} />
+            ) : (
+              <Icon name='copy' size={16} strokeWidth={2.5} />
+            )}
           </span>
           {copied ? 'Copied!' : 'Copy'}
         </button>

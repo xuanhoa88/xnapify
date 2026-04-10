@@ -30,6 +30,14 @@ export async function up({ context }) {
         is_public: false,
         description: 'Number of times to retry a failed demo action',
       },
+      {
+        namespace: 'demo_ext',
+        key: 'DEMO_JSON_SETTING',
+        type: 'json',
+        value: '{"name":"John Doe","age":30,"city":"New York"}',
+        is_public: false,
+        description: 'JSON setting for demo',
+      },
     ],
     {
       updateOnDuplicate: ['value', 'description'],

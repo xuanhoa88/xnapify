@@ -117,7 +117,6 @@ When `markdown={true}` (default), the component auto-converts between HTML and m
 | `WYSIWYG.js`               | Main component — editor setup, extensions, layout  |
 | `Toolbar.js`               | Formatting toolbar with all button groups          |
 | `ToolbarButton.js`         | Individual toolbar button component                |
-| `ToolbarIcon.js`           | SVG icon definitions                               |
 | `ToolbarPromptModal.js`    | Context + hook + modal for URL/input prompts       |
 | `MediaActionsPopup.js`     | Video/Audio/YouTube dropdown                       |
 | `CodeBlockActionsPopup.js` | Code block language picker popup                   |

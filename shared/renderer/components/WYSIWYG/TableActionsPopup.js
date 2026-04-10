@@ -9,9 +9,9 @@ import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
 import ContextMenu from '../ContextMenu';
+import Icon from '../Icon';
 
 import ToolbarButton from './ToolbarButton';
-import Icons from './ToolbarIcon';
 
 /**
  * TableActionsPopup — A toolbar button that opens a popover with table
@@ -29,7 +29,7 @@ export default function TableActionsPopup({ editor, disabled }) {
     <ContextMenu align='left'>
       <ContextMenu.Trigger
         as={ToolbarButton}
-        icon={Icons.table}
+        icon={<Icon name='table' size={16} strokeWidth={2.5} />}
         title={t('shared:form.wysiwyg.tableActions', 'Table Actions')}
         isActive={editor.isActive('table')}
         disabled={disabled}
@@ -38,7 +38,7 @@ export default function TableActionsPopup({ editor, disabled }) {
       <ContextMenu.Menu>
         {/* Insert */}
         <ContextMenu.Item
-          icon={Icons.table}
+          icon={<Icon name='table' size={16} strokeWidth={2.5} />}
           onClick={() =>
             editor
               .chain()
@@ -56,19 +56,21 @@ export default function TableActionsPopup({ editor, disabled }) {
 
             {/* Row actions */}
             <ContextMenu.Item
-              icon={Icons.tableAddRowBefore}
+              icon={
+                <Icon name='tableAddRowBefore' size={16} strokeWidth={2.5} />
+              }
               onClick={() => editor.chain().focus().addRowBefore().run()}
             >
               {t('shared:form.wysiwyg.tableRowBefore', 'Add Row Before')}
             </ContextMenu.Item>
             <ContextMenu.Item
-              icon={Icons.tableRow}
+              icon={<Icon name='tableRow' size={16} strokeWidth={2.5} />}
               onClick={() => editor.chain().focus().addRowAfter().run()}
             >
               {t('shared:form.wysiwyg.tableRowAfter', 'Add Row After')}
             </ContextMenu.Item>
             <ContextMenu.Item
-              icon={Icons.tableDeleteRow}
+              icon={<Icon name='tableDeleteRow' size={16} strokeWidth={2.5} />}
               onClick={() => editor.chain().focus().deleteRow().run()}
               variant='danger'
             >
@@ -79,19 +81,21 @@ export default function TableActionsPopup({ editor, disabled }) {
 
             {/* Column actions */}
             <ContextMenu.Item
-              icon={Icons.tableAddColBefore}
+              icon={
+                <Icon name='tableAddColBefore' size={16} strokeWidth={2.5} />
+              }
               onClick={() => editor.chain().focus().addColumnBefore().run()}
             >
               {t('shared:form.wysiwyg.tableColBefore', 'Add Column Before')}
             </ContextMenu.Item>
             <ContextMenu.Item
-              icon={Icons.tableCol}
+              icon={<Icon name='tableCol' size={16} strokeWidth={2.5} />}
               onClick={() => editor.chain().focus().addColumnAfter().run()}
             >
               {t('shared:form.wysiwyg.tableColAfter', 'Add Column After')}
             </ContextMenu.Item>
             <ContextMenu.Item
-              icon={Icons.tableDeleteCol}
+              icon={<Icon name='tableDeleteCol' size={16} strokeWidth={2.5} />}
               onClick={() => editor.chain().focus().deleteColumn().run()}
               variant='danger'
             >
@@ -102,13 +106,17 @@ export default function TableActionsPopup({ editor, disabled }) {
 
             {/* Cell & header actions */}
             <ContextMenu.Item
-              icon={Icons.tableMergeOrSplit}
+              icon={
+                <Icon name='tableMergeOrSplit' size={16} strokeWidth={2.5} />
+              }
               onClick={() => editor.chain().focus().mergeOrSplit().run()}
             >
               {t('shared:form.wysiwyg.tableMergeOrSplit', 'Merge/Split Cells')}
             </ContextMenu.Item>
             <ContextMenu.Item
-              icon={Icons.tableToggleHeader}
+              icon={
+                <Icon name='tableToggleHeader' size={16} strokeWidth={2.5} />
+              }
               onClick={() => editor.chain().focus().toggleHeaderRow().run()}
             >
               {t(
@@ -117,7 +125,9 @@ export default function TableActionsPopup({ editor, disabled }) {
               )}
             </ContextMenu.Item>
             <ContextMenu.Item
-              icon={Icons.tableToggleHeader}
+              icon={
+                <Icon name='tableToggleHeader' size={16} strokeWidth={2.5} />
+              }
               onClick={() => editor.chain().focus().toggleHeaderColumn().run()}
             >
               {t(
@@ -130,7 +140,7 @@ export default function TableActionsPopup({ editor, disabled }) {
 
             {/* Delete table */}
             <ContextMenu.Item
-              icon={Icons.tableDelete}
+              icon={<Icon name='tableDelete' size={16} strokeWidth={2.5} />}
               onClick={() => editor.chain().focus().deleteTable().run()}
               variant='danger'
             >

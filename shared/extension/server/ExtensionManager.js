@@ -94,7 +94,7 @@ class ServerExtensionManager extends BaseExtensionManager {
    */
   _resolveEntryPoint(manifest) {
     // The manifest's entry points now contain content-hashed filenames
-    // (e.g. './server.a1b2c3d4.js') from the manifest.json.
+    // (e.g. './server.a1b2c3d4.js') from the stats.json.
     if (manifest && manifest.browser) {
       // The server loads the SSR bundle (server.js), resolved via buildManifest
       const bm = manifest.buildManifest;
@@ -1002,7 +1002,7 @@ class ServerExtensionManager extends BaseExtensionManager {
   /**
    * Read an extension's package.json manifest from its directory on disk.
    * Trusts the `manifest.id` field written at build time by the extension
-   * build pipeline. Loads the sibling `manifest.json` for
+   * build pipeline. Loads the sibling `stats.json` for
    * content-hashed filename resolution.
    * Detects built client assets from the build manifest.
    * @param {...string} extensionDirs - Absolute path to the extension directory
@@ -1024,11 +1024,11 @@ class ServerExtensionManager extends BaseExtensionManager {
         manifest.id = this._resolveExtensionId(manifest);
       }
 
-      // Load manifest.json for content-hashed filename resolution
+      // Load stats.json for content-hashed filename resolution
       let buildManifest = null;
       try {
         const bmContent = await fs.promises.readFile(
-          path.join(extDir, 'manifest.json'),
+          path.join(extDir, 'stats.json'),
           'utf8',
         );
         buildManifest = JSON.parse(bmContent);

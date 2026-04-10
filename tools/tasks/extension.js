@@ -108,7 +108,7 @@ function discoverExtensions() {
  * (Re-)generate the built package.json for each extension.
  * Re-reads source manifest on every call so watch-mode picks up metadata changes.
  *
- * Reads `manifest.json` (written by BuildManifestPlugin) to resolve
+ * Reads `stats.json` (written by BuildManifestPlugin) to resolve
  * content-hashed filenames for entry points.
  *
  * The `id` field is generated at build time via `generateExtensionId(name)`
@@ -130,15 +130,15 @@ async function generateManifests(extensions) {
       continue;
     }
 
-    // Read manifest.json for content-hashed filenames
+    // Read stats.json for content-hashed filenames
     let buildManifest = {};
     try {
       buildManifest = JSON.parse(
-        fs.readFileSync(path.join(outputDir, 'manifest.json'), 'utf8'),
+        fs.readFileSync(path.join(outputDir, 'stats.json'), 'utf8'),
       );
     } catch {
       logInfo(
-        `No manifest.json for ${name} — entry points will use logical names`,
+        `No stats.json for ${name} — entry points will use logical names`,
       );
     }
 
@@ -149,7 +149,7 @@ async function generateManifests(extensions) {
       // Canonical identity
       name,
       version,
-      // Entry points (resolved from manifest.json hashed filenames)
+      // Entry points (resolved from stats.json hashed filenames)
       ...(manifest.main && {
         main: `./${buildManifest['api.js'] || 'api.js'}`,
       }),

@@ -5,7 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-const fs = require('fs');
 const path = require('path');
 
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
@@ -33,6 +32,7 @@ const {
   isDev,
   verbose,
 } = require('./base.config');
+const StatsManifestPlugin = require('./StatsManifestPlugin');
 
 /**
  * Webpack plugin to strip :root CSS rules from final CSS assets
@@ -69,7 +69,7 @@ class StripRootCSSPlugin {
 }
 
 /**
- * Webpack plugin that writes a manifest.json after each compilation.
+ * Webpack plugin that writes a stats.json after each compilation.
  * Maps logical filenames (e.g. 'api.js') to their content-hashed physical
  * filenames (e.g. 'api.a1b2c3d4.js'). This enables runtime resolution of
  * extension bundles without hardcoded filenames, solving browser and Node.js
@@ -78,66 +78,51 @@ class StripRootCSSPlugin {
  * Each compilation config should specify `logicalName` in the plugin
  * constructor to define which logical name this build's output maps to.
  */
-class BuildManifestPlugin {
+class BuildManifestPlugin extends StatsManifestPlugin {
   /**
    * @param {Object} options
    * @param {string} options.logicalName - Logical filename key (e.g. 'api.js')
    */
   constructor({ logicalName }) {
-    this.logicalName = logicalName;
-  }
+    super({
+      filename: 'stats.json',
+      incremental: true,
+      ignoreErrors: false,
+      statsOptions: { all: false, assets: true },
+      transform: (statsData, manifest) => {
+        // Find the emitted asset matching this logical name's base
+        // e.g. logicalName='api.js' matches 'api.a1b2c3d4.js'
+        const logicalBase = logicalName.replace(/\.[^.]+$/, ''); // 'api'
+        const logicalExt = path.extname(logicalName); // '.js'
 
-  apply(compiler) {
-    const { logicalName } = this;
+        const assets = (statsData.assets || [])
+          .map(a => (typeof a === 'string' ? a : a && a.name))
+          .filter(Boolean);
 
-    compiler.hooks.done.tap('BuildManifestPlugin', stats => {
-      if (stats.hasErrors()) return;
-
-      const { outputPath } = compiler;
-      const manifestPath = path.join(outputPath, 'manifest.json');
-
-      // Read existing manifest (other compilers may have already written)
-      let manifest = {};
-      try {
-        manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-      } catch {
-        // File doesn't exist yet — start fresh
-      }
-
-      // Find the emitted asset matching this logical name's base
-      // e.g. logicalName='api.js' matches 'api.a1b2c3d4.js'
-      const logicalBase = logicalName.replace(/\.[^.]+$/, ''); // 'api'
-      const logicalExt = path.extname(logicalName); // '.js'
-
-      const statsData = stats.toJson({ all: false, assets: true });
-      const assets = (statsData.assets || [])
-        .map(a => a && a.name)
-        .filter(n => typeof n === 'string');
-
-      // Match pattern: <logicalBase>.<hash><logicalExt>
-      const hashPattern = new RegExp(
-        `^${logicalBase}\\.[a-f0-9]{8}\\${logicalExt}$`,
-      );
-      const matched = assets.find(name => hashPattern.test(name));
-
-      if (matched) {
-        manifest[logicalName] = matched;
-      } else {
-        // Fallback: exact match (for non-hashed builds)
-        const exact = assets.find(name => name === logicalName);
-        if (exact) manifest[logicalName] = exact;
-      }
-
-      manifest.builtAt = Date.now();
-
-      fs.mkdirSync(outputPath, { recursive: true });
-      fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
-
-      if (verbose) {
-        console.log(
-          `[BuildManifestPlugin] ${logicalName} → ${manifest[logicalName] || '(not found)'}`,
+        // Match pattern: <logicalBase>.<hash><logicalExt>
+        const hashPattern = new RegExp(
+          `^${logicalBase}\\.[a-f0-9]{8}\\${logicalExt}$`,
         );
-      }
+        const matched = assets.find(name => hashPattern.test(name));
+
+        if (matched) {
+          manifest[logicalName] = matched;
+        } else {
+          // Fallback: exact match (for non-hashed builds)
+          const exact = assets.find(name => name === logicalName);
+          if (exact) manifest[logicalName] = exact;
+        }
+
+        manifest.builtAt = Date.now();
+
+        if (verbose) {
+          console.log(
+            `[BuildManifestPlugin] ${logicalName} → ${manifest[logicalName] || '(not found)'}`,
+          );
+        }
+
+        return manifest;
+      },
     });
   }
 }

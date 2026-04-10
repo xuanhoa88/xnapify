@@ -12,6 +12,7 @@ import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
 import { ExtensionSlot } from '../Extension';
+import Icon from '../Icon';
 
 import CodeBlockActionsPopup from './CodeBlockActionsPopup';
 import ColorPickerPopup from './ColorPickerPopup';
@@ -19,7 +20,6 @@ import EmojiPickerButton from './EmojiPickerButton';
 import MediaActionsPopup from './MediaActionsPopup';
 import TableActionsPopup from './TableActionsPopup';
 import ToolbarButton from './ToolbarButton';
-import Icons from './ToolbarIcon';
 import { useToolbarPrompt } from './ToolbarPromptModal';
 
 import s from './Toolbar.css';
@@ -58,7 +58,7 @@ export default function Toolbar({
     (key, title, command, activeCheck) => (
       <ToolbarButton
         key={key}
-        icon={Icons[key]}
+        icon={<Icon name={key} size={16} strokeWidth={2.5} />}
         title={title}
         isActive={activeCheck ? editor.isActive(activeCheck) : false}
         onClick={() => command()}
@@ -200,7 +200,7 @@ export default function Toolbar({
       <div className={s.toolbarGroup}>
         {has('color') && (
           <ColorPickerPopup
-            icon={Icons.textColor}
+            icon={<Icon name='textColor' size={16} strokeWidth={2.5} />}
             title={t('shared:form.wysiwyg.textColor', 'Text Color')}
             value={editor.getAttributes('textStyle').color}
             defaultValue='#000000'
@@ -213,7 +213,7 @@ export default function Toolbar({
         )}
         {has('highlight') && (
           <ColorPickerPopup
-            icon={Icons.highlight}
+            icon={<Icon name='highlight' size={16} strokeWidth={2.5} />}
             title={t('shared:form.wysiwyg.highlight', 'Background Color')}
             value={editor.getAttributes('highlight').color}
             defaultValue='#ffffff'
@@ -379,13 +379,13 @@ export default function Toolbar({
       {/* Undo / Redo */}
       <div className={s.toolbarGroup}>
         <ToolbarButton
-          icon={Icons.undo}
+          icon={<Icon name='undo' size={16} strokeWidth={2.5} />}
           title={t('shared:form.wysiwyg.undo', 'Undo')}
           onClick={() => editor.chain().focus().undo().run()}
           disabled={!editor.can().undo()}
         />
         <ToolbarButton
-          icon={Icons.redo}
+          icon={<Icon name='redo' size={16} strokeWidth={2.5} />}
           title={t('shared:form.wysiwyg.redo', 'Redo')}
           onClick={() => editor.chain().focus().redo().run()}
           disabled={!editor.can().redo()}
@@ -405,7 +405,13 @@ export default function Toolbar({
       {/* View Options */}
       <div className={s.toolbarGroup}>
         <ToolbarButton
-          icon={isFullScreen ? Icons.minimize : Icons.fullscreen}
+          icon={
+            isFullScreen ? (
+              <Icon name='minimize' size={16} strokeWidth={2.5} />
+            ) : (
+              <Icon name='fullscreen' size={16} strokeWidth={2.5} />
+            )
+          }
           title={
             isFullScreen
               ? t('shared:form.wysiwyg.exitFullScreen', 'Exit full screen')

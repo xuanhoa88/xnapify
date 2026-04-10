@@ -39,6 +39,7 @@ import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
 import { ExtensionSlot } from '../Extension';
+import Icon from '../Icon';
 
 import CodeBlockView from './CodeBlockView';
 import CommentActionsPopup from './CommentActionsPopup';
@@ -51,7 +52,6 @@ import { Video, Audio } from './MediaExtensions';
 import createSuggestion from './suggestion';
 import Toolbar from './Toolbar';
 import ToolbarButton from './ToolbarButton';
-import Icons from './ToolbarIcon';
 import { ToolbarPromptProvider } from './ToolbarPromptModal';
 
 import s from './WYSIWYG.css';
@@ -591,7 +591,9 @@ const WYSIWYG = forwardRef(function WYSIWYG$(
         {editor && (
           <>
             <DragHandle editor={editor}>
-              <div className={s.dragHandle}>{Icons.dragHandle}</div>
+              <div className={s.dragHandle}>
+                {<Icon name='dragHandle' size={16} strokeWidth={2.5} />}
+              </div>
             </DragHandle>
 
             <BubbleMenu
@@ -625,7 +627,7 @@ const WYSIWYG = forwardRef(function WYSIWYG$(
               ) : (
                 <>
                   <ToolbarButton
-                    icon={Icons.comment}
+                    icon={<Icon name='comment' size={16} strokeWidth={2.5} />}
                     {...(activeCommentId
                       ? {
                           label: t(
@@ -654,7 +656,9 @@ const WYSIWYG = forwardRef(function WYSIWYG$(
                   {/* If we are actively on a comment thread and not in popup mode, show a quick delete button */}
                   {activeCommentId && (
                     <ToolbarButton
-                      icon={Icons.tableDelete} // Using tableDelete icon as a generic trash icon for now
+                      icon={
+                        <Icon name='tableDelete' size={16} strokeWidth={2.5} />
+                      } // Using tableDelete icon as a generic trash icon for now
                       label={t(
                         'shared.form.wysiwyg.removeCommentThread',
                         'Remove Comment Thread',

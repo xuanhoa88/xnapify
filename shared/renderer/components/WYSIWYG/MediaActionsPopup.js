@@ -9,9 +9,9 @@ import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
 import ContextMenu from '../ContextMenu';
+import Icon from '../Icon';
 
 import ToolbarButton from './ToolbarButton';
-import Icons from './ToolbarIcon';
 
 /**
  * MediaActionsPopup — A toolbar button that opens a popover with media
@@ -39,7 +39,7 @@ export default function MediaActionsPopup({
     <ContextMenu align='left'>
       <ContextMenu.Trigger
         as={ToolbarButton}
-        icon={Icons.video}
+        icon={<Icon name='video' size={16} strokeWidth={2.5} />}
         title={t('shared:form.wysiwyg.mediaActions', 'Media')}
         disabled={disabled}
       />
@@ -47,7 +47,7 @@ export default function MediaActionsPopup({
       <ContextMenu.Menu>
         {hasVideo && (
           <ContextMenu.Item
-            icon={Icons.video}
+            icon={<Icon name='video' size={16} strokeWidth={2.5} />}
             onClick={() => {
               openPrompt({
                 title: t('shared:form.wysiwyg.video', 'Video'),
@@ -67,7 +67,7 @@ export default function MediaActionsPopup({
         )}
         {hasAudio && (
           <ContextMenu.Item
-            icon={Icons.audio}
+            icon={<Icon name='audio' size={16} strokeWidth={2.5} />}
             onClick={() => {
               openPrompt({
                 title: t('shared:form.wysiwyg.audio', 'Audio'),
@@ -87,7 +87,7 @@ export default function MediaActionsPopup({
         )}
         {hasYoutube && (
           <ContextMenu.Item
-            icon={Icons.youtube}
+            icon={<Icon name='youtube' size={16} strokeWidth={2.5} />}
             onClick={() => {
               openPrompt({
                 title: t('shared:form.wysiwyg.youtube', 'YouTube'),

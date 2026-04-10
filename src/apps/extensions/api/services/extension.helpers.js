@@ -125,12 +125,14 @@ export function validateManifest(manifest) {
 /**
  * Invalidate extension caches
  * @param {object} cache - Cache engine instance
- * @param {string} [extensionId] - Optional extension ID to invalidate detail cache
+ * @param {...string} extensionIds - Optional extension ID to invalidate detail cache
  */
-export async function invalidateCache(cache, extensionId) {
+export async function invalidateCaches(cache, ...extensionIds) {
   if (cache) {
     const keys = ['extensions:list:all', 'extensions:list:active'];
-    if (extensionId) keys.push(`extensions:detail:${extensionId}`);
+    extensionIds.forEach(extensionId => {
+      keys.push(`extensions:detail:${extensionId}`);
+    });
     await Promise.all(keys.map(k => cache.delete(k)));
   }
 }

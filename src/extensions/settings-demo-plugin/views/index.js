@@ -8,7 +8,7 @@ export default {
     // Inject custom settings tab configuration metadata
     registry.registerHook('settings.tabs.config', () => ({
       demo_ext: {
-        icon: 'stars',
+        icon: 'star',
         label: 'Demo Config', // Fallback label
         i18nKey: 'admin:extensions.demoSettings.title',
         order: 90, // Place it towards the end but before 'system'

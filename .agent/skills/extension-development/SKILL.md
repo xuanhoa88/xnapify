@@ -216,24 +216,24 @@ export default {
   translations() {
     return require.context('../translations', false, /\.json$/i);
   },
-  
+
   boot({ registry }) {
     // Inject tab metadata using the exact namespace inserted into the DB
     registry.registerHook('settings.tabs.config', () => ({
       my_extension: {
         icon: '/api/extensions/my_extension/static/icon.svg', // Serves static asset
-        i18nKey: 'my_extension:settings.tabLabel',            // Uses your translations()
-        label: 'My Extension',                                // Fallback
+        i18nKey: 'my_extension:settings.tabLabel', // Uses your translations()
+        label: 'My Extension', // Fallback
         order: 60,
-        fieldOrder: ['API_KEY', 'WEBHOOK_URL']
-      }
+        fieldOrder: ['API_KEY', 'WEBHOOK_URL'],
+      },
     }));
   },
-  
+
   shutdown({ registry }) {
     // Always cleanup!
     registry.unregisterHook('settings.tabs.config');
-  }
+  },
 };
 ```
 
@@ -251,16 +251,16 @@ export default {
 
 ## Related Skills & Workflows
 
-| Need                       | Skill / Workflow                                         |
-| -------------------------- | -------------------------------------------------------- |
-| Core module patterns       | `module-development` skill                                 |
-| Coding standards           | `coding-standards` skill                                       |
-| Security review            | `security-compliance` skill                                 |
+| Need                       | Skill / Workflow                                       |
+| -------------------------- | ------------------------------------------------------ |
+| Core module patterns       | `module-development` skill                             |
+| Coding standards           | `coding-standards` skill                               |
+| Security review            | `security-compliance` skill                            |
 | Code review checklist      | `code-review` skill (`checklists/extension-review.md`) |
-| Adding extension tests     | `/add-test` workflow                                     |
-| Full extension scaffolding | `/add-extension` workflow                                |
-| Database patterns          | `database-development` skill                               |
-| Engine development         | `engine-development` skill                                 |
+| Adding extension tests     | `/add-test` workflow                                   |
+| Full extension scaffolding | `/add-extension` workflow                              |
+| Database patterns          | `database-development` skill                           |
+| Engine development         | `engine-development` skill                             |
 
 ## Content-Hashed Bundles & Cache Busting
 
@@ -275,13 +275,13 @@ build/extensions/<ext_name>/
 ├── remote.c9d0e1f2.js           # Module Federation container (content-hashed)
 ├── server.5e6f7a8b.js           # SSR bundle (content-hashed)
 ├── extension.1a2b3c4d.css       # Extracted CSS (content-hashed)
-├── manifest.json                # Maps logical → physical filenames
+├── stats.json                # Maps logical → physical filenames
 └── package.json                 # Manifest with hashed entry points
 ```
 
-### manifest.json
+### stats.json
 
-The `BuildManifestPlugin` (in `extension.config.js`) writes a `manifest.json` after each successful compilation. This file maps logical bundle names to their content-hashed physical filenames:
+The `BuildManifestPlugin` (in `extension.config.js`) writes a `stats.json` after each successful compilation. This file maps logical bundle names to their content-hashed physical filenames:
 
 ```json
 {
@@ -296,7 +296,7 @@ The `BuildManifestPlugin` (in `extension.config.js`) writes a `manifest.json` af
 
 ### How Runtime Resolution Works
 
-1. **Server (`ServerExtensionManager`)**: `readManifest()` loads `manifest.json` alongside `package.json`. All bundle paths (`_loadViewModule`, `_requireApiModule`, `_onExtensionLoaded`) resolve through this manifest.
+1. **Server (`ServerExtensionManager`)**: `readManifest()` loads `stats.json` alongside `package.json`. All bundle paths (`_loadViewModule`, `_requireApiModule`, `_onExtensionLoaded`) resolve through this manifest.
 2. **Client (`ClientExtensionManager`)**: The manifest's `buildManifest` object is passed to the client via the extension API response. CSS/script injection and MF container loading use hashed filenames directly.
 3. **Static serving**: `serveExtensionStatic()` detects content-hashed files by pattern (`*.<8-char-hex>.*`) and sets `Cache-Control: public, max-age=31536000, immutable`. Non-hashed files get `Cache-Control: no-cache`.
 
@@ -304,13 +304,13 @@ The `BuildManifestPlugin` (in `extension.config.js`) writes a `manifest.json` af
 
 When debugging extension bundles in development:
 
-1. **Find the physical filename**: Check `build/extensions/<ext_name>/manifest.json` to map logical names (e.g. `api.js`) to hashed filenames (e.g. `api.5629519e.js`).
+1. **Find the physical filename**: Check `build/extensions/<ext_name>/stats.json` to map logical names (e.g. `api.js`) to hashed filenames (e.g. `api.5629519e.js`).
 2. **Browser DevTools**: In the Network tab, look for requests like `/api/extensions/<id>/static/remote.a475718a.js` — the hash in the URL is the cache buster.
 3. **Source maps**: Source maps are generated alongside hashed bundles and can be loaded in DevTools for step-through debugging.
 4. **Rebuild detection**: After modifying extension source code, the watcher rebuilds and generates new hashes. The dev server automatically refreshes extensions via the `extensions-refreshed` IPC message.
 
 ### Important Notes
 
-- **All extensions must be rebuilt** after upgrading to content-hashed builds. Legacy extensions without `manifest.json` will fail to load.
+- **All extensions must be rebuilt** after upgrading to content-hashed builds. Legacy extensions without `stats.json` will fail to load.
 - Hashes change on **every rebuild** when content changes — this is by design for cache safety.
 - The `package.json` `main` and `browser` fields contain the hashed filenames (e.g. `"main": "./api.5629519e.js"`).

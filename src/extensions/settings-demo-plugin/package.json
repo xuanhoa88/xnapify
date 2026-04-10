@@ -1,7 +1,8 @@
 {
-  "name": "@xnapify-extension/demo-settings",
+  "name": "@xnapify-extension/settings-demo",
   "version": "1.0.0",
   "browser": "views/index.js",
   "main": "api/index.js",
-  "description": "Demo settings extension to populate the SettingsBuilderForm tab"
+  "description": "Demo settings extension to populate the SettingsBuilderForm tab",
+  "slots": ["/admin/settings"]
 }

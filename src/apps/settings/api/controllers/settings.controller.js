@@ -12,8 +12,7 @@
  * Accessed via req.app.get('container').resolve('settings').
  */
 
-import { namespaceUpdateSchema } from '../../validator/index.js';
-
+import { namespaceUpdateSchema } from '../../validator';
 
 /**
  * GET /api/admin/settings — list all settings grouped by namespace (admin)
@@ -39,15 +38,14 @@ export async function list(req, res) {
       await hook('auth.permissions').invoke('resolve', req);
     }
 
-    const isAdmin =
-      (req.user && req.user.roles && req.user.roles.includes('admin')) || false;
+    const isAdmin = req.user && req.user.is_admin;
     const userPermissions = (req.user && req.user.permissions) || [];
 
-    const grouped = await settings.getAll();
+    const groupedSettings = await settings.getAll();
     const authorizedGrouped = {};
 
     // 2. Filter out namespaces without read permissions
-    for (const [ns, items] of Object.entries(grouped)) {
+    for (const [ns, items] of Object.entries(groupedSettings)) {
       if (
         isAdmin ||
         auth.middlewares.hasPermission(
@@ -92,8 +90,7 @@ export async function getByNamespace(req, res) {
     ) {
       await hook('auth.permissions').invoke('resolve', req);
     }
-    const isAdmin =
-      (req.user && req.user.roles && req.user.roles.includes('admin')) || false;
+    const isAdmin = req.user && req.user.is_admin;
     const userPermissions = (req.user && req.user.permissions) || [];
 
     const hasReadPerm =
@@ -125,8 +122,6 @@ export async function getByNamespace(req, res) {
     );
   }
 }
-
-
 
 /**
  * GET /api/settings/public — public settings (no auth required)
@@ -185,8 +180,7 @@ export async function updateByNamespace(req, res) {
     ) {
       await hook('auth.permissions').invoke('resolve', req);
     }
-    const isAdmin =
-      (req.user && req.user.roles && req.user.roles.includes('admin')) || false;
+    const isAdmin = req.user && req.user.is_admin;
     const userPermissions = (req.user && req.user.permissions) || [];
 
     const hasWritePerm =

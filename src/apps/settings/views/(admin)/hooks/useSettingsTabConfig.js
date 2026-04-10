@@ -75,7 +75,7 @@ const INITIAL_STATE = {
  * @returns {{ icons, labels, translationKeys, order, fieldOrder, loading }}
  */
 export function useSettingsTabConfig(extension) {
-  const registry = extension?.registry;
+  const registry = extension ? extension.registry : undefined;
 
   const [config, setConfig] = useState(INITIAL_STATE);
   const [loading, setLoading] = useState(true);

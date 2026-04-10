@@ -13,7 +13,6 @@ import {
   extensionStatusSchema,
   extensionUpgradeSchema,
 } from '../../validator/extension';
-import { invalidateCache } from '../services/extension.helpers';
 import * as extensionService from '../services/extension.service';
 
 // ========================================================================
@@ -328,12 +327,11 @@ export const refreshExtensions = async (req, res) => {
   const container = req.app.get('container');
   const http = container.resolve('http');
   try {
-    const extensionManager = container.resolve('extension');
-    const cache = container.resolve('cache');
-    await extensionManager.refresh();
-
-    // Invalidate extension list caches
-    await invalidateCache(cache);
+    await extensionService.refreshExtensions([], {
+      extensionManager: container.resolve('extension'),
+      cache: container.resolve('cache'),
+      models: container.resolve('models'),
+    });
 
     const ws = container.resolve('ws');
     ws.sendToPublicChannel('extension:updated', {

@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import * as extensionService from './services/extension.service';
 import { registerExtensionWorkers } from './services/extension.workers';
 
 // Auto-load contexts
@@ -33,5 +34,58 @@ export default {
 
   async boot({ container }) {
     registerExtensionWorkers(container);
+
+    if (process.env.NODE_ENV !== 'production') {
+      registerHmrIpcListener(container);
+    }
   },
 };
+
+/**
+ * Registers an IPC message listener for local Webpack recompilations (HMR).
+ * When `tools/tasks/extension.js` finishes rebuilding extension source code,
+ * it broadcasts `extensions-refreshed`, instructing the backend to hot-reload
+ * manifests and invalidate API caches.
+ */
+let activeIpcListener = null;
+
+function registerHmrIpcListener(container) {
+  // Clean up any existing listener from a previous HMR hot-reload
+  // to prevent memory leaks and double-firing
+  if (activeIpcListener) {
+    process.removeListener('message', activeIpcListener);
+  }
+
+  let isRefreshing = false;
+
+  activeIpcListener = async msg => {
+    if (msg && msg.type === 'extensions-refreshed') {
+      if (isRefreshing) return;
+
+      isRefreshing = true;
+      const start = Date.now();
+      console.log('🔌 Refreshing all extensions...');
+
+      try {
+        const extensionIds = Array.isArray(msg.extensions)
+          ? msg.extensions
+          : [];
+
+        await extensionService.refreshExtensions(extensionIds, {
+          extensionManager: container.resolve('extension'),
+          cache: container.resolve('cache'),
+          models: container.resolve('models'),
+        });
+
+        const duration = Date.now() - start;
+        console.log(`✅ Extensions refreshed in ${duration}ms`);
+      } catch (err) {
+        console.error('❌ Failed to refresh extensions via IPC:', err.message);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+  };
+
+  process.on('message', activeIpcListener);
+}

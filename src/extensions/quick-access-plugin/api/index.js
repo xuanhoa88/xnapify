@@ -32,4 +32,11 @@ export default {
   async providers({ container }) {
     container.bind('users:seed_constants', () => SEED_USERS, OWNER_KEY);
   },
+
+  /**
+   * Lifecycle: shutdown — clean up persistent bindings on extension deactivate.
+   */
+  async shutdown({ container }) {
+    container.reset('users:seed_constants', OWNER_KEY);
+  },
 };
