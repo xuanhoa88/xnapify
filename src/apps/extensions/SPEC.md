@@ -51,7 +51,7 @@ Provide a unified framework for installing, managing, and executing system exten
 
 ## 5. Workers & Background Processing (`api/utils/`, `api/services/extension.workers.js`)
 
-### Checksum Utilities (`api/utils/checksum.js`)
+### Checksum Utilities (`api/utils/checksum.util.js`)
 
 Checksum operations are called directly (same-process):
 

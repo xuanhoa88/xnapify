@@ -113,7 +113,15 @@ export async function manageExtensions({
   models,
   cwd,
   queue,
+  cache,
 }) {
+  const CACHE_KEY = 'extensions:list:all';
+
+  if (cache) {
+    const cached = await cache.get(CACHE_KEY);
+    if (cached) return cached;
+  }
+
   const installedExtensionsDir = extensionManager.getInstalledExtensionsDir();
   const localExtensionsDir = extensionManager.getDevExtensionsDir(cwd);
 
@@ -235,6 +243,10 @@ export async function manageExtensions({
   console.debug(
     `[manageExtensions] Total extensions found: ${extensions.length}`,
   );
+
+  if (cache) {
+    await cache.set(CACHE_KEY, extensions, CACHE_TTL);
+  }
 
   return extensions;
 }

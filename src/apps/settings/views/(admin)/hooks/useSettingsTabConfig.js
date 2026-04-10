@@ -75,7 +75,7 @@ const INITIAL_STATE = {
  * @returns {{ icons, labels, translationKeys, order, fieldOrder, loading }}
  */
 export function useSettingsTabConfig(extension) {
-  const { registry } = extension;
+  const registry = extension?.registry;
 
   const [config, setConfig] = useState(INITIAL_STATE);
   const [loading, setLoading] = useState(true);
@@ -122,15 +122,16 @@ export function useSettingsTabConfig(extension) {
       // Insert extension namespaces before 'system' (always last)
       extraOrder.sort((a, b) => a.order - b.order);
       const finalOrder = [...CORE_ORDER];
-      const systemIdx = finalOrder.indexOf('system');
-      for (const { ns } of extraOrder) {
-        if (!finalOrder.includes(ns)) {
-          finalOrder.splice(
-            systemIdx >= 0 ? systemIdx : finalOrder.length,
-            0,
-            ns,
-          );
-        }
+      const extNamespaces = extraOrder
+        .map(e => e.ns)
+        .filter(ns => !finalOrder.includes(ns));
+      if (extNamespaces.length > 0) {
+        const systemIdx = finalOrder.indexOf('system');
+        finalOrder.splice(
+          systemIdx >= 0 ? systemIdx : finalOrder.length,
+          0,
+          ...extNamespaces,
+        );
       }
 
       if (mountedIndicator && mountedIndicator.current) {
@@ -148,6 +149,11 @@ export function useSettingsTabConfig(extension) {
   );
 
   useEffect(() => {
+    if (!registry) {
+      setLoading(false);
+      return;
+    }
+
     const mounted = { current: true };
     resolve(mounted);
 

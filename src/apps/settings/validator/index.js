@@ -55,4 +55,6 @@ export const settingCreateSchema = z.object({
 /**
  * Schema for updating an arbitrary settings namespace payload
  */
-export const namespaceUpdateSchema = z.record(z.union([z.string(), z.null()]));
+export const namespaceUpdateSchema = z.record(
+  z.union([z.string(), z.number(), z.boolean(), z.null()]),
+);

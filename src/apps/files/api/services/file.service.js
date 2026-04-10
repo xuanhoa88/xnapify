@@ -570,15 +570,15 @@ export async function updateSharing(
     }
   }
 
-  const result = await sequelize.transaction(async t => {
+  const result = await sequelize.transaction(async transaction => {
     file.share_type = shareType;
-    await file.save({ transaction: t });
+    await file.save({ transaction });
 
     // Sync shares
     // 1. Delete old shares
     await FileShare.destroy({
       where: { file_id: fileId },
-      transaction: t,
+      transaction,
     });
 
     // 2. Add new ones if share_type is search-based
@@ -590,7 +590,7 @@ export async function updateSharing(
         permission: s.permission || 'viewer',
       }));
 
-      await FileShare.bulkCreate(shareRecords, { transaction: t });
+      await FileShare.bulkCreate(shareRecords, { transaction });
     }
 
     // Return the updated file with shares included
@@ -605,7 +605,7 @@ export async function updateSharing(
           ],
         },
       ],
-      transaction: t,
+      transaction,
     });
   });
 

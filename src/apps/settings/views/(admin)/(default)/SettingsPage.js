@@ -100,7 +100,7 @@ function SettingRow({ setting, canWrite }) {
   };
 
   return (
-    <div key={name} className={s.settingRow}>
+    <div className={s.settingRow}>
       <div className={s.settingMeta}>
         <div className={s.settingKeyRow}>
           <code className={s.settingKey}>{setting.key}</code>
@@ -207,15 +207,7 @@ function sortSettingFields(namespace, settings, fieldOrder) {
 // Settings Builder Form
 // =============================================================================
 
-function SettingsBuilderForm({
-  namespace,
-  settings,
-  icons,
-  labels,
-  translationKeys,
-  fieldOrder,
-}) {
-  const { t } = useTranslation();
+function SettingsBuilderForm({ namespace, settings, fieldOrder, onSaved }) {
   const dispatch = useDispatch();
   const { hasPermission } = useRbac();
 
@@ -237,6 +229,8 @@ function SettingsBuilderForm({
       let val = item.value;
       if (item.type === 'boolean') {
         val = val === 'true' || val === true;
+      } else if (item.type === 'integer') {
+        val = val != null ? parseInt(val, 10) : null;
       }
       vals[item.key] = val;
     });
@@ -261,30 +255,20 @@ function SettingsBuilderForm({
           saveNamespaceSettings({ namespace, payload }),
         );
         if (!result.error) {
+          // Reset the form with submitted data so dirty state clears immediately
+          methods.reset(data);
+          // Then refresh from server to pick up any server-side transformations
           dispatch(fetchSettings());
+          if (typeof onSaved === 'function') onSaved(namespace);
         }
       }
     },
-    [dispatch, namespace],
+    [dispatch, namespace, onSaved],
   );
-
-  const icon = (icons && icons[namespace]) || 'settings';
-  const label = getNamespaceLabel(namespace, t, labels, translationKeys);
 
   return (
     <Form defaultValues={defaultValues} onSubmit={handleSave}>
       <Card variant='default'>
-        <Card.Header>
-          <div className={s.panelHeader}>
-            <Icon name={icon} size={20} />
-            <h3 className={s.panelTitle}>{label}</h3>
-            {canWrite && (
-              <div className={s.panelHeaderActions}>
-                <SaveButton />
-              </div>
-            )}
-          </div>
-        </Card.Header>
         <Card.Body className={s.panelBody}>
           {sortedFields.map(setting => (
             <SettingRow
@@ -294,6 +278,11 @@ function SettingsBuilderForm({
             />
           ))}
         </Card.Body>
+        {canWrite && (
+          <Card.Footer align='right'>
+            <SaveButton />
+          </Card.Footer>
+        )}
       </Card>
     </Form>
   );
@@ -302,10 +291,8 @@ function SettingsBuilderForm({
 SettingsBuilderForm.propTypes = {
   namespace: PropTypes.string.isRequired,
   settings: PropTypes.array.isRequired,
-  icons: PropTypes.object.isRequired,
-  labels: PropTypes.object.isRequired,
-  translationKeys: PropTypes.object.isRequired,
   fieldOrder: PropTypes.object.isRequired,
+  onSaved: PropTypes.func,
 };
 
 // =============================================================================
@@ -365,7 +352,7 @@ function SettingsPage({ context }) {
           )}
         />
         <Loader
-          variant='skeleton'
+          variant='spinner'
           message={t('admin:settings.loading', 'Loading settings...')}
         />
       </div>
@@ -421,26 +408,16 @@ function SettingsPage({ context }) {
           ))}
         </nav>
 
-        {/* Settings panels */}
+        {/* Settings panel — only the active tab is mounted */}
         <div className={s.panel}>
-          {namespaces.map(ns => {
-            if (!groups[ns]) return null;
-            return (
-              <div
-                key={ns}
-                style={{ display: activeTab === ns ? 'block' : 'none' }}
-              >
-                <SettingsBuilderForm
-                  namespace={ns}
-                  settings={groups[ns]}
-                  icons={icons}
-                  labels={labels}
-                  translationKeys={translationKeys}
-                  fieldOrder={fieldOrder}
-                />
-              </div>
-            );
-          })}
+          {activeTab && groups[activeTab] && (
+            <SettingsBuilderForm
+              key={activeTab}
+              namespace={activeTab}
+              settings={groups[activeTab]}
+              fieldOrder={fieldOrder}
+            />
+          )}
         </div>
       </div>
     </div>

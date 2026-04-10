@@ -441,7 +441,7 @@ export default function createSettings(options = {}) {
 export function createProductionSettings(options = {}) {
   return createSettings({
     logLevel: 'warn', // Less verbose logging
-    enableMetrics: true, // Enable performance metrics
+    enableMetrics: false, // Disables performance metrics
     enableAudit: true, // Enable security audit
     ...options,
     additionalSettings: {
@@ -473,7 +473,7 @@ export function createProductionSettings(options = {}) {
 export function createDevelopmentSettings(options = {}) {
   return createSettings({
     logLevel: 'debug', // Verbose logging
-    enableMetrics: true, // Performance insights
+    enableMetrics: false, // Performance insights disabled
     enableAudit: true, // Track changes
     enableProjects: false, // Disabled to avoid welcome dialog on every load
     ...options,

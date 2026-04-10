@@ -7,7 +7,10 @@
 
 import fs from 'fs';
 
-import { computeChecksum, verifyExtensionChecksum } from '../utils/checksum';
+import {
+  computeChecksum,
+  verifyExtensionChecksum,
+} from '../utils/checksum.util';
 
 import {
   installExtensionDependencies,

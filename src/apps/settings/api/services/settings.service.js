@@ -292,7 +292,8 @@ export function createSettingsService(container) {
      * @returns {Promise<Object[]>} Updated settings
      */
     async bulkUpdate(updates) {
-      const { Setting, sequelize } = container.resolve('models');
+      const { Setting } = container.resolve('models');
+      const { sequelize } = Setting;
       const results = [];
       await sequelize.transaction(async transaction => {
         for (const update of updates) {

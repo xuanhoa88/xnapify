@@ -1,4 +1,4 @@
-jest.mock('../utils/checksum', () => ({
+jest.mock('../utils/checksum.util', () => ({
   computeChecksum: jest.fn().mockResolvedValue('abc123hash'),
   verifyExtensionChecksum: jest
     .fn()
@@ -31,7 +31,10 @@ jest.mock('fs', () => {
   };
 });
 
-import { computeChecksum, verifyExtensionChecksum } from '../utils/checksum';
+import {
+  computeChecksum,
+  verifyExtensionChecksum,
+} from '../utils/checksum.util';
 
 import {
   installExtensionDependencies,

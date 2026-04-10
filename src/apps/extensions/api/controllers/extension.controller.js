@@ -13,6 +13,7 @@ import {
   extensionStatusSchema,
   extensionUpgradeSchema,
 } from '../../validator/extension';
+import { invalidateCache } from '../services/extension.helpers';
 import * as extensionService from '../services/extension.service';
 
 // ========================================================================
@@ -138,6 +139,7 @@ export const manageExtensions = async (req, res) => {
       cwd: container.resolve('cwd'),
       actorId: req.user && req.user.id,
       queue: container.resolve('queue'),
+      cache: container.resolve('cache'),
     });
     return http.sendSuccess(res, { extensions });
   } catch (err) {
@@ -327,7 +329,11 @@ export const refreshExtensions = async (req, res) => {
   const http = container.resolve('http');
   try {
     const extensionManager = container.resolve('extension');
+    const cache = container.resolve('cache');
     await extensionManager.refresh();
+
+    // Invalidate extension list caches
+    await invalidateCache(cache);
 
     const ws = container.resolve('ws');
     ws.sendToPublicChannel('extension:updated', {
