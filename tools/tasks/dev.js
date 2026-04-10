@@ -457,7 +457,7 @@ function setupServerBundleWatcher(serverCompiler) {
   serverCompiler.watch(
     {
       ignored: getHmrWatchIgnored(),
-      aggregateTimeout: 200,
+      aggregateTimeout: 300,
       followSymlinks: false,
       poll: process.env.CHOKIDAR_USEPOLLING === 'true' ? 500 : false,
     },

@@ -14,8 +14,10 @@
  */
 
 module.exports = api => {
-  // Always recalc config — Webpack + React Refresh need this
-  api.cache.never();
+  // Cache config per NODE_ENV — config only varies by isProd/isTest.
+  // React Refresh babel plugin is injected at the webpack loader level
+  // (configureWebpackForDev in dev.js), not here, so caching is safe.
+  api.cache.using(() => process.env.NODE_ENV);
 
   const nodeEnv = process.env.NODE_ENV || 'development';
   const isProd = nodeEnv === 'production';

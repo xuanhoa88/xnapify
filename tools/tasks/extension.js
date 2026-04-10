@@ -392,9 +392,11 @@ async function buildExtensions(options = {}) {
         return;
       }
 
-      await generateManifests(extensions);
-      await copyStaticAssets(extensions);
-      await linkExtensionNodeModules(extensions);
+      await Promise.all([
+        generateManifests(extensions),
+        copyStaticAssets(extensions),
+        linkExtensionNodeModules(extensions),
+      ]);
 
       logInfo(
         `✅ Extension build completed in ${formatDuration(Date.now() - start)}`,

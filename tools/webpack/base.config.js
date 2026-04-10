@@ -163,11 +163,10 @@ const createCSSRule = ({
   const postcssLoaderOptions = {
     sourceMap: isDev,
     postcssOptions: ctx => {
-      // Clear require cache to ensure fresh options for each build
-      const configPath = require.resolve('../postcss.config');
-      delete require.cache[configPath];
-      // eslint-disable-next-line import/no-dynamic-require, global-require
-      const configFn = require(configPath);
+      // PostCSS config is stable within a build — no need to clear require cache.
+      // Webpack's filesystem cache (buildDependencies) handles config changes across restarts.
+      // eslint-disable-next-line global-require
+      const configFn = require('../postcss.config');
       const result = configFn({ options: postcssOptions });
       return {
         ...result,
@@ -456,7 +455,7 @@ const createScriptRule = () => ({
       loader: 'babel-loader',
       options: {
         comments: false,
-        cacheDirectory: false,
+        cacheDirectory: isDev,
         configFile: path.resolve(config.CWD, 'babel.config.js'),
         // Override babel-loader's default sourceRoot (process.cwd()) to prevent
         // Windows-specific Invalid URL TypeError in @pmmmwh/react-refresh-webpack-plugin
@@ -625,6 +624,7 @@ function createWebpackConfig(name, options = {}) {
 
       watchOptions: {
         ignored: getHmrWatchIgnored(),
+        aggregateTimeout: 300,
       },
 
       optimization: {
@@ -704,15 +704,30 @@ function createWebpackConfig(name, options = {}) {
       // Stop compilation on first error
       bail: !isDev,
 
-      // Disable filesystem caching
-      cache: false,
+      // Enable Webpack 5 filesystem cache in development for fast rebuilds.
+      // Production builds (isDev=false) always compile from scratch.
+      // buildDependencies ensures the cache is invalidated when toolchain config changes.
+      cache: isDev
+        ? {
+            type: 'filesystem',
+            buildDependencies: {
+              config: [
+                __filename,
+                path.resolve(config.CWD, 'babel.config.js'),
+                path.resolve(config.CWD, 'package.json'),
+                path.resolve(__dirname, '../postcss.config.js'),
+              ],
+            },
+          }
+        : false,
 
       // Enable source maps for debugging
+      // Server uses eval-source-map (fast + accurate) instead of full source-map
       devtool: config.env(
         'WEBPACK_DEVTOOL',
         isDev
           ? isServer
-            ? 'source-map'
+            ? 'eval-source-map'
             : 'eval-cheap-module-source-map'
           : false,
       ),
