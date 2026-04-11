@@ -257,6 +257,7 @@ XNAPIFY_JWT_EXPIRY=7d
 **Default:** SQLite (zero-config). Drivers are installed on-demand — no DB packages in `package.json`.
 
 **Switch databases:** Set `XNAPIFY_DB_URL` in `.env`, then `npm run dev`:
+
 - `XNAPIFY_DB_URL=postgres` — PostgreSQL (embedded auto-download on port 5433)
 - `XNAPIFY_DB_URL=mysql` — MySQL 8.4 LTS (embedded auto-download on port 3307)
 - Full URLs also supported (e.g., `postgresql://user:pass@host:5432/db`)
@@ -264,12 +265,13 @@ XNAPIFY_JWT_EXPIRY=7d
 **On-demand override** (does NOT modify `.env` — uses session-scoped `.env.local`):
 
 ```bash
-XNAPIFY_DB=mysql npm run dev        # Dev with MySQL (one-shot)
-XNAPIFY_DB=postgres npm run dev     # Dev with PostgreSQL (one-shot)
-XNAPIFY_DB=mysql npm start          # Production with MySQL (one-shot)
+XNAPIFY_DB_TYPE=mysql npm run dev        # Dev with MySQL (one-shot)
+XNAPIFY_DB_TYPE=postgres npm run dev     # Dev with PostgreSQL (one-shot)
+XNAPIFY_DB_TYPE=mysql npm start          # Production with MySQL (one-shot)
 ```
 
 Preboot resolves servers with a 3-tier priority chain:
+
 1. **Configured URL** — if reachable, use it
 2. **Local system server** — auto-detect PG (5432) or MySQL (3306)
 3. **Embedded server** — auto-download + start portable daemon
@@ -308,18 +310,18 @@ To use an external database, set `XNAPIFY_DB_URL` in the compose environment:
 ```yaml
 # In .docker/docker-compose.yml under xnapify service:
 environment:
-  XNAPIFY_DB_URL: postgresql://user:pass@host:5432/dbname  # External PG
+  XNAPIFY_DB_URL: postgresql://user:pass@host:5432/dbname # External PG
   # or: mysql://user:pass@host:3306/dbname                 # External MySQL
   # or: sqlite:database.sqlite                             # SQLite (default)
 ```
 
 **Data directories** (control where each database stores its files):
 
-| Variable | Default (prod) | Docker Compose |
-|---|---|---|
-| `XNAPIFY_SQLITE_DATA_DIR` | `~/.xnapify/sqlite` | `/app/data/sqlite` |
-| `XNAPIFY_PG_DATA_DIR` | `~/.xnapify/postgres` | `/app/data/postgres` |
-| `XNAPIFY_MYSQL_DATA_DIR` | `~/.xnapify/mysql` | `/app/data/mysql` |
+| Variable                  | Default (prod)        | Docker Compose       |
+| ------------------------- | --------------------- | -------------------- |
+| `XNAPIFY_SQLITE_DATA_DIR` | `~/.xnapify/sqlite`   | `/app/data/sqlite`   |
+| `XNAPIFY_PG_DATA_DIR`     | `~/.xnapify/postgres` | `/app/data/postgres` |
+| `XNAPIFY_MYSQL_DATA_DIR`  | `~/.xnapify/mysql`    | `/app/data/mysql`    |
 
 ## 🚢 Production Deployment
 

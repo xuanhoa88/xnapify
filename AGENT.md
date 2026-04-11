@@ -738,8 +738,8 @@ XNAPIFY_DB_URL=sqlite:database.sqlite
 # XNAPIFY_MYSQL_DATA_DIR=        # MySQL data directory
 
 # On-demand dialect override (session-scoped, writes to .env.local)
-# Usage: XNAPIFY_DB=mysql npm run dev
-# XNAPIFY_DB=                 # Not set by default
+# Usage: XNAPIFY_DB_TYPE=mysql npm run dev
+# XNAPIFY_DB_TYPE=                 # Not set by default
 
 # Authentication
 XNAPIFY_KEY=                # Auto-generated on first run
@@ -758,7 +758,7 @@ WEBPACK_PROFILE=false
 2. **Start development:** `npm run dev` (auto-creates `.env`, installs DB driver)
 3. **Switch to PostgreSQL:** Set `XNAPIFY_DB_URL=postgres` in `.env`, then `npm run dev`
 4. **Switch to MySQL:** Set `XNAPIFY_DB_URL=mysql` in `.env`, then `npm run dev`
-5. **On-demand override:** `XNAPIFY_DB=mysql npm run dev` (session-scoped, writes to `.env.local`)
+5. **On-demand override:** `XNAPIFY_DB_TYPE=mysql npm run dev` (session-scoped, writes to `.env.local`)
 6. **Make changes:** Edit files in `src/`
 7. **See updates:** HMR updates browser automatically
 8. **Run tests:** `npm run test` or `npm run test:watch`
@@ -789,11 +789,11 @@ node tools/npm/preboot.js --db sqlite --install   # Pre-install SQLite driver
 On-demand override (session-scoped — does NOT mutate `.env`):
 
 ```bash
-XNAPIFY_DB=mysql npm run dev                     # Dev with MySQL
-XNAPIFY_DB=postgres npm start                    # Production with PostgreSQL
+XNAPIFY_DB_TYPE=mysql npm run dev                     # Dev with MySQL
+XNAPIFY_DB_TYPE=postgres npm start                    # Production with PostgreSQL
 ```
 
-> **Session isolation:** When `XNAPIFY_DB` or `--db` is used, the resolved URL
+> **Session isolation:** When `XNAPIFY_DB_TYPE` or `--db` is used, the resolved URL
 > is written to `.env.local` (read by dotenv-flow with higher priority than `.env`).
 > The `--stop` command cleans up `.env.local`, restoring `.env` as the source of truth.
 
@@ -831,18 +831,18 @@ docker compose -f .docker/docker-compose.yml down
 ```yaml
 # In .docker/docker-compose.yml under xnapify service:
 environment:
-  XNAPIFY_DB_URL: postgresql://user:pass@host:5432/dbname  # External PG
+  XNAPIFY_DB_URL: postgresql://user:pass@host:5432/dbname # External PG
   # or: mysql://user:pass@host:3306/dbname                 # External MySQL
   # or: sqlite:database.sqlite                             # SQLite (default)
 ```
 
 **Data directories** — control where each database stores its files in Docker:
 
-| Variable | Default (prod) | Docker Compose |
-|---|---|---|
-| `XNAPIFY_SQLITE_DATA_DIR` | `~/.xnapify/sqlite` | `/app/data/sqlite` |
-| `XNAPIFY_PG_DATA_DIR` | `~/.xnapify/postgres` | `/app/data/postgres` |
-| `XNAPIFY_MYSQL_DATA_DIR` | `~/.xnapify/mysql` | `/app/data/mysql` |
+| Variable                  | Default (prod)        | Docker Compose       |
+| ------------------------- | --------------------- | -------------------- |
+| `XNAPIFY_SQLITE_DATA_DIR` | `~/.xnapify/sqlite`   | `/app/data/sqlite`   |
+| `XNAPIFY_PG_DATA_DIR`     | `~/.xnapify/postgres` | `/app/data/postgres` |
+| `XNAPIFY_MYSQL_DATA_DIR`  | `~/.xnapify/mysql`    | `/app/data/mysql`    |
 
 ## Key Features
 

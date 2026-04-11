@@ -95,7 +95,7 @@ function npmInstall(cwd, label) {
   const start = Date.now();
 
   try {
-    execSync('npm install --xnapify-setup', {
+    execSync('npm install --xnapify-setup --loglevel=verbose', {
       cwd,
       stdio: 'inherit',
       shell: true,

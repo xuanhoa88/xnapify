@@ -22,7 +22,7 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV:-production}
       XNAPIFY_HOST: 0.0.0.0
-      XNAPIFY_DB_URL: ${XNAPIFY_DB_URL:-sqlite}
+      XNAPIFY_DB_TYPE: ${XNAPIFY_DB_TYPE:-sqlite}
       # Writable directories — all under /app/data (single persistent volume)
       XNAPIFY_UPLOAD_DIR: /app/data/uploads
       XNAPIFY_NODERED_HOME: /app/data/node-red

@@ -22,9 +22,9 @@ services:
       - '${XNAPIFY_PORT:-1337}:1337'
     environment:
       NODE_ENV: development
-      XNAPIFY_HOST: 0.0.0.0
       CHOKIDAR_USEPOLLING: 'true'
-      XNAPIFY_DB_URL: ${XNAPIFY_DB_URL:-sqlite}
+      XNAPIFY_HOST: 0.0.0.0
+      XNAPIFY_DB_TYPE: ${XNAPIFY_DB_TYPE:-sqlite}
       # Writable directories
       XNAPIFY_UPLOAD_DIR: /app/data/uploads
       XNAPIFY_NODERED_HOME: /app/data/node-red

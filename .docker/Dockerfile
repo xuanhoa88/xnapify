@@ -13,7 +13,11 @@ COPY package*.json ./
 COPY tools/npm/ ./tools/npm/
 
 # Install ALL dependencies (including devDependencies for build)
-RUN npm run setup
+# Set npm configs to prevent network timeouts/EOF during large downloads on QEMU/Podman
+RUN npm config set fetch-retries 5 \
+ && npm config set fetch-retry-mintimeout 20000 \
+ && npm config set fetch-retry-maxtimeout 120000 \
+ && npm run setup
 
 # Copy source code
 COPY . .

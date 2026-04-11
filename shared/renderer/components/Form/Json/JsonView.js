@@ -237,7 +237,11 @@ function CopyToClipboard({ src, enableClipboard }) {
     <span className={s.copyContainer} title='Copy to clipboard'>
       <span className={s.clipboardIcon} onClick={handleCopy}>
         <Icon name='copy' size={15} />
-        {copied && <span className={s.clipboardChecked}>✔</span>}
+        {copied && (
+          <span className={s.clipboardChecked}>
+            <Icon name='check' size={15} />
+          </span>
+        )}
       </span>
     </span>
   );
@@ -303,7 +307,8 @@ function ValidationFailure({ message, active, onDismiss }) {
   if (!active) return null;
   return (
     <div className={s.validationFailure} onClick={onDismiss}>
-      <span className={s.validationFailureLabel}>{message}</span>✕
+      <span className={s.validationFailureLabel}>{message}</span>
+      <Icon name='x' size={15} style={{ verticalAlign: 'middle' }} />
     </div>
   );
 }

@@ -42,7 +42,8 @@ const ENV_TEMPLATE = path.join(ROOT, '.env.xnapify');
 
 /**
  * When true, DB URL writes go to .env.local (session override)
- * instead of .env (persistent). Set when --db or XNAPIFY_DB is used.
+ * instead of .env (persistent). Set only when --db CLI flag is used.
+ * XNAPIFY_DB_TYPE env var writes persistently to .env instead.
  */
 let useLocalEnv = false;
 
@@ -150,17 +151,22 @@ function ensureEnvFile() {
 /**
  * Update XNAPIFY_DB_URL in the appropriate env file.
  *
- * When `useLocalEnv` is true (--db / XNAPIFY_DB override), writes to
- * `.env.local` so the override is session-scoped and does NOT mutate
- * the user's `.env`. dotenv-flow reads `.env.local` automatically and
+ * When `useLocalEnv` is true (--db CLI flag), writes to `.env.local`
+ * so the override is session-scoped and does NOT mutate the
+ * user's `.env`. dotenv-flow reads `.env.local` automatically and
  * it takes precedence over `.env`.
  *
- * When `useLocalEnv` is false (normal auto mode), writes to `.env`
- * for persistent configuration.
+ * When `useLocalEnv` is false (normal auto mode or XNAPIFY_DB_TYPE),
+ * writes to `.env` for persistent configuration.
  *
  * @param {string} newUrl - New database URL value
  */
 function updateEnvDbUrl(newUrl) {
+  // Always update process.env so the resolved URL is available
+  // to any code running in the same process (e.g., if preboot
+  // is require()'d rather than spawned as a child process).
+  process.env.XNAPIFY_DB_URL = newUrl;
+
   const targetFile = useLocalEnv ? ENV_LOCAL_PATH : ENV_PATH;
 
   // For .env.local — simple: just write/replace the single variable
@@ -1330,7 +1336,7 @@ async function pgFallbackChain() {
  *
  * Ensures the data directory exists and resolves the SQLite URL to use
  * XNAPIFY_SQLITE_DATA_DIR when:
- *   - An explicit override is active (--db sqlite / XNAPIFY_DB=sqlite)
+ *   - An explicit override is active (--db sqlite / XNAPIFY_DB_TYPE=sqlite)
  *   - The URL is the bare shorthand 'sqlite' (no path specified)
  *   - The URL uses the default relative 'sqlite:database.sqlite'
  *
@@ -1553,7 +1559,7 @@ Options:
 
 Environment:
   XNAPIFY_DB_URL   Database URL or shorthand (sqlite, postgres, mysql)
-  XNAPIFY_DB       Override dialect (same as --db, for npm lifecycle hooks)
+  XNAPIFY_DB_TYPE       Override dialect (same as --db, for npm lifecycle hooks)
 
 Examples:
   node tools/npm/preboot.js --install                # install driver for detected dialect
@@ -1561,8 +1567,8 @@ Examples:
   node tools/npm/preboot.js --start                  # start DB detected from env
   node tools/npm/preboot.js --db mysql --start       # force MySQL start
   node tools/npm/preboot.js --db postgres --stop     # force PostgreSQL stop
-  XNAPIFY_DB=mysql npm run dev                       # dev with MySQL
-  XNAPIFY_DB=postgres npm start                      # start with PostgreSQL
+  XNAPIFY_DB_TYPE=mysql npm run dev                       # dev with MySQL
+  XNAPIFY_DB_TYPE=postgres npm start                      # start with PostgreSQL
 `);
 }
 
@@ -1579,17 +1585,21 @@ function resolveDialect(dbOverride) {
 }
 
 // Parse CLI arguments
-// --db <type> or XNAPIFY_DB env var overrides dialect detection.
-// XNAPIFY_DB env works with npm lifecycle hooks (predev/prestart)
+// --db <type> or XNAPIFY_DB_TYPE env var overrides dialect detection.
+// XNAPIFY_DB_TYPE env works with npm lifecycle hooks (predev/prestart)
 // where CLI args are not forwarded.
 const args = process.argv.slice(2);
 const dbIdx = args.indexOf('--db');
 const dbOverride =
-  (dbIdx !== -1 ? args[dbIdx + 1] : null) || process.env.XNAPIFY_DB || null;
+  (dbIdx !== -1 ? args[dbIdx + 1] : null) ||
+  process.env.XNAPIFY_DB_TYPE ||
+  null;
 
-// When override is active, route DB URL writes to .env.local
-// so the user's .env is not permanently mutated.
-if (dbOverride) useLocalEnv = true;
+// When an explicit CLI override is active (--db <dialect>), route DB URL writes
+// to .env.local so the user's .env is not permanently mutated.
+// However, if the user defines XNAPIFY_DB_TYPE in their environment, we treat
+// it as a global configuration and write the resolved XNAPIFY_DB_URL persistently to .env.
+if (dbIdx !== -1) useLocalEnv = true;
 
 const flag = args.find(
   a => a.startsWith('--') && a !== '--db' && a !== dbOverride,

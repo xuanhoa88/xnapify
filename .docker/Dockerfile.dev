@@ -17,7 +17,10 @@ WORKDIR /app
 # Install dependencies first (layer cache optimisation)
 COPY package*.json ./
 COPY tools/npm/ ./tools/npm/
-RUN npm run setup
+RUN npm config set fetch-retries 5 \
+ && npm config set fetch-retry-mintimeout 20000 \
+ && npm config set fetch-retry-maxtimeout 120000 \
+ && npm run setup
 
 # Source code is bind-mounted at runtime — no COPY needed
 # COPY . .  (intentionally omitted)
