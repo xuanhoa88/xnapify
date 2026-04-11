@@ -1,15 +1,21 @@
 {
   "name": "xnapify",
   "version": "1.0.0",
-  "description": "Modern, production-ready React application boilerplate with server-side rendering",
+  "description": "Extensible full-stack React framework with SSR, modular plugins, and database integration",
   "keywords": [
     "react",
+    "redux",
     "ssr",
     "server-side-rendering",
     "webpack",
     "express",
+    "sequelize",
+    "framework",
     "boilerplate",
-    "starter-kit"
+    "starter-kit",
+    "plugin-architecture",
+    "websocket",
+    "docker"
   ],
   "homepage": "https://github.com/xuanhoa88/xnapify#readme",
   "repository": {
