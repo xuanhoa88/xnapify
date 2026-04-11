@@ -163,13 +163,16 @@ const createCSSRule = ({
   const postcssLoaderOptions = {
     sourceMap: isDev,
     postcssOptions: ctx => {
-      // PostCSS config is stable within a build — no need to clear require cache.
-      // Webpack's filesystem cache (buildDependencies) handles config changes across restarts.
-      // eslint-disable-next-line global-require
-      const configFn = require('../postcss.config');
-      const result = configFn({ options: postcssOptions });
+      // Get postcss config path
+      const cssConfigPath = path.resolve(__dirname, '../postcss.config');
+
+      // Clear require cache to ensure we get the latest config
+      delete require.cache[cssConfigPath];
+
+      // Get postcss config
+      const configFn = require(cssConfigPath);
       return {
-        ...result,
+        ...configFn({ options: postcssOptions }),
         parser:
           ctx && ctx.resourcePath && /\.sss$/i.test(ctx.resourcePath)
             ? 'sugarss'
@@ -704,22 +707,8 @@ function createWebpackConfig(name, options = {}) {
       // Stop compilation on first error
       bail: !isDev,
 
-      // Enable Webpack 5 filesystem cache in development for fast rebuilds.
-      // Production builds (isDev=false) always compile from scratch.
-      // buildDependencies ensures the cache is invalidated when toolchain config changes.
-      cache: isDev
-        ? {
-            type: 'filesystem',
-            buildDependencies: {
-              config: [
-                __filename,
-                path.resolve(config.CWD, 'babel.config.js'),
-                path.resolve(config.CWD, 'package.json'),
-                path.resolve(__dirname, '../postcss.config.js'),
-              ],
-            },
-          }
-        : false,
+      // Disable webpack 5 filesystem cache
+      cache: false,
 
       // Enable source maps for debugging
       // Server uses eval-source-map (fast + accurate) instead of full source-map

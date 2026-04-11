@@ -47,17 +47,55 @@ const ENV_TEMPLATE = path.join(ROOT, '.env.xnapify');
  */
 let useLocalEnv = false;
 
-const SQLITE_DATA_DIR =
-  process.env.XNAPIFY_SQLITE_DATA_DIR ||
-  (process.env.NODE_ENV === 'production'
-    ? path.join(os.homedir(), '.xnapify', 'sqlite')
-    : path.join(ROOT, '.data', 'sqlite'));
+/**
+ * Detect if running inside a Docker/Podman container.
+ * Checks /.dockerenv, /run/.containerenv, and cgroup v1/v2.
+ * @returns {boolean}
+ */
+function isContainer() {
+  if (os.platform() !== 'linux') return false;
+  // Docker creates /.dockerenv; Podman creates /run/.containerenv
+  if (fs.existsSync('/.dockerenv')) return true;
+  if (fs.existsSync('/run/.containerenv')) return true;
+  // cgroup v1: /proc/1/cgroup contains /docker/ or /kubepods/
+  try {
+    const cgroup = fs.readFileSync('/proc/1/cgroup', 'utf-8');
+    if (/docker|kubepods|containerd/i.test(cgroup)) return true;
+  } catch {
+    // /proc not available (macOS, Windows)
+  }
+  return false;
+}
 
-const PG_DATA_DIR =
-  process.env.XNAPIFY_PG_DATA_DIR ||
-  (process.env.NODE_ENV === 'production'
-    ? path.join(os.homedir(), '.xnapify', 'postgres')
-    : path.join(ROOT, '.data', 'postgres'));
+/** @type {boolean} Cached container detection result */
+const _isContainer = isContainer();
+
+/**
+ * Resolve the default data directory for a given database engine.
+ * In containers, defaults to /app/data/<engine> (persistent volume mount).
+ * In production host, defaults to ~/.xnapify/<engine>.
+ * In development, defaults to .data/<engine> (project-local).
+ * @param {string} engine - 'sqlite' | 'postgres' | 'mysql'
+ * @returns {string}
+ */
+function defaultDataDir(engine) {
+  if (_isContainer) {
+    // /app/data/ is chowned by entrypoint.sh and expected to be a named volume
+    return path.join('/app', 'data', engine);
+  }
+  if (process.env.NODE_ENV === 'production') {
+    return path.join(os.homedir(), '.xnapify', engine);
+  }
+  return path.join(ROOT, '.data', engine);
+}
+
+const SQLITE_DATA_DIR = safePath(
+  process.env.XNAPIFY_SQLITE_DATA_DIR || defaultDataDir('sqlite'),
+);
+
+const PG_DATA_DIR = safePath(
+  process.env.XNAPIFY_PG_DATA_DIR || defaultDataDir('postgres'),
+);
 
 const PG_DEFAULTS = {
   port: 5433,
@@ -68,11 +106,9 @@ const PG_DEFAULTS = {
 
 const MYSQL_VERSION = '8.4.8';
 const MYSQL_EMBEDDED_PORT = 3307;
-const MYSQL_DATA_DIR =
-  process.env.XNAPIFY_MYSQL_DATA_DIR ||
-  (process.env.NODE_ENV === 'production'
-    ? path.join(os.homedir(), '.xnapify', 'mysql')
-    : path.join(ROOT, '.data', 'mysql'));
+const MYSQL_DATA_DIR = safePath(
+  process.env.XNAPIFY_MYSQL_DATA_DIR || defaultDataDir('mysql'),
+);
 
 const MYSQL_DEFAULTS = {
   port: MYSQL_EMBEDDED_PORT,
@@ -110,23 +146,65 @@ const DIALECT_DEPS = (() => {
 /**
  * Detect if the current runtime uses musl libc (e.g. Alpine Linux).
  * glibc-linked MySQL binaries cannot run on musl — MariaDB must be used instead.
+ *
+ * Lazily evaluates on first call and caches the result to avoid
+ * repeated child process spawns, without blocking module load.
  * @returns {boolean}
  */
-function isMusl() {
-  if (os.platform() !== 'linux') return false;
-  // Alpine ships /etc/alpine-release
-  if (fs.existsSync('/etc/alpine-release')) return true;
-  // Generic musl detection via ldd
-  try {
-    const lddOutput = execSync('ldd --version 2>&1 || true', {
-      encoding: 'utf-8',
-      timeout: 3000,
-      shell: true,
-    });
-    return /musl/i.test(lddOutput);
-  } catch {
-    return false;
+const isMusl = (() => {
+  let cached = null;
+  return () => {
+    if (cached !== null) return cached;
+    if (os.platform() !== 'linux') return (cached = false);
+    if (fs.existsSync('/etc/alpine-release')) return (cached = true);
+
+    try {
+      const lddOutput = execSync('ldd --version 2>&1 || true', {
+        encoding: 'utf-8',
+        timeout: 3000,
+        shell: true,
+      });
+      return (cached = /musl/i.test(lddOutput));
+    } catch {
+      return (cached = false);
+    }
+  };
+})();
+
+/**
+ * Validate a filesystem path for safe use in shell commands.
+ * Prevents shell injection via crafted env vars like XNAPIFY_PG_DATA_DIR.
+ * @param {string} p - Path to validate
+ * @returns {string} The validated path
+ * @throws {Error} If path contains dangerous characters
+ */
+function safePath(p) {
+  // Reject paths containing shell metacharacters that could enable injection.
+  // Allow: alphanumeric, slashes, dots, dashes, underscores, spaces, colons (Windows)
+  if (/[;|&$`(){}\[\]!<>\n\r]/.test(p)) {
+    throw new Error(
+      `Unsafe characters in path: ${p}\n` +
+        'Paths must not contain shell metacharacters (;|&$`(){}[]!<>)',
+    );
   }
+  return p;
+}
+
+/**
+ * Mask the password component of a database URL for safe logging.
+ * @param {string} url - Database URL
+ * @returns {string} URL with password replaced by ***
+ */
+function maskUrl(url) {
+  try {
+    const parsed = new URL(url);
+    if (parsed.password) {
+      return url.replace(`:${parsed.password}@`, ':***@');
+    }
+  } catch {
+    // Not a parsable URL (e.g. shorthand 'sqlite') — return as-is
+  }
+  return url;
 }
 
 /**
@@ -289,7 +367,7 @@ function detectDialect(url) {
  * modifying package.json. Skips if all packages are already resolvable.
  * @param {string} dialect - 'sqlite' | 'postgres' | 'mysql'
  */
-function ensureDeps(dialect) {
+async function ensureDeps(dialect) {
   const deps = DIALECT_DEPS[dialect];
   if (!deps || deps.length === 0) return;
 
@@ -427,10 +505,9 @@ function ensureDeps(dialect) {
           `\n⚠️  [Attempt ${attempts}/${maxAttempts}] Install failed: ${message}`,
         );
         console.warn(`   Retrying in 5 seconds...\n`);
-        execSync(
-          os.platform() === 'win32' ? 'timeout /t 5 /nobreak > NUL' : 'sleep 5',
-          { shell: true },
-        );
+        // Use non-blocking delay instead of execSync('sleep 5') to avoid
+        // blocking the event loop for 5 seconds.
+        await new Promise(r => setTimeout(r, 5_000));
       }
     }
   }
@@ -623,7 +700,7 @@ async function startPostgres(cfg = PG_DEFAULTS) {
   }
 
   console.log(
-    `✅ PostgreSQL ready — ${buildPostgresUrl({ ...PG_DEFAULTS, ...cfg })}`,
+    `✅ PostgreSQL ready — ${maskUrl(buildPostgresUrl({ ...PG_DEFAULTS, ...cfg }))}`,
   );
 }
 
@@ -680,7 +757,7 @@ function resolvePgBin(binName) {
  */
 async function terminateConnections(port) {
   try {
-    ensureDeps('postgres');
+    await ensureDeps('postgres');
     const { Client } = require('pg');
     const client = new Client({
       host: '127.0.0.1',
@@ -911,40 +988,36 @@ function getMysqlDownloadInfo() {
  * some CDNs (e.g. dev.mysql.com) require HTTP/2 for proper redirect
  * negotiation, which the Node.js http/https modules do not support.
  *
+ * Note: Uses synchronous execSync — no need for Promise wrapper.
+ *
  * @param {string} url - URL to download
  * @param {string} dest - Destination file path
- * @returns {Promise<void>}
  */
 function downloadFile(url, dest) {
-  return new Promise((resolve, reject) => {
-    const isWin = os.platform() === 'win32';
+  const isWin = os.platform() === 'win32';
 
-    // Build download command — curl on Unix/macOS, PowerShell on Windows
-    const cmd = isWin
-      ? `powershell -Command "Invoke-WebRequest -Uri '${url}' -OutFile '${dest}' -UseBasicParsing"`
-      : `curl -fSL --retry 3 --retry-delay 5 -o "${dest}" "${url}"`;
+  // Build download command — curl on Unix/macOS, PowerShell on Windows
+  const cmd = isWin
+    ? `powershell -Command "Invoke-WebRequest -Uri '${url}' -OutFile '${safePath(dest)}' -UseBasicParsing"`
+    : `curl -fSL --retry 3 --retry-delay 5 -o "${safePath(dest)}" "${url}"`;
 
-    console.log(`   📥 Downloading from ${new URL(url).hostname}...`);
+  console.log(`   📥 Downloading from ${new URL(url).hostname}...`);
 
-    try {
-      execSync(cmd, {
-        cwd: ROOT,
-        stdio: 'inherit',
-        timeout: 600_000, // 10 min for large MySQL archives
-        shell: true,
-      });
-      if (!fs.existsSync(dest)) {
-        return reject(
-          new Error(`Download completed but file not found: ${dest}`),
-        );
-      }
-      resolve();
-    } catch (err) {
-      // Cleanup partial downloads
-      if (fs.existsSync(dest)) fs.unlinkSync(dest);
-      reject(new Error(`Download failed from ${url}: ${err.message}`));
+  try {
+    execSync(cmd, {
+      cwd: ROOT,
+      stdio: 'inherit',
+      timeout: 600_000, // 10 min for large MySQL archives
+      shell: true,
+    });
+    if (!fs.existsSync(dest)) {
+      throw new Error(`Download completed but file not found: ${dest}`);
     }
-  });
+  } catch (err) {
+    // Cleanup partial downloads
+    if (fs.existsSync(dest)) fs.unlinkSync(dest);
+    throw new Error(`Download failed from ${url}: ${err.message}`);
+  }
 }
 
 /**
@@ -1225,7 +1298,11 @@ async function startMysql(cfg = MYSQL_DEFAULTS) {
         `--datadir=${datadir}`,
         `--auth-root-authentication-method=normal`,
       ];
-      if (os.platform() !== 'win32') {
+      if (
+        os.platform() !== 'win32' &&
+        process.getuid &&
+        process.getuid() === 0
+      ) {
         initArgs.push(`--user=${os.userInfo().username}`);
       }
       execSync(`"${installDb}" ${initArgs.join(' ')}`, {
@@ -1242,7 +1319,11 @@ async function startMysql(cfg = MYSQL_DEFAULTS) {
         `--datadir=${datadir}`,
       ];
       // --user is Unix-only; Windows ignores it and usernames may have spaces
-      if (os.platform() !== 'win32') {
+      if (
+        os.platform() !== 'win32' &&
+        process.getuid &&
+        process.getuid() === 0
+      ) {
         initArgs.push(`--user=${os.userInfo().username}`);
       }
       execSync(`"${mysqld}" ${initArgs.join(' ')}`, {
@@ -1298,7 +1379,7 @@ async function startMysql(cfg = MYSQL_DEFAULTS) {
     });
   }
 
-  // Step 5: Wait for MySQL to become reachable
+  // Step 6: Wait for MySQL to become reachable
   const maxWait = 15_000;
   const start = Date.now();
   while (!(await isPortReachable(port)) && Date.now() - start < maxWait) {
@@ -1380,7 +1461,7 @@ async function startMysql(cfg = MYSQL_DEFAULTS) {
   }
 
   console.log(
-    `✅ MySQL ready — ${buildMysqlUrl({ ...MYSQL_DEFAULTS, ...cfg })}`,
+    `✅ MySQL ready — ${maskUrl(buildMysqlUrl({ ...MYSQL_DEFAULTS, ...cfg }))}`,
   );
 }
 
@@ -1447,6 +1528,15 @@ async function stopMysql() {
   } catch (err) {
     console.warn(`⚠️  Could not stop cleanly: ${err.message}`);
     console.warn(`   Try manually: kill the process on port ${embeddedPort}`);
+    // Clean up stale PID file so a subsequent start doesn't fail
+    const pidFile = path.join(MYSQL_DATA_DIR, 'mysql.pid');
+    if (fs.existsSync(pidFile)) {
+      try {
+        fs.unlinkSync(pidFile);
+      } catch {
+        // Non-fatal — PID file cleanup is best-effort
+      }
+    }
   }
 }
 
@@ -1475,17 +1565,16 @@ async function autoMode() {
 
   if (isTest) {
     const dialect = 'sqlite';
-    ensureDeps(dialect);
+    await ensureDeps(dialect);
     console.log('🧪 Test mode — using SQLite (in-memory)');
     return;
   }
 
   // --db <type> overrides XNAPIFY_DB_URL dialect detection
-  const url =
-    dbOverride || process.env.XNAPIFY_DB_URL || 'sqlite:database.sqlite';
+  const url = dbOverride || process.env.XNAPIFY_DB_URL || 'sqlite';
   const dialect = detectDialect(url);
 
-  ensureDeps(dialect);
+  await ensureDeps(dialect);
 
   if (dialect === 'postgres') {
     await resolvePostgres(url);
@@ -1545,7 +1634,7 @@ async function pgFallbackChain() {
 
   // ── Priority 3: Embedded PostgreSQL (port 5433) ──
   const embeddedUrl = buildPostgresUrl(PG_DEFAULTS);
-  ensureDeps('_embedded');
+  await ensureDeps('_embedded');
   await startPostgres(PG_DEFAULTS);
   updateEnvDbUrl(embeddedUrl);
   console.log(`📄 Updated XNAPIFY_DB_URL=${embeddedUrl}`);
@@ -1559,8 +1648,7 @@ async function pgFallbackChain() {
  * Ensures the data directory exists and resolves the SQLite URL to use
  * XNAPIFY_SQLITE_DATA_DIR when:
  *   - An explicit override is active (--db sqlite / XNAPIFY_DB_TYPE=sqlite)
- *   - The URL is the bare shorthand 'sqlite' (no path specified)
- *   - The URL uses the default relative 'sqlite:database.sqlite'
+ *   - The URL is a bare shorthand ('sqlite' or 'sqlite://' or 'sqlite:database.sqlite')
  *
  * When a custom path is already specified (e.g. sqlite:/my/path/db.sqlite),
  * it is preserved as-is.
@@ -1569,21 +1657,33 @@ async function pgFallbackChain() {
  */
 async function resolveSqlite(url) {
   // Determine the file path from the URL
-  const isShorthand = url === 'sqlite' || url === 'sqlite:database.sqlite';
-  const isDefault = !dbOverride && !isShorthand;
+  const normalizedUrl = url.trim().toLowerCase();
+  const isShorthand =
+    /^sqlite(:\/\/)?$/.test(normalizedUrl) ||
+    normalizedUrl === 'sqlite:database.sqlite';
 
-  if (isDefault && !isShorthand) {
-    // User specified a custom sqlite path — respect it as-is
-    const filePath = url.replace(/^sqlite:/, '');
-    if (path.isAbsolute(filePath)) {
-      // Ensure parent directory exists for absolute paths
-      fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  // A "custom path" is when the URL is NOT a shorthand AND was NOT explicitly
+  // overridden via --db flag. In this case the user has manually set a full
+  // sqlite path in their .env — respect it as-is.
+  const isCustomPath = !isShorthand && !dbOverride;
+
+  if (isCustomPath) {
+    let filePath = url.replace(/^sqlite:/i, ''); // i flag for case-insensitivity
+
+    // Replicate connection.js behavior: Resolve relative custom paths against
+    // XNAPIFY_SQLITE_DATA_DIR if explicitly set in the environment.
+    if (!path.isAbsolute(filePath) && process.env.XNAPIFY_SQLITE_DATA_DIR) {
+      filePath = path.join(process.env.XNAPIFY_SQLITE_DATA_DIR, filePath);
     }
+
+    // Ensure parent directory exists for absolute paths, or resolved relative paths
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+
     console.log(`📂 Using SQLite database: ${filePath}`);
     return;
   }
 
-  // Resolve database file inside the data directory
+  // Shorthand or --db override: resolve database file inside the data directory
   fs.mkdirSync(SQLITE_DATA_DIR, { recursive: true });
   const dbFile = path.join(SQLITE_DATA_DIR, 'database.sqlite');
   const sqliteUrl = `sqlite:${dbFile}`;
@@ -1681,7 +1781,7 @@ async function showStatus(dialectOverride) {
   ensureEnvFile();
   loadEnv();
 
-  const url = process.env.XNAPIFY_DB_URL || 'sqlite:database.sqlite';
+  const url = process.env.XNAPIFY_DB_URL || 'sqlite';
   const dialect = dialectOverride || detectDialect(url);
   const separator = '─'.repeat(50);
 
@@ -1830,7 +1930,7 @@ const flag = args.find(
 const COMMANDS = {
   '--install': async () => {
     const dialect = resolveDialect(dbOverride);
-    ensureDeps(dialect);
+    await ensureDeps(dialect);
     console.log(`✅ ${dialect} driver ready`);
   },
   '--start': async () => {
@@ -1840,12 +1940,12 @@ const COMMANDS = {
       return;
     }
     if (dialect === 'postgres') {
-      ensureDeps('postgres');
-      ensureDeps('_embedded');
+      await ensureDeps('postgres');
+      await ensureDeps('_embedded');
       return startPostgres(PG_DEFAULTS);
     }
     if (dialect === 'mysql') {
-      ensureDeps('mysql');
+      await ensureDeps('mysql');
       return startMysql(MYSQL_DEFAULTS);
     }
     console.warn(`⚠️  Unknown dialect: ${dialect}`);

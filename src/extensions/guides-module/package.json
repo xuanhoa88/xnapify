@@ -1,5 +1,5 @@
 {
-  "name": "@xnapify-extension/docs",
+  "name": "@xnapify-extension/guides",
   "version": "1.0.0",
   "browser": "views/index.js",
   "main": "api/index.js",

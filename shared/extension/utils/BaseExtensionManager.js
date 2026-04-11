@@ -479,8 +479,9 @@ export class BaseExtensionManager {
 
       // Inject view routes (module-type only; plugins have no routes)
       if (hasRoutes) {
+        const routesObj = await ext.routes();
         // eslint-disable-next-line no-underscore-dangle
-        this._injectRoutes(id, ext.routes(), 'views');
+        await this._injectRoutes(id, routesObj, 'views');
       }
 
       // Register as ACTIVE so teardown can find it (activateViewNamespace

@@ -543,8 +543,9 @@ class ServerExtensionManager extends BaseExtensionManager {
 
       // 7. API Routes
       if (typeof extensionApi.routes === 'function') {
+        const routesObj = await extensionApi.routes();
         // eslint-disable-next-line no-underscore-dangle
-        this._injectRoutes(id, extensionApi.routes(), 'api');
+        await this._injectRoutes(id, routesObj, 'api');
       }
     } catch (bootErr) {
       console.error(

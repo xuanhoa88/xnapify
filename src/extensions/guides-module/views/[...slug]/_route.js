@@ -7,8 +7,6 @@
 
 import MarkdownViewer from '../viewer/MarkdownViewer';
 
-export const namespace = 'docs';
-
 export async function getInitialProps({ fetch, params }) {
   if (!params || !params.slug) {
     return { error: true };
@@ -19,11 +17,14 @@ export async function getInitialProps({ fetch, params }) {
     : params.slug;
 
   try {
-    const rawText = await fetch(`/docs/${pathPart}.md`, {
-      headers: {
-        'Content-Type': 'text/markdown',
+    const rawText = await fetch(
+      `/api/extensions/${__EXTENSION_ID__}/static/${pathPart}.md`,
+      {
+        headers: {
+          'Content-Type': 'text/markdown',
+        },
       },
-    });
+    );
 
     // Lightweight Frontmatter Regex Parser (handles both LF and CRLF)
     let content = rawText;
