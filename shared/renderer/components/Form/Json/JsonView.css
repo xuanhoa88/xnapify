@@ -1,3 +1,5 @@
+/* stylelint-disable value-keyword-case */
+
 /**
  * xnapify — JSON Viewer / Editor styles
  *
@@ -147,13 +149,13 @@
 }
 
 .undefinedValue {
-  composes: nullvalue;
+  composes: nullValue;
   color: var(--json-undefined, #93a1a1);
   background: var(--json-undefined-bg, rgb(147 161 161 / 6%));
 }
 
 .nanValue {
-  composes: nullvalue;
+  composes: nullValue;
   color: var(--json-nan, #cb4b16);
   background: var(--json-nan-bg, rgb(203 75 22 / 6%));
 }
@@ -268,34 +270,34 @@
 }
 
 .editIcon {
-  composes: actionicon;
+  composes: actionIcon;
   color: var(--json-edit-icon, #586e75);
 }
 
 .checkIcon {
-  composes: actionicon;
+  composes: actionIcon;
   color: var(--json-check-icon, #859900);
   padding-right: 1px;
 }
 
 .cancelIcon {
-  composes: actionicon;
+  composes: actionIcon;
   color: var(--json-cancel-icon, #dc322f);
   padding-right: 1px;
 }
 
 .addIcon {
-  composes: actionicon;
+  composes: actionIcon;
   color: var(--json-add-icon, #859900);
 }
 
 .removeIcon {
-  composes: actionicon;
+  composes: actionIcon;
   color: var(--json-remove-icon, #dc322f);
 }
 
 .clipboardIcon {
-  composes: actionicon;
+  composes: actionIcon;
   color: var(--json-clipboard, #93a1a1);
 }
 
