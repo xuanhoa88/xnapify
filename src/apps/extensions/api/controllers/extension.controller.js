@@ -266,8 +266,16 @@ export const updateExtensionStatus = async (req, res) => {
       },
     );
 
-    const extensionData =
-      typeof extension.toJSON === 'function' ? extension.toJSON() : extension;
+    // Inject job_status so the frontend knows a background job was enqueued.
+    // Without this, the Redux fulfilled handler would store the extension
+    // without job_status, causing the reconciliation effect to prematurely
+    // clear actionMap entries for OTHER extensions during the same render.
+    const extensionData = {
+      ...(typeof extension.toJSON === 'function'
+        ? extension.toJSON()
+        : extension),
+      job_status: result.is_active ? 'ACTIVATING' : 'DEACTIVATING',
+    };
 
     return http.sendSuccess(res, { extension: extensionData });
   } catch (error) {

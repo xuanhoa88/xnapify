@@ -193,6 +193,11 @@ const Modal = ({
 }) => {
   const [shouldRender, setShouldRender] = useState(isOpen);
   const [isClosing, setIsClosing] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     let timer;
@@ -209,7 +214,7 @@ const Modal = ({
     return () => clearTimeout(timer);
   }, [isOpen, shouldRender]);
 
-  if (!shouldRender || typeof document === 'undefined') return null;
+  if (!shouldRender || !mounted || typeof document === 'undefined') return null;
 
   return createPortal(
     <div

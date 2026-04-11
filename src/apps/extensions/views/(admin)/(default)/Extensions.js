@@ -141,18 +141,40 @@ function Extensions() {
     dispatch(fetchExtensions());
   }, [dispatch]);
 
-  // Reconcile actionMap with fetched data — if an extension no longer has
-  // a job_status, its action is done and can be cleared from the local map.
+  // Track which extensions were last seen WITH a job_status so the
+  // reconciliation effect can detect the transition "had status → no status"
+  // instead of blindly clearing entries that never had status at all.
+  const prevJobStatusRef = useRef({});
+
+  // Reconcile actionMap with fetched data — clear an actionMap entry only
+  // when an extension *previously had* a job_status that has now disappeared
+  // (meaning the job completed between fetches). This prevents premature
+  // clearing caused by thunk fulfilled handlers storing extensions without
+  // job_status while other extensions still have pending jobs.
   useEffect(() => {
+    // Build current job_status snapshot
+    const currentStatus = {};
+    for (const ext of extensions) {
+      if (ext.job_status) {
+        currentStatus[ext.id] = ext.job_status;
+      }
+    }
+
     setActionMap(prev => {
       const ids = Object.keys(prev);
-      if (ids.length === 0) return prev;
+      if (ids.length === 0) {
+        prevJobStatusRef.current = currentStatus;
+        return prev;
+      }
 
       let changed = false;
       const next = { ...prev };
       for (const id of ids) {
         const ext = extensions.find(e => e.id === id);
-        if (ext && !ext.job_status) {
+        // Only clear if this extension previously HAD a job_status
+        // and now no longer does — that means the job finished.
+        const hadStatus = prevJobStatusRef.current[id];
+        if (ext && hadStatus && !ext.job_status) {
           delete next[id];
           if (actionTimersRef.current[id]) {
             clearTimeout(actionTimersRef.current[id]);
@@ -161,6 +183,8 @@ function Extensions() {
           changed = true;
         }
       }
+
+      prevJobStatusRef.current = currentStatus;
       return changed ? next : prev;
     });
   }, [extensions]);
