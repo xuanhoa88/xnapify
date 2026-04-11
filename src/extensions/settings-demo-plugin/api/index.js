@@ -16,11 +16,11 @@ export default {
     return seedsContext;
   },
 
-  async boot({ container }) {
+  async boot() {
     console.log(`[Extension] Initialized backend for ${__EXTENSION_ID__}`);
   },
 
-  async shutdown({ container }) {
+  async shutdown() {
     // Clear handlers
     this[HANDLERS] = {};
     console.log(`[Extension] Destroyed backend for ${__EXTENSION_ID__}`);

@@ -51,6 +51,7 @@ xnapify/
 ├── build/                        # Production build output
 ├── public/                       # Static assets
 ├── .agent/                       # AI assistant configuration
+│   ├── ARCHITECTURE.md           # AI Agent Architecture Flow
 │   ├── RULES.md                  # Coding rules & constraints
 │   ├── workflows/                # Step-by-step development guides (22)
 │   ├── skills/                   # AI persona skills (17)

@@ -7,6 +7,7 @@ The `xnapify` application is officially engineered to support intelligent develo
 ```
 xnapify/
 ├── .agent/                       # Main AI Intelligence Engine
+│   ├── ARCHITECTURE.md           # AI Agent Architecture Flow
 │   ├── README.md                 # This guide
 │   ├── RULES.md                  # Coding rules & constraints
 │   ├── workflows/                # Explicit guides on HOW to do things

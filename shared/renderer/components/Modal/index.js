@@ -9,10 +9,10 @@ import { useState, useEffect } from 'react';
 
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
-import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 
 import Button from '../Button';
+import Portal from '../Portal';
 
 import s from './Modal.css';
 
@@ -193,11 +193,6 @@ const Modal = ({
 }) => {
   const [shouldRender, setShouldRender] = useState(isOpen);
   const [isClosing, setIsClosing] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
     let timer;
@@ -214,37 +209,38 @@ const Modal = ({
     return () => clearTimeout(timer);
   }, [isOpen, shouldRender]);
 
-  if (!shouldRender || !mounted || typeof document === 'undefined') return null;
+  if (!shouldRender || typeof document === 'undefined') return null;
 
-  return createPortal(
-    <div
-      className={clsx(
-        s.modalOverlay,
-        {
-          [s.modalOverlayRight]: placement === 'right',
-          [s.modalOverlayClosing]: isClosing,
-        },
-        className,
-      )}
-      onClick={onClose}
-      role='presentation'
-    >
-      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events */}
+  return (
+    <Portal>
       <div
-        className={clsx(s.modal, {
-          [s.modalRight]: placement === 'right',
-          [s.modalClosing]: isClosing && placement !== 'right',
-          [s.modalRightClosing]: isClosing && placement === 'right',
-        })}
-        role='dialog'
-        aria-modal='true'
-        onClick={e => e.stopPropagation()}
-        onMouseDown={e => e.stopPropagation()}
+        className={clsx(
+          s.modalOverlay,
+          {
+            [s.modalOverlayRight]: placement === 'right',
+            [s.modalOverlayClosing]: isClosing,
+          },
+          className,
+        )}
+        onClick={onClose}
+        role='presentation'
       >
-        {children}
+        {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events */}
+        <div
+          className={clsx(s.modal, {
+            [s.modalRight]: placement === 'right',
+            [s.modalClosing]: isClosing && placement !== 'right',
+            [s.modalRightClosing]: isClosing && placement === 'right',
+          })}
+          role='dialog'
+          aria-modal='true'
+          onClick={e => e.stopPropagation()}
+          onMouseDown={e => e.stopPropagation()}
+        >
+          {children}
+        </div>
       </div>
-    </div>,
-    document.body,
+    </Portal>
   );
 };
 

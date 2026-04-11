@@ -9,12 +9,12 @@ import { useEffect, useState } from 'react';
 
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
-import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 
 import Button from '@shared/renderer/components/Button';
 import Icon from '@shared/renderer/components/Icon';
 import Modal from '@shared/renderer/components/Modal';
+import Portal from '@shared/renderer/components/Portal';
 
 import s from './ListingDetail.css';
 
@@ -188,10 +188,8 @@ export default function ListingDetail({ listing = null, onClose }) {
       </Modal>
 
       {/* ── Lightbox overlay ───────────────────────── */}
-      {lightboxIdx !== null &&
-        screenshots.length > 0 &&
-        typeof document !== 'undefined' &&
-        createPortal(
+      {lightboxIdx !== null && screenshots.length > 0 && (
+        <Portal>
           <div
             className={s.lightboxOverlay}
             onClick={() => setLightboxIdx(null)}
@@ -259,9 +257,9 @@ export default function ListingDetail({ listing = null, onClose }) {
                 ))}
               </div>
             </div>
-          </div>,
-          document.body,
-        )}
+          </div>
+        </Portal>
+      )}
     </>
   );
 }

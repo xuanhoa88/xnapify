@@ -9,10 +9,10 @@
 
 import renderer, { act } from 'react-test-renderer';
 
+import { registry } from '@shared/extension/client/Registry';
 import { AppContext } from '@shared/renderer/AppContext';
 
 import ExtensionSlot from './ExtensionSlot';
-import { registry } from './Registry';
 
 const mockContext = { mockContext: true };
 const withContext = ui => (

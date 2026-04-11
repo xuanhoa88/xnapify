@@ -17,9 +17,9 @@ import {
 
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
-import { createPortal } from 'react-dom';
 
 import Button from '../Button';
+import Portal from '../Portal';
 import { useRbac } from '../Rbac/useRbac';
 
 // eslint-disable-next-line css-modules/no-unused-class -- dynamic classes
@@ -204,24 +204,25 @@ function Menu({ children, className }) {
 
   if (!ctx.isOpen) return null;
 
-  return createPortal(
-    <div
-      ref={ctx.menuRef}
-      className={clsx(s.menu, className)}
-      style={{
-        position: 'fixed',
-        top: position.top,
-        left: position.left,
-        right: position.right,
-      }}
-      onClick={e => e.stopPropagation()}
-      onKeyDown={e => e.stopPropagation()}
-      role='menu'
-      tabIndex={-1}
-    >
-      {children}
-    </div>,
-    document.body,
+  return (
+    <Portal>
+      <div
+        ref={ctx.menuRef}
+        className={clsx(s.menu, className)}
+        style={{
+          position: 'fixed',
+          top: position.top,
+          left: position.left,
+          right: position.right,
+        }}
+        onClick={e => e.stopPropagation()}
+        onKeyDown={e => e.stopPropagation()}
+        role='menu'
+        tabIndex={-1}
+      >
+        {children}
+      </div>
+    </Portal>
   );
 }
 

@@ -9,11 +9,11 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
-import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 
 import Button from '../Button';
 import Icon from '../Icon';
+import Portal from '../Portal';
 
 import s from './SearchableSelect.css';
 
@@ -292,9 +292,8 @@ function SearchableSelect({
         </div>
       </div>
 
-      {isOpen &&
-        typeof document !== 'undefined' &&
-        createPortal(
+      {isOpen && (
+        <Portal>
           <div ref={menuRef} className={s.menu} style={menuStyle}>
             {showSearch && (
               <div className={s.searchContainer}>
@@ -389,9 +388,9 @@ function SearchableSelect({
                 </li>
               )}
             </ul>
-          </div>,
-          document.body,
-        )}
+          </div>
+        </Portal>
+      )}
     </div>
   );
 }

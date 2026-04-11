@@ -30,8 +30,6 @@ const {
 } = require('./base.config');
 const StatsManifestPlugin = require('./StatsManifestPlugin');
 
-
-
 // =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================

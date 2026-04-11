@@ -588,7 +588,7 @@ const WYSIWYG = forwardRef(function WYSIWYG$(
       id={id}
     >
       <div className={s.editorContent}>
-        {editor && (
+        {editor && typeof window !== 'undefined' && (
           <>
             <DragHandle editor={editor}>
               <div className={s.dragHandle}>
@@ -599,9 +599,6 @@ const WYSIWYG = forwardRef(function WYSIWYG$(
             <BubbleMenu
               className={s.bubbleMenu}
               editor={editor}
-              appendTo={() =>
-                typeof document !== 'undefined' ? document.body : null
-              }
               shouldShow={({ editor: e, state }) => {
                 const { selection } = state;
                 const { empty } = selection;

@@ -11,7 +11,8 @@ import { useMemo } from 'react';
 
 import renderer, { act } from 'react-test-renderer';
 
-import { registry } from './Registry';
+import { registry } from '@shared/extension/client/Registry';
+
 import {
   useExtensionHooks,
   useExtensionValidator,

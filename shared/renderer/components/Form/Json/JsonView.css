@@ -36,7 +36,7 @@
    ============================================================================= */
 
 .objectKeyVal {
-  padding: 3px 0 3px 0;
+  padding: 3px 0;
   border-left: 1px solid var(--color-border, #e2e8f0);
   position: relative;
 }
@@ -143,19 +143,19 @@
   font-weight: bold;
   padding: 1px 2px;
   border-radius: 3px;
-  background: var(--json-null-bg, rgba(220, 50, 47, 0.06));
+  background: var(--json-null-bg, rgb(220 50 47 / 6%));
 }
 
 .undefinedValue {
-  composes: nullValue;
+  composes: nullvalue;
   color: var(--json-undefined, #93a1a1);
-  background: var(--json-undefined-bg, rgba(147, 161, 161, 0.06));
+  background: var(--json-undefined-bg, rgb(147 161 161 / 6%));
 }
 
 .nanValue {
-  composes: nullValue;
+  composes: nullvalue;
   color: var(--json-nan, #cb4b16);
-  background: var(--json-nan-bg, rgba(203, 75, 22, 0.06));
+  background: var(--json-nan-bg, rgb(203 75 22 / 6%));
 }
 
 .dateValue {
@@ -216,7 +216,7 @@
    ============================================================================= */
 
 .variableRow {
-  padding: 3px 0 3px 0;
+  padding: 3px 0;
   border-left: 1px solid transparent;
   display: flex;
   align-items: flex-start;
@@ -268,34 +268,34 @@
 }
 
 .editIcon {
-  composes: actionIcon;
+  composes: actionicon;
   color: var(--json-edit-icon, #586e75);
 }
 
 .checkIcon {
-  composes: actionIcon;
+  composes: actionicon;
   color: var(--json-check-icon, #859900);
   padding-right: 1px;
 }
 
 .cancelIcon {
-  composes: actionIcon;
+  composes: actionicon;
   color: var(--json-cancel-icon, #dc322f);
   padding-right: 1px;
 }
 
 .addIcon {
-  composes: actionIcon;
+  composes: actionicon;
   color: var(--json-add-icon, #859900);
 }
 
 .removeIcon {
-  composes: actionIcon;
+  composes: actionicon;
   color: var(--json-remove-icon, #dc322f);
 }
 
 .clipboardIcon {
-  composes: actionIcon;
+  composes: actionicon;
   color: var(--json-clipboard, #93a1a1);
 }
 
@@ -314,7 +314,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(255, 255, 255, 0.3);
+  background: rgb(255 255 255 / 30%);
   z-index: 10;
 }
 
@@ -325,7 +325,7 @@
   padding: 10px;
   border-radius: var(--radius-md, 6px);
   position: relative;
-  box-shadow: var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1));
+  box-shadow: var(--shadow-md, 0 4px 6px -1px rgb(0 0 0 / 10%));
   border: 1px solid var(--color-border, #e2e8f0);
 }
 
@@ -356,7 +356,7 @@
   position: absolute;
   top: 0;
   right: 0;
-  border-radius: 0 3px 0 3px;
+  border-radius: 0 3px;
   cursor: pointer;
   color: var(--json-cancel-icon, #dc322f);
 }
@@ -380,7 +380,7 @@
   border-radius: 2px;
   cursor: pointer;
   color: var(--color-error, #dc2626);
-  background: var(--color-error-bg, rgba(220, 38, 38, 0.08));
+  background: var(--color-error-bg, rgb(220 38 38 / 8%));
   font-size: 11px;
 }
 
