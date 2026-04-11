@@ -103,7 +103,11 @@ export const serveExtensionStatic = async (req, res, next) => {
 
   // Use the catch-all :path* param from [id]/static/[...path]/_route.js
   const originalUrl = req.url;
-  const filePath = `/${req.params.path}`.replace(/\/+/g, '/');
+  let { path: rawPath } = req.params || {};
+  if (Array.isArray(rawPath)) {
+    rawPath = rawPath.join('/');
+  }
+  const filePath = `/${rawPath}`.replace(/\/+/g, '/');
   req.url = filePath;
 
   // Content-hashed files are immutable — cache forever.

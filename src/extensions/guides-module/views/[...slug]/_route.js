@@ -17,14 +17,24 @@ export async function getInitialProps({ fetch, params }) {
     : params.slug;
 
   try {
-    const rawText = await fetch(
-      `/api/extensions/${__EXTENSION_ID__}/static/${pathPart}.md`,
+    let rawText = await fetch(
+      `/api/extensions/${__EXTENSION_ID__}/static/assets/${pathPart}.md`,
       {
         headers: {
           'Content-Type': 'text/markdown',
         },
       },
     );
+
+    if (rawText && typeof rawText.text === 'function') {
+      rawText = await rawText.text();
+    } else if (typeof rawText !== 'string') {
+      // API may bounce 404s as JSON errors
+      if (rawText && rawText.error) {
+        return { error: true, content: '', title: null };
+      }
+      rawText = JSON.stringify(rawText);
+    }
 
     // Lightweight Frontmatter Regex Parser (handles both LF and CRLF)
     let content = rawText;

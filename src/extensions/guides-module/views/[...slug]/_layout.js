@@ -11,8 +11,6 @@ import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
-import { Link } from '@shared/renderer/components/History';
-
 import s from './SidebarLayout.css';
 
 export default function DocsLayout({ children }) {
@@ -25,11 +23,11 @@ export default function DocsLayout({ children }) {
     const controller = new AbortController();
     abortRef.current = controller;
 
-    fetch('/api/docs/tree', { signal: controller.signal })
+    fetch('/api/guides', { signal: controller.signal })
       .then(res => res.json())
-      .then(data => {
-        if (data && data.success && data.tree) {
-          setTree(data.tree);
+      .then(body => {
+        if (body && body.success && body.data) {
+          setTree(body.data);
         }
       })
       .catch(err => {
@@ -59,14 +57,21 @@ export default function DocsLayout({ children }) {
             }
             return (
               <li key={node.path} className={s.fileNode}>
-                <Link
-                  to={`/docs/${node.path}`}
-                  className={({ isActive }) =>
-                    clsx(s.link, { [s.active]: isActive })
-                  }
+                <a
+                  href={`/guides/${node.path}`}
+                  className={clsx(
+                    s.link,
+                    window.location.pathname === `/guides/${node.path}` &&
+                      s.active,
+                  )}
+                  onClick={e => {
+                    e.preventDefault();
+                    window.history.pushState(null, '', `/guides/${node.path}`);
+                    window.dispatchEvent(new Event('popstate'));
+                  }}
                 >
                   {node.name}
-                </Link>
+                </a>
               </li>
             );
           })}

@@ -10,7 +10,6 @@ import path from 'path';
 
 /**
  * Public documentation tree — read-only static file listing.
- * No authentication required since docs are publicly served from public/docs.
  */
 export const middleware = false;
 
@@ -25,26 +24,27 @@ let cachedTree = null;
 let cacheExpiry = 0;
 const CACHE_TTL = 60000; // 1 minute
 
-// GET /api/docs/tree
+// GET /api/guides
 export const get = async (req, res) => {
   const container = req.app.get('container');
   const http = container.resolve('http');
-  const publicDocsDir = path.resolve(process.cwd(), 'public', 'docs');
+  // The assets directory is copied to the extension build root (where api.js lives), so it's just __dirname + 'assets'.
+  const publicDocsDir = path.resolve(__dirname, 'assets');
 
   try {
     const now = Date.now();
     if (cachedTree && now < cacheExpiry) {
-      return http.sendSuccess(res, { tree: cachedTree });
+      return http.sendSuccess(res, cachedTree);
     }
 
     const tree = await buildTree(publicDocsDir, publicDocsDir);
     cachedTree = tree;
     cacheExpiry = now + CACHE_TTL;
-    return http.sendSuccess(res, { tree });
+    return http.sendSuccess(res, tree);
   } catch (err) {
     // If the directory simply does not exist, return empty tree
     if (err.code === 'ENOENT') {
-      return http.sendSuccess(res, { tree: [] });
+      return http.sendSuccess(res, []);
     }
     return http.sendServerError(res, 'Failed to read docs tree', err);
   }
