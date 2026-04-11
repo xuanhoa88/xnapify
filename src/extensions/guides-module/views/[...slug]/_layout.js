@@ -13,7 +13,7 @@ import { useTranslation } from 'react-i18next';
 
 import s from './SidebarLayout.css';
 
-export default function DocsLayout({ children }) {
+export default function DocsLayout({ children, context: { fetch, history } }) {
   const { t } = useTranslation(`extension:${__EXTENSION_ID__}`);
   const [tree, setTree] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -24,7 +24,6 @@ export default function DocsLayout({ children }) {
     abortRef.current = controller;
 
     fetch('/api/guides', { signal: controller.signal })
-      .then(res => res.json())
       .then(body => {
         if (body && body.success && body.data) {
           setTree(body.data);
@@ -38,7 +37,7 @@ export default function DocsLayout({ children }) {
       .finally(() => setLoading(false));
 
     return () => controller.abort();
-  }, []);
+  }, [fetch]);
 
   const renderTree = useCallback(
     (nodes, depth) => {
@@ -59,16 +58,15 @@ export default function DocsLayout({ children }) {
               <li key={node.path} className={s.fileNode}>
                 <a
                   href={`/guides/${node.path}`}
-                  className={clsx(
-                    s.link,
-                    window.location.pathname === `/guides/${node.path}` &&
-                      s.active,
-                  )}
                   onClick={e => {
                     e.preventDefault();
-                    window.history.pushState(null, '', `/guides/${node.path}`);
-                    window.dispatchEvent(new Event('popstate'));
+                    history.push(`/guides/${node.path}`);
                   }}
+                  className={clsx(
+                    s.link,
+                    history.location.pathname === `/guides/${node.path}` &&
+                      s.active,
+                  )}
                 >
                   {node.name}
                 </a>
@@ -78,7 +76,7 @@ export default function DocsLayout({ children }) {
         </ul>
       );
     },
-    [], // stable — renderTree only depends on CSS module `s` which is static
+    [history], // stable — renderTree only depends on CSS module `s` which is static
   );
 
   return (
@@ -104,4 +102,8 @@ export default function DocsLayout({ children }) {
 
 DocsLayout.propTypes = {
   children: PropTypes.node.isRequired,
+  context: PropTypes.shape({
+    fetch: PropTypes.func.isRequired,
+    history: PropTypes.object.isRequired,
+  }).isRequired,
 };
