@@ -1,0 +1,109 @@
+.layout {
+  display: flex;
+  min-height: 100vh;
+  background-color: #fff;
+}
+
+.sidebar {
+  width: 280px;
+  flex-shrink: 0;
+  border-right: 1px solid #eaecef;
+  background-color: #f8f9fa;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebarHeader {
+  padding: 1.5rem;
+  border-bottom: 1px solid #eaecef;
+}
+
+.sidebarHeader h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #24292e;
+}
+
+.sidebarContent {
+  padding: 1rem;
+  overflow-y: auto;
+  flex-grow: 1;
+}
+
+.mainContent {
+  flex-grow: 1;
+  min-width: 0; /* allows text truncation if needed inside */
+  background: #fff;
+}
+
+.rootList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.nestedList {
+  list-style: none;
+  padding-left: 1rem;
+  margin: 0.25rem 0 0;
+}
+
+.dirNode {
+  margin-bottom: 0.5rem;
+}
+
+.dirLabel {
+  font-weight: 600;
+  color: #586069;
+  text-transform: capitalize;
+  margin-bottom: 0.25rem;
+  font-size: 0.9rem;
+}
+
+.fileNode {
+  margin-bottom: 0.25rem;
+}
+
+.link {
+  display: block;
+  padding: 0.35rem 0.5rem;
+  color: #24292e;
+  text-decoration: none;
+  border-radius: 4px;
+  font-size: 0.95rem;
+}
+
+.link:hover {
+  background-color: rgb(3 102 214 / 8%);
+  color: #0366d6;
+}
+
+.link.active {
+  background-color: #0366d6;
+  color: #fff;
+  font-weight: 500;
+}
+
+.loading {
+  color: #6a737d;
+  font-size: 0.9rem;
+  padding: 1rem;
+}
+
+/* Responsive: stack layout on mobile */
+@media (max-width: 768px) {
+  .layout {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid #eaecef;
+    max-height: 50vh;
+  }
+
+  .mainContent {
+    min-height: 50vh;
+  }
+}

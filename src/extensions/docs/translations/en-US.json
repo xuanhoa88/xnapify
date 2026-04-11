@@ -1,0 +1,12 @@
+{
+  "title": "Documentation",
+  "sidebar": {
+    "title": "Documentation",
+    "loading": "Loading..."
+  },
+  "viewer": {
+    "notFound": "Document Not Found",
+    "notFoundDescription": "We could not locate the requested document at this path.",
+    "parseError": "Error parsing document."
+  }
+}

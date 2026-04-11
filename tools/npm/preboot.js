@@ -108,6 +108,28 @@ const DIALECT_DEPS = (() => {
 })();
 
 /**
+ * Detect if the current runtime uses musl libc (e.g. Alpine Linux).
+ * glibc-linked MySQL binaries cannot run on musl — MariaDB must be used instead.
+ * @returns {boolean}
+ */
+function isMusl() {
+  if (os.platform() !== 'linux') return false;
+  // Alpine ships /etc/alpine-release
+  if (fs.existsSync('/etc/alpine-release')) return true;
+  // Generic musl detection via ldd
+  try {
+    const lddOutput = execSync('ldd --version 2>&1 || true', {
+      encoding: 'utf-8',
+      timeout: 3000,
+      shell: true,
+    });
+    return /musl/i.test(lddOutput);
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Load .env into process.env. Tries dotenv-flow first (supports
  * .env.local, .env.{NODE_ENV}, etc.). Falls back to manual .env
  * parsing if dotenv-flow is not installed yet.
@@ -295,14 +317,38 @@ function ensureDeps(dialect) {
 
   while (attempts < maxAttempts) {
     try {
+      // sqlite3 is the only driver requiring native compilation (node-gyp → gcc).
+      // Always build from source for maximum platform compatibility.
+      // Opt-out: XNAPIFY_SQLITE_BUILD_FROM_SOURCE=0 to prefer pre-built binaries.
+      // Requires build tools: python3, make, g++ (present in builder stage)
       const buildOpts =
-        dialect === 'sqlite' ? ['--build-from-source=sqlite3'] : [];
+        dialect === 'sqlite' &&
+        process.env.XNAPIFY_SQLITE_BUILD_FROM_SOURCE !== '0'
+          ? ['--build-from-source=sqlite3']
+          : [];
+      const buildFromSource = buildOpts.length > 0;
 
       const env = { ...process.env };
 
       // Prevent debug port collisions and unsupported flag errors by explicitly removing
       // NODE_OPTIONS from spawned npm steps.
       delete env.NODE_OPTIONS;
+
+      // Ensure system proxy variables are applied correctly inside the spawned npm process
+      if (process.env.HTTP_PROXY || process.env.http_proxy) {
+        env.npm_config_proxy = process.env.HTTP_PROXY || process.env.http_proxy;
+      }
+      if (process.env.HTTPS_PROXY || process.env.https_proxy) {
+        env.npm_config_https_proxy =
+          process.env.HTTPS_PROXY || process.env.https_proxy;
+      }
+
+      // 🛡️ Bypass GitHub CDN connection resets by enforcing highly-available binary mirrors.
+      // node-pre-gyp will download directly from this CDN rather than github.com/releases.
+      if (!env.npm_config_sqlite3_binary_host_mirror) {
+        env.npm_config_sqlite3_binary_host_mirror =
+          'https://npmmirror.com/mirrors/sqlite3';
+      }
 
       // Add NODE_DIR to env
       if (process.env.XNAPIFY_NODE_DIR) {
@@ -330,13 +376,26 @@ function ensureDeps(dialect) {
         ),
       );
 
+      // Source compilation (node-gyp → gcc) inside QEMU/Podman VMs can take
+      // 10+ minutes. Extend timeout to 15 min when building from source;
+      // pre-built binary downloads finish in under a minute.
+      const installTimeout = buildFromSource ? 900_000 : 300_000;
+
+      // ⚠️ stdio MUST be 'inherit' when building from source.
+      // gcc/node-gyp produces thousands of lines of output during compilation.
+      // With 'pipe', the OS pipe buffer (64KB) fills up → child blocks on
+      // write → execSync blocks waiting for exit → permanent deadlock.
+      // 'inherit' streams output directly to the terminal, avoiding the
+      // deadlock and giving visibility into compilation progress.
+      const installStdio = buildFromSource ? 'inherit' : 'pipe';
+
       execSync(
         `npm install --no-save --prefix "${driverDir}" ${[...specs, ...buildOpts].join(' ')}`,
         {
           env,
           cwd: driverDir,
-          stdio: 'pipe',
-          timeout: 300_000,
+          stdio: installStdio,
+          timeout: installTimeout,
           shell: os.platform() === 'win32' ? 'powershell.exe' : true,
         },
       );
@@ -703,6 +762,83 @@ async function stopPostgres() {
 // ─── MySQL Lifecycle ────────────────────────────────────────────────────────
 
 /**
+ * Check if MariaDB is available as a system package (Alpine / musl).
+ * On Alpine, `apk add mariadb` provides musl-native mysqld.
+ * @returns {boolean}
+ */
+function isMariaDbAvailable() {
+  try {
+    execSync('mariadbd --version', { stdio: 'pipe', timeout: 5000 });
+    return true;
+  } catch {
+    // Try legacy mysqld name (mariadb < 10.5)
+    try {
+      execSync('mysqld --version', { stdio: 'pipe', timeout: 5000 });
+      // Verify it's actually MariaDB, not glibc MySQL
+      const ver = execSync('mysqld --version 2>&1', {
+        encoding: 'utf-8',
+        timeout: 5000,
+        shell: true,
+      });
+      return /mariadb/i.test(ver);
+    } catch {
+      return false;
+    }
+  }
+}
+
+/**
+ * Resolve the system MariaDB daemon binary path.
+ * MariaDB 10.5+ renamed mysqld → mariadbd but keeps mysqld as symlink.
+ * @returns {string} path to the daemon binary
+ */
+function resolveMariaDbDaemon() {
+  // Try mariadbd first (MariaDB 10.11+)
+  for (const name of ['mariadbd', 'mysqld']) {
+    try {
+      const p = execSync(`which ${name}`, {
+        encoding: 'utf-8',
+        timeout: 3000,
+        shell: true,
+      }).trim();
+      if (p) return p;
+    } catch {
+      // continue
+    }
+  }
+  throw new Error('MariaDB daemon (mariadbd/mysqld) not found in PATH');
+}
+
+/**
+ * Resolve a system MariaDB CLI binary path.
+ * @param {string} binName - e.g. 'mariadb', 'mariadb-admin', 'mysql', 'mysqladmin'
+ * @returns {string}
+ */
+function resolveMariaDbBin(binName) {
+  // MariaDB 10.5+ renames mysql → mariadb, mysqladmin → mariadb-admin, etc.
+  const aliases = {
+    mysql: ['mariadb', 'mysql'],
+    mysqladmin: ['mariadb-admin', 'mysqladmin'],
+    mysql_tzinfo_to_sql: ['mariadb-tzinfo-to-sql', 'mysql_tzinfo_to_sql'],
+    mariadb_tzinfo_to_sql: ['mariadb-tzinfo-to-sql', 'mysql_tzinfo_to_sql'],
+  };
+  const candidates = aliases[binName] || [binName];
+  for (const name of candidates) {
+    try {
+      const p = execSync(`which ${name}`, {
+        encoding: 'utf-8',
+        timeout: 3000,
+        shell: true,
+      }).trim();
+      if (p) return p;
+    } catch {
+      // continue
+    }
+  }
+  throw new Error(`MariaDB binary '${binName}' not found in PATH`);
+}
+
+/**
  * Get platform-specific MySQL download info.
  * @returns {{ url: string, dirName: string, archiveExt: string }}
  */
@@ -711,6 +847,14 @@ function getMysqlDownloadInfo() {
   const arch = os.arch();
   const ver = MYSQL_VERSION;
   const base = `https://dev.mysql.com/get/Downloads/MySQL-8.4`;
+
+  // musl/Alpine cannot run glibc MySQL — must use system MariaDB
+  if (isMusl()) {
+    throw new Error(
+      'glibc MySQL binaries are not compatible with musl/Alpine. ' +
+        'Install MariaDB via: apk add mariadb mariadb-client',
+    );
+  }
 
   /** @type {Record<string, Record<string, { url: string, dirName: string, archiveExt: string }>>} */
   const matrix = {
@@ -864,6 +1008,18 @@ function extractArchive(archivePath, destDir) {
  * @returns {string} basedir — path to extracted MySQL directory
  */
 async function ensureMysqlBinaries() {
+  // On musl/Alpine, use system MariaDB instead of downloading glibc MySQL
+  if (isMusl()) {
+    if (!isMariaDbAvailable()) {
+      throw new Error(
+        'musl/Alpine detected but MariaDB is not installed. ' +
+          'Add to Dockerfile: RUN apk add --no-cache mariadb mariadb-client',
+      );
+    }
+    // Return a sentinel value — MariaDB binaries are in PATH, not a basedir
+    return '__system_mariadb__';
+  }
+
   const info = getMysqlDownloadInfo();
   const basedir = path.join(MYSQL_DATA_DIR, info.dirName);
   const mysqldBin = path.join(
@@ -959,34 +1115,46 @@ function generateMyCnf(cfg = MYSQL_DEFAULTS, basedir) {
   const errorLog = path.join(MYSQL_DATA_DIR, 'error.log');
   const cnfPath = path.join(MYSQL_DATA_DIR, 'my.cnf');
 
-  const content = `# Auto-generated by xnapify preboot — do not edit manually
-[mysqld]
-basedir       = ${fwd(basedir)}
-datadir       = ${fwd(datadir)}
-port          = ${port}
-socket        = ${fwd(socketPath)}
-pid-file      = ${fwd(pidFile)}
-log-error     = ${fwd(errorLog)}
-bind-address  = 127.0.0.1
-mysqlx        = 0
-skip-name-resolve
+  const useMariaDb = isMusl();
 
-# Character set
-character-set-server = utf8mb4
-collation-server = utf8mb4_0900_ai_ci
+  // MariaDB doesn't support: mysqlx, innodb_redo_log_capacity,
+  // utf8mb4_0900_ai_ci collation. Use compatible alternatives.
+  const mysqlxLine = useMariaDb ? '' : 'mysqlx        = 0';
+  const collation = useMariaDb ? 'utf8mb4_general_ci' : 'utf8mb4_0900_ai_ci';
+  const redoLogLine = useMariaDb ? '' : 'innodb_redo_log_capacity = 96M';
 
-# Performance (conservative dev defaults)
-innodb_buffer_pool_size = 128M
-innodb_redo_log_capacity = 96M
-innodb_flush_log_at_trx_commit = 2
-max_connections = 100
+  const lines =
+    [
+      '# Auto-generated by xnapify preboot — do not edit manually',
+      '[mysqld]',
+      `basedir       = ${fwd(basedir)}`,
+      `datadir       = ${fwd(datadir)}`,
+      `port          = ${port}`,
+      `socket        = ${fwd(socketPath)}`,
+      `pid-file      = ${fwd(pidFile)}`,
+      `log-error     = ${fwd(errorLog)}`,
+      'bind-address  = 127.0.0.1',
+      mysqlxLine,
+      'skip-name-resolve',
+      '',
+      '# Character set',
+      'character-set-server = utf8mb4',
+      `collation-server = ${collation}`,
+      '',
+      '# Performance (conservative dev defaults)',
+      'innodb_buffer_pool_size = 128M',
+      redoLogLine,
+      'innodb_flush_log_at_trx_commit = 2',
+      'max_connections = 100',
+      '',
+      '[client]',
+      `socket        = ${fwd(socketPath)}`,
+      `port          = ${port}`,
+    ]
+      .filter(Boolean)
+      .join('\n') + '\n';
 
-[client]
-socket        = ${fwd(socketPath)}
-port          = ${port}
-`;
-
-  fs.writeFileSync(cnfPath, content, 'utf-8');
+  fs.writeFileSync(cnfPath, lines, 'utf-8');
   return cnfPath;
 }
 
@@ -1023,35 +1191,71 @@ async function startMysql(cfg = MYSQL_DEFAULTS) {
 
   console.log(`🐬 Starting embedded MySQL on port ${port}...`);
 
-  // Step 1: Ensure binaries are downloaded
+  // Step 1: Ensure binaries are available
   const basedir = await ensureMysqlBinaries();
-  const mysqld = resolveMysqlBin('mysqld');
+  const useSystemMariaDb = basedir === '__system_mariadb__';
+  const mysqld = useSystemMariaDb
+    ? resolveMariaDbDaemon()
+    : resolveMysqlBin('mysqld');
   const datadir = path.join(MYSQL_DATA_DIR, 'data');
 
   // Step 2: Initialise data directory (idempotent — skip if already exists)
   if (!fs.existsSync(path.join(datadir, 'mysql'))) {
     console.log('🐬 Initialising MySQL data directory...');
     fs.mkdirSync(datadir, { recursive: true });
-    const initArgs = [
-      '--no-defaults',
-      '--initialize-insecure',
-      `--basedir=${basedir}`,
-      `--datadir=${datadir}`,
-    ];
-    // --user is Unix-only; Windows ignores it and usernames may have spaces
-    if (os.platform() !== 'win32') {
-      initArgs.push(`--user=${os.userInfo().username}`);
+
+    if (useSystemMariaDb) {
+      // MariaDB uses mariadb-install-db (or mysql_install_db) for init
+      let installDb;
+      try {
+        installDb = execSync(
+          'which mariadb-install-db || which mysql_install_db',
+          {
+            encoding: 'utf-8',
+            timeout: 3000,
+            shell: true,
+          },
+        ).trim();
+      } catch {
+        throw new Error(
+          'mariadb-install-db not found. Ensure mariadb package is installed.',
+        );
+      }
+      const initArgs = [
+        `--datadir=${datadir}`,
+        `--auth-root-authentication-method=normal`,
+      ];
+      if (os.platform() !== 'win32') {
+        initArgs.push(`--user=${os.userInfo().username}`);
+      }
+      execSync(`"${installDb}" ${initArgs.join(' ')}`, {
+        cwd: ROOT,
+        stdio: 'inherit',
+        timeout: 60_000,
+        shell: true,
+      });
+    } else {
+      const initArgs = [
+        '--no-defaults',
+        '--initialize-insecure',
+        `--basedir=${basedir}`,
+        `--datadir=${datadir}`,
+      ];
+      // --user is Unix-only; Windows ignores it and usernames may have spaces
+      if (os.platform() !== 'win32') {
+        initArgs.push(`--user=${os.userInfo().username}`);
+      }
+      execSync(`"${mysqld}" ${initArgs.join(' ')}`, {
+        cwd: ROOT,
+        stdio: 'inherit',
+        timeout: 60_000,
+        shell: true,
+      });
     }
-    execSync(`"${mysqld}" ${initArgs.join(' ')}`, {
-      cwd: ROOT,
-      stdio: 'inherit',
-      timeout: 60_000,
-      shell: true,
-    });
   }
 
   // Step 3: Generate my.cnf
-  const cnfPath = generateMyCnf(cfg, basedir);
+  const cnfPath = generateMyCnf(cfg, useSystemMariaDb ? '/usr' : basedir);
 
   // Step 4: Clean up stale socket from previous crash (Unix only)
   const socketPath = path.join(MYSQL_DATA_DIR, 'mysql.sock');
@@ -1072,6 +1276,18 @@ async function startMysql(cfg = MYSQL_DEFAULTS) {
       timeout: 10_000,
       shell: true,
     });
+  } else if (useSystemMariaDb) {
+    // MariaDB doesn't support --daemonize; use shell backgrounding
+    const pidFile = path.join(MYSQL_DATA_DIR, 'mysql.pid');
+    execSync(
+      `"${mysqld}" --defaults-file="${cnfPath}" --pid-file="${pidFile}" &`,
+      {
+        cwd: ROOT,
+        stdio: 'inherit',
+        timeout: 10_000,
+        shell: true,
+      },
+    );
   } else {
     // Unix: use --daemonize (MySQL 8.4+ built-in)
     execSync(`"${mysqld}" --defaults-file="${cnfPath}" --daemonize`, {
@@ -1108,7 +1324,9 @@ async function startMysql(cfg = MYSQL_DEFAULTS) {
   // user. We use the mysql CLI over socket to bootstrap root@'%'.
   const dbName = cfg.database || MYSQL_DEFAULTS.database;
   try {
-    const mysqlCli = resolveMysqlBin('mysql');
+    const mysqlCli = useSystemMariaDb
+      ? resolveMariaDbBin('mysql')
+      : resolveMysqlBin('mysql');
     const socketPath = path.join(MYSQL_DATA_DIR, 'mysql.sock');
     const connectArgs =
       os.platform() === 'win32'
@@ -1142,7 +1360,9 @@ async function startMysql(cfg = MYSQL_DEFAULTS) {
     const zoneinfoDir = '/usr/share/zoneinfo';
     if (os.platform() !== 'win32' && fs.existsSync(zoneinfoDir)) {
       try {
-        const tzSql = resolveMysqlBin('mysql_tzinfo_to_sql');
+        const tzSql = useSystemMariaDb
+          ? resolveMariaDbBin('mysql_tzinfo_to_sql')
+          : resolveMysqlBin('mysql_tzinfo_to_sql');
         execSync(`"${tzSql}" "${zoneinfoDir}" | ${baseCmd} mysql`, {
           cwd: ROOT,
           stdio: 'pipe',
@@ -1191,7 +1411,9 @@ async function stopMysql() {
 
   try {
     const socketPath = path.join(MYSQL_DATA_DIR, 'mysql.sock');
-    const mysqladmin = resolveMysqlBin('mysqladmin');
+    const mysqladmin = isMusl()
+      ? resolveMariaDbBin('mysqladmin')
+      : resolveMysqlBin('mysqladmin');
     console.log('🐬 Stopping embedded MySQL...');
 
     const shutdownArgs = [

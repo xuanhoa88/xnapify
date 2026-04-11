@@ -14,7 +14,9 @@ COPY tools/npm/ ./tools/npm/
 
 # Install ALL dependencies (including devDependencies for build)
 # Set npm configs to prevent network timeouts/EOF during large downloads on QEMU/Podman
-RUN npm config set fetch-retries 5 \
+RUN npm config set maxsockets 1 \
+ && npm config set fetch-timeout 600000 \
+ && npm config set fetch-retries 5 \
  && npm config set fetch-retry-mintimeout 20000 \
  && npm config set fetch-retry-maxtimeout 120000 \
  && npm run setup
@@ -44,15 +46,17 @@ FROM node:18-alpine
 
 # Runtime dependencies for privilege dropping and embedded database engines.
 # - su-exec: drop root privileges in entrypoint
-# - gcompat: glibc shim so glibc-linked PG/MySQL binaries run on Alpine musl
+# - gcompat: glibc shim so glibc-linked PG binaries run on Alpine musl
 # - Shared libs for PostgreSQL: libstdc++ icu-libs readline zlib openssl
 #   PG 18+: lz4-libs zstd-libs (WAL/TOAST compression), libxml2 (SQL/XML)
-# - Shared libs for MySQL: libaio numactl ncurses-libs
-# - Tools for MySQL download/extract: curl xz
+# - mariadb + mariadb-client: musl-native MySQL-compatible server for Alpine
+#   (glibc MySQL binaries cannot run on Alpine musl — MariaDB is the drop-in)
+# - Tools for download/extract: curl xz
 # - tzdata: timezone tables for MySQL SET time_zone = 'UTC'
 RUN apk add --no-cache su-exec gcompat libstdc++ icu-libs readline zlib openssl \
     lz4-libs zstd-libs libxml2 \
-    curl xz libaio numactl ncurses-libs tzdata
+    curl xz tzdata \
+    mariadb mariadb-client
 
 WORKDIR /app
 
