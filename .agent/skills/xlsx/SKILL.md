@@ -59,64 +59,62 @@ Unless otherwise stated by the user or existing template
 A user may ask you to create, edit, or analyze the contents of an .xlsx file. You have different tools and workflows available for different tasks.
 
 ## Important Requirements
-**LibreOffice Required for Formula Recalculation**: You can assume LibreOffice is installed for recalculating formula values using the `scripts/recalc.py` script. The script automatically configures LibreOffice on first run, including in sandboxed environments where Unix sockets are restricted (handled by `scripts/office/soffice.py`)
+**LibreOffice Required for Formula Recalculation**: You can assume LibreOffice is installed for recalculating formula values using the `scripts/recalc.js` script. The script automatically configures LibreOffice on first run, including in sandboxed environments where Unix sockets are restricted (handled by `scripts/office/soffice.js`)
 
-For data analysis, visualization, and basic operations, use **pandas** which provides powerful data manipulation capabilities:
+For data analysis, visualization, and basic operations, use **xlsx** (SheetJS) which provides powerful data manipulation capabilities:
 
-```python
-import pandas as pd
+```javascript
+const XLSX = require('xlsx');
 
-# Read Excel
-df = pd.read_excel('file.xlsx')  # Default: first sheet
-all_sheets = pd.read_excel('file.xlsx', sheet_name=None)  # All sheets as dict
+// Read Excel
+const wb = XLSX.readFile('file.xlsx');
+const sheet = wb.Sheets[wb.SheetNames[0]]; // Default: first sheet
 
-# Analyze
-df.head()      # Preview data
-df.info()      # Column info
-df.describe()  # Statistics
+// Analyze
+const data = XLSX.utils.sheet_to_json(sheet);
+console.log(data.slice(0, 5)); // Preview data
 
-# Write Excel
-df.to_excel('output.xlsx', index=False)
+// Write Excel
+const newWb = XLSX.utils.book_new();
+const newWs = XLSX.utils.json_to_sheet(data);
+XLSX.utils.book_append_sheet(newWb, newWs, "Sheet1");
+XLSX.writeFile(newWb, 'output.xlsx');
 ```
 
-**Always use Excel formulas instead of calculating values in Python and hardcoding them.** This ensures the spreadsheet remains dynamic and updateable.
+**Always use Excel formulas instead of calculating values in NodeJS and hardcoding them.** This ensures the spreadsheet remains dynamic and updateable.
 
 ### ❌ WRONG - Hardcoding Calculated Values
-```python
-# Bad: Calculating in Python and hardcoding result
-total = df['Sales'].sum()
-sheet['B10'] = total  # Hardcodes 5000
+```javascript
+// Bad: Calculating in Node and hardcoding result
+const total = data.reduce((sum, row) => sum + row.Sales, 0);
+XLSX.utils.sheet_add_aoa(ws, [[total]], {origin: "B10"}); // Hardcodes 5000
 
-# Bad: Computing growth rate in Python
-growth = (df.iloc[-1]['Revenue'] - df.iloc[0]['Revenue']) / df.iloc[0]['Revenue']
-sheet['C5'] = growth  # Hardcodes 0.15
-
-# Bad: Python calculation for average
-avg = sum(values) / len(values)
-sheet['D20'] = avg  # Hardcodes 42.5
+// Bad: Computing growth rate in Node
+const growth = (data[data.length - 1].Revenue - data[0].Revenue) / data[0].Revenue;
+XLSX.utils.sheet_add_aoa(ws, [[growth]], {origin: "C5"}); // Hardcodes 0.15
 ```
 
 ### ✅ CORRECT - Using Excel Formulas
-```python
-# Good: Let Excel calculate the sum
-sheet['B10'] = '=SUM(B2:B9)'
+```javascript
+// Good: Let Excel calculate the sum
+XLSX.utils.sheet_add_aoa(ws, [[ { t: 'n', f: 'SUM(B2:B9)' } ]], {origin: "B10"});
 
-# Good: Growth rate as Excel formula
-sheet['C5'] = '=(C4-C2)/C2'
+// Good: Growth rate as Excel formula
+XLSX.utils.sheet_add_aoa(ws, [[ { t: 'n', f: '(C4-C2)/C2' } ]], {origin: "C5"});
 
-# Good: Average using Excel function
-sheet['D20'] = '=AVERAGE(D2:D19)'
+// Good: Average using Excel function
+XLSX.utils.sheet_add_aoa(ws, [[ { t: 'n', f: 'AVERAGE(D2:D19)' } ]], {origin: "D20"});
 ```
 
 This applies to ALL calculations - totals, percentages, ratios, differences, etc. The spreadsheet should be able to recalculate when source data changes.
 
-1. **Choose tool**: pandas for data, openpyxl for formulas/formatting
+1. **Choose tool**: xlsx for Node
 2. **Create/Load**: Create new workbook or load existing file
 3. **Modify**: Add/edit data, formulas, and formatting
 4. **Save**: Write to file
-5. **Recalculate formulas (MANDATORY IF USING FORMULAS)**: Use the scripts/recalc.py script
+5. **Recalculate formulas (MANDATORY IF USING FORMULAS)**: Use the scripts/recalc.js script
    ```bash
-   python scripts/recalc.py output.xlsx
+   node scripts/recalc.js output.xlsx
    ```
 6. **Verify and fix any errors**: 
    - The script returns JSON with error details
@@ -129,69 +127,56 @@ This applies to ALL calculations - totals, percentages, ratios, differences, etc
      - `#NAME?`: Unrecognized formula name
 
 ### Creating new Excel files
-```python
-# Using openpyxl for formulas and formatting
-from openpyxl import Workbook
-from openpyxl.styles import Font, PatternFill, Alignment
+```javascript
+// Using xlsx for formulas and data
+const XLSX = require('xlsx');
 
-wb = Workbook()
-sheet = wb.active
+const wb = XLSX.utils.book_new();
+const wsData = [
+  ['Hello', 'World'],
+  ['Row', 'of', 'data']
+];
+const ws = XLSX.utils.aoa_to_sheet(wsData);
 
-# Add data
-sheet['A1'] = 'Hello'
-sheet['B1'] = 'World'
-sheet.append(['Row', 'of', 'data'])
+// Add formula
+ws['B2'] = { t: 'n', f: 'SUM(A1:A10)' };
 
-# Add formula
-sheet['B2'] = '=SUM(A1:A10)'
+// Column width
+ws['!cols'] = [ { wpx: 150 } ];
 
-# Formatting
-sheet['A1'].font = Font(bold=True, color='FF0000')
-sheet['A1'].fill = PatternFill('solid', start_color='FFFF00')
-sheet['A1'].alignment = Alignment(horizontal='center')
-
-# Column width
-sheet.column_dimensions['A'].width = 20
-
-wb.save('output.xlsx')
+XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+XLSX.writeFile(wb, 'output.xlsx');
 ```
 
 ### Editing existing Excel files
-```python
-# Using openpyxl to preserve formulas and formatting
-from openpyxl import load_workbook
+```javascript
+const XLSX = require('xlsx');
 
-# Load existing file
-wb = load_workbook('existing.xlsx')
-sheet = wb.active  # or wb['SheetName'] for specific sheet
+// Load existing file
+const wb = XLSX.readFile('existing.xlsx');
+let sheetName = wb.SheetNames[0];
+let ws = wb.Sheets[sheetName];
 
-# Working with multiple sheets
-for sheet_name in wb.sheetnames:
-    sheet = wb[sheet_name]
-    print(f"Sheet: {sheet_name}")
+// Modify cells
+XLSX.utils.sheet_add_aoa(ws, [['New Value']], {origin: 'A1'});
 
-# Modify cells
-sheet['A1'] = 'New Value'
-sheet.insert_rows(2)  # Insert row at position 2
-sheet.delete_cols(3)  # Delete column 3
+// Add new sheet
+const newSheet = XLSX.utils.aoa_to_sheet([['Data']]);
+XLSX.utils.book_append_sheet(wb, newSheet, 'NewSheet');
 
-# Add new sheet
-new_sheet = wb.create_sheet('NewSheet')
-new_sheet['A1'] = 'Data'
-
-wb.save('modified.xlsx')
+XLSX.writeFile(wb, 'modified.xlsx');
 ```
 
 ## Recalculating formulas
-Excel files created or modified by openpyxl contain formulas as strings but not calculated values. Use the provided `scripts/recalc.py` script to recalculate formulas:
+Excel files created or modified by `xlsx` contain formulas as strings but not calculated values. Use the provided `scripts/recalc.js` script to recalculate formulas:
 
 ```bash
-python scripts/recalc.py <excel_file> [timeout_seconds]
+node scripts/recalc.js <excel_file> [timeout_seconds]
 ```
 
 Example:
 ```bash
-python scripts/recalc.py output.xlsx 30
+node scripts/recalc.js output.xlsx 30
 ```
 
 The script:
@@ -206,13 +191,12 @@ Quick checks to ensure formulas work correctly:
 
 ### Essential Verification
 - [ ] **Test 2-3 sample references**: Verify they pull correct values before building full model
-- [ ] **Column mapping**: Confirm Excel columns match (e.g., column 64 = BL, not BK)
-- [ ] **Row offset**: Remember Excel rows are 1-indexed (DataFrame row 5 = Excel row 6)
+- [ ] **Column mapping**: Confirm Excel columns match
+- [ ] **Row offset**: Remember Excel rows are 1-indexed (array row 5 = Excel row 6)
 
 ### Common Pitfalls
-- [ ] **NaN handling**: Check for null values with `pd.notna()`
+- [ ] **Null handling**: Check for null values
 - [ ] **Far-right columns**: FY data often in columns 50+ 
-- [ ] **Multiple matches**: Search all occurrences, not just first
 - [ ] **Division by zero**: Check denominators before using `/` in formulas (#DIV/0!)
 - [ ] **Wrong references**: Verify all cell references point to intended cells (#REF!)
 - [ ] **Cross-sheet references**: Use correct format (Sheet1!A1) for linking sheets
@@ -222,7 +206,7 @@ Quick checks to ensure formulas work correctly:
 - [ ] **Verify dependencies**: Check all cells referenced in formulas exist
 - [ ] **Test edge cases**: Include zero, negative, and very large values
 
-### Interpreting scripts/recalc.py Output
+### Interpreting scripts/recalc.js Output
 The script returns JSON with error details:
 ```json
 {
@@ -239,25 +223,19 @@ The script returns JSON with error details:
 ```
 
 ### Library Selection
-- **pandas**: Best for data analysis, bulk operations, and simple data export
-- **openpyxl**: Best for complex formatting, formulas, and Excel-specific features
+- **xlsx (SheetJS)**: Best for data analysis, bulk operations, formulas, and simple data export
+- **exceljs** (if available): Best for complex formatting and Excel-specific features
 
-### Working with openpyxl
-- Cell indices are 1-based (row=1, column=1 refers to cell A1)
-- Use `data_only=True` to read calculated values: `load_workbook('file.xlsx', data_only=True)`
-- **Warning**: If opened with `data_only=True` and saved, formulas are replaced with values and permanently lost
-- For large files: Use `read_only=True` for reading or `write_only=True` for writing
-- Formulas are preserved but not evaluated - use scripts/recalc.py to update values
+### Working with xlsx (SheetJS)
+- Cell indices are 0-based for arrays, but standard for references (A1)
+- Use `cellFormula: true` when reading files to preserve formulas
+- For large files: avoid `sheet_to_json` to prevent massive memory spikes, iterate using APIs instead
+- Formulas are preserved but not evaluated - use scripts/recalc.js to update values
 
-### Working with pandas
-- Specify data types to avoid inference issues: `pd.read_excel('file.xlsx', dtype={'id': str})`
-- For large files, read specific columns: `pd.read_excel('file.xlsx', usecols=['A', 'C', 'E'])`
-- Handle dates properly: `pd.read_excel('file.xlsx', parse_dates=['date_column'])`
-
-**IMPORTANT**: When generating Python code for Excel operations:
-- Write minimal, concise Python code without unnecessary comments
+**IMPORTANT**: When generating NodeJS code for Excel operations:
+- Write minimal, concise NodeJS code without unnecessary comments
 - Avoid verbose variable names and redundant operations
-- Avoid unnecessary print statements
+- Avoid unnecessary console statements
 
 **For Excel files themselves**:
 - Add comments to cells with complex formulas or important assumptions

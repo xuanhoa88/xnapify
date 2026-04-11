@@ -4,7 +4,7 @@
 FROM node:18-alpine AS builder
 
 # Build tools for native modules (sqlite3 requires node-gyp → python3/make/g++)
-RUN apk add --no-cache python3 make g++
+RUN apk add --no-cache python3 py3-setuptools make g++
 
 WORKDIR /build
 

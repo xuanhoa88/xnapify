@@ -10,7 +10,7 @@ FROM node:18-alpine
 RUN apk add --no-cache gcompat libstdc++ icu-libs readline zlib openssl \
     lz4-libs zstd-libs libxml2 \
     curl xz libaio numactl ncurses-libs tzdata \
-    python3 make g++
+    python3 py3-setuptools make g++
 
 WORKDIR /app
 

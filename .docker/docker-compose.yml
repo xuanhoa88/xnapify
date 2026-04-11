@@ -22,6 +22,7 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV:-production}
       XNAPIFY_HOST: 0.0.0.0
+      XNAPIFY_DB_URL: ${XNAPIFY_DB_URL:-sqlite}
       # Writable directories — all under /app/data (single persistent volume)
       XNAPIFY_UPLOAD_DIR: /app/data/uploads
       XNAPIFY_NODERED_HOME: /app/data/node-red
@@ -33,7 +34,7 @@ services:
     volumes:
       - xnapify_data:/app/data
     healthcheck:
-      test: ['CMD', 'wget', '-qO-', 'http://localhost:1337/']
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:1337/']
       interval: 30s
       timeout: 10s
       retries: 3
