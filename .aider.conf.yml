@@ -1,0 +1,7 @@
+# Aider Configuration
+# This file bridges the xnapify Agent architecture natively into Aider
+
+# Automatically load the global project structures and rules as read-only context on launch
+read:
+  - ".agent/RULES.md"
+  - "AGENT.md"
