@@ -779,8 +779,10 @@ Manual control:
 node tools/npm/preboot.js --status                # Show DB status (auto-detects dialect)
 node tools/npm/preboot.js --start                 # Start embedded DB (auto-detects dialect)
 node tools/npm/preboot.js --stop                  # Stop embedded DB (auto-detects dialect)
+node tools/npm/preboot.js --install               # Install driver only (no server start)
 node tools/npm/preboot.js --db mysql --start      # Force MySQL start
 node tools/npm/preboot.js --db postgres --stop    # Force PostgreSQL stop
+node tools/npm/preboot.js --db sqlite --install   # Pre-install SQLite driver
 ```
 
 On-demand override (session-scoped — does NOT mutate `.env`):
@@ -813,13 +815,24 @@ npm run setup
 # Start server (.env + DB driver auto-provisioned by prestart hook)
 npm start
 
-# Or use Docker
-docker build -t xnapify .
-docker run -p 1337:1337 \
-  -e NODE_ENV=production \
-  -e XNAPIFY_KEY=your-secret \
-  -e XNAPIFY_DB_URL=postgresql://user:pass@host:5432/db \
-  xnapify
+# Or use Docker (all 3 drivers pre-installed — switch DB via env var)
+docker compose -f .docker/docker-compose.yml up -d --build
+
+# View logs
+docker compose -f .docker/docker-compose.yml logs -f xnapify
+
+# Stop
+docker compose -f .docker/docker-compose.yml down
+```
+
+**Database switching** — set `XNAPIFY_DB_URL` in the compose environment:
+
+```yaml
+# In .docker/docker-compose.yml under xnapify service:
+environment:
+  XNAPIFY_DB_URL: postgresql://user:pass@host:5432/dbname  # External PG
+  # or: mysql://user:pass@host:3306/dbname                 # External MySQL
+  # or: sqlite:database.sqlite                             # SQLite (default)
 ```
 
 **Data directories** — control where each database stores its files in Docker:

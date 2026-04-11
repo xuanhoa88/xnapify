@@ -9,21 +9,15 @@ Build and manage the application using Docker Compose from the `.docker/` direct
 All Docker configuration lives in `.docker/`:
 
 - `.docker/Dockerfile` — Multi-stage build (builder → production)
-- `.docker/docker-compose.yml` — Service definitions (app, postgres, mysql)
+- `.docker/docker-compose.yml` — Service definitions (app only — DB is embedded)
 - `.docker/entrypoint.sh` — Runtime permission fixer via `su-exec`
 - `.dockerignore` — Build context exclusions (stays in project root)
 
 ## Build & Run (Production)
 
 ```bash
-# Build and start app (SQLite default — DB driver auto-installed by preboot)
+# Build and start app (all DB drivers pre-installed — SQLite default)
 docker compose -f .docker/docker-compose.yml up -d --build
-
-# With PostgreSQL
-docker compose -f .docker/docker-compose.yml --profile postgres up -d --build
-
-# With MySQL
-docker compose -f .docker/docker-compose.yml --profile mysql up -d --build
 
 # View logs
 docker compose -f .docker/docker-compose.yml logs -f xnapify
@@ -42,9 +36,6 @@ docker compose -f .docker/docker-compose.dev.yml up --build
 
 # Podman equivalent
 podman compose -f .docker/docker-compose.dev.yml up --build
-
-# With PostgreSQL
-docker compose -f .docker/docker-compose.dev.yml --profile postgres up --build
 
 # Stop
 docker compose -f .docker/docker-compose.dev.yml down
@@ -69,16 +60,22 @@ To change baked values for Docker builds, set them in the Dockerfile's `RUN` com
 RUN XNAPIFY_HOST=0.0.0.0 npm run build
 ```
 
-## When Database URL Changes
+## Database Configuration
 
-If switching from SQLite to Postgres/MySQL for Docker:
-1. Change `XNAPIFY_DB_URL` in `.env.xnapify` (baked at build time by Webpack)
-2. Or set it as a build arg: `RUN XNAPIFY_DB_URL=postgresql://... npm run build`
-3. The `prestart` hook auto-installs the correct driver at container startup
-4. Data directories control where each database stores files:
-   - `XNAPIFY_SQLITE_DATA_DIR` — SQLite database file (default: `/app/data/sqlite` in Docker)
-   - `XNAPIFY_PG_DATA_DIR` — PostgreSQL data (default: `/app/data/postgres` in Docker)
-   - `XNAPIFY_MYSQL_DATA_DIR` — MySQL data (default: `/app/data/mysql` in Docker)
+The Docker image ships with all 3 database drivers pre-installed (sqlite3, pg, mysql2).
+Switch databases at runtime by setting `XNAPIFY_DB_URL`:
+
+```yaml
+environment:
+  XNAPIFY_DB_URL: postgresql://user:pass@host:5432/dbname   # External PG
+  XNAPIFY_DB_URL: mysql://user:pass@host:3306/dbname        # External MySQL
+  XNAPIFY_DB_URL: sqlite:database.sqlite                    # SQLite (default)
+```
+
+Data directories control where each database stores files:
+- `XNAPIFY_SQLITE_DATA_DIR` — SQLite database file (default: `/app/data/sqlite` in Docker)
+- `XNAPIFY_PG_DATA_DIR` — PostgreSQL data (default: `/app/data/postgres` in Docker)
+- `XNAPIFY_MYSQL_DATA_DIR` — MySQL data (default: `/app/data/mysql` in Docker)
 
 Manual DB control inside the container:
 
@@ -91,8 +88,8 @@ node tools/npm/preboot.js --stop
 node tools/npm/preboot.js --db mysql --start
 node tools/npm/preboot.js --db postgres --stop
 
-# On-demand override (local dev only — uses .env.local, not applicable in Docker)
-XNAPIFY_DB=mysql npm run dev
+# Install driver only (no server start — used by Dockerfile)
+node tools/npm/preboot.js --db sqlite --install
 ```
 
 ## Debugging

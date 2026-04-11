@@ -279,38 +279,38 @@ Preboot resolves servers with a 3-tier priority chain:
 node tools/npm/preboot.js --status                # Show DB status
 node tools/npm/preboot.js --start                 # Start embedded DB
 node tools/npm/preboot.js --stop                  # Stop embedded DB
+node tools/npm/preboot.js --install               # Install driver only (no server start)
 
 # Override dialect
 node tools/npm/preboot.js --db mysql --start      # Force MySQL
 node tools/npm/preboot.js --db postgres --stop    # Force PostgreSQL
+node tools/npm/preboot.js --db sqlite --install   # Pre-install SQLite driver
 ```
 
 ## 🐳 Docker
 
+The Docker image ships with all 3 database drivers pre-installed (`sqlite3`, `pg`, `mysql2`).
+Switch databases at runtime by setting `XNAPIFY_DB_URL`.
+
 ```bash
-# Build image
-docker build -t xnapify .
+# Build and start (SQLite default)
+docker compose -f .docker/docker-compose.yml up -d --build
 
-# Run container (SQLite default — persisted via data volume)
-docker run -p 1337:1337 \
-  -e NODE_ENV=production \
-  -e XNAPIFY_KEY=$(openssl rand -base64 32) \
-  -v xnapify_data:/app/data \
-  xnapify
+# View logs
+docker compose -f .docker/docker-compose.yml logs -f xnapify
 
-# With PostgreSQL
-docker run -p 1337:1337 \
-  -e NODE_ENV=production \
-  -e XNAPIFY_KEY=$(openssl rand -base64 32) \
-  -e XNAPIFY_DB_URL=postgresql://user:pass@host:5432/dbname \
-  xnapify
+# Stop
+docker compose -f .docker/docker-compose.yml down
+```
 
-# With MySQL
-docker run -p 1337:1337 \
-  -e NODE_ENV=production \
-  -e XNAPIFY_KEY=$(openssl rand -base64 32) \
-  -e XNAPIFY_DB_URL=mysql://user:pass@host:3306/dbname \
-  xnapify
+To use an external database, set `XNAPIFY_DB_URL` in the compose environment:
+
+```yaml
+# In .docker/docker-compose.yml under xnapify service:
+environment:
+  XNAPIFY_DB_URL: postgresql://user:pass@host:5432/dbname  # External PG
+  # or: mysql://user:pass@host:3306/dbname                 # External MySQL
+  # or: sqlite:database.sqlite                             # SQLite (default)
 ```
 
 **Data directories** (control where each database stores its files):

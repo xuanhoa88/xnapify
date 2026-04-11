@@ -3,7 +3,6 @@
 # =============================================================================
 # Usage:
 #   docker compose -f .docker/docker-compose.dev.yml up --build
-#   docker compose -f .docker/docker-compose.dev.yml --profile postgres up --build
 #
 # Podman:
 #   podman compose -f .docker/docker-compose.dev.yml up --build
@@ -41,71 +40,9 @@ services:
       - /app/node_modules
       # Persistent data volume
       - xnapify_data:/app/data
-    networks:
-      - xnapify-net
-
-  # ---------------------------------------------------------------------------
-  # PostgreSQL (activate with: --profile postgres)
-  # ---------------------------------------------------------------------------
-  postgres:
-    image: postgres:16-alpine
-    container_name: xnapify-postgres
-    profiles:
-      - postgres
-    restart: unless-stopped
-    ports:
-      - '${XNAPIFY_PG_PORT:-5432}:5432'
-    environment:
-      POSTGRES_DB: ${XNAPIFY_PG_DB:-xnapify}
-      POSTGRES_USER: ${XNAPIFY_PG_USER:-xnapify}
-      POSTGRES_PASSWORD: ${XNAPIFY_PG_PASSWORD:-xnapify_secret}
-    volumes:
-      - xnapify_pg:/var/lib/postgresql/data
-    networks:
-      - xnapify-net
-    healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${XNAPIFY_PG_USER:-xnapify}']
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # ---------------------------------------------------------------------------
-  # MySQL (activate with: --profile mysql)
-  # ---------------------------------------------------------------------------
-  mysql:
-    image: mysql:8.0
-    container_name: xnapify-mysql
-    profiles:
-      - mysql
-    restart: unless-stopped
-    ports:
-      - '${XNAPIFY_MYSQL_PORT:-3306}:3306'
-    environment:
-      MYSQL_DATABASE: ${XNAPIFY_MYSQL_DB:-xnapify}
-      MYSQL_USER: ${XNAPIFY_MYSQL_USER:-xnapify}
-      MYSQL_PASSWORD: ${XNAPIFY_MYSQL_PASSWORD:-xnapify_secret}
-      MYSQL_ROOT_PASSWORD: ${XNAPIFY_MYSQL_ROOT_PASSWORD:-root_secret}
-    volumes:
-      - xnapify_mysql:/var/lib/mysql
-    networks:
-      - xnapify-net
-    healthcheck:
-      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost']
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
 # =============================================================================
 # Volumes
 # =============================================================================
 volumes:
   xnapify_data:
-  xnapify_pg:
-  xnapify_mysql:
-
-# =============================================================================
-# Networks
-# =============================================================================
-networks:
-  xnapify-net:
-    driver: bridge

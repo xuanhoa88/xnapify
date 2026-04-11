@@ -1541,6 +1541,7 @@ Usage: node tools/npm/preboot.js [options] [command]
 
 Commands:
   (none)      Auto mode — detect dialect, install deps, resolve server
+  --install   Install driver for the detected/specified dialect (no server start)
   --start     Start embedded database daemon (auto-detects from XNAPIFY_DB_URL)
   --stop      Stop embedded database daemon (auto-detects from XNAPIFY_DB_URL)
   --status    Show database status (auto-detects from XNAPIFY_DB_URL)
@@ -1555,11 +1556,13 @@ Environment:
   XNAPIFY_DB       Override dialect (same as --db, for npm lifecycle hooks)
 
 Examples:
-  node tools/npm/preboot.js --start              # start DB detected from env
-  node tools/npm/preboot.js --db mysql --start   # force MySQL start
-  node tools/npm/preboot.js --db postgres --stop  # force PostgreSQL stop
-  XNAPIFY_DB=mysql npm run dev                   # dev with MySQL
-  XNAPIFY_DB=postgres npm start                  # start with PostgreSQL
+  node tools/npm/preboot.js --install                # install driver for detected dialect
+  node tools/npm/preboot.js --db sqlite --install    # install SQLite driver only
+  node tools/npm/preboot.js --start                  # start DB detected from env
+  node tools/npm/preboot.js --db mysql --start       # force MySQL start
+  node tools/npm/preboot.js --db postgres --stop     # force PostgreSQL stop
+  XNAPIFY_DB=mysql npm run dev                       # dev with MySQL
+  XNAPIFY_DB=postgres npm start                      # start with PostgreSQL
 `);
 }
 
@@ -1593,6 +1596,11 @@ const flag = args.find(
 );
 
 const COMMANDS = {
+  '--install': async () => {
+    const dialect = resolveDialect(dbOverride);
+    ensureDeps(dialect);
+    console.log(`✅ ${dialect} driver ready`);
+  },
   '--start': async () => {
     const dialect = resolveDialect(dbOverride);
     if (dialect === 'sqlite') {

@@ -27,7 +27,8 @@ Database operations in xnapify are managed through the `db` engine (`shared/api/
 | PostgreSQL | `pg` | `XNAPIFY_DB_URL=postgres://...` | — |
 | MySQL/MariaDB | `mysql2` | `XNAPIFY_DB_URL=mysql://...` | — |
 
-Drivers are auto-installed by `tools/npm/preboot.js` at startup.
+Drivers are auto-installed by `tools/npm/preboot.js` at startup. In Docker images, all 3 drivers are
+pre-installed during the build stage (`node tools/npm/preboot.js --db <dialect> --install`).
 
 ### Data Directories
 
