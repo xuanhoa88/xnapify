@@ -1,3 +1,9 @@
+---
+id: architecture-testing
+title: Testing Architecture
+sidebar_position: 6
+---
+
 # Testing Architecture
 
 The **xnapify** platform is tested through two distinct methodologies natively: 
@@ -19,16 +25,23 @@ xnapify integrates a powerful E2E framework built around **Puppeteer**. However,
 
 ### SPA Stability Engine
 
-Modern React frontends frequently mutate asynchronously. Hardcoding `await page.waitForTimeout()` leads to flaky tests. The xnapify `executor.js` instead waits for comprehensive UI "Stability" across 5 metrics prior to executing a click or typing action:
-- **Network**: All tracked `fetch()` or `XHR` calls return zero pending.
-- **DOM Mutations**: Re-renders cease mutating the HTML.
-- **CSS Animations**: Transitions are fully completed.
-- **Loading UI**: Indicators (e.g. `[role="progressbar"]`, `.spinner`) are totally absent.
-- **React Internals**: Checks the live React Fiber state to safely guarantee no suspended logic is pending.
+Modern React frontends frequently mutate asynchronously. Hardcoding `await page.waitForTimeout()` leads to flaky tests. The xnapify `executor.js` instead waits for comprehensive UI "Stability" across 5 metrics prior to executing a click or typing action.
+
+```mermaid
+flowchart TD
+    Start[Action Requested] --> Net[Network: 0 pending requests?]
+    Net --> DOM[DOM: Mutations ceased?]
+    DOM --> CSS[CSS: Animations complete?]
+    CSS --> Load[LoadUI: Spinners absent?]
+    Load --> React[React: Fiber Suspense resolved?]
+    React --> Exec[Execute Puppeteer Action]
+```
 
 ### Pseudo-Selectors for Safe Targeting
 
-Do not test by mapping brittle auto-generated CSS classes. Test via visible text outputs:
+> [!WARNING]
+> Do not test by mapping brittle auto-generated CSS classes. Test via visible text outputs.
+
 ```javascript
 // Test text natively:
 await page.locator('::-p-text(Upload Extension)').click();
@@ -51,5 +64,8 @@ src/apps/users/api/services/
 
 ### Best Practices
 
-- **Mocking Extraneous Engines**: Since Backend logic leans heavily on the DI `container`, integration tests inside xnapify should build mock Containers passing exclusively the explicitly needed engines allowing rapid test isolation.
-- **In-Memory SQLite**: When testing `models()` and their respective persistence mechanics, leverage the SQLite engine dynamically overriding connections locally to avoid deploying tests into persistent DB stores.
+> [!NOTE]
+> **Mocking Extraneous Engines**: Since Backend logic leans heavily on the DI `container`, integration tests inside xnapify should build mock Containers passing exclusively the explicitly needed engines allowing rapid test isolation.
+
+> [!TIP]
+> **In-Memory SQLite**: When testing `models()` and their respective persistence mechanics, leverage the SQLite engine dynamically overriding connections locally to avoid deploying tests into persistent DB stores.

@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
@@ -13,31 +13,17 @@ import { useTranslation } from 'react-i18next';
 
 import s from './SidebarLayout.css';
 
-export default function DocsLayout({ children, context: { fetch, history } }) {
+export default function DocsLayout({
+  children,
+  context: { history, initialProps },
+}) {
   const { t } = useTranslation(`extension:${__EXTENSION_ID__}`);
-  const [tree, setTree] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const abortRef = useRef(null);
 
-  useEffect(() => {
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    fetch('/api/guides', { signal: controller.signal })
-      .then(body => {
-        if (body && body.success && body.data) {
-          setTree(body.data);
-        }
-      })
-      .catch(err => {
-        if (err.name !== 'AbortError') {
-          console.error('[DocsLayout] fetch failed', err);
-        }
-      })
-      .finally(() => setLoading(false));
-
-    return () => controller.abort();
-  }, [fetch]);
+  const tree = useMemo(
+    () =>
+      initialProps && Array.isArray(initialProps.tree) ? initialProps.tree : [],
+    [initialProps],
+  );
 
   const renderTree = useCallback(
     (nodes, depth) => {
@@ -85,15 +71,7 @@ export default function DocsLayout({ children, context: { fetch, history } }) {
         <div className={s.sidebarHeader}>
           <h2>{t('sidebar.title', 'Documentation')}</h2>
         </div>
-        <div className={s.sidebarContent}>
-          {loading ? (
-            <div className={s.loading}>
-              {t('sidebar.loading', 'Loading...')}
-            </div>
-          ) : (
-            renderTree(tree)
-          )}
-        </div>
+        <div className={s.sidebarContent}>{renderTree(tree)}</div>
       </aside>
       <main className={s.mainContent}>{children}</main>
     </div>
@@ -103,7 +81,9 @@ export default function DocsLayout({ children, context: { fetch, history } }) {
 DocsLayout.propTypes = {
   children: PropTypes.node.isRequired,
   context: PropTypes.shape({
-    fetch: PropTypes.func.isRequired,
     history: PropTypes.object.isRequired,
+    initialProps: PropTypes.shape({
+      tree: PropTypes.array.isRequired,
+    }).isRequired,
   }).isRequired,
 };

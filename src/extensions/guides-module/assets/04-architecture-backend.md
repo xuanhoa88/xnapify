@@ -1,3 +1,9 @@
+---
+id: architecture-backend
+title: Backend Engines
+sidebar_position: 4
+---
+
 # Backend Engines
 
 The **xnapify** backend eliminates duplicate infrastructure logic across domains by centralizing core functionalities under the `shared/api/engines/` layer. These engines behave as system-level singletons that execute foundational duties like WebSockets, scheduling, file systems, and databases. 
@@ -17,7 +23,8 @@ The database engine dynamically detects your target Relational database dialect 
 | `'db'` | `Sequelize Connection Manager` | Offers database connection strings, transaction wrapping, and direct execution (`db.connection.query()`). |
 | `'models'` | `Object` | Provides deterministic access to all active tables registered via auto-discovery (e.g. `const models = container.resolve('models'); await models.Users.findAll()`). |
 
-> **Note:** Migrations and Seeds are executed natively by the Engine during deployment startup phases; there is no need for external Node CLI run operations.
+> [!NOTE]
+> Migrations and Seeds are executed natively by the Engine during deployment startup phases; there is no need for external Node CLI run operations.
 
 ---
 
@@ -41,6 +48,7 @@ async boot({ container }) {
 The WebSocket engine maintains active live connections scoped securely by Authentication tokens. It coordinates broadcast emissions mapped to isolated URL channels.
 
 ### API Reference
+
 | Service Key | Return Type | Method | Purpose |
 | --- | --- | ---| --- |
 | `'ws'` | `WebSocketManager` | `broadcast(channel, event, data)` | Broadcasts an action to all connected users residing within an isolated WebSocket namespace (e.g. `ws.broadcast('/rooms/1', 'message_sent', { text: "Hello" })`). |
@@ -52,6 +60,7 @@ The WebSocket engine maintains active live connections scoped securely by Authen
 Wraps `node-cron` definitions safely avoiding overlap collisions.
 
 ### API Reference
+
 ```javascript
 const schedule = container.resolve('schedule');
 
@@ -96,7 +105,7 @@ await hook('emails').emit('send', {
 
 Additional engines expose fundamental utilities safely ensuring isolation mapping isn't breached:
 
-- **`cache`**: Memory LRU caching scoped utilizing namespaces e.g., `const scopedCache = cache.withNamespace('users'); scopedCache.set('list', [])`.
+- **`cache`**: Memory LRU caching scoped utilizing namespaces. (e.g., `const scopedCache = cache.withNamespace('users'); scopedCache.set('list', [])`).
 - **`fs`**: Safe-guarded File System reads preventing traversal attacks outside the application scope folders.
 - **`http`**: Standardized Response formatters (e.g., `http.sendSuccess(req, res)` or `http.sendError(req, res)`).
-- **`template`**: Executes raw `<p> {{ text }} </p>` template execution operations utilizing LiquidJS rendering (mostly used alongside the Email engine's templating system).
+- **`template`**: Executes raw `<p> {{ text }} </p>` template operations utilizing LiquidJS rendering (mostly used alongside the Email engine's templating system).

@@ -19,30 +19,35 @@ export const middleware = false;
  */
 export const useRateLimit = { max: 30, windowMs: 60000 };
 
-// In-memory cache to avoid repeated filesystem walks
-let cachedTree = null;
-let cacheExpiry = 0;
-const CACHE_TTL = 60000; // 1 minute
+const CACHE_KEY = 'docs_tree';
 
 // GET /api/guides
 export const get = async (req, res) => {
   const container = req.app.get('container');
   const http = container.resolve('http');
-  // The assets directory is copied to the extension build root (where api.js lives), so it's just __dirname + 'assets'.
+  const cache = container.resolve('cache');
+
+  // Obtain safe, scoped key isolation instance
+  const scopedCache = cache.withNamespace('guides');
+
+  // The assets directory is copied to the extension build root (where api.js lives)
   const publicDocsDir = path.resolve(__dirname, 'assets');
 
   try {
-    const now = Date.now();
-    if (cachedTree && now < cacheExpiry) {
+    // 1. Centralized Cache Evaluation
+    const cachedTree = await scopedCache.get(CACHE_KEY);
+    if (cachedTree) {
       return http.sendSuccess(res, cachedTree);
     }
 
+    // 2. Dynamically Execute File Tree Search & Frontmatter Extraction
     const tree = await buildTree(publicDocsDir, publicDocsDir);
-    cachedTree = tree;
-    cacheExpiry = now + CACHE_TTL;
+
+    // 3. Save into memory system (TTL: 60 seconds)
+    await scopedCache.set(CACHE_KEY, tree, { ttl: 60 });
+
     return http.sendSuccess(res, tree);
   } catch (err) {
-    // If the directory simply does not exist, return empty tree
     if (err.code === 'ENOENT') {
       return http.sendSuccess(res, []);
     }
@@ -51,7 +56,32 @@ export const get = async (req, res) => {
 };
 
 /**
- * Recursively builds a directory tree for the sidebar.
+ * Safely parse Markdown Frontmatter extracting specific indexing keys.
+ * Limits buffer read lengths for performant file scraping.
+ */
+async function extractFrontmatter(filePath) {
+  try {
+    const content = await fs.readFile(filePath, 'utf8');
+    const chunk = content.slice(0, 1000);
+
+    let title = null;
+    let sidebarPosition = 999;
+
+    // Resolve explicitly YAML keys inside the --- boundary
+    const titleMatch = chunk.match(/^title:\s*(.+)$/m);
+    if (titleMatch) title = titleMatch[1].replace(/['"]/g, '').trim();
+
+    const posMatch = chunk.match(/^sidebar_position:\s*(\d+)/m);
+    if (posMatch) sidebarPosition = parseInt(posMatch[1], 10);
+
+    return { title, sidebarPosition };
+  } catch (e) {
+    return { title: null, sidebarPosition: 999 };
+  }
+}
+
+/**
+ * Recursively builds a directory tree for the sidebar visually parsing components.
  * @param {string} currentDir - Absolute path to current traversal directory
  * @param {string} baseDir - Absolute path to the root docs directory (for traversal guard)
  * @returns {Promise<Array>}
@@ -80,26 +110,44 @@ async function buildTree(currentDir, baseDir) {
     if (entry.isDirectory()) {
       const children = await buildTree(fullPath, baseDir);
       if (children.length > 0) {
+        // Directories visually bubble up their highest-priority item
+        const lowestChildPos = children.reduce(
+          (min, child) => Math.min(min, child.sidebarPosition || 999),
+          999,
+        );
+
         nodes.push({
           type: 'directory',
           name: entry.name,
+          title:
+            entry.name.charAt(0).toUpperCase() +
+            entry.name.slice(1).replace(/-/g, ' '),
           path: relPath,
+          sidebarPosition: lowestChildPos,
           children,
         });
       }
     } else if (entry.isFile() && entry.name.endsWith('.md')) {
       const cleanName = entry.name.replace(/\.md$/, '');
       const cleanPath = relPath.replace(/\.md$/, '');
+
+      const { title, sidebarPosition } = await extractFrontmatter(fullPath);
+
       nodes.push({
         type: 'file',
         name: cleanName,
+        title: title || cleanName,
         path: cleanPath,
+        sidebarPosition,
       });
     }
   }
 
-  // Basic alphabetical sort: directories first, then files
+  // Exact Mathematical Sort: Primary Sort on Priority, Secondary by Alphabetical Directory
   nodes.sort((a, b) => {
+    if (a.sidebarPosition !== b.sidebarPosition) {
+      return a.sidebarPosition - b.sidebarPosition;
+    }
     if (a.type !== b.type) return a.type === 'directory' ? -1 : 1;
     return a.name.localeCompare(b.name);
   });

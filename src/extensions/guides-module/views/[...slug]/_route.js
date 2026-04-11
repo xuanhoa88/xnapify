@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import MarkdownViewer from '../viewer/MarkdownViewer';
+import MarkdownViewer from '../components/preview/MarkdownViewer';
 
 export async function getInitialProps({ fetch, params }) {
   if (!params || !params.slug) {
@@ -17,27 +17,20 @@ export async function getInitialProps({ fetch, params }) {
     : params.slug;
 
   try {
-    let rawText = await fetch(
-      `/api/extensions/${__EXTENSION_ID__}/static/assets/${pathPart}.md`,
-      {
-        headers: {
-          'Content-Type': 'text/markdown',
+    const [rawText, treeRes] = await Promise.all([
+      fetch(
+        `/api/extensions/${__EXTENSION_ID__}/static/assets/${pathPart}.md`,
+        {
+          headers: {
+            'Content-Type': 'text/markdown',
+          },
         },
-      },
-    );
-
-    if (rawText && typeof rawText.text === 'function') {
-      rawText = await rawText.text();
-    } else if (typeof rawText !== 'string') {
-      // API may bounce 404s as JSON errors
-      if (rawText && rawText.error) {
-        return { error: true, content: '', title: null };
-      }
-      rawText = JSON.stringify(rawText);
-    }
+      ),
+      fetch('/api/guides'),
+    ]);
 
     // Lightweight Frontmatter Regex Parser (handles both LF and CRLF)
-    let content = rawText;
+    let content = JSON.stringify(rawText);
     let title = null;
     const frontmatterMatch = rawText.match(/^---\r?\n([\s\S]*?)\r?\n---/);
     if (frontmatterMatch) {
@@ -51,10 +44,12 @@ export async function getInitialProps({ fetch, params }) {
       }
     }
 
-    return { content, title, error: false };
+    const tree = treeRes && treeRes.success && treeRes.data ? treeRes.data : [];
+
+    return { content, title, error: false, tree };
   } catch (err) {
     console.error('getInitialProps Failed for docs:', err);
-    return { error: true, content: '', title: null };
+    return { error: true, content: '', title: null, tree: [] };
   }
 }
 

@@ -1,3 +1,9 @@
+---
+id: deployment-guide
+title: Deployment Guide
+sidebar_position: 8
+---
+
 # Deployment Guide
 
 This guide covers the deployment process for xnapify, whether you are running it locally, on a bare-metal server, or within a Docker container.
@@ -13,6 +19,14 @@ This guide covers the deployment process for xnapify, whether you are running it
 ## 1. Local Production Build
 
 To build and deploy the application on a local server or VM without Docker:
+
+```mermaid
+flowchart LR
+    A[Install Root Deps\nnpm run setup] --> B[Build Client/Server\nnpm run build]
+    B --> C[Change to Build Dir\ncd build]
+    C --> D[Install Prod Deps\nnpm run setup]
+    D --> E[Start Server\nnpm start]
+```
 
 ```bash
 # 1. Install all project dependencies (root + sub-packages)
@@ -32,6 +46,7 @@ npm start
 ```
 
 ### Environment Variables
+
 Environment variables (prefixed with `XNAPIFY_`) are baked into the client bundle during the `npm run build` step via Webpack's `DefinePlugin`. 
 Copy `.env.xnapify` to `.env` and configure your settings *before* running the build process.
 
@@ -71,7 +86,8 @@ podman compose -f .docker/docker-compose.dev.yml up --build
 
 ### Important: Webpack DefinePlugin
 
-> **⚠️ Warning:** All `XNAPIFY_*` variables are baked into the server bundle at build time. Runtime overrides in `docker-compose.yml` under the `environment:` key will have **no effect** for values injected during the React/Webpack build.
+> [!WARNING]
+> All `XNAPIFY_*` variables are baked into the server bundle at build time. Runtime overrides in `docker-compose.yml` under the `environment:` key will have **no effect** for values injected during the React/Webpack build.
 
 If you need to change client-side baked values for Docker builds, you must pass and set them in the `Dockerfile` before the `RUN npm run build` directive:
 
@@ -108,6 +124,7 @@ XNAPIFY_DB_TYPE=postgres npm start
 
 ## 4. Troubleshooting
 
-- **Locally building errors:** Try `npm run clean && npm run build`. Ensure your node dependencies are fully instated using `npm run setup`. If necessary, run with `LOG_LEVEL=verbose` for granular details.
-- **Docker/Podman startup errors:** Make sure you aren't encountering file permission issues. You can verify the container status `docker compose -f .docker/docker-compose.yml ps`.
-- **Database issues:** Check if your dialect driver successfully installed inside the Docker image or the output directory dependencies.
+> [!NOTE]
+> - **Locally building errors:** Try `npm run clean && npm run build`. Ensure your node dependencies are fully instated using `npm run setup`. If necessary, run with `LOG_LEVEL=verbose` for granular details.
+> - **Docker/Podman startup errors:** Make sure you aren't encountering file permission issues. You can verify the container status `docker compose -f .docker/docker-compose.yml ps`.
+> - **Database issues:** Check if your dialect driver successfully installed inside the Docker image or the output directory dependencies.

@@ -1,3 +1,9 @@
+---
+id: architecture-frontend
+title: Frontend & SSR Architecture
+sidebar_position: 5
+---
+
 # Frontend & Server-Side Rendering (SSR) Architecture
 
 The **xnapify** frontend relies heavily on a Universal Data fetching strategy bridged by **React**, **Redux Toolkit**, and **Webpack's SSR algorithms**. The entire frontend infrastructure is located in `shared/renderer/`, which orchestrates HTML string generation on Node instances and seamless DOM hydration once the payload impacts the user's browser.
@@ -7,6 +13,15 @@ The **xnapify** frontend relies heavily on a Universal Data fetching strategy br
 ## 1. The Rendering Lifecycle (React + Redux)
 
 xnapify automatically maps Domain routing via URL path inference. When the Express Server encounters a route mapping to a Frontend view, the renderer triggers an evaluation sequence to bake the initial React tree.
+
+```mermaid
+graph TD
+    A[Express URL Request] --> B[Route Matched against views/index.js]
+    B --> C[Setup Phase: middleware / init / setup]
+    C --> D[Pre-fetching: getInitialProps]
+    D --> E[React SSR: Render string with Redux states in head]
+    E --> F[Client Hydration: hydrateRoot DOM]
+```
 
 ### Core Render Sequence
 
@@ -31,7 +46,8 @@ To remain modular, reducers are injected lazily instead of bundling everything i
 
 ### Best Practices
 
-Instead of injecting in `views/index.js` (which evaluates continuously on server build), xnapify prescribes Redux Injection exactly when a route attempts to resolve (`_route.js`), saving massive scale performance:
+> [!TIP]
+> Instead of injecting in `views/index.js` (which evaluates continuously on server build), xnapify prescribes Redux Injection exactly when a route attempts to resolve (`_route.js`), saving massive scale performance.
 
 ```javascript
 /* src/apps/marketing/views/_route.js */
@@ -76,7 +92,8 @@ export default function SafeModal({ children }) {
 
 ## 4. Internationalization (i18n)
 
-Under NO circumstances does xnapify allow hardcoded interface strings. It integrates tightly with `i18next` localized statically and passed gracefully through Webpack context analysis.
+> [!CAUTION]
+> Under NO circumstances does xnapify allow hardcoded interface strings. It integrates tightly with `i18next` localized statically and passed gracefully through Webpack context analysis.
 
 Domains simply export a Webpack string analyzer inside their core index definitions:
 ```javascript

@@ -1,3 +1,9 @@
+---
+id: architecture-extensions
+title: Extensions Overview
+sidebar_position: 3
+---
+
 # Extensions Overview
 
 Unlike Modules which construct the rigid core and fundamental database models of a domain, **Extensions** (`src/extensions/`) inject, transform, or adapt behaviors across the system purely via dependency-injected Hooks and Slots. Extensions can be toggled on/off dynamically during runtime via the Admin Panel Extension Manager without restarting the production Node.js service (though Hot-Module Reload manages this in dev).
@@ -58,7 +64,27 @@ export default {
 }
 ```
 
-Wait, `__EXTENSION_ID__` is a Webpack provided compile-time constant holding a mapped snake_case namespace corresponding to the extension's folder / `package.json` manifest.
+> [!NOTE]
+> `__EXTENSION_ID__` is a Webpack provided compile-time constant holding a mapped snake_case namespace corresponding to the extension's folder / `package.json` manifest.
+
+---
+
+## Extension Event Flow
+
+The diagram below maps how an external module's hook triggers logic strictly maintained by decoupled extensions.
+
+```mermaid
+sequenceDiagram
+    participant M as Module (src/apps/)
+    participant H as Hook System (IPC)
+    participant E as Extension (src/extensions/)
+
+    E->>H: boot(): hook.on('users:deleted', action)
+    Note over M,H: Later in the application lifecycle...
+    M->>H: hook.emit('users:deleted', { id: 1 })
+    H->>E: Transmit async event payload
+    E-->>E: Run isolated action logic
+```
 
 ---
 
@@ -110,7 +136,12 @@ export default function UserLayout({ user }) {
 ```
 This paradigm ensures the `users` domain isn't crowded with static `import` commands from optional analytical or aesthetic extensions.
 
+---
+
 ## Execution Requirements
 
-- ⚠️ **Strict De-Registration:** Extensions must un-register **everything** within their `shutdown` methods. Failure results in Memory-Leak crashes.
-- ⚠️ **Immutability:** Do not mutate `src/apps/` files or the global DOM directly utilizing JavaScript (`document.getElementById()`). Confine all rendering strictly inside standard declarative component registration.
+> [!WARNING]
+> **Strict De-Registration:** Extensions must un-register **everything** within their `shutdown` methods. Failure results in Memory-Leak crashes.
+
+> [!CAUTION]
+> **Immutability:** Do not mutate `src/apps/` files or the global DOM directly utilizing JavaScript (`document.getElementById()`). Confine all rendering strictly inside standard declarative component registration.

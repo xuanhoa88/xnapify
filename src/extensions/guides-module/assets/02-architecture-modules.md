@@ -1,3 +1,9 @@
+---
+id: architecture-modules
+title: Module Architecture
+sidebar_position: 2
+---
+
 # Module Architecture
 
 The `xnapify` application handles business logic via modular domains housed directly within the `src/apps/` directory. Each module provides clear separation of backend logic and frontend presentation while being automatically discovered without explicit registration in core application files.
@@ -34,7 +40,7 @@ src/apps/[module_name]/
 
 ## Module Export Signatures
 
-Modules interact directly with the framework orchestrators through export signatures defined in their `index.js` files. 
+Modules interact directly with the framework orchestrators through export signatures defined in their `index.js` files.
 
 ### Backend Entry Point (`api/index.js`)
 
@@ -93,6 +99,30 @@ export default {
 
 ---
 
+## Auto-Discovery Sequence
+
+The following diagram illustrates how modules are discovered and bootstrapped when the xnapify server boots up.
+
+```mermaid
+sequenceDiagram
+    participant S as Server
+    participant AL as AutoLoader
+    participant M as Module
+    participant DI as DI Container
+
+    S->>AL: Start Server Boot
+    AL->>M: Scan src/apps/*
+    M-->>AL: Return index.js structures
+    AL->>M: Extract providers()
+    M-->>DI: Bind Services to Container
+    AL->>M: Extract models() / migrations()
+    M-->>AL: Execute DB initialization
+    AL->>M: Execute boot({ container })
+    M-->>S: Module Fully Loaded
+```
+
+---
+
 ## The Frontend `_route.js` Lifecycle
 
 In xnapify, Frontend URLs are inferred directly from the file path where a `_route.js` file lives. Within this file, you can export explicit lifecycle hooks that handle Server Side Rendering (SSR), UI mounting, and authentication state.
@@ -112,6 +142,11 @@ In xnapify, Frontend URLs are inferred directly from the file path where a `_rou
 
 ## Best Practices
 
-- **Strict Isolation:** Avoid deep static `import/export` mapping across independent `apps/` domains. Rely instead on the **Dependency Injection (DI)** container `container.resolve()` capabilities or broadcasted hook events (`container.resolve('hook')('event-name')`).
-- **WebPack Requirements:** Hooks such as `routes()`, `models()`, and `migrations()` MUST exactly return a `require.context` evaluation; Webpack requires this literal compilation string to statically analyze files before bundling.
-- **Data Hydration:** Utilize `getInitialProps` on the frontend correctly to avoid cumulative layout impacts on screen load. By injecting states beforehand, React SSR will provide the finalized view HTML avoiding hydration mismatches.
+> [!WARNING]
+> **Strict Isolation:** Avoid deep static `import/export` mapping across independent `apps/` domains. Rely instead on the **Dependency Injection (DI)** container `container.resolve()` capabilities or broadcasted hook events (`container.resolve('hook')('event-name')`).
+
+> [!IMPORTANT]
+> **WebPack Requirements:** Hooks such as `routes()`, `models()`, and `migrations()` MUST exactly return a `require.context` evaluation; Webpack requires this literal compilation string to statically analyze files before bundling.
+
+> [!NOTE]
+> **Data Hydration:** Utilize `getInitialProps` on the frontend correctly to avoid cumulative layout impacts on screen load. By injecting states beforehand, React SSR will provide the finalized view HTML avoiding hydration mismatches.

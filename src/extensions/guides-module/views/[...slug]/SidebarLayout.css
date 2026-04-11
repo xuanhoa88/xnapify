@@ -84,11 +84,6 @@
   font-weight: 500;
 }
 
-.loading {
-  color: #6a737d;
-  font-size: 0.9rem;
-  padding: 1rem;
-}
 
 /* Responsive: stack layout on mobile */
 @media (max-width: 768px) {

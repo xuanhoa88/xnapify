@@ -1,3 +1,9 @@
+---
+id: extension-development
+title: Extension Developer Guideline
+sidebar_position: 7
+---
+
 # Extension Developer Guideline
 
 Extensions in **xnapify** enable you to augment core functionality, inject UI elements dynamically, and establish database migrations without modifying the underlying App module logic. Extensions can easily be toggled on/off at runtime.
@@ -76,7 +82,7 @@ export default {
     const hook = container.resolve('hook');
     
     // Bind logic listening to the explicit App Module's events
-    this[HANDLERS].onUserSignup = (user) => { ... }
+    this[HANDLERS].onUserSignup = (user) => { /* logic */ }
     hook('users').on('created', this[HANDLERS].onUserSignup);
   },
 
@@ -139,6 +145,11 @@ It's conventionally used to safely prefix:
 
 ## Best Practices
 
-- **Assume Ephemerality:** Since Extensions can be unmounted or shut down interactively from an Admin screen, logic bound within `boot` MUST inversely de-bind in `shutdown`. Leaving dangling React hooks or Database Event emitters actively crashes process pools!
-- **Data Encapsulation:** If making standard Database entities inside `api/models`, ensure they are intrinsically tied to your functionality to avoid breaking core Domains upon Uninstallation script executions.
-- **NEVER Mutate React DOM:** Attempting to manipulate Core DOM constructs through pure `document.querySelector` avoids the React V-DOM mapping resulting in rendering mismatches. Exclusively use the `.registerSlot` mechanics.
+> [!WARNING]
+> **Assume Ephemerality:** Since Extensions can be unmounted or shut down interactively from an Admin screen, logic bound within `boot` MUST inversely de-bind in `shutdown`. Leaving dangling React hooks or Database Event emitters actively crashes process pools!
+
+> [!IMPORTANT]
+> **Data Encapsulation:** If making standard Database entities inside `api/models`, ensure they are intrinsically tied to your functionality to avoid breaking core Domains upon Uninstallation script executions.
+
+> [!CAUTION]
+> **NEVER Mutate React DOM:** Attempting to manipulate Core DOM constructs through pure `document.querySelector` avoids the React V-DOM mapping resulting in rendering mismatches. Exclusively use the `.registerSlot` mechanics.
