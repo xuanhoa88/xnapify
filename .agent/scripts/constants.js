@@ -19,29 +19,36 @@ const path = require('path');
 // ── Directories to skip during recursive file walks ─────────────────
 const SKIP_DIRS = new Set([
   // Build / tooling artifacts
-  'node_modules', '.cache', 'build', 'dist', 'out',
+  'node_modules',
+  '.cache',
+  'build',
+  'dist',
+  'out',
 
   // Version control
   '.git',
 
   // Project-specific
-  '.agent', '.xnapify', '.data',
+  '.agent',
+  '.xnapify',
+  '.data',
 
   // Data-layer artifacts (auto-generated, not source code)
-  'migrations', 'seeds',
+  'migrations',
+  'seeds',
 
   // Test infrastructure
   '__mocks__',
 
   // Static assets (not auditable source)
-  'translations', 'benchmarks',
+  'translations',
+  'benchmarks',
 ]);
 
 // ── Files to skip during recursive file walks (exact match) ──────────
 const SKIP_FILES = new Set([
-  'jest-setuptest.js',
-  '.eslintrc.js',
   'package-lock.json',
+  'eslint.config.js',
   'babel.config.js',
   'jest.config.js',
 ]);
@@ -56,9 +63,16 @@ const VIEW_EXTENSIONS = new Set(['.js', '.jsx', '.ts', '.tsx', '.html']);
 
 /** Full frontend — UX audits including styles and framework templates */
 const UI_EXTENSIONS = new Set([
-  '.js', '.jsx', '.ts', '.tsx', '.html',
-  '.vue', '.svelte',
-  '.css', '.scss', '.less',
+  '.js',
+  '.jsx',
+  '.ts',
+  '.tsx',
+  '.html',
+  '.vue',
+  '.svelte',
+  '.css',
+  '.scss',
+  '.less',
 ]);
 
 // ── Shared file-walk utility ────────────────────────────────────────

@@ -25,9 +25,12 @@ module.exports = api => {
 
   return {
     /**
-     * Look for .babelrc files in extensions and modules
+     * Explicitly map module/extension babel configurations from the central registry
      */
-    babelrcRoots: ['.', './src/extensions/*', './src/apps/*'],
+    overrides: require('./registry.config').babelConfigs.map(cfg => ({
+      test: new RegExp(`^${cfg.moduleDir.replace(/\\/g, '/')}/`),
+      extends: cfg.path,
+    })),
 
     /**
      * Use inline source maps for best debugging with Webpack + HMR

@@ -207,7 +207,10 @@ module.exports = {
    */
   transform: {
     // JavaScript and JSX files
-    '^.+\\.(js|jsx)$': 'babel-jest',
+    '^.+\\.(js|jsx)$': [
+      'babel-jest',
+      { configFile: path.resolve(__dirname, '..', 'babel.config.js') },
+    ],
   },
 
   /**

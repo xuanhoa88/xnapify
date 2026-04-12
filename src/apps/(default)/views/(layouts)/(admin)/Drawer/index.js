@@ -235,12 +235,14 @@ function Drawer({ minimal = false }) {
       <aside
         ref={siderRef}
         className={siderClass}
-        style={!isMobile ? { width: siderWidth } : undefined}
+        {...(!isMobile && { style: { width: siderWidth } })}
         data-sider
       >
         {/* Logo */}
         <div className={s.logo}>
-          <span className={s.logoIcon}>⚡</span>
+          <span className={s.logoIcon}>
+            <img alt='xnapify' src='/xnapify.png' />
+          </span>
           <span className={s.logoText}>xnapify</span>
         </div>
 

@@ -173,20 +173,16 @@ const createCSSRule = ({
       const globalConfigFn = require(cssConfigPath);
       const globalConfig = globalConfigFn({ options: postcssOptions });
 
-      // Look for a local postcss config moving up the directory tree
-      let currentDir =
-        ctx && ctx.resourcePath ? path.dirname(ctx.resourcePath) : '';
+      // Look up local postcss config from the registry
       let localPlugins = [];
-
-      while (
-        currentDir &&
-        currentDir.startsWith(config.CWD) &&
-        currentDir !== config.CWD
-      ) {
-        const localConfigPath = path.join(currentDir, 'postcss.config.js');
-        if (fs.existsSync(localConfigPath)) {
-          delete require.cache[localConfigPath];
-          const localConfigFn = require(localConfigPath);
+      if (ctx && ctx.resourcePath) {
+        const registry = require('../registry.config');
+        const matchedConfig = registry.postcssConfigs.find(cfg =>
+          ctx.resourcePath.startsWith(cfg.moduleDir),
+        );
+        if (matchedConfig) {
+          delete require.cache[matchedConfig.path];
+          const localConfigFn = require(matchedConfig.path);
           const localCfg =
             typeof localConfigFn === 'function'
               ? localConfigFn({ options: postcssOptions })
@@ -196,9 +192,7 @@ const createCSSRule = ({
               ? localCfg.plugins
               : [localCfg.plugins];
           }
-          break; // Found local config, stop searching
         }
-        currentDir = path.dirname(currentDir);
       }
 
       // Merge global and local plugins
@@ -494,7 +488,7 @@ const createScriptRule = () => ({
       options: {
         comments: false,
         cacheDirectory: isDev,
-        configFile: path.resolve(config.CWD, 'babel.config.js'),
+        configFile: path.resolve(__dirname, '..', 'babel.config.js'),
         // Override babel-loader's default sourceRoot (process.cwd()) to prevent
         // Windows-specific Invalid URL TypeError in @pmmmwh/react-refresh-webpack-plugin
         sourceRoot: '',

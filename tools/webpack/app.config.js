@@ -10,11 +10,12 @@ const path = require('path');
 
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const webpack = require('webpack');
+const { default: merge } = require('webpack-merge');
 
 const config = require('../config');
+const registry = require('../registry.config');
 const { isVerbose, logInfo, logWarn } = require('../utils/logger');
 
-const AsyncModuleFederationPlugin = require('./AsyncModuleFederationPlugin');
 const {
   createCacheGroups,
   createWebpackConfig,
@@ -178,7 +179,6 @@ const clientConfig = createWebpackConfig('client', {
       process: require.resolve('process/browser'),
     }),
     createEnvDefine(),
-    new AsyncModuleFederationPlugin(),
     new webpack.container.ModuleFederationPlugin({
       name: 'host',
       shared: createSharedDependencies(pkg.dependencies || {}, {
@@ -290,12 +290,44 @@ const workerConfig = (() => {
 })();
 
 // =============================================================================
+// APPLY REGISTRY WEBPACK CONFIGURATIONS (CORE APPS)
+// =============================================================================
+
+let finalClientConfig = clientConfig;
+let finalServerConfig = serverConfig;
+
+// Filter for customizers belonging specifically to core apps
+const coreAppWebpacks = registry.webpackConfigs.filter(cfg =>
+  cfg.moduleDir.startsWith(path.join(config.APP_DIR, 'apps')),
+);
+
+for (const customWebpack of coreAppWebpacks) {
+  try {
+    const appCustomizer = require(customWebpack.path);
+    if (typeof appCustomizer === 'function') {
+      finalClientConfig =
+        appCustomizer(finalClientConfig, merge) || finalClientConfig;
+      finalServerConfig =
+        appCustomizer(finalServerConfig, merge) || finalServerConfig;
+    } else if (typeof appCustomizer === 'object') {
+      finalClientConfig = merge(finalClientConfig, appCustomizer);
+      finalServerConfig = merge(finalServerConfig, appCustomizer);
+    }
+  } catch (err) {
+    logWarn(
+      `Skipping invalid webpack config in core app ${path.basename(customWebpack.moduleDir)}:`,
+      err,
+    );
+  }
+}
+
+// =============================================================================
 // EXPORTS
 // =============================================================================
 
 module.exports = {
-  clientConfig,
-  serverConfig,
+  clientConfig: finalClientConfig,
+  serverConfig: finalServerConfig,
   workerConfig,
   getHmrWatchIgnored,
 };

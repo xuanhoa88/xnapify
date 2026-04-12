@@ -5,7 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-const fs = require('fs');
 const path = require('path');
 
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
@@ -393,14 +392,15 @@ function createExtensionConfig(extensions = [], buildPath) {
       ...createApiConfig(extensionData, extensionDefines, buildPath),
     );
 
-    // Escape hatch: Load extension-specific webpack configuration
-    const customWebpackPath = path.join(
-      extensionData.extensionPath,
-      'extension.webpack.js',
+    // Escape hatch: Load module-specific webpack configuration from registry
+    const registry = require('../registry.config');
+    const customWebpack = registry.webpackConfigs.find(
+      cfg => cfg.moduleDir === extensionData.extensionPath,
     );
-    if (fs.existsSync(customWebpackPath)) {
+
+    if (customWebpack) {
       try {
-        const extensionCustomizer = require(customWebpackPath);
+        const extensionCustomizer = require(customWebpack.path);
         if (typeof extensionCustomizer === 'function') {
           extConfigs = extConfigs.map(
             config => extensionCustomizer(config, merge) || config,
@@ -413,7 +413,7 @@ function createExtensionConfig(extensions = [], buildPath) {
         }
       } catch (err) {
         logWarn(
-          `Skipping invalid extension.webpack.js in ${extensionData.extensionId}:`,
+          `Skipping invalid webpack config in ${extensionData.extensionId}:`,
           err,
         );
       }
