@@ -6,7 +6,6 @@ Client-side infrastructure — React application shell, view autoloading, routin
 
 ```jsx
 import App from '@shared/renderer/App';
-import { AppContext } from '@shared/renderer/AppContext';
 import { configureStore } from '@shared/renderer/redux';
 import { Router } from '@shared/renderer/router';
 ```
@@ -18,24 +17,13 @@ import { Router } from '@shared/renderer/router';
 `App.js` composes all root providers:
 
 ```
-AppContext → Redux → i18next → History → children
+Redux → i18next → History → children
 ```
 
 ```jsx
 <App context={{ store, i18n, history, fetch, locale, pathname, container }}>
   <Routes />
 </App>
-```
-
-### DI Context
-
-```jsx
-import { useContext } from 'react';
-import { AppContext } from '@shared/renderer/AppContext';
-
-function MyComponent() {
-  const { fetch, container, locale } = useContext(AppContext);
-}
 ```
 
 ### SSR Shell
@@ -83,7 +71,7 @@ translations → init → unmount(prev) → mount(current) → resolve
 ### Usage
 
 ```javascript
-const router = new Router(adapter, { context: appContext });
+const router = new Router(adapter, { context });
 const result = await router.resolve('/dashboard');
 ```
 

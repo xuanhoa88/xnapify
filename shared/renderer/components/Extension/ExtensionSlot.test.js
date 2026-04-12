@@ -10,14 +10,8 @@
 import renderer, { act } from 'react-test-renderer';
 
 import { registry } from '@shared/extension/client/Registry';
-import { AppContext } from '@shared/renderer/AppContext';
 
 import ExtensionSlot from './ExtensionSlot';
-
-const mockContext = { mockContext: true };
-const withContext = ui => (
-  <AppContext.Provider value={mockContext}>{ui}</AppContext.Provider>
-);
 
 describe('ExtensionSlot', () => {
   let comp;
@@ -37,7 +31,7 @@ describe('ExtensionSlot', () => {
 
   test('renders nothing when no components are registered', () => {
     act(() => {
-      comp = renderer.create(withContext(<ExtensionSlot name='empty.slot' />));
+      comp = renderer.create(<ExtensionSlot name='empty.slot' />);
     });
     // div wrapper is always rendered (for SSR hydration safety)
     const tree = comp.toJSON();
@@ -51,7 +45,7 @@ describe('ExtensionSlot', () => {
       <div
         className='mock1'
         // eslint-disable-next-line react/prop-types
-        title={JSON.stringify({ custom: props.customProp, ctx: props.context })}
+        title={JSON.stringify({ custom: props.customProp })}
       />
     );
     const MockComponent2 = props => (
@@ -64,7 +58,7 @@ describe('ExtensionSlot', () => {
 
     act(() => {
       comp = renderer.create(
-        withContext(<ExtensionSlot name='test.slot' customProp='hello' />),
+        <ExtensionSlot name='test.slot' customProp='hello' />,
       );
     });
 
@@ -76,9 +70,6 @@ describe('ExtensionSlot', () => {
 
     expect(tree.children[0].props.className).toBe('mock1');
     expect(tree.children[0].props.title).toContain('"custom":"hello"');
-    expect(tree.children[0].props.title).toContain(
-      '"ctx":{"mockContext":true}',
-    );
 
     expect(tree.children[1].props.className).toBe('mock2');
     expect(tree.children[1].children[0]).toBe('hello');
@@ -88,9 +79,7 @@ describe('ExtensionSlot', () => {
     const MockComponent = () => <span>Added dynamically</span>;
 
     act(() => {
-      comp = renderer.create(
-        withContext(<ExtensionSlot name='dynamic.slot' />),
-      );
+      comp = renderer.create(<ExtensionSlot name='dynamic.slot' />);
     });
 
     // Empty wrapper initially

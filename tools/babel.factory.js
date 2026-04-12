@@ -98,9 +98,7 @@ module.exports = api => {
       // =====================
       // 🧪 Test environment
       // =====================
-      ...(isTest
-        ? [require.resolve('./tools/jest/requireContextPolyfill')]
-        : []),
+      ...(isTest ? [require.resolve('./jest/requireContextPolyfill')] : []),
 
       // =====================
       // 🚀 Production Optimizations

@@ -9,7 +9,6 @@
 ```
 shared/renderer/
 ├── App.js              # Root component (provider composition)
-├── AppContext.js       # DI context (React.createContext)
 ├── Html.js             # SSR HTML shell (meta, hydration, OG tags)
 ├── autoloader.js       # View module lifecycle orchestrator
 ├── Providers/
@@ -44,7 +43,7 @@ shared/renderer/
 Composes the provider tree (memoized to prevent re-renders):
 
 ```
-AppContext.Provider → ReduxProvider → I18nextProvider → HistoryProvider → children
+ReduxProvider → I18nextProvider → HistoryProvider → children
 ```
 
 **Context shape:**
