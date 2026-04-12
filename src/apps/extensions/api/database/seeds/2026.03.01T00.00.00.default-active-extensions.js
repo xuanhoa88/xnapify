@@ -12,7 +12,10 @@ import path from 'path';
  * Default active extensions — seeded as active on first run.
  * Array of logical manifest names to activate.
  */
-const DEFAULT_EXTENSIONS = ['@xnapify-extension/quick-access'];
+const DEFAULT_EXTENSIONS = [
+  '@xnapify-extension/quick-access',
+  '@xnapify-extension/guides',
+];
 
 async function discoverAllExtensionManifests(container) {
   const cwd = container.resolve('cwd');
