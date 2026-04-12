@@ -1,7 +1,7 @@
 ---
 id: architecture-routing
 title: Routing & Data Flow
-sidebar_position: 9
+sidebar_position: 4
 ---
 
 # Routing & Data Flow

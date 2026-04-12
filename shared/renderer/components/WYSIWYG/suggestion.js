@@ -19,6 +19,7 @@
  */
 
 import { ReactRenderer } from '@tiptap/react';
+// eslint-disable-next-line import/namespace, import/default
 import tippy from 'tippy.js';
 
 import MentionList from './MentionList';

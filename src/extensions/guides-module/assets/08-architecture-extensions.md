@@ -1,7 +1,7 @@
 ---
 id: architecture-extensions
 title: Extensions Overview
-sidebar_position: 3
+sidebar_position: 8
 ---
 
 # Extensions Overview

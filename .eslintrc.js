@@ -220,6 +220,8 @@ const config = {
       version: 'detect',
     },
 
+    'import/ignore': ['node_modules'],
+
     'import/parsers': {
       '@babel/eslint-parser': ['.js', '.jsx'],
     },

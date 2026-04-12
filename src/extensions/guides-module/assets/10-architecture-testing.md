@@ -1,7 +1,7 @@
 ---
 id: architecture-testing
 title: Testing Architecture
-sidebar_position: 6
+sidebar_position: 10
 ---
 
 # Testing Architecture
@@ -17,7 +17,7 @@ The **xnapify** platform is tested through two distinct methodologies natively:
 
 xnapify integrates a powerful E2E framework built around **Puppeteer**. However, xnapify abstracts raw Puppeteer scripts behind an AI-interpreting SPA Stability Engine capable of reading markdown definitions and executing UI actions autonomously.
 
-For a deep dive into writing test cases, the LLM compilation flow, and the SPA Stability Engine, see [E2E Test Automation](/guides/10-e2e-automation).
+For a deep dive into writing test cases, the LLM compilation flow, and the SPA Stability Engine, see [E2E Test Automation](/guides/11-e2e-automation).
 
 ---
 

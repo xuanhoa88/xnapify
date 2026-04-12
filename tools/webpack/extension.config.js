@@ -394,17 +394,28 @@ function createExtensionConfig(extensions = [], buildPath) {
     );
 
     // Escape hatch: Load extension-specific webpack configuration
-    const customWebpackPath = path.join(extensionData.extensionPath, 'extension.webpack.js');
+    const customWebpackPath = path.join(
+      extensionData.extensionPath,
+      'extension.webpack.js',
+    );
     if (fs.existsSync(customWebpackPath)) {
       try {
         const extensionCustomizer = require(customWebpackPath);
         if (typeof extensionCustomizer === 'function') {
-           extConfigs = extConfigs.map(config => extensionCustomizer(config, merge) || config);
-        } else if (typeof extensionCustomizer === 'object') { // Support just exporting mergeable object
-           extConfigs = extConfigs.map(config => merge(config, extensionCustomizer));
+          extConfigs = extConfigs.map(
+            config => extensionCustomizer(config, merge) || config,
+          );
+        } else if (typeof extensionCustomizer === 'object') {
+          // Support just exporting mergeable object
+          extConfigs = extConfigs.map(config =>
+            merge(config, extensionCustomizer),
+          );
         }
       } catch (err) {
-        logWarn(`Skipping invalid extension.webpack.js in ${extensionData.extensionId}:`, err);
+        logWarn(
+          `Skipping invalid extension.webpack.js in ${extensionData.extensionId}:`,
+          err,
+        );
       }
     }
 

@@ -68,7 +68,7 @@ function isContainer() {
 }
 
 /** @type {boolean} Cached container detection result */
-const _isContainer = isContainer();
+const isContainerCached = isContainer();
 
 /**
  * Resolve the default data directory for a given database engine.
@@ -79,7 +79,7 @@ const _isContainer = isContainer();
  * @returns {string}
  */
 function defaultDataDir(engine) {
-  if (_isContainer) {
+  if (isContainerCached) {
     // /app/data/ is chowned by entrypoint.sh and expected to be a named volume
     return path.join('/app', 'data', engine);
   }
@@ -181,7 +181,8 @@ const isMusl = (() => {
 function safePath(p) {
   // Reject paths containing shell metacharacters that could enable injection.
   // Allow: alphanumeric, slashes, dots, dashes, underscores, spaces, colons (Windows)
-  if (/[;|&$`(){}\[\]!<>\n\r]/.test(p)) {
+  // eslint-disable-next-line no-useless-escape
+  if (/[;|&$`(){}[\]!<>\n\r]/.test(p)) {
     throw new Error(
       `Unsafe characters in path: ${p}\n` +
         'Paths must not contain shell metacharacters (;|&$`(){}[]!<>)',

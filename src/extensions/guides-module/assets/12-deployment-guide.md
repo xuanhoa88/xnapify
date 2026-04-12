@@ -1,7 +1,7 @@
 ---
 id: deployment-guide
 title: Deployment Guide
-sidebar_position: 8
+sidebar_position: 12
 ---
 
 # Deployment Guide

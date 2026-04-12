@@ -1,7 +1,7 @@
 ---
 id: architecture-modules
 title: Module Architecture
-sidebar_position: 2
+sidebar_position: 3
 ---
 
 # Module Architecture

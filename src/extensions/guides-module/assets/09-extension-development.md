@@ -1,7 +1,7 @@
 ---
 id: extension-development
 title: Extension Developer Guideline
-sidebar_position: 7
+sidebar_position: 9
 ---
 
 # Extension Developer Guideline

@@ -1,7 +1,7 @@
 ---
 id: e2e-automation
 title: E2E Test Automation
-sidebar_position: 10
+sidebar_position: 11
 ---
 
 # E2E Test Automation

@@ -1,7 +1,7 @@
 ---
 id: architecture-frontend
 title: Frontend & SSR Architecture
-sidebar_position: 5
+sidebar_position: 6
 ---
 
 # Frontend & Server-Side Rendering (SSR) Architecture

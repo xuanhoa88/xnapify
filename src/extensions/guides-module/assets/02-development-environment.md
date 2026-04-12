@@ -1,7 +1,7 @@
 ---
 id: development-environment
 title: Development Environment
-sidebar_position: 11
+sidebar_position: 2
 ---
 
 # Development Environment
