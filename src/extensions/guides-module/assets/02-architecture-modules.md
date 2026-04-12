@@ -135,7 +135,7 @@ In xnapify, Frontend URLs are inferred directly from the file path where a `_rou
 | `export function teardown({ store })` | Route Cleanup | Unregisters layout-level items or cleans memory. |
 | `export function mount({ store, i18n, path })` | Component Mount execution | Responsible for firing side-effects like generating breadcrumbs paths for the layout. |
 | `export function unmount({ store })` | Component Unmount execution | Route exit behaviors. |
-| `export async function getInitialProps({ fetch, i18n })` | SSR Resolution Pipeline | Critical path for Node resolving page data prior to hydration; runs server side and client side exactly once. |
+| `export async function getInitialProps({ fetch, i18n })` | SSR Resolution Pipeline | Resolves page data prior to hydration. Data is placed on `context.initialProps` and passed to the Page and Layout components as a read-only prop. Runs server-side on first load, and client-side on subsequent navigations. |
 | `export default Component` | Rendering | The actual React view rendered corresponding to the route path. |
 
 ---

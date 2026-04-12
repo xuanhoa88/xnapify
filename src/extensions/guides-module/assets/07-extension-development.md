@@ -112,9 +112,9 @@ export default {
   translations: () => translationsContext,
   
   // Evaluated globally before route layouts render
-  providers(registry, { store }) {
+  providers({ container }) {
       // Useful for injecting explicit Redux slices dynamically
-      // store.injectReducer('my_extension', myLogicReducer)
+      // container.register('component:MyWidget', MyWidgetComponent)
   },
 
   boot({ registry }) {
@@ -123,7 +123,7 @@ export default {
       registry.registerSlot('user.profile.details', MySpecialComponent, { order: 10 });
   },
 
-  shutdown(registry) {
+  shutdown({ registry }) {
       // Clean Memory explicitly!
       registry.unregisterSlot('user.profile.details', MySpecialComponent);
   }
@@ -134,7 +134,7 @@ export default {
 
 ## 4. Understanding Identifiers (`__EXTENSION_ID__`)
 
-Webpack statically injects a universal constant called `__EXTENSION_ID__` inside all extension scripts at compile-time. Its value converts your `package.json` name into an underscored `snake_case` variant (e.g. `xnapify_extension_my_extension`).
+Webpack statically injects a universal constant called `__EXTENSION_ID__` inside all extension scripts at compile-time. Its value is derived from the extension's **directory name** (e.g., `guides-module` for `src/extensions/guides-module/`), optionally overridden by the `id` field in the extension's database record.
 
 It's conventionally used to safely prefix:
 - Database Tables / Migrations (`table: ${__EXTENSION_ID__}_logs`)

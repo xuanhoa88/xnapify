@@ -12,7 +12,7 @@ import s from './Privacy.css';
 /**
  * Privacy Page Component
  */
-function PrivacyPage({ title, html }) {
+function PrivacyPage({ context: { initialProps: { title, html } = {} } = {} }) {
   return (
     <div className={s.root}>
       <div className={s.container}>
@@ -24,8 +24,12 @@ function PrivacyPage({ title, html }) {
 }
 
 PrivacyPage.propTypes = {
-  title: PropTypes.string.isRequired,
-  html: PropTypes.string.isRequired,
+  context: PropTypes.shape({
+    initialProps: PropTypes.shape({
+      title: PropTypes.string.isRequired,
+      html: PropTypes.string.isRequired,
+    }),
+  }).isRequired,
 };
 
 /**

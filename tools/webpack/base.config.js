@@ -163,16 +163,50 @@ const createCSSRule = ({
   const postcssLoaderOptions = {
     sourceMap: isDev,
     postcssOptions: ctx => {
-      // Get postcss config path
+      // Get global postcss config path
       const cssConfigPath = path.resolve(__dirname, '../postcss.config');
 
       // Clear require cache to ensure we get the latest config
       delete require.cache[cssConfigPath];
 
-      // Get postcss config
-      const configFn = require(cssConfigPath);
+      // Get global postcss config
+      const globalConfigFn = require(cssConfigPath);
+      const globalConfig = globalConfigFn({ options: postcssOptions });
+
+      // Look for a local postcss config moving up the directory tree
+      let currentDir =
+        ctx && ctx.resourcePath ? path.dirname(ctx.resourcePath) : '';
+      let localPlugins = [];
+
+      while (
+        currentDir &&
+        currentDir.startsWith(config.CWD) &&
+        currentDir !== config.CWD
+      ) {
+        const localConfigPath = path.join(currentDir, 'postcss.config.js');
+        if (fs.existsSync(localConfigPath)) {
+          delete require.cache[localConfigPath];
+          const localConfigFn = require(localConfigPath);
+          const localCfg =
+            typeof localConfigFn === 'function'
+              ? localConfigFn({ options: postcssOptions })
+              : localConfigFn;
+          if (localCfg && localCfg.plugins) {
+            localPlugins = Array.isArray(localCfg.plugins)
+              ? localCfg.plugins
+              : [localCfg.plugins];
+          }
+          break; // Found local config, stop searching
+        }
+        currentDir = path.dirname(currentDir);
+      }
+
+      // Merge global and local plugins
+      const mergedPlugins = [...globalConfig.plugins, ...localPlugins];
+
       return {
-        ...configFn({ options: postcssOptions }),
+        ...globalConfig,
+        plugins: mergedPlugins,
         parser:
           ctx && ctx.resourcePath && /\.sss$/i.test(ctx.resourcePath)
             ? 'sugarss'
@@ -453,6 +487,7 @@ function createCacheGroups(
 const createScriptRule = () => ({
   test: reScript,
   include: [config.APP_DIR, path.resolve(config.CWD, 'shared')],
+  exclude: [/node_modules/],
   use: [
     {
       loader: 'babel-loader',

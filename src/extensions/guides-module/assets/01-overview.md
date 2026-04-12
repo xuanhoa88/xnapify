@@ -36,7 +36,7 @@ Modules (also called Apps or Domains) are the core building blocks for primary b
 - **Self-Contained Routing:** (e.g., URL `/users` maps exactly to `src/apps/users/views/(default)/_route.js`).
 - **Rigid Definitions:** Encompasses Data (Sequelize models), Business logic (Services), and Visuals (React Components).
 
-To deep-dive into creating Modules and understanding how Auto-Discovery works, see [Module Architecture](./02-architecture-modules.md).
+To deep-dive into creating Modules and understanding how Auto-Discovery works, see [Module Architecture](/guides/02-architecture-modules).
 
 ---
 
@@ -48,7 +48,7 @@ Extensions are lighter, more decoupled plugin structures designed explicitly to 
 - **Hooks:** Allow functional side-effects to happen in backend processes asynchronously. If a user is deleted in `src/apps/users`, the `src/extensions/activity-logs` can listen to `hook('users').on('deleted')` and record it.
 - **Slots:** Allow UI components to visually inject themselves into generic layouts. A module rendering `<ExtensionSlot name="user-profile.header" />` can have numerous extensions append buttons without requiring hardcoded imports.
 
-To deep-dive into creating Hooks and Slots safely, see [Extension Architecture](./03-architecture-extensions.md).
+To deep-dive into creating Hooks and Slots safely, see [Extension Architecture](/guides/03-architecture-extensions).
 
 ---
 
@@ -58,10 +58,10 @@ The Shared directories manage all the underlying engine-level tooling, global ro
 
 **Key components:**
 - **Backend Engines (`shared/api/engines/`):** Manages dynamic connection routing (preboot), scheduling daemons, the embedded Database instances (SQLite, MySQL, Postgres), email queueing, background Node-RED workers, and WebSockets.
-  - See [Backend Engines Architecture](./04-architecture-backend.md)
+  - See [Backend Engines Architecture](/guides/04-architecture-backend)
   
 - **Frontend Server-Side Rendering (`shared/renderer/`):** A rigid Webpack SSR pipeline that correctly passes data into the initial DOM string, manages hydrate-state mismatches, assembles Redux slice hierarchies automatically from module definitions, and orchestrates client `getInitialProps` calls.
-  - See [Frontend React Architecture](./05-architecture-frontend.md)
+  - See [Frontend React Architecture](/guides/05-architecture-frontend)
 
 ---
 
@@ -86,3 +86,5 @@ async boot({ container }) {
 ### Route-Level Discovery 
 
 Instead of configuring a monumental `react-router` nested routing tree context manually, the project infers explicit nested structure entirely off system paths. A component structured in `views/marketing/landing/_route.js` constructs the exact path `[URL]/marketing/landing`, simplifying organizational load dynamically.
+
+To understand the full data flow from URL to rendered component, see [Routing & Data Flow](/guides/09-architecture-routing).

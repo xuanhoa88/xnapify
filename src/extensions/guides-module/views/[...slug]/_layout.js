@@ -83,7 +83,7 @@ DocsLayout.propTypes = {
   context: PropTypes.shape({
     history: PropTypes.object.isRequired,
     initialProps: PropTypes.shape({
-      tree: PropTypes.array.isRequired,
-    }).isRequired,
+      tree: PropTypes.array,
+    }),
   }).isRequired,
 };

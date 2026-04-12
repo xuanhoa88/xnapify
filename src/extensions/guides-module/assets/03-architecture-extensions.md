@@ -65,7 +65,7 @@ export default {
 ```
 
 > [!NOTE]
-> `__EXTENSION_ID__` is a Webpack provided compile-time constant holding a mapped snake_case namespace corresponding to the extension's folder / `package.json` manifest.
+> `__EXTENSION_ID__` is a Webpack compile-time constant derived from the extension's **directory name** (e.g., `guides-module` for `src/extensions/guides-module/`). It can be overridden by setting `id` in the extension's database record.
 
 ---
 

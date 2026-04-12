@@ -30,7 +30,7 @@ The database engine dynamically detects your target Relational database dialect 
 
 ## 2. Worker Engine (`worker`)
 
-Modules can encapsulate intense computational scripts or logic inside of direct function arrays called *Workers*. A Worker prevents blocking the main thread execution loops while standard HTTP requests arrive.
+Modules can encapsulate intensive computational scripts or long-running logic as *Workers*. Workers are direct function calls that run within the main Node.js process but are typically dispatched via the job queue for asynchronous execution, keeping the HTTP request loop responsive.
 
 ```javascript
 /* src/apps/my_app/api/index.js */
@@ -51,7 +51,7 @@ The WebSocket engine maintains active live connections scoped securely by Authen
 
 | Service Key | Return Type | Method | Purpose |
 | --- | --- | ---| --- |
-| `'ws'` | `WebSocketManager` | `broadcast(channel, event, data)` | Broadcasts an action to all connected users residing within an isolated WebSocket namespace (e.g. `ws.broadcast('/rooms/1', 'message_sent', { text: "Hello" })`). |
+| `'ws'` | `WebSocketManager` | `sendToPublicChannel(event, data)` | Broadcasts data to all connected clients on the public channel (e.g., `ws.sendToPublicChannel('extension:updated', { type: 'EXTENSION_INSTALLED' })`). |
 
 ---
 
@@ -107,5 +107,5 @@ Additional engines expose fundamental utilities safely ensuring isolation mappin
 
 - **`cache`**: Memory LRU caching scoped utilizing namespaces. (e.g., `const scopedCache = cache.withNamespace('users'); scopedCache.set('list', [])`).
 - **`fs`**: Safe-guarded File System reads preventing traversal attacks outside the application scope folders.
-- **`http`**: Standardized Response formatters (e.g., `http.sendSuccess(req, res)` or `http.sendError(req, res)`).
+- **`http`**: Standardized Response formatters (e.g., `http.sendSuccess(res, data)` or `http.sendError(res, message, statusCode)`).
 - **`template`**: Executes raw `<p> {{ text }} </p>` template operations utilizing LiquidJS rendering (mostly used alongside the Email engine's templating system).

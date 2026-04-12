@@ -5,10 +5,12 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+const fs = require('fs');
 const path = require('path');
 
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const webpack = require('webpack');
+const { merge } = require('webpack-merge');
 const nodeExternals = require('webpack-node-externals');
 
 const { logWarn } = require('../utils/logger');
@@ -379,15 +381,34 @@ function createExtensionConfig(extensions = [], buildPath) {
       ),
     });
 
+    let extConfigs = [];
+
     // Create browser builds
-    configs.push(
+    extConfigs.push(
       ...createClientConfig(extensionData, extensionDefines, buildPath),
     );
 
     // Create API + worker builds
-    configs.push(
+    extConfigs.push(
       ...createApiConfig(extensionData, extensionDefines, buildPath),
     );
+
+    // Escape hatch: Load extension-specific webpack configuration
+    const customWebpackPath = path.join(extensionData.extensionPath, 'extension.webpack.js');
+    if (fs.existsSync(customWebpackPath)) {
+      try {
+        const extensionCustomizer = require(customWebpackPath);
+        if (typeof extensionCustomizer === 'function') {
+           extConfigs = extConfigs.map(config => extensionCustomizer(config, merge) || config);
+        } else if (typeof extensionCustomizer === 'object') { // Support just exporting mergeable object
+           extConfigs = extConfigs.map(config => merge(config, extensionCustomizer));
+        }
+      } catch (err) {
+        logWarn(`Skipping invalid extension.webpack.js in ${extensionData.extensionId}:`, err);
+      }
+    }
+
+    configs.push(...extConfigs);
   }
 
   return [...new Set(configs)];

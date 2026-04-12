@@ -17,35 +17,7 @@ The **xnapify** platform is tested through two distinct methodologies natively:
 
 xnapify integrates a powerful E2E framework built around **Puppeteer**. However, xnapify abstracts raw Puppeteer scripts behind an AI-interpreting SPA Stability Engine capable of reading markdown definitions and executing UI actions autonomously.
 
-### The Compile-Then-Execute Flow
-
-1. **Definition (`test.md`)**: A human writes test actions in English markdown.
-2. **Compilation**: The internal CLI orchestrator passes the markdown document to an LLM compiler, converting steps into a deterministic `script.json` cache logic.
-3. **Execution**: The JSON script is orchestrated against the live frontend application via a Puppeteer driver (`executor.js`).
-
-### SPA Stability Engine
-
-Modern React frontends frequently mutate asynchronously. Hardcoding `await page.waitForTimeout()` leads to flaky tests. The xnapify `executor.js` instead waits for comprehensive UI "Stability" across 5 metrics prior to executing a click or typing action.
-
-```mermaid
-flowchart TD
-    Start[Action Requested] --> Net[Network: 0 pending requests?]
-    Net --> DOM[DOM: Mutations ceased?]
-    DOM --> CSS[CSS: Animations complete?]
-    CSS --> Load[LoadUI: Spinners absent?]
-    Load --> React[React: Fiber Suspense resolved?]
-    React --> Exec[Execute Puppeteer Action]
-```
-
-### Pseudo-Selectors for Safe Targeting
-
-> [!WARNING]
-> Do not test by mapping brittle auto-generated CSS classes. Test via visible text outputs.
-
-```javascript
-// Test text natively:
-await page.locator('::-p-text(Upload Extension)').click();
-```
+For a deep dive into writing test cases, the LLM compilation flow, and the SPA Stability Engine, see [E2E Test Automation](/guides/10-e2e-automation).
 
 ---
 

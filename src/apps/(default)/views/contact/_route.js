@@ -21,10 +21,15 @@ export async function getInitialProps({ i18n }) {
 /**
  * Default export - Page component
  */
-export default function ContactPage({ title }) {
+export default function ContactPage({ context: { initialProps } }) {
+  const { title } = initialProps || {};
   return <Contact title={title} />;
 }
 
 ContactPage.propTypes = {
-  title: PropTypes.string.isRequired,
+  context: PropTypes.shape({
+    initialProps: PropTypes.shape({
+      title: PropTypes.string.isRequired,
+    }),
+  }).isRequired,
 };

@@ -12,7 +12,7 @@ import s from './About.css';
 /**
  * About Page Component
  */
-function AboutPage({ title, html }) {
+function AboutPage({ context: { initialProps: { title, html } = {} } = {} }) {
   return (
     <div className={s.root}>
       <div className={s.container}>
@@ -24,8 +24,12 @@ function AboutPage({ title, html }) {
 }
 
 AboutPage.propTypes = {
-  title: PropTypes.string.isRequired,
-  html: PropTypes.string.isRequired,
+  context: PropTypes.shape({
+    initialProps: PropTypes.shape({
+      title: PropTypes.string.isRequired,
+      html: PropTypes.string.isRequired,
+    }),
+  }).isRequired,
 };
 
 /**

@@ -35,10 +35,14 @@ export async function getInitialProps({ params, i18n }) {
 /**
  * Default export - Page component
  */
-export default function FeatureDetailsPage({ featureId }) {
-  return <FeatureDetails featureId={featureId} />;
+export default function FeatureDetailsPage({ context: { params } }) {
+  return <FeatureDetails featureId={params.featureId} />;
 }
 
 FeatureDetailsPage.propTypes = {
-  featureId: PropTypes.string.isRequired,
+  context: PropTypes.shape({
+    params: PropTypes.shape({
+      featureId: PropTypes.string.isRequired,
+    }).isRequired,
+  }).isRequired,
 };

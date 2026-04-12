@@ -25,6 +25,11 @@ module.exports = api => {
 
   return {
     /**
+     * Look for .babelrc files in extensions and modules
+     */
+    babelrcRoots: ['.', './src/extensions/*', './src/apps/*'],
+
+    /**
      * Use inline source maps for best debugging with Webpack + HMR
      * (external maps often break HMR invalidation)
      */

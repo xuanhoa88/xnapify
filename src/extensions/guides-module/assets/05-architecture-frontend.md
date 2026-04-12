@@ -31,7 +31,7 @@ graph TD
    - `init({ store })` evaluates allowing components to securely inject Redux `slices`.
    - `setup({ store })` evaluates establishing the side-bar navigation states.
 3. **Pre-fetching Phase (`getInitialProps`)**: 
-   - Instead of empty loading screens, xnapify awaits the `getInitialProps` async exporter. Data returned here is injected into Redux directly.
+   - Instead of empty loading screens, xnapify awaits the `getInitialProps` async exporter. Data returned is placed on `context.initialProps` and passed to Page and Layout components as a read-only prop.
 4. **Server Side Render**: 
    - React translates the virtual DOM string injecting the Redux serialization payload directly onto the `<head>`.
 5. **Client Hydration**: 
@@ -51,7 +51,6 @@ To remain modular, reducers are injected lazily instead of bundling everything i
 
 ```javascript
 /* src/apps/marketing/views/_route.js */
-import { injectReducer } from '@shared/renderer/store'
 import marketingSlice from './slices/marketingSlice'
 import PageLayout from './components/Page'
 

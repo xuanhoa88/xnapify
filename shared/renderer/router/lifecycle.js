@@ -296,6 +296,7 @@ export function createAction(pageInfo, configs = [], layouts = []) {
       // composeMiddleware calls next(err) when a middleware throws.
       // Re-throw so the error propagates to the router's errorHandler.
       if (err) throw err;
+
       // 1. Load route data
       let pageData = {};
       if (typeof module.getInitialProps === 'function') {
@@ -321,15 +322,11 @@ export function createAction(pageInfo, configs = [], layouts = []) {
       }
 
       // 3. Build component tree with layouts (innermost to outermost)
-      let component = <Page context={context} {...pageData} />;
+      let component = <Page context={context} />;
       for (const layout of reversedLayouts) {
         const Layout = layout.module.default || layout.module;
         if (Layout) {
-          component = (
-            <Layout context={context} metadata={pageData}>
-              {component}
-            </Layout>
-          );
+          component = <Layout context={context}>{component}</Layout>;
         }
       }
 
