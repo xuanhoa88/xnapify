@@ -48,8 +48,10 @@ const SKIP_DIRS = new Set([
 // ── Files to skip during recursive file walks (exact match) ──────────
 const SKIP_FILES = new Set([
   'package-lock.json',
-  'eslint.config.js',
-  'babel.config.js',
+  'eslint.factory.js',
+  'babel.factory.js',
+  'postcss.factory.js',
+  'registry.factory.js',
   'jest.config.js',
 ]);
 

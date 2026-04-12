@@ -5,16 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import {
-  useMemo,
-  useState,
-  useEffect,
-  useRef,
-  useCallback,
-  useContext,
-} from 'react';
+import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 
-import { AppContext } from '../../AppContext';
+import { registry } from '@shared/extension/client/Registry';
 
 /**
  * Hook to execute extension hooks
@@ -24,14 +17,12 @@ import { AppContext } from '../../AppContext';
  *   await hooks.execute('profile.submit', formData);
  */
 export function useExtensionHooks() {
-  const { container } = useContext(AppContext);
-  const { registry } = container.resolve('extension');
-
   return useMemo(
     () => ({
-      execute: (hookId, ...args) => registry.executeHook(hookId, ...args),
+      execute: (hookId, ...args) =>
+        registry ? registry.executeHook(hookId, ...args) : undefined,
     }),
-    [registry],
+    [],
   );
 }
 
@@ -46,9 +37,6 @@ export function useExtensionHooks() {
  * @param {Object} validator - Zod instance (caller provides)
  */
 export function useExtensionValidator(hookId, baseSchema, validator) {
-  const { container } = useContext(AppContext);
-  const { registry } = container.resolve('extension');
-
   const [schema, setSchema] = useState(baseSchema);
   const [loading, setLoading] = useState(true);
 
@@ -63,6 +51,10 @@ export function useExtensionValidator(hookId, baseSchema, validator) {
 
     const execute = async () => {
       try {
+        if (!registry) {
+          if (mounted) setLoading(false);
+          return;
+        }
         const results = await registry.executeHook(
           hookId,
           baseSchemaRef.current,
@@ -94,7 +86,7 @@ export function useExtensionValidator(hookId, baseSchema, validator) {
     return () => {
       mounted = false;
     };
-  }, [hookId, registry]); // Only re-run when hookId or registry changes
+  }, [hookId]); // Only re-run when hookId or registry changes
 
   return [schema, loading];
 }
@@ -109,9 +101,6 @@ export function useExtensionValidator(hookId, baseSchema, validator) {
  * @param {any} context - Context to pass to the hook
  */
 export function useExtensionFormData(hookId, context) {
-  const { container } = useContext(AppContext);
-  const { registry } = container.resolve('extension');
-
   const [formData, setFormData] = useState({});
   const [loading, setLoading] = useState(true);
 
@@ -129,6 +118,10 @@ export function useExtensionFormData(hookId, context) {
 
     const execute = async () => {
       try {
+        if (!registry) {
+          if (mounted) setLoading(false);
+          return;
+        }
         const results = await registry.executeHook(hookId, contextRef.current);
         if (mounted) {
           // Merge all results into a single object (last extension wins)
@@ -171,21 +164,23 @@ export function useExtensionFormData(hookId, context) {
  * @returns {Array} Array of registered slot entries
  */
 export function useExtensionSlots(name) {
-  const { container } = useContext(AppContext);
-  const { registry } = container.resolve('extension');
-
   const [components, setComponents] = useState(() =>
-    registry.getSlotEntries(name),
+    registry ? registry.getSlotEntries(name) : [],
   );
 
   const sync = useCallback(() => {
-    setComponents(registry.getSlotEntries(name));
-  }, [name, registry]);
+    if (registry) {
+      setComponents(registry.getSlotEntries(name));
+    }
+  }, [name]);
 
   useEffect(() => {
     sync();
-    return registry.subscribe(sync);
-  }, [sync, registry]);
+    if (registry) {
+      return registry.subscribe(sync);
+    }
+    return undefined;
+  }, [sync]);
 
   return components;
 }

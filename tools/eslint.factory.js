@@ -240,9 +240,9 @@ const config = {
   },
 };
 
-const registry = require('./module.registry');
+const { eslintConfigs } = require('./registry.factory');
 
-config.overrides = registry.eslintConfigs.map(cfg => ({
+config.overrides = eslintConfigs.map(cfg => ({
   files: [`${cfg.moduleDir.replace(/\\/g, '/')}/**/*.{js,jsx}`],
   // Use extends to inherit from the module-level config cleanly
   extends: [cfg.path],

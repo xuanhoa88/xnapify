@@ -13,7 +13,7 @@ const webpack = require('webpack');
 const { default: merge } = require('webpack-merge');
 
 const config = require('../config');
-const registry = require('../module.registry');
+const { webpackConfigs } = require('../registry.factory');
 const { isVerbose, logInfo, logWarn } = require('../utils/logger');
 
 const {
@@ -297,9 +297,9 @@ let finalClientConfig = clientConfig;
 let finalServerConfig = serverConfig;
 
 // Filter for customizers belonging specifically to core apps
-const coreAppWebpacks = registry.webpackConfigs.filter(cfg =>
-  cfg.moduleDir.startsWith(path.join(config.APP_DIR, 'apps')),
-);
+const coreAppWebpacks = (
+  Array.isArray(webpackConfigs) ? webpackConfigs : []
+).filter(cfg => cfg.moduleDir.startsWith(path.join(config.APP_DIR, 'apps')));
 
 for (const customWebpack of coreAppWebpacks) {
   try {

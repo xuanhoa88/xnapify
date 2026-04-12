@@ -176,10 +176,10 @@ const createCSSRule = ({
       // Look up local postcss config from the registry
       let localPlugins = [];
       if (ctx && ctx.resourcePath) {
-        const registry = require('../module.registry');
-        const matchedConfig = registry.postcssConfigs.find(cfg =>
-          ctx.resourcePath.startsWith(cfg.moduleDir),
-        );
+        const { postcssConfigs } = require('../registry.factory');
+        const matchedConfig = (
+          Array.isArray(postcssConfigs) ? postcssConfigs : []
+        ).find(cfg => ctx.resourcePath.startsWith(cfg.moduleDir));
         if (matchedConfig) {
           delete require.cache[matchedConfig.path];
           const localConfigFn = require(matchedConfig.path);

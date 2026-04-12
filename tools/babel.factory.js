@@ -14,6 +14,8 @@
  */
 
 module.exports = api => {
+  const { babelConfigs } = require('./registry.factory');
+
   // Cache config per NODE_ENV — config only varies by isProd/isTest.
   // React Refresh babel plugin is injected at the webpack loader level
   // (configureWebpackForDev in dev.js), not here, so caching is safe.
@@ -27,7 +29,7 @@ module.exports = api => {
     /**
      * Explicitly map module/extension babel configurations from the central registry
      */
-    overrides: require('./module.registry').babelConfigs.map(cfg => ({
+    overrides: (Array.isArray(babelConfigs) ? babelConfigs : []).map(cfg => ({
       test: new RegExp(`^${cfg.moduleDir.replace(/\\/g, '/')}/`),
       extends: cfg.path,
     })),

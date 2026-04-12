@@ -5,18 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import {
-  Component,
-  useState,
-  useEffect,
-  useCallback,
-  memo,
-  useContext,
-} from 'react';
+import { Component, useState, useEffect, useCallback, memo } from 'react';
 
 import PropTypes from 'prop-types';
 
-import { AppContext } from '../../AppContext';
+import { registry } from '@shared/extension/client/Registry';
 
 /**
  * Error boundary that catches render errors from extension components.
@@ -76,8 +69,6 @@ const ExtensionSlot = memo(function ExtensionSlot({ name, ...props }) {
   // Start as not-mounted; flips to true after hydration completes.
   const [mounted, setMounted] = useState(false);
   const [components, setComponents] = useState([]);
-  const context = useContext(AppContext);
-  const { registry } = context.container.resolve('extension');
 
   useEffect(() => {
     // Mark as mounted — this only runs on the client after hydration.
@@ -85,18 +76,19 @@ const ExtensionSlot = memo(function ExtensionSlot({ name, ...props }) {
   }, []);
 
   const syncComponents = useCallback(() => {
+    if (!registry) return;
     setComponents(registry.getSlotEntries(name));
-  }, [name, registry]);
+  }, [name]);
 
   useEffect(() => {
-    if (!mounted) return undefined;
+    if (!mounted || !registry) return undefined;
 
     // Sync immediately in case registry already has entries
     syncComponents();
 
     // Subscribe to future changes (extensions loading later)
     return registry.subscribe(syncComponents);
-  }, [mounted, syncComponents, registry]);
+  }, [mounted, syncComponents]);
 
   return (
     <div data-slot={name}>
@@ -111,7 +103,7 @@ const ExtensionSlot = memo(function ExtensionSlot({ name, ...props }) {
 
           return (
             <SlotErrorBoundary key={key}>
-              <Comp {...props} context={context} />
+              <Comp {...props} />
             </SlotErrorBoundary>
           );
         })}

@@ -68,3 +68,33 @@ node tools/npm/preboot.js --stop
 # Check status of port allocations and daemon existence
 node tools/npm/preboot.js --status
 ```
+
+---
+
+## 4. Build Configuration Registry
+
+In modern monorepo and plugin-based architectures, standardizing how modules define and alter structural building tools (like Babel, PostCSS, Webpack, and ESLint) is critical. 
+
+The `xnapify` build pipeline centralizes this process using a **Barrel Registry Mechanism** (`tools/registry.factory.js`). This negates intensive synchronous filesystem lookups and prevents the global injection of isolated dependencies.
+
+### Module-Level Escape Hatches
+
+A module developer can drop a specific configuration file in the root of their module (e.g. `src/apps/groups/`) and the build pipeline will implicitly apply that configuration **only** to that module boundary.
+
+Supported configurations include:
+
+- **Webpack (`module.webpack.js`):** Intercepts internal compilation states (both Client and Server configurations) and merges or mutates the properties dynamically. Applies comprehensively for both Core Apps and Extensions.
+- **Babel (`module.babel.js`):** Instructs Babel to compile `jsx/js` files targeting the specified module using `overrides[test: RegExp]`, bypassing volatile undocumented `babelrcRoots` mechanics.
+- **PostCSS (`module.postcss.js`):** Triggers CSS loaders via Webpack injection parameters specifically for `.css` files existing under that module's structural boundary via a synchronized fast-lookup iteration.
+- **ESLint (`module.eslint.js`):** Pushes the localized standard safely into the global ESLint parser `overrides` array tightly bounded strictly to `{ files: [moduleDir/**/*.{js,jsx}] }`.
+
+### The `.factory.js` Naming Paradigm
+
+Within the structural `tools/` directory, files managing specific runtime environments carry a `.factory.js` suffix (e.g., `babel.factory.js`, `eslint.factory.js`). Using generic `.config.js` names internally risks aggressive **Search Collisions** (e.g. `CMD+P` yielding the tools file *and* the root file simultaneously).
+
+Instead, "zero-config" development compatibility (like the VS Code ESLint parser finding configs immediately) is satisfied using lightweight **Proxy Exports** natively situated at the project's system root boundary:
+
+```javascript
+// .eslintrc.js (Root Level)
+module.exports = require('./tools/eslint.factory.js');
+```
