@@ -6,7 +6,7 @@ sidebar_position: 12
 
 # Role-Based Access Control (RBAC)
 
-**xnapify** implements a robust, centralized Role-Based Access Control system to govern multi-tenant setups, organizational security, and endpoint authorization across the core App modules and modular extensions uniformly. 
+**xnapify** implements a robust, centralized Role-Based Access Control system to govern multi-tenant setups, organizational security, and endpoint authorization across the core App modules and modular extensions uniformly.
 
 ---
 
@@ -32,21 +32,30 @@ Instead of hitting the SQL Database recursively upon every single API request to
 
 ## 2. Server Authorization (API Layer)
 
-Backend Routes leverage Express middlewares built natively to check contextual permissions immediately prior to executing the backend controllers.
+Instead of relying on statically imported middlewares that tightly couple modules to the auth system, backend routes dynamically retrieve the `requirePermission` middleware from the Dependency Injection (DI) system at request-time. This decoupling is essential for the engine architecture.
 
 ```javascript
 /* src/apps/files/api/routes/(admin)/(default)/_route.js */
 
-export function setup({ auth }) {
-  const requirePermission = auth.middlewares.requirePermission;
+import * as fileController from '../../../controllers/admin/files.controller';
 
-  return {
-    // Guards the entire Controller sequence blocking unauthorized connections 
-    // terminating with HTTP 403 Forbidden.
-    get: [requirePermission('files:read'), fileController.getFiles],
-    post: [requirePermission('files:create'), fileController.uploadFile]
+/**
+ * Dynamically resolves the auth engine to prevent static module coupling
+ */
+function requirePermission(permission) {
+  return (req, res, next) => {
+    const { middlewares } = req.app.get('container').resolve('auth');
+    return middlewares.requirePermission(permission)(req, res, next);
   };
 }
+
+// Guards the endpoint, responding with HTTP 403 if unauthorized
+export const get = [requirePermission('files:read'), fileController.getFiles];
+
+export const post = [
+  requirePermission('files:create'),
+  fileController.uploadFile,
+];
 ```
 
 ---
@@ -60,27 +69,27 @@ Exposing frontend React User Interfaces depends on evaluating the logged-in User
 To obscure functionality logically impossible for unauthorized users, `xnapify` ships a centralized wrapper component utilizing Context evaluation:
 
 ```javascript
-import { RbacGuard } from '@shared/renderer/components/Rbac'
+import { RbacGuard } from '@shared/renderer/components/Rbac';
 
 export default function AdministrativePanel() {
-    return (
-        <div>
-            <h1>Dashboard</h1>
-            
-            {/* Standard Element Evaluation */}
-            <RbacGuard permission="users:read">
-               <UserListingTable />
-            </RbacGuard>
-            
-            {/* Fallback Rendering Pattern */}
-            <RbacGuard 
-                permission="users:delete" 
-                fallback={<button disabled>Delete (Unauthorized)</button>}
-            >
-                <button color="danger">Delete System Core</button>
-            </RbacGuard>
-        </div>
-    )
+  return (
+    <div>
+      <h1>Dashboard</h1>
+
+      {/* Standard Element Evaluation */}
+      <RbacGuard permission='users:read'>
+        <UserListingTable />
+      </RbacGuard>
+
+      {/* Fallback Rendering Pattern */}
+      <RbacGuard
+        permission='users:delete'
+        fallback={<button disabled>Delete (Unauthorized)</button>}
+      >
+        <button color='danger'>Delete System Core</button>
+      </RbacGuard>
+    </div>
+  );
 }
 ```
 
@@ -91,13 +100,13 @@ Entire React structural subtrees (i.e., Page routes) can be blocked utilizing Fr
 ```javascript
 /* src/apps/settings/views/_route.js */
 
-import { requirePermission } from '@shared/renderer/components/Rbac'
+import { requirePermission } from '@shared/renderer/components/Rbac';
 
 // Evaluated by the SSR and Client Routers prior to triggering React
 export const middleware = requirePermission('settings:update');
 
 export default function SettingsView() {
-   return <div>Only Admins See This String</div>
+  return <div>Only Admins See This String</div>;
 }
 ```
 
@@ -107,4 +116,4 @@ export default function SettingsView() {
 
 Certain edge-case Users intrinsically require 100% overriding application control circumventing rigid permission matrices entirely: **Super Admins**.
 
-The `User.is_superadmin` flag forcefully overrides all `requirePermission()` bounds structurally in both Node.js API middlewares and React logic ensuring complete lockout prevention during server failure scenarios. Use this flag with extreme care natively.
+The `User.is_admin` flag forcefully overrides all `requirePermission()` bounds structurally in both Node.js API middlewares and React logic ensuring complete lockout prevention during server failure scenarios. Use this flag with extreme care natively.
