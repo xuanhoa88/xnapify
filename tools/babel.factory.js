@@ -27,7 +27,7 @@ module.exports = api => {
     /**
      * Explicitly map module/extension babel configurations from the central registry
      */
-    overrides: require('./registry.config').babelConfigs.map(cfg => ({
+    overrides: require('./module.registry').babelConfigs.map(cfg => ({
       test: new RegExp(`^${cfg.moduleDir.replace(/\\/g, '/')}/`),
       extends: cfg.path,
     })),

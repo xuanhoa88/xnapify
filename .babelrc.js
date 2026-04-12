@@ -5,4 +5,4 @@
  * Re-exports the full config from tools/babel.config.js so that IDEs
  * and hardcoded runners automatically pick up the central settings.
  */
-module.exports = require('./tools/babel.config');
+module.exports = require('./tools/babel.factory.js');

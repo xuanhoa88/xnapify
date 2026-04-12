@@ -393,7 +393,7 @@ function createExtensionConfig(extensions = [], buildPath) {
     );
 
     // Escape hatch: Load module-specific webpack configuration from registry
-    const registry = require('../registry.config');
+    const registry = require('../module.registry');
     const customWebpack = registry.webpackConfigs.find(
       cfg => cfg.moduleDir === extensionData.extensionPath,
     );

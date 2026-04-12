@@ -164,7 +164,7 @@ const createCSSRule = ({
     sourceMap: isDev,
     postcssOptions: ctx => {
       // Get global postcss config path
-      const cssConfigPath = path.resolve(__dirname, '../postcss.config');
+      const cssConfigPath = path.resolve(__dirname, '../postcss.factory');
 
       // Clear require cache to ensure we get the latest config
       delete require.cache[cssConfigPath];
@@ -176,7 +176,7 @@ const createCSSRule = ({
       // Look up local postcss config from the registry
       let localPlugins = [];
       if (ctx && ctx.resourcePath) {
-        const registry = require('../registry.config');
+        const registry = require('../module.registry');
         const matchedConfig = registry.postcssConfigs.find(cfg =>
           ctx.resourcePath.startsWith(cfg.moduleDir),
         );
@@ -488,7 +488,7 @@ const createScriptRule = () => ({
       options: {
         comments: false,
         cacheDirectory: isDev,
-        configFile: path.resolve(__dirname, '..', 'babel.config.js'),
+        configFile: path.resolve(__dirname, '..', 'babel.factory.js'),
         // Override babel-loader's default sourceRoot (process.cwd()) to prevent
         // Windows-specific Invalid URL TypeError in @pmmmwh/react-refresh-webpack-plugin
         sourceRoot: '',

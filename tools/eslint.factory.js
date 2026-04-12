@@ -240,7 +240,7 @@ const config = {
   },
 };
 
-const registry = require('./registry.config');
+const registry = require('./module.registry');
 
 config.overrides = registry.eslintConfigs.map(cfg => ({
   files: [`${cfg.moduleDir.replace(/\\/g, '/')}/**/*.{js,jsx}`],

@@ -13,7 +13,7 @@ const webpack = require('webpack');
 const { default: merge } = require('webpack-merge');
 
 const config = require('../config');
-const registry = require('../registry.config');
+const registry = require('../module.registry');
 const { isVerbose, logInfo, logWarn } = require('../utils/logger');
 
 const {
