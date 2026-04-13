@@ -59,6 +59,24 @@ const DEFAULT_SETTINGS = [
     is_public: true,
     description: 'Enable maintenance mode (blocks non-admin access)',
   },
+  {
+    namespace: 'core',
+    key: 'MAINTENANCE_BYPASS_TOKEN',
+    type: 'password',
+    value: null,
+    default_env_var: 'XNAPIFY_MAINTENANCE_BYPASS_TOKEN',
+    is_public: false,
+    description: 'Secret token path to bypass maintenance (e.g. /my-secret)',
+  },
+  {
+    namespace: 'core',
+    key: 'MAINTENANCE_EXEMPT_PATHS',
+    type: 'string',
+    value: null,
+    default_env_var: 'XNAPIFY_MAINTENANCE_EXEMPT_PATHS',
+    is_public: false,
+    description: 'Comma separated path prefixes to exempt (e.g. /my-api)',
+  },
 
   // ── Auth & OAuth ──────────────────────────────────────────────────────────
   {

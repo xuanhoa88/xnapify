@@ -20,6 +20,7 @@ import set from 'lodash/set';
 import { LRUCache } from 'lru-cache';
 import nodeFetch from 'node-fetch';
 import ReactDOM from 'react-dom/server';
+import Youch from 'youch';
 
 import { Container } from '@shared/container';
 import extensionManager from '@shared/extension/server';
@@ -225,6 +226,65 @@ function generateRequestId() {
   return `${requestIdPrefix}-${timestamp}-${counter}`;
 }
 
+function maintenanceMiddleware() {
+  return async (req, res, next) => {
+    // 1. Is Maintenance Mode ON?
+    const isMaintenance = process.env.XNAPIFY_MAINTENANCE_MODE === 'true';
+    const bypassToken = process.env.XNAPIFY_MAINTENANCE_BYPASS_TOKEN;
+
+    // 2. Bypass Token Magic Link Check (e.g. /1630542a-246b-4b66-afa1)
+    if (bypassToken && req.path === `/${bypassToken}`) {
+      res.cookie('xnapify_maintenance_bypass', bypassToken, {
+        httpOnly: true,
+        path: '/',
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+        sameSite: 'lax',
+      });
+      return res.redirect('/');
+    }
+
+    if (!isMaintenance) return next();
+
+    // 3. Cookie Bypass Validation
+    if (
+      bypassToken &&
+      req.cookies &&
+      req.cookies['xnapify_maintenance_bypass'] === bypassToken
+    ) {
+      return next(); // Authed user bypassing
+    }
+
+    // 4. Exempt Paths
+    // We strictly allow internal endpoints necessary for admin/authentication
+    // so administrators can log in to toggle maintenance off.
+    const defaultExempt = [
+      '/admin',
+      '/api/admin',
+      '/api/auth',
+      '/auth',
+      '/~/red',
+    ];
+    const userExempt = (process.env.XNAPIFY_MAINTENANCE_EXEMPT_PATHS || '')
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
+
+    const allExempt = [...defaultExempt, ...userExempt];
+    if (allExempt.some(ep => req.path.startsWith(ep))) {
+      return next(); // Exempt route hit
+    }
+
+    // 5. Block the request
+    res.status(503);
+
+    // Throw error to be caught by error handler
+    const err = new Error('Service Unavailable');
+    err.status = 503;
+    err.code = 'E_MAINTENANCE';
+    return next(err);
+  };
+}
+
 function buildCspHeader(nonce) {
   return [
     "default-src 'self'",
@@ -252,7 +312,6 @@ const appState = {
   }),
   ssrResourcesPromise: null,
   ssrRetryCount: 0,
-  youch: null,
   wsServer: null,
   nodeRed: new NodeRedManager(),
 };
@@ -683,17 +742,21 @@ function makeErrorMiddleware() {
   return async (err, req, res, next) => {
     if (res.headersSent) return next(err);
 
+    const isMaintenance = err.code === 'E_MAINTENANCE';
+
     if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
-      return res.status(401).json({
-        success: false,
-        error:
-          err.name === 'JsonWebTokenError' ? 'Invalid token' : 'Token expired',
-        code: err.name,
-        requestId: req.id,
-      });
+      err.status = 401;
+      err.message =
+        err.name === 'JsonWebTokenError' ? 'Invalid token' : 'Token expired';
+    } else {
+      err.status = err.status || 500;
+      err.message = isMaintenance
+        ? 'Maintenance mode is enabled. Please try again later.'
+        : err.message || 'Service is unavailable. Please try again later.';
     }
 
-    const status = err.status || 500;
+    const { status } = err;
+    res.status(status);
 
     console.error('❌ Error:', {
       status,
@@ -705,30 +768,34 @@ function makeErrorMiddleware() {
       ...(__DEV__ && err.stack ? { stack: err.stack } : {}),
     });
 
-    if (__DEV__ && !req.path.startsWith('/api')) {
-      try {
-        if (!appState.youch) {
-          appState.youch = await import('youch');
-        }
-        const { default: Youch } = appState.youch;
-        const youch = new Youch(err, {
-          method: req.method,
-          url: req.url,
-          httpVersion: req.httpVersion,
-          headers: { 'content-type': 'text/html', accept: '*/*' },
+    try {
+      if (
+        req.path.startsWith('/api') ||
+        req.accepts(['html', 'json']) === 'json'
+      ) {
+        return res.json({
+          status,
+          success: false,
+          error:
+            __DEV__ || isMaintenance ? err.message : 'Internal server error',
+          maintenance: isMaintenance,
+          requestId: req.id,
         });
-        return res.status(status).send(await youch.toHTML());
-      } catch (youchError) {
-        console.error('⚠️  Youch rendering failed:', youchError.message);
       }
-    }
 
-    res.status(status).json({
-      status,
-      success: false,
-      error: __DEV__ ? err.message : 'Internal server error',
-      requestId: req.id,
-    });
+      const youch = new Youch(err, {
+        method: req.method,
+        url: req.url,
+        httpVersion: req.httpVersion,
+        headers: { 'content-type': 'text/html', accept: '*/*' },
+      });
+      return res.send(await youch.toHTML());
+    } catch (youchError) {
+      console.error('⚠️  Youch rendering failed:', youchError.message);
+      return res.send(
+        `<h1>${status} ${isMaintenance ? err.message : 'Internal server error'}</h1><p>Please try again later.</p>`,
+      );
+    }
   };
 }
 
@@ -963,6 +1030,9 @@ export async function bootstrapApp(app, server, options = {}) {
       next(err);
     });
   });
+
+  // Maintenance Mode
+  app.use(maintenanceMiddleware());
 
   // Request timeout
   app.use((req, res, next) => {

@@ -64,7 +64,7 @@ await settings.bulkUpdate([{ namespace, key, value }]);
   - **Redux Slice:** `@settings/admin`.
 
 ## 5. Seeds (`api/database/seeds/`)
-- **Default settings:** Core (APP_NAME, APP_DESCRIPTION, APP_URL, APP_IMAGE, MAINTENANCE_MODE), Auth (JWT_EXPIRY, ALLOW_REGISTRATION, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_KEY), Email (MAIL_PROVIDER, FROM_ADDRESS, SMTP_*), File (STORAGE_PROVIDER, MAX_UPLOAD_BYTES, ALLOWED_EXTENSIONS), Webhook (WEBHOOK_TIMEOUT_MS, MAX_RETRY_ATTEMPTS, REQUIRE_SIGNATURE), Optimization (COMPRESSION, SSR_CACHE).
+- **Default settings:** Core (APP_NAME, APP_DESCRIPTION, APP_URL, APP_IMAGE, MAINTENANCE_MODE, MAINTENANCE_BYPASS_TOKEN, MAINTENANCE_EXEMPT_PATHS), Auth (JWT_EXPIRY, ALLOW_REGISTRATION, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_KEY), Email (MAIL_PROVIDER, FROM_ADDRESS, SMTP_*), File (STORAGE_PROVIDER, MAX_UPLOAD_BYTES, ALLOWED_EXTENSIONS), Webhook (WEBHOOK_TIMEOUT_MS, MAX_RETRY_ATTEMPTS, REQUIRE_SIGNATURE), Optimization (COMPRESSION, SSR_CACHE).
 - **Permissions:** `settings:read` and `settings:write`, assigned to admin role.
 
 ## 6. Core Module Status
@@ -87,7 +87,6 @@ export default {
         i18nKey: 'slack_plugin:settings.tabLabel', // Optional: Extension's own i18n translation key
         label: 'Slack', // Hardcoded fallback label
         order: 60, // Sort position
-        fieldOrder: ['WEBHOOK_URL', 'CHANNEL'], // Enforced field ordering
       },
     }));
   }
@@ -96,6 +95,7 @@ export default {
 
 **Merge & Resolution Strategy:**
 - **Per-field deep merge:** Core defaults (e.g., `core`, `auth`, `webhook`) are immutable. Extension configurations apply per-field and merge dynamically.
+- **Dynamic Field Sorting:** Front-end configuration ignores `fieldOrder`; settings display natively cascades by the global database `sort_order` mapping natively handled by the DB sequencer. 
 - **Icon Resolution:** Natively supports built-in feather names (`'zap'`), absolute paths to static extension assets, and external URLs (prefixed with `http`).
 - **Label i18n Cascade:** Resolves in the following order: `i18nKey` (from the extension's translations) -> Core i18n -> `label` -> Raw namespace string.
 - **Hot-Reload:** The UI automatically subscribes to registry changes, hot-reloading configurations when extensions are toggled.

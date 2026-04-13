@@ -149,6 +149,7 @@
     "ws": "8.18.3",
     "y-protocols": "1.0.7",
     "yjs": "13.6.30",
+    "youch": "3.3.4",
     "zod": "3.23.8"
   },
   "devDependencies": {
@@ -239,7 +240,6 @@
     "webpack-hot-middleware": "2.26.1",
     "webpack-merge": "5.10.0",
     "webpack-node-externals": "3.0.0",
-    "xlsx": "0.18.5",
-    "youch": "3.3.4"
+    "xlsx": "0.18.5"
   }
 }
