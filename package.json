@@ -113,7 +113,7 @@
     "history": "4.7.2",
     "i18next": "23.15.2",
     "is-localhost-ip": "2.0.0",
-    "jsonwebtoken": "9.0.2",
+    "jsonwebtoken": "9.0.3",
     "katex": "0.16.38",
     "liquidjs": "10.24.0",
     "lodash": "4.17.21",
