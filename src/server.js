@@ -232,8 +232,14 @@ function maintenanceMiddleware() {
     const isMaintenance = process.env.XNAPIFY_MAINTENANCE_MODE === 'true';
     const bypassToken = process.env.XNAPIFY_MAINTENANCE_BYPASS_TOKEN;
 
-    // 2. Bypass Token Magic Link Check (e.g. /1630542a-246b-4b66-afa1)
-    if (bypassToken && req.path === `/${bypassToken}`) {
+    // 2. Bypass Token Magic Link — only process when maintenance is active
+    //    and the token is long enough to avoid route collisions
+    if (
+      isMaintenance &&
+      bypassToken &&
+      bypassToken.length >= 8 &&
+      req.path === `/${bypassToken}`
+    ) {
       res.cookie('xnapify_maintenance_bypass', bypassToken, {
         httpOnly: true,
         path: '/',
@@ -254,30 +260,7 @@ function maintenanceMiddleware() {
       return next(); // Authed user bypassing
     }
 
-    // 4. Exempt Paths
-    // We strictly allow internal endpoints necessary for admin/authentication
-    // so administrators can log in to toggle maintenance off.
-    const defaultExempt = [
-      '/admin',
-      '/api/admin',
-      '/api/auth',
-      '/auth',
-      '/~/red',
-    ];
-    const userExempt = (process.env.XNAPIFY_MAINTENANCE_EXEMPT_PATHS || '')
-      .split(',')
-      .map(s => s.trim())
-      .filter(Boolean);
-
-    const allExempt = [...defaultExempt, ...userExempt];
-    if (allExempt.some(ep => req.path.startsWith(ep))) {
-      return next(); // Exempt route hit
-    }
-
-    // 5. Block the request
-    res.status(503);
-
-    // Throw error to be caught by error handler
+    // 4. Block the request — delegate status to error handler
     const err = new Error('Service Unavailable');
     err.status = 503;
     err.code = 'E_MAINTENANCE';
@@ -758,15 +741,18 @@ function makeErrorMiddleware() {
     const { status } = err;
     res.status(status);
 
-    console.error('❌ Error:', {
-      status,
-      message: err.message,
-      name: err.name,
-      path: req.path,
-      method: req.method,
-      requestId: req.id,
-      ...(__DEV__ && err.stack ? { stack: err.stack } : {}),
-    });
+    // Skip noisy logging for expected maintenance blocks
+    if (!isMaintenance) {
+      console.error('❌ Error:', {
+        status,
+        message: err.message,
+        name: err.name,
+        path: req.path,
+        method: req.method,
+        requestId: req.id,
+        ...(__DEV__ && err.stack ? { stack: err.stack } : {}),
+      });
+    }
 
     try {
       if (
@@ -783,12 +769,7 @@ function makeErrorMiddleware() {
         });
       }
 
-      const youch = new Youch(err, {
-        method: req.method,
-        url: req.url,
-        httpVersion: req.httpVersion,
-        headers: { 'content-type': 'text/html', accept: '*/*' },
-      });
+      const youch = new Youch(err, req);
       return res.send(await youch.toHTML());
     } catch (youchError) {
       console.error('⚠️  Youch rendering failed:', youchError.message);
