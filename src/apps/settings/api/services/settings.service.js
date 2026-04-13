@@ -126,6 +126,7 @@ export function createSettingsService(container) {
       namespace: row.namespace,
       key: row.key,
       type: row.type,
+      sortOrder: row.sort_order,
       value: rawValue,
       coerced: coerce(rawValue, row.type),
       isDefault: row.value == null,
@@ -217,7 +218,10 @@ export function createSettingsService(container) {
       if (namespace) {
         const rows = await Setting.findAll({
           where: { namespace },
-          order: [['key', 'ASC']],
+          order: [
+            ['sort_order', 'ASC'],
+            ['key', 'ASC'],
+          ],
         });
         const result = rows.map(formatRow);
         collectionCache.set(cacheKey, result);
@@ -227,6 +231,7 @@ export function createSettingsService(container) {
       const rows = await Setting.findAll({
         order: [
           ['namespace', 'ASC'],
+          ['sort_order', 'ASC'],
           ['key', 'ASC'],
         ],
       });
@@ -261,6 +266,7 @@ export function createSettingsService(container) {
         where: { is_public: true },
         order: [
           ['namespace', 'ASC'],
+          ['sort_order', 'ASC'],
           ['key', 'ASC'],
         ],
       });

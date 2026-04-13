@@ -59,6 +59,13 @@ export default function createSettingModel({ connection, DataTypes }) {
         comment: 'Value type — determines admin UI control and coercion',
       },
 
+      sort_order: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
+        allowNull: false,
+        comment: 'Control display sort order in the admin UI within namespace',
+      },
+
       value: {
         type: DataTypes.TEXT,
         allowNull: true,

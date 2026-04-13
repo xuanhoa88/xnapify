@@ -181,12 +181,22 @@ export function createConnection(url, options) {
     // Resolve relative SQLite paths against XNAPIFY_SQLITE_DATA_DIR when set.
     // This mirrors how PG_DATA_DIR and MYSQL_DATA_DIR control data placement.
     const filePath = databaseUrl.slice(SQLITE_PREFIX.length);
-    if (
-      filePath &&
-      !path.isAbsolute(filePath) &&
-      process.env.XNAPIFY_SQLITE_DATA_DIR
-    ) {
-      databaseUrl = `${SQLITE_PREFIX}${path.join(process.env.XNAPIFY_SQLITE_DATA_DIR, filePath)}`;
+    let dataDir = process.env.XNAPIFY_SQLITE_DATA_DIR;
+    if (!dataDir) {
+      if (process.env.NODE_ENV === 'production') {
+        const os = require('os');
+        dataDir = path.join(os.homedir(), '.xnapify', 'sqlite');
+      } else {
+        dataDir = path.join(process.cwd(), '.data', 'sqlite');
+      }
+    }
+
+    if (filePath && !path.isAbsolute(filePath) && dataDir) {
+      const fs = require('fs');
+      if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+      }
+      databaseUrl = `${SQLITE_PREFIX}${path.join(dataDir, filePath)}`;
     }
 
     delete config.timezone; // SQLite ignores connection timezones

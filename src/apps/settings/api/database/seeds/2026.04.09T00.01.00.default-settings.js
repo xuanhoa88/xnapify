@@ -55,7 +55,7 @@ const DEFAULT_SETTINGS = [
     key: 'MAINTENANCE_MODE',
     type: 'boolean',
     value: 'false',
-    default_env_var: null,
+    default_env_var: 'XNAPIFY_MAINTENANCE_MODE',
     is_public: true,
     description: 'Enable maintenance mode (blocks non-admin access)',
   },
@@ -246,12 +246,18 @@ export async function up(_, { container }) {
   const { Setting } = container.resolve('models');
   const now = new Date();
 
+  const namespaceOrders = {};
+
   for (const setting of DEFAULT_SETTINGS) {
+    namespaceOrders[setting.namespace] =
+      (namespaceOrders[setting.namespace] || 0) + 10;
+
     await Setting.findOrCreate({
       where: { namespace: setting.namespace, key: setting.key },
       defaults: {
         id: uuidv4(),
         ...setting,
+        sort_order: namespaceOrders[setting.namespace],
         created_at: now,
         updated_at: now,
       },

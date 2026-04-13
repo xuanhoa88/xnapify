@@ -192,22 +192,15 @@ function sortNamespaces(namespaces, order) {
   ]);
 }
 
-function sortSettingFields(namespace, settings, fieldOrder) {
-  const order = (fieldOrder && fieldOrder[namespace]) || [];
-  return sortBy(settings, [
-    setting => {
-      const idx = order.indexOf(setting.key);
-      return idx === -1 ? Infinity : idx;
-    },
-    setting => setting.key,
-  ]);
+function sortSettingFields(settings) {
+  return sortBy(settings, ['sortOrder', 'key']);
 }
 
 // =============================================================================
 // Settings Builder Form
 // =============================================================================
 
-function SettingsBuilderForm({ namespace, settings, fieldOrder, onSaved }) {
+function SettingsBuilderForm({ namespace, settings, onSaved }) {
   const dispatch = useDispatch();
   const { hasPermission } = useRbac();
 
@@ -220,8 +213,8 @@ function SettingsBuilderForm({ namespace, settings, fieldOrder, onSaved }) {
   }, [namespace, hasPermission]);
 
   const sortedFields = useMemo(() => {
-    return sortSettingFields(namespace, settings, fieldOrder);
-  }, [namespace, settings, fieldOrder]);
+    return sortSettingFields(settings);
+  }, [settings]);
 
   const defaultValues = useMemo(() => {
     const vals = {};
@@ -291,7 +284,6 @@ function SettingsBuilderForm({ namespace, settings, fieldOrder, onSaved }) {
 SettingsBuilderForm.propTypes = {
   namespace: PropTypes.string.isRequired,
   settings: PropTypes.array.isRequired,
-  fieldOrder: PropTypes.object.isRequired,
   onSaved: PropTypes.func,
 };
 
@@ -304,8 +296,9 @@ function SettingsPage({ context }) {
   const dispatch = useDispatch();
   const { hasPermission } = useRbac();
 
-  const { icons, labels, translationKeys, order, fieldOrder } =
-    useSettingsTabConfig(context.container.resolve('extension'));
+  const { icons, labels, translationKeys, order } = useSettingsTabConfig(
+    context.container.resolve('extension'),
+  );
 
   const groups = useSelector(selectGroups);
   const loading = useSelector(selectLoading);
@@ -423,7 +416,6 @@ function SettingsPage({ context }) {
               key={activeTab}
               namespace={activeTab}
               settings={groups[activeTab]}
-              fieldOrder={fieldOrder}
             />
           )}
         </div>

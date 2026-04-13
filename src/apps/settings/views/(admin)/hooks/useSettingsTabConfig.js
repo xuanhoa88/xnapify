@@ -17,7 +17,7 @@ const CORE_ICONS = Object.freeze({
   email: 'mail',
   file: 'folder',
   webhook: 'zap',
-  optimization: 'cpu',
+  optimization: 'sliders',
 });
 
 const CORE_LABELS = Object.freeze({
@@ -39,28 +39,6 @@ const CORE_ORDER = Object.freeze([
   'system',
 ]);
 
-const CORE_FIELD_ORDER = Object.freeze({
-  core: ['APP_NAME', 'APP_DESCRIPTION', 'APP_URL', 'MAINTENANCE_MODE'],
-  auth: [
-    'ALLOW_REGISTRATION',
-    'JWT_EXPIRY',
-    'GOOGLE_CLIENT_ID',
-    'GOOGLE_CLIENT_KEY',
-  ],
-  email: [
-    'MAIL_PROVIDER',
-    'FROM_ADDRESS',
-    'SMTP_HOST',
-    'SMTP_PORT',
-    'SMTP_USER',
-    'SMTP_KEY',
-    'SMTP_SECURE',
-  ],
-  file: ['STORAGE_PROVIDER', 'ALLOWED_EXTENSIONS', 'MAX_UPLOAD_BYTES'],
-  webhook: ['REQUIRE_SIGNATURE', 'WEBHOOK_TIMEOUT_MS', 'MAX_RETRY_ATTEMPTS'],
-  optimization: ['COMPRESSION', 'SSR_CACHE'],
-});
-
 /** Hook ID used by extensions to register settings tab metadata */
 const HOOK_ID = 'settings.tabs.config';
 
@@ -73,7 +51,6 @@ const INITIAL_STATE = {
   labels: { ...CORE_LABELS },
   translationKeys: {},
   order: [...CORE_ORDER],
-  fieldOrder: { ...CORE_FIELD_ORDER },
 };
 
 // =============================================================================
@@ -86,10 +63,10 @@ const INITIAL_STATE = {
  * Merges core defaults with extension-provided tab metadata registered
  * via `registry.registerHook('settings.tabs.config', callback)`.
  *
- * Extensions return: `{ [namespace]: { icon, label, i18nKey, order, fieldOrder } }`
+ * Extensions return: `{ [namespace]: { icon, label, i18nKey, order } }`
  *
  * @param {Object} extension - The extension manager
- * @returns {{ icons, labels, translationKeys, order, fieldOrder, loading }}
+ * @returns {{ icons, labels, translationKeys, order, loading }}
  */
 export function useSettingsTabConfig(extension) {
   const registry = extension ? extension.registry : undefined;
@@ -110,7 +87,6 @@ export function useSettingsTabConfig(extension) {
       const mergedIcons = { ...CORE_ICONS };
       const mergedLabels = { ...CORE_LABELS };
       const mergedTranslationKeys = {};
-      const mergedFieldOrder = { ...CORE_FIELD_ORDER };
       const extraOrder = [];
 
       for (const result of results) {
@@ -129,7 +105,6 @@ export function useSettingsTabConfig(extension) {
           if (cfg.icon) mergedIcons[ns] = cfg.icon;
           if (cfg.label) mergedLabels[ns] = cfg.label;
           if (cfg.i18nKey) mergedTranslationKeys[ns] = cfg.i18nKey;
-          if (cfg.fieldOrder) mergedFieldOrder[ns] = cfg.fieldOrder;
           if (cfg.order != null && !CORE_ORDER.includes(ns)) {
             extraOrder.push({ ns, order: cfg.order });
           }
@@ -157,7 +132,6 @@ export function useSettingsTabConfig(extension) {
           labels: mergedLabels,
           translationKeys: mergedTranslationKeys,
           order: finalOrder,
-          fieldOrder: mergedFieldOrder,
         });
         setLoading(false);
       }
