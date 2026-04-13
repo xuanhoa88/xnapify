@@ -82,11 +82,16 @@ const STATIC_SECURITY_HEADERS = Object.entries({
   'Referrer-Policy': 'strict-origin-when-cross-origin',
 });
 
-const APP_METADATA = Object.freeze({
-  title: process.env.XNAPIFY_PUBLIC_APP_NAME || 'xnapify',
-  description:
-    process.env.XNAPIFY_PUBLIC_APP_DESC || 'Snap your API, Stream your React',
-});
+const APP_METADATA = {
+  get title() {
+    return process.env.XNAPIFY_PUBLIC_APP_NAME || 'xnapify';
+  },
+  get description() {
+    return (
+      process.env.XNAPIFY_PUBLIC_APP_DESC || 'Snap your API, Stream your React'
+    );
+  },
+};
 
 // ---------------------------------------------------------------------------
 // Utilities
@@ -844,10 +849,6 @@ export async function bootstrapApp(app, server, options = {}) {
   if (!/^(http|https):\/\/.+$/.test(process.env.XNAPIFY_PUBLIC_APP_URL || '')) {
     set(process.env, 'XNAPIFY_PUBLIC_APP_URL', baseUrl);
   }
-
-  // Set app name and description
-  set(process.env, 'XNAPIFY_PUBLIC_APP_NAME', APP_METADATA.title);
-  set(process.env, 'XNAPIFY_PUBLIC_APP_DESC', APP_METADATA.description);
 
   // Core DI container — the only provider stored on Express settings
   const apiContainer = new Container();

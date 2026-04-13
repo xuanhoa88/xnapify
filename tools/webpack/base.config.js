@@ -692,7 +692,9 @@ function createWebpackConfig(name, options = {}) {
         minimizer: !isDev
           ? [
               new TerserPlugin({
-                parallel: true,
+                parallel: process.env.XNAPIFY_MAX_WORKERS
+                  ? parseInt(process.env.XNAPIFY_MAX_WORKERS, 10)
+                  : true,
                 terserOptions: {
                   compress: {
                     drop_console: !isServer,

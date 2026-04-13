@@ -13,7 +13,7 @@
 import { v4 as uuidv4 } from 'uuid';
 
 const DEFAULT_SETTINGS = [
-  // ── Core ──────────────────────────────────────────────────────────────────
+  // ── Core & Metadata ───────────────────────────────────────────────────────
   {
     namespace: 'core',
     key: 'APP_NAME',
@@ -34,6 +34,24 @@ const DEFAULT_SETTINGS = [
   },
   {
     namespace: 'core',
+    key: 'APP_URL',
+    type: 'string',
+    value: null,
+    default_env_var: 'XNAPIFY_PUBLIC_APP_URL',
+    is_public: true,
+    description: 'Full application URL string',
+  },
+  {
+    namespace: 'core',
+    key: 'APP_IMAGE',
+    type: 'string',
+    value: null,
+    default_env_var: 'XNAPIFY_PUBLIC_APP_IMAGE',
+    is_public: true,
+    description: 'Default Open Graph Social Image URL',
+  },
+  {
+    namespace: 'core',
     key: 'MAINTENANCE_MODE',
     type: 'boolean',
     value: 'false',
@@ -42,15 +60,15 @@ const DEFAULT_SETTINGS = [
     description: 'Enable maintenance mode (blocks non-admin access)',
   },
 
-  // ── Auth ──────────────────────────────────────────────────────────────────
+  // ── Auth & OAuth ──────────────────────────────────────────────────────────
   {
     namespace: 'auth',
-    key: 'SESSION_TTL',
-    type: 'integer',
+    key: 'JWT_EXPIRY',
+    type: 'string',
     value: null,
-    default_env_var: 'XNAPIFY_SESSION_TTL',
+    default_env_var: 'XNAPIFY_JWT_EXPIRY',
     is_public: false,
-    description: 'Session TTL in seconds (default: 3600)',
+    description: 'Session JSON Web Token Expiration (e.g. 7d, 2h)',
   },
   {
     namespace: 'auth',
@@ -61,28 +79,91 @@ const DEFAULT_SETTINGS = [
     is_public: true,
     description: 'Allow new user self-registration',
   },
+  {
+    namespace: 'auth',
+    key: 'GOOGLE_CLIENT_ID',
+    type: 'string',
+    value: null,
+    default_env_var: 'XNAPIFY_GOOGLE_CLIENT_ID',
+    is_public: true,
+    description: 'Google OAuth Client ID',
+  },
+  {
+    namespace: 'auth',
+    key: 'GOOGLE_CLIENT_KEY',
+    type: 'password',
+    value: null,
+    default_env_var: 'XNAPIFY_GOOGLE_CLIENT_KEY',
+    is_public: false,
+    description: 'Google OAuth Client Secret Key',
+  },
 
-  // ── Email ─────────────────────────────────────────────────────────────────
+  // ── Email / SMTP ──────────────────────────────────────────────────────────
+  {
+    namespace: 'email',
+    key: 'MAIL_PROVIDER',
+    type: 'string',
+    value: 'smtp',
+    default_env_var: 'XNAPIFY_MAIL_PROVIDER',
+    is_public: false,
+    description: 'Mail sending engine (smtp, mailgun, sendgrid, mock)',
+  },
   {
     namespace: 'email',
     key: 'FROM_ADDRESS',
     type: 'string',
     value: null,
-    default_env_var: 'XNAPIFY_SMTP_FROM',
+    default_env_var: 'XNAPIFY_MAIL_FROM',
     is_public: false,
     description: 'Default sender email address',
   },
   {
     namespace: 'email',
-    key: 'FROM_NAME',
+    key: 'SMTP_HOST',
     type: 'string',
     value: null,
-    default_env_var: 'XNAPIFY_SMTP_FROM_NAME',
+    default_env_var: 'XNAPIFY_SMTP_HOST',
     is_public: false,
-    description: 'Default sender display name',
+    description: 'SMTP Server Hostname',
+  },
+  {
+    namespace: 'email',
+    key: 'SMTP_PORT',
+    type: 'integer',
+    value: null,
+    default_env_var: 'XNAPIFY_SMTP_PORT',
+    is_public: false,
+    description: 'SMTP Server Network Port',
+  },
+  {
+    namespace: 'email',
+    key: 'SMTP_USER',
+    type: 'string',
+    value: null,
+    default_env_var: 'XNAPIFY_SMTP_USER',
+    is_public: false,
+    description: 'SMTP Client Username',
+  },
+  {
+    namespace: 'email',
+    key: 'SMTP_KEY',
+    type: 'password',
+    value: null,
+    default_env_var: 'XNAPIFY_SMTP_KEY',
+    is_public: false,
+    description: 'SMTP Client Security Password',
+  },
+  {
+    namespace: 'email',
+    key: 'SMTP_SECURE',
+    type: 'boolean',
+    value: null,
+    default_env_var: 'XNAPIFY_SMTP_SECURE',
+    is_public: false,
+    description: 'Enable TLS/SSL for SMTP endpoints',
   },
 
-  // ── File ─────────────────────────────────────────────────────────────────
+  // ── File & Upload ────────────────────────────────────────────────────────
   {
     namespace: 'file',
     key: 'STORAGE_PROVIDER',
@@ -94,24 +175,24 @@ const DEFAULT_SETTINGS = [
   },
   {
     namespace: 'file',
-    key: 'MAX_UPLOAD_SIZE_MB',
+    key: 'MAX_UPLOAD_BYTES',
     type: 'integer',
-    value: 50,
-    default_env_var: 'XNAPIFY_MAX_UPLOAD_SIZE',
+    value: null,
+    default_env_var: 'XNAPIFY_UPLOAD_FILE_SIZE',
     is_public: true,
-    description: 'Maximum permitted file upload size in MB',
+    description: 'Maximum permitted file upload size globally in Bytes',
   },
   {
     namespace: 'file',
     key: 'ALLOWED_EXTENSIONS',
     type: 'string',
-    value: '.jpg,.png,.pdf,.docx',
-    default_env_var: null,
+    value: null,
+    default_env_var: 'XNAPIFY_UPLOAD_FILE_EXT',
     is_public: true,
     description: 'Comma separated list of allowed file extensions',
   },
 
-  // ── Webhook ──────────────────────────────────────────────────────────────
+  // ── Webhook & Search ─────────────────────────────────────────────────────
   {
     namespace: 'webhook',
     key: 'WEBHOOK_TIMEOUT_MS',
@@ -137,8 +218,27 @@ const DEFAULT_SETTINGS = [
     value: 'true',
     default_env_var: null,
     is_public: true,
-    description:
-      'Require cryptographic payload signatures for webhook reception',
+    description: 'Require cryptographic payload signatures for reception',
+  },
+
+  // ── Optimization ──────────────────────────────────────────────────────────
+  {
+    namespace: 'optimization',
+    key: 'COMPRESSION',
+    type: 'boolean',
+    value: null,
+    default_env_var: 'XNAPIFY_COMPRESSION',
+    is_public: false,
+    description: 'Enable native HTTP gzip/brotli compression logic',
+  },
+  {
+    namespace: 'optimization',
+    key: 'SSR_CACHE',
+    type: 'boolean',
+    value: null,
+    default_env_var: 'XNAPIFY_SSR_CACHE',
+    is_public: false,
+    description: 'Enable Server-Side Rendering output caching',
   },
 ];
 

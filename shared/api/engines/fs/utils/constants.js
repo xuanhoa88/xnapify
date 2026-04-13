@@ -28,25 +28,31 @@ export const DEFAULT_FILE_SIZES = Object.freeze({
   XLARGE: 100 * SIZE_LIMITS.MB, // 100MB
 });
 
-// Configuration from environment variables
-export const MAX_FILE_SIZE =
-  parseInt(process.env.XNAPIFY_UPLOAD_FILE_SIZE, 10) ||
-  DEFAULT_FILE_SIZES.LARGE;
-
-export const MAX_FILE_LENGTH =
-  parseInt(process.env.XNAPIFY_UPLOAD_FILE_LENGTH, 10) || 255;
-
-const isProd = process.env.NODE_ENV === 'production';
-
-export const UPLOAD_DIR =
-  process.env.XNAPIFY_UPLOAD_DIR ||
-  (isProd
-    ? path.join(os.homedir(), '.xnapify', 'uploads')
-    : path.join(process.cwd(), '.data', 'uploads'));
-
-export const ALLOWED_EXTENSIONS = process.env.XNAPIFY_UPLOAD_FILE_EXT
-  ? process.env.XNAPIFY_UPLOAD_FILE_EXT.split(',').map(ext => ext.trim())
-  : null;
+// Configuration from environment variables (evaluated lazily via getters)
+export const config = {
+  get MAX_FILE_SIZE() {
+    return (
+      parseInt(process.env.XNAPIFY_UPLOAD_FILE_SIZE, 10) ||
+      DEFAULT_FILE_SIZES.LARGE
+    );
+  },
+  get MAX_FILE_LENGTH() {
+    return parseInt(process.env.XNAPIFY_UPLOAD_FILE_LENGTH, 10) || 255;
+  },
+  get UPLOAD_DIR() {
+    return (
+      process.env.XNAPIFY_UPLOAD_DIR ||
+      (process.env.NODE_ENV === 'production'
+        ? path.join(os.homedir(), '.xnapify', 'uploads')
+        : path.join(process.cwd(), '.data', 'uploads'))
+    );
+  },
+  get ALLOWED_EXTENSIONS() {
+    return process.env.XNAPIFY_UPLOAD_FILE_EXT
+      ? process.env.XNAPIFY_UPLOAD_FILE_EXT.split(',').map(ext => ext.trim())
+      : null;
+  },
+};
 
 // Error codes
 export const ERROR_CODES = Object.freeze({

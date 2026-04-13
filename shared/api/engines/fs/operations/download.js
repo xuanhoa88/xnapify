@@ -6,7 +6,7 @@ import {
   FilesystemError,
   createOperationResult,
   createZip,
-  UPLOAD_DIR,
+  config,
 } from '../utils';
 
 /**
@@ -82,7 +82,7 @@ export async function download(manager, fileNames, options = {}) {
 
     // Use streaming ZIP creation (no full file buffering)
     const zipResult = await createZip(fileInfos, {
-      basePath: UPLOAD_DIR,
+      basePath: config.UPLOAD_DIR,
       compressionLevel: options.compressionLevel || 6,
       zipName: options.zipName || 'files.zip',
     });

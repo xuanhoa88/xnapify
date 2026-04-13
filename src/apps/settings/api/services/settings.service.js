@@ -147,6 +147,16 @@ export function createSettingsService(container) {
     collectionCache.clear();
   }
 
+  /**
+   * Sync a changed setting back to process.env for live hot-reloading compatibility.
+   * Note: Enforces string values to maintain pure Node.js compatibility.
+   */
+  function syncToEnv(row) {
+    if (row.default_env_var && row.value != null) {
+      process.env[row.default_env_var] = String(row.value);
+    }
+  }
+
   // ── Public API ────────────────────────────────────────────────────────────
 
   return {
@@ -281,6 +291,7 @@ export function createSettingsService(container) {
       row.value = value;
       await row.save();
       invalidate(namespace, key);
+      syncToEnv(row);
       return formatRow(row);
     },
 
@@ -313,15 +324,16 @@ export function createSettingsService(container) {
 
           row.value = update.value;
           await row.save({ transaction });
-          results.push(formatRow(row));
+          results.push({ row, formatted: formatRow(row) });
         }
       });
 
-      // Invalidate cache after successful transaction commit
+      // Invalidate cache and sync to process.env after successful transaction commit
       for (const result of results) {
-        invalidate(result.namespace, result.key);
+        invalidate(result.formatted.namespace, result.formatted.key);
+        syncToEnv(result.row);
       }
-      return results;
+      return results.map(r => r.formatted);
     },
 
     /**

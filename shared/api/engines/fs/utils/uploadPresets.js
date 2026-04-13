@@ -11,15 +11,23 @@
 
 import path from 'path';
 
-import { SIZE_LIMITS, UPLOAD_DIR } from './constants';
+import { SIZE_LIMITS, config } from './constants';
 import { getMimeTypesForCategories } from './fileTypes';
 
 export const UPLOAD_PRESETS = Object.freeze({
   avatar: {
-    destination:
-      process.env.XNAPIFY_UPLOAD_AVATAR_DIR || path.join(UPLOAD_DIR, 'avatars'),
-    maxFileSize:
-      parseInt(process.env.XNAPIFY_UPLOAD_AVATAR_MAX, 10) || 2 * SIZE_LIMITS.MB,
+    get destination() {
+      return (
+        process.env.XNAPIFY_UPLOAD_AVATAR_DIR ||
+        path.join(config.UPLOAD_DIR, 'avatars')
+      );
+    },
+    get maxFileSize() {
+      return (
+        parseInt(process.env.XNAPIFY_UPLOAD_AVATAR_MAX, 10) ||
+        2 * SIZE_LIMITS.MB
+      );
+    },
     allowedMimeTypes: getMimeTypesForCategories(['image']),
     maxFiles: 1,
     fieldName: 'avatar',
@@ -32,10 +40,17 @@ export const UPLOAD_PRESETS = Object.freeze({
   },
 
   document: {
-    destination:
-      process.env.XNAPIFY_UPLOAD_DOC_DIR || path.join(UPLOAD_DIR, 'documents'),
-    maxFileSize:
-      parseInt(process.env.XNAPIFY_UPLOAD_DOC_MAX, 10) || 10 * SIZE_LIMITS.MB,
+    get destination() {
+      return (
+        process.env.XNAPIFY_UPLOAD_DOC_DIR ||
+        path.join(config.UPLOAD_DIR, 'documents')
+      );
+    },
+    get maxFileSize() {
+      return (
+        parseInt(process.env.XNAPIFY_UPLOAD_DOC_MAX, 10) || 10 * SIZE_LIMITS.MB
+      );
+    },
     allowedMimeTypes: getMimeTypesForCategories(['document']),
     maxFiles: 10,
     fieldName: 'documents',
@@ -47,10 +62,18 @@ export const UPLOAD_PRESETS = Object.freeze({
   },
 
   media: {
-    destination:
-      process.env.XNAPIFY_UPLOAD_MEDIA_DIR || path.join(UPLOAD_DIR, 'media'),
-    maxFileSize:
-      parseInt(process.env.XNAPIFY_UPLOAD_MEDIA_MAX, 10) || 50 * SIZE_LIMITS.MB,
+    get destination() {
+      return (
+        process.env.XNAPIFY_UPLOAD_MEDIA_DIR ||
+        path.join(config.UPLOAD_DIR, 'media')
+      );
+    },
+    get maxFileSize() {
+      return (
+        parseInt(process.env.XNAPIFY_UPLOAD_MEDIA_MAX, 10) ||
+        50 * SIZE_LIMITS.MB
+      );
+    },
     allowedMimeTypes: getMimeTypesForCategories(['image', 'video', 'audio']),
     maxFiles: 20,
     fieldName: 'media',
@@ -63,12 +86,18 @@ export const UPLOAD_PRESETS = Object.freeze({
   },
 
   archive: {
-    destination:
-      process.env.XNAPIFY_UPLOAD_ARCHIVE_DIR ||
-      path.join(UPLOAD_DIR, 'archives'),
-    maxFileSize:
-      parseInt(process.env.XNAPIFY_UPLOAD_ARCHIVE_MAX, 10) ||
-      100 * SIZE_LIMITS.MB,
+    get destination() {
+      return (
+        process.env.XNAPIFY_UPLOAD_ARCHIVE_DIR ||
+        path.join(config.UPLOAD_DIR, 'archives')
+      );
+    },
+    get maxFileSize() {
+      return (
+        parseInt(process.env.XNAPIFY_UPLOAD_ARCHIVE_MAX, 10) ||
+        100 * SIZE_LIMITS.MB
+      );
+    },
     allowedMimeTypes: getMimeTypesForCategories(['archive']),
     maxFiles: 5,
     fieldName: 'archives',
@@ -80,12 +109,18 @@ export const UPLOAD_PRESETS = Object.freeze({
   },
 
   general: {
-    destination:
-      process.env.XNAPIFY_UPLOAD_GENERAL_DIR ||
-      path.join(UPLOAD_DIR, 'general'),
-    maxFileSize:
-      parseInt(process.env.XNAPIFY_UPLOAD_GENERAL_MAX, 10) ||
-      25 * SIZE_LIMITS.MB,
+    get destination() {
+      return (
+        process.env.XNAPIFY_UPLOAD_GENERAL_DIR ||
+        path.join(config.UPLOAD_DIR, 'general')
+      );
+    },
+    get maxFileSize() {
+      return (
+        parseInt(process.env.XNAPIFY_UPLOAD_GENERAL_MAX, 10) ||
+        25 * SIZE_LIMITS.MB
+      );
+    },
     allowedMimeTypes: null, // Allow all types
     maxFiles: 15,
     fieldName: 'files',
