@@ -17,14 +17,14 @@ Provide a flexible, namespace-grouped settings system that allows administrators
 
 ## 2. API Routes & Controllers (`api/`)
 - **Method & Path:** `GET /api/admin/settings`
-  - **Security:** Requires `settings:read` permission.
+  - **Security:** Requires auth + `settings:read` permission (per-namespace RBAC).
   - **Logic:** Returns all settings grouped by namespace, with resolved values.
-- **Method & Path:** `PUT /api/admin/settings`
-  - **Security:** Requires `settings:write` permission.
-  - **Logic:** Bulk updates settings from `{ updates: [{ namespace, key, value }] }`.
 - **Method & Path:** `GET /api/admin/settings/:namespace`
-  - **Security:** Requires `settings:read` permission.
+  - **Security:** Requires auth + `settings.{namespace}:read` permission.
   - **Logic:** Returns settings for a single namespace.
+- **Method & Path:** `PUT /api/admin/settings/:namespace`
+  - **Security:** Requires auth + `settings.{namespace}:write` permission.
+  - **Logic:** Updates settings from a flat key-value body `{ KEY: value, ... }`.
 - **Method & Path:** `GET /api/settings/public`
   - **Security:** No auth required.
   - **Logic:** Returns only `is_public: true` settings as a flat key-value map.
@@ -36,7 +36,7 @@ Registered in `providers()` phase. Available to all downstream modules.
 const settings = container.resolve('settings');
 
 // Single value (returns coerced result: string|boolean|number|object|null)
-await settings.get('auth', 'SESSION_TTL');     // → 3600
+await settings.get('auth', 'JWT_EXPIRY');      // → '7d'
 
 // All settings for a namespace
 await settings.getAll('auth');                 // → [{ key, value, type, ... }]
@@ -47,8 +47,8 @@ await settings.getAll();                       // → { core: [...], auth: [...]
 // All public settings (flat map)
 await settings.getPublic();            // → { 'core.APP_NAME': 'xnapify', ... }
 
-// Update
-await settings.set('auth', 'SESSION_TTL', '7200');
+// Update (syncs to process.env automatically)
+await settings.set('auth', 'JWT_EXPIRY', '2h');
 await settings.bulkUpdate([{ namespace, key, value }]);
 ```
 
@@ -64,7 +64,7 @@ await settings.bulkUpdate([{ namespace, key, value }]);
   - **Redux Slice:** `@settings/admin`.
 
 ## 5. Seeds (`api/database/seeds/`)
-- **Default settings:** Core (APP_NAME, APP_DESCRIPTION, MAINTENANCE_MODE), Auth (SESSION_TTL, ALLOW_REGISTRATION), Email (FROM_ADDRESS, FROM_NAME).
+- **Default settings:** Core (APP_NAME, APP_DESCRIPTION, APP_URL, APP_IMAGE, MAINTENANCE_MODE), Auth (JWT_EXPIRY, ALLOW_REGISTRATION, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_KEY), Email (MAIL_PROVIDER, FROM_ADDRESS, SMTP_*), File (STORAGE_PROVIDER, MAX_UPLOAD_BYTES, ALLOWED_EXTENSIONS), Webhook (WEBHOOK_TIMEOUT_MS, MAX_RETRY_ATTEMPTS, REQUIRE_SIGNATURE), Optimization (COMPRESSION, SSR_CACHE).
 - **Permissions:** `settings:read` and `settings:write`, assigned to admin role.
 
 ## 6. Core Module Status

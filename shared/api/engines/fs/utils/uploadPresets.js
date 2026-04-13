@@ -11,7 +11,7 @@
 
 import path from 'path';
 
-import { SIZE_LIMITS, config } from './constants';
+import { SIZE_LIMITS, DEFAULT_CONFIG } from './constants';
 import { getMimeTypesForCategories } from './fileTypes';
 
 export const UPLOAD_PRESETS = Object.freeze({
@@ -19,7 +19,7 @@ export const UPLOAD_PRESETS = Object.freeze({
     get destination() {
       return (
         process.env.XNAPIFY_UPLOAD_AVATAR_DIR ||
-        path.join(config.UPLOAD_DIR, 'avatars')
+        path.join(DEFAULT_CONFIG.UPLOAD_DIR, 'avatars')
       );
     },
     get maxFileSize() {
@@ -43,7 +43,7 @@ export const UPLOAD_PRESETS = Object.freeze({
     get destination() {
       return (
         process.env.XNAPIFY_UPLOAD_DOC_DIR ||
-        path.join(config.UPLOAD_DIR, 'documents')
+        path.join(DEFAULT_CONFIG.UPLOAD_DIR, 'documents')
       );
     },
     get maxFileSize() {
@@ -65,7 +65,7 @@ export const UPLOAD_PRESETS = Object.freeze({
     get destination() {
       return (
         process.env.XNAPIFY_UPLOAD_MEDIA_DIR ||
-        path.join(config.UPLOAD_DIR, 'media')
+        path.join(DEFAULT_CONFIG.UPLOAD_DIR, 'media')
       );
     },
     get maxFileSize() {
@@ -89,7 +89,7 @@ export const UPLOAD_PRESETS = Object.freeze({
     get destination() {
       return (
         process.env.XNAPIFY_UPLOAD_ARCHIVE_DIR ||
-        path.join(config.UPLOAD_DIR, 'archives')
+        path.join(DEFAULT_CONFIG.UPLOAD_DIR, 'archives')
       );
     },
     get maxFileSize() {
@@ -112,7 +112,7 @@ export const UPLOAD_PRESETS = Object.freeze({
     get destination() {
       return (
         process.env.XNAPIFY_UPLOAD_GENERAL_DIR ||
-        path.join(config.UPLOAD_DIR, 'general')
+        path.join(DEFAULT_CONFIG.UPLOAD_DIR, 'general')
       );
     },
     get maxFileSize() {

@@ -152,8 +152,15 @@ export function createSettingsService(container) {
    * Note: Enforces string values to maintain pure Node.js compatibility.
    */
   function syncToEnv(row) {
-    if (row.default_env_var && row.value != null) {
+    if (!row.default_env_var) return;
+
+    if (row.value != null) {
+      // DB value takes precedence — propagate to process.env
       process.env[row.default_env_var] = String(row.value);
+    } else {
+      // Value reset to null — remove the override so the original
+      // .env / system environment variable becomes the active fallback.
+      delete process.env[row.default_env_var];
     }
   }
 

@@ -6,8 +6,8 @@
   "description": "Serve public/docs files explicitly as a Docusaurus-like viewer.",
   "dependencies": {
     "highlight.js": "11.9.0",
-    "isomorphic-dompurify": "^2.19.0",
+    "isomorphic-dompurify": "^1.13.0",
     "marked": "4.3.0",
-    "mermaid": "^11.4.0"
+    "mermaid": "^10.9.1"
   }
 }

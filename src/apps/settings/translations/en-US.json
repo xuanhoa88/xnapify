@@ -5,7 +5,10 @@
       "subtitle": "Configure system-wide settings for all modules",
       "loading": "Loading settings...",
       "errorLoading": "Error loading settings",
-      "resetToDefault": "Reset to env default"
+      "resetToDefault": "Reset to env default",
+      "badgePublic": "public",
+      "badgeDefault": "env default",
+      "fallback": "Fallback: "
     },
     "navigation": {
       "settings": "Settings",
@@ -21,7 +24,8 @@
       "auth": "Authentication",
       "email": "Email",
       "file": "File Storage",
-      "webhook": "Webhook"
+      "webhook": "Webhook",
+      "optimization": "Optimization"
     }
   }
 }

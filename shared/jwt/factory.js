@@ -141,34 +141,67 @@ export function createJwtFromEnv() {
     );
   }
 
-  const jwtConfig = {
-    expiresIn: process.env.XNAPIFY_JWT_EXPIRY || DEFAULT_JWT_CONFIG.expiresIn,
-    algorithm: process.env.XNAPIFY_JWT_ALG || DEFAULT_JWT_CONFIG.algorithm,
-    issuer: process.env.XNAPIFY_JWT_ISS || DEFAULT_JWT_CONFIG.issuer,
-    audience: process.env.XNAPIFY_JWT_AUD || DEFAULT_JWT_CONFIG.audience,
-  };
+  // Dynamic config resolver — re-reads process.env on each call so that
+  // database-driven overrides via the settings module's boot() hook take effect
+  // even though the JWT singleton is created before settings boots.
+  function resolveConfig() {
+    return {
+      expiresIn: process.env.XNAPIFY_JWT_EXPIRY || DEFAULT_JWT_CONFIG.expiresIn,
+      algorithm: process.env.XNAPIFY_JWT_ALG || DEFAULT_JWT_CONFIG.algorithm,
+      issuer: process.env.XNAPIFY_JWT_ISS || DEFAULT_JWT_CONFIG.issuer,
+      audience: process.env.XNAPIFY_JWT_AUD || DEFAULT_JWT_CONFIG.audience,
+    };
+  }
 
-  const jwt = createJwt({ secret, ...jwtConfig });
+  // Base JWT instance (used for static utilities and key rotation setup)
+  const baseJwt = createJwt({ secret, ...resolveConfig() });
+
+  // Wrap with dynamic config resolution at call-time
+  const jwt = Object.freeze({
+    ...baseJwt,
+    generateToken(payload, overrides = {}) {
+      return generateToken(payload, secret, {
+        ...resolveConfig(),
+        ...overrides,
+      });
+    },
+    verifyToken(token, overrides = {}) {
+      return verifyToken(token, secret, { ...resolveConfig(), ...overrides });
+    },
+    generateTypedToken(type, payload, overrides = {}) {
+      return generateTypedToken(type, payload, secret, overrides);
+    },
+    verifyTypedToken(token, expectedType, overrides = {}) {
+      return verifyTypedToken(token, expectedType, secret, overrides);
+    },
+    generateTokenPair(payload, overrides = {}) {
+      return generateTokenPair(payload, secret, overrides);
+    },
+    refreshTokenPair(refreshToken, overrides = {}) {
+      return refreshTokenPair(refreshToken, secret, overrides);
+    },
+  });
 
   // Key rotation: if a previous key is configured, wrap verify methods
   // to try the current key first, then fall back to the previous key.
   if (previousSecret && previousSecret.trim().length > 0) {
-    const previousJwt = createJwt({ secret: previousSecret, ...jwtConfig });
-    const originalVerify = jwt.verifyToken.bind(jwt);
-    const originalVerifyTyped = jwt.verifyTypedToken.bind(jwt);
+    const previousJwt = createJwt({
+      secret: previousSecret,
+      ...resolveConfig(),
+    });
 
     return Object.freeze({
       ...jwt,
       verifyToken(token, overrides) {
         try {
-          return originalVerify(token, overrides);
+          return jwt.verifyToken(token, overrides);
         } catch {
           return previousJwt.verifyToken(token, overrides);
         }
       },
       verifyTypedToken(token, expectedType, overrides) {
         try {
-          return originalVerifyTyped(token, expectedType, overrides);
+          return jwt.verifyTypedToken(token, expectedType, overrides);
         } catch {
           return previousJwt.verifyTypedToken(token, expectedType, overrides);
         }

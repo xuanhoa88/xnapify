@@ -12,7 +12,7 @@
 import crypto from 'crypto';
 import path from 'path';
 
-import { SIZE_LIMITS, config } from './constants';
+import { SIZE_LIMITS, DEFAULT_CONFIG } from './constants';
 import { FILE_TYPES } from './fileTypes';
 import { UPLOAD_PRESETS } from './uploadPresets';
 
@@ -28,7 +28,7 @@ function sanitizeFileName(fileName) {
       .replace(/[^a-zA-Z0-9._-]/g, '_') // Replace dangerous chars
       .replace(/_{2,}/g, '_') // Replace multiple underscores
       .replace(/^_+|_+$/g, '') // Remove leading/trailing underscores
-      .substring(0, config.MAX_FILE_LENGTH) || 'file'
+      .substring(0, DEFAULT_CONFIG.MAX_FILE_LENGTH) || 'file'
   ); // Fallback name
 }
 
@@ -91,10 +91,10 @@ export function getFileExtension(fileName) {
  * @returns {boolean} True if allowed
  */
 export function isAllowedExtension(fileName) {
-  if (!config.ALLOWED_EXTENSIONS) return true; // Allow all if not configured
+  if (!DEFAULT_CONFIG.ALLOWED_EXTENSIONS) return true; // Allow all if not configured
 
   const extension = getFileExtension(fileName);
-  return config.ALLOWED_EXTENSIONS.includes(extension);
+  return DEFAULT_CONFIG.ALLOWED_EXTENSIONS.includes(extension);
 }
 
 /**
@@ -108,7 +108,7 @@ export function isValidFileSize(fileSize, preset = null) {
   if (preset && UPLOAD_PRESETS[preset]) {
     return fileSize <= UPLOAD_PRESETS[preset].maxFileSize;
   }
-  return fileSize <= config.MAX_FILE_SIZE;
+  return fileSize <= DEFAULT_CONFIG.MAX_FILE_SIZE;
 }
 
 /**

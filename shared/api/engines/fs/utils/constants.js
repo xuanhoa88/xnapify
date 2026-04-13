@@ -29,7 +29,7 @@ export const DEFAULT_FILE_SIZES = Object.freeze({
 });
 
 // Configuration from environment variables (evaluated lazily via getters)
-export const config = {
+export const DEFAULT_CONFIG = {
   get MAX_FILE_SIZE() {
     return (
       parseInt(process.env.XNAPIFY_UPLOAD_FILE_SIZE, 10) ||

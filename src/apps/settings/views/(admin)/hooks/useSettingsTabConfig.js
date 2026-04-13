@@ -17,6 +17,7 @@ const CORE_ICONS = Object.freeze({
   email: 'mail',
   file: 'folder',
   webhook: 'zap',
+  optimization: 'cpu',
 });
 
 const CORE_LABELS = Object.freeze({
@@ -25,6 +26,7 @@ const CORE_LABELS = Object.freeze({
   email: 'Email',
   file: 'File Storage',
   webhook: 'Webhook',
+  optimization: 'Optimization',
 });
 
 const CORE_ORDER = Object.freeze([
@@ -33,15 +35,30 @@ const CORE_ORDER = Object.freeze([
   'email',
   'file',
   'webhook',
+  'optimization',
   'system',
 ]);
 
 const CORE_FIELD_ORDER = Object.freeze({
-  core: ['APP_NAME', 'APP_DESCRIPTION', 'MAINTENANCE_MODE'],
-  auth: ['ALLOW_REGISTRATION', 'SESSION_TTL'],
-  email: ['FROM_NAME', 'FROM_ADDRESS'],
-  file: ['STORAGE_PROVIDER', 'ALLOWED_EXTENSIONS', 'MAX_UPLOAD_SIZE_MB'],
+  core: ['APP_NAME', 'APP_DESCRIPTION', 'APP_URL', 'MAINTENANCE_MODE'],
+  auth: [
+    'ALLOW_REGISTRATION',
+    'JWT_EXPIRY',
+    'GOOGLE_CLIENT_ID',
+    'GOOGLE_CLIENT_KEY',
+  ],
+  email: [
+    'MAIL_PROVIDER',
+    'FROM_ADDRESS',
+    'SMTP_HOST',
+    'SMTP_PORT',
+    'SMTP_USER',
+    'SMTP_KEY',
+    'SMTP_SECURE',
+  ],
+  file: ['STORAGE_PROVIDER', 'ALLOWED_EXTENSIONS', 'MAX_UPLOAD_BYTES'],
   webhook: ['REQUIRE_SIGNATURE', 'WEBHOOK_TIMEOUT_MS', 'MAX_RETRY_ATTEMPTS'],
+  optimization: ['COMPRESSION', 'SSR_CACHE'],
 });
 
 /** Hook ID used by extensions to register settings tab metadata */
