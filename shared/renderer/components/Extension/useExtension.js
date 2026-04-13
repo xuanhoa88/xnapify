@@ -145,7 +145,7 @@ export function useExtensionFormData(hookId, context) {
     return () => {
       mounted = false;
     };
-  }, [hookId, context, registry]); // Re-run when hookId, context, or registry changes
+  }, [hookId, context]); // Re-run when hookId, context, or registry changes
 
   return [formData, loading];
 }
