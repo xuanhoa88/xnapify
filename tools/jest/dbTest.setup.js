@@ -134,7 +134,7 @@ function setupAssociations(models) {
  * // ... run tests
  * await closeTestDb();
  */
-export async function setupTestDb() {
+async function setupTestDb() {
   let sequelizeInstance;
   let models;
 
@@ -187,7 +187,7 @@ export async function setupTestDb() {
  * // ... run tests
  * await closeTestDb(db.sequelize);
  */
-export async function closeTestDb(sequelizeInstance) {
+async function closeTestDb(sequelizeInstance) {
   if (!sequelizeInstance) {
     return;
   }
@@ -199,3 +199,5 @@ export async function closeTestDb(sequelizeInstance) {
     // Don't throw - we want cleanup to be forgiving
   }
 }
+
+module.exports = { setupTestDb, closeTestDb };

@@ -643,7 +643,7 @@ async function main() {
       `   1. Check if port ${port} is available`,
       `   2. Run: npm run setup`,
       `   3. Run: npm run clean`,
-    ].join('');
+    ].join('\n');
 
     logError(errorMessage);
 

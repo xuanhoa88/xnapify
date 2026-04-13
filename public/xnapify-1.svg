@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-5 -5 110 110" width="100%" height="100%">
+  <defs>
+    <!-- Gradients for Google Enterprise Style -->
+    <linearGradient id="grad-blue" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#5591F5" />
+      <stop offset="100%" stop-color="#1B61D1" />
+    </linearGradient>
+    <linearGradient id="grad-green" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#41B15F" />
+      <stop offset="100%" stop-color="#1E8E3E" />
+    </linearGradient>
+    <linearGradient id="grad-red" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#EA4335" />
+      <stop offset="100%" stop-color="#C5221F" />
+    </linearGradient>
+    <linearGradient id="grad-yellow" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FBBC05" />
+      <stop offset="100%" stop-color="#F29900" />
+    </linearGradient>
+
+    <!-- Subtle Material Design Drop Shadow -->
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="-1" dy="2" stdDeviation="2" flood-color="#000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <!-- Left Bar (Blue) -->
+  <path d="M 10 90 L 10 30 L 30 10 L 30 90 Z" fill="url(#grad-blue)" stroke="url(#grad-blue)" stroke-width="2" stroke-linejoin="round" />
+  
+  <!-- Right Bar (Green) -->
+  <path d="M 70 10 L 90 10 L 90 70 L 70 90 Z" fill="url(#grad-green)" stroke="url(#grad-green)" stroke-width="2" stroke-linejoin="round" />
+
+  <!-- Left Arm (Red) -->
+  <path d="M 30 10 L 57.5 37.5 L 37.5 57.5 L 30 50 Z" fill="url(#grad-red)" stroke="url(#grad-red)" stroke-width="2" stroke-linejoin="round" filter="url(#shadow)" />
+
+  <!-- Right Arm (Yellow) -->
+  <path d="M 70 50 L 62.5 42.5 L 42.5 62.5 L 70 90 Z" fill="url(#grad-yellow)" stroke="url(#grad-yellow)" stroke-width="2" stroke-linejoin="round" filter="url(#shadow)" />
+</svg>

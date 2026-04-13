@@ -241,9 +241,9 @@ function Drawer({ minimal = false }) {
         {/* Logo */}
         <div className={s.logo}>
           <span className={s.logoIcon}>
-            <img alt='xnapify' src='/xnapify.png' />
+            <img alt={t('header.brand', 'xnapify')} src='/xnapify.png' />
           </span>
-          <span className={s.logoText}>xnapify</span>
+          <span className={s.logoText}>{t('header.brand', 'xnapify')}</span>
         </div>
 
         {/* Menu */}

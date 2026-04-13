@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-5 -5 110 110" width="100%" height="100%">
+  <defs>
+    <!-- Enterprise-grade Orange Gradient (Firebase/SaaS style) -->
+    <linearGradient id="brand-orange" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#F24E1E" /> <!-- Deep vibrant orange -->
+      <stop offset="100%" stop-color="#FF8A00" /> <!-- Bright energetic orange -->
+    </linearGradient>
+
+    <!-- Subtle Drop Shadow for depth against light backgrounds -->
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="1" dy="3" stdDeviation="3" flood-color="#D84315" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <!-- 
+    Unified Path combining both segments. 
+    Using a unified color restores the Gestalt closure,
+    allowing the eye to perceive both the 'N' strokes 
+    AND the negative-space/implied 'x' character intersection! 
+  -->
+  <path 
+    d="M 10 90 L 10 30 L 30 10 L 57.5 37.5 L 37.5 57.5 L 30 50 L 30 90 Z 
+       M 70 10 L 90 10 L 90 70 L 70 90 L 42.5 62.5 L 62.5 42.5 L 70 50 Z" 
+    fill="url(#brand-orange)" 
+    stroke="url(#brand-orange)" 
+    stroke-width="2" 
+    stroke-linejoin="round"
+    filter="url(#shadow)"
+  />
+</svg>

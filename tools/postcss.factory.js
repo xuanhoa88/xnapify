@@ -10,56 +10,58 @@ module.exports = () => ({
   // https://github.com/postcss/postcss
   plugins: [
     // Transfer @import rule by inlining content, e.g. @import 'normalize.css'
+    // Must run before other plugins so imported content gets processed.
     // https://github.com/postcss/postcss-import
     require('postcss-import')(),
-    // W3C variables, e.g. :root { --color: red; } div { background: var(--color); }
-    // https://github.com/postcss/postcss-custom-properties
-    require('postcss-custom-properties')({
-      importFrom: 'shared/renderer/components/variables.css',
+
+    // postcss-preset-env bundles modern PostCSS plugins and automatically
+    // determines which CSS polyfills are needed based on the browserslist
+    // configuration. Replaces 10+ individual plugins:
+    //   - postcss-custom-properties (CSS Variables fallback)
+    //   - postcss-custom-media (CSS Custom Media Queries)
+    //   - postcss-custom-selectors (CSS Custom Selectors)
+    //   - postcss-nesting (W3C CSS Nesting)
+    //   - postcss-calc (CSS calc() reduction)
+    //   - postcss-media-minmax (CSS Media Queries ranges)
+    //   - postcss-selector-not (CSS :not() Level 4)
+    //   - postcss-is-pseudo-class (CSS :is() / formerly :matches())
+    //   - @csstools/postcss-color-function (CSS color() function)
+    //   - autoprefixer (vendor prefixes)
+    // https://github.com/csstools/postcss-plugins/tree/main/plugin-packs/postcss-preset-env
+    require('postcss-preset-env')({
+      // Stage 2: Likely to become standard (editor's drafts + working drafts)
+      stage: 2,
+
+      features: {
+        // Enable CSS nesting via & parent selector
+        'nesting-rules': true,
+
+        // Import custom properties from the shared variables file
+        'custom-properties': {
+          importFrom: 'shared/renderer/components/variables.css',
+        },
+
+        // Import custom media queries from the shared variables file
+        'custom-media-queries': {
+          importFrom: 'shared/renderer/components/variables.css',
+        },
+      },
+
+      // Autoprefixer options
+      autoprefixer: {
+        // Browserslist config will be read from .browserslistrc automatically
+        flexbox: 'no-2009',
+      },
     }),
-    // W3C CSS Custom Media Queries, e.g. @custom-media --small-viewport (max-width: 30em);
-    // https://github.com/postcss/postcss-custom-media
-    require('postcss-custom-media')({
-      importFrom: 'shared/renderer/components/variables.css',
-    }),
-    // CSS4 Media Queries, e.g. @media screen and (width >= 500px) and (width <= 1200px) { }
-    // https://github.com/postcss/postcss-media-minmax
-    require('postcss-media-minmax')(),
-    // W3C CSS Custom Selectors, e.g. @custom-selector :--heading h1, h2, h3, h4, h5, h6;
-    // https://github.com/postcss/postcss-custom-selectors
-    require('postcss-custom-selectors')(),
-    // W3C calc() function, e.g. div { height: calc(100px - 2em); }
-    // https://github.com/postcss/postcss-calc
-    require('postcss-calc')(),
-    // Allows you to nest one style rule inside another
-    // https://github.com/jonathantneal/postcss-nesting
-    require('postcss-nesting')(),
-    // Unwraps nested rules like how Sass does it
+
+    // Unwraps nested rules like how Sass does it.
+    // Kept alongside postcss-nesting (from preset-env) for backward
+    // compatibility with Sass-style patterns (& .child, &:hover, &::pseudo).
     // https://github.com/postcss/postcss-nested
     require('postcss-nested')(),
-    // W3C color() function, e.g. div { background: color(red alpha(90%)); }
-    // https://github.com/postcss/postcss-color-function
-    require('postcss-color-function')(),
-    // Convert CSS shorthand filters to SVG equivalent, e.g. .blur { filter: blur(4px); }
-    // https://github.com/iamvdo/pleeease-filters
-    require('pleeease-filters')(),
-    // Generate pixel fallback for "rem" units, e.g. div { margin: 2.5rem 2px 3em 100%; }
-    // https://github.com/robwierzbowski/node-pixrem
-    require('pixrem')(),
-    // W3C CSS Level4 :matches() pseudo class, e.g. p:matches(:first-child, .special) { }
-    // https://github.com/postcss/postcss-selector-matches
-    require('postcss-selector-matches')(),
-    // Transforms :not() W3C CSS Level 4 pseudo class to :not() CSS Level 3 selectors
-    // https://github.com/postcss/postcss-selector-not
-    require('postcss-selector-not')(),
-    // Postcss flexbox bug fixer
+
+    // Postcss flexbox bug fixer — still relevant for Safari 14 edge cases
     // https://github.com/luisrudge/postcss-flexbugs-fixes
     require('postcss-flexbugs-fixes')(),
-    // Add vendor prefixes to CSS rules using values from caniuse.com
-    // https://github.com/postcss/autoprefixer
-    require('autoprefixer')({
-      // Browserslist config will be read from .browserslistrc automatically
-      flexbox: 'no-2009',
-    }),
   ],
 });

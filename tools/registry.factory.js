@@ -26,37 +26,67 @@ const registry = {
   eslintConfigs: [],
 };
 
+// Customizer file names, checked in priority order (first match wins).
+// Hoisted to module scope to avoid re-allocation per module.
+const CUSTOMIZERS = {
+  webpack: ['module.webpack.js', 'extension.webpack.js'],
+  postcss: ['module.postcss.js', 'postcss.config.js'],
+  babel: [
+    'module.babel.js',
+    'babel.config.js',
+    '.babelrc.js',
+    '.babelrc.json',
+    '.babelrc',
+  ],
+  eslint: ['module.eslint.js', '.eslintrc.js', '.eslintrc.json', '.eslintrc'],
+};
+
+/**
+ * Check if a directory entry should be skipped during scanning.
+ * Skips hidden directories (.) and route-group directories like (default).
+ *
+ * @param {string} name - Directory name
+ * @returns {boolean} - true if the directory should be skipped
+ */
+function shouldSkip(name) {
+  return name.startsWith('.') || name.startsWith('(');
+}
+
+/**
+ * Resolve whether a dirent is a directory, following symlinks if needed.
+ *
+ * @param {fs.Dirent} dirent - Directory entry
+ * @param {string} fullPath - Absolute path to the entry
+ * @returns {boolean}
+ */
+function isDirectory(dirent, fullPath) {
+  return (
+    dirent.isDirectory() ||
+    (dirent.isSymbolicLink() && fs.statSync(fullPath).isDirectory())
+  );
+}
+
 function scanRoot(rootDir) {
   if (!fs.existsSync(rootDir)) return;
   const dirs = fs.readdirSync(rootDir, { withFileTypes: true });
   for (const dirent of dirs) {
     const targetPath = path.join(rootDir, dirent.name);
-    // Support symlinks pointing to directories (monorepo workspaces / npm link)
-    const isDir =
-      dirent.isDirectory() ||
-      (dirent.isSymbolicLink() && fs.statSync(targetPath).isDirectory());
+    if (!isDirectory(dirent, targetPath)) continue;
+    if (shouldSkip(dirent.name)) continue;
 
-    if (!isDir) continue;
-
-    // Support scope packages eg @xnapify-extension/quick-access
+    // Support scoped packages eg @xnapify-extension/quick-access
     if (dirent.name.startsWith('@')) {
-      const scopeDir = targetPath;
       let subDirs;
       try {
-        subDirs = fs.readdirSync(scopeDir, { withFileTypes: true });
+        subDirs = fs.readdirSync(targetPath, { withFileTypes: true });
       } catch (err) {
         continue;
       }
       for (const subDirent of subDirs) {
-        const subTargetPath = path.join(scopeDir, subDirent.name);
-        const isSubDir =
-          subDirent.isDirectory() ||
-          (subDirent.isSymbolicLink() &&
-            fs.statSync(subTargetPath).isDirectory());
-
-        if (isSubDir) {
-          checkAndRegister(subTargetPath);
-        }
+        const subTargetPath = path.join(targetPath, subDirent.name);
+        if (!isDirectory(subDirent, subTargetPath)) continue;
+        if (shouldSkip(subDirent.name)) continue;
+        checkAndRegister(subTargetPath);
       }
     } else {
       checkAndRegister(targetPath);
@@ -65,57 +95,61 @@ function scanRoot(rootDir) {
 }
 
 function checkAndRegister(moduleDir) {
-  // Defensive validation: Ensure it's a structural module before registering tools.
-  if (!fs.existsSync(path.join(moduleDir, 'package.json'))) {
+  // Read the module directory once to get all files, then match
+  // against known customizer names in memory. This replaces up to
+  // 14 individual existsSync calls with a single readdirSync.
+  let files;
+  try {
+    files = new Set(fs.readdirSync(moduleDir));
+  } catch (err) {
     return;
   }
+
+  // Defensive validation: Ensure it's a structural module before registering tools.
+  if (!files.has('package.json')) {
+    return;
+  }
+
   // Webpack: search for module.webpack.js or extension.webpack.js
-  const webpackCustomizers = ['module.webpack.js', 'extension.webpack.js'];
-  for (const name of webpackCustomizers) {
-    const filePath = path.join(moduleDir, name);
-    if (fs.existsSync(filePath)) {
-      registry.webpackConfigs.push({ moduleDir, path: filePath });
+  for (const name of CUSTOMIZERS.webpack) {
+    if (files.has(name)) {
+      registry.webpackConfigs.push({
+        moduleDir,
+        path: path.join(moduleDir, name),
+      });
       break;
     }
   }
 
   // PostCSS: module.postcss.js or postcss.config.js
-  const postcssCustomizers = ['module.postcss.js', 'postcss.config.js'];
-  for (const name of postcssCustomizers) {
-    const filePath = path.join(moduleDir, name);
-    if (fs.existsSync(filePath)) {
-      registry.postcssConfigs.push({ moduleDir, path: filePath });
+  for (const name of CUSTOMIZERS.postcss) {
+    if (files.has(name)) {
+      registry.postcssConfigs.push({
+        moduleDir,
+        path: path.join(moduleDir, name),
+      });
       break;
     }
   }
 
   // Babel: module.babel.js, babel.config.js, .babelrc.js, .babelrc.json, .babelrc
-  const babelCustomizers = [
-    'module.babel.js',
-    'babel.config.js',
-    '.babelrc.js',
-    '.babelrc.json',
-    '.babelrc',
-  ];
-  for (const name of babelCustomizers) {
-    const filePath = path.join(moduleDir, name);
-    if (fs.existsSync(filePath)) {
-      registry.babelConfigs.push({ moduleDir, path: filePath });
+  for (const name of CUSTOMIZERS.babel) {
+    if (files.has(name)) {
+      registry.babelConfigs.push({
+        moduleDir,
+        path: path.join(moduleDir, name),
+      });
       break;
     }
   }
 
-  // ESLint: module.eslint.js or .eslintrc.js
-  const eslintCustomizers = [
-    'module.eslint.js',
-    '.eslintrc.js',
-    '.eslintrc.json',
-    '.eslintrc',
-  ];
-  for (const name of eslintCustomizers) {
-    const filePath = path.join(moduleDir, name);
-    if (fs.existsSync(filePath)) {
-      registry.eslintConfigs.push({ moduleDir, path: filePath });
+  // ESLint: module.eslint.js, .eslintrc.js, .eslintrc.json, .eslintrc
+  for (const name of CUSTOMIZERS.eslint) {
+    if (files.has(name)) {
+      registry.eslintConfigs.push({
+        moduleDir,
+        path: path.join(moduleDir, name),
+      });
       break;
     }
   }

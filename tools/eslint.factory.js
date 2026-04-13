@@ -5,6 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+const path = require('path');
+
+const config_constants = require('./config');
+const { eslintConfigs } = require('./registry.factory');
+
 const patterns = {
   all: '{shared,src}/**/*.{js,jsx}',
   js: '{shared,src}/**/*.js',
@@ -240,13 +245,19 @@ const config = {
   },
 };
 
-const { eslintConfigs } = require('./registry.factory');
-
-config.overrides = eslintConfigs.map(cfg => ({
-  files: [`${cfg.moduleDir.replace(/\\/g, '/')}/**/*.{js,jsx}`],
-  // Use extends to inherit from the module-level config cleanly
-  extends: [cfg.path],
-}));
+config.overrides = eslintConfigs.map(cfg => {
+  // Use relative paths so the config is portable across machines and CI.
+  // .eslintrc.js at the project root re-exports this file, so paths are
+  // relative to the project root (CWD).
+  const relDir = path
+    .relative(config_constants.CWD, cfg.moduleDir)
+    .replace(/\\/g, '/');
+  return {
+    files: [`${relDir}/**/*.{js,jsx}`],
+    // Use extends to inherit from the module-level config cleanly
+    extends: [cfg.path],
+  };
+});
 
 module.exports = config;
 

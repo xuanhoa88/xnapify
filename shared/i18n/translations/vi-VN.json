@@ -60,11 +60,17 @@
   },
   "profile": {
     "displayName": "Tên hiển thị",
+    "displayNamePlaceholder": "Nhập tên hiển thị",
     "firstName": "Tên",
+    "firstNamePlaceholder": "Tên",
     "lastName": "Họ",
+    "lastNamePlaceholder": "Họ",
     "bio": "Giới thiệu",
+    "bioPlaceholder": "Kể cho chúng tôi về bạn...",
     "location": "Địa chỉ",
+    "locationPlaceholder": "Địa chỉ của bạn",
     "website": "Website",
+    "websitePlaceholder": "https://yourwebsite.com",
     "email": "Email",
     "saving": "Đang lưu...",
     "saveChanges": "Lưu thay đổi",
@@ -88,8 +94,7 @@
     "security": "An ninh",
     "securityDesc": "Quản lý mật khẩu và an ninh",
     "roles": "Vai trò",
-    "groups": "Nhóm",
-    "permissions": "Quyền"
+    "groups": "Nhóm"
   },
   "navigation": {
     "about": "Giới thiệu",

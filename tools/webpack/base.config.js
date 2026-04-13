@@ -166,8 +166,11 @@ const createCSSRule = ({
       // Get global postcss config path
       const cssConfigPath = path.resolve(__dirname, '../postcss.factory');
 
-      // Clear require cache to ensure we get the latest config
-      delete require.cache[cssConfigPath];
+      // Clear require cache in dev (HMR needs fresh reads).
+      // Production builds skip cache-busting — global config is static.
+      if (isDev) {
+        delete require.cache[cssConfigPath];
+      }
 
       // Get global postcss config
       const globalConfigFn = require(cssConfigPath);
@@ -177,9 +180,13 @@ const createCSSRule = ({
       let localPlugins = [];
       if (ctx && ctx.resourcePath) {
         const { postcssConfigs } = require('../registry.factory');
+        // Sort by path length descending so the most specific
+        // (deepest) module directory wins when paths are nested.
         const matchedConfig = (
           Array.isArray(postcssConfigs) ? postcssConfigs : []
-        ).find(cfg => ctx.resourcePath.startsWith(cfg.moduleDir));
+        )
+          .sort((a, b) => b.moduleDir.length - a.moduleDir.length)
+          .find(cfg => ctx.resourcePath.startsWith(cfg.moduleDir));
         if (matchedConfig) {
           delete require.cache[matchedConfig.path];
           const localConfigFn = require(matchedConfig.path);

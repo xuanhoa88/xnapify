@@ -29,10 +29,14 @@ module.exports = api => {
     /**
      * Explicitly map module/extension babel configurations from the central registry
      */
-    overrides: (Array.isArray(babelConfigs) ? babelConfigs : []).map(cfg => ({
-      test: new RegExp(`^${cfg.moduleDir.replace(/\\/g, '/')}/`),
-      extends: cfg.path,
-    })),
+    overrides: (Array.isArray(babelConfigs) ? babelConfigs : []).map(cfg => {
+      // Normalise Windows backslashes then escape regex metacharacters
+      // so paths like `(default)` are matched literally, not as groups.
+      const escaped = cfg.moduleDir
+        .replace(/\\/g, '/')
+        .replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      return { test: new RegExp(`^${escaped}/`), extends: cfg.path };
+    }),
 
     /**
      * Use inline source maps for best debugging with Webpack + HMR

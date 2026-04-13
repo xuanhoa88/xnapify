@@ -20,7 +20,7 @@ import {
 } from './useExtension';
 
 // Mock Registry
-jest.mock('./Registry', () => ({
+jest.mock('@shared/extension/client/Registry', () => ({
   registry: {
     executeHook: jest.fn(),
   },
