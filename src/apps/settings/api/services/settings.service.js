@@ -149,19 +149,42 @@ export function createSettingsService(container) {
   }
 
   /**
+   * Snapshot of original process.env values captured before the first
+   * override for each env var. Used to restore the original fallback
+   * when a setting is reset to null.
+   *
+   * key   = env var name (e.g. 'XNAPIFY_SMTP_HOST')
+   * value = original value (string) or undefined if the var was not set
+   */
+  const originalEnvSnapshot = new Map();
+
+  /**
    * Sync a changed setting back to process.env for live hot-reloading compatibility.
-   * Note: Enforces string values to maintain pure Node.js compatibility.
+   * Preserves the original env value so it can be restored when the DB value is reset to null.
    */
   function syncToEnv(row) {
     if (!row.default_env_var) return;
+
+    // Capture the original env value before the very first override
+    if (!originalEnvSnapshot.has(row.default_env_var)) {
+      originalEnvSnapshot.set(
+        row.default_env_var,
+        process.env[row.default_env_var],
+      );
+    }
 
     if (row.value != null) {
       // DB value takes precedence — propagate to process.env
       process.env[row.default_env_var] = String(row.value);
     } else {
-      // Value reset to null — remove the override so the original
+      // Value reset to null — restore the original env var so the
       // .env / system environment variable becomes the active fallback.
-      delete process.env[row.default_env_var];
+      const original = originalEnvSnapshot.get(row.default_env_var);
+      if (original !== undefined) {
+        process.env[row.default_env_var] = original;
+      } else {
+        delete process.env[row.default_env_var];
+      }
     }
   }
 
@@ -170,7 +193,7 @@ export function createSettingsService(container) {
   return {
     /**
      * Get a single setting value (resolved, coerced).
-     * Results are cached for up to 30s.
+     * Results are cached for up to 5 minutes.
      *
      * @param {string} namespace - Module namespace
      * @param {string} key - Setting key
@@ -250,7 +273,7 @@ export function createSettingsService(container) {
 
     /**
      * Get all public settings (for client consumption).
-     * Results are cached for up to 10s.
+     * Results are cached for up to 1 minute.
      *
      * @returns {Promise<Object>} Map of "namespace.key" → coerced value
      */
@@ -347,6 +370,26 @@ export function createSettingsService(container) {
         syncToEnv(result.row);
       }
       return results.map(r => r.formatted);
+    },
+
+    /**
+     * Sync all DB-overridden settings to process.env at boot time.
+     * Captures original env values before overriding so they can be
+     * restored later if a setting is reset to null via the admin UI.
+     *
+     * Called once from the module's boot() lifecycle hook.
+     */
+    async syncBootToEnv() {
+      const { Setting } = container.resolve('models');
+      const rows = await Setting.findAll();
+
+      for (const row of rows) {
+        // Only sync settings that have an explicit DB value and an env var mapping.
+        // syncToEnv internally snapshots the original env value before overriding.
+        if (row.default_env_var && row.value != null) {
+          syncToEnv(row);
+        }
+      }
     },
 
     /**

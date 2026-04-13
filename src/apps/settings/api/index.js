@@ -46,18 +46,9 @@ export default {
 
   async boot({ container }) {
     const settings = container.resolve('settings');
-    const allSettings = await settings.getAll();
 
-    // Iterate over all namespaces and dynamically override process.env
-    // with any values explicitly set in the database.
-    for (const namespace of Object.keys(allSettings)) {
-      for (const setting of allSettings[namespace]) {
-        // If the setting has an explicit DB value and an associated env var,
-        // override process.env so legacy systems can reuse it.
-        if (setting.defaultEnvVar && !setting.isDefault) {
-          process.env[setting.defaultEnvVar] = String(setting.value);
-        }
-      }
-    }
+    // Sync DB-overridden settings to process.env so legacy systems can reuse them.
+    // Also snapshots original env values for safe restore on null reset.
+    await settings.syncBootToEnv();
   },
 };

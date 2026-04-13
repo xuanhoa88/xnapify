@@ -79,8 +79,8 @@ When you call `settings.get(namespace, key)`, values are resolved in this order:
 | Method | Path | Auth | Description |
 |---|---|---|---|
 | `GET` | `/api/admin/settings` | `settings:read` | All settings grouped by namespace |
-| `PUT` | `/api/admin/settings` | `settings:write` | Bulk update settings |
-| `GET` | `/api/admin/settings/:namespace` | `settings:read` | Settings for one namespace |
+| `GET` | `/api/admin/settings/:namespace` | `settings.{ns}:read` | Settings for one namespace |
+| `PUT` | `/api/admin/settings/:namespace` | `settings.{ns}:write` | Update settings for a namespace |
 | `GET` | `/api/settings/public` | None | Public settings as flat map |
 
 ## Architecture

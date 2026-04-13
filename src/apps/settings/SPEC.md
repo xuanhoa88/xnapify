@@ -95,7 +95,7 @@ export default {
 
 **Merge & Resolution Strategy:**
 - **Per-field deep merge:** Core defaults (e.g., `core`, `auth`, `webhook`) are immutable. Extension configurations apply per-field and merge dynamically.
-- **Dynamic Field Sorting:** Front-end configuration ignores `fieldOrder`; settings display natively cascades by the global database `sort_order` mapping natively handled by the DB sequencer. 
+- **Dynamic Field Sorting:** Display order is determined by the `sort_order` integer column in the database, set during seeding. Frontend configuration does not override field ordering.
 - **Icon Resolution:** Natively supports built-in feather names (`'zap'`), absolute paths to static extension assets, and external URLs (prefixed with `http`).
 - **Label i18n Cascade:** Resolves in the following order: `i18nKey` (from the extension's translations) -> Core i18n -> `label` -> Raw namespace string.
 - **Hot-Reload:** The UI automatically subscribes to registry changes, hot-reloading configurations when extensions are toggled.
