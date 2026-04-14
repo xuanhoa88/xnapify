@@ -19,32 +19,40 @@ const seedsContext = require.context(
 export default {
   seeds: () => seedsContext,
   async boot({ container }) {
-    const clientID = process.env.XNAPIFY_GOOGLE_CLIENT_ID;
-    const clientSecret = process.env.XNAPIFY_GOOGLE_CLIENT_KEY;
-
-    if (!clientID || !clientSecret) {
-      console.warn(
-        `${TAG} ⚠️ XNAPIFY_GOOGLE_CLIENT_ID / XNAPIFY_GOOGLE_CLIENT_KEY not set — skipping`,
-      );
-      return;
-    }
-
     const oauth = container.resolve('oauth');
 
+    // Register a lazy strategy factory — credentials are resolved
+    // from the settings service at first request, not at boot time.
+    // This eliminates boot-order timing issues and allows admin
+    // settings changes to take effect without a server restart.
     oauth.registerProvider('google', {
-      strategy: new GoogleStrategy(
-        {
-          clientID,
-          clientSecret,
-          callbackURL: `${process.env.XNAPIFY_PUBLIC_APP_URL}/api/auth/oauth/google/callback`,
-          passReqToCallback: false,
-        },
-        (accessToken, refreshToken, profile, done) => done(null, profile),
-      ),
+      strategy: async () => {
+        const clientID = process.env.XNAPIFY_GOOGLE_CLIENT_ID;
+        const clientSecret = process.env.XNAPIFY_GOOGLE_CLIENT_KEY;
+
+        if (!clientID || !clientSecret) {
+          console.warn(
+            `${TAG} ⚠️ XNAPIFY_GOOGLE_CLIENT_ID / XNAPIFY_GOOGLE_CLIENT_KEY not set`,
+          );
+          return null;
+        }
+
+        console.info(`${TAG} ✅ Strategy created`);
+
+        return new GoogleStrategy(
+          {
+            clientID,
+            clientSecret,
+            callbackURL: `${process.env.XNAPIFY_PUBLIC_APP_URL}/api/auth/oauth/google/callback`,
+            passReqToCallback: false,
+          },
+          (accessToken, refreshToken, profile, done) => done(null, profile),
+        );
+      },
       scope: ['profile', 'email'],
     });
 
-    console.info(`${TAG} ✅ Initialized`);
+    console.info(`${TAG} ✅ Registered (lazy strategy)`);
   },
 
   async shutdown({ container }) {

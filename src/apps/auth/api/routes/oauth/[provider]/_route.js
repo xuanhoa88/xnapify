@@ -8,7 +8,7 @@
 import passport from 'passport';
 
 export const get = [
-  function oauthInitiate(req, res, next) {
+  async function oauthInitiate(req, res, next) {
     const { provider } = req.params;
 
     const container = req.app.get('container');
@@ -18,6 +18,16 @@ export const get = [
       const oauth = container.resolve('oauth');
 
       if (!oauth || !oauth.hasProvider(provider)) {
+        return http.sendError(
+          res,
+          `OAuth provider '${provider}' is not configured or unknown`,
+          404,
+        );
+      }
+
+      // Materialise the strategy (lazy factory) before authenticating
+      const ready = await oauth.ensureStrategy(provider);
+      if (!ready) {
         return http.sendError(
           res,
           `OAuth provider '${provider}' is not configured or unknown`,

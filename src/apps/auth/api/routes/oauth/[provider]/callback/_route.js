@@ -8,13 +8,19 @@
 import passport from 'passport';
 
 export const get = [
-  function oauthCallbackMiddleware(req, res, next) {
+  async function oauthCallbackMiddleware(req, res, next) {
     const { provider } = req.params;
 
     // Get app URL from environment variable
     const appUrl = process.env.XNAPIFY_PUBLIC_APP_URL;
 
     try {
+      // Materialise the strategy (lazy factory) before authenticating
+      const oauth = req.app.get('container').resolve('oauth');
+      if (oauth) {
+        await oauth.ensureStrategy(provider);
+      }
+
       passport.authenticate(
         provider,
         { session: false, failureRedirect: `${appUrl}/?oauth=error` },

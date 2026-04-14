@@ -19,33 +19,37 @@ const seedsContext = require.context(
 export default {
   seeds: () => seedsContext,
   async boot({ container }) {
-    const clientID = process.env.XNAPIFY_MICROSOFT_CLIENT_ID;
-    const clientSecret = process.env.XNAPIFY_MICROSOFT_CLIENT_KEY;
-
-    if (!clientID || !clientSecret) {
-      console.warn(
-        `${TAG} ⚠️ XNAPIFY_MICROSOFT_CLIENT_ID / XNAPIFY_MICROSOFT_CLIENT_KEY not set — skipping`,
-      );
-      return;
-    }
-
     const oauth = container.resolve('oauth');
 
     oauth.registerProvider('microsoft', {
-      strategy: new MicrosoftStrategy(
-        {
-          clientID,
-          clientSecret,
-          callbackURL: `${process.env.XNAPIFY_PUBLIC_APP_URL}/api/auth/oauth/microsoft/callback`,
-          scope: ['user.read'],
-          passReqToCallback: false,
-        },
-        (accessToken, refreshToken, profile, done) => done(null, profile),
-      ),
+      strategy: async () => {
+        const clientID = process.env.XNAPIFY_MICROSOFT_CLIENT_ID;
+        const clientSecret = process.env.XNAPIFY_MICROSOFT_CLIENT_KEY;
+
+        if (!clientID || !clientSecret) {
+          console.warn(
+            `${TAG} ⚠️ XNAPIFY_MICROSOFT_CLIENT_ID / XNAPIFY_MICROSOFT_CLIENT_KEY not set`,
+          );
+          return null;
+        }
+
+        console.info(`${TAG} ✅ Strategy created`);
+
+        return new MicrosoftStrategy(
+          {
+            clientID,
+            clientSecret,
+            callbackURL: `${process.env.XNAPIFY_PUBLIC_APP_URL}/api/auth/oauth/microsoft/callback`,
+            scope: ['user.read'],
+            passReqToCallback: false,
+          },
+          (accessToken, refreshToken, profile, done) => done(null, profile),
+        );
+      },
       scope: ['user.read'],
     });
 
-    console.info(`${TAG} ✅ Initialized`);
+    console.info(`${TAG} ✅ Registered (lazy strategy)`);
   },
 
   async shutdown({ container }) {

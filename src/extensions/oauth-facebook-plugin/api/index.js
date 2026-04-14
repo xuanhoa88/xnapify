@@ -19,33 +19,37 @@ const seedsContext = require.context(
 export default {
   seeds: () => seedsContext,
   async boot({ container }) {
-    const clientID = process.env.XNAPIFY_FACEBOOK_APP_ID;
-    const clientSecret = process.env.XNAPIFY_FACEBOOK_APP_KEY;
-
-    if (!clientID || !clientSecret) {
-      console.warn(
-        `${TAG} ⚠️ XNAPIFY_FACEBOOK_APP_ID / XNAPIFY_FACEBOOK_APP_KEY not set — skipping`,
-      );
-      return;
-    }
-
     const oauth = container.resolve('oauth');
 
     oauth.registerProvider('facebook', {
-      strategy: new FacebookStrategy(
-        {
-          clientID,
-          clientSecret,
-          callbackURL: `${process.env.XNAPIFY_PUBLIC_APP_URL}/api/auth/oauth/facebook/callback`,
-          profileFields: ['id', 'emails', 'name', 'picture.type(large)'],
-          passReqToCallback: false,
-        },
-        (accessToken, refreshToken, profile, done) => done(null, profile),
-      ),
+      strategy: async () => {
+        const clientID = process.env.XNAPIFY_FACEBOOK_APP_ID;
+        const clientSecret = process.env.XNAPIFY_FACEBOOK_APP_KEY;
+
+        if (!clientID || !clientSecret) {
+          console.warn(
+            `${TAG} ⚠️ XNAPIFY_FACEBOOK_APP_ID / XNAPIFY_FACEBOOK_APP_KEY not set`,
+          );
+          return null;
+        }
+
+        console.info(`${TAG} ✅ Strategy created`);
+
+        return new FacebookStrategy(
+          {
+            clientID,
+            clientSecret,
+            callbackURL: `${process.env.XNAPIFY_PUBLIC_APP_URL}/api/auth/oauth/facebook/callback`,
+            profileFields: ['id', 'emails', 'name', 'picture.type(large)'],
+            passReqToCallback: false,
+          },
+          (accessToken, refreshToken, profile, done) => done(null, profile),
+        );
+      },
       scope: ['public_profile', 'email'],
     });
 
-    console.info(`${TAG} ✅ Initialized`);
+    console.info(`${TAG} ✅ Registered (lazy strategy)`);
   },
 
   async shutdown({ container }) {
