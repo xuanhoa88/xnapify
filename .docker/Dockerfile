@@ -66,7 +66,7 @@ COPY --from=builder /build/build ./build
 
 # Copy pre-compiled database drivers from builder stage
 # The sandbox directory contains the actual compiled binaries
-COPY --from=builder /build/.data/sequelize-drivers ./build/.data/sequelize-drivers
+COPY --from=builder /build/.xnapify/sequelize-drivers ./build/.xnapify/sequelize-drivers
 
 # Install production dependencies (.npmrc in build/ forces production=true)
 WORKDIR /app/build
@@ -74,10 +74,11 @@ RUN npm run setup && npm cache clean --force
 
 # Recreate driver symlinks (preboot.js ensureDeps creates these, but symlinks
 # don't survive COPY --from across Docker stages)
-RUN ln -sf ../.data/sequelize-drivers/sqlite/node_modules/sqlite3 node_modules/sqlite3 \
- && ln -sf ../.data/sequelize-drivers/postgres/node_modules/pg node_modules/pg \
- && ln -sf ../.data/sequelize-drivers/postgres/node_modules/pg-hstore node_modules/pg-hstore \
- && ln -sf ../.data/sequelize-drivers/mysql/node_modules/mysql2 node_modules/mysql2
+RUN chmod -R 755 /app/build/.xnapify \
+ && ln -sf /app/build/.xnapify/sequelize-drivers/sqlite/node_modules/sqlite3 node_modules/sqlite3 \
+ && ln -sf /app/build/.xnapify/sequelize-drivers/postgres/node_modules/pg node_modules/pg \
+ && ln -sf /app/build/.xnapify/sequelize-drivers/postgres/node_modules/pg-hstore node_modules/pg-hstore \
+ && ln -sf /app/build/.xnapify/sequelize-drivers/mysql/node_modules/mysql2 node_modules/mysql2
 
 # Preboot installs DB drivers on-demand at runtime (as `node` user via su-exec)
 RUN chown -R node:node /app/build
@@ -91,6 +92,9 @@ ENV NODE_ENV=production
 
 # Expose port
 EXPOSE 1337
+
+# Declare persistent volume
+VOLUME ["/home/node/.xnapify"]
 
 ENTRYPOINT ["entrypoint.sh"]
 CMD ["npm", "start"]

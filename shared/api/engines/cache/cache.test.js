@@ -23,7 +23,7 @@ import cache, {
 // Helpers
 // ======================================================================
 
-const TEST_CACHE_DIR = path.join(process.cwd(), '.data', 'test-caches');
+const TEST_CACHE_DIR = path.join(process.cwd(), '.xnapify', 'test-caches');
 
 function cleanDir(dir) {
   try {

@@ -13,11 +13,11 @@ if [ "$(id -u)" = "0" ]; then
     chown -R node:node /app/build/extensions
   fi
 
-  # Persistent data dir (uploads, extensions, Node-RED, caches, FTS)
+  # Persistent data dir (uploads, extensions, Node-RED, caches, FTS, sqlite)
   # Subdirectories are created by the app on first use
-  mkdir -p /app/data
-  if [ "$(stat -c '%u' /app/data 2>/dev/null)" != "1000" ]; then
-    chown -R node:node /app/data
+  mkdir -p /home/node/.xnapify
+  if [ "$(stat -c '%u' /home/node/.xnapify 2>/dev/null)" != "1000" ]; then
+    chown -R node:node /home/node/.xnapify
   fi
 
   exec su-exec node "$@"

@@ -92,7 +92,7 @@ web_modules/
 .rts2_cache/
 .eslintcache
 .cache/
-.data/
+.xnapify/
 .parcel-cache/
 
 # Sensitive credentials

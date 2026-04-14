@@ -23,7 +23,7 @@ jest.mock('uuid');
 describe('FileQueue Adapter', () => {
   let FileQueue;
   let queue;
-  const TEST_DATA_DIR = path.join(process.cwd(), '.data', 'test-queues');
+  const TEST_DATA_DIR = path.join(process.cwd(), '.xnapify', 'test-queues');
 
   beforeEach(() => {
     jest.resetModules();

@@ -5,6 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import fs from 'fs';
+import os from 'os';
 import path from 'path';
 
 import merge from 'lodash/merge';
@@ -22,9 +24,6 @@ import {
 // ======================================================================
 // Constants
 // ======================================================================
-
-const DEFAULT_DB_URL = 'sqlite:database.sqlite';
-const SQLITE_PREFIX = 'sqlite:';
 
 // SQLite performance tuning PRAGMAs (applied per-connection via afterConnect)
 const SQLITE_PRAGMAS = [
@@ -162,7 +161,7 @@ function attachMigrationMethods(sequelize) {
  * @returns {Sequelize} Sequelize connection instance with migration methods
  */
 export function createConnection(url, options) {
-  let databaseUrl = process.env.XNAPIFY_DB_URL || DEFAULT_DB_URL;
+  let databaseUrl = process.env.XNAPIFY_DB_URL || 'sqlite:database.sqlite';
   let opts = {};
 
   // Handle overloaded arguments: (url), (options), or (url, options)
@@ -177,26 +176,32 @@ export function createConnection(url, options) {
   const config = merge({}, getDefaultOptions(), opts);
 
   // SQLite-specific tuning
+  const SQLITE_PREFIX = 'sqlite:';
   if (databaseUrl.startsWith(SQLITE_PREFIX)) {
     // Resolve relative SQLite paths against XNAPIFY_SQLITE_DATA_DIR when set.
     // This mirrors how PG_DATA_DIR and MYSQL_DATA_DIR control data placement.
     const filePath = databaseUrl.slice(SQLITE_PREFIX.length);
-    let dataDir = process.env.XNAPIFY_SQLITE_DATA_DIR;
-    if (!dataDir) {
-      if (process.env.NODE_ENV === 'production') {
-        const os = require('os');
-        dataDir = path.join(os.homedir(), '.xnapify', 'sqlite');
-      } else {
-        dataDir = path.join(process.cwd(), '.data', 'sqlite');
-      }
-    }
 
-    if (filePath && !path.isAbsolute(filePath) && dataDir) {
-      const fs = require('fs');
+    // Leave in-memory and explicit absolute paths completely untouched
+    if (filePath !== ':memory:' && !path.isAbsolute(filePath)) {
+      // Safely resolve the data dir with a development fallback
+      let dataDir = process.env.XNAPIFY_SQLITE_DATA_DIR;
+      if (!dataDir) {
+        dataDir = path.join(
+          process.env.NODE_ENV === 'production' ? os.homedir() : process.cwd(),
+          '.xnapify',
+          'sqlite',
+        );
+      }
+
+      // Create data directory if it doesn't exist
       if (!fs.existsSync(dataDir)) {
         fs.mkdirSync(dataDir, { recursive: true });
       }
-      databaseUrl = `${SQLITE_PREFIX}${path.join(dataDir, filePath)}`;
+
+      // Safe to use basename here to prevent redundant paths
+      // like `.xnapify/sqlite/database.sqlite` since absolute paths are out
+      databaseUrl = `${SQLITE_PREFIX}${path.join(dataDir, path.basename(filePath))}`;
     }
 
     delete config.timezone; // SQLite ignores connection timezones

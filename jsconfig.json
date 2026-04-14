@@ -16,7 +16,7 @@
     "coverage",
     ".cache",
     ".agent",
-    ".data",
+    ".xnapify",
     "dist"
   ]
 }

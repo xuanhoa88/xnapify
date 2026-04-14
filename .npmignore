@@ -64,4 +64,4 @@ __mocks__/
 .cache/
 tmp/
 temp/
-.data/
+.xnapify/

@@ -273,7 +273,7 @@ describe('MemoryQueue Performance', () => {
 describe('FileQueue Performance', () => {
   let FileQueue;
   let queue;
-  const TEST_DATA_DIR = path.join(process.cwd(), '.data', 'perf-queues');
+  const TEST_DATA_DIR = path.join(process.cwd(), '.xnapify', 'perf-queues');
   const results = [];
 
   beforeAll(() => {
@@ -490,7 +490,7 @@ describe('FileQueue Performance', () => {
 describe('Adapter Comparison', () => {
   let MemoryQueue;
   let FileQueue;
-  const TEST_DATA_DIR = path.join(process.cwd(), '.data', 'cmp-queues');
+  const TEST_DATA_DIR = path.join(process.cwd(), '.xnapify', 'cmp-queues');
 
   beforeAll(async () => {
     jest.resetModules();

@@ -40,17 +40,17 @@ index.js
 
 All adapters implement these methods:
 
-| Method | Signature | Returns | Sync/Async | Required |
-|---|---|---|---|---|
-| `get(key)` | `(string)` | value or `null` | Memory: sync, File: async | ✅ |
-| `set(key, value, ttl?)` | `(string, any, number?)` | `void` | Memory: sync, File: async | ✅ |
-| `delete(key)` | `(string)` | `boolean` | Memory: sync, File: async | ✅ |
-| `has(key)` | `(string)` | `boolean` | Memory: sync, File: async | ✅ |
-| `clear()` | `()` | `void` | Memory: sync, File: async | ✅ |
-| `keys()` | `()` | `string[]` | Memory: sync, File: async | Optional |
-| `stats()` | `()` | `object` | Memory: sync, File: async | Optional |
-| `cleanup()` | `()` | `number` | Memory: sync, File: async | Optional |
-| `size` | getter | `number` | Sync | Optional |
+| Method                  | Signature                | Returns         | Sync/Async                | Required |
+| ----------------------- | ------------------------ | --------------- | ------------------------- | -------- |
+| `get(key)`              | `(string)`               | value or `null` | Memory: sync, File: async | ✅       |
+| `set(key, value, ttl?)` | `(string, any, number?)` | `void`          | Memory: sync, File: async | ✅       |
+| `delete(key)`           | `(string)`               | `boolean`       | Memory: sync, File: async | ✅       |
+| `has(key)`              | `(string)`               | `boolean`       | Memory: sync, File: async | ✅       |
+| `clear()`               | `()`                     | `void`          | Memory: sync, File: async | ✅       |
+| `keys()`                | `()`                     | `string[]`      | Memory: sync, File: async | Optional |
+| `stats()`               | `()`                     | `object`        | Memory: sync, File: async | Optional |
+| `cleanup()`             | `()`                     | `number`        | Memory: sync, File: async | Optional |
+| `size`                  | getter                   | `number`        | Sync                      | Optional |
 
 ### Standardized Stats Shape
 
@@ -72,12 +72,12 @@ All adapters return a consistent stats shape:
 
 ## 3. Error Classes (`errors.js`)
 
-| Class | Code | StatusCode | Thrown By |
-|---|---|---|---|
-| `CacheError` | `CACHE_ERROR` | `500` | Base class |
-| `InvalidCacheTypeError` | `INVALID_CACHE_TYPE` | `400` | `createFactory()` — unknown adapter type |
-| `InvalidNamespaceError` | `INVALID_NAMESPACE` | `400` | `withNamespace()` — empty, whitespace, or >100 chars |
-| `InvalidCacheError` | `INVALID_CACHE` | `400` | `withNamespace()` — missing or invalid base cache |
+| Class                   | Code                 | StatusCode | Thrown By                                            |
+| ----------------------- | -------------------- | ---------- | ---------------------------------------------------- |
+| `CacheError`            | `CACHE_ERROR`        | `500`      | Base class                                           |
+| `InvalidCacheTypeError` | `INVALID_CACHE_TYPE` | `400`      | `createFactory()` — unknown adapter type             |
+| `InvalidNamespaceError` | `INVALID_NAMESPACE`  | `400`      | `withNamespace()` — empty, whitespace, or >100 chars |
+| `InvalidCacheError`     | `INVALID_CACHE`      | `400`      | `withNamespace()` — missing or invalid base cache    |
 
 All errors have: `name`, `code`, `statusCode`, `timestamp`, and stack trace.
 
@@ -101,15 +101,15 @@ Creates a cache adapter instance, attaches `withNamespace()`, and registers sign
 Creates a wrapper that prefixes all keys with `namespace:`.
 
 **Validation (throws `InvalidNamespaceError`):**
+
 1. Namespace must be a non-empty string.
 2. Namespace cannot be whitespace-only.
 3. Namespace must be ≤ 100 characters.
 
-**Validation (throws `InvalidCacheError`):**
-4. Base cache must be provided.
-5. Base cache must have a `get` method.
+**Validation (throws `InvalidCacheError`):** 4. Base cache must be provided. 5. Base cache must have a `get` method.
 
 **Behavior:**
+
 - `get(key)` → `baseCache.get(prefix + key)`
 - `set(key, value, ttl)` → `baseCache.set(prefix + key, value, ttl)`
 - `delete(key)` → `baseCache.delete(prefix + key)`
@@ -125,10 +125,10 @@ LRU in-memory cache using `Map` insertion order for eviction. **All operations a
 
 ### Configuration
 
-| Option | Default | Description |
-|---|---|---|
-| `maxSize` | `1000` | Maximum entries before LRU eviction |
-| `ttl` | `300000` (5 min) | Default TTL in milliseconds |
+| Option    | Default          | Description                         |
+| --------- | ---------------- | ----------------------------------- |
+| `maxSize` | `1000`           | Maximum entries before LRU eviction |
+| `ttl`     | `300000` (5 min) | Default TTL in milliseconds         |
 
 ### Internal Storage
 
@@ -152,15 +152,16 @@ Filesystem-backed cache with persistent storage across restarts. **All operation
 
 ### Configuration
 
-| Option | Default | Description |
-|---|---|---|
-| `directory` | `~/.xnapify/caches` (prod), `.data/caches` (dev) | Cache directory path |
-| `maxSize` | `10000` | Maximum cache files |
-| `ttl` | `300000` (5 min) | Default TTL in milliseconds |
+| Option      | Default                                             | Description                 |
+| ----------- | --------------------------------------------------- | --------------------------- |
+| `directory` | `~/.xnapify/caches` (prod), `.xnapify/caches` (dev) | Cache directory path        |
+| `maxSize`   | `10000`                                             | Maximum cache files         |
+| `ttl`       | `300000` (5 min)                                    | Default TTL in milliseconds |
 
 ### File Format
 
 Each entry stored as `<sha256(key).slice(0,32)>.json`:
+
 ```javascript
 { key: string, value: any, expiresAt: number, createdAt: number }
 ```
@@ -184,6 +185,7 @@ This replaces the previous blocking spin lock. Each key gets its own promise cha
 ### LRU-like Eviction
 
 `evictIfNeeded()` triggers when file count reaches `maxSize`:
+
 1. Reads all cache files, parses their `createdAt`.
 2. Sorts by `createdAt` ascending.
 3. Removes oldest **10%** (minimum 1 entry).
@@ -204,29 +206,31 @@ Removes expired files and corrupted (unparseable) files.
 
 Development-mode passthrough. Automatically selected when `__DEV__` is truthy.
 
-| Method | Returns |
-|---|---|
-| `get()` | `null` |
-| `set()` | `undefined` |
-| `delete()` | `true` |
-| `has()` | `false` |
-| `clear()` | `undefined` |
-| `keys()` | `[]` |
-| `stats()` | `{ type: 'noop', totalEntries: 0, validEntries: 0, expiredEntries: 0, maxSize: 0, defaultTTL: 0 }` |
-| `cleanup()` | `0` |
-| `size` | `0` |
+| Method      | Returns                                                                                            |
+| ----------- | -------------------------------------------------------------------------------------------------- |
+| `get()`     | `null`                                                                                             |
+| `set()`     | `undefined`                                                                                        |
+| `delete()`  | `true`                                                                                             |
+| `has()`     | `false`                                                                                            |
+| `clear()`   | `undefined`                                                                                        |
+| `keys()`    | `[]`                                                                                               |
+| `stats()`   | `{ type: 'noop', totalEntries: 0, validEntries: 0, expiredEntries: 0, maxSize: 0, defaultTTL: 0 }` |
+| `cleanup()` | `0`                                                                                                |
+| `size`      | `0`                                                                                                |
 
 ## 8. Default Singleton
 
 **File:** `index.js`
 
 ### Named Exports
+
 - `createFactory` — create custom instances
 - `withNamespace` — standalone namespace wrapper
 - `CacheError`, `InvalidCacheTypeError`, `InvalidNamespaceError`, `InvalidCacheError` — error classes
 - `MemoryCache`, `FileCache`, `NoOpCache` — adapter classes
 
 ### Default Export
+
 ```javascript
 const cache = createFactory({
   type: 'memory',
@@ -244,6 +248,7 @@ The singleton is registered on the DI container as `container.resolve('cache')` 
 ### Test Coverage (9 describe blocks)
 
 **Default Instance (Memory):**
+
 - Has all required methods and `withNamespace`.
 - `get()`: null for missing, returns stored value, null for expired, handles complex objects.
 - `set()`: stores, custom TTL, updates existing, enforces max size.
@@ -256,6 +261,7 @@ The singleton is registered on the DI container as `container.resolve('cache')` 
 - `size`: tracks entries.
 
 **createFactory():**
+
 - Default memory cache.
 - Custom config (maxSize, ttl).
 - File cache creation.
@@ -264,6 +270,7 @@ The singleton is registered on the DI container as `container.resolve('cache')` 
 - Registers SIGTERM/SIGINT signal handlers.
 
 **withNamespace():**
+
 - Creates from default instance.
 - Key prefixing (`users:123`).
 - Isolation between namespaces.
@@ -275,10 +282,12 @@ The singleton is registered on the DI container as `container.resolve('cache')` 
 - Validation: empty, null, whitespace, too-long, missing cache, invalid cache.
 
 **LRU Eviction:**
+
 - Evicts least recently used on `get()` access.
 - Updates LRU order on `set()` update.
 
 **FileCache:**
+
 - Directory creation.
 - get/set/delete/has/clear/keys/stats/cleanup/getSize.
 - Atomic writes (no .tmp files remaining).
@@ -289,13 +298,16 @@ The singleton is registered on the DI container as `container.resolve('cache')` 
 - Eviction at max size.
 
 **NoOpCache:**
+
 - All methods return expected no-op values.
 - Stats shape matches standardized format.
 
 **Error Classes:**
+
 - Correct name, code, statusCode, timestamp properties.
 
 **Exports:**
+
 - All adapter classes, factory, withNamespace exported.
 
 ## 10. Integration Points
@@ -307,4 +319,4 @@ The singleton is registered on the DI container as `container.resolve('cache')` 
 
 ---
 
-*Note: This spec reflects the CURRENT implementation of the cache engine.*
+_Note: This spec reflects the CURRENT implementation of the cache engine._

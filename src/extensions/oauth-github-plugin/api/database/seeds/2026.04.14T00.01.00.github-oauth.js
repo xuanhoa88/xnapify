@@ -1,3 +1,12 @@
+/**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+import { v4 as uuidv4 } from 'uuid';
+
 const GITHUB_OAUTH_SETTINGS = [
   {
     namespace: 'auth',
@@ -17,14 +26,8 @@ const GITHUB_OAUTH_SETTINGS = [
   },
 ];
 
-export async function up(container) {
+export async function up(_, { container }) {
   const { Setting } = container.resolve('models');
-
-  const count = await Setting.count({
-    where: { namespace: 'auth', key: 'GITHUB_CLIENT_ID' },
-  });
-
-  if (count > 0) return;
 
   const maxOrderRows = await Setting.findAll({
     attributes: ['namespace', 'sort_order'],
@@ -33,28 +36,35 @@ export async function up(container) {
 
   let currentSort = {};
   for (const row of maxOrderRows) {
-    if (!currentSort[row.namespace] || row.sort_order > currentSort[row.namespace]) {
+    if (
+      !currentSort[row.namespace] ||
+      row.sort_order > currentSort[row.namespace]
+    ) {
       currentSort[row.namespace] = row.sort_order;
     }
   }
 
-  const batch = GITHUB_OAUTH_SETTINGS.map(s => {
-    let order = currentSort[s.namespace] || 0;
+  const now = new Date();
+
+  for (const setting of GITHUB_OAUTH_SETTINGS) {
+    let order = currentSort[setting.namespace] || 0;
     order += 10;
-    currentSort[s.namespace] = order;
+    currentSort[setting.namespace] = order;
 
-    return {
-      ...s,
-      sort_order: order,
-      created_at: new Date(),
-      updated_at: new Date(),
-    };
-  });
-
-  await Setting.bulkCreate(batch);
+    await Setting.findOrCreate({
+      where: { namespace: setting.namespace, key: setting.key },
+      defaults: {
+        id: uuidv4(),
+        ...setting,
+        sort_order: order,
+        created_at: now,
+        updated_at: now,
+      },
+    });
+  }
 }
 
-export async function down(container) {
+export async function down(_, { container }) {
   const { Setting } = container.resolve('models');
   const keys = GITHUB_OAUTH_SETTINGS.map(s => s.key);
 

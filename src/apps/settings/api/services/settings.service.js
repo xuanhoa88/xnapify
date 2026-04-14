@@ -216,10 +216,11 @@ export function createSettingsService(container) {
      * @param {string} [namespace] - Optional module namespace
      * @returns {Promise<Object[]|Object>}
      */
-    async getAll(namespace) {
+    async getAll(namespace, options = {}) {
+      const { bypassCache = false } = options;
       const cacheKey = namespace ? `ns:${namespace}` : 'all';
 
-      if (collectionCache.has(cacheKey)) {
+      if (!bypassCache && collectionCache.has(cacheKey)) {
         return collectionCache.get(cacheKey);
       }
 

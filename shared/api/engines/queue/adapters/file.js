@@ -76,13 +76,14 @@ class FileQueue {
     });
 
     // Resolve and validate queue directory
-    const isProd = process.env.NODE_ENV === 'production';
     const dataDir =
       options.dataDir ||
       process.env.XNAPIFY_QUEUE_DATA_DIR ||
-      (isProd
-        ? path.join(os.homedir(), '.xnapify', 'queues')
-        : path.join(process.cwd(), '.data', 'queues'));
+      path.join(
+        process.env.NODE_ENV === 'production' ? os.homedir() : process.cwd(),
+        '.xnapify',
+        'queues',
+      );
     this.queueDir = path.join(dataDir, this.name);
     this.lockDir = path.join(this.queueDir, '.locks');
 

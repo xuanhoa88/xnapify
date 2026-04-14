@@ -40,6 +40,17 @@ const ENV_PATH = path.join(ROOT, '.env');
 const ENV_LOCAL_PATH = path.join(ROOT, '.env.local');
 const ENV_TEMPLATE = path.join(ROOT, '.env.xnapify');
 
+// Bypass Webpack's static analyzer which automatically stubs `require.resolve`
+// for dynamically discovered native database addons it cannot trace at build-time.
+function nativeResolve(moduleName) {
+  const req =
+    typeof __non_webpack_require__ !== 'undefined'
+      ? // eslint-disable-next-line no-undef
+        __non_webpack_require__
+      : require;
+  return req.resolve(moduleName);
+}
+
 /**
  * When true, DB URL writes go to .env.local (session override)
  * instead of .env (persistent). Set only when --db CLI flag is used.
@@ -48,45 +59,29 @@ const ENV_TEMPLATE = path.join(ROOT, '.env.xnapify');
 let useLocalEnv = false;
 
 /**
- * Detect if running inside a Docker/Podman container.
- * Checks /.dockerenv, /run/.containerenv, and cgroup v1/v2.
- * @returns {boolean}
- */
-function isContainer() {
-  if (os.platform() !== 'linux') return false;
-  // Docker creates /.dockerenv; Podman creates /run/.containerenv
-  if (fs.existsSync('/.dockerenv')) return true;
-  if (fs.existsSync('/run/.containerenv')) return true;
-  // cgroup v1: /proc/1/cgroup contains /docker/ or /kubepods/
-  try {
-    const cgroup = fs.readFileSync('/proc/1/cgroup', 'utf-8');
-    if (/docker|kubepods|containerd/i.test(cgroup)) return true;
-  } catch {
-    // /proc not available (macOS, Windows)
-  }
-  return false;
-}
-
-/** @type {boolean} Cached container detection result */
-const isContainerCached = isContainer();
-
-/**
  * Resolve the default data directory for a given database engine.
- * In containers, defaults to /app/data/<engine> (persistent volume mount).
- * In production host, defaults to ~/.xnapify/<engine>.
- * In development, defaults to .data/<engine> (project-local).
+ * In production host/containers, defaults to ~/.xnapify/<engine>.
+ * In development, defaults to .xnapify/<engine> (project-local).
  * @param {string} engine - 'sqlite' | 'postgres' | 'mysql'
  * @returns {string}
  */
 function defaultDataDir(engine) {
-  if (isContainerCached) {
-    // /app/data/ is chowned by entrypoint.sh and expected to be a named volume
-    return path.join('/app', 'data', engine);
+  // ─── DRIVER BINARY ISOLATION ───
+  // Always lock pre-compiled C++ drivers to the application bundle directory so they
+  // never interact with host volume binds. `ROOT` automatically resolves to `/build`
+  // during Docker stage 1, and elegantly shifts to `/app/build` during production.
+  if (engine.startsWith('sequelize-drivers')) {
+    return path.join(ROOT, '.xnapify', engine);
   }
-  if (process.env.NODE_ENV === 'production') {
-    return path.join(os.homedir(), '.xnapify', engine);
-  }
-  return path.join(ROOT, '.data', engine);
+
+  // ─── PERSISTENT DATA VOLUME ───
+  // Genuine user data inherently writes to the persistent named Host Volume mapping
+  // located smoothly at `/home/node/.xnapify` natively in Docker production.
+  return path.join(
+    process.env.NODE_ENV === 'production' ? os.homedir() : ROOT,
+    '.xnapify',
+    engine,
+  );
 }
 
 const SQLITE_DATA_DIR = safePath(
@@ -375,7 +370,7 @@ async function ensureDeps(dialect) {
   // Check by module name, install by spec (with version pin)
   const missing = deps.filter(dep => {
     try {
-      require.resolve(dep.name);
+      nativeResolve(dep.name);
       return false;
     } catch {
       return true;
@@ -435,9 +430,9 @@ async function ensureDeps(dialect) {
       }
 
       // --- ISOLATED SANDBOX ARCHITECTURE ---
-      // Execute the database backend install locked cleanly inside a .data sandbox
+      // Execute the database backend install locked cleanly inside a .xnapify sandbox
       // to guarantee NPM v9+ never traverses into the project root and drops packages
-      const driverDir = path.join(ROOT, '.data', 'sequelize-drivers', dialect);
+      const driverDir = defaultDataDir(path.join('sequelize-drivers', dialect));
       if (!fs.existsSync(driverDir))
         fs.mkdirSync(driverDir, { recursive: true });
 
@@ -724,7 +719,7 @@ function resolvePgBin(binName) {
   const pkgName = `@embedded-postgres/${platKey}-${archKey}`;
 
   try {
-    const pkgDir = path.dirname(require.resolve(`${pkgName}/package.json`));
+    const pkgDir = path.dirname(nativeResolve(`${pkgName}/package.json`));
     const bin = path.join(pkgDir, 'native', 'bin', fileName);
     if (fs.existsSync(bin)) return bin;
   } catch {
@@ -1790,7 +1785,7 @@ async function showStatus(dialectOverride) {
   const deps = DIALECT_DEPS[dialect] || [];
   const installed = deps.filter(d => {
     try {
-      require.resolve(d.name);
+      nativeResolve(d.name);
       return true;
     } catch {
       return false;

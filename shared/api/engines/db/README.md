@@ -18,10 +18,10 @@ const users = await models.User.findAll();
 
 Creates a Sequelize instance with migration methods attached.
 
-| Param | Type | Default | Description |
-|---|---|---|---|
-| `url` | `string` | `XNAPIFY_DB_URL` or `sqlite:database.sqlite` | Database connection URL |
-| `options` | `object` | `{}` | Sequelize options (deep-merged with defaults) |
+| Param     | Type     | Default                                      | Description                                   |
+| --------- | -------- | -------------------------------------------- | --------------------------------------------- |
+| `url`     | `string` | `XNAPIFY_DB_URL` or `sqlite:database.sqlite` | Database connection URL                       |
+| `options` | `object` | `{}`                                         | Sequelize options (deep-merged with defaults) |
 
 ### `closeConnection()`
 
@@ -43,23 +43,24 @@ await connection.runMigrations(migrationsContext);
 await connection.runSeeds(seedsContext);
 await connection.revertMigrations(migrationsContext);
 await connection.undoSeeds(seedsContext);
-const { executed, pending } = await connection.getMigrationStatus(migrationsContext);
+const { executed, pending } =
+  await connection.getMigrationStatus(migrationsContext);
 const seedStatus = await connection.getSeedStatus(seedsContext);
 ```
 
 ### Default Configuration
 
-| Option | Value | Env Override |
-|---|---|---|
-| Timezone | `+00:00` (UTC) | `XNAPIFY_DB_TZ` |
-| Pool max | `5` | `XNAPIFY_DB_POOL_MAX` |
-| Pool min | `0` | `XNAPIFY_DB_POOL_MIN` |
-| Pool idle | `10s` | — |
-| Pool acquire | `30s` | — |
-| Logging | Disabled | `XNAPIFY_DB_LOG=true` (dev only) |
-| `freezeTableName` | `true` | — |
-| `timestamps` | `true` | — |
-| SQLite data dir | `.data/sqlite` (dev) / `~/.xnapify/sqlite` (prod) | `XNAPIFY_SQLITE_DATA_DIR` |
+| Option            | Value                                                | Env Override                     |
+| ----------------- | ---------------------------------------------------- | -------------------------------- |
+| Timezone          | `+00:00` (UTC)                                       | `XNAPIFY_DB_TZ`                  |
+| Pool max          | `5`                                                  | `XNAPIFY_DB_POOL_MAX`            |
+| Pool min          | `0`                                                  | `XNAPIFY_DB_POOL_MIN`            |
+| Pool idle         | `10s`                                                | —                                |
+| Pool acquire      | `30s`                                                | —                                |
+| Logging           | Disabled                                             | `XNAPIFY_DB_LOG=true` (dev only) |
+| `freezeTableName` | `true`                                               | —                                |
+| `timestamps`      | `true`                                               | —                                |
+| SQLite data dir   | `.xnapify/sqlite` (dev) / `~/.xnapify/sqlite` (prod) | `XNAPIFY_SQLITE_DATA_DIR`        |
 
 > **Note:** SQL logging is automatically disabled in production (`NODE_ENV=production`) even when `XNAPIFY_DB_LOG=true`.
 >

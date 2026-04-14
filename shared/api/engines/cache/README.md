@@ -8,8 +8,8 @@ Key-value caching with pluggable adapters (memory, file), namespace isolation, L
 const cache = container.resolve('cache');
 
 await cache.set('key', 'value', 60000); // 60s TTL
-const value = await cache.get('key');    // 'value' or null
-await cache.delete('key');               // true/false
+const value = await cache.get('key'); // 'value' or null
+await cache.delete('key'); // true/false
 ```
 
 > **Note:** In `__DEV__` mode, all cache operations are no-ops to ensure fresh data.
@@ -18,17 +18,17 @@ await cache.delete('key');               // true/false
 
 ### Core Methods
 
-| Method | Returns | Description |
-|---|---|---|
-| `get(key)` | value or `null` | Get value (null if missing or expired) |
-| `set(key, value, ttl?)` | `void` | Set value with optional TTL in ms (default: 5 min) |
-| `delete(key)` | `boolean` | Delete key |
-| `has(key)` | `boolean` | Check if key exists and not expired |
-| `clear()` | `void` | Clear all entries |
-| `keys()` | `string[]` | Get all cache keys |
-| `stats()` | `object` | Cache statistics |
-| `cleanup()` | `number` | Remove expired entries, returns count |
-| `size` | `number` | Current entry count |
+| Method                  | Returns         | Description                                        |
+| ----------------------- | --------------- | -------------------------------------------------- |
+| `get(key)`              | value or `null` | Get value (null if missing or expired)             |
+| `set(key, value, ttl?)` | `void`          | Set value with optional TTL in ms (default: 5 min) |
+| `delete(key)`           | `boolean`       | Delete key                                         |
+| `has(key)`              | `boolean`       | Check if key exists and not expired                |
+| `clear()`               | `void`          | Clear all entries                                  |
+| `keys()`                | `string[]`      | Get all cache keys                                 |
+| `stats()`               | `object`        | Cache statistics                                   |
+| `cleanup()`             | `number`        | Remove expired entries, returns count              |
+| `size`                  | `number`        | Current entry count                                |
 
 > **Note:** File cache methods are async (return Promises). Memory cache methods are synchronous.
 
@@ -50,11 +50,11 @@ userCache.clear(); // Removes "users:*", leaves "posts:*" etc.
 
 ## Adapters
 
-| Type | Class | Default `maxSize` | Default Dir | Description |
-|---|---|---|---|---|
-| `memory` | `MemoryCache` | `1000` | — | In-memory LRU cache (default) |
-| `file` | `FileCache` | `10000` | `~/.xnapify/caches` (prod)<br/>`.data/caches` (dev) | File-system backed, persistent across restarts |
-| `noop` | `NoOpCache` | — | — | No-op (auto-selected in `__DEV__` mode) |
+| Type     | Class         | Default `maxSize` | Default Dir                                            | Description                                    |
+| -------- | ------------- | ----------------- | ------------------------------------------------------ | ---------------------------------------------- |
+| `memory` | `MemoryCache` | `1000`            | —                                                      | In-memory LRU cache (default)                  |
+| `file`   | `FileCache`   | `10000`           | `~/.xnapify/caches` (prod)<br/>`.xnapify/caches` (dev) | File-system backed, persistent across restarts |
+| `noop`   | `NoOpCache`   | —                 | —                                                      | No-op (auto-selected in `__DEV__` mode)        |
 
 ### Memory Adapter
 
@@ -83,15 +83,19 @@ const memCache = createFactory({ type: 'memory', maxSize: 500, ttl: 10000 });
 ## Error Classes
 
 ```javascript
-import { CacheError, InvalidCacheTypeError, InvalidNamespaceError } from '@shared/api/engines/cache';
+import {
+  CacheError,
+  InvalidCacheTypeError,
+  InvalidNamespaceError,
+} from '@shared/api/engines/cache';
 ```
 
-| Class | Code | Status | When |
-|---|---|---|---|
-| `CacheError` | `CACHE_ERROR` | `500` | Base error |
-| `InvalidCacheTypeError` | `INVALID_CACHE_TYPE` | `400` | Unknown adapter type |
-| `InvalidNamespaceError` | `INVALID_NAMESPACE` | `400` | Invalid namespace |
-| `InvalidCacheError` | `INVALID_CACHE` | `400` | Missing/invalid base cache |
+| Class                   | Code                 | Status | When                       |
+| ----------------------- | -------------------- | ------ | -------------------------- |
+| `CacheError`            | `CACHE_ERROR`        | `500`  | Base error                 |
+| `InvalidCacheTypeError` | `INVALID_CACHE_TYPE` | `400`  | Unknown adapter type       |
+| `InvalidNamespaceError` | `INVALID_NAMESPACE`  | `400`  | Invalid namespace          |
+| `InvalidCacheError`     | `INVALID_CACHE`      | `400`  | Missing/invalid base cache |
 
 ## Signal Handling
 

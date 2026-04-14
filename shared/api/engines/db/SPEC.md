@@ -27,29 +27,29 @@ shared/api/engines/db/
 
 ### Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `XNAPIFY_DB_URL` | `sqlite:database.sqlite` | Database connection URL |
-| `XNAPIFY_DB_TZ` | `+00:00` | Connection timezone (ignored for SQLite) |
-| `XNAPIFY_DB_LOG` | `false` | Enable SQL query logging (disabled in production) |
-| `XNAPIFY_DB_POOL_MAX` | `5` | Maximum connection pool size |
-| `XNAPIFY_DB_POOL_MIN` | `0` | Minimum connection pool size |
-| `XNAPIFY_SQLITE_DATA_DIR` | `.data/sqlite` (dev) / `~/.xnapify/sqlite` (prod) | Directory for SQLite database file (relative paths resolved against this) |
-| `XNAPIFY_PG_DATA_DIR` | `.data/postgres` (dev) / `~/.xnapify/postgres` (prod) | Directory for embedded PostgreSQL data |
-| `XNAPIFY_MYSQL_DATA_DIR` | `.data/mysql` (dev) / `~/.xnapify/mysql` (prod) | Directory for embedded MySQL data |
+| Variable                  | Default                                                  | Description                                                               |
+| ------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `XNAPIFY_DB_URL`          | `sqlite:database.sqlite`                                 | Database connection URL                                                   |
+| `XNAPIFY_DB_TZ`           | `+00:00`                                                 | Connection timezone (ignored for SQLite)                                  |
+| `XNAPIFY_DB_LOG`          | `false`                                                  | Enable SQL query logging (disabled in production)                         |
+| `XNAPIFY_DB_POOL_MAX`     | `5`                                                      | Maximum connection pool size                                              |
+| `XNAPIFY_DB_POOL_MIN`     | `0`                                                      | Minimum connection pool size                                              |
+| `XNAPIFY_SQLITE_DATA_DIR` | `.xnapify/sqlite` (dev) / `~/.xnapify/sqlite` (prod)     | Directory for SQLite database file (relative paths resolved against this) |
+| `XNAPIFY_PG_DATA_DIR`     | `.xnapify/postgres` (dev) / `~/.xnapify/postgres` (prod) | Directory for embedded PostgreSQL data                                    |
+| `XNAPIFY_MYSQL_DATA_DIR`  | `.xnapify/mysql` (dev) / `~/.xnapify/mysql` (prod)       | Directory for embedded MySQL data                                         |
 
 ### SQLite Concurrency Tuning
 
 When the connection URL starts with `sqlite:`, Sequelize's `afterConnect` hook applies PRAGMAs on every new pool connection:
 
-| PRAGMA | Value | Purpose |
-|--------|-------|---------|
-| `journal_mode` | `WAL` | Concurrent readers + single writer |
-| `busy_timeout` | `5000` | Wait 5 s on lock instead of `SQLITE_BUSY` |
-| `synchronous` | `NORMAL` | Safe with WAL, reduces fsync |
-| `cache_size` | `-64000` | 64 MB page cache |
-| `foreign_keys` | `ON` | Enforce FK constraints |
-| `mmap_size` | `268435456` | 256 MB memory-mapped I/O |
+| PRAGMA         | Value       | Purpose                                   |
+| -------------- | ----------- | ----------------------------------------- |
+| `journal_mode` | `WAL`       | Concurrent readers + single writer        |
+| `busy_timeout` | `5000`      | Wait 5 s on lock instead of `SQLITE_BUSY` |
+| `synchronous`  | `NORMAL`    | Safe with WAL, reduces fsync              |
+| `cache_size`   | `-64000`    | 64 MB page cache                          |
+| `foreign_keys` | `ON`        | Enforce FK constraints                    |
+| `mmap_size`    | `268435456` | 256 MB memory-mapped I/O                  |
 
 ## 3. Migrator (`migrator.js`)
 
@@ -66,4 +66,4 @@ Modules call `db.connection.runMigrations()` inside their `migrations(container)
 
 ---
 
-*Note: This spec reflects the CURRENT implementation of the db engine.*
+_Note: This spec reflects the CURRENT implementation of the db engine._

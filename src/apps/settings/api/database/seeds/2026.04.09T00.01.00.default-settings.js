@@ -170,6 +170,34 @@ const DEFAULT_SETTINGS = [
     description: 'Comma separated list of allowed file extensions',
   },
 
+  // ── Node-RED ─────────────────────────────────────────────────────────────
+  {
+    namespace: 'nodered',
+    key: 'NODERED_HOME',
+    type: 'string',
+    value: null,
+    default_env_var: 'XNAPIFY_NODERED_HOME',
+    description:
+      'Node-RED global user directory path (overrides .xnapify/node-red)',
+  },
+  {
+    namespace: 'nodered',
+    key: 'NODERED_LOG_LEVEL',
+    type: 'string',
+    value: 'info',
+    default_env_var: 'XNAPIFY_NODERED_LOG_LEVEL',
+    description: 'Log level for Node-RED diagnostics (info, debug, trace)',
+  },
+  {
+    namespace: 'nodered',
+    key: 'NODERED_PROJECTS',
+    type: 'boolean',
+    value: 'false',
+    default_env_var: 'XNAPIFY_NODERED_PROJECTS',
+    description:
+      'Enable Node-RED built-in Git projects and workflow versioning',
+  },
+
   // ── Webhook & Search ─────────────────────────────────────────────────────
   {
     namespace: 'webhook',

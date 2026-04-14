@@ -732,7 +732,7 @@ XNAPIFY_PUBLIC_APP_DESC="Snap your API, Stream your React"
 XNAPIFY_DB_URL=sqlite:database.sqlite
 
 # Database data directories (control where each DB stores files)
-# Defaults: dev → .data/<dialect>, prod → ~/.xnapify/<dialect>
+# Defaults: dev → .xnapify/<dialect>, prod → ~/.xnapify/<dialect>
 # XNAPIFY_SQLITE_DATA_DIR=       # SQLite database file location
 # XNAPIFY_PG_DATA_DIR=           # PostgreSQL data directory
 # XNAPIFY_MYSQL_DATA_DIR=        # MySQL data directory

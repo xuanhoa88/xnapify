@@ -31,7 +31,6 @@ const SKIP_DIRS = new Set([
   // Project-specific
   '.agent',
   '.xnapify',
-  '.data',
 
   // Data-layer artifacts (auto-generated, not source code)
   'migrations',

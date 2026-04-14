@@ -13,19 +13,19 @@ Database operations in xnapify are managed through the `db` engine (`shared/api/
 
 ### Database Engine
 
-| Component | File | Purpose |
-|-----------|------|---------|
+| Component  | File            | Purpose                             |
+| ---------- | --------------- | ----------------------------------- |
 | Connection | `connection.js` | Sequelize instance + SQLite pragmas |
-| Migrator | `migrator.js` | Umzug-based migration/seed runner |
-| Entry | `index.js` | Re-exports + Sequelize operators |
+| Migrator   | `migrator.js`   | Umzug-based migration/seed runner   |
+| Entry      | `index.js`      | Re-exports + Sequelize operators    |
 
 ### Multi-DB Support
 
-| Database | Driver | Env Var | Default |
-|----------|--------|---------|---------|
-| SQLite | `sqlite3` | `XNAPIFY_DB_URL=sqlite` | ✅ Default |
-| PostgreSQL | `pg` | `XNAPIFY_DB_URL=postgres://...` | — |
-| MySQL/MariaDB | `mysql2` | `XNAPIFY_DB_URL=mysql://...` | — |
+| Database      | Driver    | Env Var                         | Default    |
+| ------------- | --------- | ------------------------------- | ---------- |
+| SQLite        | `sqlite3` | `XNAPIFY_DB_URL=sqlite`         | ✅ Default |
+| PostgreSQL    | `pg`      | `XNAPIFY_DB_URL=postgres://...` | —          |
+| MySQL/MariaDB | `mysql2`  | `XNAPIFY_DB_URL=mysql://...`    | —          |
 
 Drivers are auto-installed by `tools/npm/preboot.js` at startup. In Docker images, all 3 drivers are
 pre-installed during the build stage (`node tools/npm/preboot.js --db <dialect> --install`).
@@ -34,11 +34,11 @@ pre-installed during the build stage (`node tools/npm/preboot.js --db <dialect> 
 
 Each database dialect has a configurable data directory. Defaults vary by environment:
 
-| Variable | Dev Default | Prod Default | Docker |
-|----------|-------------|--------------|--------|
-| `XNAPIFY_SQLITE_DATA_DIR` | `.data/sqlite` | `~/.xnapify/sqlite` | `/app/data/sqlite` |
-| `XNAPIFY_PG_DATA_DIR` | `.data/postgres` | `~/.xnapify/postgres` | `/app/data/postgres` |
-| `XNAPIFY_MYSQL_DATA_DIR` | `.data/mysql` | `~/.xnapify/mysql` | `/app/data/mysql` |
+| Variable                  | Dev Default         | Prod Default          | Docker               |
+| ------------------------- | ------------------- | --------------------- | -------------------- |
+| `XNAPIFY_SQLITE_DATA_DIR` | `.xnapify/sqlite`   | `~/.xnapify/sqlite`   | `/app/data/sqlite`   |
+| `XNAPIFY_PG_DATA_DIR`     | `.xnapify/postgres` | `~/.xnapify/postgres` | `/app/data/postgres` |
+| `XNAPIFY_MYSQL_DATA_DIR`  | `.xnapify/mysql`    | `~/.xnapify/mysql`    | `/app/data/mysql`    |
 
 > When `XNAPIFY_SQLITE_DATA_DIR` is set, relative paths in `XNAPIFY_DB_URL` (e.g., `sqlite:database.sqlite`) resolve against the data directory. Preboot also uses it to place the database file in the correct location.
 
@@ -100,14 +100,14 @@ Example: `2026.04.01T00.00.00.create-posts.js`
 
 ### Migration Best Practices
 
-| Rule | Why |
-|------|-----|
-| Always include `down()` | Enables rollback |
-| Use `queryInterface` methods | Portable across SQLite/PG/MySQL |
-| Add indexes for queried columns | Performance |
-| Use `DataTypes.UUID` for PKs | Distributed-safe |
-| Include `references` for FKs | Enables eager loading |
-| Name files with timestamps | Ensures ordered execution |
+| Rule                            | Why                             |
+| ------------------------------- | ------------------------------- |
+| Always include `down()`         | Enables rollback                |
+| Use `queryInterface` methods    | Portable across SQLite/PG/MySQL |
+| Add indexes for queried columns | Performance                     |
+| Use `DataTypes.UUID` for PKs    | Distributed-safe                |
+| Include `references` for FKs    | Enables eager loading           |
+| Name files with timestamps      | Ensures ordered execution       |
 
 ### Adding Columns (Alter Migration)
 
@@ -137,40 +137,41 @@ export async function down({ context: queryInterface }) {
 ```javascript
 // api/models/Post.js
 export default function defineModel({ connection, DataTypes }) {
-  const Post = connection.define('Post', {
-    id: {
-      type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
-      primaryKey: true,
+  const Post = connection.define(
+    'Post',
+    {
+      id: {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        primaryKey: true,
+      },
+      title: {
+        type: DataTypes.STRING(255),
+        allowNull: false,
+      },
+      slug: {
+        type: DataTypes.STRING(255),
+        allowNull: true,
+        unique: true,
+      },
+      content: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      },
+      userId: {
+        type: DataTypes.UUID,
+        allowNull: false,
+      },
     },
-    title: {
-      type: DataTypes.STRING(255),
-      allowNull: false,
+    {
+      tableName: 'posts',
+      timestamps: true,
+      indexes: [{ fields: ['userId'] }, { fields: ['slug'], unique: true }],
     },
-    slug: {
-      type: DataTypes.STRING(255),
-      allowNull: true,
-      unique: true,
-    },
-    content: {
-      type: DataTypes.TEXT,
-      allowNull: true,
-    },
-    userId: {
-      type: DataTypes.UUID,
-      allowNull: false,
-    },
-  }, {
-    tableName: 'posts',
-    timestamps: true,
-    indexes: [
-      { fields: ['userId'] },
-      { fields: ['slug'], unique: true },
-    ],
-  });
+  );
 
   // REQUIRED: Define associations
-  Post.associate = (models) => {
+  Post.associate = models => {
     Post.belongsTo(models.User, {
       as: 'author',
       foreignKey: 'userId',
@@ -187,28 +188,32 @@ export default function defineModel({ connection, DataTypes }) {
 
 ### Model Conventions
 
-| Convention | Example |
-|-----------|---------|
-| Function signature | `({ connection, DataTypes })` |
-| Table name | `tableName: 'snake_case_plural'` |
-| PK type | `DataTypes.UUID` with `UUIDV4` default |
-| Timestamps | `timestamps: true` (auto `createdAt`/`updatedAt`) |
-| Associations | `Post.associate = (models) => { ... }` |
-| Indexes | Declared in model `indexes` array |
+| Convention         | Example                                           |
+| ------------------ | ------------------------------------------------- |
+| Function signature | `({ connection, DataTypes })`                     |
+| Table name         | `tableName: 'snake_case_plural'`                  |
+| PK type            | `DataTypes.UUID` with `UUIDV4` default            |
+| Timestamps         | `timestamps: true` (auto `createdAt`/`updatedAt`) |
+| Associations       | `Post.associate = (models) => { ... }`            |
+| Indexes            | Declared in model `indexes` array                 |
 
 ### Virtual Fields
 
 ```javascript
-Post.define('Post', {
-  // ... columns
-}, {
-  getterMethods: {
-    excerpt() {
-      const content = this.getDataValue('content');
-      return content ? content.substring(0, 200) : '';
+Post.define(
+  'Post',
+  {
+    // ... columns
+  },
+  {
+    getterMethods: {
+      excerpt() {
+        const content = this.getDataValue('content');
+        return content ? content.substring(0, 200) : '';
+      },
     },
   },
-});
+);
 ```
 
 ### Scopes
@@ -218,7 +223,7 @@ Post.addScope('published', {
   where: { status: 'published' },
 });
 
-Post.addScope('byUser', (userId) => ({
+Post.addScope('byUser', userId => ({
   where: { userId },
 }));
 
@@ -236,15 +241,23 @@ Post.addScope('byUser', (userId) => ({
 // api/database/seeds/2026.04.01T00.00.00.default-categories.js
 export async function up({ context: queryInterface }) {
   const categories = [
-    { id: '550e8400-e29b-41d4-a716-446655440001', name: 'General', slug: 'general' },
+    {
+      id: '550e8400-e29b-41d4-a716-446655440001',
+      name: 'General',
+      slug: 'general',
+    },
     { id: '550e8400-e29b-41d4-a716-446655440002', name: 'News', slug: 'news' },
   ];
 
-  await queryInterface.bulkInsert('categories', categories.map(c => ({
-    ...c,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  })), { ignoreDuplicates: true });
+  await queryInterface.bulkInsert(
+    'categories',
+    categories.map(c => ({
+      ...c,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })),
+    { ignoreDuplicates: true },
+  );
 }
 
 export async function down({ context: queryInterface }) {
@@ -259,12 +272,12 @@ export async function down({ context: queryInterface }) {
 
 ### Seed Best Practices
 
-| Rule | Why |
-|------|-----|
-| Use `ignoreDuplicates: true` | Idempotent (safe to re-run) |
-| Use fixed UUIDs in seeds | Deterministic (reproducible) |
-| Include `down()` | Revert on uninstall |
-| Include timestamps | Required for `timestamps: true` |
+| Rule                         | Why                             |
+| ---------------------------- | ------------------------------- |
+| Use `ignoreDuplicates: true` | Idempotent (safe to re-run)     |
+| Use fixed UUIDs in seeds     | Deterministic (reproducible)    |
+| Include `down()`             | Revert on uninstall             |
+| Include timestamps           | Required for `timestamps: true` |
 
 ---
 
@@ -335,7 +348,10 @@ const transaction = await db.connection.transaction();
 
 try {
   const post = await Post.create({ title, content, userId }, { transaction });
-  await ActivityLog.create({ action: 'post:created', resourceId: post.id }, { transaction });
+  await ActivityLog.create(
+    { action: 'post:created', resourceId: post.id },
+    { transaction },
+  );
   await transaction.commit();
   return post;
 } catch (error) {
@@ -350,22 +366,22 @@ try {
 
 ### SQLite-Specific
 
-| Setting | Value | Why |
-|---------|-------|-----|
-| WAL mode | `PRAGMA journal_mode=WAL` | Concurrent reads during writes |
-| Busy timeout | `PRAGMA busy_timeout=5000` | Retry on lock (5s) |
-| Pool max | `1` | SQLite only supports one writer |
-| FK constraints | `PRAGMA foreign_keys=ON` | Enforce referential integrity |
+| Setting        | Value                      | Why                             |
+| -------------- | -------------------------- | ------------------------------- |
+| WAL mode       | `PRAGMA journal_mode=WAL`  | Concurrent reads during writes  |
+| Busy timeout   | `PRAGMA busy_timeout=5000` | Retry on lock (5s)              |
+| Pool max       | `1`                        | SQLite only supports one writer |
+| FK constraints | `PRAGMA foreign_keys=ON`   | Enforce referential integrity   |
 
 ### PostgreSQL/MySQL Differences
 
-| Feature | SQLite | PostgreSQL | MySQL |
-|---------|--------|-----------|-------|
-| Concurrency | WAL mode | Native MVCC | InnoDB |
-| Pool max | `1` | `5` (default) | `5` (default) |
-| JSONB | ❌ TEXT | ✅ Native | ✅ JSON type |
-| Array columns | ❌ | ✅ `DataTypes.ARRAY` | ❌ |
-| Full-text search | ❌ | ✅ `tsvector` | ✅ FULLTEXT |
+| Feature          | SQLite   | PostgreSQL           | MySQL         |
+| ---------------- | -------- | -------------------- | ------------- |
+| Concurrency      | WAL mode | Native MVCC          | InnoDB        |
+| Pool max         | `1`      | `5` (default)        | `5` (default) |
+| JSONB            | ❌ TEXT  | ✅ Native            | ✅ JSON type  |
+| Array columns    | ❌       | ✅ `DataTypes.ARRAY` | ❌            |
+| Full-text search | ❌       | ✅ `tsvector`        | ✅ FULLTEXT   |
 
 ### Portable Queries
 
@@ -421,11 +437,11 @@ sqlite3 database.sqlite "SELECT key, is_active FROM extensions;"
 
 ## Related Skills & Workflows
 
-| Need | Skill / Workflow |
-|------|-----------------|
-| Module lifecycle (migrations hook) | `module-development` skill |
-| Extension lifecycle | `extension-development` skill |
-| Engine architecture | `engine-development` skill |
-| Adding data to a module | `/add-data` workflow |
-| Security (SQL injection) | `security-compliance` skill |
-| Debugging DB issues | `/debug` workflow (Part 11) |
+| Need                               | Skill / Workflow              |
+| ---------------------------------- | ----------------------------- |
+| Module lifecycle (migrations hook) | `module-development` skill    |
+| Extension lifecycle                | `extension-development` skill |
+| Engine architecture                | `engine-development` skill    |
+| Adding data to a module            | `/add-data` workflow          |
+| Security (SQL injection)           | `security-compliance` skill   |
+| Debugging DB issues                | `/debug` workflow (Part 11)   |

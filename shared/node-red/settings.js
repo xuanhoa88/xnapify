@@ -253,9 +253,11 @@ export default function createSettings(options = {}) {
     port = 1337,
     protocol = 'http',
     userDir = process.env.XNAPIFY_NODERED_HOME ||
-      (process.env.NODE_ENV === 'production'
-        ? path.join(os.homedir(), '.xnapify', 'node-red')
-        : path.join(process.cwd(), '.data', 'node-red')),
+      path.join(
+        process.env.NODE_ENV === 'production' ? os.homedir() : process.cwd(),
+        '.xnapify',
+        'node-red',
+      ),
     logLevel = process.env.XNAPIFY_NODERED_LOG_LEVEL || 'info',
     enableProjects = process.env.XNAPIFY_NODERED_PROJECTS === 'true',
     httpAdminRoot = '/~/red/admin',

@@ -18,6 +18,7 @@ const CORE_ICONS = Object.freeze({
   file: 'folder',
   webhook: 'zap',
   optimization: 'sliders',
+  nodered: 'layers',
 });
 
 const CORE_LABELS = Object.freeze({
@@ -27,11 +28,13 @@ const CORE_LABELS = Object.freeze({
   file: 'File Storage',
   webhook: 'Webhook',
   optimization: 'Optimization',
+  nodered: 'Node-RED',
 });
 
 const CORE_ORDER = Object.freeze([
   'core',
   'auth',
+  'nodered',
   'email',
   'file',
   'webhook',

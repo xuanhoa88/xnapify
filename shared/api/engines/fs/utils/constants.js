@@ -42,9 +42,11 @@ export const DEFAULT_CONFIG = {
   get UPLOAD_DIR() {
     return (
       process.env.XNAPIFY_UPLOAD_DIR ||
-      (process.env.NODE_ENV === 'production'
-        ? path.join(os.homedir(), '.xnapify', 'uploads')
-        : path.join(process.cwd(), '.data', 'uploads'))
+      path.join(
+        process.env.NODE_ENV === 'production' ? os.homedir() : process.cwd(),
+        '.xnapify',
+        'uploads',
+      )
     );
   },
   get ALLOWED_EXTENSIONS() {

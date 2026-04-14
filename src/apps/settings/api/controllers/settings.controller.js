@@ -36,7 +36,9 @@ export async function list(req, res) {
     const isAdmin = req.user && req.user.is_admin === true;
     const userPermissions = (req.user && req.user.permissions) || [];
 
-    const groupedSettings = await settings.getAll();
+    const groupedSettings = await settings.getAll(undefined, {
+      bypassCache: true,
+    });
     const authorizedGrouped = {};
 
     // 2. Filter out namespaces without read permissions
@@ -102,7 +104,7 @@ export async function getByNamespace(req, res) {
       return;
     }
 
-    const items = await settings.getAll(namespace);
+    const items = await settings.getAll(namespace, { bypassCache: true });
     return http.sendSuccess(res, items);
   } catch (error) {
     return http.sendServerError(

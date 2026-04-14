@@ -69,4 +69,4 @@ logs/
 .cache/
 .temp/
 tmp/
-.data/
+.xnapify/

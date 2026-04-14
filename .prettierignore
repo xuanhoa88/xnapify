@@ -12,7 +12,7 @@ release/
 dist/
 out/
 .cache/
-.data/
+.xnapify/
 coverage/
 
 # Generated files
