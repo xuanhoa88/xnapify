@@ -56,6 +56,9 @@ export async function registerUser(
     throw error;
   }
 
+  // Invoke before_register hook (allow modules to reject registration)
+  await hook('auth').invoke('before_register', { userData });
+
   // Create user with profile (password hashed automatically by model hook)
   const user = await User.create(
     {

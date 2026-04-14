@@ -46,6 +46,9 @@ function Login() {
   const error = useSelector(getAuthError);
   const currentLocale = useSelector(getLocale);
   const returnTo = useQuery('returnTo') || '/';
+  const settings = useSelector(state => state.settings || {});
+  const isRegistrationAllowed =
+    settings && settings['auth.ALLOW_REGISTRATION'] !== false;
 
   // Clear error on unmount
   useEffect(() => {
@@ -129,14 +132,16 @@ function Login() {
             <ExtensionSlot name='auth.login.quickAccess' />
           </Form>
 
-          <div className={s.registerLink}>
-            <Trans
-              t={t}
-              i18nKey='login.dontHaveAccount'
-              // eslint-disable-next-line jsx-a11y/anchor-has-content, react/jsx-key
-              components={[<Link to='/register' className={s.link} />]}
-            />
-          </div>
+          {isRegistrationAllowed && (
+            <div className={s.registerLink}>
+              <Trans
+                t={t}
+                i18nKey='login.dontHaveAccount'
+                // eslint-disable-next-line jsx-a11y/anchor-has-content, react/jsx-key
+                components={[<Link to='/register' className={s.link} />]}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

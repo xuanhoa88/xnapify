@@ -91,6 +91,12 @@ export async function register(req, res) {
       return http.sendError(res, 'User with this email already exists', 409);
     }
 
+    // Event-driven generic HTTP Error delegation mapping
+    const statusCode = error.statusCode || error.status;
+    if (statusCode && statusCode >= 400 && statusCode < 600) {
+      return http.sendError(res, error.message, statusCode, error);
+    }
+
     return http.sendServerError(res, 'Registration failed', error);
   }
 }

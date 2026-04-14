@@ -11,23 +11,12 @@ import { LRUCache } from 'lru-cache';
 // CACHE CONFIGURATION
 // =============================================================================
 
-/** Max entries for single-key lookups (namespace.key → coerced value) */
-const SINGLE_CACHE_MAX = 1000;
-
-/**
- * TTL for single-key lookups (ms).
- * 5 minutes is an optimal sweet-spot: it achieves a near 100% cache hit rate
- * for busy requests, while ensuring that multi-process clusters eventually
- * sync up if a setting is changed in another node.
- */
-const SINGLE_CACHE_TTL = 5 * 60 * 1000; // 5 mins
-
-/** Max entries for collection queries (getAll, getPublic, getByNamespace) */
+/** Max entries for collection queries (getAll, getDictionary) */
 const COLLECTION_CACHE_MAX = 100;
 
 /**
  * TTL for collection queries (ms)
- * 1 minute ensures the admin UI and public frontend endpoints load instantly
+ * 1 minute ensures the admin UI loads instantly
  * but reflect new grouped configurations very quickly.
  */
 const COLLECTION_CACHE_TTL = 60 * 1000; // 1 min
@@ -49,13 +38,7 @@ const COLLECTION_CACHE_TTL = 60 * 1000; // 1 min
 export function createSettingsService(container) {
   // ── Caches ────────────────────────────────────────────────────────────────
 
-  /** Cache for single get(namespace, key) → coerced value */
-  const singleCache = new LRUCache({
-    max: SINGLE_CACHE_MAX,
-    ttl: SINGLE_CACHE_TTL,
-  });
-
-  /** Cache for collection queries (getAll, getPublic, getByNamespace) */
+  /** Cache for collection queries (getAll, getDictionary) */
   const collectionCache = new LRUCache({
     max: COLLECTION_CACHE_MAX,
     ttl: COLLECTION_CACHE_TTL,
@@ -138,13 +121,9 @@ export function createSettingsService(container) {
 
   /**
    * Invalidate cache entries affected by a write to (namespace, key).
-   *
-   * @param {string} namespace
-   * @param {string} key
    */
-  function invalidate(namespace, key) {
-    singleCache.delete(`${namespace}.${key}`);
-    // Purge all collection caches since any write could affect grouping
+  function invalidate() {
+    // Purge all collection caches since any write could affect grouping or dictionaries
     collectionCache.clear();
   }
 
@@ -188,36 +167,44 @@ export function createSettingsService(container) {
     }
   }
 
+  /**
+   * Internal generic dictionary factory mapping DB rows -> nested lodash objects.
+   */
+  async function getDictionary(isPublic = false) {
+    const cacheKey = isPublic ? 'dict:public' : 'dict:all';
+    if (collectionCache.has(cacheKey)) return collectionCache.get(cacheKey);
+
+    const { Setting } = container.resolve('models');
+    const where = isPublic ? { is_public: true } : {};
+    const rows = await Setting.findAll({ where });
+
+    const result = {};
+    for (const row of rows) {
+      const rawValue = resolveValue(row);
+      result[`${row.namespace}.${row.key}`] = coerce(rawValue, row.type);
+    }
+
+    collectionCache.set(cacheKey, result);
+    return result;
+  }
+
   // ── Public API ────────────────────────────────────────────────────────────
 
   return {
     /**
-     * Get a single setting value (resolved, coerced).
-     * Results are cached for up to 5 minutes.
+     * Get a single setting value via dynamic path traversal.
+     * Uses memory-cached dictionary to avoid N+1 DB queries natively.
      *
-     * @param {string} namespace - Module namespace
-     * @param {string} key - Setting key
+     * @param {string} namespaceOrPath - Module namespace or full dot path
+     * @param {string} [key] - Setting key (optional if using path)
      * @returns {Promise<*>} Coerced value or null
      */
-    async get(namespace, key) {
-      const cacheKey = `${namespace}.${key}`;
+    async get(namespaceOrPath, key) {
+      const path = key ? `${namespaceOrPath}.${key}` : namespaceOrPath;
+      const dict = await getDictionary(false);
 
-      if (singleCache.has(cacheKey)) {
-        return singleCache.get(cacheKey);
-      }
-
-      const { Setting } = container.resolve('models');
-      const row = await Setting.findOne({ where: { namespace, key } });
-
-      if (!row) {
-        // Cache miss-as-null to avoid repeated DB queries for unknown keys
-        singleCache.set(cacheKey, null);
-        return null;
-      }
-
-      const result = coerce(resolveValue(row), row.type);
-      singleCache.set(cacheKey, result);
-      return result;
+      const val = dict[path];
+      return val == null ? null : val;
     },
 
     /**
@@ -278,30 +265,7 @@ export function createSettingsService(container) {
      * @returns {Promise<Object>} Map of "namespace.key" → coerced value
      */
     async getPublic() {
-      const cacheKey = 'public';
-
-      if (collectionCache.has(cacheKey)) {
-        return collectionCache.get(cacheKey);
-      }
-
-      const { Setting } = container.resolve('models');
-      const rows = await Setting.findAll({
-        where: { is_public: true },
-        order: [
-          ['namespace', 'ASC'],
-          ['sort_order', 'ASC'],
-          ['key', 'ASC'],
-        ],
-      });
-
-      const result = {};
-      for (const row of rows) {
-        const rawValue = resolveValue(row);
-        result[`${row.namespace}.${row.key}`] = coerce(rawValue, row.type);
-      }
-
-      collectionCache.set(cacheKey, result);
-      return result;
+      return getDictionary(true);
     },
 
     /**
@@ -326,7 +290,7 @@ export function createSettingsService(container) {
 
       row.value = value;
       await row.save();
-      invalidate(namespace, key);
+      invalidate();
       syncToEnv(row);
       return formatRow(row);
     },
@@ -364,11 +328,13 @@ export function createSettingsService(container) {
         }
       });
 
-      // Invalidate cache and sync to process.env after successful transaction commit
+      // Sync to process.env after successful transaction commit
       for (const result of results) {
-        invalidate(result.formatted.namespace, result.formatted.key);
         syncToEnv(result.row);
       }
+
+      // Execute a single global invalidation flush covering all updates securely
+      invalidate();
       return results.map(r => r.formatted);
     },
 
@@ -396,7 +362,6 @@ export function createSettingsService(container) {
      * Clear all caches. Useful after migrations or manual DB changes.
      */
     clearCache() {
-      singleCache.clear();
       collectionCache.clear();
     },
 

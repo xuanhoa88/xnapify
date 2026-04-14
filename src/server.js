@@ -648,10 +648,10 @@ function makeSsrMiddleware(baseUrl) {
 
       const html = await promiseWithDeadline(
         renderToHtml({
+          nonce,
           context,
           component: page.component,
           metadata: await extractPageMetadata(page, req),
-          nonce,
         }),
         SERVER_TIMEOUTS.RENDER,
         'SSR render',

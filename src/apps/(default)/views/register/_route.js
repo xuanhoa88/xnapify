@@ -27,6 +27,13 @@ export async function middleware(context, next) {
   if (isAuthenticated(state)) {
     return { redirect: query.returnTo || '/' };
   }
+
+  const allowRegistration =
+    state.settings && state.settings['auth.ALLOW_REGISTRATION'];
+  if (allowRegistration === false) {
+    return { redirect: '/login' };
+  }
+
   return next();
 }
 

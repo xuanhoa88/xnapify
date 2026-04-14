@@ -35,9 +35,9 @@ export default {
   routes: () => routesContext,
 
   async providers({ container }) {
-    // Register settings service on the DI container.
+    // Register settings service on the DI container as a persistent singleton.
     // Available to all modules loaded after this one (e.g. in their boot() hooks).
-    container.bind(
+    container.singleton(
       'settings',
       () => createSettingsService(container),
       OWNER_KEY,
@@ -46,9 +46,24 @@ export default {
 
   async boot({ container }) {
     const settings = container.resolve('settings');
+    const hook = container.resolve('hook');
 
     // Sync DB-overridden settings to process.env so legacy systems can reuse them.
     // Also snapshots original env values for safe restore on null reset.
     await settings.syncBootToEnv();
+
+    // Register inter-module hooks securely
+    hook('auth').on('before_register', async () => {
+      const allowRegistration = await settings.get(
+        'auth',
+        'ALLOW_REGISTRATION',
+      );
+      if (allowRegistration === false) {
+        const error = new Error('Registration is currently disabled.');
+        error.name = 'RegistrationDisabledError';
+        error.status = 403;
+        throw error;
+      }
+    });
   },
 };

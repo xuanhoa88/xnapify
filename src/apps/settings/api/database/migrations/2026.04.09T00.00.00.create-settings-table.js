@@ -52,6 +52,12 @@ export async function up({ context, Sequelize }) {
       allowNull: false,
       comment: 'If true, exposed to client via public API',
     },
+    sort_order: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+      allowNull: false,
+      comment: 'Control display sort order in the admin UI',
+    },
     description: {
       type: DataTypes.TEXT,
       allowNull: true,

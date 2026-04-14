@@ -56,7 +56,6 @@ const DEFAULT_SETTINGS = [
     type: 'boolean',
     value: 'false',
     default_env_var: 'XNAPIFY_MAINTENANCE_MODE',
-    is_public: false,
     description: 'Enable maintenance mode (blocks non-admin access)',
   },
   {
@@ -65,7 +64,6 @@ const DEFAULT_SETTINGS = [
     type: 'password',
     value: null,
     default_env_var: 'XNAPIFY_MAINTENANCE_BYPASS_TOKEN',
-    is_public: false,
     description: 'Secret token path to bypass maintenance (e.g. /my-secret)',
   },
 
@@ -76,7 +74,6 @@ const DEFAULT_SETTINGS = [
     type: 'string',
     value: null,
     default_env_var: 'XNAPIFY_JWT_EXPIRY',
-    is_public: false,
     description: 'Session JSON Web Token Expiration (e.g. 7d, 2h)',
   },
   {
@@ -94,7 +91,6 @@ const DEFAULT_SETTINGS = [
     type: 'string',
     value: null,
     default_env_var: 'XNAPIFY_GOOGLE_CLIENT_ID',
-    is_public: true,
     description: 'Google OAuth Client ID',
   },
   {
@@ -103,7 +99,6 @@ const DEFAULT_SETTINGS = [
     type: 'password',
     value: null,
     default_env_var: 'XNAPIFY_GOOGLE_CLIENT_KEY',
-    is_public: false,
     description: 'Google OAuth Client Secret Key',
   },
 
@@ -114,7 +109,6 @@ const DEFAULT_SETTINGS = [
     type: 'string',
     value: 'smtp',
     default_env_var: 'XNAPIFY_MAIL_PROVIDER',
-    is_public: false,
     description: 'Mail sending engine (smtp, mailgun, sendgrid, mock)',
   },
   {
@@ -123,7 +117,6 @@ const DEFAULT_SETTINGS = [
     type: 'string',
     value: null,
     default_env_var: 'XNAPIFY_MAIL_FROM',
-    is_public: false,
     description: 'Default sender email address',
   },
   {
@@ -132,7 +125,6 @@ const DEFAULT_SETTINGS = [
     type: 'string',
     value: null,
     default_env_var: 'XNAPIFY_SMTP_HOST',
-    is_public: false,
     description: 'SMTP Server Hostname',
   },
   {
@@ -141,7 +133,6 @@ const DEFAULT_SETTINGS = [
     type: 'integer',
     value: null,
     default_env_var: 'XNAPIFY_SMTP_PORT',
-    is_public: false,
     description: 'SMTP Server Network Port',
   },
   {
@@ -150,7 +141,6 @@ const DEFAULT_SETTINGS = [
     type: 'string',
     value: null,
     default_env_var: 'XNAPIFY_SMTP_USER',
-    is_public: false,
     description: 'SMTP Client Username',
   },
   {
@@ -159,7 +149,6 @@ const DEFAULT_SETTINGS = [
     type: 'password',
     value: null,
     default_env_var: 'XNAPIFY_SMTP_KEY',
-    is_public: false,
     description: 'SMTP Client Security Password',
   },
   {
@@ -168,7 +157,6 @@ const DEFAULT_SETTINGS = [
     type: 'boolean',
     value: null,
     default_env_var: 'XNAPIFY_SMTP_SECURE',
-    is_public: false,
     description: 'Enable TLS/SSL for SMTP endpoints',
   },
 
@@ -179,7 +167,6 @@ const DEFAULT_SETTINGS = [
     type: 'string',
     value: 'local',
     default_env_var: 'XNAPIFY_STORAGE_PROVIDER',
-    is_public: true,
     description: 'Storage backend provider (e.g., local, s3, gcs)',
   },
   {
@@ -188,7 +175,6 @@ const DEFAULT_SETTINGS = [
     type: 'integer',
     value: null,
     default_env_var: 'XNAPIFY_UPLOAD_FILE_SIZE',
-    is_public: true,
     description: 'Maximum permitted file upload size globally in Bytes',
   },
   {
@@ -197,7 +183,6 @@ const DEFAULT_SETTINGS = [
     type: 'string',
     value: null,
     default_env_var: 'XNAPIFY_UPLOAD_FILE_EXT',
-    is_public: true,
     description: 'Comma separated list of allowed file extensions',
   },
 
@@ -208,7 +193,6 @@ const DEFAULT_SETTINGS = [
     type: 'integer',
     value: '5000',
     default_env_var: null,
-    is_public: false,
     description: 'Timeout for dispatching webhook in milliseconds',
   },
   {
@@ -217,7 +201,6 @@ const DEFAULT_SETTINGS = [
     type: 'integer',
     value: '3',
     default_env_var: null,
-    is_public: false,
     description: 'Number of times to retry failed webhook deliveries',
   },
   {
@@ -226,7 +209,6 @@ const DEFAULT_SETTINGS = [
     type: 'boolean',
     value: 'true',
     default_env_var: null,
-    is_public: true,
     description: 'Require cryptographic payload signatures for reception',
   },
 
@@ -237,7 +219,6 @@ const DEFAULT_SETTINGS = [
     type: 'boolean',
     value: null,
     default_env_var: 'XNAPIFY_COMPRESSION',
-    is_public: false,
     description: 'Enable native HTTP gzip/brotli compression logic',
   },
   {
@@ -246,7 +227,6 @@ const DEFAULT_SETTINGS = [
     type: 'boolean',
     value: null,
     default_env_var: 'XNAPIFY_SSR_CACHE',
-    is_public: false,
     description: 'Enable Server-Side Rendering output caching',
   },
 ];

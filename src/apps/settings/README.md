@@ -18,17 +18,6 @@ const maintenanceMode = await settings.get('core', 'MAINTENANCE_MODE');
 // → false (boolean)
 ```
 
-### Client-side (React)
-
-Public settings are available via the API:
-
-```javascript
-// In a React component or thunk:
-const response = await fetch('/api/settings/public');
-const { data } = await response.json();
-// data = { 'core.APP_NAME': 'My App', 'core.MAINTENANCE_MODE': false, ... }
-```
-
 ## Adding New Settings
 
 Add entries to the default settings seed file, or create a new seed file in your module:
@@ -66,22 +55,21 @@ When you call `settings.get(namespace, key)`, values are resolved in this order:
 
 ## Setting Types
 
-| Type | DB Storage | Coerced Output | Admin UI Control |
-|---|---|---|---|
-| `string` | Plain text | `string` | Text input |
-| `boolean` | `'true'`/`'false'` | `true`/`false` | Toggle switch |
-| `integer` | Numeric string | `number` | Number input |
-| `json` | JSON string | `object` | Textarea (code) |
-| `password` | Plain text | `string` | Masked input |
+| Type       | DB Storage         | Coerced Output | Admin UI Control |
+| ---------- | ------------------ | -------------- | ---------------- |
+| `string`   | Plain text         | `string`       | Text input       |
+| `boolean`  | `'true'`/`'false'` | `true`/`false` | Toggle switch    |
+| `integer`  | Numeric string     | `number`       | Number input     |
+| `json`     | JSON string        | `object`       | Textarea (code)  |
+| `password` | Plain text         | `string`       | Masked input     |
 
 ## API Endpoints
 
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| `GET` | `/api/admin/settings` | `settings:read` | All settings grouped by namespace |
-| `GET` | `/api/admin/settings/:namespace` | `settings.{ns}:read` | Settings for one namespace |
-| `PUT` | `/api/admin/settings/:namespace` | `settings.{ns}:write` | Update settings for a namespace |
-| `GET` | `/api/settings/public` | None | Public settings as flat map |
+| Method | Path                             | Auth                  | Description                       |
+| ------ | -------------------------------- | --------------------- | --------------------------------- |
+| `GET`  | `/api/admin/settings`            | `settings:read`       | All settings grouped by namespace |
+| `GET`  | `/api/admin/settings/:namespace` | `settings.{ns}:read`  | Settings for one namespace        |
+| `PUT`  | `/api/admin/settings/:namespace` | `settings.{ns}:write` | Update settings for a namespace   |
 
 ## Architecture
 
@@ -99,7 +87,7 @@ src/apps/settings/
 │   ├── routes/
 │   │   ├── (admin)/(default)/      # Admin CRUD
 │   │   ├── (admin)/[namespace]/    # Per-namespace
-│   │   └── public/                 # Public endpoint
+
 │   └── services/
 │       └── settings.service.js     # Core service (DI: 'settings')
 ├── validator/
