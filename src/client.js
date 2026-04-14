@@ -48,13 +48,13 @@ const preloadedState = merge({}, window.__PRELOADED_STATE__);
 // Create browser history with configurable basename
 let parsedBasename = '';
 try {
-  const appUrlStr =
+  const appUrl =
     preloadedState.appUrl || process.env.XNAPIFY_PUBLIC_APP_URL || '';
-  if (appUrlStr.startsWith('http')) {
-    parsedBasename = new URL(appUrlStr).pathname;
+  if (appUrl.startsWith('http')) {
+    parsedBasename = new URL(appUrl).pathname;
     if (parsedBasename === '/') parsedBasename = '';
   } else {
-    parsedBasename = appUrlStr;
+    parsedBasename = appUrl;
   }
 } catch {
   parsedBasename = '';

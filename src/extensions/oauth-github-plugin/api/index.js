@@ -19,9 +19,8 @@ const seedsContext = require.context(
 export default {
   seeds: () => seedsContext,
   async boot({ container }) {
-    const settings = container.resolve('settings');
-    const clientID = await settings.get('auth', 'GITHUB_CLIENT_ID');
-    const clientSecret = await settings.get('auth', 'GITHUB_CLIENT_KEY');
+    const clientID = process.env.XNAPIFY_GITHUB_CLIENT_ID;
+    const clientSecret = process.env.XNAPIFY_GITHUB_CLIENT_KEY;
 
     if (!clientID || !clientSecret) {
       console.warn(
@@ -30,8 +29,6 @@ export default {
       return;
     }
 
-    const appUrl =
-      (await settings.get('core', 'APP_URL')) || 'http://localhost:1337';
     const oauth = container.resolve('oauth');
 
     oauth.registerProvider('github', {
@@ -39,7 +36,7 @@ export default {
         {
           clientID,
           clientSecret,
-          callbackURL: `${appUrl}/api/auth/oauth/github/callback`,
+          callbackURL: `${process.env.XNAPIFY_PUBLIC_APP_URL}/api/auth/oauth/github/callback`,
           scope: ['user:email'],
           passReqToCallback: false,
         },

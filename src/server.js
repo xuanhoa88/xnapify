@@ -92,6 +92,9 @@ const APP_METADATA = {
       process.env.XNAPIFY_PUBLIC_APP_DESC || 'Snap your API, Stream your React'
     );
   },
+  get url() {
+    return process.env.XNAPIFY_PUBLIC_APP_URL;
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -489,7 +492,7 @@ async function renderToHtml({ context, component, metadata = {}, nonce }) {
     scriptLinks: [...scriptLinks, ...safeExtUrls('scriptUrls')],
     appState: {
       redux: context.store.getState(),
-      appUrl: process.env.XNAPIFY_PUBLIC_APP_URL,
+      appUrl: APP_METADATA.url,
     },
     nonce,
   };
@@ -894,7 +897,7 @@ export async function bootstrapApp(app, server, options = {}) {
   // Ensure an absolute XNAPIFY_PUBLIC_APP_URL exists (used by OAuth callbacks, Passport, etc.)
   // If undefined or invalid, default to the local port/host used by the server
   // Access via bracket notation to prevent Webpack DefinePlugin from replacing it with a build-time string
-  if (!/^(http|https):\/\/.+$/.test(process.env.XNAPIFY_PUBLIC_APP_URL || '')) {
+  if (!/^(http|https):\/\/.+$/.test(APP_METADATA.url)) {
     set(process.env, 'XNAPIFY_PUBLIC_APP_URL', baseUrl);
   }
 
