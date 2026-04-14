@@ -85,22 +85,6 @@ const DEFAULT_SETTINGS = [
     is_public: true,
     description: 'Allow new user self-registration',
   },
-  {
-    namespace: 'auth',
-    key: 'GOOGLE_CLIENT_ID',
-    type: 'string',
-    value: null,
-    default_env_var: 'XNAPIFY_GOOGLE_CLIENT_ID',
-    description: 'Google OAuth Client ID',
-  },
-  {
-    namespace: 'auth',
-    key: 'GOOGLE_CLIENT_KEY',
-    type: 'password',
-    value: null,
-    default_env_var: 'XNAPIFY_GOOGLE_CLIENT_KEY',
-    description: 'Google OAuth Client Secret Key',
-  },
 
   // ── Email / SMTP ──────────────────────────────────────────────────────────
   {
