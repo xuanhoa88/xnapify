@@ -326,7 +326,8 @@
    OAUTH BUTTONS & DIVIDER
    ============================================================================= */
 
-.oauthSection:empty {
+/* Hide the entire OAuth section if the extension slot is empty */
+.oauthSection:has([data-slot="auth.oauth.buttons"]:empty) {
   display: none;
 }
 
@@ -337,8 +338,13 @@
   margin-bottom: var(--spacing-6);
 }
 
+/* Make the ExtensionSlot wrapper transparent so flexbox applies directly to the buttons */
+.oauthButtonsContainer [data-slot] {
+  display: contents;
+}
+
 /* Each button takes 50% minus gap when 2+, full width when alone */
-.oauthButtonsContainer > * {
+.oauthButtonsContainer [data-slot] > * {
   flex: 1 1 calc(50% - var(--spacing-3) / 2);
   min-width: 0;
 }
