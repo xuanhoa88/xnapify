@@ -13,10 +13,13 @@ import renderer, { act } from 'react-test-renderer';
 
 import { registry } from '@shared/extension/client/Registry';
 
+import { ExtensionProvider } from '../../Providers/Extension';
+
 import {
   useExtensionHooks,
   useExtensionValidator,
   useExtensionFormData,
+  useExtensionRegistry,
 } from './useExtension';
 
 // Mock Registry
@@ -44,6 +47,40 @@ describe('useExtension', () => {
     jest.restoreAllMocks();
   });
 
+  describe('useExtensionRegistry', () => {
+    it('returns the registry from ExtensionContext', () => {
+      let currentRegistry;
+      const Dummy = () => {
+        currentRegistry = useExtensionRegistry();
+        return null;
+      };
+
+      act(() => {
+        comp = renderer.create(
+          <ExtensionProvider registry={registry}>
+            <Dummy />
+          </ExtensionProvider>,
+        );
+      });
+
+      expect(currentRegistry).toBe(registry);
+    });
+
+    it('returns null when outside of ExtensionProvider', () => {
+      let currentRegistry = 'not-null';
+      const Dummy = () => {
+        currentRegistry = useExtensionRegistry();
+        return null;
+      };
+
+      act(() => {
+        comp = renderer.create(<Dummy />);
+      });
+
+      expect(currentRegistry).toBeNull();
+    });
+  });
+
   describe('useExtensionHooks', () => {
     it('returns an execute function that calls registry.executeHook', async () => {
       const mockResult = [{ success: true }];
@@ -56,7 +93,11 @@ describe('useExtension', () => {
       };
 
       act(() => {
-        comp = renderer.create(<Dummy />);
+        comp = renderer.create(
+          <ExtensionProvider registry={registry}>
+            <ExtensionProvider registry={registry}><Dummy /></ExtensionProvider>
+          </ExtensionProvider>,
+        );
       });
 
       const res = await hooks.execute('test.hook', 'arg1');
@@ -90,7 +131,7 @@ describe('useExtension', () => {
       };
 
       await act(async () => {
-        comp = renderer.create(<Dummy />);
+        comp = renderer.create(<ExtensionProvider registry={registry}><Dummy /></ExtensionProvider>);
       });
 
       expect(isLoading).toBe(false);
@@ -116,7 +157,7 @@ describe('useExtension', () => {
       };
 
       await act(async () => {
-        comp = renderer.create(<Dummy />);
+        comp = renderer.create(<ExtensionProvider registry={registry}><Dummy /></ExtensionProvider>);
       });
 
       expect(isLoading).toBe(false);
@@ -144,7 +185,7 @@ describe('useExtension', () => {
       };
 
       await act(async () => {
-        comp = renderer.create(<Dummy />);
+        comp = renderer.create(<ExtensionProvider registry={registry}><Dummy /></ExtensionProvider>);
       });
 
       expect(isLoading).toBe(false);
@@ -160,7 +201,7 @@ describe('useExtension', () => {
       };
 
       await act(async () => {
-        comp = renderer.create(<Dummy />);
+        comp = renderer.create(<ExtensionProvider registry={registry}><Dummy /></ExtensionProvider>);
       });
 
       expect(isLoading).toBe(false);

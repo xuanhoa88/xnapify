@@ -11,6 +11,8 @@ import renderer, { act } from 'react-test-renderer';
 
 import { registry } from '@shared/extension/client/Registry';
 
+import { ExtensionProvider } from '../../Providers/Extension';
+
 import ExtensionSlot from './ExtensionSlot';
 
 describe('ExtensionSlot', () => {
@@ -31,7 +33,11 @@ describe('ExtensionSlot', () => {
 
   test('renders nothing when no components are registered', () => {
     act(() => {
-      comp = renderer.create(<ExtensionSlot name='empty.slot' />);
+      comp = renderer.create(
+        <ExtensionProvider registry={registry}>
+          <ExtensionSlot name='empty.slot' />
+        </ExtensionProvider>,
+      );
     });
     // div wrapper is always rendered (for SSR hydration safety)
     const tree = comp.toJSON();
@@ -58,7 +64,9 @@ describe('ExtensionSlot', () => {
 
     act(() => {
       comp = renderer.create(
-        <ExtensionSlot name='test.slot' customProp='hello' />,
+        <ExtensionProvider registry={registry}>
+          <ExtensionSlot name='test.slot' customProp='hello' />
+        </ExtensionProvider>,
       );
     });
 
@@ -79,7 +87,11 @@ describe('ExtensionSlot', () => {
     const MockComponent = () => <span>Added dynamically</span>;
 
     act(() => {
-      comp = renderer.create(<ExtensionSlot name='dynamic.slot' />);
+      comp = renderer.create(
+        <ExtensionProvider registry={registry}>
+          <ExtensionSlot name='dynamic.slot' />
+        </ExtensionProvider>,
+      );
     });
 
     // Empty wrapper initially

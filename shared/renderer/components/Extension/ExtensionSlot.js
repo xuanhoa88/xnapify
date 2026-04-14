@@ -9,7 +9,7 @@ import { Component, useState, useEffect, useCallback, memo } from 'react';
 
 import PropTypes from 'prop-types';
 
-import { registry } from '@shared/extension/client/Registry';
+import { useExtensionRegistry } from './useExtension';
 
 /**
  * Error boundary that catches render errors from extension components.
@@ -52,12 +52,9 @@ SlotErrorBoundary.defaultProps = {
 /**
  * ExtensionSlot - Renders components registered for a named slot
  *
- * Slot content is rendered only on the client (after mount) to avoid
- * hydration mismatches.  Server-side, extensions are loaded synchronously
- * and would populate the slot, but the client loads extensions
- * asynchronously via Module Federation. React cannot reconcile the
- * structural difference, so we skip server rendering of slot children
- * and let the client fill them in once extensions are ready.
+ * Slot content is rendered synchronously. During SSR, it consumes the server registry
+ * via Context, ensuring the server HTML matches the client's hydrated state perfectly
+ * and eliminating any visual delay or pop-in effect.
  *
  * Each extension component is wrapped in a SlotErrorBoundary so that
  * a crashing extension renders nothing instead of taking down the page.
@@ -66,47 +63,42 @@ SlotErrorBoundary.defaultProps = {
  *   <ExtensionSlot name="profile.fields" formData={formData} />
  */
 const ExtensionSlot = memo(function ExtensionSlot({ name, ...props }) {
-  // Start as not-mounted; flips to true after hydration completes.
-  const [mounted, setMounted] = useState(false);
-  const [components, setComponents] = useState([]);
-
-  useEffect(() => {
-    // Mark as mounted — this only runs on the client after hydration.
-    setMounted(true);
-  }, []);
+  const registry = useExtensionRegistry();
+  const [components, setComponents] = useState(() =>
+    registry ? registry.getSlotEntries(name) : [],
+  );
 
   const syncComponents = useCallback(() => {
     if (!registry) return;
     setComponents(registry.getSlotEntries(name));
-  }, [name]);
+  }, [registry, name]);
 
   useEffect(() => {
-    if (!mounted || !registry) return undefined;
+    if (!registry) return undefined;
 
     // Sync immediately in case registry already has entries
     syncComponents();
 
     // Subscribe to future changes (extensions loading later)
     return registry.subscribe(syncComponents);
-  }, [mounted, syncComponents]);
+  }, [registry, syncComponents]);
 
   return (
     <div data-slot={name}>
-      {mounted &&
-        components.map(({ component: Comp, ...options }, index) => {
-          const key =
-            options.id ||
-            options.key ||
-            Comp.displayName ||
-            Comp.name ||
-            `${name}-${index}`;
+      {components.map(({ component: Comp, ...options }, index) => {
+        const key =
+          options.id ||
+          options.key ||
+          Comp.displayName ||
+          Comp.name ||
+          `${name}-${index}`;
 
-          return (
-            <SlotErrorBoundary key={key}>
-              <Comp {...props} />
-            </SlotErrorBoundary>
-          );
-        })}
+        return (
+          <SlotErrorBoundary key={key}>
+            <Comp {...props} />
+          </SlotErrorBoundary>
+        );
+      })}
     </div>
   );
 });

@@ -41,6 +41,7 @@ import PropTypes from 'prop-types';
 import { I18nextProvider } from 'react-i18next';
 import { Provider as ReduxProvider } from 'react-redux';
 
+import { ExtensionProvider } from './Providers/Extension';
 import { HistoryProvider } from './Providers/History';
 
 // =============================================================================
@@ -83,18 +84,23 @@ const contextPropTypes = PropTypes.shape({
  */
 export default function App({ context, children }) {
   // Memoize the provider composition to prevent unnecessary re-renders
-  const providers = useMemo(
-    () => (
+  const providers = useMemo(() => {
+    const { registry } = context.container.has('extension')
+      ? context.container.resolve('extension')
+      : {};
+
+    return (
       <ReduxProvider store={context.store}>
         <I18nextProvider i18n={context.i18n}>
           <HistoryProvider history={context.history}>
-            {React.Children.only(children)}
+            <ExtensionProvider registry={registry}>
+              {React.Children.only(children)}
+            </ExtensionProvider>
           </HistoryProvider>
         </I18nextProvider>
       </ReduxProvider>
-    ),
-    [context, children],
-  );
+    );
+  }, [context, children]);
 
   return providers;
 }

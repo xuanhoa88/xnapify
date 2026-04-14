@@ -1,0 +1,29 @@
+/**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+import { createContext } from 'react';
+
+import PropTypes from 'prop-types';
+
+// Create context with global client registry as default
+export const ExtensionContext = createContext(null);
+
+/**
+ * ExtensionProvider - Provides extension registry to components
+ */
+export function ExtensionProvider({ registry, children }) {
+  return (
+    <ExtensionContext.Provider value={registry}>
+      {children}
+    </ExtensionContext.Provider>
+  );
+}
+
+ExtensionProvider.propTypes = {
+  registry: PropTypes.object,
+  children: PropTypes.node,
+};
