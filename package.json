@@ -205,7 +205,7 @@
     "lint-staged": "7.0.0",
     "mini-css-extract-plugin": "2.9.2",
     "normalize.css": "8.0.1",
-    "open": "8.4.2",
+    "open": "11.0.0",
     "postcss": "8.4.31",
     "postcss-flexbugs-fixes": "5.0.2",
     "postcss-import": "15.1.0",
