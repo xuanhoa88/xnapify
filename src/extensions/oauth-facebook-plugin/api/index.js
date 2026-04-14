@@ -10,10 +10,18 @@ import { Strategy as FacebookStrategy } from 'passport-facebook';
 
 const TAG = '[OAuth Facebook]';
 
+const seedsContext = require.context(
+  './database/seeds',
+  false,
+  /\.[cm]?[jt]s$/i,
+);
+
 export default {
+  seeds: () => seedsContext,
   async boot({ container }) {
-    const clientID = process.env.XNAPIFY_FACEBOOK_APP_ID;
-    const clientSecret = process.env.XNAPIFY_FACEBOOK_APP_KEY;
+    const settings = container.resolve('settings');
+    const clientID = await settings.get('auth', 'FACEBOOK_APP_ID');
+    const clientSecret = await settings.get('auth', 'FACEBOOK_APP_KEY');
 
     if (!clientID || !clientSecret) {
       console.warn(
@@ -23,7 +31,7 @@ export default {
     }
 
     const appUrl =
-      process.env.XNAPIFY_PUBLIC_APP_URL || 'http://localhost:1337';
+      (await settings.get('core', 'APP_URL')) || 'http://localhost:1337';
     const oauth = container.resolve('oauth');
 
     oauth.registerProvider('facebook', {

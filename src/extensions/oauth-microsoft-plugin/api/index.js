@@ -10,10 +10,18 @@ import { Strategy as MicrosoftStrategy } from 'passport-microsoft';
 
 const TAG = '[OAuth Microsoft]';
 
+const seedsContext = require.context(
+  './database/seeds',
+  false,
+  /\.[cm]?[jt]s$/i,
+);
+
 export default {
+  seeds: () => seedsContext,
   async boot({ container }) {
-    const clientID = process.env.XNAPIFY_MICROSOFT_CLIENT_ID;
-    const clientSecret = process.env.XNAPIFY_MICROSOFT_CLIENT_KEY;
+    const settings = container.resolve('settings');
+    const clientID = await settings.get('auth', 'MICROSOFT_CLIENT_ID');
+    const clientSecret = await settings.get('auth', 'MICROSOFT_CLIENT_KEY');
 
     if (!clientID || !clientSecret) {
       console.warn(
@@ -23,7 +31,7 @@ export default {
     }
 
     const appUrl =
-      process.env.XNAPIFY_PUBLIC_APP_URL || 'http://localhost:1337';
+      (await settings.get('core', 'APP_URL')) || 'http://localhost:1337';
     const oauth = container.resolve('oauth');
 
     oauth.registerProvider('microsoft', {
