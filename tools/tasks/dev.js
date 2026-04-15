@@ -7,6 +7,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+const { execSync } = require('child_process');
 const http = require('http');
 const path = require('path');
 
@@ -533,6 +534,19 @@ async function main() {
 
       // Dispose server bundle (Node-RED, etc.)
       typeof dispose === 'function' ? dispose() : Promise.resolve(),
+
+      // Shutdown embedded database daemons gracefully
+      new Promise(resolve => {
+        try {
+          execSync('npm run predev -- --stop', {
+            stdio: 'inherit',
+            timeout: 20_000,
+          });
+        } catch {
+          // Failure to stop db shouldn't crash the shutdown process
+        }
+        resolve();
+      }),
 
       // Print goodbye message (synchronous)
       new Promise(resolve => {
