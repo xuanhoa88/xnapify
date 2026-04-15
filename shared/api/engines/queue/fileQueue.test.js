@@ -432,7 +432,7 @@ describe('FileQueue Adapter', () => {
       await queue.add('b', {}, { removeOnComplete: false });
 
       queue.process(async () => 'done');
-      
+
       await waitFor(async () => {
         const completedJobs = await queue.getJobsByStatus('completed');
         return completedJobs.length === 2;
