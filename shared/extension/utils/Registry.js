@@ -149,11 +149,13 @@ class ExtensionRegistry {
     }
 
     const namespaces = Array.isArray(manifest.slots) ? manifest.slots : [];
-    const extensionId = manifest.name;
+    const extensionId = manifest.id || manifest.name;
     const meta = { description: manifest.description };
 
     if (!extensionId) {
-      console.warn('[ExtensionRegistry] Extension definition missing name');
+      console.warn(
+        '[ExtensionRegistry] Extension definition missing id or name',
+      );
       return this;
     }
 
