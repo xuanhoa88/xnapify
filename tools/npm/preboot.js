@@ -59,6 +59,17 @@ function nativeResolve(moduleName) {
 let useLocalEnv = false;
 
 /**
+ * Resolve the isolation directory for pre-compiled C++ database drivers.
+ * Always locks to the application bundle directory so they never interact
+ * with host volume binds, regardless of whether it's Docker or bare-metal production.
+ * @param {string} dialect - 'sqlite' | 'postgres' | 'mysql'
+ * @returns {string}
+ */
+function getDriverIsolationDir(dialect) {
+  return path.join(ROOT, '.xnapify', 'sequelize-drivers', dialect);
+}
+
+/**
  * Resolve the default data directory for a given database engine.
  * In production host/containers, defaults to ~/.xnapify/<engine>.
  * In development, defaults to .xnapify/<engine> (project-local).
@@ -66,14 +77,6 @@ let useLocalEnv = false;
  * @returns {string}
  */
 function defaultDataDir(engine) {
-  // ─── DRIVER BINARY ISOLATION ───
-  // Always lock pre-compiled C++ drivers to the application bundle directory so they
-  // never interact with host volume binds. `ROOT` automatically resolves to `/build`
-  // during Docker stage 1, and elegantly shifts to `/app/build` during production.
-  if (engine.startsWith('sequelize-drivers')) {
-    return path.join(ROOT, '.xnapify', engine);
-  }
-
   // ─── PERSISTENT DATA VOLUME ───
   // Genuine user data inherently writes to the persistent named Host Volume mapping
   // located smoothly at `/home/node/.xnapify` natively in Docker production.
@@ -432,7 +435,7 @@ async function ensureDeps(dialect) {
       // --- ISOLATED SANDBOX ARCHITECTURE ---
       // Execute the database backend install locked cleanly inside a .xnapify sandbox
       // to guarantee NPM v9+ never traverses into the project root and drops packages
-      const driverDir = defaultDataDir(path.join('sequelize-drivers', dialect));
+      const driverDir = getDriverIsolationDir(dialect);
       if (!fs.existsSync(driverDir))
         fs.mkdirSync(driverDir, { recursive: true });
 

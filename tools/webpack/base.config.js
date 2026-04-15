@@ -483,9 +483,10 @@ function createCacheGroups(
 
 /**
  * Create script rule for JS/JSX/TS files
+ * @param {boolean} isServer - True for server bundle, false for client bundle
  * @returns {Object} Webpack rule
  */
-const createScriptRule = () => ({
+const createScriptRule = (isServer = false) => ({
   test: reScript,
   include: [config.APP_DIR, path.resolve(config.CWD, 'shared')],
   exclude: [/node_modules/],
@@ -514,8 +515,9 @@ const createScriptRule = () => ({
         },
         // Production: inject core-js polyfills for browser compatibility
         // (polyfill injection based on browser targets + core-js usage).
-        // Development: skip polyfills (targeting modern dev browser).
-        ...(isDev
+        // Development and Server: skip polyfills. Server doesn't need browser
+        // core-js polyfills like DOMException, and dev targets modern browsers.
+        ...(isDev || isServer
           ? {}
           : {
               env: {
@@ -679,6 +681,12 @@ function createWebpackConfig(name, options = {}) {
           nodeExternals({
             allowlist: [reStyle, reImage, reFont, reSvg, /^\.\.\?\//],
           }),
+          'sqlite3',
+          'mysql2',
+          'pg',
+          'pg-hstore',
+          'mariadb',
+          'tedious',
         ],
       }),
 
@@ -756,7 +764,7 @@ function createWebpackConfig(name, options = {}) {
       module: {
         strictExportPresence: true,
         rules: [
-          createScriptRule(),
+          createScriptRule(isServer),
           createImageRule(),
           createFontRule(),
           createSVGRule(),
