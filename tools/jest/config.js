@@ -16,19 +16,13 @@ const isWatch = config.env('JEST_WATCH') === 'true';
 const isVerbose = config.env('JEST_VERBOSE') !== 'false';
 // support benchmark mode (only run *.benchmark.js files)
 const isBenchmark = config.env('JEST_BENCHMARK') === 'true';
-const maxWorkers = config.env('JEST_MAX_WORKERS', isCI ? 2 : '50%');
+const maxWorkers = config.env('JEST_MAX_WORKERS', isCI ? '2' : '50%');
 
 // Relative path to app directory
 const appDir = path.relative(config.CWD, config.APP_DIR);
 const sharedDir = path.relative(config.CWD, path.resolve(config.CWD, 'shared'));
 
 module.exports = {
-  /**
-   * Automatically clear mock calls, instances, contexts and results before every test.
-   * Equivalent to calling jest.clearAllMocks() before each test.
-   */
-  clearMocks: true,
-
   /**
    * Indicates whether the coverage information should be collected while executing the test.
    * Enable via COVERAGE=true environment variable or --coverage flag.
@@ -60,6 +54,7 @@ module.exports = {
     '!**/release/**',
     '!**/out/**',
     '!**/.cache/**',
+    '!**/.xnapify/**',
   ],
 
   /**
@@ -106,22 +101,13 @@ module.exports = {
    * The test environment that will be used for testing.
    * jsdom simulates a browser environment for React component testing.
    */
-  testEnvironment: '<rootDir>/tools/jest/nodeEnvironment.js',
+  testEnvironment: '<rootDir>/tools/jest/environment.js',
 
   /**
    * Test environment options for jsdom.
    */
   testEnvironmentOptions: {
     url: 'http://localhost',
-  },
-
-  /**
-   * Global variables available in all test environments.
-   * Note: NODE_ENV is automatically set to 'test' by Jest.
-   */
-  globals: {
-    __DEV__: false,
-    __TEST__: true,
   },
 
   /**
@@ -153,7 +139,7 @@ module.exports = {
 
     // Resolve @shared alias to the shared directory
     // This ensures jest.mock('@shared/...') resolves the same way
-    // as babel-plugin-module-resolver does for import statements
+    // as webpack's resolve.alias does for import statements
     '^@shared/(.*)$': '<rootDir>/shared/$1',
 
     // Style files
@@ -199,6 +185,7 @@ module.exports = {
     '/out/',
     '/coverage/',
     '/.cache/',
+    '/.xnapify/',
   ],
 
   /**
@@ -206,10 +193,23 @@ module.exports = {
    * Transformers are modules that provide a synchronous function for transforming source files.
    */
   transform: {
-    // JavaScript and JSX files
-    '^.+\\.(js|jsx)$': [
-      'babel-jest',
-      { configFile: path.resolve(__dirname, '..', 'babel.factory.js') },
+    // JavaScript and JSX files — use SWC for fast transpilation
+    '^.+\\.(t|j)sx?$': [
+      '@swc/jest',
+      {
+        jsc: {
+          parser: {
+            syntax: 'ecmascript',
+            jsx: true,
+            dynamicImport: true,
+          },
+          transform: {
+            react: { runtime: 'automatic' },
+          },
+          loose: true,
+        },
+        module: { type: 'commonjs' },
+      },
     ],
   },
 
@@ -227,13 +227,13 @@ module.exports = {
    * A list of paths to modules that run some code to configure or set up the testing
    * environment before each test file in the suite is executed.
    */
-  setupFiles: ['<rootDir>/tools/jest/setup.js'],
+  setupFiles: ['<rootDir>/tools/jest/setupGlobals.js'],
 
   /**
    * A list of paths to modules that run some code to configure or set up the testing
    * framework before each test file in the suite is executed.
    */
-  setupFilesAfterEnv: ['<rootDir>/tools/jest/setupAfterEnv.js'],
+  setupFilesAfterEnv: ['<rootDir>/tools/jest/setupTestLifecycle.js'],
 
   /**
    * Stop running tests after the first failure.
@@ -249,16 +249,23 @@ module.exports = {
   maxWorkers,
 
   /**
+   * Automatically clear mock calls, instances, contexts and results before every test.
+   * Equivalent to calling jest.clearAllMocks() before each test.
+   */
+  clearMocks: true,
+
+  /**
    * Automatically reset mock state before every test.
    * Equivalent to calling jest.resetAllMocks() before each test.
    */
-  resetMocks: false,
+  resetMocks: true,
 
   /**
    * Automatically restore mock state and implementation before every test.
    * Equivalent to calling jest.restoreAllMocks() before each test.
+   * NOTE: Disabled because it clears jest.mock() factory implementations
    */
-  restoreMocks: true,
+  restoreMocks: false,
 
   /**
    * The number of seconds after which a test is considered as slow and reported as such.
@@ -386,7 +393,7 @@ module.exports = {
   /**
    * This option allows the use of a custom resolver.
    */
-  resolver: '<rootDir>/tools/jest/resolver.js',
+  resolver: '<rootDir>/tools/jest/nodeModuleResolver.js',
 
   /**
    * Allows you to use a custom runner instead of Jest's default test runner.

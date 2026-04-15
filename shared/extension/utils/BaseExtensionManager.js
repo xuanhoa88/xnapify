@@ -249,13 +249,16 @@ export class BaseExtensionManager {
   /**
    * Fetch and load all active extensions from API
    */
-  async sync() {
+  async sync(preloadedExtensions = null) {
     try {
-      const { data: response } = await this.fetch('/api/extensions');
-      const extensions =
-        response && Array.isArray(response.extensions)
-          ? response.extensions
-          : [];
+      let extensions = preloadedExtensions;
+      if (!extensions) {
+        const { data: response } = await this.fetch('/api/extensions');
+        extensions =
+          response && Array.isArray(response.extensions)
+            ? response.extensions
+            : [];
+      }
       const results = await Promise.allSettled(
         extensions.map(item => {
           const id = typeof item === 'object' ? item.id : item;

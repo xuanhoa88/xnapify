@@ -13,12 +13,19 @@ import { JOB_STATUS } from './utils/constants';
 const waitFor = async (conditionFn, timeout = 3000) => {
   const start = Date.now();
   while (Date.now() - start < timeout) {
-    if (conditionFn()) return;
+    if (await conditionFn()) return;
     await new Promise(resolve => setTimeout(resolve, 50));
   }
 };
 
-jest.mock('uuid');
+jest.mock('uuid', () => ({
+  v4: () =>
+    'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+      const r = (Math.random() * 16) | 0;
+      const v = c === 'x' ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    }),
+}));
 
 describe('FileQueue Adapter', () => {
   let FileQueue;
@@ -27,9 +34,6 @@ describe('FileQueue Adapter', () => {
 
   beforeEach(() => {
     jest.resetModules();
-    // Require fresh to reset uuid counter
-    const uuidMock = require('uuid');
-    uuidMock.resetCounter();
     FileQueue = require('./adapters/file').default;
 
     queue = new FileQueue({
@@ -207,13 +211,26 @@ describe('FileQueue Adapter', () => {
     it('should remove completed job when removeOnComplete is true', async () => {
       await queue.add('task', {}, { removeOnComplete: true });
 
-      queue.process(async () => 'done');
+      let completedFired = false;
+      queue.on('completed', () => {
+        completedFired = true;
+      });
 
-      await new Promise(resolve => setTimeout(resolve, 200));
+      queue.process(async () => 'done');
 
       const completedDir = path.join(TEST_DATA_DIR, 'test-queue', 'completed');
       const pendingDir = path.join(TEST_DATA_DIR, 'test-queue', 'pending');
       const activeDir = path.join(TEST_DATA_DIR, 'test-queue', 'active');
+
+      await waitFor(() => {
+        return (
+          completedFired &&
+          fs.readdirSync(completedDir).length === 0 &&
+          fs.readdirSync(pendingDir).length === 0 &&
+          fs.readdirSync(activeDir).length === 0
+        );
+      });
+
       expect(fs.readdirSync(completedDir).length).toBe(0);
       expect(fs.readdirSync(pendingDir).length).toBe(0);
       expect(fs.readdirSync(activeDir).length).toBe(0);
@@ -298,7 +315,7 @@ describe('FileQueue Adapter', () => {
       expect(processed).toHaveLength(0);
 
       queue.resume();
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await waitFor(() => processed.length === 1);
       expect(processed).toHaveLength(1);
     });
   });
@@ -371,7 +388,10 @@ describe('FileQueue Adapter', () => {
         throw new Error('fail');
       });
 
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await waitFor(async () => {
+        const failedJobs = await queue.getJobsByStatus('failed');
+        return failedJobs.length === 1;
+      });
 
       queue.pause();
 
@@ -412,7 +432,11 @@ describe('FileQueue Adapter', () => {
       await queue.add('b', {}, { removeOnComplete: false });
 
       queue.process(async () => 'done');
-      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      await waitFor(async () => {
+        const completedJobs = await queue.getJobsByStatus('completed');
+        return completedJobs.length === 2;
+      });
 
       const cleaned = await queue.clean('completed', 0);
       expect(cleaned).toBe(2);
@@ -440,8 +464,12 @@ describe('FileQueue Adapter', () => {
 
     it('should persist meta.json on close', async () => {
       await queue.add('task', {}, { removeOnComplete: false });
+      let completed = false;
+      queue.on('completed', () => {
+        completed = true;
+      });
       queue.process(async () => 'done');
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await waitFor(() => completed);
 
       await queue.close();
 
@@ -481,7 +509,7 @@ describe('FileQueue Adapter', () => {
       await queue.add('task', {});
       queue.process(async () => 'done');
 
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await waitFor(() => events.length === 1);
       expect(events).toHaveLength(1);
     });
 
@@ -496,14 +524,16 @@ describe('FileQueue Adapter', () => {
     it('should catch errors in event handlers', async () => {
       const spy = jest.spyOn(console, 'error').mockImplementation();
 
+      let completedFired = false;
       queue.on('completed', () => {
+        completedFired = true;
         throw new Error('handler error');
       });
 
       await queue.add('task', {});
       queue.process(async () => 'done');
 
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await waitFor(() => completedFired);
 
       const errorCalls = spy.mock.calls.filter(
         c => typeof c[0] === 'string' && c[0].includes('event handler'),

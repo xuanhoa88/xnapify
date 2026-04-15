@@ -123,7 +123,7 @@ Verify that quick-access login buttons are rendered on the login page.
 
 ### Prerequisite
 
-- fixture_zip: ./src/**tests**/fixtures/sample-extension.zip
+- fixture_zip: ./src/__tests__/fixtures/sample-extension.zip
 
 ## Steps
 

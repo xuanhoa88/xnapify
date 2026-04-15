@@ -9,7 +9,6 @@ const path = require('path');
 
 const glob = require('glob');
 const SequelizeModule = require('sequelize');
-const { v4: uuidv4 } = require('uuid');
 
 const config = require('../config');
 
@@ -34,21 +33,6 @@ const SEQUELIZE_CONFIG = {
 
 // Get all model files
 const modelFiles = glob.sync(path.join(config.CWD, MODEL_GLOB_PATTERN));
-
-/**
- * Creates test-compatible DataTypes by polyfilling unsupported types.
- * SQLite doesn't support UUIDV1, so we use a generator function that
- * returns a UUID v4 string.
- * @returns {Object} Modified DataTypes object
- */
-function createTestDataTypes() {
-  const testDataTypes = { ...SequelizeModule.DataTypes };
-  // SQLite doesn't support UUIDV1. Using a function that returns a UUID v4
-  // instead of the UUIDV4 class avoids "Invalid value UUIDV4 {}" errors
-  // during sync/validation in some versions of Sequelize/SQLite.
-  testDataTypes.UUIDV4 = () => uuidv4();
-  return testDataTypes;
-}
 
 /**
  * Loads all model definition files and initializes them.
@@ -104,21 +88,16 @@ function loadModels(context) {
  * @throws {Error} If association setup fails
  */
 function setupAssociations(models) {
-  for (const modelName of Object.keys(models)) {
-    const model = models[modelName];
-
-    if (typeof model.associate !== 'function') {
-      continue;
+  Object.values(models).forEach(model => {
+    if (typeof model.associate === 'function') {
+      try {
+        model.associate(models);
+      } catch (err) {
+        console.error(`Association error in model ${model.name}:`, err);
+        throw err;
+      }
     }
-
-    try {
-      model.associate(models);
-    } catch (err) {
-      throw new Error(
-        `Failed to setup associations for ${modelName}: ${err.message}`,
-      );
-    }
-  }
+  });
 }
 
 /**
@@ -142,12 +121,53 @@ async function setupTestDb() {
     // Create fresh Sequelize instance for test isolation
     sequelizeInstance = new Sequelize('sqlite::memory:', SEQUELIZE_CONFIG);
 
-    // Create context object with polyfilled DataTypes
     const context = {
       ...SequelizeModule,
-      DataTypes: createTestDataTypes(),
+      DataTypes: SequelizeModule.DataTypes,
       connection: sequelizeInstance,
     };
+
+    const origDefine = sequelizeInstance.define;
+    sequelizeInstance.define = function (modelName, attributes, options) {
+      if (attributes) {
+        Object.keys(attributes).forEach(key => {
+          const attr = attributes[key];
+
+          // Sequelize SQLite Query generator permanently suppresses Explicit IDs mapped on UUID columns
+          // if their original defaultValue implies native database generation.
+          // Changing it to a static string placeholder completely breaks this suppression,
+          // forcing Sequelize to safely bind the column in SQL statements!
+          if (attr && attr.type && attr.type.key === 'UUID') {
+            attr.type = SequelizeModule.DataTypes.STRING(36);
+            attr.defaultValue = 'sqlite-mock-uuid-fallback';
+          }
+        });
+      }
+      return origDefine.call(this, modelName, attributes, options);
+    };
+
+    // Now securely assign dynamic unique JavaScript strings automatically.
+    // Because the defaultValue is a static placeholder, Sequelize safely transports this overridden property
+    // natively into the bind parameter array and returns it identically on model instantiation.
+    sequelizeInstance.addHook('beforeValidate', instance => {
+      if (instance.isNewRecord) {
+        const crypto = require('crypto');
+        const pks = Object.keys(instance.rawAttributes).filter(
+          key =>
+            instance.rawAttributes[key].primaryKey &&
+            instance.rawAttributes[key].type.key === 'STRING',
+        );
+        pks.forEach(pk => {
+          // If it's missing or equals our generic fallback, uniquely generate it natively.
+          if (
+            !instance.dataValues[pk] ||
+            instance.dataValues[pk] === 'sqlite-mock-uuid-fallback'
+          ) {
+            instance.set(pk, crypto.randomUUID());
+          }
+        });
+      }
+    });
 
     // Load and initialize all models
     models = loadModels(context);

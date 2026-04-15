@@ -2,6 +2,7 @@ import { validateForm } from '@shared/validator';
 
 import * as authService from '../services/auth.service';
 import * as profileService from '../services/profile.service';
+import { generatePassword } from '../utils/password';
 
 import * as authController from './auth.controller';
 
@@ -24,7 +25,7 @@ jest.mock('../services/profile.service', () => ({
 }));
 
 jest.mock('../utils/password', () => ({
-  generatePassword: jest.fn(() => 'SecureP@ssw0rd!'),
+  generatePassword: jest.fn(),
 }));
 
 describe('Auth Controller', () => {
@@ -370,7 +371,8 @@ describe('Auth Controller', () => {
 
   describe('generateRandomPassword', () => {
     it('should orchestrate password generation successfully', async () => {
-      req.query = { length: '12', includeSymbols: 'false' };
+      generatePassword.mockReturnValue('SecureP@ssw0rd!');
+      req.query = { length: '16', includeSymbols: 'true' };
 
       await authController.generateRandomPassword(req, res);
 

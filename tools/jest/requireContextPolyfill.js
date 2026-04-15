@@ -1,94 +1,119 @@
 /**
- * Babel plugin that replaces require.context() with an inline polyfill.
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
- * Unlike @storybook/babel-plugin-require-context-hook which transforms
- * require.context() into __requireContext() (a global that must be
- * registered separately), this plugin inlines the fs-based implementation
- * directly into the call site. No global setup is needed.
- *
- * Usage: add to babel plugins for test environment only.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
  */
 
-module.exports = function requireContextPolyfill() {
-  return {
-    visitor: {
-      CallExpression(path, state) {
-        const callee = path.get('callee');
-        if (
-          !callee.isMemberExpression() ||
-          !callee.get('object').isIdentifier({ name: 'require' }) ||
-          !callee.get('property').isIdentifier({ name: 'context' })
-        ) {
-          return;
-        }
+'use strict';
 
-        const args = path.get('arguments');
-        if (args.length < 1) return;
+const fs = require('fs');
+const path = require('path');
 
-        const filename = state.filename || state.file.opts.filename;
-        const { types: t, template } = require('@babel/core');
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-        const dirNode = args[0].node;
-        const subdirsNode =
-          args.length > 1 ? args[1].node : t.booleanLiteral(false);
-        const regexpNode =
-          args.length > 2 ? args[2].node : t.regExpLiteral('^\\.\\/', '');
+/**
+ * Convert an absolute path to a require.context-style relative key.
+ * e.g. /abs/base/foo/bar.js → ./foo/bar.js
+ */
+function toRelativeKey(absoluteBase, absPath) {
+  return './' + path.relative(absoluteBase, absPath).replace(/\\/g, '/');
+}
 
-        const helperAst = template.expression(
-          `
-          (function () {
-            var _path = require('path');
-            var _fs = require('fs');
+/**
+ * Resolve the originating module filename from the current stack trace.
+ * Allows relative require.context paths (e.g. './translations') to resolve
+ * relative to the caller module, matching Webpack's behavior.
+ */
+function resolveCallerFilename() {
+  const originalPrepareStackTrace = Error.prepareStackTrace;
+  Error.prepareStackTrace = (_, stack) => stack;
+  const { stack } = new Error();
+  Error.prepareStackTrace = originalPrepareStackTrace;
 
-            function _enumerate(base, dir, useSub, re) {
-              var result = [];
-              _fs.readdirSync(_path.join(base, dir)).forEach(function (f) {
-                var rel = dir + '/' + f;
-                var s = _fs.lstatSync(_path.join(base, rel));
-                if (s.isDirectory()) {
-                  if (useSub)
-                    result = result.concat(_enumerate(base, rel, useSub, re));
-                } else if (re.test(rel)) {
-                  result.push(rel);
-                }
-              });
-              return result;
-            }
+  if (!Array.isArray(stack) || stack.length === 0) return null;
 
-            var _absDir = _path.resolve(
-              _path.dirname(%%filename%%),
-              %%directory%%,
-            );
-            var _keys = _enumerate(_absDir, '.', %%subdirs%%, %%regexp%%);
+  for (const frame of stack) {
+    if (!frame || typeof frame.getFileName !== 'function') continue;
 
-            function _ctx(key) {
-              if (_keys.indexOf(key) < 0)
-                throw new Error("Cannot find module '" + key + "'.");
-              return require(_path.resolve(_absDir, key));
-            }
-            _ctx.keys = function () {
-              return _keys;
-            };
-            _ctx.resolve = function (fn) {
-              return (
-                (%%directory%%.indexOf('./') === 0 ? './' : '') +
-                _path.join(%%directory%%, fn)
-              );
-            };
+    const filename = frame.getFileName();
+    if (!filename) continue;
+    if (filename === __filename) continue;
+    if (filename.includes('/node_modules/')) continue;
 
-            return _ctx;
-          })()
-        `,
-          { plugins: ['@babel/plugin-syntax-optional-chaining'] },
-        )({
-          filename: t.stringLiteral(filename),
-          directory: dirNode,
-          subdirs: subdirsNode,
-          regexp: regexpNode,
-        });
+    return filename;
+  }
 
-        path.replaceWith(helperAst);
-      },
-    },
+  return null;
+}
+
+/**
+ * Resolve the absolute base directory for a require.context call.
+ * Supports absolute paths, caller-relative paths, and cwd-relative fallback.
+ */
+function resolveContextDirectory(directory) {
+  if (path.isAbsolute(directory)) return path.resolve(directory);
+
+  const caller = resolveCallerFilename();
+  if (caller) return path.resolve(path.dirname(caller), directory);
+
+  return path.resolve(process.cwd(), directory);
+}
+
+// ─── require.context polyfill ─────────────────────────────────────────────────
+
+/**
+ * Polyfill for Webpack's require.context, for use in Jest + SWC environments.
+ *
+ * @param {string}  directory         - Directory to scan (absolute or relative).
+ * @param {boolean} useSubdirectories - Whether to recurse into subdirectories.
+ * @param {RegExp}  regExp            - Filter applied to relative module keys.
+ * @param {string}  _mode             - Webpack API compat parameter (ignored).
+ * @returns {Function} A context function with .keys(), .resolve(), and .id.
+ */
+function requireContext(
+  directory,
+  useSubdirectories = false,
+  regExp = /^\.\/.*$/,
+  _mode = 'sync',
+) {
+  const absoluteBase = resolveContextDirectory(directory);
+
+  function scanDir(dir) {
+    if (!fs.existsSync(dir)) {
+      console.warn('[require.context] Directory not found: ' + dir);
+      return [];
+    }
+
+    return fs.readdirSync(dir).flatMap(function (file) {
+      const absPath = path.join(dir, file);
+
+      if (fs.statSync(absPath).isDirectory()) {
+        return useSubdirectories ? scanDir(absPath) : [];
+      }
+
+      const relKey = toRelativeKey(absoluteBase, absPath);
+      return regExp.test(relKey) ? [absPath] : [];
+    });
+  }
+
+  const files = scanDir(absoluteBase);
+
+  // Use Jest's wrapped require so mocks and transforms apply.
+  const context = function (key) {
+    return require(path.resolve(absoluteBase, key));
   };
-};
+  context.keys = function () {
+    return files.map(function (f) {
+      return toRelativeKey(absoluteBase, f);
+    });
+  };
+  context.resolve = function (key) {
+    return path.resolve(absoluteBase, key);
+  };
+  context.id = directory;
+
+  return context;
+}
+
+module.exports = requireContext;

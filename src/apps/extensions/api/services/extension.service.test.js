@@ -78,11 +78,10 @@ const mockQueueChannel = {
 const mockQueue = jest.fn(() => mockQueueChannel);
 
 const mockExtensionManager = {
-  getInstalledExtensionsDir: jest.fn(() => '/mock/extensions'),
-  getDevExtensionsDir: jest.fn(cwd =>
+  getInstalledExtensionsDir: () => '/mock/extensions',
+  getDevExtensionsDir: cwd =>
     path.resolve(cwd, process.env.XNAPIFY_EXTENSION_LOCAL_PATH || 'extensions'),
-  ),
-  readManifest: jest.fn(async (dirPath, dirName) => {
+  readManifest: async (dirPath, dirName) => {
     const filePath = dirName
       ? path.join(dirPath, dirName, 'package.json')
       : path.join(dirPath, 'package.json');
@@ -100,11 +99,11 @@ const mockExtensionManager = {
     } catch {
       return null;
     }
-  }),
-  resolveExtensionDir: jest.fn(async key => ({
+  },
+  resolveExtensionDir: async key => ({
     dir: `/mock/extensions/${key}`,
     isDevExtension: true,
-  })),
+  }),
 };
 
 const mockContext = {
@@ -119,6 +118,8 @@ const mockContext = {
 describe('Extension Service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockQueue.mockReturnValue(mockQueueChannel);
+    mockQueueChannel.queue.getJobs.mockResolvedValue([]);
     mockCache.get.mockResolvedValue(null);
   });
 

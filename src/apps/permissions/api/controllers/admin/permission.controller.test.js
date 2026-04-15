@@ -5,7 +5,7 @@ describe('Admin Permission Controller (SQLite E2E)', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
-    mockModels = global.testDb.models;
+    mockModels = globalThis.testDb.models;
 
     mockHttp = {
       sendSuccess: jest.fn(),

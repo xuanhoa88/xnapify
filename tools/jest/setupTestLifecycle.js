@@ -10,15 +10,15 @@
  * but before each test file is executed.
  */
 
-// jest/setupAfterEnv.js
+// jest/setupTestLifecycle.js
 // ----------------------
 // Runs after the environment has been set up but before any individual
 // test file executes.  We use it to configure i18next (so components
 // render without errors) and to wire up an in‑memory database that can
 // be reused across tests.
 
-const { setupTestDb, closeTestDb } = require('./dbTest.setup');
-const { initI18nForTesting } = require('./i18nTest.setup');
+const { setupTestDb, closeTestDb } = require('./setupTestDb');
+const { initI18nForTesting } = require('./setupTestI18n');
 
 // -----------------------------------------------------------------------------
 // i18n initialization for tests (delegated)
@@ -30,10 +30,10 @@ initI18nForTesting();
 // -----------------------------------------------------------------------------
 // `setupTestDb()` maintains its own singleton connection; calling it
 // repeatedly will force-sync the schema (clearing data).  We expose the
-// returned object on `global.testDb` for convenience in tests.
+// returned object on `globalThis.testDb` for convenience in tests.
 
 async function resetTestDb() {
-  global.testDb = await setupTestDb();
+  globalThis.testDb = await setupTestDb();
 }
 
 beforeAll(async () => {
@@ -47,8 +47,8 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  if (global.testDb) {
+  if (globalThis.testDb) {
     await closeTestDb();
-    delete global.testDb;
+    delete globalThis.testDb;
   }
 });

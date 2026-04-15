@@ -19,7 +19,7 @@ const patterns = {
 const config = {
   root: true,
 
-  parser: '@babel/eslint-parser',
+  // ESLint's built-in parser (espree) supports JSX natively.
 
   env: {
     browser: true,
@@ -34,12 +34,6 @@ const config = {
 
     ecmaFeatures: {
       jsx: true,
-    },
-
-    requireConfigFile: false,
-
-    babelOptions: {
-      presets: ['@babel/preset-react'],
     },
   },
 
@@ -228,7 +222,7 @@ const config = {
     'import/ignore': ['node_modules'],
 
     'import/parsers': {
-      '@babel/eslint-parser': ['.js', '.jsx'],
+      espree: ['.js', '.jsx'],
     },
 
     'import/resolver': {

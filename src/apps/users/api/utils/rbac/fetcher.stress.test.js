@@ -1,26 +1,19 @@
 import { performance } from 'perf_hooks';
 
+import * as cache from './cache';
+import * as collector from './collector';
 import { fetchUserRbacData } from './fetcher';
 
 // Mock collector to produce deterministic RBAC data
 jest.mock('./collector', () => ({
-  collectUserRbacData: jest.fn(user => ({
-    roles: user.roles ? user.roles.map(r => r.name) : [],
-    groups: user.groups ? user.groups.map(g => g.name) : [],
-    permissions: [],
-  })),
+  collectUserRbacData: jest.fn(() => ({})),
 }));
 
-// Provide a simple in-memory cache implementation for the module
-jest.mock('./cache', () => {
-  const store = new Map();
-  return {
-    getUser: jest.fn((id, _cache) => store.get(id)),
-    setUser: jest.fn((id, data, _cache) => store.set(id, data)),
-    _store: store,
-    _clear: () => store.clear(),
-  };
-});
+// Mock cache module
+jest.mock('./cache', () => ({
+  getUser: jest.fn(),
+  setUser: jest.fn(),
+}));
 
 describe('RBAC Fetcher Stress Test', () => {
   jest.setTimeout(120000);
@@ -31,7 +24,23 @@ describe('RBAC Fetcher Stress Test', () => {
   let modelsMock;
   let cacheMock;
 
+  let cacheStore;
+
   beforeEach(() => {
+    // Restore mock implementations after resetMocks clears them
+    collector.collectUserRbacData.mockImplementation(user => ({
+      roles: user.roles ? user.roles.map(r => r.name) : [],
+      groups: user.groups ? user.groups.map(g => g.name) : [],
+      permissions: [],
+    }));
+
+    // Create fresh cache store and restore mock implementations
+    cacheStore = new Map();
+    cache.getUser.mockImplementation((id, _cache) => cacheStore.get(id));
+    cache.setUser.mockImplementation((id, data, _cache) =>
+      cacheStore.set(id, data),
+    );
+
     cacheMock = {};
     // Simulated user object returned by DB
     const mockUser = {

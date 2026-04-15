@@ -90,13 +90,13 @@ xnapify/
 ### Build Tools
 
 - **Bundler:** Webpack 5.96.0 with code splitting and tree shaking
-- **Transpiler:** Babel 7.28.5 with preset-env and preset-react
+- **Transpiler:** SWC (via swc-loader) with core-js polyfill injection
 - **CSS Processing:** PostCSS with autoprefixer and CSS Modules
 - **HMR:** React Refresh + webpack-hot-middleware
 
 ### Code Quality
 
-- **Linting:** ESLint 8.57.0 with @babel/eslint-parser
+- **Linting:** ESLint 8.57.0 with espree (built-in parser)
 - **CSS Linting:** Stylelint 14.16.1
 - **Formatting:** Prettier 3.3.3
 - **Testing:** Jest 24.9.0 with React Testing Library

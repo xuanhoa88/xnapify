@@ -88,8 +88,14 @@ export async function fetchUserWithRBAC(userId, models) {
  * @returns {Promise<Object>} Object containing { roles: string[], groups: string[], permissions: string[] }
  */
 export async function fetchUserRbacData(userId, { models, cache }) {
+  // 1. Check in-flight promises first to prevent cache stampede during ASYNC cache lookups
+  if (activeFetches.has(userId)) return activeFetches.get(userId);
+
   const cached = await rbacCache.getUser(userId, cache);
   if (cached) return cached;
+
+  // 2. Re-check in-flight promises after async cache miss
+  if (activeFetches.has(userId)) return activeFetches.get(userId);
 
   if (!models) {
     const error = new Error('Database models not available');
@@ -100,21 +106,19 @@ export async function fetchUserRbacData(userId, { models, cache }) {
   }
 
   // Deduplicate concurrent requests (prevent cache stampede)
-  if (!activeFetches.has(userId)) {
-    const fetchPromise = (async () => {
-      try {
-        const user = await fetchUserWithRBAC(userId, models);
-        const rbacData = collectUserRbacData(user);
-        await rbacCache.setUser(userId, rbacData, cache);
-        return rbacData;
-      } finally {
-        activeFetches.delete(userId); // ensure cleanup
-      }
-    })();
-    activeFetches.set(userId, fetchPromise);
-  }
+  const fetchPromise = (async () => {
+    try {
+      const user = await fetchUserWithRBAC(userId, models);
+      const rbacData = collectUserRbacData(user);
+      await rbacCache.setUser(userId, rbacData, cache);
+      return rbacData;
+    } finally {
+      activeFetches.delete(userId); // ensure cleanup
+    }
+  })();
+  activeFetches.set(userId, fetchPromise);
 
-  return activeFetches.get(userId);
+  return fetchPromise;
 }
 
 /**

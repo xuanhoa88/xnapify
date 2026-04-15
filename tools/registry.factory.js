@@ -12,7 +12,7 @@ const config = require('./config');
 
 // Eagerly scan apps and extensions for overriding tool configurations
 // Using synchronous discovery to ensure config is available at startup
-// before Webpack/Babel/ESLint initialization blocks
+// before Webpack/ESLint initialization blocks
 
 const discoveryRoots = [
   path.join(config.APP_DIR, 'apps'),
@@ -22,7 +22,6 @@ const discoveryRoots = [
 const registry = {
   webpackConfigs: [],
   postcssConfigs: [],
-  babelConfigs: [],
   eslintConfigs: [],
 };
 
@@ -31,13 +30,6 @@ const registry = {
 const CUSTOMIZERS = {
   webpack: ['module.webpack.js', 'extension.webpack.js'],
   postcss: ['module.postcss.js', 'postcss.config.js'],
-  babel: [
-    'module.babel.js',
-    'babel.config.js',
-    '.babelrc.js',
-    '.babelrc.json',
-    '.babelrc',
-  ],
   eslint: ['module.eslint.js', '.eslintrc.js', '.eslintrc.json', '.eslintrc'],
 };
 
@@ -125,17 +117,6 @@ function checkAndRegister(moduleDir) {
   for (const name of CUSTOMIZERS.postcss) {
     if (files.has(name)) {
       registry.postcssConfigs.push({
-        moduleDir,
-        path: path.join(moduleDir, name),
-      });
-      break;
-    }
-  }
-
-  // Babel: module.babel.js, babel.config.js, .babelrc.js, .babelrc.json, .babelrc
-  for (const name of CUSTOMIZERS.babel) {
-    if (files.has(name)) {
-      registry.babelConfigs.push({
         moduleDir,
         path: path.join(moduleDir, name),
       });

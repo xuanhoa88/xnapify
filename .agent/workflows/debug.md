@@ -35,11 +35,11 @@ export NODE_OPTIONS="--max-old-space-size=4096"
 npm run build
 ```
 
-## CSS/Babel errors
+## CSS/Loader errors
 
 ```bash
 # Adding specific packages bypasses the preinstall guard automatically
-npm install --save-dev babel-loader css-loader
+npm install --save-dev swc-loader css-loader
 ```
 
 ## CSS not loading

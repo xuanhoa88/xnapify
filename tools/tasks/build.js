@@ -43,10 +43,9 @@ const {
 const { createWebpackConfig } = require('../webpack/base.config');
 
 const clean = require('./clean');
-const buildExtensions = require('./extension');
+const createBundledExtensions = require('./extension');
 
 // Build configuration
-
 const BUILD_TIMESTAMP = Date.now();
 
 // Cache verbose check for use throughout the build
@@ -339,7 +338,7 @@ function logBundleResults(analysis, duration) {
  * Create webpack bundle
  * Simplified to focus on core bundling logic
  */
-function createBundle() {
+function createBundledApp() {
   return new Promise((resolve, reject) => {
     const startTime = Date.now();
 
@@ -472,21 +471,19 @@ async function main() {
         description: 'Building npm scripts',
       },
       {
-        name: 'extensions',
-        task: () =>
-          withBuildRetry(() => buildExtensions(), {
-            operation: 'build-extensions',
-            verbose,
-          }),
-        description: 'Building extensions',
-      },
-      {
         name: 'apps',
         task: () =>
-          withBuildRetry(() => createBundle(), {
-            operation: 'build-apps',
-            verbose,
-          }),
+          withBuildRetry(
+            () =>
+              Promise.all([
+                createBundledExtensions({ watch: false }),
+                createBundledApp(),
+              ]),
+            {
+              operation: 'build-apps',
+              verbose,
+            },
+          ),
         description: 'Building apps',
       },
     ];

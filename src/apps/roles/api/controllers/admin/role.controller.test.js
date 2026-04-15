@@ -5,7 +5,7 @@ describe('Admin Role Controller (SQLite E2E)', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
-    mockModels = global.testDb.models;
+    mockModels = globalThis.testDb.models;
 
     mockHttp = {
       sendSuccess: jest.fn(),
@@ -98,7 +98,10 @@ describe('Admin Role Controller (SQLite E2E)', () => {
 
   describe('getRoles', () => {
     it('should parse pagination and get list', async () => {
-      await mockModels.Role.create({ name: 'role-a' });
+      await mockModels.Role.create({
+        id: require('uuid').v4(),
+        name: 'role-a',
+      });
 
       await roleController.getRoles(req, res);
 

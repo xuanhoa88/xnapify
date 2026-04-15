@@ -328,7 +328,7 @@ async function buildExtensions(options = {}) {
     return;
   }
 
-  logInfo(`🚀 Building ${extensions.length} extension(s)...`);
+  logInfo(`🔨 Compiling ${extensions.length} extension(s)...`);
   const start = Date.now();
 
   // Auto-cleanup: remove stale build directories that no longer match

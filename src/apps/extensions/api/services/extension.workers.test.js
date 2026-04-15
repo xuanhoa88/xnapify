@@ -62,6 +62,7 @@ function createMockContainer(overrides = {}) {
         update: mockExtensionUpdate,
         destroy: mockExtensionDestroy,
         findAll: jest.fn().mockResolvedValue([]),
+        findOne: jest.fn().mockResolvedValue(null),
       },
     },
     extension: {
@@ -122,6 +123,13 @@ describe('Extension Workers', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    computeChecksum.mockResolvedValue('abc123hash');
+    verifyExtensionChecksum.mockResolvedValue({
+      valid: true,
+      actual: 'abc123hash',
+    });
+    installExtensionDependencies.mockResolvedValue(undefined);
+    resolveExtension.mockResolvedValue({ extension: null });
 
     mockContainer = createMockContainer();
 

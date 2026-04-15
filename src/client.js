@@ -694,7 +694,7 @@ async function attemptStartup() {
 
   // Phase 1b: Load active extensions (API is already reachable on the client)
   try {
-    await extensionManager.sync();
+    await extensionManager.sync(preloadedState.extensions);
   } catch (error) {
     log(`⚠️ Extension sync failed: ${error.message}`, 'error');
   }

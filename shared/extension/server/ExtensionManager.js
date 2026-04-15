@@ -35,6 +35,9 @@ const EXTENSION_SCRIPT_ENTRY_POINTS = Symbol(
   '__xnapify.ext.scriptEntryPoints__',
 );
 const SERVER_CWD = Symbol('__xnapify.ext.serverCwd__');
+const DISCOVERING_DEV_EXTENSIONS = Symbol(
+  '__xnapify.ext.discoveringDevExtensions__',
+);
 
 /** Non-throwing async file existence check */
 async function fileExists(...filePaths) {
@@ -67,6 +70,12 @@ class ServerExtensionManager extends BaseExtensionManager {
     this.on('extensions:refreshed', ({ extensionIds }) => {
       // eslint-disable-next-line no-underscore-dangle
       if (extensionIds === null) this._discoverDevExtensions();
+    });
+
+    // Also discover dev extensions after initial sync
+    this.on('extensions:initialized', () => {
+      // eslint-disable-next-line no-underscore-dangle
+      this._discoverDevExtensions();
     });
 
     // eslint-disable-next-line no-underscore-dangle
@@ -813,6 +822,10 @@ class ServerExtensionManager extends BaseExtensionManager {
    * @private
    */
   async _discoverDevExtensions() {
+    if (this[DISCOVERING_DEV_EXTENSIONS]) return;
+
+    this[DISCOVERING_DEV_EXTENSIONS] = true;
+
     try {
       const devBaseDir = this.getDevExtensionsDir(this[SERVER_CWD]);
       if (!devBaseDir || !(await fileExists(devBaseDir))) return;
@@ -887,6 +900,8 @@ class ServerExtensionManager extends BaseExtensionManager {
           err.message,
         );
       }
+    } finally {
+      this[DISCOVERING_DEV_EXTENSIONS] = false;
     }
   }
 

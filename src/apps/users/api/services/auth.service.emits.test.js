@@ -21,6 +21,16 @@ jest.mock('../utils/password', () => ({
 }));
 
 describe('auth.service emits (additional)', () => {
+  beforeEach(() => {
+    // Re-setup mock implementations after resetMocks clears them
+    createTimedResetToken.mockReturnValue({
+      token: 'tok1',
+      hashedToken: 'hashed',
+      expiresAt: Date.now() + 3600,
+    });
+    validateResetToken.mockReturnValue({ valid: true, errors: [] });
+    verifyPassword.mockReturnValue(true);
+  });
   test('registerUser emits registered', async () => {
     const factory = createFactory();
     const ctx = { app: 'ctx' };
@@ -73,6 +83,8 @@ describe('auth.service emits (additional)', () => {
       failed_login_attempts: 0,
       is_active: true,
       is_locked: false,
+      increment: jest.fn().mockResolvedValue(true),
+      update: jest.fn().mockResolvedValue(true),
     };
 
     // Mock scoped findOne

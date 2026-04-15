@@ -27,7 +27,7 @@ jest.mock('../services/profile.service', () => ({
 }));
 
 jest.mock('../utils/formatter', () => ({
-  formatUserResponse: jest.fn(user => ({ ...user, formatted: true })),
+  formatUserResponse: jest.fn(),
 }));
 
 describe('Profile Controller', () => {
@@ -115,6 +115,7 @@ describe('Profile Controller', () => {
         id: 1,
         email: 'test@example.com',
       });
+      formatUserResponse.mockResolvedValue({ id: 1, formatted: true });
 
       await profileController.getProfile(req, res);
 

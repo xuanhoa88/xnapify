@@ -139,7 +139,7 @@ xnapify/
 | Technology                    | Purpose                       |
 | ----------------------------- | ----------------------------- |
 | Webpack 5                     | Bundling, code splitting, HMR |
-| Babel 7                       | ES2015+ transpilation         |
+| SWC                           | ES2015+ transpilation         |
 | Jest                          | Testing & benchmarks          |
 | ESLint + Prettier + Stylelint | Code quality & formatting     |
 

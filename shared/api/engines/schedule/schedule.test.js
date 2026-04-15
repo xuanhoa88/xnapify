@@ -13,6 +13,35 @@ import cron from 'node-cron';
 import { ScheduleError } from './errors';
 import { ScheduleManager, createFactory } from './factory';
 
+beforeEach(() => {
+  cron.validate.mockImplementation(expression => {
+    if (!expression || typeof expression !== 'string') return false;
+    const parts = expression.trim().split(/\s+/);
+    if (parts.length < 5 || parts.length > 6) return false;
+    return true;
+  });
+
+  cron.schedule.mockImplementation((expression, callback, options) => {
+    let status = 'stopped';
+    const task = {
+      start: jest.fn(() => {
+        status = 'scheduled';
+      }),
+      stop: jest.fn(() => {
+        status = 'stopped';
+      }),
+      getStatus: jest.fn(() => status),
+      _callback: callback,
+      _options: options,
+    };
+    if (options && options.scheduled) task.start();
+    const taskId = `${expression}-${Date.now()}-${Math.random()}`;
+    // eslint-disable-next-line no-underscore-dangle
+    cron.__getMockTasks().set(taskId, { task, callback });
+    return task;
+  });
+});
+
 describe('ScheduleManager', () => {
   let manager;
 

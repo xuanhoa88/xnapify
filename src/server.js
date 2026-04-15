@@ -493,6 +493,9 @@ async function renderToHtml({ context, component, metadata = {}, nonce }) {
     appState: {
       redux: context.store.getState(),
       appUrl: APP_METADATA.url,
+      extensions: extensionManager
+        .getAllExtensionMetadata()
+        .map(m => m.manifest),
     },
     nonce,
   };

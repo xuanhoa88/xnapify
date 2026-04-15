@@ -69,7 +69,7 @@ function createCompilationPromise(name, compiler) {
   return new Promise((resolve, reject) => {
     compiler.hooks.compile.tap(name, () => {
       if (!silent) {
-        logInfo(`🔄 Compiling '${name}'...`);
+        logInfo(`🔨 Compiling '${name}'...`);
       }
     });
 
@@ -139,40 +139,27 @@ function configureWebpackForDev(cfg, isClient = true) {
       }),
     );
 
-    // Add react-refresh/babel plugin to babel-loader for React Fast Refresh
-    const addBabelPluginToRules = (rules, plugin) => {
-      if (!Array.isArray(rules)) return;
-
-      rules.forEach(rule => {
-        if (!rule) return;
-
-        // Process loader array
-        const loaders = (
-          Array.isArray(rule.use) ? rule.use : [rule.use]
-        ).filter(Boolean);
-        loaders.forEach(loaderConfig => {
-          const loader =
-            typeof loaderConfig === 'string'
-              ? loaderConfig
-              : loaderConfig && loaderConfig.loader;
-
-          if (loader === 'babel-loader' && typeof loaderConfig === 'object') {
-            loaderConfig.options = loaderConfig.options || {};
-            loaderConfig.options.plugins = loaderConfig.options.plugins || [];
-            if (!loaderConfig.options.plugins.includes(plugin)) {
-              loaderConfig.options.plugins.push(plugin);
-            }
-          }
-        });
-
-        // Recursively process nested rules (like oneOf)
-        if (rule.oneOf) addBabelPluginToRules(rule.oneOf, plugin);
-      });
-    };
-
-    const refreshBabelPlugin = require.resolve('react-refresh/babel');
+    // Enable React Fast Refresh in swc-loader
+    // SWC handles refresh natively via jsc.transform.react.refresh
     const rules = cfg.module && cfg.module.rules ? cfg.module.rules : [];
-    addBabelPluginToRules(rules, refreshBabelPlugin);
+    rules.forEach(rule => {
+      if (!rule || !rule.use) return;
+      const loaders = (Array.isArray(rule.use) ? rule.use : [rule.use]).filter(
+        Boolean,
+      );
+      loaders.forEach(loaderConfig => {
+        if (
+          typeof loaderConfig === 'object' &&
+          loaderConfig.loader === 'swc-loader' &&
+          loaderConfig.options &&
+          loaderConfig.options.jsc &&
+          loaderConfig.options.jsc.transform &&
+          loaderConfig.options.jsc.transform.react
+        ) {
+          loaderConfig.options.jsc.transform.react.refresh = true;
+        }
+      });
+    });
 
     // Use shared HMR client to ensure singleton connection
     const whm = require.resolve('../webpack/hotClient');
@@ -327,7 +314,9 @@ function createWebpackMiddlewares(clientCompiler) {
       chunks: false, // Hide chunk details to reduce noise
       modules: false, // Hide module details
     },
-    writeToDisk: true, // Write files to disk for SSR
+    // Only write stats.json and CSS to disk (needed for SSR template).
+    // JS chunks are served from memory by dev middleware — faster I/O.
+    writeToDisk: filePath => /\.(json|css)$/.test(filePath),
     serverSideRender: true, // Enable SSR access to webpack stats
   });
 
@@ -521,6 +510,19 @@ async function main() {
   const startTime = Date.now();
   logInfo('🚀 Starting development server...');
 
+  // Forward extension rebuild events to the client browser via hot middleware
+  process.on('message', msg => {
+    if (msg && msg.type === 'extensions-refreshed' && hotMiddleware) {
+      if (typeof hotMiddleware.publish === 'function') {
+        hotMiddleware.publish({
+          type: 'extensions-refreshed',
+          extensions: msg.extensions,
+        });
+        logInfo('🔌 Forwarded extensions-refreshed to client');
+      }
+    }
+  });
+
   // Setup graceful shutdown handler
   setupGracefulShutdown(async () => {
     logInfo('🛑 Development server shutting down...');
@@ -550,27 +552,8 @@ async function main() {
     });
   });
 
-  // Clean before starting
-  await clean();
-
-  // Generate JWT
-  await generateJWT(config.CWD);
-
-  // Build extensions
-  await buildExtensions({ watch: true });
-
-  // Forward extension rebuild events to the client browser via hot middleware
-  process.on('message', msg => {
-    if (msg && msg.type === 'extensions-refreshed' && hotMiddleware) {
-      if (typeof hotMiddleware.publish === 'function') {
-        hotMiddleware.publish({
-          type: 'extensions-refreshed',
-          extensions: msg.extensions,
-        });
-        logInfo('🔌 Forwarded extensions-refreshed to client');
-      }
-    }
-  });
+  // Clean and generate JWT in parallel (JWT only touches .env, independent of build dir)
+  await Promise.all([clean(), generateJWT(config.CWD)]);
 
   try {
     // Setup webpack compilers
@@ -606,7 +589,11 @@ async function main() {
       createWebpackMiddlewares(clientCompiler));
 
     // Wait for both server and client bundle compilations to finish (they run in parallel)
-    await Promise.all([serverPromise, clientPromise]);
+    await Promise.all([
+      buildExtensions({ watch: true }),
+      serverPromise,
+      clientPromise,
+    ]);
 
     // Load server bundle
     let createServer, bootstrapApp;

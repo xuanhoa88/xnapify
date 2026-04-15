@@ -491,14 +491,39 @@ const createScriptRule = () => ({
   exclude: [/node_modules/],
   use: [
     {
-      loader: 'babel-loader',
+      loader: 'swc-loader',
       options: {
-        comments: false,
-        cacheDirectory: isDev,
-        configFile: path.resolve(__dirname, '..', 'babel.factory.js'),
-        // Override babel-loader's default sourceRoot (process.cwd()) to prevent
-        // Windows-specific Invalid URL TypeError in @pmmmwh/react-refresh-webpack-plugin
-        sourceRoot: '',
+        jsc: {
+          parser: {
+            syntax: 'ecmascript',
+            jsx: true,
+            dynamicImport: true,
+          },
+          transform: {
+            react: {
+              runtime: 'automatic',
+              development: isDev,
+              // React Fast Refresh is enabled per-compiler in
+              // configureWebpackForDev (dev.js) — default off here
+              // so the server bundle is not affected.
+              refresh: false,
+            },
+          },
+          // Disable loose mode to ensure iterables (Set, Map, etc) spread correctly
+          loose: false,
+        },
+        // Production: inject core-js polyfills for browser compatibility
+        // (polyfill injection based on browser targets + core-js usage).
+        // Development: skip polyfills (targeting modern dev browser).
+        ...(isDev
+          ? {}
+          : {
+              env: {
+                targets: 'defaults',
+                mode: 'usage',
+                coreJs: '3.46',
+              },
+            }),
       },
     },
   ],

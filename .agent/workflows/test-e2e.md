@@ -194,7 +194,7 @@ Description of what this test validates.
 
 ### Prerequisite
 
-- fixture_zip: ./src/**tests**/fixtures/sample-extension.zip
+- fixture_zip: ./src/__tests__/fixtures/sample-extension.zip
 
 ## Steps
 

@@ -15,6 +15,7 @@ const { cleanDir, getFileInfo, readDir } = require('../utils/fs');
 const {
   formatBytes,
   formatDuration,
+  isVerbose,
   logDebug,
   logInfo,
   logVerbose,
@@ -160,13 +161,15 @@ async function enhancedCleanDir(targetPath, options = {}) {
       return { preserved: true, reason: preserveCheck.reason };
     }
 
-    // Calculate size before deletion for statistics
+    // Calculate size before deletion for statistics (skip in non-verbose mode
+    // to avoid walking the entire build tree — saves ~200-500ms on startup)
+    const verbose = isVerbose();
     let sizeInfo = { totalSize: 0, fileCount: 0, dirCount: 0 };
-    if (pathInfo.isDirectory) {
+    if (verbose && pathInfo.isDirectory) {
       sizeInfo = await calculateDirectorySize(targetPath);
       state.stats.totalDirectories += sizeInfo.dirCount;
       state.stats.totalFiles += sizeInfo.fileCount;
-    } else {
+    } else if (verbose) {
       sizeInfo.totalSize = pathInfo.size;
       // eslint-disable-next-line no-plusplus
       state.stats.totalFiles++;

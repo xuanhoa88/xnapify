@@ -5,8 +5,14 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-// Mock uuid to avoid Jest compatibility issues
-jest.mock('uuid');
+jest.mock('uuid', () => ({
+  v4: () =>
+    'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+      const r = (Math.random() * 16) | 0;
+      const v = c === 'x' ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    }),
+}));
 
 import { Channel } from './channel';
 import { createFactory } from './factory';
