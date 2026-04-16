@@ -733,9 +733,8 @@ function resolvePgBin(binName) {
   const platform = os.platform();
   const arch = os.arch();
 
-  const isWin = platform === 'win32';
   // On Windows the binaries have a .exe extension
-  const fileName = isWin ? `${binName}.exe` : binName;
+  const fileName = platform === 'win32' ? `${binName}.exe` : binName;
 
   // Map Node arch/platform names to embedded-postgres package names
   const archMap = { x64: 'x64', arm64: 'arm64' };
@@ -1026,12 +1025,11 @@ function getMysqlDownloadInfo() {
  * @param {string} dest - Destination file path
  */
 function downloadFile(url, dest) {
-  const isWin = os.platform() === 'win32';
-
   // Build download command — curl on Unix/macOS, PowerShell on Windows
-  const cmd = isWin
-    ? `powershell -Command "Invoke-WebRequest -Uri '${url}' -OutFile '${safePath(dest)}' -UseBasicParsing"`
-    : `curl -fSL --retry 3 --retry-delay 5 -o "${safePath(dest)}" "${url}"`;
+  const cmd =
+    os.platform() === 'win32'
+      ? `powershell -Command "Invoke-WebRequest -Uri '${url}' -OutFile '${safePath(dest)}' -UseBasicParsing"`
+      : `curl -fSL --retry 3 --retry-delay 5 -o "${safePath(dest)}" "${url}"`;
 
   console.log(`   📥 Downloading from ${new URL(url).hostname}...`);
 
@@ -1183,8 +1181,7 @@ async function ensureMysqlBinaries() {
  * @returns {string} Absolute path to the binary
  */
 function resolveMysqlBin(binName) {
-  const isWin = os.platform() === 'win32';
-  const fileName = isWin ? `${binName}.exe` : binName;
+  const fileName = os.platform() === 'win32' ? `${binName}.exe` : binName;
 
   const info = getMysqlDownloadInfo();
   const basedir = path.join(MYSQL_DATA_DIR, info.dirName);
