@@ -44,8 +44,7 @@
 }
 
 .objectKeyVal:hover {
-  border-left: 2px solid var(--json-accent, #586e75);
-  padding-left: 0;
+  border-left: 1px solid var(--json-accent, #586e75);
 }
 
 .jsvRoot {
@@ -209,7 +208,9 @@
    ============================================================================= */
 
 .objectMetaData {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   padding: 0 0 0 10px;
 }
 
@@ -220,12 +221,13 @@
 .variableRow {
   padding: 3px 0;
   border-left: 1px solid transparent;
+  border-radius: 4px;
   display: flex;
   align-items: flex-start;
 }
 
 .variableRow:hover {
-  border-left: 2px solid var(--json-accent, #586e75);
+  background-color: var(--color-background-secondary, #f1f5f9);
 }
 
 .variableValue {
@@ -233,28 +235,40 @@
   display: inline-block;
 }
 
+.editModeContainer {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: -2px;
+}
+
 .editInput {
   display: inline-block;
-  min-width: 130px;
-  border: none;
-  border-radius: 2px;
-  background: var(--color-background-secondary, #f1f5f9);
+  min-width: 160px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-sm, 4px);
+  background: var(--color-background, #fff);
   color: var(--color-text-primary, #1a1a2e);
-  padding: 5px;
-  margin-right: 4px;
+  padding: 4px 6px;
+  margin-bottom: -2px;
   font-family: var(--font-family-mono, monospace);
   font-size: var(--font-size-xs, 12px);
   resize: vertical;
   outline: none;
+  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgb(0 0 0 / 5%));
+  transition: all 0.2s ease;
 }
 
 .editInput:focus {
-  box-shadow: 0 0 0 2px var(--color-primary, #2563eb);
+  border-color: var(--color-primary, #2563eb);
+  box-shadow: 0 0 0 2px rgb(37 99 235 / 20%);
 }
 
 .editIconContainer {
-  display: inline-block;
-  vertical-align: top;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-top: 4px;
 }
 
 .detectedRow {
@@ -311,23 +325,26 @@
    ============================================================================= */
 
 .keyModalOverlay {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgb(255 255 255 / 30%);
-  z-index: 10;
+  background: rgb(255 255 255 / 50%);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
 }
 
 .keyModal {
-  width: 200px;
+  width: 260px;
   background: var(--color-background, #fff);
-  margin: 15px auto 0;
-  padding: 10px;
+  padding: 16px;
   border-radius: var(--radius-md, 6px);
   position: relative;
-  box-shadow: var(--shadow-md, 0 4px 6px -1px rgb(0 0 0 / 10%));
+  box-shadow: var(--shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 10%), 0 4px 6px -4px rgb(0 0 0 / 10%));
   border: 1px solid var(--color-border, #e2e8f0);
 }
 
@@ -372,6 +389,15 @@
   cursor: pointer;
 }
 
+.keyModalInputWrapper {
+  position: relative;
+}
+
+.keyModalInputWrapperField {
+  position: relative;
+  margin-bottom: 8px;
+}
+
 /* =============================================================================
    VALIDATION FAILURE
    ============================================================================= */
@@ -400,8 +426,18 @@
 }
 
 .variableRow:hover .hoverActions,
-.objectKeyVal:hover > span > .objectMetaData .hoverActions {
-  display: inline-block;
+.objectKeyVal:hover > span.objectMetaData .hoverActions,
+.jsvRoot:hover > span.objectMetaData .hoverActions {
+  display: inline-flex;
+  align-items: center;
+}
+
+.variableHoverActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-top: 2px;
+  margin-left: 4px;
 }
 
 /* =============================================================================
@@ -414,6 +450,8 @@
 }
 
 .variableRow:hover .copyContainer,
-.objectKeyVal:hover > span > .objectMetaData .copyContainer {
-  display: inline-block;
+.objectKeyVal:hover > span.objectMetaData .copyContainer,
+.jsvRoot:hover > span.objectMetaData .copyContainer {
+  display: inline-flex;
+  align-items: center;
 }

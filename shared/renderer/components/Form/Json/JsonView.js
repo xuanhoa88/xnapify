@@ -44,6 +44,15 @@ function DataTypeLabel({ type, show }) {
   return <span className={s.dataTypeLabel}>{type}</span>;
 }
 
+function getInitialType(val) {
+  if (val === null) return 'null';
+  if (Array.isArray(val)) return 'array';
+  if (typeof val === 'object') return 'object';
+  if (typeof val === 'boolean') return 'boolean';
+  if (typeof val === 'number') return 'number';
+  return 'string';
+}
+
 // =============================================================================
 // VALUE RENDERERS
 // =============================================================================
@@ -251,38 +260,106 @@ function CopyToClipboard({ src, enableClipboard }) {
 // ADD KEY MODAL
 // =============================================================================
 
-function AddKeyModal({ existingKeys, onSubmit, onCancel, defaultValue }) {
-  const [input, setInput] = useState('');
-  const inputRef = useRef(null);
-  const isValid = input !== '' && !existingKeys.includes(input);
+function AddKeyModal({
+  existingKeys,
+  isArray,
+  onSubmit,
+  onCancel,
+  defaultValue,
+}) {
+  const [keyInput, setKeyInput] = useState('');
+  const [valueType, setValueType] = useState(getInitialType(defaultValue));
+
+  const keyInputRef = useRef(null);
+  const valueSelectRef = useRef(null);
+
+  const isValid =
+    isArray || (keyInput !== '' && !existingKeys.includes(keyInput));
 
   useEffect(() => {
-    if (inputRef.current) inputRef.current.focus();
-  }, []);
+    if (isArray && valueSelectRef.current) valueSelectRef.current.focus();
+    else if (!isArray && keyInputRef.current) keyInputRef.current.focus();
+  }, [isArray]);
+
+  const handleSubmit = () => {
+    if (!isValid) return;
+    let finalValue;
+    switch (valueType) {
+      case 'string':
+        finalValue = '';
+        break;
+      case 'number':
+        finalValue = 0;
+        break;
+      case 'boolean':
+        finalValue = false;
+        break;
+      case 'object':
+        finalValue = {};
+        break;
+      case 'array':
+        finalValue = [];
+        break;
+      case 'null':
+        finalValue = null;
+        break;
+      default:
+        finalValue = '';
+        break;
+    }
+    onSubmit(isArray ? null : keyInput, finalValue);
+  };
 
   return (
     <div className={s.keyModalOverlay} onClick={onCancel}>
       <div className={s.keyModal} onClick={e => e.stopPropagation()}>
-        <div className={s.keyModalLabel}>Key Name:</div>
-        <div style={{ position: 'relative' }}>
-          <input
-            ref={inputRef}
+        {!isArray && (
+          <>
+            <div className={s.keyModalLabel}>Key Name:</div>
+            <div className={s.keyModalInputWrapperField}>
+              <input
+                ref={keyInputRef}
+                className={s.keyModalInput}
+                spellCheck={false}
+                value={keyInput}
+                placeholder='...'
+                onChange={e => setKeyInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Escape') onCancel();
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (valueSelectRef.current) valueSelectRef.current.focus();
+                  }
+                }}
+              />
+            </div>
+          </>
+        )}
+        <div className={s.keyModalLabel}>Type:</div>
+        <div className={s.keyModalInputWrapper}>
+          <select
+            ref={valueSelectRef}
             className={s.keyModalInput}
-            spellCheck={false}
-            value={input}
-            placeholder='...'
-            onChange={e => setInput(e.target.value)}
+            value={valueType}
+            onChange={e => setValueType(e.target.value)}
             onKeyDown={e => {
-              if (isValid && e.key === 'Enter') onSubmit(input, defaultValue);
+              if (isValid && e.key === 'Enter') handleSubmit();
               if (e.key === 'Escape') onCancel();
             }}
-          />
+          >
+            <option value='string'>String</option>
+            <option value='number'>Number</option>
+            <option value='boolean'>Boolean</option>
+            <option value='object'>Object</option>
+            <option value='array'>Array</option>
+            <option value='null'>Null</option>
+          </select>
           {isValid && (
             <Icon
               name='check-circle'
               size={15}
               className={s.keyModalSubmit}
-              onClick={() => onSubmit(input, defaultValue)}
+              onClick={handleSubmit}
             />
           )}
         </div>
@@ -380,7 +457,7 @@ function VariableEditor({
       <span className={s.objectKey}>{`"${name}":`}</span>
       <div className={s.variableValue}>
         {editMode ? (
-          <div>
+          <div className={s.editModeContainer}>
             <textarea
               className={s.editInput}
               value={editValue}
@@ -422,7 +499,7 @@ function VariableEditor({
       </div>
       {/* Action icons (only on hover) */}
       {hovered && !editMode && (
-        <span style={{ display: 'inline-flex', gap: '2px' }}>
+        <span className={s.variableHoverActions}>
           {enableClipboard && (
             <CopyToClipboard src={value} enableClipboard={enableClipboard} />
           )}
@@ -589,11 +666,7 @@ function ObjectNode({
                 className={s.addIcon}
                 onClick={e => {
                   e.stopPropagation();
-                  if (isArray) {
-                    handleAddKey(null, defaultValue);
-                  } else {
-                    setAddKeyActive(true);
-                  }
+                  setAddKeyActive(true);
                 }}
               />
             </span>
@@ -686,6 +759,7 @@ function ObjectNode({
       {addKeyActive && (
         <AddKeyModal
           existingKeys={Object.keys(src)}
+          isArray={isArray}
           onSubmit={handleAddKey}
           onCancel={() => setAddKeyActive(false)}
           defaultValue={defaultValue}

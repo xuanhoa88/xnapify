@@ -202,7 +202,7 @@ function ExtensionCard({
             <label className={s.toggleSwitch}>
               <input
                 type='checkbox'
-                checked={extension.is_active}
+                checked={Boolean(extension.is_active)}
                 onChange={() => {}}
                 onClick={handleToggleStatus}
                 disabled={!canUpdate}
