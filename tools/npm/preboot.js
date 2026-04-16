@@ -106,7 +106,7 @@ const PG_DATA_DIR = safePath(
 const PG_EMBEDDED_PORT = 5433;
 const PG_SYSTEM_USER = 'postgres';
 const PG_SYSTEM_PASSWORD = 'postgres';
-const PG_SYSTEM_DB = 'postgres';
+
 const PG_DEFAULTS = Object.freeze({
   port: PG_EMBEDDED_PORT,
   user: PG_SYSTEM_USER,
@@ -800,7 +800,7 @@ async function terminateConnections(port) {
       port,
       user: PG_DEFAULTS.user,
       password: PG_DEFAULTS.password,
-      database: PG_SYSTEM_DB,
+      database: PG_DEFAULTS.user, // PG convention: default DB = username
       connectionTimeoutMillis: 3000,
     });
 
@@ -1634,23 +1634,24 @@ async function autoMode() {
 
 /**
  * Ensure the target PostgreSQL database exists.
- * Idempotent — Safe to run multiple times.
+ * Connects to the user's default database (PG convention: DB name = username)
+ * to check and create the target database. Idempotent — safe to run multiple times.
  * @param {{ host?: string, port?: number, user?: string, password?: string, database?: string }} cfg
  */
 async function ensurePostgresDatabase(cfg) {
   const dbName = cfg.database || PG_DEFAULTS.database;
+  const user = cfg.user || PG_DEFAULTS.user;
   try {
     const { Client } = require('pg');
     const client = new Client({
       host: cfg.host || DB_DEFAULT_HOST,
       port: cfg.port || PG_DEFAULTS.port,
-      user: cfg.user || PG_DEFAULTS.user,
+      user,
       password: cfg.password || PG_DEFAULTS.password,
-      database: PG_SYSTEM_DB,
+      database: user, // PG convention: default DB = username
       connectionTimeoutMillis: 5000,
     });
     await client.connect();
-    // Check if database exists
     const result = await client.query(
       'SELECT 1 FROM pg_database WHERE datname = $1',
       [dbName],
@@ -1662,7 +1663,6 @@ async function ensurePostgresDatabase(cfg) {
     await client.end();
   } catch (e) {
     console.error(`⚠️  Auto-create DB failed: ${e.message}`);
-    // Database might already exist, permission denied, or remote host doesn't allow tracking
   }
 }
 
@@ -1984,11 +1984,11 @@ Environment:
   XNAPIFY_DB_TYPE       Override dialect (same as --db, for npm lifecycle hooks)
 
 Examples:
-  node tools/npm/preboot.js --install                # install driver for detected dialect
-  node tools/npm/preboot.js --db sqlite --install    # install SQLite driver only
-  node tools/npm/preboot.js --start                  # start DB detected from env
-  node tools/npm/preboot.js --db mysql --start       # force MySQL start
-  node tools/npm/preboot.js --db postgres --stop     # force PostgreSQL stop
+  node tools/npm/preboot.js --install                     # install driver for detected dialect
+  node tools/npm/preboot.js --db sqlite --install         # install SQLite driver only
+  node tools/npm/preboot.js --start                       # start DB detected from env
+  node tools/npm/preboot.js --db mysql --start            # force MySQL start
+  node tools/npm/preboot.js --db postgres --stop          # force PostgreSQL stop
   XNAPIFY_DB_TYPE=mysql npm run dev                       # dev with MySQL
   XNAPIFY_DB_TYPE=postgres npm start                      # start with PostgreSQL
 `);
