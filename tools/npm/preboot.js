@@ -644,6 +644,22 @@ async function startPostgres(cfg = PG_DEFAULTS) {
 
   console.log(`🐘 Starting embedded PostgreSQL on port ${port}...`);
 
+  const isRoot =
+    process.getuid && process.getuid() === 0 && fs.existsSync('/bin/su');
+  const suPrefix = isRoot ? `su node -s /bin/sh -c ` : ``;
+
+  // Ensure data directory exists and is owned by node if we are root
+  if (!fs.existsSync(PG_DATA_DIR)) {
+    fs.mkdirSync(PG_DATA_DIR, { recursive: true });
+  }
+  if (isRoot) {
+    try {
+      execSync(`chown -R node:node "${PG_DATA_DIR}"`);
+    } catch (err) {
+      // ignore
+    }
+  }
+
   // Initialise data directory via initdb (idempotent — skips if already done)
   if (!fs.existsSync(path.join(PG_DATA_DIR, 'PG_VERSION'))) {
     const initdb = resolvePgBin('initdb');
@@ -656,10 +672,14 @@ async function startPostgres(cfg = PG_DEFAULTS) {
       (platform === 'linux' && fs.existsSync('/etc/alpine-release'))
         ? '--locale=C'
         : '--locale=C --lc-messages=en_US.UTF-8';
-    execSync(
-      `"${initdb}" -D "${PG_DATA_DIR}" -U "${user}" --auth=trust --encoding=UTF8 ${localeFlags}`,
-      { cwd: ROOT, stdio: 'inherit', timeout: 60_000, shell: true },
-    );
+
+    const cmd = `"${initdb}" -D "${PG_DATA_DIR}" -U "${user}" --auth=trust --encoding=UTF8 ${localeFlags}`;
+    execSync(isRoot ? `${suPrefix} '${cmd}'` : cmd, {
+      cwd: ROOT,
+      stdio: 'inherit',
+      timeout: 60_000,
+      shell: true,
+    });
   }
 
   // Resolve pg_ctl binary path from the embedded-postgres platform package
@@ -686,10 +706,13 @@ async function startPostgres(cfg = PG_DEFAULTS) {
 
   // Use execSync with stdio: 'ignore' to completely decouple the background
   // daemon's streams from stopping Node.js or blocking the shell.
-  execSync(
-    `"${pgCtl}" -D "${PG_DATA_DIR}" -l "${logFile}" -o "-p ${port}" start`,
-    { cwd: ROOT, stdio: 'ignore', timeout: 30_000, shell: true },
-  );
+  const startCmd = `"${pgCtl}" -D "${PG_DATA_DIR}" -l "${logFile}" -o "-p ${port}" start`;
+  execSync(isRoot ? `${suPrefix} '${startCmd}'` : startCmd, {
+    cwd: ROOT,
+    stdio: 'ignore',
+    timeout: 30_000,
+    shell: true,
+  });
 
   // Wait for PG to become reachable
   if (!(await waitForPort(port, { interval: 200 }))) {
@@ -1218,6 +1241,7 @@ function generateMyCnf(cfg = MYSQL_DEFAULTS, basedir) {
       `pid-file      = ${fwd(pidFile)}`,
       `log-error     = ${fwd(errorLog)}`,
       'bind-address  = 127.0.0.1',
+      'user          = root',
       mysqlxLine,
       'skip-name-resolve',
       '',
