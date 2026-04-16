@@ -38,6 +38,14 @@ const ROOT = process.cwd();
 const ENV_PATH = path.join(ROOT, '.env');
 const ENV_LOCAL_PATH = path.join(ROOT, '.env.local');
 const ENV_TEMPLATE = path.join(ROOT, '.env.xnapify');
+const DB_DEFAULT_HOST = '127.0.0.1';
+const DB_DEFAULT_NAME = 'xnapify_dev';
+
+/** @constant {number} Standard system PostgreSQL port */
+const PG_DEFAULT_PORT = 5432;
+
+/** @constant {number} Standard system MySQL port */
+const MYSQL_DEFAULT_PORT = 3306;
 
 // Bypass Webpack's static analyzer which automatically stubs `require.resolve`
 // for dynamically discovered native database addons it cannot trace at build-time.
@@ -86,39 +94,45 @@ function defaultDataDir(engine) {
   );
 }
 
+// SQLite system user
 const SQLITE_DATA_DIR = safePath(
   process.env.XNAPIFY_SQLITE_DATA_DIR || defaultDataDir('sqlite'),
 );
 
+// PostgreSQL system user
 const PG_DATA_DIR = safePath(
   process.env.XNAPIFY_PG_DATA_DIR || defaultDataDir('postgres'),
 );
+const PG_EMBEDDED_PORT = 5433;
+const PG_SYSTEM_USER = 'postgres';
+const PG_SYSTEM_PASSWORD = 'postgres';
+const PG_SYSTEM_DB = 'postgres';
+const PG_DEFAULTS = Object.freeze({
+  port: PG_EMBEDDED_PORT,
+  user: PG_SYSTEM_USER,
+  password: PG_SYSTEM_PASSWORD,
+  database: DB_DEFAULT_NAME,
+});
 
-const PG_DEFAULTS = {
-  port: 5433,
-  user: 'postgres',
-  password: 'postgres',
-  database: 'xnapify_dev',
-};
-
+// MySQL system user
 const MYSQL_VERSION = '8.4.8';
 const MYSQL_EMBEDDED_PORT = 3307;
 const MYSQL_DATA_DIR = safePath(
   process.env.XNAPIFY_MYSQL_DATA_DIR || defaultDataDir('mysql'),
 );
 
-const MYSQL_DEFAULTS = {
+// MySQL initialization creates 'root'@'localhost' implicitly by default
+const MYSQL_SYSTEM_USER = 'root';
+const MYSQL_SYSTEM_PASSWORD = '';
+
+const MYSQL_DEFAULTS = Object.freeze({
   port: MYSQL_EMBEDDED_PORT,
-  user: 'root',
-  password: '',
-  database: 'xnapify_dev',
-};
+  user: MYSQL_SYSTEM_USER,
+  password: MYSQL_SYSTEM_PASSWORD,
+  database: DB_DEFAULT_NAME,
+});
 
-/** @constant {number} Standard system PostgreSQL port */
-const PG_DEFAULT_PORT = 5432;
-/** @constant {number} Standard system MySQL port */
-const MYSQL_DEFAULT_PORT = 3306;
-
+// Database dependencies
 const DIALECT_DEPS = (() => {
   const platform = os.platform();
   const arch = os.arch();
@@ -548,11 +562,11 @@ async function ensureDeps(dialect) {
 /**
  * Check if a TCP port is reachable (cross-platform).
  * @param {number} port
- * @param {string} [host='127.0.0.1']
+ * @param {string} [host=DB_DEFAULT_HOST]
  * @param {number} [timeout=1000]
  * @returns {Promise<boolean>}
  */
-function isPortReachable(port, host = '127.0.0.1', timeout = 1000) {
+function isPortReachable(port, host = DB_DEFAULT_HOST, timeout = 1000) {
   return new Promise(resolve => {
     const socket = new net.Socket();
 
@@ -580,7 +594,7 @@ function isPortReachable(port, host = '127.0.0.1', timeout = 1000) {
  */
 async function waitForPort(
   port,
-  { timeout = 45_000, interval = 300, host = '127.0.0.1' } = {},
+  { timeout = 45_000, interval = 300, host = DB_DEFAULT_HOST } = {},
 ) {
   const start = Date.now();
   while (Date.now() - start < timeout) {
@@ -601,12 +615,12 @@ function parsePostgresUrl(url) {
     return {
       user: parsed.username || PG_DEFAULTS.user,
       password: parsed.password || PG_DEFAULTS.password,
-      host: parsed.hostname || '127.0.0.1',
+      host: parsed.hostname || DB_DEFAULT_HOST,
       port: parseInt(parsed.port, 10) || PG_DEFAULTS.port,
       database: parsed.pathname.replace(/^\//, '') || PG_DEFAULTS.database,
     };
   } catch {
-    return { ...PG_DEFAULTS, host: '127.0.0.1' };
+    return { ...PG_DEFAULTS, host: DB_DEFAULT_HOST };
   }
 }
 
@@ -620,7 +634,7 @@ function buildPostgresUrl(cfg) {
   const password = encodeURIComponent(cfg.password || PG_DEFAULTS.password);
   const port = cfg.port || PG_DEFAULTS.port;
   const database = encodeURIComponent(cfg.database || PG_DEFAULTS.database);
-  return `postgresql://${user}:${password}@127.0.0.1:${port}/${database}`;
+  return `postgresql://${user}:${password}@${DB_DEFAULT_HOST}:${port}/${database}`;
 }
 
 /**
@@ -694,10 +708,10 @@ async function startPostgres(cfg = PG_DEFAULTS) {
   }
 
   // Ensure listen on 127.0.0.1 only
-  if (!confContent.includes("listen_addresses = '127.0.0.1'")) {
+  if (!confContent.includes(`listen_addresses = '${DB_DEFAULT_HOST}'`)) {
     confContent = confContent.replace(
       /^#?\s*listen_addresses\s*=.*/m,
-      "listen_addresses = '127.0.0.1'",
+      `listen_addresses = '${DB_DEFAULT_HOST}'`,
     );
     fs.writeFileSync(confPath, confContent, 'utf-8');
   }
@@ -782,11 +796,11 @@ async function terminateConnections(port) {
     await ensureDeps('postgres');
     const { Client } = require('pg');
     const client = new Client({
-      host: '127.0.0.1',
+      host: DB_DEFAULT_HOST,
       port,
       user: PG_DEFAULTS.user,
       password: PG_DEFAULTS.password,
-      database: 'postgres',
+      database: PG_SYSTEM_DB,
       connectionTimeoutMillis: 3000,
     });
 
@@ -1237,8 +1251,8 @@ function generateMyCnf(cfg = MYSQL_DEFAULTS, basedir) {
       `socket        = ${fwd(socketPath)}`,
       `pid-file      = ${fwd(pidFile)}`,
       `log-error     = ${fwd(errorLog)}`,
-      'bind-address  = 127.0.0.1',
-      'user          = root',
+      `bind-address  = ${DB_DEFAULT_HOST}`,
+      `user          = ${MYSQL_SYSTEM_USER}`,
       mysqlxLine,
       'skip-name-resolve',
       '',
@@ -1274,7 +1288,7 @@ function buildMysqlUrl(cfg) {
   const port = cfg.port || MYSQL_DEFAULTS.port;
   const database = encodeURIComponent(cfg.database || MYSQL_DEFAULTS.database);
   const auth = password ? `${user}:${encodeURIComponent(password)}` : user;
-  return `mysql://${auth}@127.0.0.1:${port}/${database}`;
+  return `mysql://${auth}@${DB_DEFAULT_HOST}:${port}/${database}`;
 }
 
 /**
@@ -1434,9 +1448,12 @@ async function startMysql(cfg = MYSQL_DEFAULTS) {
     const setupSocketPath = path.join(MYSQL_DATA_DIR, 'mysql.sock');
     const connectArgs =
       platform === 'win32'
-        ? `--host=127.0.0.1 --port=${port}`
+        ? `--host=${DB_DEFAULT_HOST} --port=${port}`
         : `--socket="${setupSocketPath}"`;
-    const baseCmd = `"${mysqlCli}" ${connectArgs} --user=root`;
+    const baseCmd = `"${mysqlCli}" ${connectArgs} --user=${MYSQL_SYSTEM_USER}`;
+
+    const setupUser = cfg.user || MYSQL_DEFAULTS.user;
+    const setupPass = cfg.password || MYSQL_DEFAULTS.password;
 
     // Write setup SQL to a temp file to avoid shell escaping issues
     // with backticks, single quotes, and empty strings.
@@ -1444,8 +1461,8 @@ async function startMysql(cfg = MYSQL_DEFAULTS) {
     fs.writeFileSync(
       sqlFile,
       [
-        "CREATE USER IF NOT EXISTS 'root'@'%' IDENTIFIED BY '';",
-        "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION;",
+        `CREATE USER IF NOT EXISTS '${setupUser}'@'%' IDENTIFIED BY '${setupPass}';`,
+        `GRANT ALL PRIVILEGES ON *.* TO '${setupUser}'@'%' WITH GRANT OPTION;`,
         'FLUSH PRIVILEGES;',
         `CREATE DATABASE IF NOT EXISTS \`${dbName}\`;`,
       ].join('\n'),
@@ -1625,11 +1642,11 @@ async function ensurePostgresDatabase(cfg) {
   try {
     const { Client } = require('pg');
     const client = new Client({
-      host: cfg.host || '127.0.0.1',
+      host: cfg.host || DB_DEFAULT_HOST,
       port: cfg.port || PG_DEFAULTS.port,
       user: cfg.user || PG_DEFAULTS.user,
       password: cfg.password || PG_DEFAULTS.password,
-      database: 'postgres',
+      database: PG_SYSTEM_DB,
       connectionTimeoutMillis: 5000,
     });
     await client.connect();
@@ -1672,7 +1689,7 @@ async function resolvePostgres(url) {
   }
 
   // Configured URL not reachable
-  if (cfg.host !== '127.0.0.1' && cfg.host !== 'localhost') {
+  if (cfg.host !== DB_DEFAULT_HOST && cfg.host !== 'localhost') {
     console.warn(
       `⚠️  Remote PostgreSQL at ${cfg.host}:${cfg.port} not reachable`,
     );
@@ -1769,19 +1786,19 @@ function parseMysqlUrl(url) {
   try {
     const parsed = new URL(url);
     return {
-      host: parsed.hostname || '127.0.0.1',
+      host: parsed.hostname || DB_DEFAULT_HOST,
       port: parseInt(parsed.port, 10) || MYSQL_DEFAULT_PORT,
-      user: parsed.username || 'root',
-      password: parsed.password || '',
-      database: parsed.pathname.replace(/^\//, '') || '',
+      user: parsed.username || MYSQL_DEFAULTS.user,
+      password: parsed.password || MYSQL_DEFAULTS.password,
+      database: parsed.pathname.replace(/^\//, '') || MYSQL_DEFAULTS.database,
     };
   } catch {
     return {
-      host: '127.0.0.1',
+      host: DB_DEFAULT_HOST,
       port: MYSQL_DEFAULT_PORT,
-      user: 'root',
-      password: '',
-      database: '',
+      user: MYSQL_DEFAULTS.user,
+      password: MYSQL_DEFAULTS.password,
+      database: MYSQL_DEFAULTS.database,
     };
   }
 }
@@ -1808,7 +1825,7 @@ async function resolveMysql(url) {
   }
 
   // Configured URL not reachable
-  if (cfg.host !== '127.0.0.1' && cfg.host !== 'localhost') {
+  if (cfg.host !== DB_DEFAULT_HOST && cfg.host !== 'localhost') {
     console.warn(`⚠️  Remote MySQL at ${cfg.host}:${cfg.port} not reachable`);
   }
 
@@ -1830,7 +1847,7 @@ async function mysqlFallbackChain() {
     try {
       const mysql2 = require('mysql2/promise');
       const conn = await mysql2.createConnection({
-        host: '127.0.0.1',
+        host: DB_DEFAULT_HOST,
         port: MYSQL_DEFAULT_PORT,
         user: MYSQL_DEFAULTS.user,
         password: MYSQL_DEFAULTS.password,
