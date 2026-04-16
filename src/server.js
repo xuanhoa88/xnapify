@@ -389,6 +389,7 @@ async function createReduxStore({ fetch, history, locale }, options = {}) {
       initialNow: Date.now(),
       appName: APP_METADATA.title,
       appDescription: APP_METADATA.description,
+      appUrl: APP_METADATA.url,
     }),
   );
 
@@ -492,7 +493,6 @@ async function renderToHtml({ context, component, metadata = {}, nonce }) {
     scriptLinks: [...scriptLinks, ...safeExtUrls('scriptUrls')],
     appState: {
       redux: context.store.getState(),
-      appUrl: APP_METADATA.url,
       extensions: extensionManager
         .getAllExtensionMetadata()
         .map(m => m.manifest),

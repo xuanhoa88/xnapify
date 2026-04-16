@@ -194,9 +194,17 @@ function loadServerBundle() {
       path.join(config.BUILD_DIR, 'server'),
     );
 
-    // Only the server bundle entry needs clearing — framework singletons
-    // (express, http, react) are injected from dev.js and never bundled.
-    delete require.cache[serverBundlePath];
+    // Clear require.cache for ALL files in the build directory.
+    // Webpack code-splits server modules into separate chunk files
+    // (e.g. src_bootstrap_views_js.js). These chunks are loaded via
+    // Node's require() and cached independently. Clearing only the
+    // main entry leaves stale chunk code in memory after recompilation.
+    const buildDir = path.resolve(config.BUILD_DIR);
+    Object.keys(require.cache).forEach(id => {
+      if (id.startsWith(buildDir)) {
+        delete require.cache[id];
+      }
+    });
 
     // Load the server bundle
     const { hot, ...bundle } = require(serverBundlePath);

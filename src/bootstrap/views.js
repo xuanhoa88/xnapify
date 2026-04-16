@@ -57,24 +57,37 @@ class AppRouter extends Router {
    */
   async resolve(context) {
     const page = await super.resolve(context);
+    if (!page) return page;
+
     const state = context.store.getState();
+
+    // 1. Handle Metadata Fallback (Description)
+    if (!page.description) {
+      page.description = getAppDescription(state);
+    }
+
+    // 2. Handle Title Suffixing (App Name)
     const appName = getAppName(state);
-    const appDescription = getAppDescription(state);
+    if (page.title) {
+      const title = String(page.title).trim();
 
-    if (page) {
-      // 1. Handle Metadata Fallback (Description)
-      if (!page.description) {
-        page.description = appDescription;
-      }
-
-      // 2. Handle Title Suffixing (App Name)
-      if (page.title) {
-        // If page has a specific title, append app name: "Leaf Title - App Name"
-        page.title = `${page.title} - ${appName}`;
-      } else {
-        // If no title, fallback to app name: "App Name"
+      if (!title) {
+        // Fallback if the title was only whitespace
         page.title = appName;
+      } else if (title !== appName) {
+        // Guard against multiple common separators to avoid duplication
+        const hasSuffix =
+          title.endsWith(` - ${appName}`) ||
+          title.endsWith(` | ${appName}`) ||
+          title.endsWith(` · ${appName}`);
+
+        page.title = hasSuffix ? title : `${title} - ${appName}`;
+      } else {
+        // Title exactly matches app name
+        page.title = title;
       }
+    } else {
+      page.title = appName;
     }
 
     return page;
