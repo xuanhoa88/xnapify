@@ -15,6 +15,9 @@ import {
 } from '../../validator/extension';
 import * as extensionService from '../services/extension.service';
 
+// Cache for static middleware
+const staticMiddlewareCache = new Map();
+
 // ========================================================================
 // EXTENSION CONTROLLERS
 // ========================================================================
@@ -120,7 +123,13 @@ export const serveExtensionStatic = async (req, res, next) => {
     res.setHeader('Cache-Control', 'no-cache');
   }
 
-  return express.static(staticDir)(req, res, (...args) => {
+  let staticMiddleware = staticMiddlewareCache.get(staticDir);
+  if (!staticMiddleware) {
+    staticMiddleware = express.static(staticDir);
+    staticMiddlewareCache.set(staticDir, staticMiddleware);
+  }
+
+  return staticMiddleware(req, res, (...args) => {
     req.url = originalUrl;
     next(...args);
   });

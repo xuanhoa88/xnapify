@@ -15,11 +15,11 @@ import { createNativeRequire } from '@shared/utils/createNativeRequire';
 
 import {
   BaseExtensionManager,
-  ExtensionState,
   EXTENSION_METADATA,
   BUFFERED_ROUTES,
   STORED_ADAPTERS,
   CONNECTED_ROUTERS,
+  SEQUENTIAL_SYNC,
 } from '../utils/BaseExtensionManager';
 import { normalizeRouteAdapter } from '../utils/routeAdapter';
 
@@ -35,9 +35,6 @@ const EXTENSION_SCRIPT_ENTRY_POINTS = Symbol(
   '__xnapify.ext.scriptEntryPoints__',
 );
 const SERVER_CWD = Symbol('__xnapify.ext.serverCwd__');
-const DISCOVERING_DEV_EXTENSIONS = Symbol(
-  '__xnapify.ext.discoveringDevExtensions__',
-);
 
 /** Non-throwing async file existence check */
 async function fileExists(...filePaths) {
@@ -56,6 +53,9 @@ class ServerExtensionManager extends BaseExtensionManager {
 
   constructor() {
     super(registry);
+
+    // Override sync() behavior in base class to prevent SQLite WAL locking issues
+    this[SEQUENTIAL_SYNC] = true;
     this[EXTENSION_API_ENTRY_POINTS] = new Map();
     this[EXTENSION_CSS_ENTRY_POINTS] = new Map();
     this[EXTENSION_SCRIPT_ENTRY_POINTS] = new Map();
@@ -65,19 +65,6 @@ class ServerExtensionManager extends BaseExtensionManager {
 
     // eslint-disable-next-line no-underscore-dangle
     this.on('extension:unloaded', ({ id }) => this._onExtensionUnloaded(id));
-
-    // Discover dev extensions after full refresh (extensionIds: null)
-    this.on('extensions:refreshed', ({ extensionIds }) => {
-      // eslint-disable-next-line no-underscore-dangle
-      if (extensionIds === null) return this._discoverDevExtensions();
-      return Promise.resolve();
-    });
-
-    // Also discover dev extensions after initial sync
-    this.on('extensions:initialized', () =>
-      // eslint-disable-next-line no-underscore-dangle
-      this._discoverDevExtensions(),
-    );
 
     // eslint-disable-next-line no-underscore-dangle
     this.on('manager:destroyed', () => this._onDestroy());
@@ -527,7 +514,7 @@ class ServerExtensionManager extends BaseExtensionManager {
           const models = this.apiContainer.resolve('models');
           if (models && typeof models.discover === 'function') {
             await models.discover(modelCtx, id);
-            models.associate();
+            await models.associate();
           }
         }
       }
@@ -683,64 +670,6 @@ class ServerExtensionManager extends BaseExtensionManager {
   }
 
   // ---------------------------------------------------------------------------
-  // 7. Sync (serialized — prevents SQLITE_BUSY)
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Override base sync() to serialize extension loading.
-   * SQLite only supports a single writer — loading extensions in parallel
-   * (via Promise.allSettled in the base class) causes SQLITE_BUSY when
-   * multiple extensions run migrations/seeds concurrently.
-   *
-   * The client-side base class keeps parallel loading (no SQLite concern).
-   */
-  async sync() {
-    try {
-      const { data: response } = await this.fetch('/api/extensions');
-      const extensions =
-        response && Array.isArray(response.extensions)
-          ? response.extensions
-          : [];
-
-      let loaded = 0;
-      let failed = 0;
-
-      // Sequential loading prevents concurrent SQLite writes
-      for (const item of extensions) {
-        const id = typeof item === 'object' ? item.id : item;
-        const manifest = typeof item === 'object' ? item : null;
-        try {
-          // eslint-disable-next-line no-await-in-loop
-          await this.loadExtension(id, manifest);
-
-          // loadExtension catches errors internally and returns undefined
-          // (does not re-throw), so check metadata state for accurate count
-          const meta = this[EXTENSION_METADATA].get(id);
-          if (meta && meta.state === ExtensionState.FAILED) {
-            failed++;
-          } else {
-            loaded++;
-          }
-        } catch (err) {
-          failed++;
-          console.warn(
-            `[ServerExtensionManager] Failed to load extension "${this._formatDisplayName(id)}":`,
-            err.message,
-          );
-        }
-      }
-
-      await this.emit('extensions:initialized', {
-        total: extensions.length,
-        loaded,
-        failed,
-      });
-    } catch (error) {
-      console.error('[ExtensionManager] Failed to fetch extensions:', error);
-      await this.emit('extensions:init-failed', { error });
-    }
-  }
-
   // ---------------------------------------------------------------------------
   // 8. Refresh
   // ---------------------------------------------------------------------------
@@ -812,100 +741,6 @@ class ServerExtensionManager extends BaseExtensionManager {
 
     if (__DEV__) {
       console.log('[ServerExtensionManager] Refreshed ✅');
-    }
-  }
-
-  /**
-   * Scan the dev extensions directory for extensions not yet in the DB.
-   * Uses async I/O throughout. Called after full refresh to enable
-   * "plug & play" development without DB registration.
-   *
-   * @private
-   */
-  async _discoverDevExtensions() {
-    if (this[DISCOVERING_DEV_EXTENSIONS]) return;
-
-    this[DISCOVERING_DEV_EXTENSIONS] = true;
-
-    try {
-      const devBaseDir = this.getDevExtensionsDir(this[SERVER_CWD]);
-      if (!devBaseDir || !(await fileExists(devBaseDir))) {
-        this[DISCOVERING_DEV_EXTENSIONS] = false;
-        return;
-      }
-
-      const entries = await fs.promises.readdir(devBaseDir, {
-        withFileTypes: true,
-      });
-
-      const loadedNames = new Set(
-        Array.from(this[EXTENSION_METADATA].values())
-          .map(m => m.manifest && m.manifest.name)
-          .filter(Boolean),
-      );
-
-      const extDirs = [];
-      for (const entry of entries) {
-        if (!entry.isDirectory()) continue;
-        if (entry.name.startsWith('@')) {
-          const scopeDir = path.join(devBaseDir, entry.name);
-          try {
-            const scopeEntries = await fs.promises.readdir(scopeDir, {
-              withFileTypes: true,
-            });
-            for (const subEntry of scopeEntries) {
-              if (subEntry.isDirectory()) {
-                extDirs.push(path.join(scopeDir, subEntry.name));
-              }
-            }
-          } catch {
-            // skip
-          }
-        } else {
-          extDirs.push(path.join(devBaseDir, entry.name));
-        }
-      }
-
-      const devExtensions = (
-        await Promise.all(
-          extDirs.map(async extDir => {
-            const manifest = await this.readManifest(extDir);
-            if (!manifest || !manifest.id) return null;
-            if (loadedNames.has(manifest.name)) return null;
-
-            return { ...manifest, fromDisk: true };
-          }),
-        )
-      ).filter(Boolean);
-
-      if (devExtensions.length > 0) {
-        if (__DEV__) {
-          console.log(
-            `[ServerExtensionManager] Discovered dev extensions: ${devExtensions.map(m => this._formatDisplayName(m.id)).join(', ')}`,
-          );
-        }
-        // Sequential loading — prevents concurrent SQLite writes
-        for (const manifest of devExtensions) {
-          try {
-            // eslint-disable-next-line no-await-in-loop
-            await this.loadExtension(manifest.id, manifest);
-          } catch (err) {
-            console.warn(
-              `[ServerExtensionManager] Failed to load dev extension "${this._formatDisplayName(manifest.id)}":`,
-              err.message,
-            );
-          }
-        }
-      }
-    } catch (err) {
-      if (__DEV__) {
-        console.warn(
-          '[ServerExtensionManager] Dev extension scan failed:',
-          err.message,
-        );
-      }
-    } finally {
-      this[DISCOVERING_DEV_EXTENSIONS] = false;
     }
   }
 

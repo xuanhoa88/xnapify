@@ -17,6 +17,12 @@ import {
   invalidateCaches,
 } from './extension.helpers';
 
+// Cache for disk-only extensions
+const diskExtensionCache = new Map();
+let lastDiskScan = 0;
+let diskScanPromise = null;
+const DISK_SCAN_TTL = 5000; // 5 seconds TTL
+
 /**
  * Scan a directory and add extensions to the map
  * @param {string} dirPath - Directory path
@@ -80,21 +86,51 @@ async function scanDirectory(dirPath, source, metadata, extensionManager) {
  */
 async function getDiskExtensionById(extensionManager, cwd, id) {
   if (!id) return null;
-  const installedExtensionsDir = extensionManager.getInstalledExtensionsDir();
-  const localExtensionsDir = extensionManager.getDevExtensionsDir(cwd);
 
-  const metadata = new Map();
-  const scanTasks = [
-    scanDirectory(installedExtensionsDir, 'remote', metadata, extensionManager),
-  ];
-  if (localExtensionsDir && localExtensionsDir !== installedExtensionsDir) {
-    scanTasks.push(
-      scanDirectory(localExtensionsDir, 'local', metadata, extensionManager),
-    );
+  const now = Date.now();
+  if (now - lastDiskScan < DISK_SCAN_TTL && diskExtensionCache.has(id)) {
+    return diskExtensionCache.get(id);
   }
-  await Promise.all(scanTasks);
 
-  return metadata.get(id) || null;
+  if (!diskScanPromise) {
+    diskScanPromise = (async () => {
+      const installedExtensionsDir =
+        extensionManager.getInstalledExtensionsDir();
+      const localExtensionsDir = extensionManager.getDevExtensionsDir(cwd);
+
+      const metadata = new Map();
+      const scanTasks = [
+        scanDirectory(
+          installedExtensionsDir,
+          'remote',
+          metadata,
+          extensionManager,
+        ),
+      ];
+      if (localExtensionsDir && localExtensionsDir !== installedExtensionsDir) {
+        scanTasks.push(
+          scanDirectory(
+            localExtensionsDir,
+            'local',
+            metadata,
+            extensionManager,
+          ),
+        );
+      }
+      await Promise.all(scanTasks);
+
+      diskExtensionCache.clear();
+      for (const [key, val] of metadata.entries()) {
+        diskExtensionCache.set(key, val);
+      }
+      lastDiskScan = Date.now();
+    })();
+  }
+
+  await diskScanPromise;
+  diskScanPromise = null;
+
+  return diskExtensionCache.get(id) || null;
 }
 
 // ========================================================================

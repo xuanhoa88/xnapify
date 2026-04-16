@@ -18,7 +18,7 @@
  * @example
  * const registry = new ModelRegistry(container);
  * await registry.discover(modelsContext, 'posts');
- * registry.associate();
+ * await registry.associate();
  * registry.seal();
  *
  * // Access (backwards-compatible)

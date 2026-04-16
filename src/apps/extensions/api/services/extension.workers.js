@@ -193,6 +193,7 @@ async function handleToggleJob(container, job) {
           const manifest = await extensionManager.readManifest(extensionDir);
           if (manifest) {
             manifest.fromDisk = true;
+            manifest.isWorker = true;
             await extensionManager.loadExtension(extensionKey, manifest);
           }
         }

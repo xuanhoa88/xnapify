@@ -11,6 +11,8 @@ This skill equips you to build entirely encapsulated extensions for the `xnapify
 
 Unlike Modules (which contain core domain logic), Extensions (`src/extensions/`) are isolated and modify behavior dynamically via Extension Slots and Event Hooks. They are loaded and unloaded during runtime via the Extension Manager.
 
+> **Important Activation Rule:** All extensions (including local development plugins in `src/extensions/`) MUST be registered in the database with `is_active: true` to be discovered and loaded via the API. Building the web app or dragging a folder into the source tree will NOT magically auto-activate an extension without database correlation.
+
 ## Extension Lifecycle
 
 Extensions follow a well-defined phase-sequential lifecycle. Each phase runs for **all extensions** before the next phase begins, ensuring cross-extension dependencies are resolved.

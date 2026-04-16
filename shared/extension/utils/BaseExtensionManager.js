@@ -21,12 +21,15 @@ export const EXTENSION_METADATA = Symbol('__xnapify.ext.metadata__');
 export const BUFFERED_ROUTES = Symbol('__xnapify.ext.pendingRoutes__');
 export const STORED_ADAPTERS = Symbol('__xnapify.ext.routeAdapters__');
 export const CONNECTED_ROUTERS = Symbol('__xnapify.ext.connectedRouters__');
+export const SEQUENTIAL_SYNC = Symbol('__xnapify.ext.sequentialSync__');
 
 // Symbols — private (internal to base manager)
 const FETCH = Symbol('__xnapify.ext.fetch__');
 const CONTEXTS = Symbol('__xnapify.ext.contexts__');
 const REGISTRY = Symbol('__xnapify.ext.registry__');
 const EVENT_HANDLERS = Symbol('__xnapify.ext.eventHandlers__');
+const IS_SYNCING = Symbol('__xnapify.ext.isSyncing__');
+const IS_REFRESHING = Symbol('__xnapify.ext.isRefreshing__');
 
 /**
  * Extension states
@@ -74,6 +77,8 @@ export class BaseExtensionManager {
     this[STORED_ADAPTERS] = new Map(); // id -> { view?, api? }
     this[BUFFERED_ROUTES] = []; // [{ id, adapter, type }]
     this[CONTEXTS] = { view: null, api: null };
+    this[IS_SYNCING] = false;
+    this[IS_REFRESHING] = false;
   }
 
   // ---------------------------------------------------------------------------
@@ -260,6 +265,8 @@ export class BaseExtensionManager {
    * Fetch and load all active extensions from API
    */
   async sync(preloadedExtensions = null) {
+    if (this[IS_SYNCING]) return;
+    this[IS_SYNCING] = true;
     try {
       let extensions = preloadedExtensions;
       if (!extensions) {
@@ -269,13 +276,56 @@ export class BaseExtensionManager {
             ? response.extensions
             : [];
       }
-      const results = await Promise.allSettled(
-        extensions.map(item => {
+      let results = [];
+      const isSequential = this[SEQUENTIAL_SYNC] === true;
+
+      if (isSequential) {
+        // Sequential loading (e.g. for Server DB lock prevention)
+        for (const item of extensions) {
           const id = typeof item === 'object' ? item.id : item;
           const manifest = typeof item === 'object' ? item : null;
-          return this.loadExtension(id, manifest);
-        }),
-      );
+          try {
+            // eslint-disable-next-line no-await-in-loop
+            await this.loadExtension(id, manifest);
+
+            // loadExtension catches internal errors
+            const meta = this[EXTENSION_METADATA].get(id);
+            if (meta && meta.state === ExtensionState.FAILED) {
+              results.push({
+                status: 'rejected',
+                reason: meta.error || new Error('Failed inside loadExtension'),
+              });
+            } else {
+              results.push({ status: 'fulfilled', value: undefined });
+            }
+          } catch (err) {
+            results.push({ status: 'rejected', reason: err });
+          }
+        }
+      } else {
+        // Parallel loading (default for Client bundle fetching)
+        await Promise.allSettled(
+          extensions.map(item => {
+            const id = typeof item === 'object' ? item.id : item;
+            const manifest = typeof item === 'object' ? item : null;
+            return this.loadExtension(id, manifest);
+          }),
+        );
+
+        // Map telemetry manually because loadExtension swallows internal errors
+        for (const item of extensions) {
+          const id = typeof item === 'object' ? item.id : item;
+          const meta = this[EXTENSION_METADATA].get(id);
+          if (meta && meta.state === ExtensionState.FAILED) {
+            results.push({
+              status: 'rejected',
+              reason: meta.error || new Error('Failed inside loadExtension'),
+            });
+          } else {
+            results.push({ status: 'fulfilled', value: undefined });
+          }
+        }
+      }
 
       // Report failures
       const failures = results
@@ -289,20 +339,11 @@ export class BaseExtensionManager {
           ),
         );
       }
-
-      // Report success
-      const success = results
-        .map((result, index) => ({ result, item: extensions[index] }))
-        .filter(({ result }) => result.status === 'fulfilled');
-
-      await this.emit('extensions:initialized', {
-        total: extensions.length,
-        loaded: success.length,
-        failed: failures.length,
-      });
     } catch (error) {
       console.error('[ExtensionManager] Failed to fetch extensions:', error);
       await this.emit('extensions:init-failed', { error });
+    } finally {
+      this[IS_SYNCING] = false;
     }
   }
 
@@ -404,6 +445,14 @@ export class BaseExtensionManager {
       if (manifest && manifest.fromDisk) {
         // Clean up the internal flag
         delete manifest.fromDisk;
+
+        // Auto-discovered dev extensions (from _discoverDevExtensions) that are not
+        // explicitly in the DB (or not actively toggled via worker) must remain deactivated.
+        if (!manifest.isWorker) {
+          metadata.state = ExtensionState.LOADED;
+          return null;
+        }
+        delete manifest.isWorker;
       }
 
       if (!containerName) {
@@ -1342,31 +1391,38 @@ export class BaseExtensionManager {
    * @param {...string} extensionIds - Specific IDs to refresh (empty = all)
    */
   async refresh(...extensionIds) {
-    // Targeted refresh — delegate to subclass hook
-    if (extensionIds.length > 0) {
-      // eslint-disable-next-line no-underscore-dangle
-      return this._refreshExtensions(extensionIds);
-    }
+    if (this[IS_REFRESHING]) return;
+    this[IS_REFRESHING] = true;
 
-    // Full refresh: unload all, reset state, re-fetch
-    if (__DEV__) {
-      console.log('[ExtensionManager] Refreshing all...');
-    }
+    try {
+      // Targeted refresh — delegate to subclass hook
+      if (extensionIds.length > 0) {
+        // eslint-disable-next-line no-underscore-dangle
+        return await this._refreshExtensions(extensionIds);
+      }
 
-    await this.emit('extensions:refreshing', { extensionIds: null });
+      // Full refresh: unload all, reset state, re-fetch
+      if (__DEV__) {
+        console.log('[ExtensionManager] Refreshing all...');
+      }
 
-    const allIds = Array.from(this[ACTIVE_EXTENSIONS].keys());
-    await Promise.allSettled(allIds.map(id => this.unloadExtension(id)));
+      await this.emit('extensions:refreshing', { extensionIds: null });
 
-    this[ACTIVE_EXTENSIONS].clear();
-    this[EXTENSION_METADATA].clear();
+      const allIds = Array.from(this[ACTIVE_EXTENSIONS].keys());
+      await Promise.allSettled(allIds.map(id => this.unloadExtension(id)));
 
-    await this.sync();
+      this[ACTIVE_EXTENSIONS].clear();
+      this[EXTENSION_METADATA].clear();
 
-    await this.emit('extensions:refreshed', { extensionIds: null });
+      await this.sync();
 
-    if (__DEV__) {
-      console.log('[ExtensionManager] Refreshed');
+      await this.emit('extensions:refreshed', { extensionIds: null });
+
+      if (__DEV__) {
+        console.log('[ExtensionManager] Refreshed');
+      }
+    } finally {
+      this[IS_REFRESHING] = false;
     }
   }
 

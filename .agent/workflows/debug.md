@@ -429,7 +429,7 @@ sync() → GET /api/extensions
 
 ### Key Invariant
 
-Extensions that should auto-load on boot **must be in the DB seed data** with `is_active: true`. The `_discoverDevExtensions()` disk scan only runs during `refresh()` (HMR/admin), **not** on boot.
+Extensions that should auto-load on boot **must be in the DB** with `is_active: true`. The application does not auto-discover physical folders anymore—the database is the exact source of truth.
 
 Seed file: `src/apps/extensions/api/database/seeds/2026.03.01T00.00.00.default-active-extensions.js`
 
@@ -448,14 +448,14 @@ Directory naming uses `snakeCase(manifest.name)`:
 
 ## SQLITE_BUSY: Database Lock
 
-**Root cause**: `sync()`, `_refreshExtensions()`, and `_discoverDevExtensions()` use `Promise.allSettled` to load extensions concurrently. Each load runs Umzug migrations + seeds → concurrent SQLite writes → `SQLITE_BUSY`.
+**Root cause**: Legacy behavior used `Promise.allSettled` to load extensions concurrently on boot. Each load runs Umzug migrations + seeds → concurrent SQLite writes → `SQLITE_BUSY`.
 
-**Fix**: `ServerExtensionManager` must serialize extension loads (sequential `for...of` instead of `Promise.allSettled`). The client-side `BaseExtensionManager.sync()` keeps parallel loading (no SQLite).
+**Fix**: `ServerExtensionManager` must serialize extension loads. The client-side `BaseExtensionManager.sync()` keeps parallel loading (no SQLite).
 
 **Files involved**:
 
-- `shared/extension/server/ExtensionManager.js` — `sync()` override, `_refreshExtensions()`, `_discoverDevExtensions()`
-- `shared/extension/utils/BaseExtensionManager.js` — base `sync()` (parallel, OK for client)
+- `shared/extension/server/ExtensionManager.js`
+- `shared/extension/utils/BaseExtensionManager.js`
 - `shared/api/engines/db/migrator.js` — Umzug migration runner
 
 ### Debug extension loading order
