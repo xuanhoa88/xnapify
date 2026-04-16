@@ -17,54 +17,64 @@
  * - name: 'user', description: 'Regular user'
  * - name: 'mod', description: 'Content moderator'
  *
- * @param {Object} connection - Sequelize connection instance
- * @param {Object} DataTypes - Sequelize data types
+ * @param {Object} db - Sequelize connection instance
+ * @param {Object} db.connection - Sequelize connection instance
+ * @param {Object} db.DataTypes - Sequelize data types
+ * @param {Object} container - DI container
  * @returns {Model} Role model
  */
-export default function createRoleModel({ connection, DataTypes }) {
-  const Role = connection.define(
-    'Role',
-    {
-      id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
-        primaryKey: true,
-        comment: 'Unique role identifier',
-      },
-
-      name: {
-        type: DataTypes.STRING(50),
-        allowNull: false,
-        unique: true,
-        validate: {
-          notEmpty: true,
-        },
-        comment: 'Role name (e.g., admin, user, mod)',
-      },
-
-      description: {
-        type: DataTypes.STRING(255),
-        allowNull: true,
-        comment: 'Role description',
-      },
-
-      is_active: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: true,
-        allowNull: false,
-        comment: 'Whether role is active',
-      },
+export default async function createRoleModel(
+  { connection, DataTypes },
+  container,
+) {
+  const attributes = {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+      comment: 'Unique role identifier',
     },
-    {
-      tableName: 'roles',
-      timestamps: true,
-      underscored: true,
-      createdAt: 'created_at',
-      updatedAt: 'updated_at',
-    },
-  );
 
-  Role.associate = models => {
+    name: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      unique: true,
+      validate: {
+        notEmpty: true,
+      },
+      comment: 'Role name (e.g., admin, user, mod)',
+    },
+
+    description: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      comment: 'Role description',
+    },
+
+    is_active: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+      allowNull: false,
+      comment: 'Whether role is active',
+    },
+  };
+
+  // Invoke hook to allow extensions to modify the model
+  const hook = container.resolve('hook');
+  await hook('models').invoke('Role:define', {
+    attributes,
+    container,
+  });
+
+  const Role = connection.define('Role', attributes, {
+    tableName: 'roles',
+    timestamps: true,
+    underscored: true,
+    createdAt: 'created_at',
+    updatedAt: 'updated_at',
+  });
+
+  Role.associate = async function (models) {
     // Role <-> User (Many-to-Many through UserRole)
     Role.belongsToMany(models.User, {
       through: models.UserRole,
@@ -87,6 +97,13 @@ export default function createRoleModel({ connection, DataTypes }) {
       foreignKey: 'role_id',
       otherKey: 'group_id',
       as: 'groups',
+    });
+
+    const hook = container.resolve('hook');
+    await hook('models').invoke('Role:associate', {
+      models,
+      model: Role,
+      container,
     });
   };
 

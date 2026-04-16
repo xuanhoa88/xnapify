@@ -73,6 +73,19 @@ Extensions follow a well-defined phase-sequential lifecycle. Each phase runs for
    - **`uninstall({ container })`**: Runs ONCE when deleted. Undo migrations/seeds via `db.connection.revertSeeds()`/`revertMigrations()`.
    - **`shutdown({ container, registry })`**: Called on deactivation. MUST unsubscribe from all hooks (`.off()`). Extension models are auto-unregistered from the `ModelRegistry`. Translations are auto-cleaned via `removeNamespace()`.
 
+   **Modifying Core DB Models (Dynamic Model Injection):**
+   Extensions can inject columns into core models (like `User` or `Setting`) securely *before* the models are constructed by subscribing to their `define` hook during the `providers()` phase:
+   ```javascript
+   export async function providers({ container }) {
+     const hook = container.resolve('hook');
+     // The core framework emits [PascalCaseModelName]:define
+     hook('models').on('User:define', async ({ attributes, DataTypes }) => {
+       attributes.my_plugin_field = { type: DataTypes.STRING, allowNull: true };
+     });
+   }
+   ```
+   *Note: Ensure your extension's migrations actually alter the core database table to support your new field!*
+
 3. **Frontend Entry (`views/index.js`):**
 
    - Export an object containing `translations`, `providers`, `boot`, and `shutdown`.

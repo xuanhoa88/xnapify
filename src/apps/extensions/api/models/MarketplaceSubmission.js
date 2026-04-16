@@ -11,130 +11,139 @@
  * Represents a submission in the review queue.
  * Developers submit extensions for admin review before they appear in the catalog.
  *
- * @param {Object} connection - Sequelize connection instance
- * @param {Object} DataTypes - Sequelize data types
+ * @param {Object} db - Sequelize connection instance
+ * @param {Object} db.connection - Sequelize connection instance
+ * @param {Object} db.DataTypes - Sequelize data types
+ * @param {Object} container - DI container
  * @returns {Model} MarketplaceSubmission model
  */
-export default function createMarketplaceSubmissionModel({
-  connection,
-  DataTypes,
-}) {
-  const types = DataTypes || connection.constructor.DataTypes;
+export default async function createMarketplaceSubmissionModel(
+  { connection, DataTypes },
+  container,
+) {
+  const attributes = {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+      comment: 'Unique submission identifier',
+    },
+
+    listing_id: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      comment: 'FK to listing (for version updates to existing listings)',
+    },
+
+    name: {
+      type: DataTypes.STRING(100),
+      allowNull: false,
+      validate: { notEmpty: true },
+      comment: 'Submitted extension name',
+    },
+
+    key: {
+      type: DataTypes.STRING(100),
+      allowNull: false,
+      validate: { notEmpty: true },
+      comment: 'Submitted package identifier',
+    },
+
+    description: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: 'Submitted description',
+    },
+
+    short_description: {
+      type: DataTypes.STRING(160),
+      allowNull: true,
+      comment: 'Submitted one-liner',
+    },
+
+    category: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      defaultValue: 'other',
+      comment: 'Submitted category',
+    },
+
+    tags: {
+      type: DataTypes.JSON,
+      defaultValue: [],
+      comment: 'Submitted tags',
+      get() {
+        const raw = this.getDataValue('tags');
+        if (raw == null) return [];
+        if (typeof raw === 'string') {
+          try {
+            return JSON.parse(raw);
+          } catch {
+            return [];
+          }
+        }
+        return Array.isArray(raw) ? raw : [];
+      },
+      set(value) {
+        this.setDataValue('tags', Array.isArray(value) ? value : []);
+      },
+    },
+
+    version: {
+      type: DataTypes.STRING(20),
+      allowNull: false,
+      comment: 'Submitted version',
+    },
+
+    package_path: {
+      type: DataTypes.STRING(500),
+      allowNull: false,
+      comment: 'Uploaded package file path',
+    },
+
+    submitter_id: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      comment: 'Submitter user ID',
+    },
+
+    status: {
+      type: DataTypes.STRING(20),
+      allowNull: false,
+      defaultValue: 'pending',
+      validate: { isIn: [['pending', 'approved', 'rejected']] },
+      comment: 'Review status',
+    },
+
+    review_notes: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: 'Admin review feedback',
+    },
+
+    reviewed_by: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      comment: 'Reviewer user ID',
+    },
+
+    reviewed_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      comment: 'Review timestamp',
+    },
+  };
+
+  // Invoke hook to allow extensions to modify the model
+  const hook = container.resolve('hook');
+  await hook('models').invoke('Extension:define', {
+    attributes,
+    container,
+  });
 
   const MarketplaceSubmission = connection.define(
     'MarketplaceSubmission',
-    {
-      id: {
-        type: types.UUID,
-        defaultValue: types.UUIDV4,
-        primaryKey: true,
-        comment: 'Unique submission identifier',
-      },
-
-      listing_id: {
-        type: types.UUID,
-        allowNull: true,
-        comment: 'FK to listing (for version updates to existing listings)',
-      },
-
-      name: {
-        type: types.STRING(100),
-        allowNull: false,
-        validate: { notEmpty: true },
-        comment: 'Submitted extension name',
-      },
-
-      key: {
-        type: types.STRING(100),
-        allowNull: false,
-        validate: { notEmpty: true },
-        comment: 'Submitted package identifier',
-      },
-
-      description: {
-        type: types.TEXT,
-        allowNull: true,
-        comment: 'Submitted description',
-      },
-
-      short_description: {
-        type: types.STRING(160),
-        allowNull: true,
-        comment: 'Submitted one-liner',
-      },
-
-      category: {
-        type: types.STRING(50),
-        allowNull: false,
-        defaultValue: 'other',
-        comment: 'Submitted category',
-      },
-
-      tags: {
-        type: types.JSON,
-        defaultValue: [],
-        comment: 'Submitted tags',
-        get() {
-          const raw = this.getDataValue('tags');
-          if (raw == null) return [];
-          if (typeof raw === 'string') {
-            try {
-              return JSON.parse(raw);
-            } catch {
-              return [];
-            }
-          }
-          return Array.isArray(raw) ? raw : [];
-        },
-        set(value) {
-          this.setDataValue('tags', Array.isArray(value) ? value : []);
-        },
-      },
-
-      version: {
-        type: types.STRING(20),
-        allowNull: false,
-        comment: 'Submitted version',
-      },
-
-      package_path: {
-        type: types.STRING(500),
-        allowNull: false,
-        comment: 'Uploaded package file path',
-      },
-
-      submitter_id: {
-        type: types.UUID,
-        allowNull: false,
-        comment: 'Submitter user ID',
-      },
-
-      status: {
-        type: types.STRING(20),
-        allowNull: false,
-        defaultValue: 'pending',
-        validate: { isIn: [['pending', 'approved', 'rejected']] },
-        comment: 'Review status',
-      },
-
-      review_notes: {
-        type: types.TEXT,
-        allowNull: true,
-        comment: 'Admin review feedback',
-      },
-
-      reviewed_by: {
-        type: types.UUID,
-        allowNull: true,
-        comment: 'Reviewer user ID',
-      },
-
-      reviewed_at: {
-        type: types.DATE,
-        allowNull: true,
-        comment: 'Review timestamp',
-      },
-    },
+    attributes,
     {
       tableName: 'marketplace_submissions',
       underscored: true,
@@ -147,27 +156,28 @@ export default function createMarketplaceSubmissionModel({
     },
   );
 
-  MarketplaceSubmission.associate = function (models) {
-    const { User, MarketplaceListing } = models;
+  MarketplaceSubmission.associate = async function (models) {
+    MarketplaceSubmission.belongsTo(models.User, {
+      foreignKey: 'submitter_id',
+      as: 'submitter',
+    });
 
-    if (User) {
-      MarketplaceSubmission.belongsTo(User, {
-        foreignKey: 'submitter_id',
-        as: 'submitter',
-      });
+    MarketplaceSubmission.belongsTo(models.User, {
+      foreignKey: 'reviewed_by',
+      as: 'reviewer',
+    });
 
-      MarketplaceSubmission.belongsTo(User, {
-        foreignKey: 'reviewed_by',
-        as: 'reviewer',
-      });
-    }
+    MarketplaceSubmission.belongsTo(models.MarketplaceListing, {
+      foreignKey: 'listing_id',
+      as: 'listing',
+    });
 
-    if (MarketplaceListing) {
-      MarketplaceSubmission.belongsTo(MarketplaceListing, {
-        foreignKey: 'listing_id',
-        as: 'listing',
-      });
-    }
+    const hook = container.resolve('hook');
+    await hook('models').invoke('MarketplaceSubmission:associate', {
+      models,
+      model: MarketplaceSubmission,
+      container,
+    });
   };
 
   return MarketplaceSubmission;

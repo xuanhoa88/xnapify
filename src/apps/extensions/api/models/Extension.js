@@ -11,139 +11,149 @@
  * Creates the Extension model with the provided Sequelize instance.
  * Stores extension metadata and user associations.
  *
- * @param {Object} connection - Sequelize connection instance
- * @param {Object} DataTypes - Sequelize data types
+ * @param {Object} db - Sequelize connection instance
+ * @param {Object} db.connection - Sequelize connection instance
+ * @param {Object} db.DataTypes - Sequelize data types
+ * @param {Object} container - DI container
  * @returns {Model} Extension model
  */
-export default function createExtensionModel({ connection, DataTypes }) {
-  const Extension = connection.define(
-    'Extension',
-    {
-      id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
-        primaryKey: true,
-        comment: 'Unique extension identifier',
-      },
+export default async function createExtensionModel(
+  { connection, DataTypes },
+  container,
+) {
+  const attributes = {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+      comment: 'Unique extension identifier',
+    },
 
-      name: {
-        type: DataTypes.STRING(100),
-        allowNull: false,
-        unique: true,
-        validate: {
-          notEmpty: true,
-        },
-        comment: 'Extension name',
+    name: {
+      type: DataTypes.STRING(100),
+      allowNull: false,
+      unique: true,
+      validate: {
+        notEmpty: true,
       },
+      comment: 'Extension name',
+    },
 
-      key: {
-        type: DataTypes.STRING(100),
-        allowNull: false,
-        unique: true,
-        validate: {
-          notEmpty: true,
-        },
-        comment: 'Extension unique key',
+    key: {
+      type: DataTypes.STRING(100),
+      allowNull: false,
+      unique: true,
+      validate: {
+        notEmpty: true,
       },
+      comment: 'Extension unique key',
+    },
 
-      description: {
-        type: DataTypes.STRING(255),
-        allowNull: true,
-        comment: 'Extension description',
+    description: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      comment: 'Extension description',
+    },
+
+    version: {
+      type: DataTypes.STRING(20),
+      allowNull: false,
+      defaultValue: '0.0.0',
+      comment: 'Extension version',
+    },
+
+    is_active: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+      allowNull: false,
+      comment: 'Whether extension is active globally',
+    },
+
+    type: {
+      type: DataTypes.STRING(10),
+      allowNull: false,
+      defaultValue: 'plugin',
+      validate: {
+        isIn: [['plugin', 'module']],
       },
+      comment: 'Extension type: plugin or module',
+    },
 
-      version: {
-        type: DataTypes.STRING(20),
-        allowNull: false,
-        defaultValue: '0.0.0',
-        comment: 'Extension version',
-      },
-
-      is_active: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: true,
-        allowNull: false,
-        comment: 'Whether extension is active globally',
-      },
-
-      type: {
-        type: DataTypes.STRING(10),
-        allowNull: false,
-        defaultValue: 'plugin',
-        validate: {
-          isIn: [['plugin', 'module']],
-        },
-        comment: 'Extension type: plugin or module',
-      },
-
-      options: {
-        type: DataTypes.JSON,
-        defaultValue: {},
-        comment: 'Extension configuration options',
-        get() {
-          const raw = this.getDataValue('options');
-          if (raw == null) return {};
-          if (typeof raw === 'string') {
-            try {
-              return JSON.parse(raw);
-            } catch {
-              return {};
-            }
+    options: {
+      type: DataTypes.JSON,
+      defaultValue: {},
+      comment: 'Extension configuration options',
+      get() {
+        const raw = this.getDataValue('options');
+        if (raw == null) return {};
+        if (typeof raw === 'string') {
+          try {
+            return JSON.parse(raw);
+          } catch {
+            return {};
           }
-          return typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
-        },
-        set(value) {
-          if (value == null) {
-            this.setDataValue('options', {});
-            return;
-          }
-          if (typeof value === 'string') {
-            try {
-              const parsed = JSON.parse(value);
-              this.setDataValue(
-                'options',
-                typeof parsed === 'object' && !Array.isArray(parsed)
-                  ? parsed
-                  : {},
-              );
-            } catch {
-              this.setDataValue('options', {});
-            }
-            return;
-          }
-          if (typeof value === 'object' && !Array.isArray(value)) {
-            this.setDataValue('options', value);
-          } else {
+        }
+        return typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+      },
+      set(value) {
+        if (value == null) {
+          this.setDataValue('options', {});
+          return;
+        }
+        if (typeof value === 'string') {
+          try {
+            const parsed = JSON.parse(value);
+            this.setDataValue(
+              'options',
+              typeof parsed === 'object' && !Array.isArray(parsed)
+                ? parsed
+                : {},
+            );
+          } catch {
             this.setDataValue('options', {});
           }
-        },
-      },
-
-      integrity: {
-        type: DataTypes.STRING(64),
-        allowNull: true,
-        unique: true,
-        comment: 'SHA-256 integrity hash of built extension files',
+          return;
+        }
+        if (typeof value === 'object' && !Array.isArray(value)) {
+          this.setDataValue('options', value);
+        } else {
+          this.setDataValue('options', {});
+        }
       },
     },
-    {
-      tableName: 'extensions',
-      timestamps: true,
-      underscored: true,
-      createdAt: 'created_at',
-      updatedAt: 'updated_at',
-      hooks: {
-        beforeCreate(instance) {
+
+    integrity: {
+      type: DataTypes.STRING(64),
+      allowNull: true,
+      unique: true,
+      comment: 'SHA-256 integrity hash of built extension files',
+    },
+  };
+
+  // Invoke hook to allow extensions to modify the model
+  const hook = container.resolve('hook');
+  await hook('models').invoke('Extension:define', {
+    attributes,
+    container,
+  });
+
+  const Extension = connection.define('Extension', attributes, {
+    tableName: 'extensions',
+    timestamps: true,
+    underscored: true,
+    createdAt: 'created_at',
+    updatedAt: 'updated_at',
+    hooks: {
+      beforeCreate(instance) {
+        sanitizeOptions(instance);
+      },
+      beforeUpdate(instance) {
+        if (instance.changed('options')) {
           sanitizeOptions(instance);
-        },
-        beforeUpdate(instance) {
-          if (instance.changed('options')) {
-            sanitizeOptions(instance);
-          }
-        },
+        }
       },
     },
-  );
+  });
 
   return Extension;
 }

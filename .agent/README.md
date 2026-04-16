@@ -1,4 +1,4 @@
-# xnapify AI Architecture Guide
+# AI Architecture Guide
 
 The `xnapify` application is officially engineered to support intelligent developer assistance via a unified "Single Source of Truth" AI directory. Various AI agents (`Cursor`, `Claude`, `Gemini`, `Antigravity`) are configured to pull custom rules and workflows exclusively from the `.agent/` directory.
 

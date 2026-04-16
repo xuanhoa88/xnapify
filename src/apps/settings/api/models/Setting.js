@@ -12,101 +12,105 @@
  * Stores global configuration key-value pairs grouped by namespace,
  * with optional process.env fallback and type metadata.
  *
- * @param {Object} connection - Sequelize connection instance
- * @param {Object} DataTypes - Sequelize data types
+ * @param {Object} db - Sequelize connection instance
+ * @param {Object} db.connection - Sequelize connection instance
+ * @param {Object} db.DataTypes - Sequelize data types
+ * @param {Object} container - DI container
  * @returns {Model} Setting model
  */
-export default function createSettingModel({ connection, DataTypes }) {
-  const Setting = connection.define(
-    'Setting',
-    {
-      id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
-        primaryKey: true,
-        comment: 'Unique setting identifier',
-      },
-
-      namespace: {
-        type: DataTypes.STRING(100),
-        allowNull: false,
-        validate: {
-          notEmpty: true,
-          is: /^[a-z0-9_-]+$/i,
-        },
-        comment: 'Module or extension grouping (e.g. core, auth, emails)',
-      },
-
-      key: {
-        type: DataTypes.STRING(255),
-        allowNull: false,
-        validate: {
-          notEmpty: true,
-        },
-        comment: 'Config key within namespace (e.g. SESSION_TTL)',
-      },
-
-      type: {
-        type: DataTypes.ENUM(
-          'string',
-          'boolean',
-          'integer',
-          'json',
-          'password',
-        ),
-        defaultValue: 'string',
-        allowNull: false,
-        comment: 'Value type — determines admin UI control and coercion',
-      },
-
-      sort_order: {
-        type: DataTypes.INTEGER,
-        defaultValue: 0,
-        allowNull: false,
-        comment: 'Control display sort order in the admin UI within namespace',
-      },
-
-      value: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-        comment: 'Serialized value. NULL means "use fallback"',
-      },
-
-      default_env_var: {
-        type: DataTypes.STRING(255),
-        allowNull: true,
-        comment:
-          'process.env key to fallback to when value is NULL (e.g. XNAPIFY_PUBLIC_APP_NAME)',
-      },
-
-      is_public: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: false,
-        allowNull: false,
-        comment: 'If true, exposed to client via public API endpoint',
-      },
-
-      description: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-        comment: 'Human-readable description for the admin UI',
-      },
+export default async function createSettingModel(
+  { connection, DataTypes },
+  container,
+) {
+  const attributes = {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+      comment: 'Unique setting identifier',
     },
-    {
-      tableName: 'settings',
-      underscored: true,
-      timestamps: true,
-      createdAt: 'created_at',
-      updatedAt: 'updated_at',
-      indexes: [
-        {
-          unique: true,
-          fields: ['namespace', 'key'],
-          name: 'settings_namespace_key_unique',
-        },
-      ],
+
+    namespace: {
+      type: DataTypes.STRING(100),
+      allowNull: false,
+      validate: {
+        notEmpty: true,
+        is: /^[a-z0-9_-]+$/i,
+      },
+      comment: 'Module or extension grouping (e.g. core, auth, emails)',
     },
-  );
+
+    key: {
+      type: DataTypes.STRING(255),
+      allowNull: false,
+      validate: {
+        notEmpty: true,
+      },
+      comment: 'Config key within namespace (e.g. SESSION_TTL)',
+    },
+
+    type: {
+      type: DataTypes.ENUM('string', 'boolean', 'integer', 'json', 'password'),
+      defaultValue: 'string',
+      allowNull: false,
+      comment: 'Value type — determines admin UI control and coercion',
+    },
+
+    sort_order: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+      allowNull: false,
+      comment: 'Control display sort order in the admin UI within namespace',
+    },
+
+    value: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: 'Serialized value. NULL means "use fallback"',
+    },
+
+    default_env_var: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      comment:
+        'process.env key to fallback to when value is NULL (e.g. XNAPIFY_PUBLIC_APP_NAME)',
+    },
+
+    is_public: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: false,
+      comment: 'If true, exposed to client via public API endpoint',
+    },
+
+    description: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: 'Human-readable description for the admin UI',
+    },
+  };
+
+  // Invoke hook to allow extensions to modify the model
+  const hook = container.resolve('hook');
+  await hook('models').invoke('Setting:define', {
+    attributes,
+    container,
+  });
+
+  const Setting = connection.define('Setting', attributes, {
+    tableName: 'settings',
+    underscored: true,
+    timestamps: true,
+    createdAt: 'created_at',
+    updatedAt: 'updated_at',
+    indexes: [
+      {
+        unique: true,
+        fields: ['namespace', 'key'],
+        name: 'settings_namespace_key_unique',
+      },
+    ],
+  });
 
   return Setting;
 }

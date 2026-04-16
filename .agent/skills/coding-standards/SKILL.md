@@ -5,9 +5,11 @@ version: 3.0
 priority: CRITICAL
 ---
 
-# Clean Code — xnapify Pragmatic Standards
+# Clean Code — Pragmatic Standards
 
 > **CRITICAL SKILL** — Be **concise, direct, and solution-focused**. The user wants working code, not a programming lesson.
+
+> 🔴 **ABSOLUTE BAN:** You MUST NOT EVER generate code using optional chaining (`?.`), nullish coalescing (`??`), or nullish assignment (`??=`). The repository runs in an environment where these throw FATAL compilation/parsing errors. Use explicit logic (e.g., `x && x.y`). Under no circumstances is modern ES syntax permitted for guard clauses.
 
 ---
 

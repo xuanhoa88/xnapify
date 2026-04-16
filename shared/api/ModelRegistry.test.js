@@ -40,10 +40,20 @@ function createMockAdapter(fileMap) {
 describe('ModelRegistry', () => {
   let registry;
   let db;
+  let container;
 
   beforeEach(() => {
     db = createMockDb();
-    registry = new ModelRegistry(db);
+    container = {
+      has: jest.fn().mockImplementation(key => key === 'db'),
+      resolve: jest.fn().mockImplementation(key => {
+        if (key === 'db') return db;
+        if (key === 'hook')
+          return () => ({ invoke: async () => {}, on: () => {} });
+        return null;
+      }),
+    };
+    registry = new ModelRegistry(container);
     jest.clearAllMocks();
   });
 
@@ -57,14 +67,10 @@ describe('ModelRegistry', () => {
       expect(registry.names()).toEqual([]);
     });
 
-    it('should accept null db parameter', () => {
-      const r = new ModelRegistry(null);
+    it('should create an empty registry with container', () => {
+      const r = new ModelRegistry(container);
       expect(r.size).toBe(0);
-    });
-
-    it('should accept no db parameter', () => {
-      const r = new ModelRegistry();
-      expect(r.size).toBe(0);
+      expect(r.names()).toEqual([]);
     });
   });
 
@@ -230,8 +236,12 @@ describe('ModelRegistry', () => {
       expect(registry.has('Role')).toBe(true);
     });
 
-    it('should return empty result when db is null', async () => {
-      const r = new ModelRegistry(null);
+    it('should return empty result when container has no db', async () => {
+      const emptyContainer = {
+        has: jest.fn().mockReturnValue(false),
+        resolve: jest.fn(),
+      };
+      const r = new ModelRegistry(emptyContainer);
       const { registered, errors } = await r.discover({}, 'test');
 
       expect(registered).toEqual([]);
@@ -487,7 +497,7 @@ describe('ModelRegistry', () => {
   // =========================================================================
 
   describe('associate()', () => {
-    it('should call associate() on all models with the registry proxy', () => {
+    it('should call associate() on all models with the registry proxy', async () => {
       const userAssociate = jest.fn();
       const postAssociate = jest.fn();
 
@@ -500,34 +510,34 @@ describe('ModelRegistry', () => {
         createMockModel('Post', { associate: postAssociate }),
       );
 
-      const errors = registry.associate();
+      const errors = await registry.associate();
 
       expect(errors).toHaveLength(0);
       expect(userAssociate).toHaveBeenCalledWith(registry);
       expect(postAssociate).toHaveBeenCalledWith(registry);
     });
 
-    it('should skip models without associate()', () => {
+    it('should skip models without associate()', async () => {
       registry.register('User', createMockModel('User'));
 
-      const errors = registry.associate();
+      const errors = await registry.associate();
       expect(errors).toHaveLength(0);
     });
 
-    it('should not re-associate already-associated models', () => {
+    it('should not re-associate already-associated models', async () => {
       const associateFn = jest.fn();
       registry.register(
         'User',
         createMockModel('User', { associate: associateFn }),
       );
 
-      registry.associate();
-      registry.associate();
+      await registry.associate();
+      await registry.associate();
 
       expect(associateFn).toHaveBeenCalledTimes(1);
     });
 
-    it('should capture association errors without stopping', () => {
+    it('should capture association errors without stopping', async () => {
       const errorSpy = jest.spyOn(console, 'error').mockImplementation();
 
       registry.register(
@@ -543,7 +553,7 @@ describe('ModelRegistry', () => {
         createMockModel('Good', { associate: jest.fn() }),
       );
 
-      const errors = registry.associate();
+      const errors = await registry.associate();
 
       expect(errors).toHaveLength(1);
       expect(errors[0].moduleName).toBe('Broken');
@@ -556,20 +566,20 @@ describe('ModelRegistry', () => {
       errorSpy.mockRestore();
     });
 
-    it('should associate new models added after first associate() call', () => {
+    it('should associate new models added after first associate() call', async () => {
       const userAssociate = jest.fn();
       registry.register(
         'User',
         createMockModel('User', { associate: userAssociate }),
       );
-      registry.associate();
+      await registry.associate();
 
       const postAssociate = jest.fn();
       registry.register(
         'Post',
         createMockModel('Post', { associate: postAssociate }),
       );
-      registry.associate();
+      await registry.associate();
 
       expect(userAssociate).toHaveBeenCalledTimes(1);
       expect(postAssociate).toHaveBeenCalledTimes(1);

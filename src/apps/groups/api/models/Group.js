@@ -17,67 +17,77 @@
  * - name: 'Marketing', description: 'Marketing team'
  * - name: 'Support', description: 'Customer support team'
  *
- * @param {Object} connection - Sequelize connection instance
- * @param {Object} DataTypes - Sequelize data types
+ * @param {Object} db - Sequelize connection instance
+ * @param {Object} db.connection - Sequelize connection instance
+ * @param {Object} db.DataTypes - Sequelize data types
+ * @param {Object} container - DI container
  * @returns {Model} Group model
  */
-export default function createGroupModel({ connection, DataTypes }) {
-  const Group = connection.define(
-    'Group',
-    {
-      id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
-        primaryKey: true,
-        comment: 'Unique group identifier',
-      },
-
-      name: {
-        type: DataTypes.STRING(100),
-        allowNull: false,
-        unique: true,
-        validate: {
-          notEmpty: true,
-        },
-        comment: 'Group name',
-      },
-
-      description: {
-        type: DataTypes.STRING(255),
-        allowNull: true,
-        comment: 'Group description',
-      },
-
-      category: {
-        type: DataTypes.STRING(50),
-        allowNull: true,
-        comment: 'Group category (e.g., system, organization, department)',
-      },
-
-      type: {
-        type: DataTypes.STRING(50),
-        allowNull: true,
-        comment:
-          'Group type (e.g., security, organizational, functional, default)',
-      },
-
-      is_active: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: true,
-        allowNull: false,
-        comment: 'Whether group is active',
-      },
+export default async function createGroupModel(
+  { connection, DataTypes },
+  container,
+) {
+  const attributes = {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+      comment: 'Unique group identifier',
     },
-    {
-      tableName: 'groups',
-      timestamps: true,
-      underscored: true,
-      createdAt: 'created_at',
-      updatedAt: 'updated_at',
-    },
-  );
 
-  Group.associate = models => {
+    name: {
+      type: DataTypes.STRING(100),
+      allowNull: false,
+      unique: true,
+      validate: {
+        notEmpty: true,
+      },
+      comment: 'Group name',
+    },
+
+    description: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      comment: 'Group description',
+    },
+
+    category: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      comment: 'Group category (e.g., system, organization, department)',
+    },
+
+    type: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      comment:
+        'Group type (e.g., security, organizational, functional, default)',
+    },
+
+    is_active: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+      allowNull: false,
+      comment: 'Whether group is active',
+    },
+  };
+
+  // Invoke hook to allow extensions to modify the model
+  const hook = container.resolve('hook');
+  await hook('models').invoke('Group:define', {
+    attributes,
+    container,
+  });
+
+  const Group = connection.define('Group', attributes, {
+    tableName: 'groups',
+    timestamps: true,
+    underscored: true,
+    createdAt: 'created_at',
+    updatedAt: 'updated_at',
+  });
+
+  Group.associate = async function (models) {
     // Group <-> User (Many-to-Many through UserGroup)
     Group.belongsToMany(models.User, {
       through: models.UserGroup,
@@ -92,6 +102,13 @@ export default function createGroupModel({ connection, DataTypes }) {
       foreignKey: 'group_id',
       otherKey: 'role_id',
       as: 'roles',
+    });
+
+    const hook = container.resolve('hook');
+    await hook('models').invoke('Group:associate', {
+      models,
+      model: Group,
+      container,
     });
   };
 

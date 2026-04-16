@@ -40,7 +40,7 @@ const modelFiles = glob.sync(path.join(config.CWD, MODEL_GLOB_PATTERN));
  * @returns {Promise<Object>} Dictionary of initialized models
  * @throws {Error} If model loading or initialization fails
  */
-function loadModels(context) {
+async function loadModels(context) {
   const loadedModels = {};
 
   if (modelFiles.length === 0) {
@@ -65,8 +65,18 @@ function loadModels(context) {
         continue;
       }
 
+      // Mock container for tests
+      const mockContainer = {
+        has: () => true,
+        resolve: key => {
+          if (key === 'hook')
+            return () => ({ invoke: async () => {}, on: () => {} });
+          return null;
+        },
+      };
+
       // Initialize the model
-      const model = initModel(context);
+      const model = await initModel(context, mockContainer);
 
       // Validate that the model has required properties
       if (!model || !model.name) {
@@ -170,7 +180,7 @@ async function setupTestDb() {
     });
 
     // Load and initialize all models
-    models = loadModels(context);
+    models = await loadModels(context);
 
     // Setup model-to-model associations
     setupAssociations(models);

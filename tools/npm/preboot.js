@@ -26,7 +26,6 @@
  *
  * Cross-platform: macOS, Linux, Windows (x64 + arm64)
  */
-
 const { execSync } = require('child_process');
 const fs = require('fs');
 const net = require('net');
@@ -180,13 +179,14 @@ const isMusl = (() => {
  * @throws {Error} If path contains dangerous characters
  */
 function safePath(p) {
-  // Reject paths containing shell metacharacters that could enable injection.
+  // Reject paths containing shell metacharacters or quotes that could enable
+  // injection when interpolated into shell commands via execSync.
   // Allow: alphanumeric, slashes, dots, dashes, underscores, spaces, colons (Windows)
   // eslint-disable-next-line no-useless-escape
-  if (/[;|&$`(){}[\]!<>\n\r]/.test(p)) {
+  if (/[;|&$`(){}[\]!<>\n\r'"\\]/.test(p)) {
     throw new Error(
       `Unsafe characters in path: ${p}\n` +
-        'Paths must not contain shell metacharacters (;|&$`(){}[]!<>)',
+        'Paths must not contain shell metacharacters (;&$`(){}[]!<>\'"\\)',
     );
   }
   return p;
@@ -222,8 +222,10 @@ function loadEnv() {
     if (!fs.existsSync(ENV_PATH)) return;
     const lines = fs.readFileSync(ENV_PATH, 'utf-8').split('\n');
     for (const line of lines) {
-      const trimmed = line.trim();
+      let trimmed = line.trim();
       if (!trimmed || trimmed.startsWith('#')) continue;
+      // Strip optional 'export ' prefix (common in .env files)
+      if (trimmed.startsWith('export ')) trimmed = trimmed.slice(7);
       const idx = trimmed.indexOf('=');
       if (idx === -1) continue;
       const key = trimmed.slice(0, idx).trim();
@@ -301,7 +303,9 @@ function upsertEnvVar(filePath, key, value) {
   }
 
   const content = fs.readFileSync(filePath, 'utf-8');
-  const pattern = new RegExp(`^${key}=.*`, 'm');
+  // Escape regex metacharacters in key to prevent injection
+  const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const pattern = new RegExp(`^${escaped}=.*`, 'm');
 
   if (pattern.test(content)) {
     const updated = content.replace(pattern, `${key}=${value}`);
@@ -569,6 +573,24 @@ function isPortReachable(port, host = '127.0.0.1', timeout = 1000) {
 }
 
 /**
+ * Wait for a TCP port to become reachable, polling at regular intervals.
+ * @param {number} port
+ * @param {{ timeout?: number, interval?: number, host?: string }} [opts]
+ * @returns {Promise<boolean>} true if port became reachable within timeout
+ */
+async function waitForPort(
+  port,
+  { timeout = 45_000, interval = 300, host = '127.0.0.1' } = {},
+) {
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
+    if (await isPortReachable(port, host)) return true;
+    await new Promise(r => setTimeout(r, interval));
+  }
+  return isPortReachable(port, host);
+}
+
+/**
  * Parse connection details from a postgresql:// URL.
  * @param {string} url
  * @returns {{ user: string, password: string, host: string, port: number, database: string }}
@@ -660,21 +682,17 @@ async function startPostgres(cfg = PG_DEFAULTS) {
     fs.writeFileSync(confPath, confContent, 'utf-8');
   }
 
-  // Start PG as a background daemon via pg_ctl (survives process exit)
   const logFile = path.join(PG_DATA_DIR, 'logfile');
+
+  // Use execSync with stdio: 'ignore' to completely decouple the background
+  // daemon's streams from stopping Node.js or blocking the shell.
   execSync(
     `"${pgCtl}" -D "${PG_DATA_DIR}" -l "${logFile}" -o "-p ${port}" start`,
-    { cwd: ROOT, stdio: 'inherit', timeout: 30_000, shell: true },
+    { cwd: ROOT, stdio: 'ignore', timeout: 30_000, shell: true },
   );
 
   // Wait for PG to become reachable
-  const maxWait = 10_000;
-  const start = Date.now();
-  while (!(await isPortReachable(port)) && Date.now() - start < maxWait) {
-    await new Promise(r => setTimeout(r, 200));
-  }
-
-  if (!(await isPortReachable(port))) {
+  if (!(await waitForPort(port, { interval: 200 }))) {
     throw new Error(`PostgreSQL did not become reachable on port ${port}`);
   }
 
@@ -775,9 +793,17 @@ async function terminateConnections(port) {
  * @returns {Promise<void>}
  */
 async function stopPostgres() {
-  const { port } = PG_DEFAULTS;
+  // Resolve actual port from env URL, falling back to embedded default
+  loadEnv();
+  const envUrl = process.env.XNAPIFY_DB_URL || '';
+  const envCfg = /^postgres(ql)?:\/\//i.test(envUrl)
+    ? parsePostgresUrl(envUrl)
+    : null;
+  const port = (envCfg && envCfg.port) || PG_DEFAULTS.port;
+
   const embeddedRunning = await isPortReachable(port);
-  const systemRunning = await isPortReachable(PG_DEFAULT_PORT);
+  const systemRunning =
+    port !== PG_DEFAULT_PORT && (await isPortReachable(PG_DEFAULT_PORT));
 
   if (!embeddedRunning && !systemRunning) {
     console.log('🐘 No PostgreSQL servers running');
@@ -803,7 +829,7 @@ async function stopPostgres() {
 
     // Step 2: Stop via pg_ctl
     const pgCtl = resolvePgBin('pg_ctl');
-    console.log('🐘 Stopping embedded PostgreSQL...');
+    console.log(`🐘 Stopping embedded PostgreSQL on port ${port}...`);
     execSync(`"${pgCtl}" -D "${PG_DATA_DIR}" -m fast stop`, {
       cwd: ROOT,
       stdio: 'inherit',
@@ -814,7 +840,7 @@ async function stopPostgres() {
     console.log('✅ PostgreSQL stopped');
   } catch (err) {
     console.warn(`⚠️  Could not stop cleanly: ${err.message}`);
-    console.warn('   Try manually: kill the process on port 5433');
+    console.warn(`   Try manually: kill the process on port ${port}`);
   }
 }
 
@@ -855,7 +881,7 @@ function resolveMariaDbDaemon() {
   // Try mariadbd first (MariaDB 10.11+)
   for (const name of ['mariadbd', 'mysqld']) {
     try {
-      const p = execSync(`which ${name}`, {
+      const p = execSync(`command -v ${name}`, {
         encoding: 'utf-8',
         timeout: 3000,
         shell: true,
@@ -884,7 +910,7 @@ function resolveMariaDbBin(binName) {
   const candidates = aliases[binName] || [binName];
   for (const name of candidates) {
     try {
-      const p = execSync(`which ${name}`, {
+      const p = execSync(`command -v ${name}`, {
         encoding: 'utf-8',
         timeout: 3000,
         shell: true,
@@ -1097,7 +1123,7 @@ async function ensureMysqlBinaries() {
   const archivePath = path.join(MYSQL_DATA_DIR, archiveName);
 
   try {
-    await downloadFile(info.url, archivePath);
+    downloadFile(info.url, archivePath);
     console.log('📦 Extracting MySQL binaries...');
     extractArchive(archivePath, MYSQL_DATA_DIR);
 
@@ -1327,9 +1353,9 @@ async function startMysql(cfg = MYSQL_DEFAULTS) {
     fs.unlinkSync(socketPath);
   }
 
-  // Step 5: Start daemon
+  // Step 5: Start daemon securely with execSync relying on shell detachment
   if (platform === 'win32') {
-    // Windows: start detached
+    // Windows: start detached using "start /B" background trick
     execSync(`start /B "" "${mysqld}" --defaults-file="${cnfPath}"`, {
       cwd: ROOT,
       stdio: 'ignore',
@@ -1337,35 +1363,32 @@ async function startMysql(cfg = MYSQL_DEFAULTS) {
       shell: true,
     });
   } else if (useSystemMariaDb) {
-    // MariaDB doesn't support --daemonize; use shell backgrounding
+    // MariaDB doesn't support --daemonize; use shell backgrounding.
+    // Crucial: Must redirect to /dev/null so the shell "&" detaches completely
+    // and doesn't hold standard pipes open indefinitely.
     const pidFile = path.join(MYSQL_DATA_DIR, 'mysql.pid');
     execSync(
-      `"${mysqld}" --defaults-file="${cnfPath}" --pid-file="${pidFile}" &`,
+      `"${mysqld}" --defaults-file="${cnfPath}" --pid-file="${pidFile}" > /dev/null 2>&1 &`,
       {
         cwd: ROOT,
-        stdio: 'inherit',
+        stdio: 'ignore',
         timeout: 10_000,
         shell: true,
       },
     );
   } else {
-    // Unix: use --daemonize (MySQL 8.4+ built-in)
+    // Unix: use --daemonize (MySQL 8.4+ built-in).
+    // Utilizing stdio: 'ignore' prevents Node.js from piping output, blocking event hooks.
     execSync(`"${mysqld}" --defaults-file="${cnfPath}" --daemonize`, {
       cwd: ROOT,
-      stdio: 'inherit',
+      stdio: 'ignore',
       timeout: 30_000,
       shell: true,
     });
   }
 
   // Step 6: Wait for MySQL to become reachable
-  const maxWait = 15_000;
-  const start = Date.now();
-  while (!(await isPortReachable(port)) && Date.now() - start < maxWait) {
-    await new Promise(r => setTimeout(r, 300));
-  }
-
-  if (!(await isPortReachable(port))) {
+  if (!(await waitForPort(port))) {
     const errorLog = path.join(MYSQL_DATA_DIR, 'error.log');
     if (fs.existsSync(errorLog)) {
       const tail = fs
@@ -1387,11 +1410,11 @@ async function startMysql(cfg = MYSQL_DEFAULTS) {
     const mysqlCli = useSystemMariaDb
       ? resolveMariaDbBin('mysql')
       : resolveMysqlBin('mysql');
-    const socketPath = path.join(MYSQL_DATA_DIR, 'mysql.sock');
+    const setupSocketPath = path.join(MYSQL_DATA_DIR, 'mysql.sock');
     const connectArgs =
       platform === 'win32'
         ? `--host=127.0.0.1 --port=${port}`
-        : `--socket="${socketPath}"`;
+        : `--socket="${setupSocketPath}"`;
     const baseCmd = `"${mysqlCli}" ${connectArgs} --user=root`;
 
     // Write setup SQL to a temp file to avoid shell escaping issues
@@ -1450,9 +1473,16 @@ async function startMysql(cfg = MYSQL_DEFAULTS) {
  * @returns {Promise<void>}
  */
 async function stopMysql() {
-  const embeddedPort = MYSQL_DEFAULTS.port;
+  // Resolve actual port from env URL, falling back to embedded default
+  loadEnv();
+  const envUrl = process.env.XNAPIFY_DB_URL || '';
+  const envCfg = /^mysql:\/\//i.test(envUrl) ? parseMysqlUrl(envUrl) : null;
+  const embeddedPort = (envCfg && envCfg.port) || MYSQL_DEFAULTS.port;
+
   const embeddedRunning = await isPortReachable(embeddedPort);
-  const systemRunning = await isPortReachable(MYSQL_DEFAULT_PORT);
+  const systemRunning =
+    embeddedPort !== MYSQL_DEFAULT_PORT &&
+    (await isPortReachable(MYSQL_DEFAULT_PORT));
 
   if (!embeddedRunning && !systemRunning) {
     console.log('🐬 No MySQL servers running');
@@ -1474,7 +1504,7 @@ async function stopMysql() {
     const mysqladmin = isMusl()
       ? resolveMariaDbBin('mysqladmin')
       : resolveMysqlBin('mysqladmin');
-    console.log('🐬 Stopping embedded MySQL...');
+    console.log(`🐬 Stopping embedded MySQL on port ${embeddedPort}...`);
 
     const shutdownArgs = [
       `--user=${MYSQL_DEFAULTS.user}`,
@@ -1579,6 +1609,7 @@ async function ensurePostgresDatabase(cfg) {
       user: cfg.user || PG_DEFAULTS.user,
       password: cfg.password || PG_DEFAULTS.password,
       database: 'postgres',
+      connectionTimeoutMillis: 5000,
     });
     await client.connect();
     // Check if database exists
@@ -1614,7 +1645,7 @@ async function resolvePostgres(url) {
   // ── Priority 1: Configured URL ──
   const cfg = parsePostgresUrl(url);
   if (await isPortReachable(cfg.port, cfg.host)) {
-    console.log(`🐘 Using PostgreSQL at ${cfg.host}:${cfg.port}`);
+    console.log(`🐘 Using PostgreSQL at ${maskUrl(url)}`);
     await ensurePostgresDatabase(cfg);
     return;
   }
@@ -1751,7 +1782,7 @@ async function resolveMysql(url) {
   // ── Priority 1: Configured URL ──
   const cfg = parseMysqlUrl(url);
   if (await isPortReachable(cfg.port, cfg.host)) {
-    console.log(`🐬 Using MySQL at ${cfg.host}:${cfg.port}`);
+    console.log(`🐬 Using MySQL at ${maskUrl(url)}`);
     return;
   }
 
@@ -1769,14 +1800,32 @@ async function resolveMysql(url) {
 async function mysqlFallbackChain() {
   // ── Priority 2: Local system MySQL/MariaDB (port 3306) ──
   if (await isPortReachable(MYSQL_DEFAULT_PORT)) {
+    // Verify we can actually authenticate before committing this URL.
+    // System MySQL may require a password that differs from our defaults.
     const systemUrl = buildMysqlUrl({
       ...MYSQL_DEFAULTS,
       port: MYSQL_DEFAULT_PORT,
     });
-    updateEnvDbUrl(systemUrl);
-    console.log(`🐬 Using local system MySQL on port ${MYSQL_DEFAULT_PORT}`);
-    console.log(`📄 Updated XNAPIFY_DB_URL=${systemUrl}`);
-    return;
+    try {
+      const mysql2 = require('mysql2/promise');
+      const conn = await mysql2.createConnection({
+        host: '127.0.0.1',
+        port: MYSQL_DEFAULT_PORT,
+        user: MYSQL_DEFAULTS.user,
+        password: MYSQL_DEFAULTS.password,
+        connectTimeout: 3000,
+      });
+      await conn.end();
+      updateEnvDbUrl(systemUrl);
+      console.log(`🐬 Using local system MySQL on port ${MYSQL_DEFAULT_PORT}`);
+      console.log(`📄 Updated XNAPIFY_DB_URL=${systemUrl}`);
+      return;
+    } catch {
+      console.warn(
+        `⚠️  System MySQL on port ${MYSQL_DEFAULT_PORT} is running but ` +
+          `authentication as '${MYSQL_DEFAULTS.user}' failed — falling back to embedded`,
+      );
+    }
   }
 
   // ── Priority 3: Embedded MySQL (port 3307) ──

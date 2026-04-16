@@ -220,15 +220,25 @@ export class BaseExtensionManager {
 
   /**
    * Post-load hook called after an extension is successfully loaded.
-   * Subclasses override to perform environment-specific work.
-   * Client uses this to eagerly activate module-type namespaces.
-   * @param {string} _id - Extension ID
+   * Eagerly activates namespaces for extensions so boot() runs
+   * immediately — injecting Redux reducers, registering sidebar menus,
+   * and registering slots for plugin-type extensions.
+   *
+   * @param {string} id - Extension ID
    * @param {Object} _ext - Loaded extension module
-   * @param {Object} _manifest - Extension manifest
+   * @param {Object} manifest - Extension manifest
    * @protected
    */
-  // eslint-disable-next-line class-methods-use-this, no-unused-vars
-  async _postLoad(_id, _ext, _manifest) {}
+  async _postLoad(id, _ext, manifest) {
+    const subs = Array.isArray(manifest.slots) ? manifest.slots : [];
+    if (subs.length === 0) return;
+
+    const def = this.registry.findDefinition(id);
+    if (def) {
+      // eslint-disable-next-line no-underscore-dangle
+      await this._activateViewExtension(def, this._hookContext());
+    }
+  }
 
   /**
    * Inject routes for an extension.
@@ -275,7 +285,7 @@ export class BaseExtensionManager {
         console.warn(
           `[ExtensionManager] ${failures.length} extension(s) failed to load:`,
           failures.map(({ item }) =>
-            typeof item === 'object' ? item.id : item,
+            typeof item === 'object' ? item.id || item.name : item,
           ),
         );
       }
@@ -489,8 +499,14 @@ export class BaseExtensionManager {
 
       // Register as ACTIVE so teardown can find it (activateViewNamespace
       // skips extensions already in ACTIVE_EXTENSIONS).
-      this.registry.register(id, ext);
-      this[ACTIVE_EXTENSIONS].set(id, ext);
+      const def = this.registry.findDefinition(id);
+      if (def) {
+        this.registry.register(id, def);
+        this[ACTIVE_EXTENSIONS].set(id, def);
+      } else {
+        this.registry.register(id, ext);
+        this[ACTIVE_EXTENSIONS].set(id, ext);
+      }
       metadata.state = ExtensionState.ACTIVE;
 
       // Update metadata
@@ -999,6 +1015,84 @@ export class BaseExtensionManager {
   }
 
   /**
+   * Activate a single extension for the view layer through its full initialization
+   * lifecycle (translations -> providers -> boot).
+   * @param {Object} def - Extension definition wrapper
+   * @param {Object} context - Hook context
+   */
+  async _activateViewExtension(def, context) {
+    if (this[ACTIVE_EXTENSIONS].has(def.id)) {
+      if (__DEV__) {
+        console.log(
+          `[ExtensionManager] Extension "${def.id}" is already active. Skipping.`,
+        );
+      }
+      return;
+    }
+
+    // Phase 1: Translations
+    if (typeof def.translations === 'function') {
+      try {
+        const translations = getTranslations(def.translations());
+        if (Object.keys(translations).length > 0) {
+          addNamespace(`extension:${def.id}`, translations);
+        }
+      } catch (error) {
+        console.error(
+          `[ExtensionManager] Failed to register translations for ${def.id}:`,
+          error,
+        );
+      }
+    }
+
+    // Phase 2: Providers
+    if (typeof def.providers === 'function') {
+      try {
+        // eslint-disable-next-line no-underscore-dangle
+        await def.providers({
+          ...context,
+          // eslint-disable-next-line no-underscore-dangle
+          registry: this._scopedRegistry(def.id),
+        });
+      } catch (error) {
+        console.error(
+          `[ExtensionManager] Failed to run providers for ${def.id}:`,
+          error,
+        );
+      }
+    }
+
+    // Phase 3: Boot
+    if (typeof def.boot === 'function') {
+      try {
+        // eslint-disable-next-line no-underscore-dangle
+        await def.boot({
+          ...context,
+          // eslint-disable-next-line no-underscore-dangle
+          registry: this._scopedRegistry(def.id),
+        });
+      } catch (error) {
+        console.error(
+          `[ExtensionManager] Failed to boot extension ${def.id}:`,
+          error,
+        );
+        await this.emit('extension:boot-error', {
+          id: def.id,
+          error,
+          phase: 'boot',
+        });
+      }
+    }
+
+    // Phase 4: Register + mark ACTIVE
+    this.registry.register(def.id, def);
+    this[ACTIVE_EXTENSIONS].set(def.id, def);
+
+    const meta = this[EXTENSION_METADATA].get(def.id);
+    if (meta) meta.state = ExtensionState.ACTIVE;
+  }
+
+  /**
    * Load all extensions for a given namespace (runtime activation)
    * @param {string} ns - Namespace to load
    */
@@ -1020,17 +1114,9 @@ export class BaseExtensionManager {
       }
 
       // Filter to unactivated extensions only
-      const pending = Array.from(extensions).filter(def => {
-        if (this[ACTIVE_EXTENSIONS].has(def.id)) {
-          if (__DEV__) {
-            console.log(
-              `[ExtensionManager] Extension "${def.id}" is already active. Skipping.`,
-            );
-          }
-          return false;
-        }
-        return true;
-      });
+      const pending = Array.from(extensions).filter(
+        def => !this[ACTIVE_EXTENSIONS].has(def.id),
+      );
 
       if (pending.length === 0) return;
 
@@ -1043,74 +1129,9 @@ export class BaseExtensionManager {
       // eslint-disable-next-line no-underscore-dangle
       const context = this._hookContext();
 
-      // ── Phase 1: Translations (all extensions) ──
       for (const def of pending) {
-        if (typeof def.translations === 'function') {
-          try {
-            const translations = getTranslations(def.translations());
-            if (Object.keys(translations).length > 0) {
-              addNamespace(`extension:${def.id}`, translations);
-            }
-          } catch (error) {
-            console.error(
-              `[ExtensionManager] Failed to register translations for ${def.id}:`,
-              error,
-            );
-          }
-        }
-      }
-
-      // ── Phase 2: Providers (all extensions) ──
-      for (const def of pending) {
-        if (typeof def.providers === 'function') {
-          try {
-            // eslint-disable-next-line no-await-in-loop,no-underscore-dangle
-            await def.providers({
-              ...context,
-              // eslint-disable-next-line no-underscore-dangle
-              registry: this._scopedRegistry(def.id),
-            });
-          } catch (error) {
-            console.error(
-              `[ExtensionManager] Failed to run providers for ${def.id}:`,
-              error,
-            );
-          }
-        }
-      }
-
-      // ── Phase 3: Boot (all extensions) ──
-      for (const def of pending) {
-        if (typeof def.boot === 'function') {
-          try {
-            // eslint-disable-next-line no-await-in-loop,no-underscore-dangle
-            await def.boot({
-              ...context,
-              // eslint-disable-next-line no-underscore-dangle
-              registry: this._scopedRegistry(def.id),
-            });
-          } catch (error) {
-            console.error(
-              `[ExtensionManager] Failed to boot extension ${def.id}:`,
-              error,
-            );
-            // eslint-disable-next-line no-await-in-loop
-            await this.emit('extension:boot-error', {
-              id: def.id,
-              error,
-              phase: 'boot',
-            });
-          }
-        }
-      }
-
-      // ── Phase 4: Register + mark ACTIVE ──
-      for (const def of pending) {
-        this.registry.register(def.id, def);
-        this[ACTIVE_EXTENSIONS].set(def.id, def);
-
-        const meta = this[EXTENSION_METADATA].get(def.id);
-        if (meta) meta.state = ExtensionState.ACTIVE;
+        // eslint-disable-next-line no-underscore-dangle
+        await this._activateViewExtension(def, context);
       }
 
       if (__DEV__) {

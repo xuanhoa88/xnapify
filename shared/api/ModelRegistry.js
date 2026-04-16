@@ -16,7 +16,7 @@
  * and destructuring (`const { User } = registry`) work transparently.
  *
  * @example
- * const registry = new ModelRegistry(db);
+ * const registry = new ModelRegistry(container);
  * await registry.discover(modelsContext, 'posts');
  * registry.associate();
  * registry.seal();
@@ -41,8 +41,8 @@ const ASSOCIATED = Symbol('__xnapify.model.associated__');
 /** @type {symbol} Map of source → registered model names */
 const SOURCE_MAP = Symbol('__xnapify.model.sourceMap__');
 
-/** @type {symbol} Database engine reference */
-const DB_ENGINE = Symbol('__xnapify.model.dbEngine__');
+/** @type {symbol} Dependency Injection container */
+const CONTAINER = Symbol('__xnapify.model.container__');
 
 function log(message, level = 'info') {
   const prefix = `[${TAG}]`;
@@ -53,9 +53,9 @@ function log(message, level = 'info') {
 
 class ModelRegistry {
   /**
-   * @param {Object} [db] - Database engine with `connection` and `DataTypes`
+   * @param {Object} container - DI container
    */
-  constructor(db) {
+  constructor(container) {
     /** @type {Map<string, Object>} */
     this[MODELS] = new Map();
 
@@ -69,7 +69,7 @@ class ModelRegistry {
     this[SOURCE_MAP] = new Map();
 
     /** @type {Object|null} */
-    this[DB_ENGINE] = db || null;
+    this[CONTAINER] = container;
 
     // Return a Proxy so `registry.User` and `const { User } = registry` work
     return new Proxy(this, {
@@ -193,7 +193,7 @@ class ModelRegistry {
    * @returns {Promise<{ registered: string[], errors: Object[] }>}
    */
   async discover(context, source = 'unknown') {
-    const db = this[DB_ENGINE];
+    const db = this[CONTAINER].has('db') ? this[CONTAINER].resolve('db') : null;
     if (!db || !context) return { registered: [], errors: [] };
 
     // Idempotent: skip if this source was already discovered
@@ -228,7 +228,7 @@ class ModelRegistry {
           return null;
         }
 
-        const model = await factory(db);
+        const model = await factory(db, this[CONTAINER]);
 
         if (!model) {
           log(`[${source}] "${key}" did not return a valid object`, 'warn');
@@ -292,7 +292,7 @@ class ModelRegistry {
    *
    * @returns {Object[]} Array of errors (empty if none)
    */
-  associate() {
+  async associate() {
     const errors = [];
 
     for (const modelName of this[MODELS].keys()) {
@@ -306,7 +306,7 @@ class ModelRegistry {
       }
 
       try {
-        model.associate(this);
+        await model.associate(this);
         this[ASSOCIATED].add(modelName);
       } catch (error) {
         errors.push({

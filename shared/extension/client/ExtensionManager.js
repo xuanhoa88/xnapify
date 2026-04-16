@@ -101,33 +101,6 @@ class ClientExtensionManager extends BaseExtensionManager {
   }
 
   /**
-   * Eagerly activate namespaces for extensions so boot() runs
-   * immediately — injecting Redux reducers, registering sidebar menus,
-   * and registering slots for plugin-type extensions.
-   * Server skips this (inherits no-op); SSR activates per-request via onRouteInit.
-   */
-  async _postLoad(id, ext, manifest) {
-    const subs = Array.isArray(manifest.slots) ? manifest.slots : [];
-
-    // Module-type extensions (with routes) auto-subscribe to '*' if no
-    // explicit subscribe is declared (handled in Registry.defineExtension).
-    // Plugin-type extensions (no routes) rely solely on their subscribe list.
-    if (subs.length === 0) return;
-
-    const results = await Promise.allSettled(
-      subs.map(ns => this.ensureViewNamespaceActive(ns)),
-    );
-    for (let i = 0; i < results.length; i++) {
-      if (results[i].status === 'rejected') {
-        console.warn(
-          `[ClientExtensionManager] Namespace "${subs[i]}" activation failed for ${this._formatDisplayName(id)}:`,
-          results[i].reason.message,
-        );
-      }
-    }
-  }
-
-  /**
    * Resolve the extension entry point based on manifest
    * @param {Object} manifest - Extension manifest
    * @returns {string|null} Entry point filename or null to skip

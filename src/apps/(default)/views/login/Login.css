@@ -228,8 +228,6 @@
   text-decoration: underline;
 }
 
-
-
 /* =============================================================================
    RESPONSIVE
    ============================================================================= */
@@ -327,7 +325,7 @@
    ============================================================================= */
 
 /* Hide the entire OAuth section if the extension slot is empty */
-.oauthSection:has([data-slot="auth.oauth.buttons"]:empty) {
+.oauthSection:has([data-slot='auth.oauth.buttons']:empty) {
   display: none;
 }
 

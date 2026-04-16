@@ -69,14 +69,15 @@ class ServerExtensionManager extends BaseExtensionManager {
     // Discover dev extensions after full refresh (extensionIds: null)
     this.on('extensions:refreshed', ({ extensionIds }) => {
       // eslint-disable-next-line no-underscore-dangle
-      if (extensionIds === null) this._discoverDevExtensions();
+      if (extensionIds === null) return this._discoverDevExtensions();
+      return Promise.resolve();
     });
 
     // Also discover dev extensions after initial sync
-    this.on('extensions:initialized', () => {
+    this.on('extensions:initialized', () =>
       // eslint-disable-next-line no-underscore-dangle
-      this._discoverDevExtensions();
-    });
+      this._discoverDevExtensions(),
+    );
 
     // eslint-disable-next-line no-underscore-dangle
     this.on('manager:destroyed', () => this._onDestroy());
@@ -828,7 +829,10 @@ class ServerExtensionManager extends BaseExtensionManager {
 
     try {
       const devBaseDir = this.getDevExtensionsDir(this[SERVER_CWD]);
-      if (!devBaseDir || !(await fileExists(devBaseDir))) return;
+      if (!devBaseDir || !(await fileExists(devBaseDir))) {
+        this[DISCOVERING_DEV_EXTENSIONS] = false;
+        return;
+      }
 
       const entries = await fs.promises.readdir(devBaseDir, {
         withFileTypes: true,

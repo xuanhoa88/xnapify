@@ -10,86 +10,96 @@
  *
  * Creates the File model to represent files and folders in the Drive structure.
  *
- * @param {Object} connection - Sequelize connection instance
- * @param {Object} [DataTypes] - Sequelize DataTypes
+ * @param {Object} db - Sequelize connection instance
+ * @param {Object} db.connection - Sequelize connection instance
+ * @param {Object} db.DataTypes - Sequelize data types
+ * @param {Object} container - DI container
  * @returns {Model} File model
  */
-export default function createFileModel({ connection, DataTypes }) {
-  const File = connection.define(
-    'File',
-    {
-      id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
-        primaryKey: true,
-        comment: 'Unique file or folder identifier',
-      },
-
-      parent_id: {
-        type: DataTypes.UUID,
-        allowNull: true,
-        comment: 'Parent folder ID (null means root of Drive)',
-      },
-
-      name: {
-        type: DataTypes.STRING(255),
-        allowNull: false,
-        validate: {
-          notEmpty: true,
-        },
-        comment: 'File or folder name',
-      },
-
-      type: {
-        type: DataTypes.ENUM('file', 'folder'),
-        allowNull: false,
-        defaultValue: 'file',
-        comment: 'Type: file or folder',
-      },
-
-      mime_type: {
-        type: DataTypes.STRING(100),
-        allowNull: true,
-        comment: 'MIME type of the file',
-      },
-
-      size: {
-        type: DataTypes.BIGINT,
-        allowNull: true,
-        comment: 'File size in bytes',
-      },
-
-      path: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-        comment: 'Physical path on server storage',
-      },
-
-      owner_id: {
-        type: DataTypes.UUID,
-        allowNull: false,
-        comment: 'User who owns this file/folder',
-      },
-
-      share_type: {
-        type: DataTypes.ENUM('private', 'public_link', 'shared_users'),
-        defaultValue: 'private',
-        allowNull: false,
-        comment: 'Sharing scope',
-      },
+export default async function createFileModel(
+  { connection, DataTypes },
+  container,
+) {
+  const attributes = {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+      comment: 'Unique file or folder identifier',
     },
-    {
-      tableName: 'files',
-      underscored: true,
-      timestamps: true,
-      paranoid: true, // Enables soft deletes (Trash)
-      createdAt: 'created_at',
-      updatedAt: 'updated_at',
-      deletedAt: 'deleted_at',
-    },
-  );
 
-  File.associate = models => {
+    parent_id: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      comment: 'Parent folder ID (null means root of Drive)',
+    },
+
+    name: {
+      type: DataTypes.STRING(255),
+      allowNull: false,
+      validate: {
+        notEmpty: true,
+      },
+      comment: 'File or folder name',
+    },
+
+    type: {
+      type: DataTypes.ENUM('file', 'folder'),
+      allowNull: false,
+      defaultValue: 'file',
+      comment: 'Type: file or folder',
+    },
+
+    mime_type: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      comment: 'MIME type of the file',
+    },
+
+    size: {
+      type: DataTypes.BIGINT,
+      allowNull: true,
+      comment: 'File size in bytes',
+    },
+
+    path: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: 'Physical path on server storage',
+    },
+
+    owner_id: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      comment: 'User who owns this file/folder',
+    },
+
+    share_type: {
+      type: DataTypes.ENUM('private', 'public_link', 'shared_users'),
+      defaultValue: 'private',
+      allowNull: false,
+      comment: 'Sharing scope',
+    },
+  };
+
+  // Invoke hook to allow extensions to modify the model
+  const hook = container.resolve('hook');
+  await hook('models').invoke('File:define', {
+    attributes,
+    container,
+  });
+
+  const File = connection.define('File', attributes, {
+    tableName: 'files',
+    underscored: true,
+    timestamps: true,
+    paranoid: true, // Enables soft deletes (Trash)
+    createdAt: 'created_at',
+    updatedAt: 'updated_at',
+    deletedAt: 'deleted_at',
+  });
+
+  File.associate = async function (models) {
     // Owner
     if (models.User) {
       File.belongsTo(models.User, {
@@ -131,6 +141,13 @@ export default function createFileModel({ connection, DataTypes }) {
         onDelete: 'CASCADE',
       });
     }
+
+    const hook = container.resolve('hook');
+    await hook('models').invoke('File:associate', {
+      models,
+      model: File,
+      container,
+    });
   };
 
   return File;

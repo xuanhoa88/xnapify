@@ -66,7 +66,7 @@ xnapify/
 
 - **Runtime:** Node.js >= 16.14.0
 - **Package Manager:** npm >= 8.0.0
-- **Language:** JavaScript (ES2015+) with JSX
+- **Language:** JavaScript (ES2015+) with JSX. **Strict Constraint:** DO NOT use optional chaining (`?.`), nullish coalescing (`??`), or assignment (`??=`) since they break our raw Node loader environment. Use traditional boolean guards (`if (x && x.y)`).
 
 ### Frontend
 
