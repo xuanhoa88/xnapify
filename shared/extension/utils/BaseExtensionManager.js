@@ -28,7 +28,7 @@ const FETCH = Symbol('__xnapify.ext.fetch__');
 const CONTEXTS = Symbol('__xnapify.ext.contexts__');
 const REGISTRY = Symbol('__xnapify.ext.registry__');
 const EVENT_HANDLERS = Symbol('__xnapify.ext.eventHandlers__');
-const IS_SYNCING = Symbol('__xnapify.ext.isSyncing__');
+const SYNC_PROMISE = Symbol('__xnapify.ext.syncPromise__');
 const IS_REFRESHING = Symbol('__xnapify.ext.isRefreshing__');
 
 /**
@@ -77,7 +77,7 @@ export class BaseExtensionManager {
     this[STORED_ADAPTERS] = new Map(); // id -> { view?, api? }
     this[BUFFERED_ROUTES] = []; // [{ id, adapter, type }]
     this[CONTEXTS] = { view: null, api: null };
-    this[IS_SYNCING] = false;
+    this[SYNC_PROMISE] = null;
     this[IS_REFRESHING] = false;
   }
 
@@ -262,11 +262,39 @@ export class BaseExtensionManager {
   // ---------------------------------------------------------------------------
 
   /**
-   * Fetch and load all active extensions from API
+   * Fetch and load all active extensions from API.
+   *
+   * Uses a stored promise so that concurrent callers (e.g. refresh()
+   * arriving during boot sync) can await the in-flight operation
+   * instead of silently bailing out.
    */
   async sync(preloadedExtensions = null) {
-    if (this[IS_SYNCING]) return;
-    this[IS_SYNCING] = true;
+    // If a sync is already running, await it and return.
+    // This prevents duplicate fetches while still allowing refresh()
+    // to wait for the boot sync to finish before starting its own.
+    if (this[SYNC_PROMISE]) {
+      await this[SYNC_PROMISE];
+      return;
+    }
+
+    // Store the work as a promise so other callers can await it.
+    this[SYNC_PROMISE] = this._performSync(preloadedExtensions);
+    try {
+      await this[SYNC_PROMISE];
+    } finally {
+      this[SYNC_PROMISE] = null;
+    }
+  }
+
+  /**
+   * Internal sync implementation.
+   * Separated from sync() so the outer method can store and share
+   * the promise without nesting try/finally blocks.
+   *
+   * @param {Array|null} preloadedExtensions - Pre-fetched extensions or null to fetch from API
+   * @private
+   */
+  async _performSync(preloadedExtensions) {
     try {
       let extensions = preloadedExtensions;
       if (!extensions) {
@@ -342,8 +370,6 @@ export class BaseExtensionManager {
     } catch (error) {
       console.error('[ExtensionManager] Failed to fetch extensions:', error);
       await this.emit('extensions:init-failed', { error });
-    } finally {
-      this[IS_SYNCING] = false;
     }
   }
 
@@ -443,15 +469,10 @@ export class BaseExtensionManager {
         manifest && manifest.id ? `extension_${manifest.id}` : null;
 
       if (manifest && manifest.fromDisk) {
-        // Clean up the internal flag
+        // Clean up internal transport flags injected by extension.workers.js.
+        // These flags are only used to distinguish worker-initiated loads from
+        // other disk-based callers; they must not leak into the manifest.
         delete manifest.fromDisk;
-
-        // Auto-discovered dev extensions (from _discoverDevExtensions) that are not
-        // explicitly in the DB (or not actively toggled via worker) must remain deactivated.
-        if (!manifest.isWorker) {
-          metadata.state = ExtensionState.LOADED;
-          return null;
-        }
         delete manifest.isWorker;
       }
 
@@ -1395,6 +1416,13 @@ export class BaseExtensionManager {
     this[IS_REFRESHING] = true;
 
     try {
+      // If a sync is currently in progress (e.g. boot sync), wait for it
+      // to finish before we unload anything. This prevents the race where
+      // refresh clears state while sync is still populating it.
+      if (this[SYNC_PROMISE]) {
+        await this[SYNC_PROMISE];
+      }
+
       // Targeted refresh — delegate to subclass hook
       if (extensionIds.length > 0) {
         // eslint-disable-next-line no-underscore-dangle

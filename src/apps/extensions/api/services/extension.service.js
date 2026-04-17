@@ -94,41 +94,47 @@ async function getDiskExtensionById(extensionManager, cwd, id) {
 
   if (!diskScanPromise) {
     diskScanPromise = (async () => {
-      const installedExtensionsDir =
-        extensionManager.getInstalledExtensionsDir();
-      const localExtensionsDir = extensionManager.getDevExtensionsDir(cwd);
+      try {
+        const installedExtensionsDir =
+          extensionManager.getInstalledExtensionsDir();
+        const localExtensionsDir = extensionManager.getDevExtensionsDir(cwd);
 
-      const metadata = new Map();
-      const scanTasks = [
-        scanDirectory(
-          installedExtensionsDir,
-          'remote',
-          metadata,
-          extensionManager,
-        ),
-      ];
-      if (localExtensionsDir && localExtensionsDir !== installedExtensionsDir) {
-        scanTasks.push(
+        const metadata = new Map();
+        const scanTasks = [
           scanDirectory(
-            localExtensionsDir,
-            'local',
+            installedExtensionsDir,
+            'remote',
             metadata,
             extensionManager,
           ),
-        );
-      }
-      await Promise.all(scanTasks);
+        ];
+        if (
+          localExtensionsDir &&
+          localExtensionsDir !== installedExtensionsDir
+        ) {
+          scanTasks.push(
+            scanDirectory(
+              localExtensionsDir,
+              'local',
+              metadata,
+              extensionManager,
+            ),
+          );
+        }
+        await Promise.all(scanTasks);
 
-      diskExtensionCache.clear();
-      for (const [key, val] of metadata.entries()) {
-        diskExtensionCache.set(key, val);
+        diskExtensionCache.clear();
+        for (const [key, val] of metadata.entries()) {
+          diskExtensionCache.set(key, val);
+        }
+        lastDiskScan = Date.now();
+      } finally {
+        diskScanPromise = null;
       }
-      lastDiskScan = Date.now();
     })();
   }
 
   await diskScanPromise;
-  diskScanPromise = null;
 
   return diskExtensionCache.get(id) || null;
 }
