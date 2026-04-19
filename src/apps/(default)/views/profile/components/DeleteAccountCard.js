@@ -7,14 +7,14 @@
 
 import { useCallback, useEffect } from 'react';
 
+import { TrashIcon, ExclamationTriangleIcon } from '@radix-ui/react-icons';
+import { Flex, Box, Text, Heading, Button } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Button from '@shared/renderer/components/Button';
 import Form, { useFormContext } from '@shared/renderer/components/Form';
 import { useHistory } from '@shared/renderer/components/History';
-import Icon from '@shared/renderer/components/Icon';
 import {
   deleteUser,
   isDeleteLoading,
@@ -26,6 +26,9 @@ import { deleteAccountFormSchema } from '../../../../users/validator/auth';
 
 import s from './DeleteAccountCard.css';
 
+/**
+ * DeleteAccountCard adopting pure functional Radix implementations overriding primitive mapped styles.
+ */
 function DeleteAccountCard() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
@@ -61,36 +64,40 @@ function DeleteAccountCard() {
   );
 
   return (
-    <div className={s.card}>
-      <div className={s.cardHeader}>
-        <div className={s.cardIcon}>
-          <Icon name='trash' size={22} />
-        </div>
-        <div>
-          <h2 className={s.cardTitle}>
+    <Box className={s.cardContainer}>
+      <Flex align='center' gap='4' className={s.cardHeader}>
+        <Box className={`${s.cardHeaderIcon} ${s.cardHeaderIconRed}`}>
+          <TrashIcon width={24} height={24} />
+        </Box>
+        <Box>
+          <Heading as='h2' size='5' className={s.cardTitle}>
             {t('profile.deleteAccount', 'Delete Account')}
-          </h2>
-          <p className={s.cardDescription}>
+          </Heading>
+          <Text size='2' color='gray'>
             {t(
               'profile.deleteAccountDesc',
               'Permanently delete your account and all data',
             )}
-          </p>
-        </div>
-      </div>
+          </Text>
+        </Box>
+      </Flex>
 
-      <div className={s.warning}>
-        <Icon name='alert-triangle' size={18} />
-        <div>
-          <strong>{t('profile.deleteWarningTitle', 'Warning')}</strong>
-          <p>
+      <Flex align='start' gap='3' className={s.warningBox}>
+        <Box className={s.warningIcon}>
+          <ExclamationTriangleIcon width={20} height={20} />
+        </Box>
+        <Box>
+          <Text size='3' weight='bold' className={s.warningTitle}>
+            {t('profile.deleteWarningTitle', 'Warning')}
+          </Text>
+          <Text size='2' className={s.warningText}>
             {t(
               'profile.deleteWarningText',
               'This action cannot be undone. All your data will be permanently deleted.',
             )}
-          </p>
-        </div>
-      </div>
+          </Text>
+        </Box>
+      </Flex>
 
       <Form.Error message={error || ''} />
 
@@ -104,7 +111,7 @@ function DeleteAccountCard() {
       >
         <DeleteAccountFormFields loading={loading} />
       </Form>
-    </div>
+    </Box>
   );
 }
 
@@ -115,7 +122,7 @@ function DeleteAccountFormFields({ loading }) {
   } = useFormContext();
 
   return (
-    <>
+    <Flex direction='column' gap='4'>
       <Form.Field
         name='password'
         label={t('profile.currentPassword', 'Current Password')}
@@ -130,17 +137,19 @@ function DeleteAccountFormFields({ loading }) {
         <Form.Password />
       </Form.Field>
 
-      <Button
-        variant='danger'
-        type='submit'
-        className={s.buttonDanger}
-        loading={loading || isSubmitting}
-      >
-        {loading
-          ? t('profile.deletingAccount', 'Deleting Account...')
-          : t('profile.deleteAccountButton', 'Delete My Account')}
-      </Button>
-    </>
+      <Flex justify='end' className={s.cardAction}>
+        <Button
+          color='red'
+          variant='solid'
+          type='submit'
+          loading={loading || isSubmitting}
+        >
+          {loading
+            ? t('profile.deletingAccount', 'Deleting Account...')
+            : t('profile.deleteAccountButton', 'Delete My Account')}
+        </Button>
+      </Flex>
+    </Flex>
   );
 }
 

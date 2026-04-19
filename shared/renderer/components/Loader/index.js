@@ -5,16 +5,16 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import clsx from 'clsx';
+import { Flex, Skeleton, Spinner, Text } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 
 import s from './Loader.css';
 
 /**
- * Loader Component
+ * Loader Component using Radix Themes Spinner and Skeleton
  *
  * A professional loading state component for admin pages.
- * Supports different variants: spinner, skeleton, pulse.
+ * Supports different variants: spinner, skeleton, cards.
  */
 function Loader({
   message = 'Loading...',
@@ -24,54 +24,61 @@ function Loader({
 }) {
   if (variant === 'skeleton') {
     return (
-      <div className={clsx(s.root, className)}>
-        <div className={s.skeletonContainer}>
-          {Array.from({ length: skeletonCount }).map((_, i) => (
-            // eslint-disable-next-line react/no-array-index-key
-            <div key={i} className={s.skeletonRow}>
-              <div className={clsx(s.skeleton, s.skeletonAvatar)} />
-              <div className={s.skeletonContent}>
-                <div className={clsx(s.skeleton, s.skeletonTitle)} />
-                <div className={clsx(s.skeleton, s.skeletonText)} />
-              </div>
-              <div className={clsx(s.skeleton, s.skeletonBadge)} />
-            </div>
-          ))}
-        </div>
-      </div>
+      <Flex direction='column' gap='4' py='4' className={className}>
+        {Array.from({ length: skeletonCount }).map((_, i) => (
+          // eslint-disable-next-line react/no-array-index-key
+          <Flex key={i} align='center' gap='4' p='3'>
+            <Skeleton width='40px' height='40px' className={s.circleSkeleton} />
+            <Flex direction='column' gap='2' flexGrow='1'>
+              <Skeleton height='16px' width='75%' />
+              <Skeleton height='12px' width='50%' />
+            </Flex>
+            <Skeleton height='24px' width='64px' className={s.pillSkeleton} />
+          </Flex>
+        ))}
+      </Flex>
     );
   }
 
   if (variant === 'cards') {
     return (
-      <div className={clsx(s.root, className)}>
-        <div className={s.cardsGrid}>
-          {Array.from({ length: 4 }).map((_, i) => (
-            // eslint-disable-next-line react/no-array-index-key
-            <div key={i} className={s.cardSkeleton}>
-              <div className={s.cardSkeletonHeader}>
-                <div className={clsx(s.skeleton, s.skeletonTitle)} />
-                <div className={clsx(s.skeleton, s.skeletonIcon)} />
-              </div>
-              <div className={clsx(s.skeleton, s.skeletonValue)} />
-              <div className={clsx(s.skeleton, s.skeletonText)} />
-            </div>
-          ))}
-        </div>
-      </div>
+      <Flex gap='4' py='4' wrap='wrap' className={className}>
+        {Array.from({ length: 4 }).map((_, i) => (
+          // eslint-disable-next-line react/no-array-index-key
+          <Flex
+            key={i}
+            direction='column'
+            gap='3'
+            p='5'
+            flexGrow='1'
+            className={s.cardSkeleton}
+          >
+            <Flex justify='between' align='center'>
+              <Skeleton height='16px' width='96px' />
+              <Skeleton height='20px' width='20px' />
+            </Flex>
+            <Skeleton height='32px' width='80px' />
+            <Skeleton height='12px' width='128px' />
+          </Flex>
+        ))}
+      </Flex>
     );
   }
 
   // Default: spinner variant
   return (
-    <div className={clsx(s.root, s.spinnerSection, className)}>
-      <div className={s.spinner}>
-        <div className={s.spinnerRing} />
-        <div className={s.spinnerRing} />
-        <div className={s.spinnerRing} />
-      </div>
-      <p className={s.message}>{message}</p>
-    </div>
+    <Flex
+      direction='column'
+      align='center'
+      justify='center'
+      py='9'
+      className={className}
+    >
+      <Spinner size='3' />
+      <Text size='2' color='gray' mt='4'>
+        {message}
+      </Text>
+    </Flex>
   );
 }
 

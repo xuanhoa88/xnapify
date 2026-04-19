@@ -9,7 +9,7 @@ export const featuresData = [
   {
     id: 'modular-architecture',
     name: 'Modular Architecture',
-    icon: '🧩',
+    icon: 'ComponentInstanceIcon',
     description:
       'Domain-driven modules auto-discovered via Webpack require.context. Each module owns its API routes, controllers, services, models, migrations, seeds, and views — fully self-contained.',
     details:
@@ -19,7 +19,7 @@ export const featuresData = [
   {
     id: 'extension-system',
     name: 'Extension System',
-    icon: '🔌',
+    icon: 'Link2Icon',
     description:
       'Install, activate, and manage extensions at runtime with hooks, slots, and integrity verification. Extend functionality without modifying core code.',
     details:
@@ -29,7 +29,7 @@ export const featuresData = [
   {
     id: 'dependency-injection',
     name: 'Dependency Injection',
-    icon: '💉',
+    icon: 'Share2Icon',
     description:
       'Centralized DI container with singleton bindings, factory methods, and ownership keys. Services resolve dependencies at runtime, never via static imports.',
     details:
@@ -39,7 +39,7 @@ export const featuresData = [
   {
     id: 'file-based-routing',
     name: 'File-Based Routing',
-    icon: '📁',
+    icon: 'FileIcon',
     description:
       'Convention-based routing with _route.js files. Dynamic segments via [param] folders, route groups with (parentheses), and automatic middleware inheritance.',
     details:
@@ -49,7 +49,7 @@ export const featuresData = [
   {
     id: 'rbac-security',
     name: 'RBAC Security',
-    icon: '🔐',
+    icon: 'LockClosedIcon',
     description:
       'Role-based access control with JWT authentication, permission guards, user groups, API key strategies, and OAuth provider integration.',
     details:
@@ -59,7 +59,7 @@ export const featuresData = [
   {
     id: 'full-stack-tooling',
     name: 'Full-Stack Tooling',
-    icon: '🛠️',
+    icon: 'GearIcon',
     description:
       'Webpack 5 builds, Sequelize ORM with migrations, Redux Toolkit with dynamic injection, background worker functions, queue-based workers, and Docker deployment.',
     details:

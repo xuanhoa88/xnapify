@@ -7,14 +7,14 @@
 
 import { useCallback, useState, useEffect, useRef } from 'react';
 
+import { ArrowLeftIcon, LockOpen1Icon } from '@radix-ui/react-icons';
+import { Flex, Box, Text, Heading, Button } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Button from '@shared/renderer/components/Button';
 import Form, { useFormContext } from '@shared/renderer/components/Form';
 import { Link } from '@shared/renderer/components/History';
-import Icon from '@shared/renderer/components/Icon';
 import Toast from '@shared/renderer/components/Toast';
 import {
   resetPasswordConfirmation,
@@ -33,7 +33,7 @@ import s from './ResetPasswordConfirmation.css';
 
 /**
  * Reset Password Confirmation Page Component
- * Standalone full-page form without header/footer
+ * Standalone full-page form explicitly mapped via Radix Box layouts resolving CSS imports natively.
  */
 function ResetPasswordConfirmation({ token }) {
   const { t } = useTranslation();
@@ -83,26 +83,32 @@ function ResetPasswordConfirmation({ token }) {
   );
 
   return (
-    <div className={s.root}>
+    <Flex className={s.pageContainer}>
       <HeroSection />
 
-      <div className={s.formSection}>
-        <div className={s.formContainer}>
+      <Flex align='center' justify='center' className={s.contentWrapper}>
+        <Box className={s.formBox}>
           <Form.Error message={error} />
 
           {success ? (
-            <div className={s.successBox}>
-              <div className={s.successIcon}>✓</div>
-              <Trans
-                t={t}
-                i18nKey='resetPasswordConfirmation.success'
-                // eslint-disable-next-line react/jsx-key
-                components={[<strong />]}
-              />
-              <Link to='/login' className={s.submitButton}>
-                {t('resetPasswordConfirmation.goToLogin', 'Go to Login')}
-              </Link>
-            </div>
+            <Flex direction='column' align='center' className={s.successBox}>
+              <Text size='8' color='green' mb='3'>
+                ✓
+              </Text>
+              <Text size='3' color='green' mb='5'>
+                <Trans
+                  t={t}
+                  i18nKey='resetPasswordConfirmation.success'
+                  // eslint-disable-next-line react/jsx-key
+                  components={[<strong />]}
+                />
+              </Text>
+              <Button asChild variant='solid' className={s.loginLinkBtn}>
+                <Link to='/login' className={s.loginLink}>
+                  {t('resetPasswordConfirmation.goToLogin', 'Go to Login')}
+                </Link>
+              </Button>
+            </Flex>
           ) : (
             <Form
               schema={passwordResetConfirmFormSchema}
@@ -117,16 +123,16 @@ function ResetPasswordConfirmation({ token }) {
             </Form>
           )}
 
-          <div className={s.backLink}>
-            <Link to='/login' className={s.link}>
-              <Icon name='arrowLeft' />
+          <Flex justify='center' mt='6'>
+            <Link to='/login' className={s.backLink}>
+              <ArrowLeftIcon width={16} height={16} />
               {t('resetPasswordConfirmation.backToLogin', 'Back to Login')}
             </Link>
-          </div>
-        </div>
-      </div>
+          </Flex>
+        </Box>
+      </Flex>
       <Toast ref={toastRef} />
-    </div>
+    </Flex>
   );
 }
 
@@ -141,30 +147,40 @@ function HeroSection() {
   const { t } = useTranslation();
 
   return (
-    <div className={s.hero}>
-      <div className={s.heroContent}>
-        <Link to='/' className={s.brand}>
+    <Flex
+      direction='column'
+      justify='center'
+      align='center'
+      className={s.heroSection}
+    >
+      <Flex direction='column' align='center' className={s.heroContent}>
+        <Link to='/' className={s.logoLink}>
           <img
             src='/xnapify_38x38.png'
             srcSet='/xnapify_72x72.png 2x'
             width='48'
             height='48'
             alt='xnapify'
+            className={s.logoImg}
           />
-          <span className={s.brandText}>xnapify</span>
+          <Text size='5' weight='bold'>
+            xnapify
+          </Text>
         </Link>
-        <div className={s.heroIcon}>🔐</div>
-        <h1 className={s.heroTitle}>
+        <Text size='9' mb='4' className={s.heroIcon}>
+          🔐
+        </Text>
+        <Heading as='h1' size='8' mb='3' className={s.heroTitle}>
           {t('resetPasswordConfirmation.title', 'Set New Password')}
-        </h1>
-        <p className={s.heroSubtitle}>
+        </Heading>
+        <Text size='4' className={s.heroSubtitle}>
           {t(
             'resetPasswordConfirmation.subtitle',
             'Create a strong password for your account',
           )}
-        </p>
-      </div>
-    </div>
+        </Text>
+      </Flex>
+    </Flex>
   );
 }
 
@@ -203,7 +219,7 @@ function ResetFormFields({ loading, dispatch }) {
   }, [dispatch, setValue, t]);
 
   return (
-    <>
+    <Flex direction='column' gap='4'>
       <Form.Field
         name='password'
         label={t('resetPasswordConfirmation.newPassword', 'New Password')}
@@ -221,19 +237,19 @@ function ResetFormFields({ loading, dispatch }) {
         <Form.Password />
       </Form.Field>
 
-      <div className={s.generatePasswordLink}>
+      <Flex justify='end'>
         <Button
-          variant='unstyled'
-          size='small'
+          variant='ghost'
+          size='1'
           onClick={handleGeneratePassword}
           disabled={generatingPassword}
-          className={s.generateBtn}
+          className={`${s.generateBtn} ${generatingPassword ? s.generateBtnLoading : s.generateBtnReady}`}
         >
           {generatingPassword ? (
             t('resetPasswordConfirmation.generatingPassword', 'Generating...')
           ) : (
             <>
-              <Icon name='key' size={14} />
+              <LockOpen1Icon width={14} height={14} />
               {t(
                 'resetPasswordConfirmation.generatePassword',
                 'Generate Secure Password',
@@ -241,20 +257,21 @@ function ResetFormFields({ loading, dispatch }) {
             </>
           )}
         </Button>
-      </div>
+      </Flex>
 
       <Button
-        variant='primary'
+        variant='solid'
+        color='indigo'
         type='submit'
-        fullWidth
-        className={s.submitButton}
+        mt='2'
+        className={s.submitBtn}
         loading={loading || isSubmitting}
       >
         {loading
           ? t('resetPasswordConfirmation.loading', 'Resetting...')
           : t('resetPasswordConfirmation.submit', 'Reset Password')}
       </Button>
-    </>
+    </Flex>
   );
 }
 

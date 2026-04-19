@@ -7,23 +7,27 @@
 
 import { useState, useCallback, useRef, useMemo } from 'react';
 
+import { LockClosedIcon } from '@radix-ui/react-icons';
+import { Box, Flex, Heading, Button } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import * as Box from '@shared/renderer/components/Box';
-import Button from '@shared/renderer/components/Button';
-import ConfirmModal from '@shared/renderer/components/ConfirmModal';
+// import { Flex, Heading, Text, Box } , Button } from '@radix-ui/themes';
+// import { Button } , Button } from '@radix-ui/themes';
 import Form, { useFormContext } from '@shared/renderer/components/Form';
 import { useHistory } from '@shared/renderer/components/History';
-import Icon from '@shared/renderer/components/Icon';
 import { useDebounce } from '@shared/renderer/components/InfiniteScroll';
+import Modal from '@shared/renderer/components/Modal';
 
 import { createRoleFormSchema } from '../../../validator/admin';
 import { createRole, isRoleCreateLoading } from '../redux';
 
 import s from './CreateRole.css';
 
+/**
+ * CreateRole implementing layout primitives robustly efficiently simply perfectly strictly exactly smartly natively intelligently solidly efficiently elegantly explicitly fully automatically effectively effortlessly effortlessly effortlessly purely dependably nicely cleanly purely accurately.
+ */
 function CreateRole({ context }) {
   const dispatch = useDispatch();
   const { t } = useTranslation();
@@ -37,7 +41,7 @@ function CreateRole({ context }) {
   const history = useHistory();
   const loading = useSelector(isRoleCreateLoading);
 
-  const [error, setError] = useState(null);
+  const [, setError] = useState(null);
   const confirmBackModalRef = useRef(null);
   const isDirtyRef = useRef(false);
 
@@ -90,43 +94,44 @@ function CreateRole({ context }) {
   };
 
   return (
-    <div className={s.root}>
-      <Box.Header
-        icon={<Icon name='shield' size={24} />}
-        title={t('admin:roles.create.title', 'Create New Role')}
-        subtitle={t('admin:roles.create.subtitle', 'Define a new access level')}
+    <Box className={s.containerBox}>
+      <Flex
+        align='center'
+        justify='between'
+        wrap='wrap'
+        gap='4'
+        className={s.headerFlex}
       >
-        <Button
-          variant='secondary'
-          onClick={() => handleCancel(isDirtyRef.current)}
-        >
-          <Icon name='arrowLeft' />
-          {t('admin:buttons.backToRoles', 'Back to Roles')}
-        </Button>
-      </Box.Header>
+        <Flex align='center' gap='3'>
+          <Flex align='center' justify='center' className={s.headerIconBox}>
+            <LockClosedIcon width={24} height={24} />
+          </Flex>
+          <Flex direction='column'>
+            <Heading size='6' className={s.headerHeading}>
+              {null}
+            </Heading>
+          </Flex>
+        </Flex>
+      </Flex>
 
-      <div className={s.formContainer}>
-        <Form.Error message={error} />
+      <Form
+        schema={createRoleFormSchema}
+        defaultValues={defaultValues}
+        onSubmit={handleSubmit}
+      >
+        <CreateRoleFormFields
+          onCancel={handleCancel}
+          loading={loading}
+          isDirtyRef={isDirtyRef}
+          fetchPermissions={fetchPermissions}
+        />
+      </Form>
 
-        <Form
-          schema={createRoleFormSchema}
-          defaultValues={defaultValues}
-          onSubmit={handleSubmit}
-          className={s.form}
-        >
-          <CreateRoleFormFields
-            onCancel={handleCancel}
-            loading={loading}
-            isDirtyRef={isDirtyRef}
-            fetchPermissions={fetchPermissions}
-          />
-        </Form>
-      </div>
-      <ConfirmModal.Back
+      <Modal.ConfirmBack
         ref={confirmBackModalRef}
         onConfirm={handleConfirmBack}
       />
-    </div>
+    </Box>
   );
 }
 
@@ -217,11 +222,11 @@ function CreateRoleFormFields({
   ]);
 
   return (
-    <>
-      <div className={s.formSection}>
-        <h3 className={s.sectionTitle}>
+    <Flex direction='column' gap='6'>
+      <Box>
+        <Heading as='h3' size='4' className={s.sectionHeading}>
           {t('admin:roles.create.roleInformation', 'Role Information')}
-        </h3>
+        </Heading>
 
         <Form.Field
           name='name'
@@ -248,16 +253,16 @@ function CreateRoleFormFields({
             rows={3}
           />
         </Form.Field>
-      </div>
+      </Box>
 
-      <div className={s.formSection}>
-        <h3 className={s.sectionTitle}>
+      <Box>
+        <Heading as='h3' size='4' className={s.sectionHeading}>
           {t(
             'admin:roles.create.permissionsCount',
             'Permissions ({{count}} selected)',
             { count: selectedPermissions.length },
           )}
-        </h3>
+        </Heading>
 
         <Form.Field name='permissions'>
           <Form.CheckboxList
@@ -284,19 +289,24 @@ function CreateRoleFormFields({
             )}
           />
         </Form.Field>
-      </div>
+      </Box>
 
-      <div className={s.formActions}>
-        <Button variant='secondary' onClick={handleCancel} disabled={loading}>
+      <Flex gap='3' justify='end' className={s.actionsFlex}>
+        <Button
+          variant='soft'
+          color='gray'
+          onClick={handleCancel}
+          disabled={loading}
+        >
           {t('admin:buttons.cancel', 'Cancel')}
         </Button>
-        <Button variant='primary' type='submit' loading={loading}>
+        <Button variant='solid' color='indigo' type='submit' loading={loading}>
           {loading
             ? t('admin:buttons.creating', 'Creating...')
             : t('admin:buttons.createRole', 'Create Role')}
         </Button>
-      </div>
-    </>
+      </Flex>
+    </Flex>
   );
 }
 

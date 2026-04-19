@@ -7,17 +7,15 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
-import clsx from 'clsx';
+import { ArrowUpIcon } from '@radix-ui/react-icons';
+import { Button } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
-
-import Button from '@shared/renderer/components/Button';
-import Icon from '@shared/renderer/components/Icon';
 
 import s from './ScrollToTop.css';
 
 /**
  * ScrollToTop Component
- * Floating button that appears when user scrolls down
+ * Floating button that appears when user scrolls down built with inline Radix tokens
  */
 function ScrollToTop() {
   const { t } = useTranslation();
@@ -69,13 +67,19 @@ function ScrollToTop() {
 
   return (
     <Button
-      variant='primary'
-      iconOnly
-      className={clsx(s.scrollToTop, { [s.visible]: showScroll })}
+      variant='solid'
+      color='indigo'
       onClick={scrollToTop}
       title={t('common.scrollToTop', 'Scroll to top')}
+      className={s.scrollBtnDefault}
+      // eslint-disable-next-line react/forbid-dom-props
+      style={{
+        opacity: showScroll ? 1 : 0,
+        visibility: showScroll ? 'visible' : 'hidden',
+        transform: showScroll ? 'translateY(0)' : 'translateY(20px)',
+      }}
     >
-      <Icon name='arrowUp' size={24} className={s.icon} />
+      <ArrowUpIcon width={24} height={24} />
     </Button>
   );
 }

@@ -1,103 +1,38 @@
-/**
- * xnapify (https://github.com/xuanhoa88/xnapify/)
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE.txt file in the root directory of this source tree.
- */
-
-/* Checkbox List */
-.checkboxList {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-2);
+.searchBox {
+  margin-bottom: var(--space-4);
 }
 
-.checkboxListItem {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--spacing-3);
-  padding: var(--spacing-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+.scrollList {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.loadingBox {
+  background-color: var(--gray-2);
+  border-radius: var(--radius-3);
+}
+
+/* We combine these with className={s.itemBox + ' ' + (selected ? s.itemBoxSelected : s.itemBoxDefault)} */
+.itemBox {
+  border-radius: var(--radius-2);
   cursor: pointer;
-  transition: var(--transition-base);
+  transition: all 0.2s;
 }
 
-.checkboxListItem:hover {
-  background: var(--color-background-secondary);
-  border-color: var(--color-primary);
+.itemBoxSelected {
+  border: 1px solid var(--indigo-8);
+  background-color: var(--indigo-2);
 }
 
-.checkboxListItem.selected {
-  background: #eff6ff;
-  border-color: var(--color-primary);
+.itemBoxDefault {
+  border: 1px solid var(--gray-4);
+  background-color: var(--color-panel-solid);
 }
 
-.checkboxContent {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-1);
-  flex: 1;
-}
-
-.checkboxListLabel {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
-  font-weight: var(--font-weight-medium);
-}
-
-.checkboxListDesc {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-}
-
-.checkbox {
-  width: 18px;
-  height: 18px;
+.checkboxCursor {
   cursor: pointer;
-  accent-color: var(--color-primary);
-  margin-top: 2px;
 }
 
-.noItems {
-  color: var(--color-text-secondary);
-  font-style: italic;
-  font-size: var(--font-size-sm);
-  padding: var(--spacing-4);
-  text-align: center;
-}
-
-/* Search bar spacing */
-.modalSearchBar {
-  margin-bottom: var(--spacing-4);
-}
-
-/* =============================================================================
-   RESPONSIVE DESIGN - MOBILE
-   ============================================================================= */
-
-@media (max-width: 768px) {
-  .checkboxListItem {
-    padding: var(--spacing-2);
-    gap: var(--spacing-2);
-  }
-
-  .checkboxListLabel {
-    font-size: var(--font-size-xs);
-  }
-
-  .checkboxListDesc {
-    font-size: 10px;
-  }
-
-  .checkbox {
-    width: 16px;
-    height: 16px;
-  }
-}
-
-@media (max-width: 375px) {
-  .checkboxListItem {
-    padding: var(--spacing-1) var(--spacing-2);
-  }
+.itemNameText {
+  color: var(--gray-12);
 }

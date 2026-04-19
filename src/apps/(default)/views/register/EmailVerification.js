@@ -7,14 +7,14 @@
 
 import { useCallback, useState, useEffect } from 'react';
 
+import { ArrowLeftIcon } from '@radix-ui/react-icons';
+import { Flex, Box, Text, Heading, Button } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Button from '@shared/renderer/components/Button';
 import Form, { useFormContext } from '@shared/renderer/components/Form';
 import { Link, useHistory } from '@shared/renderer/components/History';
-import Icon from '@shared/renderer/components/Icon';
 import {
   emailVerification,
   isEmailVerificationLoading,
@@ -29,7 +29,7 @@ import s from './EmailVerification.css';
 
 /**
  * Email Verification Page Component
- * Standalone full-page verification without header/footer
+ * Standalone full-page verification fully adopting Radix flex properties.
  */
 function EmailVerification({ token: initialToken }) {
   const { t } = useTranslation();
@@ -70,35 +70,44 @@ function EmailVerification({ token: initialToken }) {
   );
 
   return (
-    <div className={s.root}>
+    <Flex className={s.pageContainer}>
       <HeroSection />
 
       {/* Content Section */}
-      <div className={s.formSection}>
-        <div className={s.formContainer}>
+      <Flex align='center' justify='center' className={s.contentWrapper}>
+        <Box className={s.formBox}>
           {loading && (
-            <div className={s.info}>
-              <p>
+            <Box className={s.loadingBox}>
+              <Text
+                size='3'
+                color='blue'
+                align='center'
+                className={s.loadingText}
+              >
                 {t('emailVerification.verifying', 'Verifying your email...')}
-              </p>
-            </div>
+              </Text>
+            </Box>
           )}
 
           <Form.Error message={error} />
 
           {success && !loading && (
-            <div className={s.successBox}>
-              <div className={s.successIcon}>✓</div>
-              <Trans
-                t={t}
-                i18nKey='emailVerification.success'
-                // eslint-disable-next-line react/jsx-key
-                components={[<strong />]}
-              />
-              <p className={s.redirectMessage}>
+            <Flex direction='column' align='center' className={s.successBox}>
+              <Text size='8' className={s.successIcon}>
+                ✓
+              </Text>
+              <Text size='3' color='green' className={s.successText}>
+                <Trans
+                  t={t}
+                  i18nKey='emailVerification.success'
+                  // eslint-disable-next-line react/jsx-key
+                  components={[<strong />]}
+                />
+              </Text>
+              <Text size='2' color='gray'>
                 {t('emailVerification.redirecting', 'Redirecting to home...')}
-              </p>
-            </div>
+              </Text>
+            </Flex>
           )}
 
           {!success && !loading && (
@@ -114,15 +123,15 @@ function EmailVerification({ token: initialToken }) {
             </Form>
           )}
 
-          <div className={s.backLink}>
-            <Link to='/login' className={s.link}>
-              <Icon name='arrowLeft' />
+          <Flex justify='center' className={s.backFlex}>
+            <Link to='/login' className={s.backLink}>
+              <ArrowLeftIcon width={16} height={16} />
               {t('emailVerification.backToLogin', 'Back to Login')}
             </Link>
-          </div>
-        </div>
-      </div>
-    </div>
+          </Flex>
+        </Box>
+      </Flex>
+    </Flex>
   );
 }
 
@@ -133,24 +142,34 @@ function HeroSection() {
   const { t } = useTranslation();
 
   return (
-    <div className={s.hero}>
-      <div className={s.heroContent}>
-        <Link to='/' className={s.brand}>
+    <Flex
+      direction='column'
+      justify='center'
+      align='center'
+      className={s.heroSection}
+    >
+      <Flex direction='column' align='center' className={s.heroContent}>
+        <Link to='/' className={s.logoLink}>
           <img
             src='/xnapify_38x38.png'
             srcSet='/xnapify_72x72.png 2x'
             width='48'
             height='48'
             alt='xnapify'
+            className={s.logoImg}
           />
-          <span className={s.brandText}>xnapify</span>
+          <Text size='5' weight='bold'>
+            xnapify
+          </Text>
         </Link>
-        <div className={s.heroIcon}>✉️</div>
-        <h1 className={s.heroTitle}>
+        <Text size='9' className={s.heroIcon}>
+          ✉️
+        </Text>
+        <Heading as='h1' size='8' className={s.heroTitle}>
           {t('emailVerification.title', 'Email Verification')}
-        </h1>
-      </div>
-    </div>
+        </Heading>
+      </Flex>
+    </Flex>
   );
 }
 
@@ -164,13 +183,13 @@ function EmailVerificationFormFields({ loading, showTokenField }) {
   } = useFormContext();
 
   return (
-    <>
-      <p className={s.description}>
+    <Flex direction='column' gap='4'>
+      <Text size='3' color='gray' align='center' className={s.descText}>
         {t(
           'emailVerification.description',
           'Click the button below to verify your email address.',
         )}
-      </p>
+      </Text>
 
       {showTokenField && (
         <Form.Field
@@ -188,17 +207,17 @@ function EmailVerificationFormFields({ loading, showTokenField }) {
       )}
 
       <Button
-        variant='primary'
+        variant='solid'
+        color='indigo'
         type='submit'
-        fullWidth
-        className={s.submitButton}
+        className={s.submitBtn}
         loading={loading || isSubmitting}
       >
         {loading
           ? t('emailVerification.loading', 'Verifying...')
           : t('emailVerification.submit', 'Verify Email')}
       </Button>
-    </>
+    </Flex>
   );
 }
 

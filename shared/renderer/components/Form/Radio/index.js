@@ -5,16 +5,14 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import clsx from 'clsx';
+import { Flex, RadioGroup, Text } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
-import { useFormContext } from 'react-hook-form';
+import { Controller, useFormContext } from 'react-hook-form';
 
 import { useFormField } from '../FormContext';
 
-import s from './FormRadio.css';
-
 /**
- * FormRadio - Radio group element to be used inside Form.Field
+ * FormRadio - Radio group element to be used inside Form.Field baked by Radix Themes
  *
  * Usage:
  *   <Form.Field name="gender" label="Gender">
@@ -28,49 +26,42 @@ function FormRadio({
   direction = 'vertical',
   ...props
 }) {
-  const { id, name } = useFormField();
-  const { register } = useFormContext();
-
-  // Get registration props (ref is handled per-option for radio buttons)
-  const { ref: registerRef, ...registerProps } = register(name);
+  const { name, error } = useFormField();
+  const { control } = useFormContext();
 
   return (
-    <div
-      className={clsx(
-        s.radioGroup,
-        {
-          [s.horizontal]: direction === 'horizontal',
-        },
-        className,
-      )}
-      role='radiogroup'
-    >
-      {options.map((option, index) => {
-        const optionId = `${id}-${index}`;
-        return (
-          <label
-            key={option.value}
-            htmlFor={optionId}
-            className={clsx(s.radioLabel, {
-              [s.disabled]: disabled || option.disabled,
-            })}
+    <Controller
+      name={name}
+      control={control}
+      render={({ field }) => (
+        <RadioGroup.Root
+          value={field.value !== undefined ? String(field.value) : undefined}
+          onValueChange={field.onChange}
+          disabled={disabled}
+          name={field.name}
+          color={error ? 'red' : undefined}
+          className={className}
+          {...props}
+        >
+          <Flex
+            gap='3'
+            direction={direction === 'horizontal' ? 'row' : 'column'}
           >
-            <input
-              id={optionId}
-              type='radio'
-              value={option.value}
-              disabled={disabled || option.disabled}
-              className={s.radio}
-              {...registerProps}
-              {...props}
-              ref={registerRef}
-            />
-            <span className={s.radioIndicator} />
-            <span className={s.radioText}>{option.label}</span>
-          </label>
-        );
-      })}
-    </div>
+            {options.map(option => (
+              <Text as='label' size='2' key={option.value}>
+                <Flex gap='2' align='center'>
+                  <RadioGroup.Item
+                    value={String(option.value)}
+                    disabled={disabled || option.disabled}
+                  />
+                  {option.label}
+                </Flex>
+              </Text>
+            ))}
+          </Flex>
+        </RadioGroup.Root>
+      )}
+    />
   );
 }
 
@@ -80,7 +71,7 @@ FormRadio.propTypes = {
     PropTypes.shape({
       value: PropTypes.oneOfType([PropTypes.string, PropTypes.number])
         .isRequired,
-      label: PropTypes.string.isRequired,
+      label: PropTypes.node.isRequired,
       disabled: PropTypes.bool,
     }),
   ),

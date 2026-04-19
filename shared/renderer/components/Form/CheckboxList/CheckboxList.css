@@ -1,0 +1,81 @@
+.checkboxItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  transition: background-color 0.15s;
+  border-radius: var(--radius-2);
+}
+
+.checkboxItemCursor {
+  cursor: pointer;
+}
+
+.checkboxItemCursorDisabled {
+  cursor: not-allowed;
+}
+
+.checkboxFlex1 {
+  flex: 1;
+}
+
+.checkboxLabel {
+  color: var(--gray-12);
+  line-height: 1.4;
+}
+
+.checkboxDesc {
+  line-height: 1.4;
+}
+
+.groupHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  margin: 0;
+  background: var(--gray-2);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  transition: background-color 0.15s;
+  cursor: pointer;
+}
+
+.groupHeaderLabel {
+  text-transform: capitalize;
+  flex: 1;
+  color: var(--gray-12);
+}
+
+.centerItalic {
+  text-align: center;
+  font-style: italic;
+}
+
+.groupItemsFlex {
+  padding: var(--space-1) 0;
+}
+
+.groupItemsFlexBorder {
+  border-bottom: 1px solid var(--gray-a6);
+}
+
+.listContainer {
+  overflow-y: auto;
+  border: 1px solid var(--gray-a6);
+  border-radius: var(--radius-3);
+  background-color: var(--color-surface);
+}
+
+.listContainerError {
+  border-color: var(--red-8);
+}
+
+.listContainerPadding {
+  padding: var(--space-2);
+}
+
+.listContainerNoPadding {
+  padding: 0;
+}

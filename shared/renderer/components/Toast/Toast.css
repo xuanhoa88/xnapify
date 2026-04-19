@@ -1,313 +1,141 @@
-/**
- * xnapify (https://github.com/xuanhoa88/xnapify/)
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE.txt file in the root directory of this source tree.
- */
-
-/* ==========================================================================
-   Toast Component Styles
-   ========================================================================== */
-
-.toast {
+.toastContainer {
   position: fixed;
-  z-index: 9999;
-  display: flex;
-  align-items: flex-start;
-  gap: var(--spacing-3);
-  min-width: 300px;
-  max-width: 450px;
-  padding: var(--spacing-4);
-  background-color: var(--color-background);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  border-left: 4px solid;
+  z-index: 100;
+  max-width: 400px;
+  width: calc(100vw - 32px);
+  margin: 16px;
+  background-color: var(--toast-bg);
+  border: 1px solid var(--toast-border);
+  border-radius: var(--radius-3);
+  box-shadow: var(--shadow-4);
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
 }
 
-.toast.exiting {
-  animation-fill-mode: forwards;
+/* Placements */
+.placement-top-right {
+  top: 0;
+  right: 0;
 }
 
-/* ==========================================================================
-   Position Classes
-   ========================================================================== */
+.placement-top-left {
+  top: 0;
+  left: 0;
+}
 
-/* Top Center */
-.topCenter {
-  top: var(--spacing-6);
+.placement-top-center {
+  top: 0;
   left: 50%;
   transform: translateX(-50%);
-  animation: slideInTopCenter 0.2s ease-out;
 }
 
-.topCenter.exiting {
-  animation: slideOutTopCenter 0.2s ease-in forwards;
+.placement-bottom-right {
+  bottom: 0;
+  right: 0;
 }
 
-/* Top Right */
-.topRight {
-  top: var(--spacing-6);
-  right: var(--spacing-6);
-  animation: slideInRight 0.2s ease-out;
+.placement-bottom-left {
+  bottom: 0;
+  left: 0;
 }
 
-.topRight.exiting {
-  animation: slideOutRight 0.2s ease-in forwards;
-}
-
-/* Top Left */
-.topLeft {
-  top: var(--spacing-6);
-  left: var(--spacing-6);
-  animation: slideInLeft 0.2s ease-out;
-}
-
-.topLeft.exiting {
-  animation: slideOutLeft 0.2s ease-in forwards;
-}
-
-/* Bottom Center */
-.bottomCenter {
-  bottom: var(--spacing-6);
+.placement-bottom-center {
+  bottom: 0;
   left: 50%;
   transform: translateX(-50%);
-  animation: slideInBottomCenter 0.2s ease-out;
 }
 
-.bottomCenter.exiting {
-  animation: slideOutBottomCenter 0.2s ease-in forwards;
+/* Variants */
+.variant-success {
+  --toast-bg: var(--green-2);
+  --toast-border: var(--green-7);
+  --toast-icon: var(--green-9);
+  --toast-text: var(--green-11);
 }
 
-/* Bottom Right */
-.bottomRight {
-  bottom: var(--spacing-6);
-  right: var(--spacing-6);
-  animation: slideInRight 0.2s ease-out;
+.variant-error {
+  --toast-bg: var(--red-2);
+  --toast-border: var(--red-7);
+  --toast-icon: var(--red-9);
+  --toast-text: var(--red-11);
 }
 
-.bottomRight.exiting {
-  animation: slideOutRight 0.2s ease-in forwards;
+.variant-warning {
+  --toast-bg: var(--amber-2);
+  --toast-border: var(--amber-7);
+  --toast-icon: var(--amber-9);
+  --toast-text: var(--amber-11);
 }
 
-/* Bottom Left */
-.bottomLeft {
-  bottom: var(--spacing-6);
-  left: var(--spacing-6);
-  animation: slideInLeft 0.2s ease-out;
+.variant-info {
+  --toast-bg: var(--blue-2);
+  --toast-border: var(--blue-7);
+  --toast-icon: var(--blue-9);
+  --toast-text: var(--blue-11);
 }
 
-.bottomLeft.exiting {
-  animation: slideOutLeft 0.2s ease-in forwards;
+/* Transitions */
+.enteredTop {
+  opacity: 1;
+  transform: translateY(0);
 }
 
-/* ==========================================================================
-   Animations
-   ========================================================================== */
-
-@keyframes slideInTopCenter {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(-100%);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
+.enteredBottom {
+  opacity: 1;
+  transform: translateY(0);
 }
 
-@keyframes slideOutTopCenter {
-  from {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
-
-  to {
-    opacity: 0;
-    transform: translateX(-50%) translateY(-100%);
-  }
+.enteredTopCenter {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
 }
 
-@keyframes slideInBottomCenter {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(100%);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
+.enteredBottomCenter {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
 }
 
-@keyframes slideOutBottomCenter {
-  from {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
-
-  to {
-    opacity: 0;
-    transform: translateX(-50%) translateY(100%);
-  }
+.exitingTop {
+  opacity: 0;
+  transform: translateY(-10px);
 }
 
-@keyframes slideInRight {
-  from {
-    opacity: 0;
-    transform: translateX(100%);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+.exitingBottom {
+  opacity: 0;
+  transform: translateY(10px);
 }
 
-@keyframes slideOutRight {
-  from {
-    opacity: 1;
-    transform: translateX(0);
-  }
-
-  to {
-    opacity: 0;
-    transform: translateX(100%);
-  }
+.exitingTopCenter {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-10px);
 }
 
-@keyframes slideInLeft {
-  from {
-    opacity: 0;
-    transform: translateX(-100%);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+.exitingBottomCenter {
+  opacity: 0;
+  transform: translateX(-50%) translateY(10px);
 }
 
-@keyframes slideOutLeft {
-  from {
-    opacity: 1;
-    transform: translateX(0);
-  }
-
-  to {
-    opacity: 0;
-    transform: translateX(-100%);
-  }
-}
-
-/* ==========================================================================
-   Toast Content
-   ========================================================================== */
-
-.iconWrapper {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* Content */
+.iconBox {
+  color: var(--toast-icon);
   flex-shrink: 0;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-full);
+  margin-top: 2px;
 }
 
-/* ==========================================================================
-   Toast Variants
-   ========================================================================== */
-
-/* Success Toast */
-.success {
-  border-left-color: var(--color-success);
+.contentFlex {
+  flex-grow: 1;
 }
 
-.success .iconWrapper {
-  color: var(--color-success);
-  background-color: #ecfdf5; /* Green 50 */
+.titleText {
+  color: var(--toast-text);
 }
 
-/* Error Toast */
-.error {
-  border-left-color: var(--color-error);
+.messageText {
+  color: var(--toast-text);
 }
-
-.error .iconWrapper {
-  color: var(--color-error);
-  background-color: var(--color-error-bg);
-}
-
-/* Warning Toast */
-.warning {
-  border-left-color: var(--color-warning);
-}
-
-.warning .iconWrapper {
-  color: var(--color-warning);
-  background-color: #fffbeb; /* Amber 50 */
-}
-
-/* Info Toast */
-.info {
-  border-left-color: var(--color-info);
-}
-
-.info .iconWrapper {
-  color: var(--color-info);
-  background-color: var(--color-primary-bg);
-}
-
-.icon {
-  flex-shrink: 0;
-}
-
-.content {
-  flex: 1;
-  min-width: 0;
-}
-
-.title {
-  font-family: var(--font-family-base);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
-  margin-bottom: var(--spacing-1);
-}
-
-.message {
-  font-family: var(--font-family-base);
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  line-height: var(--line-height-normal);
-}
-
-/* ==========================================================================
-   Close Button
-   ========================================================================== */
 
 .closeButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   flex-shrink: 0;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  background-color: transparent;
-  border: none;
-  border-radius: var(--radius-md);
-  color: var(--color-text-tertiary);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.closeButton:hover {
-  background-color: var(--color-background-tertiary);
-  color: var(--color-text-secondary);
-}
-
-.closeButton:focus {
-  outline: none;
-  box-shadow: var(--shadow-focus);
+  margin-left: var(--space-2);
 }

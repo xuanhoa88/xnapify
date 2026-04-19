@@ -1,101 +1,130 @@
-/**
- * xnapify (https://github.com/xuanhoa88/xnapify/)
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE.txt file in the root directory of this source tree.
- */
-.root {
-  padding: var(--spacing-8);
-  background: var(--color-background-secondary);
+.containerBox {
+  padding: var(--space-6);
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.headerFlex {
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--gray-a6);
+  margin-bottom: var(--space-6);
+}
+
+.headerIconBox {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-3);
+  background-color: var(--gray-3);
+  color: var(--gray-11);
+  flex-shrink: 0;
+}
+
+.headerHeading {
+  margin: 0;
+  color: var(--gray-12);
+}
+
+.headerSubtitle {
+  margin: 0;
+  margin-top: var(--space-1);
+}
+
+.errorFlex {
+  border: 1px solid var(--red-6);
+  border-radius: var(--radius-3);
+  background-color: var(--red-2);
+}
+
+.contentBox {
+  background-color: var(--color-panel-solid);
+  border-radius: var(--radius-4);
+  box-shadow: var(--shadow-2);
+  overflow: hidden;
+}
+
+.tableSearchBox {
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--gray-4);
+}
+
+.tableSearchWrapper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.searchableSelectLarge {
+  min-width: 180px;
   flex: 1;
 }
 
-.filters {
-  display: grid;
-  grid-template-columns: 1fr auto auto auto auto;
-  gap: var(--spacing-3);
-  margin-bottom: var(--spacing-6);
-  background: var(--color-background);
-  padding: var(--spacing-4);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--color-border);
-  align-items: center;
+.searchableSelectSmall {
+  min-width: 150px;
+  flex: 1;
 }
 
-/* Filter Actions */
-.filterActions {
-  display: flex;
-  gap: var(--spacing-2);
-  align-items: center;
-}
-
-.filterSearchableSelect {
-  min-width: 140px;
-}
-
-.userCell {
+.clearFilterBox {
   display: flex;
   align-items: center;
-  gap: var(--spacing-3);
+  min-width: max-content;
 }
 
-.actions {
-  display: flex;
-  gap: var(--spacing-2);
+.tableWrapper {
+  position: relative;
+  overflow-x: auto;
+}
+
+.checkboxCol {
+  width: 48px;
+  text-align: center;
+}
+
+.textRight {
+  text-align: right;
+}
+
+.emptyStateFlex {
+  opacity: 0.6;
+}
+
+.emptyStateIcon {
+  margin-bottom: var(--space-3);
+}
+
+.emptyStateText {
+  margin-bottom: var(--space-4);
+}
+
+.rowSelected {
+  background-color: var(--indigo-a3);
+}
+
+.colCenter {
+  text-align: center;
 }
 
 .youBadge {
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-xs);
-  font-style: italic;
+  font-size: 10px;
+  height: 18px;
+  padding: 0 4px;
 }
 
-
-/* =============================================================================
-   RESPONSIVE DESIGN - MOBILE
-   ============================================================================= */
-
-@media (max-width: 768px) {
-  .root {
-    padding: var(--spacing-3);
-  }
-
-  /* Filters - improved mobile layout */
-  .filters {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    padding: var(--spacing-3);
-    gap: var(--spacing-2);
-    margin-bottom: var(--spacing-4);
-  }
-
-  .filterSearchableSelect {
-    min-width: unset;
-    width: 100%;
-  }
-
-  .filterActions {
-    grid-column: 1 / -1; /* Full width single row */
-    display: flex;
-  }
-
-  /* User cell compact */
-  .userCell {
-    gap: var(--spacing-2);
-  }
-
-
+.loadingOverlay {
+  position: absolute;
+  inset: 0;
+  background-color: var(--color-background);
+  opacity: 0.5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
 }
 
-/* Extra small mobile */
-@media (max-width: 375px) {
-  .root {
-    padding: var(--spacing-2);
-  }
+.paginationBox {
+  border-top: 1px solid var(--gray-4);
+}
 
-  .filters {
-    padding: var(--spacing-2);
-    gap: var(--spacing-2);
-  }
+.userNameText {
+  color: var(--gray-12);
 }

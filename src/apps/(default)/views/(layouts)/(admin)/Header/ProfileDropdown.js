@@ -7,13 +7,19 @@
 
 import { useState, useCallback, useMemo } from 'react';
 
-import clsx from 'clsx';
+import {
+  ChevronDownIcon,
+  PersonIcon,
+  LightningBoltIcon,
+  ArrowUpIcon,
+  ExitIcon,
+} from '@radix-ui/react-icons';
+import { Flex, Text, Box } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 
 import ContextMenu from '@shared/renderer/components/ContextMenu';
 import { Link, useHistory } from '@shared/renderer/components/History';
-import Icon from '@shared/renderer/components/Icon';
 import { checkPermission } from '@shared/renderer/components/Rbac';
 import {
   getUserDisplayName,
@@ -28,7 +34,7 @@ import s from './ProfileDropdown.css';
 
 /**
  * ProfileDropdown Component
- * User profile dropdown with navigation and logout
+ * User profile dropdown with navigation and logout, using native Radix primitives
  */
 function ProfileDropdown() {
   const { t } = useTranslation();
@@ -88,65 +94,73 @@ function ProfileDropdown() {
   }, [roles, t]);
 
   return (
-    <div className={s.userMenu}>
+    <Box position='relative'>
       <ContextMenu isOpen={isOpen} onToggle={setIsOpen}>
-        <ContextMenu.Trigger variant='unstyled' className={s.userMenuBtn}>
-          <div className={s.userAvatar}>
-            {avatarUrl ? (
-              <img
-                src={avatarUrl}
-                alt=''
-                className={s.userAvatarImg}
-                onError={e => {
-                  e.target.style.display = 'none';
-                }}
-              />
-            ) : (
-              avatarInitial
-            )}
-          </div>
-          <div className={s.userInfo}>
-            <span className={s.userName}>{displayName}</span>
-            <span className={s.userRole}>{displayRole}</span>
-          </div>
-          <Icon
-            name='chevronDown'
-            size={12}
-            className={clsx(s.dropdownIcon, {
-              [s.dropdownIconOpen]: isOpen,
-            })}
-          />
+        <ContextMenu.Trigger variant='unstyled'>
+          <Flex
+            align='center'
+            gap='2'
+            className={`${s.profileTrigger} ${isOpen ? s.profileTriggerOpen : ''}`}
+          >
+            <Flex align='center' justify='center' className={s.avatarCircle}>
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt=''
+                  className={s.avatarImage}
+                  onError={e => {
+                    e.target.style.display = 'none';
+                  }}
+                />
+              ) : (
+                avatarInitial
+              )}
+            </Flex>
+            <Flex direction='column' className={s.profileInfo}>
+              <Text size='2' weight='medium' className={s.profileName}>
+                {displayName}
+              </Text>
+              <Text size='1' color='gray' className={s.profileRole}>
+                {displayRole}
+              </Text>
+            </Flex>
+            <Box
+              className={`${s.profileChevron} ${isOpen ? s.chevronIconOpen : ''}`}
+            >
+              <ChevronDownIcon width={12} height={12} />
+            </Box>
+          </Flex>
         </ContextMenu.Trigger>
 
         <ContextMenu.Menu>
           <ContextMenu.Header title={displayName} subtitle={displayRole} />
 
           <ContextMenu.Item as={Link} to='/profile' onClick={handleClose}>
-            <Icon name='user' size={16} />
+            <PersonIcon width={16} height={16} />
             {t('navigation.profile', 'Profile')}
           </ContextMenu.Item>
 
           {checkPermission(userProfile, 'nodered:admin') && (
             <ContextMenu.Item as='a' href='/~/red/admin' onClick={handleClose}>
-              <Icon name='node-red' size={16} />
+              <LightningBoltIcon width={16} height={16} />
               Node-RED
             </ContextMenu.Item>
           )}
 
           <ContextMenu.Item as={Link} to='/' onClick={handleClose}>
-            <Icon name='arrowUp' size={16} />
+            <ArrowUpIcon width={16} height={16} />
             {t('navigation.backToSite', 'Back to Site')}
           </ContextMenu.Item>
 
           <ContextMenu.Divider />
 
           <ContextMenu.Item onClick={handleLogout} variant='danger'>
-            <Icon name='logout' size={16} />
+            <ExitIcon width={16} height={16} />
             {t('navigation.logout', 'Logout')}
           </ContextMenu.Item>
         </ContextMenu.Menu>
       </ContextMenu>
-    </div>
+    </Box>
   );
 }
 

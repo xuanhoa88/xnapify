@@ -5,43 +5,64 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { Flex, Box, Text, Heading } from '@radix-ui/themes';
+
 import s from './TestNextJS.css';
 
+/**
+ * TestNextJSPage mapping exact Box constraints dynamically replacing implicit CSS logic reliably.
+ */
 export default function TestNextJSPage() {
   return (
-    <div className={s.container}>
-      <h1 className={s.title}>✅ Next.js-Style Routing Works!</h1>
+    <Box className={s.container}>
+      <Heading as='h1' size='7' mb='6' className={s.title}>
+        ✅ Next.js-Style Routing Works!
+      </Heading>
 
-      <div className={s.card}>
-        <h2>File-Based Routing Test</h2>
-        <p>This page was created using the new Next.js-style routing system.</p>
+      <Box className={s.boxFeature} mb='6'>
+        <Heading as='h2' size='5' mb='3' color='indigo'>
+          File-Based Routing Test
+        </Heading>
+        <Text size='3' color='gray' mb='5' className={s.dBlock}>
+          This page was created using the new Next.js-style routing system.
+        </Text>
 
-        <h3>File Location:</h3>
-        <code className={s.codeBlock}>
+        <Heading as='h3' size='3' mb='2'>
+          File Location:
+        </Heading>
+        <Box as='code' mb='5' className={s.codeBlock}>
           @apps/(default)/views/test-nextjs/_route.js
-        </code>
+        </Box>
 
-        <h3 className={s.heading}>Route Path:</h3>
-        <code className={s.codeBlock}>/test-nextjs</code>
+        <Heading as='h3' size='3' mb='2'>
+          Route Path:
+        </Heading>
+        <Box as='code' mb='5' className={s.codeBlock}>
+          /test-nextjs
+        </Box>
 
-        <h3 className={s.heading}>Features Demonstrated:</h3>
-        <ul>
+        <Heading as='h3' size='3' mb='3'>
+          Features Demonstrated:
+        </Heading>
+        <Flex as='ul' direction='column' gap='2' className={s.listItems}>
           <li>✅ File-based routing (_route.js)</li>
           <li>✅ Route groups: (default) removed from URL</li>
           <li>✅ Metadata export (title, description)</li>
           <li>✅ Component export as default</li>
           <li>✅ Automatic Layout Wrapping (_layout.js)</li>
-        </ul>
-      </div>
+        </Flex>
+      </Box>
 
-      <div className={s.infoBox}>
-        <h3>Next Steps:</h3>
-        <ol>
+      <Box className={s.nextStepsBox}>
+        <Heading as='h3' size='4' mb='3' color='blue'>
+          Next Steps:
+        </Heading>
+        <Flex as='ol' direction='column' gap='2' className={s.listItems}>
           <li>Check browser console for discovery logs</li>
           <li>Test layout nesting with /test-nextjs/nested</li>
           <li>Verify old routes still work (/login, /about)</li>
-        </ol>
-      </div>
-    </div>
+        </Flex>
+      </Box>
+    </Box>
   );
 }

@@ -13,13 +13,16 @@ import {
   useEffect,
 } from 'react';
 
-import clsx from 'clsx';
+import { Box, Flex, Text, Checkbox } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
 import Modal from '@shared/renderer/components/Modal';
-import Table from '@shared/renderer/components/Table';
+import {
+  TablePagination,
+  TableSearch,
+} from '@shared/renderer/components/Table';
 
 import { assignRolesToUser, isUserAssignRolesLoading } from '../redux';
 
@@ -228,35 +231,57 @@ const UserRolesModal = forwardRef(({ onSuccess, fetchRoles }, ref) => {
         <Modal.Description>{description}</Modal.Description>
 
         {/* Search Input */}
-        <Table.SearchBar
+        <TableSearch
           value={searchTerm}
           onChange={handleSearchChange}
           placeholder={t('admin:users.roles.searchRoles', 'Search roles...')}
           debounce={300}
-          className={s.modalSearchBar}
+          className={s.searchBox}
         />
 
-        <div className={s.checkboxList}>
+        <Flex direction='column' gap='2' className={s.scrollList}>
           {rolesLoading ? (
-            <div className={s.noItems}>
-              {t('admin:users.roles.loadingRoles', 'Loading roles...')}
-            </div>
+            <Flex
+              align='center'
+              justify='center'
+              p='6'
+              className={s.loadingBox}
+            >
+              <Text as='p' color='gray'>
+                {t('admin:users.roles.loadingRoles', 'Loading roles...')}
+              </Text>
+            </Flex>
           ) : roles.length === 0 ? (
-            <div className={s.noItems}>
-              {searchTerm
-                ? t(
-                    'admin:users.roles.noRolesMatch',
-                    'No roles match your search',
-                  )
-                : t('admin:users.roles.noRolesAvailable', 'No roles available')}
-            </div>
+            <Flex
+              align='center'
+              justify='center'
+              p='6'
+              className={s.loadingBox}
+            >
+              <Text as='p' color='gray'>
+                {searchTerm
+                  ? t(
+                      'admin:users.roles.noRolesMatch',
+                      'No roles match your search',
+                    )
+                  : t(
+                      'admin:users.roles.noRolesAvailable',
+                      'No roles available',
+                    )}
+              </Text>
+            </Flex>
           ) : (
             roles.map(role => (
-              <div
+              <Flex
                 key={role.id}
-                className={clsx(s.checkboxListItem, {
-                  [s.selected]: selections.includes(role.name),
-                })}
+                align='center'
+                gap='3'
+                p='3'
+                className={`${s.itemBox} ${
+                  selections.includes(role.name)
+                    ? s.itemBoxSelected
+                    : s.itemBoxDefault
+                }`}
                 onClick={() => toggleSelection(role.name)}
                 role='checkbox'
                 aria-checked={selections.includes(role.name)}
@@ -268,35 +293,44 @@ const UserRolesModal = forwardRef(({ onSuccess, fetchRoles }, ref) => {
                   }
                 }}
               >
-                <input
-                  type='checkbox'
-                  className={s.checkbox}
+                <Checkbox
+                  size='2'
                   checked={selections.includes(role.name)}
-                  onChange={() => {}}
+                  onCheckedChange={() => toggleSelection(role.name)}
                   tabIndex={-1}
+                  className={s.checkboxCursor}
                 />
-                <div className={s.checkboxContent}>
-                  <span className={s.checkboxListLabel}>{role.name}</span>
+                <Box>
+                  <Text
+                    as='div'
+                    size='2'
+                    weight='bold'
+                    className={s.itemNameText}
+                  >
+                    {role.name}
+                  </Text>
                   {role.description && (
-                    <span className={s.checkboxListDesc}>
+                    <Text as='div' size='1' color='gray' mt='1'>
                       {role.description}
-                    </span>
+                    </Text>
                   )}
-                </div>
-              </div>
+                </Box>
+              </Flex>
             ))
           )}
-        </div>
+        </Flex>
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <Table.Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={totalItems}
-            onPageChange={setCurrentPage}
-            loading={rolesLoading}
-          />
+          <Box mt='4'>
+            <TablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              onPageChange={setCurrentPage}
+              loading={rolesLoading}
+            />
+          </Box>
         )}
       </Modal.Body>
       <Modal.Footer>

@@ -212,6 +212,12 @@ const config = {
         message: 'Optional chaining (?.) is not allowed.',
       },
     ],
+
+    /*
+     * Style Enforcement
+     */
+    'react/forbid-dom-props': ['error', { forbid: ['style'] }],
+    'react/forbid-component-props': ['error', { forbid: ['style'] }],
   },
 
   settings: {
@@ -239,19 +245,50 @@ const config = {
   },
 };
 
-config.overrides = eslintConfigs.map(cfg => {
-  // Use relative paths so the config is portable across machines and CI.
-  // .eslintrc.js at the project root re-exports this file, so paths are
-  // relative to the project root (CWD).
-  const relDir = path
-    .relative(config_constants.CWD, cfg.moduleDir)
-    .replace(/\\/g, '/');
-  return {
-    files: [`${relDir}/**/*.{js,jsx}`],
-    // Use extends to inherit from the module-level config cleanly
-    extends: [cfg.path],
-  };
-});
+config.overrides = [
+  ...eslintConfigs.map(cfg => {
+    // Use relative paths so the config is portable across machines and CI.
+    // .eslintrc.js at the project root re-exports this file, so paths are
+    // relative to the project root (CWD).
+    const relDir = path
+      .relative(config_constants.CWD, cfg.moduleDir)
+      .replace(/\\/g, '/');
+    return {
+      files: [`${relDir}/**/*.{js,jsx}`],
+      // Use extends to inherit from the module-level config cleanly
+      extends: [cfg.path],
+    };
+  }),
+  {
+    // Global bypass for legacy files until fully migrated
+    files: [
+      'src/apps/**/*.js',
+      'src/extensions/**/*.js',
+      'src/infrastructure/**/*.js',
+      'shared/renderer/**/*.js',
+    ],
+    rules: {
+      'react/forbid-dom-props': 'off',
+      'react/forbid-component-props': 'off',
+    },
+  },
+  {
+    // Opt-in strict enforcement for fully mapped and audited directories
+    files: [
+      'shared/renderer/components/SearchableSelect/**/*.js',
+      'shared/renderer/components/Modal/**/*.js',
+      'shared/renderer/components/ContextMenu/**/*.js',
+      'src/apps/extensions/views/(admin)/hub/components/CategoryChips.js',
+      'src/extensions/quick-access-plugin/views/QuickAccess.js',
+      'src/extensions/posts-module/views/(admin)/(default)/PostForm.js',
+      'src/extensions/posts-module/views/(admin)/(default)/SeoPreview.js',
+    ],
+    rules: {
+      'react/forbid-dom-props': ['error', { forbid: ['style'] }],
+      'react/forbid-component-props': ['error', { forbid: ['style'] }],
+    },
+  },
+];
 
 module.exports = config;
 

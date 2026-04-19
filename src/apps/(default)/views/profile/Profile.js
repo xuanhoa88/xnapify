@@ -5,10 +5,14 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import {
+  PersonIcon,
+  GearIcon,
+  LockClosedIcon,
+  TrashIcon,
+} from '@radix-ui/react-icons';
+import { Box, Tabs } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
-
-import Icon from '@shared/renderer/components/Icon';
-import Tabs from '@shared/renderer/components/Tabs';
 
 import DeleteAccountCard from './components/DeleteAccountCard';
 import PersonalInfoCard from './components/PersonalInfoCard';
@@ -18,53 +22,67 @@ import SecurityCard from './components/SecurityCard';
 
 import s from './Profile.css';
 
+/**
+ * Profile layout component natively migrating from pure CSS to absolute Box and Flex parameters.
+ */
 function Profile() {
   const { t } = useTranslation();
 
   return (
-    <div className={s.root}>
-      <div className={s.wrapper}>
+    <Box className={s.pageContainer}>
+      <Box className={s.contentWrapper}>
         <ProfileHeader />
 
-        <Tabs defaultTab='personal'>
-          <Tabs.List>
-            <Tabs.Tab id='personal' icon={<Icon name='user' size={18} />}>
-              {t('profile.personalInfo', 'Personal Info')}
-            </Tabs.Tab>
-            <Tabs.Tab
-              id='preferences'
-              icon={<Icon name='settings' size={18} />}
-            >
-              {t('profile.preferences', 'Preferences')}
-            </Tabs.Tab>
-            <Tabs.Tab id='security' icon={<Icon name='shield' size={18} />}>
-              {t('profile.security', 'Security')}
-            </Tabs.Tab>
-            <Tabs.Tab id='danger' icon={<Icon name='trash' size={18} />}>
-              {t('profile.dangerZone', 'Danger Zone')}
-            </Tabs.Tab>
-          </Tabs.List>
+        <Box className={s.tabsContainer}>
+          <Tabs.Root defaultValue='personal'>
+            <Tabs.List>
+              <Tabs.Trigger value='personal'>
+                <Box className={s.tabIcon}>
+                  <PersonIcon width={18} height={18} />
+                </Box>
+                {t('profile.personalInfo', 'Personal Info')}
+              </Tabs.Trigger>
+              <Tabs.Trigger value='preferences'>
+                <Box className={s.tabIcon}>
+                  <GearIcon width={18} height={18} />
+                </Box>
+                {t('profile.preferences', 'Preferences')}
+              </Tabs.Trigger>
+              <Tabs.Trigger value='security'>
+                <Box className={s.tabIcon}>
+                  <LockClosedIcon width={18} height={18} />
+                </Box>
+                {t('profile.security', 'Security')}
+              </Tabs.Trigger>
+              <Tabs.Trigger value='danger'>
+                <Box className={s.tabIcon}>
+                  <TrashIcon width={18} height={18} />
+                </Box>
+                {t('profile.dangerZone', 'Danger Zone')}
+              </Tabs.Trigger>
+            </Tabs.List>
 
-          <Tabs.Panels>
-            <Tabs.Panel id='personal'>
-              <PersonalInfoCard />
-            </Tabs.Panel>
+            <Box pt='4'>
+              <Tabs.Content value='personal'>
+                <PersonalInfoCard />
+              </Tabs.Content>
 
-            <Tabs.Panel id='preferences'>
-              <PreferencesCard />
-            </Tabs.Panel>
+              <Tabs.Content value='preferences'>
+                <PreferencesCard />
+              </Tabs.Content>
 
-            <Tabs.Panel id='security'>
-              <SecurityCard />
-            </Tabs.Panel>
+              <Tabs.Content value='security'>
+                <SecurityCard />
+              </Tabs.Content>
 
-            <Tabs.Panel id='danger'>
-              <DeleteAccountCard />
-            </Tabs.Panel>
-          </Tabs.Panels>
-        </Tabs>
-      </div>
-    </div>
+              <Tabs.Content value='danger'>
+                <DeleteAccountCard />
+              </Tabs.Content>
+            </Box>
+          </Tabs.Root>
+        </Box>
+      </Box>
+    </Box>
   );
 }
 

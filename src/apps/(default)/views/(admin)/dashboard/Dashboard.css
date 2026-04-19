@@ -1,120 +1,118 @@
-/**
- * xnapify (https://github.com/xuanhoa88/xnapify/)
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE.txt file in the root directory of this source tree.
- */
-.root {
-  padding: var(--spacing-8);
-  background: var(--color-background-secondary);
-  flex: 1;
+.errorFlex {
+  border: 1px solid var(--red-6);
+  border-radius: var(--radius-3);
+  background-color: var(--red-2);
 }
 
-/* Dashboard Grid */
-.dashboardGrid {
+.gridContainer {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: var(--spacing-6);
-  margin-bottom: var(--spacing-6);
+  grid-template-columns: 1fr;
+  gap: var(--space-6);
+  margin-top: var(--space-6);
 }
 
-.fullWidthSection {
-  grid-column: 1 / -1;
+.surfaceBox {
+  background-color: var(--color-panel-solid);
+  border-radius: var(--radius-4);
+  box-shadow: var(--shadow-2);
+  overflow: hidden;
 }
 
-@media (max-width: 1200px) {
-  .dashboardGrid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+.headerBox {
+  padding: var(--space-5);
+  border-bottom: 1px solid var(--gray-4);
 }
 
-.sectionHeader {
-  display: flex;
-  align-items: center;
-  margin-bottom: var(--spacing-4);
+.headingText {
+  color: var(--gray-12);
 }
 
-.sectionTitle {
-  margin: 0;
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-3);
+.badgeText {
+  font-size: var(--font-size-1);
 }
 
-.countBadge {
-  font-size: var(--font-size-sm);
+.searchBox {
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--gray-4);
 }
 
-.filters {
-  display: flex;
-  justify-content: flex-end;
-  background: var(--color-background);
-  padding: var(--spacing-4);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--color-border);
-  margin-bottom: var(--spacing-6);
+.tableWrapper {
+  position: relative;
+  overflow-x: auto;
 }
 
-.emptyValue {
-  color: var(--color-text-tertiary);
+.emptyStateFlex {
+  opacity: 0.6;
+}
+
+.emptyStateIcon {
+  margin-bottom: var(--space-3);
+}
+
+.codeBox {
+  font-family: monospace;
+  background-color: var(--indigo-2);
+  color: var(--indigo-11);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-1);
+  font-size: 13px;
+}
+
+.entityTypeText {
+  color: var(--gray-12);
+}
+
+.entityIdText {
+  color: var(--gray-10);
+  font-family: monospace;
+}
+
+.italicText {
   font-style: italic;
-  font-size: var(--font-size-sm);
 }
 
-/* Activity Event Code */
-.eventCode {
-  font-family: var(--font-mono);
-  font-size: var(--font-size-xs);
-  padding: var(--spacing-1) var(--spacing-2);
-  background: var(--color-background-tertiary);
-  border-radius: var(--radius-sm);
-  color: var(--color-text-secondary);
-}
-
-/* Entity Cell */
-.entityCell {
+.loadingOverlay {
+  position: absolute;
+  inset: 0;
+  background-color: var(--color-background);
+  opacity: 0.5;
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
 }
 
-.entityType {
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-primary);
-  text-transform: capitalize;
+.paginationBox {
+  border-top: 1px solid var(--gray-4);
 }
 
-.entityId {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
-  font-family: var(--font-mono);
+.containerBox {
+  padding: var(--space-6);
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-  .root {
-    padding: var(--spacing-3);
-  }
-
-  .dashboardGrid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: var(--spacing-3);
-  }
+.headerFlex {
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--gray-a6);
+  margin-bottom: var(--space-6);
 }
 
-/* Extra small mobile */
-@media (max-width: 375px) {
-  .root {
-    padding: var(--spacing-2);
-  }
-
-  .dashboardGrid {
-    grid-template-columns: 1fr;
-    gap: var(--spacing-2);
-  }
+.headerIconBox {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-3);
+  background-color: var(--gray-3);
+  color: var(--gray-11);
+  flex-shrink: 0;
 }
 
+.headerHeading {
+  margin: 0;
+  color: var(--gray-12);
+}
+
+.headerSubtitle {
+  margin: 0;
+  margin-top: var(--space-1);
+}

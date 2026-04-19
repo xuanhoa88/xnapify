@@ -1,65 +1,45 @@
-.root {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-  padding: 12px;
-  background-color: var(--color-background-accent, rgb(0 0 0 / 3%));
-  border-radius: 6px;
-  margin-bottom: 16px;
+.container {
+  padding: var(--space-3);
+  background-color: var(--gray-2);
+  border-radius: var(--radius-3);
+  border: 1px solid var(--gray-4);
 }
 
-.label {
-  font-size: 13px;
+.titleFlex {
+  color: var(--gray-11);
+  font-size: var(--font-size-2);
   font-weight: 500;
-  color: var(--color-text-secondary);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-right: 4px;
+  margin-right: var(--space-2);
 }
 
 .emptyText {
-  font-size: 13px;
-  color: var(--color-text-tertiary);
   font-style: italic;
 }
 
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  background-color: var(--color-background-default);
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  font-size: 12px;
-  font-family: var(--font-mono, monospace);
-  color: var(--color-text);
+.variableBtn {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-2);
+  border: none;
+  font-size: var(--font-size-1);
+  font-family: monospace;
   cursor: pointer;
-  transition: all 0.2s ease;
-  user-select: none;
+  transition: background-color 0.2s;
 }
 
-.chip:hover {
-  border-color: var(--color-primary);
-  background-color: var(--color-primary-light, rgb(25 118 210 / 5%));
-  color: var(--color-background);
-  transform: translateY(-1px);
+.variableBtnNormal {
+  background-color: var(--indigo-3);
+  color: var(--indigo-11);
 }
 
-.chip:active {
-  transform: translateY(0);
+.variableBtnNormal:hover {
+  background-color: var(--indigo-4);
 }
 
-.copiedTag {
-  background-color: var(--color-success, #4caf50);
-  color: white;
-  border-color: var(--color-success, #4caf50);
+.variableBtnCopied {
+  background-color: var(--green-4);
+  color: var(--green-11);
 }
 
-.copiedTag:hover {
-  background-color: var(--color-success, #4caf50);
-  color: white;
-  border-color: var(--color-success, #4caf50);
+.variableBtnCopied:hover {
+  background-color: var(--green-5);
 }

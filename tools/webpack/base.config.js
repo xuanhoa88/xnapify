@@ -338,6 +338,7 @@ function createSharedDependencies(dependencies, options = {}) {
         // Use caret range so compatible patch versions from transitive
         // dependencies are accepted (no lockfile → patches may float).
         const version = dependencies[dep];
+        const rawVersion = version.replace(/^[\^~]/, '');
         const requiredVersion = /^\d/.test(version) ? `^${version}` : version;
         return [
           dep,
@@ -346,6 +347,7 @@ function createSharedDependencies(dependencies, options = {}) {
             eager: isEager,
             requiredVersion,
             strictVersion,
+            version: rawVersion,
           },
         ];
       }),

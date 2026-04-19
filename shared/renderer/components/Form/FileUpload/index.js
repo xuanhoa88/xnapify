@@ -7,16 +7,18 @@
 
 import { forwardRef, useCallback, useState } from 'react';
 
+import { UploadIcon } from '@radix-ui/react-icons';
+import { Flex, Text, Box } from '@radix-ui/themes';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
-import { useFormContext } from 'react-hook-form';
+import { useFormContext, useWatch } from 'react-hook-form';
 
 import { useFormField, useMergeRefs } from '../FormContext';
 
-import s from './FormFileUpload.css';
+import s from './FileUpload.css';
 
 /**
- * FormFileUpload - File upload with drag-and-drop support
+ * FormFileUpload - File upload with drag-and-drop support (Radix baked styles)
  *
  * Usage:
  *   <Form.Field name="avatar" label="Profile Picture">
@@ -24,13 +26,19 @@ import s from './FormFileUpload.css';
  *   </Form.Field>
  */
 const FormFileUpload = forwardRef(function FormFileUpload$(
-  { accept, className, disabled, multiple = false, ...props },
+  { accept, className, disabled, multiple = false },
   forwardedRef,
 ) {
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const { id, name, error } = useFormField();
-  const { register, setValue } = useFormContext();
+  const { register, setValue, control } = useFormContext();
+
+  // Watch for form resets breaking internal selectedFile state sync
+  const formValue = useWatch({ control, name });
+  if (!formValue && selectedFile) {
+    setSelectedFile(null);
+  }
 
   // Get registration props including ref
   const { ref: registerRef, onChange, ...registerProps } = register(name);
@@ -89,61 +97,75 @@ const FormFileUpload = forwardRef(function FormFileUpload$(
   }, [selectedFile]);
 
   return (
-    <div
-      className={clsx(
-        s.uploadWrapper,
-        {
-          [s.dragging]: isDragging,
-          [s.hasFile]: selectedFile,
-          [s.error]: error,
-          [s.disabled]: disabled,
-        },
-        className,
-      )}
+    <Box
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
+      className={clsx(
+        className,
+        s.container,
+        disabled ? s.containerDisabled : s.containerInteractive,
+        error && s.containerError,
+        isDragging && !error && s.containerDragActive,
+        selectedFile && !error && !isDragging && s.containerSelected,
+      )}
     >
-      <input
+      <Box
+        as='input'
         id={id}
         type='file'
         accept={accept}
         disabled={disabled}
         multiple={multiple}
-        className={s.input}
         {...registerProps}
         onChange={handleFileChange}
         ref={handleRef}
-        {...props}
-      />
-      <label htmlFor={id} className={s.label}>
-        <svg
-          className={s.icon}
-          viewBox='0 0 24 24'
-          fill='none'
-          stroke='currentColor'
-        >
-          <path
-            strokeLinecap='round'
-            strokeLinejoin='round'
-            strokeWidth='2'
-            d='M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12'
-          />
-        </svg>
-        <span className={s.text}>
-          {selectedFile ? (
-            <strong>{getFileName()}</strong>
-          ) : (
-            <>
-              <strong>Click to upload</strong> or drag and drop
-            </>
-          )}
-        </span>
-        {accept && (
-          <span className={s.hint}>{accept.replace(/\*/g, 'All')}</span>
+        className={clsx(
+          s.hiddenInput,
+          disabled ? s.containerDisabled : s.containerInteractive,
         )}
-      </label>
-    </div>
+      />
+      <Box
+        as='label'
+        htmlFor={id}
+        className={clsx(
+          s.labelDropZone,
+          disabled ? s.containerDisabled : s.containerInteractive,
+        )}
+      >
+        <Flex direction='column' align='center' gap='2'>
+          <UploadIcon
+            width='24'
+            height='24'
+            color={
+              error
+                ? 'var(--red-9)'
+                : selectedFile
+                  ? 'var(--indigo-9)'
+                  : 'var(--gray-9)'
+            }
+            className={s.icon}
+          />
+          <Text
+            size='2'
+            color={error ? 'red' : selectedFile ? 'indigo' : 'gray'}
+          >
+            {selectedFile ? (
+              <Text weight='bold'>{getFileName()}</Text>
+            ) : (
+              <>
+                <Text weight='bold'>Click to upload</Text> or drag and drop
+              </>
+            )}
+          </Text>
+          {accept && (
+            <Text size='1' color='gray'>
+              {accept.replace(/\*/g, 'All')}
+            </Text>
+          )}
+        </Flex>
+      </Box>
+    </Box>
   );
 });
 

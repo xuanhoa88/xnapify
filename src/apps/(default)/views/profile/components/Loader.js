@@ -5,22 +5,27 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { LoaderIcon } from '@radix-ui/react-icons';
+import { Flex, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
-
-import Icon from '@shared/renderer/components/Icon';
 
 import s from './Loader.css';
 
+/**
+ * Profile Component Loader utilizing standard programmatic UI Box assignments
+ */
 function Loader() {
   const { t } = useTranslation();
 
   return (
-    <div className={s.root}>
-      <div className={s.spinner}>
-        <Icon name='loader' size={24} />
-      </div>
-      <span>{t('loading', 'Loading...')}</span>
-    </div>
+    <Flex direction='column' align='center' justify='center' gap='3' p='8'>
+      <Flex className={s.loaderIconWrapper}>
+        <LoaderIcon width={32} height={32} className={s.loaderSpin} />
+      </Flex>
+      <Text size='3' color='gray'>
+        {t('loading', 'Loading...')}
+      </Text>
+    </Flex>
   );
 }
 

@@ -7,11 +7,11 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 
+import { TrashIcon } from '@radix-ui/react-icons';
+import { Button, TextArea, Flex } from '@radix-ui/themes';
 import formatDistanceToNow from 'date-fns/formatDistanceToNow';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
-
-import Icon from '../Icon';
 
 import s from './CommentActionsPopup.css';
 
@@ -69,8 +69,10 @@ const CommentActionsPopup = ({
                     addSuffix: true,
                   })}
                 </span>
-                <button
-                  type='button'
+                <Button
+                  variant='ghost'
+                  color='red'
+                  size='1'
                   className={s.removeButton}
                   onClick={() => onRemoveComment(comment.id)}
                   title={t(
@@ -79,8 +81,8 @@ const CommentActionsPopup = ({
                   )}
                   aria-label='Delete Comment'
                 >
-                  {<Icon name='trash' size={16} strokeWidth={2.5} />}
-                </button>
+                  <TrashIcon width={16} height={16} />
+                </Button>
               </div>
               <p className={s.commentText}>{comment.text}</p>
             </li>
@@ -89,9 +91,8 @@ const CommentActionsPopup = ({
       )}
 
       <form className={s.commentForm} onSubmit={handleSubmit}>
-        <textarea
+        <TextArea
           ref={textareaRef}
-          className={s.commentTextarea}
           value={newCommentText}
           onChange={e => setNewCommentText(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -100,19 +101,16 @@ const CommentActionsPopup = ({
             'Type a comment... (Enter to submit)',
           )}
           rows={2}
+          className={s.commentTextArea}
         />
-        <div className={s.commentActions}>
-          <button type='button' className={s.cancelButton} onClick={onClose}>
+        <Flex gap='3' justify='end' className={s.commentActions}>
+          <Button variant='ghost' type='button' color='gray' onClick={onClose}>
             {t('shared:form.wysiwyg.cancel', 'Cancel')}
-          </button>
-          <button
-            type='submit'
-            className={s.submitButton}
-            disabled={!newCommentText.trim()}
-          >
+          </Button>
+          <Button type='submit' disabled={!newCommentText.trim()}>
             {t('shared:form.wysiwyg.comment', 'Comment')}
-          </button>
-        </div>
+          </Button>
+        </Flex>
       </form>
     </div>
   );

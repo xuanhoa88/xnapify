@@ -5,12 +5,12 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { EyeOpenIcon } from '@radix-ui/react-icons';
+import { Flex, Text, Button } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Button from '@shared/renderer/components/Button';
 import { useHistory } from '@shared/renderer/components/History';
-import Icon from '@shared/renderer/components/Icon';
 import {
   getUserProfile,
   getImpersonatorId,
@@ -20,7 +20,7 @@ import {
 import s from './ImpersonationBanner.css';
 
 /**
- * Global banner shown when the current user is being impersonated by an administrator.
+ * Global banner explicitly substituting legacy CSS values via Radix implementations seamlessly resolving absolute imports dynamically directly substituting classNames.
  */
 function ImpersonationBanner() {
   const { t } = useTranslation();
@@ -43,10 +43,16 @@ function ImpersonationBanner() {
   };
 
   return (
-    <div className={s.root}>
-      <div className={s.content}>
-        <Icon name='eye' size={20} className={s.icon} />
-        <span className={s.text}>
+    <Flex
+      align='center'
+      justify='between'
+      wrap='wrap'
+      gap='3'
+      className={s.bannerContainer}
+    >
+      <Flex align='center' gap='2'>
+        <EyeOpenIcon width={20} height={20} className={s.bannerIcon} />
+        <Text size='2' weight='medium'>
           {t(
             'auth:impersonation.active',
             'You are currently impersonating {{name}}',
@@ -56,17 +62,17 @@ function ImpersonationBanner() {
                 (user && user.email),
             },
           )}
-        </span>
-      </div>
+        </Text>
+      </Flex>
       <Button
         variant='ghost'
-        size='small'
+        size='1'
         onClick={handleStop}
-        className={s.button}
+        className={s.stopBtn}
       >
         {t('auth:impersonation.stop', 'Stop Impersonating')}
       </Button>
-    </div>
+    </Flex>
   );
 }
 

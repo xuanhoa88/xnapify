@@ -5,15 +5,20 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 
-import clsx from 'clsx';
+import {
+  ChevronDownIcon,
+  PersonIcon,
+  LightningBoltIcon,
+  GearIcon,
+  ExitIcon,
+} from '@radix-ui/react-icons';
+import { Flex, Text, Box, DropdownMenu } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 
-import ContextMenu from '@shared/renderer/components/ContextMenu';
-import { Link, useHistory } from '@shared/renderer/components/History';
-import Icon from '@shared/renderer/components/Icon';
+import { useHistory } from '@shared/renderer/components/History';
 import { checkPermission } from '@shared/renderer/components/Rbac';
 import {
   getUserDisplayName,
@@ -28,13 +33,20 @@ import s from './ProfileDropdown.css';
 
 /**
  * ProfileDropdown Component
- * User profile dropdown with navigation and logout for authenticated users
+ *
+ * Renders a static trigger button during SSR to avoid hydration mismatches.
+ * After mount, upgrades to the full interactive Radix DropdownMenu.
  */
 function ProfileDropdown() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const history = useHistory();
   const ws = useWebSocket();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Redux state
   const displayName = useSelector(getUserDisplayName);
@@ -42,18 +54,9 @@ function ProfileDropdown() {
   const avatarUrl = useSelector(getUserAvatarUrl);
   const userProfile = useSelector(getUserProfile);
 
-  // Local state
-  const [isOpen, setIsOpen] = useState(false);
-
-  // Handlers
-  const handleClose = useCallback(() => {
-    setIsOpen(false);
-  }, []);
-
   const handleLogout = useCallback(
     async e => {
       e.preventDefault();
-      setIsOpen(false);
       await dispatch(logout());
       if (ws) {
         ws.logout();
@@ -69,61 +72,87 @@ function ProfileDropdown() {
     return displayName ? displayName.charAt(0).toUpperCase() : 'U';
   }, [displayName]);
 
+  // Static trigger button — rendered identically on server and client
+  // before mount to guarantee zero hydration mismatch.
+  const triggerButton = (
+    <button type='button' className={s.profileTrigger}>
+      <Flex align='center' gap='2'>
+        <Flex align='center' justify='center' className={s.avatarCircle}>
+          {avatarUrl ? (
+            <img
+              src={avatarUrl}
+              alt=''
+              className={s.avatarImage}
+              onError={e => {
+                e.target.style.display = 'none';
+              }}
+            />
+          ) : (
+            avatarInitial
+          )}
+        </Flex>
+        <Text size='2' weight='medium' className={s.profileName}>
+          {displayName}
+        </Text>
+        <Box className={s.profileChevron}>
+          <ChevronDownIcon width={12} height={12} />
+        </Box>
+      </Flex>
+    </button>
+  );
+
+  // Before mount: render static placeholder (no DropdownMenu wrapper)
+  if (!mounted) {
+    return <Box position='relative'>{triggerButton}</Box>;
+  }
+
+  // After mount: full interactive DropdownMenu
   return (
-    <div className={s.profileMenu}>
-      <ContextMenu isOpen={isOpen} onToggle={setIsOpen}>
-        <ContextMenu.Trigger variant='unstyled' className={s.profileBtn}>
-          <div className={s.avatar}>
-            {avatarUrl ? (
-              <img
-                src={avatarUrl}
-                alt=''
-                className={s.avatarImg}
-                onError={e => {
-                  e.target.style.display = 'none';
-                }}
-              />
-            ) : (
-              avatarInitial
-            )}
-          </div>
-          <span className={s.profileName}>{displayName}</span>
-          <Icon
-            name='chevronDown'
-            size={12}
-            className={clsx(s.chevron, { [s.chevronOpen]: isOpen })}
-          />
-        </ContextMenu.Trigger>
+    <Box position='relative'>
+      <DropdownMenu.Root>
+        <DropdownMenu.Trigger asChild>
+          {triggerButton}
+        </DropdownMenu.Trigger>
 
-        <ContextMenu.Menu>
-          <ContextMenu.Header title={displayName} subtitle={email} />
+        <DropdownMenu.Content align='end' variant='soft' size='2' className={s.menuContent}>
+          {/* Header */}
+          <Box py='2' px='3' mb='1'>
+            <Text as='div' size='2' weight='bold'>
+              {displayName}
+            </Text>
+            <Text as='div' size='1' color='gray' mt='1'>
+              {email}
+            </Text>
+          </Box>
+          <DropdownMenu.Separator />
 
-          <ContextMenu.Item as={Link} to='/profile' onClick={handleClose}>
-            <Icon name='user' size={16} />
+          {/* Navigation Items */}
+          <DropdownMenu.Item onClick={() => history.push('/profile')}>
+            <PersonIcon width={16} height={16} style={{ marginRight: '8px' }} />
             {t('navigation.profile', 'Profile')}
-          </ContextMenu.Item>
+          </DropdownMenu.Item>
 
           {checkPermission(userProfile, 'nodered:admin') && (
-            <ContextMenu.Item as='a' href='/~/red/admin' onClick={handleClose}>
-              <Icon name='node-red' size={16} />
+            <DropdownMenu.Item onClick={() => { window.location.href = '/~/red/admin'; }}>
+              <LightningBoltIcon width={16} height={16} style={{ marginRight: '8px' }} />
               {t('navigation.nodeRed', 'Node-RED')}
-            </ContextMenu.Item>
+            </DropdownMenu.Item>
           )}
 
-          <ContextMenu.Item as={Link} to='/admin' onClick={handleClose}>
-            <Icon name='settings' size={16} />
+          <DropdownMenu.Item onClick={() => history.push('/admin')}>
+            <GearIcon width={16} height={16} style={{ marginRight: '8px' }} />
             {t('navigation.admin', 'Admin Panel')}
-          </ContextMenu.Item>
+          </DropdownMenu.Item>
 
-          <ContextMenu.Divider />
+          <DropdownMenu.Separator />
 
-          <ContextMenu.Item onClick={handleLogout} variant='danger'>
-            <Icon name='logout' size={16} />
+          <DropdownMenu.Item color='red' onClick={handleLogout}>
+            <ExitIcon width={16} height={16} style={{ marginRight: '8px' }} />
             {t('navigation.logout', 'Logout')}
-          </ContextMenu.Item>
-        </ContextMenu.Menu>
-      </ContextMenu>
-    </div>
+          </DropdownMenu.Item>
+        </DropdownMenu.Content>
+      </DropdownMenu.Root>
+    </Box>
   );
 }
 

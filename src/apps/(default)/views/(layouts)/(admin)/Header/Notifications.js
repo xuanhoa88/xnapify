@@ -7,11 +7,9 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 
-import clsx from 'clsx';
+import * as RadixIcons from '@radix-ui/react-icons';
+import { Flex, Text, Box, Button } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
-
-import Button from '@shared/renderer/components/Button';
-import Icon from '@shared/renderer/components/Icon';
 
 import s from './Notifications.css';
 
@@ -45,7 +43,7 @@ const mockNotifications = [
 
 /**
  * Notifications Component
- * Notification bell with dropdown panel showing recent notifications
+ * Notification bell with dropdown panel natively mapped to Radix Flex/Box layout
  */
 function AdminNotifications() {
   const { t } = useTranslation();
@@ -73,79 +71,119 @@ function AdminNotifications() {
     setIsOpen(prev => !prev);
   }, []);
 
-  const getTypeIcon = type => {
+  const getTypeStyle = type => {
     switch (type) {
       case 'warning':
-        return <Icon name='alert-triangle' size={16} />;
+        return {
+          color: 'var(--amber-11)',
+          bg: 'var(--amber-3)',
+          icon: RadixIcons.ExclamationTriangleIcon,
+        };
       case 'success':
-        return <Icon name='check-circle' size={16} />;
+        return {
+          color: 'var(--green-11)',
+          bg: 'var(--green-3)',
+          icon: RadixIcons.CheckCircledIcon,
+        };
       case 'error':
-        return <Icon name='x-circle' size={16} />;
+        return {
+          color: 'var(--red-11)',
+          bg: 'var(--red-3)',
+          icon: RadixIcons.CrossCircledIcon,
+        };
       default:
-        return <Icon name='info' size={16} />;
+        return {
+          color: 'var(--blue-11)',
+          bg: 'var(--blue-3)',
+          icon: RadixIcons.InfoCircledIcon,
+        };
     }
   };
 
   return (
-    <div className={s.notificationWrapper} ref={dropdownRef}>
+    <Box position='relative' ref={dropdownRef}>
       <Button
-        variant='unstyled'
-        iconOnly
-        className={s.notificationBtn}
+        variant='ghost'
         onClick={handleToggle}
         title={t('common.notifications', 'Notifications')}
+        className={`${s.notificationBtn} ${isOpen ? s.notificationBtnOpen : ''}`}
       >
-        <Icon name='bell' size={18} />
+        <RadixIcons.BellIcon width={18} height={18} />
         {unreadCount > 0 && (
-          <span className={s.notificationBadge}>{unreadCount}</span>
+          <Flex align='center' justify='center' className={s.badge}>
+            {unreadCount}
+          </Flex>
         )}
       </Button>
 
       {isOpen && (
-        <div className={s.dropdown}>
-          <div className={s.dropdownHeader}>
-            <span className={s.dropdownTitle}>
+        <Box className={`${s.dropdownBox} ${s.notificationDropdown}`}>
+          <Flex align='center' justify='between' className={s.dropdownHeader}>
+            <Text size='3' weight='bold'>
               {t('common.notifications', 'Notifications')}
-            </span>
-            <span className={s.dropdownCount}>
+            </Text>
+            <Text size='1' color='gray'>
               {t('common.newNotificationsCount', '{{count}} new', {
                 count: unreadCount,
               })}
-            </span>
-          </div>
+            </Text>
+          </Flex>
 
-          <div className={s.dropdownList}>
-            {notifications.map(notification => (
-              <div
-                key={notification.id}
-                className={clsx(s.notificationItem, {
-                  [s.unread]: !notification.read,
-                })}
-              >
-                <span className={s.notificationIcon}>
-                  {getTypeIcon(notification.type)}
-                </span>
-                <div className={s.notificationContent}>
-                  <div className={s.notificationTitle}>
-                    {notification.title}
-                  </div>
-                  <div className={s.notificationMessage}>
-                    {notification.message}
-                  </div>
-                  <div className={s.notificationTime}>{notification.time}</div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <Box className={s.notificationList}>
+            {notifications.map(notification => {
+              const typeStyle = getTypeStyle(notification.type);
 
-          <div className={s.dropdownFooter}>
-            <Button variant='unstyled' className={s.viewAllBtn}>
+              return (
+                <Flex
+                  key={notification.id}
+                  gap='3'
+                  className={`${s.notificationItem} ${!notification.read ? s.notificationItemUnread : ''}`}
+                >
+                  <Flex
+                    align='center'
+                    justify='center'
+                    className={s.notificationIcon}
+                    // eslint-disable-next-line react/forbid-dom-props
+                    style={{
+                      backgroundColor: typeStyle.bg,
+                      color: typeStyle.color,
+                    }}
+                  >
+                    {(() => {
+                      const NotificationIcon = typeStyle.icon;
+                      return <NotificationIcon width={16} height={16} />;
+                    })()}
+                  </Flex>
+                  <Flex className={s.notificationContent}>
+                    <Flex justify='between' align='start'>
+                      <Text
+                        size='2'
+                        weight={notification.read ? 'regular' : 'bold'}
+                        className={s.notificationTitle}
+                      >
+                        {notification.title}
+                      </Text>
+                    </Flex>
+                    <Text size='2' color='gray' className={s.notificationText}>
+                      {notification.message}
+                    </Text>
+                    <Text size='1' color='gray' className={s.notificationTime}>
+                      {notification.time}
+                    </Text>
+                  </Flex>
+                </Flex>
+              );
+            })}
+          </Box>
+
+          <Flex justify='center' className={s.dropdownFooter}>
+            <Button variant='ghost' className={s.viewAllBtn}>
               {t('common.viewAll', 'View all notifications')}
             </Button>
-          </div>
-        </div>
+          </Flex>
+        </Box>
       )}
-    </div>
+    </Box>
   );
 }
 

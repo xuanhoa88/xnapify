@@ -1,0 +1,116 @@
+.toastContainer {
+  position: fixed;
+  z-index: 100;
+  max-width: 400px;
+  width: calc(100vw - 32px);
+  margin: 16px;
+  background-color: var(--toast-bg);
+  border: 1px solid var(--toast-border);
+  border-radius: var(--radius-3);
+  box-shadow: var(--shadow-4);
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.placement-top-right {
+  top: 0;
+  right: 0;
+}
+
+.placement-top-left {
+  top: 0;
+  left: 0;
+}
+
+.placement-top-center {
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.placement-bottom-right {
+  bottom: 0;
+  right: 0;
+}
+
+.placement-bottom-left {
+  bottom: 0;
+  left: 0;
+}
+
+.placement-bottom-center {
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.variant-info {
+  --toast-bg: var(--blue-2);
+  --toast-border: var(--blue-7);
+  --toast-icon: var(--blue-9);
+  --toast-text: var(--blue-11);
+}
+
+.enteredTop {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.enteredBottom {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.enteredTopCenter {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.enteredBottomCenter {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.exitingTop {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.exitingBottom {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.exitingTopCenter {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-10px);
+}
+
+.exitingBottomCenter {
+  opacity: 0;
+  transform: translateX(-50%) translateY(10px);
+}
+
+.iconBox {
+  color: var(--toast-icon);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.contentFlex {
+  flex-grow: 1;
+}
+
+.titleText {
+  color: var(--toast-text);
+}
+
+.messageText {
+  color: var(--toast-text);
+}
+
+.closeButton {
+  flex-shrink: 0;
+  margin-left: var(--space-2);
+}

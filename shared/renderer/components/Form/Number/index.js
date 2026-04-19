@@ -7,16 +7,16 @@
 
 import { forwardRef } from 'react';
 
-import clsx from 'clsx';
+import { TextField, IconButton, Flex } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useFormContext } from 'react-hook-form';
 
 import { useFormField, useMergeRefs } from '../FormContext';
 
-import s from './FormNumberInput.css';
+import s from './Index.css';
 
 /**
- * FormNumberInput - Number input with +/- buttons
+ * FormNumberInput - Number input with +/- buttons baked by Radix Themes
  *
  * Usage:
  *   <Form.Field name="quantity" label="Quantity">
@@ -68,18 +68,19 @@ const FormNumberInput = forwardRef(function FormNumberInput$(
   };
 
   return (
-    <div className={clsx(s.numberWrapper, { [s.error]: error }, className)}>
-      <button
+    <Flex align='center' gap='2' className={className}>
+      <IconButton
         type='button'
-        className={s.button}
+        variant='soft'
+        color='gray'
         onClick={decrement}
         disabled={disabled || numericValue <= min}
         aria-label='Decrease'
         tabIndex={-1}
       >
         −
-      </button>
-      <input
+      </IconButton>
+      <TextField.Root
         id={id}
         type='number'
         placeholder={placeholder}
@@ -87,24 +88,26 @@ const FormNumberInput = forwardRef(function FormNumberInput$(
         min={min}
         max={max}
         step={step}
-        className={clsx(s.input, { [s.inputError]: error })}
+        color={error ? 'red' : undefined}
         // eslint-disable-next-line jsx-a11y/no-autofocus
         autoFocus={autoFocus}
+        className={s.numberInput}
         {...registerProps}
         {...props}
         ref={handleRef}
       />
-      <button
+      <IconButton
         type='button'
-        className={s.button}
+        variant='soft'
+        color='gray'
         onClick={increment}
         disabled={disabled || (max != null && numericValue >= max)}
         aria-label='Increase'
         tabIndex={-1}
       >
         +
-      </button>
-    </div>
+      </IconButton>
+    </Flex>
   );
 });
 

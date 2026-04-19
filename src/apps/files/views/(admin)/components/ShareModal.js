@@ -7,12 +7,17 @@
 
 import { useState, useCallback, useImperativeHandle, forwardRef } from 'react';
 
-import clsx from 'clsx';
+import {
+  LockClosedIcon,
+  GroupIcon,
+  GlobeIcon,
+  PersonIcon,
+  Cross2Icon,
+} from '@radix-ui/react-icons';
+import { Box, Flex, Text, Button, Select } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Button from '@shared/renderer/components/Button';
-import Icon from '@shared/renderer/components/Icon';
 import Modal from '@shared/renderer/components/Modal';
 import { SearchableSelect } from '@shared/renderer/components/SearchableSelect';
 import { getUserId } from '@shared/renderer/redux/features/user/selector';
@@ -146,19 +151,26 @@ const ShareModal = forwardRef((props, ref) => {
         : r.email || t('files:share.user', 'User');
 
       return (
-        <div className={s.searchResultItem}>
-          <div
-            className={clsx(s.avatar, s.smallAvatar, {
-              [s.groupAvatar]: isGroup,
-            })}
+        <Flex align='center' gap='3' className={s.paddingY}>
+          <Flex
+            align='center'
+            justify='center'
+            className={`${s.avatarBox} ${isGroup ? s.avatarGroup : s.avatarUser}`}
           >
-            <Icon name={isGroup ? 'users' : 'user'} size={14} />
-          </div>
-          <div className={s.shareInfo}>
-            <span className={s.shareName}>{primaryName}</span>
-            <span className={s.shareRole}>{secondaryName}</span>
-          </div>
-        </div>
+            {(() => {
+              const Comp = isGroup ? GroupIcon : PersonIcon;
+              return <Comp width={14} height={14} />;
+            })()}
+          </Flex>
+          <Flex direction='column'>
+            <Text as='span' size='2' weight='medium' className={s.textPrimary}>
+              {primaryName}
+            </Text>
+            <Text as='span' size='1' color='gray'>
+              {secondaryName}
+            </Text>
+          </Flex>
+        </Flex>
       );
     },
     [t],
@@ -265,47 +277,66 @@ const ShareModal = forwardRef((props, ref) => {
         loading={loading && !shares.length && !initError}
       >
         {initError ? (
-          <div className={s.initErrorState}>
-            <div className={s.initErrorIcon}>
-              <Icon name='lock' size={48} />
-            </div>
-            <p className={s.initErrorMessage}>{initError}</p>
-          </div>
+          <Flex
+            direction='column'
+            align='center'
+            justify='center'
+            className={s.initErrorContainer}
+          >
+            <Box className={s.initErrorIcon}>
+              <LockClosedIcon width={48} height={48} />
+            </Box>
+            <Text as='p' size='3' weight='medium'>
+              {initError}
+            </Text>
+          </Flex>
         ) : (
-          <>
-            <div className={s.section}>
-              <h4>{t('files:share.general_access', 'General access')}</h4>
-              <div className={s.accessRow}>
-                <div className={s.accessIcon}>
+          <Flex direction='column' gap='5'>
+            <Box>
+              <Text as='h4' size='3' weight='bold' className={s.sectionTitle}>
+                {t('files:share.general_access', 'General access')}
+              </Text>
+
+              <Flex align='start' gap='3' className={s.generalAccessBox}>
+                <Flex
+                  align='center'
+                  justify='center'
+                  className={`${s.accessIconBox} ${shareType === 'private' ? s.accessPrivate : shareType === 'shared_users' ? s.accessShared : s.accessPublic}`}
+                >
                   {shareType === 'private' ? (
-                    <Icon name='lock' size={24} className={s.restrictedIcon} />
+                    <LockClosedIcon width={20} height={20} />
                   ) : shareType === 'shared_users' ? (
-                    <Icon name='users' size={24} className={s.usersIcon} />
+                    <GroupIcon width={20} height={20} />
                   ) : (
-                    <Icon name='globe' size={24} className={s.publicIcon} />
+                    <GlobeIcon width={20} height={20} />
                   )}
-                </div>
-                <div className={s.accessSelectBlock}>
-                  <select
-                    className={s.accessSelect}
+                </Flex>
+                <Flex direction='column' className={s.flexOne}>
+                  <Select.Root
                     value={shareType}
-                    onChange={e => setShareType(e.target.value)}
+                    onValueChange={setShareType}
                     disabled={!isOwner}
                   >
-                    <option value='private'>
-                      {t('files:share.restricted', 'Restricted')}
-                    </option>
-                    <option value='public_link'>
-                      {t('files:share.public_link', 'Anyone with the link')}
-                    </option>
-                    <option value='shared_users'>
-                      {t(
-                        'files:share.specific_users',
-                        'Specific User or Group',
-                      )}
-                    </option>
-                  </select>
-                  <p className={s.accessHelper}>
+                    <Select.Trigger
+                      variant='ghost'
+                      className={s.selectTrigger}
+                    />
+                    <Select.Content>
+                      <Select.Item value='private'>
+                        {t('files:share.restricted', 'Restricted')}
+                      </Select.Item>
+                      <Select.Item value='public_link'>
+                        {t('files:share.public_link', 'Anyone with the link')}
+                      </Select.Item>
+                      <Select.Item value='shared_users'>
+                        {t(
+                          'files:share.specific_users',
+                          'Specific User or Group',
+                        )}
+                      </Select.Item>
+                    </Select.Content>
+                  </Select.Root>
+                  <Text as='p' size='1' color='gray'>
                     {shareType === 'private'
                       ? t(
                           'files:share.restricted_desc',
@@ -320,127 +351,150 @@ const ShareModal = forwardRef((props, ref) => {
                             'files:share.specific_users_desc',
                             'Only specific users or groups you add below can access',
                           )}
-                  </p>
-                </div>
-              </div>
+                  </Text>
+                </Flex>
+              </Flex>
+            </Box>
 
-              {shareType === 'shared_users' && (
-                <>
-                  <div className={s.searchWrapper}>
-                    <SearchableSelect
-                      placeholder={t(
-                        'files:share.add_people_hint',
-                        'Add people and groups',
+            {shareType === 'shared_users' && (
+              <Box>
+                <Box className={s.searchBoxMargin}>
+                  <SearchableSelect
+                    placeholder={t(
+                      'files:share.add_people_hint',
+                      'Add people and groups',
+                    )}
+                    onSearch={handleSearch}
+                    onChange={handleAddShare}
+                    options={searchResults}
+                    loading={searching}
+                    value=''
+                    clearable
+                    renderOption={renderSearchResult}
+                  />
+                </Box>
+
+                {(shares.length > 0 || fileOwner) && (
+                  <Box>
+                    <Text
+                      as='h4'
+                      size='2'
+                      weight='bold'
+                      className={s.peopleTitle}
+                    >
+                      {t(
+                        'files:share.people_with_access',
+                        'People with access',
                       )}
-                      onSearch={handleSearch}
-                      onChange={handleAddShare}
-                      options={searchResults}
-                      loading={searching}
-                      value=''
-                      clearable
-                      renderOption={renderSearchResult}
-                    />
-                  </div>
-
-                  {(shares.length > 0 || fileOwner) && (
-                    <>
-                      <h4>
-                        {t(
-                          'files:share.people_with_access',
-                          'People with access',
-                        )}
-                      </h4>
-                      <div className={s.shareList}>
-                        {fileOwner && (
-                          <div className={s.shareItem}>
-                            <div className={clsx(s.avatar)}>
-                              <Icon name='user' size={16} />
-                            </div>
-                            <div className={s.shareInfo}>
-                              <span className={s.shareName}>
-                                {fileOwner.name || fileOwner.email}
-                              </span>
-                              <span className={s.shareRole}>
-                                {t('files:share.owner', 'Owner')}
-                              </span>
-                            </div>
-                            <span
-                              className={s.permissionSelect}
-                              style={{
-                                border: 'none',
-                                cursor: 'default',
-                                color: 'var(--text-secondary, #5f6368)',
-                              }}
+                    </Text>
+                    <Flex direction='column' gap='2'>
+                      {fileOwner && (
+                        <Flex align='center' gap='3' className={s.paddingY}>
+                          <Flex
+                            align='center'
+                            justify='center'
+                            className={`${s.avatarBox} ${s.avatarGroup}`}
+                          >
+                            <PersonIcon width={16} height={16} />
+                          </Flex>
+                          <Flex direction='column' className={s.flexOneMin}>
+                            <Text
+                              as='span'
+                              size='2'
+                              weight='medium'
+                              className={s.textEllipsis}
                             >
+                              {fileOwner.name || fileOwner.email}
+                            </Text>
+                            <Text as='span' size='1' color='gray'>
                               {t('files:share.owner', 'Owner')}
-                            </span>
-                            <div style={{ width: 28 }} />
-                            {/* Spacer for remove button */}
-                          </div>
-                        )}
-                        {shares.map((item, index) => (
-                          <div key={index} className={s.shareItem}>
-                            <div
-                              className={clsx(s.avatar, {
-                                [s.groupAvatar]: item.entity_type === 'group',
-                              })}
+                            </Text>
+                          </Flex>
+                          <Text as='span' size='2' className={s.ownerLabel}>
+                            {t('files:share.owner', 'Owner')}
+                          </Text>
+                          <Box className={s.spacer32} />
+                          {/* Spacer for remove button */}
+                        </Flex>
+                      )}
+                      {shares.map((item, index) => (
+                        <Flex
+                          key={index}
+                          align='center'
+                          gap='3'
+                          className={s.paddingY}
+                        >
+                          <Flex
+                            align='center'
+                            justify='center'
+                            className={`${s.avatarBox} ${item.entity_type === 'group' ? s.avatarGroup : s.avatarUser}`}
+                          >
+                            {(() => {
+                              const Comp =
+                                item.entity_type === 'user'
+                                  ? PersonIcon
+                                  : GroupIcon;
+                              return <Comp width={16} height={16} />;
+                            })()}
+                          </Flex>
+                          <Flex direction='column' className={s.flexOneMin}>
+                            <Text
+                              as='span'
+                              size='2'
+                              weight='medium'
+                              className={s.textEllipsis}
                             >
-                              <Icon
-                                name={
-                                  item.entity_type === 'user' ? 'user' : 'users'
-                                }
-                                size={16}
-                              />
-                            </div>
-                            <div className={s.shareInfo}>
-                              <span className={s.shareName}>
-                                {(item.user && item.user.email) ||
-                                  (item.group && item.group.name)}
-                              </span>
-                              <span className={s.shareRole}>
-                                {item.entity_type === 'user'
-                                  ? t('files:share.user', 'User')
-                                  : t('files:share.group', 'Group')}
-                              </span>
-                            </div>
-                            <select
-                              className={s.permissionSelect}
-                              value={item.permission}
-                              onChange={e =>
-                                handlePermissionChange(index, e.target.value)
-                              }
-                              disabled={!isOwner && !item.isNew}
-                            >
-                              <option value='viewer'>
+                              {(item.user && item.user.email) ||
+                                (item.group && item.group.name)}
+                            </Text>
+                            <Text as='span' size='1' color='gray'>
+                              {item.entity_type === 'user'
+                                ? t('files:share.user', 'User')
+                                : t('files:share.group', 'Group')}
+                            </Text>
+                          </Flex>
+
+                          <Select.Root
+                            value={item.permission}
+                            onValueChange={value =>
+                              handlePermissionChange(index, value)
+                            }
+                            disabled={!isOwner && !item.isNew}
+                          >
+                            <Select.Trigger variant='surface' size='1' />
+                            <Select.Content>
+                              <Select.Item value='viewer'>
                                 {t('files:share.permission_view', 'View')}
-                              </option>
-                              <option value='editor'>
+                              </Select.Item>
+                              <Select.Item value='editor'>
                                 {t(
                                   'files:share.permission_edit_download',
                                   'Edit / Download',
                                 )}
-                              </option>
-                            </select>
-                            {(isOwner || item.isNew) && (
-                              <Button
-                                variant='ghost'
-                                size='small'
-                                iconOnly
-                                className={s.removeBtn}
-                                onClick={() => handleRemoveShare(index)}
-                              >
-                                <Icon name='close' size={14} />
-                              </Button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </>
-              )}
-            </div>
-          </>
+                              </Select.Item>
+                            </Select.Content>
+                          </Select.Root>
+
+                          {isOwner || item.isNew ? (
+                            <Button
+                              variant='ghost'
+                              size='1'
+                              className={s.closeBtn}
+                              onClick={() => handleRemoveShare(index)}
+                            >
+                              <Cross2Icon width={16} height={16} />
+                            </Button>
+                          ) : (
+                            <Box className={s.spacer32} />
+                          )}
+                        </Flex>
+                      ))}
+                    </Flex>
+                  </Box>
+                )}
+              </Box>
+            )}
+          </Flex>
         )}
       </Modal.Body>
 
@@ -448,16 +502,21 @@ const ShareModal = forwardRef((props, ref) => {
         <Modal.Actions>
           {!initError ? (
             <>
-              <Button variant='outline' size='small' onClick={copyLink}>
+              <Button variant='outline' size='1' onClick={copyLink}>
                 {t('files:share.copy_link', 'Copy link')}
               </Button>
-              <div className={s.spacer} />
-              <Button variant='primary' onClick={handleSave} loading={loading}>
+              <Box className={s.flexOne} />
+              <Button
+                variant='solid'
+                color='indigo'
+                onClick={handleSave}
+                loading={loading}
+              >
                 {t('files:share.done', 'Done')}
               </Button>
             </>
           ) : (
-            <Button variant='primary' onClick={handleClose}>
+            <Button variant='solid' color='indigo' onClick={handleClose}>
               {t('files:share.close', 'Close')}
             </Button>
           )}

@@ -1,38 +1,29 @@
-/**
- * xnapify (https://github.com/xuanhoa88/xnapify/)
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE.txt file in the root directory of this source tree.
- */
 
-.container {
-  border: 3px dashed #0070f3;
-  padding: 20px;
-  margin: 20px;
-  border-radius: 8px;
-  background: #fafafa;
+
+.layoutWrapper {
+  border: 2px dashed var(--blue-6);
+  border-radius: var(--radius-4);
+  margin: var(--space-4);
+  overflow: hidden;
 }
 
-.header {
-  background: #0070f3;
-  color: white;
-  padding: 10px 20px;
-  border-radius: 4px;
-  margin-bottom: 20px;
+.layoutHeader {
+  background-color: var(--blue-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 2px dashed var(--blue-6);
   font-weight: bold;
+  color: var(--blue-11);
 }
 
-.content {
-  background: white;
-  padding: 20px;
-  border-radius: 4px;
+.layoutContent {
+  padding: var(--space-4);
+  background-color: var(--color-panel-solid);
 }
 
-.footer {
-  margin-top: 20px;
-  padding: 10px;
-  background: #fff3cd;
-  border: 1px solid #ffc107;
-  border-radius: 4px;
-  font-size: 14px;
+.layoutFooter {
+  background-color: var(--blue-2);
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--blue-6);
+  color: var(--blue-11);
+  font-size: var(--font-size-2);
 }

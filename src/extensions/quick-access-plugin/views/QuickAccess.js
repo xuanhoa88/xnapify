@@ -7,9 +7,9 @@
 
 import { useCallback, useEffect } from 'react';
 
+import { Button, Box, Flex, Text, Heading } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
-import Button from '@shared/renderer/components/Button';
 import { useFormContext } from '@shared/renderer/components/Form';
 
 import s from './QuickAccess.scss';
@@ -89,14 +89,14 @@ export default function QuickAccess() {
   }, [handleKeyDown]);
 
   return (
-    <div className={s.root}>
-      <h3 className={s.title}>
+    <Box className={s.root}>
+      <Heading as='h3' className={s.title}>
         {t('login.quickAccess', 'Quick Access')}
-        <span className={s.hint}>
+        <Text as='span' className={s.hint}>
           {t('login.quickAccessHint', 'Press 1-3 or click to login')}
-        </span>
-      </h3>
-      <div className={s.userList}>
+        </Text>
+      </Heading>
+      <Flex direction='column' className={s.userList}>
         {DEMO_USERS.map((user, index) => (
           <Button
             key={user.email}
@@ -104,14 +104,20 @@ export default function QuickAccess() {
             className={s.userCard}
             onClick={() => handleQuickLogin(user)}
           >
-            <span className={s.shortcut}>{index + 1}</span>
-            <div className={s.userInfo}>
-              <span className={s.userName}>{user.name}</span>
-              <span className={s.userRole}>{user.role}</span>
-            </div>
+            <Text as='span' className={s.shortcut}>
+              {index + 1}
+            </Text>
+            <Flex direction='column' className={s.userInfo}>
+              <Text as='span' className={s.userName}>
+                {user.name}
+              </Text>
+              <Text as='span' className={s.userRole}>
+                {user.role}
+              </Text>
+            </Flex>
           </Button>
         ))}
-      </div>
-    </div>
+      </Flex>
+    </Box>
   );
 }

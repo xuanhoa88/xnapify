@@ -7,17 +7,24 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 
+import { ActivityIcon, ReloadIcon, Cross2Icon } from '@radix-ui/react-icons';
+import {
+  Box,
+  Flex,
+  Heading,
+  Text,
+  Table,
+  Button,
+  Badge,
+} from '@radix-ui/themes';
+import clsx from 'clsx';
 import format from 'date-fns/format';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import * as Box from '@shared/renderer/components/Box';
-import Button from '@shared/renderer/components/Button';
-import Icon from '@shared/renderer/components/Icon';
 import Loader from '@shared/renderer/components/Loader';
 import { SearchableSelect } from '@shared/renderer/components/SearchableSelect';
-import Table from '@shared/renderer/components/Table';
-import Tag from '@shared/renderer/components/Tag';
+import { TablePagination } from '@shared/renderer/components/Table';
 
 import { selectors, thunks } from '../redux';
 
@@ -97,6 +104,7 @@ const ActivityList = () => {
       { value: 'admin:roles:updated', label: 'Roles: Updated' },
       { value: 'admin:roles:deleted', label: 'Roles: Deleted' },
     ],
+
     [t],
   );
 
@@ -111,174 +119,285 @@ const ActivityList = () => {
       { value: 'role', label: 'Role' },
       { value: 'permission', label: 'Permission' },
     ],
+
     [t],
   );
-
-  const columns = [
-    {
-      title: t('admin:activities.column.event', 'Event'),
-      dataIndex: 'event',
-      key: 'event',
-      render: event => <Tag variant='info'>{event}</Tag>,
-    },
-    {
-      title: t('admin:activities.column.entity', 'Entity'),
-      key: 'entity',
-      render: (_, record) => (
-        <span>
-          <Tag variant='secondary'>{record.entity_type}</Tag>
-          {record.entity_id && (
-            <code className='ml-2 text-xs'>{record.entity_id}</code>
-          )}
-        </span>
-      ),
-    },
-    {
-      title: t('admin:activities.column.actor', 'Actor'),
-      dataIndex: 'actor_id',
-      key: 'actor',
-      render: actorId =>
-        actorId ? <code className='text-xs'>{actorId}</code> : '—',
-    },
-    {
-      title: t('admin:activities.column.timestamp', 'Timestamp'),
-      dataIndex: 'created_at',
-      key: 'timestamp',
-      render: date =>
-        date ? format(new Date(date), 'MMM dd, yyyy HH:mm') : '—',
-    },
-  ];
 
   // Loading state (first fetch / not initialized)
   if (!initialized || (loading && activities.length === 0)) {
     return (
-      <div className={s.root}>
-        <Box.Header
-          icon={<Icon name='activity' size={24} />}
-          title={t('admin:activities.title', 'Activity Logs')}
-          subtitle={t(
-            'admin:activities.subtitle',
-            'System audit trail and event history',
-          )}
-        />
+      <Box className={s.loadingBox}>
+        <Flex
+          align='center'
+          justify='between'
+          wrap='wrap'
+          gap='4'
+          className={s.headerFlex}
+        >
+          <Flex align='center' gap='3'>
+            <Flex align='center' justify='center' className={s.headerIconBox}>
+              <ActivityIcon width={24} height={24} />
+            </Flex>
+            <Flex direction='column'>
+              <Heading size='6' className={s.headerHeading}>
+                {t('admin:activities.title', 'Activity Logs')}
+              </Heading>
+              <Text size='3' color='gray' className={s.subtitleText}>
+                {t(
+                  'admin:activities.subtitle',
+                  'System audit trail and event history',
+                )}
+              </Text>
+            </Flex>
+          </Flex>
+        </Flex>
         <Loader
           variant='skeleton'
           message={t('admin:activities.loading', 'Loading activity logs...')}
         />
-      </div>
+      </Box>
     );
   }
 
   // Error state
   if (error) {
     return (
-      <div className={s.root}>
-        <Box.Header
-          icon={<Icon name='activity' size={24} />}
-          title={t('admin:activities.title', 'Activity Logs')}
-          subtitle={t(
-            'admin:activities.subtitle',
-            'System audit trail and event history',
-          )}
-        />
-        <Table.Error
-          title={t(
-            'admin:activities.errorLoading',
-            'Error loading activity logs',
-          )}
-          error={error}
-          onRetry={refreshActivities}
-        />
-      </div>
+      <Box className={s.container}>
+        <Flex
+          align='center'
+          justify='between'
+          wrap='wrap'
+          gap='4'
+          className={s.header}
+        >
+          <Flex align='center' gap='3'>
+            <Flex align='center' justify='center' className={s.headerIcon}>
+              <ActivityIcon width={24} height={24} />
+            </Flex>
+            <Flex direction='column'>
+              <Heading size='6' className={s.headerHeading}>
+                {t('admin:activities.title', 'Activity Logs')}
+              </Heading>
+              <Text size='3' color='gray' className={s.subtitleText}>
+                {t(
+                  'admin:activities.subtitle',
+                  'System audit trail and event history',
+                )}
+              </Text>
+            </Flex>
+          </Flex>
+        </Flex>
+        <Flex
+          direction='column'
+          align='center'
+          justify='center'
+          p='6'
+          className={s.errorBox}
+        >
+          <Text color='red' size='4' weight='bold' mb='2'>
+            {t('admin:activities.errorLoading', 'Error loading activity logs')}
+          </Text>
+          <Text color='red' size='2' mb='4'>
+            {error}
+          </Text>
+          <Button variant='soft' color='red' onClick={refreshActivities}>
+            {t('common:retry', 'Retry')}
+          </Button>
+        </Flex>
+      </Box>
     );
   }
 
   return (
-    <div className={s.root}>
-      <Box.Header
-        icon={<Icon name='activity' size={24} />}
-        title={t('admin:activities.title', 'Activity Logs')}
-        subtitle={t(
-          'admin:activities.subtitle',
-          'System audit trail and event history',
-        )}
+    <Box className={s.container}>
+      <Flex
+        align='center'
+        justify='between'
+        wrap='wrap'
+        gap='4'
+        className={s.header}
       >
-        <Button
-          variant='ghost'
-          size='small'
-          onClick={refreshActivities}
-          loading={loading}
-        >
-          <Icon name='refresh-cw' size={16} />
-          {t('common:refresh', 'Refresh')}
-        </Button>
-      </Box.Header>
+        <Flex align='center' gap='3'>
+          <Flex align='center' justify='center' className={s.headerIcon}>
+            <ActivityIcon width={24} height={24} />
+          </Flex>
+          <Flex direction='column'>
+            <Heading size='6' className={s.headerHeading}>
+              {t('admin:activities.title', 'Activity Logs')}
+            </Heading>
+            <Text size='3' color='gray' className={s.subtitleText}>
+              {t(
+                'admin:activities.subtitle',
+                'System audit trail and event history',
+              )}
+            </Text>
+          </Flex>
+        </Flex>
+        <Flex align='center' gap='3'>
+          <Button
+            variant='ghost'
+            size='1'
+            onClick={refreshActivities}
+            disabled={loading}
+          >
+            <ReloadIcon width={16} height={16} />
+            {t('common:refresh', 'Refresh')}
+          </Button>
+        </Flex>
+      </Flex>
 
-      <div className={s.filters}>
+      <Flex gap='3' align='center' wrap='wrap' className={s.filterBar}>
         <SearchableSelect
-          className={s.filterSearchableSelect}
+          className={s.filterSelect}
           options={eventOptions}
           value={eventFilter}
           onChange={handleEventFilterChange}
           placeholder={t('admin:activities.filter.allEvents', 'All Events')}
           showSearch={false}
         />
+
         <SearchableSelect
-          className={s.filterSearchableSelect}
+          className={s.filterSelect}
           options={entityTypeOptions}
           value={entityTypeFilter}
           onChange={handleEntityTypeFilterChange}
           placeholder={t('admin:activities.filter.allEntities', 'All Entities')}
           showSearch={false}
         />
-        <div className={s.filterActions}>
+
+        <Box className={s.clearFiltersBox}>
           {hasActiveFilters && (
             <Button
               variant='ghost'
-              size='small'
+              size='1'
               onClick={handleClearAllFilters}
               type='button'
               title={t('admin:activities.filter.resetAll', 'Reset all filters')}
             >
-              <Icon name='x' size={12} />
+              <Cross2Icon width={12} height={12} />
               {t('admin:activities.filter.clear', 'Clear Filters')}
             </Button>
           )}
-        </div>
-      </div>
+        </Box>
+      </Flex>
 
-      <Table
-        columns={columns}
-        dataSource={activities}
-        rowKey='id'
-        loading={loading}
-        pagination={
-          pagination && pagination.pages > 1
-            ? {
-                current: currentPage,
-                pages: pagination.pages,
-                total: pagination.total,
-                onChange: setCurrentPage,
-              }
-            : false
-        }
-        locale={{
-          emptyText: (
-            <Table.Empty
-              icon='activity'
-              title={t(
-                'admin:activities.noLogsFound',
-                'No activity logs found',
+      <Box className={s.relativeBox}>
+        <Box className={s.tableWrapper}>
+          <Table.Root variant='surface'>
+            <Table.Header>
+              <Table.Row>
+                <Table.ColumnHeaderCell>
+                  {t('admin:activities.column.event', 'Event')}
+                </Table.ColumnHeaderCell>
+                <Table.ColumnHeaderCell>
+                  {t('admin:activities.column.entity', 'Entity')}
+                </Table.ColumnHeaderCell>
+                <Table.ColumnHeaderCell>
+                  {t('admin:activities.column.actor', 'Actor')}
+                </Table.ColumnHeaderCell>
+                <Table.ColumnHeaderCell>
+                  {t('admin:activities.column.timestamp', 'Timestamp')}
+                </Table.ColumnHeaderCell>
+              </Table.Row>
+            </Table.Header>
+            <Table.Body>
+              {activities.length === 0 ? (
+                <Table.Row>
+                  <Table.Cell colSpan={4}>
+                    <Flex
+                      justify='center'
+                      align='center'
+                      direction='column'
+                      py='9'
+                      className={s.opacityBox}
+                    >
+                      <ActivityIcon
+                        width={48}
+                        height={48}
+                        className={s.marginBottomBox}
+                      />
+
+                      <Text size='3' weight='bold'>
+                        {t(
+                          'admin:activities.noLogsFound',
+                          'No activity logs found',
+                        )}
+                      </Text>
+                      <Text size='2'>
+                        {t(
+                          'admin:activities.noLogsDescription',
+                          'Activity logs will appear here as system events occur. Try adjusting your filters.',
+                        )}
+                      </Text>
+                    </Flex>
+                  </Table.Cell>
+                </Table.Row>
+              ) : (
+                activities.map(record => (
+                  <Table.Row key={record.id}>
+                    <Table.Cell>
+                      <Badge color='blue' radius='full' variant='soft'>
+                        {record.event}
+                      </Badge>
+                    </Table.Cell>
+                    <Table.Cell>
+                      <Flex align='center'>
+                        <Badge color='gray' radius='full' variant='surface'>
+                          {record.entity_type}
+                        </Badge>
+                        {record.entity_id && (
+                          <Box
+                            as='code'
+                            className={clsx(s.codeBadge, s.codeBadgeMargin)}
+                          >
+                            {record.entity_id}
+                          </Box>
+                        )}
+                      </Flex>
+                    </Table.Cell>
+                    <Table.Cell>
+                      {record.actor_id ? (
+                        <Box as='code' className={s.codeBadge}>
+                          {record.actor_id}
+                        </Box>
+                      ) : (
+                        '—'
+                      )}
+                    </Table.Cell>
+                    <Table.Cell>
+                      {record.created_at
+                        ? format(
+                            new Date(record.created_at),
+                            'MMM dd, yyyy HH:mm',
+                          )
+                        : '—'}
+                    </Table.Cell>
+                  </Table.Row>
+                ))
               )}
-              description={t(
-                'admin:activities.noLogsDescription',
-                'Activity logs will appear here as system events occur. Try adjusting your filters.',
-              )}
+            </Table.Body>
+          </Table.Root>
+        </Box>
+
+        {loading && activities.length > 0 && (
+          <Box className={s.loadingOverlay}>
+            <Loader variant='spinner' />
+          </Box>
+        )}
+
+        {pagination && pagination.pages > 1 && (
+          <Box mt='4'>
+            <TablePagination
+              currentPage={currentPage}
+              totalPages={pagination.pages}
+              totalItems={pagination.total}
+              onPageChange={setCurrentPage}
+              loading={loading}
             />
-          ),
-        }}
-      />
-    </div>
+          </Box>
+        )}
+      </Box>
+    </Box>
   );
 };
 

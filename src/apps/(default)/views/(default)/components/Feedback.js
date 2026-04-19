@@ -5,43 +5,52 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { QuestionMarkCircledIcon, FaceIcon } from '@radix-ui/react-icons';
+import { Flex, Box } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
-
-import Icon from '@shared/renderer/components/Icon';
 
 import s from './Feedback.css';
 
 /**
- * Feedback Section Component
- * Displays links for asking questions and reporting issues
+ * Feedback Section Component explicitly discarding absolute structures mapping explicitly.
  */
 function Feedback() {
   const { t } = useTranslation();
 
   return (
-    <section className={s.root}>
-      <div className={s.container}>
-        <a
-          className={s.link}
-          href='https://gitter.im/xuanhoa88/xnapify'
-          target='_blank'
-          rel='noopener noreferrer'
-        >
-          <Icon name='help-circle' size={20} className={s.icon} />
-          {t('home.feedback.askQuestion', 'Ask a question')}
-        </a>
-        <span className={s.spacer}>|</span>
-        <a
-          className={s.link}
-          href='https://github.com/xuanhoa88/xnapify/issues/new'
-          target='_blank'
-          rel='noopener noreferrer'
-        >
-          <Icon name='thumbs-up' size={20} className={s.icon} />
-          {t('home.feedback.reportIssue', 'Report an issue')}
-        </a>
-      </div>
-    </section>
+    <Box as='section' className={s.feedbackSection}>
+      <Flex
+        align='center'
+        justify='center'
+        gap='4'
+        wrap='wrap'
+        className={s.feedbackContainer}
+      >
+        <Flex asChild align='center' gap='2' className={s.feedbackLink}>
+          <a
+            href='https://gitter.im/xuanhoa88/xnapify'
+            target='_blank'
+            rel='noopener noreferrer'
+          >
+            <QuestionMarkCircledIcon width={20} height={20} />
+            {t('home.feedback.askQuestion', 'Ask a question')}
+          </a>
+        </Flex>
+
+        <Box className={s.feedbackDivider}>|</Box>
+
+        <Flex asChild align='center' gap='2' className={s.feedbackLink}>
+          <a
+            href='https://github.com/xuanhoa88/xnapify/issues/new'
+            target='_blank'
+            rel='noopener noreferrer'
+          >
+            <FaceIcon width={20} height={20} />
+            {t('home.feedback.reportIssue', 'Report an issue')}
+          </a>
+        </Flex>
+      </Flex>
+    </Box>
   );
 }
 

@@ -1,196 +1,30 @@
-/**
- * xnapify (https://github.com/xuanhoa88/xnapify/)
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE.txt file in the root directory of this source tree.
- */
-
-/* =============================================================================
-   WRAPPER
-   ============================================================================= */
-
-.wrapper {
-  position: relative;
-}
-
-/* =============================================================================
-   TRIGGER BUTTON
-   ============================================================================= */
-
-.trigger {
-  display: flex;
+.langBtn {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: var(--spacing-2);
-  height: 36px;
-  min-height: 36px;
-  min-width: 36px;
-  padding: 0 var(--spacing-3);
-  background-color: rgb(255 255 255 / 8%);
-  border: 1px solid rgb(255 255 255 / 12%);
-  border-radius: var(--radius-full);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  color: rgb(255 255 255 / 85%);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  font-family: inherit;
-}
-
-.trigger:hover {
-  background-color: rgb(255 255 255 / 12%);
-  border-color: rgb(255 255 255 / 20%);
-  color: white;
-}
-
-.globeIcon {
-  flex-shrink: 0;
-  color: inherit;
-  width: 18px;
-  height: 18px;
-}
-
-.langName {
-  white-space: nowrap;
-}
-
-.chevron {
-  color: rgb(255 255 255 / 60%);
-  transition: transform var(--transition-fast);
-  flex-shrink: 0;
-  width: 12px;
-  height: 12px;
-}
-
-.chevronOpen {
-  transform: rotate(180deg);
-}
-
-/* =============================================================================
-   DROPDOWN MENU
-   ============================================================================= */
-
-.dropdown {
-  position: absolute;
-  top: calc(100% + var(--spacing-2));
-  right: 0;
-  min-width: 160px;
-  background: white;
-  border-radius: var(--radius-lg);
-  box-shadow:
-    0 10px 40px rgb(0 0 0 / 15%),
-    0 0 0 1px rgb(0 0 0 / 5%);
-  overflow: hidden;
-  z-index: 200;
-  animation: dropdownFadeIn 0.15s ease-out;
-}
-
-@keyframes dropdownFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* =============================================================================
-   DROPDOWN OPTIONS
-   ============================================================================= */
-
-.option {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: var(--spacing-3) var(--spacing-4);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-secondary);
-  text-decoration: none;
-  background-color: transparent;
+  gap: var(--space-2);
+  padding: 6px 12px;
   border: none;
-  cursor: pointer;
-  transition: all var(--transition-fast);
+  border-radius: var(--radius-3);
+  background-color: transparent;
+  color: var(--gray-11);
   font-family: inherit;
-  text-align: left;
+  font-size: var(--font-size-2);
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
-.option:hover {
-  background-color: var(--color-bg-tertiary);
-  color: var(--color-text-primary);
+.langBtn:hover {
+  background-color: var(--gray-a3);
+  color: var(--gray-12);
 }
 
-.optionActive {
-  color: var(--color-primary);
-  font-weight: var(--font-weight-semibold);
+.langBtn:focus-visible {
+  outline: 2px solid var(--focus-8);
+  outline-offset: -1px;
 }
 
-.optionActive:hover {
-  color: var(--color-primary);
-}
-
-.optionName {
-  flex: 1;
-}
-
-.checkmark {
-  color: var(--color-primary);
-  flex-shrink: 0;
-}
-
-/* =============================================================================
-   RESPONSIVE
-   ============================================================================= */
-
-/* Mobile */
-@media (max-width: 768px) {
-  .trigger {
-    width: 36px;
-    height: 36px;
-    min-height: 36px;
-    min-width: 36px;
-    padding: 0;
-  }
-
-  .globeIcon {
-    width: 16px;
-    height: 16px;
-  }
-
-  .langName {
-    display: none;
-  }
-
-  .chevron {
-    display: none;
-  }
-
-  .option {
-    min-height: 40px;
-    padding: var(--spacing-2) var(--spacing-3);
-    font-size: var(--font-size-sm);
-  }
-}
-
-@media (max-width: 375px) {
-  .trigger {
-    width: 28px;
-    height: 28px;
-    min-width: 28px;
-  }
-
-  .globeIcon {
-    width: 14px;
-    height: 14px;
-  }
-
-  .option {
-    min-height: 36px;
-    padding: var(--spacing-2);
-    font-size: var(--font-size-xs);
-  }
+.localeItemActive {
+  background-color: var(--indigo-a3) !important;
+  color: var(--indigo-11) !important;
 }

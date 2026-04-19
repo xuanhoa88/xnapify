@@ -7,6 +7,7 @@
 
 import { useMemo } from 'react';
 
+import { Flex, Text, Box } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
 import { Link } from '@shared/renderer/components/History';
@@ -28,7 +29,7 @@ const NAV_LINKS = [
 
 /**
  * Footer Component
- * Site footer with navigation links and scroll-to-top button
+ * Site footer with navigation links and scroll-to-top button built on Radix Themes
  */
 function Footer() {
   const { t } = useTranslation();
@@ -37,22 +38,32 @@ function Footer() {
 
   return (
     <>
-      <footer className={s.root}>
-        <div className={s.container}>
-          <span className={s.text}>
-            {t('footer.copyright', { year: currentYear })}
-          </span>
+      <Box as='footer' px='4' py='6' className={s.footerBox}>
+        <Flex
+          align='center'
+          justify='center'
+          wrap='wrap'
+          gap='3'
+          maxWidth='1200px'
+          m='0 auto'
+          className={s.footerFlexInner}
+        >
+          <Text size='2'>{t('footer.copyright', { year: currentYear })}</Text>
 
           {NAV_LINKS.map(link => (
-            <span key={link.to}>
-              <span className={s.spacer}>·</span>
-              <Link className={s.link} to={link.to}>
-                {t(link.key)}
-              </Link>
-            </span>
+            <Flex asChild align='center' gap='3' key={link.to}>
+              <span>
+                <Text size='2' color='gray'>
+                  ·
+                </Text>
+                <Link to={link.to} className={s.footerLink}>
+                  {t(link.key)}
+                </Link>
+              </span>
+            </Flex>
           ))}
-        </div>
-      </footer>
+        </Flex>
+      </Box>
 
       <ScrollToTop />
     </>

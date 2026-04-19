@@ -5,8 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { forwardRef, useMemo } from 'react';
+import { forwardRef, useMemo, useState } from 'react';
 
+import { Flex, Text } from '@radix-ui/themes';
 import Cleave from 'cleave.js/react';
 import clsx from 'clsx';
 import get from 'lodash/get';
@@ -15,7 +16,7 @@ import { useFormContext, useController } from 'react-hook-form';
 
 import { useFormField } from '../FormContext';
 
-import s from './FormDateRange.css';
+import s from './DateRange.css';
 
 /** Time-related tokens that distinguish a datetime format from a date-only format */
 const TIME_TOKENS = /[Hhms]/;
@@ -91,6 +92,9 @@ const FormDateRange = forwardRef(function FormDateRange$(
     formState: { errors },
   } = useFormContext();
 
+  const [startFocused, setStartFocused] = useState(false);
+  const [endFocused, setEndFocused] = useState(false);
+
   const startName = `${name}[0]`;
   const endName = `${name}[1]`;
 
@@ -113,37 +117,55 @@ const FormDateRange = forwardRef(function FormDateRange$(
   const { field: endField } = useController({ name: endName, control });
 
   return (
-    <div className={clsx(s.container, className)} ref={forwardedRef}>
+    <Flex align='center' gap='2' className={className} ref={forwardedRef}>
       <Cleave
         id={`${id}-start`}
         options={options}
         disabled={disabled}
-        className={clsx(s.input, { [s.inputError]: startError })}
         placeholder={startPlaceholder || format}
+        className={clsx(
+          s.dateRangeInput,
+          startError && s.dateRangeInputError,
+          startFocused && s.dateRangeInputFocus,
+          disabled && s.dateRangeInputDisabled,
+        )}
         // eslint-disable-next-line jsx-a11y/no-autofocus
         autoFocus={autoFocus}
         onChange={startField.onChange}
-        onBlur={startField.onBlur}
+        onFocus={() => setStartFocused(true)}
+        onBlur={e => {
+          setStartFocused(false);
+          startField.onBlur(e);
+        }}
         value={startField.value || ''}
         name={startField.name}
         {...props}
         htmlRef={startField.ref}
       />
-      <span className={s.separator}>→</span>
+      <Text className={s.dateRangeArrow}>→</Text>
       <Cleave
         id={`${id}-end`}
         options={options}
         disabled={disabled}
-        className={clsx(s.input, { [s.inputError]: endError })}
         placeholder={endPlaceholder || format}
+        className={clsx(
+          s.dateRangeInput,
+          endError && s.dateRangeInputError,
+          endFocused && s.dateRangeInputFocus,
+          disabled && s.dateRangeInputDisabled,
+        )}
         onChange={endField.onChange}
-        onBlur={endField.onBlur}
+        onFocus={() => setEndFocused(true)}
+        onBlur={e => {
+          setEndFocused(false);
+          endField.onBlur(e);
+        }}
         value={endField.value || ''}
         name={endField.name}
         {...props}
         htmlRef={endField.ref}
       />
-    </div>
+    </Flex>
   );
 });
 

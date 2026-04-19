@@ -7,16 +7,14 @@
 
 import { forwardRef } from 'react';
 
-import clsx from 'clsx';
+import { Select } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
-import { useFormContext } from 'react-hook-form';
+import { Controller, useFormContext } from 'react-hook-form';
 
-import { useFormField, useMergeRefs } from '../FormContext';
-
-import s from './FormSelect.css';
+import { useFormField } from '../FormContext';
 
 /**
- * FormSelect - Simple select element to be used inside Form.Field
+ * FormSelect - Select element to be used inside Form.Field baked by Radix Themes
  *
  * Usage:
  *   <Form.Field name="role" label="Role">
@@ -27,38 +25,40 @@ const FormSelect = forwardRef(function FormSelect$(
   { options = [], placeholder, className, disabled, ...props },
   forwardedRef,
 ) {
-  const { id, name, error } = useFormField();
-  const { register } = useFormContext();
-
-  // Get registration props including ref
-  const { ref: registerRef, ...registerProps } = register(name);
-
-  // Merge refs - both react-hook-form ref and forwarded ref
-  const handleRef = useMergeRefs(registerRef, forwardedRef);
+  const { name, error } = useFormField();
+  const { control } = useFormContext();
 
   return (
-    <div className={s.selectWrapper}>
-      <select
-        id={id}
-        disabled={disabled}
-        className={clsx(s.select, { [s.selectError]: error }, className)}
-        {...registerProps}
-        {...props}
-        ref={handleRef}
-      >
-        {placeholder && (
-          <option value='' disabled>
-            {placeholder}
-          </option>
-        )}
-        {options.map(option => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-      <span className={s.selectIcon}>▼</span>
-    </div>
+    <Controller
+      name={name}
+      control={control}
+      render={({ field }) => (
+        <Select.Root
+          value={field.value !== undefined ? String(field.value) : undefined}
+          onValueChange={field.onChange}
+          disabled={disabled}
+        >
+          <Select.Trigger
+            placeholder={placeholder}
+            color={error ? 'red' : undefined}
+            className={className}
+            ref={ref => {
+              field.ref(ref);
+              if (typeof forwardedRef === 'function') forwardedRef(ref);
+              else if (forwardedRef) forwardedRef.current = ref;
+            }}
+            {...props}
+          />
+          <Select.Content>
+            {options.map(option => (
+              <Select.Item key={option.value} value={String(option.value)}>
+                {option.label}
+              </Select.Item>
+            ))}
+          </Select.Content>
+        </Select.Root>
+      )}
+    />
   );
 });
 

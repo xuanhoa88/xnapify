@@ -7,13 +7,10 @@
 
 import { useState, useCallback, useEffect } from 'react';
 
-import clsx from 'clsx';
+import * as RadixIcons from '@radix-ui/react-icons';
+import { Box, Flex, Text, Button, Badge, Switch } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
-
-import Button from '@shared/renderer/components/Button';
-import Card from '@shared/renderer/components/Card';
-import Icon from '@shared/renderer/components/Icon';
 
 import ExtensionActionsDropdown from './ExtensionActionsDropdown';
 
@@ -56,7 +53,7 @@ function ExtensionCard({
 
   const handleToggleStatus = useCallback(
     e => {
-      e.preventDefault();
+      if (e && e.preventDefault) e.preventDefault();
       if (!canUpdate || isLoading) return;
       if (extension.is_active) {
         onDeactivate(extension);
@@ -73,22 +70,12 @@ function ExtensionCard({
     extension.source === 'local' || extension.source === 'db+local';
 
   return (
-    <Card
-      variant='default'
-      className={clsx(
-        'extension-card',
-        extension.is_active
-          ? 'active-extension-card'
-          : 'inactive-extension-card',
-        s.root,
-        {
-          [s.loading]: isLoading,
-          [s.inactive]: !extension.is_active,
-        },
-      )}
+    <Flex
+      direction='column'
+      className={`extension-card ${s.cardContainer} ${extension.is_active ? s.cardActive : s.cardInactive}`}
     >
-      <div className={s.header}>
-        <div className={s.iconWrapper}>
+      <Flex p='4' gap='3' align='start' className={s.headerFlex}>
+        <Box className={s.iconBox}>
           {extension.icon && /^https?:\/\//.test(extension.icon) ? (
             <img
               src={extension.icon}
@@ -102,71 +89,73 @@ function ExtensionCard({
               className={s.iconImage}
             />
           ) : (
-            <Icon name={extension.icon || 'extension'} size={28} />
+            (() => {
+              const iconName = extension.icon || 'BoxIcon';
+              const Comp = RadixIcons[iconName] || RadixIcons.BoxIcon;
+              return <Comp width={28} height={28} />;
+            })()
           )}
-        </div>
-        <div className={s.headerText}>
+        </Box>
+        <Box className={s.infoBox}>
           {isLoading ? (
-            <div className={s.skeletonWrapper}>
-              <div className={clsx(s.skeleton, s.skeletonTitle)} />
-            </div>
+            <Box className={s.skeletonTitle} />
           ) : (
             <>
-              <div className={s.titleRow}>
-                <h3 className={s.name} title={extension.name}>
+              <Flex align='center' gap='2' className={s.titleFlex}>
+                <Text as='h3' size='3' weight='bold' className={s.titleText}>
                   {extension.name}
-                </h3>
-                <span className={s.version}>v{extension.version}</span>
-              </div>
-              <div className={s.subtitleRow}>
+                </Text>
+                <Badge color='gray' radius='full' variant='surface'>
+                  v{extension.version}
+                </Badge>
+              </Flex>
+              <Flex align='center' gap='2' wrap='wrap'>
                 {extension.source && (
-                  <span
-                    className={clsx(s.typeBadge, s.sourceBadge, {
-                      [s.sourceLocal]: isLocal,
-                    })}
+                  <Badge
+                    variant={isLocal ? 'secondary' : 'primary'}
+                    color='gray'
+                    radius='full'
                   >
                     {isLocal
                       ? t('admin:extensions.sourceLocal', 'LOCAL')
                       : t('admin:extensions.sourceRemote', 'REMOTE')}
-                  </span>
+                  </Badge>
                 )}
                 {authorText && (
-                  <span className={s.author}>&bull; {authorText}</span>
+                  <Text as='span' size='1' color='gray'>
+                    &bull; {authorText}
+                  </Text>
                 )}
-              </div>
+              </Flex>
             </>
           )}
-        </div>
-      </div>
+        </Box>
+      </Flex>
 
-      <div className={s.body}>
+      <Box p='4' className={s.descriptionBox}>
         {isLoading ? (
-          <div className={s.skeletonWrapper}>
-            <div className={clsx(s.skeleton, s.skeletonText)} />
-            <div className={clsx(s.skeleton, s.skeletonText)} />
-            <div
-              className={clsx(s.skeleton, s.skeletonText, s.skeletonShort)}
-            />
-          </div>
-        ) : (
-          <>
-            <p className={s.description}>
-              {extension.description ||
-                t(
-                  'admin:extensions.noDescriptionAvailable',
-                  'No description available',
-                )}
-            </p>
-          </>
-        )}
-      </div>
+          <Flex direction='column' gap='2'>
+            <Box className={s.skeletonDesc1} />
 
-      <div className={s.footer}>
-        <div className={s.footerActions}>
+            <Box className={s.skeletonDesc2} />
+          </Flex>
+        ) : (
+          <Text as='p' size='2' color='gray' className={s.descriptionText}>
+            {extension.description ||
+              t(
+                'admin:extensions.noDescriptionAvailable',
+                'No description available',
+              )}
+          </Text>
+        )}
+      </Box>
+
+      <Flex p='3' align='center' justify='between' className={s.footerFlex}>
+        <Flex gap='2'>
           {extension.options && extension.options.repository && (
             <Button
               variant='outline'
-              size='small'
+              size='1'
               onClick={() =>
                 window.open(extension.options.repository, '_blank')
               }
@@ -176,7 +165,7 @@ function ExtensionCard({
           )}
           <Button
             variant='outline'
-            size='small'
+            size='1'
             onClick={() => onDelete(extension)}
           >
             {t('admin:common.remove', 'Remove')}
@@ -191,29 +180,33 @@ function ExtensionCard({
               onDelete={onDelete}
             />
           )}
-        </div>
+        </Flex>
 
-        <div className={s.footerToggle}>
+        <Box>
           {isLoading ? (
-            <div className={clsx(s.skeleton, s.skeletonSwitch)} />
+            <Box className={s.skeletonSwitch} />
           ) : isActionPending ? (
-            <span className={s.actionTag}>{resolvedActionLabel}</span>
+            <Badge color='yellow' radius='full' variant='soft'>
+              {resolvedActionLabel}
+            </Badge>
           ) : (
-            <label className={s.toggleSwitch}>
-              <input
-                type='checkbox'
+            <Box className={s.switchBox}>
+              <Switch
+                size='2'
+                color='green'
                 checked={Boolean(extension.is_active)}
-                onChange={() => {}}
-                onClick={handleToggleStatus}
+                onCheckedChange={handleToggleStatus}
                 disabled={!canUpdate}
                 aria-label={t('admin:common.toggleStatus', 'Toggle status')}
+                className={
+                  canUpdate ? s.switchControl : s.switchControlDisabled
+                }
               />
-              <span className={s.toggleSlider} />
-            </label>
+            </Box>
           )}
-        </div>
-      </div>
-    </Card>
+        </Box>
+      </Flex>
+    </Flex>
   );
 }
 

@@ -48,7 +48,7 @@ export async function search(req, res) {
       : searchEngine;
 
     const results = await engine.search(q.trim(), {
-      entityType: entityType || undefined,
+      entityType,
       limit: Math.min(parseInt(limit, 10) || 20, 100),
       offset: parseInt(offset, 10) || 0,
     });

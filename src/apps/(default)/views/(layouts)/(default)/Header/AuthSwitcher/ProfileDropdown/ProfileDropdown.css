@@ -1,116 +1,59 @@
-/**
- * xnapify (https://github.com/xuanhoa88/xnapify/)
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE.txt file in the root directory of this source tree.
- */
-
-/* =============================================================================
-   PROFILE MENU
-   ============================================================================= */
-
-.profileMenu {
-  position: relative;
+.profileChevron {
+  display: flex;
+  color: var(--gray-11);
+  transition: transform 0.2s;
 }
 
-.profileBtn {
+.profileTrigger[data-state='open'] .profileChevron {
+  transform: rotate(180deg);
+}
+
+.profileTrigger {
+  border: none;
+  font-family: inherit;
+  color: inherit;
   display: flex;
   align-items: center;
-  gap: var(--spacing-2);
-  height: 36px;
-  min-height: 36px;
-  padding: 0 var(--spacing-3) 0 2px;
-  background: rgb(255 255 255 / 8%);
-  border: 1px solid rgb(255 255 255 / 12%);
-  border-radius: var(--radius-full);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-3);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: background-color 0.2s;
+  background-color: transparent;
 }
 
-.profileBtn:hover {
-  background-color: rgb(255 255 255 / 15%);
-  border-color: rgb(255 255 255 / 25%);
+.profileTrigger:focus-visible {
+  outline: 2px solid var(--focus-8);
+  outline-offset: -1px;
 }
 
-.avatar {
+.profileTrigger:hover,
+.profileTrigger[data-state='open'] {
+  background-color: var(--gray-3);
+}
+
+.avatarCircle {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  color: white;
+  background-color: var(--indigo-3);
+  color: var(--indigo-11);
   overflow: hidden;
+  font-weight: bold;
+  font-size: var(--font-size-2);
 }
 
-.avatarImg {
+.avatarImage {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
 .profileName {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: white;
-  max-width: 120px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: none;
 }
 
-.chevron {
-  color: rgb(255 255 255 / 70%);
-  transition: transform var(--transition-fast);
-}
-
-.chevronOpen {
-  transform: rotate(180deg);
-}
-
-/* =============================================================================
-   RESPONSIVE
-   ============================================================================= */
-
-/* Tablet */
-@media (max-width: 992px) {
+@media (min-width: 768px) {
   .profileName {
-    display: none;
-  }
-}
-
-/* Mobile */
-@media (max-width: 768px) {
-  .profileBtn {
-    width: 36px;
-    height: 36px;
-    min-height: 36px;
-    padding: 2px;
-    justify-content: center;
-  }
-
-  .avatar {
-    width: 30px;
-    height: 30px;
-  }
-
-  .chevron {
-    display: none;
-  }
-}
-
-@media (max-width: 375px) {
-  .profileBtn {
-    width: 28px;
-    height: 28px;
-  }
-
-  .avatar {
-    width: 24px;
-    height: 24px;
-    font-size: 10px;
+    display: block;
   }
 }

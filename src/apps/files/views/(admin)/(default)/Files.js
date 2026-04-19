@@ -7,12 +7,11 @@
 
 import { useEffect, useRef } from 'react';
 
-import { useTranslation } from 'react-i18next';
+import { ArchiveIcon } from '@radix-ui/react-icons';
+import { Box, Flex, Heading } from '@radix-ui/themes';
 import { useDispatch, useSelector } from 'react-redux';
 
-import * as Box from '@shared/renderer/components/Box';
-import Icon from '@shared/renderer/components/Icon';
-
+// import { Flex, Heading, Text, Box } , Heading } from '@radix-ui/themes';
 import FileGrid from '../components/FileGrid';
 import FileSidebar from '../components/FileSidebar';
 import FileToolbar from '../components/FileToolbar';
@@ -34,7 +33,6 @@ import s from './Files.css';
  * The main container for the Google Drive-like file manager in the admin panel.
  */
 function Files() {
-  const { t } = useTranslation();
   const dispatch = useDispatch();
   const currentView = useSelector(selectCurrentView);
   const currentFolderId = useSelector(selectCurrentFolderId);
@@ -57,36 +55,52 @@ function Files() {
   }, [dispatch, currentView, currentFolderId, search, page, pageSize]);
 
   return (
-    <div className={s.root}>
-      <Box.Header
-        icon={<Icon name='folder' size={24} />}
-        title={t('files:page.title', 'Files')}
-        subtitle={t('files:page.subtitle', 'Manage your files and folders')}
-      />
-      <div className={s.filesAppContainer}>
+    <Box className={s.container}>
+      <Flex
+        align='center'
+        justify='between'
+        wrap='wrap'
+        gap='4'
+        className={s.header}
+      >
+        <Flex align='center' gap='3'>
+          <Flex align='center' justify='center' className={s.iconBox}>
+            <ArchiveIcon width={24} height={24} />
+          </Flex>
+          <Flex direction='column'>
+            <Heading size='6' className={s.heading}>
+              {null}
+            </Heading>
+          </Flex>
+        </Flex>
+      </Flex>
+
+      <Flex className={s.mainFlex}>
         {/* Left Sidebar Pane */}
-        <div className={s.sidebarPane}>
+        <Box className={s.sidebarBox}>
           <FileSidebar />
-        </div>
+        </Box>
 
         {/* Right Main Content Pane */}
-        <div className={s.mainPane}>
-          <FileToolbar />
+        <Flex direction='column' className={s.contentFlex}>
+          <Box className={s.toolbarBox}>
+            <FileToolbar />
+          </Box>
 
           {/* Scrollable Area for Files */}
-          <div className={s.contentArea}>
+          <Box className={s.gridBox}>
             <FileGrid
               onShare={file => {
                 if (shareModalRef.current) shareModalRef.current.open(file);
               }}
             />
-          </div>
-        </div>
-      </div>
+          </Box>
+        </Flex>
+      </Flex>
 
       {/* Absolute positioned uploader / modal */}
       <ShareModal ref={shareModalRef} />
-    </div>
+    </Box>
   );
 }
 

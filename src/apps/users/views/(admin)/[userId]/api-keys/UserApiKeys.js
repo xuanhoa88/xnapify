@@ -7,23 +7,34 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 
-import cn from 'clsx';
+import {
+  LockOpen1Icon,
+  ArrowLeftIcon,
+  PlusIcon,
+  ClipboardIcon,
+  TrashIcon,
+  Cross2Icon,
+} from '@radix-ui/react-icons';
+import {
+  Box,
+  Flex,
+  Heading,
+  Text,
+  Table,
+  Button,
+  Badge,
+  IconButton,
+} from '@radix-ui/themes';
 import format from 'date-fns/format';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import * as Box from '@shared/renderer/components/Box';
-import Button from '@shared/renderer/components/Button';
-import ConfirmModal from '@shared/renderer/components/ConfirmModal';
 import Form from '@shared/renderer/components/Form';
 import { useHistory } from '@shared/renderer/components/History';
-import Icon from '@shared/renderer/components/Icon';
 import Loader from '@shared/renderer/components/Loader';
 import Modal from '@shared/renderer/components/Modal';
 import { useRbac } from '@shared/renderer/components/Rbac';
-import Table from '@shared/renderer/components/Table';
-import Tag from '@shared/renderer/components/Tag';
 import { showSuccessMessage } from '@shared/renderer/redux';
 
 import { createApiKeyFormSchema } from '../../../../validator/admin';
@@ -174,30 +185,46 @@ export default function UserApiKeys({ userId }) {
   // =========================================================================
 
   const getHeader = () => (
-    <Box.Header
-      icon={<Icon name='key' size={24} />}
-      title={
-        user
-          ? t('admin:users.apiKeys.headerTitle', 'API Keys: {{name}}', {
-              name: (user.profile && user.profile.display_name) || user.email,
-            })
-          : t('admin:users.apiKeys.headerTitle', 'User API Keys')
-      }
-      subtitle={t(
-        'admin:users.apiKeys.headerSubtitle',
-        'Manage API keys for this user',
-      )}
+    <Flex
+      align='center'
+      justify='between'
+      wrap='wrap'
+      gap='4'
+      className={s.headerFlex}
     >
-      <div style={{ display: 'flex', gap: '8px' }}>
+      <Flex align='center' gap='3'>
+        <Flex align='center' justify='center' className={s.headerIconBox}>
+          <LockOpen1Icon width={24} height={24} />
+        </Flex>
+        <Flex direction='column'>
+          <Heading size='6' className={s.headerHeading}>
+            {user
+              ? t('admin:users.apiKeys.headerTitle', 'API Keys: {{name}}', {
+                  name:
+                    (user.profile && user.profile.display_name) || user.email,
+                })
+              : t('admin:users.apiKeys.headerTitle', 'User API Keys')}
+          </Heading>
+          <Text size='3' color='gray' className={s.headerSubtitle}>
+            {t(
+              'admin:users.apiKeys.headerSubtitle',
+              'Manage API keys for this user',
+            )}
+          </Text>
+        </Flex>
+      </Flex>
+      <Flex gap='2'>
         <Button
-          variant='secondary'
+          variant='soft'
+          color='gray'
           onClick={() => history.push('/admin/users')}
         >
-          <Icon name='arrowLeft' />
+          <ArrowLeftIcon />
           {t('admin:users.apiKeys.backToUsers', 'Back to Users')}
         </Button>
         <Button
-          variant='primary'
+          variant='solid'
+          color='indigo'
           onClick={() => setIsCreateOpen(true)}
           {...(canCreate
             ? { title: t('admin:users.apiKeys.generateKey', 'Generate Key') }
@@ -209,11 +236,11 @@ export default function UserApiKeys({ userId }) {
                 ),
               })}
         >
-          <Icon name='plus' size={16} />
+          <PlusIcon width={16} height={16} />
           {t('admin:users.apiKeys.generateKey', 'Generate Key')}
         </Button>
-      </div>
-    </Box.Header>
+      </Flex>
+    </Flex>
   );
 
   // =========================================================================
@@ -222,149 +249,207 @@ export default function UserApiKeys({ userId }) {
 
   if (!userInitialized || userLoading) {
     return (
-      <div className={s.root}>
+      <Box className={s.containerBox}>
         {getHeader()}
         <Loader
           variant='skeleton'
           message={t('admin:users.apiKeys.loading', 'Loading...')}
         />
-      </div>
+      </Box>
     );
   }
 
   if (userError || !user) {
     return (
-      <div className={s.root}>
+      <Box className={s.containerBox}>
         {getHeader()}
-        <div style={{ marginTop: 'var(--spacing-6)' }}>
-          <Table.Error
-            title={t('admin:users.apiKeys.userNotFoundError', 'User not found')}
-            error={userError}
-            action={
-              <Button
-                variant='secondary'
-                onClick={() => history.push('/admin/users')}
-              >
-                {t('admin:users.apiKeys.backToUsers', 'Back to Users')}
-              </Button>
-            }
-          />
-        </div>
-      </div>
+        <Box className={s.marginTopBox}>
+          <Flex
+            direction='column'
+            align='center'
+            justify='center'
+            p='6'
+            className={s.errorFlex}
+          >
+            <Text color='red' size='4' weight='bold' mb='2'>
+              {t('admin:users.apiKeys.userNotFoundError', 'User not found')}
+            </Text>
+            <Text color='red' size='2' mb='4'>
+              {userError || 'Cannot load user context'}
+            </Text>
+            <Button
+              variant='soft'
+              color='gray'
+              onClick={() => history.push('/admin/users')}
+            >
+              {t('admin:users.apiKeys.backToUsers', 'Back to Users')}
+            </Button>
+          </Flex>
+        </Box>
+      </Box>
     );
   }
 
   return (
-    <div className={s.root}>
+    <Box className={s.containerBox}>
       {getHeader()}
 
-      <div style={{ marginTop: 'var(--spacing-6)' }}>
+      <Box className={s.marginTopBox}>
         {/* New key banner — shown once after generation */}
         {newKey && (
-          <div className={s.newKeyAlert}>
-            <div className={s.alertHeader}>
-              <strong>
+          <Box className={s.newKeyBox}>
+            <Flex
+              align='center'
+              justify='between'
+              className={s.newKeyHeaderFlex}
+            >
+              <Text as='strong' size='3' className={s.newKeyTitle}>
                 {t(
                   'admin:users.apiKeys.newKeyGenerated',
                   'New API Key Generated!',
                 )}
-              </strong>
-              <button
-                className={s.closeBtn}
+              </Text>
+              <IconButton
+                variant='ghost'
+                color='green'
+                size='1'
                 onClick={handleCloseNewKeyAlert}
                 aria-label={t('admin:users.apiKeys.close', 'Close')}
               >
-                ×
-              </button>
-            </div>
-            <p className={s.alertText}>
+                <Cross2Icon />
+              </IconButton>
+            </Flex>
+            <Text as='p' size='2' className={s.newKeyDesc}>
               {t(
                 'admin:users.apiKeys.newKeyGeneratedText',
                 'Please copy this key now. It will not be shown again.',
               )}
-            </p>
-            <div className={s.tokenDisplay}>
-              <code>{newKey.token}</code>
+            </Text>
+            <Flex
+              align='center'
+              justify='between'
+              className={s.newKeyTokenFlex}
+            >
+              <Text as='code' className={s.newKeyTokenText}>
+                {newKey.token}
+              </Text>
               <Button
-                variant='secondary'
-                size='small'
+                variant='soft'
+                color='gray'
+                size='1'
                 onClick={() => handleCopy(newKey.token)}
               >
-                <Icon name='clipboard' size={14} />
+                <ClipboardIcon width={14} height={14} />
                 {t('admin:users.apiKeys.copy', 'Copy')}
               </Button>
-            </div>
-          </div>
+            </Flex>
+          </Box>
         )}
 
-        <Table
-          columns={[
-            {
-              title: t('admin:users.apiKeys.name', 'Name'),
-              dataIndex: 'name',
-            },
-            {
-              title: t('admin:users.apiKeys.prefix', 'Prefix'),
-              dataIndex: 'token_prefix',
-              render: prefix => <code>{prefix}…</code>,
-            },
-            {
-              title: t('admin:users.apiKeys.created', 'Created'),
-              dataIndex: 'created_at',
-              render: date =>
-                date ? format(new Date(date), 'yyyy-MM-dd') : '—',
-            },
-            {
-              title: t('admin:users.apiKeys.lastUsed', 'Last Used'),
-              dataIndex: 'last_used_at',
-              render: date =>
-                date ? format(new Date(date), 'yyyy-MM-dd HH:mm') : '—',
-            },
-            {
-              title: t('admin:users.apiKeys.status', 'Status'),
-              key: 'status',
-              render: (_, key) => (
-                <Tag variant={key.is_active ? 'success' : 'neutral'}>
-                  {key.is_active
-                    ? t('admin:users.apiKeys.statusActive', 'Active')
-                    : t('admin:users.apiKeys.statusRevoked', 'Revoked')}
-                </Tag>
-              ),
-            },
-            {
-              key: 'actions',
-              className: s.actionsCol,
-              render: (_, key) => (
-                <div className={s.actions}>
-                  {key.is_active && (
-                    <Button
-                      variant='ghost'
-                      size='small'
-                      iconOnly
-                      onClick={() => handleRevoke(key)}
-                      title={t('admin:users.apiKeys.revoke', 'Revoke')}
+        <Box className={s.tableWrapper}>
+          <Table.Root variant='surface'>
+            <Table.Header>
+              <Table.Row>
+                <Table.ColumnHeaderCell>
+                  {t('admin:users.apiKeys.name', 'Name')}
+                </Table.ColumnHeaderCell>
+                <Table.ColumnHeaderCell>
+                  {t('admin:users.apiKeys.prefix', 'Prefix')}
+                </Table.ColumnHeaderCell>
+                <Table.ColumnHeaderCell>
+                  {t('admin:users.apiKeys.created', 'Created')}
+                </Table.ColumnHeaderCell>
+                <Table.ColumnHeaderCell>
+                  {t('admin:users.apiKeys.lastUsed', 'Last Used')}
+                </Table.ColumnHeaderCell>
+                <Table.ColumnHeaderCell>
+                  {t('admin:users.apiKeys.status', 'Status')}
+                </Table.ColumnHeaderCell>
+                <Table.ColumnHeaderCell
+                  className={s.textRight}
+                ></Table.ColumnHeaderCell>
+              </Table.Row>
+            </Table.Header>
+            <Table.Body>
+              {keys.length === 0 ? (
+                <Table.Row>
+                  <Table.Cell colSpan={6}>
+                    <Flex
+                      justify='center'
+                      align='center'
+                      direction='column'
+                      py='9'
+                      className={s.emptyStateFlex}
                     >
-                      <Icon name='trash' size={16} />
-                    </Button>
-                  )}
-                </div>
-              ),
-            },
-          ]}
-          dataSource={keys}
-          loading={keysLoading}
-          rowKey='id'
-          rowClassName={record => cn({ [s.revoked]: !record.is_active })}
-          locale={{
-            emptyText: (
-              <Table.Empty
-                icon='key'
-                title={t('admin:users.apiKeys.emptyState', 'No API keys yet')}
-              />
-            ),
-          }}
-        />
-      </div>
+                      <LockOpen1Icon
+                        width={48}
+                        height={48}
+                        className={s.emptyStateIcon}
+                      />
+
+                      <Text size='3' weight='bold'>
+                        {t('admin:users.apiKeys.emptyState', 'No API keys yet')}
+                      </Text>
+                    </Flex>
+                  </Table.Cell>
+                </Table.Row>
+              ) : (
+                keys.map(key => (
+                  <Table.Row
+                    key={key.id}
+                    className={key.is_active ? '' : 'is-revoked'}
+                  >
+                    <Table.Cell>{key.name}</Table.Cell>
+                    <Table.Cell>
+                      <code>{key.token_prefix}…</code>
+                    </Table.Cell>
+                    <Table.Cell>
+                      {key.created_at
+                        ? format(new Date(key.created_at), 'yyyy-MM-dd')
+                        : '—'}
+                    </Table.Cell>
+                    <Table.Cell>
+                      {key.last_used_at
+                        ? format(new Date(key.last_used_at), 'yyyy-MM-dd HH:mm')
+                        : '—'}
+                    </Table.Cell>
+                    <Table.Cell>
+                      <Badge
+                        variant={key.is_active ? 'success' : 'neutral'}
+                        color='gray'
+                        radius='full'
+                      >
+                        {key.is_active
+                          ? t('admin:users.apiKeys.statusActive', 'Active')
+                          : t('admin:users.apiKeys.statusRevoked', 'Revoked')}
+                      </Badge>
+                    </Table.Cell>
+                    <Table.Cell className={s.textRight}>
+                      <Flex justify='end'>
+                        {key.is_active && (
+                          <Button
+                            variant='ghost'
+                            size='1'
+                            onClick={() => handleRevoke(key)}
+                            title={t('admin:users.apiKeys.revoke', 'Revoke')}
+                          >
+                            <TrashIcon width={16} height={16} />
+                          </Button>
+                        )}
+                      </Flex>
+                    </Table.Cell>
+                  </Table.Row>
+                ))
+              )}
+            </Table.Body>
+          </Table.Root>
+          {keysLoading && (
+            <Box className={s.loadingOverlay}>
+              <Loader variant='spinner' />
+            </Box>
+          )}
+        </Box>
+      </Box>
 
       {/* Create key modal */}
       <Modal isOpen={isCreateOpen} onClose={handleCloseCreate}>
@@ -378,7 +463,7 @@ export default function UserApiKeys({ userId }) {
             schema={createApiKeyFormSchema}
             defaultValues={DEFAULT_FORM_VALUES}
           >
-            <div className={s.modalField}>
+            <Box className={s.fieldPaddingBox}>
               <Form.Field
                 name='name'
                 label={t('admin:users.apiKeys.keyName', 'Key Name')}
@@ -390,8 +475,8 @@ export default function UserApiKeys({ userId }) {
                   )}
                 />
               </Form.Field>
-            </div>
-            <div className={s.modalField}>
+            </Box>
+            <Box className={s.fieldPaddingBox}>
               <Form.Field
                 name='expiresIn'
                 label={t('admin:users.apiKeys.expiration', 'Expiration')}
@@ -429,8 +514,8 @@ export default function UserApiKeys({ userId }) {
                   ]}
                 />
               </Form.Field>
-            </div>
-            <div className={s.modalField}>
+            </Box>
+            <Box className={s.fieldPaddingBox}>
               <Form.Field
                 name='scopes'
                 label={t('admin:users.apiKeys.permissions', 'Permissions')}
@@ -456,7 +541,7 @@ export default function UserApiKeys({ userId }) {
                   )}
                 />
               </Form.Field>
-            </div>
+            </Box>
           </Form>
         </Modal.Body>
         <Modal.Footer>
@@ -479,13 +564,13 @@ export default function UserApiKeys({ userId }) {
       </Modal>
 
       {/* Revoke confirmation modal */}
-      <ConfirmModal.Delete
+      <Modal.ConfirmDelete
         ref={confirmRevokeRef}
         title={t('admin:users.apiKeys.revokeTitle', 'Revoke API Key')}
         getItemName={key => key.name}
         onDelete={onRevoke}
       />
-    </div>
+    </Box>
   );
 }
 

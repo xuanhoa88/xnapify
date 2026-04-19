@@ -1,178 +1,69 @@
-/**
- * xnapify (https://github.com/xuanhoa88/xnapify/)
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE.txt file in the root directory of this source tree.
- */
-.root {
-  padding: var(--spacing-8);
-  background: var(--color-background-secondary);
-  flex: 1;
+.containerBox {
+  padding: var(--space-6);
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
-
-
-/* Toolbar: Filters and Search */
-.toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--spacing-4);
-  margin-bottom: var(--spacing-6);
+.headerFlex {
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--gray-a6);
+  margin-bottom: var(--space-6);
 }
 
-/* Filter Tabs inside Toolbar */
-.filterTabs {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-1, 4px);
-  padding: var(--spacing-1, 4px);
-  background: var(--color-background-tertiary, #e5e7eb);
-  border-radius: var(--radius-lg, 8px);
-  overflow-x: auto;
+.headerIconFlex {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-3);
+  background-color: var(--gray-3);
+  color: var(--gray-11);
+  flex-shrink: 0;
 }
 
-.filterTab {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--spacing-2, 6px);
-  padding: var(--spacing-2, 8px) var(--spacing-3, 12px);
-  border: none;
-  background: transparent;
-  font-size: var(--font-size-sm, 14px);
-  font-family: inherit;
-  font-weight: 500;
-  color: var(--color-text-secondary, #6b7280);
-  cursor: pointer;
-  border-radius: var(--radius-md, 6px);
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.filterTab:hover {
-  color: var(--color-text-primary);
-}
-
-.filterTabActive {
-  background-color: var(--color-background, #fff);
-  color: var(--color-primary-default, #2563eb);
-  box-shadow: 0 1px 3px rgb(0 0 0 / 10%);
-}
-
-.filterTabCount {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 var(--spacing-1);
-  font-size: var(--font-size-xs, 12px);
-  font-weight: 600;
-  border-radius: var(--radius-full);
-  background-color: rgb(0 0 0 / 5%);
-  color: var(--color-text-secondary);
-}
-
-.filterTabActive .filterTabCount {
-  background-color: var(--color-primary-subtle, #eff6ff);
-  color: var(--color-primary-default, #2563eb);
-}
-
-/* Search bar inside toolbar */
-.searchContainer {
-  flex: 1;
-  max-width: 320px;
-}
-
-.searchBar {
+.headerHeading {
   margin: 0;
-  width: 100%;
+  color: var(--gray-12);
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: var(--spacing-6);
+.headerSubtitle {
+  margin: 0;
+  margin-top: var(--space-1);
 }
 
-/* Empty State */
-.emptyState {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: var(--spacing-12, 48px) var(--spacing-6);
+.hiddenFileInput {
+  display: none;
+}
+
+.tabsBox {
+  background-color: var(--gray-2);
+  padding: var(--space-1);
+  border-radius: var(--radius-3);
+}
+
+.tabButton {
+  border-radius: var(--radius-2);
+  box-shadow: none;
+}
+
+.tabButtonActive {
+  box-shadow: var(--shadow-1);
+}
+
+.searchBox {
+  min-width: 280px;
+}
+
+.emptyStateFlex {
+  padding: var(--space-9);
+  background-color: var(--gray-2);
+  border-radius: var(--radius-4);
   text-align: center;
-  color: var(--color-text-secondary, #6b7280);
-  background: var(--color-background);
-  border-radius: var(--radius-lg);
-  border: 1px dashed var(--color-border, #e5e7eb);
 }
 
-.emptyTitle {
-  margin: var(--spacing-4) 0 var(--spacing-2) 0;
-  font-size: var(--font-size-lg, 18px);
-  font-weight: 600;
-  color: var(--color-text-primary);
+.emptyStateIcon {
+  color: var(--gray-8);
+  margin-bottom: var(--space-4);
 }
 
-.emptySubtitle {
-  margin: 0;
-  font-size: var(--font-size-sm, 14px);
-  color: var(--color-text-secondary, #6b7280);
-}
-
-/* Header Actions */
-.headerActions {
-  display: flex;
-  gap: var(--spacing-2);
-}
-
-/* =============================================================================
-   RESPONSIVE DESIGN - MOBILE
-   ============================================================================= */
-
-@media (max-width: 768px) {
-  .root {
-    padding: var(--spacing-3);
-  }
-
-  .filterTabs {
-    padding: var(--spacing-1) var(--spacing-2);
-    gap: 0;
-  }
-
-  .filterTab {
-    padding: var(--spacing-1) var(--spacing-3);
-    font-size: var(--font-size-xs, 12px);
-  }
-
-  /* Search Container - 100% width on mobile */
-  .searchContainer {
-    width: 100%;
-    max-width: none;
-    padding: var(--spacing-3);
-    margin-bottom: var(--spacing-4);
-  }
-
-  /* Grid single column */
-  .grid {
-    grid-template-columns: 1fr;
-    gap: var(--spacing-4);
-  }
-}
-
-/* Extra small mobile */
-@media (max-width: 375px) {
-  .root {
-    padding: var(--spacing-2);
-  }
-
-  .searchContainer {
-    padding: var(--spacing-2);
-  }
-
-  .filterTabs {
-    overflow-x: auto;
-  }
+.emptyStateText {
+  margin-top: var(--space-2);
 }

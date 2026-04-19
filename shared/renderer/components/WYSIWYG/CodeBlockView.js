@@ -7,6 +7,7 @@
 
 import { useState, useCallback } from 'react';
 
+import { Button } from '@radix-ui/themes';
 import { NodeViewContent, NodeViewWrapper } from '@tiptap/react';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
@@ -44,8 +45,10 @@ export default function CodeBlockView({ node }) {
         <span className={s.languageLabel}>{language}</span>
 
         {/* Copy button */}
-        <button
-          type='button'
+        <Button
+          variant='ghost'
+          color='gray'
+          size='1'
           className={clsx(s.copyButton, { [s.copied]: copied })}
           onClick={handleCopy}
           title={copied ? 'Copied!' : 'Copy code'}
@@ -58,7 +61,7 @@ export default function CodeBlockView({ node }) {
             )}
           </span>
           {copied ? 'Copied!' : 'Copy'}
-        </button>
+        </Button>
       </div>
 
       {/* Editable code content — Tiptap handles syntax highlighting here */}

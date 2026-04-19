@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { forwardRef, useMemo } from 'react';
+import { forwardRef, useMemo, useState } from 'react';
 
 import Cleave from 'cleave.js/react';
 import clsx from 'clsx';
@@ -14,7 +14,7 @@ import { useFormContext, useController } from 'react-hook-form';
 
 import { useFormField, useMergeRefs } from '../FormContext';
 
-import s from './FormDate.css';
+import s from './Date.css';
 
 /** Time-related tokens that distinguish a datetime format from a date-only format */
 const TIME_TOKENS = /[Hhms]/;
@@ -82,6 +82,7 @@ const FormDate = forwardRef(function FormDate$(
   const { id, name, error } = useFormField();
   const { control } = useFormContext();
   const { field } = useController({ name, control });
+  const [isFocused, setIsFocused] = useState(false);
 
   // Merge refs - both react-hook-form ref and forwarded ref
   const handleRef = useMergeRefs(field.ref, forwardedRef);
@@ -105,12 +106,22 @@ const FormDate = forwardRef(function FormDate$(
       id={id}
       options={options}
       disabled={disabled}
-      className={clsx(s.input, { [s.inputError]: error }, className)}
+      className={clsx(
+        className,
+        s.dateInput,
+        error && s.dateInputError,
+        isFocused && s.dateInputFocus,
+        disabled && s.dateInputDisabled,
+      )}
       // eslint-disable-next-line jsx-a11y/no-autofocus
       autoFocus={autoFocus}
       placeholder={placeholder || format}
       onChange={field.onChange}
-      onBlur={field.onBlur}
+      onFocus={() => setIsFocused(true)}
+      onBlur={e => {
+        setIsFocused(false);
+        field.onBlur(e);
+      }}
       value={field.value || ''}
       name={field.name}
       {...props}

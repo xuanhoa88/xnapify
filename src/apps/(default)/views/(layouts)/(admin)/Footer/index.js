@@ -7,18 +7,16 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
-import clsx from 'clsx';
+import { ArrowUpIcon } from '@radix-ui/react-icons';
+import { Flex, Text, Button } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
-import Button from '@shared/renderer/components/Button';
-import Icon from '@shared/renderer/components/Icon';
-
-import s from './Footer.css';
+import s from './AdminFooter.css';
 
 /**
  * AdminFooter Component
  *
- * A minimal, professional footer for admin panel pages.
+ * A minimal, professional footer for admin panel pages built natively with Radix Themes.
  * Features: Copyright info and scroll-to-top button.
  */
 function AdminFooter() {
@@ -66,23 +64,36 @@ function AdminFooter() {
 
   return (
     <>
-      <footer className={s.adminFooter}>
-        <div className={s.footerContainer}>
-          <span className={s.copyright}>
+      <Flex
+        asChild
+        align='center'
+        justify='center'
+        p='4'
+        px='6'
+        className={s.footerFlex}
+      >
+        <footer>
+          <Text size='2' color='gray'>
             {t('footer.copyright', { year: currentYear })}
-          </span>
-        </div>
-      </footer>
+          </Text>
+        </footer>
+      </Flex>
 
       {/* Scroll to Top Button */}
       <Button
-        variant='primary'
-        iconOnly
-        className={clsx(s.scrollToTop, showScroll && s.visible)}
+        variant='solid'
+        color='indigo'
         onClick={scrollToTop}
         title={t('common.scrollToTop', 'Scroll to top')}
+        className={s.scrollBtn}
+        // eslint-disable-next-line react/forbid-dom-props
+        style={{
+          opacity: showScroll ? 1 : 0,
+          visibility: showScroll ? 'visible' : 'hidden',
+          transform: showScroll ? 'translateY(0)' : 'translateY(10px)',
+        }}
       >
-        <Icon name='arrowUp' size={20} />
+        <ArrowUpIcon width={20} height={20} />
       </Button>
     </>
   );

@@ -1,16 +1,108 @@
-/**
- * xnapify (https://github.com/xuanhoa88/xnapify/)
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE.txt file in the root directory of this source tree.
- */
+.dropdownBox {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background-color: var(--color-panel-solid);
+  border: 1px solid var(--gray-a6);
+  border-radius: var(--radius-3);
+  box-shadow: var(--shadow-4);
+  overflow: hidden;
+  z-index: 100;
+}
 
-/* =============================================================================
-   MESSAGES
-   ============================================================================= */
+.messagesDropdown {
+  width: 320px;
+}
 
-.messagesWrapper {
-  position: relative;
+.dropdownHeader {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--gray-a6);
+  background-color: var(--gray-2);
+}
+
+.dropdownFooter {
+  padding: var(--space-2);
+  background-color: var(--gray-2);
+  border-top: 1px solid var(--gray-a6);
+}
+
+.messagesBadge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background-color: var(--red-9);
+  color: var(--red-1);
+  font-size: 10px;
+  font-weight: bold;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  padding: 0 4px;
+  border: 2px solid var(--color-panel-solid);
+}
+
+.messagesList {
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.messageAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: var(--gray-4);
+  color: var(--gray-11);
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.messageAvatarImg {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+}
+
+.messageContent {
+  width: 100%;
+  overflow: hidden;
+  flex-direction: column;
+}
+
+.messageSender {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.messageTime {
+  flex-shrink: 0;
+  margin-left: var(--space-2);
+}
+
+.messageSubject {
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.messagePreview {
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.viewAllBtn {
+  color: var(--indigo-11);
+  font-size: var(--font-size-2);
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.viewAllBtn:hover {
+  text-decoration: underline;
 }
 
 .messagesBtn {
@@ -18,229 +110,37 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-md);
-  color: rgb(255 255 255 / 70%);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  color: var(--gray-11);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: background-color 0.2s, color 0.2s;
+  background-color: transparent;
 }
 
-.messagesBtn:hover {
-  background-color: rgb(255 255 255 / 10%);
-  color: white;
+.messagesBtn:hover,
+.messagesBtnOpen {
+  background-color: var(--gray-3);
+  color: var(--gray-12);
 }
-
-.messagesBtn:active {
-  background-color: rgb(255 255 255 / 15%);
-  transform: scale(0.95);
-}
-
-.messagesBadge {
-  position: absolute;
-  top: 5px;
-  right: 5px;
-  min-width: 16px;
-  height: 16px;
-  background: var(--color-primary);
-  border-radius: var(--radius-full);
-  color: white;
-  font-size: 10px;
-  font-weight: var(--font-weight-bold);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 4px;
-  border: 2px solid var(--color-dark-navy);
-}
-
-/* =============================================================================
-   DROPDOWN
-   ============================================================================= */
-
-.dropdown {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  width: 340px;
-  background: rgb(20 25 35);
-  border: 1px solid rgb(255 255 255 / 12%);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 8px 24px rgb(0 0 0 / 40%);
-  z-index: 1000;
-  animation: dropdownSlide 0.15s ease-out;
-}
-
-@keyframes dropdownSlide {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.dropdownHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--spacing-3) var(--spacing-4);
-  border-bottom: 1px solid rgb(255 255 255 / 10%);
-}
-
-.dropdownTitle {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  color: white;
-}
-
-.dropdownCount {
-  font-size: var(--font-size-xs);
-  color: var(--color-primary);
-  font-weight: var(--font-weight-medium);
-}
-
-.dropdownList {
-  max-height: 350px;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgb(255 255 255 / 20%) transparent;
-}
-
-/* Webkit scrollbar for Chrome/Safari */
-.dropdownList::-webkit-scrollbar {
-  width: 6px;
-}
-
-.dropdownList::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.dropdownList::-webkit-scrollbar-thumb {
-  background: rgb(255 255 255 / 20%);
-  border-radius: 3px;
-}
-
-.dropdownList::-webkit-scrollbar-thumb:hover {
-  background: rgb(255 255 255 / 30%);
-}
-
-/* =============================================================================
-   MESSAGE ITEM
-   ============================================================================= */
 
 .messageItem {
-  display: flex;
-  gap: var(--spacing-3);
-  padding: var(--spacing-3) var(--spacing-4);
-  border-bottom: 1px solid rgb(255 255 255 / 6%);
-  transition: background var(--transition-fast);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--gray-a6);
+  background-color: transparent;
   cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.messageItemUnread {
+  background-color: var(--indigo-2);
 }
 
 .messageItem:hover {
-  background: rgb(255 255 255 / 5%);
+  background-color: var(--gray-3);
 }
 
-.messageItem.unread {
-  background: rgb(255 255 255 / 3%);
-}
-
-.messageAvatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: linear-gradient(
-    135deg,
-    var(--color-primary) 0%,
-    var(--color-secondary) 100%
-  );
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-bold);
-  color: white;
-  flex-shrink: 0;
-}
-
-.messageAvatar img {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.messageContent {
-  flex: 1;
-  min-width: 0;
-}
-
-.messageSender {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  color: white;
-  margin-bottom: 2px;
-}
-
-.messageSubject {
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  color: rgb(255 255 255 / 80%);
-  margin-bottom: 2px;
-}
-
-.messagePreview {
-  font-size: var(--font-size-xs);
-  color: rgb(255 255 255 / 50%);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.messageTime {
-  font-size: 10px;
-  color: rgb(255 255 255 / 40%);
-  margin-top: 4px;
-}
-
-/* =============================================================================
-   FOOTER
-   ============================================================================= */
-
-.dropdownFooter {
-  padding: var(--spacing-3) var(--spacing-4);
-  border-top: 1px solid rgb(255 255 255 / 10%);
-}
-
-.viewAllBtn {
-  width: 100%;
-  padding: var(--spacing-2) var(--spacing-3);
-  background-color: rgb(255 255 255 / 8%);
-  border: none;
-  border-radius: var(--radius-md);
-  color: rgb(255 255 255 / 80%);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  font-family: inherit;
-}
-
-.viewAllBtn:hover {
-  background-color: rgb(255 255 255 / 12%);
-  color: white;
-}
-
-/* Mobile */
-@media (max-width: 768px) {
-  .dropdown {
-    width: 300px;
-    right: -100px;
-  }
+.messageItemUnread:hover {
+  background-color: var(--indigo-3);
 }

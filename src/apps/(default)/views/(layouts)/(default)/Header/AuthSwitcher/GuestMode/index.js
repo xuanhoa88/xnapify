@@ -5,28 +5,39 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { Flex, Button } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
-import { Link } from '@shared/renderer/components/History';
+import { useHistory } from '@shared/renderer/components/History';
 
 import s from './GuestMode.css';
 
 /**
  * GuestMode Component
- * Login and Register buttons for guest users
+ * Login and Register buttons for guest users natively mapped with Radix Themes
  */
 function GuestMode() {
   const { t } = useTranslation();
+  const history = useHistory();
 
   return (
-    <div className={s.guestMode}>
-      <Link to='/login' className={s.loginBtn}>
+    <Flex align='center' gap='3'>
+      <Button
+        variant='ghost'
+        color='gray'
+        className={s.pointerBtn}
+        onClick={() => history.push('/login')}
+      >
         {t('navigation.login', 'Login')}
-      </Link>
-      <Link to='/register' className={s.registerBtn}>
+      </Button>
+      <Button
+        variant='solid'
+        className={s.pointerBtn}
+        onClick={() => history.push('/register')}
+      >
         {t('navigation.register', 'Register')}
-      </Link>
-    </div>
+      </Button>
+    </Flex>
   );
 }
 

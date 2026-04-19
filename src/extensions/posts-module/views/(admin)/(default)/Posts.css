@@ -1,87 +1,108 @@
-/**
- * Posts page styles — CSS Module
- */
-.root {
-  padding: var(--spacing-8);
-  background: var(--color-background-secondary);
-  flex: 1;
+.container {
+  padding: var(--space-6);
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
-.filters {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: var(--spacing-3);
-  margin-bottom: var(--spacing-6);
-  background: var(--color-background);
-  padding: var(--spacing-4);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--color-border);
+.headerRow {
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--gray-a6);
+  margin-bottom: var(--space-6);
+}
+
+.iconBox {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-3);
+  background-color: var(--gray-3);
+  color: var(--gray-11);
+  flex-shrink: 0;
+}
+
+.heading {
+  margin: 0;
+  color: var(--gray-12);
+}
+
+.subheading {
+  margin: 0;
+  margin-top: var(--space-1);
+}
+
+.errorContainer {
+  border: 1px solid var(--red-6);
+  border-radius: var(--radius-3);
+  background-color: var(--red-2);
+}
+
+.tableContainer {
+  background-color: var(--color-panel-solid);
+  border-radius: var(--radius-4);
+  box-shadow: var(--shadow-2);
+  overflow: hidden;
+}
+
+.searchHeader {
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--gray-4);
+}
+
+.searchSelectBox {
+  width: 180px;
+}
+
+.tableWrapper {
+  position: relative;
+  overflow-x: auto;
+}
+
+.actionColumn {
+  width: 140px;
+  text-align: right;
+}
+
+.emptyState {
+  opacity: 0.6;
+}
+
+.emptyIcon {
+  margin-bottom: var(--space-3);
+}
+
+.emptyDescription {
+  margin-bottom: var(--space-4);
+}
+
+.titleText {
+  color: var(--gray-12);
+}
+
+.excerptText {
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  max-width: 300px;
+}
+
+.actionCell {
+  text-align: right;
+}
+
+.deleteAction {
+  color: var(--red-11);
+}
+
+.loadingOverlay {
+  position: absolute;
+  inset: 0;
+  background-color: var(--color-background);
+  opacity: 0.5;
+  display: flex;
   align-items: center;
+  justify-content: center;
+  z-index: 10;
 }
 
-/* Filter Actions */
-.filterActions {
-  display: flex;
-  gap: var(--spacing-2);
-  align-items: center;
-}
-
-.filterSearchableSelect {
-  min-width: 140px;
-}
-
-.titleCell {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-1);
-}
-
-.excerpt {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-}
-
-.actions {
-  display: flex;
-  gap: var(--spacing-2);
-}
-
-/* =============================================================================
-   RESPONSIVE DESIGN - MOBILE
-   ============================================================================= */
-
-@media (max-width: 768px) {
-  .root {
-    padding: var(--spacing-3);
-  }
-
-  .filters {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    padding: var(--spacing-3);
-    gap: var(--spacing-2);
-    margin-bottom: var(--spacing-4);
-  }
-
-  .filterSearchableSelect {
-    min-width: unset;
-    width: 100%;
-  }
-
-  .filterActions {
-    grid-column: 1 / -1;
-    display: flex;
-  }
-}
-
-@media (max-width: 375px) {
-  .root {
-    padding: var(--spacing-2);
-  }
-
-  .filters {
-    padding: var(--spacing-2);
-    gap: var(--spacing-2);
-  }
+.paginationContainer {
+  border-top: 1px solid var(--gray-4);
 }

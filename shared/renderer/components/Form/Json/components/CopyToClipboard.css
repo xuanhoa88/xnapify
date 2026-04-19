@@ -1,0 +1,18 @@
+.clipboardIcon {
+  cursor: pointer;
+  color: var(--json-clipboard, #93a1a1);
+}
+
+.clipboardIcon:hover {
+  opacity: 0.8;
+}
+
+.clipboardChecked {
+  color: var(--json-check-icon, #859900);
+  margin-left: -12px;
+}
+
+.copyContainer {
+  vertical-align: top;
+  display: none;
+}

@@ -5,11 +5,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import clsx from 'clsx';
+import { CheckIcon, DownloadIcon } from '@radix-ui/react-icons';
+import { Flex, Box, Text, Badge } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
-
-import Icon from '@shared/renderer/components/Icon';
 
 import getCategoryIcon from './getCategoryIcon';
 
@@ -24,55 +23,99 @@ export default function MarketplaceCard({
   const isOfficial = listing.author === 'xnapify Team';
 
   return (
-    <div
-      className={clsx(s.card, isFeatured, s.featuredCard)}
+    <Flex
+      direction='column'
       onClick={() => onClick(listing)}
       role='button'
       tabIndex={0}
       onKeyDown={e => e.key === 'Enter' && onClick(listing)}
+      className={`${s.cardFlex} ${isFeatured ? s.cardFeatured : s.cardNormal}`}
     >
-      <div className={s.cardIcon}>
-        {listing.icon ? (
-          <img src={listing.icon} alt={listing.name} />
-        ) : (
-          <Icon name={getCategoryIcon(listing.category)} size={32} />
-        )}
-      </div>
-      <div className={s.cardBody}>
-        <h3 className={s.cardName}>{listing.name}</h3>
-        <p className={s.cardDescription}>
-          {listing.short_description || listing.description}
-        </p>
-        <div className={s.cardMeta}>
-          <span className={s.cardInstalls}>
-            <Icon name='download' size={14} />{' '}
-            {(listing.install_count || 0).toLocaleString()}
-          </span>
-          {listing.author && (
-            <span className={s.cardAuthor}>
-              {t('admin:hub.byAuthor', 'by {{author}}', {
-                author: listing.author,
-              })}
-              {isOfficial && (
-                <span
-                  className={s.officialBadge}
-                  title={t(
-                    'admin:hub.officialBadge',
-                    'Official xnapify Extension',
-                  )}
-                >
-                  <Icon name='check' size={10} />
-                </span>
-              )}
-            </span>
+      {isFeatured && <Box className={s.featuredOverlay} />}
+
+      <Flex gap='3' align='start' className={s.headerFlex}>
+        <Box
+          className={`${s.iconBox} ${isFeatured ? s.iconBoxFeatured : s.iconBoxNormal}`}
+        >
+          {listing.icon ? (
+            <img
+              src={listing.icon}
+              alt={listing.name}
+              className={s.iconImage}
+            />
+          ) : (
+            (() => {
+              const Comp = getCategoryIcon(listing.category);
+              return (
+                <Comp
+                  width={isFeatured ? 28 : 24}
+                  height={isFeatured ? 28 : 24}
+                />
+              );
+            })()
           )}
-        </div>
-        <div className={s.cardFooter}>
-          <span className={s.cardCategory}>{listing.category}</span>
-          <span className={s.cardVersion}>v{listing.version}</span>
-        </div>
-      </div>
-    </div>
+        </Box>
+        <Box className={s.infoBox}>
+          <Text
+            as='h3'
+            size={isFeatured ? '4' : '3'}
+            weight='bold'
+            className={s.titleText}
+          >
+            {listing.name}
+          </Text>
+          {listing.author && (
+            <Flex align='center' gap='1'>
+              <Text as='span' size='1' color='gray'>
+                {t('admin:hub.byAuthor', 'by {{author}}', {
+                  author: listing.author,
+                })}
+              </Text>
+              {isOfficial && (
+                <Badge
+                  size='small'
+                  className={s.officialBadge}
+                  color='indigo'
+                  radius='full'
+                  variant='soft'
+                >
+                  <CheckIcon width={10} height={10} className={s.checkIcon} />
+                  Official
+                </Badge>
+              )}
+            </Flex>
+          )}
+        </Box>
+      </Flex>
+
+      <Box className={s.descriptionBox}>
+        <Text
+          as='p'
+          size='2'
+          color='gray'
+          className={`${s.descText} ${isFeatured ? s.descTextFeatured : s.descTextNormal}`}
+        >
+          {listing.short_description || listing.description}
+        </Text>
+      </Box>
+
+      <Flex align='center' justify='between' className={s.footerFlex}>
+        <Badge size='small' color='gray' radius='full' variant='surface'>
+          {listing.category}
+        </Badge>
+        <Flex gap='3' align='center'>
+          <Flex align='center' gap='1' className={s.downloadsFlex}>
+            <DownloadIcon width={14} height={14} />
+            <Text as='span' size='1' weight='medium'>
+              {(listing.install_count || 0).toLocaleString()}
+            </Text>
+          </Flex>
+          <Text as='span' size='1' color='gray'>
+            v{listing.version}
+          </Text>
+        </Flex>
+      </Flex>
+    </Flex>
   );
 }
 

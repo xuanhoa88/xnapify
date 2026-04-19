@@ -7,16 +7,14 @@
 
 import { forwardRef } from 'react';
 
-import clsx from 'clsx';
+import { Switch, Flex, Text } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
-import { useFormContext } from 'react-hook-form';
+import { Controller, useFormContext } from 'react-hook-form';
 
-import { useFormField, useMergeRefs } from '../FormContext';
-
-import s from './FormSwitch.css';
+import { useFormField } from '../FormContext';
 
 /**
- * FormSwitch - Toggle switch (modern alternative to checkbox)
+ * FormSwitch - Toggle switch backed by Radix Themes
  *
  * Usage:
  *   <Form.Field name="notifications">
@@ -27,29 +25,35 @@ const FormSwitch = forwardRef(function FormSwitch$(
   { label, className, disabled, ...props },
   forwardedRef,
 ) {
-  const { id, name } = useFormField();
-  const { register } = useFormContext();
-
-  // Get registration props including ref
-  const { ref: registerRef, ...registerProps } = register(name);
-
-  // Merge refs
-  const handleRef = useMergeRefs(registerRef, forwardedRef);
+  const { id, name, error } = useFormField();
+  const { control } = useFormContext();
 
   return (
-    <label className={clsx(s.switchWrapper, className)} htmlFor={id}>
-      <input
-        id={id}
-        type='checkbox'
-        disabled={disabled}
-        className={s.input}
-        {...registerProps}
-        {...props}
-        ref={handleRef}
-      />
-      <span className={s.slider} />
-      {label && <span className={s.label}>{label}</span>}
-    </label>
+    <Controller
+      name={name}
+      control={control}
+      render={({ field }) => (
+        <Text as='label' size='2'>
+          <Flex gap='2' align='center' className={className}>
+            <Switch
+              id={id}
+              disabled={disabled}
+              checked={field.value || false}
+              color={error ? 'red' : undefined}
+              onCheckedChange={field.onChange}
+              onBlur={field.onBlur}
+              ref={ref => {
+                field.ref(ref);
+                if (typeof forwardedRef === 'function') forwardedRef(ref);
+                else if (forwardedRef) forwardedRef.current = ref;
+              }}
+              {...props}
+            />
+            {label}
+          </Flex>
+        </Text>
+      )}
+    />
   );
 });
 

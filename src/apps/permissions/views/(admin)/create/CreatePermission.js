@@ -7,16 +7,17 @@
 
 import { useState, useCallback, useRef } from 'react';
 
+import { LockOpen1Icon } from '@radix-ui/react-icons';
+import { Box, Flex, Text, Heading, Button } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import * as Box from '@shared/renderer/components/Box';
-import Button from '@shared/renderer/components/Button';
-import ConfirmModal from '@shared/renderer/components/ConfirmModal';
+// import { Flex, Heading, Text, Box } , Button } from '@radix-ui/themes';
+// import { Button } , Button } from '@radix-ui/themes';
 import Form, { useFormContext } from '@shared/renderer/components/Form';
 import { useHistory } from '@shared/renderer/components/History';
-import Icon from '@shared/renderer/components/Icon';
+import Modal from '@shared/renderer/components/Modal';
 
 import { createPermissionFormSchema } from '../../../validator/admin';
 import { createPermission, isPermissionCreateLoading } from '../redux';
@@ -25,10 +26,10 @@ import s from './CreatePermission.css';
 
 export default function CreatePermission() {
   const dispatch = useDispatch();
-  const { t } = useTranslation();
+
   const history = useHistory();
   const loading = useSelector(isPermissionCreateLoading);
-  const [error, setError] = useState(null);
+  const [, setError] = useState(null);
   const confirmBackModalRef = useRef(null);
   const isDirtyRef = useRef(false);
 
@@ -80,48 +81,43 @@ export default function CreatePermission() {
   };
 
   return (
-    <div className={s.root}>
-      <Box.Header
-        icon={<Icon name='key' size={24} />}
-        title={t('admin:permissions.create.title', 'Create New Permission')}
-        subtitle={t(
-          'admin:permissions.create.subtitle',
-          'Define a new access control rule',
-        )}
+    <Box className={s.containerBox}>
+      <Flex
+        align='center'
+        justify='between'
+        wrap='wrap'
+        gap='4'
+        className={s.headerFlex}
       >
-        <Button
-          variant='secondary'
-          onClick={() => handleCancel(isDirtyRef.current)}
-        >
-          <Icon name='arrowLeft' />
-          {t(
-            'admin:permissions.create.backToPermissions',
-            'Back to Permissions',
-          )}
-        </Button>
-      </Box.Header>
+        <Flex align='center' gap='3'>
+          <Flex align='center' justify='center' className={s.headerIconBox}>
+            <LockOpen1Icon width={24} height={24} />
+          </Flex>
+          <Flex direction='column'>
+            <Heading size='6' className={s.headerHeading}>
+              {null}
+            </Heading>
+          </Flex>
+        </Flex>
+      </Flex>
 
-      <div className={s.formContainer}>
-        <Form.Error message={error} />
+      <Form
+        schema={createPermissionFormSchema}
+        defaultValues={defaultValues}
+        onSubmit={handleSubmit}
+      >
+        <CreatePermissionFormFields
+          onCancel={handleCancel}
+          loading={loading}
+          isDirtyRef={isDirtyRef}
+        />
+      </Form>
 
-        <Form
-          schema={createPermissionFormSchema}
-          defaultValues={defaultValues}
-          onSubmit={handleSubmit}
-          className={s.form}
-        >
-          <CreatePermissionFormFields
-            onCancel={handleCancel}
-            loading={loading}
-            isDirtyRef={isDirtyRef}
-          />
-        </Form>
-      </div>
-      <ConfirmModal.Back
+      <Modal.ConfirmBack
         ref={confirmBackModalRef}
         onConfirm={handleConfirmBack}
       />
-    </div>
+    </Box>
   );
 }
 
@@ -149,41 +145,45 @@ function CreatePermissionFormFields({ onCancel, loading, isDirtyRef }) {
   const generatedName = resource && action ? `${resource}:${action}` : '-';
 
   return (
-    <>
-      <div className={s.formSection}>
-        <h3 className={s.sectionTitle}>
+    <Flex direction='column' gap='6'>
+      <Box>
+        <Heading as='h3' size='4' className={s.sectionHeading}>
           {t(
             'admin:permissions.create.permissionInformation',
             'Permission Information',
           )}
-        </h3>
+        </Heading>
 
-        <div className={s.formRow}>
-          <Form.Field
-            name='resource'
-            label={t('admin:permissions.create.resource', 'Resource')}
-            required
-          >
-            <Form.Input
-              placeholder={t(
-                'admin:permissions.create.resourcePlaceholder',
-                'e.g. users, posts, comments',
-              )}
-            />
-          </Form.Field>
-          <Form.Field
-            name='action'
-            label={t('admin:permissions.create.action', 'Action')}
-            required
-          >
-            <Form.Input
-              placeholder={t(
-                'admin:permissions.create.actionPlaceholder',
-                'e.g. read, write, delete',
-              )}
-            />
-          </Form.Field>
-        </div>
+        <Flex gap='4' direction={{ initial: 'column', sm: 'row' }}>
+          <Box className={s.flex1}>
+            <Form.Field
+              name='resource'
+              label={t('admin:permissions.create.resource', 'Resource')}
+              required
+            >
+              <Form.Input
+                placeholder={t(
+                  'admin:permissions.create.resourcePlaceholder',
+                  'e.g. users, posts, comments',
+                )}
+              />
+            </Form.Field>
+          </Box>
+          <Box className={s.flex1}>
+            <Form.Field
+              name='action'
+              label={t('admin:permissions.create.action', 'Action')}
+              required
+            >
+              <Form.Input
+                placeholder={t(
+                  'admin:permissions.create.actionPlaceholder',
+                  'e.g. read, write, delete',
+                )}
+              />
+            </Form.Field>
+          </Box>
+        </Flex>
 
         <Form.Field
           name='description'
@@ -197,44 +197,49 @@ function CreatePermissionFormFields({ onCancel, loading, isDirtyRef }) {
             rows={3}
           />
         </Form.Field>
-      </div>
+      </Box>
 
-      <div className={s.formSection}>
-        <h3 className={s.sectionTitle}>
+      <Box>
+        <Heading as='h3' size='4' className={s.sectionHeading}>
           {t('admin:permissions.create.status', 'Status')}
-        </h3>
+        </Heading>
 
         <Form.Field name='is_active'>
           <Form.Checkbox
             label={t('admin:permissions.create.isActive', 'Active')}
           />
         </Form.Field>
-        <p className={s.checkboxHint}>
+        <Text as='p' size='1' color='gray' className={s.hintText}>
           {t(
             'admin:permissions.create.isActiveHint',
             'Inactive permissions will not be enforced in authorization checks',
           )}
-        </p>
-      </div>
+        </Text>
+      </Box>
 
-      <div className={s.formSection}>
-        <h3 className={s.sectionTitle}>
+      <Box>
+        <Heading as='h3' size='4' className={s.sectionHeading}>
           {t('admin:permissions.create.generatedName', 'Generated Name')}
-        </h3>
-        <div className={s.previewName}>{generatedName}</div>
-        <p className={s.previewHint}>
+        </Heading>
+        <Box className={s.namePreview}>{generatedName}</Box>
+        <Text as='p' size='1' color='gray' className={s.hintText2}>
           {t(
             'admin:permissions.create.generatedNameHint',
             'Permission name is auto-generated from resource and action',
           )}
-        </p>
-      </div>
+        </Text>
+      </Box>
 
-      <div className={s.formActions}>
-        <Button variant='secondary' onClick={handleCancel} disabled={loading}>
+      <Flex gap='3' justify='end' className={s.actionsFlex}>
+        <Button
+          variant='soft'
+          color='gray'
+          onClick={handleCancel}
+          disabled={loading}
+        >
           {t('admin:permissions.create.cancel', 'Cancel')}
         </Button>
-        <Button variant='primary' type='submit' loading={loading}>
+        <Button variant='solid' color='indigo' type='submit' loading={loading}>
           {loading
             ? t('admin:permissions.create.creating', 'Creating...')
             : t(
@@ -242,8 +247,8 @@ function CreatePermissionFormFields({ onCancel, loading, isDirtyRef }) {
                 'Create Permission',
               )}
         </Button>
-      </div>
-    </>
+      </Flex>
+    </Flex>
   );
 }
 

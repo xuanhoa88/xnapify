@@ -13,34 +13,12 @@ import {
   useState,
 } from 'react';
 
-import clsx from 'clsx';
+import { Flex, Text, Box, IconButton } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 
-import Button from '../Button';
 import Icon from '../Icon';
 
-// eslint-disable-next-line css-modules/no-unused-class -- classes accessed dynamically via s[variant] and s[placementClasses[placement]]
-import s from './Toast.css';
-
-/**
- * Toast - Notification component controlled via ref
- *
- * Usage:
- *   const toastRef = useRef();
- *
- *   // Show toast imperatively
- *   toastRef.current.show({
- *     variant: 'success',
- *     message: 'Operation successful!',
- *     title: 'Success', // optional
- *     duration: 4000,   // optional, default 4000ms
- *   });
- *
- *   // Hide toast imperatively
- *   toastRef.current.hide();
- *
- *   <Toast ref={toastRef} placement="top-center" />
- */
+import s from './Index.css';
 
 // Icon mapping for each variant
 const variantIcons = {
@@ -50,14 +28,39 @@ const variantIcons = {
   info: 'info',
 };
 
-// CSS class mapping for each placement
-const placementClasses = {
-  'top-right': 'topRight',
-  'top-left': 'topLeft',
-  'top-center': 'topCenter',
-  'bottom-right': 'bottomRight',
-  'bottom-left': 'bottomLeft',
-  'bottom-center': 'bottomCenter',
+// Placement styles mapping
+const getPlacementClass = placement => {
+  switch (placement) {
+    case 'top-right':
+      return s['placement-top-right'];
+    case 'top-left':
+      return s['placement-top-left'];
+    case 'top-center':
+      return s['placement-top-center'];
+    case 'bottom-right':
+      return s['placement-bottom-right'];
+    case 'bottom-left':
+      return s['placement-bottom-left'];
+    case 'bottom-center':
+      return s['placement-bottom-center'];
+    default:
+      return s['placement-top-center'];
+  }
+};
+
+const getVariantColor = variant => {
+  switch (variant) {
+    case 'success':
+      return 'green';
+    case 'error':
+      return 'red';
+    case 'warning':
+      return 'amber';
+    case 'info':
+      return 'blue';
+    default:
+      return 'gray';
+  }
 };
 
 const Toast = forwardRef(function Toast(
@@ -160,39 +163,68 @@ const Toast = forwardRef(function Toast(
 
   const { variant, title, message } = config;
   const iconName = variantIcons[variant];
-  const placementClass = placementClasses[placement] || 'topCenter';
+  const color = getVariantColor(variant);
+
+  const placementClass = getPlacementClass(placement);
+  const variantClass = s[`variant-${variant}`] || s['variant-info'];
+
+  // Transition logic
+  const isTop = placement.includes('top');
+  const isCenter = placement.includes('center');
+
+  let transitionClass;
+  if (isExiting) {
+    if (isTop && isCenter) transitionClass = s.exitingTopCenter;
+    else if (!isTop && isCenter) transitionClass = s.exitingBottomCenter;
+    else if (isTop) transitionClass = s.exitingTop;
+    else transitionClass = s.exitingBottom;
+  } else {
+    if (isTop && isCenter) transitionClass = s.enteredTopCenter;
+    else if (!isTop && isCenter) transitionClass = s.enteredBottomCenter;
+    else if (isTop) transitionClass = s.enteredTop;
+    else transitionClass = s.enteredBottom;
+  }
+
+  const containerClasses = [
+    s.toastContainer,
+    placementClass,
+    variantClass,
+    transitionClass,
+    className,
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
-    <div
-      className={clsx(
-        s.toast,
-        s[variant],
-        s[placementClass],
-        { [s.exiting]: isExiting },
-        className,
-      )}
-      role='alert'
-      aria-live='polite'
-    >
-      <div className={s.iconWrapper}>
-        <Icon name={iconName} size={20} className={s.icon} />
-      </div>
-      <div className={s.content}>
-        {title && <div className={s.title}>{title}</div>}
-        <div className={s.message}>{message}</div>
-      </div>
-      {closable && (
-        <Button
-          variant='ghost'
-          iconOnly
-          className={s.closeButton}
-          onClick={hide}
-          aria-label='Close notification'
-        >
-          <Icon name='close' size={16} />
-        </Button>
-      )}
-    </div>
+    <Box className={containerClasses} role='alert' aria-live='polite'>
+      <Flex p='3' gap='3' align='start'>
+        <Box className={s.iconBox}>
+          <Icon name={iconName} size={20} />
+        </Box>
+        <Flex direction='column' gap='1' className={s.contentFlex}>
+          {title && (
+            <Text size='2' weight='bold' className={s.titleText}>
+              {title}
+            </Text>
+          )}
+          <Text size='2' className={s.messageText}>
+            {message}
+          </Text>
+        </Flex>
+        {closable && (
+          <IconButton
+            variant='ghost'
+            color={color}
+            size='1'
+            onClick={hide}
+            aria-label='Close notification'
+            className={s.closeButton}
+          >
+            <Icon name='close' size={16} />
+          </IconButton>
+        )}
+      </Flex>
+    </Box>
   );
 });
 

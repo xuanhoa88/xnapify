@@ -13,6 +13,7 @@ import {
   useState,
 } from 'react';
 
+import { Button } from '@radix-ui/themes';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 
@@ -90,18 +91,19 @@ const MentionList = forwardRef(function MentionList$({ items, command }, ref) {
   return (
     <div className={s.mentionList} role='listbox'>
       {items.map((item, index) => (
-        <button
+        <Button
           key={item}
           role='option'
+          variant={index === selectedIndex ? 'soft' : 'ghost'}
+          color='gray'
           aria-selected={index === selectedIndex}
-          className={clsx(s.mentionItem, {
+          onClick={() => selectItem(index)}
+          className={clsx(s.mentionItem, s.alignStart, {
             [s.isSelected]: index === selectedIndex,
           })}
-          onClick={() => selectItem(index)}
-          type='button'
         >
           @{item}
-        </button>
+        </Button>
       ))}
     </div>
   );

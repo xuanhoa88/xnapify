@@ -1,0 +1,8 @@
+:global(.rightPlacement) {
+  position: fixed;
+  inset: 0 0 0 auto;
+  height: 100vh;
+  max-width: 24rem;
+  border-radius: 0;
+  animation: none;
+}

@@ -1,115 +1,68 @@
-/**
- * xnapify (https://github.com/xuanhoa88/xnapify/)
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE.txt file in the root directory of this source tree.
- */
-
-/* Role Breakdown */
-.sectionTitle {
-  margin: 0 0 var(--spacing-3) 0;
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
+.loadingText {
+  display: block;
+  margin-top: var(--space-4);
 }
 
-.roleBreakdown {
-  margin-bottom: var(--spacing-5);
-  padding-bottom: var(--spacing-4);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.rolesList {
+.contentFlex {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-2);
+  gap: var(--space-5);
+  margin-top: var(--space-4);
 }
 
-.roleItem {
+.roleBreakdownHeading {
+  margin-bottom: var(--space-3);
+  color: var(--gray-12);
+}
+
+.roleListFlex {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--spacing-2) var(--spacing-3);
-  background: var(--color-background-secondary);
-  border-radius: var(--radius-md);
+  flex-direction: column;
+  gap: var(--space-2);
 }
 
-.roleName {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-primary);
+.roleItemFlex {
+  padding: var(--space-2) var(--space-3);
+  background-color: var(--gray-2);
+  border-radius: var(--radius-2);
+  border: 1px solid var(--gray-4);
 }
 
-.rolePermCount {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
+.roleItemHeading {
+  color: var(--gray-12);
 }
 
-/* Permissions */
-.permissionsSection {
-  margin-top: var(--spacing-2);
+.permissionsBox {
+  background-color: var(--gray-2);
+  padding: var(--space-4);
+  border-radius: var(--radius-3);
 }
 
-.permissionsList {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-2);
+.permissionsHeading {
+  margin-bottom: var(--space-4);
+  color: var(--gray-12);
 }
 
-.permissionBadge {
-  display: inline-flex;
-  padding: var(--spacing-2) var(--spacing-3);
-  background: #f0fdf4;
-  color: #166534;
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
+.permissionsCountText {
+  margin-left: var(--space-2);
+  color: var(--gray-11);
+  font-weight: normal;
 }
 
-.noPermissions {
-  color: var(--color-text-secondary);
+.permissionTag {
+  background-color: var(--indigo-3);
+  color: var(--indigo-11);
+  border-radius: var(--radius-full);
+  padding: var(--space-1) var(--space-3);
+  font-family: monospace;
+  font-weight: 500;
+}
+
+.emptyPermissionsText {
   font-style: italic;
-  font-size: var(--font-size-sm);
-}
-
-/* =============================================================================
-   RESPONSIVE DESIGN - MOBILE
-   ============================================================================= */
-
-@media (max-width: 768px) {
-  .sectionTitle {
-    font-size: var(--font-size-xs);
-  }
-
-  .roleItem {
-    padding: var(--spacing-1) var(--spacing-2);
-  }
-
-  .roleName {
-    font-size: var(--font-size-xs);
-  }
-
-  .rolePermCount {
-    font-size: 10px;
-  }
-
-  .permissionBadge {
-    padding: var(--spacing-1) var(--spacing-2);
-    font-size: 10px;
-  }
-
-  .noPermissions {
-    font-size: var(--font-size-xs);
-  }
-}
-
-@media (max-width: 375px) {
-  .roleBreakdown {
-    margin-bottom: var(--spacing-3);
-    padding-bottom: var(--spacing-3);
-  }
-
-  .permissionsList {
-    gap: var(--spacing-1);
-  }
+  margin: 0;
+  padding: var(--space-4);
+  text-align: center;
+  background-color: var(--color-panel-solid);
+  border-radius: var(--radius-2);
 }

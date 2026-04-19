@@ -9,7 +9,7 @@
 .wrapper {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-2);
+  gap: var(--space-2);
 }
 
 /* Search Container */
@@ -23,7 +23,7 @@
 /* Search Icon */
 .searchIcon {
   position: absolute;
-  left: var(--spacing-3);
+  left: var(--space-3);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -34,7 +34,7 @@
 }
 
 .searchContainer:focus-within .searchIcon {
-  color: var(--color-primary);
+  color: var(--indigo-9);
 }
 
 /* Search Input */
@@ -43,13 +43,13 @@
   box-sizing: border-box;
   width: 100%;
   height: 40px;
-  padding: 0 var(--spacing-4);
-  padding-left: calc(var(--spacing-3) + 28px);
-  padding-right: calc(var(--spacing-3) + 32px);
+  padding: 0 var(--space-4);
+  padding-left: calc(var(--space-3) + 28px);
+  padding-right: calc(var(--space-3) + 32px);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-sm);
-  font-family: var(--font-family-base);
+  border-radius: var(--radius-3);
+  font-size: var(--font-size-1);
+  font-family: var(--default-font-family);
   background: var(--color-background);
   color: var(--color-text-primary);
   transition: var(--transition-base);
@@ -61,7 +61,7 @@
 
 .searchInput:focus {
   outline: none;
-  border-color: var(--color-primary);
+  border-color: var(--indigo-9);
   box-shadow: 0 0 0 3px rgb(59 130 246 / 15%);
 }
 
@@ -78,7 +78,7 @@
 /* Search Clear Button */
 .searchClear {
   position: absolute;
-  right: var(--spacing-3);
+  right: var(--space-3);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -103,7 +103,7 @@
 }
 
 .searchContainer:focus-within .searchClear {
-  color: var(--color-primary);
+  color: var(--indigo-9);
 }
 
 /* Checkbox Group Container */
@@ -111,9 +111,9 @@
   display: flex;
   flex-direction: column;
   gap: 0;
-  padding: var(--spacing-2);
+  padding: var(--space-2);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-3);
   background: var(--color-background);
   overflow-y: auto;
 
@@ -147,17 +147,17 @@
 .checkboxItem {
   display: flex;
   align-items: flex-start;
-  gap: var(--spacing-3);
+  gap: var(--space-3);
   cursor: pointer;
-  padding: var(--spacing-2) var(--spacing-4);
+  padding: var(--space-2) var(--space-4);
   margin: 0;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-2);
   transition: var(--transition-base);
   border: none;
 }
 
 .checkboxItem:hover {
-  background-color: var(--color-background-secondary);
+  background-color: var(--gray-2);
 }
 
 .checkboxItem input[type='checkbox'] {
@@ -166,7 +166,7 @@
   height: 16px;
   margin: 1px 0 0;
   flex-shrink: 0;
-  accent-color: var(--color-primary);
+  accent-color: var(--indigo-9);
 }
 
 .checkboxItem input[type='checkbox']:disabled {
@@ -194,13 +194,13 @@
 
 /* Loading State */
 .loading {
-  padding: var(--spacing-4);
+  padding: var(--space-4);
   text-align: center;
   color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-1);
   font-style: italic;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-3);
   background: var(--color-background);
   min-height: 160px;
   display: flex;
@@ -210,19 +210,19 @@
 
 /* Loading More */
 .loadingMore {
-  padding: var(--spacing-3);
+  padding: var(--space-3);
   text-align: center;
   color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-1);
   font-style: italic;
 }
 
 /* Empty State */
 .empty {
-  padding: var(--spacing-4);
+  padding: var(--space-4);
   text-align: center;
   color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-1);
   font-style: italic;
 }
 
@@ -247,10 +247,10 @@
 .groupHeader {
   display: flex;
   align-items: center;
-  gap: var(--spacing-3);
+  gap: var(--space-3);
   margin: 0;
-  padding: var(--spacing-3) var(--spacing-4);
-  background: var(--color-background-secondary);
+  padding: var(--space-3) var(--space-4);
+  background: var(--gray-2);
   position: sticky;
   top: 0;
   z-index: 1;
@@ -269,7 +269,7 @@
   height: 16px;
   margin: 0;
   flex-shrink: 0;
-  accent-color: var(--color-primary);
+  accent-color: var(--indigo-9);
 }
 
 .groupCheckbox:disabled {
@@ -280,7 +280,7 @@
 /* Group Title */
 .groupTitle {
   margin: 0;
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-1);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
   text-transform: capitalize;
@@ -299,13 +299,13 @@
   display: flex;
   flex-direction: column;
   gap: 0;
-  padding: var(--spacing-1) 0;
+  padding: var(--space-1) 0;
 }
 
 /* Item Label */
 .itemLabel {
   display: block;
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-1);
   font-weight: var(--font-weight-medium);
   color: var(--color-text-primary);
   line-height: 1.4;
@@ -319,13 +319,13 @@
   .searchInput {
     height: 36px;
     font-size: var(--font-size-xs);
-    padding-left: calc(var(--spacing-2) + 24px);
-    padding-right: calc(var(--spacing-2) + 28px);
+    padding-left: calc(var(--space-2) + 24px);
+    padding-right: calc(var(--space-2) + 28px);
   }
 
   .checkboxItem {
-    padding: var(--spacing-1) var(--spacing-3);
-    gap: var(--spacing-2);
+    padding: var(--space-1) var(--space-3);
+    gap: var(--space-2);
   }
 
   .checkboxItem input[type='checkbox'] {
@@ -342,8 +342,8 @@
   }
 
   .groupHeader {
-    padding: var(--spacing-2) var(--spacing-3);
-    gap: var(--spacing-2);
+    padding: var(--space-2) var(--space-3);
+    gap: var(--space-2);
   }
 
   .groupCheckbox {
@@ -360,13 +360,13 @@
   }
 
   .groupItems {
-    padding: var(--spacing-1) 0;
+    padding: var(--space-1) 0;
   }
 
   .loading,
   .empty,
   .loadingMore {
-    padding: var(--spacing-3);
+    padding: var(--space-3);
     font-size: var(--font-size-xs);
   }
 }

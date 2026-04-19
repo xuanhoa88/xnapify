@@ -1,183 +1,87 @@
-/**
- * xnapify (https://github.com/xuanhoa88/xnapify/)
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE.txt file in the root directory of this source tree.
- */
-
-/* =============================================================================
-   LANGUAGE SWITCHER WRAPPER
-   ============================================================================= */
-
-.wrapper {
-  position: relative;
+.langBtn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-3);
+  color: var(--gray-11);
+  transition: background-color 0.2s;
+  cursor: pointer;
+  background-color: transparent;
 }
 
-/* =============================================================================
-   TRIGGER BUTTON
-   ============================================================================= */
+.langBtn:hover {
+  background-color: var(--gray-3);
+}
 
-.trigger {
-  position: relative;
+.langIconWrap {
+  width: 20px;
+  height: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--spacing-1);
-  padding: var(--spacing-2) var(--spacing-3);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-md);
-  color: rgb(255 255 255 / 70%);
-  cursor: pointer;
-  transition: all var(--transition-fast);
 }
 
-.trigger:hover {
-  background-color: rgb(255 255 255 / 10%);
-  color: white;
+.langText {
+  display: none;
 }
 
-.trigger:active {
-  background-color: rgb(255 255 255 / 15%);
-  transform: scale(0.95);
+@media (min-width: 768px) {
+  .langText {
+    display: block;
+  }
 }
 
-.globeIcon {
-  font-size: 14px;
-  line-height: 1;
+.chevronIcon {
+  display: flex;
+  transition: transform 0.2s;
+  color: var(--gray-9);
 }
 
-.code {
-  font-weight: var(--font-weight-semibold);
-  letter-spacing: 0.5px;
-}
-
-.chevron {
-  transition: transform var(--transition-fast);
-  color: rgb(255 255 255 / 50%);
-}
-
-.chevronOpen {
+.chevronIconOpen {
   transform: rotate(180deg);
 }
 
-/* =============================================================================
-   DROPDOWN MENU
-   ============================================================================= */
-
-.dropdown {
+.langDropdownBox {
   position: absolute;
-  top: calc(100% + 6px);
+  top: calc(100% + 4px);
   right: 0;
   min-width: 160px;
-  background: rgb(20 25 35);
-  border: 1px solid rgb(255 255 255 / 12%);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 8px 24px rgb(0 0 0 / 40%);
-  z-index: 1000;
-  animation: dropdownSlide 0.15s ease-out;
-  overflow: hidden;
+  background-color: var(--color-panel-solid);
+  border: 1px solid var(--gray-a6);
+  border-radius: var(--radius-3);
+  box-shadow: var(--shadow-3);
+  padding: var(--space-1);
+  z-index: 100;
 }
 
-@keyframes dropdownSlide {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* =============================================================================
-   OPTION ITEMS
-   ============================================================================= */
-
-.option {
+.localeItem {
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  width: 100%;
-  padding: var(--spacing-2) var(--spacing-3);
-  background-color: transparent;
-  border: none;
-  font-family: inherit;
-  font-size: var(--font-size-sm);
-  color: rgb(255 255 255 / 70%);
-  cursor: pointer;
-  transition: all var(--transition-fast);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-2);
   text-align: left;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  background-color: transparent;
+  color: var(--gray-12);
 }
 
-.option:hover {
-  background-color: rgb(255 255 255 / 8%);
-  color: white;
+.localeItem:hover {
+  background-color: var(--gray-3);
 }
 
-.optionActive {
-  color: white;
-  background-color: rgb(255 255 255 / 5%);
+.localeItemActive {
+  background-color: var(--indigo-3);
+  color: var(--indigo-11);
 }
 
-.optionName {
-  flex: 1;
+.localeItemActive:hover {
+  background-color: var(--indigo-3);
 }
 
-.checkmark {
-  color: var(--color-success);
-  font-size: var(--font-size-xs);
-  margin-left: var(--spacing-2);
-}
-
-/* =============================================================================
-   MOBILE
-   ============================================================================= */
-
-@media (max-width: 768px) {
-  .trigger {
-    padding: var(--spacing-2);
-  }
-
-  .globeIcon {
-    font-size: 16px;
-  }
-
-  .code {
-    display: none;
-  }
-
-  .chevron {
-    display: block;
-  }
-
-  .dropdown {
-    min-width: 140px;
-    right: -40px;
-  }
-
-  .option {
-    min-height: 40px;
-    padding: var(--spacing-2) var(--spacing-3);
-    font-size: var(--font-size-sm);
-  }
-}
-
-@media (max-width: 375px) {
-  .trigger {
-    padding: var(--spacing-1) var(--spacing-2);
-  }
-
-  .globeIcon {
-    font-size: 14px;
-  }
-
-  .option {
-    min-height: 36px;
-    padding: var(--spacing-2);
-    font-size: var(--font-size-xs);
-  }
+.activeCheckIcon {
+  color: var(--indigo-11);
 }

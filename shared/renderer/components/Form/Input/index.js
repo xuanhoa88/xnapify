@@ -7,16 +7,14 @@
 
 import { forwardRef } from 'react';
 
-import clsx from 'clsx';
+import { TextField } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useFormContext } from 'react-hook-form';
 
 import { useFormField, useMergeRefs } from '../FormContext';
 
-import s from './FormInput.css';
-
 /**
- * FormInput - Simple input element to be used inside Form.Field
+ * FormInput - Simple input element to be used inside Form.Field backed by Radix Themes
  *
  * Usage:
  *   <Form.Field name="email" label="Email">
@@ -37,12 +35,13 @@ const FormInput = forwardRef(function FormInput$(
   const handleRef = useMergeRefs(registerRef, forwardedRef);
 
   return (
-    <input
+    <TextField.Root
       id={id}
       type={type}
       placeholder={placeholder}
       disabled={disabled}
-      className={clsx(s.input, { [s.inputError]: error }, className)}
+      color={error ? 'red' : undefined}
+      className={className}
       // eslint-disable-next-line jsx-a11y/no-autofocus
       autoFocus={autoFocus}
       {...registerProps}

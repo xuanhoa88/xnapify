@@ -278,6 +278,7 @@ export class BaseExtensionManager {
     }
 
     // Store the work as a promise so other callers can await it.
+    // eslint-disable-next-line no-underscore-dangle
     this[SYNC_PROMISE] = this._performSync(preloadedExtensions);
     try {
       await this[SYNC_PROMISE];

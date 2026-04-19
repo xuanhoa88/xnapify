@@ -27,7 +27,7 @@ export const fetchRoles = createAsyncThunk(
         query: {
           page,
           limit,
-          search: search || undefined,
+          search,
         },
       });
 
@@ -130,7 +130,7 @@ export const fetchRoleUsers = createAsyncThunk(
         query: {
           page,
           limit,
-          search: search || undefined,
+          search,
         },
       });
 
@@ -157,7 +157,7 @@ export const fetchRoleGroups = createAsyncThunk(
         query: {
           page,
           limit,
-          search: search || undefined,
+          search,
         },
       });
 

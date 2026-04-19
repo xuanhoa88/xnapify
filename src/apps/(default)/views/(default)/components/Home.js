@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { Box } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 
 import FeaturesPreview from './FeaturesPreview';
@@ -16,12 +17,12 @@ import s from './Home.css';
 
 function Home({ loading, payload, featuresData }) {
   return (
-    <div className={s.root}>
+    <Box className={s.bgBackground}>
       <HeroSection />
       <FeaturesPreview featuresData={featuresData} />
       <NewsSection loading={loading} news={payload} />
       <Feedback />
-    </div>
+    </Box>
   );
 }
 

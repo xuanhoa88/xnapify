@@ -34,9 +34,11 @@
  */
 
 import 'normalize.css';
-import './components/variables.css';
+import '@radix-ui/themes/styles.css';
+
 import React, { useMemo } from 'react';
 
+import { Theme } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { I18nextProvider } from 'react-i18next';
 import { Provider as ReduxProvider } from 'react-redux';
@@ -90,15 +92,17 @@ export default function App({ context, children }) {
       : {};
 
     return (
-      <ReduxProvider store={context.store}>
-        <I18nextProvider i18n={context.i18n}>
-          <HistoryProvider history={context.history}>
-            <ExtensionProvider registry={registry}>
-              {React.Children.only(children)}
-            </ExtensionProvider>
-          </HistoryProvider>
-        </I18nextProvider>
-      </ReduxProvider>
+      <Theme>
+        <ReduxProvider store={context.store}>
+          <I18nextProvider i18n={context.i18n}>
+            <HistoryProvider history={context.history}>
+              <ExtensionProvider registry={registry}>
+                {React.Children.only(children)}
+              </ExtensionProvider>
+            </HistoryProvider>
+          </I18nextProvider>
+        </ReduxProvider>
+      </Theme>
     );
   }, [context, children]);
 

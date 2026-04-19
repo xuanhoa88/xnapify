@@ -1,0 +1,85 @@
+.stringValue {
+  display: inline-block;
+  color: var(--json-string, #859900);
+  cursor: default;
+  word-break: break-all;
+}
+
+.integerValue {
+  display: inline-block;
+  color: var(--json-integer, #6c71c4);
+}
+
+.floatValue {
+  display: inline-block;
+  color: var(--json-float, #6c71c4);
+}
+
+.booleanValue {
+  display: inline-block;
+  color: var(--json-boolean, #d33682);
+}
+
+.nullValue {
+  display: inline-block;
+  color: var(--json-null, #dc322f);
+  font-size: 11px;
+  font-weight: bold;
+  padding: 1px 2px;
+  border-radius: 3px;
+  background: var(--json-null-bg, rgb(220 50 47 / 6%));
+}
+
+.undefinedValue {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: bold;
+  padding: 1px 2px;
+  border-radius: 3px;
+  color: var(--json-undefined, #93a1a1);
+  background: var(--json-undefined-bg, rgb(147 161 161 / 6%));
+}
+
+.nanValue {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: bold;
+  padding: 1px 2px;
+  border-radius: 3px;
+  color: var(--json-nan, #cb4b16);
+  background: var(--json-nan-bg, rgb(203 75 22 / 6%));
+}
+
+.dateValue {
+  display: inline-block;
+  color: var(--json-date, #2aa198);
+  margin-left: 2px;
+}
+
+.regexpValue {
+  display: inline-block;
+  color: var(--json-regexp, #2aa198);
+}
+
+.functionValue {
+  display: inline-block;
+  color: var(--json-function, #268bd2);
+  cursor: pointer;
+  white-space: pre-line;
+}
+
+.functionValueCollapsed {
+  font-weight: bold;
+}
+
+.pointer {
+  cursor: pointer;
+}
+
+.ellipsis {
+  font-size: 18px;
+  line-height: 10px;
+  cursor: pointer;
+  color: var(--json-ellipsis, #93a1a1);
+  padding: 0 4px;
+}

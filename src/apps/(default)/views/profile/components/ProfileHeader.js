@@ -7,11 +7,11 @@
 
 import { useRef, useCallback, useMemo, useEffect } from 'react';
 
-import clsx from 'clsx';
+import { LoaderIcon, CameraIcon } from '@radix-ui/react-icons';
+import { Flex, Box, Text, Heading } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 
-import Icon from '@shared/renderer/components/Icon';
 import {
   getUserProfile,
   getUserAvatarUrl,
@@ -23,6 +23,9 @@ import {
 
 import s from './ProfileHeader.css';
 
+/**
+ * ProfileHeader strictly rendered with explicit React structures bypassing CSS Module imports.
+ */
 function ProfileHeader() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
@@ -74,64 +77,78 @@ function ProfileHeader() {
   );
 
   return (
-    <div className={s.profileHeader}>
-      <div className={s.avatarSection}>
-        <div
-          className={clsx(s.avatarWrapper, { [s.avatarLoading]: loading })}
+    <Flex align='center' gap='5' className={s.headerContainer}>
+      <Flex direction='column' align='center' className={s.avatarSection}>
+        <Box
           onClick={handleAvatarClick}
           role='button'
           tabIndex={0}
           onKeyDown={e => {
             if (e.key === 'Enter') handleAvatarClick();
           }}
+          className={`${s.avatarBox} ${loading ? s.avatarBoxLoading : ''}`}
         >
           {avatarUrl ? (
             <img src={avatarUrl} alt='Profile' className={s.avatarImg} />
           ) : (
-            <div className={s.avatar}>{avatarInitial}</div>
+            <Text>{avatarInitial}</Text>
           )}
-          <div className={s.avatarOverlay}>
+          <Flex
+            className={`${s.avatarOverlay} avatar-overlay ${loading ? s.avatarOverlayLoading : ''}`}
+            align='center'
+            justify='center'
+          >
             {loading ? (
-              <Icon name='loader' size={24} />
+              <LoaderIcon width={32} height={32} className={s.spinner} />
             ) : (
-              <Icon name='camera' size={24} />
+              <CameraIcon width={32} height={32} />
             )}
-          </div>
-        </div>
-        <input
+          </Flex>
+        </Box>
+        <Box
+          as='input'
           type='file'
           ref={fileInputRef}
-          style={{ display: 'none' }}
+          className={s.avatarInput}
           onChange={handleFileChange}
           accept='image/*'
           disabled={loading}
         />
         {error && (
-          <div className={clsx(s.avatarMessage, s.avatarError)}>{error}</div>
+          <Text size='2' color='red' align='center' className={s.errorText}>
+            {error}
+          </Text>
         )}
-      </div>
+      </Flex>
 
-      <div className={s.userInfo}>
-        <h1 className={s.userName}>
+      <Flex direction='column' className={s.infoSection}>
+        <Heading as='h1' size='7' className={s.displayName}>
           {displayName || t('navigation.profile', 'Profile')}
-        </h1>
-        <p className={s.userEmail}>{(user && user.email) || ''}</p>
-        <div className={s.userStats}>
-          <div className={s.statItem}>
-            <span className={s.statValue}>
+        </Heading>
+        <Text size='3' color='gray' className={s.emailText}>
+          {(user && user.email) || ''}
+        </Text>
+
+        <Flex gap='5' justify={{ initial: 'center', md: 'start' }}>
+          <Flex direction='column' align={{ initial: 'center', md: 'start' }}>
+            <Text size='6' weight='bold' className={s.statValue}>
               {(user && Array.isArray(user.roles) && user.roles.length) || 0}
-            </span>
-            <span className={s.statLabel}>{t('profile.roles', 'Roles')}</span>
-          </div>
-          <div className={s.statItem}>
-            <span className={s.statValue}>
+            </Text>
+            <Text size='2' color='gray' weight='medium' className={s.statLabel}>
+              {t('profile.roles', 'Roles')}
+            </Text>
+          </Flex>
+          <Flex direction='column' align={{ initial: 'center', md: 'start' }}>
+            <Text size='6' weight='bold' className={s.statValue}>
               {(user && Array.isArray(user.groups) && user.groups.length) || 0}
-            </span>
-            <span className={s.statLabel}>{t('profile.groups', 'Groups')}</span>
-          </div>
-        </div>
-      </div>
-    </div>
+            </Text>
+            <Text size='2' color='gray' weight='medium' className={s.statLabel}>
+              {t('profile.groups', 'Groups')}
+            </Text>
+          </Flex>
+        </Flex>
+      </Flex>
+    </Flex>
   );
 }
 

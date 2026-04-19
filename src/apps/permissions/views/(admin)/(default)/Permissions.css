@@ -1,101 +1,102 @@
-/**
- * xnapify (https://github.com/xuanhoa88/xnapify/)
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE.txt file in the root directory of this source tree.
- */
-.root {
-  padding: var(--spacing-8);
-  background: var(--color-background-secondary);
-  flex: 1;
+.containerBox {
+  padding: var(--space-6);
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
-/* Filters Section - matches Users.css */
-.filters {
-  display: grid;
-  grid-template-columns: 1fr auto auto auto;
-  gap: var(--spacing-3);
-  margin-bottom: var(--spacing-6);
-  background: var(--color-background);
-  padding: var(--spacing-4);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--color-border);
-  align-items: center;
+.headerFlex {
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--gray-a6);
+  margin-bottom: var(--space-6);
 }
 
-.filterSearchableSelect {
-  min-width: 140px;
+.headerIconBox {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-3);
+  background-color: var(--gray-3);
+  color: var(--gray-11);
+  flex-shrink: 0;
 }
 
-.filterActions {
+.headerHeading {
+  margin: 0;
+  color: var(--gray-12);
+}
+
+.headerSubtitle {
+  margin: 0;
+  margin-top: var(--space-1);
+}
+
+.errorFlex {
+  border: 1px solid var(--red-6);
+  border-radius: var(--radius-3);
+  background-color: var(--red-2);
+}
+
+.searchBox {
+  margin-bottom: var(--space-6);
+}
+
+.searchFilterBox {
+  width: 200px;
+}
+
+.tableBox {
+  position: relative;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+}
+
+.chkCell {
+  width: 48px;
+  text-align: center;
+}
+
+.centerCell {
+  text-align: center;
+}
+
+.rightCell {
+  text-align: right;
+}
+
+.emptyStateFlex {
+  opacity: 0.6;
+}
+
+.emptyStateIcon {
+  margin-bottom: var(--space-3);
+}
+
+.activeRowSelected {
+  background-color: var(--indigo-a3) !important;
+}
+
+.spacerSpan {
+  display: inline-block;
+  width: 20px;
+}
+
+.descriptionSpan {
+  color: var(--gray-11);
+}
+
+.emptyDescriptionSpan {
+  color: var(--gray-8);
+  font-style: italic;
+}
+
+.loadingOverlay {
+  position: absolute;
+  inset: 0;
+  background-color: var(--color-background);
+  opacity: 0.5;
   display: flex;
-  gap: var(--spacing-2);
   align-items: center;
-}
-
-
-/* Resource Empty (used for grouped rows) */
-.resourceEmpty {
-  display: block;
-  width: 100%;
-}
-
-/* Description */
-.descriptionCell {
-  max-width: 300px;
-  color: var(--color-text-secondary);
-}
-
-.noDescription {
-  color: var(--color-text-tertiary);
-}
-
-/* Actions - matches Users.css */
-.actions {
-  display: flex;
-  gap: var(--spacing-1);
-}
-
-/* =============================================================================
-   RESPONSIVE DESIGN
-   ============================================================================= */
-
-@media (max-width: 768px) {
-  .root {
-    padding: var(--spacing-3);
-  }
-
-  .filters {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    padding: var(--spacing-3);
-    gap: var(--spacing-2);
-    margin-bottom: var(--spacing-4);
-  }
-
-  .filterSearchableSelect {
-    min-width: unset;
-    width: 100%;
-  }
-
-  .filterActions {
-    grid-column: 1 / -1;
-    display: flex;
-  }
-
-  .descriptionCell {
-    max-width: 150px;
-  }
-}
-
-@media (max-width: 375px) {
-  .root {
-    padding: var(--spacing-2);
-  }
-
-  .filters {
-    padding: var(--spacing-2);
-    gap: var(--spacing-2);
-  }
+  justify-content: center;
+  z-index: 10;
 }

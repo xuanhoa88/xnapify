@@ -275,8 +275,8 @@ export const fetchPosts = createAsyncThunk(
         query: {
           page,
           limit,
-          search: search || undefined,
-          status: status || undefined,
+          search,
+          status,
         },
       });
 

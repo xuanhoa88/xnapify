@@ -1,132 +1,99 @@
-/**
- * xnapify (https://github.com/xuanhoa88/xnapify/)
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE.txt file in the root directory of this source tree.
- */
-.tableContainer {
-  background: var(--color-background);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
-  box-shadow: var(--shadow-sm);
-  overflow-x: auto;
-  margin-bottom: var(--spacing-6);
+/* TableSearch */
+.searchTextField {
+  min-width: 250px;
 }
 
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 700px;
+/* TablePagination */
+.paginationContainer {
+  border-top: 1px solid var(--gray-a6);
 }
 
-.table th {
-  padding: var(--spacing-3) var(--spacing-4);
-  text-align: left;
-  font-weight: var(--font-weight-semibold);
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  background: var(--color-background-secondary);
-  border-bottom: 1px solid var(--color-border);
+.paginationControls {
+  margin-left: 0;
+}
+
+.paginationControlsAuto {
+  margin-left: auto;
+}
+
+.paginationPageButton {
+  cursor: pointer;
+  min-width: 28px;
+}
+
+.paginationPageButtonCurrent {
+  cursor: default;
+}
+
+/* TableBulkActions */
+.bulkBarContainer {
+  position: absolute;
+  top: var(--space-2);
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: var(--color-surface);
+  border: 1px solid var(--gray-a6);
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-4);
+  z-index: 20;
+  gap: var(--space-4);
+  animation: slideUp 0.2s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.bulkCountBadge {
+  background-color: var(--indigo-9);
+  color: white;
+  border-radius: var(--radius-full);
+  padding: 2px 8px;
+  font-size: var(--font-size-2);
+  font-weight: bold;
+}
+
+.bulkItemCountText {
+  color: var(--gray-11);
   white-space: nowrap;
 }
 
-.table td {
-  padding: var(--spacing-3) var(--spacing-4);
-  border-bottom: 1px solid var(--color-border);
-  font-size: var(--font-size-sm);
-  vertical-align: middle;
+.bulkActionsFlex {
+  border-left: 1px solid var(--gray-a6);
+  padding-left: var(--space-3);
 }
 
-.table tbody tr:hover {
-  background: var(--color-background-tertiary);
+.bulkActionButton {
+  font-weight: 500;
 }
 
-.table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-/* =============================================================================
-   RESPONSIVE DESIGN - MOBILE
-   ============================================================================= */
-
-@media (max-width: 768px) {
-  /* Table container - enable horizontal scroll */
-  .tableContainer {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    margin-bottom: var(--spacing-4);
-  }
-
-  .table {
-    font-size: var(--font-size-xs);
-    min-width: 700px; /* Force minimum width to enable scroll */
-  }
-
-  .table th,
-  .table td {
-    padding: var(--spacing-2) var(--spacing-3);
-    white-space: nowrap;
-  }
-
-  .table th {
-    font-size: 10px;
-  }
-}
-
-/* Extra small mobile */
-@media (max-width: 375px) {
-  .table {
-    min-width: 600px;
-  }
-}
-
-/* Antd Refactor Additions */
-.tableWrapper {
-  position: relative;
-  margin-bottom: var(--spacing-6);
-}
-
-.tableWrapper .tableContainer {
-  margin-bottom: 0; 
-}
-
-.checkboxCol {
-  width: 48px;
-  text-align: center !important;
-}
-
-.checkbox {
-  cursor: pointer;
-  width: 16px;
-  height: 16px;
-}
-
-.selectedRow {
-  background-color: var(--color-primary-50) !important;
-}
-
-.loadingCell,
-.emptyCell {
-  text-align: center !important;
-  padding: var(--spacing-8) var(--spacing-4) !important;
-  background-color: var(--color-background);
-}
-
-.loadingOverlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgb(255 255 255 / 50%);
-  display: flex;
+.bulkMoreTrigger {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  z-index: 10;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-3);
+  background: transparent;
+  border: none;
+  color: var(--gray-11);
+  cursor: pointer;
+  transition: background-color 0.15s;
 }
 
-.paginationWrapper {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: var(--spacing-4);
+.bulkMoreTrigger:hover {
+  background-color: var(--gray-a3);
+}
+
+.bulkClearButton {
+  color: var(--gray-9);
+  margin-left: var(--space-2);
 }

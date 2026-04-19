@@ -33,10 +33,10 @@ export const fetchGroups = createAsyncThunk(
         query: {
           page,
           limit,
-          search: search || undefined,
-          category: category || undefined,
-          type: type || undefined,
-          role: role || undefined,
+          search,
+          category,
+          type,
+          role,
         },
       });
 
@@ -139,7 +139,7 @@ export const fetchGroupUsers = createAsyncThunk(
         query: {
           page,
           limit,
-          search: search || undefined,
+          search,
         },
       });
 

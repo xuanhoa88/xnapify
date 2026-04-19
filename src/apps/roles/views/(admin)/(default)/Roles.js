@@ -7,18 +7,19 @@
 
 import { useEffect, useCallback, useState, useRef } from 'react';
 
+import * as RadixIcons from '@radix-ui/react-icons';
+import { Flex, Box, Text, Grid, Heading, Card, Button } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import * as Box from '@shared/renderer/components/Box';
-import Button from '@shared/renderer/components/Button';
-import Card from '@shared/renderer/components/Card';
-import ConfirmModal from '@shared/renderer/components/ConfirmModal';
 import { useHistory } from '@shared/renderer/components/History';
-import Icon from '@shared/renderer/components/Icon';
 import Loader from '@shared/renderer/components/Loader';
+import Modal from '@shared/renderer/components/Modal';
 import { useRbac } from '@shared/renderer/components/Rbac';
-import Table from '@shared/renderer/components/Table';
+import {
+  TablePagination,
+  TableSearch,
+} from '@shared/renderer/components/Table';
 
 import RoleActionsDropdown from '../components/RoleActionsDropdown';
 import RoleGroupsModal from '../components/RoleGroupsModal';
@@ -41,19 +42,22 @@ const ITEMS_PER_PAGE = 10;
 
 // Map role names to icon names for visual consistency
 const ROLE_ICONS = Object.freeze({
-  admin: 'crown',
-  mod: 'shield',
-  user: 'user',
-  guest: 'eye',
-  editor: 'edit',
-  viewer: 'eye',
+  admin: RadixIcons.LockClosedIcon,
+  mod: RadixIcons.StarIcon,
+  user: RadixIcons.PersonIcon,
+  guest: RadixIcons.EyeOpenIcon,
+  editor: RadixIcons.Pencil1Icon,
+  viewer: RadixIcons.EyeOpenIcon,
 });
 
 const getRoleIcon = roleName => {
-  const iconName = ROLE_ICONS[roleName.toLowerCase()] || 'clipboard';
-  return <Icon name={iconName} size={24} />;
+  const Comp = ROLE_ICONS[roleName.toLowerCase()] || RadixIcons.ClipboardIcon;
+  return <Comp width={24} height={24} />;
 };
 
+/**
+ * Roles mapping native layout representations mapping classes directly.
+ */
 function Roles() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
@@ -145,88 +149,164 @@ function Roles() {
   // Show loading on first fetch (not initialized) or when loading with no data
   if (!initialized || (loading && roles.length === 0)) {
     return (
-      <div className={s.root}>
-        <Box.Header
-          icon={<Icon name='shield' size={24} />}
-          title={t('admin:roles.title', 'Role Management')}
-          subtitle='Define access levels and permissions'
-        />
+      <Box className={s.containerBox}>
+        <Flex
+          align='center'
+          justify='between'
+          wrap='wrap'
+          gap='4'
+          className={s.headerFlex}
+        >
+          <Flex align='center' gap='3'>
+            <Flex align='center' justify='center' className={s.headerIconBox}>
+              <RadixIcons.LockClosedIcon width={24} height={24} />
+            </Flex>
+            <Flex direction='column'>
+              <Heading size='6' className={s.headerHeading}>
+                {t('admin:roles.title', 'Role Management')}
+              </Heading>
+              <Text className={s.headerSubtitle}>
+                {t(
+                  'admin:roles.subtitle',
+                  'Define access levels and permissions',
+                )}
+              </Text>
+            </Flex>
+          </Flex>
+        </Flex>
         <Loader
           variant='cards'
           message={t('admin:roles.loading', 'Loading roles...')}
         />
-      </div>
+      </Box>
     );
   }
 
   if (error) {
     return (
-      <div className={s.root}>
-        <Box.Header
-          icon={<Icon name='shield' size={24} />}
-          title={t('admin:roles.title', 'Role Management')}
-          subtitle='Define access levels and permissions'
-        />
-        <Table.Error
-          title={t('admin:roles.errorLoading', 'Error loading roles')}
-          error={error}
-          retryLabel={t('admin:common.retry', 'Retry')}
-          onRetry={() =>
-            dispatch(
-              fetchRoles({
-                page: currentPage,
-                limit: ITEMS_PER_PAGE,
-                search,
-              }),
-            )
-          }
-        />
-      </div>
+      <Box className={s.containerBox}>
+        <Flex
+          align='center'
+          justify='between'
+          wrap='wrap'
+          gap='4'
+          className={s.headerFlex}
+        >
+          <Flex align='center' gap='3'>
+            <Flex align='center' justify='center' className={s.headerIconBox}>
+              <RadixIcons.LockClosedIcon width={24} height={24} />
+            </Flex>
+            <Flex direction='column'>
+              <Heading size='6' className={s.headerHeading}>
+                {t('admin:roles.title', 'Role Management')}
+              </Heading>
+              <Text className={s.headerSubtitle}>
+                {t(
+                  'admin:roles.subtitle',
+                  'Define access levels and permissions',
+                )}
+              </Text>
+            </Flex>
+          </Flex>
+        </Flex>
+        <Flex
+          direction='column'
+          align='center'
+          justify='center'
+          p='6'
+          className={s.errorFlex}
+        >
+          <Text color='red' size='4' weight='bold' mb='2'>
+            {t('admin:roles.errorLoading', 'Error loading roles')}
+          </Text>
+          <Text color='red' size='2' mb='4'>
+            {error}
+          </Text>
+          <Button variant='soft' color='red' onClick={refreshRoles}>
+            {t('common:retry', 'Retry')}
+          </Button>
+        </Flex>
+      </Box>
     );
   }
 
   return (
-    <div className={s.root}>
-      <Box.Header
-        icon={<Icon name='shield' size={24} />}
-        title={t('admin:roles.title', 'Role Management')}
-        subtitle='Define access levels and permissions'
+    <Box className={s.containerBox}>
+      <Flex
+        align='center'
+        justify='between'
+        wrap='wrap'
+        gap='4'
+        className={s.headerFlex}
       >
-        <Button
-          variant='primary'
-          onClick={handleAddRole}
-          {...(!canCreate && {
-            disabled: true,
-            title: t(
-              'admin:roles.noPermissionToCreate',
-              'You do not have permission to create roles',
-            ),
-          })}
-        >
-          <Icon name='plus' size={16} />
-          {t('admin:roles.addRole', 'Add Role')}
-        </Button>
-      </Box.Header>
+        <Flex align='center' gap='3'>
+          <Flex align='center' justify='center' className={s.headerIconBox}>
+            <RadixIcons.LockClosedIcon width={24} height={24} />
+          </Flex>
+          <Flex direction='column'>
+            <Heading size='6' className={s.headerHeading}>
+              {t('admin:roles.title', 'Role Management')}
+            </Heading>
+            <Text className={s.headerSubtitle}>
+              {t(
+                'admin:roles.subtitle',
+                'Define access levels and permissions',
+              )}
+            </Text>
+          </Flex>
+        </Flex>
+        <Flex align='center' gap='3'>
+          <Button
+            variant='solid'
+            color='indigo'
+            onClick={handleAddRole}
+            {...(!canCreate && {
+              disabled: true,
+              title: t(
+                'admin:roles.noPermissionToCreate',
+                'You do not have permission to create roles',
+              ),
+            })}
+          >
+            <RadixIcons.PlusIcon width={16} height={16} />
+            {t('admin:roles.addRole', 'Add Role')}
+          </Button>
+        </Flex>
+      </Flex>
 
-      {/* Search/Filter Section */}
-      <Table.SearchBar
-        className={s.filters}
-        value={search}
-        onChange={handleSearchChange}
-        placeholder={t('admin:roles.searchPlaceholder', 'Search roles...')}
-      />
+      <Box className={s.searchBox}>
+        <TableSearch
+          value={search}
+          onChange={handleSearchChange}
+          placeholder={t('admin:roles.searchPlaceholder', 'Search roles...')}
+        />
+      </Box>
 
       {roles.length === 0 ? (
-        <Table.Empty
-          icon='shield'
-          title={t('admin:roles.noRolesFound', 'No roles found')}
-          description={t(
-            'admin:roles.noRolesDescription',
-            'Create a new role to define access levels and permissions.',
-          )}
+        <Flex
+          justify='center'
+          align='center'
+          direction='column'
+          py='9'
+          className={s.emptyStateFlex}
         >
+          <RadixIcons.LockClosedIcon
+            width={48}
+            height={48}
+            className={s.emptyStateIcon}
+          />
+          <Text size='3' weight='bold'>
+            {t('admin:roles.noRolesFound', 'No roles found')}
+          </Text>
+          <Text size='2' className={s.emptyStateText}>
+            {t(
+              'admin:roles.noRolesDescription',
+              'Create a new role to define access levels and permissions.',
+            )}
+          </Text>
           <Button
-            variant='primary'
+            variant='solid'
+            color='indigo'
             onClick={handleAddRole}
             {...(!canCreate && {
               disabled: true,
@@ -238,78 +318,89 @@ function Roles() {
           >
             {t('admin:roles.addRole', 'Add Role')}
           </Button>
-        </Table.Empty>
+        </Flex>
       ) : (
-        <div className={s.grid}>
+        <Grid columns={{ initial: '1', sm: '2', md: '3', lg: '4' }} gap='5'>
           {roles.map(role => (
-            <Card
-              key={role.id}
-              variant='default'
-              interactive
-              className={s.roleCard}
-            >
-              <Card.Header
-                className={s.roleCardHeader}
-                actions={
-                  <RoleActionsDropdown
-                    role={role}
-                    isOpen={activeDropdownId === role.id}
-                    onToggle={handleToggleDropdown}
-                    onViewUsers={handleViewUsers}
-                    onViewGroups={handleViewGroups}
-                    onViewPermissions={handleViewPermissions}
-                    onEdit={handleEditRole}
-                    onDelete={handleDeleteClick}
-                  />
-                }
+            <Card key={role.id} variant='surface' className={s.cardContent}>
+              <Flex
+                align='center'
+                justify='between'
+                pb='3'
+                mb='3'
+                className={s.cardHeader}
               >
-                <div className={s.roleHeaderContent}>
-                  <div className={s.roleIcon}>{getRoleIcon(role.name)}</div>
-                  <h3 className={s.roleName}>{role.name}</h3>
-                </div>
-              </Card.Header>
-              <Card.Body className={s.roleCardBody}>
-                <p className={s.roleDescription}>
+                <Flex align='center' gap='3'>
+                  <Flex
+                    align='center'
+                    justify='center'
+                    className={s.cardIconBox}
+                  >
+                    {getRoleIcon(role.name)}
+                  </Flex>
+                  <Text size='4' weight='bold' className={s.cardTitle}>
+                    {role.name}
+                  </Text>
+                </Flex>
+                <RoleActionsDropdown
+                  role={role}
+                  isOpen={activeDropdownId === role.id}
+                  onToggle={handleToggleDropdown}
+                  onViewUsers={handleViewUsers}
+                  onViewGroups={handleViewGroups}
+                  onViewPermissions={handleViewPermissions}
+                  onEdit={handleEditRole}
+                  onDelete={handleDeleteClick}
+                />
+              </Flex>
+              <Box className={s.cardBody}>
+                <Text size='2' color='gray' className={s.cardDescription}>
                   {role.description ||
                     t('admin:roles.noDescription', 'No description available')}
-                </p>
-                <div className={s.roleStats}>
-                  <div className={s.stat}>
-                    <span className={s.statLabel}>
+                </Text>
+                <Flex direction='column' gap='2' className={s.cardStatsFlex}>
+                  <Flex justify='between' align='center'>
+                    <Text size='2' className={s.statLabel}>
                       {t('admin:roles.users', 'Users')}:
-                    </span>
-                    <span className={s.statValue}>{role.usersCount || 0}</span>
-                  </div>
-                  <div className={s.stat}>
-                    <span className={s.statLabel}>
+                    </Text>
+                    <Text size='2' weight='medium' className={s.statValue}>
+                      {role.usersCount || 0}
+                    </Text>
+                  </Flex>
+                  <Flex justify='between' align='center'>
+                    <Text size='2' className={s.statLabel}>
                       {t('admin:roles.groups', 'Groups')}:
-                    </span>
-                    <span className={s.statValue}>{role.groupsCount || 0}</span>
-                  </div>
-                  <div className={s.stat}>
-                    <span className={s.statLabel}>
+                    </Text>
+                    <Text size='2' weight='medium' className={s.statValue}>
+                      {role.groupsCount || 0}
+                    </Text>
+                  </Flex>
+                  <Flex justify='between' align='center'>
+                    <Text size='2' className={s.statLabel}>
                       {t('admin:roles.permissions', 'Permissions')}:
-                    </span>
-                    <span className={s.statValue}>
+                    </Text>
+                    <Text size='2' weight='medium' className={s.statValue}>
                       {role.permissionsCount || 0}
-                    </span>
-                  </div>
-                </div>
-              </Card.Body>
+                    </Text>
+                  </Flex>
+                </Flex>
+              </Box>
             </Card>
           ))}
-        </div>
+        </Grid>
       )}
 
       {/* Pagination */}
       {pagination && pagination.pages > 1 && (
-        <Table.Pagination
-          currentPage={currentPage}
-          totalPages={pagination.pages}
-          totalItems={pagination.total}
-          onPageChange={setCurrentPage}
-          loading={loading}
-        />
+        <Box className={s.paginationBox}>
+          <TablePagination
+            currentPage={currentPage}
+            totalPages={pagination.pages}
+            totalItems={pagination.total}
+            onPageChange={setCurrentPage}
+            loading={loading}
+          />
+        </Box>
       )}
 
       {/* Permissions Modal */}
@@ -322,14 +413,14 @@ function Roles() {
       <RoleGroupsModal ref={groupsModalRef} />
 
       {/* Delete Confirmation Modal */}
-      <ConfirmModal.Delete
+      <Modal.ConfirmDelete
         ref={deleteModalRef}
         title='Delete Role'
         getItemName={getRoleName}
         onDelete={handleDeleteRole}
         onSuccess={refreshRoles}
       />
-    </div>
+    </Box>
   );
 }
 

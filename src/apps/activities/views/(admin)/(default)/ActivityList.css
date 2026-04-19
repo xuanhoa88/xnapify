@@ -1,73 +1,67 @@
-/**
- * xnapify (https://github.com/xuanhoa88/xnapify/)
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE.txt file in the root directory of this source tree.
- */
-.root {
-  padding: var(--spacing-8);
-  background: var(--color-background-secondary);
-  flex: 1;
+/* stylelint-disable block-no-empty */
+.loadingBox {
+  padding: var(--space-6);
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
-.filters {
-  display: grid;
-  grid-template-columns: 1fr auto auto auto;
-  gap: var(--spacing-3);
-  margin-bottom: var(--spacing-6);
-  background: var(--color-background);
-  padding: var(--spacing-4);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--color-border);
-  align-items: center;
+.headerFlex {
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--gray-a6);
+  margin-bottom: var(--space-6);
 }
 
-.filterSearchableSelect {
-  min-width: 140px;
+.headerIconBox {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-3);
+  background-color: var(--gray-3);
+  color: var(--gray-11);
+  flex-shrink: 0;
 }
 
-.filterActions {
-  display: flex;
-  gap: var(--spacing-2);
-  align-items: center;
+.headerHeading {
+  margin: 0;
+  color: var(--gray-12);
 }
 
-/* =============================================================================
-   RESPONSIVE DESIGN - MOBILE
-   ============================================================================= */
-
-@media (max-width: 768px) {
-  .root {
-    padding: var(--spacing-3);
-  }
-
-  .filters {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    padding: var(--spacing-3);
-    gap: var(--spacing-2);
-    margin-bottom: var(--spacing-4);
-  }
-
-  .filterSearchableSelect {
-    min-width: unset;
-    width: 100%;
-  }
-
-  .filterActions {
-    grid-column: 1 / -1;
-    display: flex;
-  }
+.subtitleText {
+  margin: 0;
+  margin-top: var(--space-1);
 }
 
-@media (max-width: 375px) {
-  .root {
-    padding: var(--spacing-2);
-  }
-
-  .filters {
-    padding: var(--spacing-2);
-    gap: var(--spacing-2);
-  }
+.relativeBox {
+  position: relative;
 }
+
+.opacityBox {
+  opacity: 0.6;
+}
+
+.marginBottomBox {
+  margin-bottom: var(--space-3);
+}
+
+.filterSelect {
+  width: 200px;
+}
+
+.container {}
+
+.header {}
+
+.headerIcon {}
+
+.errorBox {}
+
+.filterBar {}
+
+.clearFiltersBox {}
+
+.tableWrapper {}
+
+.codeBadge {}
+
+.codeBadgeMargin {}
+
+.loadingOverlay {}

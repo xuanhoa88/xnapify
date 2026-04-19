@@ -7,23 +7,19 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 
+import { GroupIcon, LockOpen1Icon } from '@radix-ui/react-icons';
+import { Box, Flex, Text, Grid, Heading, Button } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import * as Box from '@shared/renderer/components/Box';
-import Button from '@shared/renderer/components/Button';
-import ConfirmModal from '@shared/renderer/components/ConfirmModal';
+// import { Flex, Heading, Text, Box } from '@radix-ui/themes';
+// import { Button } from '@radix-ui/themes';
 import Form, { useFormContext } from '@shared/renderer/components/Form';
 import { useHistory } from '@shared/renderer/components/History';
-import Icon from '@shared/renderer/components/Icon';
 import { useDebounce } from '@shared/renderer/components/InfiniteScroll';
-import Loader from '@shared/renderer/components/Loader';
-import {
-  generatePassword,
-  getUserProfile,
-  showSuccessMessage,
-} from '@shared/renderer/redux';
+import Modal from '@shared/renderer/components/Modal';
+import { generatePassword, showSuccessMessage } from '@shared/renderer/redux';
 
 import { updateUserFormSchema } from '../../../../validator/admin';
 import {
@@ -53,14 +49,13 @@ function EditUser({ userId, context }) {
   }, [container]);
 
   const history = useHistory();
-  const currentUser = useSelector(getUserProfile);
   const loading = useSelector(isUserUpdateLoading);
   const fetchingUser = useSelector(isUserFetchLoading);
   const fetchInitialized = useSelector(isUserFetchInitialized);
   const user = useSelector(getFetchedUser);
   const userLoadError = useSelector(getUserFetchError);
 
-  const [error, setError] = useState(null);
+  const [, setError] = useState(null);
   const confirmBackModalRef = useRef(null);
   const isDirtyRef = useRef(false);
 
@@ -146,137 +141,99 @@ function EditUser({ userId, context }) {
   // Show loading on first fetch or when still fetching
   if (!fetchInitialized || fetchingUser) {
     return (
-      <div className={s.root}>
-        <Box.Header
-          icon={<Icon name='users' size={24} />}
-          title={t('admin:users.edit.title', 'Edit User')}
-          subtitle={t(
-            'admin:users.edit.subtitle',
-            'Modify user account details',
-          )}
+      <Box className={s.container}>
+        <Flex
+          align='center'
+          justify='between'
+          wrap='wrap'
+          gap='4'
+          className={s.headerFlex}
         >
-          <Button variant='secondary' onClick={() => handleCancel(false)}>
-            <Icon name='arrowLeft' />
-            {t('admin:users.edit.backToUsers', 'Back to Users')}
-          </Button>
-        </Box.Header>
-        <div className={s.formContainer}>
-          <Loader
-            variant='spinner'
-            message={t('admin:users.edit.loadingUser', 'Loading user data...')}
-          />
-        </div>
-      </div>
+          <Flex align='center' gap='3'>
+            <Flex align='center' justify='center' className={s.headerIconBox}>
+              <GroupIcon width={24} height={24} />
+            </Flex>
+            <Flex direction='column'>
+              <Heading size='6' className={s.heading}>
+                {null}
+              </Heading>
+            </Flex>
+          </Flex>
+        </Flex>
+      </Box>
     );
   }
 
   if (!user || userLoadError) {
     return (
-      <div className={s.root}>
-        <Box.Header
-          icon={<Icon name='users' size={24} />}
-          title={t('admin:users.edit.title', 'Edit User')}
-          subtitle={t(
-            'admin:users.edit.subtitle',
-            'Modify user account details',
-          )}
+      <Box className={s.container}>
+        <Flex
+          align='center'
+          justify='between'
+          wrap='wrap'
+          gap='4'
+          className={s.headerFlex}
         >
-          <Button variant='secondary' onClick={() => handleCancel(false)}>
-            <Icon name='arrowLeft' />
-            {t('admin:users.edit.backToUsers', 'Back to Users')}
-          </Button>
-        </Box.Header>
-        <div className={s.formContainer}>
-          <div className={s.formError}>
-            {t('admin:users.edit.failedToLoad', 'Failed to load user data')}
-          </div>
-          <div className={s.formActions}>
-            <Button variant='secondary' onClick={() => handleCancel(false)}>
-              {t('admin:users.edit.backBtn', 'Back to Users')}
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Prevent admin from editing their own account
-  if (currentUser && currentUser.id === userId) {
-    return (
-      <div className={s.root}>
-        <Box.Header
-          icon={<Icon name='users' size={24} />}
-          title={t('admin:users.edit.title', 'Edit User')}
-          subtitle={t(
-            'admin:users.edit.subtitle',
-            'Modify user account details',
-          )}
-        >
-          <Button variant='secondary' onClick={() => handleCancel(false)}>
-            <Icon name='arrowLeft' />
-            {t('admin:users.edit.backToUsers', 'Back to Users')}
-          </Button>
-        </Box.Header>
-        <div className={s.formContainer}>
-          <div className={s.formError}>
-            {t(
-              'admin:users.errors.cannotEditSelf',
-              'You cannot edit your own account from the admin panel. Please use your profile settings instead.',
-            )}
-          </div>
-          <div className={s.formActions}>
-            <Button variant='secondary' onClick={() => handleCancel(false)}>
-              {t('admin:users.edit.backBtn', 'Back to Users')}
-            </Button>
-            <Button variant='primary' onClick={() => history.push('/profile')}>
-              {t('admin:users.edit.goToProfile', 'Go to Profile Settings')}
-            </Button>
-          </div>
-        </div>
-      </div>
+          <Flex align='center' gap='3'>
+            <Flex align='center' justify='center' className={s.headerIconBox}>
+              <GroupIcon width={24} height={24} />
+            </Flex>
+            <Flex direction='column'>
+              <Heading size='6' className={s.heading}>
+                {null}
+              </Heading>
+            </Flex>
+          </Flex>
+        </Flex>
+      </Box>
     );
   }
 
   return (
-    <div className={s.root}>
-      <Box.Header
-        icon={<Icon name='users' size={24} />}
-        title={t('admin:users.edit.title', 'Edit User')}
-        subtitle={t('admin:users.edit.subtitle', 'Modify user account details')}
+    <Box className={s.container}>
+      <Flex
+        align='center'
+        justify='between'
+        wrap='wrap'
+        gap='4'
+        className={s.headerFlex}
       >
-        <Button
-          variant='secondary'
-          onClick={() => handleCancel(isDirtyRef.current)}
-        >
-          <Icon name='arrowLeft' />
-          {t('admin:users.edit.backToUsers', 'Back to Users')}
-        </Button>
-      </Box.Header>
+        <Flex align='center' gap='3'>
+          <Flex align='center' justify='center' className={s.headerIconBox}>
+            <GroupIcon width={24} height={24} />
+          </Flex>
+          <Flex direction='column'>
+            <Heading size='6' className={s.heading}>
+              {(user.profile && user.profile.display_name) || user.email}
+            </Heading>
+            <Text size='2' color='gray'>
+              {user.email}
+            </Text>
+          </Flex>
+        </Flex>
+      </Flex>
 
-      <div className={s.formContainer}>
-        <Form.Error message={error} />
+      <Form
+        schema={updateUserFormSchema}
+        defaultValues={defaultValues}
+        onSubmit={handleSubmit}
+        className='edit-user-form'
+      >
+        <EditUserFormFields
+          setError={setError}
+          onCancel={handleCancel}
+          loading={loading}
+          isDirtyRef={isDirtyRef}
+          fetchRoles={fetchRoles}
+          fetchGroups={fetchGroups}
+        />
+      </Form>
 
-        <Form
-          schema={updateUserFormSchema}
-          defaultValues={defaultValues}
-          onSubmit={handleSubmit}
-          className={s.form}
-        >
-          <EditUserFormFields
-            setError={setError}
-            onCancel={handleCancel}
-            loading={loading}
-            isDirtyRef={isDirtyRef}
-            fetchRoles={fetchRoles}
-            fetchGroups={fetchGroups}
-          />
-        </Form>
-      </div>
-      <ConfirmModal.Back
+      <Modal.ConfirmBack
         ref={confirmBackModalRef}
         onConfirm={handleConfirmBack}
       />
-    </div>
+    </Box>
   );
 }
 
@@ -454,12 +411,16 @@ function EditUserFormFields({
 
   return (
     <>
-      <div className={s.formSection}>
-        <h3 className={s.sectionTitle}>
+      <Box className={s.sectionBox}>
+        <Text as='h3' size='4' weight='bold' className={s.sectionHeader}>
           {t('admin:users.edit.accountInfo', 'Account Information')}
-        </h3>
+        </Text>
 
-        <Form.Field name='email' label={t('admin:users.edit.email', 'Email')}>
+        <Form.Field
+          name='email'
+          label={t('admin:users.edit.email', 'Email')}
+          className={s.fieldMarginBottom0}
+        >
           <Form.Input type='email' disabled />
         </Form.Field>
 
@@ -490,35 +451,36 @@ function EditUserFormFields({
           />
         </Form.Field>
 
-        <div className={s.generatePasswordLink}>
+        <Flex justify='end'>
           <Button
-            variant='unstyled'
-            size='small'
+            variant='ghost'
+            size='1'
             onClick={handleGeneratePassword}
             disabled={generatingPassword}
-            className={s.generateBtn}
+            className={s.buttonGhost}
           >
             {generatingPassword ? (
               t('admin:users.generatingPassword', 'Generating...')
             ) : (
               <>
-                <Icon name='key' size={14} />
+                <LockOpen1Icon width={14} height={14} />
                 {t('admin:users.generateNewPassword', 'Generate New Password')}
               </>
             )}
           </Button>
-        </div>
-      </div>
+        </Flex>
+      </Box>
 
-      <div className={s.formSection}>
-        <h3 className={s.sectionTitle}>
+      <Box className={s.sectionBox}>
+        <Text as='h3' size='4' weight='bold' className={s.sectionHeader}>
           {t('admin:users.edit.personalInfo', 'Personal Information')}
-        </h3>
+        </Text>
 
-        <div className={s.formRow}>
+        <Grid columns={{ initial: '1', sm: '2' }} gap='4'>
           <Form.Field
             name='profile.first_name'
             label={t('admin:users.edit.firstName', 'First Name')}
+            className={s.fieldMarginBottom0}
           >
             <Form.Input
               placeholder={t('admin:users.edit.firstNamePlaceholder', 'John')}
@@ -527,16 +489,18 @@ function EditUserFormFields({
           <Form.Field
             name='profile.last_name'
             label={t('admin:users.edit.lastName', 'Last Name')}
+            className={s.fieldMarginBottom0}
           >
             <Form.Input
               placeholder={t('admin:users.edit.lastNamePlaceholder', 'Doe')}
             />
           </Form.Field>
-        </div>
+        </Grid>
 
         <Form.Field
           name='profile.display_name'
           label={t('admin:users.edit.displayName', 'Display Name')}
+          className={s.fieldMarginTop}
         >
           <Form.Input
             placeholder={t(
@@ -545,12 +509,12 @@ function EditUserFormFields({
             )}
           />
         </Form.Field>
-      </div>
+      </Box>
 
-      <div className={s.formSection}>
-        <h3 className={s.sectionTitle}>
+      <Box className={s.sectionBoxSmall}>
+        <Text as='h3' size='4' weight='bold' className={s.sectionHeader}>
           {t('admin:users.edit.accessAndPermissions', 'Access & Permissions')}
-        </h3>
+        </Text>
 
         <Form.Field
           name='roles'
@@ -622,18 +586,18 @@ function EditUserFormFields({
         <Form.Field name='is_active'>
           <Form.Checkbox label={t('admin:users.edit.active', 'Active')} />
         </Form.Field>
-      </div>
+      </Box>
 
-      <div className={s.formActions}>
-        <Button variant='secondary' onClick={handleCancel}>
+      <Flex align='center' justify='between' className={s.footerFlex}>
+        <Button variant='soft' color='gray' onClick={handleCancel}>
           {t('admin:users.edit.cancel', 'Cancel')}
         </Button>
-        <Button variant='primary' type='submit' loading={loading}>
+        <Button variant='solid' color='indigo' type='submit' loading={loading}>
           {loading
             ? t('admin:users.edit.saving', 'Saving...')
             : t('admin:users.edit.saveChanges', 'Save Changes')}
         </Button>
-      </div>
+      </Flex>
     </>
   );
 }

@@ -7,19 +7,27 @@
 
 import { useEffect, useCallback, useState, useRef, useMemo } from 'react';
 
-import clsx from 'clsx';
+import { CubeIcon, PlusIcon } from '@radix-ui/react-icons';
+import {
+  Box,
+  Flex,
+  Text,
+  Grid,
+  Heading,
+  Button,
+  Badge,
+} from '@radix-ui/themes';
 import toLower from 'lodash/toLower';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import * as Box from '@shared/renderer/components/Box';
-import Button from '@shared/renderer/components/Button';
-import ConfirmModal from '@shared/renderer/components/ConfirmModal';
-import Icon from '@shared/renderer/components/Icon';
+// import { Flex, Heading, Text, Box } from '@radix-ui/themes';
+// import { Button } from '@radix-ui/themes';
 import { useDebounce } from '@shared/renderer/components/InfiniteScroll';
 import Loader from '@shared/renderer/components/Loader';
+import Modal from '@shared/renderer/components/Modal';
 import { useRbac } from '@shared/renderer/components/Rbac';
-import Table from '@shared/renderer/components/Table';
+import { TableSearch } from '@shared/renderer/components/Table';
 import {
   showSuccessMessage,
   showWarningMessage,
@@ -496,77 +504,123 @@ function Extensions() {
 
   if (!initialized || (loading && extensions.length === 0)) {
     return (
-      <div className={s.root}>
-        <Box.Header
-          icon={<Icon name='extension' size={24} />}
-          title={t('admin:navigation.extensions', 'Extensions')}
-          subtitle={t('admin:extensions.subtitle', 'Manage system extensions')}
-        />
+      <Box className={s.containerBox}>
+        <Flex
+          align='center'
+          justify='between'
+          wrap='wrap'
+          gap='4'
+          className={s.headerFlex}
+        >
+          <Flex align='center' gap='3'>
+            <Flex align='center' justify='center' className={s.headerIconFlex}>
+              <CubeIcon width={24} height={24} />
+            </Flex>
+            <Flex direction='column'>
+              <Heading size='6' className={s.headerHeading}>
+                {t('admin:navigation.extensions', 'Extensions')}
+              </Heading>
+              <Text size='3' color='gray' className={s.headerSubtitle}>
+                {t('admin:extensions.subtitle', 'Manage system extensions')}
+              </Text>
+            </Flex>
+          </Flex>
+        </Flex>
         <Loader variant='cards' />
-      </div>
+      </Box>
     );
   }
 
   return (
-    <div className={s.root}>
-      <Box.Header
-        icon={<Icon name='extension' size={24} />}
-        title={t('admin:navigation.extensions', 'Extensions')}
-        subtitle={t('admin:extensions.subtitle', 'Manage system extensions')}
+    <Box className={s.containerBox}>
+      <Flex
+        align='center'
+        justify='between'
+        wrap='wrap'
+        gap='4'
+        className={s.headerFlex}
       >
-        <div className={s.headerActions}>
-          <input
+        <Flex align='center' gap='3'>
+          <Flex align='center' justify='center' className={s.headerIconFlex}>
+            <CubeIcon width={24} height={24} />
+          </Flex>
+          <Flex direction='column'>
+            <Heading size='6' className={s.headerHeading}>
+              {t('admin:navigation.extensions', 'Extensions')}
+            </Heading>
+            <Text size='3' color='gray' className={s.headerSubtitle}>
+              {t('admin:extensions.subtitle', 'Manage system extensions')}
+            </Text>
+          </Flex>
+        </Flex>
+        <Flex gap='3' align='center'>
+          <Box
+            as='input'
             type='file'
             ref={fileInputRef}
-            style={{ display: 'none' }}
+            className={s.hiddenFileInput}
             accept='.zip'
             onChange={handleFileChange}
           />
+
           <Button
-            variant='primary'
+            variant='solid'
+            color='indigo'
             onClick={handleUploadClick}
             disabled={!canCreate || uploading}
           >
-            <Icon name='plus' size={16} />
+            <PlusIcon width={16} height={16} />
             {uploading
               ? t('admin:extensions.uploading', 'Uploading...')
               : t('admin:extensions.upload', 'Upload Extension')}
           </Button>
-        </div>
-      </Box.Header>
+        </Flex>
+      </Flex>
 
       {/* Toolbar: Filter Tabs + Search */}
-      <div className={clsx(s.toolbar, 'extensions-toolbar')}>
-        <div className={s.filterTabs}>
+      <Flex align='center' justify='between' mb='5' wrap='wrap' gap='4'>
+        <Flex gap='2' className={s.tabsBox}>
           {FILTER_TABS.map(tab => (
             <Button
               key={tab.key}
               type='button'
-              className={clsx(s.filterTab, {
-                [s.filterTabActive]: activeFilter === tab.key,
-              })}
+              variant={activeFilter === tab.key ? 'primary' : 'ghost'}
               onClick={() => setActiveFilter(tab.key)}
+              className={`${s.tabButton} ${activeFilter === tab.key ? s.tabButtonActive : ''}`}
             >
-              {t(tab.labelKey, tab.fallback)}
-              <span className={s.filterTabCount}>{tabCounts[tab.key]}</span>
+              <Text as='span' mr='2'>
+                {t(tab.labelKey, tab.fallback)}
+              </Text>
+              <Badge
+                variant={activeFilter === tab.key ? 'neutral' : 'outline'}
+                color='gray'
+                radius='full'
+              >
+                {tabCounts[tab.key]}
+              </Badge>
             </Button>
           ))}
-        </div>
+        </Flex>
 
-        <div className={s.searchContainer}>
-          <Table.SearchBar
-            className={s.searchBar}
+        <Box className={s.searchBox}>
+          <TableSearch
             value={search}
             onChange={handleSearchChange}
             placeholder={t('admin:extensions.search', 'Search extensions...')}
           />
-        </div>
-      </div>
+        </Box>
+      </Flex>
 
       {filteredExtensions.length === 0 ? (
-        <div className={s.emptyState}>
-          <Icon name='extension' size={48} />
-          <p className={s.emptyTitle}>
+        <Flex
+          direction='column'
+          align='center'
+          justify='center'
+          className={s.emptyStateFlex}
+        >
+          <CubeIcon width={48} height={48} className={s.emptyStateIcon} />
+
+          <Text as='h3' size='4' weight='bold' color='gray'>
             {search
               ? t(
                   'admin:extensions.noSearchResults',
@@ -576,8 +630,8 @@ function Extensions() {
                   'admin:extensions.noExtensionsInFilter',
                   'No extensions in this category',
                 )}
-          </p>
-          <p className={s.emptySubtitle}>
+          </Text>
+          <Text as='p' size='2' color='gray' className={s.emptyStateText}>
             {search
               ? t(
                   'admin:extensions.tryDifferentSearch',
@@ -587,10 +641,10 @@ function Extensions() {
                   'admin:extensions.tryDifferentFilter',
                   'Try selecting a different filter tab.',
                 )}
-          </p>
-        </div>
+          </Text>
+        </Flex>
       ) : (
-        <div className={clsx(s.grid, 'card-grid')}>
+        <Grid columns={{ initial: '1', md: '2', lg: '3' }} gap='4'>
           {filteredExtensions.map(extension => (
             <ExtensionCard
               key={extension.id}
@@ -605,11 +659,11 @@ function Extensions() {
               canUpdate={canUpdate}
             />
           ))}
-        </div>
+        </Grid>
       )}
 
       {/* Uninstall confirmation */}
-      <ConfirmModal.Delete
+      <Modal.ConfirmDelete
         ref={deleteModalRef}
         title={t('admin:extensions.uninstall', 'Uninstall Extension')}
         message={t(
@@ -621,7 +675,7 @@ function Extensions() {
       />
 
       {/* Activate confirmation */}
-      <ConfirmModal.Action
+      <Modal.ConfirmAction
         ref={activateModalRef}
         title={t('admin:extensions.activate', 'Activate Extension')}
         getDescription={p =>
@@ -636,7 +690,7 @@ function Extensions() {
       />
 
       {/* Deactivate confirmation */}
-      <ConfirmModal.Action
+      <Modal.ConfirmAction
         ref={deactivateModalRef}
         title={t('admin:extensions.deactivate', 'Deactivate Extension')}
         getDescription={p =>
@@ -651,7 +705,7 @@ function Extensions() {
       />
 
       {/* Install confirmation */}
-      <ConfirmModal.Action
+      <Modal.ConfirmAction
         ref={installModalRef}
         title={t('admin:extensions.install', 'Install Extension')}
         getDescription={p =>
@@ -665,7 +719,7 @@ function Extensions() {
         onSuccess={handleInstallCancel}
         confirmLabel={t('admin:extensions.installButton', 'Install')}
       />
-    </div>
+    </Box>
   );
 }
 

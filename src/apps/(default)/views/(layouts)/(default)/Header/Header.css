@@ -1,130 +1,41 @@
-/**
- * xnapify (https://github.com/xuanhoa88/xnapify/)
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE.txt file in the root directory of this source tree.
- */
-
-/* =============================================================================
-   NAVIGATION BAR (STICKY)
-   ============================================================================= */
-
-.navbar {
-  position: sticky;
-  top: 0;
+.headerBox {
   z-index: 100;
-  background: var(--color-dark-navy);
-  border-bottom: 1px solid rgb(255 255 255 / 10%);
-  box-shadow: 0 2px 8px 0 rgb(0 0 0 / 15%);
   width: 100%;
+  background-color: var(--color-panel-translucent);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--gray-a6);
+  box-shadow: 0 4px 24px -6px rgb(0 0 0 / 3%);
 }
 
-.navContainer {
-  max-width: var(--max-content-width);
-  margin: 0 auto;
-  padding: var(--spacing-3) var(--spacing-6);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--spacing-6);
-}
-
-/* =============================================================================
-   BRAND/LOGO
-   ============================================================================= */
-
-.brand {
-  color: white;
+.brandLink {
   text-decoration: none;
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-3);
-  transition: all var(--transition-base);
-  flex-shrink: 0;
-  padding: var(--spacing-2);
-  border-radius: var(--radius-lg);
+  color: var(--gray-12);
 }
 
-.brand:hover {
+.brandLink:hover {
+  opacity: 0.8;
+}
+
+.navLink {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-2);
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: var(--radius-3);
+  text-decoration: none;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.navLink:hover {
+  color: var(--color-text-primary);
+  background-color: var(--gray-a3);
   text-decoration: none;
 }
 
-.brand img {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-md);
-}
-
-.brandTxt {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-bold);
-  letter-spacing: -0.02em;
-  line-height: 1;
-  color: white;
-}
-
-/* =============================================================================
-   RIGHT SECTION
-   ============================================================================= */
-
-.rightSection {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-3);
-}
-
-/* =============================================================================
-   RESPONSIVE DESIGN
-   ============================================================================= */
-
-/* Tablet */
-@media (max-width: 992px) {
-  .navContainer {
-    padding: var(--spacing-3) var(--spacing-4);
-    gap: var(--spacing-4);
-  }
-
-  .brand img {
-    width: 32px;
-    height: 32px;
-  }
-
-  .brandTxt {
-    font-size: var(--font-size-base);
-  }
-
-  .rightSection {
-    gap: var(--spacing-2);
-  }
-}
-
-/* Mobile */
-@media (max-width: 768px) {
-  .navbar {
-    box-shadow: 0 1px 4px 0 rgb(0 0 0 / 20%);
-  }
-
-  .navContainer {
-    padding: var(--spacing-3) var(--spacing-4);
-    gap: var(--spacing-3);
-  }
-
-  .brand {
-    padding: var(--spacing-1);
-    gap: var(--spacing-2);
-  }
-
-  .brand img {
-    width: 32px;
-    height: 32px;
-  }
-
-  .brandTxt {
-    font-size: var(--font-size-sm);
-    font-weight: var(--font-weight-semibold);
-  }
-
-  .rightSection {
-    gap: var(--spacing-2);
-  }
+.navDivider {
+  width: 1px;
+  height: 24px;
+  background-color: var(--gray-6);
+  margin-left: 4px;
+  margin-right: 4px;
 }

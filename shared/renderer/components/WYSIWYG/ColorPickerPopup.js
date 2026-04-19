@@ -5,11 +5,14 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { Button, Box } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 
 import ContextMenu from '../ContextMenu';
 
 import ToolbarButton from './ToolbarButton';
+
+import s from './ColorPickerPopup.css';
 
 /**
  * ColorPickerPopup — A toolbar button that opens a popover with a color
@@ -48,36 +51,18 @@ export default function ColorPickerPopup({
       />
 
       <ContextMenu.Menu>
-        <div style={{ padding: '4px', display: 'flex', gap: '8px' }}>
-          <input
+        <div className={s.popupContainer}>
+          <Box
+            as='input'
             type='color'
-            style={{
-              width: '32px',
-              height: '32px',
-              padding: 0,
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-            }}
+            className={s.colorInput}
             value={value || defaultValue}
             onInput={e => onChange(e.target.value)}
           />
           {onReset && (
-            <button
-              type='button'
-              style={{
-                padding: '4px 8px',
-                fontSize: '12px',
-                color: 'var(--color-text-secondary)',
-                backgroundColor: 'transparent',
-                border: '1px solid var(--color-border)',
-                borderRadius: '4px',
-                cursor: 'pointer',
-              }}
-              onClick={onReset}
-            >
+            <Button variant='soft' color='gray' size='1' onClick={onReset}>
               {resetLabel}
-            </button>
+            </Button>
           )}
         </div>
       </ContextMenu.Menu>

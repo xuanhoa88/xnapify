@@ -4,13 +4,13 @@
 .form {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-5);
+  gap: var(--space-5);
 }
 
 .slugHint {
   font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
-  margin-top: var(--spacing-1);
+  margin-top: var(--space-1);
 }
 
 .contentField {

@@ -1,65 +1,29 @@
-/**
- * xnapify (https://github.com/xuanhoa88/xnapify/)
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE.txt file in the root directory of this source tree.
- */
-
-/* Permissions Section */
-.sectionTitle {
-  margin: 0 0 var(--spacing-3) 0;
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
+.permissionsBox {
+  margin-top: var(--space-4);
+  background-color: var(--gray-2);
+  padding: var(--space-4);
+  border-radius: var(--radius-3);
 }
 
-.permissionsSection {
-  margin-top: var(--spacing-2);
+.permissionsHeading {
+  margin-bottom: var(--space-4);
+  color: var(--gray-12);
 }
 
-.permissionsList {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-2);
+.permissionTag {
+  background-color: var(--indigo-3);
+  color: var(--indigo-11);
+  border-radius: var(--radius-full);
+  padding: var(--space-1) var(--space-3);
+  font-family: monospace;
+  font-weight: 500;
 }
 
-.permissionBadge {
-  display: inline-flex;
-  padding: var(--spacing-2) var(--spacing-3);
-  background: #f0fdf4;
-  color: #166534;
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-}
-
-.noPermissions {
-  color: var(--color-text-secondary);
+.emptyPermissions {
   font-style: italic;
-  font-size: var(--font-size-sm);
-}
-
-/* =============================================================================
-   RESPONSIVE DESIGN - MOBILE
-   ============================================================================= */
-
-@media (max-width: 768px) {
-  .sectionTitle {
-    font-size: var(--font-size-xs);
-  }
-
-  .permissionBadge {
-    padding: var(--spacing-1) var(--spacing-2);
-    font-size: 10px;
-  }
-
-  .noPermissions {
-    font-size: var(--font-size-xs);
-  }
-}
-
-@media (max-width: 375px) {
-  .permissionsList {
-    gap: var(--spacing-1);
-  }
+  margin: 0;
+  padding: var(--space-4);
+  text-align: center;
+  background-color: var(--color-panel-solid);
+  border-radius: var(--radius-2);
 }

@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { Flex, Box, Text, Heading, Grid } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
 import { Link } from '@shared/renderer/components/History';
@@ -13,57 +14,80 @@ import { featuresData } from '../data';
 
 import s from './Features.css';
 
+/**
+ * Features listing substituting wrapper CSS mappings enforcing static Box sizing layouts matching native Radix.
+ */
 function Features() {
   const { t } = useTranslation();
 
   return (
-    <div className={s.root}>
+    <Box>
       {/* Hero Section */}
-      <section className={s.hero}>
-        <div className={s.heroContent}>
-          <h1 className={s.heroTitle}>
+      <Box
+        as='section'
+        className={`${s.heroSection} ${s.sectionPadding} ${s.textCenter} ${s.textWhite}`}
+      >
+        <Flex direction='column' align='center' className={s.maxWidth800}>
+          <Heading as='h1' size='8' className={`${s.mb4} ${s.textWhite}`}>
             {t('features.hero.title', 'Our Features')}
-          </h1>
-          <p className={s.heroSubtitle}>
+          </Heading>
+          <Text size='4' className={`${s.heroSubtitle} ${s.maxWidth600}`}>
             {t(
               'features.hero.subtitle',
               'Discover the powerful features that make this starter kit amazing',
             )}
-          </p>
-        </div>
-      </section>
+          </Text>
+        </Flex>
+      </Box>
 
       {/* Features Grid */}
-      <section className={s.features}>
-        <div className={s.container}>
-          <div className={s.grid}>
+      <Box as='section' className={`${s.p8X4} ${s.newsBg}`}>
+        <Box className={s.maxWidth1200}>
+          <Grid columns={{ initial: '1', sm: '2', md: '3' }} gap='5'>
             {featuresData.map(feature => (
-              <Link
+              <Flex
+                asChild
                 key={feature.id}
-                to={`/features/${feature.id}`}
-                className={s.card}
+                direction='column'
+                className={`${s.featureCard} ${s.featureLinkCard}`}
               >
-                <div className={s.cardHeader}>
-                  <div className={s.icon}>{feature.icon}</div>
-                  <h3 className={s.cardTitle}>{feature.name}</h3>
-                </div>
-                <p className={s.cardDesc}>{feature.description}</p>
-                <div className={s.tags}>
-                  {feature.tags.map(tag => (
-                    <span key={tag} className={s.tag}>
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-                <span className={s.link}>
-                  {t('features.learnMore', 'Learn more →')}
-                </span>
-              </Link>
+                <Link to={`/features/${feature.id}`}>
+                  <Flex align='center' gap='3' className={s.mb4}>
+                    <Flex
+                      align='center'
+                      justify='center'
+                      className={s.featureIcon}
+                    >
+                      {feature.icon}
+                    </Flex>
+                    <Heading as='h3' size='4' className={s.textGray12}>
+                      {feature.name}
+                    </Heading>
+                  </Flex>
+                  <Text size='3' color='gray' className={`${s.mb4} ${s.flex1}`}>
+                    {feature.description}
+                  </Text>
+                  <Flex wrap='wrap' gap='2' className={s.mb5}>
+                    {feature.tags.map(tag => (
+                      <Text key={tag} size='1' className={s.tagBadge}>
+                        {tag}
+                      </Text>
+                    ))}
+                  </Flex>
+                  <Text
+                    size='2'
+                    weight='medium'
+                    className={`${s.textIndigo11} ${s.mtAuto}`}
+                  >
+                    {t('features.learnMore', 'Learn more →')}
+                  </Text>
+                </Link>
+              </Flex>
             ))}
-          </div>
-        </div>
-      </section>
-    </div>
+          </Grid>
+        </Box>
+      </Box>
+    </Box>
   );
 }
 

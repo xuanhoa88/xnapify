@@ -7,6 +7,7 @@
 
 import { forwardRef, useCallback } from 'react';
 
+import { Box } from '@radix-ui/themes';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useFormContext, useController } from 'react-hook-form';
@@ -89,7 +90,7 @@ const FormSearchableSelect = forwardRef(function FormSearchableSelect$(
   );
 
   return (
-    <div className={s.wrapper} ref={handleRef}>
+    <Box className={s.wrapper} ref={handleRef}>
       <SearchableSelect
         id={id}
         options={options}
@@ -111,7 +112,7 @@ const FormSearchableSelect = forwardRef(function FormSearchableSelect$(
         clearable={clearable}
         {...props}
       />
-    </div>
+    </Box>
   );
 });
 

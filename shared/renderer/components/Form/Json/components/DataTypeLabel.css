@@ -1,0 +1,6 @@
+.dataTypeLabel {
+  font-size: 11px;
+  margin-right: 4px;
+  opacity: 0.8;
+  color: var(--json-type-label, #93a1a1);
+}

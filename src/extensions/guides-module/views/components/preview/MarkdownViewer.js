@@ -10,7 +10,6 @@ import { useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
-/* eslint-disable css-modules/no-unused-class */
 import s from './MarkdownViewer.css';
 
 import 'highlight.js/styles/github.css';

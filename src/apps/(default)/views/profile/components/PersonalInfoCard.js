@@ -7,12 +7,13 @@
 
 import { useCallback, useMemo, useEffect } from 'react';
 
+import { PersonIcon } from '@radix-ui/react-icons';
+import { Flex, Box, Grid, Text, Heading, Button } from '@radix-ui/themes';
 import merge from 'lodash/merge';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 
-import Button from '@shared/renderer/components/Button';
 import {
   ExtensionSlot,
   useExtensionHooks,
@@ -20,7 +21,6 @@ import {
   useExtensionFormData,
 } from '@shared/renderer/components/Extension';
 import Form, { useFormContext } from '@shared/renderer/components/Form';
-import Icon from '@shared/renderer/components/Icon';
 import {
   getUserProfile,
   updateUserProfile,
@@ -38,62 +38,52 @@ import Loader from './Loader';
 import s from './PersonalInfoCard.css';
 
 function PersonalInfoCard() {
-  const { t, i18n } = useTranslation(); // Destructure i18n
+  const { t, i18n } = useTranslation();
   const dispatch = useDispatch();
   const user = useSelector(getUserProfile);
   const loading = useSelector(isProfileLoading);
   const error = useSelector(getProfileError);
   const extensionHooks = useExtensionHooks();
 
-  // Fetch defaults from extensions
   const [extensionDefaultValues, loadingDefaultValues] = useExtensionFormData(
     'profile.personal_info.formData',
     user,
   );
 
-  // Instantiate base schema object
   const baseSchema = useMemo(
     () => updateProfileFormSchema({ i18n, z }),
     [i18n],
   );
 
-  // Extend schema with extensions
   const [extendedValidator, loadingValidator] = useExtensionValidator(
     'profile.personal_info.validator',
     baseSchema,
     z,
   );
 
-  // Wrap in factory for Form component
   const formSchema = useCallback(() => extendedValidator, [extendedValidator]);
 
-  // Clear error on unmount
   useEffect(() => {
     return () => {
       dispatch(clearProfileError());
     };
   }, [dispatch]);
 
-  // Derive default values from user (memoized to prevent unnecessary re-renders)
-  // Extension defaults come first so user data takes precedence
   const defaultValues = useMemo(
     () => merge({}, extensionDefaultValues, user),
     [user, extensionDefaultValues],
   );
 
-  // Handle form submit - Form component provides methods via callback
   const handleSubmit = useCallback(
     async (data, { reset }) => {
       try {
         await dispatch(updateUserProfile(data)).unwrap();
 
-        // Execute extension hooks
         await extensionHooks.execute('profile.personal_info.submit', data, {
           dispatch,
           user,
         });
 
-        // Reset form with the new saved data
         reset(data);
         dispatch(
           showSuccessMessage({
@@ -113,20 +103,20 @@ function PersonalInfoCard() {
   }
 
   return (
-    <div className={s.card}>
-      <div className={s.cardHeader}>
-        <div className={s.cardIcon}>
-          <Icon name='user' size={22} />
-        </div>
-        <div>
-          <h2 className={s.cardTitle}>
+    <Box className={s.cardContainer}>
+      <Flex align='center' gap='4' className={s.cardHeader}>
+        <Box className={`${s.cardHeaderIcon} ${s.cardHeaderIconIndigo}`}>
+          <PersonIcon width={24} height={24} />
+        </Box>
+        <Box>
+          <Heading as='h2' size='5' className={s.cardTitle}>
             {t('profile.personalInfo', 'Personal Information')}
-          </h2>
-          <p className={s.cardDescription}>
+          </Heading>
+          <Text size='2' color='gray'>
             {t('profile.personalInfoDesc', 'Update your personal details')}
-          </p>
-        </div>
-      </div>
+          </Text>
+        </Box>
+      </Flex>
 
       <Form.Error message={error || ''} />
 
@@ -137,7 +127,7 @@ function PersonalInfoCard() {
       >
         <PersonalInfoFormFields loading={loading} />
       </Form>
-    </div>
+    </Box>
   );
 }
 
@@ -149,7 +139,7 @@ function PersonalInfoFormFields({ loading }) {
   } = useFormContext();
 
   return (
-    <>
+    <Flex direction='column' gap='4'>
       <Form.Field
         name='profile.display_name'
         label={t('profile.displayName', 'Display Name')}
@@ -163,30 +153,26 @@ function PersonalInfoFormFields({ loading }) {
         />
       </Form.Field>
 
-      <div className={s.row}>
-        <div className={s.col}>
-          <Form.Field
-            name='profile.first_name'
-            label={t('profile.firstName', 'First Name')}
-          >
-            <Form.Input
-              type='text'
-              placeholder={t('profile.firstNamePlaceholder', 'First name')}
-            />
-          </Form.Field>
-        </div>
-        <div className={s.col}>
-          <Form.Field
-            name='profile.last_name'
-            label={t('profile.lastName', 'Last Name')}
-          >
-            <Form.Input
-              type='text'
-              placeholder={t('profile.lastNamePlaceholder', 'Last name')}
-            />
-          </Form.Field>
-        </div>
-      </div>
+      <Grid columns={{ initial: '1', sm: '2' }} gap='4'>
+        <Form.Field
+          name='profile.first_name'
+          label={t('profile.firstName', 'First Name')}
+        >
+          <Form.Input
+            type='text'
+            placeholder={t('profile.firstNamePlaceholder', 'First name')}
+          />
+        </Form.Field>
+        <Form.Field
+          name='profile.last_name'
+          label={t('profile.lastName', 'Last Name')}
+        >
+          <Form.Input
+            type='text'
+            placeholder={t('profile.lastNamePlaceholder', 'Last name')}
+          />
+        </Form.Field>
+      </Grid>
 
       <Form.Field name='profile.bio' label={t('profile.bio', 'Bio')}>
         <Form.WYSIWYG
@@ -224,17 +210,19 @@ function PersonalInfoFormFields({ loading }) {
         errors={errors}
       />
 
-      <Button
-        variant='primary'
-        type='submit'
-        className={s.button}
-        loading={loading || isSubmitting}
-      >
-        {loading
-          ? t('profile.saving', 'Saving...')
-          : t('profile.saveChanges', 'Save Changes')}
-      </Button>
-    </>
+      <Flex justify='end' className={s.cardAction}>
+        <Button
+          variant='solid'
+          color='indigo'
+          type='submit'
+          loading={loading || isSubmitting}
+        >
+          {loading
+            ? t('profile.saving', 'Saving...')
+            : t('profile.saveChanges', 'Save Changes')}
+        </Button>
+      </Flex>
+    </Flex>
   );
 }
 

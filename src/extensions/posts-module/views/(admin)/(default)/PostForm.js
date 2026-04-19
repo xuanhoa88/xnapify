@@ -6,6 +6,7 @@
  */
 import { useMemo, useCallback, useEffect, useRef } from 'react';
 
+import { Box, Text } from '@radix-ui/themes';
 import kebabCase from 'lodash/kebabCase';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
@@ -53,7 +54,7 @@ function PostFormFields({ isEdit, saving }) {
   }, []);
 
   return (
-    <div className={s.form}>
+    <Box className={s.form}>
       <Form.Field name='title' label={t('posts:form.title', 'Title')} required>
         <Form.Input
           placeholder={t('posts:form.titlePlaceholder', 'Enter post title')}
@@ -65,12 +66,12 @@ function PostFormFields({ isEdit, saving }) {
           placeholder={t('posts:form.slugPlaceholder', 'url-friendly-slug')}
           onChange={handleSlugChange}
         />
-        <div className={s.slugHint}>
+        <Text as='div' className={s.slugHint}>
           {t(
             'posts:form.slugHint',
             'Auto-generated from title. Edit to customize.',
           )}
-        </div>
+        </Text>
       </Form.Field>
 
       <Form.Field name='status' label={t('posts:form.status', 'Status')}>
@@ -121,7 +122,7 @@ function PostFormFields({ isEdit, saving }) {
           </Modal.Button>
         </Modal.Actions>
       </Modal.Footer>
-    </div>
+    </Box>
   );
 }
 

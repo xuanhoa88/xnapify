@@ -1,186 +1,103 @@
-/**
- * xnapify (https://github.com/xuanhoa88/xnapify/)
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE.txt file in the root directory of this source tree.
- */
-.root {
-  padding: var(--spacing-8);
-  background: var(--color-background-secondary);
+.containerBox {
+  padding: var(--space-6);
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.headerFlex {
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--gray-a6);
+  margin-bottom: var(--space-6);
+}
+
+.headerIconBox {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-3);
+  background-color: var(--gray-3);
+  color: var(--gray-11);
+  flex-shrink: 0;
+}
+
+.headerHeading {
+  margin: 0;
+  color: var(--gray-12);
+}
+
+.headerSubtitle {
+  margin: 0;
+  margin-top: var(--space-1);
+}
+
+.errorFlex {
+  border: 1px solid var(--red-6);
+  border-radius: var(--radius-3);
+  background-color: var(--red-2);
+}
+
+.emptyStateFlex {
+  opacity: 0.6;
+}
+
+.emptyStateIcon {
+  margin-bottom: var(--space-3);
+}
+
+.emptyStateText {
+  margin-bottom: var(--space-4);
+}
+
+.searchBox {
+  margin-bottom: var(--space-6);
+}
+
+.cardContent {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.cardHeader {
+  border-bottom: 1px solid var(--gray-a5);
+}
+
+.cardIconBox {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-3);
+  background-color: var(--indigo-3);
+  color: var(--indigo-11);
+}
+
+.cardTitle {
+  color: var(--gray-12);
+  word-break: break-word;
+}
+
+.cardBody {
+  padding: var(--space-2) 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.cardDescription {
+  margin-bottom: var(--space-4);
   flex: 1;
 }
 
-/* Filters Section - matches Users.css */
-.filters {
-  display: flex;
-  gap: var(--spacing-4);
-  margin-bottom: var(--spacing-6);
-  flex-wrap: wrap;
-  background: var(--color-background);
-  padding: var(--spacing-5);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--color-border);
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: var(--spacing-5);
-}
-
-/* Role Card - Supplementary styles (Card component handles base styling) */
-.roleCard {
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  z-index: 1;
-}
-
-/* When dropdown is open, elevate card above other cards */
-.roleCard:has(.open) {
-  z-index: 9999;
-}
-
-/* Card.Header customization for role cards */
-.roleCardHeader {
-  border-bottom: none;
-}
-
-/* Header content wrapper for icon and name */
-.roleHeaderContent {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-3);
-}
-
-/* Card.Body customization for role cards */
-.roleCardBody {
-  padding-top: 0;
-}
-
-.roleIcon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-primary);
-}
-
-.roleName {
-  margin: 0;
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text-primary);
-  line-height: 1.4;
-}
-
-.roleDescription {
-  margin: 0 0 var(--spacing-3) 0;
-  color: var(--color-text-secondary);
-  line-height: 1.5;
-  font-size: var(--font-size-sm);
-}
-
-.roleStats {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-2);
-  margin-bottom: var(--spacing-4);
-  padding: var(--spacing-3) var(--spacing-4);
-  background: var(--color-background-secondary);
-  border-radius: var(--radius-md);
-}
-
-.roleStats:hover {
-  background: var(--color-background-tertiary);
-}
-
-.stat {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.cardStatsFlex {
+  margin-top: auto;
 }
 
 .statLabel {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-  font-weight: var(--font-weight-semibold);
+  color: var(--gray-11);
 }
 
 .statValue {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text-primary);
+  color: var(--gray-12);
 }
 
-/* =============================================================================
-   RESPONSIVE DESIGN - MOBILE
-   ============================================================================= */
-
-@media (max-width: 768px) {
-  .root {
-    padding: var(--spacing-3);
-  }
-
-  /* Filters compact */
-  .filters {
-    padding: var(--spacing-3);
-    gap: var(--spacing-2);
-    margin-bottom: var(--spacing-4);
-  }
-
-  /* Grid single column */
-  .grid {
-    grid-template-columns: 1fr;
-    gap: var(--spacing-3);
-  }
-
-  /* Role card compact */
-  .roleCard {
-    padding: var(--spacing-4);
-    border-radius: var(--radius-lg);
-  }
-
-  .roleCard:hover {
-    transform: none;
-  }
-
-  .roleName {
-    font-size: var(--font-size-base);
-  }
-
-  .roleDescription {
-    font-size: var(--font-size-xs);
-    margin-bottom: var(--spacing-3);
-    line-height: 1.5;
-  }
-
-  .roleStats {
-    padding: var(--spacing-2) var(--spacing-3);
-    margin-bottom: var(--spacing-3);
-    gap: var(--spacing-2);
-  }
-
-  .statLabel {
-    font-size: 10px;
-  }
-
-  .statValue {
-    font-size: var(--font-size-xs);
-  }
-}
-
-/* Extra small mobile */
-@media (max-width: 375px) {
-  .root {
-    padding: var(--spacing-2);
-  }
-
-  .roleCard {
-    padding: var(--spacing-3);
-  }
-
-  .roleName {
-    font-size: var(--font-size-sm);
-  }
+.paginationBox {
+  margin-top: var(--space-6);
 }

@@ -5,52 +5,62 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { Flex, Box, Text, Heading, Button } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
-import Button from '@shared/renderer/components/Button';
 import { Link } from '@shared/renderer/components/History';
 
 import s from './NotFound.css';
 
 /**
  * Not Found (404) Page Component
- * Standalone full-page display without header/footer
+ * Standalone full-page display natively mapped to pure Radix Flex definitions
  */
 function NotFound() {
   const { t } = useTranslation();
 
   return (
-    <div className={s.root}>
+    <Box className={s.pageContainer}>
       {/* Hero Section */}
-      <div className={s.hero}>
-        <div className={s.heroCode}>404</div>
-        <h1 className={s.heroTitle}>{t('notFound.title', 'Page Not Found')}</h1>
-        <p className={s.heroSubtitle}>
+      <Flex
+        direction='column'
+        align='center'
+        justify='center'
+        className={s.hero}
+      >
+        <Text className={s.errorCode}>404</Text>
+        <Heading as='h1' size='8' mb='3' className={s.heroTitle}>
+          {t('notFound.title', 'Page Not Found')}
+        </Heading>
+        <Text size='4' color='gray' className={s.heroSubtitle}>
           {t(
             'notFound.message',
             'Sorry, the page you were trying to view does not exist.',
           )}
-        </p>
-      </div>
+        </Text>
+      </Flex>
 
       {/* Actions Section */}
-      <div className={s.content}>
-        <div className={s.container}>
-          <div className={s.actions}>
-            <Link to='/' className={s.btnPrimary}>
-              {t('notFound.backToHome', 'Back to Home')}
-            </Link>
+      <Box className={s.contentWrapper}>
+        <Box className={s.contentInner}>
+          <Flex gap='4' justify='center' align='center' mt='6'>
+            <Button asChild variant='solid' size='3'>
+              <Link to='/' className={s.link}>
+                {t('notFound.backToHome', 'Back to Home')}
+              </Link>
+            </Button>
             <Button
-              variant='secondary'
-              className={s.btnSecondary}
+              variant='surface'
+              size='3'
+              color='gray'
               onClick={() => window.history.back()}
             >
               {t('notFound.goBack', 'Go Back')}
             </Button>
-          </div>
-        </div>
-      </div>
-    </div>
+          </Flex>
+        </Box>
+      </Box>
+    </Box>
   );
 }
 

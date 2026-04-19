@@ -1,37 +1,30 @@
-/**
- * xnapify (https://github.com/xuanhoa88/xnapify/)
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE.txt file in the root directory of this source tree.
- */
 
-/* Root container - matches admin pages */
-.root {
-  padding: var(--spacing-8);
-  background: var(--color-background-secondary);
-  flex: 1;
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-/* Main content wrapper */
-.wrapper {
-  max-width: 1000px;
+.pageContainer {
+  background-color: var(--color-background);
+  min-height: 100vh;
+  padding: var(--space-6) var(--space-4);
+}
+
+.contentWrapper {
+  max-width: 1200px;
   margin: 0 auto;
 }
 
-/* =============================================================================
-   RESPONSIVE DESIGN - TABLET
-   ============================================================================= */
-@media (max-width: 768px) {
-  .root {
-    padding: var(--spacing-4);
-  }
+.tabsContainer {
+  margin-top: var(--space-6);
 }
 
-/* =============================================================================
-   RESPONSIVE DESIGN - SMALL MOBILE
-   ============================================================================= */
-@media (max-width: 375px) {
-  .root {
-    padding: var(--spacing-3);
-  }
+.tabIcon {
+  margin-right: var(--space-2);
 }

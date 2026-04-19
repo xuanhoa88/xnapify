@@ -7,10 +7,11 @@
 
 import { useEffect, useRef } from 'react';
 
+import * as RadixIcons from '@radix-ui/react-icons';
+import { Text, Box, Button, Flex } from '@radix-ui/themes';
+import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
-
-import Icon from '@shared/renderer/components/Icon';
 
 import getCategoryIcon from './getCategoryIcon';
 
@@ -36,31 +37,50 @@ export default function CategoryChips({
     return () => el.removeEventListener('wheel', onWheel);
   }, []);
 
-  return (
-    <div ref={ref} className={s.categories}>
-      <button
+  const renderChip = (id, labelKey, count, isAll = false) => {
+    const isActive = activeCategory === id;
+    const iconName = isAll
+      ? RadixIcons.ClipboardIcon
+      : getCategoryIcon(labelKey);
+    const labelText = isAll ? t('admin:hub.categoryAll', 'All') : labelKey;
+
+    return (
+      <Button
+        key={id}
         type='button'
-        className={activeCategory === 'all' ? s.categoryActive : s.category}
-        onClick={() => onSelect('all')}
+        variant={isActive ? 'solid' : 'soft'}
+        color={isActive ? 'indigo' : 'gray'}
+        radius='full'
+        onClick={() => onSelect(id)}
+        className={s.chipButton}
       >
-        <Icon name='clipboard' size={16} />
-        <span>{t('admin:hub.categoryAll', 'All')}</span>
-      </button>
-      {categories.map(cat => (
-        <button
-          key={cat.key}
-          type='button'
-          className={activeCategory === cat.key ? s.categoryActive : s.category}
-          onClick={() => onSelect(cat.key)}
-        >
-          <Icon name={getCategoryIcon(cat.label)} size={16} />
-          <span>{cat.label}</span>
-          {cat.count > 0 && (
-            <span className={s.categoryCount}>{cat.count}</span>
-          )}
-        </button>
-      ))}
-    </div>
+        {(() => {
+          const Comp = iconName;
+          return <Comp width={16} height={16} />;
+        })()}
+        <Text as='span' size='2'>
+          {labelText}
+        </Text>
+        {count > 0 && !isAll && (
+          <Box
+            as='span'
+            className={clsx(
+              s.countBadge,
+              isActive ? s.countActive : s.countInactive,
+            )}
+          >
+            {count}
+          </Box>
+        )}
+      </Button>
+    );
+  };
+
+  return (
+    <Flex ref={ref} gap='2' className={s.scrollContainer}>
+      {renderChip('all', 'all', 0, true)}
+      {categories.map(cat => renderChip(cat.key, cat.label, cat.count))}
+    </Flex>
   );
 }
 

@@ -7,12 +7,19 @@
 
 import { useEffect, useState } from 'react';
 
-import clsx from 'clsx';
+import * as RadixIcons from '@radix-ui/react-icons';
+import {
+  Flex,
+  Box,
+  Text,
+  Grid,
+  Button,
+  Badge,
+  IconButton,
+} from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
-import Button from '@shared/renderer/components/Button';
-import Icon from '@shared/renderer/components/Icon';
 import Modal from '@shared/renderer/components/Modal';
 import Portal from '@shared/renderer/components/Portal';
 
@@ -46,30 +53,32 @@ export default function ListingDetail({ listing = null, onClose }) {
 
   const metaItems = [
     {
-      icon: 'star',
+      icon: RadixIcons.StarIcon,
       label: t('admin:hub.version', 'Version'),
       value: listing && (
-        <span style={{ textTransform: 'none' }}>v{listing.version}</span>
+        <Text as='span' className={s.versionText}>
+          v{listing.version}
+        </Text>
       ),
     },
     {
-      icon: 'user',
+      icon: RadixIcons.PersonIcon,
       label: t('admin:hub.author', 'Author'),
       value: (listing && listing.author) || '—',
     },
     {
-      icon: 'download',
+      icon: RadixIcons.DownloadIcon,
       label: t('admin:hub.installs', 'Installs'),
       value: ((listing && listing.install_count) || 0).toLocaleString(),
     },
     {
-      icon: 'folder',
+      icon: RadixIcons.ArchiveIcon, // folder substitute
       label: t('admin:hub.category', 'Category'),
       value: listing && listing.category,
     },
     listing && listing.compatibility
       ? {
-          icon: 'check-circle',
+          icon: RadixIcons.CheckCircledIcon,
           label: t('admin:hub.testedWith', 'Tested with'),
           value: `xnapify ${listing.compatibility}`,
         }
@@ -83,137 +92,236 @@ export default function ListingDetail({ listing = null, onClose }) {
           {t('admin:hub.extensionDetail', 'Extension Detail')}
         </Modal.Header>
         <Modal.Body>
-          <div className={s.drawerContent}>
+          <Box className={s.bodyBox}>
             {/* ── Hero ───────────────────────────────── */}
-            <div className={s.detailHero}>
-              <div className={s.detailHeroIcon}>
+            <Flex gap='4' align='start' className={s.heroFlex}>
+              <Box className={s.heroIconBox}>
                 {listing && listing.icon ? (
-                  <img src={listing.icon} alt={listing.name} />
+                  <img
+                    src={listing.icon}
+                    alt={listing.name}
+                    className={s.iconImage}
+                  />
                 ) : (
-                  <Icon name='extension' size={36} />
+                  <RadixIcons.CubeIcon width={36} height={36} />
                 )}
-              </div>
-              <div className={s.detailHeroInfo}>
-                <h2 className={s.detailName}>
+              </Box>
+              <Box className={s.heroInfoBox}>
+                <Text as='h2' size='6' weight='bold' className={s.heroTitle}>
                   {(listing && listing.name) || ''}
-                </h2>
-                <div className={s.detailHeroMeta}>
+                </Text>
+
+                <Flex
+                  gap='2'
+                  align='center'
+                  wrap='wrap'
+                  className={s.badgesFlex}
+                >
                   {isOfficial && (
-                    <span className={s.officialPill}>
-                      <Icon name='check-circle' size={12} />
+                    <Badge
+                      size='small'
+                      color='indigo'
+                      radius='full'
+                      variant='soft'
+                    >
+                      <RadixIcons.CheckCircledIcon
+                        width={12}
+                        height={12}
+                        className={s.badgeIcon}
+                      />
+
                       {t('admin:hub.officialBadge', 'Official')}
-                    </span>
+                    </Badge>
                   )}
-                  <span className={s.metaPill}>
-                    <Icon name='download' size={12} />
+                  <Badge
+                    size='small'
+                    color='gray'
+                    radius='full'
+                    variant='surface'
+                  >
+                    <RadixIcons.DownloadIcon
+                      width={12}
+                      height={12}
+                      className={s.badgeIcon}
+                    />
+
                     {((listing && listing.install_count) || 0).toLocaleString()}
-                  </span>
-                  <span className={s.metaPill}>
+                  </Badge>
+                  <Badge
+                    size='small'
+                    color='gray'
+                    radius='full'
+                    variant='surface'
+                  >
                     v{listing && listing.version}
-                  </span>
+                  </Badge>
                   {listing && listing.category && (
-                    <span className={s.categoryPill}>{listing.category}</span>
+                    <Badge
+                      size='small'
+                      color='gray'
+                      radius='full'
+                      variant='surface'
+                    >
+                      {listing.category}
+                    </Badge>
                   )}
-                </div>
+                </Flex>
+
                 {listing && listing.author && (
-                  <p className={s.detailAuthor}>
+                  <Text as='p' size='2' color='gray' className={s.authorText}>
                     {t('admin:hub.byAuthor', 'by {{author}}', {
                       author: listing.author,
                     })}
-                  </p>
+                  </Text>
                 )}
-              </div>
-            </div>
+              </Box>
+            </Flex>
 
             {/* ── Screenshots strip ──────────────────── */}
             {screenshots.length > 0 && (
-              <div className={s.screenshotStrip}>
-                {screenshots.map((url, idx) => (
-                  <button
-                    key={idx}
-                    type='button'
-                    className={s.screenshotThumb}
-                    onClick={() => setLightboxIdx(idx)}
-                    aria-label={t(
-                      'admin:hub.screenshotAlt',
-                      'Screenshot {{number}}',
-                      { number: idx + 1 },
-                    )}
-                  >
-                    <img src={url} alt='' />
-                    <span className={s.screenshotZoom}>
-                      <Icon name='eye' size={16} />
-                    </span>
-                  </button>
-                ))}
-              </div>
+              <Box className={s.screenshotsBox}>
+                <Flex gap='3' className={s.screenshotsStripFlex}>
+                  {screenshots.map((url, idx) => (
+                    <Box
+                      key={idx}
+                      onClick={() => setLightboxIdx(idx)}
+                      role='button'
+                      tabIndex={0}
+                      aria-label={t(
+                        'admin:hub.screenshotAlt',
+                        'Screenshot {{number}}',
+                        { number: idx + 1 },
+                      )}
+                      onKeyDown={e => e.key === 'Enter' && setLightboxIdx(idx)}
+                      className={s.screenshotBox}
+                    >
+                      <img src={url} alt='' className={s.screenshotImage} />
+
+                      <Flex className={s.screenshotOverlay}>
+                        <RadixIcons.EyeOpenIcon width={24} height={24} />
+                      </Flex>
+                    </Box>
+                  ))}
+                </Flex>
+              </Box>
             )}
 
             {/* ── Description ───────────────────────── */}
-            <div className={s.detailDescription}>
-              <h3>{t('admin:hub.overview', 'Overview')}</h3>
-              <p>{listing && listing.description}</p>
-            </div>
+            <Box className={s.descBox}>
+              <Text as='h3' size='4' weight='bold' className={s.descTitle}>
+                {t('admin:hub.overview', 'Overview')}
+              </Text>
+              <Text as='p' size='3' className={s.descText}>
+                {listing &&
+                  (listing.description ||
+                    t(
+                      'admin:hub.noDescription',
+                      'No description available for this extension.',
+                    ))}
+              </Text>
+            </Box>
 
             {/* ── Metadata rows ─────────────────────── */}
-            <div className={s.sidebarMeta}>
-              {metaItems.map(row => (
-                <div key={row.label} className={s.metaRow}>
-                  <span className={s.metaRowIcon}>
-                    <Icon name={row.icon} size={14} />
-                  </span>
-                  <span className={s.metaRowLabel}>{row.label}</span>
-                  <span className={s.metaRowValue}>{row.value}</span>
-                </div>
-              ))}
-            </div>
+            <Box className={s.metaBox}>
+              <Grid columns='1' gap='3'>
+                {metaItems.map((row, i) => (
+                  <Flex
+                    key={row.label}
+                    align='center'
+                    justify='between'
+                    className={
+                      i < metaItems.length - 1 ? s.metaRowNormal : s.metaRowLast
+                    }
+                  >
+                    <Flex align='center' gap='2' className={s.metaLabelFlex}>
+                      {(() => {
+                        const Comp = row.icon;
+                        return <Comp width={16} height={16} />;
+                      })()}
+                      <Text as='span' size='2' weight='medium'>
+                        {row.label}
+                      </Text>
+                    </Flex>
+                    <Text
+                      as='span'
+                      size='2'
+                      weight='bold'
+                      className={s.metaValueText}
+                    >
+                      {row.value}
+                    </Text>
+                  </Flex>
+                ))}
+              </Grid>
+            </Box>
 
             {/* ── Tags ──────────────────────────────── */}
             {tags.length > 0 && (
-              <div className={s.tags}>
-                {tags.map(tag => (
-                  <span key={tag} className={s.tag}>
-                    {tag}
-                  </span>
-                ))}
-              </div>
+              <Box>
+                <Text as='h3' size='3' weight='bold' className={s.tagsTitle}>
+                  Tags
+                </Text>
+                <Flex gap='2' wrap='wrap'>
+                  {tags.map(tag => (
+                    <Badge
+                      key={tag}
+                      size='small'
+                      color='gray'
+                      radius='full'
+                      variant='soft'
+                    >
+                      {tag}
+                    </Badge>
+                  ))}
+                </Flex>
+              </Box>
             )}
-          </div>
+          </Box>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant='primary' icon='download'>
-            {t('admin:hub.install', 'Install')}
-          </Button>
+          <Modal.Actions>
+            <Button variant='solid' color='indigo' icon='download'>
+              {t('admin:hub.install', 'Install')}
+            </Button>
+          </Modal.Actions>
         </Modal.Footer>
       </Modal>
 
       {/* ── Lightbox overlay ───────────────────────── */}
       {lightboxIdx !== null && screenshots.length > 0 && (
         <Portal>
-          <div
-            className={s.lightboxOverlay}
+          <Box
+            className={s.portalOverlay}
             onClick={() => setLightboxIdx(null)}
             role='presentation'
           >
-            {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events */}
-            <div
-              className={s.lightboxContent}
+            <Box
+              className={s.portalDialog}
               onClick={e => e.stopPropagation()}
               role='dialog'
               aria-modal='true'
             >
-              <button
-                type='button'
-                className={s.lightboxClose}
+              <IconButton
+                variant='solid'
+                color='gray'
+                highContrast
+                radius='full'
+                size='3'
+                className={s.closeButton}
                 onClick={() => setLightboxIdx(null)}
                 aria-label={t('common.close', 'Close')}
               >
-                <Icon name='x' size={20} />
-              </button>
+                <RadixIcons.Cross2Icon width={24} height={24} />
+              </IconButton>
+
               {screenshots.length > 1 && (
-                <button
-                  type='button'
-                  className={clsx(s.lightboxNav, s.lightboxNavPrev)}
+                <IconButton
+                  variant='solid'
+                  color='gray'
+                  highContrast
+                  radius='full'
+                  size='4'
+                  className={s.prevButton}
                   onClick={() =>
                     setLightboxIdx(
                       i => (i - 1 + screenshots.length) % screenshots.length,
@@ -221,43 +329,49 @@ export default function ListingDetail({ listing = null, onClose }) {
                   }
                   aria-label='Previous'
                 >
-                  <Icon name='arrowLeft' size={20} />
-                </button>
+                  <RadixIcons.ArrowLeftIcon width={24} height={24} />
+                </IconButton>
               )}
+
               <img
                 src={screenshots[lightboxIdx]}
                 alt={t('admin:hub.screenshotAlt', 'Screenshot {{number}}', {
                   number: lightboxIdx + 1,
                 })}
-                className={s.lightboxImg}
+                className={s.lightboxImage}
               />
+
               {screenshots.length > 1 && (
-                <button
-                  type='button'
-                  className={clsx(s.lightboxNav, s.lightboxNavNext)}
+                <IconButton
+                  variant='solid'
+                  color='gray'
+                  highContrast
+                  radius='full'
+                  size='4'
+                  className={s.nextButton}
                   onClick={() =>
                     setLightboxIdx(i => (i + 1) % screenshots.length)
                   }
                   aria-label='Next'
                 >
-                  <Icon name='arrowRight' size={20} />
-                </button>
+                  <RadixIcons.ArrowRightIcon width={24} height={24} />
+                </IconButton>
               )}
-              <div className={s.lightboxDots}>
+
+              <Flex gap='2' className={s.dotsFlex}>
                 {screenshots.map((_, i) => (
-                  <button
+                  <Box
+                    as='button'
                     key={i}
                     type='button'
-                    className={clsx(s.lightboxDot, {
-                      [s.lightboxDotActive]: i === lightboxIdx,
-                    })}
+                    className={`${s.dotButton} ${i === lightboxIdx ? s.dotActive : s.dotInactive}`}
                     onClick={() => setLightboxIdx(i)}
                     aria-label={`Screenshot ${i + 1}`}
                   />
                 ))}
-              </div>
-            </div>
-          </div>
+              </Flex>
+            </Box>
+          </Box>
         </Portal>
       )}
     </>

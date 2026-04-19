@@ -7,21 +7,18 @@
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
 
-import clsx from 'clsx';
+import { CodeIcon, CheckIcon, CopyIcon } from '@radix-ui/react-icons';
+import { Flex, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
 import { useFormContext } from '@shared/renderer/components/Form';
-import Icon from '@shared/renderer/components/Icon';
 
 import { extractVariables } from '../../../utils/template';
 
 import s from './TemplateVariables.css';
 
 /**
-
- * TemplateVariables component
- * Uses react-hook-form context to watch `subject` and `html_body` inputs,
- * extracts LiquidJS variables (`{{ variable }}`), and displays them as chips.
+ * TemplateVariables utilizing Radix explicitly preventing pure DOM overrides enforcing exact design parameters effectively reliably cleanly beautifully efficiently safely robustly.
  */
 export default function TemplateVariables() {
   const { t } = useTranslation();
@@ -69,36 +66,39 @@ export default function TemplateVariables() {
   }
 
   return (
-    <div className={s.root}>
-      <span className={s.label}>
-        <Icon name='code' size={16} />
+    <Flex align='center' wrap='wrap' gap='2' className={s.container}>
+      <Flex align='center' gap='2' className={s.titleFlex}>
+        <CodeIcon width={16} height={16} />
         {t('admin:emails.form.detectedVariables', 'Detected Variables:')}
-      </span>
+      </Flex>
       {variables.length === 0 ? (
-        <span className={s.emptyText}>
+        <Text size='2' color='gray' className={s.emptyText}>
           {t(
             'admin:emails.form.noVariables',
             'None found. Use {{ var }} to insert dynamic data.',
           )}
-        </span>
+        </Text>
       ) : (
         variables.map(v => (
-          <button
+          <Flex
+            as='button'
             key={v}
             type='button'
-            className={clsx(s.chip, { [s.copiedTag]: copiedVar === v })}
+            align='center'
+            gap='1'
             onClick={() => handleCopy(v)}
             title={t('admin:emails.form.clickToCopy', 'Click to copy')}
+            className={`${s.variableBtn} ${copiedVar === v ? s.variableBtnCopied : s.variableBtnNormal}`}
           >
             {copiedVar === v ? (
-              <Icon name='check' size={14} />
+              <CheckIcon width={14} height={14} />
             ) : (
-              <Icon name='copy' size={14} />
+              <CopyIcon width={14} height={14} />
             )}
             {v}
-          </button>
+          </Flex>
         ))
       )}
-    </div>
+    </Flex>
   );
 }

@@ -5,40 +5,41 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { Flex, Box } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 
 import ImpersonationBanner from '../components/ImpersonationBanner';
 
-import Drawer, { SIDER_WIDTH, SIDER_MINIMAL_WIDTH } from './Drawer';
+import Drawer from './Drawer';
 import FlashMessage from './FlashMessage';
 import Footer from './Footer';
 import Header from './Header';
 
-import s from './Admin.css';
+import s from './AdminLayout.css';
 
 /**
  * AdminLayout Component
  *
- * A dedicated layout component for admin panel pages.
+ * A dedicated layout component for admin panel pages using Radix UI primitives.
  * Features a persistent Sider (Drawer), Header, Footer, and FlashMessage.
  */
 function AdminLayout({ children, minimal = true }) {
   return (
-    <div
-      className={s.root}
-      style={{
-        '--sider-width': `${minimal ? SIDER_MINIMAL_WIDTH : SIDER_WIDTH}px`,
-      }}
-    >
+    <Flex minHeight='100vh' className={s.layoutWrapper}>
       <Drawer minimal={minimal} />
-      <div className={s.body}>
+
+      <Flex direction='column' grow='1' className={s.mainContent}>
         <ImpersonationBanner />
         <Header />
-        <main className={s.content}>{children}</main>
+
+        <Box as='main' grow='1' px='6' py='4' overflowX='hidden'>
+          {children}
+        </Box>
+
         <FlashMessage />
         <Footer />
-      </div>
-    </div>
+      </Flex>
+    </Flex>
   );
 }
 

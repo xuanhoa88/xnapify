@@ -1,0 +1,9 @@
+.layoutWrapper {
+  background-color: var(--color-background);
+}
+
+.mainContent {
+  transition: margin-left 0.2s ease, width 0.2s ease;
+  margin-left: var(--sider-width);
+  width: calc(100% - var(--sider-width));
+}

@@ -35,16 +35,6 @@ module.exports = () => ({
       features: {
         // Enable CSS nesting via & parent selector
         'nesting-rules': true,
-
-        // Import custom properties from the shared variables file
-        'custom-properties': {
-          importFrom: 'shared/renderer/components/variables.css',
-        },
-
-        // Import custom media queries from the shared variables file
-        'custom-media-queries': {
-          importFrom: 'shared/renderer/components/variables.css',
-        },
       },
 
       // Autoprefixer options

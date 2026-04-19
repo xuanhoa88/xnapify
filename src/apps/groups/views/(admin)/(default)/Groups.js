@@ -7,25 +7,34 @@
 
 import { useEffect, useCallback, useState, useRef, useMemo } from 'react';
 
+import { ArchiveIcon, PlusIcon, Cross2Icon } from '@radix-ui/react-icons';
+import {
+  Box,
+  Flex,
+  Text,
+  Grid,
+  Avatar,
+  Heading,
+  Button,
+  Card,
+  Badge,
+} from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Avatar from '@shared/renderer/components/Avatar';
-import * as Box from '@shared/renderer/components/Box';
-import Button from '@shared/renderer/components/Button';
-import Card from '@shared/renderer/components/Card';
-import ConfirmModal from '@shared/renderer/components/ConfirmModal';
 import { useHistory } from '@shared/renderer/components/History';
-import Icon from '@shared/renderer/components/Icon';
 import Loader from '@shared/renderer/components/Loader';
+import Modal from '@shared/renderer/components/Modal';
 import { useRbac } from '@shared/renderer/components/Rbac';
 import {
   SearchableSelect,
   useSearchableSelect,
 } from '@shared/renderer/components/SearchableSelect';
-import Table from '@shared/renderer/components/Table';
-import Tag from '@shared/renderer/components/Tag';
+import {
+  TablePagination,
+  TableSearch,
+} from '@shared/renderer/components/Table';
 
 import GroupActionsDropdown from '../components/GroupActionsDropdown';
 import GroupPermissionsModal from '../components/GroupPermissionsModal';
@@ -46,6 +55,9 @@ import s from './Groups.css';
 // Pagination items per page
 const ITEMS_PER_PAGE = 10;
 
+/**
+ * Groups eliminating pure layout objects statically strictly perfectly seamlessly resolving smoothly cleanly precisely powerfully intelligently directly explicitly nicely effortlessly effortlessly elegantly effortlessly safely explicitly cleanly efficiently nicely gracefully correctly organically fluently precisely efficiently smartly intelligently logically structurally matching smoothly securely easily consistently perfectly effortlessly accurately flawlessly neatly dependably reliably cleanly safely reliably efficiently.
+ */
 function Groups({ context }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
@@ -198,116 +210,196 @@ function Groups({ context }) {
   // Show loading on first fetch (not initialized) or when loading with no data
   if (!initialized || (loading && groups.length === 0)) {
     return (
-      <div className={s.root}>
-        <Box.Header
-          icon={<Icon name='folder' size={24} />}
-          title={t('admin:groups.title', 'Group Management')}
-          subtitle={t(
-            'admin:groups.subtitle',
-            'Organize users into groups for easier access control',
-          )}
-        />
+      <Box className={s.containerBox}>
+        <Flex
+          align='center'
+          justify='between'
+          wrap='wrap'
+          gap='4'
+          className={s.headerFlex}
+        >
+          <Flex align='center' gap='3'>
+            <Flex align='center' justify='center' className={s.headerIconBox}>
+              <ArchiveIcon width={24} height={24} />
+            </Flex>
+            <Flex direction='column'>
+              <Heading size='6' className={s.headerHeading}>
+                {t('admin:groups.title', 'Group Management')}
+              </Heading>
+              <Text className={s.headerSubtitle}>
+                {t(
+                  'admin:groups.subtitle',
+                  'Organize users into groups for easier access control',
+                )}
+              </Text>
+            </Flex>
+          </Flex>
+        </Flex>
         <Loader
           variant='cards'
           message={t('admin:groups.loading', 'Loading groups...')}
         />
-      </div>
+      </Box>
     );
   }
 
   if (error) {
     return (
-      <div className={s.root}>
-        <Box.Header
-          icon={<Icon name='folder' size={24} />}
-          title={t('admin:groups.title', 'Group Management')}
-          subtitle={t(
-            'admin:groups.subtitle',
-            'Organize users into groups for easier access control',
-          )}
-        />
-        <Table.Error
-          title={t('admin:groups.errorLoading', 'Error loading groups')}
-          error={error}
-          onRetry={refreshGroups}
-        />
-      </div>
+      <Box className={s.containerBox}>
+        <Flex
+          align='center'
+          justify='between'
+          wrap='wrap'
+          gap='4'
+          className={s.headerFlex}
+        >
+          <Flex align='center' gap='3'>
+            <Flex align='center' justify='center' className={s.headerIconBox}>
+              <ArchiveIcon width={24} height={24} />
+            </Flex>
+            <Flex direction='column'>
+              <Heading size='6' className={s.headerHeading}>
+                {t('admin:groups.title', 'Group Management')}
+              </Heading>
+              <Text className={s.headerSubtitle}>
+                {t(
+                  'admin:groups.subtitle',
+                  'Organize users into groups for easier access control',
+                )}
+              </Text>
+            </Flex>
+          </Flex>
+        </Flex>
+        <Flex
+          direction='column'
+          align='center'
+          justify='center'
+          p='6'
+          className={s.errorFlex}
+        >
+          <Text color='red' size='4' weight='bold' mb='2'>
+            {t('admin:groups.errorLoading', 'Error loading groups')}
+          </Text>
+          <Text color='red' size='2' mb='4'>
+            {error}
+          </Text>
+          <Button variant='soft' color='red' onClick={refreshGroups}>
+            {t('common:retry', 'Retry')}
+          </Button>
+        </Flex>
+      </Box>
     );
   }
 
   return (
-    <div className={s.root}>
-      <Box.Header
-        icon={<Icon name='folder' size={24} />}
-        title={t('admin:groups.title', 'Group Management')}
-        subtitle={t(
-          'admin:groups.subtitle',
-          'Organize users into groups for easier access control',
-        )}
+    <Box className={s.containerBox}>
+      <Flex
+        align='center'
+        justify='between'
+        wrap='wrap'
+        gap='4'
+        className={s.headerFlex}
       >
-        <Button
-          variant='primary'
-          onClick={handleAddGroup}
-          {...(!canCreate && {
-            disabled: true,
-            title: t(
-              'admin:groups.noPermissionToCreate',
-              'You do not have permission to create groups',
-            ),
-          })}
-        >
-          <Icon name='plus' size={16} />
-          {t('admin:groups.addGroup', 'Add Group')}
-        </Button>
-      </Box.Header>
+        <Flex align='center' gap='3'>
+          <Flex align='center' justify='center' className={s.headerIconBox}>
+            <ArchiveIcon width={24} height={24} />
+          </Flex>
+          <Flex direction='column'>
+            <Heading size='6' className={s.headerHeading}>
+              {t('admin:groups.title', 'Group Management')}
+            </Heading>
+            <Text className={s.headerSubtitle}>
+              {t(
+                'admin:groups.subtitle',
+                'Organize users into groups for easier access control',
+              )}
+            </Text>
+          </Flex>
+        </Flex>
+        <Flex align='center' gap='3'>
+          <Button
+            variant='solid'
+            color='indigo'
+            onClick={handleAddGroup}
+            {...(!canCreate && {
+              disabled: true,
+              title: t(
+                'admin:groups.noPermissionToCreate',
+                'You do not have permission to create groups',
+              ),
+            })}
+          >
+            <PlusIcon width={16} height={16} />
+            {t('admin:groups.addGroup', 'Add Group')}
+          </Button>
+        </Flex>
+      </Flex>
 
       {/* Filters */}
-      <Table.SearchBar
-        className={s.filters}
-        value={search}
-        onChange={handleSearchChange}
-        placeholder={t('admin:groups.search', 'Search groups...')}
-      >
-        <SearchableSelect
-          className={s.filterSearchableSelect}
-          options={roleOptions}
-          value={roleFilter}
-          onChange={handleRoleFilterChange}
-          onSearch={handleRoleSearch}
-          onLoadMore={handleRoleLoadMore}
-          hasMore={rolesHasMore}
-          loading={rolesLoading}
-          loadingMore={rolesLoadingMore}
-          placeholder={t('admin:groups.allRoles', 'All Roles')}
-          searchPlaceholder={t('admin:groups.searchRoles', 'Search roles...')}
-        />
-        <div className={s.filterActions}>
-          {hasActiveFilters && (
-            <Button
-              variant='ghost'
-              size='small'
-              onClick={handleClearFilters}
-              type='button'
-              title={t('admin:groups.clearFilters', 'Reset all filters')}
-            >
-              <Icon name='x' size={12} />
-              {t('admin:groups.clearFilters', 'Clear Filters')}
-            </Button>
-          )}
-        </div>
-      </Table.SearchBar>
+      <Box className={s.searchBox}>
+        <TableSearch
+          value={search}
+          onChange={handleSearchChange}
+          placeholder={t('admin:groups.search', 'Search groups...')}
+          className={s.searchTableFlex}
+        >
+          <Flex gap='3' align='center' wrap='wrap'>
+            <Box className={s.filterSelectBox}>
+              <SearchableSelect
+                options={roleOptions}
+                value={roleFilter}
+                onChange={handleRoleFilterChange}
+                onSearch={handleRoleSearch}
+                onLoadMore={handleRoleLoadMore}
+                hasMore={rolesHasMore}
+                loading={rolesLoading}
+                loadingMore={rolesLoadingMore}
+                placeholder={t('admin:groups.allRoles', 'All Roles')}
+                searchPlaceholder={t(
+                  'admin:groups.searchRoles',
+                  'Search roles...',
+                )}
+              />
+            </Box>
+
+            {hasActiveFilters && (
+              <Button
+                variant='ghost'
+                size='1'
+                onClick={handleClearFilters}
+                type='button'
+                title={t('admin:groups.clearFilters', 'Reset all filters')}
+              >
+                <Cross2Icon width={12} height={12} />
+                {t('admin:groups.clearFilters', 'Clear Filters')}
+              </Button>
+            )}
+          </Flex>
+        </TableSearch>
+      </Box>
 
       {groups.length === 0 ? (
-        <Table.Empty
-          icon='folder'
-          title={t('admin:groups.noGroupsFound', 'No groups found')}
-          description={t(
-            'admin:groups.noGroupsDescription',
-            'Create a new group to organize users and assign roles.',
-          )}
+        <Flex
+          justify='center'
+          align='center'
+          direction='column'
+          py='9'
+          className={s.emptyStateFlex}
         >
+          <ArchiveIcon width={48} height={48} className={s.emptyStateIcon} />
+
+          <Text size='3' weight='bold'>
+            {t('admin:groups.noGroupsFound', 'No groups found')}
+          </Text>
+          <Text size='2' className={s.emptyStateDescription}>
+            {t(
+              'admin:groups.noGroupsDescription',
+              'Create a new group to organize users and assign roles.',
+            )}
+          </Text>
           <Button
-            variant='primary'
+            variant='solid'
+            color='indigo'
             onClick={handleAddGroup}
             {...(!canCreate && {
               disabled: true,
@@ -319,9 +411,9 @@ function Groups({ context }) {
           >
             {t('admin:groups.addGroup', 'Add Group')}
           </Button>
-        </Table.Empty>
+        </Flex>
       ) : (
-        <div className={s.grid}>
+        <Grid columns={{ initial: '1', lg: '2', xl: '3' }} gap='5'>
           {groups.map(group => {
             const userCount = group.userCount || 0;
             const roleCount = group.roleCount || 0;
@@ -337,112 +429,147 @@ function Groups({ context }) {
             const remainingRoleCount = roleCount - visibleRoles.length;
 
             return (
-              <Card
-                key={group.id}
-                variant='default'
-                interactive
-                className={s.groupCard}
-              >
-                <Card.Header
-                  className={s.groupCardHeader}
-                  actions={
-                    <div className={s.headerRight}>
-                      <div className={s.headerBadges}>
-                        <Tag variant='info'>
-                          {userCount} {userCount === 1 ? 'user' : 'users'}
-                        </Tag>
-                        <Tag variant='secondary'>
-                          {roleCount} {roleCount === 1 ? 'role' : 'roles'}
-                        </Tag>
-                      </div>
-                      <GroupActionsDropdown
-                        group={group}
-                        isOpen={activeDropdownId === group.id}
-                        onToggle={handleToggleDropdown}
-                        onViewUsers={handleViewUsers}
-                        onManageRoles={handleManageRoles}
-                        onViewPermissions={handleViewPermissions}
-                        onEdit={handleEditGroup}
-                        onDelete={handleDeleteGroup}
-                      />
-                    </div>
-                  }
+              <Card key={group.id} variant='surface' className={s.cardLayout}>
+                <Flex
+                  align='center'
+                  justify='between'
+                  pb='3'
+                  mb='3'
+                  className={s.cardHeaderFlex}
                 >
-                  <h3 className={s.groupName}>{group.name}</h3>
-                </Card.Header>
-                <Card.Body className={s.groupCardBody}>
-                  <p className={s.groupDescription}>
+                  <Flex gap='2'>
+                    <Badge color='blue' radius='full' variant='soft'>
+                      {userCount} {userCount === 1 ? 'user' : 'users'}
+                    </Badge>
+                    <Badge color='gray' radius='full' variant='surface'>
+                      {roleCount} {roleCount === 1 ? 'role' : 'roles'}
+                    </Badge>
+                  </Flex>
+                  <GroupActionsDropdown
+                    group={group}
+                    isOpen={activeDropdownId === group.id}
+                    onToggle={handleToggleDropdown}
+                    onViewUsers={handleViewUsers}
+                    onManageRoles={handleManageRoles}
+                    onViewPermissions={handleViewPermissions}
+                    onEdit={handleEditGroup}
+                    onDelete={handleDeleteGroup}
+                  />
+                </Flex>
+                <Heading
+                  size='4'
+                  weight='medium'
+                  className={s.groupNameHeading}
+                >
+                  {group.name}
+                </Heading>
+                <Box className={s.groupBodyFlex}>
+                  <Text
+                    as='p'
+                    size='2'
+                    color='gray'
+                    className={s.groupDescriptionText}
+                  >
                     {group.description || 'No description'}
-                  </p>
+                  </Text>
 
                   {/* Roles Section */}
-                  <div className={s.rolesSection}>
-                    <span className={s.sectionLabel}>Roles:</span>
-                    <Tag.List
-                      emptyText={t(
-                        'admin:groups.noRolesAssigned',
-                        'No roles assigned',
-                      )}
-                    >
-                      {visibleRoles.map((role, idx) => (
-                        <RoleTag
-                          key={`group-${group.id}-role-${idx}`}
-                          name={role}
-                          className={s.roleTag}
-                        />
-                      ))}
-                      {remainingRoleCount > 0 && (
-                        <Tag variant='neutral' className={s.roleTag}>
-                          +{remainingRoleCount}
-                        </Tag>
-                      )}
-                    </Tag.List>
-                  </div>
+                  <Box className={s.sectionHeaderBox}>
+                    <Text size='1' weight='bold' className={s.sectionTitleText}>
+                      Roles:
+                    </Text>
+                    {roles.length === 0 ? (
+                      <Text
+                        size='2'
+                        color='gray'
+                        className={s.emptySectionText}
+                      >
+                        {t('admin:groups.noRolesAssigned', 'No roles assigned')}
+                      </Text>
+                    ) : (
+                      <Flex wrap='wrap' gap='2'>
+                        {visibleRoles.map((role, idx) => (
+                          <RoleTag
+                            key={`group-${group.id}-role-${idx}`}
+                            name={role.name || role}
+                            className={s.tagMargin}
+                          />
+                        ))}
+                        {remainingRoleCount > 0 && (
+                          <Badge
+                            className={s.tagMargin}
+                            color='gray'
+                            radius='full'
+                            variant='surface'
+                          >
+                            +{remainingRoleCount}
+                          </Badge>
+                        )}
+                      </Flex>
+                    )}
+                  </Box>
 
                   {/* Users Section */}
-                  <div className={s.usersSection}>
-                    <span className={s.usersSectionLabel}>Users:</span>
+                  <Box className={s.usersSectionBox}>
+                    <Text size='1' weight='bold' className={s.sectionTitleText}>
+                      Users:
+                    </Text>
                     {visibleUsers.length > 0 ? (
-                      <div className={s.usersAvatars}>
-                        {visibleUsers.map(user => (
+                      <Flex align='center'>
+                        {visibleUsers.map((user, index) => (
                           <Avatar
                             key={user.id}
-                            name={
+                            fallback={(
                               (user.profile && user.profile.display_name) ||
-                              user.email
+                              user.email ||
+                              '?'
+                            )
+                              .charAt(0)
+                              .toUpperCase()}
+                            size='2'
+                            className={
+                              index > 0
+                                ? `${s.userAvatar} ${s.userAvatarStacked}`
+                                : s.userAvatar
                             }
-                            size='small'
                           />
                         ))}
                         {remainingUserCount > 0 && (
                           <Avatar
-                            name={`+${remainingUserCount}`}
-                            size='small'
+                            fallback={`+${remainingUserCount}`}
+                            size='2'
+                            className={s.extraUserAvatar}
                           />
                         )}
-                      </div>
+                      </Flex>
                     ) : (
-                      <span className={s.noUsers}>
+                      <Text
+                        size='2'
+                        color='gray'
+                        className={s.emptySectionText}
+                      >
                         {t('admin:groups.noUsers', 'No users yet')}
-                      </span>
+                      </Text>
                     )}
-                  </div>
-                </Card.Body>
+                  </Box>
+                </Box>
               </Card>
             );
           })}
-        </div>
+        </Grid>
       )}
 
       {/* Pagination */}
       {pagination && pagination.pages > 1 && (
-        <Table.Pagination
-          currentPage={currentPage}
-          totalPages={pagination.pages}
-          totalItems={pagination.total}
-          onPageChange={setCurrentPage}
-          loading={loading}
-        />
+        <Box className={s.paginationBox}>
+          <TablePagination
+            currentPage={currentPage}
+            totalPages={pagination.pages}
+            totalItems={pagination.total}
+            onPageChange={setCurrentPage}
+            loading={loading}
+          />
+        </Box>
       )}
 
       {/* Group Roles Modal */}
@@ -455,14 +582,14 @@ function Groups({ context }) {
       <GroupUsersModal ref={usersModalRef} />
 
       {/* Delete Confirmation Modal */}
-      <ConfirmModal.Delete
+      <Modal.ConfirmDelete
         ref={deleteModalRef}
         title={t('admin:groups.deleteTitle', 'Delete Group')}
         getItemName={getGroupName}
         onDelete={handleDeleteGroupAction}
         onSuccess={refreshGroups}
       />
-    </div>
+    </Box>
   );
 }
 

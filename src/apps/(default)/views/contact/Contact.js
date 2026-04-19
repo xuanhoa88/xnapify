@@ -7,36 +7,33 @@
 
 import { useState, useCallback } from 'react';
 
+import * as RadixIcons from '@radix-ui/react-icons';
+import { Flex, Box, Text, Heading, Grid, Button } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
-import Button from '@shared/renderer/components/Button';
 import Form from '@shared/renderer/components/Form';
-import Icon from '@shared/renderer/components/Icon';
 
 import s from './Contact.css';
 
-/**
- * Contact information configuration
- */
 const CONTACT_INFO = [
   {
     type: 'email',
     value: 'hello@xnapify.com',
     href: 'mailto:hello@xnapify.com',
-    icon: 'mail',
+    icon: RadixIcons.EnvelopeClosedIcon,
   },
   {
     type: 'phone',
     value: '+84 966 666 666',
     href: 'tel:+84966666666',
-    icon: 'phone',
+    icon: RadixIcons.ChatBubbleIcon,
   },
   {
     type: 'address',
     value: 'Xuan Hoa, Vinh Phuc, Viet Nam',
     href: null,
-    icon: 'map-pin',
+    icon: RadixIcons.GlobeIcon,
   },
 ];
 
@@ -47,22 +44,22 @@ const SOCIAL_LINKS = [
   {
     name: 'GitHub',
     href: 'https://github.com/xuanhoa88/xnapify',
-    icon: 'github',
+    icon: RadixIcons.GitHubLogoIcon,
   },
   {
     name: 'Twitter',
     href: 'https://twitter.com',
-    icon: 'twitter',
+    icon: RadixIcons.TwitterLogoIcon,
   },
   {
     name: 'LinkedIn',
     href: 'https://linkedin.com',
-    icon: 'linkedin',
+    icon: RadixIcons.LinkedInLogoIcon,
   },
   {
     name: 'Facebook',
     href: 'https://facebook.com',
-    icon: 'facebook',
+    icon: RadixIcons.Link1Icon, // Radix UI has no Facebook icon
   },
 ];
 
@@ -92,8 +89,8 @@ function ContactFormFields({ loading }) {
   const { t } = useTranslation();
 
   return (
-    <>
-      <div className={s.formRow}>
+    <Flex direction='column' gap='4'>
+      <Grid columns={{ initial: '1', md: '2' }} gap='4'>
         <Form.Field
           name='email'
           label={t('contact.form.email', 'Email')}
@@ -111,7 +108,7 @@ function ContactFormFields({ loading }) {
             placeholder={t('contact.form.phonePlaceholder', 'Phone')}
           />
         </Form.Field>
-      </div>
+      </Grid>
 
       <Form.Field
         name='subject'
@@ -136,17 +133,18 @@ function ContactFormFields({ loading }) {
       </Form.Field>
 
       <Button
-        variant='primary'
+        variant='solid'
+        color='indigo'
         type='submit'
-        fullWidth
-        className={s.submitButton}
+        mt='4'
+        className={s.fullWidthBtn}
         loading={loading}
       >
         {loading
           ? t('contact.form.sending', 'Sending...')
           : t('contact.form.submit', 'Submit')}
       </Button>
-    </>
+    </Flex>
   );
 }
 
@@ -155,7 +153,7 @@ ContactFormFields.propTypes = {
 };
 
 /**
- * Contact Page Component
+ * Contact Page Component mapped natively to Radix Flex layout
  */
 function Contact({ title }) {
   const { t } = useTranslation();
@@ -180,104 +178,151 @@ function Contact({ title }) {
   }, []);
 
   return (
-    <div className={s.root}>
+    <Box className={s.pageContainer}>
       {/* Hero Section */}
-      <div className={s.hero}>
-        <div className={s.heroContent}>
-          <h1 className={s.heroTitle}>{title}</h1>
-          <p className={s.heroSubtitle}>{t('contact.lead')}</p>
-        </div>
-      </div>
+      <Flex align='center' justify='center' className={s.hero}>
+        <Flex
+          direction='column'
+          align='center'
+          gap='3'
+          className={s.heroContent}
+        >
+          <Heading as='h1' size='8' className={s.heroTitle}>
+            {title}
+          </Heading>
+          <Text size='4' color='gray'>
+            {t('contact.lead')}
+          </Text>
+        </Flex>
+      </Flex>
 
       {/* Main Content */}
-      <div className={s.container}>
-        <div className={s.content}>
+      <Box className={s.mainContent}>
+        <Grid columns={{ initial: '1', lg: '3' }} gap='6' className={s.grid}>
           {/* Form Section (Left) */}
-          <div className={s.formSection}>
-            <h2 className={s.formTitle}>{t('contact.sendMessage')}</h2>
-            <p className={s.formSubtitle}>
-              {t(
-                'contact.formDescription',
-                "Fill out the form below and we'll get back to you as soon as possible.",
-              )}
-            </p>
+          <Box className={s.formSection}>
+            <Box mb='6'>
+              <Heading as='h2' size='6' mb='2'>
+                {t('contact.sendMessage')}
+              </Heading>
+              <Text size='3' color='gray'>
+                {t(
+                  'contact.formDescription',
+                  "Fill out the form below and we'll get back to you as soon as possible.",
+                )}
+              </Text>
+            </Box>
 
-            <Form
-              defaultValues={DEFAULT_FORM_VALUES}
-              onSubmit={handleSubmit}
-              className={s.form}
-            >
-              <ContactFormFields loading={isSubmitting} />
-            </Form>
-          </div>
+            <Box className={s.formBox}>
+              <Form defaultValues={DEFAULT_FORM_VALUES} onSubmit={handleSubmit}>
+                <ContactFormFields loading={isSubmitting} />
+              </Form>
+            </Box>
+          </Box>
 
           {/* Sidebar (Right) */}
-          <aside className={s.sidebar}>
+          <Flex as='aside' direction='column' gap='5'>
             {/* Contact Info Card */}
-            <div className={s.sidebarCard}>
-              <h3 className={s.sidebarTitle}>{t('contact.getInTouch')}</h3>
-              <div className={s.contactInfo}>
+            <Flex direction='column' gap='4' className={s.infoCard}>
+              <Heading as='h3' size='4'>
+                {t('contact.getInTouch')}
+              </Heading>
+              <Flex direction='column' gap='4'>
                 {CONTACT_INFO.map(item => (
-                  <div key={item.type} className={s.contactItem}>
-                    <div className={s.contactIcon}>
-                      <Icon name={item.icon} size={20} />
-                    </div>
-                    <div className={s.contactDetails}>
-                      <span className={s.contactLabel}>
+                  <Flex key={item.type} align='start' gap='3'>
+                    <Flex
+                      align='center'
+                      justify='center'
+                      className={s.iconWrapper}
+                    >
+                      {(() => {
+                        const Comp = item.icon;
+                        return <Comp width={18} height={18} />;
+                      })()}
+                    </Flex>
+                    <Flex direction='column'>
+                      <Text
+                        size='1'
+                        weight='medium'
+                        color='gray'
+                        className={s.itemLabel}
+                      >
                         {t(`contact.${item.type}`)}
-                      </span>
-                      <span className={s.contactValue}>
+                      </Text>
+                      <Text size='3' weight='medium' mt='1'>
                         {item.href ? (
-                          <a href={item.href}>{item.value}</a>
+                          <a href={item.href} className={s.itemLink}>
+                            {item.value}
+                          </a>
                         ) : (
                           item.value
                         )}
-                      </span>
-                    </div>
-                  </div>
+                      </Text>
+                    </Flex>
+                  </Flex>
                 ))}
-              </div>
-            </div>
+              </Flex>
+            </Flex>
 
             {/* Social Links Card */}
-            <div className={s.sidebarCard}>
-              <h3 className={s.sidebarTitle}>{t('contact.connectWithUs')}</h3>
-              <div className={s.socialLinks}>
+            <Flex direction='column' gap='4' className={s.infoCard}>
+              <Heading as='h3' size='4'>
+                {t('contact.connectWithUs')}
+              </Heading>
+              <Flex gap='3'>
                 {SOCIAL_LINKS.map(link => (
-                  <a
+                  <Flex
+                    asChild
                     key={link.name}
-                    href={link.href}
-                    className={s.socialLink}
-                    target='_blank'
-                    rel='noopener noreferrer'
-                    title={link.name}
+                    align='center'
+                    justify='center'
+                    className={s.socialIconWrapper}
                   >
-                    <Icon name={link.icon} size={20} />
-                  </a>
+                    <a
+                      href={link.href}
+                      target='_blank'
+                      rel='noopener noreferrer'
+                      title={link.name}
+                    >
+                      {(() => {
+                        const Comp = link.icon;
+                        return <Comp width={20} height={20} />;
+                      })()}
+                    </a>
+                  </Flex>
                 ))}
-              </div>
-            </div>
+              </Flex>
+            </Flex>
 
             {/* Office Hours Card */}
-            <div className={s.sidebarCard}>
-              <h3 className={s.sidebarTitle}>{t('contact.officeHours')}</h3>
-              <div className={s.hours}>
+            <Flex direction='column' gap='4' className={s.infoCard}>
+              <Heading as='h3' size='4'>
+                {t('contact.officeHours')}
+              </Heading>
+              <Flex direction='column' gap='3'>
                 {OFFICE_HOURS.map(item => (
-                  <div key={item.day} className={s.hourItem}>
-                    <span>{t(`contact.hours.${item.day}`)}</span>
-                    <span>
+                  <Flex
+                    key={item.day}
+                    justify='between'
+                    align='center'
+                    className={s.officeHourItem}
+                  >
+                    <Text size='2' color='gray' className={s.officeHourDay}>
+                      {t(`contact.hours.${item.day}`)}
+                    </Text>
+                    <Text size='2' weight='medium'>
                       {item.hours === 'closed'
                         ? t('contact.hours.closed')
                         : item.hours}
-                    </span>
-                  </div>
+                    </Text>
+                  </Flex>
                 ))}
-              </div>
-            </div>
-          </aside>
-        </div>
-      </div>
-    </div>
+              </Flex>
+            </Flex>
+          </Flex>
+        </Grid>
+      </Box>
+    </Box>
   );
 }
 

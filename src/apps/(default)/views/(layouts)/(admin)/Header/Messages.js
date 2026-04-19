@@ -7,11 +7,9 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 
-import clsx from 'clsx';
+import { EnvelopeClosedIcon } from '@radix-ui/react-icons';
+import { Flex, Text, Box, Button } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
-
-import Button from '@shared/renderer/components/Button';
-import Icon from '@shared/renderer/components/Icon';
 
 import s from './Messages.css';
 
@@ -44,24 +42,6 @@ const mockMessages = [
     time: '1 hour ago',
     read: false,
   },
-  {
-    id: 4,
-    sender: 'Alex Brown',
-    avatar: null,
-    subject: 'Welcome aboard!',
-    preview: 'Thanks for adding me to the team...',
-    time: '2 hours ago',
-    read: false,
-  },
-  {
-    id: 5,
-    sender: 'Support Team',
-    avatar: null,
-    subject: 'Ticket #1234 resolved',
-    preview: 'Your support ticket has been closed...',
-    time: '3 hours ago',
-    read: false,
-  },
 ];
 
 // Get initials from sender name
@@ -76,7 +56,7 @@ const getInitials = name => {
 
 /**
  * Messages Component
- * Message indicator with dropdown panel showing recent messages
+ * Message indicator with dropdown panel mapped natively to Radix Flex layout
  */
 function AdminMessages() {
   const { t } = useTranslation();
@@ -105,64 +85,88 @@ function AdminMessages() {
   }, []);
 
   return (
-    <div className={s.messagesWrapper} ref={dropdownRef}>
+    <Box position='relative' ref={dropdownRef}>
       <Button
-        variant='unstyled'
-        iconOnly
-        className={s.messagesBtn}
+        variant='ghost'
         onClick={handleToggle}
         title={t('common.messages', 'Messages')}
+        className={`${s.messagesBtn} ${isOpen ? s.messagesBtnOpen : ''}`}
       >
-        <Icon name='mail' size={18} />
+        <EnvelopeClosedIcon width={18} height={18} />
         {unreadCount > 0 && (
-          <span className={s.messagesBadge}>{unreadCount}</span>
+          <Flex align='center' justify='center' className={s.messagesBadge}>
+            {unreadCount}
+          </Flex>
         )}
       </Button>
 
       {isOpen && (
-        <div className={s.dropdown}>
-          <div className={s.dropdownHeader}>
-            <span className={s.dropdownTitle}>
+        <Box className={`${s.dropdownBox} ${s.messagesDropdown}`}>
+          <Flex align='center' justify='between' className={s.dropdownHeader}>
+            <Text size='3' weight='bold'>
               {t('common.messages', 'Messages')}
-            </span>
-            <span className={s.dropdownCount}>
+            </Text>
+            <Text size='1' color='gray'>
               {t('common.newMessagesCount', '{{count}} new', {
                 count: unreadCount,
               })}
-            </span>
-          </div>
+            </Text>
+          </Flex>
 
-          <div className={s.dropdownList}>
+          <Box className={s.messagesList}>
             {messages.map(message => (
-              <div
+              <Flex
                 key={message.id}
-                className={clsx(s.messageItem, { [s.unread]: !message.read })}
+                gap='3'
+                className={`${s.messageItem} ${!message.read ? s.messageItemUnread : ''}`}
               >
-                <div className={s.messageAvatar}>
+                <Flex
+                  align='center'
+                  justify='center'
+                  className={s.messageAvatar}
+                >
                   {message.avatar ? (
-                    <img src={message.avatar} alt='' />
+                    <img
+                      src={message.avatar}
+                      alt=''
+                      className={s.messageAvatarImg}
+                    />
                   ) : (
                     getInitials(message.sender)
                   )}
-                </div>
-                <div className={s.messageContent}>
-                  <div className={s.messageSender}>{message.sender}</div>
-                  <div className={s.messageSubject}>{message.subject}</div>
-                  <div className={s.messagePreview}>{message.preview}</div>
-                  <div className={s.messageTime}>{message.time}</div>
-                </div>
-              </div>
+                </Flex>
+                <Flex className={s.messageContent}>
+                  <Flex justify='between' align='center'>
+                    <Text
+                      size='2'
+                      weight={message.read ? 'regular' : 'bold'}
+                      className={s.messageSender}
+                    >
+                      {message.sender}
+                    </Text>
+                    <Text size='1' color='gray' className={s.messageTime}>
+                      {message.time}
+                    </Text>
+                  </Flex>
+                  <Text size='2' color='gray' className={s.messageSubject}>
+                    {message.subject}
+                  </Text>
+                  <Text size='1' color='gray' className={s.messagePreview}>
+                    {message.preview}
+                  </Text>
+                </Flex>
+              </Flex>
             ))}
-          </div>
+          </Box>
 
-          <div className={s.dropdownFooter}>
-            <Button variant='unstyled' className={s.viewAllBtn}>
+          <Flex justify='center' className={s.dropdownFooter}>
+            <Button variant='ghost' className={s.viewAllBtn}>
               {t('common.viewAllMessages', 'View all messages')}
             </Button>
-          </div>
-        </div>
+          </Flex>
+        </Box>
       )}
-    </div>
+    </Box>
   );
 }
 

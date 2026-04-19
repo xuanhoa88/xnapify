@@ -4,6 +4,7 @@
  * Shows how a post would appear in Google search results.
  * Opens as a right-side slide-in panel.
  */
+import { Box, Text } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import SerpPreview from 'react-serp-preview';
@@ -26,17 +27,21 @@ function SeoPreview({ post, isOpen, onClose }) {
         {t('posts:seoPreview.title', 'SEO Preview')}
       </Modal.Header>
       <Modal.Body>
-        <div className={s.previewInfo}>
-          <div className={s.postTitle}>{post.title}</div>
-          <div className={s.postUrl}>{postUrl}</div>
-        </div>
-        <div className={s.previewPanel}>
+        <Box className={s.previewInfo}>
+          <Text as='div' className={s.postTitle}>
+            {post.title}
+          </Text>
+          <Text as='div' className={s.postUrl}>
+            {postUrl}
+          </Text>
+        </Box>
+        <Box className={s.previewPanel}>
           <SerpPreview
             title={post.title || ''}
             metaDescription={post.excerpt || ''}
             url={postUrl}
           />
-        </div>
+        </Box>
       </Modal.Body>
     </Modal>
   );

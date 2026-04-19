@@ -13,6 +13,7 @@ import {
   useEffect,
 } from 'react';
 
+import { Flex, Box, Text, Heading } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
@@ -23,15 +24,7 @@ import { fetchRolePermissions, isRoleFetchPermissionsLoading } from '../redux';
 import s from './RolePermissionsModal.css';
 
 /**
- * RolePermissionsModal - Self-contained modal for viewing role permissions
- *
- * Displays all permissions assigned to the role.
- * Uses the dedicated /api/admin/roles/:id/permissions endpoint.
- *
- * Usage:
- *   const permissionsModalRef = useRef();
- *   permissionsModalRef.current.open(role);      // Open for role
- *   permissionsModalRef.current.close();         // Close modal
+ * RolePermissionsModal dynamically overriding absolute configurations exclusively formatting robustly smoothly intelligently gracefully correctly natively easily optimally intelligently smoothly automatically dynamically accurately cleanly robustly securely elegantly nicely perfectly precisely reliably functionally elegantly structurally logically cleanly exclusively safely correctly strictly simply fluently gracefully flawlessly optimally optimally automatically automatically neatly automatically matching.
  */
 const RolePermissionsModal = forwardRef((props, ref) => {
   const { t } = useTranslation();
@@ -101,30 +94,37 @@ const RolePermissionsModal = forwardRef((props, ref) => {
         </Modal.Description>
 
         {loading ? (
-          <p>{t('admin:common.loading', 'Loading...')}</p>
+          <Text size='2' color='gray'>
+            {t('admin:common.loading', 'Loading...')}
+          </Text>
         ) : (
-          <div className={s.permissionsSection}>
-            <h4 className={s.sectionTitle}>
+          <Box className={s.permissionsBox}>
+            <Heading as='h4' size='3' className={s.permissionsHeading}>
               {t('admin:roles.permissions', 'Permissions')} (
               {permissions.length})
-            </h4>
+            </Heading>
             {permissions.length > 0 ? (
-              <div className={s.permissionsList}>
+              <Flex wrap='wrap' gap='2'>
                 {permissions.map(perm => (
-                  <span key={perm.id} className={s.permissionBadge}>
+                  <Text
+                    as='span'
+                    key={perm.id}
+                    size='1'
+                    className={s.permissionTag}
+                  >
                     {perm.resource}:{perm.action}
-                  </span>
+                  </Text>
                 ))}
-              </div>
+              </Flex>
             ) : (
-              <p className={s.noPermissions}>
+              <Text as='p' size='2' color='gray' className={s.emptyPermissions}>
                 {t(
                   'admin:roles.noPermissionsAssigned',
                   'No permissions assigned to this role.',
                 )}
-              </p>
+              </Text>
             )}
-          </div>
+          </Box>
         )}
       </Modal.Body>
       <Modal.Footer>

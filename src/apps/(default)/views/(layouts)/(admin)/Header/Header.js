@@ -7,11 +7,11 @@
 
 import { useCallback } from 'react';
 
+import { MenuIcon } from '@radix-ui/react-icons';
+import { Flex, Box, Button } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 
-import Button from '@shared/renderer/components/Button';
-import Icon from '@shared/renderer/components/Icon';
 import { isAuthenticated, toggleDrawer } from '@shared/renderer/redux';
 
 import Breadcrumbs from './Breadcrumbs';
@@ -26,7 +26,7 @@ import s from './Header.css';
  * AdminHeader Component
  *
  * A modern, professional header specifically designed for admin panel pages.
- * Composed of: Breadcrumbs, SearchBar, and ProfileDropdown sub-components.
+ * Composed of: Breadcrumbs, SearchBar, and ProfileDropdown sub-components mapped to Radix UI.
  */
 function AdminHeader() {
   const { t } = useTranslation();
@@ -42,34 +42,41 @@ function AdminHeader() {
   }
 
   return (
-    <header className={s.adminHeader}>
-      <div className={s.headerContainer}>
+    <Box as='header' position='sticky' top='0' className={s.headerBox}>
+      <Flex align='center' justify='between' height='100%' px='4'>
         {/* Left Section - Toggle & Breadcrumbs */}
-        <div className={s.leftSection}>
-          <span className={s.mobileToggle}>
-            <Button
-              variant='ghost'
-              iconOnly
-              onClick={handleToggleDrawer}
-              title={t('common.toggleDrawer', 'Toggle drawer')}
-            >
-              <Icon name='menu' size={20} />
-            </Button>
-          </span>
-          <Breadcrumbs />
-        </div>
+        <Flex align='center' gap='3'>
+          <Button
+            display={{ initial: 'flex', md: 'none' }}
+            variant='ghost'
+            color='gray'
+            onClick={handleToggleDrawer}
+            title={t('common.toggleDrawer', 'Toggle drawer')}
+          >
+            <MenuIcon width={20} height={20} />
+          </Button>
+          <Box display={{ initial: 'none', md: 'block' }}>
+            <Breadcrumbs />
+          </Box>
+        </Flex>
 
         {/* Right Section - Language | Notifications Group | User */}
-        <div className={s.rightSection}>
+        <Flex align='center' gap='3'>
           <LanguageSwitcher />
-          <span className={s.divider} />
-          <Messages />
-          <Notifications />
-          <span className={s.divider} />
+
+          <Box className={s.divider} />
+
+          <Flex align='center' gap='2'>
+            <Messages />
+            <Notifications />
+          </Flex>
+
+          <Box className={s.divider} />
+
           <ProfileDropdown />
-        </div>
-      </div>
-    </header>
+        </Flex>
+      </Flex>
+    </Box>
   );
 }
 

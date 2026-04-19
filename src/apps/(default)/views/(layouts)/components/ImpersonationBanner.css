@@ -1,42 +1,19 @@
-/**
- * xnapify (https://github.com/xuanhoa88/xnapify/)
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE.txt file in the root directory of this source tree.
- */
-
-.root {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 16px;
-  background-color: #ff9800;
-  color: #000;
-  font-weight: 500;
-  z-index: 1100;
-  box-shadow: 0 2px 4px rgb(0 0 0 / 20%);
+.bannerContainer {
+  background-color: var(--orange-9);
+  color: white;
+  padding: var(--space-2) var(--space-4);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-shadow: var(--shadow-2);
 }
 
-.content {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.bannerIcon {
+  opacity: 0.9;
 }
 
-.icon {
-  color: #000;
-}
-
-.text {
-  font-size: 14px;
-}
-
-.root .button {
-  background-color: #000;
-  color: #fff;
-  border: none;
-}
-
-.root .button:hover {
-  background-color: #333;
+.stopBtn {
+  color: white;
+  background-color: var(--orange-10);
+  border: 1px solid var(--orange-11);
 }

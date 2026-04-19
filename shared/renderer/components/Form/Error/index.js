@@ -7,13 +7,11 @@
 
 import { useContext, useMemo } from 'react';
 
-import clsx from 'clsx';
+import { Text } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
 import { FormFieldContext } from '../FormContext';
-
-import s from './FormError.css';
 
 // Find the first nested error with a message
 const findMessage = errObj => {
@@ -29,7 +27,7 @@ const findMessage = errObj => {
 };
 
 /**
- * FormError - Displays field errors and async validation status
+ * FormError - Displays field errors and async validation status baked by Radix Themes Text
  *
  * Renders a single line below the field with the following priority:
  *   1. Error message (sync or async)
@@ -46,7 +44,7 @@ function FormError({ message, className }) {
   const error = fieldContext && fieldContext.error;
   const { isValidating, validationStatus, asyncMessages } = fieldContext || {};
 
-  // Determine what to display: { text, css, role } or null
+  // Determine what to display: { text, color, role } or null
   const display = useMemo(() => {
     const msgs = asyncMessages || {};
 
@@ -56,7 +54,7 @@ function FormError({ message, className }) {
         typeof message === 'string'
           ? message
           : message.message || findMessage(message);
-      return { text: msgText, css: s.formError, role: 'alert' };
+      return { text: msgText, color: 'red', role: 'alert' };
     }
 
     // --- Field-level error (sync or async) ---
@@ -64,7 +62,7 @@ function FormError({ message, className }) {
       const errorMsg =
         typeof error.message === 'string' ? error.message : findMessage(error);
       if (errorMsg) {
-        return { text: errorMsg, css: s.fieldError, role: 'alert' };
+        return { text: errorMsg, color: 'red', role: 'alert' };
       }
     }
 
@@ -74,7 +72,7 @@ function FormError({ message, className }) {
         text:
           msgs.validating ||
           t('zod:form.messages.validating', '⏳ Validating…'),
-        css: s.fieldStatus,
+        color: 'gray',
         role: 'status',
       };
     }
@@ -84,7 +82,7 @@ function FormError({ message, className }) {
       return msgs.valid
         ? {
             text: msgs.valid,
-            css: s.fieldValid,
+            color: 'green',
             role: 'status',
           }
         : null;
@@ -96,13 +94,18 @@ function FormError({ message, className }) {
   if (!display) return null;
 
   return (
-    <div
-      className={clsx(display.css, className)}
+    <Text
+      as='div'
+      size='2'
+      color={display.color}
+      weight='medium'
+      mt='1'
       role={display.role}
       aria-live={display.role === 'status' ? 'polite' : undefined}
+      className={className}
     >
       {display.text}
-    </div>
+    </Text>
   );
 }
 

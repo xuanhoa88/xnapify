@@ -7,11 +7,11 @@
 
 import { useCallback, useEffect } from 'react';
 
+import { Flex, Box, Text, Heading, Button } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
-import { useTranslation, Trans } from 'react-i18next';
+import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Button from '@shared/renderer/components/Button';
 import { ExtensionSlot } from '@shared/renderer/components/Extension';
 import Form from '@shared/renderer/components/Form';
 import {
@@ -35,7 +35,7 @@ import { loginFormSchema } from '../../../users/validator/auth';
 import s from './Login.css';
 
 /**
- * Login Page Component
+ * Login Page Component natively mapped to Radix Flex Layouts
  */
 function Login() {
   const { t } = useTranslation();
@@ -95,33 +95,31 @@ function Login() {
   );
 
   return (
-    <div className={s.root}>
+    <Flex className={s.pageContainer}>
       <HeroSection />
 
-      <div className={s.formSection}>
-        <div className={s.formContainer}>
-          <h2 className={s.formTitle}>{t('navigation.login', 'Log In')}</h2>
+      <Flex align='center' justify='center' className={s.contentWrapper}>
+        <Box className={s.formBox}>
+          <Heading as='h1' size='7' mb='6' className={s.title}>
+            {t('navigation.login', 'Log In')}
+          </Heading>
 
           <Form.Error message={error} />
 
-          {/* OAuth buttons slot — container is always rendered for SSR hydration safety.
-             CSS hides the wrapper when the slot is empty (no children). */}
-          <div className={s.oauthSection}>
-            <div className={s.oauthButtonsContainer}>
-              <ExtensionSlot
-                name='auth.oauth.buttons'
-                className={s.oauthButton}
-              />
-            </div>
+          {/* OAuth buttons slot — container is always rendered for SSR hydration safety. */}
+          <Box mb='5' className={s.descriptionBox}>
+            <Box className={s.descriptionEmpty}>
+              <ExtensionSlot name='auth.oauth.buttons' />
+            </Box>
 
-            <div className={s.divider}>
-              <span className={s.dividerLine} />
-              <span className={s.dividerText}>
-                {t('login.orDivider', 'OR')}
-              </span>
-              <span className={s.dividerLine} />
-            </div>
-          </div>
+            <Flex align='center' className={s.divider}>
+              <Box className={s.dividerLine} />
+              <Box className={s.dividerText}>
+                {t('login.orContinueWith', 'Or continue with')}
+              </Box>
+              <Box className={s.dividerLine} />
+            </Flex>
+          </Box>
 
           <Form
             schema={loginFormSchema}
@@ -133,18 +131,18 @@ function Login() {
           </Form>
 
           {isRegistrationAllowed && (
-            <div className={s.registerLink}>
-              <Trans
-                t={t}
-                i18nKey='login.dontHaveAccount'
-                // eslint-disable-next-line jsx-a11y/anchor-has-content, react/jsx-key
-                components={[<Link to='/register' className={s.link} />]}
-              />
-            </div>
+            <Flex justify='center' mt='5'>
+              <Box className={s.registerLinkBox}>
+                {t('login.noAccount', "Don't have an account?")}{' '}
+                <Link to='/register' className={s.registerLink}>
+                  {t('login.register', 'Sign up')}
+                </Link>
+              </Box>
+            </Flex>
           )}
-        </div>
-      </div>
-    </div>
+        </Box>
+      </Flex>
+    </Flex>
   );
 }
 
@@ -155,24 +153,34 @@ function HeroSection() {
   const { t } = useTranslation();
 
   return (
-    <div className={s.hero}>
-      <div className={s.heroContent}>
-        <Link to='/' className={s.brand}>
+    <Flex
+      direction='column'
+      justify='center'
+      align='center'
+      className={s.heroSection}
+    >
+      <Flex direction='column' align='center' className={s.heroContent}>
+        <Link to='/' className={s.logoLink}>
           <img
             src='/xnapify_38x38.png'
             srcSet='/xnapify_72x72.png 2x'
             width='48'
             height='48'
             alt='xnapify'
+            className={s.logoImg}
           />
-          <span className={s.brandText}>xnapify</span>
+          <Text size='5' weight='bold'>
+            xnapify
+          </Text>
         </Link>
-        <h1 className={s.heroTitle}>{t('login.welcome', 'Welcome Back')}</h1>
-        <p className={s.heroSubtitle}>
+        <Heading as='h1' size='8' mb='3' className={s.heroTitle}>
+          {t('login.welcome', 'Welcome Back')}
+        </Heading>
+        <Text size='4' className={s.heroSubtitle}>
           {t('login.heroSubtitle', 'Sign in to continue to your account')}
-        </p>
-      </div>
-    </div>
+        </Text>
+      </Flex>
+    </Flex>
   );
 }
 
@@ -183,7 +191,7 @@ function LoginFormFields({ loading }) {
   const { t } = useTranslation();
 
   return (
-    <>
+    <Flex direction='column' gap='4'>
       <Form.Field name='email' label={t('login.email', 'Email')}>
         <Form.Input
           type='email'
@@ -192,12 +200,13 @@ function LoginFormFields({ loading }) {
       </Form.Field>
 
       <Form.Field name='password' showError={false}>
-        <div className={s.labelRow}>
+        <Flex justify='between' align='end' mb='2'>
           <Form.Label>{t('login.password', 'Password')}</Form.Label>
-          <Link to='/reset-password' className={s.forgotLink}>
+          <Link to='/reset-password' className={s.formFieldsForgotPasswordLink}>
+            {' '}
             {t('login.forgotPassword', 'Forgot password?')}
           </Link>
-        </div>
+        </Flex>
         <Form.Password />
         <Form.Error />
       </Form.Field>
@@ -207,17 +216,19 @@ function LoginFormFields({ loading }) {
       </Form.Field>
 
       <Button
-        variant='primary'
+        variant='solid'
+        color='indigo'
+        size='3'
         type='submit'
-        fullWidth
-        className={s.submitButton}
+        mt='2'
+        className={s.fullWidthBtn}
         loading={loading}
       >
         {loading
           ? t('login.loading', 'Loading...')
           : t('login.submit', 'Submit')}
       </Button>
-    </>
+    </Flex>
   );
 }
 

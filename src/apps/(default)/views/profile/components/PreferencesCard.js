@@ -7,13 +7,13 @@
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 
+import { LoaderIcon, GearIcon } from '@radix-ui/react-icons';
+import { Flex, Box, Text, Heading, Button } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Button from '@shared/renderer/components/Button';
 import Form, { useFormContext } from '@shared/renderer/components/Form';
-import Icon from '@shared/renderer/components/Icon';
 import {
   getUserPreferences,
   updateUserPreferences,
@@ -126,33 +126,35 @@ function PreferencesCard() {
   // Show loading state while fetching preferences
   if (loading && (!user || !user.profile || !user.profile.language)) {
     return (
-      <div className={s.card}>
-        <div className={s.loading}>
-          <Icon name='loader' size={24} />
-          <span>{t('common.loading', 'Loading...')}</span>
-        </div>
-      </div>
+      <Box className={s.cardContainer}>
+        <Flex align='center' justify='center' gap='3' className={s.loadingBox}>
+          <LoaderIcon width={24} height={24} className={s.spinner} />
+          <Text size='3' color='gray'>
+            {t('common.loading', 'Loading...')}
+          </Text>
+        </Flex>
+      </Box>
     );
   }
 
   return (
-    <div className={s.card}>
-      <div className={s.cardHeader}>
-        <div className={s.cardIcon}>
-          <Icon name='settings' size={22} />
-        </div>
-        <div>
-          <h2 className={s.cardTitle}>
+    <Box className={s.cardContainer}>
+      <Flex align='center' gap='4' className={s.cardHeader}>
+        <Box className={`${s.cardHeaderIcon} ${s.cardHeaderIconIndigo}`}>
+          <GearIcon width={24} height={24} />
+        </Box>
+        <Box>
+          <Heading as='h2' size='5' className={s.cardTitle}>
             {t('profile.preferences', 'Preferences')}
-          </h2>
-          <p className={s.cardDescription}>
+          </Heading>
+          <Text size='2' color='gray'>
             {t(
               'profile.preferencesDesc',
               'Customize your experience and notifications',
             )}
-          </p>
-        </div>
-      </div>
+          </Text>
+        </Box>
+      </Flex>
 
       <Form.Error message={error || ''} />
 
@@ -163,7 +165,7 @@ function PreferencesCard() {
       >
         <PreferencesFormFields loading={loading} />
       </Form>
-    </div>
+    </Box>
   );
 }
 
@@ -175,7 +177,7 @@ function PreferencesFormFields({ loading }) {
   } = useFormContext();
 
   return (
-    <>
+    <Flex direction='column' gap='4'>
       <Form.Field name='theme' label={t('profile.theme', 'Theme')}>
         <Form.Select
           options={[
@@ -239,17 +241,19 @@ function PreferencesFormFields({ loading }) {
         />
       </Form.Field>
 
-      <Button
-        variant='primary'
-        type='submit'
-        className={s.button}
-        loading={loading || isSubmitting}
-      >
-        {loading
-          ? t('profile.saving', 'Saving...')
-          : t('profile.savePreferences', 'Save Preferences')}
-      </Button>
-    </>
+      <Flex justify='end' className={s.cardAction}>
+        <Button
+          variant='solid'
+          color='indigo'
+          type='submit'
+          loading={loading || isSubmitting}
+        >
+          {loading
+            ? t('profile.saving', 'Saving...')
+            : t('profile.savePreferences', 'Save Preferences')}
+        </Button>
+      </Flex>
+    </Flex>
   );
 }
 

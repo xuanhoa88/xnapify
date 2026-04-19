@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { IconButton } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 
 import ContextMenu from '../ContextMenu';
@@ -12,6 +13,8 @@ import Icon from '../Icon';
 
 import { COMMON_EMOJIS } from './constants';
 import ToolbarButton from './ToolbarButton';
+
+import s from './EmojiPickerButton.css';
 
 export default function EmojiPickerButton({ onSelect, title, disabled }) {
   return (
@@ -24,48 +27,17 @@ export default function EmojiPickerButton({ onSelect, title, disabled }) {
       />
 
       <ContextMenu.Menu>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(5, 1fr)',
-            gap: '4px',
-            padding: '8px',
-          }}
-        >
+        <div className={s.emojiContainer}>
           {COMMON_EMOJIS.map(emoji => (
-            <button
+            <IconButton
               key={emoji}
-              type='button'
+              variant='ghost'
+              color='gray'
               onClick={() => onSelect(emoji)}
-              style={{
-                width: '32px',
-                height: '32px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '20px',
-                background: 'transparent',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-              }}
-              onMouseOver={e => {
-                e.currentTarget.style.backgroundColor =
-                  'var(--color-background-hover)';
-              }}
-              onFocus={e => {
-                e.currentTarget.style.backgroundColor =
-                  'var(--color-background-hover)';
-              }}
-              onMouseOut={e => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-              }}
-              onBlur={e => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-              }}
+              className={s.emojiButton}
             >
               {emoji}
-            </button>
+            </IconButton>
           ))}
         </div>
       </ContextMenu.Menu>

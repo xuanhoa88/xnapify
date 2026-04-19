@@ -7,13 +7,21 @@
 
 import { useEffect, useCallback, useState } from 'react';
 
+import { InfoCircledIcon, MagnifyingGlassIcon } from '@radix-ui/react-icons';
+import {
+  Box,
+  Flex,
+  Text,
+  Grid,
+  Button,
+  Select,
+  TextField,
+} from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Button from '@shared/renderer/components/Button';
-import Icon from '@shared/renderer/components/Icon';
 import Loader from '@shared/renderer/components/Loader';
-import Pagination from '@shared/renderer/components/Table/Pagination';
+import { TablePagination } from '@shared/renderer/components/Table';
 
 import CategoryChips from './components/CategoryChips';
 import ListingDetail from './components/ListingDetail';
@@ -77,15 +85,6 @@ function Hub() {
     [dispatch, filters],
   );
 
-  const handleSortChange = useCallback(
-    e => {
-      const sort = e.target.value;
-      dispatch(setFilter({ sort }));
-      dispatch(fetchHubListings({ ...filters, sort }));
-    },
-    [dispatch, filters],
-  );
-
   const handleCardClick = useCallback(
     listing => {
       dispatch(fetchListingDetail(listing.id));
@@ -105,44 +104,69 @@ function Hub() {
     [dispatch, filters],
   );
 
+  const renderHero = () => (
+    <Box className={s.heroBox}>
+      <Text as='h1' size='8' className={s.heroTitle}>
+        {t('admin:hub.title', 'Extension Hub')}
+      </Text>
+      <Text as='p' size='3' className={s.heroSubtitle}>
+        {t(
+          'admin:hub.subtitle',
+          'Discover and install plugins and modules to extend your application.',
+        )}
+      </Text>
+      <Flex justify='center' align='stretch' className={s.searchFlex}>
+        <TextField.Root
+          placeholder={t(
+            'admin:hub.searchPlaceholder',
+            'Search extensions by name or tag...',
+          )}
+          value={searchInput}
+          onChange={e => setSearchInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && handleSearch()}
+          className={s.searchInput}
+          size='3'
+        />
+        <Button icon='search' onClick={handleSearch} className={s.searchButton}>
+          {t('admin:hub.search', 'Search')}
+        </Button>
+      </Flex>
+    </Box>
+  );
+
   // First-render skeleton — wait until the initial browse completes
   if (!initialized) {
     return (
-      <div className={s.root}>
-        <div className={s.hero}>
-          <div className={s.heroContent}>
-            <h1 className={s.heroTitle}>
-              {t('admin:hub.title', 'Extension Hub')}
-            </h1>
-            <p className={s.heroSubtitle}>
-              {t(
-                'admin:hub.subtitle',
-                'Discover and install plugins and modules to extend your application.',
-              )}
-            </p>
-          </div>
-        </div>
+      <Box className={s.containerBox}>
+        {renderHero()}
         <Loader
           variant='skeleton'
           message={t('admin:hub.loading', 'Loading extensions...')}
         />
-      </div>
+      </Box>
     );
   }
 
   if (error) {
     return (
-      <div className={s.root}>
-        <div className={s.hero}>
-          <div className={s.heroContent}>
-            <h1 className={s.heroTitle}>
-              {t('admin:hub.title', 'Extension Hub')}
-            </h1>
-          </div>
-        </div>
-        <div className={s.empty}>
-          <Icon name='alert-circle' size={48} />
-          <p>{t('admin:hub.loadError', 'Failed to load extensions')}</p>
+      <Box className={s.containerBox}>
+        {renderHero()}
+        <Flex
+          direction='column'
+          align='center'
+          justify='center'
+          className={s.errorFlex}
+        >
+          <InfoCircledIcon width={48} className={s.errorIcon} />
+          <Text
+            as='p'
+            size='4'
+            weight='bold'
+            color='red'
+            className={s.errorHeading}
+          >
+            {t('admin:hub.loadError', 'Failed to load extensions')}
+          </Text>
           <Button
             variant='outline'
             onClick={() => {
@@ -153,51 +177,22 @@ function Hub() {
           >
             {t('admin:hub.retry', 'Retry')}
           </Button>
-        </div>
-      </div>
+        </Flex>
+      </Box>
     );
   }
 
   return (
-    <div className={s.root}>
-      {/* Search Hero */}
-      <div className={s.hero}>
-        <div className={s.heroContent}>
-          <h1 className={s.heroTitle}>
-            {t('admin:hub.title', 'Extension Hub')}
-          </h1>
-          <p className={s.heroSubtitle}>
-            {t(
-              'admin:hub.subtitle',
-              'Discover and install plugins and modules to extend your application.',
-            )}
-          </p>
-          <div className={s.searchBar}>
-            <input
-              type='text'
-              placeholder={t(
-                'admin:hub.searchPlaceholder',
-                'Search extensions by name or tag...',
-              )}
-              value={searchInput}
-              onChange={e => setSearchInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleSearch()}
-              className={s.searchInput}
-            />
-            <Button icon='search' onClick={handleSearch} size='large'>
-              {t('admin:hub.search', 'Search')}
-            </Button>
-          </div>
-        </div>
-      </div>
+    <Box className={s.containerBox}>
+      {renderHero()}
 
       {/* Featured carousel */}
       {featured.length > 0 && !featuredLoading && (
-        <div className={s.featuredSection}>
-          <h2 className={s.sectionTitle}>
+        <Box className={s.featuredBox}>
+          <Text as='h2' size='6' className={s.featuredHeading}>
             {t('admin:hub.featured', 'Featured')}
-          </h2>
-          <div className={s.featuredGrid}>
+          </Text>
+          <Grid columns={{ initial: '1', md: '2', lg: '4' }} gap='4'>
             {featured.slice(0, 4).map(item => (
               <MarketplaceCard
                 key={item.id}
@@ -206,60 +201,81 @@ function Hub() {
                 isFeatured
               />
             ))}
-          </div>
-        </div>
+          </Grid>
+        </Box>
       )}
 
       {/* Sticky categories & toolbars */}
-      <div className={s.stickyHeader}>
+      <Box className={s.stickyToolbarBox}>
         <CategoryChips
           categories={categories}
           activeCategory={filters.category}
           onSelect={handleCategorySelect}
         />
-        <div className={s.toolbar}>
-          <span className={s.resultCount}>
+        <Flex align='center' className={s.toolbarFlex}>
+          <Text as='span' size='2' color='gray' weight='bold'>
             {total} {t('admin:hub.results', 'results')}
-          </span>
-          <select
+          </Text>
+          <Select.Root
             value={filters.sort}
-            onChange={handleSortChange}
-            className={s.sortSelect}
+            onValueChange={sort => {
+              dispatch(setFilter({ sort }));
+              dispatch(fetchHubListings({ ...filters, sort }));
+            }}
           >
-            <option value='popular'>
-              {t('admin:hub.sortPopular', 'Most popular')}
-            </option>
-            <option value='recent'>
-              {t('admin:hub.sortRecent', 'Recently added')}
-            </option>
-            <option value='name'>{t('admin:hub.sortName', 'Name')}</option>
-          </select>
-        </div>
-      </div>
+            <Select.Trigger className={s.sortSelect} />
+            <Select.Content>
+              <Select.Item value='popular'>
+                {t('admin:hub.sortPopular', 'Most popular')}
+              </Select.Item>
+              <Select.Item value='recent'>
+                {t('admin:hub.sortRecent', 'Recently added')}
+              </Select.Item>
+              <Select.Item value='name'>
+                {t('admin:hub.sortName', 'Name')}
+              </Select.Item>
+            </Select.Content>
+          </Select.Root>
+        </Flex>
+      </Box>
 
       {/* Listing grid */}
       {loading ? (
         <Loader />
       ) : (
-        <div className={s.grid}>
-          {listings.map(item => (
-            <MarketplaceCard
-              key={item.id}
-              listing={item}
-              onClick={handleCardClick}
-            />
-          ))}
-          {listings.length === 0 && (
-            <div className={s.empty}>
-              <Icon name='search' size={48} />
-              <p>{t('admin:hub.noResults', 'No extensions found')}</p>
-            </div>
+        <Box>
+          {listings.length === 0 ? (
+            <Flex
+              direction='column'
+              align='center'
+              justify='center'
+              className={s.emptyStateFlex}
+            >
+              <MagnifyingGlassIcon width={48} className={s.emptyStateIcon} />
+              <Text as='p' size='4' weight='bold' color='gray'>
+                {t('admin:hub.noResults', 'No extensions found')}
+              </Text>
+            </Flex>
+          ) : (
+            <Grid
+              columns={{ initial: '1', md: '2', lg: '3' }}
+              gap='4'
+              className={s.gridBox}
+            >
+              {listings.map(item => (
+                <MarketplaceCard
+                  key={item.id}
+                  listing={item}
+                  onClick={handleCardClick}
+                />
+              ))}
+            </Grid>
           )}
-        </div>
+        </Box>
       )}
 
       {/* Pagination */}
-      <Pagination
+      <TablePagination
         currentPage={filters.page}
         totalPages={totalPages}
         totalItems={total}
@@ -269,7 +285,7 @@ function Hub() {
 
       {/* Detail drawer */}
       <ListingDetail listing={selectedListing} onClose={handleCloseDetail} />
-    </div>
+    </Box>
   );
 }
 

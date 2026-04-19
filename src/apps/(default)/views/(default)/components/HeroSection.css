@@ -1,173 +1,80 @@
-/**
- * xnapify (https://github.com/xuanhoa88/xnapify/)
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE.txt file in the root directory of this source tree.
- */
+@keyframes pulseGlow {
+  0% {
+    filter: blur(60px) opacity(0.8);
+    transform: translateY(0);
+  }
 
-/* =============================================================================
-   HERO SECTION
-   ============================================================================= */
+  50% {
+    filter: blur(80px) opacity(1);
+    transform: translateY(-10px);
+  }
 
-.hero {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: var(--spacing-20) var(--spacing-6);
-  text-align: center;
+  100% {
+    filter: blur(60px) opacity(0.8);
+    transform: translateY(0);
+  }
+}
+
+.heroSectionModern {
   position: relative;
   overflow: hidden;
-  width: 100%;
+  min-height: 70vh;
+  display: flex;
+  align-items: center;
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
 }
 
-.hero::before {
-  content: '';
+.heroSectionModern::before {
+  content: "";
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: radial-gradient(
-      circle at 30% 50%,
-      rgb(255 255 255 / 10%) 0%,
-      transparent 50%
-    ),
-    radial-gradient(
-      circle at 70% 80%,
-      rgb(255 255 255 / 8%) 0%,
-      transparent 50%
-    );
+  top: -30%;
+  left: 20%;
+  width: 60vw;
+  height: 60vw;
+  max-width: 800px;
+  max-height: 800px;
+  background: radial-gradient(circle, rgb(62 99 221 / 15%) 0%, rgb(206 112 224 / 8%) 40%, rgb(255 255 255 / 0%) 70%);
+  border-radius: 50%;
+  z-index: 0;
   pointer-events: none;
+  animation: pulseGlow 8s ease-in-out infinite;
 }
 
-.heroContent {
+.textCenter {
+  text-align: center;
+}
+
+.heroContainer {
+  position: relative;
+  z-index: 10;
   max-width: 800px;
   margin: 0 auto;
-  position: relative;
-  z-index: 1;
 }
 
-.heroTitle {
-  font-size: var(--font-size-5xl);
-  font-weight: var(--font-weight-bold);
-  color: white;
-  margin: 0 0 var(--spacing-6);
+.badgeLabel {
+  background-color: var(--indigo-3);
+  padding: 4px 16px;
+  border-radius: 9999px;
+  margin-bottom: var(--space-6);
+  border: 1px solid var(--indigo-6);
+  box-shadow: 0 4px 14px 0 rgb(62 99 221 / 10%);
+}
+
+.heroTitleModern {
+  color: var(--gray-12);
   letter-spacing: -0.04em;
-  line-height: 1.1;
-  text-shadow: 0 2px 8px rgb(0 0 0 / 15%);
+  margin-bottom: var(--space-5);
+  font-weight: 800;
+  line-height: 1.05;
 }
 
-.heroSubtitle {
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-normal);
-  color: rgb(255 255 255 / 95%);
-  margin: 0 0 var(--spacing-10);
+
+
+.heroSubtitleModern {
+  color: var(--gray-11);
   line-height: 1.6;
-  letter-spacing: -0.01em;
-  max-width: 600px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.heroActions {
-  display: flex;
-  gap: var(--spacing-4);
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
-.btnPrimary,
-.btnSecondary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--spacing-4) var(--spacing-8);
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-  border-radius: var(--radius-lg);
-  text-decoration: none;
-  transition: all var(--transition-base);
-  min-width: 160px;
-  letter-spacing: -0.01em;
-  line-height: 1;
-}
-
-.btnPrimary {
-  background: white;
-  color: #667eea;
-  box-shadow: 0 4px 6px rgb(0 0 0 / 10%);
-}
-
-.btnPrimary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgb(0 0 0 / 15%);
-  color: #764ba2;
-  text-decoration: none;
-}
-
-.btnSecondary {
-  background: rgb(255 255 255 / 15%);
-  color: white;
-  border: 2px solid rgb(255 255 255 / 30%);
-  backdrop-filter: blur(10px);
-}
-
-.btnSecondary:hover {
-  background: rgb(255 255 255 / 25%);
-  border-color: rgb(255 255 255 / 50%);
-  transform: translateY(-2px);
-  text-decoration: none;
-}
-
-.btnSecondary:active {
-  transform: translateY(0);
-  background: rgb(255 255 255 / 20%);
-}
-
-/* =============================================================================
-   RESPONSIVE
-   ============================================================================= */
-
-/* Tablet */
-@media (max-width: 992px) {
-  .hero {
-    padding: var(--spacing-16) var(--spacing-4);
-  }
-
-  .heroTitle {
-    font-size: var(--font-size-4xl);
-  }
-
-  .heroSubtitle {
-    font-size: var(--font-size-lg);
-  }
-}
-
-/* Mobile */
-@media (max-width: 768px) {
-  .hero {
-    padding: var(--spacing-10) var(--spacing-4) var(--spacing-12);
-  }
-
-  .heroTitle {
-    font-size: var(--font-size-3xl);
-    margin-bottom: var(--spacing-4);
-  }
-
-  .heroSubtitle {
-    font-size: var(--font-size-sm);
-    margin-bottom: var(--spacing-6);
-    line-height: var(--line-height-normal);
-  }
-
-  .heroActions {
-    flex-direction: column;
-    gap: var(--spacing-3);
-  }
-
-  .btnPrimary,
-  .btnSecondary {
-    width: 100%;
-    max-width: 100%;
-    padding: var(--spacing-3) var(--spacing-6);
-    font-size: var(--font-size-base);
-  }
+  max-width: 700px;
+  margin: 0 auto;
+  font-size: var(--font-size-5);
 }

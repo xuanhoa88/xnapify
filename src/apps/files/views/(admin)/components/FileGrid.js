@@ -7,16 +7,26 @@
 
 import { useState, useRef, useCallback } from 'react';
 
+import {
+  ArchiveIcon,
+  FileIcon,
+  StarIcon,
+  Pencil1Icon,
+  Share1Icon,
+  CopyIcon,
+  DownloadIcon,
+  TrashIcon,
+} from '@radix-ui/react-icons';
+import { Box, Flex, Text, Grid } from '@radix-ui/themes';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import ConfirmModal from '@shared/renderer/components/ConfirmModal';
 import ContextMenu from '@shared/renderer/components/ContextMenu';
-import Icon from '@shared/renderer/components/Icon';
 import Loader from '@shared/renderer/components/Loader';
-import Pagination from '@shared/renderer/components/Table/Pagination';
+import Modal from '@shared/renderer/components/Modal';
+import { TablePagination } from '@shared/renderer/components/Table';
 import { getUserId } from '@shared/renderer/redux/features/user/selector';
 import { validateForm } from '@shared/validator';
 
@@ -210,89 +220,189 @@ export default function FileGrid({ onShare }) {
 
   if (!files || files.length === 0) {
     return (
-      <div
+      <Flex
+        direction='column'
+        align='center'
+        justify='center'
+        className={s.emptyContainer}
         role='button'
         tabIndex={0}
-        className={s.emptyState}
         onClick={handleContainerClick}
         onKeyDown={e => e.key === 'Enter' && handleContainerClick()}
       >
-        <div className={s.emptyStateIcon}>
-          <Icon name='folder' size={80} />
-        </div>
-        <h3>{t('files:grid.empty_title', 'No files here')}</h3>
-        <p>
+        <Box className={s.emptyIconBox}>
+          <ArchiveIcon width={80} height={80} />
+        </Box>
+        <Text as='h3' size='4' weight='bold' className={s.emptyTitle}>
+          {t('files:grid.empty_title', 'No files here')}
+        </Text>
+        <Text as='p' size='2' color='gray'>
           {t(
             'files:grid.empty_desc',
             'Drop files here or use the "New" button.',
           )}
-        </p>
-      </div>
+        </Text>
+      </Flex>
     );
   }
 
   return (
-    <div
+    <Box
       role='presentation'
-      className={clsx(s.container, {
-        [s.gridView]: viewMode === 'grid',
-        [s.listView]: viewMode === 'list',
-      })}
+      className={s.gridContainer}
       onClick={handleContainerClick}
       onContextMenu={e => e.preventDefault()}
     >
       {/* File Items */}
-      <div className={s.grid}>
-        {files.map(file => (
-          <div
-            key={file.id}
-            role='button'
-            tabIndex={0}
-            className={clsx(s.fileItem, {
-              [s.selected]: selectedIds.includes(file.id),
-            })}
-            onClick={e => handleFileClick(e, file.id)}
-            onKeyDown={e => e.key === 'Enter' && handleDoubleClick(file)}
-            onDoubleClick={() => handleDoubleClick(file)}
-            onContextMenu={e => handleContextMenu(e, file)}
-          >
-            <div className={s.iconContainer}>
-              {file.type === 'folder' ? (
-                <Icon name='folder' size={48} className={s.fileIcon} />
-              ) : (
-                <Icon name='file' size={48} className={s.fileIcon} />
+      {viewMode === 'grid' ? (
+        <Grid
+          columns={{ initial: '1', xs: '2', sm: '3', md: '4', lg: '5' }}
+          gap='4'
+          className={s.gridWrapper}
+        >
+          {files.map(file => (
+            <Flex
+              direction='column'
+              key={file.id}
+              role='button'
+              tabIndex={0}
+              className={clsx(
+                s.fileCard,
+                selectedIds.includes(file.id)
+                  ? s.fileCardSelected
+                  : s.fileCardUnselected,
               )}
-              {file.is_starred && currentView !== 'trash' && (
-                <div className={s.starBadge}>
-                  <Icon name='star' size={16} className={s.starIcon} />
-                </div>
+              onClick={e => handleFileClick(e, file.id)}
+              onKeyDown={e => e.key === 'Enter' && handleDoubleClick(file)}
+              onDoubleClick={() => handleDoubleClick(file)}
+              onContextMenu={e => handleContextMenu(e, file)}
+            >
+              <Flex
+                align='center'
+                justify='center'
+                className={clsx(
+                  s.iconContainer,
+                  file.type === 'folder' ? s.folderIcon : s.fileIcon,
+                )}
+              >
+                {file.type === 'folder' ? (
+                  <ArchiveIcon width={48} height={48} />
+                ) : (
+                  <FileIcon width={48} height={48} />
+                )}
+                {file.is_starred && currentView !== 'trash' && (
+                  <Box className={s.starIconGrid}>
+                    <StarIcon width={16} height={16} />
+                  </Box>
+                )}
+              </Flex>
+              <Flex
+                direction='column'
+                align='center'
+                className={s.nameContainer}
+              >
+                <Text
+                  as='span'
+                  size='2'
+                  weight='medium'
+                  className={s.fileName}
+                  title={file.name}
+                >
+                  {file.name}
+                </Text>
+              </Flex>
+            </Flex>
+          ))}
+        </Grid>
+      ) : (
+        <Flex direction='column' className={s.listWrapper}>
+          {/* List View Header */}
+          <Flex align='center' className={s.listHeader}>
+            <Box className={s.iconSpace} /> {/* Icon space */}
+            <Box className={s.flex3}>{t('files:grid.name', 'Name')}</Box>
+            <Box className={s.flex2HiddenSm}>
+              {t('files:grid.owner', 'Owner')}
+            </Box>
+            <Box className={s.flex2HiddenXs}>
+              {t('files:grid.last_modified', 'Last Modified')}
+            </Box>
+            <Box className={s.flex1HiddenMd}>
+              {t('files:grid.file_size', 'File Size')}
+            </Box>
+          </Flex>
+
+          {/* List Items */}
+          {files.map(file => (
+            <Flex
+              align='center'
+              key={file.id}
+              role='button'
+              tabIndex={0}
+              className={clsx(
+                s.listItem,
+                selectedIds.includes(file.id)
+                  ? s.listItemSelected
+                  : s.listItemUnselected,
               )}
-            </div>
-            <div className={s.nameContainer}>
-              <span className={s.fileName} title={file.name}>
-                {file.name}
-              </span>
-              {viewMode === 'list' && (
-                <>
-                  <span className={s.fileDetail}>
-                    {file.owner && file.owner.email
-                      ? file.owner.email
-                      : t('files:grid.owner_me', 'Me')}
-                  </span>
-                  <span className={s.fileDetail}>
-                    {new Date(file.updated_at).toLocaleDateString()}
-                  </span>
-                  <span className={s.fileDetail}>
-                    {file.size
-                      ? `${(file.size / 1024 / 1024).toFixed(2)} MB`
-                      : '-'}
-                  </span>
-                </>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
+              onClick={e => handleFileClick(e, file.id)}
+              onKeyDown={e => e.key === 'Enter' && handleDoubleClick(file)}
+              onDoubleClick={() => handleDoubleClick(file)}
+              onContextMenu={e => handleContextMenu(e, file)}
+            >
+              <Flex
+                align='center'
+                justify='center'
+                className={clsx(
+                  s.listIconContainer,
+                  file.type === 'folder' ? s.folderIcon : s.fileIcon,
+                )}
+              >
+                {file.type === 'folder' ? (
+                  <ArchiveIcon width={24} height={24} />
+                ) : (
+                  <FileIcon width={24} height={24} />
+                )}
+                {file.is_starred && currentView !== 'trash' && (
+                  <Box className={s.starIconList}>
+                    <StarIcon width={10} height={10} />
+                  </Box>
+                )}
+              </Flex>
+              <Box className={s.listNameBox}>
+                <Text
+                  as='span'
+                  size='2'
+                  weight='medium'
+                  className={s.listFileName}
+                  title={file.name}
+                >
+                  {file.name}
+                </Text>
+              </Box>
+              <Box className={s.listOwnerBox}>
+                <Text as='span' size='1' color='gray'>
+                  {file.owner && file.owner.email
+                    ? file.owner.email
+                    : t('files:grid.owner_me', 'Me')}
+                </Text>
+              </Box>
+              <Box className={s.listModifiedBox}>
+                <Text as='span' size='1' color='gray'>
+                  {new Date(file.updated_at).toLocaleDateString()}
+                </Text>
+              </Box>
+              <Box className={s.listSizeBox}>
+                <Text as='span' size='1' color='gray'>
+                  {file.size
+                    ? `${(file.size / 1024 / 1024).toFixed(2)} MB`
+                    : '-'}
+                </Text>
+              </Box>
+            </Flex>
+          ))}
+        </Flex>
+      )}
+
       {/* Context Menu logic utilizing shared component */}
       {contextMenu && (
         <ContextMenu
@@ -301,84 +411,82 @@ export default function FileGrid({ onShare }) {
           x={contextMenu.x}
           y={contextMenu.y}
         >
-          <div className={s.contextMenuContainer}>
-            <ContextMenu.Menu>
-              {contextMenu.file.owner_id === currentUserId && (
+          <ContextMenu.Menu>
+            {contextMenu.file.owner_id === currentUserId && (
+              <ContextMenu.Item
+                onClick={onRename}
+                icon={<Pencil1Icon width={16} height={16} />}
+              >
+                {t('files:grid.rename', 'Rename')}
+              </ContextMenu.Item>
+            )}
+            <ContextMenu.Item
+              onClick={handleShare}
+              icon={<Share1Icon width={16} height={16} />}
+            >
+              {t('files:grid.share', 'Share')}
+            </ContextMenu.Item>
+
+            <ContextMenu.Item
+              onClick={onCopyLink}
+              icon={<CopyIcon width={16} height={16} />}
+            >
+              {t('files:grid.copy_link', 'Copy link')}
+            </ContextMenu.Item>
+
+            {contextMenu.file.type === 'file' && (
+              <ContextMenu.Item
+                onClick={onDownload}
+                icon={<DownloadIcon width={16} height={16} />}
+              >
+                {t('files:grid.download', 'Download')}
+              </ContextMenu.Item>
+            )}
+
+            <ContextMenu.Item
+              onClick={onStar}
+              icon={<StarIcon width={16} height={16} />}
+            >
+              {contextMenu.file.is_starred
+                ? t('files:grid.remove_star', 'Remove Star')
+                : t('files:grid.add_star', 'Add Star')}
+            </ContextMenu.Item>
+
+            {contextMenu.file.owner_id === currentUserId && (
+              <>
+                <ContextMenu.Divider />
                 <ContextMenu.Item
-                  onClick={onRename}
-                  icon={<Icon name='edit-2' size={16} />}
+                  onClick={onTrash}
+                  variant='danger'
+                  icon={<TrashIcon width={16} height={16} />}
                 >
-                  {t('files:grid.rename', 'Rename')}
+                  {currentView === 'trash'
+                    ? t('files:grid.delete_permanently', 'Delete Permanently')
+                    : t('files:grid.move_to_trash', 'Move to Trash')}
                 </ContextMenu.Item>
-              )}
-              <ContextMenu.Item
-                onClick={handleShare}
-                icon={<Icon name='share' size={16} />}
-              >
-                {t('files:grid.share', 'Share')}
-              </ContextMenu.Item>
-
-              <ContextMenu.Item
-                onClick={onCopyLink}
-                icon={<Icon name='copy' size={16} />}
-              >
-                {t('files:grid.copy_link', 'Copy link')}
-              </ContextMenu.Item>
-
-              {contextMenu.file.type === 'file' && (
-                <ContextMenu.Item
-                  onClick={onDownload}
-                  icon={<Icon name='download' size={16} />}
-                >
-                  {t('files:grid.download', 'Download')}
-                </ContextMenu.Item>
-              )}
-
-              <ContextMenu.Item
-                onClick={onStar}
-                icon={<Icon name='star' size={16} />}
-              >
-                {contextMenu.file.is_starred
-                  ? t('files:grid.remove_star', 'Remove Star')
-                  : t('files:grid.add_star', 'Add Star')}
-              </ContextMenu.Item>
-
-              {contextMenu.file.owner_id === currentUserId && (
-                <>
-                  <ContextMenu.Divider />
-                  <ContextMenu.Item
-                    onClick={onTrash}
-                    variant='danger'
-                    icon={<Icon name='trash' size={16} />}
-                  >
-                    {currentView === 'trash'
-                      ? t('files:grid.delete_permanently', 'Delete Permanently')
-                      : t('files:grid.move_to_trash', 'Move to Trash')}
-                  </ContextMenu.Item>
-                </>
-              )}
-            </ContextMenu.Menu>
-          </div>
+              </>
+            )}
+          </ContextMenu.Menu>
         </ContextMenu>
       )}
       {/* RENAME PROMPT */}
-      <ConfirmModal.Prompt
+      <Modal.ConfirmPrompt
         ref={renamePromptRef}
         onSubmit={handleRenameSubmit}
       />
       {/* PAGINATION */}
       {totalPages > 1 && (
-        <div className={s.paginationWrapper}>
-          <Pagination
+        <Box className={s.paginationContainer}>
+          <TablePagination
             currentPage={page}
             totalPages={totalPages}
             totalItems={totalItems}
             onPageChange={newPage => dispatch(setPage(newPage))}
             loading={loading}
           />
-        </div>
+        </Box>
       )}
-    </div>
+    </Box>
   );
 }
 

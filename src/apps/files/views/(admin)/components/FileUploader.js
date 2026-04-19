@@ -7,13 +7,17 @@
 
 import { useRef, useEffect, useCallback } from 'react';
 
+import {
+  Cross2Icon,
+  CheckCircledIcon,
+  InfoCircledIcon,
+} from '@radix-ui/react-icons';
+import { Box, Flex, Text, Button } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { v4 as uuidv4 } from 'uuid';
 
-import Button from '@shared/renderer/components/Button';
-import ConfirmModal from '@shared/renderer/components/ConfirmModal';
-import Icon from '@shared/renderer/components/Icon';
+import Modal from '@shared/renderer/components/Modal';
 import { validateForm } from '@shared/validator';
 
 import { createFolderFormSchema } from '../../../validator/admin/file';
@@ -168,7 +172,8 @@ function FileUploader() {
 
   return (
     <>
-      <input
+      <Box
+        as='input'
         id='hidden-file-upload'
         type='file'
         ref={fileInputRef}
@@ -178,7 +183,7 @@ function FileUploader() {
       />
 
       {/* NEW FOLDER DIALOG */}
-      <ConfirmModal.Prompt
+      <Modal.ConfirmPrompt
         ref={promptRef}
         onSubmit={handleCreateFolder}
         onSuccess={() => {
@@ -188,54 +193,76 @@ function FileUploader() {
 
       {/* UPLOAD PROGRESS TRACKER (Bottom Right) */}
       {activeUploads.length > 0 && (
-        <div className={s.uploadTracker}>
-          <div className={s.trackerHeader}>
-            <span>
+        <Box className={s.trackerContainer}>
+          <Flex align='center' justify='between' className={s.trackerHeader}>
+            <Text as='span' size='2' weight='bold' className={s.trackerTitle}>
               {t('files:uploader.uploads_status', {
                 count: activeUploads.filter(u => u.status === 'completed')
                   .length,
                 total: activeUploads.length,
               })}
-            </span>
+            </Text>
             <Button
               variant='ghost'
-              iconOnly
-              className={s.iconBtn}
+              size='1'
+              className={s.trackerCloseBtn}
               onClick={() => dispatch(clearCompletedUploads())}
             >
-              <Icon name='close' size={24} />
+              <Cross2Icon width={16} height={16} />
             </Button>
-          </div>
-          <div className={s.trackerList}>
+          </Flex>
+          <Box className={s.trackerList}>
             {activeUploads.map(upload => (
-              <div key={upload.id} className={s.trackerItem}>
-                <span className={s.trackerName} title={upload.name}>
-                  {upload.name}
-                </span>
-                <div className={s.trackerStatus}>
-                  {upload.status === 'uploading' && (
-                    <div className={s.progressBar}>
-                      <div
-                        className={s.progressFill}
-                        style={{ '--progress-width': `${upload.progress}%` }}
-                      />
-                    </div>
-                  )}
+              <Flex
+                key={upload.id}
+                direction='column'
+                className={s.trackerItem}
+              >
+                <Flex
+                  align='center'
+                  justify='between'
+                  className={
+                    upload.status === 'uploading'
+                      ? s.trackerItemHeaderUploading
+                      : s.trackerItemHeader
+                  }
+                >
+                  <Text
+                    as='span'
+                    size='2'
+                    className={s.trackerItemName}
+                    title={upload.name}
+                  >
+                    {upload.name}
+                  </Text>
+
                   {upload.status === 'completed' && (
-                    <span className={s.successText}>
+                    <Text as='span' size='1' className={s.statusSuccess}>
+                      <CheckCircledIcon width={12} height={12} />
                       {t('files:uploader.done', 'Done')}
-                    </span>
+                    </Text>
                   )}
                   {upload.status === 'error' && (
-                    <span className={s.errorText}>
+                    <Text as='span' size='1' className={s.statusError}>
+                      <InfoCircledIcon width={12} height={12} />
                       {t('files:uploader.failed', 'Failed')}
-                    </span>
+                    </Text>
                   )}
-                </div>
-              </div>
+                </Flex>
+
+                {upload.status === 'uploading' && (
+                  <Box className={s.progressTrack}>
+                    <Box
+                      className={s.progressFill}
+                      // eslint-disable-next-line react/forbid-dom-props
+                      style={{ width: `${upload.progress}%` }}
+                    />
+                  </Box>
+                )}
+              </Flex>
             ))}
-          </div>
-        </div>
+          </Box>
+        </Box>
       )}
     </>
   );

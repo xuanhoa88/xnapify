@@ -1,40 +1,40 @@
-/**
- * xnapify (https://github.com/xuanhoa88/xnapify/)
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE.txt file in the root directory of this source tree.
- */
 
-.title {
-  color: #52c41a;
-}
-
-.card {
-  background: #f6ffed;
-  padding: 20px;
-  border-radius: 8px;
-  margin-top: 20px;
-  border: 1px solid #b7eb8f;
-}
-
-.heading {
-  margin-top: 20px;
-}
 
 .codeBlock {
-  background: #fff;
-  padding: 4px 8px;
-  border-radius: 4px;
   display: block;
-  margin-top: 8px;
+  background-color: var(--gray-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-2);
+  font-family: monospace;
+  color: var(--pink-11);
 }
 
-.backLink {
-  margin-top: 20px;
+.listItems {
+  padding-left: var(--space-4);
+  color: var(--gray-11);
+  margin: 0;
 }
 
-.link {
-  color: #0070f3;
+.listItemBox {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.nestedBoxFeature {
+  background-color: var(--color-panel-solid);
+  border: 1px solid var(--gray-5);
+  border-radius: var(--radius-3);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-1);
+}
+
+.linkBox {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--indigo-11);
   text-decoration: none;
-  font-weight: bold;
+  font-weight: 500;
+  transition: color 0.2s;
 }

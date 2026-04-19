@@ -14,6 +14,7 @@ import {
   useMemo,
 } from 'react';
 
+import { Box, Flex, Text, Badge } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
@@ -120,62 +121,90 @@ const UserPermissionsModal = forwardRef((props, ref) => {
         </Modal.Description>
 
         {loading ? (
-          <p>
+          <Box className={s.loadingBox}>
             {t('admin:users.permissions.loading', 'Loading permissions...')}
-          </p>
+          </Box>
         ) : (
           <>
             {/* Role breakdown */}
             {roleDetails.length > 0 && (
-              <div className={s.roleBreakdown}>
-                <h4 className={s.sectionTitle}>
+              <Box className={s.sectionBox}>
+                <Text
+                  as='h4'
+                  size='3'
+                  weight='bold'
+                  className={s.sectionHeading}
+                >
                   {t('admin:users.permissions.assignedRoles', 'Assigned Roles')}
-                </h4>
-                <div className={s.rolesList}>
+                </Text>
+                <Flex direction='column' gap='2'>
                   {roleDetails.map(role => (
-                    <div key={role.id || role.name} className={s.roleItem}>
-                      <span className={s.roleName}>{role.name}</span>
+                    <Flex
+                      key={role.id || role.name}
+                      align='center'
+                      justify='between'
+                      className={s.roleFlex}
+                    >
+                      <Text
+                        as='span'
+                        weight='medium'
+                        className={s.roleNameText}
+                      >
+                        {role.name}
+                      </Text>
                       {role.permissionCount > 0 && (
-                        <span className={s.rolePermCount}>
+                        <Badge
+                          size='small'
+                          color='gray'
+                          radius='full'
+                          variant='surface'
+                        >
                           {t(
                             'admin:users.permissions.permissionCount',
                             '{{count}} permission(s)',
                             { count: role.permissionCount },
                           )}
-                        </span>
+                        </Badge>
                       )}
-                    </div>
+                    </Flex>
                   ))}
-                </div>
-              </div>
+                </Flex>
+              </Box>
             )}
 
             {/* All permissions */}
-            <div className={s.permissionsSection}>
-              <h4 className={s.sectionTitle}>
+            <Box>
+              <Text as='h4' size='3' weight='bold' className={s.sectionHeading}>
                 {t(
                   'admin:users.permissions.effectivePermissions',
                   'Effective Permissions ({{count}})',
                   { count: permissions.length },
                 )}
-              </h4>
+              </Text>
               {permissions.length > 0 ? (
-                <div className={s.permissionsList}>
+                <Flex wrap='wrap' gap='2'>
                   {permissions.map(perm => (
-                    <span key={perm.name} className={s.permissionBadge}>
+                    <Badge
+                      key={perm.name}
+                      size='small'
+                      className={s.badgeStyle}
+                      color='gray'
+                      radius='full'
+                      variant='soft'
+                    >
                       {perm.name}
-                    </span>
+                    </Badge>
                   ))}
-                </div>
+                </Flex>
               ) : (
-                <p className={s.noPermissions}>
+                <Text as='p' size='2' color='gray' className={s.emptyText}>
                   {t(
                     'admin:users.permissions.noPermissions',
                     'No permissions. Assign roles to grant permissions.',
                   )}
-                </p>
+                </Text>
               )}
-            </div>
+            </Box>
           </>
         )}
       </Modal.Body>

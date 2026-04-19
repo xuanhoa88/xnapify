@@ -7,6 +7,7 @@
 
 import { useCallback, useState, useEffect, useRef } from 'react';
 
+import { TextField } from '@radix-ui/themes';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
@@ -231,22 +232,24 @@ export default function Toolbar({
             className={s.fontSizeWrapper}
             data-tooltip={t('shared:form.wysiwyg.fontSize', 'Font Size (px)')}
           >
-            <input
-              ref={fontSizeRef}
-              type='number'
-              className={s.fontSizeInput}
-              value={fontSizeValue}
-              onChange={e => setFontSizeValue(e.target.value)}
-              onBlur={e => applyFontSize(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  applyFontSize(e.target.value);
-                }
-              }}
-              min='8'
-              max='100'
-            />
+            <TextField.Root>
+              <TextField.Input
+                ref={fontSizeRef}
+                type='number'
+                className={s.fontSizeInput}
+                value={fontSizeValue}
+                onChange={e => setFontSizeValue(e.target.value)}
+                onBlur={e => applyFontSize(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    applyFontSize(e.target.value);
+                  }
+                }}
+                min='8'
+                max='100'
+              />
+            </TextField.Root>
           </div>
         )}
       </div>

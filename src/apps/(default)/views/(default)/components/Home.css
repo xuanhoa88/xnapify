@@ -1,14 +1,10 @@
-/**
- * xnapify (https://github.com/xuanhoa88/xnapify/)
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE.txt file in the root directory of this source tree.
- */
 
-/* =============================================================================
-   ROOT
-   ============================================================================= */
 
-.root {
-  background: var(--color-background);
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.bgBackground {
+  background-color: var(--color-background);
 }

@@ -190,7 +190,7 @@ export const listItems = async (req, res) => {
 | Rule                   | Guideline                                                                   |
 | ---------------------- | --------------------------------------------------------------------------- |
 | **CSS Modules**        | `import s from './Component.css'` — classes via `s.className`               |
-| **No inline styles**   | Except `{ display: 'none' }` for hidden file inputs                         |
+| **No inline styles**   | 🔴 ABSOLUTE BAN on `style={{...}}`. Use Radix props (`p`, `width`) or standard `.css` modules. Only valid exception: `style={{ display: 'none' }}` for hidden inputs or programmatic conditional animations. |
 | **useCallback**        | Wrap event handlers passed as props                                         |
 | **useMemo**            | Expensive derived data (filtering, counting)                                |
 | **useRef for timers**  | Store timeout/interval IDs in refs, clean up in `useEffect` return          |

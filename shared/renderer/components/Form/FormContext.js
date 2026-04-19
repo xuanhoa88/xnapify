@@ -1,3 +1,4 @@
+/* eslint-disable no-underscore-dangle */
 /**
  * xnapify (https://github.com/xuanhoa88/xnapify/)
  *
@@ -8,16 +9,20 @@
 import { createContext, useContext, useCallback } from 'react';
 
 // Context for form field state (provided by Form.Field)
-export const FormFieldContext = createContext({});
+export const FormFieldContext = createContext(null);
 
 // Context for schema and validation instance (to detect required fields and provide z)
-export const FormValidationContext = createContext({});
+export const FormValidationContext = createContext(null);
 
 /**
  * Hook to get validation context (schema, z)
  */
 export function useFormValidation() {
-  return useContext(FormValidationContext);
+  const context = useContext(FormValidationContext);
+  if (!context) {
+    throw new Error('useFormValidation must be used within a Form component');
+  }
+  return context;
 }
 
 /**
@@ -54,7 +59,6 @@ function getSchemaShape(schema, path) {
     if (!currentSchema) return null;
 
     // Unwrap effects/refinements/optionals/nullables to get to the underlying shape
-    /* eslint-disable no-underscore-dangle */
     // eslint-disable-next-line no-constant-condition
     while (true) {
       if (currentSchema._def && currentSchema._def.schema) {

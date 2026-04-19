@@ -10,7 +10,7 @@
   gap: 1px;
   background: var(--color-border);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-3);
   overflow: hidden;
   transition: var(--transition-base);
 }
@@ -21,7 +21,7 @@
 }
 
 .numberWrapper:focus-within {
-  border-color: var(--color-primary);
+  border-color: var(--indigo-9);
   box-shadow: 0 0 0 3px rgb(59 130 246 / 15%);
 }
 
@@ -37,13 +37,13 @@
 
   /* Add min-width so it never fully collapses */
   min-width: 60px;
-  padding: 0 var(--spacing-3);
+  padding: 0 var(--space-3);
   border: none;
   outline: 0;
   background: var(--color-background);
   color: var(--color-text-primary);
-  font-size: var(--font-size-sm);
-  font-family: var(--font-family-base);
+  font-size: var(--font-size-1);
+  font-family: var(--default-font-family);
   text-align: center;
   transition: var(--transition-base);
 }
@@ -101,7 +101,7 @@
 
 .button:hover:not(:disabled) {
   background: var(--color-background-subtle);
-  color: var(--color-primary);
+  color: var(--indigo-9);
 }
 
 .button:active:not(:disabled) {

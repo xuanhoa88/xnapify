@@ -1,246 +1,219 @@
-/**
- * xnapify (https://github.com/xuanhoa88/xnapify/)
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE.txt file in the root directory of this source tree.
- */
-.container {
-  min-height: 100%;
-  width: 100%;
-  padding-bottom: 40px;
-}
-
-/* --- COMMON --- */
-.emptyState {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+.emptyContainer {
   height: 100%;
-  min-height: 400px;
-  color: var(--color-text-secondary);
+  min-height: 300px;
+  width: 100%;
+  cursor: default;
 }
 
-.emptyStateIcon {
-  margin-bottom: 16px;
-  opacity: 0.8;
+.emptyIconBox {
+  color: var(--gray-7);
+  margin-bottom: var(--space-4);
 }
 
-.emptyStateIcon svg {
-  color: var(--color-border);
+.emptyTitle {
+  color: var(--gray-11);
+  margin-bottom: var(--space-2);
 }
 
-.emptyState h3 {
-  font-size: 18px;
-  font-weight: 400;
-  margin: 0 0 8px;
-  color: var(--color-text);
+.gridContainer {
+  height: 100%;
+  min-height: 100%;
+  user-select: none;
 }
 
-.emptyState p {
-  font-size: 14px;
-  margin: 0;
+.gridWrapper {
+  padding: var(--space-2);
 }
 
-.starBadge {
-  position: absolute;
-  top: 8px;
-  right: 8px;
+.fileCard {
+  border-radius: var(--radius-3);
+  padding: var(--space-3);
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  position: relative;
+}
+
+.fileCardUnselected {
+  background-color: var(--color-panel-solid);
+  border: 1px solid var(--gray-5);
+}
+
+.fileCardSelected {
+  background-color: var(--indigo-3);
+  border: 1px solid var(--indigo-8);
+}
+
+.iconContainer {
+  height: 80px;
+  margin-bottom: var(--space-3);
+  position: relative;
+}
+
+.folderIcon {
+  color: var(--indigo-9);
 }
 
 .fileIcon {
-  color: var(--color-text-secondary);
-  fill: var(--color-text-secondary);
+  color: var(--gray-10);
 }
 
-.starIcon {
-  color: var(--color-warning, #f4b400);
-  fill: var(--color-warning, #f4b400);
+.starIconGrid {
+  position: absolute;
+  bottom: 0;
+  right: 40px;
+  color: var(--amber-9);
 }
 
-/* --- BASE GRID/LIST ELEMENTS (Specificity 0,2,0) --- */
-
-.gridView .grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 16px;
+.nameContainer {
+  flex: 1;
+  min-width: 0;
 }
 
-.listView .grid {
-  display: flex;
-  flex-direction: column;
-}
-
-.gridView .fileItem {
-  display: flex;
-  flex-direction: column;
-  background-color: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  cursor: pointer;
-  user-select: none;
-  transition:
-    background-color 0.2s,
-    box-shadow 0.2s,
-    border-color 0.2s;
-}
-
-.listView .fileItem {
-  display: flex;
-  align-items: center;
-  padding: 0 16px;
-  height: 48px;
-  border-bottom: 1px solid var(--color-border);
-  cursor: pointer;
-  user-select: none;
-  transition: background-color 0.2s;
-}
-
-.listView .fileItem:last-child {
-  border-bottom: none;
-}
-
-.gridView .iconContainer {
-  height: 120px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: var(--color-background-tertiary);
-  position: relative;
-}
-
-.listView .iconContainer {
-  width: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  position: relative;
-  margin-right: 8px;
-}
-
-.listView .iconContainer svg {
-  width: 24px;
-  height: 24px;
-}
-
-.gridView .nameContainer {
-  padding: 12px 16px;
-  border-top: 1px solid var(--color-border);
-  display: flex;
-  align-items: center;
-}
-
-.listView .nameContainer {
-  display: flex;
-  align-items: center;
-  flex-grow: 1;
-  padding-left: 8px;
-}
-
-.gridView .fileName {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--color-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.listView .fileName {
-  font-size: 14px;
-  color: var(--color-text);
-  width: 40%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  padding-right: 16px;
-}
-
-.listView .fileDetail {
-  width: 20%;
-  font-size: 13px;
-  color: var(--color-text-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.listView .starBadge {
-  top: -4px;
-  right: -4px;
-  z-index: 1;
-}
-
-/* --- HOVER / SELECTED STATES (Specificity 0,3,0+) --- */
-
-.gridView .fileItem:hover {
-  background-color: var(--color-background-hover);
-  box-shadow: var(--shadow-sm);
-}
-
-.listView .fileItem:hover {
-  background-color: var(--color-background-hover);
-}
-
-.gridView .fileItem.selected {
-  background-color: var(--color-primary-bg, #eff6ff);
-  border-color: var(--color-primary);
-}
-
-.listView .fileItem.selected {
-  background-color: var(--color-primary-bg, #eff6ff);
-}
-
-/* Make text inside selected items primary-dark for contrast */
-.gridView .fileItem.selected .fileName,
-.listView .fileItem.selected .fileName {
-  color: var(--color-primary-dark);
-}
-
-.gridView .fileItem.selected .fileIcon,
-.listView .fileItem.selected .fileIcon {
-  color: var(--color-primary);
-  fill: var(--color-primary);
-}
-
-.contextMenuContainer {
+.fileName {
   display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+  color: var(--gray-12);
 }
 
-/* Dark mode overwrites (High Specificity 0,3,0) */
-:global(.theme-dark) .gridView .fileItem {
-  background-color: var(--color-background);
-  border-color: var(--color-border);
+.listWrapper {
+  padding: var(--space-2);
 }
 
-:global(.theme-dark) .gridView .iconContainer {
-  background-color: var(--color-background-tertiary);
+.listHeader {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--gray-4);
+  color: var(--gray-11);
+  font-weight: 500;
+  font-size: var(--font-size-2);
 }
 
-:global(.theme-dark) .gridView .fileItem:hover {
-  background-color: var(--color-background-hover);
+.iconSpace {
+  width: 40px;
 }
 
-:global(.theme-dark) .gridView .fileItem.selected {
-  background-color: rgb(59 130 246 / 15%);
-  border-color: var(--color-primary);
+.flex3 {
+  flex: 3;
 }
 
-:global(.theme-dark) .gridView .fileItem.selected .fileName {
-  color: var(--color-primary-light);
+.flex2HiddenSm {
+  flex: 2;
+  display: none;
 }
 
-/* No dark mode overrides needed for standard context menu component */
-
-/* Most specific rules (0,4,0) placed at the end to avoid descending specificity */
-.gridView .fileItem.selected .iconContainer {
-  background-color: transparent; /* blend with the soft primary bg of the selection */
+@media (min-width: 768px) {
+  .flex2HiddenSm {
+    display: block;
+  }
 }
 
-.paginationWrapper {
-  margin-top: 32px;
-  display: flex;
-  justify-content: flex-end;
-  padding: 0 16px 24px;
+.flex2HiddenXs {
+  flex: 2;
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .flex2HiddenXs {
+    display: block;
+  }
+}
+
+.flex1HiddenMd {
+  flex: 1;
+  display: none;
+  text-align: right;
+}
+
+@media (min-width: 1024px) {
+  .flex1HiddenMd {
+    display: block;
+  }
+}
+
+.listItem {
+  border-bottom: 1px solid var(--gray-3);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  transition: background-color 0.15s ease-in-out;
+  position: relative;
+}
+
+.listItemUnselected {
+  background-color: transparent;
+}
+
+.listItemSelected {
+  background-color: var(--indigo-3);
+}
+
+.listIconContainer {
+  width: 40px;
+  position: relative;
+}
+
+.starIconList {
+  position: absolute;
+  bottom: -4px;
+  right: 0;
+  color: var(--amber-9);
+}
+
+.listNameBox {
+  flex: 3;
+  min-width: 0;
+  padding-right: var(--space-3);
+}
+
+.listFileName {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--gray-12);
+}
+
+.listOwnerBox {
+  flex: 2;
+  display: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (min-width: 768px) {
+  .listOwnerBox {
+    display: block;
+  }
+}
+
+.listModifiedBox {
+  flex: 2;
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .listModifiedBox {
+    display: block;
+  }
+}
+
+.listSizeBox {
+  flex: 1;
+  display: none;
+  text-align: right;
+}
+
+@media (min-width: 1024px) {
+  .listSizeBox {
+    display: block;
+  }
+}
+
+.paginationContainer {
+  padding: var(--space-4);
+  margin-top: var(--space-4);
+  border-top: 1px solid var(--gray-4);
 }

@@ -33,7 +33,7 @@
   line-height: 1.65;
   background-color: var(--bg-color);
   box-shadow: 0 4px 6px rgb(0 0 0 / 2%);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-3);
 }
 
 .article {
@@ -83,10 +83,9 @@
   border-bottom-color: var(--primary-color);
 }
 
-/* Animations */
 .article img {
   max-width: 100%;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-3);
   box-shadow: 0 4px 12px rgb(0 0 0 / 8%);
   transition: transform 0.3s ease;
 }
@@ -96,10 +95,9 @@
   box-shadow: 0 6px 16px rgb(0 0 0 / 12%);
 }
 
-/* Code Blocks */
 .article pre {
   background-color: var(--code-bg);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-2);
   padding: 1.25rem;
   overflow: auto;
   font-size: 0.9em;
@@ -132,92 +130,15 @@
   color: var(--text-muted);
   border-left: 4px solid #dfe2e5;
   background-color: #fafbfc;
-  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  border-radius: 0 var(--radius-3) var(--radius-3) 0;
 }
 
-/*
-  ==============================================
-    GitHub Alerts
-  ==============================================
-*/
-.githubAlert {
-  margin: 1.5rem 0;
-  padding: 1rem 1.25rem;
-  border-left: 4px solid var(--border-color);
-  border-radius: var(--radius-md);
-  font-size: 0.95rem;
-  line-height: 1.5;
-  box-shadow: 0 1px 3px rgb(0 0 0 / 5%);
-}
-
-.alertTitle {
-  font-weight: 700;
-  margin-bottom: 0.4rem;
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  display: flex;
-  align-items: center;
-}
-
-.alertBody p {
-  margin-bottom: 0;
-  font-size: 0.95rem;
-}
-
-/* Specific Alert Themes */
-.alertNote {
-  background-color: var(--alert-note-bg);
-  border-left-color: var(--alert-note-border);
-}
-
-.alertNote .alertTitle {
-  color: var(--alert-note-border);
-}
-
-.alertWarning {
-  background-color: var(--alert-warning-bg);
-  border-left-color: var(--alert-warning-border);
-}
-
-.alertWarning .alertTitle {
-  color: var(--alert-warning-border);
-}
-
-.alertImportant {
-  background-color: var(--alert-important-bg);
-  border-left-color: var(--alert-important-border);
-}
-
-.alertImportant .alertTitle {
-  color: var(--alert-important-border);
-}
-
-.alertTip {
-  background-color: var(--alert-tip-bg);
-  border-left-color: var(--alert-tip-border);
-}
-
-.alertTip .alertTitle {
-  color: var(--alert-tip-border);
-}
-
-.alertCaution {
-  background-color: var(--alert-caution-bg);
-  border-left-color: var(--alert-caution-border);
-}
-
-.alertCaution .alertTitle {
-  color: var(--alert-caution-border);
-}
-
-/* Error State */
 .errorContainer {
   text-align: center;
   padding: 4rem 2rem;
   background-color: #fff3f3;
   border: 1px solid var(--alert-caution-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-3);
   color: var(--alert-caution-border);
   box-shadow: 0 4px 12px rgb(207 34 46 / 10%);
 }
@@ -225,9 +146,4 @@
 .errorContainer h2 {
   margin-top: 0;
   margin-bottom: 1rem;
-}
-
-.errorText {
-  color: var(--alert-caution-border);
-  font-weight: 500;
 }

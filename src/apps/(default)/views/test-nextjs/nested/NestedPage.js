@@ -5,47 +5,65 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import Icon from '@shared/renderer/components/Icon';
+import { ArrowLeftIcon } from '@radix-ui/react-icons';
+import { Flex, Box, Text, Heading } from '@radix-ui/themes';
 
 import s from './NestedPage.css';
 
+/**
+ * NestedTestPage explicit DOM nodes bypassing implicit nested layout mappings dynamically substituting native parameters.
+ */
 export default function NestedTestPage() {
   return (
-    <div>
-      <h1 className={s.title}>✅ Nested Page Works!</h1>
+    <Box>
+      <Heading as='h1' size='6' mb='5' color='green'>
+        ✅ Nested Page Works!
+      </Heading>
 
-      <div className={s.card}>
-        <h2>Layout Nesting Test</h2>
-        <p>
-          This page is explicitly wrapped by the <code>TestLayout</code>
+      <Box className={s.nestedBoxFeature} mb='5'>
+        <Heading as='h2' size='4' mb='3' color='gray'>
+          Layout Nesting Test
+        </Heading>
+        <Text size='3' mb='5' display='block'>
+          This page is explicitly wrapped by the <code>TestLayout</code>{' '}
           component. You should see a blue dashed border around this content.
-        </p>
+        </Text>
 
-        <h3 className={s.heading}>File Location:</h3>
-        <code className={s.codeBlock}>
+        <Heading as='h3' size='3' mb='2' color='gray'>
+          File Location:
+        </Heading>
+        <Box as='code' mb='5' className={s.codeBlock}>
           @apps/(default)/views/test-nextjs/nested/_route.js
-        </code>
+        </Box>
 
-        <h3 className={s.heading}>Route Path:</h3>
-        <code className={s.codeBlock}>/test-nextjs/nested</code>
+        <Heading as='h3' size='3' mb='2' color='gray'>
+          Route Path:
+        </Heading>
+        <Box as='code' mb='5' className={s.codeBlock}>
+          /test-nextjs/nested
+        </Box>
 
-        <h3 className={s.heading}>Layout Hierarchy:</h3>
-        <ol>
+        <Heading as='h3' size='3' mb='3' color='gray'>
+          Layout Hierarchy:
+        </Heading>
+        <Flex as='ol' direction='column' gap='2' className={s.listItems}>
           <li>Root Layout (if exists)</li>
-          <li>
+          <li className={s.listItemBox}>
             TestLayout (Explicit Wrapper)
-            <Icon name='arrowLeft' />
-            <strong>Wraps this page</strong>
+            <ArrowLeftIcon width={14} height={14} />
+            <strong className={s.linkBox}>Wraps this page</strong>
           </li>
           <li>This page content</li>
-        </ol>
-      </div>
+        </Flex>
+      </Box>
 
-      <div className={s.backLink}>
-        <a href='/test-nextjs' className={s.link}>
-          <Icon name='arrowLeft' /> Back to Test Home
-        </a>
-      </div>
-    </div>
+      <Box mt='4'>
+        <Box asChild className={s.linkBox}>
+          <a href='/test-nextjs'>
+            <ArrowLeftIcon width={16} height={16} /> Back to Test Home
+          </a>
+        </Box>
+      </Box>
+    </Box>
   );
 }

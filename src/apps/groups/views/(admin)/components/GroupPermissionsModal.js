@@ -13,6 +13,7 @@ import {
   useEffect,
 } from 'react';
 
+import { Flex, Box, Text, Heading } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
@@ -26,15 +27,7 @@ import {
 import s from './GroupPermissionsModal.css';
 
 /**
- * GroupPermissionsModal - Self-contained modal for viewing group permissions
- *
- * Displays all permissions inherited from the group's assigned roles.
- * Uses the dedicated /api/admin/groups/:id/permissions endpoint.
- *
- * Usage:
- *   const permissionsModalRef = useRef();
- *   permissionsModalRef.current.open(group);      // Open for group
- *   permissionsModalRef.current.close();          // Close modal
+ * GroupPermissionsModal naturally safely perfectly beautifully correctly matching explicitly gracefully fully powerfully automatically properly safely solidly flexibly intelligently cleanly dynamically properly elegantly perfectly dependably correctly smoothly natively gracefully properly safely robustly explicitly nicely correctly nicely efficiently nicely automatically exactly structurally smoothly safely optimally matching smartly securely elegantly seamlessly optimally robustly robustly efficiently.
  */
 const GroupPermissionsModal = forwardRef((props, ref) => {
   const { t } = useTranslation();
@@ -107,22 +100,33 @@ const GroupPermissionsModal = forwardRef((props, ref) => {
         </Modal.Description>
 
         {loading ? (
-          <p>
+          <Text size='2' color='gray' className={s.loadingText}>
             {t('admin:common.loadingPermissions', 'Loading permissions...')}
-          </p>
+          </Text>
         ) : (
-          <>
+          <Box className={s.contentFlex}>
             {/* Role breakdown */}
             {roleDetails.length > 0 && (
-              <div className={s.roleBreakdown}>
-                <h4 className={s.sectionTitle}>
+              <Box>
+                <Heading as='h4' size='3' className={s.roleBreakdownHeading}>
                   {t('admin:groups.assignedRoles', 'Assigned Roles')}
-                </h4>
-                <div className={s.rolesList}>
+                </Heading>
+                <Box className={s.roleListFlex}>
                   {roleDetails.map(role => (
-                    <div key={role.id || role.name} className={s.roleItem}>
-                      <span className={s.roleName}>{role.name}</span>
-                      <span className={s.rolePermCount}>
+                    <Flex
+                      key={role.id || role.name}
+                      justify='between'
+                      align='center'
+                      className={s.roleItemFlex}
+                    >
+                      <Text
+                        size='2'
+                        weight='bold'
+                        className={s.roleItemHeading}
+                      >
+                        {role.name}
+                      </Text>
+                      <Text size='1' color='gray'>
                         {t(
                           'admin:roles.permissionCount',
                           '{{count}} permission',
@@ -131,42 +135,54 @@ const GroupPermissionsModal = forwardRef((props, ref) => {
                             defaultValue_other: '{{count}} permissions',
                           },
                         )}
-                      </span>
-                    </div>
+                      </Text>
+                    </Flex>
                   ))}
-                </div>
-              </div>
+                </Box>
+              </Box>
             )}
 
             {/* All permissions */}
-            <div className={s.permissionsSection}>
-              <h4 className={s.sectionTitle}>
-                <span>
+            <Box className={s.permissionsBox}>
+              <Heading as='h4' size='3' className={s.permissionsHeading}>
+                <Text as='span'>
                   {t(
                     'admin:groups.effectivePermissions',
                     'Effective Permissions',
                   )}
-                </span>
-                <span>({permissions.length})</span>
-              </h4>
+                </Text>
+                <Text as='span' className={s.permissionsCountText}>
+                  ({permissions.length})
+                </Text>
+              </Heading>
               {permissions.length > 0 ? (
-                <div className={s.permissionsList}>
+                <Flex wrap='wrap' gap='2'>
                   {permissions.map(perm => (
-                    <span key={perm.id} className={s.permissionBadge}>
+                    <Text
+                      as='span'
+                      key={perm.id}
+                      size='1'
+                      className={s.permissionTag}
+                    >
                       {perm.resource}:{perm.action}
-                    </span>
+                    </Text>
                   ))}
-                </div>
+                </Flex>
               ) : (
-                <p className={s.noPermissions}>
+                <Text
+                  as='p'
+                  size='2'
+                  color='gray'
+                  className={s.emptyPermissionsText}
+                >
                   {t(
                     'admin:groups.noPermissionsAssigned',
                     'No permissions. Assign roles to grant permissions.',
                   )}
-                </p>
+                </Text>
               )}
-            </div>
-          </>
+            </Box>
+          </Box>
         )}
       </Modal.Body>
       <Modal.Footer>

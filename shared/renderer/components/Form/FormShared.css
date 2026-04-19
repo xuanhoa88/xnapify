@@ -1,0 +1,146 @@
+/* Password */
+.passwordIcon {
+  display: block;
+}
+
+/* Number */
+.numberInput {
+  flex: 1;
+  text-align: center;
+}
+
+/* Label */
+.labelBlock {
+  display: block;
+}
+
+/* CheckboxList */
+.checkboxListItem {
+  border: 1px solid var(--gray-a6);
+  border-radius: var(--radius-3);
+  padding: var(--space-3);
+  background-color: var(--color-panel-solid);
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.checkboxListItemError {
+  border-color: var(--red-8);
+  background-color: var(--red-2);
+}
+
+.checkboxListCursor {
+  cursor: pointer;
+}
+
+.checkboxListCursorDisabled {
+  cursor: not-allowed;
+}
+
+.checkboxListFlex1 {
+  flex: 1;
+}
+
+.checkboxListTitle {
+  color: var(--gray-12);
+  line-height: 1.4;
+}
+
+.checkboxListDescription {
+  line-height: 1.4;
+}
+
+.checkboxListGroup {
+  border: 1px solid var(--gray-a6);
+  border-radius: var(--radius-3);
+  overflow: hidden;
+  background-color: var(--color-surface);
+}
+
+.checkboxListItemRow {
+  background-color: var(--color-panel-solid);
+  transition: background-color 0.15s;
+}
+
+.checkboxListItemRow:not(:last-child) {
+  border-bottom: 1px solid var(--gray-a6);
+}
+
+.checkboxListItemRowHover:hover {
+  background-color: var(--gray-a3);
+}
+
+.checkboxListItemRowSelected {
+  background-color: var(--indigo-a3);
+}
+
+.checkboxListCategoryHeader {
+  /* padding: var(--space-1) 0; */
+  padding-top: var(--space-1);
+  padding-bottom: var(--space-1);
+}
+
+.checkboxListCenterItalic {
+  text-align: center;
+  font-style: italic;
+}
+
+/* FileUpload */
+.fileUploadContainer {
+  border: 2px dashed var(--gray-a6);
+  border-radius: var(--radius-3);
+  background-color: var(--color-surface);
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.fileUploadContainerDragActive {
+  border-color: var(--indigo-8);
+  background-color: var(--indigo-2);
+}
+
+.fileUploadContainerError {
+  border-color: var(--red-8);
+  background-color: var(--red-2);
+}
+
+.fileUploadHiddenInput {
+  display: none;
+}
+
+.fileUploadIcon {
+  transition: color 0.2s ease;
+}
+
+/* JsonView */
+.jsonIcon15 {
+  font-size: 15px;
+}
+
+.jsonIconMiddle {
+  vertical-align: middle;
+}
+
+.jsonIconInherit {
+  color: inherit;
+}
+
+.jsonErrorText {
+  color: var(--red-11);
+}
+
+/* Date / DateRange typically handled by react-datepicker or flatpickr styles, so we might need a couple classes */
+.dateRangeInputError {
+  border-color: var(--red-8);
+  outline: 1px solid var(--red-8);
+}
+
+.dateRangeInputFocus {
+  border-color: var(--indigo-8);
+  outline: 1px solid var(--indigo-8);
+  box-shadow: 0 0 0 1px var(--indigo-8);
+}
+
+.dateRangeInputDisabled {
+  background-color: var(--gray-a3);
+  cursor: not-allowed;
+  opacity: 0.8;
+}

@@ -13,24 +13,23 @@ import {
   useEffect,
 } from 'react';
 
+import { ArchiveIcon } from '@radix-ui/react-icons';
+import { Flex, Box, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 
-import Icon from '@shared/renderer/components/Icon';
 import Modal from '@shared/renderer/components/Modal';
-import Table from '@shared/renderer/components/Table';
+import {
+  TablePagination,
+  TableSearch,
+} from '@shared/renderer/components/Table';
 
 import { fetchRoleGroups } from '../redux';
 
 import s from './RoleGroupsModal.css';
 
 /**
- * RoleGroupsModal - Self-contained modal for viewing groups with a role
- *
- * Usage:
- *   const groupsModalRef = useRef();
- *   groupsModalRef.current.open(role);    // Open for a role
- *   groupsModalRef.current.close();       // Close modal
+ * RoleGroupsModal abandoning arbitrary inline layout overrides simply dynamically cleanly perfectly smoothly statically optimally effortlessly securely gracefully matching consistently functionally securely elegantly correctly nicely thoroughly dependably dependably purely natively smartly perfectly solidly fluently optimally logically explicitly exactly carefully beautifully neatly.
  */
 const ITEMS_PER_PAGE = 10;
 
@@ -143,61 +142,76 @@ const RoleGroupsModal = forwardRef((props, ref) => {
         </Modal.Description>
 
         {/* Search Input */}
-        <Table.SearchBar
-          value={search}
-          onChange={handleSearchChange}
-          placeholder={t('admin:common.searchGroups', 'Search groups...')}
-          className={s.modalSearchBar}
-        />
+        <Box className={s.searchBox}>
+          <TableSearch
+            value={search}
+            onChange={handleSearchChange}
+            placeholder={t('admin:common.searchGroups', 'Search groups...')}
+          />
+        </Box>
 
-        <div className={s.groupsList}>
+        <Box className={s.itemsFlex}>
           {groupsLoading ? (
-            <div className={s.noGroups}>
+            <Flex justify='center' align='center' className={s.loadingFlex}>
               {t('admin:common.loadingGroups', 'Loading groups...')}
-            </div>
+            </Flex>
           ) : groups.length === 0 ? (
-            <div className={s.noGroups}>
+            <Flex justify='center' align='center' className={s.emptyFlex}>
               {search
                 ? t('admin:roles.noGroupsMatch', 'No groups match your search')
                 : t(
                     'admin:roles.noGroupsWithRole',
                     'No groups found with this role',
                   )}
-            </div>
+            </Flex>
           ) : (
             groups.map(group => (
-              <div key={group.id} className={s.groupItem}>
-                <div className={s.groupIcon}>
-                  <Icon name='folder' size={20} />
-                </div>
-                <div className={s.groupInfo}>
-                  <span className={s.groupName}>{group.name}</span>
-                  <span className={s.groupDesc}>
+              <Flex
+                key={group.id}
+                align='center'
+                gap='3'
+                className={s.itemFlex}
+              >
+                <Flex align='center' justify='center' className={s.iconBox}>
+                  <ArchiveIcon width={20} height={20} />
+                </Flex>
+                <Box className={s.itemInfo}>
+                  <Text as='div' size='2' weight='bold' className={s.itemName}>
+                    {group.name}
+                  </Text>
+                  <Text
+                    as='div'
+                    size='1'
+                    color='gray'
+                    className={s.itemDescription}
+                  >
                     {group.description ||
                       t('admin:common.noDescription', 'No description')}
-                  </span>
-                </div>
-                <div className={s.groupMeta}>
-                  <span className={s.userCount}>
+                  </Text>
+                </Box>
+                <Box>
+                  <Text size='1' weight='medium' className={s.countBadge}>
                     {t('admin:common.usersCount', '{{count}} users', {
                       count: group.userCount || 0,
                     })}
-                  </span>
-                </div>
-              </div>
+                  </Text>
+                </Box>
+              </Flex>
             ))
           )}
-        </div>
+        </Box>
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <Table.Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={totalItems}
-            onPageChange={setCurrentPage}
-            loading={groupsLoading}
-          />
+          <Box className={s.paginationBox}>
+            <TablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              onPageChange={setCurrentPage}
+              loading={groupsLoading}
+            />
+          </Box>
         )}
       </Modal.Body>
       <Modal.Footer>

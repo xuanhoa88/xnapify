@@ -29,8 +29,8 @@ export const fetchFiles = createAsyncThunk(
       const { data } = await fetch(ADMIN_API_BASE, {
         query: {
           view,
-          parentId: parentId || undefined,
-          search: search || undefined,
+          parentId,
+          search,
           page,
           pageSize,
         },

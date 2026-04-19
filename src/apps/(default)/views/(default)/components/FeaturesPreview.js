@@ -5,44 +5,83 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import {
+  ComponentInstanceIcon,
+  Link2Icon,
+  Share2Icon,
+  FileIcon,
+  LockClosedIcon,
+  GearIcon,
+} from '@radix-ui/react-icons';
+import { Flex, Box, Text, Heading, Grid, Card } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
 import s from './FeaturesPreview.css';
 
+const ICON_MAP = {
+  ComponentInstanceIcon: (
+    <ComponentInstanceIcon width={24} height={24} color='var(--indigo-9)' />
+  ),
+  Link2Icon: <Link2Icon width={24} height={24} color='var(--indigo-9)' />,
+  Share2Icon: <Share2Icon width={24} height={24} color='var(--indigo-9)' />,
+  FileIcon: <FileIcon width={24} height={24} color='var(--indigo-9)' />,
+  LockClosedIcon: (
+    <LockClosedIcon width={24} height={24} color='var(--indigo-9)' />
+  ),
+  GearIcon: <GearIcon width={24} height={24} color='var(--indigo-9)' />,
+};
+
 /**
- * Features preview grid for the home page
+ * Features preview grid natively mapped bypassing legacy class names.
  */
 function FeaturesPreview({ featuresData }) {
   const { t } = useTranslation();
 
   return (
-    <section className={s.features}>
-      <div className={s.container}>
-        <div className={s.sectionHeader}>
-          <h2 className={s.sectionTitle}>
+    <Box as='section' className={`${s.lightGreyBg} ${s.sectionPadding}`}>
+      <Box className={s.maxWidth1200}>
+        <Flex
+          direction='column'
+          align='center'
+          className={`${s.textCenter} ${s.mb8}`}
+        >
+          <Heading as='h2' size='8' className={`${s.textGray12} ${s.mb3}`}>
             {t('home.features.title', 'Built-In Architecture')}
-          </h2>
-          <p className={s.sectionSubtitle}>
+          </Heading>
+          <Text size='4' color='gray' className={s.maxWidth700}>
             {t(
               'home.features.subtitle',
               'Auto-discovered modules, runtime extensions, and a DI-powered lifecycle — all wired for you',
             )}
-          </p>
-        </div>
-        <div className={s.featureGrid}>
+          </Text>
+        </Flex>
+
+        <Grid columns={{ initial: '1', sm: '2', md: '3' }} gap='5'>
           {featuresData.map(feature => (
-            <div key={feature.id} className={s.featureCard}>
-              <div className={s.featureHeader}>
-                <div className={s.featureIcon}>{feature.icon}</div>
-                <h3 className={s.featureTitle}>{feature.name}</h3>
-              </div>
-              <p className={s.featureDesc}>{feature.description}</p>
-            </div>
+            <Card key={feature.id} size='3' className={s.featureCardDynamic}>
+              <Flex direction='column'>
+                <Flex align='center' gap='3' className={s.mb3}>
+                  <Flex
+                    align='center'
+                    justify='center'
+                    className={s.featureIconDynamic}
+                  >
+                    {ICON_MAP[feature.icon] || feature.icon}
+                  </Flex>
+                  <Heading as='h3' size='4' className={s.textGray12}>
+                    {feature.name}
+                  </Heading>
+                </Flex>
+                <Text size='3' color='gray'>
+                  {feature.description}
+                </Text>
+              </Flex>
+            </Card>
           ))}
-        </div>
-      </div>
-    </section>
+        </Grid>
+      </Box>
+    </Box>
   );
 }
 

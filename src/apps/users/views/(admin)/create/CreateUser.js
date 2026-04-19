@@ -7,17 +7,16 @@
 
 import { useState, useCallback, useRef, useMemo } from 'react';
 
+import { GroupIcon, LockOpen1Icon } from '@radix-ui/react-icons';
+import { Box, Flex, Text, Grid, Button, Heading } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import * as Box from '@shared/renderer/components/Box';
-import Button from '@shared/renderer/components/Button';
-import ConfirmModal from '@shared/renderer/components/ConfirmModal';
 import Form, { useFormContext } from '@shared/renderer/components/Form';
 import { useHistory } from '@shared/renderer/components/History';
-import Icon from '@shared/renderer/components/Icon';
 import { useDebounce } from '@shared/renderer/components/InfiniteScroll';
+import Modal from '@shared/renderer/components/Modal';
 import { generatePassword, showSuccessMessage } from '@shared/renderer/redux';
 
 import { createUserFormSchema } from '../../../validator/admin';
@@ -42,7 +41,7 @@ function CreateUser({ context }) {
   const history = useHistory();
   const loading = useSelector(isUserCreateLoading);
 
-  const [error, setError] = useState(null);
+  const [, setError] = useState(null);
   const confirmBackModalRef = useRef(null);
   const isDirtyRef = useRef(false);
 
@@ -105,44 +104,47 @@ function CreateUser({ context }) {
   };
 
   return (
-    <div className={s.root}>
-      <Box.Header
-        icon={<Icon name='users' size={24} />}
-        title={t('admin:users.create.title', 'Create New User')}
-        subtitle={t('admin:users.create.subtitle', 'Add a new user account')}
+    <Box className={s.container}>
+      <Flex
+        align='center'
+        justify='between'
+        wrap='wrap'
+        gap='4'
+        className={s.headerFlex}
       >
-        <Button
-          variant='secondary'
-          onClick={() => handleCancel(isDirtyRef.current)}
-        >
-          <Icon name='arrowLeft' />
-          {t('admin:users.create.backToUsers', 'Back to Users')}
-        </Button>
-      </Box.Header>
-      <div className={s.formContainer}>
-        <Form.Error message={error} />
+        <Flex align='center' gap='3'>
+          <Flex align='center' justify='center' className={s.headerIconBox}>
+            <GroupIcon width={24} height={24} />
+          </Flex>
+          <Flex direction='column'>
+            <Heading size='6' className={s.heading}>
+              {t('admin:users.create.title', 'Create New User')}
+            </Heading>
+          </Flex>
+        </Flex>
+      </Flex>
 
-        <Form
-          schema={createUserFormSchema}
-          defaultValues={defaultValues}
-          onSubmit={handleSubmit}
-          className={s.form}
-        >
-          <CreateUserFormFields
-            setError={setError}
-            onCancel={handleCancel}
-            loading={loading}
-            isDirtyRef={isDirtyRef}
-            fetchRoles={fetchRoles}
-            fetchGroups={fetchGroups}
-          />
-        </Form>
-      </div>
-      <ConfirmModal.Back
+      <Form
+        schema={createUserFormSchema}
+        defaultValues={defaultValues}
+        onSubmit={handleSubmit}
+        className='create-user-form'
+      >
+        <CreateUserFormFields
+          setError={setError}
+          onCancel={handleCancel}
+          loading={loading}
+          isDirtyRef={isDirtyRef}
+          fetchRoles={fetchRoles}
+          fetchGroups={fetchGroups}
+        />
+      </Form>
+
+      <Modal.ConfirmBack
         ref={confirmBackModalRef}
         onConfirm={handleConfirmBack}
       />
-    </div>
+    </Box>
   );
 }
 
@@ -321,10 +323,10 @@ function CreateUserFormFields({
 
   return (
     <>
-      <div className={s.formSection}>
-        <h3 className={s.sectionTitle}>
+      <Box className={s.sectionBox}>
+        <Text as='h3' size='4' weight='bold' className={s.sectionHeader}>
           {t('admin:users.create.accountInfo', 'Account Information')}
-        </h3>
+        </Text>
 
         <Form.Field
           name='email'
@@ -340,11 +342,16 @@ function CreateUserFormFields({
           />
         </Form.Field>
 
-        <div className={s.formRow}>
+        <Grid
+          columns={{ initial: '1', sm: '2' }}
+          gap='4'
+          className={s.gridMarginBottom}
+        >
           <Form.Field
             name='password'
             label={t('admin:users.create.password', 'Password')}
             required
+            className={s.fieldMarginBottom0}
           >
             <Form.Password
               placeholder={t(
@@ -357,6 +364,7 @@ function CreateUserFormFields({
             name='confirm_password'
             label={t('admin:users.create.confirmPassword', 'Confirm Password')}
             required
+            className={s.fieldMarginBottom0}
           >
             <Form.Password
               placeholder={t(
@@ -365,21 +373,21 @@ function CreateUserFormFields({
               )}
             />
           </Form.Field>
-        </div>
+        </Grid>
 
-        <div className={s.generatePasswordLink}>
+        <Flex justify='end'>
           <Button
-            variant='unstyled'
-            size='small'
+            variant='ghost'
+            size='1'
             onClick={handleGeneratePassword}
             disabled={generatingPassword}
-            className={s.generateBtn}
+            className={s.buttonGhost}
           >
             {generatingPassword ? (
               t('admin:users.generatingPassword', 'Generating...')
             ) : (
               <>
-                <Icon name='key' size={14} />
+                <LockOpen1Icon width={14} height={14} />
                 {t(
                   'admin:users.generateSecurePassword',
                   'Generate Secure Password',
@@ -387,18 +395,19 @@ function CreateUserFormFields({
               </>
             )}
           </Button>
-        </div>
-      </div>
+        </Flex>
+      </Box>
 
-      <div className={s.formSection}>
-        <h3 className={s.sectionTitle}>
+      <Box className={s.sectionBox}>
+        <Text as='h3' size='4' weight='bold' className={s.sectionHeader}>
           {t('admin:users.create.personalInfo', 'Personal Information')}
-        </h3>
+        </Text>
 
-        <div className={s.formRow}>
+        <Grid columns={{ initial: '1', sm: '2' }} gap='4'>
           <Form.Field
             name='profile.first_name'
             label={t('admin:users.create.firstName', 'First Name')}
+            className={s.fieldMarginBottom0}
           >
             <Form.Input
               placeholder={t('admin:users.create.firstNamePlaceholder', 'John')}
@@ -407,16 +416,18 @@ function CreateUserFormFields({
           <Form.Field
             name='profile.last_name'
             label={t('admin:users.create.lastName', 'Last Name')}
+            className={s.fieldMarginBottom0}
           >
             <Form.Input
               placeholder={t('admin:users.create.lastNamePlaceholder', 'Doe')}
             />
           </Form.Field>
-        </div>
+        </Grid>
 
         <Form.Field
           name='profile.display_name'
           label={t('admin:users.create.displayName', 'Display Name')}
+          className={s.fieldMarginTop}
         >
           <Form.Input
             placeholder={t(
@@ -425,12 +436,12 @@ function CreateUserFormFields({
             )}
           />
         </Form.Field>
-      </div>
+      </Box>
 
-      <div className={s.formSection}>
-        <h3 className={s.sectionTitle}>
+      <Box className={s.sectionBoxSmall}>
+        <Text as='h3' size='4' weight='bold' className={s.sectionHeader}>
           {t('admin:users.create.accessAndPermissions', 'Access & Permissions')}
-        </h3>
+        </Text>
 
         <Form.Field
           name='roles'
@@ -505,18 +516,18 @@ function CreateUserFormFields({
         <Form.Field name='is_active'>
           <Form.Checkbox label={t('admin:users.create.active', 'Active')} />
         </Form.Field>
-      </div>
+      </Box>
 
-      <div className={s.formActions}>
-        <Button variant='secondary' onClick={handleCancel}>
+      <Flex align='center' justify='between' className={s.footerFlex}>
+        <Button variant='soft' color='gray' onClick={handleCancel}>
           {t('admin:users.create.cancel', 'Cancel')}
         </Button>
-        <Button variant='primary' type='submit' loading={loading}>
+        <Button variant='solid' color='indigo' type='submit' loading={loading}>
           {loading
             ? t('admin:users.create.creating', 'Creating...')
             : t('admin:users.create.submit', 'Create User')}
         </Button>
-      </div>
+      </Flex>
     </>
   );
 }

@@ -5,30 +5,22 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { memo, isValidElement, cloneElement } from 'react';
+import { memo } from 'react';
 
-import clsx from 'clsx';
+import * as RadixIcons from '@radix-ui/react-icons';
 import PropTypes from 'prop-types';
 
+import s from './Icon.css';
+
 /**
- * Reusable Icon component
- * Provides consistent SVG icons with customizable size and color.
+ * Reusable Icon component using @radix-ui/react-icons
+ * Provides consistent SVG icons mapped from legacy names to Radix primitives.
  *
  * Supports two modes:
- * 1. Built-in icons: pass a name from the `ICONS` registry
+ * 1. Built-in icons: pass a legacy name (e.g. 'check') or native Radix name ('CheckIcon')
  * 2. External images: pass a URL or path (starts with `/` or `http`)
  *    — useful for extension-provided icons served via static routes
  */
-
-// Dynamically import all icon packs from the paths directory
-const iconsContext = require.context('./types', false, /\.js$/);
-
-// Icon registry organized alphabetically
-const ICONS = Object.freeze(
-  iconsContext.keys().reduce((acc, key) => {
-    return { ...acc, ...iconsContext(key).default };
-  }, {}),
-);
 
 /**
  * Check if a value is an external icon reference (URL or path).
@@ -44,66 +36,41 @@ function isExternalIcon(name) {
   );
 }
 
-function Icon({
-  name,
-  size = 20,
-  strokeWidth,
-  className,
-  style,
-  title,
-  ...rest
-}) {
-  const cls = clsx(className);
-
+function Icon({ name, size = 20, className, title, ...rest }) {
   // External icon: render as <img> for extension-provided assets
   if (isExternalIcon(name)) {
+    const combinedClass = className
+      ? `${className} ${s.externalIcon}`
+      : s.externalIcon;
     return (
       <img
         src={name}
         alt={title || ''}
         width={size}
         height={size}
-        className={cls || undefined}
-        style={{ objectFit: 'contain', ...style }}
+        className={combinedClass}
         {...rest}
       />
     );
   }
 
-  const icon = ICONS[name];
+  // Load from explicit mapping, try native name, fallback to a neutral box
+  const Component = RadixIcons[name] || RadixIcons.BoxIcon;
 
   // Dev-mode warning for unknown icon names
-  if (!icon && __DEV__) {
+  if (!RadixIcons[name] && __DEV__) {
     console.warn(`[Icon] Unknown icon name: "${name}"`);
   }
 
-  // Normalize to array for uniform rendering
-  const iconNodes = icon ? (Array.isArray(icon) ? icon : [icon]) : [];
-
   return (
-    <svg
+    <Component
       width={size}
       height={size}
-      viewBox='0 0 24 24'
-      fill='none'
-      stroke='currentColor'
-      strokeWidth={strokeWidth || '2'}
-      strokeLinecap='round'
-      strokeLinejoin='round'
-      xmlns='http://www.w3.org/2000/svg'
-      className={cls || undefined}
-      style={style}
+      className={className}
       aria-hidden={!title}
-      role={title ? 'img' : undefined}
       {...(title ? { 'aria-label': title } : {})}
       {...rest}
-    >
-      {title && <title>{title}</title>}
-      {iconNodes.map((d, i) => {
-        if (isValidElement(d)) return cloneElement(d, { key: i });
-        return <path key={i} d={d} />;
-      })}
-    </svg>
+    />
   );
 }
 
@@ -116,8 +83,7 @@ Icon.propTypes = {
           `\`${componentName}\`, but its value is \`${value}\`.`,
       );
     }
-    // Allow built-in icon names OR external paths/URLs
-    if (typeof value === 'string' && (isExternalIcon(value) || ICONS[value])) {
+    if (typeof value === 'string') {
       return null;
     }
     return new Error(
@@ -127,9 +93,7 @@ Icon.propTypes = {
   },
   size: PropTypes.number,
   className: PropTypes.string,
-  style: PropTypes.object,
   title: PropTypes.string,
-  strokeWidth: PropTypes.number,
 };
 
 export default memo(Icon);

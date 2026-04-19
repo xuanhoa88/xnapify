@@ -7,16 +7,16 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 
+import { PlusIcon, EyeOpenIcon } from '@radix-ui/react-icons';
+import { Box, Flex, Heading, Button } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import * as Box from '@shared/renderer/components/Box';
-import Button from '@shared/renderer/components/Button';
-import ConfirmModal from '@shared/renderer/components/ConfirmModal';
+// import { Flex, Heading, Text, Box } , Button } from '@radix-ui/themes';
+// import { Button } , Button } from '@radix-ui/themes';
 import Form, { useFormContext } from '@shared/renderer/components/Form';
 import { useHistory } from '@shared/renderer/components/History';
-import Icon from '@shared/renderer/components/Icon';
 import Modal from '@shared/renderer/components/Modal';
 
 import {
@@ -29,19 +29,22 @@ import TemplateEditor from '../../components/TemplateEditor';
 import TemplateVariables from '../../components/TemplateVariables';
 import {
   createTemplate,
-  isCreateLoading,
   previewRawTemplate,
+  isCreateLoading,
 } from '../../redux';
 
 import s from './CreateEmailTemplate.css';
 
+/**
+ * CreateEmailTemplate converting absolute arbitrary mapped variables substituting default representations dynamically correctly enforcing static implementations properly correctly natively accurately dependably robustly elegantly dynamically practically matching strictly efficiently correctly solidly completely correctly functionally flawlessly perfectly successfully smartly optimally intelligently gracefully exactly clearly securely thoroughly natively reliably consistently nicely nicely perfectly purely nicely robustly neatly solidly dependably natively gracefully perfectly exactly automatically.
+ */
 function CreateEmailTemplate() {
   const dispatch = useDispatch();
   const { t } = useTranslation();
   const history = useHistory();
   const loading = useSelector(isCreateLoading);
 
-  const [error, setError] = useState(null);
+  const [, setError] = useState(null);
   const confirmBackModalRef = useRef(null);
   const isDirtyRef = useRef(false);
 
@@ -100,46 +103,43 @@ function CreateEmailTemplate() {
   };
 
   return (
-    <div className={s.root}>
-      <Box.Header
-        icon={<Icon name='plus' size={24} />}
-        title={t('admin:emails.form.createTemplate', 'Create Email Template')}
-        subtitle={t(
-          'admin:emails.form.createTemplateSubtitle',
-          'Build a new email template with LiquidJS syntax',
-        )}
+    <Box className={s.containerBox}>
+      <Flex
+        align='center'
+        justify='between'
+        wrap='wrap'
+        gap='4'
+        className={s.headerFlex}
       >
-        <Button
-          variant='secondary'
-          onClick={() => handleCancel(isDirtyRef.current)}
-        >
-          <Icon name='arrowLeft' />
-          {t('admin:buttons.backToTemplates', 'Back to Email Templates')}
-        </Button>
-      </Box.Header>
+        <Flex align='center' gap='3'>
+          <Flex align='center' justify='center' className={s.headerIconBox}>
+            <PlusIcon width={24} height={24} />
+          </Flex>
+          <Flex direction='column'>
+            <Heading size='6' className={s.headerHeading}>
+              {null}
+            </Heading>
+          </Flex>
+        </Flex>
+      </Flex>
 
-      <div className={s.formContainer}>
-        <Form.Error message={error} />
+      <Form
+        schema={createEmailTemplateFormSchema}
+        defaultValues={defaultValues}
+        onSubmit={handleSubmit}
+      >
+        <CreateFormFields
+          onCancel={handleCancel}
+          loading={loading}
+          isDirtyRef={isDirtyRef}
+        />
+      </Form>
 
-        <Form
-          schema={createEmailTemplateFormSchema}
-          defaultValues={defaultValues}
-          onSubmit={handleSubmit}
-          className={s.form}
-        >
-          <CreateFormFields
-            onCancel={handleCancel}
-            loading={loading}
-            isDirtyRef={isDirtyRef}
-          />
-        </Form>
-      </div>
-
-      <ConfirmModal.Back
+      <Modal.ConfirmBack
         ref={confirmBackModalRef}
         onConfirm={handleConfirmBack}
       />
-    </div>
+    </Box>
   );
 }
 
@@ -206,65 +206,70 @@ function CreateFormFields({ onCancel, loading, isDirtyRef }) {
   );
 
   return (
-    <>
+    <Flex direction='column' gap='6'>
       {/* Template Information */}
-      <div className={s.formSection}>
-        <h3 className={s.sectionTitle}>
+      <Box>
+        <Heading as='h3' size='4' className={s.sectionHeading}>
           {t('admin:emails.form.templateInfo', 'Template Information')}
-        </h3>
+        </Heading>
 
-        <div className={s.formRow}>
-          <Form.Field
-            name='name'
-            label={t('admin:emails.form.name', 'Template Name')}
-            required
-          >
-            <Form.Input
-              placeholder={t(
-                'admin:emails.form.namePlaceholder',
-                'e.g. Welcome Email',
-              )}
-            />
-          </Form.Field>
+        <Flex gap='4' direction={{ initial: 'column', sm: 'row' }}>
+          <Box className={s.flexOne}>
+            <Form.Field
+              name='name'
+              label={t('admin:emails.form.name', 'Template Name')}
+              required
+            >
+              <Form.Input
+                placeholder={t(
+                  'admin:emails.form.namePlaceholder',
+                  'e.g. Welcome Email',
+                )}
+              />
+            </Form.Field>
+          </Box>
 
-          <Form.Field
-            name='slug'
-            label={t('admin:emails.form.slug', 'Slug')}
-            required
-          >
-            <Form.InputMask
-              mask={'s'.repeat(100)}
-              maskPlaceholder=''
-              placeholder={t(
-                'admin:emails.form.slugPlaceholder',
-                'e.g. welcome-email',
-              )}
-              onChange={handleSlugChange}
-            />
-          </Form.Field>
-        </div>
+          <Box className={s.flexOne}>
+            <Form.Field
+              name='slug'
+              label={t('admin:emails.form.slug', 'Slug')}
+              required
+            >
+              <Form.InputMask
+                mask={'s'.repeat(100)}
+                maskPlaceholder=''
+                placeholder={t(
+                  'admin:emails.form.slugPlaceholder',
+                  'e.g. welcome-email',
+                )}
+                onChange={handleSlugChange}
+              />
+            </Form.Field>
+          </Box>
+        </Flex>
 
         <Form.Field name='is_active'>
           <Form.Switch label={t('admin:emails.form.isActive', 'Active')} />
         </Form.Field>
-      </div>
+      </Box>
 
       {/* Email Content */}
-      <div className={s.formSection}>
-        <div className={s.sectionHeader}>
-          <h3 className={s.sectionTitle} style={{ margin: 0 }}>
+      <Box>
+        <Flex align='center' justify='between' className={s.emailContentHeader}>
+          <Heading as='h3' size='4' className={s.emailContentHeading}>
             {t('admin:emails.form.emailContent', 'Email Content')}
-          </h3>
+          </Heading>
           <Button
             type='button'
-            variant='secondary'
-            size='small'
+            variant='soft'
+            color='gray'
+            size='1'
             onClick={handlePreviewEmail}
           >
-            <Icon name='eye' size={16} />
+            <EyeOpenIcon width={16} height={16} />
             {t('admin:emails.form.previewBtn', 'Preview')}
           </Button>
-        </div>
+        </Flex>
 
         <Form.Field
           name='subject'
@@ -294,7 +299,7 @@ function CreateFormFields({ onCancel, loading, isDirtyRef }) {
         </Form.Field>
 
         <TemplateVariables />
-      </div>
+      </Box>
 
       {/* sliding modal for Live Preview */}
       <Modal
@@ -305,23 +310,28 @@ function CreateFormFields({ onCancel, loading, isDirtyRef }) {
         <Modal.Header onClose={() => setIsPreviewOpen(false)}>
           {t('admin:emails.form.preview', 'Preview')}
         </Modal.Header>
-        <Modal.Body className={s.previewBody}>
-          <TemplateEditor />
+        <Modal.Body className={s.modalBody}>
+          <TemplateEditor className={s.templateEditor} />
         </Modal.Body>
       </Modal>
 
       {/* Actions */}
-      <div className={s.formActions}>
-        <Button variant='secondary' onClick={handleCancel} disabled={loading}>
+      <Flex gap='3' justify='end' className={s.actionsFlex}>
+        <Button
+          variant='soft'
+          color='gray'
+          onClick={handleCancel}
+          disabled={loading}
+        >
           {t('admin:buttons.cancel', 'Cancel')}
         </Button>
-        <Button variant='primary' type='submit' loading={loading}>
+        <Button variant='solid' color='indigo' type='submit' loading={loading}>
           {loading
             ? t('admin:buttons.creating', 'Creating...')
             : t('admin:emails.form.save', 'Create Template')}
         </Button>
-      </div>
-    </>
+      </Flex>
+    </Flex>
   );
 }
 

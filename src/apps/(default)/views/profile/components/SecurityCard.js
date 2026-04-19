@@ -7,13 +7,17 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
+import {
+  LockClosedIcon,
+  CheckCircledIcon,
+  LockOpen1Icon,
+} from '@radix-ui/react-icons';
+import { Flex, Box, Text, Heading, Button } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Button from '@shared/renderer/components/Button';
 import Form, { useFormContext } from '@shared/renderer/components/Form';
-import Icon from '@shared/renderer/components/Icon';
 import {
   changeUserPassword,
   isPasswordLoading,
@@ -67,40 +71,44 @@ function SecurityCard() {
   );
 
   return (
-    <div className={s.card}>
-      <div className={s.cardHeader}>
-        <div className={s.cardIcon}>
-          <Icon name='lock' size={22} />
-        </div>
-        <div>
-          <h2 className={s.cardTitle}>{t('profile.security', 'Security')}</h2>
-          <p className={s.cardDescription}>
+    <Box className={s.cardContainer}>
+      <Flex align='center' gap='4' className={s.cardHeader}>
+        <Box className={`${s.cardHeaderIcon} ${s.cardHeaderIconIndigo}`}>
+          <LockClosedIcon width={24} height={24} />
+        </Box>
+        <Box>
+          <Heading as='h2' size='5' className={s.cardTitle}>
+            {t('profile.security', 'Security')}
+          </Heading>
+          <Text size='2' color='gray'>
             {t('profile.securityDesc', 'Manage your password and security')}
-          </p>
-        </div>
-      </div>
+          </Text>
+        </Box>
+      </Flex>
 
-      <div className={s.securityTips}>
-        <div className={s.tipItem}>
-          <Icon name='check-circle' size={16} />
-          <span>{t('profile.passwordTip1', 'Use at least 8 characters')}</span>
-        </div>
-        <div className={s.tipItem}>
-          <Icon name='check-circle' size={16} />
-          <span>
+      <Flex direction='column' gap='3' className={s.tipsBox}>
+        <Flex align='center' gap='2' className={s.infoItem}>
+          <CheckCircledIcon width={16} height={16} />
+          <Text size='2'>
+            {t('profile.passwordTip1', 'Use at least 8 characters')}
+          </Text>
+        </Flex>
+        <Flex align='center' gap='2' className={s.infoItem}>
+          <CheckCircledIcon width={16} height={16} />
+          <Text size='2'>
             {t(
               'profile.passwordTip2',
               'Mix uppercase, lowercase, numbers & symbols',
             )}
-          </span>
-        </div>
-        <div className={s.tipItem}>
-          <Icon name='check-circle' size={16} />
-          <span>
+          </Text>
+        </Flex>
+        <Flex align='center' gap='2' className={s.infoItem}>
+          <CheckCircledIcon width={16} height={16} />
+          <Text size='2'>
             {t('profile.passwordTip3', 'Avoid common words or personal info')}
-          </span>
-        </div>
-      </div>
+          </Text>
+        </Flex>
+      </Flex>
 
       <Form.Error message={error || ''} />
 
@@ -115,7 +123,7 @@ function SecurityCard() {
       >
         <SecurityFormFields loading={loading} dispatch={dispatch} />
       </Form>
-    </div>
+    </Box>
   );
 }
 
@@ -151,7 +159,7 @@ function SecurityFormFields({ loading, dispatch }) {
   }, [dispatch, setValue, t]);
 
   return (
-    <>
+    <Flex direction='column' gap='4'>
       <Form.Field
         name='currentPassword'
         label={t('profile.currentPassword', 'Current Password')}
@@ -173,36 +181,37 @@ function SecurityFormFields({ loading, dispatch }) {
         <Form.Password />
       </Form.Field>
 
-      <div className={s.generatePasswordLink}>
+      <Flex justify='end'>
         <Button
-          variant='unstyled'
-          size='small'
+          variant='ghost'
+          size='1'
           onClick={handleGeneratePassword}
           disabled={generatingPassword}
-          className={s.generateBtn}
+          className={`${s.generateBtn} ${generatingPassword ? s.generateBtnLoading : s.generateBtnReady}`}
         >
           {generatingPassword ? (
             t('profile.generatingPassword', 'Generating...')
           ) : (
             <>
-              <Icon name='key' size={14} />
+              <LockOpen1Icon width={14} height={14} />
               {t('profile.generatePassword', 'Generate Secure Password')}
             </>
           )}
         </Button>
-      </div>
+      </Flex>
 
-      <Button
-        variant='secondary'
-        type='submit'
-        className={s.buttonSecondary}
-        loading={loading || isSubmitting}
-      >
-        {loading
-          ? t('profile.changingPassword', 'Changing Password...')
-          : t('profile.updatePassword', 'Update Password')}
-      </Button>
-    </>
+      <Flex justify='end' className={s.cardAction}>
+        <Button
+          variant='surface'
+          type='submit'
+          loading={loading || isSubmitting}
+        >
+          {loading
+            ? t('profile.changingPassword', 'Changing Password...')
+            : t('profile.updatePassword', 'Update Password')}
+        </Button>
+      </Flex>
+    </Flex>
   );
 }
 

@@ -7,12 +7,15 @@
 
 import { useCallback } from 'react';
 
+import {
+  DotsVerticalIcon,
+  ArrowUpIcon,
+  TrashIcon,
+} from '@radix-ui/react-icons';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
 import ContextMenu from '@shared/renderer/components/ContextMenu';
-import Icon from '@shared/renderer/components/Icon';
-
 /**
  * ExtensionActionsDropdown - Dropdown menu for extension actions
  */
@@ -34,12 +37,12 @@ function ExtensionActionsDropdown({
       <ContextMenu.Trigger
         title={t('admin:common.moreActions', 'More actions')}
       >
-        <Icon name='more-vertical' size={18} />
+        <DotsVerticalIcon width={18} height={18} />
       </ContextMenu.Trigger>
       <ContextMenu.Menu>
         <ContextMenu.Item
           onClick={() => onUpgrade(extension)}
-          icon={<Icon name='arrowUp' size={16} />}
+          icon={<ArrowUpIcon width={16} height={16} />}
           disabled={!extension.isInstalled}
           permission='extensions:update'
         >
@@ -48,7 +51,7 @@ function ExtensionActionsDropdown({
         <ContextMenu.Divider />
         <ContextMenu.Item
           onClick={() => onDelete(extension)}
-          icon={<Icon name='trash' size={16} />}
+          icon={<TrashIcon width={16} height={16} />}
           variant='danger'
           permission='extensions:delete'
         >

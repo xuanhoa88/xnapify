@@ -7,7 +7,7 @@
 
 import { forwardRef, useCallback } from 'react';
 
-import clsx from 'clsx';
+import { TextField } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useFormContext } from 'react-hook-form';
 
@@ -15,10 +15,8 @@ import { useFormField, useMergeRefs } from '../FormContext';
 
 import useMask from './useMask';
 
-import s from '../Input/FormInput.css';
-
 /**
- * FormInputMask - Masked input element to be used inside Form.Field
+ * FormInputMask - Masked input element to be used inside Form.Field baked by Radix Themes
  *
  * Supports mask patterns:
  *   9 — digit (0-9)
@@ -80,12 +78,13 @@ const FormInputMask = forwardRef(function FormInputMask$(
   );
 
   return (
-    <input
+    <TextField.Root
       id={id}
       type={type}
       placeholder={userPlaceholder || maskPlaceholderText}
       disabled={disabled}
-      className={clsx(s.input, { [s.inputError]: error }, className)}
+      color={error ? 'red' : undefined}
+      className={className}
       // eslint-disable-next-line jsx-a11y/no-autofocus
       autoFocus={autoFocus}
       {...registerProps}

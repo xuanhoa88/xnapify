@@ -7,12 +7,18 @@
 
 import { useCallback } from 'react';
 
+import {
+  DotsVerticalIcon,
+  GroupIcon,
+  LockClosedIcon,
+  LockOpen1Icon,
+  Pencil2Icon,
+  TrashIcon,
+} from '@radix-ui/react-icons';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
 import ContextMenu from '@shared/renderer/components/ContextMenu';
-import Icon from '@shared/renderer/components/Icon';
-
 /**
  * GroupActionsDropdown - Dropdown menu for group actions
  *
@@ -41,26 +47,26 @@ function GroupActionsDropdown({
       <ContextMenu.Trigger
         title={t('admin:common.moreActions', 'More actions')}
       >
-        <Icon name='more-vertical' size={18} />
+        <DotsVerticalIcon width={18} height={18} />
       </ContextMenu.Trigger>
       <ContextMenu.Menu>
         <ContextMenu.Item
           onClick={() => onViewUsers(group)}
-          icon={<Icon name='users' size={16} />}
+          icon={<GroupIcon width={16} height={16} />}
           permission='users:read'
         >
           {t('admin:groups.viewUsers', 'View Users')}
         </ContextMenu.Item>
         <ContextMenu.Item
           onClick={() => onManageRoles(group)}
-          icon={<Icon name='shield' size={16} />}
+          icon={<LockClosedIcon width={16} height={16} />}
           permission='roles:*'
         >
           {t('admin:groups.manageRoles', 'Manage Roles')}
         </ContextMenu.Item>
         <ContextMenu.Item
           onClick={() => onViewPermissions(group)}
-          icon={<Icon name='key' size={16} />}
+          icon={<LockOpen1Icon width={16} height={16} />}
           permission='permissions:read'
         >
           {t('admin:groups.viewPermissions', 'View Permissions')}
@@ -68,14 +74,14 @@ function GroupActionsDropdown({
         <ContextMenu.Divider />
         <ContextMenu.Item
           onClick={() => onEdit(group)}
-          icon={<Icon name='edit' size={16} />}
+          icon={<Pencil2Icon width={16} height={16} />}
           permission='groups:update'
         >
           {t('admin:groups.editGroup', 'Edit Group')}
         </ContextMenu.Item>
         <ContextMenu.Item
           onClick={() => onDelete(group)}
-          icon={<Icon name='trash' size={16} />}
+          icon={<TrashIcon width={16} height={16} />}
           variant='danger'
           permission='groups:delete'
         >

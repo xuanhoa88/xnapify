@@ -14,6 +14,7 @@ import {
   useEffect,
 } from 'react';
 
+import { Text, TextField } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
@@ -135,16 +136,21 @@ export function ToolbarPromptProvider({ editor, children }) {
 
           {/* Default text input (always rendered; extension can visually hide) */}
           <div className={s.inputContainer}>
-            {label && <label className={s.inputLabel}>{label}</label>}
-            <input
+            {label && (
+              <Text as='label' className={s.inputLabel}>
+                {label}
+              </Text>
+            )}
+            <TextField.Root
               ref={inputRef}
-              type='text'
               value={value}
               onChange={e => setValue(e.target.value)}
               onKeyDown={handleKeyDown}
-              className={s.inputField}
               placeholder={label || title}
-            />
+              size='3'
+            >
+              <TextField.Input />
+            </TextField.Root>
           </div>
         </Modal.Body>
         <Modal.Footer>

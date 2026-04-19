@@ -5,49 +5,55 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import {
+  FileTextIcon,
+  StrikethroughIcon,
+  DividerHorizontalIcon,
+  Link2Icon,
+  ComponentInstanceIcon,
+} from '@radix-ui/react-icons';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
 import ContextMenu from '@shared/renderer/components/ContextMenu';
 import { ExtensionSlot } from '@shared/renderer/components/Extension';
-import Icon from '@shared/renderer/components/Icon';
 import ToolbarButton from '@shared/renderer/components/WYSIWYG/ToolbarButton';
 
 const PREDEFINED_TEMPLATES = [
   {
     id: 'welcome',
     label: 'Welcome Message',
-    icon: <Icon name='details' size={16} strokeWidth={2.5} />,
+    icon: <FileTextIcon width={16} height={16} strokeWidth={2.5} />,
     html: '<h1>Welcome aboard!</h1><p>We are thrilled to have you with us. Here are a few things you can do to get started:</p><ul><li>Complete your profile</li><li>Check out our latest guides</li><li>Join the community</li></ul><p>If you have any questions, feel free to reply to this email!</p><p>Thanks,<br>The Team</p>',
   },
   {
     id: 'notification',
     label: 'Alert / Notification',
-    icon: <Icon name='strikethrough' size={16} strokeWidth={2.5} />,
+    icon: <StrikethroughIcon width={16} height={16} strokeWidth={2.5} />,
     html: '<h2>Important Update</h2><blockquote><p>Your subscription will renew in 3 days. Please ensure your payment method is up to date.</p></blockquote><p>Visit your dashboard to review your settings.</p>',
   },
   {
     id: 'newsletter',
     label: 'Newsletter Layout',
-    icon: <Icon name='horizontalRule' size={16} strokeWidth={2.5} />,
+    icon: <DividerHorizontalIcon width={16} height={16} strokeWidth={2.5} />,
     html: "<h1>Monthly Digest</h1><p>Here's what you missed this month:</p><hr><h3>Feature Highlight</h3><p>We just released a brand new tool to help you be more productive. Check it out now!</p><hr><h3>Community News</h3><p>Join our upcoming webinar next Thursday where we discuss the future roadmap.</p><br><p><small>You are receiving this because you subscribed to our newsletter.</small></p>",
   },
   {
     id: 'register',
     label: 'Registration Confirmation',
-    icon: <Icon name='link' size={16} strokeWidth={2.5} />,
+    icon: <Link2Icon width={16} height={16} strokeWidth={2.5} />,
     html: '<h1>Confirm Your Registration</h1><p>Hi {{name}},</p><p>Thank you for registering! Please click the link below to confirm your account:</p><p><a href="{{confirm_link}}">Confirm My Account</a></p><p>If you did not request this, please ignore this email.</p>',
   },
   {
     id: 'verify_email',
     label: 'Verify Email Address',
-    icon: <Icon name='link' size={16} strokeWidth={2.5} />,
+    icon: <Link2Icon width={16} height={16} strokeWidth={2.5} />,
     html: '<h2>Verify Your Email</h2><p>Hi {{name}},</p><p>To complete your profile setup, we just need to verify your email address:</p><p><a href="{{verify_link}}">Verify Email Address</a></p><p>Thanks!</p>',
   },
   {
     id: 'new_user',
     label: 'New Account Created',
-    icon: <Icon name='details' size={16} strokeWidth={2.5} />,
+    icon: <FileTextIcon width={16} height={16} strokeWidth={2.5} />,
     html: '<h1>Welcome!</h1><p>An account has been created for you by an administrator.</p><ul><li><strong>Username:</strong> {{username}}</li><li><strong>Temporary Password:</strong> {{password}}</li></ul><p>Please log in and change your password immediately.</p><p><a href="{{login_url}}">Log In Here</a></p>',
   },
 ];
@@ -69,7 +75,9 @@ export default function EmailTemplateSelector({ editor }) {
     <ContextMenu align='left'>
       <ContextMenu.Trigger
         as={ToolbarButton}
-        icon={<Icon name='template' size={16} strokeWidth={2.5} />}
+        icon={
+          <ComponentInstanceIcon width={16} height={16} strokeWidth={2.5} />
+        }
         title={t('admin:emails.templates.insertTemplate', 'Insert Template')}
         disabled={!editor}
       />

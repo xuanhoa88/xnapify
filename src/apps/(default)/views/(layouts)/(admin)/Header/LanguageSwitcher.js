@@ -7,11 +7,10 @@
 
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 
-import clsx from 'clsx';
+import { GlobeIcon, ChevronDownIcon, CheckIcon } from '@radix-ui/react-icons';
+import { Flex, Text, Box, Button } from '@radix-ui/themes';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Button from '@shared/renderer/components/Button';
-import Icon from '@shared/renderer/components/Icon';
 import {
   getLocale,
   setLocale,
@@ -22,7 +21,7 @@ import s from './LanguageSwitcher.css';
 
 /**
  * LanguageSwitcher Component
- * Dropdown-based language switcher for scalable multi-language support
+ * Dropdown-based language switcher natively mapped for scalable multi-language support
  */
 function AdminLanguageSwitcher() {
   const dispatch = useDispatch();
@@ -80,37 +79,41 @@ function AdminLanguageSwitcher() {
   }
 
   return (
-    <div className={s.wrapper} ref={dropdownRef}>
-      <Button variant='unstyled' className={s.trigger} onClick={handleToggle}>
-        <span className={s.globeIcon}>
-          <Icon name='globe' size={18} />
-        </span>
-        <span className={s.code}>{currentLanguageName || languageCode}</span>
-        <Icon
-          name='chevronDown'
-          size={12}
-          className={clsx(s.chevron, { [s.chevronOpen]: isOpen })}
-        />
+    <Box position='relative' ref={dropdownRef}>
+      <Button variant='ghost' onClick={handleToggle} className={s.langBtn}>
+        <Flex align='center' justify='center' className={s.langIconWrap}>
+          <GlobeIcon width={18} height={18} />
+        </Flex>
+        <Text size='2' weight='medium' className={s.langText}>
+          {currentLanguageName || languageCode}
+        </Text>
+        <Box className={`${s.chevronIcon} ${isOpen ? s.chevronIconOpen : ''}`}>
+          <ChevronDownIcon width={12} height={12} />
+        </Box>
       </Button>
 
       {isOpen && (
-        <div className={s.dropdown}>
+        <Box className={s.langDropdownBox}>
           {localeEntries.map(([code, name]) => (
             <Button
               key={code}
-              variant='unstyled'
+              variant='ghost'
               onClick={e => handleLocaleChange(code, e)}
-              className={clsx(s.option, {
-                [s.optionActive]: code === currentLocale,
-              })}
+              className={`${s.localeItem} ${code === currentLocale ? s.localeItemActive : ''}`}
             >
-              <span className={s.optionName}>{name}</span>
-              {code === currentLocale && <span className={s.checkmark}>✓</span>}
+              <Text size='2'>{name}</Text>
+              {code === currentLocale && (
+                <CheckIcon
+                  width={14}
+                  height={14}
+                  className={s.activeCheckIcon}
+                />
+              )}
             </Button>
           ))}
-        </div>
+        </Box>
       )}
-    </div>
+    </Box>
   );
 }
 

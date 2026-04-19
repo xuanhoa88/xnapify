@@ -5,9 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-/* eslint-disable css-modules/no-unused-class */
 import { forwardRef } from 'react';
 
+import { IconButton } from '@radix-ui/themes';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 
@@ -21,9 +21,10 @@ const ToolbarButton = forwardRef(function ToolbarButton(
   ref,
 ) {
   return (
-    <button
+    <IconButton
       ref={ref}
-      type='button'
+      variant={isActive ? 'soft' : 'ghost'}
+      color='gray'
       className={clsx(
         s.toolbarBtn,
         { [s.toolbarBtnActive]: isActive },
@@ -38,7 +39,7 @@ const ToolbarButton = forwardRef(function ToolbarButton(
     >
       {icon}
       {children}
-    </button>
+    </IconButton>
   );
 });
 

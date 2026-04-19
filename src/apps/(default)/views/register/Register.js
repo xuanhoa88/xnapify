@@ -7,11 +7,11 @@
 
 import { useCallback, useEffect } from 'react';
 
+import { Flex, Box, Text, Heading, Button } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Button from '@shared/renderer/components/Button';
 import Form, { useFormContext } from '@shared/renderer/components/Form';
 import {
   Link,
@@ -32,7 +32,7 @@ import s from './Register.css';
 
 /**
  * Register Page Component
- * Standalone full-page registration without header/footer
+ * Standalone full-page registration cleanly mapped via Radix Box layouts
  */
 function Register() {
   const { t } = useTranslation();
@@ -74,14 +74,14 @@ function Register() {
   );
 
   return (
-    <div className={s.root}>
+    <Flex className={s.pageContainer}>
       <HeroSection />
 
-      <div className={s.formSection}>
-        <div className={s.formContainer}>
-          <h2 className={s.formTitle}>
+      <Flex align='center' justify='center' className={s.contentWrapper}>
+        <Box className={s.formBox}>
+          <Heading as='h2' size='6' align='center' mb='6' className={s.title}>
             {t('navigation.register', 'Register')}
-          </h2>
+          </Heading>
 
           <Form.Error message={error} />
 
@@ -97,17 +97,21 @@ function Register() {
             <RegisterFormFields loading={loading} />
           </Form>
 
-          <div className={s.loginLink}>
-            <Trans
-              t={t}
-              i18nKey='register.alreadyHaveAccount'
-              // eslint-disable-next-line react/jsx-key, jsx-a11y/anchor-has-content
-              components={[<Link to='/login' className={s.link} />]}
-            />
-          </div>
-        </div>
-      </div>
-    </div>
+          <Flex justify='center' mt='5'>
+            <Text size='2' color='gray'>
+              <Trans
+                t={t}
+                i18nKey='register.alreadyHaveAccount'
+                // eslint-disable-next-line react/jsx-key, jsx-a11y/anchor-has-content
+                components={[
+                  <Link key='link' to='/login' className={s.loginLink} />,
+                ]}
+              />
+            </Text>
+          </Flex>
+        </Box>
+      </Flex>
+    </Flex>
   );
 }
 
@@ -118,26 +122,34 @@ function HeroSection() {
   const { t } = useTranslation();
 
   return (
-    <div className={s.hero}>
-      <div className={s.heroContent}>
-        <Link to='/' className={s.brand}>
+    <Flex
+      direction='column'
+      justify='center'
+      align='center'
+      className={s.heroSection}
+    >
+      <Flex direction='column' align='center' className={s.heroContent}>
+        <Link to='/' className={s.logoLink}>
           <img
             src='/xnapify_38x38.png'
             srcSet='/xnapify_72x72.png 2x'
             width='48'
             height='48'
             alt='xnapify'
+            className={s.logoImg}
           />
-          <span className={s.brandText}>xnapify</span>
+          <Text size='5' weight='bold'>
+            xnapify
+          </Text>
         </Link>
-        <h1 className={s.heroTitle}>
+        <Heading as='h1' size='8' mb='3' className={s.heroTitle}>
           {t('register.welcome', 'Create Account')}
-        </h1>
-        <p className={s.heroSubtitle}>
+        </Heading>
+        <Text size='4' className={s.heroSubtitle}>
           {t('register.heroSubtitle', 'Join us and start your journey')}
-        </p>
-      </div>
-    </div>
+        </Text>
+      </Flex>
+    </Flex>
   );
 }
 
@@ -151,7 +163,7 @@ function RegisterFormFields({ loading }) {
   } = useFormContext();
 
   return (
-    <>
+    <Flex direction='column' gap='4'>
       <Form.Field name='email' label={t('register.email', 'Email')}>
         <Form.Input
           type='email'
@@ -171,17 +183,18 @@ function RegisterFormFields({ loading }) {
       </Form.Field>
 
       <Button
-        variant='primary'
+        variant='solid'
+        color='indigo'
         type='submit'
-        fullWidth
-        className={s.submitButton}
+        mt='2'
+        className={s.fullWidthBtn}
         loading={loading || isSubmitting}
       >
         {loading
           ? t('register.loading', 'Loading...')
           : t('register.submit', 'Register')}
       </Button>
-    </>
+    </Flex>
   );
 }
 

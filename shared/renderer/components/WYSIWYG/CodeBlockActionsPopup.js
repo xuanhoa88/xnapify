@@ -7,6 +7,7 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react';
 
+import { TextField } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
@@ -80,9 +81,8 @@ export default function CodeBlockActionsPopup({
 
             {/* Search filter */}
             <div className={s.searchWrapper}>
-              <input
+              <TextField.Root
                 ref={inputRef}
-                type='text'
                 className={s.searchInput}
                 placeholder={t(
                   'shared:form.wysiwyg.searchLanguage',
@@ -92,7 +92,9 @@ export default function CodeBlockActionsPopup({
                 onChange={e => setSearch(e.target.value)}
                 onClick={e => e.stopPropagation()}
                 onKeyDown={e => e.stopPropagation()}
-              />
+              >
+                <TextField.Input />
+              </TextField.Root>
             </div>
 
             {/* Scrollable language list */}

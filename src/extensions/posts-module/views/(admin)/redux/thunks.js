@@ -21,7 +21,7 @@ export const fetchPosts = createAsyncThunk(
         query: {
           page,
           limit,
-          status: status || undefined,
+          status,
         },
         signal,
       });

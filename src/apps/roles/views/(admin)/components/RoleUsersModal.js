@@ -13,25 +13,22 @@ import {
   useEffect,
 } from 'react';
 
+import { Flex, Box, Text, Avatar, Badge } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 
-import Avatar from '@shared/renderer/components/Avatar';
 import Modal from '@shared/renderer/components/Modal';
-import Table from '@shared/renderer/components/Table';
-import Tag from '@shared/renderer/components/Tag';
+import {
+  TablePagination,
+  TableSearch,
+} from '@shared/renderer/components/Table';
 
 import { fetchRoleUsers } from '../redux';
 
 import s from './RoleUsersModal.css';
 
 /**
- * RoleUsersModal - Self-contained modal for viewing users with a role
- *
- * Usage:
- *   const usersModalRef = useRef();
- *   usersModalRef.current.open(role);    // Open for a role
- *   usersModalRef.current.close();       // Close modal
+ * RoleUsersModal mapping custom implicit models easily flexibly.
  */
 const ITEMS_PER_PAGE = 10;
 
@@ -144,65 +141,86 @@ const RoleUsersModal = forwardRef((props, ref) => {
         </Modal.Description>
 
         {/* Search Input */}
-        <Table.SearchBar
-          value={search}
-          onChange={handleSearchChange}
-          placeholder={t('admin:common.searchUsers', 'Search users...')}
-          className={s.modalSearchBar}
-        />
+        <Box className={s.searchBox}>
+          <TableSearch
+            value={search}
+            onChange={handleSearchChange}
+            placeholder={t('admin:common.searchUsers', 'Search users...')}
+          />
+        </Box>
 
-        <div className={s.usersList}>
+        <Box className={s.itemsFlex}>
           {usersLoading ? (
-            <div className={s.noUsers}>
+            <Flex justify='center' align='center' className={s.loadingFlex}>
               {t('admin:common.loadingUsers', 'Loading users...')}
-            </div>
+            </Flex>
           ) : users.length === 0 ? (
-            <div className={s.noUsers}>
+            <Flex justify='center' align='center' className={s.emptyFlex}>
               {search
                 ? t('admin:roles.noUsersMatch', 'No users match your search')
                 : t(
                     'admin:roles.noUsersWithRole',
                     'No users found with this role',
                   )}
-            </div>
+            </Flex>
           ) : (
             users.map(user => (
-              <div key={user.id} className={s.userItem}>
+              <Flex key={user.id} align='center' gap='3' className={s.itemFlex}>
                 <Avatar
                   name={
                     (user.profile && user.profile.display_name) || user.email
                   }
-                  size='small'
-                  className={s.userAvatar}
+                  size='2'
+                  fallback={(
+                    (user.profile && user.profile.display_name) ||
+                    user.email ||
+                    '?'
+                  )
+                    .charAt(0)
+                    .toUpperCase()}
                 />
-                <div className={s.userInfo}>
-                  <span className={s.userName}>
+
+                <Box className={s.itemInfo}>
+                  <Text as='div' size='2' weight='bold' className={s.itemName}>
                     {(user.profile && user.profile.display_name) ||
                       t('admin:common.na', 'N/A')}
-                  </span>
-                  <span className={s.userEmail}>{user.email}</span>
-                </div>
-                <div className={s.userMeta}>
-                  <Tag variant={user.is_active ? 'success' : 'error'}>
+                  </Text>
+                  <Text
+                    as='div'
+                    size='1'
+                    color='gray'
+                    className={s.itemDescription}
+                  >
+                    {user.email}
+                  </Text>
+                </Box>
+                <Box>
+                  <Badge
+                    variant={user.is_active ? 'success' : 'error'}
+                    color='gray'
+                    radius='full'
+                  >
                     {user.is_active
                       ? t('admin:common.active', 'Active')
                       : t('admin:common.inactive', 'Inactive')}
-                  </Tag>
-                </div>
-              </div>
+                  </Badge>
+                </Box>
+              </Flex>
             ))
           )}
-        </div>
+        </Box>
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <Table.Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={totalItems}
-            onPageChange={setCurrentPage}
-            loading={usersLoading}
-          />
+          <Box className={s.paginationBox}>
+            <TablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              onPageChange={setCurrentPage}
+              loading={usersLoading}
+            />
+          </Box>
         )}
       </Modal.Body>
       <Modal.Footer>

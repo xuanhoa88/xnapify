@@ -47,3 +47,8 @@
   font-size: 13px;
   text-align: center;
 }
+
+.alignStart {
+  width: 100%;
+  justify-content: flex-start;
+}

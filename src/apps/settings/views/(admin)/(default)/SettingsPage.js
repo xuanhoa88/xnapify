@@ -7,20 +7,25 @@
 
 import { useEffect, useCallback, useState, useMemo } from 'react';
 
-import clsx from 'clsx';
+import * as RadixIcons from '@radix-ui/react-icons';
+import {
+  Flex,
+  Box,
+  Text,
+  Badge,
+  Grid,
+  Heading,
+  Card,
+  Button,
+} from '@radix-ui/themes';
 import sortBy from 'lodash/sortBy';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import * as Box from '@shared/renderer/components/Box';
-import Button from '@shared/renderer/components/Button';
-import Card from '@shared/renderer/components/Card';
 import Form, { useFormContext } from '@shared/renderer/components/Form';
-import Icon from '@shared/renderer/components/Icon';
 import Loader from '@shared/renderer/components/Loader';
 import { useRbac } from '@shared/renderer/components/Rbac';
-import Table from '@shared/renderer/components/Table';
 
 import { useSettingsTabConfig } from '../hooks/useSettingsTabConfig';
 import {
@@ -32,7 +37,6 @@ import {
   selectInitialized,
 } from '../redux';
 
-// eslint-disable-next-line css-modules/no-unused-class
 import s from './SettingsPage.css';
 
 // =============================================================================
@@ -46,8 +50,13 @@ function SaveButton() {
   } = useFormContext();
 
   return (
-    <Button type='submit' variant='primary' disabled={!isDirty || isSubmitting}>
-      <Icon name='save' size={16} />
+    <Button
+      type='submit'
+      variant='solid'
+      color='indigo'
+      disabled={!isDirty || isSubmitting}
+    >
+      <RadixIcons.DiscIcon width={16} height={16} />
       {isSubmitting
         ? t('admin:common.saving', 'Saving...')
         : t('admin:common.save', 'Save Changes')}
@@ -86,12 +95,9 @@ function SettingRow({ setting, canWrite }) {
           upperKey.includes('TEXT');
         if (setting.type === 'string' && isDescriptive) {
           return (
-            <Form.Textarea
-              disabled={!canWrite}
-              rows={3}
-              spellCheck={false}
-              className={s.textarea}
-            />
+            <Box className={s.textareaBox}>
+              <Form.Textarea disabled={!canWrite} rows={3} spellCheck={false} />
+            </Box>
           );
         }
         return <Form.Input disabled={!canWrite} />;
@@ -99,45 +105,83 @@ function SettingRow({ setting, canWrite }) {
     }
   };
 
+  const getBadgeColor = type => {
+    switch (type) {
+      case 'boolean':
+        return 'blue';
+      case 'integer':
+        return 'green';
+      case 'json':
+        return 'purple';
+      case 'password':
+        return 'red';
+      default:
+        return 'gray';
+    }
+  };
+
   return (
-    <div className={s.settingRow}>
-      <div className={s.settingMeta}>
-        <div className={s.settingKeyRow}>
-          <code className={s.settingKey}>{setting.key}</code>
-          <span className={`${s.badge} ${s[`badge-${setting.type}`]}`}>
+    <Flex
+      direction={{ initial: 'column', md: 'row' }}
+      gap='4'
+      className={setting.type === 'boolean' ? s.rowFlexCenter : s.rowFlexStart}
+    >
+      <Box className={s.rowContent}>
+        <Flex align='center' gap='2' wrap='wrap' className={s.rowHeaderFlex}>
+          <Text as='code' size='2' weight='bold' className={s.keyText}>
+            {setting.key}
+          </Text>
+          <Badge size='1' color={getBadgeColor(setting.type)}>
             {setting.type}
-          </span>
+          </Badge>
           {setting.isPublic && (
-            <span className={`${s.badge} ${s.badgePublic}`}>
+            <Badge size='1' color='green' variant='soft'>
               {t('admin:settings.badgePublic', 'public')}
-            </span>
+            </Badge>
           )}
           {setting.isDefault && (
-            <span className={`${s.badge} ${s.badgeDefault}`}>
+            <Badge size='1' color='orange' variant='soft'>
               {t('admin:settings.badgeDefault', 'env default')}
-            </span>
+            </Badge>
           )}
-        </div>
+        </Flex>
         {setting.description && (
-          <p className={s.settingDesc}>{setting.description}</p>
+          <Text
+            as='p'
+            size='2'
+            color='gray'
+            className={
+              setting.defaultEnvVar
+                ? s.descriptionTextHasEnv
+                : s.descriptionText
+            }
+          >
+            {setting.description}
+          </Text>
         )}
         {setting.defaultEnvVar && (
-          <p className={s.settingEnvHint}>
+          <Text as='p' size='1' color='gray'>
             {t('admin:settings.fallback', 'Fallback: ')}
-            <code>{setting.defaultEnvVar}</code>
-          </p>
+            <Text as='code' className={s.envVarText}>
+              {setting.defaultEnvVar}
+            </Text>
+          </Text>
         )}
-      </div>
-      <div
-        className={clsx(s.settingControl, {
-          [s.settingControlRight]: setting.type === 'boolean',
-        })}
+      </Box>
+      <Box
+        className={
+          setting.type === 'boolean'
+            ? s.inputContainerFlexEnd
+            : s.inputContainerFlexStart
+        }
       >
-        <Form.Field name={name} showError={false} className={s.formFieldReset}>
-          {renderInput()}
-        </Form.Field>
-      </div>
-    </div>
+        <Box className={s.inputWrapper}>
+          <Form.Field name={name} showError={false}>
+            {renderInput()}
+          </Form.Field>
+        </Box>
+      </Box>
+    </Flex>
   );
 }
 
@@ -158,26 +202,14 @@ SettingRow.propTypes = {
 // Namespace helpers
 // =============================================================================
 
-/**
- * Resolve namespace label with i18n-first cascade:
- * 1. Extension-provided i18nKey (extension owns its own translations)
- * 2. Core i18n key (settings module translations)
- * 3. Hardcoded label fallback from config
- * 4. Raw namespace string
- */
 function getNamespaceLabel(ns, t, labels, translationKeys) {
-  // Hardcoded label fallback
   const fallback = labels[ns] || ns;
 
-  // 1. Extension-provided i18n key overrides core translation
   if (translationKeys[ns]) {
-    // If the extension key exists in loaded bundles, use it.
-    // We try translationKeys[ns] first. If not found, we fallback to the core translation.
     const extTranslated = t(translationKeys[ns], { defaultValue: '' });
     if (extTranslated) return extTranslated;
   }
 
-  // 2. Core module i18n key, natively falling back to the hardcoded label
   const coreKey = `admin:settings.namespaces.${ns}`;
   return t(coreKey, { defaultValue: fallback });
 }
@@ -248,9 +280,7 @@ function SettingsBuilderForm({ namespace, settings, onSaved }) {
           saveNamespaceSettings({ namespace, payload }),
         );
         if (!result.error) {
-          // Reset the form with submitted data so dirty state clears immediately
           methods.reset(data);
-          // Then refresh from server to pick up any server-side transformations
           dispatch(fetchSettings());
           if (typeof onSaved === 'function') onSaved(namespace);
         }
@@ -261,8 +291,8 @@ function SettingsBuilderForm({ namespace, settings, onSaved }) {
 
   return (
     <Form defaultValues={defaultValues} onSubmit={handleSave}>
-      <Card variant='default'>
-        <Card.Body className={s.panelBody}>
+      <Card variant='surface'>
+        <Box p='0'>
           {sortedFields.map(setting => (
             <SettingRow
               key={`${setting.namespace}___${setting.key}`}
@@ -270,11 +300,18 @@ function SettingsBuilderForm({ namespace, settings, onSaved }) {
               canWrite={canWrite}
             />
           ))}
-        </Card.Body>
+        </Box>
         {canWrite && (
-          <Card.Footer align='right'>
+          <Flex
+            align='center'
+            justify='end'
+            gap='2'
+            px='5'
+            py='4'
+            className={s.saveButtonFlex}
+          >
             <SaveButton />
-          </Card.Footer>
+          </Flex>
         )}
       </Card>
     </Form>
@@ -307,8 +344,6 @@ function SettingsPage({ context }) {
 
   const [activeTab, setActiveTab] = useState(null);
 
-  // Only show namespaces that are core or registered by active extensions.
-  // This hides settings from deactivated extensions while preserving their DB data.
   const rawNamespaces = useMemo(
     () =>
       groups
@@ -333,7 +368,6 @@ function SettingsPage({ context }) {
     dispatch(fetchSettings());
   }, [dispatch]);
 
-  // Set first namespace as active tab when data loads
   useEffect(() => {
     if (!activeTab && namespaces.length > 0) {
       setActiveTab(namespaces[0]);
@@ -343,74 +377,154 @@ function SettingsPage({ context }) {
   // ── Loading ─────────────────────────────────────────────────────────────────
   if (!initialized || (loading && namespaces.length === 0)) {
     return (
-      <div className={s.root}>
-        <Box.Header
-          icon={<Icon name='settings' size={24} />}
-          title={t('admin:settings.title', 'Global Settings')}
-          subtitle={t(
-            'admin:settings.subtitle',
-            'Configure system-wide settings',
-          )}
-        />
+      <Box className={s.containerBox}>
+        <Flex
+          align='center'
+          justify='between'
+          wrap='wrap'
+          gap='4'
+          className={s.headerFlex}
+        >
+          <Flex align='center' gap='3'>
+            <Flex align='center' justify='center' className={s.headerIconBox}>
+              <RadixIcons.GearIcon width={24} height={24} />
+            </Flex>
+            <Flex direction='column'>
+              <Heading size='6' className={s.headerHeading}>
+                {t('admin:settings.title', 'Global Settings')}
+              </Heading>
+              <Text size='3' color='gray' className={s.headerSubtitle}>
+                {t('admin:settings.subtitle', 'Configure system-wide settings')}
+              </Text>
+            </Flex>
+          </Flex>
+        </Flex>
         <Loader
           variant='spinner'
           message={t('admin:settings.loading', 'Loading settings...')}
         />
-      </div>
+      </Box>
     );
   }
 
   // ── Error ───────────────────────────────────────────────────────────────────
   if (error) {
     return (
-      <div className={s.root}>
-        <Box.Header
-          icon={<Icon name='settings' size={24} />}
-          title={t('admin:settings.title', 'Global Settings')}
-        />
-        <Table.Error
-          title={t('admin:settings.errorLoading', 'Error loading settings')}
-          error={error}
-          retryLabel={t('admin:common.retry', 'Retry')}
-          onRetry={() => dispatch(fetchSettings())}
-        />
-      </div>
+      <Box className={s.containerBox}>
+        <Flex
+          align='center'
+          justify='between'
+          wrap='wrap'
+          gap='4'
+          className={s.headerFlex}
+        >
+          <Flex align='center' gap='3'>
+            <Flex align='center' justify='center' className={s.headerIconBox}>
+              <RadixIcons.GearIcon width={24} height={24} />
+            </Flex>
+            <Flex direction='column'>
+              <Heading size='6' className={s.headerHeading}>
+                {t('admin:settings.title', 'Global Settings')}
+              </Heading>
+              <Text size='3' color='gray' className={s.headerSubtitle}>
+                {t('admin:settings.subtitle', 'Configure system-wide settings')}
+              </Text>
+            </Flex>
+          </Flex>
+        </Flex>
+        <Flex
+          direction='column'
+          align='center'
+          justify='center'
+          p='6'
+          className={s.errorFlex}
+        >
+          <Text color='red' size='4' weight='bold' mb='2'>
+            {t('admin:settings.errorLoading', 'Error loading settings')}
+          </Text>
+          <Text color='red' size='2' mb='4'>
+            {error}
+          </Text>
+          <Button
+            variant='soft'
+            color='red'
+            onClick={() => dispatch(fetchSettings())}
+          >
+            {t('common:retry', 'Retry')}
+          </Button>
+        </Flex>
+      </Box>
     );
   }
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className={s.root}>
-      <Box.Header
-        icon={<Icon name='settings' size={24} />}
-        title={t('admin:settings.title', 'Global Settings')}
-        subtitle={t(
-          'admin:settings.subtitle',
-          'Configure system-wide settings for all modules',
-        )}
-      />
+    <Box className={s.containerBox}>
+      <Flex
+        align='center'
+        justify='between'
+        wrap='wrap'
+        gap='4'
+        className={s.headerFlex}
+      >
+        <Flex align='center' gap='3'>
+          <Flex align='center' justify='center' className={s.headerIconBox}>
+            <RadixIcons.GearIcon width={24} height={24} />
+          </Flex>
+          <Flex direction='column'>
+            <Heading size='6' className={s.headerHeading}>
+              {t('admin:settings.title', 'Global Settings')}
+            </Heading>
+            <Text size='3' color='gray' className={s.headerSubtitle}>
+              {t(
+                'admin:settings.subtitle',
+                'Configure system-wide settings for all modules',
+              )}
+            </Text>
+          </Flex>
+        </Flex>
+      </Flex>
 
-      <div className={s.layout}>
+      <Grid
+        columns={{ initial: '1', lg: '250px 1fr' }}
+        gap='6'
+        className={s.gridContainer}
+      >
         {/* Namespace tabs */}
-        <nav className={s.tabs}>
+        <Flex as='nav' direction='column' gap='1'>
           {namespaces.map(ns => (
-            <button
+            <Box
+              as='button'
               key={ns}
               type='button'
-              className={`${s.tab} ${activeTab === ns ? s.tabActive : ''}`}
               onClick={() => setActiveTab(ns)}
+              className={activeTab === ns ? s.tabActive : s.tabInactive}
             >
-              <Icon name={icons[ns] || 'settings'} size={16} />
-              <span className={s.tabLabel}>
+              {(() => {
+                const iconName = icons[ns];
+                const Comp =
+                  typeof iconName === 'string'
+                    ? RadixIcons[iconName] || RadixIcons.BoxIcon
+                    : RadixIcons.GearIcon;
+                return <Comp width={16} height={16} />;
+              })()}
+              <Text as='span' className={s.tabText}>
                 {getNamespaceLabel(ns, t, labels, translationKeys)}
-              </span>
-              <span className={s.tabCount}>{groups[ns].length}</span>
-            </button>
+              </Text>
+              <Badge
+                size='1'
+                color='gray'
+                variant='soft'
+                className={s.tabBadge}
+              >
+                {groups[ns].length}
+              </Badge>
+            </Box>
           ))}
-        </nav>
+        </Flex>
 
         {/* Settings panel — only the active tab is mounted */}
-        <div className={s.panel}>
+        <Box className={s.settingsPanelBox}>
           {activeTab && groups[activeTab] && (
             <SettingsBuilderForm
               key={activeTab}
@@ -418,9 +532,9 @@ function SettingsPage({ context }) {
               settings={groups[activeTab]}
             />
           )}
-        </div>
-      </div>
-    </div>
+        </Box>
+      </Grid>
+    </Box>
   );
 }
 

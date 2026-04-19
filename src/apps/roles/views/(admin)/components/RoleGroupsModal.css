@@ -1,137 +1,68 @@
-/**
- * xnapify (https://github.com/xuanhoa88/xnapify/)
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE.txt file in the root directory of this source tree.
- */
-
-/* Search bar spacing */
-.modalSearchBar {
-  margin-bottom: var(--spacing-4);
+.searchBox {
+  margin-bottom: var(--space-4);
 }
 
-/* Group List */
-.groupsList {
+.itemsFlex {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-2);
+  gap: var(--space-3);
 }
 
-.groupItem {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-3);
-  padding: var(--spacing-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  transition: var(--transition-base);
+.loadingFlex {
+  padding: var(--space-8);
+  color: var(--gray-9);
+  font-style: italic;
 }
 
-.groupItem:hover {
-  background: var(--color-background-secondary);
-  border-color: var(--color-primary);
+.emptyFlex {
+  padding: var(--space-8);
+  color: var(--gray-9);
+  font-style: italic;
+  background-color: var(--gray-2);
+  border-radius: var(--radius-3);
 }
 
-.groupIcon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.itemFlex {
+  padding: var(--space-3);
+  background-color: var(--color-panel-solid);
+  border: 1px solid var(--gray-4);
+  border-radius: var(--radius-3);
+}
+
+.iconBox {
   width: 40px;
   height: 40px;
-  border-radius: var(--radius-md);
-  background: var(--color-background-secondary);
-  color: var(--color-text-secondary);
+  border-radius: var(--radius-2);
+  background-color: var(--amber-3);
+  color: var(--amber-11);
   flex-shrink: 0;
 }
 
-.groupInfo {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-1);
+.itemInfo {
   flex: 1;
   min-width: 0;
 }
 
-.groupName {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
-  font-weight: var(--font-weight-medium);
+.itemName {
+  color: var(--gray-12);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.groupDesc {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
+.itemDescription {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.groupMeta {
-  display: flex;
-  flex-shrink: 0;
+.countBadge {
+  color: var(--indigo-11);
+  background-color: var(--indigo-3);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-full);
 }
 
-.userCount {
-  display: inline-flex;
-  padding: var(--spacing-1) var(--spacing-2);
-  border-radius: var(--radius-sm);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  background: var(--color-background-secondary);
-  color: var(--color-text-secondary);
-}
-
-.noGroups {
-  color: var(--color-text-secondary);
-  font-style: italic;
-  font-size: var(--font-size-sm);
-  padding: var(--spacing-4);
-  text-align: center;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .groupItem {
-    padding: var(--spacing-2);
-    gap: var(--spacing-2);
-  }
-
-  .groupIcon {
-    width: 36px;
-    height: 36px;
-  }
-
-  .groupName {
-    font-size: var(--font-size-xs);
-  }
-
-  .groupDesc {
-    font-size: 10px;
-  }
-
-  .userCount {
-    font-size: 10px;
-    padding: 2px var(--spacing-1);
-  }
-}
-
-@media (max-width: 375px) {
-  .groupItem {
-    flex-wrap: wrap;
-    padding: var(--spacing-2);
-  }
-
-  .groupIcon {
-    width: 32px;
-    height: 32px;
-  }
-
-  .groupMeta {
-    width: 100%;
-    margin-top: var(--spacing-1);
-    padding-left: 44px;
-  }
+.paginationBox {
+  margin-top: var(--space-5);
 }

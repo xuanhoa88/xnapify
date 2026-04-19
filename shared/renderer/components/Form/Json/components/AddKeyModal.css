@@ -1,0 +1,78 @@
+.keyModalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgb(255 255 255 / 50%);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+}
+
+.keyModal {
+  width: 260px;
+  background: var(--color-background, #fff);
+  padding: 16px;
+  border-radius: var(--radius-md, 6px);
+  position: relative;
+  box-shadow: var(--shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 10%), 0 4px 6px -4px rgb(0 0 0 / 10%));
+  border: 1px solid var(--color-border, #e2e8f0);
+}
+
+.keyModalLabel {
+  color: var(--color-text-secondary, #64748b);
+  margin-left: 2px;
+  margin-bottom: 5px;
+  font-size: 11px;
+}
+
+.keyModalInput {
+  width: 100%;
+  padding: 3px 6px;
+  font-family: var(--font-family-mono, monospace);
+  color: var(--color-text-primary, #1a1a2e);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 2px;
+  box-sizing: border-box;
+  background: var(--color-background-secondary, #f1f5f9);
+  outline: none;
+}
+
+.keyModalInput:focus {
+  box-shadow: 0 0 0 2px var(--indigo-9);
+}
+
+.keyModalCancel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  border-radius: 0 3px;
+  cursor: pointer;
+  color: var(--json-cancel-icon, #dc322f);
+}
+
+.keyModalSubmit {
+  color: var(--json-check-icon, #859900);
+  font-size: 15px;
+  position: absolute;
+  right: 2px;
+  top: 3px;
+  cursor: pointer;
+}
+
+.keyModalInputWrapper {
+  position: relative;
+}
+
+.keyModalInputWrapperField {
+  position: relative;
+  margin-bottom: 8px;
+}
+
+.jsonIcon15 {
+  width: 15px;
+  height: 15px;
+}

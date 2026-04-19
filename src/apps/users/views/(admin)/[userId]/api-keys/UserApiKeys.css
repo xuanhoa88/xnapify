@@ -1,112 +1,107 @@
-/**
- * xnapify (https://github.com/xuanhoa88/xnapify/)
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE.txt file in the root directory of this source tree.
- */
-.root {
-  padding: var(--spacing-8);
-  background: var(--color-background-secondary);
-  flex: 1;
+.containerBox {
+  padding: var(--space-6);
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
-/* =============================================================================
-   NEW KEY ALERT
-   ============================================================================= */
-
-.newKeyAlert {
-  margin-bottom: var(--spacing-6);
-  padding: var(--spacing-4);
-  background: var(--color-success-bg, #ecfdf5);
-  border: 1px solid var(--color-success, #10b981);
-  border-radius: var(--radius-md);
-  color: var(--color-success-text, #064e3b);
+.headerFlex {
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--gray-a6);
+  margin-bottom: var(--space-6);
 }
 
-.alertHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--spacing-2);
+.headerIconBox {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-3);
+  background-color: var(--gray-3);
+  color: var(--gray-11);
+  flex-shrink: 0;
 }
 
-.alertHeader strong {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
+.headerHeading {
+  margin: 0;
+  color: var(--gray-12);
 }
 
-.closeBtn {
+.headerSubtitle {
+  margin: 0;
+  margin-top: var(--space-1);
+}
+
+.marginTopBox {
+  margin-top: var(--space-6);
+}
+
+.errorFlex {
+  border: 1px solid var(--red-6);
+  border-radius: var(--radius-3);
+  background-color: var(--red-2);
+}
+
+.newKeyBox {
+  margin-bottom: var(--space-6);
+  background-color: var(--green-2);
+  border: 1px solid var(--green-6);
+  border-radius: var(--radius-3);
+  padding: var(--space-4);
+  position: relative;
+}
+
+.newKeyHeaderFlex {
+  margin-bottom: var(--space-2);
+}
+
+.newKeyTitle {
+  color: var(--green-11);
+}
+
+.newKeyDesc {
+  color: var(--green-11);
+  margin-bottom: var(--space-3);
+}
+
+.newKeyTokenFlex {
+  background-color: var(--green-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-2);
+  border: 1px solid var(--green-5);
+}
+
+.newKeyTokenText {
+  font-family: var(--font-mono);
+  color: var(--green-12);
+  font-size: var(--font-size-3);
+}
+
+.tableWrapper {
+  position: relative;
+  overflow-x: auto;
+}
+
+.textRight {
+  text-align: right;
+}
+
+.emptyStateFlex {
+  opacity: 0.6;
+}
+
+.emptyStateIcon {
+  margin-bottom: var(--space-3);
+}
+
+.loadingOverlay {
+  position: absolute;
+  inset: 0;
+  background-color: var(--color-background);
+  opacity: 0.5;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  background: none;
-  border: none;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-size: var(--font-size-lg);
-  color: currentcolor;
-  transition: var(--transition-base);
+  z-index: 10;
 }
 
-.closeBtn:hover {
-  background: rgb(0 0 0 / 8%);
-}
-
-.alertText {
-  font-size: var(--font-size-sm);
-  margin: 0 0 var(--spacing-3);
-}
-
-.tokenDisplay {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-3);
-  padding: var(--spacing-3);
-  background: var(--color-background);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--color-border);
-}
-
-.tokenDisplay code {
-  flex: 1;
-  font-family: var(--font-family-mono, monospace);
-  font-weight: var(--font-weight-semibold);
-  font-size: var(--font-size-xs);
-  word-break: break-all;
-  line-height: 1.5;
-}
-
-.actionsCol {
-  text-align: right;
-  width: 80px;
-}
-
-.revoked td {
-  opacity: 0.5;
-}
-
-.actions {
-  display: flex;
-  gap: var(--spacing-2);
-}
-
-/* =============================================================================
-   MODAL
-   ============================================================================= */
-
-.modalField {
-  margin-bottom: var(--spacing-4);
-}
-
-
-/* =============================================================================
-   RESPONSIVE
-   ============================================================================= */
-
-@media (max-width: 768px) {
-  .root {
-    padding: var(--spacing-3);
-  }
+.fieldPaddingBox {
+  margin-bottom: var(--space-4);
 }

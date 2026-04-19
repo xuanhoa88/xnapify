@@ -7,13 +7,16 @@
 
 import React, { useCallback } from 'react';
 
-import clsx from 'clsx';
+import {
+  ChevronRightIcon,
+  ListBulletIcon,
+  DashboardIcon,
+} from '@radix-ui/react-icons';
+import { Flex, Box, Button } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Button from '@shared/renderer/components/Button';
-import Icon from '@shared/renderer/components/Icon';
-import SearchBar from '@shared/renderer/components/Table/SearchBar';
+import { TableSearch } from '@shared/renderer/components/Table';
 
 import {
   setView,
@@ -49,24 +52,22 @@ export default function FileToolbar() {
   );
 
   return (
-    <div className={s.toolbar}>
-      <div className={s.breadcrumbsContainer}>
+    <Flex align='center' justify='between' className={s.toolbarFlex}>
+      <Flex align='center' gap='1' className={s.breadcrumbFlex}>
         {breadcrumbs.map((crumb, index) => {
           const isLast = index === breadcrumbs.length - 1;
           return (
             <React.Fragment key={crumb.id}>
               {/* Separator icon (chevron right) */}
               {index > 0 && (
-                <span className={s.separator}>
-                  <Icon name='chevronRight' size={16} />
-                </span>
+                <Box className={s.breadcrumbSeparator}>
+                  <ChevronRightIcon width={16} height={16} />
+                </Box>
               )}
 
               <Button
                 variant='ghost'
-                className={clsx(s.crumbBtn, {
-                  [s.activeCrumb]: isLast,
-                })}
+                className={`${s.breadcrumbBtn} ${isLast ? s.breadcrumbBtnActive : s.breadcrumbBtnInactive}`}
                 onClick={() => !isLast && handleBreadcrumbClick(crumb)}
                 disabled={isLast}
               >
@@ -77,43 +78,41 @@ export default function FileToolbar() {
             </React.Fragment>
           );
         })}
-      </div>
+      </Flex>
 
-      <div className={s.searchContainer}>
-        <SearchBar
-          value={search}
-          onChange={val => dispatch(setSearch(val))}
-          placeholder={t('files:toolbar.search_placeholder', 'Search files...')}
-          className={s.searchBar}
-        />
-      </div>
+      <Flex align='center' gap='3' className={s.controlsFlex}>
+        <Box className={s.searchBox}>
+          <TableSearch
+            value={search}
+            onChange={val => dispatch(setSearch(val))}
+            placeholder={t(
+              'files:toolbar.search_placeholder',
+              'Search files...',
+            )}
+          />
+        </Box>
 
-      <div className={s.actionsContainer}>
-        <div className={s.viewToggles}>
+        <Flex align='center' gap='1' className={s.viewModeFlex}>
           <Button
             variant='ghost'
-            className={clsx(s.iconBtn, {
-              [s.active]: viewMode === 'list',
-            })}
+            className={`${s.viewModeBtn} ${viewMode === 'list' ? s.viewModeBtnActive : s.viewModeBtnInactive}`}
             onClick={() => dispatch(setViewMode('list'))}
             title={t('files:toolbar.list_view', 'List view')}
             iconOnly
           >
-            <Icon name='list' size={20} />
+            <ListBulletIcon width={18} height={18} />
           </Button>
           <Button
             variant='ghost'
-            className={clsx(s.iconBtn, {
-              [s.active]: viewMode === 'grid',
-            })}
+            className={`${s.viewModeBtn} ${viewMode === 'grid' ? s.viewModeBtnActive : s.viewModeBtnInactive}`}
             onClick={() => dispatch(setViewMode('grid'))}
             title={t('files:toolbar.grid_view', 'Grid view')}
             iconOnly
           >
-            <Icon name='dashboard' size={20} />
+            <DashboardIcon width={18} height={18} />
           </Button>
-        </div>
-      </div>
-    </div>
+        </Flex>
+      </Flex>
+    </Flex>
   );
 }

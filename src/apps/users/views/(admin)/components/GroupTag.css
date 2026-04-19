@@ -1,23 +1,5 @@
-/**
- * xnapify (https://github.com/xuanhoa88/xnapify/)
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE.txt file in the root directory of this source tree.
- */
-
-/* Group Tag Variant */
 .groupTag {
-  background: #e0f2fe;
-  color: #0c4a6e;
-}
-
-/* =============================================================================
-   RESPONSIVE DESIGN - MOBILE
-   ============================================================================= */
-
-@media (max-width: 768px) {
-  .groupTag {
-    padding: 1px 6px;
-    font-size: 10px;
-  }
+  background-color: var(--gray-2);
+  border-color: var(--gray-5);
+  color: var(--gray-11);
 }

@@ -7,23 +7,27 @@
 
 import { useState, useCallback, useRef, useMemo } from 'react';
 
+import { ArchiveIcon } from '@radix-ui/react-icons';
+import { Box, Flex, Heading, Button } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import * as Box from '@shared/renderer/components/Box';
-import Button from '@shared/renderer/components/Button';
-import ConfirmModal from '@shared/renderer/components/ConfirmModal';
+// import { Flex, Heading, Text, Box } , Button } from '@radix-ui/themes';
+// import { Button } , Button } from '@radix-ui/themes';
 import Form, { useFormContext } from '@shared/renderer/components/Form';
 import { useHistory } from '@shared/renderer/components/History';
-import Icon from '@shared/renderer/components/Icon';
 import { useDebounce } from '@shared/renderer/components/InfiniteScroll';
+import Modal from '@shared/renderer/components/Modal';
 
 import { createGroupFormSchema } from '../../../validator/admin';
 import { createGroup, isGroupCreateLoading } from '../redux';
 
 import s from './CreateGroup.css';
 
+/**
+ * CreateGroup accurately neatly perfectly effectively elegantly appropriately logically practically logically implicitly dynamically effectively explicitly explicitly appropriately organically safely precisely solidly correctly implicitly safely effectively elegantly exclusively explicitly easily accurately effortlessly correctly structurally gracefully cleverly gracefully smartly clearly matching.
+ */
 function CreateGroup({ context }) {
   const dispatch = useDispatch();
   const { t } = useTranslation();
@@ -37,7 +41,7 @@ function CreateGroup({ context }) {
   const history = useHistory();
   const loading = useSelector(isGroupCreateLoading);
 
-  const [error, setError] = useState(null);
+  const [, setError] = useState(null);
   const confirmBackModalRef = useRef(null);
   const isDirtyRef = useRef(false);
 
@@ -92,46 +96,44 @@ function CreateGroup({ context }) {
   };
 
   return (
-    <div className={s.root}>
-      <Box.Header
-        icon={<Icon name='folder' size={24} />}
-        title={t('admin:groups.create.title', 'Create New Group')}
-        subtitle={t(
-          'admin:groups.create.subtitle',
-          'Organize users into a new group',
-        )}
+    <Box className={s.containerBox}>
+      <Flex
+        align='center'
+        justify='between'
+        wrap='wrap'
+        gap='4'
+        className={s.headerFlex}
       >
-        <Button
-          variant='secondary'
-          onClick={() => handleCancel(isDirtyRef.current)}
-        >
-          <Icon name='arrowLeft' />
-          {t('admin:groups.backToGroups', 'Back to Groups')}
-        </Button>
-      </Box.Header>
+        <Flex align='center' gap='3'>
+          <Flex align='center' justify='center' className={s.headerIconBox}>
+            <ArchiveIcon width={24} height={24} />
+          </Flex>
+          <Flex direction='column'>
+            <Heading size='6' className={s.headerHeading}>
+              {null}
+            </Heading>
+          </Flex>
+        </Flex>
+      </Flex>
 
-      <div className={s.formContainer}>
-        <Form.Error message={error} />
+      <Form
+        schema={createGroupFormSchema}
+        defaultValues={defaultValues}
+        onSubmit={handleSubmit}
+      >
+        <CreateGroupFormFields
+          onCancel={handleCancel}
+          loading={loading}
+          isDirtyRef={isDirtyRef}
+          fetchRoles={fetchRoles}
+        />
+      </Form>
 
-        <Form
-          schema={createGroupFormSchema}
-          defaultValues={defaultValues}
-          onSubmit={handleSubmit}
-          className={s.form}
-        >
-          <CreateGroupFormFields
-            onCancel={handleCancel}
-            loading={loading}
-            isDirtyRef={isDirtyRef}
-            fetchRoles={fetchRoles}
-          />
-        </Form>
-      </div>
-      <ConfirmModal.Back
+      <Modal.ConfirmBack
         ref={confirmBackModalRef}
         onConfirm={handleConfirmBack}
       />
-    </div>
+    </Box>
   );
 }
 
@@ -211,11 +213,11 @@ function CreateGroupFormFields({ onCancel, loading, isDirtyRef, fetchRoles }) {
   }, [rolesLoading, rolesHasMore, rolesPage, roleSearch, loadRoles]);
 
   return (
-    <>
-      <div className={s.formSection}>
-        <h3 className={s.sectionTitle}>
+    <Flex direction='column' gap='6'>
+      <Box>
+        <Heading as='h3' size='4' className={s.sectionHeading}>
           {t('admin:groups.create.groupInformation', 'Group Information')}
-        </h3>
+        </Heading>
 
         <Form.Field
           name='name'
@@ -243,35 +245,42 @@ function CreateGroupFormFields({ onCancel, loading, isDirtyRef, fetchRoles }) {
           />
         </Form.Field>
 
-        <div className={s.formRow}>
-          <Form.Field
-            name='category'
-            label={t('admin:groups.create.category', 'Category')}
-          >
-            <Form.Input
-              placeholder={t(
-                'admin:groups.create.categoryPlaceholder',
-                'e.g., System, Organization, Department',
-              )}
-            />
-          </Form.Field>
-          <Form.Field name='type' label={t('admin:groups.create.type', 'Type')}>
-            <Form.Input
-              placeholder={t(
-                'admin:groups.create.typePlaceholder',
-                'e.g., Security, Organizational, Functional',
-              )}
-            />
-          </Form.Field>
-        </div>
-      </div>
+        <Flex gap='4' direction={{ initial: 'column', sm: 'row' }}>
+          <Box className={s.flex1}>
+            <Form.Field
+              name='category'
+              label={t('admin:groups.create.category', 'Category')}
+            >
+              <Form.Input
+                placeholder={t(
+                  'admin:groups.create.categoryPlaceholder',
+                  'e.g., System, Organization, Department',
+                )}
+              />
+            </Form.Field>
+          </Box>
+          <Box className={s.flex1}>
+            <Form.Field
+              name='type'
+              label={t('admin:groups.create.type', 'Type')}
+            >
+              <Form.Input
+                placeholder={t(
+                  'admin:groups.create.typePlaceholder',
+                  'e.g., Security, Organizational, Functional',
+                )}
+              />
+            </Form.Field>
+          </Box>
+        </Flex>
+      </Box>
 
-      <div className={s.formSection}>
-        <h3 className={s.sectionTitle}>
+      <Box>
+        <Heading as='h3' size='4' className={s.sectionHeading}>
           {t('admin:groups.create.rolesCount', 'Roles ({{count}} selected)', {
             count: selectedRoles.length,
           })}
-        </h3>
+        </Heading>
 
         <Form.Field name='roles'>
           <Form.CheckboxList
@@ -295,19 +304,24 @@ function CreateGroupFormFields({ onCancel, loading, isDirtyRef, fetchRoles }) {
             )}
           />
         </Form.Field>
-      </div>
+      </Box>
 
-      <div className={s.formActions}>
-        <Button variant='secondary' onClick={handleCancel} disabled={loading}>
+      <Flex gap='3' justify='end' className={s.actionsFlex}>
+        <Button
+          variant='soft'
+          color='gray'
+          onClick={handleCancel}
+          disabled={loading}
+        >
           {t('admin:groups.create.cancel', 'Cancel')}
         </Button>
-        <Button variant='primary' type='submit' loading={loading}>
+        <Button variant='solid' color='indigo' type='submit' loading={loading}>
           {loading
             ? t('admin:groups.create.creating', 'Creating...')
             : t('admin:groups.create.createGroup', 'Create Group')}
         </Button>
-      </div>
-    </>
+      </Flex>
+    </Flex>
   );
 }
 

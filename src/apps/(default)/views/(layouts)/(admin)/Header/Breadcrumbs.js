@@ -7,10 +7,11 @@
 
 import { Fragment } from 'react';
 
+import { ChevronDownIcon } from '@radix-ui/react-icons';
+import { Flex, Text } from '@radix-ui/themes';
 import { useSelector } from 'react-redux';
 
 import { Link } from '@shared/renderer/components/History';
-import Icon from '@shared/renderer/components/Icon';
 import { getBreadcrumbs } from '@shared/renderer/redux';
 
 import s from './Breadcrumbs.css';
@@ -18,7 +19,7 @@ import s from './Breadcrumbs.css';
 /**
  * Breadcrumbs Component
  *
- * Renders breadcrumb navigation from Redux state.
+ * Renders breadcrumb navigation from Redux state natively injected via Radix UI.
  * Breadcrumbs are accumulated from route hierarchy by the navigator.
  */
 function AdminBreadcrumbs() {
@@ -30,7 +31,12 @@ function AdminBreadcrumbs() {
   const lastIndex = items.length - 1;
 
   return (
-    <nav className={s.breadcrumbs} aria-label='Breadcrumb'>
+    <Flex
+      as='nav'
+      align='center'
+      aria-label='Breadcrumb'
+      className={s.navContainer}
+    >
       {items.map((item, index) => {
         const isLast = index === lastIndex;
         const hasLink = item.url && !isLast;
@@ -38,19 +44,37 @@ function AdminBreadcrumbs() {
         return (
           <Fragment key={`${index}-${item.label}`}>
             {index > 0 && (
-              <Icon name='chevronDown' size={10} className={s.separator} />
+              <Flex
+                asChild
+                align='center'
+                justify='center'
+                px='2'
+                className={s.dividerIcon}
+              >
+                <span>
+                  <ChevronDownIcon
+                    width={10}
+                    height={10}
+                    className={s.dividerChevron}
+                  />
+                </span>
+              </Flex>
             )}
             {hasLink ? (
-              <Link className={s.link} to={item.url}>
-                {item.label}
-              </Link>
+              <Text size='2' asChild>
+                <Link to={item.url} className={s.breadcrumbLink}>
+                  {item.label}
+                </Link>
+              </Text>
             ) : (
-              <span className={s.current}>{item.label}</span>
+              <Text size='2' weight='medium' className={s.breadcrumbText}>
+                {item.label}
+              </Text>
             )}
           </Fragment>
         );
       })}
-    </nav>
+    </Flex>
   );
 }
 
