@@ -38,8 +38,13 @@ import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
+import {
+  ChatBubbleIcon,
+  DragHandleDots2Icon,
+  TrashIcon,
+} from '@radix-ui/react-icons';
+
 import { ExtensionSlot } from '../Extension';
-import Icon from '../Icon';
 
 import CodeBlockView from './CodeBlockView';
 import CommentActionsPopup from './CommentActionsPopup';
@@ -592,7 +597,7 @@ const WYSIWYG = forwardRef(function WYSIWYG$(
           <>
             <DragHandle editor={editor}>
               <div className={s.dragHandle}>
-                {<Icon name='dragHandle' size={16} strokeWidth={2.5} />}
+                {<DragHandleDots2Icon width={16} height={16} />}
               </div>
             </DragHandle>
 
@@ -624,7 +629,7 @@ const WYSIWYG = forwardRef(function WYSIWYG$(
               ) : (
                 <>
                   <ToolbarButton
-                    icon={<Icon name='comment' size={16} strokeWidth={2.5} />}
+                    icon={<ChatBubbleIcon width={16} height={16} />}
                     {...(activeCommentId
                       ? {
                           label: t(
@@ -654,8 +659,8 @@ const WYSIWYG = forwardRef(function WYSIWYG$(
                   {activeCommentId && (
                     <ToolbarButton
                       icon={
-                        <Icon name='tableDelete' size={16} strokeWidth={2.5} />
-                      } // Using tableDelete icon as a generic trash icon for now
+                        <TrashIcon width={16} height={16} />
+                      } // Using TrashIcon for removing comment threads
                       label={t(
                         'shared.form.wysiwyg.removeCommentThread',
                         'Remove Comment Thread',

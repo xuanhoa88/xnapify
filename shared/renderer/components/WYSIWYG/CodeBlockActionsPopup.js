@@ -7,12 +7,12 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react';
 
+import { CodeIcon } from '@radix-ui/react-icons';
 import { TextField } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
 import ContextMenu from '../ContextMenu';
-import Icon from '../Icon';
 
 import ToolbarButton from './ToolbarButton';
 
@@ -59,7 +59,7 @@ export default function CodeBlockActionsPopup({
     <ContextMenu align='left'>
       <ContextMenu.Trigger
         as={ToolbarButton}
-        icon={<Icon name='code' size={16} strokeWidth={2.5} />}
+        icon={<CodeIcon width={16} height={16} />}
         title={t('shared:form.wysiwyg.codeBlock', 'Code Block')}
         isActive={isActive}
         disabled={disabled}

@@ -23,6 +23,7 @@ const ToolbarButton = forwardRef(function ToolbarButton(
   return (
     <IconButton
       ref={ref}
+      size='1'
       variant={isActive ? 'soft' : 'ghost'}
       color='gray'
       className={clsx(

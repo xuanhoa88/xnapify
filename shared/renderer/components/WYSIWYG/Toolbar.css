@@ -4,28 +4,34 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
  */
+
+/* ------------------------------------------------------------------ */
+/*  Toolbar container                                                  */
+/* ------------------------------------------------------------------ */
 .toolbar {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: var(--space-1);
-  padding: var(--space-2);
-  background-color: var(--color-background-primary);
+  padding: var(--space-2) var(--space-3);
+  background-color: var(--gray-a2);
   z-index: 10;
 }
 
 /* Position: top — render above editor content */
 .toolbarTop {
   order: -1;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--gray-a5);
 }
 
 /* Position: bottom — render below editor content */
 .toolbarBottom {
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--gray-a5);
 }
 
-
+/* ------------------------------------------------------------------ */
+/*  Groups & dividers                                                  */
+/* ------------------------------------------------------------------ */
 .toolbarGroup {
   display: flex;
   align-items: center;
@@ -34,27 +40,32 @@
 
 .toolbarDivider {
   width: 1px;
-  height: 20px;
-  background-color: var(--color-border);
+  height: 18px;
+  background-color: var(--gray-a5);
   margin: 0 var(--space-1);
+  flex-shrink: 0;
 }
 
+/* ------------------------------------------------------------------ */
+/*  Font-size input                                                    */
+/* ------------------------------------------------------------------ */
 .fontSizeInput {
-  height: 28px;
-  width: 50px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius);
-  background-color: var(--color-background-primary);
-  color: var(--color-text-primary);
-  font-size: 13px;
+  height: 26px;
+  width: 46px;
+  border: 1px solid var(--gray-a5);
+  border-radius: var(--radius-1);
+  background-color: var(--color-surface);
+  color: var(--gray-12);
+  font-size: 12px;
   text-align: center;
   padding: 0 4px;
   outline: none;
+  transition: border-color 0.15s ease;
 }
 
 .fontSizeInput:hover,
 .fontSizeInput:focus {
-  border-color: var(--color-border-hover);
+  border-color: var(--accent-8);
 }
 
 .fontSizeInput::-webkit-outer-spin-button,
@@ -68,7 +79,9 @@
   align-items: center;
 }
 
-/* --- CSS Tooltip (consistent with ToolbarButton) --- */
+/* ------------------------------------------------------------------ */
+/*  CSS Tooltip for font-size wrapper (consistent with ToolbarButton)  */
+/* ------------------------------------------------------------------ */
 .fontSizeWrapper[data-tooltip]::before,
 .fontSizeWrapper[data-tooltip]::after {
   position: absolute;
@@ -86,13 +99,13 @@
   left: 50%;
   transform: translateX(-50%) translateY(-4px);
   padding: 4px 8px;
-  background-color: var(--color-gray-800, #1f2937);
-  color: var(--color-white, #fff);
+  background-color: var(--gray-12);
+  color: var(--gray-1);
   font-size: 11px;
   font-weight: 500;
   white-space: nowrap;
-  border-radius: var(--radius-2);
-  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-1);
+  box-shadow: var(--shadow-2);
 }
 
 /* Tooltip Arrow */
@@ -103,7 +116,7 @@
   transform: translateX(-50%) translateY(-4px);
   border-width: 0 4px 4px;
   border-style: solid;
-  border-color: transparent transparent var(--color-gray-800, #1f2937) transparent;
+  border-color: transparent transparent var(--gray-12) transparent;
 }
 
 /* Show Tooltip on Hover */

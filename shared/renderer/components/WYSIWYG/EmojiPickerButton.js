@@ -5,11 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { FaceIcon } from '@radix-ui/react-icons';
 import { IconButton } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 
 import ContextMenu from '../ContextMenu';
-import Icon from '../Icon';
 
 import { COMMON_EMOJIS } from './constants';
 import ToolbarButton from './ToolbarButton';
@@ -21,7 +21,7 @@ export default function EmojiPickerButton({ onSelect, title, disabled }) {
     <ContextMenu align='left'>
       <ContextMenu.Trigger
         as={ToolbarButton}
-        icon={<Icon name='emoji' size={16} strokeWidth={2.5} />}
+        icon={<FaceIcon width={16} height={16} />}
         title={title}
         disabled={disabled}
       />

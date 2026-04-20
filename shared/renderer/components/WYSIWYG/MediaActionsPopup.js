@@ -5,11 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { SpeakerLoudIcon, VideoIcon } from '@radix-ui/react-icons';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
 import ContextMenu from '../ContextMenu';
-import Icon from '../Icon';
 
 import ToolbarButton from './ToolbarButton';
 
@@ -39,7 +39,7 @@ export default function MediaActionsPopup({
     <ContextMenu align='left'>
       <ContextMenu.Trigger
         as={ToolbarButton}
-        icon={<Icon name='video' size={16} strokeWidth={2.5} />}
+        icon={<VideoIcon width={16} height={16} />}
         title={t('shared:form.wysiwyg.mediaActions', 'Media')}
         disabled={disabled}
       />
@@ -47,7 +47,7 @@ export default function MediaActionsPopup({
       <ContextMenu.Menu>
         {hasVideo && (
           <ContextMenu.Item
-            icon={<Icon name='video' size={16} strokeWidth={2.5} />}
+            icon={<VideoIcon width={16} height={16} />}
             onClick={() => {
               openPrompt({
                 title: t('shared:form.wysiwyg.video', 'Video'),
@@ -67,7 +67,7 @@ export default function MediaActionsPopup({
         )}
         {hasAudio && (
           <ContextMenu.Item
-            icon={<Icon name='audio' size={16} strokeWidth={2.5} />}
+            icon={<SpeakerLoudIcon width={16} height={16} />}
             onClick={() => {
               openPrompt({
                 title: t('shared:form.wysiwyg.audio', 'Audio'),
@@ -87,7 +87,7 @@ export default function MediaActionsPopup({
         )}
         {hasYoutube && (
           <ContextMenu.Item
-            icon={<Icon name='youtube' size={16} strokeWidth={2.5} />}
+            icon={<VideoIcon width={16} height={16} />}
             onClick={() => {
               openPrompt({
                 title: t('shared:form.wysiwyg.youtube', 'YouTube'),

@@ -1,41 +1,76 @@
+/**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
 
+/* ------------------------------------------------------------------ */
+/*  Toolbar button                                                     */
+/* ------------------------------------------------------------------ */
 .toolbarBtn {
   position: relative;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 28px;
   height: 28px;
   padding: 0;
-  border: 1px solid transparent;
+  border: none;
   border-radius: var(--radius-2);
   background: transparent;
-  color: var(--color-text-secondary);
+  color: var(--gray-11);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease;
+  flex-shrink: 0;
 }
 
 .toolbarBtn:disabled {
-  opacity: 0.4;
+  opacity: 0.35;
   cursor: not-allowed;
 }
 
 .toolbarBtn:hover:not(:disabled) {
-  color: var(--color-text-primary);
+  color: var(--gray-12);
+  background-color: var(--gray-a3);
 }
 
+.toolbarBtn:active:not(:disabled) {
+  background-color: var(--gray-a4);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Active state                                                       */
+/* ------------------------------------------------------------------ */
 .toolbarBtnActive {
-  background-color: var(--indigo-8);
-  color: var(--color-white, #fff);
+  background-color: var(--accent-a3);
+  color: var(--accent-11);
 }
 
+.toolbarBtnActive:hover:not(:disabled) {
+  background-color: var(--accent-a4);
+  color: var(--accent-11);
+}
+
+/* ------------------------------------------------------------------ */
+/*  SVG icon sizing inside button                                      */
+/* ------------------------------------------------------------------ */
+.toolbarBtn :global(svg) {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Tooltip — above by default                                         */
+/* ------------------------------------------------------------------ */
 .toolbarBtn[data-tooltip]::before,
 .toolbarBtn[data-tooltip]::after {
   position: absolute;
   visibility: hidden;
   opacity: 0;
   pointer-events: none;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
   z-index: var(--z-tooltip, 1070);
 }
 
@@ -44,14 +79,15 @@
   bottom: calc(100% + 6px);
   left: 50%;
   transform: translateX(-50%) translateY(4px);
-  padding: 4px 8px;
-  background-color: var(--color-gray-800, #1f2937);
-  color: var(--color-white, #fff);
+  padding: 3px 7px;
+  background-color: var(--gray-12);
+  color: var(--gray-1);
   font-size: 11px;
   font-weight: 500;
   white-space: nowrap;
-  border-radius: var(--radius-2);
-  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-1);
+  box-shadow: var(--shadow-2);
+  letter-spacing: 0.01em;
 }
 
 .toolbarBtn[data-tooltip]::after {
@@ -61,9 +97,10 @@
   transform: translateX(-50%) translateY(4px);
   border-width: 4px 4px 0;
   border-style: solid;
-  border-color: var(--color-gray-800, #1f2937) transparent transparent transparent;
+  border-color: var(--gray-12) transparent transparent transparent;
 }
 
+/* Tooltip below variant */
 [data-tooltip-position='below'] .toolbarBtn[data-tooltip]::before {
   bottom: auto;
   top: calc(100% + 6px);
@@ -75,9 +112,10 @@
   top: calc(100% + 2px);
   transform: translateX(-50%) translateY(-4px);
   border-width: 0 4px 4px;
-  border-color: transparent transparent var(--color-gray-800, #1f2937) transparent;
+  border-color: transparent transparent var(--gray-12) transparent;
 }
 
+/* Show on hover */
 .toolbarBtn[data-tooltip]:hover:not(:disabled)::before,
 .toolbarBtn[data-tooltip]:hover:not(:disabled)::after {
   visibility: visible;

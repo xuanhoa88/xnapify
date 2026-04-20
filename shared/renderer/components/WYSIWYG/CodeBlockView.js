@@ -7,12 +7,11 @@
 
 import { useState, useCallback } from 'react';
 
+import { CheckIcon, CopyIcon } from '@radix-ui/react-icons';
 import { Button } from '@radix-ui/themes';
 import { NodeViewContent, NodeViewWrapper } from '@tiptap/react';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
-
-import Icon from '../Icon';
 
 import s from './CodeBlockView.css';
 
@@ -55,9 +54,9 @@ export default function CodeBlockView({ node }) {
         >
           <span className={s.copyIcon}>
             {copied ? (
-              <Icon name='check' size={16} strokeWidth={2.5} />
+              <CheckIcon width={16} height={16} />
             ) : (
-              <Icon name='copy' size={16} strokeWidth={2.5} />
+              <CopyIcon width={16} height={16} />
             )}
           </span>
           {copied ? 'Copied!' : 'Copy'}

@@ -1,10 +1,121 @@
-/* stylelint-disable block-no-empty */
-/* stylelint-disable */
-.wysiwygWrapper {}
-.wysiwygError {}
-.wysiwygDisabled {}
-.wysiwygFullScreen {}
-.editorContent {}
-.dragHandle {}
-.bubbleMenu {}
-.contentEditable {}
+/**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+/* ------------------------------------------------------------------ */
+/*  Wrapper                                                            */
+/* ------------------------------------------------------------------ */
+.wysiwygWrapper {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--gray-a6);
+  border-radius: var(--radius-2);
+  background-color: var(--color-surface);
+  overflow: hidden;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.wysiwygWrapper:focus-within {
+  border-color: var(--accent-8);
+  box-shadow: 0 0 0 1px var(--accent-8);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Error state                                                        */
+/* ------------------------------------------------------------------ */
+.wysiwygError {
+  border-color: var(--red-8);
+}
+
+.wysiwygError:focus-within {
+  border-color: var(--red-8);
+  box-shadow: 0 0 0 1px var(--red-8);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Disabled state                                                     */
+/* ------------------------------------------------------------------ */
+.wysiwygDisabled {
+  opacity: 0.55;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Full-screen mode                                                   */
+/* ------------------------------------------------------------------ */
+.wysiwygFullScreen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  border-radius: 0;
+  border: none;
+}
+
+.wysiwygFullScreen .editorContent {
+  flex: 1 1 0%;
+  overflow-y: auto;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Editor content area                                                */
+/* ------------------------------------------------------------------ */
+.editorContent {
+  position: relative;
+  min-height: 160px;
+}
+
+/* ProseMirror editable region */
+.contentEditable :global(.tiptap) {
+  padding: var(--space-3) var(--space-4);
+  min-height: 120px;
+  outline: none;
+  font-size: var(--font-size-2);
+  line-height: var(--line-height-3);
+  color: var(--gray-12);
+}
+
+.contentEditable :global(.tiptap p.is-editor-empty:first-child::before) {
+  content: attr(data-placeholder);
+  color: var(--gray-a8);
+  pointer-events: none;
+  float: left;
+  height: 0;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Drag handle                                                        */
+/* ------------------------------------------------------------------ */
+.dragHandle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-1);
+  color: var(--gray-a8);
+  cursor: grab;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.dragHandle:hover {
+  color: var(--gray-11);
+  background-color: var(--gray-a3);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Bubble menu                                                        */
+/* ------------------------------------------------------------------ */
+.bubbleMenu {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: var(--space-1);
+  background-color: var(--color-panel-solid);
+  border: 1px solid var(--gray-a6);
+  border-radius: var(--radius-2);
+  box-shadow: var(--shadow-3);
+}
