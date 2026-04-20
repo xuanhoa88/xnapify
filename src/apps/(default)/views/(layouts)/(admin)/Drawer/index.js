@@ -9,6 +9,7 @@ import { useCallback, useRef, useState, useEffect, useMemo } from 'react';
 
 import * as RadixIcons from '@radix-ui/react-icons';
 import { Flex, Box, Text, Button } from '@radix-ui/themes';
+import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
@@ -194,7 +195,11 @@ function Drawer({ minimal = false }) {
       <Flex
         align='center'
         gap='3'
-        className={`${s.menuItemFlex} ${isCompact ? s.menuItemCompact : ''} ${active ? s.menuItemActive : ''}`}
+        className={clsx(
+          s.menuItemFlex,
+          { [s.menuItemCompact]: isCompact },
+          { [s.menuItemActive]: active },
+        )}
       >
         {(() => {
           const Comp =
@@ -237,7 +242,7 @@ function Drawer({ minimal = false }) {
         as='aside'
         ref={siderRef}
         direction='column'
-        className={`${s.drawerAside} ${isMobile ? s.drawerAsideFixed : ''}`}
+        className={clsx(s.drawerAside, { [s.drawerAsideFixed]: isMobile })}
         // eslint-disable-next-line react/forbid-dom-props
         style={{
           width: isMobile ? '80vw' : `${siderWidth}px`,
@@ -336,7 +341,9 @@ function Drawer({ minimal = false }) {
                   <Flex
                     align='center'
                     gap='3'
-                    className={`${s.quickLinkFlex} ${isCompact ? s.quickLinkFlexCompact : ''}`}
+                    className={clsx(s.quickLinkFlex, {
+                      [s.quickLinkFlexCompact]: isCompact,
+                    })}
                   >
                     <RadixIcons.ArrowUpIcon width={18} height={18} />
                     {!isCompact && (
@@ -419,7 +426,9 @@ function Drawer({ minimal = false }) {
             className={s.collapseTrigger}
           >
             <Box
-              className={`${s.collapseChevronBase} ${isExpanded ? s.collapseChevronExpanded : ''}`}
+              className={clsx(s.collapseChevronBase, {
+                [s.collapseChevronExpanded]: isExpanded,
+              })}
             >
               <RadixIcons.ChevronRightIcon width={14} height={14} />
             </Box>

@@ -18,3 +18,15 @@
   justify-content: center;
   cursor: pointer;
 }
+
+.scrollBtnHidden {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(10px);
+}
+
+.scrollBtnVisible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}

@@ -9,6 +9,7 @@ import { useRef, useCallback, useMemo, useEffect } from 'react';
 
 import { ReloadIcon, CameraIcon } from '@radix-ui/react-icons';
 import { Flex, Box, Text, Heading } from '@radix-ui/themes';
+import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 
@@ -86,7 +87,9 @@ function ProfileHeader() {
           onKeyDown={e => {
             if (e.key === 'Enter') handleAvatarClick();
           }}
-          className={`${s.avatarBox} ${loading ? s.avatarBoxLoading : ''}`}
+          className={clsx(s.avatarBox, {
+            [s.avatarBoxLoading]: loading,
+          })}
         >
           {avatarUrl ? (
             <img src={avatarUrl} alt='Profile' className={s.avatarImg} />
@@ -94,7 +97,9 @@ function ProfileHeader() {
             <Text>{avatarInitial}</Text>
           )}
           <Flex
-            className={`${s.avatarOverlay} avatar-overlay ${loading ? s.avatarOverlayLoading : ''}`}
+            className={clsx(s.avatarOverlay, s.avatarOverlay, {
+              [s.avatarOverlayLoading]: loading,
+            })}
             align='center'
             justify='center'
           >

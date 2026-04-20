@@ -214,6 +214,7 @@ const FormCheckboxList = forwardRef(function FormCheckboxList$(
     // Dimensions
     maxHeight = 320,
     minHeight = 160,
+    size = '3',
     // Other
     className,
     disabled,
@@ -457,6 +458,7 @@ const FormCheckboxList = forwardRef(function FormCheckboxList$(
       {(searchable || onSearch) && (
         <TextField.Root
           type='text'
+          size={size}
           placeholder={displaySearchPlaceholder}
           value={effectiveSearchValue}
           onChange={handleSearchChange}

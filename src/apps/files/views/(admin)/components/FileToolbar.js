@@ -13,6 +13,7 @@ import {
   DashboardIcon,
 } from '@radix-ui/react-icons';
 import { Flex, Box, Button } from '@radix-ui/themes';
+import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
@@ -67,7 +68,10 @@ export default function FileToolbar() {
 
               <Button
                 variant='ghost'
-                className={`${s.breadcrumbBtn} ${isLast ? s.breadcrumbBtnActive : s.breadcrumbBtnInactive}`}
+                className={clsx(s.breadcrumbBtn, {
+                  [s.breadcrumbBtnActive]: isLast,
+                  [s.breadcrumbBtnInactive]: !isLast,
+                })}
                 onClick={() => !isLast && handleBreadcrumbClick(crumb)}
                 disabled={isLast}
               >
@@ -95,7 +99,10 @@ export default function FileToolbar() {
         <Flex align='center' gap='1' className={s.viewModeFlex}>
           <Button
             variant='ghost'
-            className={`${s.viewModeBtn} ${viewMode === 'list' ? s.viewModeBtnActive : s.viewModeBtnInactive}`}
+            className={clsx(s.viewModeBtn, {
+              [s.viewModeBtnActive]: viewMode === 'list',
+              [s.viewModeBtnInactive]: viewMode !== 'list',
+            })}
             onClick={() => dispatch(setViewMode('list'))}
             title={t('files:toolbar.list_view', 'List view')}
             iconOnly
@@ -104,7 +111,10 @@ export default function FileToolbar() {
           </Button>
           <Button
             variant='ghost'
-            className={`${s.viewModeBtn} ${viewMode === 'grid' ? s.viewModeBtnActive : s.viewModeBtnInactive}`}
+            className={clsx(s.viewModeBtn, {
+              [s.viewModeBtnActive]: viewMode === 'grid',
+              [s.viewModeBtnInactive]: viewMode !== 'grid',
+            })}
             onClick={() => dispatch(setViewMode('grid'))}
             title={t('files:toolbar.grid_view', 'Grid view')}
             iconOnly

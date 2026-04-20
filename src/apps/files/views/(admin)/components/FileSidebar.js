@@ -2,6 +2,7 @@ import { useEffect, useCallback } from 'react';
 
 import * as RadixIcons from '@radix-ui/react-icons';
 import { Box, Flex, Text, Button } from '@radix-ui/themes';
+import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
@@ -110,7 +111,10 @@ export default function FileSidebar() {
           <Button
             key={item.id}
             variant='ghost'
-            className={`${s.navBtn} ${currentView === item.id ? s.navBtnActive : s.navBtnInactive}`}
+            className={clsx(s.navBtn, {
+              [s.navBtnActive]: currentView === item.id,
+              [s.navBtnInactive]: currentView !== item.id,
+            })}
             onClick={() => handleNavClick(item.id)}
           >
             <Flex align='center' justify='center' className={s.navIconBox}>
@@ -143,7 +147,10 @@ export default function FileSidebar() {
       <Box className={s.quotaBox}>
         <Box className={s.quotaTrack}>
           <Box
-            className={`${s.quotaFill} ${percentage > 90 ? s.quotaFillDanger : s.quotaFillNormal}`}
+            className={clsx(s.quotaFill, {
+              [s.quotaFillDanger]: percentage > 90,
+              [s.quotaFillNormal]: percentage <= 90,
+            })}
             // eslint-disable-next-line react/forbid-dom-props
             style={{ width: `${percentage}%` }}
           />

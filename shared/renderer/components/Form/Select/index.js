@@ -22,7 +22,7 @@ import { useFormField } from '../FormContext';
  *   </Form.Field>
  */
 const FormSelect = forwardRef(function FormSelect$(
-  { options = [], placeholder, className, disabled, ...props },
+  { options = [], placeholder, size = '3', className, disabled, ...props },
   forwardedRef,
 ) {
   const { name, error } = useFormField();
@@ -34,6 +34,7 @@ const FormSelect = forwardRef(function FormSelect$(
       control={control}
       render={({ field }) => (
         <Select.Root
+          size={size}
           value={field.value !== undefined ? String(field.value) : undefined}
           onValueChange={field.onChange}
           disabled={disabled}

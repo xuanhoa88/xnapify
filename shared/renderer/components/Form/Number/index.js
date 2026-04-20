@@ -26,6 +26,7 @@ import s from './Index.css';
 const FormNumberInput = forwardRef(function FormNumberInput$(
   {
     placeholder,
+    size = '3',
     className,
     disabled,
     min = 0,
@@ -83,6 +84,7 @@ const FormNumberInput = forwardRef(function FormNumberInput$(
       <TextField.Root
         id={id}
         type='number'
+        size={size}
         placeholder={placeholder}
         disabled={disabled}
         min={min}

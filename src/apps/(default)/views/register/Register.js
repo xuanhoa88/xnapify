@@ -79,10 +79,6 @@ function Register() {
 
       <Flex align='center' justify='center' className={s.contentWrapper}>
         <Card size='4' variant='classic' className={s.formCard}>
-          <Heading as='h1' size='7' mb='6' className={s.title}>
-            {t('navigation.register', 'Register')}
-          </Heading>
-
           <Form.Error message={error} />
 
           <Form
@@ -166,21 +162,20 @@ function RegisterFormFields({ loading }) {
     <Flex direction='column' gap='4'>
       <Form.Field name='email' label={t('register.email', 'Email')}>
         <Form.Input
-          size='3'
           type='email'
           placeholder={t('register.emailPlaceholder', 'your.email@example.com')}
         />
       </Form.Field>
 
       <Form.Field name='password' label={t('register.password', 'Password')}>
-        <Form.Password size='3' />
+        <Form.Password />
       </Form.Field>
 
       <Form.Field
         name='confirmPassword'
         label={t('register.confirmPassword', 'Confirm Password')}
       >
-        <Form.Password size='3' />
+        <Form.Password />
       </Form.Field>
 
       <Button

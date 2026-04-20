@@ -9,6 +9,7 @@ import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 
 import { GlobeIcon, ChevronDownIcon, CheckIcon } from '@radix-ui/react-icons';
 import { Flex, Text, Box, Button } from '@radix-ui/themes';
+import clsx from 'clsx';
 import { useDispatch, useSelector } from 'react-redux';
 
 import {
@@ -87,7 +88,7 @@ function AdminLanguageSwitcher() {
         <Text size='2' weight='medium' className={s.langText}>
           {currentLanguageName || languageCode}
         </Text>
-        <Box className={`${s.chevronIcon} ${isOpen ? s.chevronIconOpen : ''}`}>
+        <Box className={clsx(s.chevronIcon, { [s.chevronIconOpen]: isOpen })}>
           <ChevronDownIcon width={12} height={12} />
         </Box>
       </Button>
@@ -99,7 +100,9 @@ function AdminLanguageSwitcher() {
               key={code}
               variant='ghost'
               onClick={e => handleLocaleChange(code, e)}
-              className={`${s.localeItem} ${code === currentLocale ? s.localeItemActive : ''}`}
+              className={clsx(s.localeItem, {
+                [s.localeItemActive]: code === currentLocale,
+              })}
             >
               <Text size='2'>{name}</Text>
               {code === currentLocale && (

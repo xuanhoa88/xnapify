@@ -14,6 +14,7 @@ import {
   GearIcon,
 } from '@radix-ui/react-icons';
 import { Flex, Box, Text, Heading, Grid, Card } from '@radix-ui/themes';
+import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
@@ -39,14 +40,14 @@ function FeaturesPreview({ featuresData }) {
   const { t } = useTranslation();
 
   return (
-    <Box as='section' className={`${s.lightGreyBg} ${s.sectionPadding}`}>
+    <Box as='section' className={clsx(s.lightGreyBg, s.sectionPadding)}>
       <Box className={s.maxWidth1200}>
         <Flex
           direction='column'
           align='center'
-          className={`${s.textCenter} ${s.mb8}`}
+          className={clsx(s.textCenter, s.mb8)}
         >
-          <Heading as='h2' size='8' className={`${s.textGray12} ${s.mb3}`}>
+          <Heading as='h2' size='8' className={clsx(s.textGray12, s.mb3)}>
             {t('home.features.title', 'Built-In Architecture')}
           </Heading>
           <Text size='4' color='gray' className={s.maxWidth700}>

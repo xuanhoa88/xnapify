@@ -6,6 +6,7 @@
  */
 
 import { Flex, Box, Text, Heading, Grid } from '@radix-ui/themes';
+import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
@@ -18,14 +19,14 @@ function NewsSection({ loading, news }) {
   const { t } = useTranslation();
 
   return (
-    <Box as='section' className={`${s.newsBg} ${s.sectionPadding}`}>
+    <Box as='section' className={clsx(s.newsBg, s.sectionPadding)}>
       <Box className={s.maxWidth1200}>
         <Flex
           direction='column'
           align='center'
-          className={`${s.textCenter} ${s.mb8}`}
+          className={clsx(s.textCenter, s.mb8)}
         >
-          <Heading as='h2' size='8' className={`${s.textGray12} ${s.mb3}`}>
+          <Heading as='h2' size='8' className={clsx(s.textGray12, s.mb3)}>
             {t('home.news.title', 'Latest Updates')}
           </Heading>
           <Text size='4' color='gray' className={s.maxWidth600}>
@@ -73,7 +74,7 @@ function NewsSection({ loading, news }) {
                           <Text
                             size='3'
                             color='gray'
-                            className={`${s.lineClamp3} ${s.mb3}`}
+                            className={clsx(s.lineClamp3, s.mb3)}
                           >
                             {item.contentSnippet || item.content}
                           </Text>
@@ -91,7 +92,7 @@ function NewsSection({ loading, news }) {
             ) : (
               <Flex
                 justify='center'
-                className={`${s.p8} ${s.lightGreyBg} ${s.radius4}`}
+                className={clsx(s.p8, s.lightGreyBg, s.radius4)}
               >
                 <Text size='3' color='gray'>
                   {t(

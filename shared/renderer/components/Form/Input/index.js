@@ -22,7 +22,7 @@ import { useFormField, useMergeRefs } from '../FormContext';
  *   </Form.Field>
  */
 const FormInput = forwardRef(function FormInput$(
-  { type = 'text', placeholder, className, disabled, autoFocus, ...props },
+  { type = 'text', size = '3', placeholder, className, disabled, autoFocus, ...props },
   forwardedRef,
 ) {
   const { id, name, error } = useFormField();
@@ -38,6 +38,7 @@ const FormInput = forwardRef(function FormInput$(
     <TextField.Root
       id={id}
       type={type}
+      size={size}
       placeholder={placeholder}
       disabled={disabled}
       color={error ? 'red' : undefined}

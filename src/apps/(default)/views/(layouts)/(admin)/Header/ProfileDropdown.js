@@ -15,6 +15,7 @@ import {
   ExitIcon,
 } from '@radix-ui/react-icons';
 import { Flex, Text, Box } from '@radix-ui/themes';
+import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 
@@ -100,7 +101,9 @@ function ProfileDropdown() {
           <Flex
             align='center'
             gap='2'
-            className={`${s.profileTrigger} ${isOpen ? s.profileTriggerOpen : ''}`}
+            className={clsx(s.profileTrigger, {
+              [s.profileTriggerOpen]: isOpen,
+            })}
           >
             <Flex align='center' justify='center' className={s.avatarCircle}>
               {avatarUrl ? (
@@ -125,7 +128,9 @@ function ProfileDropdown() {
               </Text>
             </Flex>
             <Box
-              className={`${s.profileChevron} ${isOpen ? s.chevronIconOpen : ''}`}
+              className={clsx(s.profileChevron, {
+                [s.chevronIconOpen]: isOpen,
+              })}
             >
               <ChevronDownIcon width={12} height={12} />
             </Box>

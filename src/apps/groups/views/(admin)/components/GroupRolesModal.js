@@ -14,6 +14,7 @@ import {
 } from 'react';
 
 import { Flex, Box, Text, Checkbox } from '@radix-ui/themes';
+import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
@@ -210,11 +211,12 @@ const GroupRolesModal = forwardRef(({ fetchRoles }, ref) => {
                 role='checkbox'
                 aria-checked={selections.includes(role.name)}
                 tabIndex={0}
-                className={`${s.itemFlex} ${
+                className={clsx(
+                  s.itemFlex,
                   selections.includes(role.name)
                     ? s.itemFlexSelected
-                    : s.itemFlexUnselected
-                }`}
+                    : s.itemFlexUnselected,
+                )}
                 onKeyDown={e => {
                   if (e.key === ' ' || e.key === 'Enter') {
                     e.preventDefault();

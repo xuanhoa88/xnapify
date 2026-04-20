@@ -9,6 +9,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 
 import { CodeIcon, CheckIcon, CopyIcon } from '@radix-ui/react-icons';
 import { Flex, Text } from '@radix-ui/themes';
+import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 
 import { useFormContext } from '@shared/renderer/components/Form';
@@ -88,7 +89,10 @@ export default function TemplateVariables() {
             gap='1'
             onClick={() => handleCopy(v)}
             title={t('admin:emails.form.clickToCopy', 'Click to copy')}
-            className={`${s.variableBtn} ${copiedVar === v ? s.variableBtnCopied : s.variableBtnNormal}`}
+            className={clsx(s.variableBtn, {
+              [s.variableBtnCopied]: copiedVar === v,
+              [s.variableBtnNormal]: copiedVar !== v,
+            })}
           >
             {copiedVar === v ? (
               <CheckIcon width={14} height={14} />

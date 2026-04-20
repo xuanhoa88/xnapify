@@ -101,10 +101,6 @@ function Login() {
 
       <Flex align='center' justify='center' className={s.contentWrapper}>
         <Card size='4' variant='classic' className={s.formCard}>
-          <Heading as='h1' size='7' mb='6' className={s.title}>
-            {t('navigation.login', 'Log In')}
-          </Heading>
-
           <Form.Error message={error} />
 
           {/* OAuth buttons slot — hidden via CSS :has(:empty) when no plugins registered */}
@@ -203,7 +199,6 @@ function LoginFormFields({ loading }) {
     <Flex direction='column' gap='4'>
       <Form.Field name='email' label={t('login.email', 'Email')}>
         <Form.Input
-          size='3'
           type='email'
           placeholder={t('login.emailPlaceholder', 'your.email@example.com')}
         />
@@ -216,7 +211,7 @@ function LoginFormFields({ loading }) {
             {t('login.forgotPassword', 'Forgot password?')}
           </Link>
         </Flex>
-        <Form.Password size='3' />
+        <Form.Password />
         <Form.Error />
       </Form.Field>
 

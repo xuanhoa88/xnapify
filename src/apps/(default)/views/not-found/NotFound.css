@@ -1,44 +1,99 @@
-.pageContainer {
+.pageWrapper {
+  background-color: var(--color-background);
   min-height: 100vh;
   display: flex;
-  flex-direction: column;
-  background-color: var(--color-background);
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  padding: var(--space-8);
 }
 
-.hero {
-  padding: var(--space-9) var(--space-4);
-  background-color: var(--indigo-3);
+.contentContainer {
+  position: relative;
+  z-index: 1;
   text-align: center;
-  flex-shrink: 0;
+  max-width: 800px;
 }
 
-.errorCode {
-  font-size: var(--font-size-9);
+.watermarkWrapper {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: clamp(10rem, 30vw, 25rem);
+  color: var(--indigo-2);
+  opacity: 0.4;
+  z-index: -1;
+  pointer-events: none;
+  user-select: none;
+  font-weight: 900;
+  font-family: sans-serif;
   line-height: 1;
-  font-weight: bold;
-  color: var(--indigo-11);
-  margin-bottom: var(--space-4);
-  letter-spacing: -0.05em;
 }
 
 .heroTitle {
+  font-size: clamp(3rem, 8vw, 5rem);
+  line-height: 1.05;
+  letter-spacing: -0.04em;
   color: var(--gray-12);
+  margin-bottom: var(--space-5);
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--gray-12) 0%, var(--gray-9) 100%);
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .heroSubtitle {
-  max-width: 600px;
+  font-size: clamp(1.25rem, 3vw, 1.5rem);
+  line-height: 1.5;
+  color: var(--gray-11);
+  margin-bottom: var(--space-8);
+  font-weight: 400;
 }
 
-.contentWrapper {
-  flex-grow: 1;
-  padding: var(--space-6) var(--space-4);
+.actionsRow {
+  margin-top: var(--space-6);
 }
 
-.contentInner {
-  max-width: 800px;
-  margin: 0 auto;
-}
-
-.link {
+.actionBtnPrimary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--gray-12);
+  color: var(--color-background);
+  padding: var(--space-4) var(--space-6);
+  border-radius: var(--radius-3);
+  font-weight: 600;
+  font-size: var(--font-size-3);
   text-decoration: none;
+  transition: opacity 0.2s, transform 0.2s;
+  cursor: pointer;
+  border: none;
+}
+
+.actionBtnPrimary:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
+}
+
+.actionBtnSecondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: transparent;
+  color: var(--gray-12);
+  border: 1px solid var(--gray-6);
+  padding: var(--space-4) var(--space-6);
+  border-radius: var(--radius-3);
+  font-weight: 600;
+  font-size: var(--font-size-3);
+  text-decoration: none;
+  transition: background-color 0.2s, transform 0.2s;
+  cursor: pointer;
+}
+
+.actionBtnSecondary:hover {
+  background-color: var(--gray-3);
+  transform: translateY(-2px);
 }

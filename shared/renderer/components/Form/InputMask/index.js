@@ -33,6 +33,7 @@ import useMask from './useMask';
 const FormInputMask = forwardRef(function FormInputMask$(
   {
     type = 'text',
+    size = '3',
     placeholder: userPlaceholder,
     className,
     disabled,
@@ -81,6 +82,7 @@ const FormInputMask = forwardRef(function FormInputMask$(
     <TextField.Root
       id={id}
       type={type}
+      size={size}
       placeholder={userPlaceholder || maskPlaceholderText}
       disabled={disabled}
       color={error ? 'red' : undefined}

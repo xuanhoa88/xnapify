@@ -14,6 +14,7 @@ import {
 } from 'react';
 
 import { Box, Flex, Text, Checkbox } from '@radix-ui/themes';
+import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
@@ -280,11 +281,12 @@ const UserGroupsModal = forwardRef(({ onSuccess, fetchGroups }, ref) => {
                 align='center'
                 gap='3'
                 p='3'
-                className={`${s.itemBox} ${
+                className={clsx(
+                  s.itemBox,
                   selections.includes(group.id)
                     ? s.itemBoxSelected
-                    : s.itemBoxDefault
-                }`}
+                    : s.itemBoxDefault,
+                )}
                 onClick={() => toggleSelection(group.id)}
                 role='checkbox'
                 aria-checked={selections.includes(group.id)}

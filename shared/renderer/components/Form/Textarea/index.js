@@ -22,7 +22,7 @@ import { useFormField, useMergeRefs } from '../FormContext';
  *   </Form.Field>
  */
 const FormTextarea = forwardRef(function FormTextarea$(
-  { placeholder, className, disabled, rows = 4, ...props },
+  { placeholder, size = '3', className, disabled, rows = 4, ...props },
   forwardedRef,
 ) {
   const { id, name, error } = useFormField();
@@ -37,6 +37,7 @@ const FormTextarea = forwardRef(function FormTextarea$(
   return (
     <TextArea
       id={id}
+      size={size}
       placeholder={placeholder}
       disabled={disabled}
       color={error ? 'red' : undefined}

@@ -9,6 +9,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 
 import * as RadixIcons from '@radix-ui/react-icons';
 import { Flex, Text, Box, Button } from '@radix-ui/themes';
+import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 
 import s from './Notifications.css';
@@ -106,7 +107,7 @@ function AdminNotifications() {
         variant='ghost'
         onClick={handleToggle}
         title={t('common.notifications', 'Notifications')}
-        className={`${s.notificationBtn} ${isOpen ? s.notificationBtnOpen : ''}`}
+        className={clsx(s.notificationBtn, { [s.notificationBtnOpen]: isOpen })}
       >
         <RadixIcons.BellIcon width={18} height={18} />
         {unreadCount > 0 && (
@@ -117,7 +118,7 @@ function AdminNotifications() {
       </Button>
 
       {isOpen && (
-        <Box className={`${s.dropdownBox} ${s.notificationDropdown}`}>
+        <Box className={clsx(s.dropdownBox, s.notificationDropdown)}>
           <Flex align='center' justify='between' className={s.dropdownHeader}>
             <Text size='3' weight='bold'>
               {t('common.notifications', 'Notifications')}
@@ -137,7 +138,9 @@ function AdminNotifications() {
                 <Flex
                   key={notification.id}
                   gap='3'
-                  className={`${s.notificationItem} ${!notification.read ? s.notificationItemUnread : ''}`}
+                  className={clsx(s.notificationItem, {
+                    [s.notificationItemUnread]: !notification.read,
+                  })}
                 >
                   <Flex
                     align='center'

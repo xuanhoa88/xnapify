@@ -52,6 +52,7 @@ function SearchableSelect({
   multiple = false,
   showSearch = true,
   clearable = false,
+  size = '2',
   renderOption,
 }) {
   const { t } = useTranslation();
@@ -279,7 +280,7 @@ function SearchableSelect({
         )}
       >
         <Text
-          size='2'
+          size={size}
           className={displayText ? s.textValue : s.textPlaceholder}
         >
           {displayText || displayPlaceholder}
@@ -314,7 +315,7 @@ function SearchableSelect({
                 <Box px='2' pb='2'>
                   <TextField.Root
                     ref={inputRef}
-                    size='2'
+                    size={size}
                     value={searchTerm}
                     onChange={handleSearchChange}
                     placeholder={displaySearchPlaceholder}
@@ -341,7 +342,7 @@ function SearchableSelect({
               >
                 {loading && !filteredOptions.length ? (
                   <Box p='3' className={s.messageBox}>
-                    <Text size='2'>
+                    <Text size={size}>
                       {t(
                         'shared:components.searchableSelect.loading',
                         'Loading...',
@@ -384,7 +385,7 @@ function SearchableSelect({
                               />
                             </Box>
                           )}
-                          <Text size='2' className={s.optionText}>
+                          <Text size={size} className={s.optionText}>
                             {renderOption ? renderOption(option) : option.label}
                           </Text>
                         </Flex>
@@ -413,7 +414,7 @@ function SearchableSelect({
                   </>
                 ) : (
                   <Box p='3' className={s.messageBox}>
-                    <Text size='2'>
+                    <Text size={size}>
                       {t(
                         'shared:components.searchableSelect.noOptions',
                         'No options found',
@@ -458,6 +459,7 @@ SearchableSelect.propTypes = {
   placeholder: PropTypes.string,
   searchPlaceholder: PropTypes.string,
   debounceMs: PropTypes.number,
+  size: PropTypes.string,
   className: PropTypes.string,
   disabled: PropTypes.bool,
 };

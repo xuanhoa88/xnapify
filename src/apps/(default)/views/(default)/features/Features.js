@@ -5,7 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { Flex, Box, Text, Heading, Grid } from '@radix-ui/themes';
+import * as RadixIcons from '@radix-ui/react-icons';
+import { Flex, Box, Text, Heading, Container } from '@radix-ui/themes';
+import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 
 import { Link } from '@shared/renderer/components/History';
@@ -15,77 +17,93 @@ import { featuresData } from '../data';
 import s from './Features.css';
 
 /**
- * Features listing substituting wrapper CSS mappings enforcing static Box sizing layouts matching native Radix.
+ * Premium Features listing showcasing a maximalist typography hero and a dynamic,
+ * asymmetrical grid layout to highlight architectural capabilities.
  */
 function Features() {
   const { t } = useTranslation();
 
   return (
-    <Box>
-      {/* Hero Section */}
-      <Box
-        as='section'
-        className={`${s.heroSection} ${s.sectionPadding} ${s.textCenter} ${s.textWhite}`}
-      >
-        <Flex direction='column' align='center' className={s.maxWidth800}>
-          <Heading as='h1' size='8' className={`${s.mb4} ${s.textWhite}`}>
-            {t('features.hero.title', 'Our Features')}
-          </Heading>
-          <Text size='4' className={`${s.heroSubtitle} ${s.maxWidth600}`}>
-            {t(
-              'features.hero.subtitle',
-              'Discover the powerful features that make this starter kit amazing',
-            )}
-          </Text>
-        </Flex>
+    <Box className={s.pageWrapper}>
+      {/* Dramatic Hero Section */}
+      <Box as='section' className={clsx(s.heroSection, s.sectionPadding)}>
+        <Container size='4'>
+          <Flex direction='column' className={s.heroContent}>
+            <Heading as='h1' className={s.heroTitle}>
+              {t('features.hero.title', 'Architecture that scales.')}
+            </Heading>
+            <Text className={s.heroSubtitle}>
+              {t(
+                'features.hero.subtitle',
+                'No generic templates. No compromises. Discover the powerful features that make this starter kit an industrial-grade foundation.',
+              )}
+            </Text>
+          </Flex>
+        </Container>
       </Box>
 
-      {/* Features Grid */}
-      <Box as='section' className={`${s.p8X4} ${s.newsBg}`}>
-        <Box className={s.maxWidth1200}>
-          <Grid columns={{ initial: '1', sm: '2', md: '3' }} gap='5'>
-            {featuresData.map(feature => (
-              <Flex
-                asChild
+      {/* Asymmetrical Features Grid */}
+      <Box as='section' className={clsx(s.featuresSection, s.sectionPadding)}>
+        <Container size='4'>
+          <Box className={s.gridContainer}>
+            {featuresData.map((feature, index) => (
+              <Box
                 key={feature.id}
-                direction='column'
-                className={`${s.featureCard} ${s.featureLinkCard}`}
+                className={clsx(s.featureCard, {
+                  [s.cardFeatured]: index === 0, // make the first one larger
+                })}
               >
-                <Link to={`/features/${feature.id}`}>
-                  <Flex align='center' gap='3' className={s.mb4}>
+                <Link to={`/features/${feature.id}`} className={s.featureLink}>
+                  <Box className={s.cardGlow} />
+                  <Flex direction='column' className={s.cardContent}>
                     <Flex
-                      align='center'
-                      justify='center'
-                      className={s.featureIcon}
+                      justify='between'
+                      align='start'
+                      className={s.cardHeader}
                     >
-                      {feature.icon}
+                      <Flex
+                        align='center'
+                        justify='center'
+                        className={s.featureIcon}
+                      >
+                        {(() => {
+                          const IconComp =
+                            RadixIcons[feature.icon] || RadixIcons.CubeIcon;
+                          return <IconComp width={28} height={28} />;
+                        })()}
+                      </Flex>
+                      <Text className={s.featureNumber}>{`0${index + 1}`}</Text>
                     </Flex>
-                    <Heading as='h3' size='4' className={s.textGray12}>
-                      {feature.name}
-                    </Heading>
-                  </Flex>
-                  <Text size='3' color='gray' className={`${s.mb4} ${s.flex1}`}>
-                    {feature.description}
-                  </Text>
-                  <Flex wrap='wrap' gap='2' className={s.mb5}>
-                    {feature.tags.map(tag => (
-                      <Text key={tag} size='1' className={s.tagBadge}>
-                        {tag}
+
+                    <Box className={s.cardBody}>
+                      <Heading as='h3' className={s.cardTitle}>
+                        {feature.name}
+                      </Heading>
+                      <Text className={s.cardDescription}>
+                        {feature.description}
                       </Text>
-                    ))}
+                    </Box>
+
+                    <Flex
+                      className={s.cardFooter}
+                      justify='between'
+                      align='center'
+                    >
+                      <Flex wrap='wrap' gap='2'>
+                        {feature.tags.slice(0, 2).map(tag => (
+                          <Text key={tag} className={s.tagBadge}>
+                            {tag}
+                          </Text>
+                        ))}
+                      </Flex>
+                      <Box className={s.arrowIcon}>→</Box>
+                    </Flex>
                   </Flex>
-                  <Text
-                    size='2'
-                    weight='medium'
-                    className={`${s.textIndigo11} ${s.mtAuto}`}
-                  >
-                    {t('features.learnMore', 'Learn more →')}
-                  </Text>
                 </Link>
-              </Flex>
+              </Box>
             ))}
-          </Grid>
-        </Box>
+          </Box>
+        </Container>
       </Box>
     </Box>
   );

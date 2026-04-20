@@ -131,7 +131,7 @@ function ProfileDropdown() {
 
           {/* Navigation Items */}
           <DropdownMenu.Item onClick={() => history.push('/profile')}>
-            <PersonIcon width={16} height={16} style={{ marginRight: '8px' }} />
+            <PersonIcon width={16} height={16} className={s.menuIcon} />
             {t('navigation.profile', 'Profile')}
           </DropdownMenu.Item>
 
@@ -144,21 +144,21 @@ function ProfileDropdown() {
               <LightningBoltIcon
                 width={16}
                 height={16}
-                style={{ marginRight: '8px' }}
+                className={s.menuIcon}
               />
               {t('navigation.nodeRed', 'Node-RED')}
             </DropdownMenu.Item>
           )}
 
           <DropdownMenu.Item onClick={() => history.push('/admin')}>
-            <GearIcon width={16} height={16} style={{ marginRight: '8px' }} />
+            <GearIcon width={16} height={16} className={s.menuIcon} />
             {t('navigation.admin', 'Admin Panel')}
           </DropdownMenu.Item>
 
           <DropdownMenu.Separator />
 
           <DropdownMenu.Item color='red' onClick={handleLogout}>
-            <ExitIcon width={16} height={16} style={{ marginRight: '8px' }} />
+            <ExitIcon width={16} height={16} className={s.menuIcon} />
             {t('navigation.logout', 'Logout')}
           </DropdownMenu.Item>
         </DropdownMenu.Content>

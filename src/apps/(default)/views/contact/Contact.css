@@ -1,28 +1,38 @@
-.pageContainer {
+.pageWrapper {
   background-color: var(--color-background);
   min-height: 100vh;
-  padding-bottom: var(--space-8);
-}
-
-.hero {
-  background-color: var(--indigo-3);
-  padding: var(--space-8) var(--space-4);
-  margin-bottom: var(--space-6);
-  text-align: center;
+  padding: var(--space-8) var(--space-4) calc(var(--space-9) * 2);
 }
 
 .heroContent {
+  padding-top: var(--space-8);
+  padding-bottom: var(--space-8);
+  text-align: center;
   max-width: 800px;
+  margin: 0 auto;
 }
 
 .heroTitle {
-  color: var(--indigo-11);
+  font-size: clamp(3rem, 6vw, 4.5rem);
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+  color: var(--gray-12);
+  margin-bottom: var(--space-5);
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--gray-12) 0%, var(--gray-9) 100%);
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.heroSubtitle {
+  font-size: clamp(1.25rem, 3vw, 1.5rem);
+  line-height: 1.5;
+  color: var(--gray-11);
+  font-weight: 400;
 }
 
 .mainContent {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 var(--space-4);
+  margin-top: var(--space-8);
 }
 
 .grid {
@@ -30,66 +40,147 @@
 }
 
 .formSection {
-  grid-column: span 2 / span 2;
+  grid-column: span 1;
+}
+
+@media (min-width: 1024px) {
+  .formSection {
+    grid-column: span 2;
+  }
+}
+
+.sectionTitle {
+  font-size: clamp(2rem, 4vw, 2.5rem);
+  color: var(--gray-12);
+  font-weight: 700;
+  margin-bottom: var(--space-3);
+  letter-spacing: -0.02em;
+}
+
+.sectionSubtitle {
+  font-size: var(--font-size-4);
+  color: var(--gray-11);
+  line-height: 1.6;
 }
 
 .formBox {
   background-color: var(--color-panel-solid);
-  padding: var(--space-6);
-  border-radius: var(--radius-4);
-  box-shadow: var(--shadow-3);
+  padding: var(--space-7);
+  border-radius: var(--radius-5);
+  box-shadow: 0 4px 24px -12px rgb(0 0 0 / 10%);
+  border: 1px solid var(--gray-4);
 }
 
+.fullWidthBtn {
+  width: 100%;
+}
+
+.submitBtnWrapper button {
+  background-color: var(--gray-12);
+  color: var(--color-background);
+  height: 44px;
+  font-size: var(--font-size-3);
+  font-weight: 600;
+  border-radius: var(--radius-3);
+  transition: transform 0.2s, opacity 0.2s;
+  width: 100%;
+}
+
+.submitBtnWrapper button:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
+}
+
+/* Sidebar Info Cards */
 .infoCard {
   background-color: var(--color-panel-solid);
-  padding: var(--space-5);
+  padding: var(--space-6);
   border-radius: var(--radius-4);
-  box-shadow: var(--shadow-2);
+  border: 1px solid var(--gray-4);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.infoCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px -12px rgb(0 0 0 / 10%);
+}
+
+.cardTitle {
+  font-size: var(--font-size-2);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  color: var(--gray-9);
+  margin-bottom: var(--space-2);
+  border-bottom: 1px solid var(--gray-4);
+  padding-bottom: var(--space-4);
 }
 
 .iconWrapper {
   width: 36px;
   height: 36px;
-  border-radius: 50%;
+  border-radius: var(--radius-3);
   background-color: var(--indigo-3);
   color: var(--indigo-11);
   flex-shrink: 0;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s ease;
+}
+
+.infoCard:hover .iconWrapper {
+  transform: scale(1.1) rotate(-5deg);
+  background-color: var(--indigo-4);
 }
 
 .itemLabel {
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.02em;
 }
 
 .itemLink {
-  color: var(--indigo-11);
+  color: var(--gray-12);
   text-decoration: none;
+  transition: color 0.2s;
+}
+
+.itemLink:hover {
+  color: var(--indigo-11);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.itemValue {
+  color: var(--gray-12);
 }
 
 .socialIconWrapper {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-3);
   background-color: var(--gray-3);
   color: var(--gray-11);
-  transition: all 0.2s;
-  text-decoration: none;
+  transition: background-color 0.2s, color 0.2s, transform 0.2s;
 }
 
 .socialIconWrapper:hover {
-  background-color: var(--indigo-11);
-  color: var(--indigo-1);
+  background-color: var(--indigo-4);
+  color: var(--indigo-11);
+  transform: translateY(-2px);
 }
 
 .officeHourItem {
-  padding-bottom: var(--space-2);
-  border-bottom: 1px solid var(--gray-4);
+  padding: var(--space-3) 0;
+  border-bottom: 1px dashed var(--gray-4);
+}
+
+.officeHourItem:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
 }
 
 .officeHourDay {
   text-transform: capitalize;
 }
 
-.fullWidthBtn {
-  width: 100%;
+.officeHourValue {
+  color: var(--gray-12);
 }

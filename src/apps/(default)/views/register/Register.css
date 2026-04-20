@@ -25,10 +25,6 @@
   display: none !important;
 }
 
-.title {
-  color: var(--gray-12);
-}
-
 .loginLink {
   color: var(--indigo-11);
   text-decoration: none;

@@ -1,8 +1,89 @@
-.container {
-  max-width: var(--content-max-width, 1000px);
+.pageWrapper {
+  background-color: var(--color-background);
+  min-height: 100vh;
+  padding: var(--space-8) var(--space-4) calc(var(--space-9) * 2);
 }
 
-.content {
-  line-height: 1.6;
+.contentContainer {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.pageTitle {
+  font-size: clamp(3rem, 6vw, 4.5rem);
+  line-height: 1.1;
+  letter-spacing: -0.04em;
   color: var(--gray-12);
+  margin-bottom: calc(var(--space-8) * 1.5);
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--gray-12) 0%, var(--gray-9) 100%);
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Editorial Markdown Content Styling */
+.markdownContent {
+  color: var(--gray-11);
+  font-size: var(--font-size-4);
+  line-height: 1.8;
+}
+
+.markdownContent h2 {
+  font-size: clamp(2rem, 4vw, 2.5rem);
+  color: var(--gray-12);
+  font-weight: 700;
+  margin-top: calc(var(--space-8) * 1.2);
+  margin-bottom: var(--space-5);
+  letter-spacing: -0.02em;
+}
+
+.markdownContent h3 {
+  font-size: clamp(1.5rem, 3vw, 1.75rem);
+  color: var(--gray-12);
+  font-weight: 600;
+  margin-top: var(--space-8);
+  margin-bottom: var(--space-4);
+}
+
+.markdownContent p {
+  margin-bottom: var(--space-6);
+}
+
+.markdownContent p:last-child {
+  margin-bottom: 0;
+}
+
+.markdownContent ul,
+.markdownContent ol {
+  margin-bottom: var(--space-6);
+  padding-left: var(--space-6);
+}
+
+.markdownContent li {
+  margin-bottom: var(--space-3);
+}
+
+.markdownContent a {
+  color: var(--indigo-11);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+  transition: color 0.2s;
+}
+
+.markdownContent a:hover {
+  color: var(--indigo-9);
+}
+
+.markdownContent blockquote {
+  border-left: 4px solid var(--indigo-6);
+  padding: var(--space-5);
+  padding-left: var(--space-5);
+  margin-left: 0;
+  margin-right: 0;
+  margin-bottom: var(--space-6);
+  color: var(--gray-12);
+  font-style: italic;
+  background-color: var(--gray-2);
+  border-radius: 0 var(--radius-3) var(--radius-3) 0;
 }

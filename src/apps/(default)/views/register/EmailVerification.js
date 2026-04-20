@@ -205,7 +205,6 @@ function EmailVerificationFormFields({ loading, showTokenField }) {
           label={t('emailVerification.token', 'Verification Token')}
         >
           <Form.Input
-            size='3'
             type='text'
             placeholder={t(
               'emailVerification.tokenPlaceholder',

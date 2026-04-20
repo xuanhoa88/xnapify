@@ -9,6 +9,7 @@ import { useState, useEffect, useCallback } from 'react';
 
 import { ArrowUpIcon } from '@radix-ui/react-icons';
 import { Flex, Text, Button } from '@radix-ui/themes';
+import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 
 import s from './AdminFooter.css';
@@ -85,13 +86,10 @@ function AdminFooter() {
         color='indigo'
         onClick={scrollToTop}
         title={t('common.scrollToTop', 'Scroll to top')}
-        className={s.scrollBtn}
-        // eslint-disable-next-line react/forbid-dom-props
-        style={{
-          opacity: showScroll ? 1 : 0,
-          visibility: showScroll ? 'visible' : 'hidden',
-          transform: showScroll ? 'translateY(0)' : 'translateY(10px)',
-        }}
+        className={clsx(s.scrollBtn, {
+          [s.scrollBtnVisible]: showScroll,
+          [s.scrollBtnHidden]: !showScroll,
+        })}
       >
         <ArrowUpIcon width={20} height={20} />
       </Button>

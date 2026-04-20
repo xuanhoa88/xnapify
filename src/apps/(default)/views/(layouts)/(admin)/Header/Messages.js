@@ -9,6 +9,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 
 import { EnvelopeClosedIcon } from '@radix-ui/react-icons';
 import { Flex, Text, Box, Button } from '@radix-ui/themes';
+import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 
 import s from './Messages.css';
@@ -90,7 +91,7 @@ function AdminMessages() {
         variant='ghost'
         onClick={handleToggle}
         title={t('common.messages', 'Messages')}
-        className={`${s.messagesBtn} ${isOpen ? s.messagesBtnOpen : ''}`}
+        className={clsx(s.messagesBtn, { [s.messagesBtnOpen]: isOpen })}
       >
         <EnvelopeClosedIcon width={18} height={18} />
         {unreadCount > 0 && (
@@ -101,7 +102,7 @@ function AdminMessages() {
       </Button>
 
       {isOpen && (
-        <Box className={`${s.dropdownBox} ${s.messagesDropdown}`}>
+        <Box className={clsx(s.dropdownBox, s.messagesDropdown)}>
           <Flex align='center' justify='between' className={s.dropdownHeader}>
             <Text size='3' weight='bold'>
               {t('common.messages', 'Messages')}
@@ -118,7 +119,9 @@ function AdminMessages() {
               <Flex
                 key={message.id}
                 gap='3'
-                className={`${s.messageItem} ${!message.read ? s.messageItemUnread : ''}`}
+                className={clsx(s.messageItem, {
+                  [s.messageItemUnread]: !message.read,
+                })}
               >
                 <Flex
                   align='center'

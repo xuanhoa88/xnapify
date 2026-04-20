@@ -15,6 +15,7 @@ import {
   Cross2Icon,
 } from '@radix-ui/react-icons';
 import { Box, Flex, Text, Button, Select } from '@radix-ui/themes';
+import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
@@ -155,7 +156,10 @@ const ShareModal = forwardRef((props, ref) => {
           <Flex
             align='center'
             justify='center'
-            className={`${s.avatarBox} ${isGroup ? s.avatarGroup : s.avatarUser}`}
+            className={clsx(s.avatarBox, {
+              [s.avatarGroup]: isGroup,
+              [s.avatarUser]: !isGroup,
+            })}
           >
             {(() => {
               const Comp = isGroup ? GroupIcon : PersonIcon;
@@ -301,7 +305,11 @@ const ShareModal = forwardRef((props, ref) => {
                 <Flex
                   align='center'
                   justify='center'
-                  className={`${s.accessIconBox} ${shareType === 'private' ? s.accessPrivate : shareType === 'shared_users' ? s.accessShared : s.accessPublic}`}
+                  className={clsx(s.accessIconBox, {
+                    [s.accessPrivate]: shareType === 'private',
+                    [s.accessShared]: shareType === 'shared_users',
+                    [s.accessPublic]: shareType === 'public',
+                  })}
                 >
                   {shareType === 'private' ? (
                     <LockClosedIcon width={20} height={20} />
@@ -393,7 +401,7 @@ const ShareModal = forwardRef((props, ref) => {
                           <Flex
                             align='center'
                             justify='center'
-                            className={`${s.avatarBox} ${s.avatarGroup}`}
+                            className={clsx(s.avatarBox, s.avatarGroup)}
                           >
                             <PersonIcon width={16} height={16} />
                           </Flex>
@@ -427,7 +435,10 @@ const ShareModal = forwardRef((props, ref) => {
                           <Flex
                             align='center'
                             justify='center'
-                            className={`${s.avatarBox} ${item.entity_type === 'group' ? s.avatarGroup : s.avatarUser}`}
+                            className={clsx(s.avatarBox, {
+                              [s.avatarGroup]: item.entity_type === 'group',
+                              [s.avatarUser]: item.entity_type === 'user',
+                            })}
                           >
                             {(() => {
                               const Comp =

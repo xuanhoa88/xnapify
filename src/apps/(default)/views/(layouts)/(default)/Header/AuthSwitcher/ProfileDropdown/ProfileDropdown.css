@@ -62,3 +62,7 @@
   min-width: 200px;
   box-shadow: var(--shadow-4);
 }
+
+.menuIcon {
+  margin-right: var(--space-2);
+}

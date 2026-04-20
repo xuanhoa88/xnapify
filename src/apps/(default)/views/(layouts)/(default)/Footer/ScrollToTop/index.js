@@ -9,6 +9,7 @@ import { useState, useEffect, useCallback } from 'react';
 
 import { ArrowUpIcon } from '@radix-ui/react-icons';
 import { Button } from '@radix-ui/themes';
+import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 
 import s from './ScrollToTop.css';
@@ -71,13 +72,10 @@ function ScrollToTop() {
       color='indigo'
       onClick={scrollToTop}
       title={t('common.scrollToTop', 'Scroll to top')}
-      className={s.scrollBtnDefault}
-      // eslint-disable-next-line react/forbid-dom-props
-      style={{
-        opacity: showScroll ? 1 : 0,
-        visibility: showScroll ? 'visible' : 'hidden',
-        transform: showScroll ? 'translateY(0)' : 'translateY(20px)',
-      }}
+      className={clsx(s.scrollBtnDefault, {
+        [s.scrollBtnVisible]: showScroll,
+        [s.scrollBtnHidden]: !showScroll,
+      })}
     >
       <ArrowUpIcon width={24} height={24} />
     </Button>

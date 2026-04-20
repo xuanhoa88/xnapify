@@ -93,11 +93,7 @@ function LanguageSwitcher() {
               {name}
             </Text>
             {code === currentLocale && (
-              <CheckIcon
-                width={14}
-                height={14}
-                style={{ marginLeft: 'auto' }}
-              />
+              <CheckIcon width={14} height={14} className={s.checkIcon} />
             )}
           </DropdownMenu.Item>
         ))}

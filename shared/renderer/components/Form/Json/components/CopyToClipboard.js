@@ -8,6 +8,7 @@
 import { useState, useCallback } from 'react';
 
 import { Text } from '@radix-ui/themes';
+import clsx from 'clsx';
 import PropTypes from 'prop-types';
 
 import Icon from '../../../Icon';
@@ -49,7 +50,7 @@ export default function CopyToClipboard({ src, enableClipboard }) {
   return (
     <Text
       as='span'
-      className={`${s.copyContainer} jsv-copy-container`}
+      className={clsx(s.copyContainer, 'jsv-copy-container')}
       title='Copy to clipboard'
     >
       <Text as='span' className={s.clipboardIcon} onClick={handleCopy}>

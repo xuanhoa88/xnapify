@@ -6,6 +6,7 @@
  */
 
 import { Badge } from '@radix-ui/themes';
+import clsx from 'clsx';
 import PropTypes from 'prop-types';
 
 import s from './GroupTag.css';
@@ -13,7 +14,7 @@ import s from './GroupTag.css';
 export default function GroupTag({ name, className = '' }) {
   return (
     <Badge
-      className={`${s.groupTag} ${className}`}
+      className={clsx(s.groupTag, className)}
       color='gray'
       radius='full'
       variant='soft'

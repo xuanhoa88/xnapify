@@ -166,7 +166,6 @@ function RequestFormFields({ loading }) {
         label={t('resetPassword.email', 'Email Address')}
       >
         <Form.Input
-          size='3'
           type='email'
           placeholder={t(
             'resetPassword.emailPlaceholder',

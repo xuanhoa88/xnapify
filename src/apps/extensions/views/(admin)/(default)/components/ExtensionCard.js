@@ -9,6 +9,7 @@ import { useState, useCallback, useEffect } from 'react';
 
 import * as RadixIcons from '@radix-ui/react-icons';
 import { Box, Flex, Text, Button, Badge, Switch } from '@radix-ui/themes';
+import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
@@ -72,7 +73,10 @@ function ExtensionCard({
   return (
     <Flex
       direction='column'
-      className={`extension-card ${s.cardContainer} ${extension.is_active ? s.cardActive : s.cardInactive}`}
+      className={clsx(s.cardContainer, {
+        [s.cardActive]: extension.is_active,
+        [s.cardInactive]: !extension.is_active,
+      })}
     >
       <Flex p='4' gap='3' align='start' className={s.headerFlex}>
         <Box className={s.iconBox}>

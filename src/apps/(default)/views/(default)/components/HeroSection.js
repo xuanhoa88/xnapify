@@ -7,6 +7,7 @@
 
 import { GitHubLogoIcon, ArrowRightIcon } from '@radix-ui/react-icons';
 import { Flex, Box, Text, Heading, Button, Section } from '@radix-ui/themes';
+import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 
 import { Link } from '@shared/renderer/components/History';
@@ -20,7 +21,7 @@ function HeroSection() {
   const { t } = useTranslation();
 
   return (
-    <Section size='4' className={`${s.heroSectionModern} ${s.textCenter}`}>
+    <Section size='4' className={clsx(s.heroSectionModern, s.textCenter)}>
       <Flex direction='column' align='center' className={s.heroContainer}>
         <Box mb='4' className={s.badgeLabel}>
           <Text size='2' weight='medium' color='indigo'>

@@ -17,6 +17,7 @@ import {
   Badge,
   IconButton,
 } from '@radix-ui/themes';
+import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
@@ -364,7 +365,10 @@ export default function ListingDetail({ listing = null, onClose }) {
                     as='button'
                     key={i}
                     type='button'
-                    className={`${s.dotButton} ${i === lightboxIdx ? s.dotActive : s.dotInactive}`}
+                    className={clsx(s.dotButton, {
+                      [s.dotActive]: i === lightboxIdx,
+                      [s.dotInactive]: i !== lightboxIdx,
+                    })}
                     onClick={() => setLightboxIdx(i)}
                     aria-label={`Screenshot ${i + 1}`}
                   />

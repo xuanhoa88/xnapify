@@ -9,6 +9,7 @@ import { useMemo, useEffect, useRef } from 'react';
 
 import { ExclamationTriangleIcon } from '@radix-ui/react-icons';
 import { Box, Flex, Text } from '@radix-ui/themes';
+import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
@@ -58,7 +59,7 @@ ${TIPTAP_CORE_STYLES}
   }, [previewHtml]);
 
   return (
-    <Box className={`${s.container} ${className || ''}`}>
+    <Box className={clsx(s.container, className)}>
       {/* Preview Pane */}
       <Box className={s.previewPane}>
         {previewError ? (

@@ -25,7 +25,7 @@ import s from './Index.css';
  *   </Form.Field>
  */
 const FormPasswordInput = forwardRef(function FormPasswordInput$(
-  { placeholder = '••••••••', className, disabled, autoFocus, ...props },
+  { placeholder = '••••••••', size = '3', className, disabled, autoFocus, ...props },
   forwardedRef,
 ) {
   const [showPassword, setShowPassword] = useState(false);
@@ -46,6 +46,7 @@ const FormPasswordInput = forwardRef(function FormPasswordInput$(
     <TextField.Root
       id={id}
       type={showPassword ? 'text' : 'password'}
+      size={size}
       placeholder={placeholder}
       disabled={disabled}
       color={error ? 'red' : undefined}
@@ -58,7 +59,7 @@ const FormPasswordInput = forwardRef(function FormPasswordInput$(
     >
       <TextField.Slot side='right' px='1'>
         <IconButton
-          size='1'
+          size={size === '3' ? '2' : '1'}
           variant='ghost'
           color='gray'
           onClick={togglePasswordVisibility}

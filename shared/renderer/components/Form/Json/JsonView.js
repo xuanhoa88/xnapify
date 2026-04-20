@@ -17,6 +17,7 @@
 import { useState, useCallback, useEffect, forwardRef } from 'react';
 
 import { Box, Text } from '@radix-ui/themes';
+import clsx from 'clsx';
 import PropTypes from 'prop-types';
 
 import ObjectNode from './components/ObjectNode';
@@ -162,7 +163,7 @@ const JsonView = forwardRef(function JsonView$(
       <Box
         ref={ref}
         id={id}
-        className={`${s.root} ${error ? s.rootError : ''} ${className || ''}`}
+        className={clsx(s.root, { [s.rootError]: error, className })}
         style={userStyle}
       >
         <Text as='span' className={s.jsonErrorText}>
@@ -176,7 +177,11 @@ const JsonView = forwardRef(function JsonView$(
     <Box
       ref={ref}
       id={id}
-      className={`${s.root} ${disabled ? s.rootDisabled : ''} ${error ? s.rootError : ''} ${className || ''}`}
+      className={clsx(s.root, {
+        [s.rootDisabled]: disabled,
+        [s.rootError]: error,
+        className,
+      })}
       style={userStyle}
       onBlur={onBlur}
     >

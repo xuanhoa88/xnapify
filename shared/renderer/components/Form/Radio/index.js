@@ -21,6 +21,7 @@ import { useFormField } from '../FormContext';
  */
 function FormRadio({
   options = [],
+  size = '3',
   className,
   disabled,
   direction = 'vertical',
@@ -39,6 +40,7 @@ function FormRadio({
           onValueChange={field.onChange}
           disabled={disabled}
           name={field.name}
+          size={size}
           color={error ? 'red' : undefined}
           className={className}
           {...props}
@@ -48,7 +50,7 @@ function FormRadio({
             direction={direction === 'horizontal' ? 'row' : 'column'}
           >
             {options.map(option => (
-              <Text as='label' size='2' key={option.value}>
+              <Text as='label' size={size} key={option.value}>
                 <Flex gap='2' align='center'>
                   <RadioGroup.Item
                     value={String(option.value)}

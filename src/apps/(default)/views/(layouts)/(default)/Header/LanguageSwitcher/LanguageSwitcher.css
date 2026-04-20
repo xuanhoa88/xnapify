@@ -28,3 +28,7 @@
   background-color: var(--indigo-a3) !important;
   color: var(--indigo-11) !important;
 }
+
+.checkIcon {
+  margin-left: auto;
+}

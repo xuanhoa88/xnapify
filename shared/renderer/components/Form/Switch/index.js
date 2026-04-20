@@ -22,7 +22,7 @@ import { useFormField } from '../FormContext';
  *   </Form.Field>
  */
 const FormSwitch = forwardRef(function FormSwitch$(
-  { label, className, disabled, ...props },
+  { label, size = '3', className, disabled, ...props },
   forwardedRef,
 ) {
   const { id, name, error } = useFormField();
@@ -33,10 +33,11 @@ const FormSwitch = forwardRef(function FormSwitch$(
       name={name}
       control={control}
       render={({ field }) => (
-        <Text as='label' size='2'>
+        <Text as='label' size={size}>
           <Flex gap='2' align='center' className={className}>
             <Switch
               id={id}
+              size={size}
               disabled={disabled}
               checked={field.value || false}
               color={error ? 'red' : undefined}

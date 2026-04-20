@@ -9,6 +9,7 @@ import { useCallback, useMemo, useEffect } from 'react';
 
 import { PersonIcon } from '@radix-ui/react-icons';
 import { Flex, Box, Grid, Text, Heading, Button } from '@radix-ui/themes';
+import clsx from 'clsx';
 import merge from 'lodash/merge';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
@@ -105,7 +106,7 @@ function PersonalInfoCard() {
   return (
     <Box className={s.cardContainer}>
       <Flex align='center' gap='4' className={s.cardHeader}>
-        <Box className={`${s.cardHeaderIcon} ${s.cardHeaderIconIndigo}`}>
+        <Box className={clsx(s.cardHeaderIcon, s.cardHeaderIconIndigo)}>
           <PersonIcon width={24} height={24} />
         </Box>
         <Box>
@@ -214,6 +215,7 @@ function PersonalInfoFormFields({ loading }) {
         <Button
           variant='solid'
           color='indigo'
+          size='3'
           type='submit'
           loading={loading || isSubmitting}
         >

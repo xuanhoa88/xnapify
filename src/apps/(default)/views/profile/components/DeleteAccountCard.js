@@ -9,6 +9,7 @@ import { useCallback, useEffect } from 'react';
 
 import { TrashIcon, ExclamationTriangleIcon } from '@radix-ui/react-icons';
 import { Flex, Box, Text, Heading, Button } from '@radix-ui/themes';
+import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
@@ -66,7 +67,7 @@ function DeleteAccountCard() {
   return (
     <Box className={s.cardContainer}>
       <Flex align='center' gap='4' className={s.cardHeader}>
-        <Box className={`${s.cardHeaderIcon} ${s.cardHeaderIconRed}`}>
+        <Box className={clsx(s.cardHeaderIcon, s.cardHeaderIconRed)}>
           <TrashIcon width={24} height={24} />
         </Box>
         <Box>
@@ -141,6 +142,7 @@ function DeleteAccountFormFields({ loading }) {
         <Button
           color='red'
           variant='solid'
+          size='3'
           type='submit'
           loading={loading || isSubmitting}
         >

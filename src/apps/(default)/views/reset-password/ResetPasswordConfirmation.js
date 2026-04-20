@@ -9,6 +9,7 @@ import { useCallback, useState, useEffect, useRef } from 'react';
 
 import { LockOpen1Icon } from '@radix-ui/react-icons';
 import { Flex, Card, Text, Heading, Button } from '@radix-ui/themes';
+import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
@@ -227,7 +228,7 @@ function ResetFormFields({ loading, dispatch }) {
         name='password'
         label={t('resetPasswordConfirmation.newPassword', 'New Password')}
       >
-        <Form.Password size='3' />
+        <Form.Password />
       </Form.Field>
 
       <Form.Field
@@ -237,7 +238,7 @@ function ResetFormFields({ loading, dispatch }) {
           'Confirm New Password',
         )}
       >
-        <Form.Password size='3' />
+        <Form.Password />
       </Form.Field>
 
       <Flex justify='end'>
@@ -246,7 +247,10 @@ function ResetFormFields({ loading, dispatch }) {
           size='1'
           onClick={handleGeneratePassword}
           disabled={generatingPassword}
-          className={`${s.generateBtn} ${generatingPassword ? s.generateBtnLoading : s.generateBtnReady}`}
+          className={clsx(s.generateBtn, {
+            [s.generateBtnLoading]: generatingPassword,
+            [s.generateBtnReady]: !generatingPassword,
+          })}
         >
           {generatingPassword ? (
             t('resetPasswordConfirmation.generatingPassword', 'Generating...')

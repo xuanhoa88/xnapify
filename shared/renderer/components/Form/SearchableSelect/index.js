@@ -63,6 +63,7 @@ const FormSearchableSelect = forwardRef(function FormSearchableSelect$(
     multiple,
     showSearch,
     clearable,
+    size,
     ...props
   },
   forwardedRef,
@@ -110,6 +111,7 @@ const FormSearchableSelect = forwardRef(function FormSearchableSelect$(
         multiple={multiple}
         showSearch={showSearch}
         clearable={clearable}
+        size={size || '3'}
         {...props}
       />
     </Box>

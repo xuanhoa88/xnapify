@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import { ReloadIcon, GearIcon } from '@radix-ui/react-icons';
 import { Flex, Box, Text, Heading, Button } from '@radix-ui/themes';
+import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
@@ -140,7 +141,7 @@ function PreferencesCard() {
   return (
     <Box className={s.cardContainer}>
       <Flex align='center' gap='4' className={s.cardHeader}>
-        <Box className={`${s.cardHeaderIcon} ${s.cardHeaderIconIndigo}`}>
+        <Box className={clsx(s.cardHeaderIcon, s.cardHeaderIconIndigo)}>
           <GearIcon width={24} height={24} />
         </Box>
         <Box>
@@ -245,6 +246,7 @@ function PreferencesFormFields({ loading }) {
         <Button
           variant='solid'
           color='indigo'
+          size='3'
           type='submit'
           loading={loading || isSubmitting}
         >

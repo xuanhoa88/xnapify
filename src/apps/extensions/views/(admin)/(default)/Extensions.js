@@ -17,12 +17,11 @@ import {
   Button,
   Badge,
 } from '@radix-ui/themes';
+import clsx from 'clsx';
 import toLower from 'lodash/toLower';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-// import { Flex, Heading, Text, Box } from '@radix-ui/themes';
-// import { Button } from '@radix-ui/themes';
 import { useDebounce } from '@shared/renderer/components/InfiniteScroll';
 import Loader from '@shared/renderer/components/Loader';
 import Modal from '@shared/renderer/components/Modal';
@@ -586,7 +585,9 @@ function Extensions() {
               type='button'
               variant={activeFilter === tab.key ? 'primary' : 'ghost'}
               onClick={() => setActiveFilter(tab.key)}
-              className={`${s.tabButton} ${activeFilter === tab.key ? s.tabButtonActive : ''}`}
+              className={clsx(s.tabButton, {
+                [s.tabButtonActive]: activeFilter === tab.key,
+              })}
             >
               <Text as='span' mr='2'>
                 {t(tab.labelKey, tab.fallback)}

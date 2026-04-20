@@ -5,23 +5,29 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { Box, Heading } from '@radix-ui/themes';
+import { Box, Heading, Container } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 
 import s from './Privacy.css';
 
 /**
  * Privacy Page Component
+ * Natively mapped avoiding div components. Upgraded to premium editorial layout.
  */
 function PrivacyPage({ context: { initialProps: { title, html } = {} } = {} }) {
   return (
-    <Box pb='6' mx='auto' className={s.container}>
-      <Box p='4' pt='6' pb='6'>
-        <Heading as='h1' size='7' mb='4'>
-          {title}
-        </Heading>
-        <Box dangerouslySetInnerHTML={{ __html: html }} className={s.content} />
-      </Box>
+    <Box className={s.pageWrapper}>
+      <Container size='4'>
+        <Box className={s.contentContainer}>
+          <Heading as='h1' className={s.pageTitle}>
+            {title}
+          </Heading>
+          <Box
+            dangerouslySetInnerHTML={{ __html: html }}
+            className={s.markdownContent}
+          />
+        </Box>
+      </Container>
     </Box>
   );
 }
@@ -50,12 +56,10 @@ export async function getInitialProps({ locale }) {
           /* webpackChunkName: "privacy" */ './privacy.vi-VN.md'
         );
       } catch (e) {
-        // Fallback to default if locale file doesn't exist
         data = await import(/* webpackChunkName: "privacy" */ './privacy.md');
       }
       break;
     default:
-      // Default to English or base markdown file
       data = await import(/* webpackChunkName: "privacy" */ './privacy.md');
       break;
   }

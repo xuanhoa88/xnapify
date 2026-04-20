@@ -7,6 +7,7 @@
 
 import { CheckIcon, DownloadIcon } from '@radix-ui/react-icons';
 import { Flex, Box, Text, Badge } from '@radix-ui/themes';
+import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
@@ -29,13 +30,19 @@ export default function MarketplaceCard({
       role='button'
       tabIndex={0}
       onKeyDown={e => e.key === 'Enter' && onClick(listing)}
-      className={`${s.cardFlex} ${isFeatured ? s.cardFeatured : s.cardNormal}`}
+      className={clsx(s.cardFlex, {
+        [s.cardFeatured]: isFeatured,
+        [s.cardNormal]: !isFeatured,
+      })}
     >
       {isFeatured && <Box className={s.featuredOverlay} />}
 
       <Flex gap='3' align='start' className={s.headerFlex}>
         <Box
-          className={`${s.iconBox} ${isFeatured ? s.iconBoxFeatured : s.iconBoxNormal}`}
+          className={clsx(s.iconBox, {
+            [s.iconBoxFeatured]: isFeatured,
+            [s.iconBoxNormal]: !isFeatured,
+          })}
         >
           {listing.icon ? (
             <img
@@ -93,7 +100,10 @@ export default function MarketplaceCard({
           as='p'
           size='2'
           color='gray'
-          className={`${s.descText} ${isFeatured ? s.descTextFeatured : s.descTextNormal}`}
+          className={clsx(s.descText, {
+            [s.descTextFeatured]: isFeatured,
+            [s.descTextNormal]: !isFeatured,
+          })}
         >
           {listing.short_description || listing.description}
         </Text>
