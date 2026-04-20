@@ -14,11 +14,32 @@ import { DEFAULT_LOCALE } from './constants';
 const defaultI18nInstance = i18n.createInstance();
 
 /**
- * Create and initialize i18n instance immediately
- * Synchronous initialization for simplicity
+ * Detect the locale to initialize i18n with.
+ *
+ * On the client, Html.js injects `window.__XNAPIFY_LOCALE__` as a tiny
+ * dedicated script before the Redux state blob. Reading this string here —
+ * before the i18n singleton is created — ensures React hydration happens in
+ * the same language the server used, preventing "Text content did not match"
+ * hydration warnings.
+ *
+ * On the server `window` is undefined so we fall back to DEFAULT_LOCALE;
+ * the server then calls i18n.changeLanguage() via setLocale() in Redux.
+ *
+ * Deliberately reads only `__XNAPIFY_LOCALE__` — not `__PRELOADED_STATE__` —
+ * so that shared/i18n stays decoupled from Redux's state shape.
  */
+function detectInitialLocale() {
+  // eslint-disable-next-line no-underscore-dangle
+  return globalThis.__XNAPIFY_LOCALE__ || DEFAULT_LOCALE;
+}
+
+const initialLocale = detectInitialLocale();
+
+// Create and initialize i18n instance immediately.
+// `lng` is set to the server-preloaded locale so the instance is born in the
+// correct language — no async changeLanguage() needed before hydration.
 defaultI18nInstance.use(initReactI18next).init({
-  lng: DEFAULT_LOCALE,
+  lng: initialLocale,
   fallbackLng: DEFAULT_LOCALE,
   defaultNS: 'translation',
   ns: ['translation'],

@@ -26,7 +26,7 @@
     "email": "Email",
     "loading": "Please wait...",
     "submit": "Send Reset Link",
-    "backToLogin": "Back to Log In",
+    "backToLogin": "Back to <0>Log In</0>",
     "error": "Error",
     "success": "<0>Success!</0> If an account exists with that email, you will receive a password reset link shortly."
   },
@@ -40,7 +40,7 @@
     "passwordTooShort": "Password must be at least 8 characters",
     "loading": "Resetting password...",
     "submit": "Reset Password",
-    "backToLogin": "Back to Log In",
+    "backToLogin": "Back to <0>Log In</0>",
     "goToLogin": "Go to Log In",
     "error": "Error",
     "success": "<0>Success!</0> Your password has been reset. You can now log in with your new password."
@@ -53,7 +53,7 @@
     "verifying": "Verifying your email...",
     "loading": "Verifying...",
     "submit": "Verify Email",
-    "backToLogin": "Back to Log In",
+    "backToLogin": "Back to <0>Log In</0>",
     "goToLogin": "Go to Log In",
     "error": "Error",
     "success": "<0>Success!</0> Your email has been verified. You can now log in to your account."

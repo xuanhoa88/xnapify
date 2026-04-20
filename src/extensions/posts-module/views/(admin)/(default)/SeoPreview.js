@@ -18,7 +18,7 @@ function SeoPreview({ post, isOpen, onClose }) {
 
   if (!post) return null;
 
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+  const baseUrl = (globalThis.location && globalThis.location.origin) || '';
   const postUrl = `${baseUrl}/posts/${post.slug || post.id}`;
 
   return (

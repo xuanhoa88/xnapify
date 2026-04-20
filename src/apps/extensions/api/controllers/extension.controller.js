@@ -89,7 +89,7 @@ export const getExtension = async (req, res) => {
  * Content-hashed assets (e.g. 'remote.a1b2c3d4.js') get immutable caching.
  * Non-hashed assets get no-cache to ensure freshness.
  */
-export const serveExtensionStatic = async (req, res, next) => {
+export const serveExtensionStatic = async (req, res) => {
   const container = req.app.get('container');
   const staticDir = await extensionService.getExtensionStaticDir(
     {

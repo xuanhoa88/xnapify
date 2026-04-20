@@ -258,9 +258,9 @@ export default function useMask({ mask, maskPlaceholder = '_' }) {
       const { selectionStart, selectionEnd } = input;
 
       let nativeInputValueSetter = null;
-      if (typeof window !== 'undefined' && window.HTMLInputElement) {
+      if (globalThis.HTMLInputElement) {
         const descriptor = Object.getOwnPropertyDescriptor(
-          window.HTMLInputElement.prototype,
+          globalThis.HTMLInputElement.prototype,
           'value',
         );
         if (descriptor) {

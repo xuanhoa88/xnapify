@@ -187,6 +187,17 @@ export default function Html({
           );
         })}
 
+        {/* Locale signal — read by shared/i18n before Redux state is parsed.
+             Injected as a separate, stable script so i18n stays decoupled
+             from the Redux state shape. Must appear before __PRELOADED_STATE__. */}
+        <script
+          nonce={nonce}
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{
+            __html: `window.__XNAPIFY_LOCALE__=${serialize(locale || 'en-US')}`,
+          }}
+        />
+
         {/* Application state for client hydration */}
         <script
           nonce={nonce}

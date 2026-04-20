@@ -7,7 +7,6 @@
 
 import { useCallback, useState, useEffect } from 'react';
 
-
 import { Flex, Card, Text, Heading, Button } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation, Trans } from 'react-i18next';
@@ -98,13 +97,8 @@ function ResetPasswordRequest() {
                 t={t}
                 i18nKey='resetPassword.backToLogin'
                 defaults='Remember your password? <0>Back to Login</0>'
-                // eslint-disable-next-line react/jsx-key, jsx-a11y/anchor-has-content
                 components={[
-                  <Link
-                    key='link'
-                    to='/login'
-                    className={s.backLink}
-                  />,
+                  <Link key='link' to='/login' className={s.backLink} />,
                 ]}
               />
             </Text>

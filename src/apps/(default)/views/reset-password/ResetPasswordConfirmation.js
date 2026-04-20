@@ -129,13 +129,8 @@ function ResetPasswordConfirmation({ token }) {
                 t={t}
                 i18nKey='resetPasswordConfirmation.backToLogin'
                 defaults='Changed your mind? <0>Back to Login</0>'
-                // eslint-disable-next-line react/jsx-key, jsx-a11y/anchor-has-content
                 components={[
-                  <Link
-                    key='link'
-                    to='/login'
-                    className={s.backLink}
-                  />,
+                  <Link key='link' to='/login' className={s.backLink} />,
                 ]}
               />
             </Text>

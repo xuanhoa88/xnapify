@@ -26,7 +26,7 @@
     "email": "Email",
     "loading": "Vui lòng đợi...",
     "submit": "Gửi",
-    "backToLogin": "Quay lại đăng nhập",
+    "backToLogin": "Quay lại <0>đăng nhập</0>",
     "error": "Lỗi",
     "success": "<0>Thành công!</0> Nếu có tài khoản với email này, bạn sẽ nhận được một liên kết để reset mật khẩu."
   },
@@ -40,7 +40,7 @@
     "passwordTooShort": "Mật khẩu phải có ít nhất 8 ký tự",
     "loading": "Đang đặt lại mật khẩu...",
     "submit": "Đặt lại mật khẩu",
-    "backToLogin": "Quay lại đăng nhập",
+    "backToLogin": "Quay lại <0>đăng nhập</0>",
     "goToLogin": "Đi đến đăng nhập",
     "error": "Lỗi",
     "success": "<0>Thành công!</0> Mật khẩu của bạn đã được đặt lại. Bạn có thể đăng nhập bằng mật khẩu mới."
@@ -53,7 +53,7 @@
     "verifying": "Đang xác minh email của bạn...",
     "loading": "Đang xác minh...",
     "submit": "Xác minh email",
-    "backToLogin": "Quay lại đăng nhập",
+    "backToLogin": "Quay lại <0>đăng nhập</0>",
     "goToLogin": "Đi đến đăng nhập",
     "error": "Lỗi",
     "success": "<0>Thành công!</0> Email của bạn đã được xác minh. Bạn có thể đăng nhập vào tài khoản ngay bây giờ."

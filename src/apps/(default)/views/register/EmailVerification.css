@@ -54,10 +54,6 @@
   margin-bottom: var(--space-3);
 }
 
-.backFlex {
-  margin-top: var(--space-6);
-}
-
 .backLink {
   display: inline-flex;
   align-items: center;

@@ -491,6 +491,7 @@ async function renderToHtml({ context, component, metadata = {}, nonce }) {
     children,
     styleLinks: [...styleLinks, ...safeExtUrls('cssUrls')],
     scriptLinks: [...scriptLinks, ...safeExtUrls('scriptUrls')],
+    locale: context.locale,
     appState: {
       redux: context.store.getState(),
       extensions: extensionManager
