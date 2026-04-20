@@ -215,7 +215,7 @@ function PersonalInfoFormFields({ loading }) {
         <Button
           variant='solid'
           color='indigo'
-          size='3'
+          size='2'
           type='submit'
           loading={loading || isSubmitting}
         >

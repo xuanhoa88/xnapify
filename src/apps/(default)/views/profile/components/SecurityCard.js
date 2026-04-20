@@ -206,8 +206,8 @@ function SecurityFormFields({ loading, dispatch }) {
 
       <Flex justify='end' className={s.cardAction}>
         <Button
-          variant='surface'
-          size='3'
+          variant='solid'
+          size='2'
           type='submit'
           loading={loading || isSubmitting}
         >

@@ -95,21 +95,15 @@ summary {
   outline: none;
 }
 
-/*
- * Radix UI form controls already render their own focus ring
- * (box-shadow inset). Suppress the global outline on these so
- * it doesn't stack into a doubled / overly thick border.
- */
-.rt-TextFieldRoot:focus-within,
-.rt-TextAreaRoot:focus-within,
-.rt-TextFieldRoot :focus-visible,
-.rt-TextAreaRoot :focus-visible,
-.rt-SelectTrigger:focus-visible,
-.rt-CheckboxRoot:focus-visible,
-.rt-SwitchRoot:focus-visible,
-.rt-RadioGroupItem:focus-visible {
+/* Radix UI menu/select items manage their own visual focus via backgrounds */
+[role='menuitem']:focus-visible,
+[role='menuitemcheckbox']:focus-visible,
+[role='menuitemradio']:focus-visible,
+[role='option']:focus-visible {
   outline: none;
 }
+
+
 
 /* ==========================================================================
    7. Image containment

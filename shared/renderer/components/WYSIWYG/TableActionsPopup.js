@@ -62,9 +62,7 @@ export default function TableActionsPopup({ editor, disabled }) {
 
             {/* Row actions */}
             <ContextMenu.Item
-              icon={
-                <RowsIcon width={16} height={16} />
-              }
+              icon={<RowsIcon width={16} height={16} />}
               onClick={() => editor.chain().focus().addRowBefore().run()}
             >
               {t('shared:form.wysiwyg.tableRowBefore', 'Add Row Before')}
@@ -87,9 +85,7 @@ export default function TableActionsPopup({ editor, disabled }) {
 
             {/* Column actions */}
             <ContextMenu.Item
-              icon={
-                <ColumnsIcon width={16} height={16} />
-              }
+              icon={<ColumnsIcon width={16} height={16} />}
               onClick={() => editor.chain().focus().addColumnBefore().run()}
             >
               {t('shared:form.wysiwyg.tableColBefore', 'Add Column Before')}
@@ -112,17 +108,13 @@ export default function TableActionsPopup({ editor, disabled }) {
 
             {/* Cell & header actions */}
             <ContextMenu.Item
-              icon={
-                <ViewGridIcon width={16} height={16} />
-              }
+              icon={<ViewGridIcon width={16} height={16} />}
               onClick={() => editor.chain().focus().mergeOrSplit().run()}
             >
               {t('shared:form.wysiwyg.tableMergeOrSplit', 'Merge/Split Cells')}
             </ContextMenu.Item>
             <ContextMenu.Item
-              icon={
-                <RowsIcon width={16} height={16} />
-              }
+              icon={<RowsIcon width={16} height={16} />}
               onClick={() => editor.chain().focus().toggleHeaderRow().run()}
             >
               {t(
@@ -131,9 +123,7 @@ export default function TableActionsPopup({ editor, disabled }) {
               )}
             </ContextMenu.Item>
             <ContextMenu.Item
-              icon={
-                <RowsIcon width={16} height={16} />
-              }
+              icon={<RowsIcon width={16} height={16} />}
               onClick={() => editor.chain().focus().toggleHeaderColumn().run()}
             >
               {t(

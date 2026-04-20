@@ -111,7 +111,7 @@ const FormSearchableSelect = forwardRef(function FormSearchableSelect$(
         multiple={multiple}
         showSearch={showSearch}
         clearable={clearable}
-        size={size || '3'}
+        size={size || '2'}
         {...props}
       />
     </Box>
@@ -131,6 +131,8 @@ FormSearchableSelect.propTypes = {
   placeholder: PropTypes.string,
   /** Additional CSS class names */
   className: PropTypes.string,
+  /** Radix size */
+  size: PropTypes.string,
   /** Disabled state */
   disabled: PropTypes.bool,
   /** Callback for async search (receives search term) */

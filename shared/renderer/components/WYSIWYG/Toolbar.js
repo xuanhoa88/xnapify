@@ -330,16 +330,21 @@ export default function Toolbar({
         )}
 
         {has('image') &&
-          btn(ImageIcon, 'image', t('shared:form.wysiwyg.image', 'Image'), () => {
-            openPrompt({
-              title: t('shared:form.wysiwyg.image', 'Image'),
-              label: t('shared:form.wysiwyg.imageUrl', 'Image URL'),
-              slotName: 'wysiwyg.prompt.image',
-              onSubmit: url => {
-                if (url) editor.chain().focus().setImage({ src: url }).run();
-              },
-            });
-          })}
+          btn(
+            ImageIcon,
+            'image',
+            t('shared:form.wysiwyg.image', 'Image'),
+            () => {
+              openPrompt({
+                title: t('shared:form.wysiwyg.image', 'Image'),
+                label: t('shared:form.wysiwyg.imageUrl', 'Image URL'),
+                slotName: 'wysiwyg.prompt.image',
+                onSubmit: url => {
+                  if (url) editor.chain().focus().setImage({ src: url }).run();
+                },
+              });
+            },
+          )}
         {(has('video') || has('audio') || has('youtube')) && (
           <MediaActionsPopup
             editor={editor}

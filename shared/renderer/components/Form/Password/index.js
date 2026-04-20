@@ -25,7 +25,14 @@ import s from './Index.css';
  *   </Form.Field>
  */
 const FormPasswordInput = forwardRef(function FormPasswordInput$(
-  { placeholder = '••••••••', size = '3', className, disabled, autoFocus, ...props },
+  {
+    placeholder = '••••••••',
+    size = '2',
+    className,
+    disabled,
+    autoFocus,
+    ...props
+  },
   forwardedRef,
 ) {
   const [showPassword, setShowPassword] = useState(false);
@@ -83,6 +90,8 @@ FormPasswordInput.propTypes = {
   placeholder: PropTypes.string,
   /** Additional CSS class names */
   className: PropTypes.string,
+  /** Radix size */
+  size: PropTypes.string,
   /** Disabled state */
   disabled: PropTypes.bool,
   /** Auto focus on mount */

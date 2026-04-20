@@ -8,10 +8,13 @@
 import { forwardRef } from 'react';
 
 import { TextField } from '@radix-ui/themes';
+import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useFormContext } from 'react-hook-form';
 
 import { useFormField, useMergeRefs } from '../FormContext';
+
+import s from './Input.css';
 
 /**
  * FormInput - Simple input element to be used inside Form.Field backed by Radix Themes
@@ -22,7 +25,15 @@ import { useFormField, useMergeRefs } from '../FormContext';
  *   </Form.Field>
  */
 const FormInput = forwardRef(function FormInput$(
-  { type = 'text', size = '3', placeholder, className, disabled, autoFocus, ...props },
+  {
+    type = 'text',
+    size = '2',
+    placeholder,
+    className,
+    disabled,
+    autoFocus,
+    ...props
+  },
   forwardedRef,
 ) {
   const { id, name, error } = useFormField();
@@ -42,7 +53,7 @@ const FormInput = forwardRef(function FormInput$(
       placeholder={placeholder}
       disabled={disabled}
       color={error ? 'red' : undefined}
-      className={className}
+      className={clsx(className, s.root)}
       // eslint-disable-next-line jsx-a11y/no-autofocus
       autoFocus={autoFocus}
       {...registerProps}
@@ -57,6 +68,8 @@ FormInput.propTypes = {
   type: PropTypes.string,
   /** Placeholder text */
   placeholder: PropTypes.string,
+  /** Radix size */
+  size: PropTypes.string,
   /** Additional CSS class names */
   className: PropTypes.string,
   /** Disabled state */

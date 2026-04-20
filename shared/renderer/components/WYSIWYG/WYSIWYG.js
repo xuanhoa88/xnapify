@@ -15,6 +15,11 @@ import {
   useMemo,
 } from 'react';
 
+import {
+  ChatBubbleIcon,
+  DragHandleDots2Icon,
+  TrashIcon,
+} from '@radix-ui/react-icons';
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 import { Color } from '@tiptap/extension-color';
 import DragHandle from '@tiptap/extension-drag-handle-react';
@@ -37,12 +42,6 @@ import StarterKit from '@tiptap/starter-kit';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
-
-import {
-  ChatBubbleIcon,
-  DragHandleDots2Icon,
-  TrashIcon,
-} from '@radix-ui/react-icons';
 
 import { ExtensionSlot } from '../Extension';
 
@@ -658,9 +657,7 @@ const WYSIWYG = forwardRef(function WYSIWYG$(
                   {/* If we are actively on a comment thread and not in popup mode, show a quick delete button */}
                   {activeCommentId && (
                     <ToolbarButton
-                      icon={
-                        <TrashIcon width={16} height={16} />
-                      } // Using TrashIcon for removing comment threads
+                      icon={<TrashIcon width={16} height={16} />} // Using TrashIcon for removing comment threads
                       label={t(
                         'shared.form.wysiwyg.removeCommentThread',
                         'Remove Comment Thread',

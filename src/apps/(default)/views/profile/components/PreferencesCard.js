@@ -48,6 +48,7 @@ function PreferencesCard() {
   // Get preferences from Redux
   const user = useSelector(getUserProfile);
   const currentLocale = useSelector(getLocale);
+  const availableLocales = useSelector(getAvailableLocales);
   const loading = useSelector(isPreferencesLoading);
   const error = useSelector(getPreferencesError);
 
@@ -70,11 +71,15 @@ function PreferencesCard() {
   }, [dispatch, user]);
 
   // Derive default values from Redux preferences (memoized)
-  const defaultValues = useMemo(
-    () => ({
-      language:
-        (user && user.profile && user.profile.language) ||
-        DEFAULT_PREFERENCES.language,
+  const defaultValues = useMemo(() => {
+    const userLang = user && user.profile && user.profile.language;
+    const validLang =
+      userLang && availableLocales[userLang]
+        ? userLang
+        : DEFAULT_PREFERENCES.language;
+
+    return {
+      language: validLang,
       timezone:
         (user && user.profile && user.profile.timezone) ||
         DEFAULT_PREFERENCES.timezone,
@@ -84,9 +89,8 @@ function PreferencesCard() {
       notifications:
         (user && user.profile && user.profile.notifications) ||
         DEFAULT_PREFERENCES.notifications,
-    }),
-    [user],
-  );
+    };
+  }, [user, availableLocales]);
 
   // Handle form submit
   const handleSubmit = useCallback(
@@ -246,7 +250,7 @@ function PreferencesFormFields({ loading }) {
         <Button
           variant='solid'
           color='indigo'
-          size='3'
+          size='2'
           type='submit'
           loading={loading || isSubmitting}
         >

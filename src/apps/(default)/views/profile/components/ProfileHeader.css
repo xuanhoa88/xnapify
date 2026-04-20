@@ -1,5 +1,4 @@
 
-
 /* stylelint-disable no-descending-specificity */
 @keyframes spin {
   from {
@@ -20,6 +19,7 @@
   background-color: var(--color-panel-solid);
   padding: var(--space-6);
   border-radius: var(--radius-4);
+  border: 1px solid var(--gray-a5);
   box-shadow: var(--shadow-2);
   flex-direction: column;
 }

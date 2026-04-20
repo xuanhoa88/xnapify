@@ -33,7 +33,7 @@ import useMask from './useMask';
 const FormInputMask = forwardRef(function FormInputMask$(
   {
     type = 'text',
-    size = '3',
+    size = '2',
     placeholder: userPlaceholder,
     className,
     disabled,
@@ -109,6 +109,8 @@ FormInputMask.propTypes = {
   placeholder: PropTypes.string,
   /** Additional CSS class names */
   className: PropTypes.string,
+  /** Radix size */
+  size: PropTypes.string,
   /** Disabled state */
   disabled: PropTypes.bool,
   /** Auto focus on mount */

@@ -1,18 +1,8 @@
 
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 .cardContainer {
   background-color: var(--color-panel-solid);
   border-radius: var(--radius-4);
+  border: 1px solid var(--gray-a5);
   box-shadow: var(--shadow-2);
   padding: var(--space-6);
 }

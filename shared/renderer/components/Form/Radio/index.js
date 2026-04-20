@@ -11,6 +11,8 @@ import { Controller, useFormContext } from 'react-hook-form';
 
 import { useFormField } from '../FormContext';
 
+import s from './Radio.css';
+
 /**
  * FormRadio - Radio group element to be used inside Form.Field baked by Radix Themes
  *
@@ -21,7 +23,7 @@ import { useFormField } from '../FormContext';
  */
 function FormRadio({
   options = [],
-  size = '3',
+  size = '2',
   className,
   disabled,
   direction = 'vertical',
@@ -55,6 +57,7 @@ function FormRadio({
                   <RadioGroup.Item
                     value={String(option.value)}
                     disabled={disabled || option.disabled}
+                    className={s.root}
                   />
                   {option.label}
                 </Flex>
@@ -77,6 +80,8 @@ FormRadio.propTypes = {
       disabled: PropTypes.bool,
     }),
   ),
+  /** Radix size */
+  size: PropTypes.string,
   /** Additional CSS class names */
   className: PropTypes.string,
   /** Disabled state for all options */

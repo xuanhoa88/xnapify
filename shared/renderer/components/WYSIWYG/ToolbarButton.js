@@ -7,7 +7,6 @@
 
 import { forwardRef } from 'react';
 
-import { IconButton } from '@radix-ui/themes';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 
@@ -21,11 +20,9 @@ const ToolbarButton = forwardRef(function ToolbarButton(
   ref,
 ) {
   return (
-    <IconButton
+    <button
       ref={ref}
-      size='1'
-      variant={isActive ? 'soft' : 'ghost'}
-      color='gray'
+      type='button'
       className={clsx(
         s.toolbarBtn,
         { [s.toolbarBtnActive]: isActive },
@@ -40,7 +37,7 @@ const ToolbarButton = forwardRef(function ToolbarButton(
     >
       {icon}
       {children}
-    </IconButton>
+    </button>
   );
 });
 

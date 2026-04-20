@@ -142,7 +142,7 @@ function DeleteAccountFormFields({ loading }) {
         <Button
           color='red'
           variant='solid'
-          size='3'
+          size='2'
           type='submit'
           loading={loading || isSubmitting}
         >

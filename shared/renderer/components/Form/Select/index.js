@@ -8,10 +8,13 @@
 import { forwardRef } from 'react';
 
 import { Select } from '@radix-ui/themes';
+import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { Controller, useFormContext } from 'react-hook-form';
 
 import { useFormField } from '../FormContext';
+
+import s from './Select.css';
 
 /**
  * FormSelect - Select element to be used inside Form.Field baked by Radix Themes
@@ -22,7 +25,7 @@ import { useFormField } from '../FormContext';
  *   </Form.Field>
  */
 const FormSelect = forwardRef(function FormSelect$(
-  { options = [], placeholder, size = '3', className, disabled, ...props },
+  { options = [], placeholder, size = '2', className, disabled, ...props },
   forwardedRef,
 ) {
   const { name, error } = useFormField();
@@ -42,7 +45,7 @@ const FormSelect = forwardRef(function FormSelect$(
           <Select.Trigger
             placeholder={placeholder}
             color={error ? 'red' : undefined}
-            className={className}
+            className={clsx(className, s.root)}
             ref={ref => {
               field.ref(ref);
               if (typeof forwardedRef === 'function') forwardedRef(ref);
@@ -74,6 +77,8 @@ FormSelect.propTypes = {
   ),
   /** Placeholder text (shown as disabled first option) */
   placeholder: PropTypes.string,
+  /** Radix size */
+  size: PropTypes.string,
   /** Additional CSS class names */
   className: PropTypes.string,
   /** Disabled state */

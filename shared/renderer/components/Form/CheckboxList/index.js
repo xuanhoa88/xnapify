@@ -214,7 +214,7 @@ const FormCheckboxList = forwardRef(function FormCheckboxList$(
     // Dimensions
     maxHeight = 320,
     minHeight = 160,
-    size = '3',
+    size = '2',
     // Other
     className,
     disabled,
@@ -624,6 +624,8 @@ FormCheckboxList.propTypes = {
   minHeight: PropTypes.number,
   /** Additional CSS class names */
   className: PropTypes.string,
+  /** Radix size */
+  size: PropTypes.string,
   /** Disabled state */
   disabled: PropTypes.bool,
 };

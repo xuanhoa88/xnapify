@@ -181,7 +181,7 @@ function RegisterFormFields({ loading }) {
       <Button
         variant='solid'
         color='indigo'
-        size='3'
+        size='2'
         type='submit'
         mt='2'
         className={s.fullWidthBtn}

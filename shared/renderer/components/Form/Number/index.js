@@ -26,7 +26,7 @@ import s from './Index.css';
 const FormNumberInput = forwardRef(function FormNumberInput$(
   {
     placeholder,
-    size = '3',
+    size = '2',
     className,
     disabled,
     min = 0,
@@ -118,6 +118,8 @@ FormNumberInput.propTypes = {
   placeholder: PropTypes.string,
   /** Additional CSS class names */
   className: PropTypes.string,
+  /** Radix size */
+  size: PropTypes.string,
   /** Disabled state */
   disabled: PropTypes.bool,
   /** Minimum value */

@@ -217,7 +217,7 @@ function EmailVerificationFormFields({ loading, showTokenField }) {
       <Button
         variant='solid'
         color='indigo'
-        size='3'
+        size='2'
         type='submit'
         className={s.submitBtn}
         loading={loading || isSubmitting}
