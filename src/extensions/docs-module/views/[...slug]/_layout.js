@@ -43,14 +43,14 @@ export default function DocsLayout({
             return (
               <li key={node.path} className={s.fileNode}>
                 <a
-                  href={`/guides/${node.path}`}
+                  href={`/docs/${node.path}`}
                   onClick={e => {
                     e.preventDefault();
-                    history.push(`/guides/${node.path}`);
+                    history.push(`/docs/${node.path}`);
                   }}
                   className={clsx(
                     s.link,
-                    history.location.pathname === `/guides/${node.path}` &&
+                    history.location.pathname === `/docs/${node.path}` &&
                       s.active,
                   )}
                 >
@@ -69,7 +69,18 @@ export default function DocsLayout({
     <div className={s.layout}>
       <aside className={s.sidebar}>
         <div className={s.sidebarHeader}>
-          <h2>{t('sidebar.title', 'Documentation')}</h2>
+          <h2>
+            <a
+              href='/'
+              className={s.link}
+              onClick={e => {
+                e.preventDefault();
+                history.push('/');
+              }}
+            >
+              {t('title', 'xnapify')}
+            </a>
+          </h2>
         </div>
         <div className={s.sidebarContent}>{renderTree(tree)}</div>
       </aside>

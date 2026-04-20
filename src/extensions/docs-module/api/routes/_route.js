@@ -21,14 +21,14 @@ export const useRateLimit = { max: 30, windowMs: 60000 };
 
 const CACHE_KEY = 'docs_tree';
 
-// GET /api/guides
+// GET /api/docs
 export const get = async (req, res) => {
   const container = req.app.get('container');
   const http = container.resolve('http');
   const cache = container.resolve('cache');
 
   // Obtain safe, scoped key isolation instance
-  const scopedCache = cache.withNamespace('guides');
+  const scopedCache = cache.withNamespace('docs');
 
   // The assets directory is copied to the extension build root (where api.js lives)
   const publicDocsDir = path.resolve(__dirname, 'assets');

@@ -14,7 +14,7 @@ import path from 'path';
  */
 const DEFAULT_EXTENSIONS = [
   '@xnapify-extension/quick-access',
-  '@xnapify-extension/guides',
+  '@xnapify-extension/docs',
 ];
 
 async function discoverAllExtensionManifests(container) {

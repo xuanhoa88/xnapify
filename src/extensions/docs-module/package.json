@@ -1,9 +1,9 @@
 {
-  "name": "@xnapify-extension/guides",
+  "name": "@xnapify-extension/docs",
   "version": "1.0.0",
   "browser": "views/index.js",
   "main": "api/index.js",
-  "description": "Serve public/docs files explicitly as a Docusaurus-like viewer.",
+  "description": "Serve public/documents files explicitly as a Docusaurus-like viewer.",
   "dependencies": {
     "highlight.js": "11.9.0",
     "isomorphic-dompurify": "^1.13.0",

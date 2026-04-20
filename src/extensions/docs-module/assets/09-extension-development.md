@@ -134,7 +134,7 @@ export default {
 
 ## 4. Understanding Identifiers (`__EXTENSION_ID__`)
 
-Webpack statically injects a universal constant called `__EXTENSION_ID__` inside all extension scripts at compile-time. Its value is derived from the extension's **directory name** (e.g., `guides-module` for `src/extensions/guides-module/`), optionally overridden by the `id` field in the extension's database record.
+Webpack statically injects a universal constant called `__EXTENSION_ID__` inside all extension scripts at compile-time. Its value is derived from the extension's **directory name** (e.g., `docs-module` for `src/extensions/docs-module/`), optionally overridden by the `id` field in the extension's database record.
 
 It's conventionally used to safely prefix:
 - Database Tables / Migrations (`table: ${__EXTENSION_ID__}_logs`)

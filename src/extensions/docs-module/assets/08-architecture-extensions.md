@@ -65,7 +65,7 @@ export default {
 ```
 
 > [!NOTE]
-> `__EXTENSION_ID__` is a Webpack compile-time constant derived from the extension's **directory name** (e.g., `guides-module` for `src/extensions/guides-module/`). It can be overridden by setting `id` in the extension's database record.
+> `__EXTENSION_ID__` is a Webpack compile-time constant derived from the extension's **directory name** (e.g., `docs-module` for `src/extensions/docs-module/`). It can be overridden by setting `id` in the extension's database record.
 
 ---
 

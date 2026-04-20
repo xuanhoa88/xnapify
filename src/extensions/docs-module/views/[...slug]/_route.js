@@ -96,14 +96,14 @@ export async function getInitialProps({ fetch, params }) {
 
   try {
     // Always fetch the sidebar tree
-    const treeRes = await fetch('/api/guides');
+    const treeRes = await fetch('/api/docs');
     const tree = treeRes && treeRes.success && treeRes.data ? treeRes.data : [];
 
     // Index page: redirect to the first available document
     if (isIndex) {
       const first = findFirstFile(tree);
       if (first) {
-        return { redirect: `/guides/${first.path}` };
+        return { redirect: `/docs/${first.path}` };
       }
       return { error: true, htmlResult: '', title: null, tree };
     }

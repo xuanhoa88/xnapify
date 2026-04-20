@@ -47,6 +47,6 @@ export default {
    * Returns [moduleName, context] — the framework auto-builds the adapter.
    */
   routes() {
-    return ['guides', routesContext];
+    return ['docs', routesContext];
   },
 };
