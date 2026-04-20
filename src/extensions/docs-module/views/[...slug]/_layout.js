@@ -72,12 +72,19 @@ export default function DocsLayout({
           <h2>
             <a
               href='/'
-              className={s.link}
+              className={s.brandLink}
               onClick={e => {
                 e.preventDefault();
                 history.push('/');
               }}
             >
+              <img
+                src='/xnapify.png'
+                srcSet='/xnapify.png 2x'
+                width='28'
+                height='28'
+                alt='xnapify'
+              />
               {t('title', 'xnapify')}
             </a>
           </h2>

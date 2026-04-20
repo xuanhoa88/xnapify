@@ -63,6 +63,32 @@ const host = config.env('XNAPIFY_HOST', '127.0.0.1');
 // - devMiddleware: Webpack dev middleware instance
 let app, server, dispose, hmr, hotMiddleware, devMiddleware;
 
+// Synchronized HMR: buffers client HMR 'built' events while the server
+// compiler is still recompiling, then flushes them once the server bundle
+// is refreshed. This keeps client and server in lock-step, preventing
+// hydration mismatches without blocking any HTTP requests.
+let serverCompiling = false;
+let pendingHmrPublishes = [];
+let originalHmrPublish = null;
+
+/**
+ * Flushes any buffered client HMR events. Called after the server HMR
+ * cycle completes (success or failure) so the client receives updates
+ * only when the server is also ready.
+ */
+function flushPendingHmrPublishes() {
+  serverCompiling = false;
+  if (pendingHmrPublishes.length > 0 && originalHmrPublish) {
+    const queued = pendingHmrPublishes.splice(0);
+    for (const payload of queued) {
+      originalHmrPublish(payload);
+    }
+    if (!silent) {
+      logInfo(`🔄 Flushed ${queued.length} deferred client HMR update(s)`);
+    }
+  }
+}
+
 /**
  * Create compilation promise for webpack compiler
  */
@@ -338,6 +364,24 @@ function createWebpackMiddlewares(clientCompiler) {
     heartbeat: 10_000, // Heartbeat interval in ms
   });
 
+  // Intercept publish() to synchronize client HMR with server readiness.
+  // When the server compiler is still recompiling, 'built' events are
+  // buffered so React Fast Refresh won't fire ahead of the server bundle.
+  // Heartbeats and other control messages pass through immediately.
+  originalHmrPublish = hotMiddlewareInstance.publish.bind(
+    hotMiddlewareInstance,
+  );
+  hotMiddlewareInstance.publish = payload => {
+    if (serverCompiling && payload && payload.action === 'built') {
+      pendingHmrPublishes.push(payload);
+      if (verbose) {
+        logInfo('⏳ Deferring client HMR until server bundle is ready...');
+      }
+      return;
+    }
+    originalHmrPublish(payload);
+  };
+
   return { devMiddleware, hotMiddleware: hotMiddlewareInstance };
 }
 
@@ -455,6 +499,11 @@ async function checkForUpdate() {
  * Sets up a file watcher for the server bundle that triggers HMR updates when server code changes.
  */
 function setupServerBundleWatcher(serverCompiler) {
+  // Mark server as compiling so client HMR events are buffered.
+  serverCompiler.hooks.compile.tap('HmrSync', () => {
+    serverCompiling = true;
+  });
+
   // Start watch mode on the server compiler
   serverCompiler.watch(
     {
@@ -468,11 +517,13 @@ function setupServerBundleWatcher(serverCompiler) {
       if (error) {
         logError('❌ Server compilation failed: ' + error.message);
         if (error.stack) logError(error.stack);
+        flushPendingHmrPublishes();
         return;
       }
 
       if (!stats) {
         logError('❌ Server compilation failed: no stats returned.');
+        flushPendingHmrPublishes();
         return;
       }
 
@@ -492,6 +543,7 @@ function setupServerBundleWatcher(serverCompiler) {
           });
         }
 
+        flushPendingHmrPublishes();
         return;
       }
 
@@ -502,8 +554,10 @@ function setupServerBundleWatcher(serverCompiler) {
         logInfo('🔄 Checking for HMR updates...');
       }
 
-      // Run HMR check using a Promise chain (ES2015-safe)
+      // Apply server HMR first, THEN flush client updates so both
+      // sides have the new code before React Fast Refresh fires.
       await checkForUpdate();
+      flushPendingHmrPublishes();
     },
   );
 }

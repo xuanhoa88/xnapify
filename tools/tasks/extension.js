@@ -142,7 +142,17 @@ async function generateManifests(extensions) {
       );
     }
 
-    const checksum = await computeChecksum(outputDir);
+    let checksum;
+    try {
+      checksum = await computeChecksum(outputDir);
+    } catch (checksumErr) {
+      // Gracefully degrade — use a timestamp-based fallback so the build
+      // continues even if hashing fails (e.g. broken symlinks).
+      logError(
+        `⚠️  Checksum failed for ${name}: ${checksumErr.message} — using fallback`,
+      );
+      checksum = `fallback-${Date.now()}`;
+    }
 
     const outputManifest = {
       ...pick(manifest, MANIFEST_FIELDS),
@@ -389,11 +399,13 @@ async function buildExtensions(options = {}) {
         return;
       }
 
+      // Link node_modules and copy assets first so the output directory
+      // is complete before generateManifests checksums it.
       await Promise.all([
-        generateManifests(extensions),
         copyStaticAssets(extensions),
         linkExtensionNodeModules(extensions),
       ]);
+      await generateManifests(extensions);
 
       logInfo(
         `✅ Extension build completed in ${formatDuration(Date.now() - start)}`,
