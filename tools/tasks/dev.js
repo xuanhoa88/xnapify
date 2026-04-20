@@ -387,9 +387,11 @@ async function checkForUpdate() {
     // Small delay to ensure all modules are loaded before checking
     await new Promise(resolve => setTimeout(resolve, 50));
 
-    // Check for updates but DO NOT auto-apply them (we reload the bundle manually)
-    // Applying updates to the old bundle can cause freezes if dispose handlers hang
-    const updatedModules = await hmr.check(false);
+    // Check for updates AND apply them so webpack rewrites chunk files on disk.
+    // Previously hmr.check(false) only downloaded updates without applying,
+    // leaving stale code in chunk files. loadServerBundle() then re-required
+    // those stale chunks, causing SSR hydration mismatches.
+    const updatedModules = await hmr.check(true);
 
     // No updates found
     if (!updatedModules || updatedModules.length === 0) {

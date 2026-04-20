@@ -13,7 +13,6 @@ import {
   useContext,
   useRef,
   forwardRef,
-  useLayoutEffect,
 } from 'react';
 
 import { Button, Box, Flex, Text, Theme } from '@radix-ui/themes';
@@ -170,7 +169,7 @@ function Menu({ children, className }) {
   const ctx = useContextMenu('Menu');
 
   // Calculate position when menu opens and update on scroll/resize
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (!ctx.isOpen) return undefined;
 
     const updatePosition = () => {

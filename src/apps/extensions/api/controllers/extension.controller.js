@@ -129,9 +129,14 @@ export const serveExtensionStatic = async (req, res, next) => {
     staticMiddlewareCache.set(staticDir, staticMiddleware);
   }
 
-  return staticMiddleware(req, res, (...args) => {
+  return staticMiddleware(req, res, () => {
+    // Restore original URL before responding
     req.url = originalUrl;
-    next(...args);
+
+    // Send a plain-text 404 instead of falling through to API JSON handlers.
+    // Without this, the catch-all API middleware responds with application/json,
+    // which triggers the browser's strict MIME type check for .js files.
+    res.status(404).type('text/plain').send('Not Found');
   });
 };
 

@@ -7,7 +7,7 @@
 
 import { useRef, useCallback, useMemo, useEffect } from 'react';
 
-import { LoaderIcon, CameraIcon } from '@radix-ui/react-icons';
+import { ReloadIcon, CameraIcon } from '@radix-ui/react-icons';
 import { Flex, Box, Text, Heading } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
@@ -99,7 +99,7 @@ function ProfileHeader() {
             justify='center'
           >
             {loading ? (
-              <LoaderIcon width={32} height={32} className={s.spinner} />
+              <ReloadIcon width={32} height={32} className={s.spinner} />
             ) : (
               <CameraIcon width={32} height={32} />
             )}

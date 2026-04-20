@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { LoaderIcon } from '@radix-ui/react-icons';
+import { ReloadIcon } from '@radix-ui/react-icons';
 import { Flex, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
@@ -20,7 +20,7 @@ function Loader() {
   return (
     <Flex direction='column' align='center' justify='center' gap='3' p='8'>
       <Flex className={s.loaderIconWrapper}>
-        <LoaderIcon width={32} height={32} className={s.loaderSpin} />
+        <ReloadIcon width={32} height={32} className={s.loaderSpin} />
       </Flex>
       <Text size='3' color='gray'>
         {t('loading', 'Loading...')}

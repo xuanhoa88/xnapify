@@ -232,24 +232,22 @@ export default function Toolbar({
             className={s.fontSizeWrapper}
             data-tooltip={t('shared:form.wysiwyg.fontSize', 'Font Size (px)')}
           >
-            <TextField.Root>
-              <TextField.Input
-                ref={fontSizeRef}
-                type='number'
-                className={s.fontSizeInput}
-                value={fontSizeValue}
-                onChange={e => setFontSizeValue(e.target.value)}
-                onBlur={e => applyFontSize(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    applyFontSize(e.target.value);
-                  }
-                }}
-                min='8'
-                max='100'
-              />
-            </TextField.Root>
+            <TextField.Root
+              ref={fontSizeRef}
+              type='number'
+              className={s.fontSizeInput}
+              value={fontSizeValue}
+              onChange={e => setFontSizeValue(e.target.value)}
+              onBlur={e => applyFontSize(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  applyFontSize(e.target.value);
+                }
+              }}
+              min='8'
+              max='100'
+            />
           </div>
         )}
       </div>

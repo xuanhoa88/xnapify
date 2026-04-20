@@ -9,7 +9,6 @@
   border: 1px solid var(--gray-a7);
   outline: none;
   outline-offset: -1px;
-  box-sizing: border-box;
   font-family: inherit;
   opacity: 1;
   cursor: text;

@@ -87,9 +87,7 @@ export default function AddKeyModal({
                     if (valueSelectRef.current) valueSelectRef.current.focus();
                   }
                 }}
-              >
-                <TextField.Input />
-              </TextField.Root>
+              />
             </Box>
           </>
         )}

@@ -25,8 +25,9 @@ export default function NestedTestPage() {
           Layout Nesting Test
         </Heading>
         <Text size='3' mb='5' display='block'>
-          This page is explicitly wrapped by the <code>TestLayout</code>{' '}
-          component. You should see a blue dashed border around this content.
+          {
+            'This page is explicitly wrapped by the <code>TestLayout</code> component. You should see a blue dashed border around this content.'
+          }
         </Text>
 
         <Heading as='h3' size='3' mb='2' color='gray'>

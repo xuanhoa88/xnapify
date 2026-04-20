@@ -7,8 +7,8 @@
 
 import { useCallback, useState, useEffect } from 'react';
 
-import { ArrowLeftIcon } from '@radix-ui/react-icons';
-import { Flex, Box, Text, Heading, Button } from '@radix-ui/themes';
+
+import { Flex, Card, Text, Heading, Button } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
@@ -61,7 +61,7 @@ function ResetPasswordRequest() {
       <HeroSection />
 
       <Flex align='center' justify='center' className={s.contentWrapper}>
-        <Box className={s.formBox}>
+        <Card size='4' variant='classic' className={s.formCard}>
           <Form.Error message={error} />
 
           {success ? (
@@ -92,13 +92,24 @@ function ResetPasswordRequest() {
             </Form>
           )}
 
-          <Flex justify='center' mt='6'>
-            <Link to='/login' className={s.backLink}>
-              <ArrowLeftIcon width={16} height={16} />
-              {t('resetPassword.backToLogin', 'Back to Login')}
-            </Link>
+          <Flex justify='center' mt='5'>
+            <Text size='2' color='gray'>
+              <Trans
+                t={t}
+                i18nKey='resetPassword.backToLogin'
+                defaults='Remember your password? <0>Back to Login</0>'
+                // eslint-disable-next-line react/jsx-key, jsx-a11y/anchor-has-content
+                components={[
+                  <Link
+                    key='link'
+                    to='/login'
+                    className={s.backLink}
+                  />,
+                ]}
+              />
+            </Text>
           </Flex>
-        </Box>
+        </Card>
       </Flex>
     </Flex>
   );
@@ -131,10 +142,7 @@ function HeroSection() {
             xnapify
           </Text>
         </Link>
-        <Text size='9' mb='4' className={s.heroIcon}>
-          🔑
-        </Text>
-        <Heading as='h1' size='8' mb='3' className={s.heroTitle}>
+        <Heading as='h2' size='8' mb='3' className={s.heroTitle}>
           {t('resetPassword.title', 'Reset Password')}
         </Heading>
         <Text size='4' className={s.heroSubtitle}>
@@ -164,6 +172,7 @@ function RequestFormFields({ loading }) {
         label={t('resetPassword.email', 'Email Address')}
       >
         <Form.Input
+          size='3'
           type='email'
           placeholder={t(
             'resetPassword.emailPlaceholder',
@@ -175,6 +184,7 @@ function RequestFormFields({ loading }) {
       <Button
         variant='solid'
         color='indigo'
+        size='3'
         type='submit'
         mt='2'
         className={s.submitBtn}

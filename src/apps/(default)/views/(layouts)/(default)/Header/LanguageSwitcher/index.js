@@ -80,9 +80,7 @@ function LanguageSwitcher() {
   // After mount: full interactive DropdownMenu
   return (
     <DropdownMenu.Root>
-      <DropdownMenu.Trigger asChild>
-        {triggerButton}
-      </DropdownMenu.Trigger>
+      <DropdownMenu.Trigger asChild>{triggerButton}</DropdownMenu.Trigger>
 
       <DropdownMenu.Content align='end' variant='soft' size='2'>
         {localeEntries.map(([code, name]) => (

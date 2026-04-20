@@ -31,7 +31,6 @@
 
 .input {
   display: block;
-  box-sizing: border-box;
   flex: 1;
   height: 44px;
 

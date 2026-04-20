@@ -148,9 +148,7 @@ export function ToolbarPromptProvider({ editor, children }) {
               onKeyDown={handleKeyDown}
               placeholder={label || title}
               size='3'
-            >
-              <TextField.Input />
-            </TextField.Root>
+            />
           </div>
         </Modal.Body>
         <Modal.Footer>

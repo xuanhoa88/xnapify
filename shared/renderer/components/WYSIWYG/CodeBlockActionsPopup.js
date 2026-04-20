@@ -92,9 +92,7 @@ export default function CodeBlockActionsPopup({
                 onChange={e => setSearch(e.target.value)}
                 onClick={e => e.stopPropagation()}
                 onKeyDown={e => e.stopPropagation()}
-              >
-                <TextField.Input />
-              </TextField.Root>
+              />
             </div>
 
             {/* Scrollable language list */}

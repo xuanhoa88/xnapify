@@ -244,7 +244,6 @@ export default function ObjectNode({
         </Text>
         {!expanded && displayObjectSize && (
           <Text as='span' className={s.objectSize}>
-            {' '}
             {size} item{size === 1 ? '' : 's'}
           </Text>
         )}

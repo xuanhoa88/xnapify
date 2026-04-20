@@ -7,9 +7,9 @@
 
 import { useCallback, useEffect } from 'react';
 
-import { Flex, Box, Text, Heading, Button } from '@radix-ui/themes';
+import { Flex, Box, Card, Text, Heading, Button } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
 import { ExtensionSlot } from '@shared/renderer/components/Extension';
@@ -42,6 +42,7 @@ function Login() {
   const dispatch = useDispatch();
   const history = useHistory();
   const ws = useWebSocket();
+
   const loading = useSelector(isAuthLoading);
   const error = useSelector(getAuthError);
   const currentLocale = useSelector(getLocale);
@@ -99,16 +100,16 @@ function Login() {
       <HeroSection />
 
       <Flex align='center' justify='center' className={s.contentWrapper}>
-        <Box className={s.formBox}>
+        <Card size='4' variant='classic' className={s.formCard}>
           <Heading as='h1' size='7' mb='6' className={s.title}>
             {t('navigation.login', 'Log In')}
           </Heading>
 
           <Form.Error message={error} />
 
-          {/* OAuth buttons slot — container is always rendered for SSR hydration safety. */}
+          {/* OAuth buttons slot — hidden via CSS :has(:empty) when no plugins registered */}
           <Box mb='5' className={s.descriptionBox}>
-            <Box className={s.descriptionEmpty}>
+            <Box>
               <ExtensionSlot name='auth.oauth.buttons' />
             </Box>
 
@@ -132,15 +133,23 @@ function Login() {
 
           {isRegistrationAllowed && (
             <Flex justify='center' mt='5'>
-              <Box className={s.registerLinkBox}>
-                {t('login.noAccount', "Don't have an account?")}{' '}
-                <Link to='/register' className={s.registerLink}>
-                  {t('login.register', 'Sign up')}
-                </Link>
-              </Box>
+              <Text size='2' color='gray'>
+                <Trans
+                  t={t}
+                  i18nKey='login.dontHaveAccount'
+                  // eslint-disable-next-line react/jsx-key, jsx-a11y/anchor-has-content
+                  components={[
+                    <Link
+                      key='link'
+                      to='/register'
+                      className={s.registerLink}
+                    />,
+                  ]}
+                />
+              </Text>
             </Flex>
           )}
-        </Box>
+        </Card>
       </Flex>
     </Flex>
   );
@@ -173,7 +182,7 @@ function HeroSection() {
             xnapify
           </Text>
         </Link>
-        <Heading as='h1' size='8' mb='3' className={s.heroTitle}>
+        <Heading as='h2' size='8' mb='3' className={s.heroTitle}>
           {t('login.welcome', 'Welcome Back')}
         </Heading>
         <Text size='4' className={s.heroSubtitle}>
@@ -194,6 +203,7 @@ function LoginFormFields({ loading }) {
     <Flex direction='column' gap='4'>
       <Form.Field name='email' label={t('login.email', 'Email')}>
         <Form.Input
+          size='3'
           type='email'
           placeholder={t('login.emailPlaceholder', 'your.email@example.com')}
         />
@@ -203,11 +213,10 @@ function LoginFormFields({ loading }) {
         <Flex justify='between' align='end' mb='2'>
           <Form.Label>{t('login.password', 'Password')}</Form.Label>
           <Link to='/reset-password' className={s.formFieldsForgotPasswordLink}>
-            {' '}
             {t('login.forgotPassword', 'Forgot password?')}
           </Link>
         </Flex>
-        <Form.Password />
+        <Form.Password size='3' />
         <Form.Error />
       </Form.Field>
 

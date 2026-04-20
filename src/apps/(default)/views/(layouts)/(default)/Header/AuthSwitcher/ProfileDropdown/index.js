@@ -110,11 +110,14 @@ function ProfileDropdown() {
   return (
     <Box position='relative'>
       <DropdownMenu.Root>
-        <DropdownMenu.Trigger asChild>
-          {triggerButton}
-        </DropdownMenu.Trigger>
+        <DropdownMenu.Trigger asChild>{triggerButton}</DropdownMenu.Trigger>
 
-        <DropdownMenu.Content align='end' variant='soft' size='2' className={s.menuContent}>
+        <DropdownMenu.Content
+          align='end'
+          variant='soft'
+          size='2'
+          className={s.menuContent}
+        >
           {/* Header */}
           <Box py='2' px='3' mb='1'>
             <Text as='div' size='2' weight='bold'>
@@ -133,8 +136,16 @@ function ProfileDropdown() {
           </DropdownMenu.Item>
 
           {checkPermission(userProfile, 'nodered:admin') && (
-            <DropdownMenu.Item onClick={() => { window.location.href = '/~/red/admin'; }}>
-              <LightningBoltIcon width={16} height={16} style={{ marginRight: '8px' }} />
+            <DropdownMenu.Item
+              onClick={() => {
+                window.location.href = '/~/red/admin';
+              }}
+            >
+              <LightningBoltIcon
+                width={16}
+                height={16}
+                style={{ marginRight: '8px' }}
+              />
               {t('navigation.nodeRed', 'Node-RED')}
             </DropdownMenu.Item>
           )}

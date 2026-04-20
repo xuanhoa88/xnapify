@@ -7,8 +7,8 @@
 
 import { useCallback, useState, useEffect, useRef } from 'react';
 
-import { ArrowLeftIcon, LockOpen1Icon } from '@radix-ui/react-icons';
-import { Flex, Box, Text, Heading, Button } from '@radix-ui/themes';
+import { LockOpen1Icon } from '@radix-ui/react-icons';
+import { Flex, Card, Text, Heading, Button } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
@@ -87,7 +87,7 @@ function ResetPasswordConfirmation({ token }) {
       <HeroSection />
 
       <Flex align='center' justify='center' className={s.contentWrapper}>
-        <Box className={s.formBox}>
+        <Card size='4' variant='classic' className={s.formCard}>
           <Form.Error message={error} />
 
           {success ? (
@@ -104,7 +104,7 @@ function ResetPasswordConfirmation({ token }) {
                 />
               </Text>
               <Button asChild variant='solid' className={s.loginLinkBtn}>
-                <Link to='/login' className={s.loginLink}>
+                <Link to='/login'>
                   {t('resetPasswordConfirmation.goToLogin', 'Go to Login')}
                 </Link>
               </Button>
@@ -123,13 +123,24 @@ function ResetPasswordConfirmation({ token }) {
             </Form>
           )}
 
-          <Flex justify='center' mt='6'>
-            <Link to='/login' className={s.backLink}>
-              <ArrowLeftIcon width={16} height={16} />
-              {t('resetPasswordConfirmation.backToLogin', 'Back to Login')}
-            </Link>
+          <Flex justify='center' mt='5'>
+            <Text size='2' color='gray'>
+              <Trans
+                t={t}
+                i18nKey='resetPasswordConfirmation.backToLogin'
+                defaults='Changed your mind? <0>Back to Login</0>'
+                // eslint-disable-next-line react/jsx-key, jsx-a11y/anchor-has-content
+                components={[
+                  <Link
+                    key='link'
+                    to='/login'
+                    className={s.backLink}
+                  />,
+                ]}
+              />
+            </Text>
           </Flex>
-        </Box>
+        </Card>
       </Flex>
       <Toast ref={toastRef} />
     </Flex>
@@ -167,10 +178,7 @@ function HeroSection() {
             xnapify
           </Text>
         </Link>
-        <Text size='9' mb='4' className={s.heroIcon}>
-          🔐
-        </Text>
-        <Heading as='h1' size='8' mb='3' className={s.heroTitle}>
+        <Heading as='h2' size='8' mb='3' className={s.heroTitle}>
           {t('resetPasswordConfirmation.title', 'Set New Password')}
         </Heading>
         <Text size='4' className={s.heroSubtitle}>
@@ -224,7 +232,7 @@ function ResetFormFields({ loading, dispatch }) {
         name='password'
         label={t('resetPasswordConfirmation.newPassword', 'New Password')}
       >
-        <Form.Password />
+        <Form.Password size='3' />
       </Form.Field>
 
       <Form.Field
@@ -234,7 +242,7 @@ function ResetFormFields({ loading, dispatch }) {
           'Confirm New Password',
         )}
       >
-        <Form.Password />
+        <Form.Password size='3' />
       </Form.Field>
 
       <Flex justify='end'>
@@ -262,6 +270,7 @@ function ResetFormFields({ loading, dispatch }) {
       <Button
         variant='solid'
         color='indigo'
+        size='3'
         type='submit'
         mt='2'
         className={s.submitBtn}

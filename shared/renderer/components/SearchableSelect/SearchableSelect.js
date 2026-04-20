@@ -5,14 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import {
-  useState,
-  useRef,
-  useEffect,
-  useCallback,
-  useMemo,
-  useLayoutEffect,
-} from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 
 import {
   Button,
@@ -99,7 +92,7 @@ function SearchableSelect({
     menu.style.zIndex = '99999';
   }, [isOpen]);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (isOpen) {
       updatePosition();
       // Use capture phase to catch scrolls even on overflowing divs

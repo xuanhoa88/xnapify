@@ -7,7 +7,7 @@
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 
-import { LoaderIcon, GearIcon } from '@radix-ui/react-icons';
+import { ReloadIcon, GearIcon } from '@radix-ui/react-icons';
 import { Flex, Box, Text, Heading, Button } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
@@ -128,7 +128,7 @@ function PreferencesCard() {
     return (
       <Box className={s.cardContainer}>
         <Flex align='center' justify='center' gap='3' className={s.loadingBox}>
-          <LoaderIcon width={24} height={24} className={s.spinner} />
+          <ReloadIcon width={24} height={24} className={s.spinner} />
           <Text size='3' color='gray'>
             {t('common.loading', 'Loading...')}
           </Text>

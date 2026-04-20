@@ -7,7 +7,7 @@
 
 import { useCallback, useEffect } from 'react';
 
-import { Flex, Box, Text, Heading, Button } from '@radix-ui/themes';
+import { Flex, Card, Text, Heading, Button } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
@@ -78,8 +78,8 @@ function Register() {
       <HeroSection />
 
       <Flex align='center' justify='center' className={s.contentWrapper}>
-        <Box className={s.formBox}>
-          <Heading as='h2' size='6' align='center' mb='6' className={s.title}>
+        <Card size='4' variant='classic' className={s.formCard}>
+          <Heading as='h1' size='7' mb='6' className={s.title}>
             {t('navigation.register', 'Register')}
           </Heading>
 
@@ -109,7 +109,7 @@ function Register() {
               />
             </Text>
           </Flex>
-        </Box>
+        </Card>
       </Flex>
     </Flex>
   );
@@ -142,7 +142,7 @@ function HeroSection() {
             xnapify
           </Text>
         </Link>
-        <Heading as='h1' size='8' mb='3' className={s.heroTitle}>
+        <Heading as='h2' size='8' mb='3' className={s.heroTitle}>
           {t('register.welcome', 'Create Account')}
         </Heading>
         <Text size='4' className={s.heroSubtitle}>
@@ -166,25 +166,27 @@ function RegisterFormFields({ loading }) {
     <Flex direction='column' gap='4'>
       <Form.Field name='email' label={t('register.email', 'Email')}>
         <Form.Input
+          size='3'
           type='email'
           placeholder={t('register.emailPlaceholder', 'your.email@example.com')}
         />
       </Form.Field>
 
       <Form.Field name='password' label={t('register.password', 'Password')}>
-        <Form.Password />
+        <Form.Password size='3' />
       </Form.Field>
 
       <Form.Field
         name='confirmPassword'
         label={t('register.confirmPassword', 'Confirm Password')}
       >
-        <Form.Password />
+        <Form.Password size='3' />
       </Form.Field>
 
       <Button
         variant='solid'
         color='indigo'
+        size='3'
         type='submit'
         mt='2'
         className={s.fullWidthBtn}

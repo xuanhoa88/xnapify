@@ -7,7 +7,7 @@
 
 import { useCallback, useEffect } from 'react';
 
-import { Button, Box, Flex, Text, Heading } from '@radix-ui/themes';
+import { Box, Flex, Text, Heading } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
 import { useFormContext } from '@shared/renderer/components/Form';
@@ -98,9 +98,9 @@ export default function QuickAccess() {
       </Heading>
       <Flex direction='column' className={s.userList}>
         {DEMO_USERS.map((user, index) => (
-          <Button
+          <button
             key={user.email}
-            variant='ghost'
+            type='button'
             className={s.userCard}
             onClick={() => handleQuickLogin(user)}
           >
@@ -115,7 +115,7 @@ export default function QuickAccess() {
                 {user.role}
               </Text>
             </Flex>
-          </Button>
+          </button>
         ))}
       </Flex>
     </Box>

@@ -576,6 +576,14 @@ function cleanup() {
     }
   });
 
+  // Unmount React root so createRoot() can re-attach on HMR re-init
+  safeCleanup('Unmount React root', () => {
+    if (root && typeof root.unmount === 'function') {
+      root.unmount();
+    }
+    root = null;
+  });
+
   // Clear scroll positions history
   safeCleanup('Clear scroll positions history', () => {
     scrollPositionsHistory.clear();

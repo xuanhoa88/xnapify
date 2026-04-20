@@ -1,0 +1,158 @@
+/**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+/**
+ * Global CSS overrides applied after normalize.css and Radix UI themes.
+ *
+ * These rules establish baseline behaviors that should apply universally:
+ *   1. Box-sizing reset (border-box everywhere)
+ *   2. Font smoothing and text rendering
+ *   3. Smooth scrolling with reduced-motion respect
+ *   4. Themed text selection
+ *   5. Cursor pointer on interactive elements (Radix omits this)
+ *   6. Focus-visible ring for keyboard navigation
+ *   7. Image containment defaults
+ *   8. Scrollbar theming (thin, themed)
+ *   9. Reduced-motion accessibility
+ */
+
+/* ==========================================================================
+   1. Box-sizing reset
+   Inherit border-box everywhere so padding/border are included in width.
+   Eliminates per-component box-sizing declarations.
+   ========================================================================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* ==========================================================================
+   2–3. Font smoothing, text rendering & smooth scrolling
+   Antialiased text for crisper rendering on macOS/iOS, improved
+   legibility across all platforms, and native smooth-scroll for
+   anchor navigation. Scroll is disabled when the user prefers
+   reduced motion (see §9).
+   ========================================================================== */
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizelegibility;
+  scroll-behavior: smooth;
+}
+
+/* ==========================================================================
+   4. Themed text selection
+   Branded selection color using Radix UI design tokens.
+   ========================================================================== */
+
+::selection {
+  background-color: var(--indigo-a5);
+  color: var(--gray-12);
+}
+
+/* ==========================================================================
+   5. Cursor pointer on interactive elements
+   Radix UI intentionally omits cursor:pointer following native browser
+   conventions. This override restores the expected web UX behavior
+   where clickable controls show a pointer cursor.
+   ========================================================================== */
+
+button:not([disabled]),
+[role='button']:not([aria-disabled='true']),
+input[type='checkbox']:not([disabled]),
+input[type='radio']:not([disabled]),
+input[type='submit']:not([disabled]),
+input[type='reset']:not([disabled]),
+input[type='file']:not([disabled]),
+select:not([disabled]),
+label[for],
+a[href],
+summary {
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   6. Focus-visible ring
+   Consistent keyboard-focus indicator using Radix design tokens.
+   Only shows for keyboard navigation (:focus-visible), preserving
+   clean aesthetics for mouse/touch users.
+   ========================================================================== */
+
+:focus-visible {
+  outline: 2px solid var(--indigo-a8);
+  outline-offset: 2px;
+}
+
+/* Remove the default focus ring — :focus-visible handles it */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ==========================================================================
+   7. Image containment
+   Prevent images from overflowing their containers and remove the
+   bottom whitespace gap caused by inline display.
+   ========================================================================== */
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ==========================================================================
+   8. Scrollbar theming
+   Thin, themed scrollbars using both standard (Firefox) and WebKit
+   (Chrome/Safari/Edge) APIs.
+   ========================================================================== */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--gray-a5) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--gray-a5);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--gray-a7);
+}
+
+/* ==========================================================================
+   9. Reduced-motion accessibility
+   Respect the user's OS-level motion preference by disabling all
+   animations and transitions. Scroll behavior also falls back to
+   instant jumps.
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto;
+  }
+}
