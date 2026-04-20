@@ -67,7 +67,7 @@ function LanguageSwitcher() {
       className={s.langBtn}
     >
       <GlobeIcon width={16} height={16} />
-      <Text size='2'>{currentLanguageName}</Text>
+      <Text size='3'>{currentLanguageName}</Text>
       <ChevronDownIcon width={12} height={12} />
     </button>
   );
@@ -82,14 +82,14 @@ function LanguageSwitcher() {
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild>{triggerButton}</DropdownMenu.Trigger>
 
-      <DropdownMenu.Content align='end' variant='soft' size='2'>
+      <DropdownMenu.Content align='end' variant='soft' size='3'>
         {localeEntries.map(([code, name]) => (
           <DropdownMenu.Item
             key={code}
             onSelect={() => handleLocaleChange(code)}
             className={code === currentLocale ? s.localeItemActive : undefined}
           >
-            <Text size='2' mr='3'>
+            <Text size='3' mr='3'>
               {name}
             </Text>
             {code === currentLocale && (

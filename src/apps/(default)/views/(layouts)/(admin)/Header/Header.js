@@ -7,7 +7,7 @@
 
 import { useCallback } from 'react';
 
-import { MenuIcon } from '@radix-ui/react-icons';
+import { HamburgerMenuIcon } from '@radix-ui/react-icons';
 import { Flex, Box, Button } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
@@ -53,7 +53,7 @@ function AdminHeader() {
             onClick={handleToggleDrawer}
             title={t('common.toggleDrawer', 'Toggle drawer')}
           >
-            <MenuIcon width={20} height={20} />
+            <HamburgerMenuIcon width={20} height={20} />
           </Button>
           <Box display={{ initial: 'none', md: 'block' }}>
             <Breadcrumbs />

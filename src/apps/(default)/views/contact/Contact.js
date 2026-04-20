@@ -320,11 +320,11 @@ function Contact({ title }) {
                       align='center'
                       className={s.officeHourItem}
                     >
-                      <Text size='2' color='gray' className={s.officeHourDay}>
+                      <Text size='3' color='gray' className={s.officeHourDay}>
                         {t(`contact.hours.${item.day}`, item.label)}
                       </Text>
                       <Text
-                        size='2'
+                        size='3'
                         weight='medium'
                         className={s.officeHourValue}
                       >

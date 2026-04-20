@@ -52,7 +52,7 @@ function ImpersonationBanner() {
     >
       <Flex align='center' gap='2'>
         <EyeOpenIcon width={20} height={20} className={s.bannerIcon} />
-        <Text size='2' weight='medium'>
+        <Text size='3' weight='medium'>
           {t(
             'auth:impersonation.active',
             'You are currently impersonating {{name}}',

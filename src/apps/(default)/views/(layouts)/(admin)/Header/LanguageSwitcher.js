@@ -85,7 +85,7 @@ function AdminLanguageSwitcher() {
         <Flex align='center' justify='center' className={s.langIconWrap}>
           <GlobeIcon width={18} height={18} />
         </Flex>
-        <Text size='2' weight='medium' className={s.langText}>
+        <Text size='3' weight='medium' className={s.langText}>
           {currentLanguageName || languageCode}
         </Text>
         <Box className={clsx(s.chevronIcon, { [s.chevronIconOpen]: isOpen })}>
@@ -104,7 +104,7 @@ function AdminLanguageSwitcher() {
                 [s.localeItemActive]: code === currentLocale,
               })}
             >
-              <Text size='2'>{name}</Text>
+              <Text size='3'>{name}</Text>
               {code === currentLocale && (
                 <CheckIcon
                   width={14}

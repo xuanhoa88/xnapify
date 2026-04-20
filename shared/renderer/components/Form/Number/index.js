@@ -26,7 +26,7 @@ import s from './Index.css';
 const FormNumberInput = forwardRef(function FormNumberInput$(
   {
     placeholder,
-    size = '2',
+    size = '3',
     className,
     disabled,
     min = 0,

@@ -24,7 +24,7 @@ function HeroSection() {
     <Section size='4' className={clsx(s.heroSectionModern, s.textCenter)}>
       <Flex direction='column' align='center' className={s.heroContainer}>
         <Box mb='4' className={s.badgeLabel}>
-          <Text size='2' weight='medium' color='indigo'>
+          <Text size='3' weight='medium' color='indigo'>
             Fully Open Source & Extensible
           </Text>
         </Box>

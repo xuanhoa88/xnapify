@@ -25,7 +25,7 @@ import s from './Textarea.css';
  *   </Form.Field>
  */
 const FormTextarea = forwardRef(function FormTextarea$(
-  { placeholder, size = '2', className, disabled, rows = 4, ...props },
+  { placeholder, size = '3', className, disabled, rows = 4, ...props },
   forwardedRef,
 ) {
   const { id, name, error } = useFormField();

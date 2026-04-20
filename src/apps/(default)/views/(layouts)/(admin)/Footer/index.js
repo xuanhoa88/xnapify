@@ -74,7 +74,7 @@ function AdminFooter() {
         className={s.footerFlex}
       >
         <footer>
-          <Text size='2' color='gray'>
+          <Text size='3' color='gray'>
             {t('footer.copyright', { year: currentYear })}
           </Text>
         </footer>

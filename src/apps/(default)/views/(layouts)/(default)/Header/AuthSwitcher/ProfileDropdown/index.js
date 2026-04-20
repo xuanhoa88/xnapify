@@ -91,7 +91,7 @@ function ProfileDropdown() {
             avatarInitial
           )}
         </Flex>
-        <Text size='2' weight='medium' className={s.profileName}>
+        <Text size='3' weight='medium' className={s.profileName}>
           {displayName}
         </Text>
         <Box className={s.profileChevron}>
@@ -115,12 +115,12 @@ function ProfileDropdown() {
         <DropdownMenu.Content
           align='end'
           variant='soft'
-          size='2'
+          size='3'
           className={s.menuContent}
         >
           {/* Header */}
           <Box py='2' px='3' mb='1'>
-            <Text as='div' size='2' weight='bold'>
+            <Text as='div' size='3' weight='bold'>
               {displayName}
             </Text>
             <Text as='div' size='1' color='gray' mt='1'>

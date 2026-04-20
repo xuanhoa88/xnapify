@@ -27,7 +27,7 @@ import s from './Index.css';
 const FormPasswordInput = forwardRef(function FormPasswordInput$(
   {
     placeholder = '••••••••',
-    size = '2',
+    size = '3',
     className,
     disabled,
     autoFocus,

@@ -27,7 +27,7 @@ import s from './Input.css';
 const FormInput = forwardRef(function FormInput$(
   {
     type = 'text',
-    size = '2',
+    size = '3',
     placeholder,
     className,
     disabled,

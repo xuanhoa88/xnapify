@@ -120,7 +120,7 @@ function ProfileHeader() {
           disabled={loading}
         />
         {error && (
-          <Text size='2' color='red' align='center' className={s.errorText}>
+          <Text size='3' color='red' align='center' className={s.errorText}>
             {error}
           </Text>
         )}
@@ -139,7 +139,7 @@ function ProfileHeader() {
             <Text size='6' weight='bold' className={s.statValue}>
               {(user && Array.isArray(user.roles) && user.roles.length) || 0}
             </Text>
-            <Text size='2' color='gray' weight='medium' className={s.statLabel}>
+            <Text size='3' color='gray' weight='medium' className={s.statLabel}>
               {t('profile.roles', 'Roles')}
             </Text>
           </Flex>
@@ -147,7 +147,7 @@ function ProfileHeader() {
             <Text size='6' weight='bold' className={s.statValue}>
               {(user && Array.isArray(user.groups) && user.groups.length) || 0}
             </Text>
-            <Text size='2' color='gray' weight='medium' className={s.statLabel}>
+            <Text size='3' color='gray' weight='medium' className={s.statLabel}>
               {t('profile.groups', 'Groups')}
             </Text>
           </Flex>

@@ -48,12 +48,12 @@ function Footer() {
           m='0 auto'
           className={s.footerFlexInner}
         >
-          <Text size='2'>{t('footer.copyright', { year: currentYear })}</Text>
+          <Text size='3'>{t('footer.copyright', { year: currentYear })}</Text>
 
           {NAV_LINKS.map(link => (
             <Flex asChild align='center' gap='3' key={link.to}>
               <span>
-                <Text size='2' color='gray'>
+                <Text size='3' color='gray'>
                   ·
                 </Text>
                 <Link to={link.to} className={s.footerLink}>

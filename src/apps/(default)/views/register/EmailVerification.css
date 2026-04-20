@@ -5,6 +5,7 @@
 
 .contentWrapper {
   flex: 1;
+  background-color: var(--color-panel-solid);
   padding: var(--space-6);
   width: 100%;
 }

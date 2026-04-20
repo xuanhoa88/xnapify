@@ -110,7 +110,7 @@ function Dashboard() {
           <Text color='red' size='4' weight='bold' mb='2'>
             {t('admin:dashboard.errorLoading', 'Error loading activities')}
           </Text>
-          <Text color='red' size='2' mb='4'>
+          <Text color='red' size='3' mb='4'>
             {error}
           </Text>
           <Button variant='soft' color='red' onClick={refreshActivities}>
@@ -196,7 +196,7 @@ function Dashboard() {
                             'No recent activities',
                           )}
                         </Text>
-                        <Text size='2'>
+                        <Text size='3'>
                           {t(
                             'admin:dashboard.noRecentActivityDescription',
                             'Activity will appear here as users interact with the system.',
@@ -221,7 +221,7 @@ function Dashboard() {
                         activity.metadata.entity_id ? (
                           <Flex direction='column' gap='1'>
                             <Text
-                              size='2'
+                              size='3'
                               weight='medium'
                               className={s.entityTypeText}
                             >
@@ -232,14 +232,14 @@ function Dashboard() {
                             </Text>
                           </Flex>
                         ) : (
-                          <Text size='2' color='gray' className={s.italicText}>
+                          <Text size='3' color='gray' className={s.italicText}>
                             N/A
                           </Text>
                         )}
                       </Table.Cell>
                       <Table.Cell>
                         {(activity.metadata && activity.metadata.action) || (
-                          <Text size='2' color='gray' className={s.italicText}>
+                          <Text size='3' color='gray' className={s.italicText}>
                             N/A
                           </Text>
                         )}
@@ -263,7 +263,7 @@ function Dashboard() {
                             addSuffix: true,
                           })
                         ) : (
-                          <Text size='2' color='gray' className={s.italicText}>
+                          <Text size='3' color='gray' className={s.italicText}>
                             N/A
                           </Text>
                         )}

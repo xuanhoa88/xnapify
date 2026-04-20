@@ -152,7 +152,7 @@ function PreferencesCard() {
           <Heading as='h2' size='5' className={s.cardTitle}>
             {t('profile.preferences', 'Preferences')}
           </Heading>
-          <Text size='2' color='gray'>
+          <Text size='3' color='gray'>
             {t(
               'profile.preferencesDesc',
               'Customize your experience and notifications',
@@ -250,7 +250,7 @@ function PreferencesFormFields({ loading }) {
         <Button
           variant='solid'
           color='indigo'
-          size='2'
+          size='3'
           type='submit'
           loading={loading || isSubmitting}
         >

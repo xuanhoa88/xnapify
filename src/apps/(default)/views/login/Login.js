@@ -129,7 +129,7 @@ function Login() {
 
           {isRegistrationAllowed && (
             <Flex justify='center' mt='5'>
-              <Text size='2' color='gray'>
+              <Text size='3' color='gray'>
                 <Trans
                   t={t}
                   i18nKey='login.dontHaveAccount'
@@ -222,7 +222,7 @@ function LoginFormFields({ loading }) {
       <Button
         variant='solid'
         color='indigo'
-        size='2'
+        size='3'
         type='submit'
         mt='2'
         className={s.fullWidthBtn}

@@ -160,14 +160,14 @@ function AdminNotifications() {
                   <Flex className={s.notificationContent}>
                     <Flex justify='between' align='start'>
                       <Text
-                        size='2'
+                        size='3'
                         weight={notification.read ? 'regular' : 'bold'}
                         className={s.notificationTitle}
                       >
                         {notification.title}
                       </Text>
                     </Flex>
-                    <Text size='2' color='gray' className={s.notificationText}>
+                    <Text size='3' color='gray' className={s.notificationText}>
                       {notification.message}
                     </Text>
                     <Text size='1' color='gray' className={s.notificationTime}>

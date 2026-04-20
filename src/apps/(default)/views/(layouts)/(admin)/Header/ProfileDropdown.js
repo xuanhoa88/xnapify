@@ -120,7 +120,7 @@ function ProfileDropdown() {
               )}
             </Flex>
             <Flex direction='column' className={s.profileInfo}>
-              <Text size='2' weight='medium' className={s.profileName}>
+              <Text size='3' weight='medium' className={s.profileName}>
                 {displayName}
               </Text>
               <Text size='1' color='gray' className={s.profileRole}>

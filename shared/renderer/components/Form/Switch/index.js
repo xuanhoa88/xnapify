@@ -24,7 +24,7 @@ import s from './Switch.css';
  *   </Form.Field>
  */
 const FormSwitch = forwardRef(function FormSwitch$(
-  { label, size = '2', className, disabled, ...props },
+  { label, size = '3', className, disabled, ...props },
   forwardedRef,
 ) {
   const { id, name, error } = useFormField();

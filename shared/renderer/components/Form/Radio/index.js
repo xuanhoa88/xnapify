@@ -23,7 +23,7 @@ import s from './Radio.css';
  */
 function FormRadio({
   options = [],
-  size = '2',
+  size = '3',
   className,
   disabled,
   direction = 'vertical',

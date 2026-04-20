@@ -74,7 +74,7 @@ function DeleteAccountCard() {
           <Heading as='h2' size='5' className={s.cardTitle}>
             {t('profile.deleteAccount', 'Delete Account')}
           </Heading>
-          <Text size='2' color='gray'>
+          <Text size='3' color='gray'>
             {t(
               'profile.deleteAccountDesc',
               'Permanently delete your account and all data',
@@ -91,7 +91,7 @@ function DeleteAccountCard() {
           <Text size='3' weight='bold' className={s.warningTitle}>
             {t('profile.deleteWarningTitle', 'Warning')}
           </Text>
-          <Text size='2' className={s.warningText}>
+          <Text size='3' className={s.warningText}>
             {t(
               'profile.deleteWarningText',
               'This action cannot be undone. All your data will be permanently deleted.',
@@ -142,7 +142,7 @@ function DeleteAccountFormFields({ loading }) {
         <Button
           color='red'
           variant='solid'
-          size='2'
+          size='3'
           type='submit'
           loading={loading || isSubmitting}
         >

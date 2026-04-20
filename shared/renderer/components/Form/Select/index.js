@@ -25,7 +25,7 @@ import s from './Select.css';
  *   </Form.Field>
  */
 const FormSelect = forwardRef(function FormSelect$(
-  { options = [], placeholder, size = '2', className, disabled, ...props },
+  { options = [], placeholder, size = '3', className, disabled, ...props },
   forwardedRef,
 ) {
   const { name, error } = useFormField();

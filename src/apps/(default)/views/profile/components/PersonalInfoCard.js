@@ -113,7 +113,7 @@ function PersonalInfoCard() {
           <Heading as='h2' size='5' className={s.cardTitle}>
             {t('profile.personalInfo', 'Personal Information')}
           </Heading>
-          <Text size='2' color='gray'>
+          <Text size='3' color='gray'>
             {t('profile.personalInfoDesc', 'Update your personal details')}
           </Text>
         </Box>
@@ -215,7 +215,7 @@ function PersonalInfoFormFields({ loading }) {
         <Button
           variant='solid'
           color='indigo'
-          size='2'
+          size='3'
           type='submit'
           loading={loading || isSubmitting}
         >

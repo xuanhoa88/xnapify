@@ -33,7 +33,7 @@ import useMask from './useMask';
 const FormInputMask = forwardRef(function FormInputMask$(
   {
     type = 'text',
-    size = '2',
+    size = '3',
     placeholder: userPlaceholder,
     className,
     disabled,

@@ -61,13 +61,13 @@ function AdminBreadcrumbs() {
               </Flex>
             )}
             {hasLink ? (
-              <Text size='2' asChild>
+              <Text size='3' asChild>
                 <Link to={item.url} className={s.breadcrumbLink}>
                   {item.label}
                 </Link>
               </Text>
             ) : (
-              <Text size='2' weight='medium' className={s.breadcrumbText}>
+              <Text size='3' weight='medium' className={s.breadcrumbText}>
                 {item.label}
               </Text>
             )}

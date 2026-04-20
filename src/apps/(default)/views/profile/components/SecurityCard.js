@@ -81,7 +81,7 @@ function SecurityCard() {
           <Heading as='h2' size='5' className={s.cardTitle}>
             {t('profile.security', 'Security')}
           </Heading>
-          <Text size='2' color='gray'>
+          <Text size='3' color='gray'>
             {t('profile.securityDesc', 'Manage your password and security')}
           </Text>
         </Box>
@@ -90,13 +90,13 @@ function SecurityCard() {
       <Flex direction='column' gap='3' className={s.tipsBox}>
         <Flex align='center' gap='2' className={s.infoItem}>
           <CheckCircledIcon width={16} height={16} />
-          <Text size='2'>
+          <Text size='3'>
             {t('profile.passwordTip1', 'Use at least 8 characters')}
           </Text>
         </Flex>
         <Flex align='center' gap='2' className={s.infoItem}>
           <CheckCircledIcon width={16} height={16} />
-          <Text size='2'>
+          <Text size='3'>
             {t(
               'profile.passwordTip2',
               'Mix uppercase, lowercase, numbers & symbols',
@@ -105,7 +105,7 @@ function SecurityCard() {
         </Flex>
         <Flex align='center' gap='2' className={s.infoItem}>
           <CheckCircledIcon width={16} height={16} />
-          <Text size='2'>
+          <Text size='3'>
             {t('profile.passwordTip3', 'Avoid common words or personal info')}
           </Text>
         </Flex>
@@ -207,7 +207,7 @@ function SecurityFormFields({ loading, dispatch }) {
       <Flex justify='end' className={s.cardAction}>
         <Button
           variant='solid'
-          size='2'
+          size='3'
           type='submit'
           loading={loading || isSubmitting}
         >

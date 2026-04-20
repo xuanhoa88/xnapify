@@ -24,7 +24,7 @@ import s from './Checkbox.css';
  *   </Form.Field>
  */
 const FormCheckbox = forwardRef(function FormCheckbox$(
-  { label, size = '2', className, disabled, ...props },
+  { label, size = '3', className, disabled, ...props },
   forwardedRef,
 ) {
   const { id, name, error } = useFormField();

@@ -141,7 +141,7 @@ function AdminMessages() {
                 <Flex className={s.messageContent}>
                   <Flex justify='between' align='center'>
                     <Text
-                      size='2'
+                      size='3'
                       weight={message.read ? 'regular' : 'bold'}
                       className={s.messageSender}
                     >
@@ -151,7 +151,7 @@ function AdminMessages() {
                       {message.time}
                     </Text>
                   </Flex>
-                  <Text size='2' color='gray' className={s.messageSubject}>
+                  <Text size='3' color='gray' className={s.messageSubject}>
                     {message.subject}
                   </Text>
                   <Text size='1' color='gray' className={s.messagePreview}>

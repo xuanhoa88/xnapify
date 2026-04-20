@@ -209,7 +209,7 @@ function Drawer({ minimal = false }) {
           return <Comp width={18} height={18} />;
         })()}
         {!isCompact && (
-          <Text size='2' weight={active ? 'medium' : 'regular'}>
+          <Text size='3' weight={active ? 'medium' : 'regular'}>
             {item.label}
           </Text>
         )}
@@ -347,7 +347,7 @@ function Drawer({ minimal = false }) {
                   >
                     <RadixIcons.ArrowUpIcon width={18} height={18} />
                     {!isCompact && (
-                      <Text size='2'>
+                      <Text size='3'>
                         {t('navigation.backToSite', 'Back to Site')}
                       </Text>
                     )}
@@ -380,7 +380,7 @@ function Drawer({ minimal = false }) {
               </Flex>
               {!isCompact && (
                 <Flex direction='column' className={s.userInfoBox}>
-                  <Text size='2' weight='medium' className={s.userDisplayName}>
+                  <Text size='3' weight='medium' className={s.userDisplayName}>
                     {userDisplayName || t('common.admin', 'Admin')}
                   </Text>
                   <Text size='1' color='gray' className={s.userEmail}>
