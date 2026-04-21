@@ -47,10 +47,20 @@ function findLayouts(layouts, rootSegment, pathname, module) {
     return [];
   }
 
+  // 1. Explicit named layout: `export const layout = 'unauth'`
+  //    Looks up `(default):unauth` from theme layouts in (layouts) folder
+  if (module && typeof module.layout === 'string') {
+    const namedKey = `${ROUTE_PATH_DEFAULT}:${module.layout}`;
+    if (layouts.has(namedKey)) {
+      return [layouts.get(namedKey)];
+    }
+    return [];
+  }
+
   const result = [];
   const defaultKey = `${ROUTE_PATH_DEFAULT}:default`;
 
-  // 1. Section layout (e.g., admin shell) — always applied if it exists
+  // 2. Section layout (e.g., admin shell) — always applied if it exists
   let hasSection = false;
   if (rootSegment) {
     const sectionKey = `${ROUTE_PATH_DEFAULT}:${rootSegment}`;
@@ -60,7 +70,7 @@ function findLayouts(layouts, rootSegment, pathname, module) {
     }
   }
 
-  // 2. Colocated/Nested Layouts (Path-based, root → leaf)
+  // 3. Colocated/Nested Layouts (Path-based, root → leaf)
   const segments = pathname.split(ROUTE_SEPARATOR).filter(Boolean);
   let currentPath = '';
   const pathLayouts = [];
@@ -73,7 +83,7 @@ function findLayouts(layouts, rootSegment, pathname, module) {
     }
   });
 
-  // 3. Default layout is a FALLBACK — only when no section AND no colocated
+  // 4. Default layout is a FALLBACK — only when no section AND no colocated
   if (!hasSection && pathLayouts.length === 0 && layouts.has(defaultKey)) {
     result.push(layouts.get(defaultKey));
   }
