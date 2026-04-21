@@ -91,7 +91,7 @@ function AdminMessages() {
         variant='ghost'
         onClick={handleToggle}
         title={t('common.messages', 'Messages')}
-        className={clsx(s.messagesBtn, { [s.messagesBtnOpen]: isOpen })}
+        className={clsx(s.messagesBtn, isOpen && s.messagesBtnOpen)}
       >
         <EnvelopeClosedIcon width={18} height={18} />
         {unreadCount > 0 && (
@@ -119,9 +119,10 @@ function AdminMessages() {
               <Flex
                 key={message.id}
                 gap='3'
-                className={clsx(s.messageItem, {
-                  [s.messageItemUnread]: !message.read,
-                })}
+                className={clsx(
+                  s.messageItem,
+                  !message.read && s.messageItemUnread,
+                )}
               >
                 <Flex
                   align='center'
@@ -138,23 +139,23 @@ function AdminMessages() {
                     getInitials(message.sender)
                   )}
                 </Flex>
-                <Flex className={s.messageContent}>
+                <Flex direction='column' width='100%' overflow='hidden'>
                   <Flex justify='between' align='center'>
                     <Text
                       size='3'
                       weight={message.read ? 'regular' : 'bold'}
-                      className={s.messageSender}
+                      truncate
                     >
                       {message.sender}
                     </Text>
-                    <Text size='1' color='gray' className={s.messageTime}>
+                    <Text size='1' color='gray' shrink='0' ml='2'>
                       {message.time}
                     </Text>
                   </Flex>
-                  <Text size='3' color='gray' className={s.messageSubject}>
+                  <Text size='3' color='gray' truncate mt='1'>
                     {message.subject}
                   </Text>
-                  <Text size='1' color='gray' className={s.messagePreview}>
+                  <Text size='1' color='gray' truncate mt='1'>
                     {message.preview}
                   </Text>
                 </Flex>

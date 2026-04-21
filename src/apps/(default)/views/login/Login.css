@@ -4,9 +4,7 @@
 }
 
 .contentWrapper {
-  flex: 1;
   background-color: var(--color-panel-solid);
-  padding: var(--space-6);
   width: 100%;
 }
 
@@ -72,17 +70,9 @@
 }
 
 .heroSection {
-  flex: 1;
-  display: none;
   background-color: var(--indigo-9);
   color: white;
   padding: var(--space-8);
-}
-
-@media (min-width: 1024px) {
-  .heroSection {
-    display: flex;
-  }
 }
 
 .heroContent {

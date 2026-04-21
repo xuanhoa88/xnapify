@@ -8,10 +8,10 @@
 import { useEffect, useRef } from 'react';
 
 import { ArchiveIcon } from '@radix-ui/react-icons';
-import { Box, Flex, Heading } from '@radix-ui/themes';
+import { Box, Flex, Heading, Text } from '@radix-ui/themes';
+import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-// import { Flex, Heading, Text, Box } , Heading } from '@radix-ui/themes';
 import FileGrid from '../components/FileGrid';
 import FileSidebar from '../components/FileSidebar';
 import FileToolbar from '../components/FileToolbar';
@@ -33,6 +33,7 @@ import s from './Files.css';
  * The main container for the Google Drive-like file manager in the admin panel.
  */
 function Files() {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const currentView = useSelector(selectCurrentView);
   const currentFolderId = useSelector(selectCurrentFolderId);
@@ -61,16 +62,19 @@ function Files() {
         justify='between'
         wrap='wrap'
         gap='4'
-        className={s.header}
+        pb='4'
+        mb='6'
+        className={s.adminHeader}
       >
         <Flex align='center' gap='3'>
-          <Flex align='center' justify='center' className={s.iconBox}>
+          <Flex align='center' justify='center' className={s.adminHeaderIcon}>
             <ArchiveIcon width={24} height={24} />
           </Flex>
           <Flex direction='column'>
-            <Heading size='6' className={s.heading}>
-              {null}
-            </Heading>
+            <Heading size='6'>{t('admin:navigation.files', 'Files')}</Heading>
+            <Text size='2' color='gray' mt='1'>
+              {t('admin:files.subtitle', 'Manage digital assets')}
+            </Text>
           </Flex>
         </Flex>
       </Flex>

@@ -149,13 +149,18 @@ const RoleUsersModal = forwardRef((props, ref) => {
           />
         </Box>
 
-        <Box className={s.itemsFlex}>
+        <Flex direction='column' gap='3'>
           {usersLoading ? (
-            <Flex justify='center' align='center' className={s.loadingFlex}>
+            <Flex
+              justify='center'
+              align='center'
+              p='8'
+              className={s.loadingFlex}
+            >
               {t('admin:common.loadingUsers', 'Loading users...')}
             </Flex>
           ) : users.length === 0 ? (
-            <Flex justify='center' align='center' className={s.emptyFlex}>
+            <Flex justify='center' align='center' p='8' className={s.emptyFlex}>
               {search
                 ? t('admin:roles.noUsersMatch', 'No users match your search')
                 : t(
@@ -165,7 +170,13 @@ const RoleUsersModal = forwardRef((props, ref) => {
             </Flex>
           ) : (
             users.map(user => (
-              <Flex key={user.id} align='center' gap='3' className={s.itemFlex}>
+              <Flex
+                key={user.id}
+                align='center'
+                gap='3'
+                p='3'
+                className={s.itemFlex}
+              >
                 <Avatar
                   name={
                     (user.profile && user.profile.display_name) || user.email
@@ -180,20 +191,15 @@ const RoleUsersModal = forwardRef((props, ref) => {
                     .toUpperCase()}
                 />
 
-                <Box className={s.itemInfo}>
-                  <Text as='div' size='2' weight='bold' className={s.itemName}>
+                <Flex direction='column' grow='1' minWidth='0'>
+                  <Text as='div' size='2' weight='bold' truncate highContrast>
                     {(user.profile && user.profile.display_name) ||
                       t('admin:common.na', 'N/A')}
                   </Text>
-                  <Text
-                    as='div'
-                    size='1'
-                    color='gray'
-                    className={s.itemDescription}
-                  >
+                  <Text as='div' size='1' color='gray' truncate>
                     {user.email}
                   </Text>
-                </Box>
+                </Flex>
                 <Box>
                   <Badge
                     variant={user.is_active ? 'success' : 'error'}
@@ -208,7 +214,7 @@ const RoleUsersModal = forwardRef((props, ref) => {
               </Flex>
             ))
           )}
-        </Box>
+        </Flex>
 
         {/* Pagination */}
         {totalPages > 1 && (

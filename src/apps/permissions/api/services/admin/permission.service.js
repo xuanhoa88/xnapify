@@ -5,6 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import pick from 'lodash/pick';
+import pickBy from 'lodash/pickBy';
+
 // ========================================================================
 // PERMISSION MANAGEMENT SERVICES
 // ========================================================================
@@ -395,14 +398,15 @@ export async function updatePermission(
   }
 
   // Update only resource, action, description, is_active
-  const updateFields = {};
-  if (updateData.resource !== undefined)
-    updateFields.resource = updateData.resource;
-  if (updateData.action !== undefined) updateFields.action = updateData.action;
-  if (updateData.description !== undefined)
-    updateFields.description = updateData.description;
-  if (updateData.is_active != null)
-    updateFields.is_active = !!updateData.is_active;
+  const updateFields = {
+    ...pickBy(
+      pick(updateData, ['resource', 'action', 'description']),
+      v => v !== undefined,
+    ),
+    ...(updateData.is_active != null
+      ? { is_active: !!updateData.is_active }
+      : {}),
+  };
 
   await permission.update(updateFields);
 

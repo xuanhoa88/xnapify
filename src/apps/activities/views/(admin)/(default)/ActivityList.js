@@ -17,7 +17,6 @@ import {
   Button,
   Badge,
 } from '@radix-ui/themes';
-import clsx from 'clsx';
 import format from 'date-fns/format';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
@@ -139,10 +138,10 @@ const ActivityList = () => {
               <ActivityIcon width={24} height={24} />
             </Flex>
             <Flex direction='column'>
-              <Heading size='6' className={s.headerHeading}>
+              <Heading size='6'>
                 {t('admin:activities.title', 'Activity Logs')}
               </Heading>
-              <Text size='3' color='gray' className={s.subtitleText}>
+              <Text size='2' color='gray' mt='1'>
                 {t(
                   'admin:activities.subtitle',
                   'System audit trail and event history',
@@ -162,23 +161,23 @@ const ActivityList = () => {
   // Error state
   if (error) {
     return (
-      <Box className={s.container}>
+      <Box className={s.loadingBox}>
         <Flex
           align='center'
           justify='between'
           wrap='wrap'
           gap='4'
-          className={s.header}
+          className={s.headerFlex}
         >
           <Flex align='center' gap='3'>
-            <Flex align='center' justify='center' className={s.headerIcon}>
+            <Flex align='center' justify='center' className={s.headerIconBox}>
               <ActivityIcon width={24} height={24} />
             </Flex>
             <Flex direction='column'>
-              <Heading size='6' className={s.headerHeading}>
+              <Heading size='6'>
                 {t('admin:activities.title', 'Activity Logs')}
               </Heading>
-              <Text size='3' color='gray' className={s.subtitleText}>
+              <Text size='2' color='gray' mt='1'>
                 {t(
                   'admin:activities.subtitle',
                   'System audit trail and event history',
@@ -192,7 +191,7 @@ const ActivityList = () => {
           align='center'
           justify='center'
           p='6'
-          className={s.errorBox}
+          className={s.adminErrorBlock}
         >
           <Text color='red' size='4' weight='bold' mb='2'>
             {t('admin:activities.errorLoading', 'Error loading activity logs')}
@@ -200,7 +199,12 @@ const ActivityList = () => {
           <Text color='red' size='2' mb='4'>
             {error}
           </Text>
-          <Button variant='soft' color='red' onClick={refreshActivities}>
+          <Button
+            variant='soft'
+            color='red'
+            onClick={refreshActivities}
+            size='2'
+          >
             {t('common:retry', 'Retry')}
           </Button>
         </Flex>
@@ -209,23 +213,25 @@ const ActivityList = () => {
   }
 
   return (
-    <Box className={s.container}>
+    <Box className={s.loadingBox}>
       <Flex
         align='center'
         justify='between'
         wrap='wrap'
         gap='4'
-        className={s.header}
+        pb='4'
+        mb='6'
+        className={s.adminHeader}
       >
         <Flex align='center' gap='3'>
-          <Flex align='center' justify='center' className={s.headerIcon}>
+          <Flex align='center' justify='center' className={s.adminHeaderIcon}>
             <ActivityIcon width={24} height={24} />
           </Flex>
           <Flex direction='column'>
-            <Heading size='6' className={s.headerHeading}>
+            <Heading size='6'>
               {t('admin:activities.title', 'Activity Logs')}
             </Heading>
-            <Text size='3' color='gray' className={s.subtitleText}>
+            <Text size='2' color='gray' mt='1'>
               {t(
                 'admin:activities.subtitle',
                 'System audit trail and event history',
@@ -246,9 +252,9 @@ const ActivityList = () => {
         </Flex>
       </Flex>
 
-      <Flex gap='3' align='center' wrap='wrap' className={s.filterBar}>
+      <Flex gap='3' align='center' wrap='wrap' mb='4'>
         <SearchableSelect
-          className={s.filterSelect}
+          className={s.searchableSelect}
           options={eventOptions}
           value={eventFilter}
           onChange={handleEventFilterChange}
@@ -257,7 +263,7 @@ const ActivityList = () => {
         />
 
         <SearchableSelect
-          className={s.filterSelect}
+          className={s.searchableSelect}
           options={entityTypeOptions}
           value={entityTypeFilter}
           onChange={handleEntityTypeFilterChange}
@@ -265,7 +271,7 @@ const ActivityList = () => {
           showSearch={false}
         />
 
-        <Box className={s.clearFiltersBox}>
+        <Box className={s.clearFilterBox}>
           {hasActiveFilters && (
             <Button
               variant='ghost'
@@ -281,7 +287,7 @@ const ActivityList = () => {
         </Box>
       </Flex>
 
-      <Box className={s.relativeBox}>
+      <Box className={s.tableRelative}>
         <Box className={s.tableWrapper}>
           <Table.Root variant='surface'>
             <Table.Header>
@@ -309,15 +315,15 @@ const ActivityList = () => {
                       align='center'
                       direction='column'
                       py='9'
-                      className={s.opacityBox}
+                      className={s.adminEmptyBlock}
                     >
                       <ActivityIcon
                         width={48}
                         height={48}
-                        className={s.marginBottomBox}
+                        className={s.adminEmptyIcon}
                       />
 
-                      <Text size='3' weight='bold'>
+                      <Text size='3' weight='bold' mb='1'>
                         {t(
                           'admin:activities.noLogsFound',
                           'No activity logs found',
@@ -336,20 +342,22 @@ const ActivityList = () => {
                 activities.map(record => (
                   <Table.Row key={record.id}>
                     <Table.Cell>
-                      <Badge color='blue' radius='full' variant='soft'>
+                      <Badge color='blue' radius='full' variant='soft' size='2'>
                         {record.event}
                       </Badge>
                     </Table.Cell>
                     <Table.Cell>
-                      <Flex align='center'>
-                        <Badge color='gray' radius='full' variant='surface'>
+                      <Flex align='center' gap='2'>
+                        <Badge
+                          color='gray'
+                          radius='full'
+                          variant='surface'
+                          size='2'
+                        >
                           {record.entity_type}
                         </Badge>
                         {record.entity_id && (
-                          <Box
-                            as='code'
-                            className={clsx(s.codeBadge, s.codeBadgeMargin)}
-                          >
+                          <Box as='code' className={s.codeTag}>
                             {record.entity_id}
                           </Box>
                         )}
@@ -357,7 +365,7 @@ const ActivityList = () => {
                     </Table.Cell>
                     <Table.Cell>
                       {record.actor_id ? (
-                        <Box as='code' className={s.codeBadge}>
+                        <Box as='code' className={s.codeTag}>
                           {record.actor_id}
                         </Box>
                       ) : (

@@ -190,14 +190,16 @@ export default function UserApiKeys({ userId }) {
       justify='between'
       wrap='wrap'
       gap='4'
-      className={s.headerFlex}
+      pb='4'
+      mb='6'
+      className={s.adminHeader}
     >
       <Flex align='center' gap='3'>
-        <Flex align='center' justify='center' className={s.headerIconBox}>
+        <Flex align='center' justify='center' className={s.adminHeaderIcon}>
           <LockOpen1Icon width={24} height={24} />
         </Flex>
         <Flex direction='column'>
-          <Heading size='6' className={s.headerHeading}>
+          <Heading size='6'>
             {user
               ? t('admin:users.apiKeys.headerTitle', 'API Keys: {{name}}', {
                   name:
@@ -205,7 +207,7 @@ export default function UserApiKeys({ userId }) {
                 })
               : t('admin:users.apiKeys.headerTitle', 'User API Keys')}
           </Heading>
-          <Text size='3' color='gray' className={s.headerSubtitle}>
+          <Text size='2' color='gray' mt='1'>
             {t(
               'admin:users.apiKeys.headerSubtitle',
               'Manage API keys for this user',
@@ -263,13 +265,13 @@ export default function UserApiKeys({ userId }) {
     return (
       <Box className={s.containerBox}>
         {getHeader()}
-        <Box className={s.marginTopBox}>
+        <Box className={s.sectionMarginTop}>
           <Flex
             direction='column'
             align='center'
             justify='center'
             p='6'
-            className={s.errorFlex}
+            className={s.adminErrorBlock}
           >
             <Text color='red' size='4' weight='bold' mb='2'>
               {t('admin:users.apiKeys.userNotFoundError', 'User not found')}
@@ -281,6 +283,7 @@ export default function UserApiKeys({ userId }) {
               variant='soft'
               color='gray'
               onClick={() => history.push('/admin/users')}
+              size='2'
             >
               {t('admin:users.apiKeys.backToUsers', 'Back to Users')}
             </Button>
@@ -294,7 +297,7 @@ export default function UserApiKeys({ userId }) {
     <Box className={s.containerBox}>
       {getHeader()}
 
-      <Box className={s.marginTopBox}>
+      <Box className={s.sectionMarginTop}>
         {/* New key banner — shown once after generation */}
         {newKey && (
           <Box className={s.newKeyBox}>
@@ -379,15 +382,15 @@ export default function UserApiKeys({ userId }) {
                       align='center'
                       direction='column'
                       py='9'
-                      className={s.emptyStateFlex}
+                      className={s.adminEmptyBlock}
                     >
                       <LockOpen1Icon
                         width={48}
                         height={48}
-                        className={s.emptyStateIcon}
+                        className={s.adminEmptyIcon}
                       />
 
-                      <Text size='3' weight='bold'>
+                      <Text size='3' weight='bold' mb='1'>
                         {t('admin:users.apiKeys.emptyState', 'No API keys yet')}
                       </Text>
                     </Flex>

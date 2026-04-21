@@ -43,10 +43,6 @@
   font-weight: bold;
 }
 
-.userInfoBox {
-  overflow: hidden;
-}
-
 .groupHeader {
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -135,18 +131,6 @@
 .menuItemUnstyledLink {
   text-decoration: none;
   display: block;
-}
-
-.userDisplayName {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.userEmail {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .collapseTrigger {

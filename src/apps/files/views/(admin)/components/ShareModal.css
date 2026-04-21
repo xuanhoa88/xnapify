@@ -1,15 +1,3 @@
-.paddingY {
-  padding: var(--space-2) 0;
-}
-
-.avatarBox {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-}
-
 .avatarGroup {
   border-radius: var(--radius-3);
   background-color: var(--indigo-3);
@@ -20,10 +8,6 @@
   border-radius: 100%;
   background-color: var(--teal-3);
   color: var(--teal-11);
-}
-
-.textPrimary {
-  color: var(--gray-12);
 }
 
 .initErrorContainer {
@@ -76,10 +60,6 @@
   color: var(--green-11);
 }
 
-.flexOne {
-  flex: 1;
-}
-
 .selectTrigger {
   padding: 0;
   height: auto;
@@ -101,25 +81,9 @@
   margin-bottom: var(--space-3);
 }
 
-.flexOneMin {
-  flex: 1;
-  min-width: 0;
-}
-
-.textEllipsis {
-  color: var(--gray-12);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .ownerLabel {
   color: var(--gray-11);
   padding: 0 var(--space-2);
-}
-
-.spacer32 {
-  width: 32px;
 }
 
 .closeBtn {

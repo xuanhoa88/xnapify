@@ -365,10 +365,10 @@ export default function ListingDetail({ listing = null, onClose }) {
                     as='button'
                     key={i}
                     type='button'
-                    className={clsx(s.dotButton, {
-                      [s.dotActive]: i === lightboxIdx,
-                      [s.dotInactive]: i !== lightboxIdx,
-                    })}
+                    className={clsx(
+                      s.dotButton,
+                      i === lightboxIdx ? s.dotActive : s.dotInactive,
+                    )}
                     onClick={() => setLightboxIdx(i)}
                     aria-label={`Screenshot ${i + 1}`}
                   />

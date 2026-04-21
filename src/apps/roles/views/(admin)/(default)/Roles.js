@@ -155,17 +155,19 @@ function Roles() {
           justify='between'
           wrap='wrap'
           gap='4'
-          className={s.headerFlex}
+          pb='4'
+          mb='6'
+          className={s.adminHeader}
         >
           <Flex align='center' gap='3'>
-            <Flex align='center' justify='center' className={s.headerIconBox}>
+            <Flex align='center' justify='center' className={s.adminHeaderIcon}>
               <RadixIcons.LockClosedIcon width={24} height={24} />
             </Flex>
             <Flex direction='column'>
-              <Heading size='6' className={s.headerHeading}>
+              <Heading size='6'>
                 {t('admin:roles.title', 'Role Management')}
               </Heading>
-              <Text className={s.headerSubtitle}>
+              <Text size='2' color='gray' mt='1'>
                 {t(
                   'admin:roles.subtitle',
                   'Define access levels and permissions',
@@ -190,17 +192,19 @@ function Roles() {
           justify='between'
           wrap='wrap'
           gap='4'
-          className={s.headerFlex}
+          pb='4'
+          mb='6'
+          className={s.adminHeader}
         >
           <Flex align='center' gap='3'>
-            <Flex align='center' justify='center' className={s.headerIconBox}>
+            <Flex align='center' justify='center' className={s.adminHeaderIcon}>
               <RadixIcons.LockClosedIcon width={24} height={24} />
             </Flex>
             <Flex direction='column'>
-              <Heading size='6' className={s.headerHeading}>
+              <Heading size='6'>
                 {t('admin:roles.title', 'Role Management')}
               </Heading>
-              <Text className={s.headerSubtitle}>
+              <Text size='2' color='gray' mt='1'>
                 {t(
                   'admin:roles.subtitle',
                   'Define access levels and permissions',
@@ -214,7 +218,7 @@ function Roles() {
           align='center'
           justify='center'
           p='6'
-          className={s.errorFlex}
+          className={s.adminErrorBlock}
         >
           <Text color='red' size='4' weight='bold' mb='2'>
             {t('admin:roles.errorLoading', 'Error loading roles')}
@@ -222,7 +226,7 @@ function Roles() {
           <Text color='red' size='2' mb='4'>
             {error}
           </Text>
-          <Button variant='soft' color='red' onClick={refreshRoles}>
+          <Button variant='soft' color='red' onClick={refreshRoles} size='2'>
             {t('common:retry', 'Retry')}
           </Button>
         </Flex>
@@ -237,17 +241,19 @@ function Roles() {
         justify='between'
         wrap='wrap'
         gap='4'
-        className={s.headerFlex}
+        pb='4'
+        mb='6'
+        className={s.adminHeader}
       >
         <Flex align='center' gap='3'>
-          <Flex align='center' justify='center' className={s.headerIconBox}>
+          <Flex align='center' justify='center' className={s.adminHeaderIcon}>
             <RadixIcons.LockClosedIcon width={24} height={24} />
           </Flex>
           <Flex direction='column'>
-            <Heading size='6' className={s.headerHeading}>
+            <Heading size='6'>
               {t('admin:roles.title', 'Role Management')}
             </Heading>
-            <Text className={s.headerSubtitle}>
+            <Text size='2' color='gray' mt='1'>
               {t(
                 'admin:roles.subtitle',
                 'Define access levels and permissions',
@@ -288,17 +294,17 @@ function Roles() {
           align='center'
           direction='column'
           py='9'
-          className={s.emptyStateFlex}
+          className={s.adminEmptyBlock}
         >
           <RadixIcons.LockClosedIcon
             width={48}
             height={48}
-            className={s.emptyStateIcon}
+            className={s.adminEmptyIcon}
           />
-          <Text size='3' weight='bold'>
+          <Text size='3' weight='bold' mb='1'>
             {t('admin:roles.noRolesFound', 'No roles found')}
           </Text>
-          <Text size='2' className={s.emptyStateText}>
+          <Text size='2' color='gray'>
             {t(
               'admin:roles.noRolesDescription',
               'Create a new role to define access levels and permissions.',

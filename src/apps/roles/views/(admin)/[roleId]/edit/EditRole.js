@@ -127,16 +127,16 @@ function EditRole({ roleId, context }) {
           justify='between'
           wrap='wrap'
           gap='4'
-          className={s.headerFlex}
+          pb='4'
+          mb='6'
+          className={s.adminHeader}
         >
           <Flex align='center' gap='3'>
-            <Flex align='center' justify='center' className={s.headerIconBox}>
+            <Flex align='center' justify='center' className={s.adminHeaderIcon}>
               <LockClosedIcon width={24} height={24} />
             </Flex>
             <Flex direction='column'>
-              <Heading size='6' className={s.headerHeading}>
-                {null}
-              </Heading>
+              <Heading size='6'>{null}</Heading>
             </Flex>
           </Flex>
         </Flex>
@@ -156,16 +156,16 @@ function EditRole({ roleId, context }) {
           justify='between'
           wrap='wrap'
           gap='4'
-          className={s.headerFlex}
+          pb='4'
+          mb='6'
+          className={s.adminHeader}
         >
           <Flex align='center' gap='3'>
-            <Flex align='center' justify='center' className={s.headerIconBox}>
+            <Flex align='center' justify='center' className={s.adminHeaderIcon}>
               <LockClosedIcon width={24} height={24} />
             </Flex>
             <Flex direction='column'>
-              <Heading size='6' className={s.headerHeading}>
-                {null}
-              </Heading>
+              <Heading size='6'>{null}</Heading>
             </Flex>
           </Flex>
         </Flex>
@@ -180,16 +180,16 @@ function EditRole({ roleId, context }) {
         justify='between'
         wrap='wrap'
         gap='4'
-        className={s.headerFlex}
+        pb='4'
+        mb='6'
+        className={s.adminHeader}
       >
         <Flex align='center' gap='3'>
-          <Flex align='center' justify='center' className={s.headerIconBox}>
+          <Flex align='center' justify='center' className={s.adminHeaderIcon}>
             <LockClosedIcon width={24} height={24} />
           </Flex>
           <Flex direction='column'>
-            <Heading size='6' className={s.headerHeading}>
-              {null}
-            </Heading>
+            <Heading size='6'>{null}</Heading>
           </Flex>
         </Flex>
       </Flex>

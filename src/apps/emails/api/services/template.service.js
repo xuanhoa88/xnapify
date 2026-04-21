@@ -5,6 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import pick from 'lodash/pick';
+import pickBy from 'lodash/pickBy';
+
 /**
  * Email Template Service
  *
@@ -98,7 +101,7 @@ export async function create(models, data) {
     html_body: data.html_body || '',
     text_body: data.text_body || '',
     sample_data: data.sample_data || {},
-    is_active: data.is_active !== undefined ? data.is_active : true,
+    is_active: data.is_active != null ? data.is_active : true,
   });
 }
 
@@ -113,15 +116,18 @@ export async function update(models, id, data) {
   const record = await models.EmailTemplate.findByPk(id);
   if (!record) return null;
 
-  const updateFields = {};
-  if (data.name !== undefined) updateFields.name = data.name;
-  if (data.slug !== undefined) updateFields.slug = data.slug;
-  if (data.subject !== undefined) updateFields.subject = data.subject;
-  if (data.html_body !== undefined) updateFields.html_body = data.html_body;
-  if (data.text_body !== undefined) updateFields.text_body = data.text_body;
-  if (data.sample_data !== undefined)
-    updateFields.sample_data = data.sample_data;
-  if (data.is_active !== undefined) updateFields.is_active = data.is_active;
+  const updateFields = pickBy(
+    pick(data, [
+      'name',
+      'slug',
+      'subject',
+      'html_body',
+      'text_body',
+      'sample_data',
+      'is_active',
+    ]),
+    v => v !== undefined,
+  );
 
   await record.update(updateFields);
   return record;

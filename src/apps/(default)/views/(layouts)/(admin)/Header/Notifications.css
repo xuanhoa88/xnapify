@@ -47,24 +47,6 @@
   flex-shrink: 0;
 }
 
-.notificationContent {
-  width: 100%;
-  overflow: hidden;
-  flex-direction: column;
-}
-
-.notificationTitle {
-  color: var(--gray-12);
-}
-
-.notificationText {
-  margin-top: 2px;
-}
-
-.notificationTime {
-  margin-top: 4px;
-}
-
 .dropdownFooter {
   padding: var(--space-2);
   background-color: var(--gray-2);

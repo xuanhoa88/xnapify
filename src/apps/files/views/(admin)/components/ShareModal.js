@@ -152,22 +152,21 @@ const ShareModal = forwardRef((props, ref) => {
         : r.email || t('files:share.user', 'User');
 
       return (
-        <Flex align='center' gap='3' className={s.paddingY}>
+        <Flex align='center' gap='3' py='2'>
           <Flex
             align='center'
             justify='center'
-            className={clsx(s.avatarBox, {
-              [s.avatarGroup]: isGroup,
-              [s.avatarUser]: !isGroup,
-            })}
+            width='32px'
+            height='32px'
+            className={isGroup ? s.avatarGroup : s.avatarUser}
           >
             {(() => {
               const Comp = isGroup ? GroupIcon : PersonIcon;
               return <Comp width={14} height={14} />;
             })()}
           </Flex>
-          <Flex direction='column'>
-            <Text as='span' size='2' weight='medium' className={s.textPrimary}>
+          <Flex direction='column' grow='1' minWidth='0'>
+            <Text size='2' weight='medium' truncate highContrast>
               {primaryName}
             </Text>
             <Text as='span' size='1' color='gray'>
@@ -305,11 +304,12 @@ const ShareModal = forwardRef((props, ref) => {
                 <Flex
                   align='center'
                   justify='center'
-                  className={clsx(s.accessIconBox, {
-                    [s.accessPrivate]: shareType === 'private',
-                    [s.accessShared]: shareType === 'shared_users',
-                    [s.accessPublic]: shareType === 'public',
-                  })}
+                  className={clsx(
+                    s.accessIconBox,
+                    shareType === 'private' && s.accessPrivate,
+                    shareType === 'shared_users' && s.accessShared,
+                    shareType === 'public' && s.accessPublic,
+                  )}
                 >
                   {shareType === 'private' ? (
                     <LockClosedIcon width={20} height={20} />
@@ -319,7 +319,7 @@ const ShareModal = forwardRef((props, ref) => {
                     <GlobeIcon width={20} height={20} />
                   )}
                 </Flex>
-                <Flex direction='column' className={s.flexOne}>
+                <Flex direction='column' grow='1'>
                   <Select.Root
                     value={shareType}
                     onValueChange={setShareType}
@@ -397,20 +397,22 @@ const ShareModal = forwardRef((props, ref) => {
                     </Text>
                     <Flex direction='column' gap='2'>
                       {fileOwner && (
-                        <Flex align='center' gap='3' className={s.paddingY}>
+                        <Flex align='center' gap='3' py='2'>
                           <Flex
                             align='center'
                             justify='center'
-                            className={clsx(s.avatarBox, s.avatarGroup)}
+                            width='32px'
+                            height='32px'
+                            className={s.avatarGroup}
                           >
                             <PersonIcon width={16} height={16} />
                           </Flex>
-                          <Flex direction='column' className={s.flexOneMin}>
+                          <Flex direction='column' grow='1' minWidth='0'>
                             <Text
-                              as='span'
                               size='2'
                               weight='medium'
-                              className={s.textEllipsis}
+                              truncate
+                              highContrast
                             >
                               {fileOwner.name || fileOwner.email}
                             </Text>
@@ -421,24 +423,22 @@ const ShareModal = forwardRef((props, ref) => {
                           <Text as='span' size='2' className={s.ownerLabel}>
                             {t('files:share.owner', 'Owner')}
                           </Text>
-                          <Box className={s.spacer32} />
+                          <Box width='32px' />
                           {/* Spacer for remove button */}
                         </Flex>
                       )}
                       {shares.map((item, index) => (
-                        <Flex
-                          key={index}
-                          align='center'
-                          gap='3'
-                          className={s.paddingY}
-                        >
+                        <Flex key={index} align='center' gap='3' py='2'>
                           <Flex
                             align='center'
                             justify='center'
-                            className={clsx(s.avatarBox, {
-                              [s.avatarGroup]: item.entity_type === 'group',
-                              [s.avatarUser]: item.entity_type === 'user',
-                            })}
+                            width='32px'
+                            height='32px'
+                            className={
+                              item.entity_type === 'group'
+                                ? s.avatarGroup
+                                : s.avatarUser
+                            }
                           >
                             {(() => {
                               const Comp =
@@ -448,12 +448,12 @@ const ShareModal = forwardRef((props, ref) => {
                               return <Comp width={16} height={16} />;
                             })()}
                           </Flex>
-                          <Flex direction='column' className={s.flexOneMin}>
+                          <Flex direction='column' grow='1' minWidth='0'>
                             <Text
-                              as='span'
                               size='2'
                               weight='medium'
-                              className={s.textEllipsis}
+                              truncate
+                              highContrast
                             >
                               {(item.user && item.user.email) ||
                                 (item.group && item.group.name)}
@@ -496,7 +496,7 @@ const ShareModal = forwardRef((props, ref) => {
                               <Cross2Icon width={16} height={16} />
                             </Button>
                           ) : (
-                            <Box className={s.spacer32} />
+                            <Box width='32px' />
                           )}
                         </Flex>
                       ))}
@@ -516,7 +516,7 @@ const ShareModal = forwardRef((props, ref) => {
               <Button variant='outline' size='1' onClick={copyLink}>
                 {t('files:share.copy_link', 'Copy link')}
               </Button>
-              <Box className={s.flexOne} />
+              <Box grow='1' />
               <Button
                 variant='solid'
                 color='indigo'

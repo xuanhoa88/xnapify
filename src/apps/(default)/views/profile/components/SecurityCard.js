@@ -13,7 +13,6 @@ import {
   LockOpen1Icon,
 } from '@radix-ui/react-icons';
 import { Flex, Box, Text, Heading, Button } from '@radix-ui/themes';
-import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
@@ -73,12 +72,18 @@ function SecurityCard() {
 
   return (
     <Box className={s.cardContainer}>
-      <Flex align='center' gap='4' className={s.cardHeader}>
-        <Box className={clsx(s.cardHeaderIcon, s.cardHeaderIconIndigo)}>
+      <Flex align='center' gap='4' mb='6'>
+        <Flex
+          align='center'
+          justify='center'
+          width='48px'
+          height='48px'
+          className={s.cardHeaderIconIndigo}
+        >
           <LockClosedIcon width={24} height={24} />
-        </Box>
+        </Flex>
         <Box>
-          <Heading as='h2' size='5' className={s.cardTitle}>
+          <Heading as='h2' size='5' highContrast>
             {t('profile.security', 'Security')}
           </Heading>
           <Text size='3' color='gray'>
@@ -188,10 +193,9 @@ function SecurityFormFields({ loading, dispatch }) {
           size='1'
           onClick={handleGeneratePassword}
           disabled={generatingPassword}
-          className={clsx(s.generateBtn, {
-            [s.generateBtnLoading]: generatingPassword,
-            [s.generateBtnReady]: !generatingPassword,
-          })}
+          className={
+            generatingPassword ? s.generateBtnLoading : s.generateBtnReady
+          }
         >
           {generatingPassword ? (
             t('profile.generatingPassword', 'Generating...')
@@ -204,7 +208,7 @@ function SecurityFormFields({ loading, dispatch }) {
         </Button>
       </Flex>
 
-      <Flex justify='end' className={s.cardAction}>
+      <Flex justify='end' mt='4'>
         <Button
           variant='solid'
           size='3'

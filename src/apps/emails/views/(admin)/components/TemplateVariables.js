@@ -89,10 +89,10 @@ export default function TemplateVariables() {
             gap='1'
             onClick={() => handleCopy(v)}
             title={t('admin:emails.form.clickToCopy', 'Click to copy')}
-            className={clsx(s.variableBtn, {
-              [s.variableBtnCopied]: copiedVar === v,
-              [s.variableBtnNormal]: copiedVar !== v,
-            })}
+            className={clsx(
+              s.variableBtn,
+              copiedVar === v ? s.variableBtnCopied : s.variableBtnNormal,
+            )}
           >
             {copiedVar === v ? (
               <CheckIcon width={14} height={14} />

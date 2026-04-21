@@ -41,8 +41,9 @@ Whenever you provide assistance to a Developer on this codebase, you MUST adhere
 ## 4. Frontend Rigidity
 - **React Components**: Strictly Functional Components with hooks. Refuse any request to build a Class component.
 - **i18n Requirement**: All user-facing strings in JSX must be wrapped in `i18n.t()`. No hardcoded strings are allowed in any UI file.
-- **Data Hooking**: You must honor the SSR lifecycle. Use `getInitialProps` on routing files (`_route.js`) for initial server rendering. Do not fetch essential initial data on `useEffect` mounts.
-- **CSS Modules**: Use `.module.css` extension for component-scoped styles. Do not use inline styles or global CSS for component styling.
+- **Data Hooking**: You must honor the SSR lifecycle. Use `getInitialProps` on routing files (`_route.js`) for initial rendering. Do not fetch essential initial data on `useEffect` mounts.
+- **CSS Modules**: Use `.css` extension for component-scoped styles. ABSOLUTE BAN on inline styles (e.g., `style={{...}}`) or global CSS for component styling.
+- **clsx Utility**: When combining conditional class names, NEVER pass an object to `clsx` (e.g., `clsx(base, { [activeClass]: condition })`). Instead, use short-circuit or ternary logic: `clsx(base, condition ? activeClass : inactiveClass)` to prevent object instantiation overhead during re-renders.
 
 ---
 

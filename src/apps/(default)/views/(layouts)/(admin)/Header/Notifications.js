@@ -107,7 +107,7 @@ function AdminNotifications() {
         variant='ghost'
         onClick={handleToggle}
         title={t('common.notifications', 'Notifications')}
-        className={clsx(s.notificationBtn, { [s.notificationBtnOpen]: isOpen })}
+        className={clsx(s.notificationBtn, isOpen && s.notificationBtnOpen)}
       >
         <RadixIcons.BellIcon width={18} height={18} />
         {unreadCount > 0 && (
@@ -138,9 +138,10 @@ function AdminNotifications() {
                 <Flex
                   key={notification.id}
                   gap='3'
-                  className={clsx(s.notificationItem, {
-                    [s.notificationItemUnread]: !notification.read,
-                  })}
+                  className={clsx(
+                    s.notificationItem,
+                    !notification.read && s.notificationItemUnread,
+                  )}
                 >
                   <Flex
                     align='center'
@@ -157,20 +158,20 @@ function AdminNotifications() {
                       return <NotificationIcon width={16} height={16} />;
                     })()}
                   </Flex>
-                  <Flex className={s.notificationContent}>
+                  <Flex direction='column' width='100%' overflow='hidden'>
                     <Flex justify='between' align='start'>
                       <Text
                         size='3'
                         weight={notification.read ? 'regular' : 'bold'}
-                        className={s.notificationTitle}
+                        highContrast
                       >
                         {notification.title}
                       </Text>
                     </Flex>
-                    <Text size='3' color='gray' className={s.notificationText}>
+                    <Text size='3' color='gray' mt='1'>
                       {notification.message}
                     </Text>
-                    <Text size='1' color='gray' className={s.notificationTime}>
+                    <Text size='1' color='gray' mt='1'>
                       {notification.time}
                     </Text>
                   </Flex>

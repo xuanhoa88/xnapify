@@ -25,6 +25,7 @@ import {
   Button,
   Badge,
 } from '@radix-ui/themes';
+import clsx from 'clsx';
 import format from 'date-fns/format';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
@@ -217,17 +218,19 @@ function EmailTemplates() {
           justify='between'
           wrap='wrap'
           gap='4'
-          className={s.headerFlex}
+          pb='4'
+          mb='6'
+          className={s.adminHeader}
         >
           <Flex align='center' gap='3'>
-            <Flex align='center' justify='center' className={s.headerIconBox}>
+            <Flex align='center' justify='center' className={s.adminHeaderIcon}>
               <EnvelopeClosedIcon width={24} height={24} />
             </Flex>
             <Flex direction='column'>
-              <Heading size='6' className={s.headerHeading}>
+              <Heading size='6'>
                 {t('admin:emails.list.title', 'Templates')}
               </Heading>
-              <Text className={s.headerSubtitle}>
+              <Text size='2' color='gray' mt='1'>
                 {t(
                   'admin:emails.list.subtitle',
                   'Manage email templates with LiquidJS',
@@ -252,17 +255,19 @@ function EmailTemplates() {
           justify='between'
           wrap='wrap'
           gap='4'
-          className={s.headerFlex}
+          pb='4'
+          mb='6'
+          className={s.adminHeader}
         >
           <Flex align='center' gap='3'>
-            <Flex align='center' justify='center' className={s.headerIconBox}>
+            <Flex align='center' justify='center' className={s.adminHeaderIcon}>
               <EnvelopeClosedIcon width={24} height={24} />
             </Flex>
             <Flex direction='column'>
-              <Heading size='6' className={s.headerHeading}>
+              <Heading size='6'>
                 {t('admin:emails.list.title', 'Templates')}
               </Heading>
-              <Text className={s.headerSubtitle}>
+              <Text size='2' color='gray' mt='1'>
                 {t(
                   'admin:emails.list.subtitle',
                   'Manage email templates with LiquidJS',
@@ -276,7 +281,7 @@ function EmailTemplates() {
           align='center'
           justify='center'
           p='6'
-          className={s.errorFlex}
+          className={s.adminErrorBlock}
         >
           <Text color='red' size='4' weight='bold' mb='2'>
             {t('admin:emails.errors.loadTemplates', 'Error loading templates')}
@@ -284,7 +289,7 @@ function EmailTemplates() {
           <Text color='red' size='2' mb='4'>
             {error}
           </Text>
-          <Button variant='soft' color='red' onClick={refreshList}>
+          <Button variant='soft' color='red' onClick={refreshList} size='2'>
             {t('common:retry', 'Retry')}
           </Button>
         </Flex>
@@ -299,17 +304,19 @@ function EmailTemplates() {
         justify='between'
         wrap='wrap'
         gap='4'
-        className={s.headerFlex}
+        pb='4'
+        mb='6'
+        className={s.adminHeader}
       >
         <Flex align='center' gap='3'>
-          <Flex align='center' justify='center' className={s.headerIconBox}>
+          <Flex align='center' justify='center' className={s.adminHeaderIcon}>
             <EnvelopeClosedIcon width={24} height={24} />
           </Flex>
           <Flex direction='column'>
-            <Heading size='6' className={s.headerHeading}>
+            <Heading size='6'>
               {t('admin:emails.list.title', 'Templates')}
             </Heading>
-            <Text className={s.headerSubtitle}>
+            <Text size='2' color='gray' mt='1'>
               {t(
                 'admin:emails.list.subtitle',
                 'Manage email templates with LiquidJS',
@@ -413,21 +420,21 @@ function EmailTemplates() {
                       align='center'
                       direction='column'
                       py='9'
-                      className={s.emptyStateFlex}
+                      className={s.adminEmptyBlock}
                     >
                       <EnvelopeClosedIcon
                         width={48}
                         height={48}
-                        className={s.emptyStateIcon}
+                        className={s.adminEmptyIcon}
                       />
 
-                      <Text size='3' weight='bold'>
+                      <Text size='3' weight='bold' mb='1'>
                         {t(
                           'admin:emails.list.noTemplatesFound',
                           'No email templates found',
                         )}
                       </Text>
-                      <Text size='2' className={s.emptyStateText}>
+                      <Text size='2' color='gray' mb='4'>
                         {t(
                           'admin:emails.list.noTemplatesDescription',
                           'Create your first email template to get started.',
@@ -451,18 +458,16 @@ function EmailTemplates() {
                   return (
                     <Table.Row
                       key={template.id}
-                      className={isSelected ? s.rowSelected : ''}
+                      className={clsx({ [s.activeRowSelected]: isSelected })}
                     >
-                      <Table.Cell className={s.colCenter}>
+                      <Table.Cell className={s.checkboxCol}>
                         <Checkbox
                           checked={isSelected}
                           onCheckedChange={c => handleSelectRow(template.id, c)}
                         />
                       </Table.Cell>
                       <Table.Cell>
-                        <Text weight='bold' className={s.nameText}>
-                          {template.name}
-                        </Text>
+                        <Text weight='bold'>{template.name}</Text>
                       </Table.Cell>
                       <Table.Cell>
                         <Text as='code' className={s.slugText}>

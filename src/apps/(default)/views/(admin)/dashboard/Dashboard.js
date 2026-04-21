@@ -110,10 +110,15 @@ function Dashboard() {
           <Text color='red' size='4' weight='bold' mb='2'>
             {t('admin:dashboard.errorLoading', 'Error loading activities')}
           </Text>
-          <Text color='red' size='3' mb='4'>
+          <Text color='red' size='2' mb='4'>
             {error}
           </Text>
-          <Button variant='soft' color='red' onClick={refreshActivities}>
+          <Button
+            variant='soft'
+            color='red'
+            onClick={refreshActivities}
+            size='2'
+          >
             {t('common:retry', 'Retry')}
           </Button>
         </Flex>
@@ -126,16 +131,11 @@ function Dashboard() {
         <Box className={s.surfaceBox}>
           <Box className={s.headerBox}>
             <Flex align='center' gap='3'>
-              <Heading as='h3' size='4' className={s.headingText}>
+              <Heading as='h3' size='4'>
                 {t('admin:dashboard.recentActivities', 'Recent Activities')}
               </Heading>
               {total > 0 && (
-                <Badge
-                  className={s.badgeText}
-                  color='gray'
-                  radius='full'
-                  variant='surface'
-                >
+                <Badge size='1' radius='full' variant='surface'>
                   {total}
                 </Badge>
               )}
@@ -190,13 +190,13 @@ function Dashboard() {
                           className={s.emptyStateIcon}
                         />
 
-                        <Text size='3' weight='bold'>
+                        <Text size='3' weight='bold' mb='1'>
                           {t(
                             'admin:dashboard.noRecentActivity',
                             'No recent activities',
                           )}
                         </Text>
-                        <Text size='3'>
+                        <Text size='2' color='gray'>
                           {t(
                             'admin:dashboard.noRecentActivityDescription',
                             'Activity will appear here as users interact with the system.',
@@ -220,26 +220,26 @@ function Dashboard() {
                         activity.metadata.entity_type &&
                         activity.metadata.entity_id ? (
                           <Flex direction='column' gap='1'>
-                            <Text
-                              size='3'
-                              weight='medium'
-                              className={s.entityTypeText}
-                            >
+                            <Text size='2' weight='medium'>
                               {activity.metadata.entity_type}
                             </Text>
-                            <Text size='1' className={s.entityIdText}>
+                            <Text
+                              size='1'
+                              color='gray'
+                              className={s.monospaceText}
+                            >
                               {activity.metadata.entity_id}
                             </Text>
                           </Flex>
                         ) : (
-                          <Text size='3' color='gray' className={s.italicText}>
+                          <Text size='2' color='gray' className={s.italicText}>
                             N/A
                           </Text>
                         )}
                       </Table.Cell>
                       <Table.Cell>
                         {(activity.metadata && activity.metadata.action) || (
-                          <Text size='3' color='gray' className={s.italicText}>
+                          <Text size='2' color='gray' className={s.italicText}>
                             N/A
                           </Text>
                         )}
@@ -249,6 +249,7 @@ function Dashboard() {
                           variant={getStatusTagVariant(activity.status)}
                           color='gray'
                           radius='full'
+                          size='2'
                         >
                           {activity.status === 'delivered'
                             ? t('admin:dashboard.statusDelivered', 'Delivered')
@@ -263,7 +264,7 @@ function Dashboard() {
                             addSuffix: true,
                           })
                         ) : (
-                          <Text size='3' color='gray' className={s.italicText}>
+                          <Text size='2' color='gray' className={s.italicText}>
                             N/A
                           </Text>
                         )}
@@ -303,17 +304,19 @@ function Dashboard() {
         justify='between'
         wrap='wrap'
         gap='4'
-        className={s.headerFlex}
+        pb='4'
+        mb='6'
+        className={s.adminHeader}
       >
         <Flex align='center' gap='3'>
-          <Flex align='center' justify='center' className={s.headerIconBox}>
+          <Flex align='center' justify='center' className={s.adminHeaderIcon}>
             <DashboardIcon width={24} height={24} />
           </Flex>
           <Flex direction='column'>
-            <Heading size='6' className={s.headerHeading}>
+            <Heading size='6'>
               {t('admin:dashboard.title', 'Dashboard')}
             </Heading>
-            <Text size='3' color='gray' className={s.headerSubtitle}>
+            <Text size='2' color='gray' mt='1'>
               {t(
                 'admin:dashboard.subtitle',
                 'Overview of your system activities',

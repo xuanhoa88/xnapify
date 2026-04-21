@@ -247,10 +247,10 @@ function ResetFormFields({ loading, dispatch }) {
           size='1'
           onClick={handleGeneratePassword}
           disabled={generatingPassword}
-          className={clsx(s.generateBtn, {
-            [s.generateBtnLoading]: generatingPassword,
-            [s.generateBtnReady]: !generatingPassword,
-          })}
+          className={clsx(
+            s.generateBtn,
+            generatingPassword ? s.generateBtnLoading : s.generateBtnReady,
+          )}
         >
           {generatingPassword ? (
             t('resetPasswordConfirmation.generatingPassword', 'Generating...')

@@ -503,23 +503,32 @@ function Extensions() {
 
   if (!initialized || (loading && extensions.length === 0)) {
     return (
-      <Box className={s.containerBox}>
+      <Box p='6' className={s.containerBox}>
         <Flex
           align='center'
           justify='between'
           wrap='wrap'
           gap='4'
-          className={s.headerFlex}
+          pb='4'
+          mb='6'
+          className={s.adminHeader}
         >
           <Flex align='center' gap='3'>
-            <Flex align='center' justify='center' className={s.headerIconFlex}>
+            <Flex
+              align='center'
+              justify='center'
+              shrink='0'
+              width='40px'
+              height='40px'
+              className={s.adminHeaderIcon}
+            >
               <CubeIcon width={24} height={24} />
             </Flex>
             <Flex direction='column'>
-              <Heading size='6' className={s.headerHeading}>
+              <Heading size='6'>
                 {t('admin:navigation.extensions', 'Extensions')}
               </Heading>
-              <Text size='3' color='gray' className={s.headerSubtitle}>
+              <Text size='2' color='gray' mt='1'>
                 {t('admin:extensions.subtitle', 'Manage system extensions')}
               </Text>
             </Flex>
@@ -531,23 +540,32 @@ function Extensions() {
   }
 
   return (
-    <Box className={s.containerBox}>
+    <Box p='6' className={s.containerBox}>
       <Flex
         align='center'
         justify='between'
         wrap='wrap'
         gap='4'
-        className={s.headerFlex}
+        pb='4'
+        mb='6'
+        className={s.adminHeader}
       >
         <Flex align='center' gap='3'>
-          <Flex align='center' justify='center' className={s.headerIconFlex}>
+          <Flex
+            align='center'
+            justify='center'
+            shrink='0'
+            width='40px'
+            height='40px'
+            className={s.adminHeaderIcon}
+          >
             <CubeIcon width={24} height={24} />
           </Flex>
           <Flex direction='column'>
-            <Heading size='6' className={s.headerHeading}>
+            <Heading size='6'>
               {t('admin:navigation.extensions', 'Extensions')}
             </Heading>
-            <Text size='3' color='gray' className={s.headerSubtitle}>
+            <Text size='2' color='gray' mt='1'>
               {t('admin:extensions.subtitle', 'Manage system extensions')}
             </Text>
           </Flex>
@@ -578,16 +596,17 @@ function Extensions() {
 
       {/* Toolbar: Filter Tabs + Search */}
       <Flex align='center' justify='between' mb='5' wrap='wrap' gap='4'>
-        <Flex gap='2' className={s.tabsBox}>
+        <Flex gap='2' p='1' className={s.tabsBox}>
           {FILTER_TABS.map(tab => (
             <Button
               key={tab.key}
               type='button'
               variant={activeFilter === tab.key ? 'primary' : 'ghost'}
               onClick={() => setActiveFilter(tab.key)}
-              className={clsx(s.tabButton, {
-                [s.tabButtonActive]: activeFilter === tab.key,
-              })}
+              className={clsx(
+                s.tabButton,
+                activeFilter === tab.key && s.tabButtonActive,
+              )}
             >
               <Text as='span' mr='2'>
                 {t(tab.labelKey, tab.fallback)}
@@ -603,7 +622,7 @@ function Extensions() {
           ))}
         </Flex>
 
-        <Box className={s.searchBox}>
+        <Box minWidth='280px'>
           <TableSearch
             value={search}
             onChange={handleSearchChange}
@@ -617,11 +636,14 @@ function Extensions() {
           direction='column'
           align='center'
           justify='center'
-          className={s.emptyStateFlex}
+          py='9'
+          className={s.adminEmptyBlock}
         >
-          <CubeIcon width={48} height={48} className={s.emptyStateIcon} />
+          <Box mb='3'>
+            <CubeIcon width={48} height={48} />
+          </Box>
 
-          <Text as='h3' size='4' weight='bold' color='gray'>
+          <Text as='h3' size='4' weight='bold' color='gray' mb='1'>
             {search
               ? t(
                   'admin:extensions.noSearchResults',
@@ -632,7 +654,7 @@ function Extensions() {
                   'No extensions in this category',
                 )}
           </Text>
-          <Text as='p' size='2' color='gray' className={s.emptyStateText}>
+          <Text as='p' size='2' color='gray'>
             {search
               ? t(
                   'admin:extensions.tryDifferentSearch',

@@ -32,7 +32,7 @@ function AdminLayout({ children, minimal = true }) {
         <ImpersonationBanner />
         <Header />
 
-        <Box as='main' grow='1' px='6' py='4' overflowX='hidden'>
+        <Box as='main' grow='1' overflowX='hidden'>
           {children}
         </Box>
 

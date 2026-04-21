@@ -2,12 +2,6 @@
   margin-bottom: var(--space-4);
 }
 
-.itemsFlex {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
 .loadingFlex {
   padding: var(--space-8);
   color: var(--gray-9);
@@ -15,7 +9,6 @@
 }
 
 .emptyFlex {
-  padding: var(--space-8);
   color: var(--gray-9);
   font-style: italic;
   background-color: var(--gray-2);
@@ -23,28 +16,9 @@
 }
 
 .itemFlex {
-  padding: var(--space-3);
   background-color: var(--color-panel-solid);
   border: 1px solid var(--gray-4);
   border-radius: var(--radius-3);
-}
-
-.itemInfo {
-  flex: 1;
-  min-width: 0;
-}
-
-.itemName {
-  color: var(--gray-12);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.itemDescription {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .paginationBox {

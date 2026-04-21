@@ -86,10 +86,10 @@ function AdminFooter() {
         color='indigo'
         onClick={scrollToTop}
         title={t('common.scrollToTop', 'Scroll to top')}
-        className={clsx(s.scrollBtn, {
-          [s.scrollBtnVisible]: showScroll,
-          [s.scrollBtnHidden]: !showScroll,
-        })}
+        className={clsx(
+          s.scrollBtn,
+          showScroll ? s.scrollBtnVisible : s.scrollBtnHidden,
+        )}
       >
         <ArrowUpIcon width={20} height={20} />
       </Button>

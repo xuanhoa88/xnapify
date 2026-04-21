@@ -1,4 +1,3 @@
-/* stylelint-disable block-no-empty */
 .loadingBox {
   padding: var(--space-6);
   max-width: 1400px;
@@ -20,48 +19,70 @@
   flex-shrink: 0;
 }
 
-.headerHeading {
-  margin: 0;
-  color: var(--gray-12);
+
+
+.adminHeader {
+  border-bottom: 1px solid var(--gray-a6);
 }
 
-.subtitleText {
-  margin: 0;
-  margin-top: var(--space-1);
+.adminHeaderIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-3);
+  background-color: var(--gray-3);
+  color: var(--gray-11);
+  flex-shrink: 0;
 }
 
-.relativeBox {
-  position: relative;
+.adminErrorBlock {
+  border: 1px solid var(--red-6);
+  border-radius: var(--radius-3);
+  background-color: var(--red-2);
 }
 
-.opacityBox {
+.adminEmptyBlock {
   opacity: 0.6;
 }
 
-.marginBottomBox {
+.adminEmptyIcon {
   margin-bottom: var(--space-3);
 }
 
-.filterSelect {
+.searchableSelect {
   width: 200px;
 }
 
-.container {}
+.clearFilterBox {
+  display: flex;
+  align-items: center;
+  min-width: max-content;
+}
 
-.header {}
+.tableWrapper {
+  position: relative;
+  overflow-x: auto;
+}
 
-.headerIcon {}
+.tableRelative {
+  position: relative;
+}
 
-.errorBox {}
+.loadingOverlay {
+  position: absolute;
+  inset: 0;
+  background-color: var(--color-background);
+  opacity: 0.5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
 
-.filterBar {}
-
-.clearFiltersBox {}
-
-.tableWrapper {}
-
-.codeBadge {}
-
-.codeBadgeMargin {}
-
-.loadingOverlay {}
+.codeTag {
+  font-family: monospace;
+  background-color: var(--indigo-2);
+  color: var(--indigo-11);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-1);
+  font-size: 13px;
+}

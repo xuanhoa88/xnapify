@@ -305,7 +305,9 @@ export default function FileGrid({ onShare }) {
                   as='span'
                   size='2'
                   weight='medium'
-                  className={s.fileName}
+                  truncate
+                  align='center'
+                  highContrast
                   title={file.name}
                 >
                   {file.name}
@@ -373,7 +375,8 @@ export default function FileGrid({ onShare }) {
                   as='span'
                   size='2'
                   weight='medium'
-                  className={s.listFileName}
+                  truncate
+                  highContrast
                   title={file.name}
                 >
                   {file.name}

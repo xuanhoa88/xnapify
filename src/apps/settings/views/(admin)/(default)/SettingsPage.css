@@ -3,16 +3,9 @@
   min-height: 80px;
 }
 
-.rowFlexCenter {
+.rowBase {
   padding: var(--space-4);
   border-bottom: 1px solid var(--gray-4);
-  align-items: center;
-}
-
-.rowFlexStart {
-  padding: var(--space-4);
-  border-bottom: 1px solid var(--gray-4);
-  align-items: flex-start;
 }
 
 .rowContent {
@@ -43,28 +36,6 @@
   font-family: monospace;
 }
 
-.inputContainerFlexEnd {
-  width: 100%;
-  max-width: 400px;
-  flex-shrink: 0;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.inputContainerFlexStart {
-  width: 100%;
-  max-width: 400px;
-  flex-shrink: 0;
-  display: flex;
-  justify-content: flex-start;
-}
-
-@media (max-width: 768px) {
-  .inputContainerFlexEnd, .inputContainerFlexStart {
-    max-width: 100%;
-  }
-}
-
 .inputWrapper {
   width: 100%;
 }
@@ -80,13 +51,11 @@
   margin: 0 auto;
 }
 
-.headerFlex {
-  padding-bottom: var(--space-4);
+.adminHeader {
   border-bottom: 1px solid var(--gray-a6);
-  margin-bottom: var(--space-6);
 }
 
-.headerIconBox {
+.adminHeaderIcon {
   width: 40px;
   height: 40px;
   border-radius: var(--radius-3);
@@ -95,24 +64,10 @@
   flex-shrink: 0;
 }
 
-.headerHeading {
-  margin: 0;
-  color: var(--gray-12);
-}
-
-.headerSubtitle {
-  margin: 0;
-  margin-top: var(--space-1);
-}
-
-.errorFlex {
+.adminErrorBlock {
   border: 1px solid var(--red-6);
   border-radius: var(--radius-3);
   background-color: var(--red-2);
-}
-
-.gridContainer {
-  align-items: start;
 }
 
 .tabActive {
@@ -153,20 +108,4 @@
 .tabInactive:hover {
   background: var(--gray-a3);
   color: var(--gray-12);
-}
-
-.tabText {
-  margin-left: var(--space-2);
-  flex: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.tabBadge {
-  margin-left: var(--space-2);
-}
-
-.settingsPanelBox {
-  min-width: 0;
 }

@@ -122,7 +122,7 @@ function EditEmailTemplate({ params }) {
       slug: template.slug || '',
       subject: template.subject || '',
       html_body: template.html_body || '',
-      is_active: template.is_active !== undefined ? template.is_active : true,
+      is_active: template.is_active != null ? template.is_active : true,
     };
   }, [template]);
 
@@ -135,15 +135,17 @@ function EditEmailTemplate({ params }) {
           justify='between'
           wrap='wrap'
           gap='4'
-          className={s.headerFlex}
+          pb='4'
+          mb='6'
+          className={s.adminHeader}
         >
           <Flex align='center' gap='3'>
-            <Flex align='center' justify='center' className={s.headerIconBox}>
+            <Flex align='center' justify='center' className={s.adminHeaderIcon}>
               <Pencil2Icon width={24} height={24} />
             </Flex>
             <Flex direction='column'>
-              <Heading size='6' className={s.headerHeading}>
-                {null}
+              <Heading size='6'>
+                {t('admin:emails.form.editTemplate', 'Edit Email Template')}
               </Heading>
             </Flex>
           </Flex>
@@ -166,15 +168,17 @@ function EditEmailTemplate({ params }) {
           justify='between'
           wrap='wrap'
           gap='4'
-          className={s.headerFlex}
+          pb='4'
+          mb='6'
+          className={s.adminHeader}
         >
           <Flex align='center' gap='3'>
-            <Flex align='center' justify='center' className={s.headerIconBox}>
+            <Flex align='center' justify='center' className={s.adminHeaderIcon}>
               <Pencil2Icon width={24} height={24} />
             </Flex>
             <Flex direction='column'>
-              <Heading size='6' className={s.headerHeading}>
-                {null}
+              <Heading size='6'>
+                {t('admin:emails.form.editTemplate', 'Edit Email Template')}
               </Heading>
             </Flex>
           </Flex>
@@ -202,15 +206,17 @@ function EditEmailTemplate({ params }) {
         justify='between'
         wrap='wrap'
         gap='4'
-        className={s.headerFlex}
+        pb='4'
+        mb='6'
+        className={s.adminHeader}
       >
         <Flex align='center' gap='3'>
-          <Flex align='center' justify='center' className={s.headerIconBox}>
+          <Flex align='center' justify='center' className={s.adminHeaderIcon}>
             <Pencil2Icon width={24} height={24} />
           </Flex>
           <Flex direction='column'>
-            <Heading size='6' className={s.headerHeading}>
-              {null}
+            <Heading size='6'>
+              {t('admin:emails.form.editTemplate', 'Edit Email Template')}
             </Heading>
           </Flex>
         </Flex>

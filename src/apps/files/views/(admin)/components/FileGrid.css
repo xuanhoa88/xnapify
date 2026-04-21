@@ -69,16 +69,6 @@
   min-width: 0;
 }
 
-.fileName {
-  display: block;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  text-align: center;
-  color: var(--gray-12);
-}
-
 .listWrapper {
   padding: var(--space-2);
 }
@@ -165,14 +155,6 @@
   flex: 3;
   min-width: 0;
   padding-right: var(--space-3);
-}
-
-.listFileName {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--gray-12);
 }
 
 .listOwnerBox {

@@ -65,6 +65,8 @@ These are enforced by ESLint and **will fail lint**. Never use them:
 | `??` (nullish coalescing)  | Explicit ESLint config ban     | `x != null ? x : fallback` or `x \|\| fallback`                            |
 | `??=` (nullish assignment) | Explicit ESLint config ban     | `if (x == null) x = value`                                                 |
 | `?.` (optional chaining)   | Explicit ESLint config ban     | `x && x.prop` or guard clause                                              |
+| `x === null \|\| x === undefined` | Redundant dual check    | `x == null` (loose equality catches both)                                  |
+| `x !== null && x !== undefined`   | Redundant dual check    | `x != null` (loose inequality catches both)                                |
 | `__dangle` property access | ESLint `no-underscore-dangle`  | Rename, or add `// eslint-disable-line no-underscore-dangle` in tests only |
 | `node:` import prefix      | Fix compatibility for Node 16+ | Direct import (e.g. `import fs from 'fs'`)                                 |
 | Global `fetch()` (backend) | Missing natively in Node 16    | Use `node-fetch`, `axios`, or injected `extra.fetch`                       |
@@ -191,6 +193,7 @@ export const listItems = async (req, res) => {
 | ---------------------- | --------------------------------------------------------------------------- |
 | **CSS Modules**        | `import s from './Component.css'` — classes via `s.className`               |
 | **No inline styles**   | 🔴 ABSOLUTE BAN on `style={{...}}`. Use Radix props (`p`, `width`) or standard `.css` modules. Only valid exception: `style={{ display: 'none' }}` for hidden inputs or programmatic conditional animations. |
+| **clsx performance**   | Use conditional/ternary: `clsx(s.base, isActive ? s.active : s.inactive)`. 🔴 BAN on object properties: `clsx(s.base, { [s.active]: isActive })` to avoid instantiation overhead. |
 | **useCallback**        | Wrap event handlers passed as props                                         |
 | **useMemo**            | Expensive derived data (filtering, counting)                                |
 | **useRef for timers**  | Store timeout/interval IDs in refs, clean up in `useEffect` return          |
@@ -219,18 +222,19 @@ export const listItems = async (req, res) => {
 
 | ❌ Pattern                           | ✅ Fix                                      |
 | ------------------------------------ | ------------------------------------------- |
-| Helper for a one-liner               | Inline the code                             |
-| Factory for 2 objects                | Direct instantiation                        |
-| `utils.js` with 1 function           | Put code where it's used                    |
-| Deep nesting (3+ levels)             | Guard clauses + extract function            |
-| Magic numbers                        | Named constants: `const CACHE_TTL = 60_000` |
-| God functions (50+ lines)            | Split by responsibility                     |
-| `import X from '@apps/other-module'` | `container.resolve()` or hook system        |
-| `res.json({ data })`                 | `http.sendSuccess(res, { data })`           |
-| `process.env.MY_VAR`                 | `process.env.XNAPIFY_MY_VAR`                |
-| `require.context(\`${dynamic}\`)`    | Static string literal only                  |
-| Boolean trap: `fn(true, false)`      | Options object: `fn({ isActive: true })`    |
-| Callback-based code                  | Promisify: `const fn = promisify(cb)`       |
+| Helper for a one-liner               | Inline the code                                                  |
+| Factory for 2 objects                | Direct instantiation                                             |
+| `utils.js` with 1 function           | Put code where it's used                                         |
+| Deep nesting (3+ levels)             | Guard clauses + extract function                                 |
+| Magic numbers                        | Named constants: `const CACHE_TTL = 60_000`                      |
+| God functions (50+ lines)            | Split by responsibility                                          |
+| `import X from '@apps/other-module'` | `container.resolve()` or hook system                             |
+| `res.json({ data })`                 | `http.sendSuccess(res, { data })`                                |
+| `process.env.MY_VAR`                 | `process.env.XNAPIFY_MY_VAR`                                    |
+| `require.context(\`${dynamic}\`)`    | Static string literal only                                       |
+| Boolean trap: `fn(true, false)`      | Options object: `fn({ isActive: true })`                         |
+| Callback-based code                  | Promisify: `const fn = promisify(cb)`                            |
+| Repeated `if (x !== undefined)` for partial updates | `pickBy(pick(data, fields), v => v !== undefined)` |
 
 ---
 

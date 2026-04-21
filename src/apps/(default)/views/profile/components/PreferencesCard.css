@@ -7,34 +7,10 @@
   padding: var(--space-6);
 }
 
-.cardHeader {
-  margin-bottom: var(--space-6);
-}
-
-.cardHeaderIcon {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .cardHeaderIconIndigo {
   background-color: var(--indigo-3);
   color: var(--indigo-11);
-}
-
-.cardTitle {
-  color: var(--gray-12);
-}
-
-.cardAction {
-  margin-top: var(--space-4);
-}
-
-.loadingBox {
-  padding: var(--space-8);
+  border-radius: var(--radius-3);
 }
 
 .spinner {

@@ -216,17 +216,19 @@ function Groups({ context }) {
           justify='between'
           wrap='wrap'
           gap='4'
-          className={s.headerFlex}
+          pb='4'
+          mb='6'
+          className={s.adminHeader}
         >
           <Flex align='center' gap='3'>
-            <Flex align='center' justify='center' className={s.headerIconBox}>
+            <Flex align='center' justify='center' className={s.adminHeaderIcon}>
               <ArchiveIcon width={24} height={24} />
             </Flex>
             <Flex direction='column'>
-              <Heading size='6' className={s.headerHeading}>
+              <Heading size='6'>
                 {t('admin:groups.title', 'Group Management')}
               </Heading>
-              <Text className={s.headerSubtitle}>
+              <Text size='2' color='gray' mt='1'>
                 {t(
                   'admin:groups.subtitle',
                   'Organize users into groups for easier access control',
@@ -251,17 +253,19 @@ function Groups({ context }) {
           justify='between'
           wrap='wrap'
           gap='4'
-          className={s.headerFlex}
+          pb='4'
+          mb='6'
+          className={s.adminHeader}
         >
           <Flex align='center' gap='3'>
-            <Flex align='center' justify='center' className={s.headerIconBox}>
+            <Flex align='center' justify='center' className={s.adminHeaderIcon}>
               <ArchiveIcon width={24} height={24} />
             </Flex>
             <Flex direction='column'>
-              <Heading size='6' className={s.headerHeading}>
+              <Heading size='6'>
                 {t('admin:groups.title', 'Group Management')}
               </Heading>
-              <Text className={s.headerSubtitle}>
+              <Text size='2' color='gray' mt='1'>
                 {t(
                   'admin:groups.subtitle',
                   'Organize users into groups for easier access control',
@@ -275,7 +279,7 @@ function Groups({ context }) {
           align='center'
           justify='center'
           p='6'
-          className={s.errorFlex}
+          className={s.adminErrorBlock}
         >
           <Text color='red' size='4' weight='bold' mb='2'>
             {t('admin:groups.errorLoading', 'Error loading groups')}
@@ -283,7 +287,7 @@ function Groups({ context }) {
           <Text color='red' size='2' mb='4'>
             {error}
           </Text>
-          <Button variant='soft' color='red' onClick={refreshGroups}>
+          <Button variant='soft' color='red' onClick={refreshGroups} size='2'>
             {t('common:retry', 'Retry')}
           </Button>
         </Flex>
@@ -298,17 +302,19 @@ function Groups({ context }) {
         justify='between'
         wrap='wrap'
         gap='4'
-        className={s.headerFlex}
+        pb='4'
+        mb='6'
+        className={s.adminHeader}
       >
         <Flex align='center' gap='3'>
-          <Flex align='center' justify='center' className={s.headerIconBox}>
+          <Flex align='center' justify='center' className={s.adminHeaderIcon}>
             <ArchiveIcon width={24} height={24} />
           </Flex>
           <Flex direction='column'>
-            <Heading size='6' className={s.headerHeading}>
+            <Heading size='6'>
               {t('admin:groups.title', 'Group Management')}
             </Heading>
-            <Text className={s.headerSubtitle}>
+            <Text size='2' color='gray' mt='1'>
               {t(
                 'admin:groups.subtitle',
                 'Organize users into groups for easier access control',
@@ -341,7 +347,7 @@ function Groups({ context }) {
           value={search}
           onChange={handleSearchChange}
           placeholder={t('admin:groups.search', 'Search groups...')}
-          className={s.searchTableFlex}
+          className={s.searchFiltersBox}
         >
           <Flex gap='3' align='center' wrap='wrap'>
             <Box className={s.filterSelectBox}>
@@ -384,14 +390,14 @@ function Groups({ context }) {
           align='center'
           direction='column'
           py='9'
-          className={s.emptyStateFlex}
+          className={s.adminEmptyBlock}
         >
-          <ArchiveIcon width={48} height={48} className={s.emptyStateIcon} />
+          <ArchiveIcon width={48} height={48} className={s.adminEmptyIcon} />
 
-          <Text size='3' weight='bold'>
+          <Text size='3' weight='bold' mb='1'>
             {t('admin:groups.noGroupsFound', 'No groups found')}
           </Text>
-          <Text size='2' className={s.emptyStateDescription}>
+          <Text size='2' color='gray'>
             {t(
               'admin:groups.noGroupsDescription',
               'Create a new group to organize users and assign roles.',

@@ -197,8 +197,8 @@ function Drawer({ minimal = false }) {
         gap='3'
         className={clsx(
           s.menuItemFlex,
-          { [s.menuItemCompact]: isCompact },
-          { [s.menuItemActive]: active },
+          isCompact && s.menuItemCompact,
+          active && s.menuItemActive,
         )}
       >
         {(() => {
@@ -242,7 +242,7 @@ function Drawer({ minimal = false }) {
         as='aside'
         ref={siderRef}
         direction='column'
-        className={clsx(s.drawerAside, { [s.drawerAsideFixed]: isMobile })}
+        className={clsx(s.drawerAside, isMobile && s.drawerAsideFixed)}
         // eslint-disable-next-line react/forbid-dom-props
         style={{
           width: isMobile ? '80vw' : `${siderWidth}px`,
@@ -341,9 +341,10 @@ function Drawer({ minimal = false }) {
                   <Flex
                     align='center'
                     gap='3'
-                    className={clsx(s.quickLinkFlex, {
-                      [s.quickLinkFlexCompact]: isCompact,
-                    })}
+                    className={clsx(
+                      s.quickLinkFlex,
+                      isCompact && s.quickLinkFlexCompact,
+                    )}
                   >
                     <RadixIcons.ArrowUpIcon width={18} height={18} />
                     {!isCompact && (
@@ -379,11 +380,11 @@ function Drawer({ minimal = false }) {
                 {userDisplayName.charAt(0).toUpperCase()}
               </Flex>
               {!isCompact && (
-                <Flex direction='column' className={s.userInfoBox}>
-                  <Text size='3' weight='medium' className={s.userDisplayName}>
+                <Flex direction='column' overflow='hidden'>
+                  <Text size='3' weight='medium' truncate>
                     {userDisplayName || t('common.admin', 'Admin')}
                   </Text>
-                  <Text size='1' color='gray' className={s.userEmail}>
+                  <Text size='1' color='gray' truncate>
                     {user.email}
                   </Text>
                 </Flex>
@@ -426,9 +427,10 @@ function Drawer({ minimal = false }) {
             className={s.collapseTrigger}
           >
             <Box
-              className={clsx(s.collapseChevronBase, {
-                [s.collapseChevronExpanded]: isExpanded,
-              })}
+              className={clsx(
+                s.collapseChevronBase,
+                isExpanded && s.collapseChevronExpanded,
+              )}
             >
               <RadixIcons.ChevronRightIcon width={14} height={14} />
             </Box>

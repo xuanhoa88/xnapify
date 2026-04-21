@@ -26,6 +26,7 @@ import {
   Button,
   Badge,
 } from '@radix-ui/themes';
+import clsx from 'clsx';
 import format from 'date-fns/format';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
@@ -314,17 +315,19 @@ function Users({ context }) {
           justify='between'
           wrap='wrap'
           gap='4'
-          className={s.headerFlex}
+          pb='4'
+          mb='6'
+          className={s.adminHeader}
         >
           <Flex align='center' gap='3'>
-            <Flex align='center' justify='center' className={s.headerIconBox}>
+            <Flex align='center' justify='center' className={s.adminHeaderIcon}>
               <GroupIcon width={24} height={24} />
             </Flex>
             <Flex direction='column'>
-              <Heading size='6' className={s.headerHeading}>
+              <Heading size='6'>
                 {t('admin:users.list.title', 'User Management')}
               </Heading>
-              <Text size='3' color='gray' className={s.headerSubtitle}>
+              <Text size='2' color='gray' mt='1'>
                 {t(
                   'admin:users.list.subtitle',
                   'Manage users, roles, and permissions',
@@ -349,17 +352,19 @@ function Users({ context }) {
           justify='between'
           wrap='wrap'
           gap='4'
-          className={s.headerFlex}
+          pb='4'
+          mb='6'
+          className={s.adminHeader}
         >
           <Flex align='center' gap='3'>
-            <Flex align='center' justify='center' className={s.headerIconBox}>
+            <Flex align='center' justify='center' className={s.adminHeaderIcon}>
               <GroupIcon width={24} height={24} />
             </Flex>
             <Flex direction='column'>
-              <Heading size='6' className={s.headerHeading}>
+              <Heading size='6'>
                 {t('admin:users.list.title', 'User Management')}
               </Heading>
-              <Text size='3' color='gray' className={s.headerSubtitle}>
+              <Text size='2' color='gray' mt='1'>
                 {t(
                   'admin:users.list.subtitle',
                   'Manage users, roles, and permissions',
@@ -373,7 +378,7 @@ function Users({ context }) {
           align='center'
           justify='center'
           p='6'
-          className={s.errorFlex}
+          className={s.adminErrorBlock}
         >
           <Text color='red' size='4' weight='bold' mb='2'>
             {t('admin:users.errors.loadUsers', 'Error loading users')}
@@ -381,7 +386,7 @@ function Users({ context }) {
           <Text color='red' size='2' mb='4'>
             {error}
           </Text>
-          <Button variant='soft' color='red' onClick={refreshUsers}>
+          <Button variant='soft' color='red' onClick={refreshUsers} size='2'>
             {t('common:retry', 'Retry')}
           </Button>
         </Flex>
@@ -396,17 +401,19 @@ function Users({ context }) {
         justify='between'
         wrap='wrap'
         gap='4'
-        className={s.headerFlex}
+        pb='4'
+        mb='6'
+        className={s.adminHeader}
       >
         <Flex align='center' gap='3'>
-          <Flex align='center' justify='center' className={s.headerIconBox}>
+          <Flex align='center' justify='center' className={s.adminHeaderIcon}>
             <GroupIcon width={24} height={24} />
           </Flex>
           <Flex direction='column'>
-            <Heading size='6' className={s.headerHeading}>
+            <Heading size='6'>
               {t('admin:users.list.title', 'User Management')}
             </Heading>
-            <Text size='3' color='gray' className={s.headerSubtitle}>
+            <Text size='2' color='gray' mt='1'>
               {t(
                 'admin:users.list.subtitle',
                 'Manage users, roles, and permissions',
@@ -596,18 +603,18 @@ function Users({ context }) {
                       align='center'
                       direction='column'
                       py='9'
-                      className={s.emptyStateFlex}
+                      className={s.adminEmptyBlock}
                     >
                       <GroupIcon
                         width={48}
                         height={48}
-                        className={s.emptyStateIcon}
+                        className={s.adminEmptyIcon}
                       />
 
-                      <Text size='3' weight='bold'>
+                      <Text size='3' weight='bold' mb='1'>
                         {t('admin:users.list.noUsersFound', 'No users found')}
                       </Text>
-                      <Text size='2' className={s.emptyStateText}>
+                      <Text size='2' color='gray'>
                         {t(
                           'admin:users.list.noUsersFoundDescription',
                           'Try adjusting your search or filter criteria, or add a new user to get started.',
@@ -622,9 +629,9 @@ function Users({ context }) {
                   return (
                     <Table.Row
                       key={user.id}
-                      className={isSelected ? s.rowSelected : ''}
+                      className={clsx({ [s.activeRowSelected]: isSelected })}
                     >
-                      <Table.Cell className={s.colCenter}>
+                      <Table.Cell className={s.checkboxCol}>
                         <Checkbox
                           checked={isSelected}
                           onCheckedChange={c => handleSelectRow(user.id, c)}
@@ -658,8 +665,7 @@ function Users({ context }) {
                             </Text>
                             {currentUser && currentUser.id === user.id && (
                               <Badge
-                                size='small'
-                                className={s.youBadge}
+                                size='1'
                                 color='indigo'
                                 radius='full'
                                 variant='soft'

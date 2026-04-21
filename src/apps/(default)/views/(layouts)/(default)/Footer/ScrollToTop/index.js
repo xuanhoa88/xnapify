@@ -72,10 +72,10 @@ function ScrollToTop() {
       color='indigo'
       onClick={scrollToTop}
       title={t('common.scrollToTop', 'Scroll to top')}
-      className={clsx(s.scrollBtnDefault, {
-        [s.scrollBtnVisible]: showScroll,
-        [s.scrollBtnHidden]: !showScroll,
-      })}
+      className={clsx(
+        s.scrollBtnDefault,
+        showScroll ? s.scrollBtnVisible : s.scrollBtnHidden,
+      )}
     >
       <ArrowUpIcon width={24} height={24} />
     </Button>

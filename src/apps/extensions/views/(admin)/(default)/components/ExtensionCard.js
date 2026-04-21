@@ -73,13 +73,21 @@ function ExtensionCard({
   return (
     <Flex
       direction='column'
-      className={clsx(s.cardContainer, {
-        [s.cardActive]: extension.is_active,
-        [s.cardInactive]: !extension.is_active,
-      })}
+      className={clsx(
+        s.cardContainer,
+        extension.is_active ? s.cardActive : s.cardInactive,
+      )}
     >
       <Flex p='4' gap='3' align='start' className={s.headerFlex}>
-        <Box className={s.iconBox}>
+        <Flex
+          align='center'
+          justify='center'
+          shrink='0'
+          width='48px'
+          height='48px'
+          overflow='hidden'
+          className={s.iconBox}
+        >
           {extension.icon && /^https?:\/\//.test(extension.icon) ? (
             <img
               src={extension.icon}
@@ -99,14 +107,14 @@ function ExtensionCard({
               return <Comp width={28} height={28} />;
             })()
           )}
-        </Box>
-        <Box className={s.infoBox}>
+        </Flex>
+        <Box grow='1' minWidth='0'>
           {isLoading ? (
             <Box className={s.skeletonTitle} />
           ) : (
             <>
-              <Flex align='center' gap='2' className={s.titleFlex}>
-                <Text as='h3' size='3' weight='bold' className={s.titleText}>
+              <Flex align='center' gap='2' mb='1'>
+                <Text as='h3' size='3' weight='bold' truncate>
                   {extension.name}
                 </Text>
                 <Badge color='gray' radius='full' variant='surface'>
@@ -136,7 +144,7 @@ function ExtensionCard({
         </Box>
       </Flex>
 
-      <Box p='4' className={s.descriptionBox}>
+      <Box p='4' grow='1'>
         {isLoading ? (
           <Flex direction='column' gap='2'>
             <Box className={s.skeletonDesc1} />
@@ -194,7 +202,7 @@ function ExtensionCard({
               {resolvedActionLabel}
             </Badge>
           ) : (
-            <Box className={s.switchBox}>
+            <Flex align='center'>
               <Switch
                 size='2'
                 color='green'
@@ -206,7 +214,7 @@ function ExtensionCard({
                   canUpdate ? s.switchControl : s.switchControlDisabled
                 }
               />
-            </Box>
+            </Flex>
           )}
         </Box>
       </Flex>

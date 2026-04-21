@@ -23,15 +23,8 @@
 }
 
 .iconBox {
-  width: 48px;
-  height: 48px;
   border-radius: var(--radius-2);
   background-color: var(--gray-2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  overflow: hidden;
   border: 1px solid var(--gray-4);
 }
 
@@ -41,33 +34,12 @@
   object-fit: contain;
 }
 
-.infoBox {
-  flex: 1;
-  min-width: 0;
-}
-
 .skeletonTitle {
   width: 60%;
   height: 24px;
   background-color: var(--gray-3);
   border-radius: var(--radius-2);
   animation: pulse 1.5s infinite;
-}
-
-.titleFlex {
-  margin-bottom: var(--space-1);
-}
-
-.titleText {
-  color: var(--gray-12);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin: 0;
-}
-
-.descriptionBox {
-  flex: 1;
 }
 
 .skeletonDesc1 {
@@ -105,11 +77,6 @@
   background-color: var(--gray-3);
   border-radius: 12px;
   animation: pulse 1.5s infinite;
-}
-
-.switchBox {
-  display: flex;
-  align-items: center;
 }
 
 .switchControl {

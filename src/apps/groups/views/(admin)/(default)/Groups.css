@@ -4,13 +4,11 @@
   margin: 0 auto;
 }
 
-.headerFlex {
-  padding-bottom: var(--space-4);
+.adminHeader {
   border-bottom: 1px solid var(--gray-a6);
-  margin-bottom: var(--space-6);
 }
 
-.headerIconBox {
+.adminHeaderIcon {
   width: 40px;
   height: 40px;
   border-radius: var(--radius-3);
@@ -19,48 +17,36 @@
   flex-shrink: 0;
 }
 
-.headerHeading {
-  margin: 0;
-  color: var(--gray-12);
-}
-
-.headerSubtitle {
-  margin: 0;
-  margin-top: var(--space-1);
-}
-
-.errorFlex {
+.adminErrorBlock {
   border: 1px solid var(--red-6);
   border-radius: var(--radius-3);
   background-color: var(--red-2);
 }
 
-.searchBox {
-  margin-bottom: var(--space-6);
+.adminEmptyBlock {
+  opacity: 0.6;
 }
 
-.searchTableFlex {
+.adminEmptyIcon {
+  margin-bottom: var(--space-3);
+}
+
+.searchFiltersBox {
   width: 100%;
   flex-direction: column;
   align-items: stretch;
   gap: var(--space-3);
 }
 
+.searchBox {
+  margin-bottom: var(--space-6);
+}
+
 .filterSelectBox {
   width: 250px;
 }
 
-.emptyStateFlex {
-  opacity: 0.6;
-}
 
-.emptyStateIcon {
-  margin-bottom: var(--space-3);
-}
-
-.emptyStateDescription {
-  margin-bottom: var(--space-4);
-}
 
 .cardLayout {
   height: 100%;

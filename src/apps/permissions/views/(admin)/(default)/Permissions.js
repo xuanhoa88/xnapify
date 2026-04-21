@@ -24,6 +24,7 @@ import {
   Button,
   Badge,
 } from '@radix-ui/themes';
+import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
@@ -277,17 +278,19 @@ function Permissions() {
           justify='between'
           wrap='wrap'
           gap='4'
-          className={s.headerFlex}
+          pb='4'
+          mb='6'
+          className={s.adminHeader}
         >
           <Flex align='center' gap='3'>
-            <Flex align='center' justify='center' className={s.headerIconBox}>
+            <Flex align='center' justify='center' className={s.adminHeaderIcon}>
               <LockOpen1Icon width={24} height={24} />
             </Flex>
             <Flex direction='column'>
-              <Heading size='6' className={s.headerHeading}>
+              <Heading size='6'>
                 {t('admin:permissions.title', 'Permission Management')}
               </Heading>
-              <Text className={s.headerSubtitle}>
+              <Text size='2' color='gray' mt='1'>
                 {t(
                   'admin:permissions.subtitle',
                   'Configure granular access controls',
@@ -312,17 +315,19 @@ function Permissions() {
           justify='between'
           wrap='wrap'
           gap='4'
-          className={s.headerFlex}
+          pb='4'
+          mb='6'
+          className={s.adminHeader}
         >
           <Flex align='center' gap='3'>
-            <Flex align='center' justify='center' className={s.headerIconBox}>
+            <Flex align='center' justify='center' className={s.adminHeaderIcon}>
               <LockOpen1Icon width={24} height={24} />
             </Flex>
             <Flex direction='column'>
-              <Heading size='6' className={s.headerHeading}>
+              <Heading size='6'>
                 {t('admin:permissions.title', 'Permission Management')}
               </Heading>
-              <Text className={s.headerSubtitle}>
+              <Text size='2' color='gray' mt='1'>
                 {t(
                   'admin:permissions.subtitle',
                   'Configure granular access controls',
@@ -336,7 +341,7 @@ function Permissions() {
           align='center'
           justify='center'
           p='6'
-          className={s.errorFlex}
+          className={s.adminErrorBlock}
         >
           <Text color='red' size='4' weight='bold' mb='2'>
             {t('admin:permissions.errorLoading', 'Error loading permissions')}
@@ -344,7 +349,12 @@ function Permissions() {
           <Text color='red' size='2' mb='4'>
             {error}
           </Text>
-          <Button variant='soft' color='red' onClick={refreshPermissions}>
+          <Button
+            variant='soft'
+            color='red'
+            onClick={refreshPermissions}
+            size='2'
+          >
             {t('common:retry', 'Retry')}
           </Button>
         </Flex>
@@ -359,17 +369,19 @@ function Permissions() {
         justify='between'
         wrap='wrap'
         gap='4'
-        className={s.headerFlex}
+        pb='4'
+        mb='6'
+        className={s.adminHeader}
       >
         <Flex align='center' gap='3'>
-          <Flex align='center' justify='center' className={s.headerIconBox}>
+          <Flex align='center' justify='center' className={s.adminHeaderIcon}>
             <LockOpen1Icon width={24} height={24} />
           </Flex>
           <Flex direction='column'>
-            <Heading size='6' className={s.headerHeading}>
+            <Heading size='6'>
               {t('admin:permissions.title', 'Permission Management')}
             </Heading>
-            <Text className={s.headerSubtitle}>
+            <Text size='2' color='gray' mt='1'>
               {t(
                 'admin:permissions.subtitle',
                 'Configure granular access controls',
@@ -519,15 +531,15 @@ function Permissions() {
                       align='center'
                       direction='column'
                       py='9'
-                      className={s.emptyStateFlex}
+                      className={s.adminEmptyBlock}
                     >
                       <LockOpen1Icon
                         width={48}
                         height={48}
-                        className={s.emptyStateIcon}
+                        className={s.adminEmptyIcon}
                       />
 
-                      <Text size='3' weight='bold'>
+                      <Text size='3' weight='bold' mb='1'>
                         {search
                           ? t(
                               'admin:permissions.noMatchesFound',
@@ -538,7 +550,7 @@ function Permissions() {
                               'No permissions found',
                             )}
                       </Text>
-                      <Text size='2'>
+                      <Text size='2' color='gray'>
                         {search
                           ? t(
                               'admin:permissions.noMatchesFoundSearch',
@@ -561,7 +573,7 @@ function Permissions() {
                   return (
                     <Table.Row
                       key={permission.id}
-                      className={isSelected ? s.activeRowSelected : undefined}
+                      className={clsx({ [s.activeRowSelected]: isSelected })}
                     >
                       <Table.Cell className={s.centerCell}>
                         <Checkbox

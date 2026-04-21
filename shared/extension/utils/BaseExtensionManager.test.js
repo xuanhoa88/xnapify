@@ -31,6 +31,7 @@ function createMockRegistry() {
     unregister: jest.fn(),
     getDefinitions: jest.fn(),
     has: jest.fn(),
+    findDefinition: jest.fn().mockReturnValue(null),
     runInstallHook: jest.fn().mockResolvedValue(true),
     runUninstallHook: jest.fn().mockResolvedValue(true),
   };

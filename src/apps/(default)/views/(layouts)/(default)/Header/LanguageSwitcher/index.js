@@ -9,6 +9,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 
 import { GlobeIcon, ChevronDownIcon, CheckIcon } from '@radix-ui/react-icons';
 import { DropdownMenu, Text } from '@radix-ui/themes';
+import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
@@ -87,7 +88,7 @@ function LanguageSwitcher() {
           <DropdownMenu.Item
             key={code}
             onSelect={() => handleLocaleChange(code)}
-            className={code === currentLocale ? s.localeItemActive : undefined}
+            className={clsx({ [s.localeItemActive]: code === currentLocale })}
           >
             <Text size='3' mr='3'>
               {name}

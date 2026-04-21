@@ -150,13 +150,18 @@ const GroupUsersModal = forwardRef((props, ref) => {
           />
         </Box>
 
-        <Box className={s.userListFlex}>
+        <Flex direction='column' gap='3'>
           {usersLoading ? (
-            <Flex justify='center' align='center' className={s.loadingFlex}>
+            <Flex
+              justify='center'
+              align='center'
+              p='8'
+              className={s.loadingFlex}
+            >
               {t('admin:common.loadingUsers', 'Loading users...')}
             </Flex>
           ) : users.length === 0 ? (
-            <Flex justify='center' align='center' className={s.emptyFlex}>
+            <Flex justify='center' align='center' p='8' className={s.emptyFlex}>
               {t('admin:groups.noUsersInGroup', 'No users found in this group')}
             </Flex>
           ) : (
@@ -165,6 +170,7 @@ const GroupUsersModal = forwardRef((props, ref) => {
                 key={user.id}
                 align='center'
                 gap='3'
+                p='3'
                 className={s.userItemFlex}
               >
                 <Avatar
@@ -181,25 +187,15 @@ const GroupUsersModal = forwardRef((props, ref) => {
                     .toUpperCase()}
                 />
 
-                <Box className={s.userInfoBox}>
-                  <Text
-                    as='div'
-                    size='2'
-                    weight='bold'
-                    className={s.userNameText}
-                  >
+                <Flex direction='column' grow='1' minWidth='0'>
+                  <Text as='div' size='2' weight='bold' truncate highContrast>
                     {(user.profile && user.profile.display_name) ||
                       t('admin:common.na', 'N/A')}
                   </Text>
-                  <Text
-                    as='div'
-                    size='1'
-                    color='gray'
-                    className={s.userEmailText}
-                  >
+                  <Text as='div' size='1' color='gray' truncate>
                     {user.email}
                   </Text>
-                </Box>
+                </Flex>
                 <Box>
                   <Badge
                     variant={user.is_active ? 'success' : 'error'}
@@ -214,7 +210,7 @@ const GroupUsersModal = forwardRef((props, ref) => {
               </Flex>
             ))
           )}
-        </Box>
+        </Flex>
 
         {/* Pagination */}
         {totalPages > 1 && (

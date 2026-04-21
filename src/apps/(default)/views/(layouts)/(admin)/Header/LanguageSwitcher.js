@@ -82,15 +82,19 @@ function AdminLanguageSwitcher() {
   return (
     <Box position='relative' ref={dropdownRef}>
       <Button variant='ghost' onClick={handleToggle} className={s.langBtn}>
-        <Flex align='center' justify='center' className={s.langIconWrap}>
+        <Flex align='center' justify='center' width='20px' height='20px'>
           <GlobeIcon width={18} height={18} />
         </Flex>
-        <Text size='3' weight='medium' className={s.langText}>
+        <Text
+          size='3'
+          weight='medium'
+          display={{ initial: 'none', md: 'block' }}
+        >
           {currentLanguageName || languageCode}
         </Text>
-        <Box className={clsx(s.chevronIcon, { [s.chevronIconOpen]: isOpen })}>
+        <Flex className={clsx(s.chevronIcon, isOpen && s.chevronIconOpen)}>
           <ChevronDownIcon width={12} height={12} />
-        </Box>
+        </Flex>
       </Button>
 
       {isOpen && (
@@ -100,9 +104,10 @@ function AdminLanguageSwitcher() {
               key={code}
               variant='ghost'
               onClick={e => handleLocaleChange(code, e)}
-              className={clsx(s.localeItem, {
-                [s.localeItemActive]: code === currentLocale,
-              })}
+              className={clsx(
+                s.localeItem,
+                code === currentLocale && s.localeItemActive,
+              )}
             >
               <Text size='3'>{name}</Text>
               {code === currentLocale && (

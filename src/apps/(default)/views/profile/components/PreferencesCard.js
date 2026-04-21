@@ -9,7 +9,6 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import { ReloadIcon, GearIcon } from '@radix-ui/react-icons';
 import { Flex, Box, Text, Heading, Button } from '@radix-ui/themes';
-import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
@@ -132,7 +131,7 @@ function PreferencesCard() {
   if (loading && (!user || !user.profile || !user.profile.language)) {
     return (
       <Box className={s.cardContainer}>
-        <Flex align='center' justify='center' gap='3' className={s.loadingBox}>
+        <Flex align='center' justify='center' gap='3' p='8'>
           <ReloadIcon width={24} height={24} className={s.spinner} />
           <Text size='3' color='gray'>
             {t('common.loading', 'Loading...')}
@@ -144,12 +143,18 @@ function PreferencesCard() {
 
   return (
     <Box className={s.cardContainer}>
-      <Flex align='center' gap='4' className={s.cardHeader}>
-        <Box className={clsx(s.cardHeaderIcon, s.cardHeaderIconIndigo)}>
+      <Flex align='center' gap='4' mb='6'>
+        <Flex
+          align='center'
+          justify='center'
+          width='48px'
+          height='48px'
+          className={s.cardHeaderIconIndigo}
+        >
           <GearIcon width={24} height={24} />
-        </Box>
+        </Flex>
         <Box>
-          <Heading as='h2' size='5' className={s.cardTitle}>
+          <Heading as='h2' size='5' highContrast>
             {t('profile.preferences', 'Preferences')}
           </Heading>
           <Text size='3' color='gray'>
@@ -246,7 +251,7 @@ function PreferencesFormFields({ loading }) {
         />
       </Form.Field>
 
-      <Flex justify='end' className={s.cardAction}>
+      <Flex justify='end' mt='4'>
         <Button
           variant='solid'
           color='indigo'

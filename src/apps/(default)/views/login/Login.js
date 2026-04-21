@@ -99,7 +99,13 @@ function Login() {
     <Flex className={s.pageContainer}>
       <HeroSection />
 
-      <Flex align='center' justify='center' className={s.contentWrapper}>
+      <Flex
+        align='center'
+        justify='center'
+        grow='1'
+        p='6'
+        className={s.contentWrapper}
+      >
         <Card size='4' variant='classic' className={s.formCard}>
           <Form.Error message={error} />
 
@@ -162,6 +168,8 @@ function HeroSection() {
       direction='column'
       justify='center'
       align='center'
+      grow='1'
+      display={{ initial: 'none', lg: 'flex' }}
       className={s.heroSection}
     >
       <Flex direction='column' align='center' className={s.heroContent}>

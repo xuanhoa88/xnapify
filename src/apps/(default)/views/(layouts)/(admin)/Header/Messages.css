@@ -62,37 +62,6 @@
   border-radius: 50%;
 }
 
-.messageContent {
-  width: 100%;
-  overflow: hidden;
-  flex-direction: column;
-}
-
-.messageSender {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.messageTime {
-  flex-shrink: 0;
-  margin-left: var(--space-2);
-}
-
-.messageSubject {
-  margin-top: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.messagePreview {
-  margin-top: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 .viewAllBtn {
   color: var(--indigo-11);
   font-size: var(--font-size-2);

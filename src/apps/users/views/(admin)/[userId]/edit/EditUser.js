@@ -147,16 +147,16 @@ function EditUser({ userId, context }) {
           justify='between'
           wrap='wrap'
           gap='4'
-          className={s.headerFlex}
+          pb='4'
+          mb='6'
+          className={s.adminHeader}
         >
           <Flex align='center' gap='3'>
-            <Flex align='center' justify='center' className={s.headerIconBox}>
+            <Flex align='center' justify='center' className={s.adminHeaderIcon}>
               <GroupIcon width={24} height={24} />
             </Flex>
             <Flex direction='column'>
-              <Heading size='6' className={s.heading}>
-                {null}
-              </Heading>
+              <Heading size='6'>{null}</Heading>
             </Flex>
           </Flex>
         </Flex>
@@ -172,16 +172,16 @@ function EditUser({ userId, context }) {
           justify='between'
           wrap='wrap'
           gap='4'
-          className={s.headerFlex}
+          pb='4'
+          mb='6'
+          className={s.adminHeader}
         >
           <Flex align='center' gap='3'>
-            <Flex align='center' justify='center' className={s.headerIconBox}>
+            <Flex align='center' justify='center' className={s.adminHeaderIcon}>
               <GroupIcon width={24} height={24} />
             </Flex>
             <Flex direction='column'>
-              <Heading size='6' className={s.heading}>
-                {null}
-              </Heading>
+              <Heading size='6'>{null}</Heading>
             </Flex>
           </Flex>
         </Flex>
@@ -196,14 +196,16 @@ function EditUser({ userId, context }) {
         justify='between'
         wrap='wrap'
         gap='4'
-        className={s.headerFlex}
+        pb='4'
+        mb='6'
+        className={s.adminHeader}
       >
         <Flex align='center' gap='3'>
-          <Flex align='center' justify='center' className={s.headerIconBox}>
+          <Flex align='center' justify='center' className={s.adminHeaderIcon}>
             <GroupIcon width={24} height={24} />
           </Flex>
           <Flex direction='column'>
-            <Heading size='6' className={s.heading}>
+            <Heading size='6'>
               {(user.profile && user.profile.display_name) || user.email}
             </Heading>
             <Text size='2' color='gray'>

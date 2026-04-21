@@ -101,9 +101,7 @@ function ProfileDropdown() {
           <Flex
             align='center'
             gap='2'
-            className={clsx(s.profileTrigger, {
-              [s.profileTriggerOpen]: isOpen,
-            })}
+            className={clsx(s.profileTrigger, isOpen && s.profileTriggerOpen)}
           >
             <Flex align='center' justify='center' className={s.avatarCircle}>
               {avatarUrl ? (
@@ -128,9 +126,7 @@ function ProfileDropdown() {
               </Text>
             </Flex>
             <Box
-              className={clsx(s.profileChevron, {
-                [s.chevronIconOpen]: isOpen,
-              })}
+              className={clsx(s.profileChevron, isOpen && s.chevronIconOpen)}
             >
               <ChevronDownIcon width={12} height={12} />
             </Box>

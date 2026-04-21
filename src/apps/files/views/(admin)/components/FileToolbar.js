@@ -53,7 +53,7 @@ export default function FileToolbar() {
   );
 
   return (
-    <Flex align='center' justify='between' className={s.toolbarFlex}>
+    <Flex align='center' justify='between' height='52px'>
       <Flex align='center' gap='1' className={s.breadcrumbFlex}>
         {breadcrumbs.map((crumb, index) => {
           const isLast = index === breadcrumbs.length - 1;
@@ -68,10 +68,10 @@ export default function FileToolbar() {
 
               <Button
                 variant='ghost'
-                className={clsx(s.breadcrumbBtn, {
-                  [s.breadcrumbBtnActive]: isLast,
-                  [s.breadcrumbBtnInactive]: !isLast,
-                })}
+                className={clsx(
+                  s.breadcrumbBtn,
+                  isLast ? s.breadcrumbBtnActive : s.breadcrumbBtnInactive,
+                )}
                 onClick={() => !isLast && handleBreadcrumbClick(crumb)}
                 disabled={isLast}
               >
@@ -84,8 +84,8 @@ export default function FileToolbar() {
         })}
       </Flex>
 
-      <Flex align='center' gap='3' className={s.controlsFlex}>
-        <Box className={s.searchBox}>
+      <Flex align='center' gap='3' shrink='0'>
+        <Box width='250px'>
           <TableSearch
             value={search}
             onChange={val => dispatch(setSearch(val))}
@@ -99,10 +99,10 @@ export default function FileToolbar() {
         <Flex align='center' gap='1' className={s.viewModeFlex}>
           <Button
             variant='ghost'
-            className={clsx(s.viewModeBtn, {
-              [s.viewModeBtnActive]: viewMode === 'list',
-              [s.viewModeBtnInactive]: viewMode !== 'list',
-            })}
+            className={clsx(
+              s.viewModeBtn,
+              viewMode === 'list' ? s.viewModeBtnActive : s.viewModeBtnInactive,
+            )}
             onClick={() => dispatch(setViewMode('list'))}
             title={t('files:toolbar.list_view', 'List view')}
             iconOnly
@@ -111,10 +111,10 @@ export default function FileToolbar() {
           </Button>
           <Button
             variant='ghost'
-            className={clsx(s.viewModeBtn, {
-              [s.viewModeBtnActive]: viewMode === 'grid',
-              [s.viewModeBtnInactive]: viewMode !== 'grid',
-            })}
+            className={clsx(
+              s.viewModeBtn,
+              viewMode === 'grid' ? s.viewModeBtnActive : s.viewModeBtnInactive,
+            )}
             onClick={() => dispatch(setViewMode('grid'))}
             title={t('files:toolbar.grid_view', 'Grid view')}
             iconOnly

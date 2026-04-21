@@ -700,6 +700,7 @@ function LoginForm() {
 9. **Documentation:** Add JSDoc comments for complex functions
 10. **Testing:** Write tests for critical functionality
 11. **File Naming:** Use PascalCase for components, camelCase for utilities, kebab-case for CSS modules
+12. **Styling:** ABSOLUTE BAN on inline styles (e.g., `style={{...}}`). Always use CSS Modules instead.
 
 ## Mandatory Verification After Code Changes
 

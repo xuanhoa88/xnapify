@@ -30,19 +30,16 @@ export default function MarketplaceCard({
       role='button'
       tabIndex={0}
       onKeyDown={e => e.key === 'Enter' && onClick(listing)}
-      className={clsx(s.cardFlex, {
-        [s.cardFeatured]: isFeatured,
-        [s.cardNormal]: !isFeatured,
-      })}
+      className={clsx(s.cardFlex, isFeatured ? s.cardFeatured : s.cardNormal)}
     >
       {isFeatured && <Box className={s.featuredOverlay} />}
 
       <Flex gap='3' align='start' className={s.headerFlex}>
         <Box
-          className={clsx(s.iconBox, {
-            [s.iconBoxFeatured]: isFeatured,
-            [s.iconBoxNormal]: !isFeatured,
-          })}
+          className={clsx(
+            s.iconBox,
+            isFeatured ? s.iconBoxFeatured : s.iconBoxNormal,
+          )}
         >
           {listing.icon ? (
             <img
@@ -100,10 +97,10 @@ export default function MarketplaceCard({
           as='p'
           size='2'
           color='gray'
-          className={clsx(s.descText, {
-            [s.descTextFeatured]: isFeatured,
-            [s.descTextNormal]: !isFeatured,
-          })}
+          className={clsx(
+            s.descText,
+            isFeatured ? s.descTextFeatured : s.descTextNormal,
+          )}
         >
           {listing.short_description || listing.description}
         </Text>

@@ -21,17 +21,6 @@
   border-radius: var(--radius-4);
   border: 1px solid var(--gray-a5);
   box-shadow: var(--shadow-2);
-  flex-direction: column;
-}
-
-@media (min-width: 768px) {
-  .headerContainer {
-    flex-direction: row;
-  }
-
-  .infoSection {
-    text-align: left;
-  }
 }
 
 .avatarSection {
@@ -91,20 +80,6 @@
 .errorText {
   margin-top: var(--space-2);
   max-width: 200px;
-}
-
-.infoSection {
-  text-align: center;
-  flex: 1;
-}
-
-.displayName {
-  margin-bottom: var(--space-1);
-  color: var(--gray-12);
-}
-
-.emailText {
-  margin-bottom: var(--space-4);
 }
 
 .statValue {

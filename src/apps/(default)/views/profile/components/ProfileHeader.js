@@ -78,7 +78,12 @@ function ProfileHeader() {
   );
 
   return (
-    <Flex align='center' gap='5' className={s.headerContainer}>
+    <Flex
+      align='center'
+      gap='5'
+      direction={{ initial: 'column', md: 'row' }}
+      className={s.headerContainer}
+    >
       <Flex direction='column' align='center' className={s.avatarSection}>
         <Box
           onClick={handleAvatarClick}
@@ -87,9 +92,7 @@ function ProfileHeader() {
           onKeyDown={e => {
             if (e.key === 'Enter') handleAvatarClick();
           }}
-          className={clsx(s.avatarBox, {
-            [s.avatarBoxLoading]: loading,
-          })}
+          className={clsx(s.avatarBox, loading && s.avatarBoxLoading)}
         >
           {avatarUrl ? (
             <img src={avatarUrl} alt='Profile' className={s.avatarImg} />
@@ -97,9 +100,7 @@ function ProfileHeader() {
             <Text>{avatarInitial}</Text>
           )}
           <Flex
-            className={clsx(s.avatarOverlay, s.avatarOverlay, {
-              [s.avatarOverlayLoading]: loading,
-            })}
+            className={clsx(s.avatarOverlay, loading && s.avatarOverlayLoading)}
             align='center'
             justify='center'
           >
@@ -126,11 +127,15 @@ function ProfileHeader() {
         )}
       </Flex>
 
-      <Flex direction='column' className={s.infoSection}>
-        <Heading as='h1' size='7' className={s.displayName}>
+      <Flex
+        direction='column'
+        grow='1'
+        align={{ initial: 'center', md: 'start' }}
+      >
+        <Heading as='h1' size='7' mb='1' highContrast>
           {displayName || t('navigation.profile', 'Profile')}
         </Heading>
-        <Text size='3' color='gray' className={s.emailText}>
+        <Text size='3' color='gray' mb='4'>
           {(user && user.email) || ''}
         </Text>
 

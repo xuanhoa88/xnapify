@@ -39,7 +39,7 @@ export default async function createUserProfileModel(
       comment: 'Attribute value stored as text',
       get() {
         const rawValue = this.getDataValue('attribute_value');
-        if (rawValue === undefined || rawValue === null) return rawValue;
+        if (rawValue == null) return rawValue;
 
         const type = this.getDataValue('attribute_type');
         switch (type) {
@@ -60,7 +60,7 @@ export default async function createUserProfileModel(
         }
       },
       set(value) {
-        if (value === null || value === undefined) {
+        if (value == null) {
           this.setDataValue('attribute_type', 'string');
           this.setDataValue('attribute_value', null);
         } else if (value instanceof Date) {

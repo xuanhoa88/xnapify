@@ -4,13 +4,11 @@
   margin: 0 auto;
 }
 
-.headerFlex {
-  padding-bottom: var(--space-4);
+.adminHeader {
   border-bottom: 1px solid var(--gray-a6);
-  margin-bottom: var(--space-6);
 }
 
-.headerIconBox {
+.adminHeaderIcon {
   width: 40px;
   height: 40px;
   border-radius: var(--radius-3);
@@ -19,20 +17,18 @@
   flex-shrink: 0;
 }
 
-.headerHeading {
-  margin: 0;
-  color: var(--gray-12);
-}
-
-.headerSubtitle {
-  margin: 0;
-  margin-top: var(--space-1);
-}
-
-.errorFlex {
+.adminErrorBlock {
   border: 1px solid var(--red-6);
   border-radius: var(--radius-3);
   background-color: var(--red-2);
+}
+
+.adminEmptyBlock {
+  opacity: 0.6;
+}
+
+.adminEmptyIcon {
+  margin-bottom: var(--space-3);
 }
 
 .searchBox {
@@ -62,14 +58,6 @@
 
 .rightCell {
   text-align: right;
-}
-
-.emptyStateFlex {
-  opacity: 0.6;
-}
-
-.emptyStateIcon {
-  margin-bottom: var(--space-3);
 }
 
 .activeRowSelected {

@@ -18,6 +18,7 @@ import {
   Card,
   Button,
 } from '@radix-ui/themes';
+import clsx from 'clsx';
 import sortBy from 'lodash/sortBy';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
@@ -124,7 +125,8 @@ function SettingRow({ setting, canWrite }) {
     <Flex
       direction={{ initial: 'column', md: 'row' }}
       gap='4'
-      className={setting.type === 'boolean' ? s.rowFlexCenter : s.rowFlexStart}
+      align={setting.type === 'boolean' ? 'center' : 'start'}
+      className={s.rowBase}
     >
       <Box className={s.rowContent}>
         <Flex align='center' gap='2' wrap='wrap' className={s.rowHeaderFlex}>
@@ -168,11 +170,12 @@ function SettingRow({ setting, canWrite }) {
           </Text>
         )}
       </Box>
-      <Box
-        className={
-          setting.type === 'boolean'
-            ? s.inputContainerFlexEnd
-            : s.inputContainerFlexStart
+      <Flex
+        width='100%'
+        maxWidth={{ initial: '100%', md: '400px' }}
+        shrink='0'
+        justify={
+          setting.type === 'boolean' ? { initial: 'start', md: 'end' } : 'start'
         }
       >
         <Box className={s.inputWrapper}>
@@ -180,7 +183,7 @@ function SettingRow({ setting, canWrite }) {
             {renderInput()}
           </Form.Field>
         </Box>
-      </Box>
+      </Flex>
     </Flex>
   );
 }
@@ -383,17 +386,19 @@ function SettingsPage({ context }) {
           justify='between'
           wrap='wrap'
           gap='4'
-          className={s.headerFlex}
+          pb='4'
+          mb='6'
+          className={s.adminHeader}
         >
           <Flex align='center' gap='3'>
-            <Flex align='center' justify='center' className={s.headerIconBox}>
+            <Flex align='center' justify='center' className={s.adminHeaderIcon}>
               <RadixIcons.GearIcon width={24} height={24} />
             </Flex>
             <Flex direction='column'>
-              <Heading size='6' className={s.headerHeading}>
+              <Heading size='6'>
                 {t('admin:settings.title', 'Global Settings')}
               </Heading>
-              <Text size='3' color='gray' className={s.headerSubtitle}>
+              <Text size='2' color='gray' mt='1'>
                 {t('admin:settings.subtitle', 'Configure system-wide settings')}
               </Text>
             </Flex>
@@ -416,17 +421,19 @@ function SettingsPage({ context }) {
           justify='between'
           wrap='wrap'
           gap='4'
-          className={s.headerFlex}
+          pb='4'
+          mb='6'
+          className={s.adminHeader}
         >
           <Flex align='center' gap='3'>
-            <Flex align='center' justify='center' className={s.headerIconBox}>
+            <Flex align='center' justify='center' className={s.adminHeaderIcon}>
               <RadixIcons.GearIcon width={24} height={24} />
             </Flex>
             <Flex direction='column'>
-              <Heading size='6' className={s.headerHeading}>
+              <Heading size='6'>
                 {t('admin:settings.title', 'Global Settings')}
               </Heading>
-              <Text size='3' color='gray' className={s.headerSubtitle}>
+              <Text size='2' color='gray' mt='1'>
                 {t('admin:settings.subtitle', 'Configure system-wide settings')}
               </Text>
             </Flex>
@@ -437,7 +444,7 @@ function SettingsPage({ context }) {
           align='center'
           justify='center'
           p='6'
-          className={s.errorFlex}
+          className={s.adminErrorBlock}
         >
           <Text color='red' size='4' weight='bold' mb='2'>
             {t('admin:settings.errorLoading', 'Error loading settings')}
@@ -465,17 +472,19 @@ function SettingsPage({ context }) {
         justify='between'
         wrap='wrap'
         gap='4'
-        className={s.headerFlex}
+        pb='4'
+        mb='6'
+        className={s.adminHeader}
       >
         <Flex align='center' gap='3'>
-          <Flex align='center' justify='center' className={s.headerIconBox}>
+          <Flex align='center' justify='center' className={s.adminHeaderIcon}>
             <RadixIcons.GearIcon width={24} height={24} />
           </Flex>
           <Flex direction='column'>
-            <Heading size='6' className={s.headerHeading}>
+            <Heading size='6'>
               {t('admin:settings.title', 'Global Settings')}
             </Heading>
-            <Text size='3' color='gray' className={s.headerSubtitle}>
+            <Text size='2' color='gray' mt='1'>
               {t(
                 'admin:settings.subtitle',
                 'Configure system-wide settings for all modules',
@@ -485,11 +494,7 @@ function SettingsPage({ context }) {
         </Flex>
       </Flex>
 
-      <Grid
-        columns={{ initial: '1', lg: '250px 1fr' }}
-        gap='6'
-        className={s.gridContainer}
-      >
+      <Grid columns={{ initial: '1', lg: '250px 1fr' }} gap='6' align='start'>
         {/* Namespace tabs */}
         <Flex as='nav' direction='column' gap='1'>
           {namespaces.map(ns => (
@@ -498,7 +503,10 @@ function SettingsPage({ context }) {
               key={ns}
               type='button'
               onClick={() => setActiveTab(ns)}
-              className={activeTab === ns ? s.tabActive : s.tabInactive}
+              className={clsx({
+                [s.tabActive]: activeTab === ns,
+                [s.tabInactive]: activeTab !== ns,
+              })}
             >
               {(() => {
                 const iconName = icons[ns];
@@ -508,15 +516,10 @@ function SettingsPage({ context }) {
                     : RadixIcons.GearIcon;
                 return <Comp width={16} height={16} />;
               })()}
-              <Text as='span' className={s.tabText}>
+              <Text as='span' grow='1' truncate ml='2'>
                 {getNamespaceLabel(ns, t, labels, translationKeys)}
               </Text>
-              <Badge
-                size='1'
-                color='gray'
-                variant='soft'
-                className={s.tabBadge}
-              >
+              <Badge size='1' color='gray' variant='soft'>
                 {groups[ns].length}
               </Badge>
             </Box>
@@ -524,7 +527,7 @@ function SettingsPage({ context }) {
         </Flex>
 
         {/* Settings panel — only the active tab is mounted */}
-        <Box className={s.settingsPanelBox}>
+        <Box>
           {activeTab && groups[activeTab] && (
             <SettingsBuilderForm
               key={activeTab}
