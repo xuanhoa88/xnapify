@@ -8,13 +8,10 @@
 import { forwardRef } from 'react';
 
 import { Select } from '@radix-ui/themes';
-import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { Controller, useFormContext } from 'react-hook-form';
 
 import { useFormField } from '../FormContext';
-
-import s from './Select.css';
 
 /**
  * FormSelect - Select element to be used inside Form.Field baked by Radix Themes
@@ -45,7 +42,7 @@ const FormSelect = forwardRef(function FormSelect$(
           <Select.Trigger
             placeholder={placeholder}
             color={error ? 'red' : undefined}
-            className={clsx(className, s.root)}
+            className={className}
             ref={ref => {
               field.ref(ref);
               if (typeof forwardedRef === 'function') forwardedRef(ref);

@@ -13,8 +13,6 @@ import { Controller, useFormContext } from 'react-hook-form';
 
 import { useFormField } from '../FormContext';
 
-import s from './Switch.css';
-
 /**
  * FormSwitch - Toggle switch backed by Radix Themes
  *
@@ -41,7 +39,6 @@ const FormSwitch = forwardRef(function FormSwitch$(
               id={id}
               size={size}
               disabled={disabled}
-              className={s.root}
               checked={field.value || false}
               color={error ? 'red' : undefined}
               onCheckedChange={field.onChange}

@@ -38,7 +38,7 @@ export async function middleware(context, next) {
 /**
  * Route config
  */
-export const layout = false;
+export const layout = 'unauth';
 
 /**
  * Default export - Page component

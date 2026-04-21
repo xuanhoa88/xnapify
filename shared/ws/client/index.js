@@ -608,9 +608,11 @@ export function setWebSocketClient(client) {
 
 /**
  * Get the global WebSocket client instance
+ * Returns null during SSR to prevent hydration mismatches.
  * @returns {WebSocketClient|null} WebSocket client or null if not initialized
  */
 export function useWebSocket() {
+  if (typeof window === 'undefined') return null;
   return wsClientInstance;
 }
 

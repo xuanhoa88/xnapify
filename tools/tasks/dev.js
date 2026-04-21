@@ -58,10 +58,17 @@ const host = config.env('XNAPIFY_HOST', '127.0.0.1');
 // - app: Holds the Express application instance
 // - server: Holds the HTTP server instance
 // - dispose: Dispose server bundle (Node-RED, etc.)
+// - invalidateServerCaches: Lightweight SSR cache invalidation (no service shutdown)
 // - hmr: Tracks Hot Module Replacement state and configuration
 // - hotMiddleware: Webpack hot middleware instance
 // - devMiddleware: Webpack dev middleware instance
-let app, server, dispose, hmr, hotMiddleware, devMiddleware;
+let app,
+  server,
+  dispose,
+  invalidateServerCaches,
+  hmr,
+  hotMiddleware,
+  devMiddleware;
 
 // Synchronized HMR: buffers client HMR 'built' events while the server
 // compiler is still recompiling, then flushes them once the server bundle
@@ -233,7 +240,10 @@ function loadServerBundle() {
     });
 
     // Load the server bundle
-    const { hot, ...bundle } = require(serverBundlePath);
+    const { hot, invalidateCaches, ...bundle } = require(serverBundlePath);
+
+    // Expose lightweight cache invalidation for extension HMR
+    invalidateServerCaches = invalidateCaches;
 
     // Set up HMR if available (for development)
     hmr = hot;
@@ -576,9 +586,19 @@ async function main() {
   logInfo('🚀 Starting development server...');
 
   // Forward extension rebuild events to the client browser via hot middleware
+  // and invalidate server-side SSR caches so stale chunk URLs aren't served.
   process.on('message', msg => {
-    if (msg && msg.type === 'extensions-refreshed' && hotMiddleware) {
-      if (typeof hotMiddleware.publish === 'function') {
+    if (msg && msg.type === 'extensions-refreshed') {
+      // Invalidate SSR resource cache so stale extension asset URLs
+      // (with old content hashes) aren't injected into server-rendered HTML.
+      // The extension rebuild changes chunk hashes; without this, the cached
+      // SSR resources reference deleted chunk files → MIME type errors.
+      if (typeof invalidateServerCaches === 'function') {
+        invalidateServerCaches();
+        if (!silent) logInfo('🗑️  Extension rebuild: SSR caches cleared');
+      }
+
+      if (hotMiddleware && typeof hotMiddleware.publish === 'function') {
         hotMiddleware.publish({
           type: 'extensions-refreshed',
           extensions: msg.extensions,

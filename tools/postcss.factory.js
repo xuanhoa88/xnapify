@@ -5,7 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-module.exports = () => ({
+const path = require('path');
+
+module.exports = ({ cwd }) => ({
   // The list of plugins for PostCSS
   // https://github.com/postcss/postcss
   plugins: [
@@ -13,6 +15,23 @@ module.exports = () => ({
     // Must run before other plugins so imported content gets processed.
     // https://github.com/postcss/postcss-import
     require('postcss-import')(),
+
+    // Tailwind CSS
+    // https://tailwindcss.com/docs/installation
+    require('tailwindcss')({
+      content: [
+        path.join(cwd, 'src/**/*.{js,jsx,ts,tsx}').replace(/\\/g, '/'),
+        path.join(cwd, 'shared/**/*.{js,jsx,ts,tsx}').replace(/\\/g, '/'),
+      ],
+      theme: {
+        extend: {},
+      },
+      corePlugins: {
+        // Disable Tailwind's preflight to avoid overriding Radix UI Themes
+        preflight: false,
+      },
+      plugins: [],
+    }),
 
     // postcss-preset-env bundles modern PostCSS plugins and automatically
     // determines which CSS polyfills are needed based on the browserslist

@@ -86,8 +86,9 @@ export const getExtension = async (req, res) => {
 
 /**
  * Serve extension static files.
- * Content-hashed assets (e.g. 'remote.a1b2c3d4.js') get immutable caching.
- * Non-hashed assets get no-cache to ensure freshness.
+ * Content-hashed assets (e.g. 'remote.a1b2c3d4.js') get immutable caching
+ * in production. In development, all assets use no-store to ensure the
+ * browser always re-fetches after extension HMR rebuilds change content hashes.
  */
 export const serveExtensionStatic = async (req, res) => {
   const container = req.app.get('container');
@@ -113,20 +114,31 @@ export const serveExtensionStatic = async (req, res) => {
   const filePath = `/${rawPath}`.replace(/\/+/g, '/');
   req.url = filePath;
 
-  // Content-hashed files are immutable — cache forever.
+  // Content-hashed files are immutable — cache forever (production only).
+  // In dev mode, extension HMR rebuilds change content hashes; immutable
+  // caching would cause the browser to serve stale chunks from disk cache
+  // after a rebuild, leading to MIME type errors (old URL → 404 → JSON).
   // Pattern: <name>.<8-char-hex>.<ext> (e.g. 'remote.a1b2c3d4.js')
   const isHashed = /\.[a-f0-9]{8}\.\w+$/.test(filePath);
 
-  if (isHashed) {
+  if (isHashed && !__DEV__) {
     res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
   } else {
-    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
   }
 
-  let staticMiddleware = staticMiddlewareCache.get(staticDir);
-  if (!staticMiddleware) {
+  // In development, skip the staticMiddlewareCache to avoid stale
+  // express.static instances that may hold outdated filesystem state
+  // after extension HMR rebuilds replace chunk files.
+  let staticMiddleware;
+  if (__DEV__) {
     staticMiddleware = express.static(staticDir);
-    staticMiddlewareCache.set(staticDir, staticMiddleware);
+  } else {
+    staticMiddleware = staticMiddlewareCache.get(staticDir);
+    if (!staticMiddleware) {
+      staticMiddleware = express.static(staticDir);
+      staticMiddlewareCache.set(staticDir, staticMiddleware);
+    }
   }
 
   return staticMiddleware(req, res, () => {

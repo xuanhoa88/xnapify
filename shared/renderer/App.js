@@ -5,36 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-/**
- * Root Application Component
- *
- * Composes all application-level providers and renders the application tree.
- * This component sets up the core infrastructure including:
- * - Redux store for state management
- * - i18next for internationalization
- * - History for client-side routing
- *
- * @example
- * const context = {
- *   store: configureStore(),
- *   i18n: i18nextInstance,
- *   history: createBrowserHistory(),
- *   fetch: customFetch,
- *   locale: 'en',
- *   pathname: '/',
- *   query: {}
- * };
- *
- * ReactDOM.render(
- *   <App context={context}>
- *     <Routes />
- *   </App>,
- *   document.getElementById('root')
- * );
- */
-
-import 'normalize.css';
-import '@radix-ui/themes/styles.css';
 import './global.css';
 
 import React, { useMemo } from 'react';
@@ -118,7 +88,3 @@ App.propTypes = {
   context: contextPropTypes,
   children: PropTypes.node.isRequired,
 };
-
-/* test 2 */
-
-/* test 3 */

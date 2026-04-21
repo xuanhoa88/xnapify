@@ -29,7 +29,7 @@ async function main() {
     const args = process.argv.slice(2);
 
     // Resolve runner script
-    const runnerScript = path.resolve(__dirname, '../e2e/runner.js');
+    const runnerScript = path.resolve(__dirname, '..', 'e2e', 'runner.js');
 
     // Build arguments array
     const e2eArgs = [runnerScript, ...args];

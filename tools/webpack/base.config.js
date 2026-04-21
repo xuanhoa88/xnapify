@@ -149,9 +149,13 @@ const createCSSRule = ({
     sourceMap: isDev,
     esModule: false,
     modules: {
-      auto: resourcePath =>
-        resourcePath.includes(config.APP_DIR) ||
-        resourcePath.includes(path.resolve(config.CWD, 'shared')),
+      auto: resourcePath => {
+        if (resourcePath.endsWith('global.css')) return false;
+        return (
+          resourcePath.includes(config.APP_DIR) ||
+          resourcePath.includes(path.resolve(config.CWD, 'shared'))
+        );
+      },
       exportOnlyLocals,
       localIdentName:
         localIdentName ||
@@ -164,7 +168,7 @@ const createCSSRule = ({
     sourceMap: isDev,
     postcssOptions: ctx => {
       // Get global postcss config path
-      const cssConfigPath = path.resolve(__dirname, '../postcss.factory');
+      const cssConfigPath = path.resolve(__dirname, '..', 'postcss.factory');
 
       // Clear require cache in dev (HMR needs fresh reads).
       // Production builds skip cache-busting — global config is static.
@@ -174,7 +178,10 @@ const createCSSRule = ({
 
       // Get global postcss config
       const globalConfigFn = require(cssConfigPath);
-      const globalConfig = globalConfigFn({ options: postcssOptions });
+      const globalConfig = globalConfigFn({
+        options: postcssOptions,
+        cwd: config.CWD,
+      });
 
       // Look up local postcss config from the registry
       let localPlugins = [];

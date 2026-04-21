@@ -11,8 +11,6 @@ import { Controller, useFormContext } from 'react-hook-form';
 
 import { useFormField } from '../FormContext';
 
-import s from './Radio.css';
-
 /**
  * FormRadio - Radio group element to be used inside Form.Field baked by Radix Themes
  *
@@ -57,7 +55,6 @@ function FormRadio({
                   <RadioGroup.Item
                     value={String(option.value)}
                     disabled={disabled || option.disabled}
-                    className={s.root}
                   />
                   {option.label}
                 </Flex>

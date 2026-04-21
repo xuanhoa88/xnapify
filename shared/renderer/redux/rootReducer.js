@@ -7,6 +7,7 @@
 
 import intl from './features/intl';
 import runtime from './features/runtime';
+import settings from './features/settings';
 import ui from './features/ui';
 import user from './features/user';
 
@@ -19,4 +20,5 @@ export default {
   runtime,
   intl,
   ui,
+  settings,
 };

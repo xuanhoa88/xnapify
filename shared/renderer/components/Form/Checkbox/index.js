@@ -13,8 +13,6 @@ import { Controller, useFormContext } from 'react-hook-form';
 
 import { useFormField } from '../FormContext';
 
-import s from './Checkbox.css';
-
 /**
  * FormCheckbox - Checkbox element to be used inside Form.Field baked by Radix Themes
  *
@@ -41,7 +39,6 @@ const FormCheckbox = forwardRef(function FormCheckbox$(
               id={id}
               size={size}
               disabled={disabled}
-              className={s.root}
               checked={field.value || false}
               color={error ? 'red' : undefined}
               onCheckedChange={field.onChange}

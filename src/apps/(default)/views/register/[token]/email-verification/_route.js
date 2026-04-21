@@ -5,11 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import PropTypes from 'prop-types';
-
 import { isAuthenticated } from '@shared/renderer/redux';
 
-import EmailVerification from '../../EmailVerification';
+import EmailVerification from './EmailVerification';
 
 /**
  * Page metadata
@@ -35,20 +33,9 @@ export async function middleware(context, next) {
 /**
  * Route config
  */
-export const layout = false;
+export const layout = 'unauth';
 
 /**
  * Default export - Page component
  */
-export default function EmailVerificationPage({ context: { params } }) {
-  const { token } = params;
-  return <EmailVerification token={token} />;
-}
-
-EmailVerificationPage.propTypes = {
-  context: PropTypes.shape({
-    params: PropTypes.shape({
-      token: PropTypes.string.isRequired,
-    }).isRequired,
-  }).isRequired,
-};
+export default EmailVerification;

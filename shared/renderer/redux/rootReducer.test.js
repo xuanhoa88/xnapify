@@ -31,6 +31,7 @@ describe('[rootReducer] rootReducer.js', () => {
     expect(rootReducer).toHaveProperty('runtime');
     expect(rootReducer).toHaveProperty('intl');
     expect(rootReducer).toHaveProperty('ui');
+    expect(rootReducer).toHaveProperty('settings');
   });
 
   it('should have function as each reducer value', () => {
@@ -64,6 +65,10 @@ describe('[rootReducer] rootReducer.js', () => {
     expect(state.ui).toHaveProperty('drawers');
     expect(state.ui).toHaveProperty('breadcrumbs');
     expect(state.ui).toHaveProperty('flashMessage');
+
+    // Settings reducer should have proper structure
+    expect(state.settings).toBeDefined();
+    expect(state.settings).toEqual({});
   });
 
   it('should not export admin reducers directly', () => {
@@ -71,9 +76,9 @@ describe('[rootReducer] rootReducer.js', () => {
     expect(rootReducer).not.toHaveProperty('admin');
   });
 
-  it('should have exactly 4 core reducers', () => {
+  it('should have exactly 5 core reducers', () => {
     const keys = Object.keys(rootReducer);
-    expect(keys).toHaveLength(4);
-    expect(keys).toEqual(['user', 'runtime', 'intl', 'ui']);
+    expect(keys).toHaveLength(5);
+    expect(keys).toEqual(['user', 'runtime', 'intl', 'ui', 'settings']);
   });
 });

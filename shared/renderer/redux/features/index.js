@@ -47,3 +47,10 @@ export { default as userReducer } from './user';
 
 export * from './ui';
 export { default as uiReducer } from './ui';
+
+// =============================================================================
+// FEATURE: SETTINGS (Public Settings)
+// =============================================================================
+
+export * from './settings';
+export { default as settingsReducer } from './settings';

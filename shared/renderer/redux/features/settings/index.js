@@ -5,7 +5,5 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-/* Hide OAuth section when slot is empty */
-.oauthSection:has([data-slot]:empty) {
-  display: none;
-}
+export { default } from './slice';
+export { fetchPublicSettings, selectSetting } from './slice';

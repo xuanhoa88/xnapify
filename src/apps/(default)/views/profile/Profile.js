@@ -20,8 +20,6 @@ import PreferencesCard from './components/PreferencesCard';
 import ProfileHeader from './components/ProfileHeader';
 import SecurityCard from './components/SecurityCard';
 
-import s from './Profile.css';
-
 /**
  * Profile layout component natively migrating from pure CSS to absolute Box and Flex parameters.
  */
@@ -29,33 +27,33 @@ function Profile() {
   const { t } = useTranslation();
 
   return (
-    <Box className={s.pageContainer}>
-      <Box className={s.contentWrapper}>
+    <Box className='min-h-screen p-6 bg-slate-50'>
+      <Box className='max-w-[860px] mx-auto'>
         <ProfileHeader />
 
-        <Box className={s.tabsContainer}>
+        <Box className='mt-6'>
           <Tabs.Root defaultValue='personal'>
             <Tabs.List>
               <Tabs.Trigger value='personal'>
-                <Box className={s.tabIcon}>
+                <Box className='inline-flex mr-2'>
                   <PersonIcon width={18} height={18} />
                 </Box>
                 {t('profile.personalInfo', 'Personal Info')}
               </Tabs.Trigger>
               <Tabs.Trigger value='preferences'>
-                <Box className={s.tabIcon}>
+                <Box className='inline-flex mr-2'>
                   <GearIcon width={18} height={18} />
                 </Box>
                 {t('profile.preferences', 'Preferences')}
               </Tabs.Trigger>
               <Tabs.Trigger value='security'>
-                <Box className={s.tabIcon}>
+                <Box className='inline-flex mr-2'>
                   <LockClosedIcon width={18} height={18} />
                 </Box>
                 {t('profile.security', 'Security')}
               </Tabs.Trigger>
               <Tabs.Trigger value='danger'>
-                <Box className={s.tabIcon}>
+                <Box className='inline-flex mr-2'>
                   <TrashIcon width={18} height={18} />
                 </Box>
                 {t('profile.dangerZone', 'Danger Zone')}

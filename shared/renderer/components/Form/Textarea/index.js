@@ -8,13 +8,10 @@
 import { forwardRef } from 'react';
 
 import { TextArea } from '@radix-ui/themes';
-import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useFormContext } from 'react-hook-form';
 
 import { useFormField, useMergeRefs } from '../FormContext';
-
-import s from './Textarea.css';
 
 /**
  * FormTextarea - Simple textarea element to be used inside Form.Field backed by Radix Themes
@@ -45,7 +42,7 @@ const FormTextarea = forwardRef(function FormTextarea$(
       disabled={disabled}
       color={error ? 'red' : undefined}
       rows={rows}
-      className={clsx(className, s.root)}
+      className={className}
       {...registerProps}
       {...props}
       ref={handleRef}

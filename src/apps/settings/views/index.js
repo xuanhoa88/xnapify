@@ -7,7 +7,7 @@
 
 import * as selectors from './(admin)/redux/selector';
 import * as thunks from './(admin)/redux/thunks';
-import settingsReducer, { fetchPublicSettings } from './redux/settings';
+import { fetchPublicSettings } from './redux/settings';
 
 /** @type {Symbol} Ownership key for this module's persistent bindings */
 const OWNER_KEY = Symbol('__xnapify.module.settings.views__');
@@ -30,15 +30,12 @@ const translationsContext = require.context(
 // =============================================================================
 
 export default {
-  providers({ container, store }) {
+  providers({ container }) {
     container.bind(
       'settings:admin:state',
       () => ({ selectors, thunks }),
       OWNER_KEY,
     );
-
-    // Inject the global settings slice into the redux root early
-    store.injectReducer('settings', settingsReducer);
   },
 
   async boot({ store }) {

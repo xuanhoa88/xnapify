@@ -7,7 +7,7 @@
 
 import { useCallback, useEffect } from 'react';
 
-import { Flex, Box, Card, Text, Heading, Button } from '@radix-ui/themes';
+import { Flex, Text, Heading, Button } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { Trans, useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
@@ -27,6 +27,7 @@ import {
   isAuthLoading,
   getAuthError,
   clearAuthError,
+  selectSetting,
 } from '@shared/renderer/redux';
 import { useWebSocket } from '@shared/ws/client';
 
@@ -35,21 +36,21 @@ import { loginFormSchema } from '../../../users/validator/auth';
 import s from './Login.css';
 
 /**
- * Login Page Component natively mapped to Radix Flex Layouts
+ * Login Page Component
  */
 function Login() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const history = useHistory();
   const ws = useWebSocket();
-
   const loading = useSelector(isAuthLoading);
   const error = useSelector(getAuthError);
   const currentLocale = useSelector(getLocale);
   const returnTo = useQuery('returnTo') || '/';
-  const settings = useSelector(state => state.settings || {});
-  const isRegistrationAllowed =
-    settings && settings['auth.ALLOW_REGISTRATION'] !== false;
+  const allowRegistration = useSelector(state =>
+    selectSetting(state, 'auth.ALLOW_REGISTRATION'),
+  );
+  const isRegistrationAllowed = allowRegistration !== false;
 
   // Clear error on unmount
   useEffect(() => {
@@ -96,105 +97,72 @@ function Login() {
   );
 
   return (
-    <Flex className={s.pageContainer}>
-      <HeroSection />
-
-      <Flex
-        align='center'
-        justify='center'
-        grow='1'
-        p='6'
-        className={s.contentWrapper}
-      >
-        <Card size='4' variant='classic' className={s.formCard}>
-          <Form.Error message={error} />
-
-          {/* OAuth buttons slot — hidden via CSS :has(:empty) when no plugins registered */}
-          <Flex direction='column' mb='5' className={s.descriptionBox}>
-            <Box>
-              <ExtensionSlot name='auth.oauth.buttons' />
-            </Box>
-
-            <Flex align='center' className={s.divider}>
-              <Box className={s.dividerLine} />
-              <Box className={s.dividerText}>
-                {t('login.orContinueWith', 'Or continue with')}
-              </Box>
-              <Box className={s.dividerLine} />
-            </Flex>
-          </Flex>
-
-          <Form
-            schema={loginFormSchema}
-            defaultValues={{ email: '', password: '', rememberMe: false }}
-            onSubmit={handleSubmit}
-          >
-            <LoginFormFields loading={loading} />
-            <ExtensionSlot name='auth.login.quickAccess' />
-          </Form>
-
-          {isRegistrationAllowed && (
-            <Flex justify='center' mt='5'>
-              <Text size='3' color='gray'>
-                <Trans
-                  t={t}
-                  i18nKey='login.dontHaveAccount'
-                  // eslint-disable-next-line react/jsx-key, jsx-a11y/anchor-has-content
-                  components={[
-                    <Link
-                      key='link'
-                      to='/register'
-                      className={s.registerLink}
-                    />,
-                  ]}
-                />
-              </Text>
-            </Flex>
-          )}
-        </Card>
-      </Flex>
-    </Flex>
-  );
-}
-
-/**
- * Hero Section - Left side branding
- */
-function HeroSection() {
-  const { t } = useTranslation();
-
-  return (
-    <Flex
-      direction='column'
-      justify='center'
-      align='center'
-      grow='1'
-      p='8'
-      display={{ initial: 'none', lg: 'flex' }}
-      className={s.heroSection}
-    >
-      <Flex direction='column' align='center' className={s.heroContent}>
-        <Link to='/' className={s.logoLink}>
-          <img
-            src='/xnapify_38x38.png'
-            srcSet='/xnapify_72x72.png 2x'
-            width='48'
-            height='48'
-            alt='xnapify'
-            className={s.logoImg}
-          />
-          <Text size='5' weight='bold'>
-            xnapify
-          </Text>
-        </Link>
-        <Heading as='h2' size='8' mb='3' className={s.heroTitle}>
+    <>
+      <Flex direction='column' align='center' mb='6'>
+        <Heading as='h2' size='6' mb='2' weight='bold'>
           {t('login.welcome', 'Welcome Back')}
         </Heading>
-        <Text size='4' className={s.heroSubtitle}>
+        <Text size='3' color='gray'>
           {t('login.heroSubtitle', 'Sign in to continue to your account')}
         </Text>
       </Flex>
-    </Flex>
+
+      <Form.Error message={error} />
+
+      {/* OAuth buttons slot — hidden when no plugins registered */}
+      <div className={s.oauthSection}>
+        <Flex wrap='wrap' gap='3' mb='6'>
+          <ExtensionSlot name='auth.oauth.buttons' />
+        </Flex>
+
+        <Flex align='center' mb='6' className='opacity-60'>
+          <div className='flex-1 h-px bg-[var(--gray-a6)]' />
+          <Text
+            size='1'
+            mx='3'
+            color='gray'
+            weight='medium'
+            className='uppercase tracking-wider'
+          >
+            {t('login.orDivider', 'OR')}
+          </Text>
+          <div className='flex-1 h-px bg-[var(--gray-a6)]' />
+        </Flex>
+      </div>
+
+      <Form
+        schema={loginFormSchema}
+        defaultValues={{ email: '', password: '', rememberMe: false }}
+        onSubmit={handleSubmit}
+      >
+        <LoginFormFields loading={loading} />
+        <ExtensionSlot name='auth.login.quickAccess' />
+      </Form>
+
+      {isRegistrationAllowed && (
+        <Flex
+          justify='center'
+          mt='5'
+          pt='5'
+          className='border-t border-[var(--gray-a6)]'
+        >
+          <Text size='2' color='gray'>
+            <Trans
+              t={t}
+              i18nKey='login.dontHaveAccount'
+              // eslint-disable-next-line jsx-a11y/anchor-has-content
+              components={[
+                <Link
+                  key='register'
+                  to='/register'
+                  className='text-[var(--accent-11)] hover:text-[var(--accent-12)] font-medium no-underline'
+                />,
+              ]}
+            />
+          </Text>
+        </Flex>
+      )}
+    </>
   );
 }
 
@@ -216,7 +184,10 @@ function LoginFormFields({ loading }) {
       <Form.Field name='password' showError={false}>
         <Flex justify='between' align='end' mb='2'>
           <Form.Label>{t('login.password', 'Password')}</Form.Label>
-          <Link to='/reset-password' className={s.formFieldsForgotPasswordLink}>
+          <Link
+            to='/reset-password'
+            className='text-xs text-[var(--accent-11)] hover:text-[var(--accent-12)] no-underline font-medium'
+          >
             {t('login.forgotPassword', 'Forgot password?')}
           </Link>
         </Flex>
@@ -234,12 +205,12 @@ function LoginFormFields({ loading }) {
         size='3'
         type='submit'
         mt='2'
-        className={s.fullWidthBtn}
+        className='w-full cursor-pointer'
         loading={loading}
       >
         {loading
           ? t('login.loading', 'Loading...')
-          : t('login.submit', 'Submit')}
+          : t('login.submit', 'Log in')}
       </Button>
     </Flex>
   );

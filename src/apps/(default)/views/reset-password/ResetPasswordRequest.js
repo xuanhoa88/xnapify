@@ -7,7 +7,7 @@
 
 import { useCallback, useState, useEffect } from 'react';
 
-import { Flex, Card, Text, Heading, Button } from '@radix-ui/themes';
+import { Flex, Text, Heading, Button } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
@@ -23,11 +23,8 @@ import {
 
 import { passwordResetRequestFormSchema } from '../../../users/validator/auth';
 
-import s from './ResetPasswordRequest.css';
-
 /**
  * Reset Password Request Page Component
- * Standalone full-page form without header/footer natively mapped to Radix layouts
  */
 function ResetPasswordRequest() {
   const { t } = useTranslation();
@@ -56,106 +53,67 @@ function ResetPasswordRequest() {
   );
 
   return (
-    <Flex className={s.pageContainer}>
-      <HeroSection />
-
-      <Flex
-        align='center'
-        justify='center'
-        grow='1'
-        p='6'
-        className={s.contentWrapper}
-      >
-        <Card size='4' variant='classic' className={s.formCard}>
-          <Form.Error message={error} />
-
-          {success ? (
-            <Flex
-              direction='column'
-              align='center'
-              p='5'
-              className={s.successBoxRequest}
-            >
-              <Text size='8' mb='3' className={s.successIcon}>
-                ✓
-              </Text>
-              <Text size='3' color='green'>
-                <Trans
-                  t={t}
-                  i18nKey='resetPassword.success'
-                  // eslint-disable-next-line react/jsx-key
-                  components={[<strong />]}
-                />
-              </Text>
-            </Flex>
-          ) : (
-            <Form
-              schema={passwordResetRequestFormSchema}
-              defaultValues={{ email: '' }}
-              onSubmit={handleSubmit}
-            >
-              <RequestFormFields loading={loading} />
-            </Form>
-          )}
-
-          <Flex justify='center' mt='5'>
-            <Text size='3' color='gray'>
-              <Trans
-                t={t}
-                i18nKey='resetPassword.backToLogin'
-                defaults='Remember your password? <0>Back to Login</0>'
-                components={[
-                  <Link key='link' to='/login' className={s.backLink} />,
-                ]}
-              />
-            </Text>
-          </Flex>
-        </Card>
-      </Flex>
-    </Flex>
-  );
-}
-
-/**
- * Hero Section
- */
-function HeroSection() {
-  const { t } = useTranslation();
-
-  return (
-    <Flex
-      direction='column'
-      justify='center'
-      align='center'
-      grow='1'
-      p='8'
-      className={s.heroSection}
-    >
-      <Flex direction='column' align='center' className={s.heroContent}>
-        <Link to='/' className={s.logoLink}>
-          <img
-            src='/xnapify_38x38.png'
-            srcSet='/xnapify_72x72.png 2x'
-            width='48'
-            height='48'
-            alt='xnapify'
-            className={s.logoImg}
-          />
-          <Text size='5' weight='bold'>
-            xnapify
-          </Text>
-        </Link>
-        <Heading as='h2' size='8' mb='3' className={s.heroTitle}>
+    <>
+      <Flex direction='column' align='center' mb='6'>
+        <Heading as='h2' size='6' mb='2' weight='bold'>
           {t('resetPassword.title', 'Reset Password')}
         </Heading>
-        <Text size='4' className={s.heroSubtitle}>
+        <Text size='3' color='gray'>
           {t(
             'resetPassword.subtitle',
             "Enter your email and we'll send you a reset link",
           )}
         </Text>
       </Flex>
-    </Flex>
+
+      <Form.Error message={error} />
+
+      {success ? (
+        <Flex
+          direction='column'
+          align='center'
+          p='5'
+          className='bg-green-50 rounded-lg border border-green-200'
+        >
+          <Text size='8' mb='3' className='text-green-600'>
+            ✓
+          </Text>
+          <Text size='3' className='text-green-700'>
+            <Trans t={t} i18nKey='resetPassword.success' />
+          </Text>
+        </Flex>
+      ) : (
+        <Form
+          schema={passwordResetRequestFormSchema}
+          defaultValues={{ email: '' }}
+          onSubmit={handleSubmit}
+        >
+          <RequestFormFields loading={loading} />
+        </Form>
+      )}
+
+      <Flex
+        justify='center'
+        mt='5'
+        pt='5'
+        className='border-t border-[var(--gray-a6)]'
+      >
+        <Text size='2' color='gray'>
+          <Trans
+            t={t}
+            i18nKey='resetPassword.backToLogin'
+            defaults='Remember your password? <0>Back to Login</0>'
+            components={[
+              <Link
+                key='link'
+                to='/login'
+                className='text-[var(--accent-11)] hover:text-[var(--accent-12)] font-medium no-underline'
+              />,
+            ]}
+          />
+        </Text>
+      </Flex>
+    </>
   );
 }
 
@@ -189,7 +147,7 @@ function RequestFormFields({ loading }) {
         size='3'
         type='submit'
         mt='2'
-        className={s.submitBtn}
+        className='w-full cursor-pointer'
         loading={loading || isSubmitting}
       >
         {loading

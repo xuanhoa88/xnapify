@@ -302,7 +302,7 @@ const appState = {
   nodeRed: new NodeRedManager(),
 };
 
-function invalidateCaches() {
+export function invalidateCaches() {
   appState.localeCache.clear();
   appState.ssrCache.clear();
   appState.ssrResourcesPromise = null;

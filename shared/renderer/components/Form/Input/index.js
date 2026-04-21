@@ -8,13 +8,10 @@
 import { forwardRef } from 'react';
 
 import { TextField } from '@radix-ui/themes';
-import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useFormContext } from 'react-hook-form';
 
 import { useFormField, useMergeRefs } from '../FormContext';
-
-import s from './Input.css';
 
 /**
  * FormInput - Simple input element to be used inside Form.Field backed by Radix Themes
@@ -53,7 +50,7 @@ const FormInput = forwardRef(function FormInput$(
       placeholder={placeholder}
       disabled={disabled}
       color={error ? 'red' : undefined}
-      className={clsx(className, s.root)}
+      className={className}
       // eslint-disable-next-line jsx-a11y/no-autofocus
       autoFocus={autoFocus}
       {...registerProps}
