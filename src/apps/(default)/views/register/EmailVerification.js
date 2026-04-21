@@ -82,7 +82,7 @@ function EmailVerification({ token: initialToken }) {
       >
         <Card size='4' variant='classic' className={s.formCard}>
           {loading && (
-            <Box className={s.loadingBox}>
+            <Box p='4' mb='5' className={s.loadingBox}>
               <Text
                 size='3'
                 color='blue'
@@ -97,11 +97,16 @@ function EmailVerification({ token: initialToken }) {
           <Form.Error message={error} />
 
           {success && !loading && (
-            <Flex direction='column' align='center' className={s.successBox}>
-              <Text size='8' className={s.successIcon}>
+            <Flex
+              direction='column'
+              align='center'
+              p='5'
+              className={s.successBox}
+            >
+              <Text size='8' mb='3' className={s.successIcon}>
                 ✓
               </Text>
-              <Text size='3' color='green' className={s.successText}>
+              <Text size='3' color='green' mb='3'>
                 <Trans
                   t={t}
                   i18nKey='emailVerification.success'
@@ -158,6 +163,7 @@ function HeroSection() {
       justify='center'
       align='center'
       grow='1'
+      p='8'
       display={{ initial: 'none', lg: 'flex' }}
       className={s.heroSection}
     >
@@ -200,7 +206,7 @@ function EmailVerificationFormFields({ loading, showTokenField }) {
 
   return (
     <Flex direction='column' gap='4'>
-      <Text size='3' color='gray' align='center' className={s.descText}>
+      <Text size='3' color='gray' align='center' mb='4'>
         {t(
           'emailVerification.description',
           'Click the button below to verify your email address.',

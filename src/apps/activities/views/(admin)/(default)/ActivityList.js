@@ -7,7 +7,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 
-import { ActivityIcon, ReloadIcon, Cross2Icon } from '@radix-ui/react-icons';
+import { ActivityLogIcon, ReloadIcon, Cross2Icon } from '@radix-ui/react-icons';
 import {
   Box,
   Flex,
@@ -135,7 +135,7 @@ const ActivityList = () => {
         >
           <Flex align='center' gap='3'>
             <Flex align='center' justify='center' className={s.headerIconBox}>
-              <ActivityIcon width={24} height={24} />
+              <ActivityLogIcon width={24} height={24} />
             </Flex>
             <Flex direction='column'>
               <Heading size='6'>
@@ -171,7 +171,7 @@ const ActivityList = () => {
         >
           <Flex align='center' gap='3'>
             <Flex align='center' justify='center' className={s.headerIconBox}>
-              <ActivityIcon width={24} height={24} />
+              <ActivityLogIcon width={24} height={24} />
             </Flex>
             <Flex direction='column'>
               <Heading size='6'>
@@ -225,7 +225,7 @@ const ActivityList = () => {
       >
         <Flex align='center' gap='3'>
           <Flex align='center' justify='center' className={s.adminHeaderIcon}>
-            <ActivityIcon width={24} height={24} />
+            <ActivityLogIcon width={24} height={24} />
           </Flex>
           <Flex direction='column'>
             <Heading size='6'>
@@ -317,7 +317,7 @@ const ActivityList = () => {
                       py='9'
                       className={s.adminEmptyBlock}
                     >
-                      <ActivityIcon
+                      <ActivityLogIcon
                         width={48}
                         height={48}
                         className={s.adminEmptyIcon}

@@ -4,6 +4,7 @@
 }
 
 .contentWrapper {
+  flex: 1;
   background-color: var(--color-panel-solid);
   width: 100%;
 }
@@ -26,9 +27,7 @@
 
 .loadingBox {
   background-color: var(--blue-3);
-  padding: var(--space-4);
   border-radius: var(--radius-3);
-  margin-bottom: var(--space-5);
   border: 1px solid var(--blue-6);
 }
 
@@ -38,7 +37,6 @@
 
 .successBox {
   background-color: var(--green-3);
-  padding: var(--space-5);
   border-radius: var(--radius-3);
   border: 1px solid var(--green-6);
   text-align: center;
@@ -46,12 +44,9 @@
 
 .successIcon {
   color: var(--green-11);
-  margin-bottom: var(--space-3);
 }
 
-.successText {
-  margin-bottom: var(--space-3);
-}
+
 
 .backLink {
   display: inline-flex;
@@ -70,9 +65,9 @@
 }
 
 .heroSection {
+  flex: 1;
   background-color: var(--indigo-9);
   color: white;
-  padding: var(--space-8);
 }
 
 .heroContent {
@@ -101,9 +96,6 @@
   color: var(--indigo-3);
 }
 
-.descText {
-  margin-bottom: var(--space-4);
-}
 
 .submitBtn {
   width: 100%;

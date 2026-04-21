@@ -7,7 +7,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 
-import { ActivityIcon, DashboardIcon } from '@radix-ui/react-icons';
+import { ActivityLogIcon, DashboardIcon } from '@radix-ui/react-icons';
 import {
   Flex,
   Box,
@@ -184,7 +184,7 @@ function Dashboard() {
                         py='9'
                         className={s.emptyStateFlex}
                       >
-                        <ActivityIcon
+                        <ActivityLogIcon
                           width={48}
                           height={48}
                           className={s.emptyStateIcon}

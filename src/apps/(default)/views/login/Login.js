@@ -110,7 +110,7 @@ function Login() {
           <Form.Error message={error} />
 
           {/* OAuth buttons slot — hidden via CSS :has(:empty) when no plugins registered */}
-          <Box mb='5' className={s.descriptionBox}>
+          <Flex direction='column' mb='5' className={s.descriptionBox}>
             <Box>
               <ExtensionSlot name='auth.oauth.buttons' />
             </Box>
@@ -122,7 +122,7 @@ function Login() {
               </Box>
               <Box className={s.dividerLine} />
             </Flex>
-          </Box>
+          </Flex>
 
           <Form
             schema={loginFormSchema}
@@ -169,6 +169,7 @@ function HeroSection() {
       justify='center'
       align='center'
       grow='1'
+      p='8'
       display={{ initial: 'none', lg: 'flex' }}
       className={s.heroSection}
     >

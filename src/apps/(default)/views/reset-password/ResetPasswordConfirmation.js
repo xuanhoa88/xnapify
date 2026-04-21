@@ -87,12 +87,23 @@ function ResetPasswordConfirmation({ token }) {
     <Flex className={s.pageContainer}>
       <HeroSection />
 
-      <Flex align='center' justify='center' className={s.contentWrapper}>
+      <Flex
+        align='center'
+        justify='center'
+        grow='1'
+        p='6'
+        className={s.contentWrapper}
+      >
         <Card size='4' variant='classic' className={s.formCard}>
           <Form.Error message={error} />
 
           {success ? (
-            <Flex direction='column' align='center' className={s.successBox}>
+            <Flex
+              direction='column'
+              align='center'
+              p='5'
+              className={s.successBox}
+            >
               <Text size='8' color='green' mb='3'>
                 ✓
               </Text>
@@ -158,6 +169,8 @@ function HeroSection() {
       direction='column'
       justify='center'
       align='center'
+      grow='1'
+      p='8'
       className={s.heroSection}
     >
       <Flex direction='column' align='center' className={s.heroContent}>

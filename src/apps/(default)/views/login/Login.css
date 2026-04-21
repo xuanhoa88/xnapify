@@ -4,6 +4,7 @@
 }
 
 .contentWrapper {
+  flex: 1;
   background-color: var(--color-panel-solid);
   width: 100%;
 }
@@ -22,10 +23,6 @@
   border: none !important;
   box-shadow: none !important;
   display: none !important;
-}
-
-.descriptionBox {
-  flex-direction: column;
 }
 
 .descriptionBox:has([data-slot]:empty) {
@@ -70,9 +67,9 @@
 }
 
 .heroSection {
+  flex: 1;
   background-color: var(--indigo-9);
   color: white;
-  padding: var(--space-8);
 }
 
 .heroContent {
