@@ -13,11 +13,8 @@ import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import {
-  getLocale,
-  setLocale,
-  getAvailableLocales,
-} from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
+const { getLocale, setLocale, getAvailableLocales } = features;
 
 /**
  * LanguageSwitcher Component

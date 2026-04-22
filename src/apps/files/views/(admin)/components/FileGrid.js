@@ -27,7 +27,7 @@ import ContextMenu from '@shared/renderer/components/ContextMenu';
 import Loader from '@shared/renderer/components/Loader';
 import Modal from '@shared/renderer/components/Modal';
 import { TablePagination } from '@shared/renderer/components/Table';
-import { getUserId } from '@shared/renderer/redux/features/user/selector';
+import { features } from '@shared/renderer/redux';
 import { validateForm } from '@shared/validator';
 
 import { renameFileFormSchema } from '../../../validator/admin/file';
@@ -52,6 +52,8 @@ import {
 } from '../redux';
 
 import s from './FileGrid.css';
+
+const { getUserId } = features;
 
 export default function FileGrid({ onShare }) {
   const { t } = useTranslation();

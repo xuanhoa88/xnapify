@@ -73,7 +73,7 @@ xnapify/
 - **React:** 18.3.1 with SSR and hydration
 - **State Management:** Redux 5.0.1 + Redux Toolkit 2.11.1
 - **Routing:** Custom page auto-discovery with dynamic imports
-- **Styling:** CSS Modules + PostCSS
+- **Styling:** Tailwind CSS + Radix UI Primitives (with CSS Modules + PostCSS for custom scoping)
 - **Forms:** React Hook Form 7.51.5 + Zod 3.23.8 validation
 - **i18n:** i18next 23.15.2 + react-i18next 14.1.3
 
@@ -181,7 +181,7 @@ The application uses an auto-discovery system for both API modules and page comp
 - **Store Configuration:** `shared/renderer/redux/configureStore.js`
 - **Middleware:** Redux Logger (dev only), custom middleware for async actions
 - **Helpers:** Store receives `fetch`, `history`, `i18n` as extra arguments
-- **Dynamic Injection:** Use `store.injectReducer(SLICE_NAME, reducer)` in module `_route.js` `init({ store })` hook
+- **Dynamic Injection:** Use `store.injectReducer(SLICE_NAME, reducer)` in module `views/index.js` `providers({ store })` hook
 
 ### 5. Authentication & Authorization
 
@@ -510,14 +510,23 @@ export const fetchPosts = createAsyncThunk(
 );
 ```
 
-### 3. Styling with CSS Modules
+### 3. Styling with Tailwind CSS & Radix UI
+
+We use **Tailwind CSS** for utility-first styling and **Radix UI** (`@radix-ui/themes`) for accessible design primitives. CSS Modules are reserved for specific edge cases or legacy components.
 
 ```javascript
 import React from 'react';
-import s from './MyComponent.module.css';
+import { Box, Button, Text } from '@radix-ui/themes';
+// Avoid CSS modules when Tailwind classes suffice
+// import s from './MyComponent.module.css';
 
 function MyComponent() {
-  return <div className={s.container}>Content</div>;
+  return (
+    <Box className="p-4 bg-gray-50 rounded-md">
+      <Text size="3" className="mb-2 block">Content</Text>
+      <Button variant="solid" color="blue">Action</Button>
+    </Box>
+  );
 }
 ```
 
@@ -528,13 +537,11 @@ Each `_route.js` can export lifecycle hooks that the router calls at specific po
 ```javascript
 // @apps/activities/views/(admin)/(default)/_route.js
 import ActivityList from './ActivityList';
-import {
-  addBreadcrumb,
-  registerMenu,
-  unregisterMenu,
-} from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
 import { requirePermission } from '@shared/renderer/components/Rbac';
 import reducer, { SLICE_NAME } from '../redux';
+
+const { addBreadcrumb, registerMenu, unregisterMenu } = features;
 
 // 1. Middleware — permission guard (const, not function)
 export const middleware = requirePermission('activities:read');
@@ -700,7 +707,7 @@ function LoginForm() {
 9. **Documentation:** Add JSDoc comments for complex functions
 10. **Testing:** Write tests for critical functionality
 11. **File Naming:** Use PascalCase for components, camelCase for utilities, kebab-case for CSS modules
-12. **Styling:** ABSOLUTE BAN on inline styles (e.g., `style={{...}}`). Always use CSS Modules instead.
+12. **Styling:** ABSOLUTE BAN on inline styles (e.g., `style={{...}}`). Prefer Tailwind CSS classes and Radix UI primitives. Use CSS Modules only for complex custom styling.
 
 ## Mandatory Verification After Code Changes
 
@@ -961,7 +968,7 @@ describe('MyComponent', () => {
 });
 
 // Redux tests
-import configureStore from '@shared/renderer/redux/configureStore';
+import { configureStore } from '@shared/renderer/redux';
 import { increment } from './slice';
 
 describe('myFeature slice', () => {

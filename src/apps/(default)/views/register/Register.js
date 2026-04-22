@@ -18,12 +18,8 @@ import {
   useHistory,
   useQuery,
 } from '@shared/renderer/components/History';
-import {
-  register,
-  isAuthLoading,
-  getAuthError,
-  clearAuthError,
-} from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
+const { register, isAuthLoading, getAuthError, clearAuthError } = features;
 import { useWebSocket } from '@shared/ws/client';
 
 import { registerFormSchema } from '../../../users/validator/auth';

@@ -12,11 +12,8 @@ import { Flex, Text, Box, Button } from '@radix-ui/themes';
 import clsx from 'clsx';
 import { useDispatch, useSelector } from 'react-redux';
 
-import {
-  getLocale,
-  setLocale,
-  getAvailableLocales,
-} from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
+const { getLocale, setLocale, getAvailableLocales } = features;
 
 import s from './LanguageSwitcher.css';
 

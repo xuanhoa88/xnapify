@@ -22,7 +22,8 @@ import { useSelector } from 'react-redux';
 
 import ContextMenu from '@shared/renderer/components/ContextMenu';
 import { useHistory } from '@shared/renderer/components/History';
-import { getUserId } from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
+const { getUserId } = features;
 
 /**
  * UserActionsDropdown - Dropdown menu for user actions

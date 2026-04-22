@@ -12,7 +12,8 @@ import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
 
 import Toast from '@shared/renderer/components/Toast';
-import { getFlashMessage, clearFlashMessage } from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
+const { getFlashMessage, clearFlashMessage } = features;
 
 import ImpersonationBanner from '../components/ImpersonationBanner';
 

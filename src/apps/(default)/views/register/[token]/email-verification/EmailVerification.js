@@ -14,12 +14,13 @@ import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
 import { Link, useHistory } from '@shared/renderer/components/History';
-import {
+import { features } from '@shared/renderer/redux';
+const {
   emailVerification,
   isEmailVerificationLoading,
   getEmailVerificationError,
   clearEmailVerificationError,
-} from '@shared/renderer/redux';
+} = features;
 import { useWebSocket } from '@shared/ws/client';
 
 /**

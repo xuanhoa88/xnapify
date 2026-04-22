@@ -33,12 +33,8 @@ import i18n, {
 } from '@shared/i18n';
 import { configureJwt } from '@shared/jwt';
 import { NodeRedManager } from '@shared/node-red';
-import {
-  configureStore,
-  setRuntimeVariable,
-  setLocale,
-  me,
-} from '@shared/renderer/redux';
+import { configureStore, features } from '@shared/renderer/redux';
+const { setRuntimeVariable, setLocale, me } = features;
 import { createWebSocketServer } from '@shared/ws/server';
 
 // ---------------------------------------------------------------------------

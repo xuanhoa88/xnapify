@@ -5,9 +5,12 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { features } from '@shared/renderer/redux';
+
 import * as selectors from './(admin)/redux/selector';
 import * as thunks from './(admin)/redux/thunks';
-import { fetchPublicSettings } from './redux/settings';
+
+const { fetchPublicSettings } = features;
 
 /** @type {Symbol} Ownership key for this module's persistent bindings */
 const OWNER_KEY = Symbol('__xnapify.module.settings.views__');

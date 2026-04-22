@@ -27,10 +27,7 @@ import Loader from '@shared/renderer/components/Loader';
 import Modal from '@shared/renderer/components/Modal';
 import { useRbac } from '@shared/renderer/components/Rbac';
 import { TableSearch } from '@shared/renderer/components/Table';
-import {
-  showSuccessMessage,
-  showWarningMessage,
-} from '@shared/renderer/redux/features/ui/slice';
+import { features } from '@shared/renderer/redux';
 import { useWebSocket } from '@shared/ws/client';
 
 import ExtensionCard from './components/ExtensionCard';
@@ -47,6 +44,8 @@ import {
 } from './redux';
 
 import s from './Extensions.css';
+
+const { showSuccessMessage, showWarningMessage } = features;
 
 /**
  * Safety timeout for actionMap entries (ms).

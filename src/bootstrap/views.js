@@ -6,7 +6,8 @@
  */
 
 import { discoverModules } from '@shared/renderer/autoloader';
-import { getAppName, getAppDescription } from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
+const { getAppName, getAppDescription } = features;
 import Router from '@shared/renderer/router';
 
 // Discover view lifecycle modules from apps directory

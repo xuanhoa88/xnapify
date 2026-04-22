@@ -18,14 +18,15 @@ import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
 import Form, { useFormContext } from '@shared/renderer/components/Form';
-import {
+import { features } from '@shared/renderer/redux';
+const {
   changeUserPassword,
   isPasswordLoading,
   getPasswordError,
   clearPasswordError,
   generatePassword,
   showSuccessMessage,
-} from '@shared/renderer/redux';
+} = features;
 
 import { changePasswordFormSchema } from '../../../../users/validator/auth';
 

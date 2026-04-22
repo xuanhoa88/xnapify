@@ -19,7 +19,8 @@ import {
   useHistory,
   useQuery,
 } from '@shared/renderer/components/History';
-import {
+import { features } from '@shared/renderer/redux';
+const {
   login,
   getUserPreferences,
   setLocale,
@@ -28,7 +29,7 @@ import {
   getAuthError,
   clearAuthError,
   selectSetting,
-} from '@shared/renderer/redux';
+} = features;
 import { useWebSocket } from '@shared/ws/client';
 
 import { loginFormSchema } from '../../../users/validator/auth';

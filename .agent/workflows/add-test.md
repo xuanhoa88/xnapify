@@ -220,7 +220,7 @@ Test thunks with mocked `fetch` via store helpers:
 
 ```javascript
 // @apps/blog/views/(admin)/posts/redux/thunks.test.js
-import configureStore from '@shared/renderer/redux/configureStore';
+import { configureStore } from '@shared/renderer/redux';
 import { fetchPosts, createPost } from './thunks';
 import reducer, { SLICE_NAME } from './slice';
 import { getPosts, isPostsListLoading, getPostsListError } from './selector';

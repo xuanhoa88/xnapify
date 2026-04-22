@@ -19,7 +19,8 @@ import Form, { useFormContext } from '@shared/renderer/components/Form';
 import { useHistory } from '@shared/renderer/components/History';
 import { useDebounce } from '@shared/renderer/components/InfiniteScroll';
 import Modal from '@shared/renderer/components/Modal';
-import { generatePassword, showSuccessMessage } from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
+const { generatePassword, showSuccessMessage } = features;
 
 import { updateUserFormSchema } from '../../../../validator/admin';
 import {

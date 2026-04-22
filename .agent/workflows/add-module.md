@@ -528,11 +528,9 @@ Frontend routes work similarly to backend routes, but use React:
  */
 
 import { requirePermission } from '@shared/renderer/components/Rbac';
-import {
-  addBreadcrumb,
-  registerMenu,
-  unregisterMenu,
-} from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
+
+const { addBreadcrumb, registerMenu, unregisterMenu } = features;
 import reducer, { SLICE_NAME } from '../redux';
 import ModuleList from './ModuleList';
 

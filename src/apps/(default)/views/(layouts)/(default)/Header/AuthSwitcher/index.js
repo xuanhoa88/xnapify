@@ -7,7 +7,8 @@
 
 import { useSelector } from 'react-redux';
 
-import { isAuthenticated } from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
+const { isAuthenticated } = features;
 
 import GuestMode from './GuestMode';
 import ProfileDropdown from './ProfileDropdown';

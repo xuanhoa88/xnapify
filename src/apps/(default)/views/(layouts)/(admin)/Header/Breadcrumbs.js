@@ -12,7 +12,8 @@ import { Flex, Text } from '@radix-ui/themes';
 import { useSelector } from 'react-redux';
 
 import { Link } from '@shared/renderer/components/History';
-import { getBreadcrumbs } from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
+const { getBreadcrumbs } = features;
 
 import s from './Breadcrumbs.css';
 

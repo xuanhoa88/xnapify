@@ -11,11 +11,8 @@ import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
 import { useHistory } from '@shared/renderer/components/History';
-import {
-  getUserProfile,
-  getImpersonatorId,
-  stopImpersonating,
-} from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
+const { getUserProfile, getImpersonatorId, stopImpersonating } = features;
 
 import s from './ImpersonationBanner.css';
 

@@ -9,48 +9,36 @@
  * Redux Features - Public API
  *
  * Centralized export point for all Redux features.
- * Each feature exports actions, selectors, and its reducer.
- * Constants are kept internal to each feature.
- *
- * Features follow the Redux Ducks pattern:
- * - features/featureName/index.js - Public API (actions, selectors, reducer)
- * - features/featureName/actions.js - Action creators (private)
- * - features/featureName/constants.js - Action types (private, not exported)
- * - features/featureName/selector.js - Selectors (private)
- * - features/featureName/reducer.js - State reducer (private)
+ * Automatically discovers and loads features via Webpack context.
  */
 
-// =============================================================================
-// FEATURE: RUNTIME (Runtime Variables)
-// =============================================================================
+import { createWebpackContextAdapter } from '@shared/utils/contextAdapter';
 
-export * from './runtime';
-export { default as runtimeReducer } from './runtime';
+const featuresContext = require.context('.', true, /^\.\/[^/]+\/index\.js$/);
+const adapter = createWebpackContextAdapter(featuresContext);
 
-// =============================================================================
-// FEATURE: INTL (Internationalization)
-// =============================================================================
+const reducers = {};
+const features = {};
 
-export * from './intl';
-export { default as intlReducer } from './intl';
+adapter.files().forEach(file => {
+  const featureName = file.split('/')[1];
+  const featureModule = adapter.load(file);
 
-// =============================================================================
-// FEATURE: USER (Authentication)
-// =============================================================================
+  // Store the default export as the feature's reducer
+  if (featureModule.default) {
+    reducers[featureName] = featureModule.default;
+  }
 
-export * from './user';
-export { default as userReducer } from './user';
+  // Flatten all other exports (actions, selectors) for easy importing
+  for (const [key, value] of Object.entries(featureModule)) {
+    if (key !== 'default') {
+      features[key] = value;
+    }
+  }
+});
 
-// =============================================================================
-// FEATURE: UI (UI State)
-// =============================================================================
+// Export reducers map specifically for rootReducer.js
+export { reducers };
 
-export * from './ui';
-export { default as uiReducer } from './ui';
-
-// =============================================================================
-// FEATURE: SETTINGS (Public Settings)
-// =============================================================================
-
-export * from './settings';
-export { default as settingsReducer } from './settings';
+// Export the flattened actions/selectors as the default object
+export default features;

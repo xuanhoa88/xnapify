@@ -35,7 +35,8 @@ import { useHistory } from '@shared/renderer/components/History';
 import Loader from '@shared/renderer/components/Loader';
 import Modal from '@shared/renderer/components/Modal';
 import { useRbac } from '@shared/renderer/components/Rbac';
-import { showSuccessMessage } from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
+const { showSuccessMessage } = features;
 
 import { createApiKeyFormSchema } from '../../../../validator/admin';
 import {

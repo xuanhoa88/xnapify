@@ -9,7 +9,7 @@ const React = require('react');
 const ReactDOMServer = require('react-dom/server');
 
 const App = require('@shared/renderer/App').default;
-const configureStore = require('@shared/renderer/redux/configureStore').default;
+const { configureStore } = require('@shared/renderer/redux');
 
 // simple dummy context that mimics what the real application provides
 function createDummyContext() {

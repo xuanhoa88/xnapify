@@ -554,9 +554,10 @@ Then in the route file, only keep navigation and data-fetching hooks:
 
 ```javascript
 // @apps/blog/views/(admin)/posts/_route.js
-import { addBreadcrumb } from '@shared/renderer/redux';
 import { requirePermission } from '@shared/renderer/components/Rbac';
-import { registerMenu, unregisterMenu } from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
+
+const { addBreadcrumb, registerMenu, unregisterMenu } = features;
 import PostsList from './PostsList';
 
 /**

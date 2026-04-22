@@ -118,7 +118,8 @@ xnapify/
 | Redux Toolkit         | Global state management    |
 | React Hook Form + Zod | Form handling & validation |
 | Tiptap 3              | Rich text editor (WYSIWYG) |
-| CSS Modules + PostCSS | Scoped styling             |
+| Radix UI + Tailwind   | Design system & styling    |
+| CSS Modules + PostCSS | Scoped custom styling      |
 | i18next               | Internationalization       |
 
 ### Backend

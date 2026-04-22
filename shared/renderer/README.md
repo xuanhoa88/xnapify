@@ -101,7 +101,9 @@ const store = configureStore(initialState);
 | `ui` | Modals, sidebars, toasts, loading |
 
 ```javascript
-import { setLocale, selectLocale } from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
+
+const { setLocale, selectLocale } = features;
 
 dispatch(setLocale('fr'));
 const locale = selectLocale(getState());
@@ -109,28 +111,26 @@ const locale = selectLocale(getState());
 
 ## UI Components
 
-19 shared components with consistent design tokens from `variables.css`:
+14 shared application components extending Radix UI design primitives:
 
 | Component | Description |
 |---|---|
-| `Avatar` | User avatar with fallback |
-| `Box` | Flexible layout container |
-| `Button` | Button with variants and loading |
-| `Card` | Card with header/body/footer |
-| `ConfirmModal` | Confirmation dialog |
 | `ContextMenu` | Dropdown / right-click menu |
+| `Extension` | Extension slots and hooks |
 | `Form` | Form primitives (Input, Select, etc.) |
+| `History` | Link and routing hooks |
 | `Icon` | Icon sprite component |
 | `InfiniteScroll` | Scroll-based pagination |
 | `Loader` | Spinner / skeleton |
-| `Modal` | Dialog system |
+| `Modal` | Dialog system and confirmation modals |
+| `Portal` | React portal wrapper |
 | `Rbac` | Role-based access control |
 | `SearchableSelect` | Searchable dropdown |
-| `Table` | Data table with sorting |
-| `Tabs` | Tabbed interface |
-| `Tag` | Tag / badge |
+| `Table` | Data table with sorting and pagination |
 | `Toast` | Notifications |
 | `WYSIWYG` | Rich text editor (Tiptap) |
+
+> **Note:** Basic design primitives (`Avatar`, `Box`, `Button`, `Card`, `Tabs`, `Tag`, etc.) are imported directly from `@radix-ui/themes`.
 
 ## See Also
 

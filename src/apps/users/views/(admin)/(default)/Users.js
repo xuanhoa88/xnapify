@@ -44,7 +44,8 @@ import {
   TableSearch,
   TableBulkActions,
 } from '@shared/renderer/components/Table';
-import { getUserProfile, impersonateUser } from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
+const { getUserProfile, impersonateUser } = features;
 
 import ChangeStatusUserModal from '../components/ChangeStatusUserModal';
 import ConfirmImpersonateModal from '../components/ConfirmImpersonateModal';

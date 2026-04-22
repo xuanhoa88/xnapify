@@ -8,7 +8,8 @@
 import PropTypes from 'prop-types';
 
 import { requirePermission } from '@shared/renderer/components/Rbac';
-import { addBreadcrumb } from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
+const { addBreadcrumb } = features;
 
 import EditPermission from './EditPermission';
 

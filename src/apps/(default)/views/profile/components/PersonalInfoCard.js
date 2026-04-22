@@ -22,14 +22,15 @@ import {
   useExtensionFormData,
 } from '@shared/renderer/components/Extension';
 import Form, { useFormContext } from '@shared/renderer/components/Form';
-import {
+import { features } from '@shared/renderer/redux';
+const {
   getUserProfile,
   updateUserProfile,
   isProfileLoading,
   getProfileError,
   clearProfileError,
   showSuccessMessage,
-} from '@shared/renderer/redux';
+} = features;
 import { z } from '@shared/validator';
 
 import { updateProfileFormSchema } from '../../../../users/validator/auth';

@@ -15,12 +15,8 @@ import extensionManager from '@shared/extension/client';
 import { createFetch } from '@shared/fetch';
 import i18n, { DEFAULT_LOCALE } from '@shared/i18n';
 import App from '@shared/renderer/App';
-import {
-  configureStore,
-  refreshToken,
-  logout,
-  isAuthenticated,
-} from '@shared/renderer/redux';
+import { configureStore, features } from '@shared/renderer/redux';
+const { refreshToken, logout, isAuthenticated } = features;
 import {
   createWebSocketClient,
   EventType,

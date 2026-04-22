@@ -99,9 +99,12 @@ function requireContext(
 
   const files = scanDir(absoluteBase);
 
-  // Use Jest's wrapped require so mocks and transforms apply.
+  // `this` is the caller's require function (the Jest sandbox's wrapped require).
+  // We use it so that Jest's mocks and transforms (like SWC) apply correctly.
+  const sandboxRequire = typeof this === 'function' ? this : require;
+
   const context = function (key) {
-    return require(path.resolve(absoluteBase, key));
+    return sandboxRequire(path.resolve(absoluteBase, key));
   };
   context.keys = function () {
     return files.map(function (f) {

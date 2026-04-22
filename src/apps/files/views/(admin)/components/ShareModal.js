@@ -21,13 +21,15 @@ import { useDispatch, useSelector } from 'react-redux';
 
 import Modal from '@shared/renderer/components/Modal';
 import { SearchableSelect } from '@shared/renderer/components/SearchableSelect';
-import { getUserId } from '@shared/renderer/redux/features/user/selector';
+import { features } from '@shared/renderer/redux';
 import { validateForm } from '@shared/validator';
 
 import { shareFileFormSchema } from '../../../validator/admin/file';
 import { updateSharing, fetchFileShares, searchUsersAndGroups } from '../redux';
 
 import s from './ShareModal.css';
+
+const { getUserId } = features;
 
 const ShareModal = forwardRef((props, ref) => {
   const { t } = useTranslation();

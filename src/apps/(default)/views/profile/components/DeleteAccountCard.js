@@ -16,12 +16,9 @@ import { useDispatch, useSelector } from 'react-redux';
 
 import Form, { useFormContext } from '@shared/renderer/components/Form';
 import { useHistory } from '@shared/renderer/components/History';
-import {
-  deleteUser,
-  isDeleteLoading,
-  getDeleteError,
-  clearDeleteError,
-} from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
+const { deleteUser, isDeleteLoading, getDeleteError, clearDeleteError } =
+  features;
 
 import { deleteAccountFormSchema } from '../../../../users/validator/auth';
 

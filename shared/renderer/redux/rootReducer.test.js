@@ -79,6 +79,8 @@ describe('[rootReducer] rootReducer.js', () => {
   it('should have exactly 5 core reducers', () => {
     const keys = Object.keys(rootReducer);
     expect(keys).toHaveLength(5);
-    expect(keys).toEqual(['user', 'runtime', 'intl', 'ui', 'settings']);
+    expect(keys).toEqual(
+      expect.arrayContaining(['user', 'runtime', 'intl', 'ui', 'settings']),
+    );
   });
 });

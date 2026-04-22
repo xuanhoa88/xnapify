@@ -19,14 +19,15 @@ import { useDispatch, useSelector } from 'react-redux';
 
 import Form, { useFormContext } from '@shared/renderer/components/Form';
 import { Link } from '@shared/renderer/components/History';
-import {
+import { features } from '@shared/renderer/redux';
+const {
   resetPasswordConfirmation,
   isResetPasswordLoading,
   getResetPasswordError,
   clearResetPasswordError,
   generatePassword,
   showSuccessMessage,
-} from '@shared/renderer/redux';
+} = features;
 
 import { passwordResetConfirmFormSchema } from '../../../../../users/validator/auth';
 

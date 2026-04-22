@@ -14,7 +14,8 @@ import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
 import Form, { useFormContext } from '@shared/renderer/components/Form';
-import {
+import { features } from '@shared/renderer/redux';
+const {
   getUserPreferences,
   updateUserPreferences,
   getUserProfile,
@@ -25,7 +26,7 @@ import {
   getPreferencesError,
   clearPreferencesError,
   showSuccessMessage,
-} from '@shared/renderer/redux';
+} = features;
 
 import { updatePreferencesFormSchema } from '../../../../users/validator/auth';
 

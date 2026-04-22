@@ -13,14 +13,15 @@ import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 
-import {
+import { features } from '@shared/renderer/redux';
+const {
   getUserProfile,
   getUserAvatarUrl,
   uploadUserAvatar,
   isAvatarLoading,
   getAvatarError,
   clearAvatarError,
-} from '@shared/renderer/redux';
+} = features;
 
 import s from './ProfileHeader.css';
 

@@ -16,13 +16,9 @@ import { useDispatch, useSelector } from 'react-redux';
 
 import { useHistory, Link } from '@shared/renderer/components/History';
 import { checkPermission } from '@shared/renderer/components/Rbac';
-import {
-  isAuthenticated,
-  logout,
-  getUserProfile,
-  toggleDrawer,
-  isDrawerOpen,
-} from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
+const { isAuthenticated, logout, getUserProfile, toggleDrawer, isDrawerOpen } =
+  features;
 import { useWebSocket } from '@shared/ws/client';
 
 import s from './Drawer.css';

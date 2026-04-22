@@ -5,20 +5,12 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import intl from './features/intl';
-import runtime from './features/runtime';
-import settings from './features/settings';
-import ui from './features/ui';
-import user from './features/user';
+import { reducers } from './features';
 
 // Note: admin reducers are dynamically injected by page modules
-// via store.injectReducer() in their _route.js init() hook
+// via store.injectReducer() in their views/index.js providers() hook
 
 // Export as object for dynamic injection in configureStore
 export default {
-  user,
-  runtime,
-  intl,
-  ui,
-  settings,
+  ...reducers,
 };

@@ -170,11 +170,7 @@ const createCSSRule = ({
       // Get global postcss config path
       const cssConfigPath = path.resolve(__dirname, '..', 'postcss.factory');
 
-      // Clear require cache in dev (HMR needs fresh reads).
       // Production builds skip cache-busting — global config is static.
-      if (isDev) {
-        delete require.cache[cssConfigPath];
-      }
 
       // Get global postcss config
       const globalConfigFn = require(cssConfigPath);

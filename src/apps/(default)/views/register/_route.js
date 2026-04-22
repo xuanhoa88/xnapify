@@ -5,7 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { isAuthenticated, selectSetting } from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
+const { isAuthenticated, selectSetting } = features;
 
 import Register from './Register';
 

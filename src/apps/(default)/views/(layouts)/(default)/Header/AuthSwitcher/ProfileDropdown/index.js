@@ -20,13 +20,14 @@ import { useSelector, useDispatch } from 'react-redux';
 
 import { useHistory } from '@shared/renderer/components/History';
 import { checkPermission } from '@shared/renderer/components/Rbac';
-import {
+import { features } from '@shared/renderer/redux';
+const {
   getUserDisplayName,
   getUserEmail,
   getUserAvatarUrl,
   getUserProfile,
   logout,
-} from '@shared/renderer/redux';
+} = features;
 import { useWebSocket } from '@shared/ws/client';
 
 /**

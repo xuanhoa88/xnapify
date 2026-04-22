@@ -12,7 +12,8 @@ import { Flex, Box, Button } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 
-import { isAuthenticated, toggleDrawer } from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
+const { isAuthenticated, toggleDrawer } = features;
 
 import Breadcrumbs from './Breadcrumbs';
 import LanguageSwitcher from './LanguageSwitcher';
