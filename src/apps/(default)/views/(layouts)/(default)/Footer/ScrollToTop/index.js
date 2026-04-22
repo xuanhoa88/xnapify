@@ -12,8 +12,6 @@ import { Button } from '@radix-ui/themes';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 
-import s from './ScrollToTop.css';
-
 /**
  * ScrollToTop Component
  * Floating button that appears when user scrolls down built with inline Radix tokens
@@ -73,8 +71,10 @@ function ScrollToTop() {
       onClick={scrollToTop}
       title={t('common.scrollToTop', 'Scroll to top')}
       className={clsx(
-        s.scrollBtnDefault,
-        showScroll ? s.scrollBtnVisible : s.scrollBtnHidden,
+        'fixed bottom-[var(--space-6)] right-[var(--space-6)] z-50 rounded-full w-12 h-12 p-0 flex items-center justify-center transition-all duration-300 ease-in-out shadow-[var(--shadow-4)] cursor-pointer',
+        showScroll
+          ? 'opacity-100 translate-y-0 pointer-events-auto'
+          : 'opacity-0 translate-y-4 pointer-events-none',
       )}
     >
       <ArrowUpIcon width={24} height={24} />

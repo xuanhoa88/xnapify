@@ -29,8 +29,6 @@ import {
 } from '@shared/renderer/redux';
 import { useWebSocket } from '@shared/ws/client';
 
-import s from './ProfileDropdown.css';
-
 /**
  * ProfileDropdown Component
  *
@@ -75,14 +73,21 @@ function ProfileDropdown() {
   // Static trigger button — rendered identically on server and client
   // before mount to guarantee zero hydration mismatch.
   const triggerButton = (
-    <button type='button' className={s.profileTrigger}>
+    <button
+      type='button'
+      className='group border-none font-inherit text-inherit flex items-center px-[var(--space-2)] py-[var(--space-1)] rounded-[var(--radius-3)] cursor-pointer transition-colors duration-200 bg-transparent focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus-8)] focus-visible:outline-offset-[-1px] hover:bg-[var(--gray-3)] data-[state=open]:bg-[var(--gray-3)]'
+    >
       <Flex align='center' gap='2'>
-        <Flex align='center' justify='center' className={s.avatarCircle}>
+        <Flex
+          align='center'
+          justify='center'
+          className='w-8 h-8 rounded-full bg-[var(--indigo-3)] text-[var(--indigo-11)] overflow-hidden font-bold text-[length:var(--font-size-2)] flex items-center justify-center'
+        >
           {avatarUrl ? (
             <img
               src={avatarUrl}
               alt=''
-              className={s.avatarImage}
+              className='w-full h-full object-cover'
               onError={e => {
                 e.target.style.display = 'none';
               }}
@@ -91,10 +96,10 @@ function ProfileDropdown() {
             avatarInitial
           )}
         </Flex>
-        <Text size='3' weight='medium' className={s.profileName}>
+        <Text size='3' weight='medium' className='hidden md:block'>
           {displayName}
         </Text>
-        <Box className={s.profileChevron}>
+        <Box className='flex text-[var(--gray-11)] transition-transform duration-200 group-data-[state=open]:rotate-180'>
           <ChevronDownIcon width={12} height={12} />
         </Box>
       </Flex>
@@ -116,7 +121,7 @@ function ProfileDropdown() {
           align='end'
           variant='soft'
           size='3'
-          className={s.menuContent}
+          className='min-w-[200px] shadow-[var(--shadow-4)]'
         >
           {/* Header */}
           <Box py='2' px='3' mb='1'>
@@ -131,7 +136,11 @@ function ProfileDropdown() {
 
           {/* Navigation Items */}
           <DropdownMenu.Item onClick={() => history.push('/profile')}>
-            <PersonIcon width={16} height={16} className={s.menuIcon} />
+            <PersonIcon
+              width={16}
+              height={16}
+              className='mr-[var(--space-2)]'
+            />
             {t('navigation.profile', 'Profile')}
           </DropdownMenu.Item>
 
@@ -144,21 +153,21 @@ function ProfileDropdown() {
               <LightningBoltIcon
                 width={16}
                 height={16}
-                className={s.menuIcon}
+                className='mr-[var(--space-2)]'
               />
               {t('navigation.nodeRed', 'Node-RED')}
             </DropdownMenu.Item>
           )}
 
           <DropdownMenu.Item onClick={() => history.push('/admin')}>
-            <GearIcon width={16} height={16} className={s.menuIcon} />
+            <GearIcon width={16} height={16} className='mr-[var(--space-2)]' />
             {t('navigation.admin', 'Admin Panel')}
           </DropdownMenu.Item>
 
           <DropdownMenu.Separator />
 
           <DropdownMenu.Item color='red' onClick={handleLogout}>
-            <ExitIcon width={16} height={16} className={s.menuIcon} />
+            <ExitIcon width={16} height={16} className='mr-[var(--space-2)]' />
             {t('navigation.logout', 'Logout')}
           </DropdownMenu.Item>
         </DropdownMenu.Content>

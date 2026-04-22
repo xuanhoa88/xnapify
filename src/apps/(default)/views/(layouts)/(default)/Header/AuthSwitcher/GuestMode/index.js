@@ -10,8 +10,6 @@ import { useTranslation } from 'react-i18next';
 
 import { useHistory } from '@shared/renderer/components/History';
 
-import s from './GuestMode.css';
-
 /**
  * GuestMode Component
  * Login and Register buttons for guest users natively mapped with Radix Themes
@@ -25,14 +23,14 @@ function GuestMode() {
       <Button
         variant='ghost'
         color='gray'
-        className={s.pointerBtn}
+        className='cursor-pointer !no-underline'
         onClick={() => history.push('/login')}
       >
         {t('navigation.login', 'Login')}
       </Button>
       <Button
         variant='solid'
-        className={s.pointerBtn}
+        className='cursor-pointer !no-underline'
         onClick={() => history.push('/register')}
       >
         {t('navigation.register', 'Register')}

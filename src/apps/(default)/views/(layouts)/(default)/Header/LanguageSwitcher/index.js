@@ -19,8 +19,6 @@ import {
   getAvailableLocales,
 } from '@shared/renderer/redux';
 
-import s from './LanguageSwitcher.css';
-
 /**
  * LanguageSwitcher Component
  *
@@ -65,7 +63,7 @@ function LanguageSwitcher() {
     <button
       type='button'
       title={t('common.languageSwitcher', 'Language switcher')}
-      className={s.langBtn}
+      className='bg-transparent border-none cursor-pointer flex items-center gap-[var(--space-2)] text-[var(--gray-11)] px-[var(--space-2)] py-[var(--space-1)] rounded-[var(--radius-3)] transition-colors duration-150 ease-in-out hover:bg-[var(--gray-a3)] hover:text-[var(--gray-12)] focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus-8)] focus-visible:outline-offset-[-1px] data-[state=open]:bg-[var(--gray-a3)] data-[state=open]:text-[var(--gray-12)]'
     >
       <GlobeIcon width={16} height={16} />
       <Text size='3'>{currentLanguageName}</Text>
@@ -88,13 +86,20 @@ function LanguageSwitcher() {
           <DropdownMenu.Item
             key={code}
             onSelect={() => handleLocaleChange(code)}
-            className={clsx({ [s.localeItemActive]: code === currentLocale })}
+            className={clsx({
+              'bg-[var(--indigo-a3)] text-[var(--indigo-11)] font-medium hover:bg-[var(--indigo-a4)]':
+                code === currentLocale,
+            })}
           >
             <Text size='3' mr='3'>
               {name}
             </Text>
             {code === currentLocale && (
-              <CheckIcon width={14} height={14} className={s.checkIcon} />
+              <CheckIcon
+                width={14}
+                height={14}
+                className='text-[var(--indigo-11)] ml-auto'
+              />
             )}
           </DropdownMenu.Item>
         ))}

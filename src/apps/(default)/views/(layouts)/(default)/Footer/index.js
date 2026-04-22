@@ -14,8 +14,6 @@ import { Link } from '@shared/renderer/components/History';
 
 import ScrollToTop from './ScrollToTop';
 
-import s from './Footer.css';
-
 /**
  * Navigation links configuration
  */
@@ -38,7 +36,12 @@ function Footer() {
 
   return (
     <>
-      <Box as='footer' px='4' py='6' className={s.footerBox}>
+      <Box
+        as='footer'
+        px='4'
+        py='6'
+        className='bg-[var(--color-panel-solid)] border-t border-[var(--gray-a6)]'
+      >
         <Flex
           align='center'
           justify='center'
@@ -46,7 +49,7 @@ function Footer() {
           gap='3'
           maxWidth='1200px'
           m='0 auto'
-          className={s.footerFlexInner}
+          className='text-[var(--gray-11)]'
         >
           <Text size='3'>{t('footer.copyright', { year: currentYear })}</Text>
 
@@ -56,7 +59,10 @@ function Footer() {
                 <Text size='3' color='gray'>
                   ·
                 </Text>
-                <Link to={link.to} className={s.footerLink}>
+                <Link
+                  to={link.to}
+                  className='text-[var(--gray-11)] no-underline text-[length:var(--font-size-2)] transition-colors duration-200 hover:text-[var(--indigo-11)]'
+                >
                   {t(link.key)}
                 </Link>
               </span>

@@ -188,7 +188,7 @@ function LoginFormFields({ loading }) {
       </Form.Field>
 
       <Form.Field name='password' showError={false}>
-        <Flex justify='between' align='end' mb='2'>
+        <Flex justify='between' align='baseline'>
           <Form.Label>{t('login.password', 'Password')}</Form.Label>
           <Link
             to='/reset-password'
