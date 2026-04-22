@@ -2,3 +2,8 @@
 .passwordIcon {
   display: block;
 }
+
+.iconButton {
+  cursor: pointer;
+  margin-right: -4px; /* Pull it slightly to the right to align better with the border radius */
+}

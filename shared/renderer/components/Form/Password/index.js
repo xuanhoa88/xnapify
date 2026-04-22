@@ -81,7 +81,10 @@ const FormPasswordInput = forwardRef(function FormPasswordInput$(
           size={size === '3' ? '2' : '1'}
           variant='ghost'
           color='gray'
+          radius='full'
+          className={s.iconButton}
           onClick={togglePasswordVisibility}
+          onMouseDown={e => e.preventDefault()}
           disabled={disabled}
           aria-label={showPassword ? 'Hide password' : 'Show password'}
           tabIndex={-1}
