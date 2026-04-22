@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { forwardRef, useCallback, useState } from 'react';
+import { forwardRef, useCallback, useState, useEffect } from 'react';
 
 import { UploadIcon } from '@radix-ui/react-icons';
 import { Flex, Text, Box } from '@radix-ui/themes';
@@ -36,9 +36,11 @@ const FormFileUpload = forwardRef(function FormFileUpload$(
 
   // Watch for form resets breaking internal selectedFile state sync
   const formValue = useWatch({ control, name });
-  if (!formValue && selectedFile) {
-    setSelectedFile(null);
-  }
+  useEffect(() => {
+    if (!formValue && selectedFile) {
+      setSelectedFile(null);
+    }
+  }, [formValue, selectedFile]);
 
   // Get registration props including ref
   const { ref: registerRef, onChange, ...registerProps } = register(name);

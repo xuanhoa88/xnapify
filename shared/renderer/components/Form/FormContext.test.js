@@ -7,7 +7,7 @@
 
 import { z } from '@shared/validator';
 
-import { isFieldRequired } from './FormContext';
+import { isFieldRequired, composeEventHandlers } from './FormContext';
 
 describe('FormContext', () => {
   describe('isFieldRequired', () => {
@@ -59,6 +59,58 @@ describe('FormContext', () => {
       expect(isFieldRequired(extended, 'baseConfig')).toBe(true);
       expect(isFieldRequired(extended, 'newField')).toBe(true);
       expect(isFieldRequired(extended, 'newOptional')).toBe(false);
+    });
+  });
+
+  describe('composeEventHandlers', () => {
+    it('calls both internal and external handlers in correct order', () => {
+      const order = [];
+      const internal = () => order.push('internal');
+      const external = () => order.push('external');
+
+      const composed = composeEventHandlers(external, internal);
+      composed();
+
+      expect(order).toEqual(['internal', 'external']);
+    });
+
+    it('forwards all arguments to both handlers', () => {
+      const internalArgs = [];
+      const externalArgs = [];
+      const internal = (...args) => internalArgs.push(...args);
+      const external = (...args) => externalArgs.push(...args);
+
+      const composed = composeEventHandlers(external, internal);
+      composed('a', 'b', 'c');
+
+      expect(internalArgs).toEqual(['a', 'b', 'c']);
+      expect(externalArgs).toEqual(['a', 'b', 'c']);
+    });
+
+    it('works with only internal handler', () => {
+      const spy = jest.fn();
+      const composed = composeEventHandlers(undefined, spy);
+      composed('val');
+
+      expect(spy).toHaveBeenCalledWith('val');
+    });
+
+    it('works with only external handler', () => {
+      const spy = jest.fn();
+      const composed = composeEventHandlers(spy, undefined);
+      composed('val');
+
+      expect(spy).toHaveBeenCalledWith('val');
+    });
+
+    it('does not throw when neither handler is provided', () => {
+      const composed = composeEventHandlers(undefined, undefined);
+      expect(() => composed()).not.toThrow();
+    });
+
+    it('does not throw when handlers are null', () => {
+      const composed = composeEventHandlers(null, null);
+      expect(() => composed()).not.toThrow();
     });
   });
 });

@@ -11,7 +11,11 @@ import { TextField } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useFormContext } from 'react-hook-form';
 
-import { useFormField, useMergeRefs } from '../FormContext';
+import {
+  useFormField,
+  useMergeRefs,
+  composeEventHandlers,
+} from '../FormContext';
 
 /**
  * FormInput - Simple input element to be used inside Form.Field backed by Radix Themes
@@ -37,7 +41,12 @@ const FormInput = forwardRef(function FormInput$(
   const { register } = useFormContext();
 
   // Get registration props including ref
-  const { ref: registerRef, ...registerProps } = register(name);
+  const {
+    ref: registerRef,
+    onChange,
+    onBlur,
+    ...registerProps
+  } = register(name);
 
   // Merge refs - both react-hook-form ref and forwarded ref
   const handleRef = useMergeRefs(registerRef, forwardedRef);
@@ -55,6 +64,8 @@ const FormInput = forwardRef(function FormInput$(
       autoFocus={autoFocus}
       {...registerProps}
       {...props}
+      onChange={composeEventHandlers(props.onChange, onChange)}
+      onBlur={composeEventHandlers(props.onBlur, onBlur)}
       ref={handleRef}
     />
   );
@@ -73,6 +84,10 @@ FormInput.propTypes = {
   disabled: PropTypes.bool,
   /** Auto focus on mount */
   autoFocus: PropTypes.bool,
+  /** Custom onChange handler */
+  onChange: PropTypes.func,
+  /** Custom onBlur handler */
+  onBlur: PropTypes.func,
 };
 
 export default FormInput;

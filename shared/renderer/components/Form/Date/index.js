@@ -12,7 +12,11 @@ import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useFormContext, useController } from 'react-hook-form';
 
-import { useFormField, useMergeRefs } from '../FormContext';
+import {
+  useFormField,
+  useMergeRefs,
+  composeEventHandlers,
+} from '../FormContext';
 
 import s from './Date.css';
 
@@ -116,15 +120,15 @@ const FormDate = forwardRef(function FormDate$(
       // eslint-disable-next-line jsx-a11y/no-autofocus
       autoFocus={autoFocus}
       placeholder={placeholder || format}
-      onChange={field.onChange}
-      onFocus={() => setIsFocused(true)}
-      onBlur={e => {
+      {...props}
+      onChange={composeEventHandlers(props.onChange, field.onChange)}
+      onFocus={composeEventHandlers(props.onFocus, () => setIsFocused(true))}
+      onBlur={composeEventHandlers(props.onBlur, e => {
         setIsFocused(false);
         field.onBlur(e);
-      }}
+      })}
       value={field.value || ''}
       name={field.name}
-      {...props}
       htmlRef={handleRef}
     />
   );
@@ -141,6 +145,12 @@ FormDate.propTypes = {
   format: PropTypes.string,
   /** Placeholder text */
   placeholder: PropTypes.string,
+  /** Custom onChange handler */
+  onChange: PropTypes.func,
+  /** Custom onFocus handler */
+  onFocus: PropTypes.func,
+  /** Custom onBlur handler */
+  onBlur: PropTypes.func,
 };
 
 export default FormDate;

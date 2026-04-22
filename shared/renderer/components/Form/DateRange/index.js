@@ -14,7 +14,11 @@ import get from 'lodash/get';
 import PropTypes from 'prop-types';
 import { useFormContext, useController } from 'react-hook-form';
 
-import { useFormField } from '../FormContext';
+import {
+  useFormField,
+  useMergeRefs,
+  composeEventHandlers,
+} from '../FormContext';
 
 import s from './DateRange.css';
 
@@ -117,7 +121,7 @@ const FormDateRange = forwardRef(function FormDateRange$(
   const { field: endField } = useController({ name: endName, control });
 
   return (
-    <Flex align='center' gap='2' className={className} ref={forwardedRef}>
+    <Flex align='center' gap='2' className={className}>
       <Cleave
         id={`${id}-start`}
         options={options}
@@ -131,16 +135,18 @@ const FormDateRange = forwardRef(function FormDateRange$(
         )}
         // eslint-disable-next-line jsx-a11y/no-autofocus
         autoFocus={autoFocus}
-        onChange={startField.onChange}
-        onFocus={() => setStartFocused(true)}
-        onBlur={e => {
+        {...props}
+        onChange={composeEventHandlers(props.onChange, startField.onChange)}
+        onFocus={composeEventHandlers(props.onFocus, () =>
+          setStartFocused(true),
+        )}
+        onBlur={composeEventHandlers(props.onBlur, e => {
           setStartFocused(false);
           startField.onBlur(e);
-        }}
+        })}
         value={startField.value || ''}
         name={startField.name}
-        {...props}
-        htmlRef={startField.ref}
+        htmlRef={useMergeRefs(startField.ref, forwardedRef)}
       />
       <Text className={s.dateRangeArrow}>→</Text>
       <Cleave
@@ -154,15 +160,15 @@ const FormDateRange = forwardRef(function FormDateRange$(
           endFocused && s.dateRangeInputFocus,
           disabled && s.dateRangeInputDisabled,
         )}
-        onChange={endField.onChange}
-        onFocus={() => setEndFocused(true)}
-        onBlur={e => {
+        {...props}
+        onChange={composeEventHandlers(props.onChange, endField.onChange)}
+        onFocus={composeEventHandlers(props.onFocus, () => setEndFocused(true))}
+        onBlur={composeEventHandlers(props.onBlur, e => {
           setEndFocused(false);
           endField.onBlur(e);
-        }}
+        })}
         value={endField.value || ''}
         name={endField.name}
-        {...props}
         htmlRef={endField.ref}
       />
     </Flex>
@@ -182,6 +188,12 @@ FormDateRange.propTypes = {
   startPlaceholder: PropTypes.string,
   /** End placeholder */
   endPlaceholder: PropTypes.string,
+  /** Custom onChange handler */
+  onChange: PropTypes.func,
+  /** Custom onFocus handler */
+  onFocus: PropTypes.func,
+  /** Custom onBlur handler */
+  onBlur: PropTypes.func,
 };
 
 export default FormDateRange;

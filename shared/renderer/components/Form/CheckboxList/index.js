@@ -472,6 +472,7 @@ const FormCheckboxList = forwardRef(function FormCheckboxList$(
           {effectiveSearchValue && (
             <TextField.Slot side='right'>
               <IconButton
+                type='button'
                 variant='ghost'
                 color='gray'
                 size='1'

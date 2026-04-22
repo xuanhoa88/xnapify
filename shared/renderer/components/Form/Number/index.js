@@ -11,7 +11,11 @@ import { TextField, IconButton, Flex } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useFormContext } from 'react-hook-form';
 
-import { useFormField, useMergeRefs } from '../FormContext';
+import {
+  useFormField,
+  useMergeRefs,
+  composeEventHandlers,
+} from '../FormContext';
 
 import s from './Index.css';
 
@@ -47,7 +51,12 @@ const FormNumberInput = forwardRef(function FormNumberInput$(
       : Number(formValue);
 
   // Get registration props including ref
-  const { ref: registerRef, ...registerProps } = register(name, {
+  const {
+    ref: registerRef,
+    onChange,
+    onBlur,
+    ...registerProps
+  } = register(name, {
     valueAsNumber: true,
   });
 
@@ -96,6 +105,8 @@ const FormNumberInput = forwardRef(function FormNumberInput$(
         className={s.numberInput}
         {...registerProps}
         {...props}
+        onChange={composeEventHandlers(props.onChange, onChange)}
+        onBlur={composeEventHandlers(props.onBlur, onBlur)}
         ref={handleRef}
       />
       <IconButton
@@ -130,6 +141,10 @@ FormNumberInput.propTypes = {
   step: PropTypes.number,
   /** Auto focus on mount */
   autoFocus: PropTypes.bool,
+  /** Custom onChange handler */
+  onChange: PropTypes.func,
+  /** Custom onBlur handler */
+  onBlur: PropTypes.func,
 };
 
 export default FormNumberInput;

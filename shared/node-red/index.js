@@ -7,6 +7,7 @@
  */
 
 import { createWebpackContextAdapter } from '@shared/utils/contextAdapter';
+import { createNativeRequire } from '@shared/utils/createNativeRequire';
 
 import initFlowSplitter from './flowSplitter';
 import {
@@ -124,7 +125,8 @@ export class NodeRedManager {
   constructor(config = {}) {
     this._config = { ...DEFAULT_CONFIG, ...config };
     this._server = null;
-    this._upgradeListener = null;
+    this._serverListeners = [];
+    this._flowSplitterHandler = null;
     this._settings = null;
     this._state = LifecycleState.UNINITIALIZED;
     this._stateTransitionLock = Promise.resolve();
@@ -211,12 +213,20 @@ export class NodeRedManager {
       if (prevInstance && prevInstance !== this) {
         Logger.restart('Cleaning up previous HMR instance...');
         try {
-          // Force cleanup of the old listener
+          // Force cleanup of old server listeners before shutdown
+          // in case shutdown() throws or times out
           if (
-            prevInstance._upgradeListener &&
+            prevInstance._serverListeners &&
             prevInstance._server === server
           ) {
-            server.removeListener('upgrade', prevInstance._upgradeListener);
+            for (const { event, listener } of prevInstance._serverListeners) {
+              try {
+                server.removeListener(event, listener);
+              } catch (e) {
+                // best-effort
+              }
+            }
+            prevInstance._serverListeners = [];
           }
 
           // Attempt full shutdown
@@ -366,6 +376,44 @@ export class NodeRedManager {
     try {
       this._validateInitArgs(app, server, config);
 
+      // Clear the native Node.js require cache for Node-RED modules to force a fresh instance.
+      // We must use the native require because Webpack's require.cache only
+      // holds module wrappers for external dependencies, not the actual loaded singletons.
+      if (__DEV__) {
+        const nativeRequire = createNativeRequire(__filename);
+        const nativeCache = nativeRequire.cache;
+
+        const keysToDelete = Object.keys(nativeCache).filter(key =>
+          /[\\/]@node-red[\\/]/.test(key),
+        );
+
+        if (keysToDelete.length > 0) {
+          const modulesToDelete = new Set(
+            keysToDelete.map(key => nativeCache[key]),
+          );
+
+          // 1. Remove from the global require cache
+          keysToDelete.forEach(key => {
+            delete nativeCache[key];
+          });
+
+          // 2. Remove from the children arrays of all surviving modules.
+          // In Node.js, `module.children` holds strong references to required modules.
+          // If we don't sever these links, the parent module (like the Webpack entry chunk)
+          // will hold the entire old @node-red tree in memory indefinitely across HMR reloads.
+          Object.values(nativeCache).forEach(mod => {
+            if (mod && Array.isArray(mod.children)) {
+              mod.children = mod.children.filter(
+                child => !modulesToDelete.has(child),
+              );
+            }
+          });
+        }
+      }
+
+      // Small delay to ensure cache flush completes
+      await new Promise(resolve => setImmediate(resolve));
+
       // Create settings with app instance for authentication
       this._settings = __DEV__
         ? createDevelopmentSettings({ ...config, app })
@@ -432,34 +480,9 @@ export class NodeRedManager {
    */
   async _initializeComponents() {
     try {
-      // Small delay to ensure cache flush completes
-      await new Promise(resolve => setImmediate(resolve));
-
       // Dynamic imports for runtime and editorApi
       this._runtime = (await import('@node-red/runtime')).default;
       this._editorApi = (await import('@node-red/editor-api')).default;
-
-      // The @node-red/runtime and @node-red/editor-api might persist across
-      // HMR reloads depending on caching strategies. Even if the module cache
-      // is cleared (like in dev.js), any previously-spawned setInterval timers,
-      // network sockets, or event listeners attached by older Node-RED instances
-      // will NOT be garbage collected unless explicitly stopped.
-      // We must gracefully stop the previous runtime to prevent severe memory leaks.
-      if (this._runtime && typeof this._runtime.stop === 'function') {
-        try {
-          await this._runtime.stop();
-        } catch {
-          // Ignore errors from stopping an already-stopped runtime
-        }
-      }
-
-      if (this._editorApi && typeof this._editorApi.stop === 'function') {
-        try {
-          await this._editorApi.stop();
-        } catch {
-          // Ignore errors from stopping an already-stopped editorApi
-        }
-      }
 
       // Initialize with recovery for locked runtime
       // Use proxy to capture upgrade listener for HMR cleanup
@@ -635,6 +658,11 @@ export class NodeRedManager {
   async _performShutdown() {
     const errors = [];
 
+    // Remove the flow-splitter event listener BEFORE stopping the runtime.
+    // The runtime's EventEmitter will be orphaned after require.cache invalidation,
+    // so we must sever this link now while we still have a reference to it.
+    this._cleanupFlowSplitter(errors);
+
     // Stop runtime and editor with proper sequencing
     try {
       const stopPromises = [];
@@ -675,12 +703,13 @@ export class NodeRedManager {
       errors.push(err);
     }
 
-    // Cleanup upgrade listener
-    this._cleanupUpgradeListener(errors);
+    // Cleanup all server listeners tracked via the proxy
+    this._cleanupServerListeners(errors);
 
-    // Reset ALL state including runtime/editorApi
+    // Reset ALL state
     this._server = null;
-    this._upgradeListener = null;
+    this._serverListeners = [];
+    this._flowSplitterHandler = null;
     this._settings = null;
     this._util = null;
     this._runtime = null;
@@ -708,17 +737,43 @@ export class NodeRedManager {
   }
 
   /**
-   * Cleanup upgrade listener
+   * Cleanup all server listeners that were tracked via the proxy.
    * @private
    */
-  _cleanupUpgradeListener(errors) {
-    if (this._upgradeListener && this._server) {
+  _cleanupServerListeners(errors) {
+    if (
+      this._serverListeners &&
+      this._serverListeners.length > 0 &&
+      this._server
+    ) {
+      for (const { event, listener } of this._serverListeners) {
+        try {
+          this._server.removeListener(event, listener);
+        } catch (err) {
+          Logger.error(`Listener cleanup error for event '${event}':`, err);
+          errors.push(err);
+        }
+      }
+      this._serverListeners = [];
+      Logger.network('Server listeners removed');
+    }
+  }
+
+  /**
+   * Remove the flow-splitter event listener from the runtime EventEmitter.
+   * Must be called BEFORE this._runtime is nullified.
+   * @private
+   */
+  _cleanupFlowSplitter(errors) {
+    if (this._flowSplitterHandler && this._runtime && this._runtime.events) {
       try {
-        this._server.removeListener('upgrade', this._upgradeListener);
-        this._upgradeListener = null;
-        Logger.network('Listener removed');
+        this._runtime.events.removeListener(
+          'flows:started',
+          this._flowSplitterHandler,
+        );
+        Logger.debug('Flow-splitter listener removed');
       } catch (err) {
-        Logger.error('Listener cleanup error:', err);
+        Logger.error('Flow-splitter cleanup error:', err);
         errors.push(err);
       }
     }
@@ -759,7 +814,7 @@ export class NodeRedManager {
 
       // --- Patch getAllNodeConfigs across all 3 snapshot layers ---
       const origGetAll = registryMod.getAllNodeConfigs;
-      if (typeof origGetAll === 'function' && !origGetAll.__xnapify_patched) {
+      if (typeof origGetAll === 'function') {
         const safe = function safeGetAllNodeConfigs(lang) {
           try {
             return origGetAll.call(this, lang);
@@ -794,7 +849,6 @@ export class NodeRedManager {
             return result;
           }
         };
-        safe.__xnapify_patched = true;
         registryMod.getAllNodeConfigs = safe;
         if (registryIndex) registryIndex.getNodeConfigs = safe;
         if (runtimeNodes) runtimeNodes.getNodeConfigs = safe;
@@ -802,7 +856,7 @@ export class NodeRedManager {
 
       // --- Patch getNodeConfig across all 3 layers ---
       const origGetOne = registryMod.getNodeConfig;
-      if (typeof origGetOne === 'function' && !origGetOne.__xnapify_patched) {
+      if (typeof origGetOne === 'function') {
         const safe = function safeGetNodeConfig(id, lang) {
           if (!id) return null;
           try {
@@ -812,7 +866,6 @@ export class NodeRedManager {
             return null;
           }
         };
-        safe.__xnapify_patched = true;
         registryMod.getNodeConfig = safe;
         if (registryIndex) registryIndex.getNodeConfig = safe;
         if (runtimeNodes) runtimeNodes.getNodeConfig = safe;
@@ -825,7 +878,8 @@ export class NodeRedManager {
   }
 
   /**
-   * Create server proxy to intercept upgrade listener
+   * Create server proxy to track all event listeners Node-RED attaches
+   * to the HTTP server, so they can be removed during shutdown.
    * @private
    */
   _createServerProxy(server) {
@@ -833,20 +887,20 @@ export class NodeRedManager {
 
     return new Proxy(server, {
       get(target, prop, receiver) {
-        // Intercept event listener registration for 'upgrade' events
+        // Intercept event listener registration for all events
         if (prop === 'on' || prop === 'addListener') {
           return function captureListener(event, listener) {
-            if (event === 'upgrade') {
-              // Remove previous listener if exists
-              if (self._upgradeListener) {
-                try {
-                  target.removeListener('upgrade', self._upgradeListener);
-                } catch (err) {
-                  Logger.warn('Failed to remove old upgrade listener:', err);
-                }
-              }
-              self._upgradeListener = listener;
-            }
+            // Track the listener so we can remove it on shutdown
+            self._serverListeners.push({ event, listener });
+            return target[prop](event, listener);
+          };
+        }
+        // Intercept removeListener to keep our tracking array in sync
+        if (prop === 'removeListener' || prop === 'off') {
+          return function removeTrackedListener(event, listener) {
+            self._serverListeners = self._serverListeners.filter(
+              l => l.event !== event || l.listener !== listener,
+            );
             return target[prop](event, listener);
           };
         }
@@ -894,6 +948,10 @@ export class NodeRedManager {
       };
 
       initFlowSplitter(RED);
+
+      // Store the handler reference so _cleanupFlowSplitter can remove it
+      this._flowSplitterHandler = RED.events.xnapifyFlowSplitterHandler;
+
       Logger.success('Flow splitter extension registered');
     } catch (err) {
       Logger.warn('Failed to register flow splitter extension:', err.message);

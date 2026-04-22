@@ -12,7 +12,11 @@ import { TextField, IconButton } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useFormContext } from 'react-hook-form';
 
-import { useFormField, useMergeRefs } from '../FormContext';
+import {
+  useFormField,
+  useMergeRefs,
+  composeEventHandlers,
+} from '../FormContext';
 
 import s from './Index.css';
 
@@ -40,7 +44,12 @@ const FormPasswordInput = forwardRef(function FormPasswordInput$(
   const { register } = useFormContext();
 
   // Get registration props including ref
-  const { ref: registerRef, ...registerProps } = register(name);
+  const {
+    ref: registerRef,
+    onChange,
+    onBlur,
+    ...registerProps
+  } = register(name);
 
   // Merge refs - both react-hook-form ref and forwarded ref
   const handleRef = useMergeRefs(registerRef, forwardedRef);
@@ -62,10 +71,13 @@ const FormPasswordInput = forwardRef(function FormPasswordInput$(
       autoFocus={autoFocus}
       {...registerProps}
       {...props}
+      onChange={composeEventHandlers(props.onChange, onChange)}
+      onBlur={composeEventHandlers(props.onBlur, onBlur)}
       ref={handleRef}
     >
       <TextField.Slot side='right' px='1'>
         <IconButton
+          type='button'
           size={size === '3' ? '2' : '1'}
           variant='ghost'
           color='gray'
@@ -96,6 +108,10 @@ FormPasswordInput.propTypes = {
   disabled: PropTypes.bool,
   /** Auto focus on mount */
   autoFocus: PropTypes.bool,
+  /** Custom onChange handler */
+  onChange: PropTypes.func,
+  /** Custom onBlur handler */
+  onBlur: PropTypes.func,
 };
 
 export default FormPasswordInput;

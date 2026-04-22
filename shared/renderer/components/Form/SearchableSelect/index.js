@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { forwardRef, useCallback } from 'react';
+import { forwardRef } from 'react';
 
 import { Box } from '@radix-ui/themes';
 import clsx from 'clsx';
@@ -13,7 +13,11 @@ import PropTypes from 'prop-types';
 import { useFormContext, useController } from 'react-hook-form';
 
 import SearchableSelect from '../../SearchableSelect/SearchableSelect';
-import { useFormField, useMergeRefs } from '../FormContext';
+import {
+  useFormField,
+  useMergeRefs,
+  composeEventHandlers,
+} from '../FormContext';
 
 import s from './FormSearchableSelect.css';
 
@@ -64,6 +68,7 @@ const FormSearchableSelect = forwardRef(function FormSearchableSelect$(
     showSearch,
     clearable,
     size,
+    onChange: customOnChange,
     ...props
   },
   forwardedRef,
@@ -82,21 +87,14 @@ const FormSearchableSelect = forwardRef(function FormSearchableSelect$(
   // Merge refs - react-hook-form ref and forwarded ref
   const handleRef = useMergeRefs(fieldRef, forwardedRef);
 
-  // Handle change with react-hook-form
-  const handleChange = useCallback(
-    newValue => {
-      onChange(newValue);
-    },
-    [onChange],
-  );
-
   return (
     <Box className={s.wrapper} ref={handleRef}>
       <SearchableSelect
         id={id}
         options={options}
         value={value}
-        onChange={handleChange}
+        {...props}
+        onChange={composeEventHandlers(customOnChange, onChange)}
         placeholder={placeholder}
         disabled={disabled}
         className={clsx({ [s.error]: error }, className)}
@@ -112,7 +110,6 @@ const FormSearchableSelect = forwardRef(function FormSearchableSelect$(
         showSearch={showSearch}
         clearable={clearable}
         size={size || '2'}
-        {...props}
       />
     </Box>
   );
@@ -155,6 +152,8 @@ FormSearchableSelect.propTypes = {
   showSearch: PropTypes.bool,
   /** Show clear button when has value */
   clearable: PropTypes.bool,
+  /** Custom onChange handler */
+  onChange: PropTypes.func,
 };
 
 export default FormSearchableSelect;

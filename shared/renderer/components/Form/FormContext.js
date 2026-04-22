@@ -6,7 +6,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { createContext, useContext, useCallback } from 'react';
+import { createContext, useContext, useCallback, useRef } from 'react';
 
 // Context for form field state (provided by Form.Field)
 export const FormFieldContext = createContext(null);
@@ -147,4 +147,50 @@ export function useMergeRefs(...refs) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     refs,
   );
+}
+
+/**
+ * Compose multiple event handlers into a single function.
+ * This is crucial for preventing custom props from overwriting react-hook-form's internal handlers.
+ *
+ * @param {Function} externalHandler - The custom handler passed via props
+ * @param {Function} internalHandler - The internal react-hook-form handler
+ * @returns {Function} - Composed handler that calls both
+ */
+export function composeEventHandlers(externalHandler, internalHandler) {
+  return function handleEvent(...args) {
+    if (typeof internalHandler === 'function') {
+      internalHandler(...args);
+    }
+    if (typeof externalHandler === 'function') {
+      externalHandler(...args);
+    }
+  };
+}
+
+/**
+ * Hook version of composeEventHandlers that returns a **stable** function
+ * reference across renders. Uses refs internally so the returned callback
+ * never changes identity, which prevents unnecessary re-renders on
+ * memoized Radix primitives (Select, Checkbox, Switch, RadioGroup).
+ *
+ * @param {Function} externalHandler - The custom handler passed via props
+ * @param {Function} internalHandler - The internal react-hook-form handler
+ * @returns {Function} - Stable composed handler
+ */
+export function useComposedHandler(externalHandler, internalHandler) {
+  const externalRef = useRef(externalHandler);
+  const internalRef = useRef(internalHandler);
+  externalRef.current = externalHandler;
+  internalRef.current = internalHandler;
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useCallback(function stableHandler(...args) {
+    if (typeof internalRef.current === 'function') {
+      internalRef.current(...args);
+    }
+    if (typeof externalRef.current === 'function') {
+      externalRef.current(...args);
+    }
+  }, []);
 }

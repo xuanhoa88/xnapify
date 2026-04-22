@@ -13,15 +13,17 @@ import { useTranslation } from 'react-i18next';
 
 import { FormFieldContext } from '../FormContext';
 
+// Max recursion depth to prevent stack overflow on circular or deeply nested objects
+const MAX_DEPTH = 5;
+
 // Find the first nested error with a message
-const findMessage = errObj => {
-  if (!errObj || typeof errObj !== 'object') return null;
+const findMessage = (errObj, depth = 0) => {
+  if (!errObj || typeof errObj !== 'object' || depth > MAX_DEPTH) return null;
   if (typeof errObj.message === 'string') return errObj.message;
-  for (const key in errObj) {
-    if (Object.prototype.hasOwnProperty.call(errObj, key)) {
-      const msg = findMessage(errObj[key]);
-      if (msg) return msg;
-    }
+  const keys = Object.keys(errObj);
+  for (let i = 0; i < keys.length; i++) {
+    const msg = findMessage(errObj[keys[i]], depth + 1);
+    if (msg) return msg;
   }
   return null;
 };
@@ -35,26 +37,35 @@ const findMessage = errObj => {
  *   3. "✓" when async validation passes
  *   4. Nothing when idle
  *
- * Also supports form-level errors via explicit `message` prop.
+ * Can be used in two modes:
+ *   - **Inside Form.Field**: auto-reads errors from field context (no props needed)
+ *   - **Standalone**: pass an explicit `message` prop for form-level errors
  */
 function FormError({ message, className }) {
   const { t } = useTranslation();
 
+  // Safely read field context — null when used standalone (form-level errors)
   const fieldContext = useContext(FormFieldContext);
   const error = fieldContext && fieldContext.error;
   const { isValidating, validationStatus, asyncMessages } = fieldContext || {};
+
+  // Pre-resolve translated strings so `t` is not a useMemo dependency
+  const defaultValidatingMsg = t(
+    'zod:form.messages.validating',
+    '⏳ Validating…',
+  );
 
   // Determine what to display: { text, color, role } or null
   const display = useMemo(() => {
     const msgs = asyncMessages || {};
 
     // --- Explicit message prop (form-level) ---
-    if (message) {
+    if (message != null && message !== '') {
       const msgText =
         typeof message === 'string'
           ? message
           : message.message || findMessage(message);
-      return { text: msgText, color: 'red', role: 'alert' };
+      return msgText ? { text: msgText, color: 'red', role: 'alert' } : null;
     }
 
     // --- Field-level error (sync or async) ---
@@ -69,9 +80,7 @@ function FormError({ message, className }) {
     // --- Async validation in progress ---
     if (isValidating) {
       return {
-        text:
-          msgs.validating ||
-          t('zod:form.messages.validating', '⏳ Validating…'),
+        text: msgs.validating || defaultValidatingMsg,
         color: 'gray',
         role: 'status',
       };
@@ -89,7 +98,14 @@ function FormError({ message, className }) {
     }
 
     return null;
-  }, [message, error, isValidating, validationStatus, asyncMessages, t]);
+  }, [
+    message,
+    error,
+    isValidating,
+    validationStatus,
+    asyncMessages,
+    defaultValidatingMsg,
+  ]);
 
   if (!display) return null;
 

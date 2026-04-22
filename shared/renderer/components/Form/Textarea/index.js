@@ -11,7 +11,11 @@ import { TextArea } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useFormContext } from 'react-hook-form';
 
-import { useFormField, useMergeRefs } from '../FormContext';
+import {
+  useFormField,
+  useMergeRefs,
+  composeEventHandlers,
+} from '../FormContext';
 
 /**
  * FormTextarea - Simple textarea element to be used inside Form.Field backed by Radix Themes
@@ -29,7 +33,12 @@ const FormTextarea = forwardRef(function FormTextarea$(
   const { register } = useFormContext();
 
   // Get registration props including ref
-  const { ref: registerRef, ...registerProps } = register(name);
+  const {
+    ref: registerRef,
+    onChange,
+    onBlur,
+    ...registerProps
+  } = register(name);
 
   // Merge refs - both react-hook-form ref and forwarded ref
   const handleRef = useMergeRefs(registerRef, forwardedRef);
@@ -45,6 +54,8 @@ const FormTextarea = forwardRef(function FormTextarea$(
       className={className}
       {...registerProps}
       {...props}
+      onChange={composeEventHandlers(props.onChange, onChange)}
+      onBlur={composeEventHandlers(props.onBlur, onBlur)}
       ref={handleRef}
     />
   );
@@ -61,6 +72,10 @@ FormTextarea.propTypes = {
   disabled: PropTypes.bool,
   /** Number of visible rows */
   rows: PropTypes.number,
+  /** Custom onChange handler */
+  onChange: PropTypes.func,
+  /** Custom onBlur handler */
+  onBlur: PropTypes.func,
 };
 
 export default FormTextarea;

@@ -9,6 +9,7 @@ import { useMemo } from 'react';
 
 import { Flex } from '@radix-ui/themes';
 import get from 'lodash/get';
+import uniqueId from 'lodash/uniqueId';
 import PropTypes from 'prop-types';
 import { useFormContext } from 'react-hook-form';
 
@@ -48,7 +49,8 @@ function FormField({
   debounceMs = 300,
   asyncMessages,
 }) {
-  const id = useMemo(() => `field-${name}`, [name]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const id = useMemo(() => uniqueId(`field-${name}-`), [name]);
   const {
     formState: { errors },
   } = useFormContext();

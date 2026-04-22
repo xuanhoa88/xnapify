@@ -9,9 +9,9 @@ import { forwardRef } from 'react';
 
 import { Select } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
-import { Controller, useFormContext } from 'react-hook-form';
+import { useController, useFormContext } from 'react-hook-form';
 
-import { useFormField } from '../FormContext';
+import { useFormField, useMergeRefs, useComposedHandler } from '../FormContext';
 
 /**
  * FormSelect - Select element to be used inside Form.Field baked by Radix Themes
@@ -22,44 +22,46 @@ import { useFormField } from '../FormContext';
  *   </Form.Field>
  */
 const FormSelect = forwardRef(function FormSelect$(
-  { options = [], placeholder, size = '3', className, disabled, ...props },
+  {
+    options = [],
+    placeholder,
+    size = '3',
+    className,
+    disabled,
+    onValueChange,
+    ...props
+  },
   forwardedRef,
 ) {
   const { name, error } = useFormField();
   const { control } = useFormContext();
 
+  const { field } = useController({ name, control });
+  const handleRef = useMergeRefs(field.ref, forwardedRef);
+  const handleValueChange = useComposedHandler(onValueChange, field.onChange);
+
   return (
-    <Controller
-      name={name}
-      control={control}
-      render={({ field }) => (
-        <Select.Root
-          size={size}
-          value={field.value !== undefined ? String(field.value) : undefined}
-          onValueChange={field.onChange}
-          disabled={disabled}
-        >
-          <Select.Trigger
-            placeholder={placeholder}
-            color={error ? 'red' : undefined}
-            className={className}
-            ref={ref => {
-              field.ref(ref);
-              if (typeof forwardedRef === 'function') forwardedRef(ref);
-              else if (forwardedRef) forwardedRef.current = ref;
-            }}
-            {...props}
-          />
-          <Select.Content>
-            {options.map(option => (
-              <Select.Item key={option.value} value={String(option.value)}>
-                {option.label}
-              </Select.Item>
-            ))}
-          </Select.Content>
-        </Select.Root>
-      )}
-    />
+    <Select.Root
+      size={size}
+      value={field.value !== undefined ? String(field.value) : undefined}
+      onValueChange={handleValueChange}
+      disabled={disabled}
+    >
+      <Select.Trigger
+        placeholder={placeholder}
+        color={error ? 'red' : undefined}
+        className={className}
+        {...props}
+        ref={handleRef}
+      />
+      <Select.Content>
+        {options.map(option => (
+          <Select.Item key={option.value} value={String(option.value)}>
+            {option.label}
+          </Select.Item>
+        ))}
+      </Select.Content>
+    </Select.Root>
   );
 });
 
@@ -80,6 +82,8 @@ FormSelect.propTypes = {
   className: PropTypes.string,
   /** Disabled state */
   disabled: PropTypes.bool,
+  /** Custom onValueChange handler */
+  onValueChange: PropTypes.func,
 };
 
 export default FormSelect;

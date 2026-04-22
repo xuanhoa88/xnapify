@@ -9,9 +9,9 @@ import { forwardRef } from 'react';
 
 import { Checkbox, Flex, Text } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
-import { Controller, useFormContext } from 'react-hook-form';
+import { useController, useFormContext } from 'react-hook-form';
 
-import { useFormField } from '../FormContext';
+import { useFormField, useMergeRefs, useComposedHandler } from '../FormContext';
 
 /**
  * FormCheckbox - Checkbox element to be used inside Form.Field baked by Radix Themes
@@ -28,33 +28,31 @@ const FormCheckbox = forwardRef(function FormCheckbox$(
   const { id, name, error } = useFormField();
   const { control } = useFormContext();
 
+  const { field } = useController({ name, control });
+  const handleRef = useMergeRefs(field.ref, forwardedRef);
+  const handleCheckedChange = useComposedHandler(
+    props.onCheckedChange,
+    field.onChange,
+  );
+  const handleBlur = useComposedHandler(props.onBlur, field.onBlur);
+
   return (
-    <Controller
-      name={name}
-      control={control}
-      render={({ field }) => (
-        <Text as='label' size={size}>
-          <Flex gap='2' align='center' className={className}>
-            <Checkbox
-              id={id}
-              size={size}
-              disabled={disabled}
-              checked={field.value || false}
-              color={error ? 'red' : undefined}
-              onCheckedChange={field.onChange}
-              onBlur={field.onBlur}
-              ref={ref => {
-                field.ref(ref);
-                if (typeof forwardedRef === 'function') forwardedRef(ref);
-                else if (forwardedRef) forwardedRef.current = ref;
-              }}
-              {...props}
-            />
-            {label}
-          </Flex>
-        </Text>
-      )}
-    />
+    <Text as='label' size={size}>
+      <Flex gap='2' align='center' className={className}>
+        <Checkbox
+          id={id}
+          size={size}
+          disabled={disabled}
+          checked={!!field.value}
+          color={error ? 'red' : undefined}
+          {...props}
+          onCheckedChange={handleCheckedChange}
+          onBlur={handleBlur}
+          ref={handleRef}
+        />
+        {label}
+      </Flex>
+    </Text>
   );
 });
 
@@ -67,6 +65,10 @@ FormCheckbox.propTypes = {
   size: PropTypes.string,
   /** Disabled state */
   disabled: PropTypes.bool,
+  /** Custom onCheckedChange handler */
+  onCheckedChange: PropTypes.func,
+  /** Custom onBlur handler */
+  onBlur: PropTypes.func,
 };
 
 export default FormCheckbox;

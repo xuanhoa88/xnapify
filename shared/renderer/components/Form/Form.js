@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import clsx from 'clsx';
@@ -40,11 +40,22 @@ function Form({
 }) {
   const { i18n } = useTranslation();
 
+  // Resolve schema once per schema/locale change to avoid re-computing on every render.
+  // When schema is a factory function, the locale is baked into the Zod error messages,
+  // so we must re-resolve whenever the language changes.
+  const resolvedSchema = useMemo(
+    () => (typeof schema === 'function' ? schema({ i18n, z }) : schema),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [schema, i18n, i18n.language],
+  );
+
+  const resolver = useMemo(
+    () => (resolvedSchema ? zodResolver(resolvedSchema) : undefined),
+    [resolvedSchema],
+  );
+
   const methods = useForm({
-    resolver:
-      typeof schema === 'function'
-        ? zodResolver(schema({ i18n, z }))
-        : undefined,
+    resolver,
     defaultValues,
     mode: 'onChange', // Validates on every change - works reliably on desktop and mobile
   });
@@ -54,6 +65,15 @@ function Form({
   useEffect(() => {
     methods.reset(defaultValues);
   }, [defaultValues, methods]);
+
+  // Re-validate with updated resolver when locale changes so error messages
+  // are shown in the current language.
+  useEffect(() => {
+    if (resolver && methods.formState.isSubmitted) {
+      methods.trigger();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resolver]);
 
   const handleFormSubmit = methods.handleSubmit(async data => {
     if (typeof onSubmit === 'function') {
@@ -80,8 +100,8 @@ function Form({
 Form.propTypes = {
   /** Form content (form fields) */
   children: PropTypes.node.isRequired,
-  /** Zod validation schema factory function */
-  schema: PropTypes.func,
+  /** Zod validation schema or factory function */
+  schema: PropTypes.oneOfType([PropTypes.func, PropTypes.object]),
   /** Default form values */
   defaultValues: PropTypes.object,
   /** Form submission handler */
