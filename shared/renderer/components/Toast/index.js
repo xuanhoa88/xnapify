@@ -22,10 +22,10 @@ import s from './Index.css';
 
 // Icon mapping for each variant
 const variantIcons = {
-  success: 'check-circle',
-  error: 'x-circle',
-  warning: 'alert-triangle',
-  info: 'info',
+  success: 'CheckCircledIcon',
+  error: 'CrossCircledIcon',
+  warning: 'ExclamationTriangleIcon',
+  info: 'InfoCircledIcon',
 };
 
 // Placement styles mapping
@@ -220,7 +220,7 @@ const Toast = forwardRef(function Toast(
             aria-label='Close notification'
             className={s.closeButton}
           >
-            <Icon name='close' size={16} />
+            <Icon name='Cross2Icon' size={16} />
           </IconButton>
         )}
       </Flex>
