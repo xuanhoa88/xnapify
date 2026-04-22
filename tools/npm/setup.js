@@ -101,6 +101,7 @@ function npmInstall(cwd, label) {
       shell: true,
       env: {
         ...process.env,
+        CI: 'true',
         npm_config_engine_strict: 'false',
       },
     });

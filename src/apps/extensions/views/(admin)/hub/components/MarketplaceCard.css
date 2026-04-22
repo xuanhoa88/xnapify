@@ -104,7 +104,8 @@
 
 .descText {
   margin: 0;
-  display: box;
+  /* stylelint-disable-next-line value-no-vendor-prefix */
+  display: -webkit-box;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

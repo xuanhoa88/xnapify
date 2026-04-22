@@ -7,7 +7,7 @@
 
 import { useCallback, useEffect } from 'react';
 
-import { Flex, Text, Heading, Button } from '@radix-ui/themes';
+import { Flex, Text, Heading, Button, Box } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { Trans, useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
@@ -98,11 +98,17 @@ function Login() {
 
   return (
     <>
-      <Flex direction='column' align='center' mb='6'>
-        <Heading as='h2' size='6' mb='2' weight='bold'>
+      <Flex direction='column' align='center' mb='7'>
+        <Heading
+          as='h2'
+          size='7'
+          mb='2'
+          weight='bold'
+          className='text-slate-900 tracking-tight'
+        >
           {t('login.welcome', 'Welcome Back')}
         </Heading>
-        <Text size='3' color='gray'>
+        <Text size='3' className='text-slate-500 font-medium'>
           {t('login.heroSubtitle', 'Sign in to continue to your account')}
         </Text>
       </Flex>
@@ -110,13 +116,13 @@ function Login() {
       <Form.Error message={error} />
 
       {/* OAuth buttons slot — hidden when no plugins registered */}
-      <div className={s.oauthSection}>
+      <Box className={s.oauthSection}>
         <Flex wrap='wrap' gap='3' mb='6'>
           <ExtensionSlot name='auth.oauth.buttons' />
         </Flex>
 
         <Flex align='center' mb='6' className='opacity-60'>
-          <div className='flex-1 h-px bg-[var(--gray-a6)]' />
+          <Box className='flex-1 h-px bg-[var(--gray-a6)]' />
           <Text
             size='1'
             mx='3'
@@ -126,9 +132,9 @@ function Login() {
           >
             {t('login.orDivider', 'OR')}
           </Text>
-          <div className='flex-1 h-px bg-[var(--gray-a6)]' />
+          <Box className='flex-1 h-px bg-[var(--gray-a6)]' />
         </Flex>
-      </div>
+      </Box>
 
       <Form
         schema={loginFormSchema}
@@ -142,11 +148,11 @@ function Login() {
       {isRegistrationAllowed && (
         <Flex
           justify='center'
-          mt='5'
-          pt='5'
-          className='border-t border-[var(--gray-a6)]'
+          mt='6'
+          pt='6'
+          className='border-t border-slate-200/80'
         >
-          <Text size='2' color='gray'>
+          <Text size='2' className='text-slate-500'>
             <Trans
               t={t}
               i18nKey='login.dontHaveAccount'
@@ -155,7 +161,7 @@ function Login() {
                 <Link
                   key='register'
                   to='/register'
-                  className='text-[var(--accent-11)] hover:text-[var(--accent-12)] font-medium no-underline'
+                  className='text-indigo-600 hover:text-indigo-700 font-medium no-underline transition-colors duration-200'
                 />,
               ]}
             />
@@ -186,7 +192,7 @@ function LoginFormFields({ loading }) {
           <Form.Label>{t('login.password', 'Password')}</Form.Label>
           <Link
             to='/reset-password'
-            className='text-xs text-[var(--accent-11)] hover:text-[var(--accent-12)] no-underline font-medium'
+            className='text-xs text-indigo-600 hover:text-indigo-700 no-underline font-medium transition-colors duration-200'
           >
             {t('login.forgotPassword', 'Forgot password?')}
           </Link>
@@ -204,8 +210,8 @@ function LoginFormFields({ loading }) {
         color='indigo'
         size='3'
         type='submit'
-        mt='2'
-        className='w-full cursor-pointer'
+        mt='3'
+        className='w-full cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md'
         loading={loading}
       >
         {loading

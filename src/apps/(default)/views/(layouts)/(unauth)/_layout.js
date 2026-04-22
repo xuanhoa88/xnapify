@@ -7,7 +7,7 @@
 
 import { useEffect, useRef } from 'react';
 
-import { Flex } from '@radix-ui/themes';
+import { Box, Grid, Flex, Text, Heading } from '@radix-ui/themes';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
@@ -20,44 +20,73 @@ import { getFlashMessage, clearFlashMessage } from '@shared/renderer/redux';
 import s from './_layout.css';
 
 /**
- * Hero Section - Left side branding panel with gradient background
+ * Hero Section - Enterprise-grade deep slate with animated mesh gradients
  */
 function HeroSection() {
   const { t } = useTranslation();
 
   return (
-    <div
-      className={clsx(
-        s.hero,
-        'hidden md:flex items-center justify-center p-12 relative w-full h-full',
-      )}
-    >
-      <div className='text-center relative z-10'>
+    <Box className='hidden lg:flex items-center justify-center p-12 relative w-full h-full bg-slate-950 overflow-hidden m-0'>
+      {/* Animated Mesh Gradient Background */}
+      <Box
+        className={clsx(
+          'absolute top-[-20%] left-[-10%] w-[70%] h-[70%] rounded-full mix-blend-screen filter blur-[100px] opacity-30 animate-pulse',
+          s.meshGradient1,
+        )}
+      />
+      <Box
+        className={clsx(
+          'absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] rounded-full mix-blend-screen filter blur-[120px] opacity-20 animate-pulse',
+          s.meshGradient2,
+        )}
+      />
+
+      {/* Subtle Noise Texture for Premium Matte Finish */}
+      <Box
+        className={clsx(
+          'absolute inset-0 opacity-[0.03] pointer-events-none',
+          s.noiseTexture,
+        )}
+      />
+
+      <Box className='text-center relative z-10 flex flex-col items-center'>
         <Link
           to='/'
-          className='inline-flex items-center gap-3 no-underline mb-8 hover:-translate-y-0.5 transition-transform'
+          className='inline-flex items-center gap-4 no-underline mb-12 hover:-translate-y-1 transition-transform duration-300 group'
         >
-          <img
-            src='/xnapify_38x38.png'
-            srcSet='/xnapify_72x72.png 2x'
-            width='48'
-            height='48'
-            alt='xnapify'
-            className='rounded-lg'
-          />
-          <span className='text-xl font-bold text-white'>xnapify</span>
+          <Box className='relative overflow-hidden rounded-xl w-14 h-14 shadow-2xl shadow-indigo-500/20 ring-1 ring-white/10 group-hover:ring-indigo-500/50 transition-all'>
+            <img
+              src='/xnapify_72x72.png'
+              alt='xnapify'
+              className='object-cover w-full h-full'
+            />
+          </Box>
+          <Text size='6' weight='bold' className='text-white tracking-tight'>
+            xnapify
+          </Text>
         </Link>
-        <h1 className='text-4xl font-bold text-white mb-4 tracking-tight'>
+        <Heading
+          as='h1'
+          weight='bold'
+          className={clsx(
+            'text-white mb-6 tracking-tighter leading-tight max-w-[480px]',
+            s.heroHeading,
+          )}
+        >
           {t('unauth.heroTitle', 'Welcome to xnapify')}
-        </h1>
-        <p className='text-lg text-white/85 leading-relaxed max-w-[400px]'>
+        </Heading>
+        <Text
+          as='p'
+          size='5'
+          className='text-slate-400 leading-relaxed max-w-[420px] mx-auto font-medium'
+        >
           {t(
             'unauth.heroSubtitle',
             'The enterprise platform for modern teams.',
           )}
-        </p>
-      </div>
-    </div>
+        </Text>
+      </Box>
+    </Box>
   );
 }
 
@@ -85,25 +114,37 @@ function UnauthLayout({ children }) {
   }, [flashMessage, dispatch]);
 
   return (
-    <div className='min-h-screen w-full bg-[var(--color-surface)]'>
-      <div className={s.gridContainer}>
+    <>
+      <Grid
+        columns={{ initial: '1', lg: '2' }}
+        className='fixed inset-0 m-0 p-0 overflow-hidden bg-white z-50'
+      >
         <HeroSection />
 
-        <Flex
-          align='center'
-          justify='center'
-          className='p-6 md:p-8 lg:p-12 overflow-y-auto w-full h-full'
-        >
-          <div className='w-full max-w-[440px] bg-[var(--color-panel-solid)] rounded-[24px] shadow-[0_8px_40px_-12px_rgba(0,0,0,0.1)] border border-[var(--gray-a4)] p-8 md:p-10 relative overflow-hidden'>
-            {/* Subtle gradient glow inside the card */}
-            <div className='absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#667eea] to-[#764ba2]' />
-            {children}
-          </div>
-        </Flex>
-      </div>
+        <Box className='relative w-full h-full bg-white'>
+          {/* Subtle background decoration for the right pane */}
+          <Box className='absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-indigo-50 rounded-full filter blur-[100px] opacity-60 pointer-events-none' />
 
-      <Toast ref={toastRef} />
-    </div>
+          <Flex
+            direction='column'
+            align='center'
+            justify='center'
+            className='min-h-full w-full py-12'
+          >
+            <Box
+              className={clsx(
+                'w-full max-w-[440px] px-6 relative z-10',
+                s.animateSlideUp,
+              )}
+            >
+              {children}
+            </Box>
+          </Flex>
+        </Box>
+
+        <Toast ref={toastRef} />
+      </Grid>
+    </>
   );
 }
 

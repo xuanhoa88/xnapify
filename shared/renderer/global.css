@@ -11,15 +11,8 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 
- * Global focus-visible overrides for Radix UI form elements 
- * Replaces individual CSS modules to ensure consistent styling
- */
-.rt-TextFieldInput:focus-visible,
-.rt-CheckboxRoot:focus-visible,
-.rt-SelectTrigger:focus-visible,
-.rt-TextAreaInput:focus-visible,
-.rt-SwitchRoot:focus-visible,
-.rt-RadioGroupItem:focus-visible {
-  outline: none !important;
+html, body, #app {
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow-x: hidden;
 }

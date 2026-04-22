@@ -22,6 +22,8 @@ module.exports = ({ cwd }) => ({
       content: [
         path.join(cwd, 'src/**/*.{js,jsx,ts,tsx}').replace(/\\/g, '/'),
         path.join(cwd, 'shared/**/*.{js,jsx,ts,tsx}').replace(/\\/g, '/'),
+        '!' + path.join(cwd, 'src/**/node_modules/**').replace(/\\/g, '/'),
+        '!' + path.join(cwd, 'shared/**/node_modules/**').replace(/\\/g, '/'),
       ],
       theme: {
         extend: {},
