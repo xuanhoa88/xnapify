@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useState, useCallback, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import {
   ChevronDownIcon,
@@ -14,12 +14,10 @@ import {
   ArrowUpIcon,
   ExitIcon,
 } from '@radix-ui/react-icons';
-import { Flex, Text, Box } from '@radix-ui/themes';
-import clsx from 'clsx';
+import { Flex, Text, Box, DropdownMenu, Button } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 
-import ContextMenu from '@shared/renderer/components/ContextMenu';
 import { Link, useHistory } from '@shared/renderer/components/History';
 import { checkPermission } from '@shared/renderer/components/Rbac';
 import { features } from '@shared/renderer/redux';
@@ -31,8 +29,6 @@ const {
   logout,
 } = features;
 import { useWebSocket } from '@shared/ws/client';
-
-import s from './ProfileDropdown.css';
 
 /**
  * ProfileDropdown Component
@@ -50,18 +46,9 @@ function ProfileDropdown() {
   const roles = useSelector(getUserRoles);
   const userProfile = useSelector(getUserProfile);
 
-  // Local state
-  const [isOpen, setIsOpen] = useState(false);
-
-  // Handlers
-  const handleClose = useCallback(() => {
-    setIsOpen(false);
-  }, []);
-
   const handleLogout = useCallback(
     async e => {
       e.preventDefault();
-      setIsOpen(false);
       await dispatch(logout());
       if (ws) {
         ws.logout();
@@ -96,73 +83,107 @@ function ProfileDropdown() {
   }, [roles, t]);
 
   return (
-    <Box position='relative'>
-      <ContextMenu isOpen={isOpen} onToggle={setIsOpen}>
-        <ContextMenu.Trigger variant='unstyled'>
+    <DropdownMenu.Root modal={false}>
+      <DropdownMenu.Trigger>
+        <Button
+          variant='ghost'
+          className='px-2 py-1 h-auto rounded-md cursor-pointer transition-colors bg-transparent hover:bg-gray-3 data-[state=open]:bg-gray-3 border-none outline-none flex items-center gap-2'
+        >
           <Flex
             align='center'
-            gap='2'
-            className={clsx(s.profileTrigger, isOpen && s.profileTriggerOpen)}
+            justify='center'
+            className='w-8 h-8 rounded-full bg-indigo-3 text-indigo-11 overflow-hidden font-bold text-sm flex items-center justify-center'
           >
-            <Flex align='center' justify='center' className={s.avatarCircle}>
-              {avatarUrl ? (
-                <img
-                  src={avatarUrl}
-                  alt=''
-                  className={s.avatarImage}
-                  onError={e => {
-                    e.target.style.display = 'none';
-                  }}
-                />
-              ) : (
-                avatarInitial
-              )}
-            </Flex>
-            <Flex direction='column' className={s.profileInfo}>
-              <Text size='3' weight='medium' className={s.profileName}>
-                {displayName}
-              </Text>
-              <Text size='1' color='gray' className={s.profileRole}>
-                {displayRole}
-              </Text>
-            </Flex>
-            <Box
-              className={clsx(s.profileChevron, isOpen && s.chevronIconOpen)}
-            >
-              <ChevronDownIcon width={12} height={12} />
-            </Box>
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt=''
+                className='w-full h-full object-cover'
+                onError={e => {
+                  e.target.style.display = 'none';
+                }}
+              />
+            ) : (
+              avatarInitial
+            )}
           </Flex>
-        </ContextMenu.Trigger>
+          <Flex
+            direction='column'
+            className='hidden md:flex md:flex-col items-start'
+          >
+            <Text
+              size='3'
+              weight='medium'
+              className='text-gray-12 leading-none'
+            >
+              {displayName}
+            </Text>
+            <Text size='1' color='gray' className='leading-none mt-[2px]'>
+              {displayRole}
+            </Text>
+          </Flex>
+          <Box className='flex text-gray-11 transition-transform duration-200 ml-1 data-[state=open]:rotate-180'>
+            <ChevronDownIcon width={12} height={12} />
+          </Box>
+        </Button>
+      </DropdownMenu.Trigger>
 
-        <ContextMenu.Menu>
-          <ContextMenu.Header title={displayName} subtitle={displayRole} />
+      <DropdownMenu.Content
+        align='end'
+        className='min-w-[200px] bg-panel-solid/90 backdrop-blur-md border border-gray-a6 rounded-md shadow-lg p-1 z-[100] data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95'
+      >
+        <Box py='2' px='3' mb='1' className='border-b border-gray-a6 mb-2'>
+          <Text as='div' size='2' weight='bold'>
+            {displayName}
+          </Text>
+          <Text as='div' size='1' color='gray' mt='1'>
+            {displayRole}
+          </Text>
+        </Box>
 
-          <ContextMenu.Item as={Link} to='/profile' onClick={handleClose}>
+        <DropdownMenu.Item asChild>
+          <Link
+            to='/profile'
+            className='w-full flex items-center gap-2 px-3 py-2 rounded-sm text-left cursor-pointer transition-colors text-gray-12 hover:bg-gray-3 hover:text-gray-12 focus:outline-none focus:bg-gray-3 no-underline'
+          >
             <PersonIcon width={16} height={16} />
             {t('navigation.profile', 'Profile')}
-          </ContextMenu.Item>
+          </Link>
+        </DropdownMenu.Item>
 
-          {checkPermission(userProfile, 'nodered:admin') && (
-            <ContextMenu.Item as='a' href='/~/red/admin' onClick={handleClose}>
+        {checkPermission(userProfile, 'nodered:admin') && (
+          <DropdownMenu.Item asChild>
+            <a
+              href='/~/red/admin'
+              className='w-full flex items-center gap-2 px-3 py-2 rounded-sm text-left cursor-pointer transition-colors text-gray-12 hover:bg-gray-3 hover:text-gray-12 focus:outline-none focus:bg-gray-3 no-underline'
+            >
               <LightningBoltIcon width={16} height={16} />
               Node-RED
-            </ContextMenu.Item>
-          )}
+            </a>
+          </DropdownMenu.Item>
+        )}
 
-          <ContextMenu.Item as={Link} to='/' onClick={handleClose}>
+        <DropdownMenu.Item asChild>
+          <Link
+            to='/'
+            className='w-full flex items-center gap-2 px-3 py-2 rounded-sm text-left cursor-pointer transition-colors text-gray-12 hover:bg-gray-3 hover:text-gray-12 focus:outline-none focus:bg-gray-3 no-underline'
+          >
             <ArrowUpIcon width={16} height={16} />
             {t('navigation.backToSite', 'Back to Site')}
-          </ContextMenu.Item>
+          </Link>
+        </DropdownMenu.Item>
 
-          <ContextMenu.Divider />
+        <DropdownMenu.Separator className='h-[1px] bg-gray-a6 my-1 mx-1' />
 
-          <ContextMenu.Item onClick={handleLogout} variant='danger'>
-            <ExitIcon width={16} height={16} />
-            {t('navigation.logout', 'Logout')}
-          </ContextMenu.Item>
-        </ContextMenu.Menu>
-      </ContextMenu>
-    </Box>
+        <DropdownMenu.Item
+          onClick={handleLogout}
+          className='w-full flex items-center gap-2 px-3 py-2 rounded-sm text-left cursor-pointer transition-colors text-red-11 hover:bg-red-3 hover:text-red-11 focus:outline-none focus:bg-red-3'
+        >
+          <ExitIcon width={16} height={16} />
+          {t('navigation.logout', 'Logout')}
+        </DropdownMenu.Item>
+      </DropdownMenu.Content>
+    </DropdownMenu.Root>
   );
 }
 

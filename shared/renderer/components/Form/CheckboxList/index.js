@@ -496,7 +496,7 @@ const FormCheckboxList = forwardRef(function FormCheckboxList$(
           justify='center'
           className={clsx(
             s.listContainer,
-            error && s.listContainerError,
+            { [s.listContainerError]: error },
             groupBy ? s.listContainerNoPadding : s.listContainerPadding,
           )}
           style={dynamicSizing}
@@ -511,7 +511,7 @@ const FormCheckboxList = forwardRef(function FormCheckboxList$(
           id={id}
           className={clsx(
             s.listContainer,
-            error && s.listContainerError,
+            { [s.listContainerError]: error },
             groupBy ? s.listContainerNoPadding : s.listContainerPadding,
           )}
           // eslint-disable-next-line react/forbid-dom-props

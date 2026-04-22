@@ -31,16 +31,13 @@ export default function DocsLayout({
       const level = depth || 0;
       return (
         <ul className={level === 0 ? s.rootList : s.nestedList}>
-          {nodes.map(node => {
-            if (node.type === 'directory') {
-              return (
-                <li key={node.path} className={s.dirNode}>
-                  <div className={s.dirLabel}>{node.name}</div>
-                  {renderTree(node.children, level + 1)}
-                </li>
-              );
-            }
-            return (
+          {nodes.map(node =>
+            node.type === 'directory' ? (
+              <li key={node.path} className={s.dirNode}>
+                <div className={s.dirLabel}>{node.name}</div>
+                {renderTree(node.children, level + 1)}
+              </li>
+            ) : (
               <li key={node.path} className={s.fileNode}>
                 <a
                   href={`/docs/${node.path}`}
@@ -48,21 +45,20 @@ export default function DocsLayout({
                     e.preventDefault();
                     history.push(`/docs/${node.path}`);
                   }}
-                  className={clsx(
-                    s.link,
-                    history.location.pathname === `/docs/${node.path}` &&
-                      s.active,
-                  )}
+                  className={clsx(s.link, {
+                    [s.active]:
+                      history.location.pathname === `/docs/${node.path}`,
+                  })}
                 >
                   {node.name}
                 </a>
               </li>
-            );
-          })}
+            ),
+          )}
         </ul>
       );
     },
-    [history], // stable — renderTree only depends on CSS module `s` which is static
+    [history],
   );
 
   return (

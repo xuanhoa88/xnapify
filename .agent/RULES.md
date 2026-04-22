@@ -43,7 +43,7 @@ Whenever you provide assistance to a Developer on this codebase, you MUST adhere
 - **i18n Requirement**: All user-facing strings in JSX must be wrapped in `i18n.t()`. No hardcoded strings are allowed in any UI file.
 - **Data Hooking**: You must honor the SSR lifecycle. Use `getInitialProps` on routing files (`_route.js`) for initial rendering. Do not fetch essential initial data on `useEffect` mounts.
 - **Styling**: Primary styling must use **Tailwind CSS** utility classes and **Radix UI primitives** (`@radix-ui/themes`). DO NOT use inline styles (`style={{...}}`). Use CSS Modules (`.css` extension) ONLY for complex edge cases that Tailwind cannot solve.
-- **clsx Utility**: When combining conditional class names, NEVER pass an object to `clsx` (e.g., `clsx(base, { [activeClass]: condition })`). Instead, use short-circuit or ternary logic: `clsx(base, condition ? activeClass : inactiveClass)` to prevent object instantiation overhead during re-renders.
+- **clsx Utility**: When applying custom CSS modules or combining conditional class names, ALWAYS use `clsx` (never use template literals or raw concatenation). HOWEVER, do not use `clsx` for a single module class (e.g., `className={s.foo}`) or a simple shorthand ternary condition (e.g., `className={condition ? s.foo : s.bar}`). NEVER pass an object to `clsx` (e.g., `clsx(base, { [activeClass]: condition })`). Instead, use short-circuit or ternary logic: `clsx(base, condition ? activeClass : inactiveClass)` to prevent object instantiation overhead during re-renders.
 
 ---
 

@@ -107,9 +107,11 @@ const FormFileUpload = forwardRef(function FormFileUpload$(
         className,
         s.container,
         disabled ? s.containerDisabled : s.containerInteractive,
-        error && s.containerError,
-        isDragging && !error && s.containerDragActive,
-        selectedFile && !error && !isDragging && s.containerSelected,
+        {
+          [s.containerError]: error,
+          [s.containerDragActive]: isDragging && !error,
+          [s.containerSelected]: selectedFile && !error && !isDragging,
+        },
       )}
     >
       <Box

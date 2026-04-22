@@ -21,8 +21,6 @@ import Messages from './Messages';
 import Notifications from './Notifications';
 import ProfileDropdown from './ProfileDropdown';
 
-import s from './Header.css';
-
 /**
  * AdminHeader Component
  *
@@ -43,8 +41,17 @@ function AdminHeader() {
   }
 
   return (
-    <Box as='header' position='sticky' top='0' className={s.headerBox}>
-      <Flex align='center' justify='between' height='100%' px='4'>
+    <Box
+      as='header'
+      position='sticky'
+      top='0'
+      className='z-40 pt-4 px-4 pb-2 bg-gray-2/80 backdrop-blur-sm'
+    >
+      <Flex
+        align='center'
+        justify='between'
+        className='h-14 px-4 rounded-xl bg-panel-solid/90 shadow-sm border border-gray-a6 backdrop-blur-md'
+      >
         {/* Left Section - Toggle & Breadcrumbs */}
         <Flex align='center' gap='3'>
           <Button
@@ -62,19 +69,20 @@ function AdminHeader() {
         </Flex>
 
         {/* Right Section - Language | Notifications Group | User */}
-        <Flex align='center' gap='3'>
-          <LanguageSwitcher />
-
-          <Box className={s.divider} />
-
-          <Flex align='center' gap='2'>
+        <Flex align='center'>
+          <Flex
+            align='center'
+            gap='1'
+            className='bg-gray-3 p-1 rounded-full border border-gray-a6'
+          >
+            <LanguageSwitcher />
             <Messages />
             <Notifications />
           </Flex>
 
-          <Box className={s.divider} />
-
-          <ProfileDropdown />
+          <Box className='ml-3'>
+            <ProfileDropdown />
+          </Box>
         </Flex>
       </Flex>
     </Box>

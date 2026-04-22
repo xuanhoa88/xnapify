@@ -23,12 +23,12 @@ export function setup({ store, i18n }) {
       id: 'communications',
       label: i18n.t('admin:navigation.communications', 'Communications'),
       order: 40,
-      icon: 'mail',
+      icon: 'EnvelopeClosedIcon',
       items: [
         {
           path: '/admin/emails/templates',
           label: i18n.t('admin:emails.templates', 'Email Templates'),
-          icon: 'mail-open',
+          icon: 'EnvelopeOpenIcon',
           permission: 'emails:templates:read',
           order: 50,
         },

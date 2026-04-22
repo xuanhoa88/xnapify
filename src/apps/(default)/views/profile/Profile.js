@@ -34,25 +34,25 @@ function Profile() {
         <Box className='mt-6'>
           <Tabs.Root defaultValue='personal'>
             <Tabs.List>
-              <Tabs.Trigger value='personal'>
+              <Tabs.Trigger value='personal' className='cursor-pointer'>
                 <Box className='inline-flex mr-2'>
                   <PersonIcon width={18} height={18} />
                 </Box>
                 {t('profile.personalInfo', 'Personal Info')}
               </Tabs.Trigger>
-              <Tabs.Trigger value='preferences'>
+              <Tabs.Trigger value='preferences' className='cursor-pointer'>
                 <Box className='inline-flex mr-2'>
                   <GearIcon width={18} height={18} />
                 </Box>
                 {t('profile.preferences', 'Preferences')}
               </Tabs.Trigger>
-              <Tabs.Trigger value='security'>
+              <Tabs.Trigger value='security' className='cursor-pointer'>
                 <Box className='inline-flex mr-2'>
                   <LockClosedIcon width={18} height={18} />
                 </Box>
                 {t('profile.security', 'Security')}
               </Tabs.Trigger>
-              <Tabs.Trigger value='danger'>
+              <Tabs.Trigger value='danger' className='cursor-pointer'>
                 <Box className='inline-flex mr-2'>
                   <TrashIcon width={18} height={18} />
                 </Box>

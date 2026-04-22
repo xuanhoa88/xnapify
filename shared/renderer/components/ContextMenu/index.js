@@ -95,7 +95,11 @@ function ContextMenu({
     <ContextMenuContext.Provider
       value={{ isOpen, onToggle, align, x, y, triggerRef, menuRef }}
     >
-      <Box className={clsx(className, s.container, isOpen && s.containerOpen)}>
+      <Box
+        className={clsx(className, s.container, {
+          [s.containerOpen]: isOpen,
+        })}
+      >
         {children}
       </Box>
     </ContextMenuContext.Provider>
@@ -318,12 +322,11 @@ const Item = forwardRef(
         role='menuitem'
         className={clsx(
           s.item,
-          disabled ? s.itemDisabled : '',
-          variant === 'danger'
-            ? s.itemDanger
-            : variant === 'warning'
-              ? s.itemWarning
-              : s.itemDefault,
+          {
+            [s.itemDisabled]: disabled,
+            [s.itemDanger]: variant === 'danger',
+            [s.itemWarning]: variant === 'warning',
+          },
           className,
         )}
         onClick={handleClick}

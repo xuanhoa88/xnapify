@@ -129,9 +129,9 @@ const FormDateRange = forwardRef(function FormDateRange$(
         placeholder={startPlaceholder || format}
         className={clsx(
           s.dateRangeInput,
-          startError && s.dateRangeInputError,
-          startFocused && s.dateRangeInputFocus,
-          disabled && s.dateRangeInputDisabled,
+          { [s.dateRangeInputError]: startError },
+          { [s.dateRangeInputFocus]: startFocused },
+          { [s.dateRangeInputDisabled]: disabled },
         )}
         // eslint-disable-next-line jsx-a11y/no-autofocus
         autoFocus={autoFocus}
@@ -156,9 +156,9 @@ const FormDateRange = forwardRef(function FormDateRange$(
         placeholder={endPlaceholder || format}
         className={clsx(
           s.dateRangeInput,
-          endError && s.dateRangeInputError,
-          endFocused && s.dateRangeInputFocus,
-          disabled && s.dateRangeInputDisabled,
+          { [s.dateRangeInputError]: endError },
+          { [s.dateRangeInputFocus]: endFocused },
+          { [s.dateRangeInputDisabled]: disabled },
         )}
         {...props}
         onChange={composeEventHandlers(props.onChange, endField.onChange)}

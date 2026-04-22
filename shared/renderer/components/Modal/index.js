@@ -175,7 +175,9 @@ const Modal = ({
       onOpenChange={open => !open && onClose && onClose()}
     >
       <Dialog.Content
-        className={clsx(className, placement === 'right' && 'rightPlacement')}
+        className={clsx(className, {
+          [s.rightPlacement]: placement === 'right',
+        })}
       >
         {children}
       </Dialog.Content>
@@ -207,7 +209,7 @@ import ConfirmBack from './ConfirmBack';
 import ConfirmDelete from './ConfirmDelete';
 import ConfirmPrompt from './ConfirmPrompt';
 
-import './Index.css';
+import s from './Modal.css';
 
 Modal.ConfirmAction = ConfirmAction;
 Modal.ConfirmBack = ConfirmBack;

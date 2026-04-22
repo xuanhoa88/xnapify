@@ -93,7 +93,7 @@ function ProfileHeader() {
           onKeyDown={e => {
             if (e.key === 'Enter') handleAvatarClick();
           }}
-          className={clsx(s.avatarBox, loading && s.avatarBoxLoading)}
+          className={clsx(s.avatarBox, { [s.avatarBoxLoading]: loading })}
         >
           {avatarUrl ? (
             <img src={avatarUrl} alt='Profile' className={s.avatarImg} />
@@ -101,7 +101,9 @@ function ProfileHeader() {
             <Text>{avatarInitial}</Text>
           )}
           <Flex
-            className={clsx(s.avatarOverlay, loading && s.avatarOverlayLoading)}
+            className={clsx(s.avatarOverlay, {
+              [s.avatarOverlayLoading]: loading,
+            })}
             align='center'
             justify='center'
           >
@@ -112,8 +114,7 @@ function ProfileHeader() {
             )}
           </Flex>
         </Box>
-        <Box
-          as='input'
+        <input
           type='file'
           ref={fileInputRef}
           className={s.avatarInput}

@@ -260,7 +260,9 @@ function SearchableSelect({
 
   return (
     <Box
-      className={clsx(className, s.container, disabled && s.containerDisabled)}
+      className={clsx(className, s.container, {
+        [s.containerDisabled]: disabled,
+      })}
       ref={containerRef}
     >
       <Flex
@@ -273,11 +275,10 @@ function SearchableSelect({
         aria-haspopup='listbox'
         aria-expanded={isOpen}
         onKeyDown={handleKeyDown}
-        className={clsx(
-          s.trigger,
-          isOpen && s.triggerOpen,
-          disabled && s.triggerDisabled,
-        )}
+        className={clsx(s.trigger, {
+          [s.triggerOpen]: isOpen,
+          [s.triggerDisabled]: disabled,
+        })}
       >
         <Text
           size={size}
@@ -366,10 +367,9 @@ function SearchableSelect({
                           onKeyDown={e =>
                             e.key === 'Enter' && handleSelect(option.value)
                           }
-                          className={clsx(
-                            s.optionItem,
-                            optSelected && s.optionItemSelected,
-                          )}
+                          className={clsx(s.optionItem, {
+                            [s.optionItemSelected]: optSelected,
+                          })}
                         >
                           {multiple && (
                             <Box

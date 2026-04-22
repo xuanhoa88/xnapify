@@ -113,9 +113,9 @@ const FormDate = forwardRef(function FormDate$(
       className={clsx(
         className,
         s.dateInput,
-        error && s.dateInputError,
-        isFocused && s.dateInputFocus,
-        disabled && s.dateInputDisabled,
+        { [s.dateInputError]: error },
+        { [s.dateInputFocus]: isFocused },
+        { [s.dateInputDisabled]: disabled },
       )}
       // eslint-disable-next-line jsx-a11y/no-autofocus
       autoFocus={autoFocus}

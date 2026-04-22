@@ -149,10 +149,9 @@ function TablePagination({
                 size='1'
                 onClick={() => handlePageClick(page)}
                 disabled={loading}
-                className={clsx(
-                  s.paginationPageButton,
-                  currentPage === page && s.paginationPageButtonCurrent,
-                )}
+                className={clsx(s.paginationPageButton, {
+                  [s.paginationPageButtonCurrent]: currentPage === page,
+                })}
               >
                 {page}
               </Button>

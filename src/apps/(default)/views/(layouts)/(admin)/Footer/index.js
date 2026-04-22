@@ -12,8 +12,6 @@ import { Flex, Text, Button } from '@radix-ui/themes';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 
-import s from './AdminFooter.css';
-
 /**
  * AdminFooter Component
  *
@@ -71,7 +69,7 @@ function AdminFooter() {
         justify='center'
         p='4'
         px='6'
-        className={s.footerFlex}
+        className='border-t border-gray-a6 bg-transparent'
       >
         <footer>
           <Text size='3' color='gray'>
@@ -87,8 +85,10 @@ function AdminFooter() {
         onClick={scrollToTop}
         title={t('common.scrollToTop', 'Scroll to top')}
         className={clsx(
-          s.scrollBtn,
-          showScroll ? s.scrollBtnVisible : s.scrollBtnHidden,
+          'fixed bottom-6 right-6 w-10 h-10 rounded-xl shadow-md z-50 transition-all duration-300 flex items-center justify-center cursor-pointer',
+          showScroll
+            ? 'opacity-100 visible translate-y-0'
+            : 'opacity-0 invisible translate-y-2',
         )}
       >
         <ArrowUpIcon width={20} height={20} />

@@ -6,6 +6,7 @@
  */
 
 import { Flex, Box } from '@radix-ui/themes';
+import clsx from 'clsx';
 import PropTypes from 'prop-types';
 
 import ImpersonationBanner from '../components/ImpersonationBanner';
@@ -15,8 +16,6 @@ import FlashMessage from './FlashMessage';
 import Footer from './Footer';
 import Header from './Header';
 
-import s from './AdminLayout.css';
-
 /**
  * AdminLayout Component
  *
@@ -25,10 +24,14 @@ import s from './AdminLayout.css';
  */
 function AdminLayout({ children, minimal = true }) {
   return (
-    <Flex minHeight='100vh' className={s.layoutWrapper}>
+    <Flex minHeight='100vh' className='bg-gray-2'>
       <Drawer minimal={minimal} />
 
-      <Flex direction='column' grow='1' className={s.mainContent}>
+      <Flex
+        direction='column'
+        grow='1'
+        className='transition-[margin-left,width] duration-200 ease-in-out ml-[var(--sider-width)] w-[calc(100%-var(--sider-width))]'
+      >
         <ImpersonationBanner />
         <Header />
 

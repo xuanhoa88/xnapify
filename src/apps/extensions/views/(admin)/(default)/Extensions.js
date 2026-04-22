@@ -602,10 +602,9 @@ function Extensions() {
               type='button'
               variant={activeFilter === tab.key ? 'primary' : 'ghost'}
               onClick={() => setActiveFilter(tab.key)}
-              className={clsx(
-                s.tabButton,
-                activeFilter === tab.key && s.tabButtonActive,
-              )}
+              className={clsx(s.tabButton, {
+                [s.tabButtonActive]: activeFilter === tab.key,
+              })}
             >
               <Text as='span' mr='2'>
                 {t(tab.labelKey, tab.fallback)}

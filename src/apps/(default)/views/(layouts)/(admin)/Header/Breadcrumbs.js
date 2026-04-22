@@ -15,8 +15,6 @@ import { Link } from '@shared/renderer/components/History';
 import { features } from '@shared/renderer/redux';
 const { getBreadcrumbs } = features;
 
-import s from './Breadcrumbs.css';
-
 /**
  * Breadcrumbs Component
  *
@@ -32,12 +30,7 @@ function AdminBreadcrumbs() {
   const lastIndex = items.length - 1;
 
   return (
-    <Flex
-      as='nav'
-      align='center'
-      aria-label='Breadcrumb'
-      className={s.navContainer}
-    >
+    <Flex as='nav' align='center' aria-label='Breadcrumb' className='h-full'>
       {items.map((item, index) => {
         const isLast = index === lastIndex;
         const hasLink = item.url && !isLast;
@@ -50,25 +43,28 @@ function AdminBreadcrumbs() {
                 align='center'
                 justify='center'
                 px='2'
-                className={s.dividerIcon}
+                className='text-gray-8'
               >
                 <span>
                   <ChevronDownIcon
                     width={10}
                     height={10}
-                    className={s.dividerChevron}
+                    className='-rotate-90'
                   />
                 </span>
               </Flex>
             )}
             {hasLink ? (
               <Text size='3' asChild>
-                <Link to={item.url} className={s.breadcrumbLink}>
+                <Link
+                  to={item.url}
+                  className='text-gray-11 no-underline transition-colors duration-200 hover:text-gray-12'
+                >
                   {item.label}
                 </Link>
               </Text>
             ) : (
-              <Text size='3' weight='medium' className={s.breadcrumbText}>
+              <Text size='3' weight='medium' className='text-gray-12'>
                 {item.label}
               </Text>
             )}

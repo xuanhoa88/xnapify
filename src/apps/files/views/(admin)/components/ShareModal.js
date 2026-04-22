@@ -308,9 +308,9 @@ const ShareModal = forwardRef((props, ref) => {
                   justify='center'
                   className={clsx(
                     s.accessIconBox,
-                    shareType === 'private' && s.accessPrivate,
-                    shareType === 'shared_users' && s.accessShared,
-                    shareType === 'public' && s.accessPublic,
+                    { [s.accessPrivate]: shareType === 'private' },
+                    { [s.accessShared]: shareType === 'shared_users' },
+                    { [s.accessPublic]: shareType === 'public' },
                   )}
                 >
                   {shareType === 'private' ? (

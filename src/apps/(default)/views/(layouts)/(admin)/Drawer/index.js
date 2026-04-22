@@ -17,11 +17,10 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useHistory, Link } from '@shared/renderer/components/History';
 import { checkPermission } from '@shared/renderer/components/Rbac';
 import { features } from '@shared/renderer/redux';
-const { isAuthenticated, logout, getUserProfile, toggleDrawer, isDrawerOpen } =
-  features;
 import { useWebSocket } from '@shared/ws/client';
 
-import s from './Drawer.css';
+const { isAuthenticated, logout, getUserProfile, toggleDrawer, isDrawerOpen } =
+  features;
 
 export const SIDER_WIDTH = 240;
 export const SIDER_COLLAPSED_WIDTH = 80;
@@ -123,12 +122,12 @@ function Drawer({ minimal = false }) {
         id: 'main',
         ns: mainKey,
         order: 0,
-        icon: 'dashboard',
+        icon: 'DashboardIcon',
         items: [
           {
             path: '/admin',
             label: t('admin:navigation.dashboard', 'Dashboard'),
-            icon: 'dashboard',
+            icon: 'DashboardIcon',
             exact: true,
             order: 0,
           },
@@ -192,9 +191,12 @@ function Drawer({ minimal = false }) {
         align='center'
         gap='3'
         className={clsx(
-          s.menuItemFlex,
-          isCompact && s.menuItemCompact,
-          active && s.menuItemActive,
+          'w-full rounded-md transition-all duration-200 cursor-pointer no-underline py-2.5 px-4 justify-start text-gray-11 bg-transparent hover:bg-gray-3 hover:text-gray-12',
+          {
+            'p-3 justify-center': isCompact,
+            'text-indigo-11 bg-indigo-3 hover:bg-indigo-3 hover:text-indigo-11':
+              active,
+          },
         )}
       >
         {(() => {
@@ -214,7 +216,7 @@ function Drawer({ minimal = false }) {
 
     const linkProps = {
       onClick: isMobile ? handleCloseMobileDrawer : undefined,
-      className: s.menuItemLink,
+      className: 'no-underline block mb-1',
     };
 
     if (item.external) {
@@ -238,7 +240,10 @@ function Drawer({ minimal = false }) {
         as='aside'
         ref={siderRef}
         direction='column'
-        className={clsx(s.drawerAside, isMobile && s.drawerAsideFixed)}
+        className={clsx(
+          'bg-panel-solid border-r border-gray-a6 transition-[width,transform] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] top-0 left-0 bottom-0',
+          { fixed: isMobile },
+        )}
         // eslint-disable-next-line react/forbid-dom-props
         style={{
           width: isMobile ? '80vw' : `${siderWidth}px`,
@@ -258,23 +263,23 @@ function Drawer({ minimal = false }) {
           height='64px'
           px='4'
           shrink='0'
-          className={s.logoFlex}
+          className='border-b border-gray-a6'
         >
           <Box width='32px' height='32px' shrink='0'>
             <img
               alt={t('header.brand', 'xnapify')}
               src='/xnapify.png'
-              className={s.logoImg}
+              className='w-full h-full'
             />
           </Box>
           {!isCompact && (
-            <Text size='4' weight='bold' className={s.brandText}>
+            <Text size='4' weight='bold' className='text-gray-12'>
               {t('header.brand', 'xnapify')}
             </Text>
           )}
         </Flex>
 
-        <Box as='nav' grow='1' p='3' className={s.navBox}>
+        <Box as='nav' grow='1' p='3' className='overflow-y-auto'>
           {menuItems.map(group => {
             return (
               <Box key={group.id || group.ns} mb='4'>
@@ -284,13 +289,13 @@ function Drawer({ minimal = false }) {
                     size='1'
                     weight='bold'
                     color='gray'
-                    className={s.groupHeader}
+                    className='uppercase tracking-wide px-2 mb-2 block'
                   >
                     {group.ns}
                   </Text>
                 )}
                 {isCompact && group.icon && (
-                  <Flex justify='center' className={s.groupIconFlex}>
+                  <Flex justify='center' className='mb-2 text-gray-8'>
                     {(() => {
                       const Comp =
                         typeof group.icon === 'string'
@@ -302,7 +307,7 @@ function Drawer({ minimal = false }) {
                 )}
 
                 {/* Items */}
-                <Box as='ul' className={s.listBase}>
+                <Box as='ul' className='list-none p-0 m-0'>
                   {group.items.map(item => (
                     <Box as='li' key={item.path}>
                       {renderLink(item)}
@@ -313,7 +318,7 @@ function Drawer({ minimal = false }) {
             );
           })}
 
-          <Box width='100%' height='1px' my='4' className={s.navDivider} />
+          <Box width='100%' height='1px' my='4' className='bg-gray-a6' />
 
           {/* Quick Links */}
           <Box mb='4'>
@@ -322,24 +327,24 @@ function Drawer({ minimal = false }) {
                 size='1'
                 weight='bold'
                 color='gray'
-                className={s.groupHeader}
+                className='uppercase tracking-wide px-2 mb-2 block'
               >
                 {t('navigation.quick', 'Quick Links')}
               </Text>
             )}
-            <Box as='ul' className={s.listBase}>
+            <Box as='ul' className='list-none p-0 m-0'>
               <Box as='li'>
                 <Link
                   to='/'
                   onClick={isMobile ? handleCloseMobileDrawer : undefined}
-                  className={s.menuItemUnstyledLink}
+                  className='no-underline block'
                 >
                   <Flex
                     align='center'
                     gap='3'
                     className={clsx(
-                      s.quickLinkFlex,
-                      isCompact && s.quickLinkFlexCompact,
+                      'py-2.5 px-4 justify-start text-gray-11 rounded-md transition-all duration-200 bg-transparent hover:bg-gray-3 hover:text-gray-12',
+                      { 'p-3 justify-center': isCompact },
                     )}
                   >
                     <RadixIcons.ArrowUpIcon width={18} height={18} />
@@ -362,7 +367,7 @@ function Drawer({ minimal = false }) {
             justify={isCompact ? 'center' : 'space-between'}
             p='4'
             shrink='0'
-            className={s.userFooter}
+            className='border-t border-gray-a6'
           >
             <Flex align='center' gap='3'>
               <Flex
@@ -371,7 +376,7 @@ function Drawer({ minimal = false }) {
                 width='32px'
                 height='32px'
                 shrink='0'
-                className={s.avatarCircle}
+                className='rounded-full bg-indigo-3 text-indigo-11 font-bold'
               >
                 {userDisplayName.charAt(0).toUpperCase()}
               </Flex>
@@ -395,7 +400,7 @@ function Drawer({ minimal = false }) {
                 onClick={handleLogout}
                 title={t('navigation.logout', 'Logout')}
               >
-                <RadixIcons.LogoutIcon width={16} height={16} />
+                <RadixIcons.ExitIcon width={16} height={16} />
               </Button>
             )}
           </Flex>
@@ -420,13 +425,12 @@ function Drawer({ minimal = false }) {
                 ? t('common.collapse', 'Collapse')
                 : t('common.expand', 'Expand')
             }
-            className={s.collapseTrigger}
+            className='absolute top-1/2 -right-3 -translate-y-1/2 w-6 h-6 rounded-full bg-panel-solid border border-gray-a6 text-gray-9 cursor-pointer z-10 shadow-sm transition-all duration-200 hover:text-gray-12 hover:border-gray-8'
           >
             <Box
-              className={clsx(
-                s.collapseChevronBase,
-                isExpanded && s.collapseChevronExpanded,
-              )}
+              className={clsx('transition-transform duration-200 flex', {
+                'rotate-180': isExpanded,
+              })}
             >
               <RadixIcons.ChevronRightIcon width={14} height={14} />
             </Box>
@@ -437,7 +441,7 @@ function Drawer({ minimal = false }) {
       {/* Mobile overlay */}
       {isMobile && drawerOpen && (
         <Box
-          className={s.overlay}
+          className='fixed inset-0 bg-current opacity-50 z-[90]'
           onClick={handleCloseMobileDrawer}
           role='presentation'
         />

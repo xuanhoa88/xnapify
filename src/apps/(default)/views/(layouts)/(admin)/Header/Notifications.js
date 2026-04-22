@@ -5,14 +5,12 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 
 import * as RadixIcons from '@radix-ui/react-icons';
-import { Flex, Text, Box, Button } from '@radix-ui/themes';
+import { Flex, Text, Box, Button, Popover } from '@radix-ui/themes';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-
-import s from './Notifications.css';
 
 // Mock notification data
 const mockNotifications = [
@@ -48,146 +46,140 @@ const mockNotifications = [
  */
 function AdminNotifications() {
   const { t } = useTranslation();
-  const [isOpen, setIsOpen] = useState(false);
   const [notifications] = useState(mockNotifications);
-  const dropdownRef = useRef(null);
-
   const unreadCount = notifications.filter(n => !n.read).length;
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = event => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen]);
-
-  const handleToggle = useCallback(() => {
-    setIsOpen(prev => !prev);
-  }, []);
 
   const getTypeStyle = type => {
     switch (type) {
       case 'warning':
         return {
-          color: 'var(--amber-11)',
-          bg: 'var(--amber-3)',
+          colorClass: 'text-amber-11',
+          bgClass: 'bg-amber-3',
           icon: RadixIcons.ExclamationTriangleIcon,
         };
       case 'success':
         return {
-          color: 'var(--green-11)',
-          bg: 'var(--green-3)',
+          colorClass: 'text-green-11',
+          bgClass: 'bg-green-3',
           icon: RadixIcons.CheckCircledIcon,
         };
       case 'error':
         return {
-          color: 'var(--red-11)',
-          bg: 'var(--red-3)',
+          colorClass: 'text-red-11',
+          bgClass: 'bg-red-3',
           icon: RadixIcons.CrossCircledIcon,
         };
       default:
         return {
-          color: 'var(--blue-11)',
-          bg: 'var(--blue-3)',
+          colorClass: 'text-blue-11',
+          bgClass: 'bg-blue-3',
           icon: RadixIcons.InfoCircledIcon,
         };
     }
   };
 
   return (
-    <Box position='relative' ref={dropdownRef}>
-      <Button
-        variant='ghost'
-        onClick={handleToggle}
-        title={t('common.notifications', 'Notifications')}
-        className={clsx(s.notificationBtn, isOpen && s.notificationBtnOpen)}
+    <Popover.Root>
+      <Popover.Trigger>
+        <Button
+          variant='ghost'
+          title={t('common.notifications', 'Notifications')}
+          className='relative flex items-center justify-center w-9 h-9 rounded-full text-gray-11 cursor-pointer transition-colors bg-transparent hover:bg-gray-3 hover:text-gray-12 data-[state=open]:bg-gray-3 data-[state=open]:text-gray-12'
+        >
+          <RadixIcons.BellIcon width={18} height={18} />
+          {unreadCount > 0 && (
+            <Flex
+              align='center'
+              justify='center'
+              className='absolute top-1 right-1 bg-red-9 text-red-1 text-[10px] font-bold min-w-[16px] h-4 rounded-full px-1 border-2 border-panel-solid flex items-center justify-center'
+            >
+              {unreadCount}
+            </Flex>
+          )}
+        </Button>
+      </Popover.Trigger>
+
+      <Popover.Content
+        align='end'
+        className='p-0 bg-panel-solid/90 backdrop-blur-md border border-gray-a6 rounded-md shadow-lg overflow-hidden z-[100] w-[320px] data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95'
       >
-        <RadixIcons.BellIcon width={18} height={18} />
-        {unreadCount > 0 && (
-          <Flex align='center' justify='center' className={s.badge}>
-            {unreadCount}
-          </Flex>
-        )}
-      </Button>
+        <Flex
+          align='center'
+          justify='between'
+          className='px-4 py-3 border-b border-gray-a6 bg-gray-2'
+        >
+          <Text size='3' weight='bold'>
+            {t('common.notifications', 'Notifications')}
+          </Text>
+          <Text size='1' color='gray'>
+            {t('common.newNotificationsCount', '{{count}} new', {
+              count: unreadCount,
+            })}
+          </Text>
+        </Flex>
 
-      {isOpen && (
-        <Box className={clsx(s.dropdownBox, s.notificationDropdown)}>
-          <Flex align='center' justify='between' className={s.dropdownHeader}>
-            <Text size='3' weight='bold'>
-              {t('common.notifications', 'Notifications')}
-            </Text>
-            <Text size='1' color='gray'>
-              {t('common.newNotificationsCount', '{{count}} new', {
-                count: unreadCount,
-              })}
-            </Text>
-          </Flex>
+        <Box className='max-h-[360px] overflow-y-auto'>
+          {notifications.map(notification => {
+            const typeStyle = getTypeStyle(notification.type);
 
-          <Box className={s.notificationList}>
-            {notifications.map(notification => {
-              const typeStyle = getTypeStyle(notification.type);
-
-              return (
+            return (
+              <Flex
+                key={notification.id}
+                gap='3'
+                className={clsx(
+                  'px-4 py-3 border-b border-gray-a6 bg-transparent cursor-pointer transition-colors hover:bg-gray-3',
+                  { 'bg-indigo-2 hover:bg-indigo-3': !notification.read },
+                )}
+              >
                 <Flex
-                  key={notification.id}
-                  gap='3'
+                  align='center'
+                  justify='center'
                   className={clsx(
-                    s.notificationItem,
-                    !notification.read && s.notificationItemUnread,
+                    'w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center',
+                    typeStyle.bgClass,
+                    typeStyle.colorClass,
                   )}
                 >
-                  <Flex
-                    align='center'
-                    justify='center'
-                    className={s.notificationIcon}
-                    // eslint-disable-next-line react/forbid-dom-props
-                    style={{
-                      backgroundColor: typeStyle.bg,
-                      color: typeStyle.color,
-                    }}
-                  >
-                    {(() => {
-                      const NotificationIcon = typeStyle.icon;
-                      return <NotificationIcon width={16} height={16} />;
-                    })()}
-                  </Flex>
-                  <Flex direction='column' width='100%' overflow='hidden'>
-                    <Flex justify='between' align='start'>
-                      <Text
-                        size='3'
-                        weight={notification.read ? 'regular' : 'bold'}
-                        highContrast
-                      >
-                        {notification.title}
-                      </Text>
-                    </Flex>
-                    <Text size='3' color='gray' mt='1'>
-                      {notification.message}
-                    </Text>
-                    <Text size='1' color='gray' mt='1'>
-                      {notification.time}
-                    </Text>
-                  </Flex>
+                  {(() => {
+                    const NotificationIcon = typeStyle.icon;
+                    return <NotificationIcon width={16} height={16} />;
+                  })()}
                 </Flex>
-              );
-            })}
-          </Box>
-
-          <Flex justify='center' className={s.dropdownFooter}>
-            <Button variant='ghost' className={s.viewAllBtn}>
-              {t('common.viewAll', 'View all notifications')}
-            </Button>
-          </Flex>
+                <Flex direction='column' width='100%' overflow='hidden'>
+                  <Flex justify='between' align='start'>
+                    <Text
+                      size='3'
+                      weight={notification.read ? 'regular' : 'bold'}
+                      highContrast
+                    >
+                      {notification.title}
+                    </Text>
+                  </Flex>
+                  <Text size='3' color='gray' mt='1'>
+                    {notification.message}
+                  </Text>
+                  <Text size='1' color='gray' mt='1'>
+                    {notification.time}
+                  </Text>
+                </Flex>
+              </Flex>
+            );
+          })}
         </Box>
-      )}
-    </Box>
+
+        <Flex
+          justify='center'
+          className='p-2 bg-gray-2 border-t border-gray-a6'
+        >
+          <Button
+            variant='ghost'
+            className='text-indigo-11 text-sm font-medium cursor-pointer no-underline hover:underline'
+          >
+            {t('common.viewAll', 'View all notifications')}
+          </Button>
+        </Flex>
+      </Popover.Content>
+    </Popover.Root>
   );
 }
 

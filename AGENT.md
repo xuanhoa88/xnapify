@@ -514,15 +514,18 @@ export const fetchPosts = createAsyncThunk(
 
 We use **Tailwind CSS** for utility-first styling and **Radix UI** (`@radix-ui/themes`) for accessible design primitives. CSS Modules are reserved for specific edge cases or legacy components.
 
+When using custom CSS modules, ALWAYS use the `clsx` utility to apply multiple combined classes. Do not use template literals or raw concatenation. However, do not use `clsx` for a single custom module class (e.g., `className={s.foo}`) or a simple shorthand ternary condition (e.g., `className={cond ? s.a : s.b}`).
+
 ```javascript
 import React from 'react';
 import { Box, Button, Text } from '@radix-ui/themes';
+import clsx from 'clsx';
 // Avoid CSS modules when Tailwind classes suffice
 // import s from './MyComponent.module.css';
 
 function MyComponent() {
   return (
-    <Box className="p-4 bg-gray-50 rounded-md">
+    <Box className={clsx("p-4 bg-gray-50 rounded-md", s.customClass)}>
       <Text size="3" className="mb-2 block">Content</Text>
       <Button variant="solid" color="blue">Action</Button>
     </Box>
