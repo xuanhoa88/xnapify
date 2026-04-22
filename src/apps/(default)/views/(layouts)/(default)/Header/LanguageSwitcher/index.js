@@ -78,7 +78,7 @@ function LanguageSwitcher() {
 
   // After mount: full interactive DropdownMenu
   return (
-    <DropdownMenu.Root>
+    <DropdownMenu.Root modal={false}>
       <DropdownMenu.Trigger asChild>{triggerButton}</DropdownMenu.Trigger>
 
       <DropdownMenu.Content align='end' variant='soft' size='3'>

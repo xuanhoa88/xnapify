@@ -114,7 +114,7 @@ function ProfileDropdown() {
   // After mount: full interactive DropdownMenu
   return (
     <Box position='relative'>
-      <DropdownMenu.Root>
+      <DropdownMenu.Root modal={false}>
         <DropdownMenu.Trigger asChild>{triggerButton}</DropdownMenu.Trigger>
 
         <DropdownMenu.Content
