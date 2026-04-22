@@ -5,11 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import PropTypes from 'prop-types';
-
 import { isAuthenticated } from '@shared/renderer/redux';
 
-import ResetPasswordConfirmation from '../../ResetPasswordConfirmation';
+import ResetPasswordConfirmation from './ResetPasswordConfirmation';
 
 /**
  * Page metadata
@@ -43,15 +41,4 @@ export const layout = 'unauth';
 /**
  * Default export - Page component
  */
-export default function ResetPasswordConfirmationPage({ context: { params } }) {
-  const { token } = params;
-  return <ResetPasswordConfirmation token={token} />;
-}
-
-ResetPasswordConfirmationPage.propTypes = {
-  context: PropTypes.shape({
-    params: PropTypes.shape({
-      token: PropTypes.string.isRequired,
-    }).isRequired,
-  }).isRequired,
-};
+export default ResetPasswordConfirmation;

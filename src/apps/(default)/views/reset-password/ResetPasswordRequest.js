@@ -7,6 +7,7 @@
 
 import { useCallback, useState, useEffect } from 'react';
 
+import { CrossCircledIcon } from '@radix-ui/react-icons';
 import { Flex, Text, Heading, Button } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation, Trans } from 'react-i18next';
@@ -54,11 +55,17 @@ function ResetPasswordRequest() {
 
   return (
     <>
-      <Flex direction='column' align='center' mb='6'>
-        <Heading as='h2' size='6' mb='2' weight='bold'>
+      <Flex direction='column' align='center' mb='7'>
+        <Heading
+          as='h2'
+          size='7'
+          mb='2'
+          weight='bold'
+          className='text-slate-900 tracking-tight'
+        >
           {t('resetPassword.title', 'Reset Password')}
         </Heading>
-        <Text size='3' color='gray'>
+        <Text size='3' className='text-slate-500 font-medium'>
           {t(
             'resetPassword.subtitle',
             "Enter your email and we'll send you a reset link",
@@ -66,39 +73,55 @@ function ResetPasswordRequest() {
         </Text>
       </Flex>
 
-      <Form.Error message={error} />
-
       {success ? (
         <Flex
           direction='column'
           align='center'
           p='5'
-          className='bg-green-50 rounded-lg border border-green-200'
+          className='bg-emerald-50/50 rounded-xl border border-emerald-100'
         >
-          <Text size='8' mb='3' className='text-green-600'>
+          <Text size='8' mb='3' className='text-emerald-500'>
             ✓
           </Text>
-          <Text size='3' className='text-green-700'>
+          <Text size='3' className='text-emerald-700 font-semibold'>
             <Trans t={t} i18nKey='resetPassword.success' />
           </Text>
         </Flex>
       ) : (
-        <Form
-          schema={passwordResetRequestFormSchema}
-          defaultValues={{ email: '' }}
-          onSubmit={handleSubmit}
-        >
-          <RequestFormFields loading={loading} />
-        </Form>
+        <>
+          {error && (
+            <Flex
+              direction='column'
+              align='center'
+              p='5'
+              mb='5'
+              className='bg-red-50/50 rounded-xl border border-red-100'
+            >
+              <CrossCircledIcon className='w-8 h-8 text-red-500 mb-3' />
+              <Text size='3' className='text-red-700 font-medium text-center'>
+                {(error && error.message) ||
+                  (typeof error === 'string' ? error : null) ||
+                  t('resetPassword.error', 'Failed to request password reset')}
+              </Text>
+            </Flex>
+          )}
+          <Form
+            schema={passwordResetRequestFormSchema}
+            defaultValues={{ email: '' }}
+            onSubmit={handleSubmit}
+          >
+            <RequestFormFields loading={loading} />
+          </Form>
+        </>
       )}
 
       <Flex
         justify='center'
-        mt='5'
-        pt='5'
-        className='border-t border-[var(--gray-a6)]'
+        mt='6'
+        pt='6'
+        className='border-t border-slate-200/80'
       >
-        <Text size='2' color='gray'>
+        <Text size='2' className='text-slate-500'>
           <Trans
             t={t}
             i18nKey='resetPassword.backToLogin'
@@ -107,7 +130,7 @@ function ResetPasswordRequest() {
               <Link
                 key='link'
                 to='/login'
-                className='text-[var(--accent-11)] hover:text-[var(--accent-12)] font-medium no-underline'
+                className='text-indigo-600 hover:text-indigo-700 font-medium no-underline transition-colors duration-200'
               />,
             ]}
           />
@@ -146,8 +169,8 @@ function RequestFormFields({ loading }) {
         color='indigo'
         size='3'
         type='submit'
-        mt='2'
-        className='w-full cursor-pointer'
+        mt='3'
+        className='w-full cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md'
         loading={loading || isSubmitting}
       >
         {loading

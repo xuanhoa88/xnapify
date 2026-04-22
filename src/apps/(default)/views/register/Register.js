@@ -72,11 +72,17 @@ function Register() {
 
   return (
     <>
-      <Flex direction='column' align='center' mb='6'>
-        <Heading as='h2' size='6' mb='2' weight='bold'>
+      <Flex direction='column' align='center' mb='7'>
+        <Heading
+          as='h2'
+          size='7'
+          mb='2'
+          weight='bold'
+          className='text-slate-900 tracking-tight'
+        >
           {t('register.welcome', 'Create Account')}
         </Heading>
-        <Text size='3' color='gray'>
+        <Text size='3' className='text-slate-500 font-medium'>
           {t('register.heroSubtitle', 'Join us and start your journey')}
         </Text>
       </Flex>
@@ -97,11 +103,11 @@ function Register() {
 
       <Flex
         justify='center'
-        mt='5'
-        pt='5'
-        className='border-t border-[var(--gray-a6)]'
+        mt='6'
+        pt='6'
+        className='border-t border-slate-200/80'
       >
-        <Text size='2' color='gray'>
+        <Text size='2' className='text-slate-500'>
           <Trans
             t={t}
             i18nKey='register.alreadyHaveAccount'
@@ -110,7 +116,7 @@ function Register() {
               <Link
                 key='login'
                 to='/login'
-                className='text-[var(--accent-11)] hover:text-[var(--accent-12)] font-medium no-underline'
+                className='text-indigo-600 hover:text-indigo-700 font-medium no-underline transition-colors duration-200'
               />,
             ]}
           />
@@ -154,8 +160,8 @@ function RegisterFormFields({ loading }) {
         color='indigo'
         size='3'
         type='submit'
-        mt='2'
-        className='w-full cursor-pointer'
+        mt='3'
+        className='w-full cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md'
         loading={loading || isSubmitting}
       >
         {loading
