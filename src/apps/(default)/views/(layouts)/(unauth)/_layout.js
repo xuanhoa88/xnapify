@@ -29,7 +29,7 @@ function HeroSection() {
     <div
       className={clsx(
         s.hero,
-        'hidden lg:flex flex-1 items-center justify-center p-12 relative',
+        'hidden md:flex items-center justify-center p-12 relative w-full h-full',
       )}
     >
       <div className='text-center relative z-10'>
@@ -85,17 +85,22 @@ function UnauthLayout({ children }) {
   }, [flashMessage, dispatch]);
 
   return (
-    <div className='fixed inset-0 z-[9999] flex overflow-hidden bg-[var(--color-background)]'>
-      <HeroSection />
+    <div className='min-h-screen w-full bg-[var(--color-surface)]'>
+      <div className={s.gridContainer}>
+        <HeroSection />
 
-      <Flex
-        align='center'
-        justify='center'
-        flexGrow='1'
-        className='p-8 overflow-y-auto'
-      >
-        <div className='w-full max-w-[420px]'>{children}</div>
-      </Flex>
+        <Flex
+          align='center'
+          justify='center'
+          className='p-6 md:p-8 lg:p-12 overflow-y-auto w-full h-full'
+        >
+          <div className='w-full max-w-[440px] bg-[var(--color-panel-solid)] rounded-[24px] shadow-[0_8px_40px_-12px_rgba(0,0,0,0.1)] border border-[var(--gray-a4)] p-8 md:p-10 relative overflow-hidden'>
+            {/* Subtle gradient glow inside the card */}
+            <div className='absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#667eea] to-[#764ba2]' />
+            {children}
+          </div>
+        </Flex>
+      </div>
 
       <Toast ref={toastRef} />
     </div>

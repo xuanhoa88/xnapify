@@ -420,89 +420,106 @@ function attachWebpackMiddlewares(expressApp) {
 }
 
 /**
- * Check for HMR updates and optionally apply them.
- *
- * @returns {Promise<boolean>} True if updates detected, false otherwise.
+ * Tracks the compilation hash of the server bundle that is currently loaded
+ * in memory. Used to skip redundant reloads when the compiler fires but
+ * produces identical output.
  */
-async function checkForUpdate() {
-  try {
-    // Return early if Express app is not initialized (e.g. during initial compilation)
-    if (!app) {
-      if (verbose) logInfo('App not initialized, skipping update check');
-      return false;
-    }
+let loadedServerHash = null;
 
-    // Skip if HMR runtime is not available or not in 'idle' state
-    if (!hmr || typeof hmr.status !== 'function' || hmr.status() !== 'idle') {
-      if (verbose) logInfo('HMR not ready, skipping update check');
-      return false;
-    }
-
-    // Small delay to ensure all modules are loaded before checking
-    await new Promise(resolve => setTimeout(resolve, 50));
-
-    // Check for updates AND apply them so webpack rewrites chunk files on disk.
-    // Previously hmr.check(false) only downloaded updates without applying,
-    // leaving stale code in chunk files. loadServerBundle() then re-required
-    // those stale chunks, causing SSR hydration mismatches.
-    const updatedModules = await hmr.check(true);
-
-    // No updates found
-    if (!updatedModules || updatedModules.length === 0) {
-      if (verbose) logInfo('No HMR updates available (ignoring for debug).');
-      // return false;
-    }
-
-    logInfo(
-      `🔥 HMR: Detected ${updatedModules ? updatedModules.length : 0} updated module(s).`,
-    );
-
-    // Clean up previous bundle resources (Node-RED, etc.)
-    if (typeof dispose === 'function') {
-      try {
-        await dispose();
-      } catch (err) {
-        logError('❌ Error disposing previous bundle:', err);
-      }
-    }
-
-    // Notify browser sync BEFORE reloading the bundle
-    // so clients see "restarting" before the "ready/reload" message
-    await notifyBrowserSyncRestart();
-
-    // Load new server bundle
-    let createServer, bootstrapApp;
-    ({ createServer, bootstrapApp, disposeApp: dispose } = loadServerBundle());
-
-    // Recreate dev server with new bundle
-    await prepareDevServer({ createServer, bootstrapApp }, server);
-
-    return true;
-  } catch (err) {
-    // Capture HMR status for context; fallback if hmr is unavailable
-    const hmrStatus =
-      hmr && typeof hmr.status === 'function' ? hmr.status() : 'no-hmr';
-
-    // Log detailed error information
-    logError(`❌ HMR update failed (status: ${hmrStatus}).`);
-    logError(err && err.stack ? err.stack : err.message || err);
-
-    // Provide guidance based on HMR state
-    switch (hmrStatus) {
-      case 'abort':
-      case 'fail':
-        logInfo('⚠️ HMR in a bad state, consider restarting the server.');
-        break;
-      case 'dispose':
-      case 'prepare':
-        logInfo('⏳ HMR is processing, will retry on next check.');
-        break;
-      default:
-        logError('⚠️ Unexpected HMR state, monitoring for next update.');
-    }
-
+/**
+ * Reload the server bundle after a successful recompilation.
+ *
+ * Three-tier strategy, from fastest to most reliable:
+ *
+ * 1. **Skip** — compilation hash unchanged → nothing to do.
+ * 2. **HMR fast-path** — `hmr.check(true)` applies the update in-place
+ *    and `invalidateServerCaches()` clears SSR caches. No Express restart.
+ *    Works for typical edits (changing a component, fixing a string, etc.).
+ * 3. **Full reload** — clears require.cache, re-requires the bundle from
+ *    disk, and re-bootstraps Express. Required when HMR can't apply the
+ *    update (e.g. new files added to a `require.context`, deleted modules,
+ *    or structural changes that break the module graph).
+ *
+ * @param {string} [currentHash] Compilation hash from `stats.hash`.
+ * @returns {Promise<boolean>} True if the server was reloaded.
+ */
+async function checkForUpdate(currentHash) {
+  // -----------------------------------------------------------------------
+  // Guard: app must be initialized (initial compilation is handled by main)
+  // -----------------------------------------------------------------------
+  if (!app) {
+    if (verbose) logInfo('App not initialized, skipping update check');
     return false;
   }
+
+  // -----------------------------------------------------------------------
+  // Tier 1: Skip if hash unchanged
+  // -----------------------------------------------------------------------
+  if (currentHash && currentHash === loadedServerHash) {
+    if (verbose) logInfo('Server bundle hash unchanged, skipping reload');
+    return false;
+  }
+
+  // -----------------------------------------------------------------------
+  // Tier 2: Try HMR fast-path (in-memory update, no Express restart)
+  // -----------------------------------------------------------------------
+  if (hmr && typeof hmr.status === 'function' && hmr.status() === 'idle') {
+    try {
+      const updatedModules = await hmr.check(/* autoApply */ true);
+
+      if (updatedModules && updatedModules.length > 0) {
+        // HMR applied successfully — module.hot.accept() in server.js
+        // already called invalidateCaches(). Just update the hash.
+        loadedServerHash = currentHash;
+        logInfo(`🔥 HMR: Applied ${updatedModules.length} module(s) in-place`);
+        return true;
+      }
+
+      // hmr.check returned empty — the compiler ran but produced
+      // identical HMR output. This is effectively a no-op.
+      if (verbose) logInfo('HMR found no updated modules');
+      loadedServerHash = currentHash;
+      return false;
+    } catch {
+      // HMR apply failed — expected for structural changes (new context
+      // entries, deleted modules, etc.). Fall through to full reload.
+      // After a failed apply HMR status may be 'abort' or 'fail';
+      // loadServerBundle() below captures a fresh `module.hot` from
+      // the re-required bundle, restoring the runtime to 'idle'.
+      logInfo('⚠️ HMR apply failed, falling back to full reload');
+    }
+  }
+
+  // -----------------------------------------------------------------------
+  // Tier 3: Full bundle reload from disk
+  // -----------------------------------------------------------------------
+  logInfo('🔄 Full server bundle reload...');
+
+  // Clean up previous bundle resources (Node-RED, etc.)
+  if (typeof dispose === 'function') {
+    try {
+      await dispose();
+    } catch (err) {
+      logError('❌ Error disposing previous bundle:', err);
+    }
+  }
+
+  // Notify browser sync BEFORE reloading the bundle
+  // so clients see "restarting" before the "ready/reload" message
+  await notifyBrowserSyncRestart();
+
+  // Re-require the server bundle from disk.
+  // loadServerBundle() clears require.cache for the build dir, captures
+  // a fresh `hmr` (module.hot) from the new bundle, and returns
+  // the new { createServer, bootstrapApp } surface.
+  let createServer, bootstrapApp;
+  ({ createServer, bootstrapApp, disposeApp: dispose } = loadServerBundle());
+
+  // Recreate the Express app with the new bundle
+  await prepareDevServer({ createServer, bootstrapApp }, server);
+
+  loadedServerHash = currentHash;
+  return true;
 }
 
 /**
@@ -561,12 +578,11 @@ function setupServerBundleWatcher(serverCompiler) {
       if (verbose) {
         const time = stats.endTime - stats.startTime;
         logInfo('✅ Server bundle compiled in ' + time + 'ms');
-        logInfo('🔄 Checking for HMR updates...');
       }
 
-      // Apply server HMR first, THEN flush client updates so both
-      // sides have the new code before React Fast Refresh fires.
-      await checkForUpdate();
+      // Reload the server with the new bundle, THEN flush client HMR
+      // so both sides have the new code before React Fast Refresh fires.
+      await checkForUpdate(stats.hash);
       flushPendingHmrPublishes();
     },
   );
@@ -687,15 +703,17 @@ async function main() {
       createWebpackMiddlewares(clientCompiler));
 
     // Wait for both server and client bundle compilations to finish (they run in parallel)
-    await Promise.all([
+    const [, serverStats] = await Promise.all([
       buildExtensions({ watch: true }),
       serverPromise,
       clientPromise,
     ]);
 
-    // Load server bundle
+    // Load server bundle and record its hash so checkForUpdate()
+    // can skip redundant reloads when the watcher fires.
     let createServer, bootstrapApp;
     ({ createServer, bootstrapApp, disposeApp: dispose } = loadServerBundle());
+    loadedServerHash = serverStats.hash;
 
     // Start server
     const startServer = await prepareDevServer(

@@ -6,6 +6,12 @@
  */
 
 /* Hero gradient pseudo-element — not achievable with Tailwind alone */
+.gridContainer {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  min-height: 100vh;
+}
+
 .hero {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
