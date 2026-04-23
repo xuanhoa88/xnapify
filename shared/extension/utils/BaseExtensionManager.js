@@ -22,6 +22,7 @@ export const BUFFERED_ROUTES = Symbol('__xnapify.ext.pendingRoutes__');
 export const STORED_ADAPTERS = Symbol('__xnapify.ext.routeAdapters__');
 export const CONNECTED_ROUTERS = Symbol('__xnapify.ext.connectedRouters__');
 export const SEQUENTIAL_SYNC = Symbol('__xnapify.ext.sequentialSync__');
+export const PENDING_LOADS = Symbol('__xnapify.ext.pendingLoads__');
 
 // Symbols — private (internal to base manager)
 const FETCH = Symbol('__xnapify.ext.fetch__');
@@ -79,6 +80,7 @@ export class BaseExtensionManager {
     this[CONTEXTS] = { view: null, api: null };
     this[SYNC_PROMISE] = null;
     this[IS_REFRESHING] = false;
+    this[PENDING_LOADS] = new Map();
   }
 
   // ---------------------------------------------------------------------------
@@ -439,11 +441,36 @@ export class BaseExtensionManager {
       return this[ACTIVE_EXTENSIONS].get(id);
     }
 
+    // Deduplicate identical concurrent load requests
+    if (this[PENDING_LOADS].has(id)) {
+      if (__DEV__) {
+        console.log(
+          `[ExtensionManager] Deduplicating load request for: "${id}"`,
+        );
+      }
+      return this[PENDING_LOADS].get(id);
+    }
+
+    const loadPromise = this.executeLoadExtension(id, manifest, _loadingChain);
+    this[PENDING_LOADS].set(id, loadPromise);
+
+    try {
+      return await loadPromise;
+    } finally {
+      this[PENDING_LOADS].delete(id);
+    }
+  }
+
+  /**
+   * Internal execution logic for loading a single extension by ID.
+   * @private
+   */
+  async executeLoadExtension(id, manifest = null, _loadingChain) {
     // Initialize metadata
     const metadata = {
       id,
       state: ExtensionState.LOADING,
-      version: (manifest && manifest.version) || '0.0.0',
+      version: (manifest && manifest.version) || '1.0.0',
       error: null,
       loadedAt: null,
       autoload: (manifest && manifest.autoload) || {},

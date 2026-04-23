@@ -18,6 +18,7 @@ import {
   Badge,
 } from '@radix-ui/themes';
 import clsx from 'clsx';
+import debounce from 'lodash/debounce';
 import toLower from 'lodash/toLower';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
@@ -195,22 +196,32 @@ function Extensions() {
     });
   }, [extensions]);
 
+  const debouncedFetch = useMemo(
+    () =>
+      debounce(
+        signal => {
+          if (!signal.aborted) {
+            dispatch(fetchExtensions({ signal }));
+          }
+        },
+        500,
+        { maxWait: 1000 },
+      ),
+    [dispatch],
+  );
+
+  useEffect(() => {
+    return () => {
+      debouncedFetch.cancel();
+    };
+  }, [debouncedFetch]);
+
   // Listen for background job completion via WebSocket to refresh extension list
   const ws = useWebSocket();
   useEffect(() => {
     if (!ws) return;
     const controller = new AbortController();
     const { signal } = controller;
-    let debounceTimer = null;
-
-    const debouncedFetch = () => {
-      if (debounceTimer) clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(() => {
-        if (!signal.aborted) {
-          dispatch(fetchExtensions({ signal }));
-        }
-      }, 500);
-    };
 
     const handler = async data => {
       if (!data || signal.aborted) return;
@@ -233,7 +244,7 @@ function Extensions() {
           // EXTENSION_UPDATED toast is handled inline in handleUpgrade —
           // no need to show it again from WS. The debouncedFetch below
           // still keeps other tabs/clients in sync.
-          debouncedFetch();
+          debouncedFetch(signal);
           break;
         }
         case 'EXTENSION_UNINSTALLED': {
@@ -248,7 +259,7 @@ function Extensions() {
               ),
             }),
           );
-          debouncedFetch();
+          debouncedFetch(signal);
           break;
         }
         case 'EXTENSION_ACTIVATED': {
@@ -263,7 +274,7 @@ function Extensions() {
               ),
             }),
           );
-          debouncedFetch();
+          debouncedFetch(signal);
           break;
         }
         case 'EXTENSION_DEACTIVATED': {
@@ -278,7 +289,11 @@ function Extensions() {
               ),
             }),
           );
-          debouncedFetch();
+          debouncedFetch(signal);
+          break;
+        }
+        case 'EXTENSIONS_REFRESHED': {
+          debouncedFetch(signal);
           break;
         }
         case 'EXTENSION_INSTALL_FAILED':
@@ -296,7 +311,7 @@ function Extensions() {
               ),
             }),
           );
-          debouncedFetch();
+          debouncedFetch(signal);
           break;
         }
         case 'EXTENSION_TAMPERED': {
@@ -308,7 +323,7 @@ function Extensions() {
               ),
             }),
           );
-          debouncedFetch();
+          debouncedFetch(signal);
           break;
         }
         default:
@@ -317,11 +332,10 @@ function Extensions() {
     };
     ws.on('extension:updated', handler);
     return () => {
-      if (debounceTimer) clearTimeout(debounceTimer);
       controller.abort();
       ws.off('extension:updated', handler);
     };
-  }, [ws, dispatch, t, clearAction]);
+  }, [ws, dispatch, t, clearAction, debouncedFetch]);
 
   const handleSearchChange = useCallback(value => {
     setSearch(value);

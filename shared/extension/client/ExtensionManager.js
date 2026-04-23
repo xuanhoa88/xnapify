@@ -360,7 +360,42 @@ class ClientExtensionManager extends BaseExtensionManager {
   }
 
   // ---------------------------------------------------------------------------
-  // 5. Refresh
+  // 5. Reload Overrides
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Reload an extension by ID.
+   * Overridden to deduplicate identical concurrent fetch requests.
+   *
+   * @param {string} id - Extension ID
+   * @returns {Promise<any>}
+   */
+  async reloadExtension(id) {
+    if (!this.pendingReloads) {
+      this.pendingReloads = new Map();
+    }
+
+    if (this.pendingReloads.has(id)) {
+      if (__DEV__) {
+        console.log(
+          `[ClientExtensionManager] Deduplicating reload request for: ${id}`,
+        );
+      }
+      return this.pendingReloads.get(id);
+    }
+
+    const reloadPromise = super.reloadExtension(id);
+    this.pendingReloads.set(id, reloadPromise);
+
+    try {
+      return await reloadPromise;
+    } finally {
+      this.pendingReloads.delete(id);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // 6. Refresh
   // ---------------------------------------------------------------------------
 
   /**

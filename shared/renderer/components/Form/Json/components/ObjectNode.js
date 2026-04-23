@@ -123,9 +123,17 @@ export default function ObjectNode({
       >
         <Text as='span' className={s.iconContainer}>
           {expanded ? (
-            <Icon name='ChevronDownIcon' size={15} className={s.jsonIconInherit} />
+            <Icon
+              name='ChevronDownIcon'
+              size={15}
+              className={s.jsonIconInherit}
+            />
           ) : (
-            <Icon name='ChevronRightIcon' size={15} className={s.jsonIconInherit} />
+            <Icon
+              name='ChevronRightIcon'
+              size={15}
+              className={s.jsonIconInherit}
+            />
           )}
         </Text>
         {name !== false && (

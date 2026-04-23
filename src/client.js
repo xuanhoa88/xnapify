@@ -38,10 +38,15 @@ const REACT_DOM_UNAVAILABLE = false;
 // INITIALIZATION
 // =============================================================================
 
-// eslint-disable-next-line no-underscore-dangle
-const preloadedState = merge({}, window.__PRELOADED_STATE__);
-// eslint-disable-next-line no-underscore-dangle
-delete window.__PRELOADED_STATE__; // avoid memory leaks / exposure
+let preloadedState;
+if (module.hot && module.hot.data && module.hot.data.reduxState) {
+  preloadedState = { redux: module.hot.data.reduxState };
+} else {
+  // eslint-disable-next-line no-underscore-dangle
+  preloadedState = merge({}, window.__PRELOADED_STATE__);
+  // eslint-disable-next-line no-underscore-dangle
+  delete window.__PRELOADED_STATE__; // avoid memory leaks / exposure
+}
 
 const { redux: preloadedReduxState = {} } = preloadedState;
 
@@ -739,11 +744,7 @@ if (isDOMReady) {
 // =============================================================================
 
 if (module.hot) {
-  module.hot.accept(err => {
-    if (err) {
-      log(`❌ HMR error: ${err.message}`, 'error');
-      return;
-    }
+  module.hot.accept('./bootstrap/views', () => {
     cachedViews = null;
     const loc = { ...currentLocation };
     const schedule = window.requestIdleCallback || setTimeout;
@@ -828,8 +829,11 @@ if (module.hot) {
     }
   });
 
-  module.hot.dispose(() => {
+  module.hot.dispose(data => {
     log('🔥 HMR dispose', 'info');
+    if (store) {
+      data.reduxState = store.getState();
+    }
     if (hmrEventSource) {
       hmrEventSource.close();
       hmrEventSource = null;

@@ -9,7 +9,6 @@
  * Activity Admin Route
  */
 
-
 import { requirePermission } from '@shared/renderer/components/Rbac';
 import { features } from '@shared/renderer/redux';
 

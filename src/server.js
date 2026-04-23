@@ -302,6 +302,7 @@ export function invalidateCaches() {
   appState.localeCache.clear();
   appState.ssrCache.clear();
   appState.ssrResourcesPromise = null;
+  appState.ssrRetryCount = 0;
   if (__DEV__) console.log('🗑️  Caches cleared');
 }
 
@@ -1164,15 +1165,13 @@ export async function destroyServer(server) {
 // ---------------------------------------------------------------------------
 
 if (module.hot) {
-  module.hot.accept(err => {
-    if (err) {
-      console.error('❌ HMR error:', err);
-      return;
-    }
-
-    invalidateCaches();
-    console.log('🔄 HMR: Caches cleared');
-  });
+  module.hot.accept(
+    ['./bootstrap/views', '@shared/renderer/App', '@shared/renderer/Html'],
+    () => {
+      invalidateCaches();
+      console.log('🔄 HMR: SSR dependencies updated, caches cleared');
+    },
+  );
 
   exports.hot = module.hot;
 } else {

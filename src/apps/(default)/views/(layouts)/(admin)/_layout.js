@@ -28,13 +28,18 @@ function AdminLayout({ children, minimal = true }) {
 
       <Flex
         direction='column'
+        minHeight='100vh'
         grow='1'
-        className='transition-[margin-left,width] duration-200 ease-in-out ml-[var(--sider-width)] w-[calc(100%-var(--sider-width))]'
+        className='transition-[margin-left,width] duration-200 ease-in-out'
+        style={{
+          marginLeft: `var(--sider-width, ${minimal ? '64px' : '240px'})`,
+          width: `calc(100% - var(--sider-width, ${minimal ? '64px' : '240px'}))`,
+        }}
       >
         <ImpersonationBanner />
         <Header />
 
-        <Box as='main' grow='1' overflowX='hidden'>
+        <Box as='main' className='flex-1 overflow-x-hidden'>
           {children}
         </Box>
 

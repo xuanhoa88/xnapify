@@ -70,7 +70,7 @@ function AdminHeader() {
         </Flex>
 
         {/* Right Section - Page Title & Action Icons */}
-        <Flex align='center' gap='5'>
+        <Flex align='center' gap='1'>
           <Notifications />
 
           <Flex
