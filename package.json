@@ -63,7 +63,7 @@
   "dependencies": {
     "@hookform/resolvers": "3.9.1",
     "@node-red/editor-api": "3.1.15",
-    "@node-red/nodes": "3.1.15",
+    "@node-red/nodes": "4.1.8",
     "@node-red/runtime": "3.1.15",
     "@node-red/util": "3.1.15",
     "@reduxjs/toolkit": "2.11.1",
