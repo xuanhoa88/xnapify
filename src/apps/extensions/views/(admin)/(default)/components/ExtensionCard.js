@@ -20,8 +20,6 @@ import s from './ExtensionCard.css';
 function ExtensionCard({
   extension,
   actionLabel,
-  activeDropdownId,
-  onToggleDropdown,
   onActivate,
   onDeactivate,
   onUpgrade,
@@ -186,8 +184,6 @@ function ExtensionCard({
           {!isLoading && (
             <ExtensionActionsDropdown
               extension={extension}
-              isOpen={activeDropdownId === extension.id}
-              onToggle={onToggleDropdown}
               onUpgrade={onUpgrade}
               onDelete={onDelete}
             />
@@ -241,8 +237,6 @@ ExtensionCard.propTypes = {
     }),
   }).isRequired,
   actionLabel: PropTypes.string,
-  activeDropdownId: PropTypes.string,
-  onToggleDropdown: PropTypes.func.isRequired,
   onActivate: PropTypes.func.isRequired,
   onDeactivate: PropTypes.func.isRequired,
   onUpgrade: PropTypes.func.isRequired,

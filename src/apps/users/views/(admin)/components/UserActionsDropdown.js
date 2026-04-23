@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 
 import {
   DotsVerticalIcon,
@@ -28,15 +28,9 @@ const { getUserId } = features;
 
 /**
  * UserActionsDropdown - Dropdown menu for user actions
- *
- * To ensure only one dropdown is open at a time, pass `isOpen` and `onToggle` from parent.
- * Parent should manage activeDropdownId state and pass `isOpen={activeDropdownId === user.id}`
- * and `onToggle={(id) => setActiveDropdownId(prev => prev === id ? null : id)}`
  */
 function UserActionsDropdown({
   user,
-  isOpen,
-  onToggle,
   onManageRoles,
   onManageGroups,
   onViewPermissions,
@@ -48,21 +42,18 @@ function UserActionsDropdown({
   const currentUserId = useSelector(getUserId);
   const history = useHistory();
 
-  const handleToggle = useCallback(() => {
-    onToggle(isOpen ? null : user.id);
-  }, [isOpen, user.id, onToggle]);
-
   const isCurrentUser = useMemo(
     () => currentUserId === user.id,
     [currentUserId, user.id],
   );
 
   return (
-    <ContextMenu isOpen={isOpen} onToggle={handleToggle}>
+    <ContextMenu>
       <ContextMenu.Trigger
         title={t('admin:users.list.moreActions', 'More actions')}
+        className='rt-IconButton'
       >
-        <DotsVerticalIcon width={18} height={18} />
+        <DotsVerticalIcon width={16} height={16} />
       </ContextMenu.Trigger>
       <ContextMenu.Menu>
         <ContextMenu.Item
@@ -133,8 +124,6 @@ function UserActionsDropdown({
 
 UserActionsDropdown.propTypes = {
   user: PropTypes.object.isRequired,
-  isOpen: PropTypes.bool.isRequired,
-  onToggle: PropTypes.func.isRequired,
   onManageRoles: PropTypes.func.isRequired,
   onManageGroups: PropTypes.func.isRequired,
   onViewPermissions: PropTypes.func.isRequired,

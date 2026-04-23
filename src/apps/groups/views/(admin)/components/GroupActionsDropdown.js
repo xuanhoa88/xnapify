@@ -5,8 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useCallback } from 'react';
-
 import {
   DotsVerticalIcon,
   GroupIcon,
@@ -21,15 +19,9 @@ import { useTranslation } from 'react-i18next';
 import ContextMenu from '@shared/renderer/components/ContextMenu';
 /**
  * GroupActionsDropdown - Dropdown menu for group actions
- *
- * To ensure only one dropdown is open at a time, pass `isOpen` and `onToggle` from parent.
- * Parent should manage activeDropdownId state and pass `isOpen={activeDropdownId === group.id}`
- * and `onToggle={(id) => setActiveDropdownId(prev => prev === id ? null : id)}`
  */
 function GroupActionsDropdown({
   group,
-  isOpen,
-  onToggle,
   onViewUsers,
   onManageRoles,
   onViewPermissions,
@@ -38,16 +30,13 @@ function GroupActionsDropdown({
 }) {
   const { t } = useTranslation();
 
-  const handleToggle = useCallback(() => {
-    onToggle(isOpen ? null : group.id);
-  }, [isOpen, group.id, onToggle]);
-
   return (
-    <ContextMenu isOpen={isOpen} onToggle={handleToggle}>
+    <ContextMenu>
       <ContextMenu.Trigger
         title={t('admin:common.moreActions', 'More actions')}
+        className='rt-IconButton'
       >
-        <DotsVerticalIcon width={18} height={18} />
+        <DotsVerticalIcon width={16} height={16} />
       </ContextMenu.Trigger>
       <ContextMenu.Menu>
         <ContextMenu.Item
@@ -94,8 +83,6 @@ function GroupActionsDropdown({
 
 GroupActionsDropdown.propTypes = {
   group: PropTypes.object.isRequired,
-  isOpen: PropTypes.bool.isRequired,
-  onToggle: PropTypes.func.isRequired,
   onViewUsers: PropTypes.func.isRequired,
   onManageRoles: PropTypes.func.isRequired,
   onViewPermissions: PropTypes.func.isRequired,

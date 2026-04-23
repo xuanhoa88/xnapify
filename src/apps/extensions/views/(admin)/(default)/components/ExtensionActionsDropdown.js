@@ -5,8 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useCallback } from 'react';
-
 import {
   DotsVerticalIcon,
   ArrowUpIcon,
@@ -19,25 +17,16 @@ import ContextMenu from '@shared/renderer/components/ContextMenu';
 /**
  * ExtensionActionsDropdown - Dropdown menu for extension actions
  */
-function ExtensionActionsDropdown({
-  extension,
-  isOpen,
-  onToggle,
-  onUpgrade,
-  onDelete,
-}) {
+function ExtensionActionsDropdown({ extension, onUpgrade, onDelete }) {
   const { t } = useTranslation();
 
-  const handleToggle = useCallback(() => {
-    onToggle(isOpen ? null : extension.id);
-  }, [isOpen, extension.id, onToggle]);
-
   return (
-    <ContextMenu isOpen={isOpen} onToggle={handleToggle}>
+    <ContextMenu>
       <ContextMenu.Trigger
         title={t('admin:common.moreActions', 'More actions')}
+        className='rt-IconButton'
       >
-        <DotsVerticalIcon width={18} height={18} />
+        <DotsVerticalIcon width={16} height={16} />
       </ContextMenu.Trigger>
       <ContextMenu.Menu>
         <ContextMenu.Item
@@ -64,8 +53,6 @@ function ExtensionActionsDropdown({
 
 ExtensionActionsDropdown.propTypes = {
   extension: PropTypes.object.isRequired,
-  isOpen: PropTypes.bool.isRequired,
-  onToggle: PropTypes.func.isRequired,
   onUpgrade: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
 };

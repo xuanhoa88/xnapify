@@ -27,8 +27,6 @@ import { TablePagination } from '@shared/renderer/components/Table';
 
 import { selectors, thunks } from '../redux';
 
-import s from './ActivityList.css';
-
 const ActivityList = () => {
   const { t } = useTranslation();
   const dispatch = useDispatch();
@@ -125,16 +123,20 @@ const ActivityList = () => {
   // Loading state (first fetch / not initialized)
   if (!initialized || (loading && activities.length === 0)) {
     return (
-      <Box className={s.loadingBox}>
+      <Box className='p-6 max-w-[1400px] mx-auto'>
         <Flex
           align='center'
           justify='between'
           wrap='wrap'
           gap='4'
-          className={s.headerFlex}
+          className='pb-4 border-b border-[var(--gray-a6)] mb-6'
         >
           <Flex align='center' gap='3'>
-            <Flex align='center' justify='center' className={s.headerIconBox}>
+            <Flex
+              align='center'
+              justify='center'
+              className='w-10 h-10 rounded-[var(--radius-3)] bg-[var(--gray-3)] text-[var(--gray-11)] shrink-0'
+            >
               <ActivityLogIcon width={24} height={24} />
             </Flex>
             <Flex direction='column'>
@@ -161,16 +163,20 @@ const ActivityList = () => {
   // Error state
   if (error) {
     return (
-      <Box className={s.loadingBox}>
+      <Box className='p-6 max-w-[1400px] mx-auto'>
         <Flex
           align='center'
           justify='between'
           wrap='wrap'
           gap='4'
-          className={s.headerFlex}
+          className='pb-4 border-b border-[var(--gray-a6)] mb-6'
         >
           <Flex align='center' gap='3'>
-            <Flex align='center' justify='center' className={s.headerIconBox}>
+            <Flex
+              align='center'
+              justify='center'
+              className='w-10 h-10 rounded-[var(--radius-3)] bg-[var(--gray-3)] text-[var(--gray-11)] shrink-0'
+            >
               <ActivityLogIcon width={24} height={24} />
             </Flex>
             <Flex direction='column'>
@@ -191,7 +197,7 @@ const ActivityList = () => {
           align='center'
           justify='center'
           p='6'
-          className={s.adminErrorBlock}
+          className='border border-[var(--red-6)] rounded-[var(--radius-3)] bg-[var(--red-2)]'
         >
           <Text color='red' size='4' weight='bold' mb='2'>
             {t('admin:activities.errorLoading', 'Error loading activity logs')}
@@ -213,18 +219,14 @@ const ActivityList = () => {
   }
 
   return (
-    <Box className={s.loadingBox}>
-      <Flex
-        align='center'
-        justify='between'
-        wrap='wrap'
-        gap='4'
-        pb='4'
-        mb='6'
-        className={s.adminHeader}
-      >
+    <Box className='p-6 max-w-[1400px] mx-auto'>
+      <Flex align='center' justify='between' wrap='wrap' gap='4' pb='4' mb='6'>
         <Flex align='center' gap='3'>
-          <Flex align='center' justify='center' className={s.adminHeaderIcon}>
+          <Flex
+            align='center'
+            justify='center'
+            className='w-10 h-10 rounded-[var(--radius-3)] bg-[var(--gray-3)] text-[var(--gray-11)] shrink-0'
+          >
             <ActivityLogIcon width={24} height={24} />
           </Flex>
           <Flex direction='column'>
@@ -242,7 +244,7 @@ const ActivityList = () => {
         <Flex align='center' gap='3'>
           <Button
             variant='ghost'
-            size='1'
+            size='2'
             onClick={refreshActivities}
             disabled={loading}
           >
@@ -252,56 +254,68 @@ const ActivityList = () => {
         </Flex>
       </Flex>
 
-      <Flex gap='3' align='center' wrap='wrap' mb='4'>
-        <SearchableSelect
-          className={s.searchableSelect}
-          options={eventOptions}
-          value={eventFilter}
-          onChange={handleEventFilterChange}
-          placeholder={t('admin:activities.filter.allEvents', 'All Events')}
-          showSearch={false}
-        />
+      <Box className='bg-[var(--color-panel-solid)] rounded-[var(--radius-4)] shadow-[var(--shadow-2)] border border-[var(--gray-a6)] overflow-hidden relative'>
+        <Flex
+          gap='3'
+          align='center'
+          wrap='wrap'
+          p='4'
+          className='border-b border-[var(--gray-a6)] bg-[var(--gray-2)]'
+        >
+          <SearchableSelect
+            className='w-[200px]'
+            options={eventOptions}
+            value={eventFilter}
+            onChange={handleEventFilterChange}
+            placeholder={t('admin:activities.filter.allEvents', 'All Events')}
+            showSearch={false}
+          />
 
-        <SearchableSelect
-          className={s.searchableSelect}
-          options={entityTypeOptions}
-          value={entityTypeFilter}
-          onChange={handleEntityTypeFilterChange}
-          placeholder={t('admin:activities.filter.allEntities', 'All Entities')}
-          showSearch={false}
-        />
+          <SearchableSelect
+            className='w-[200px]'
+            options={entityTypeOptions}
+            value={entityTypeFilter}
+            onChange={handleEntityTypeFilterChange}
+            placeholder={t(
+              'admin:activities.filter.allEntities',
+              'All Entities',
+            )}
+            showSearch={false}
+          />
 
-        <Box className={s.clearFilterBox}>
-          {hasActiveFilters && (
-            <Button
-              variant='ghost'
-              size='1'
-              onClick={handleClearAllFilters}
-              type='button'
-              title={t('admin:activities.filter.resetAll', 'Reset all filters')}
-            >
-              <Cross2Icon width={12} height={12} />
-              {t('admin:activities.filter.clear', 'Clear Filters')}
-            </Button>
-          )}
-        </Box>
-      </Flex>
+          <Box className='flex items-center min-w-max'>
+            {hasActiveFilters && (
+              <Button
+                variant='ghost'
+                size='2'
+                onClick={handleClearAllFilters}
+                type='button'
+                title={t(
+                  'admin:activities.filter.resetAll',
+                  'Reset all filters',
+                )}
+              >
+                <Cross2Icon width={12} height={12} />
+                {t('admin:activities.filter.clear', 'Clear Filters')}
+              </Button>
+            )}
+          </Box>
+        </Flex>
 
-      <Box className={s.tableRelative}>
-        <Box className={s.tableWrapper}>
-          <Table.Root variant='surface'>
-            <Table.Header>
+        <Box className='relative overflow-x-auto'>
+          <Table.Root variant='ghost'>
+            <Table.Header className='bg-[var(--color-panel-solid)]'>
               <Table.Row>
-                <Table.ColumnHeaderCell>
+                <Table.ColumnHeaderCell className='py-3'>
                   {t('admin:activities.column.event', 'Event')}
                 </Table.ColumnHeaderCell>
-                <Table.ColumnHeaderCell>
+                <Table.ColumnHeaderCell className='py-3'>
                   {t('admin:activities.column.entity', 'Entity')}
                 </Table.ColumnHeaderCell>
-                <Table.ColumnHeaderCell>
+                <Table.ColumnHeaderCell className='py-3'>
                   {t('admin:activities.column.actor', 'Actor')}
                 </Table.ColumnHeaderCell>
-                <Table.ColumnHeaderCell>
+                <Table.ColumnHeaderCell className='py-3'>
                   {t('admin:activities.column.timestamp', 'Timestamp')}
                 </Table.ColumnHeaderCell>
               </Table.Row>
@@ -315,12 +329,12 @@ const ActivityList = () => {
                       align='center'
                       direction='column'
                       py='9'
-                      className={s.adminEmptyBlock}
+                      className='opacity-60'
                     >
                       <ActivityLogIcon
                         width={48}
                         height={48}
-                        className={s.adminEmptyIcon}
+                        className='mb-3'
                       />
 
                       <Text size='3' weight='bold' mb='1'>
@@ -341,12 +355,12 @@ const ActivityList = () => {
               ) : (
                 activities.map(record => (
                   <Table.Row key={record.id}>
-                    <Table.Cell>
+                    <Table.Cell className='py-3'>
                       <Badge color='blue' radius='full' variant='soft' size='2'>
                         {record.event}
                       </Badge>
                     </Table.Cell>
-                    <Table.Cell>
+                    <Table.Cell className='py-3'>
                       <Flex align='center' gap='2'>
                         <Badge
                           color='gray'
@@ -357,28 +371,36 @@ const ActivityList = () => {
                           {record.entity_type}
                         </Badge>
                         {record.entity_id && (
-                          <Box as='code' className={s.codeTag}>
+                          <Box
+                            as='code'
+                            className='font-mono bg-[var(--indigo-2)] text-[var(--indigo-11)] py-1 px-2 rounded-[var(--radius-1)] text-[13px]'
+                          >
                             {record.entity_id}
                           </Box>
                         )}
                       </Flex>
                     </Table.Cell>
-                    <Table.Cell>
+                    <Table.Cell className='py-3'>
                       {record.actor_id ? (
-                        <Box as='code' className={s.codeTag}>
+                        <Box
+                          as='code'
+                          className='font-mono bg-[var(--indigo-2)] text-[var(--indigo-11)] py-1 px-2 rounded-[var(--radius-1)] text-[13px]'
+                        >
                           {record.actor_id}
                         </Box>
                       ) : (
                         '—'
                       )}
                     </Table.Cell>
-                    <Table.Cell>
-                      {record.created_at
-                        ? format(
-                            new Date(record.created_at),
-                            'MMM dd, yyyy HH:mm',
-                          )
-                        : '—'}
+                    <Table.Cell className='py-3'>
+                      <Text size='2' color='gray'>
+                        {record.created_at
+                          ? format(
+                              new Date(record.created_at),
+                              'MMM dd, yyyy HH:mm',
+                            )
+                          : '—'}
+                      </Text>
                     </Table.Cell>
                   </Table.Row>
                 ))
@@ -388,13 +410,13 @@ const ActivityList = () => {
         </Box>
 
         {loading && activities.length > 0 && (
-          <Box className={s.loadingOverlay}>
+          <Box className='absolute inset-0 bg-[var(--color-background)] opacity-50 flex items-center justify-center z-10'>
             <Loader variant='spinner' />
           </Box>
         )}
 
         {pagination && pagination.pages > 1 && (
-          <Box mt='4'>
+          <Box className='bg-[var(--gray-1)]'>
             <TablePagination
               currentPage={currentPage}
               totalPages={pagination.pages}

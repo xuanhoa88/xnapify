@@ -1,17 +1,4 @@
-
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translate(-50%, 10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translate(-50%, 0);
-  }
-}
-
+/* TablePagination */
 .paginationContainer {
   border-top: 1px solid var(--gray-a6);
 }

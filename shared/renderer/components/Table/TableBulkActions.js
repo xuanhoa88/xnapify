@@ -17,7 +17,8 @@ import Icon from '../Icon';
 import s from './TableBulkActions.css';
 
 /**
- * BulkActionsBar - Floating action bar when table rows are selected
+ * BulkActionsBar - Floating dark command bar when table rows are selected.
+ * Inspired by Linear / Notion enterprise floating toolbars.
  */
 function TableBulkActions({
   count,
@@ -28,10 +29,6 @@ function TableBulkActions({
 }) {
   const { t } = useTranslation();
   const [isMoreOpen, setIsMoreOpen] = useState(false);
-
-  const displayItemCountLabel =
-    itemCountLabel ||
-    t('shared:components.bulkActions.itemsSelected', 'items selected');
 
   const handleMoreToggle = useCallback(isOpen => {
     setIsMoreOpen(isOpen);
@@ -47,22 +44,27 @@ function TableBulkActions({
       py='2'
       className={s.bulkBarContainer}
     >
+      {/* Left: count badge */}
       <Flex align='center' gap='2'>
         <Box className={s.bulkCountBadge}>{count}</Box>
         <Text size='2' weight='medium' className={s.bulkItemCountText}>
-          {displayItemCountLabel}
+          {itemCountLabel ||
+            t('shared:components.bulkActions.itemsSelected', 'items selected')}
         </Text>
       </Flex>
 
+      {/* Center: action buttons */}
       <Flex align='center' gap='2' className={s.bulkActionsFlex}>
         {actions
           .filter(Boolean)
           .slice(0, 3)
           .map((action, index) => (
             <Button
+              type='button'
               key={action.label || index}
-              variant={action.variant === 'danger' ? 'danger' : 'ghost'}
-              size='small'
+              variant='ghost'
+              highContrast
+              size='2'
               onClick={action.onClick}
               className={s.bulkActionButton}
             >
@@ -81,7 +83,10 @@ function TableBulkActions({
                 'shared:components.bulkActions.moreActions',
                 'More actions',
               )}
-              className={s.bulkMoreTrigger}
+              className='rt-IconButton'
+              variant='ghost'
+              highContrast
+              size='2'
             >
               <Icon name='DotsVerticalIcon' size={16} />
             </ContextMenu.Trigger>
@@ -104,9 +109,13 @@ function TableBulkActions({
           </ContextMenu>
         )}
       </Flex>
+
+      {/* Right: clear / dismiss */}
       <Button
+        type='button'
         variant='ghost'
-        size='small'
+        highContrast
+        size='2'
         onClick={onClear}
         className={s.bulkClearButton}
       >

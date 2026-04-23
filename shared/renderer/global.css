@@ -16,3 +16,18 @@ html, body, #app {
   padding: 0 !important;
   overflow-x: hidden;
 }
+
+/* Enforce pointer cursor on all buttons (Radix UI uses cursor: default by default) */
+button,
+.rt-BaseButton,
+.rt-Button,
+.rt-IconButton {
+  cursor: pointer !important;
+}
+
+button:disabled,
+.rt-BaseButton:disabled,
+.rt-Button:disabled,
+.rt-IconButton:disabled {
+  cursor: not-allowed !important;
+}

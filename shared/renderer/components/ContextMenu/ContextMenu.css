@@ -1,80 +1,14 @@
-.menu {
-  position: fixed;
-  min-width: 200px;
-  background-color: var(--color-panel-solid);
-  border: 1px solid var(--gray-a4);
-  border-radius: var(--radius-4);
-  box-shadow: var(--shadow-4);
-  z-index: 99999;
-  overflow: hidden;
-  padding: var(--space-1) 0;
-  backdrop-filter: blur(8px);
-}
-
-.item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  width: 100%;
-  padding: var(--space-2) var(--space-3);
-  background-color: transparent;
-  border: none;
-  font-size: var(--font-size-2);
-  font-weight: 500;
-  text-align: left;
-  text-decoration: none;
-  transition: background-color 0.1s ease;
-  cursor: pointer;
-}
-
-.itemDisabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-.item:hover:not(.itemDisabled) {
-  background-color: var(--gray-a3);
-}
-
-.itemDanger {
-  color: var(--red-9);
-}
-
-.itemDanger:hover:not(.itemDisabled) {
-  background-color: var(--red-a3);
-}
-
-.itemWarning {
-  color: var(--yellow-9);
-}
-
-.itemWarning:hover:not(.itemDisabled) {
-  background-color: var(--yellow-a3);
-}
-
-.itemDefault {
-  color: var(--gray-12);
-}
-
 .container {
   position: relative;
   isolation: isolate;
 }
 
-.containerOpen {
-  z-index: 9999;
-}
-
 .trigger {
   position: relative;
   z-index: 1;
+  cursor: pointer;
 }
 
 .header {
   border-bottom: 1px solid var(--gray-a4);
-}
-
-.divider {
-  height: 1px;
-  background-color: var(--gray-a4);
 }

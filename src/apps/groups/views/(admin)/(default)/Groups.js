@@ -103,9 +103,6 @@ function Groups({ context }) {
   // Ref for DeleteGroupModal
   const deleteModalRef = useRef();
 
-  // State for managing which dropdown is open
-  const [activeDropdownId, setActiveDropdownId] = useState(null);
-
   // Use hook for role filter with caching
   const {
     options: roleOptions,
@@ -183,10 +180,6 @@ function Groups({ context }) {
   );
 
   const getGroupName = useCallback(item => item.name, []);
-
-  const handleToggleDropdown = useCallback(id => {
-    setActiveDropdownId(prev => (prev === id ? null : id));
-  }, []);
 
   // Search handlers
   const handleSearchChange = useCallback(value => {
@@ -453,8 +446,6 @@ function Groups({ context }) {
                   </Flex>
                   <GroupActionsDropdown
                     group={group}
-                    isOpen={activeDropdownId === group.id}
-                    onToggle={handleToggleDropdown}
                     onViewUsers={handleViewUsers}
                     onManageRoles={handleManageRoles}
                     onViewPermissions={handleViewPermissions}

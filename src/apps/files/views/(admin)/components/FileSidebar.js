@@ -66,13 +66,8 @@ export default function FileSidebar() {
   return (
     <Box className={s.sidebarContainer}>
       <Box className={s.topBox}>
-        <ContextMenu align='left'>
-          <ContextMenu.Trigger
-            as={Button}
-            variant='primary'
-            fullWidth
-            className={s.newBtn}
-          >
+        <ContextMenu>
+          <ContextMenu.Trigger variant='primary' fullWidth className={s.newBtn}>
             <RadixIcons.PlusIcon
               width={20}
               height={20}

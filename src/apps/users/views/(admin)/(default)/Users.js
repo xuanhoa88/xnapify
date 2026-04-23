@@ -8,7 +8,7 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 
 import {
-  GroupIcon,
+  PersonIcon,
   PlusIcon,
   CheckIcon,
   Cross2Icon,
@@ -16,34 +16,26 @@ import {
   Pencil2Icon,
 } from '@radix-ui/react-icons';
 import {
-  Box,
   Flex,
   Text,
-  Heading,
-  Table,
-  Checkbox,
   Avatar,
   Button,
+  IconButton,
   Badge,
+  Box,
 } from '@radix-ui/themes';
-import clsx from 'clsx';
 import format from 'date-fns/format';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
 import { useHistory } from '@shared/renderer/components/History';
-import Loader from '@shared/renderer/components/Loader';
 import { useRbac } from '@shared/renderer/components/Rbac';
 import {
   SearchableSelect,
   useSearchableSelect,
 } from '@shared/renderer/components/SearchableSelect';
-import {
-  TablePagination,
-  TableSearch,
-  TableBulkActions,
-} from '@shared/renderer/components/Table';
+import { DataTable, useTableColumns } from '@shared/renderer/components/Table';
 import { features } from '@shared/renderer/redux';
 
 import ChangeStatusUserModal from '../components/ChangeStatusUserModal';
@@ -64,9 +56,10 @@ import {
   getUsersListError,
 } from '../redux';
 
-import s from './Users.css';
-
 const { getUserProfile, impersonateUser } = features;
+
+/** Extension hook ID for injecting extra columns into the users table. */
+const COLUMNS_HOOK_ID = 'table.columns.users.list';
 
 function Users({ context }) {
   const { t } = useTranslation();
@@ -92,7 +85,7 @@ function Users({ context }) {
   const error = useSelector(getUsersListError);
   const currentUser = useSelector(getUserProfile);
 
-  // Use hooks for filter dropdowns with caching
+  // Filter dropdowns with caching
   const {
     options: roleOptions,
     loading: rolesLoading,
@@ -132,7 +125,6 @@ function Users({ context }) {
 
   // Selection state
   const [selectedUsers, setSelectedUsers] = useState([]);
-  const [activeDropdownId, setActiveDropdownId] = useState(null);
 
   // Modal refs
   const rolesModalRef = useRef();
@@ -141,8 +133,6 @@ function Users({ context }) {
   const deleteModalRef = useRef();
   const changeStatusModalRef = useRef();
   const impersonateModalRef = useRef();
-
-  const clearSelection = useCallback(() => setSelectedUsers([]), []);
 
   useEffect(() => {
     dispatch(
@@ -168,27 +158,27 @@ function Users({ context }) {
     );
   }, [dispatch, currentPage, search, roleFilter, groupFilter, statusFilter]);
 
+  // ─── Callbacks ─────────────────────────────────────────────────────
+  const clearSelection = useCallback(() => setSelectedUsers([]), []);
+
+  const handleRefreshUsers = useCallback(() => {
+    clearSelection();
+    refreshUsers();
+  }, [clearSelection, refreshUsers]);
+
   const handleDelete = useCallback(user => {
     deleteModalRef.current &&
-      deleteModalRef.current.open({
-        ids: [user.id],
-        items: [user],
-      });
+      deleteModalRef.current.open({ ids: [user.id], items: [user] });
   }, []);
 
   const handleBulkDelete = useCallback(() => {
     deleteModalRef.current &&
-      deleteModalRef.current.open({
-        ids: selectedUsers,
-      });
+      deleteModalRef.current.open({ ids: selectedUsers });
   }, [selectedUsers]);
 
   const handleBulkActivate = useCallback(() => {
     changeStatusModalRef.current &&
-      changeStatusModalRef.current.open({
-        ids: selectedUsers,
-        isActive: true,
-      });
+      changeStatusModalRef.current.open({ ids: selectedUsers, isActive: true });
   }, [selectedUsers]);
 
   const handleBulkDeactivate = useCallback(() => {
@@ -201,18 +191,12 @@ function Users({ context }) {
 
   const handleActivate = useCallback(user => {
     changeStatusModalRef.current &&
-      changeStatusModalRef.current.open({
-        ids: [user.id],
-        isActive: true,
-      });
+      changeStatusModalRef.current.open({ ids: [user.id], isActive: true });
   }, []);
 
   const handleDeactivate = useCallback(user => {
     changeStatusModalRef.current &&
-      changeStatusModalRef.current.open({
-        ids: [user.id],
-        isActive: false,
-      });
+      changeStatusModalRef.current.open({ ids: [user.id], isActive: false });
   }, []);
 
   const handleImpersonate = useCallback(user => {
@@ -239,8 +223,6 @@ function Users({ context }) {
     setStatusFilter('');
     setCurrentPage(1);
   }, []);
-
-  const hasActiveFilters = search || roleFilter || groupFilter || statusFilter;
 
   const handleRoleFilterChange = useCallback(value => {
     setRoleFilter(value);
@@ -285,145 +267,257 @@ function Users({ context }) {
     [selectedUsers],
   );
 
-  const handleRefreshUsers = useCallback(() => {
-    clearSelection();
-    refreshUsers();
-  }, [clearSelection, refreshUsers]);
+  const hasActiveFilters = search || roleFilter || groupFilter || statusFilter;
 
-  const handleSelectAll = checked => {
-    if (checked) {
-      setSelectedUsers(users.map(u => u.id));
-    } else {
-      setSelectedUsers([]);
-    }
-  };
-
-  const handleSelectRow = (id, checked) => {
-    if (checked) {
-      setSelectedUsers(prev => [...prev, id]);
-    } else {
-      setSelectedUsers(prev => prev.filter(k => k !== id));
-    }
-  };
-
-  const isAllSelected =
-    users.length > 0 && selectedUsers.length === users.length;
-
-  if (!initialized || (loading && users.length === 0)) {
-    return (
-      <Box className={s.containerBox}>
-        <Flex
-          align='center'
-          justify='between'
-          wrap='wrap'
-          gap='4'
-          pb='4'
-          mb='6'
-          className={s.adminHeader}
-        >
+  // ─── Column definitions ────────────────────────────────────────────
+  const baseColumns = useMemo(
+    () => [
+      {
+        key: 'user',
+        dataIndex: 'email',
+        title: t('admin:users.list.user', 'User'),
+        order: 10,
+        render: (_, record) => (
           <Flex align='center' gap='3'>
-            <Flex align='center' justify='center' className={s.adminHeaderIcon}>
-              <GroupIcon width={24} height={24} />
-            </Flex>
-            <Flex direction='column'>
-              <Heading size='6'>
-                {t('admin:users.list.title', 'User Management')}
-              </Heading>
-              <Text size='2' color='gray' mt='1'>
-                {t(
-                  'admin:users.list.subtitle',
-                  'Manage users, roles, and permissions',
-                )}
+            <Avatar
+              name={
+                (record.profile && record.profile.display_name) || record.email
+              }
+              size='2'
+              fallback={(
+                (record.profile && record.profile.display_name) ||
+                record.email ||
+                '?'
+              )
+                .charAt(0)
+                .toUpperCase()}
+            />
+            <Flex align='center' gap='2'>
+              <Text as='span' weight='medium' color='gray' highContrast>
+                {(record.profile && record.profile.display_name) ||
+                  record.email}
               </Text>
+              {currentUser && currentUser.id === record.id && (
+                <Badge size='1' color='indigo' radius='full' variant='soft'>
+                  {t('admin:users.list.you', 'You')}
+                </Badge>
+              )}
             </Flex>
           </Flex>
-        </Flex>
-        <Loader
-          variant='skeleton'
-          message={t('admin:users.list.loadingUsers', 'Loading users...')}
-        />
-      </Box>
-    );
-  }
-
-  if (error) {
-    return (
-      <Box className={s.containerBox}>
-        <Flex
-          align='center'
-          justify='between'
-          wrap='wrap'
-          gap='4'
-          pb='4'
-          mb='6'
-          className={s.adminHeader}
-        >
-          <Flex align='center' gap='3'>
-            <Flex align='center' justify='center' className={s.adminHeaderIcon}>
-              <GroupIcon width={24} height={24} />
-            </Flex>
-            <Flex direction='column'>
-              <Heading size='6'>
-                {t('admin:users.list.title', 'User Management')}
-              </Heading>
-              <Text size='2' color='gray' mt='1'>
-                {t(
-                  'admin:users.list.subtitle',
-                  'Manage users, roles, and permissions',
-                )}
-              </Text>
-            </Flex>
+        ),
+      },
+      {
+        key: 'email',
+        dataIndex: 'email',
+        title: t('admin:users.list.email', 'Email'),
+        order: 20,
+      },
+      {
+        key: 'roles',
+        dataIndex: 'roles',
+        title: t('admin:users.list.roles', 'Roles'),
+        order: 30,
+        render: roles => (
+          <Flex wrap='wrap' gap='1'>
+            {roles &&
+              roles.length > 0 &&
+              roles.map((role, idx) => (
+                <RoleTag key={`role-${idx}`} name={role} />
+              ))}
           </Flex>
-        </Flex>
-        <Flex
-          direction='column'
-          align='center'
-          justify='center'
-          p='6'
-          className={s.adminErrorBlock}
-        >
-          <Text color='red' size='4' weight='bold' mb='2'>
-            {t('admin:users.errors.loadUsers', 'Error loading users')}
+        ),
+      },
+      {
+        key: 'groups',
+        dataIndex: 'groups',
+        title: t('admin:users.list.groups', 'Groups'),
+        order: 40,
+        render: groups => (
+          <Flex wrap='wrap' gap='1'>
+            {groups &&
+              groups.map(group => (
+                <GroupTag key={group.id} name={group.name} />
+              ))}
+          </Flex>
+        ),
+      },
+      {
+        key: 'status',
+        dataIndex: 'is_active',
+        title: t('admin:users.list.status', 'Status'),
+        order: 50,
+        render: isActive => (
+          <Badge
+            variant={isActive ? 'success' : 'error'}
+            color='gray'
+            radius='full'
+          >
+            {isActive
+              ? t('admin:users.list.statusActive', 'Active')
+              : t('admin:users.list.statusInactive', 'Inactive')}
+          </Badge>
+        ),
+      },
+      {
+        key: 'joined',
+        dataIndex: 'created_at',
+        title: t('admin:users.list.joined', 'Joined'),
+        order: 60,
+        render: createdAt => (
+          <Text size='2' color='gray'>
+            {createdAt ? format(new Date(createdAt), 'MMM dd, yyyy') : '—'}
           </Text>
-          <Text color='red' size='2' mb='4'>
-            {error}
-          </Text>
-          <Button variant='soft' color='red' onClick={refreshUsers} size='2'>
-            {t('common:retry', 'Retry')}
-          </Button>
-        </Flex>
-      </Box>
-    );
-  }
+        ),
+      },
+      {
+        key: 'actions',
+        title: '',
+        order: 9999,
+        className: 'text-right',
+        render: (_, record) => (
+          <Flex gap='2' justify='end' onClick={e => e.stopPropagation()}>
+            <IconButton
+              variant='ghost'
+              size='2'
+              {...(currentUser && currentUser.id === record.id
+                ? {
+                    disabled: true,
+                    title: t(
+                      'admin:users.list.cannotEditSelf',
+                      'Cannot edit your own account',
+                    ),
+                  }
+                : { title: t('admin:users.list.edit', 'Edit') })}
+              onClick={() => history.push(`/admin/users/${record.id}/edit`)}
+            >
+              <Pencil2Icon width={16} height={16} />
+            </IconButton>
+            <IconButton
+              variant='ghost'
+              size='2'
+              {...(currentUser && currentUser.id === record.id
+                ? {
+                    disabled: true,
+                    title: t(
+                      'admin:users.list.cannotDeleteSelf',
+                      'Cannot delete your own account',
+                    ),
+                  }
+                : {
+                    title: t('admin:users.list.delete', 'Delete'),
+                  })}
+              onClick={() => handleDelete(record)}
+            >
+              <TrashIcon width={16} height={16} />
+            </IconButton>
+            <UserActionsDropdown
+              user={record}
+              onManageRoles={openRolesModal}
+              onManageGroups={openGroupsModal}
+              onViewPermissions={openPermissionsModal}
+              onActivate={handleActivate}
+              onDeactivate={handleDeactivate}
+              onImpersonate={handleImpersonate}
+            />
+          </Flex>
+        ),
+      },
+    ],
+    [
+      t,
+      currentUser,
+      history,
+      handleDelete,
+      openRolesModal,
+      openGroupsModal,
+      openPermissionsModal,
+      handleActivate,
+      handleDeactivate,
+      handleImpersonate,
+    ],
+  );
+
+  // Merge base columns with extension-injected columns
+  const { columns } = useTableColumns(COLUMNS_HOOK_ID, baseColumns);
+
+  // ─── Status filter options ────────────────────────────────────────
+  const statusOptions = useMemo(
+    () => [
+      {
+        value: '',
+        label: t('admin:users.list.allStatus', 'All Status'),
+      },
+      {
+        value: 'active',
+        label: t('admin:users.list.statusActive', 'Active'),
+      },
+      {
+        value: 'inactive',
+        label: t('admin:users.list.statusInactive', 'Inactive'),
+      },
+    ],
+    [t],
+  );
+
+  // ─── Bulk action descriptors ───────────────────────────────────────
+  const bulkActions = useMemo(
+    () => [
+      {
+        label: t('admin:users.list.assignRoles', 'Assign Roles'),
+        onClick: openBulkRolesModal,
+      },
+      {
+        label: t('admin:users.list.assignGroups', 'Assign Groups'),
+        onClick: openBulkGroupsModal,
+      },
+    ],
+    [t, openBulkRolesModal, openBulkGroupsModal],
+  );
+
+  const moreBulkActions = useMemo(
+    () => [
+      {
+        label: t('admin:users.list.activate', 'Activate'),
+        icon: <CheckIcon width={16} height={16} />,
+        onClick: handleBulkActivate,
+      },
+      {
+        label: t('admin:users.list.deactivate', 'Deactivate'),
+        icon: <Cross2Icon width={16} height={16} />,
+        variant: 'warning',
+        onClick: handleBulkDeactivate,
+      },
+      { type: 'divider' },
+      {
+        label: t('admin:users.list.delete', 'Delete'),
+        icon: <TrashIcon width={16} height={16} />,
+        variant: 'danger',
+        onClick: handleBulkDelete,
+      },
+    ],
+    [t, handleBulkActivate, handleBulkDeactivate, handleBulkDelete],
+  );
 
   return (
-    <Box className={s.containerBox}>
-      <Flex
-        align='center'
-        justify='between'
-        wrap='wrap'
-        gap='4'
-        pb='4'
-        mb='6'
-        className={s.adminHeader}
+    <Box className='p-6 max-w-[1400px] mx-auto'>
+      <DataTable
+        columns={columns}
+        dataSource={users}
+        rowKey='id'
+        loading={loading}
+        initialized={initialized}
+        selectable
+        selectedKeys={selectedUsers}
+        onSelectionChange={setSelectedUsers}
       >
-        <Flex align='center' gap='3'>
-          <Flex align='center' justify='center' className={s.adminHeaderIcon}>
-            <GroupIcon width={24} height={24} />
-          </Flex>
-          <Flex direction='column'>
-            <Heading size='6'>
-              {t('admin:users.list.title', 'User Management')}
-            </Heading>
-            <Text size='2' color='gray' mt='1'>
-              {t(
-                'admin:users.list.subtitle',
-                'Manage users, roles, and permissions',
-              )}
-            </Text>
-          </Flex>
-        </Flex>
-        <Flex gap='2'>
+        <DataTable.Header
+          title={t('admin:users.list.title', 'User Management')}
+          subtitle={t(
+            'admin:users.list.subtitle',
+            'Manage users, roles, and permissions',
+          )}
+          icon={<PersonIcon width={24} height={24} />}
+        >
           <Button
             variant='solid'
             color='indigo'
@@ -439,386 +533,104 @@ function Users({ context }) {
             <PlusIcon width={16} height={16} />
             {t('admin:users.list.addUser', 'Add User')}
           </Button>
-        </Flex>
-      </Flex>
+        </DataTable.Header>
 
-      <Box className={s.contentBox}>
-        {selectedUsers.length > 0 && (
-          <TableBulkActions
-            count={selectedUsers.length}
-            actions={[
-              {
-                label: t('admin:users.list.assignRoles', 'Assign Roles'),
-                onClick: openBulkRolesModal,
-              },
-              {
-                label: t('admin:users.list.assignGroups', 'Assign Groups'),
-                onClick: openBulkGroupsModal,
-              },
-            ]}
-            moreActions={[
-              {
-                label: t('admin:users.list.activate', 'Activate'),
-                icon: <CheckIcon width={16} height={16} />,
-                onClick: handleBulkActivate,
-              },
-              {
-                label: t('admin:users.list.deactivate', 'Deactivate'),
-                icon: <Cross2Icon width={16} height={16} />,
-                variant: 'warning',
-                onClick: handleBulkDeactivate,
-              },
-              { type: 'divider' },
-              {
-                label: t('admin:users.list.delete', 'Delete'),
-                icon: <TrashIcon width={16} height={16} />,
-                variant: 'danger',
-                onClick: handleBulkDelete,
-              },
-            ]}
-            onClear={clearSelection}
-          />
-        )}
-
-        <Box className={s.tableSearchBox}>
-          <TableSearch
-            className={s.tableSearchWrapper}
+        <DataTable.Toolbar>
+          <DataTable.Search
             value={search}
             onChange={handleSearchChange}
             placeholder={t('admin:users.list.searchUsers', 'Search users...')}
-          >
-            <SearchableSelect
-              className={s.searchableSelectLarge}
-              options={roleOptions}
-              value={roleFilter}
-              onChange={handleRoleFilterChange}
-              onSearch={handleRoleSearch}
-              onLoadMore={handleRoleLoadMore}
-              hasMore={rolesHasMore}
-              loading={rolesLoading}
-              loadingMore={rolesLoadingMore}
-              placeholder={t('admin:users.list.allRoles', 'All Roles')}
-              searchPlaceholder={t(
-                'admin:users.list.searchRoles',
-                'Search roles...',
-              )}
-            />
+          />
+          <DataTable.Filter
+            component={SearchableSelect}
+            width='lg'
+            options={roleOptions}
+            value={roleFilter}
+            onChange={handleRoleFilterChange}
+            onSearch={handleRoleSearch}
+            onLoadMore={handleRoleLoadMore}
+            hasMore={rolesHasMore}
+            loading={rolesLoading}
+            loadingMore={rolesLoadingMore}
+            placeholder={t('admin:users.list.allRoles', 'All Roles')}
+            searchPlaceholder={t(
+              'admin:users.list.searchRoles',
+              'Search roles...',
+            )}
+          />
+          <DataTable.Filter
+            component={SearchableSelect}
+            width='lg'
+            options={groupOptions}
+            value={groupFilter}
+            onChange={handleGroupFilterChange}
+            onSearch={handleGroupSearch}
+            onLoadMore={handleGroupLoadMore}
+            hasMore={groupsHasMore}
+            loading={groupsLoading}
+            loadingMore={groupsLoadingMore}
+            placeholder={t('admin:users.list.allGroups', 'All Groups')}
+            searchPlaceholder={t(
+              'admin:users.list.searchGroups',
+              'Search groups...',
+            )}
+          />
+          <DataTable.Filter
+            component={SearchableSelect}
+            width='sm'
+            options={statusOptions}
+            value={statusFilter}
+            onChange={handleStatusFilterChange}
+            placeholder={t('admin:users.list.allStatus', 'All Status')}
+            showSearch={false}
+          />
+          <DataTable.ClearFilters
+            visible={!!hasActiveFilters}
+            onClick={handleClearAllFilters}
+          />
+        </DataTable.Toolbar>
 
-            <SearchableSelect
-              className={s.searchableSelectLarge}
-              options={groupOptions}
-              value={groupFilter}
-              onChange={handleGroupFilterChange}
-              onSearch={handleGroupSearch}
-              onLoadMore={handleGroupLoadMore}
-              hasMore={groupsHasMore}
-              loading={groupsLoading}
-              loadingMore={groupsLoadingMore}
-              placeholder={t('admin:users.list.allGroups', 'All Groups')}
-              searchPlaceholder={t(
-                'admin:users.list.searchGroups',
-                'Search groups...',
-              )}
-            />
+        <DataTable.BulkActions
+          actions={bulkActions}
+          moreActions={moreBulkActions}
+        />
 
-            <SearchableSelect
-              className={s.searchableSelectSmall}
-              options={[
-                {
-                  value: '',
-                  label: t('admin:users.list.allStatus', 'All Status'),
-                },
-                {
-                  value: 'active',
-                  label: t('admin:users.list.statusActive', 'Active'),
-                },
-                {
-                  value: 'inactive',
-                  label: t('admin:users.list.statusInactive', 'Inactive'),
-                },
-              ]}
-              value={statusFilter}
-              onChange={handleStatusFilterChange}
-              placeholder={t('admin:users.list.allStatus', 'All Status')}
-              showSearch={false}
-            />
-
-            <Box className={s.clearFilterBox}>
-              {hasActiveFilters && (
-                <Button
-                  variant='ghost'
-                  size='1'
-                  onClick={handleClearAllFilters}
-                  type='button'
-                  title={t(
-                    'admin:users.list.resetAllFilters',
-                    'Reset all filters',
-                  )}
-                >
-                  <Cross2Icon width={12} height={12} />
-                  {t('admin:users.list.clearFilters', 'Clear Filters')}
-                </Button>
-              )}
-            </Box>
-          </TableSearch>
-        </Box>
-
-        <Box className={s.tableWrapper}>
-          <Table.Root variant='surface'>
-            <Table.Header>
-              <Table.Row>
-                <Table.ColumnHeaderCell className={s.checkboxCol}>
-                  <Checkbox
-                    checked={isAllSelected}
-                    onCheckedChange={handleSelectAll}
-                  />
-                </Table.ColumnHeaderCell>
-                <Table.ColumnHeaderCell>
-                  {t('admin:users.list.user', 'User')}
-                </Table.ColumnHeaderCell>
-                <Table.ColumnHeaderCell>
-                  {t('admin:users.list.email', 'Email')}
-                </Table.ColumnHeaderCell>
-                <Table.ColumnHeaderCell>
-                  {t('admin:users.list.roles', 'Roles')}
-                </Table.ColumnHeaderCell>
-                <Table.ColumnHeaderCell>
-                  {t('admin:users.list.groups', 'Groups')}
-                </Table.ColumnHeaderCell>
-                <Table.ColumnHeaderCell>
-                  {t('admin:users.list.status', 'Status')}
-                </Table.ColumnHeaderCell>
-                <Table.ColumnHeaderCell>
-                  {t('admin:users.list.joined', 'Joined')}
-                </Table.ColumnHeaderCell>
-                <Table.ColumnHeaderCell
-                  className={s.textRight}
-                ></Table.ColumnHeaderCell>
-              </Table.Row>
-            </Table.Header>
-            <Table.Body>
-              {users.length === 0 ? (
-                <Table.Row>
-                  <Table.Cell colSpan={8}>
-                    <Flex
-                      justify='center'
-                      align='center'
-                      direction='column'
-                      py='9'
-                      className={s.adminEmptyBlock}
-                    >
-                      <GroupIcon
-                        width={48}
-                        height={48}
-                        className={s.adminEmptyIcon}
-                      />
-
-                      <Text size='3' weight='bold' mb='1'>
-                        {t('admin:users.list.noUsersFound', 'No users found')}
-                      </Text>
-                      <Text size='2' color='gray'>
-                        {t(
-                          'admin:users.list.noUsersFoundDescription',
-                          'Try adjusting your search or filter criteria, or add a new user to get started.',
-                        )}
-                      </Text>
-                    </Flex>
-                  </Table.Cell>
-                </Table.Row>
-              ) : (
-                users.map(user => {
-                  const isSelected = selectedUsers.includes(user.id);
-                  return (
-                    <Table.Row
-                      key={user.id}
-                      className={clsx({ [s.activeRowSelected]: isSelected })}
-                    >
-                      <Table.Cell className={s.checkboxCol}>
-                        <Checkbox
-                          checked={isSelected}
-                          onCheckedChange={c => handleSelectRow(user.id, c)}
-                        />
-                      </Table.Cell>
-                      <Table.Cell>
-                        <Flex align='center' gap='3'>
-                          <Avatar
-                            name={
-                              (user.profile && user.profile.display_name) ||
-                              user.email
-                            }
-                            size='2'
-                            fallback={(
-                              (user.profile && user.profile.display_name) ||
-                              user.email ||
-                              '?'
-                            )
-                              .charAt(0)
-                              .toUpperCase()}
-                          />
-
-                          <Flex align='center' gap='2'>
-                            <Text
-                              as='span'
-                              weight='medium'
-                              className={s.userNameText}
-                            >
-                              {(user.profile && user.profile.display_name) ||
-                                user.email}
-                            </Text>
-                            {currentUser && currentUser.id === user.id && (
-                              <Badge
-                                size='1'
-                                color='indigo'
-                                radius='full'
-                                variant='soft'
-                              >
-                                {t('admin:users.list.you', 'You')}
-                              </Badge>
-                            )}
-                          </Flex>
-                        </Flex>
-                      </Table.Cell>
-                      <Table.Cell>{user.email}</Table.Cell>
-                      <Table.Cell>
-                        <Flex wrap='wrap' gap='1'>
-                          {user.roles &&
-                            user.roles.length > 0 &&
-                            user.roles.map((role, idx) => (
-                              <RoleTag
-                                key={`user-${user.id}-role-${idx}`}
-                                name={role}
-                              />
-                            ))}
-                        </Flex>
-                      </Table.Cell>
-                      <Table.Cell>
-                        <Flex wrap='wrap' gap='1'>
-                          {user.groups &&
-                            user.groups.map(group => (
-                              <GroupTag key={group.id} name={group.name} />
-                            ))}
-                        </Flex>
-                      </Table.Cell>
-                      <Table.Cell>
-                        <Badge
-                          variant={user.is_active ? 'success' : 'error'}
-                          color='gray'
-                          radius='full'
-                        >
-                          {user.is_active
-                            ? t('admin:users.list.statusActive', 'Active')
-                            : t('admin:users.list.statusInactive', 'Inactive')}
-                        </Badge>
-                      </Table.Cell>
-                      <Table.Cell>
-                        {user.created_at
-                          ? format(new Date(user.created_at), 'MMM dd, yyyy')
-                          : '—'}
-                      </Table.Cell>
-                      <Table.Cell className={s.textRight}>
-                        <Flex
-                          gap='1'
-                          justify='end'
-                          onClick={e => e.stopPropagation()}
-                        >
-                          <Button
-                            variant='ghost'
-                            size='1'
-                            {...(currentUser && currentUser.id === user.id
-                              ? {
-                                  disabled: true,
-                                  title: t(
-                                    'admin:users.list.cannotEditSelf',
-                                    'Cannot edit your own account',
-                                  ),
-                                }
-                              : { title: t('admin:users.list.edit', 'Edit') })}
-                            onClick={() =>
-                              history.push(`/admin/users/${user.id}/edit`)
-                            }
-                          >
-                            <Pencil2Icon width={16} height={16} />
-                          </Button>
-                          <Button
-                            variant='ghost'
-                            size='1'
-                            {...(currentUser && currentUser.id === user.id
-                              ? {
-                                  disabled: true,
-                                  title: t(
-                                    'admin:users.list.cannotDeleteSelf',
-                                    'Cannot delete your own account',
-                                  ),
-                                }
-                              : {
-                                  title: t('admin:users.list.delete', 'Delete'),
-                                })}
-                            onClick={() => handleDelete(user)}
-                          >
-                            <TrashIcon width={16} height={16} />
-                          </Button>
-                          <UserActionsDropdown
-                            user={user}
-                            isOpen={activeDropdownId === user.id}
-                            onToggle={id =>
-                              setActiveDropdownId(prev =>
-                                prev === id ? null : id,
-                              )
-                            }
-                            onManageRoles={openRolesModal}
-                            onManageGroups={openGroupsModal}
-                            onViewPermissions={openPermissionsModal}
-                            onActivate={handleActivate}
-                            onDeactivate={handleDeactivate}
-                            onImpersonate={handleImpersonate}
-                          />
-                        </Flex>
-                      </Table.Cell>
-                    </Table.Row>
-                  );
-                })
-              )}
-            </Table.Body>
-          </Table.Root>
-          {loading && users.length > 0 && (
-            <Box className={s.loadingOverlay}>
-              <Loader variant='spinner' />
-            </Box>
+        <DataTable.Empty
+          icon={<PersonIcon width={48} height={48} />}
+          title={t('admin:users.list.noUsersFound', 'No users found')}
+          description={t(
+            'admin:users.list.noUsersFoundDescription',
+            'Try adjusting your search or filter criteria, or add a new user to get started.',
           )}
-        </Box>
+        />
+        <DataTable.Error message={error} onRetry={refreshUsers} />
+        <DataTable.Loader />
 
-        {pagination && pagination.pages > 1 && (
-          <Box p='4' className={s.paginationBox}>
-            <TablePagination
-              currentPage={currentPage}
-              totalPages={pagination.pages}
-              totalItems={pagination.total}
-              onPageChange={setCurrentPage}
-              loading={loading}
-            />
-          </Box>
-        )}
-      </Box>
+        <DataTable.Pagination
+          current={currentPage}
+          totalPages={pagination ? pagination.pages : undefined}
+          total={pagination ? pagination.total : undefined}
+          onChange={setCurrentPage}
+        />
+      </DataTable>
 
+      {/* Modals */}
       <UserRolesModal
         ref={rolesModalRef}
         onSuccess={handleRefreshUsers}
         fetchRoles={fetchRoles}
       />
-
       <UserGroupsModal
         ref={groupsModalRef}
         onSuccess={handleRefreshUsers}
         fetchGroups={fetchGroups}
       />
-
       <UserPermissionsModal ref={permissionsModalRef} />
       <DeleteUserModal ref={deleteModalRef} onSuccess={handleRefreshUsers} />
       <ChangeStatusUserModal
         ref={changeStatusModalRef}
         onSuccess={handleRefreshUsers}
       />
-
       <ConfirmImpersonateModal
         ref={impersonateModalRef}
         onConfirm={handleConfirmImpersonate}

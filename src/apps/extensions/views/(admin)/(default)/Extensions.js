@@ -88,7 +88,6 @@ function Extensions() {
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
   const [activeFilter, setActiveFilter] = useState('all');
-  const [activeDropdownId, setActiveDropdownId] = useState(null);
   const [actionMap, setActionMap] = useState({});
 
   // Safety timeout timers — keyed by extension ID
@@ -336,14 +335,6 @@ function Extensions() {
       ws.off('extension:updated', handler);
     };
   }, [ws, dispatch, t, clearAction, debouncedFetch]);
-
-  const handleSearchChange = useCallback(value => {
-    setSearch(value);
-  }, []);
-
-  const handleToggleDropdown = useCallback(id => {
-    setActiveDropdownId(prev => (prev === id ? null : id));
-  }, []);
 
   // --- Uninstall (existing ConfirmModal.Delete) ---
   const handleDelete = useCallback(extension => {
@@ -637,7 +628,7 @@ function Extensions() {
         <Box minWidth='280px'>
           <TableSearch
             value={search}
-            onChange={handleSearchChange}
+            onChange={setSearch}
             placeholder={t('admin:extensions.search', 'Search extensions...')}
           />
         </Box>
@@ -685,8 +676,6 @@ function Extensions() {
               key={extension.id}
               extension={extension}
               actionLabel={actionMap[extension.id]}
-              activeDropdownId={activeDropdownId}
-              onToggleDropdown={handleToggleDropdown}
               onActivate={handleActivate}
               onDeactivate={handleDeactivate}
               onUpgrade={handleUpgrade}

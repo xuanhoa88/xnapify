@@ -47,18 +47,20 @@ export default {
  * it broadcasts `extensions-refreshed`, instructing the backend to hot-reload
  * manifests and invalidate API caches.
  */
-let activeIpcListener = null;
+const IPC_LISTENER_KEY = Symbol.for('__xnapify.extension.hmr.ipcListener__');
 
 function registerHmrIpcListener(container) {
   // Clean up any existing listener from a previous HMR hot-reload
-  // to prevent memory leaks and double-firing
-  if (activeIpcListener) {
-    process.removeListener('message', activeIpcListener);
+  // Since require.cache is cleared during full reloads, a module-scoped
+  // variable would reset to null, causing a memory leak of detached listeners.
+  // We use a global symbol to ensure the old listener is found and removed.
+  if (global[IPC_LISTENER_KEY]) {
+    process.removeListener('message', global[IPC_LISTENER_KEY]);
   }
 
   let isRefreshing = false;
 
-  activeIpcListener = async msg => {
+  const activeIpcListener = async msg => {
     if (msg && msg.type === 'extensions-refreshed') {
       if (isRefreshing) return;
 
@@ -87,5 +89,6 @@ function registerHmrIpcListener(container) {
     }
   };
 
+  global[IPC_LISTENER_KEY] = activeIpcListener;
   process.on('message', activeIpcListener);
 }

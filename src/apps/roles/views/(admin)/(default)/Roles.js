@@ -88,9 +88,6 @@ function Roles() {
   // Groups modal ref
   const groupsModalRef = useRef();
 
-  // Dropdown state
-  const [activeDropdownId, setActiveDropdownId] = useState(null);
-
   useEffect(() => {
     dispatch(fetchRoles({ page: currentPage, limit: ITEMS_PER_PAGE, search }));
   }, [dispatch, currentPage, search]);
@@ -122,10 +119,6 @@ function Roles() {
 
   const handleViewPermissions = useCallback(role => {
     permissionsModalRef.current && permissionsModalRef.current.open(role);
-  }, []);
-
-  const handleToggleDropdown = useCallback(id => {
-    setActiveDropdownId(prev => (prev === id ? null : id));
   }, []);
 
   // Open delete confirmation modal
@@ -350,8 +343,6 @@ function Roles() {
                 </Flex>
                 <RoleActionsDropdown
                   role={role}
-                  isOpen={activeDropdownId === role.id}
-                  onToggle={handleToggleDropdown}
                   onViewUsers={handleViewUsers}
                   onViewGroups={handleViewGroups}
                   onViewPermissions={handleViewPermissions}

@@ -72,7 +72,7 @@ export default function EmailTemplateSelector({ editor }) {
   };
 
   return (
-    <ContextMenu align='left'>
+    <ContextMenu>
       <ContextMenu.Trigger
         as={ToolbarButton}
         icon={

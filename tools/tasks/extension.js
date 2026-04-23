@@ -257,17 +257,25 @@ function handleBuildResult(err, stats, isWatch) {
   return null;
 }
 
+let notifyTimer = null;
+
 /** Notify the dev server that extension bundles have been rebuilt. */
 function notifyServer(extensions) {
-  const names = extensions.map(p => p.name);
-  const msg = { type: 'extensions-refreshed', extensions: names };
-
-  if (typeof process.send === 'function') {
-    process.send(msg);
-  } else {
-    process.emit('message', msg);
+  if (notifyTimer) {
+    clearTimeout(notifyTimer);
   }
-  logInfo(`🔌 Sent extensions-refreshed: ${names.join(', ')}`);
+
+  notifyTimer = setTimeout(() => {
+    const names = extensions.map(p => p.name);
+    const msg = { type: 'extensions-refreshed', extensions: names };
+
+    if (typeof process.send === 'function') {
+      process.send(msg);
+    } else {
+      process.emit('message', msg);
+    }
+    logInfo(`🔌 Sent extensions-refreshed: ${names.join(', ')}`);
+  }, 300);
 }
 
 // ---------------------------------------------------------------------------

@@ -17,13 +17,12 @@ import {
   DownloadIcon,
   TrashIcon,
 } from '@radix-ui/react-icons';
-import { Box, Flex, Text, Grid } from '@radix-ui/themes';
+import { Box, Flex, Text, Grid, ContextMenu } from '@radix-ui/themes';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import ContextMenu from '@shared/renderer/components/ContextMenu';
 import Loader from '@shared/renderer/components/Loader';
 import Modal from '@shared/renderer/components/Modal';
 import { TablePagination } from '@shared/renderer/components/Table';
@@ -408,50 +407,44 @@ export default function FileGrid({ onShare }) {
         </Flex>
       )}
 
-      {/* Context Menu logic utilizing shared component */}
-      {contextMenu && (
-        <ContextMenu
-          isOpen={true}
-          onToggle={() => setContextMenu(null)}
-          x={contextMenu.x}
-          y={contextMenu.y}
-        >
-          <ContextMenu.Menu>
+      {/* Right-click context menu backed by Radix ContextMenu */}
+      <ContextMenu.Root
+        onOpenChange={open => {
+          if (!open) setContextMenu(null);
+        }}
+      >
+        {/* Hidden trigger – the menu is opened programmatically via onContextMenu */}
+        <ContextMenu.Trigger disabled={!contextMenu}>
+          <span />
+        </ContextMenu.Trigger>
+
+        {contextMenu && (
+          <ContextMenu.Content>
             {contextMenu.file.owner_id === currentUserId && (
-              <ContextMenu.Item
-                onClick={onRename}
-                icon={<Pencil1Icon width={16} height={16} />}
-              >
+              <ContextMenu.Item onSelect={onRename}>
+                <Pencil1Icon width={16} height={16} />
                 {t('files:grid.rename', 'Rename')}
               </ContextMenu.Item>
             )}
-            <ContextMenu.Item
-              onClick={handleShare}
-              icon={<Share1Icon width={16} height={16} />}
-            >
+            <ContextMenu.Item onSelect={handleShare}>
+              <Share1Icon width={16} height={16} />
               {t('files:grid.share', 'Share')}
             </ContextMenu.Item>
 
-            <ContextMenu.Item
-              onClick={onCopyLink}
-              icon={<CopyIcon width={16} height={16} />}
-            >
+            <ContextMenu.Item onSelect={onCopyLink}>
+              <CopyIcon width={16} height={16} />
               {t('files:grid.copy_link', 'Copy link')}
             </ContextMenu.Item>
 
             {contextMenu.file.type === 'file' && (
-              <ContextMenu.Item
-                onClick={onDownload}
-                icon={<DownloadIcon width={16} height={16} />}
-              >
+              <ContextMenu.Item onSelect={onDownload}>
+                <DownloadIcon width={16} height={16} />
                 {t('files:grid.download', 'Download')}
               </ContextMenu.Item>
             )}
 
-            <ContextMenu.Item
-              onClick={onStar}
-              icon={<StarIcon width={16} height={16} />}
-            >
+            <ContextMenu.Item onSelect={onStar}>
+              <StarIcon width={16} height={16} />
               {contextMenu.file.is_starred
                 ? t('files:grid.remove_star', 'Remove Star')
                 : t('files:grid.add_star', 'Add Star')}
@@ -459,21 +452,18 @@ export default function FileGrid({ onShare }) {
 
             {contextMenu.file.owner_id === currentUserId && (
               <>
-                <ContextMenu.Divider />
-                <ContextMenu.Item
-                  onClick={onTrash}
-                  variant='danger'
-                  icon={<TrashIcon width={16} height={16} />}
-                >
+                <ContextMenu.Separator />
+                <ContextMenu.Item color='red' onSelect={onTrash}>
+                  <TrashIcon width={16} height={16} />
                   {currentView === 'trash'
                     ? t('files:grid.delete_permanently', 'Delete Permanently')
                     : t('files:grid.move_to_trash', 'Move to Trash')}
                 </ContextMenu.Item>
               </>
             )}
-          </ContextMenu.Menu>
-        </ContextMenu>
-      )}
+          </ContextMenu.Content>
+        )}
+      </ContextMenu.Root>
       {/* RENAME PROMPT */}
       <Modal.ConfirmPrompt
         ref={renamePromptRef}

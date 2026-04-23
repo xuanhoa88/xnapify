@@ -314,7 +314,16 @@ function SearchableSelect({
       {isOpen && (
         <Portal>
           <Theme>
-            <Box ref={menuRef} className={s.menuContainer}>
+            <Box
+              ref={node => {
+                menuRef.current = node;
+                if (node && isOpen) {
+                  // Small delay to ensure DOM is fully painted before measuring
+                  requestAnimationFrame(() => updatePosition());
+                }
+              }}
+              className={s.menuContainer}
+            >
               {showSearch && (
                 <Box px='2' pb='2'>
                   <TextField.Root
