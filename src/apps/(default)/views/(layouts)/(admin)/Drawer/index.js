@@ -8,7 +8,7 @@
 import { useCallback, useRef, useState, useEffect, useMemo } from 'react';
 
 import * as RadixIcons from '@radix-ui/react-icons';
-import { Flex, Box, Text, Button } from '@radix-ui/themes';
+import { Flex, Box, Text, Tooltip, HoverCard } from '@radix-ui/themes';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
@@ -19,14 +19,20 @@ import { checkPermission } from '@shared/renderer/components/Rbac';
 import { features } from '@shared/renderer/redux';
 import { useWebSocket } from '@shared/ws/client';
 
-const { isAuthenticated, logout, getUserProfile, toggleDrawer, isDrawerOpen } =
-  features;
+import s from './Drawer.css';
+
+const {
+  isAuthenticated,
+  logout,
+  getUserProfile,
+  getUserRoles,
+  toggleDrawer,
+  isDrawerOpen,
+} = features;
 
 export const SIDER_WIDTH = 240;
 export const SIDER_COLLAPSED_WIDTH = 80;
 export const SIDER_MINIMAL_WIDTH = 64;
-
-
 
 function Drawer({ minimal = false }) {
   const { t } = useTranslation();
@@ -172,6 +178,20 @@ function Drawer({ minimal = false }) {
       : user.email;
   }, [isAuth, user]);
 
+  const roles = useSelector(getUserRoles);
+
+  const userDisplayRole = useMemo(() => {
+    if (!roles || roles.length === 0) return t('common.user', 'User');
+    const specializedRole = roles.find(r => {
+      const roleName = typeof r === 'string' ? r : r.name;
+      return roleName !== 'user';
+    });
+    const roleToDisplay = specializedRole || roles[0];
+    const roleName =
+      typeof roleToDisplay === 'string' ? roleToDisplay : roleToDisplay.name;
+    return roleName.charAt(0).toUpperCase() + roleName.slice(1);
+  }, [roles, t]);
+
   const isExpanded = minimal ? collapsed : !collapsed;
 
   let siderWidth;
@@ -187,27 +207,48 @@ function Drawer({ minimal = false }) {
 
   const renderLink = item => {
     const active = isActive(item.path, item.exact);
+    const Icon = resolveIcon(item.icon);
+    const treatAsCompact = isCompact && !item.isSubItem;
 
     const content = (
       <Flex
         align='center'
         gap='3'
         className={clsx(
-          'w-full rounded-md transition-all duration-200 cursor-pointer no-underline py-2 px-3 justify-start text-gray-11 bg-transparent hover:bg-gray-3 hover:text-gray-12',
-          {
-            'p-3 justify-center': isCompact,
-            'text-gray-12 bg-gray-3 font-medium': active,
-          },
+          'rounded-lg transition-all duration-200 cursor-pointer select-none relative group/item no-underline',
+          treatAsCompact
+            ? 'w-10 h-10 p-0 justify-center mx-auto flex'
+            : 'w-full py-2.5 px-3',
+          !active && 'text-slate-400 hover:text-white hover:bg-white/[0.06]',
+          active && 'text-white font-medium bg-blue-500/15',
         )}
       >
-        {(() => {
-          const Comp = typeof item.icon === 'string'
-            ? RadixIcons[item.icon] || RadixIcons.BoxIcon
-            : (item.icon || RadixIcons.BoxIcon);
-          return <Comp width={18} height={18} />;
-        })()}
-        {!isCompact && (
-          <Text size='3' weight={active ? 'medium' : 'regular'}>
+        {active && (
+          <Box
+            className={clsx(
+              'absolute left-0 w-[3px] rounded-r-full bg-blue-400',
+              treatAsCompact
+                ? 'top-[15%] bottom-[15%]'
+                : 'top-[15%] bottom-[15%]',
+            )}
+          />
+        )}
+        <Icon
+          width={treatAsCompact ? 20 : 18}
+          height={treatAsCompact ? 20 : 18}
+          className={clsx(
+            'shrink-0 transition-colors',
+            active
+              ? 'text-blue-400'
+              : 'text-slate-500 group-hover/item:text-slate-300',
+          )}
+        />
+        {!treatAsCompact && (
+          <Text
+            size='2'
+            weight={active ? 'medium' : 'regular'}
+            className='truncate leading-normal text-[13.5px]'
+          >
             {item.label}
           </Text>
         )}
@@ -216,21 +257,98 @@ function Drawer({ minimal = false }) {
 
     const linkProps = {
       onClick: isMobile ? handleCloseMobileDrawer : undefined,
-      className: 'no-underline block mb-1',
+      className:
+        'no-underline block mb-0.5 focus-visible:outline-none [color:inherit]',
     };
 
     if (item.external) {
       return (
         <a href={item.path} {...linkProps}>
-          {content}
+          {treatAsCompact ? (
+            <Tooltip content={item.label} side='right'>
+              {content}
+            </Tooltip>
+          ) : (
+            content
+          )}
         </a>
       );
     }
 
     return (
       <Link to={item.path} {...linkProps}>
-        {content}
+        {treatAsCompact ? (
+          <Tooltip content={item.label} side='right' delayDuration={80}>
+            {content}
+          </Tooltip>
+        ) : (
+          content
+        )}
       </Link>
+    );
+  };
+
+  const resolveIcon = icon => {
+    if (typeof icon === 'string') return RadixIcons[icon] || RadixIcons.BoxIcon;
+    return icon || RadixIcons.BoxIcon;
+  };
+
+  const renderCompactGroup = group => {
+    if (!group.items || group.items.length === 0) return null;
+    if (group.items.length === 1) return renderLink(group.items[0]);
+
+    const firstItem = group.items[0];
+    const groupActive = group.items.some(item =>
+      isActive(item.path, item.exact),
+    );
+    const Icon = resolveIcon(firstItem.icon || group.icon);
+
+    return (
+      <HoverCard.Root
+        openDelay={100}
+        closeDelay={100}
+        key={group.id || group.ns}
+      >
+        <HoverCard.Trigger>
+          <Box className='cursor-pointer outline-none w-full'>
+            <Flex
+              align='center'
+              justify='center'
+              className={clsx(
+                'w-10 h-10 rounded-lg mx-auto transition-all duration-200 relative flex',
+                !groupActive &&
+                  'text-slate-500 hover:text-white hover:bg-white/[0.06]',
+                groupActive && 'text-blue-400 bg-blue-500/15',
+              )}
+            >
+              {groupActive && (
+                <Box className='absolute left-0 top-[15%] bottom-[15%] w-[3px] rounded-r-full bg-blue-400' />
+              )}
+              <Icon width={20} height={20} />
+            </Flex>
+          </Box>
+        </HoverCard.Trigger>
+        <HoverCard.Content
+          side='right'
+          align='start'
+          sideOffset={16}
+          className='p-2 bg-[#0a1628] border border-white/[0.06] shadow-xl min-w-[220px]'
+        >
+          <Text
+            as='div'
+            className='uppercase tracking-[0.08em] text-slate-500 px-2 mb-2 select-none text-[10px] font-semibold'
+          >
+            {group.ns}
+          </Text>
+          <Flex direction='column' gap='0.5'>
+            {group.items.map(item => (
+              <Box key={item.path}>
+                {renderLink({ ...item, isSubItem: true })}
+              </Box>
+            ))}
+          </Flex>
+        </HoverCard.Content>
+      </HoverCard.Root>
     );
   };
 
@@ -241,7 +359,7 @@ function Drawer({ minimal = false }) {
         ref={siderRef}
         direction='column'
         className={clsx(
-          'bg-panel-solid border-r border-gray-a5 transition-[width,transform] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] top-0 left-0 bottom-0 z-40',
+          'bg-[#0a1628] transition-[width,transform] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] top-0 left-0 bottom-0 z-40',
           isMobile ? 'fixed' : 'fixed',
         )}
         // eslint-disable-next-line react/forbid-dom-props
@@ -261,144 +379,193 @@ function Drawer({ minimal = false }) {
           justify={isCompact ? 'center' : 'flex-start'}
           gap='3'
           height='64px'
-          px='4'
+          px={isCompact ? '0' : '5'}
           shrink='0'
-          className='border-b border-gray-a6'
+          className='border-b border-white/[0.06]'
         >
-          <Box width='32px' height='32px' shrink='0'>
+          <Flex
+            align='center'
+            justify='center'
+            className={clsx(
+              'relative group/logo cursor-pointer overflow-hidden shrink-0',
+              isCompact ? 'w-10 h-10' : 'w-8 h-8',
+            )}
+          >
+            <Box className='absolute inset-0 bg-white/5 opacity-0 group-hover/logo:opacity-100 transition-opacity duration-300' />
             <img
               alt={t('header.brand', 'xnapify')}
-              src='/xnapify.png'
-              className='w-full h-full'
+              src='/xnapify_38x38.png'
+              srcSet='/xnapify_72x72.png 2x'
+              className={clsx(
+                'rounded-md transition-transform duration-300 group-hover/logo:scale-110',
+                isCompact ? 'w-[24px] h-[24px]' : 'w-[20px] h-[20px]',
+              )}
             />
-          </Box>
+          </Flex>
           {!isCompact && (
-            <Text size='4' weight='bold' className='text-gray-12'>
-              {t('header.brand', 'xnapify')}
-            </Text>
+            <Flex direction='column' justify='center'>
+              <Text
+                size='4'
+                weight='bold'
+                className='text-white tracking-tight leading-none mt-0.5'
+              >
+                {t('header.brand', 'xnapify')}
+              </Text>
+              <Text
+                size='1'
+                className='text-slate-400 font-medium tracking-wide uppercase text-[9px] mt-1'
+              >
+                {t('header.brandSub', 'Admin Panel')}
+              </Text>
+            </Flex>
           )}
         </Flex>
 
-        <Box as='nav' grow='1' p='3' className='overflow-y-auto'>
-          {menuItems.map(group => {
+        <Box
+          as='nav'
+          grow='1'
+          p={isCompact ? '2' : '3'}
+          pt='4'
+          className={clsx('overflow-y-auto overflow-x-hidden', s.scrollArea)}
+        >
+          {menuItems.map((group, gi) => {
             return (
-              <Box key={group.id || group.ns} mb='4'>
+              <Box key={group.id || group.ns} mb='4' className='w-full'>
                 {/* Group Header */}
                 {!isCompact && (
                   <Text
-                    weight='semibold'
-                    className='uppercase tracking-wider text-[11px] px-2 mb-2 block text-gray-10'
+                    as='div'
+                    className='uppercase tracking-[0.08em] text-slate-500 px-3 mb-1.5 select-none text-[10.5px] font-semibold'
                   >
                     {group.ns}
                   </Text>
                 )}
-                {isCompact && group.icon && (
-                  <Flex justify='center' className='mb-2 text-gray-8'>
-                    {(() => {
-                      const Comp = typeof group.icon === 'string'
-                        ? RadixIcons[group.icon] || RadixIcons.BoxIcon
-                        : (group.icon || RadixIcons.BoxIcon);
-                      return <Comp width={16} height={16} />;
-                    })()}
-                  </Flex>
+
+                {/* Divider for compact mode */}
+                {isCompact && gi > 0 && (
+                  <Box className='h-px bg-white/[0.06] mx-2 mb-2.5 mt-[-4px]' />
                 )}
 
                 {/* Items */}
-                <Box as='ul' className='list-none p-0 m-0'>
-                  {group.items.map(item => (
-                    <Box as='li' key={item.path}>
-                      {renderLink(item)}
-                    </Box>
-                  ))}
-                </Box>
+                <Flex direction='column' align='center' gap='0.5'>
+                  {isCompact
+                    ? renderCompactGroup(group)
+                    : group.items.map(item => (
+                        <Box key={item.path} className='w-full'>
+                          {renderLink(item)}
+                        </Box>
+                      ))}
+                </Flex>
               </Box>
             );
           })}
 
-          <Box width='100%' height='1px' my='4' className='bg-gray-a6' />
-
           {/* Quick Links */}
-          <Box mb='4'>
+          <Box mb='4' className='w-full'>
             {!isCompact && (
               <Text
-                weight='semibold'
-                className='uppercase tracking-wider text-[11px] px-2 mb-2 block text-gray-10'
+                as='div'
+                className='uppercase tracking-[0.08em] text-slate-500 px-3 mb-1.5 select-none text-[10.5px] font-semibold mt-6'
               >
                 {t('navigation.quick', 'Quick Links')}
               </Text>
             )}
-            <Box as='ul' className='list-none p-0 m-0'>
-              <Box as='li'>
-                <Link
-                  to='/'
-                  onClick={isMobile ? handleCloseMobileDrawer : undefined}
-                  className='no-underline block'
-                >
-                  <Flex
-                    align='center'
-                    gap='3'
-                    className={clsx(
-                      'py-2 px-3 justify-start text-gray-11 rounded-md transition-all duration-200 bg-transparent hover:bg-gray-3 hover:text-gray-12',
-                      { 'p-3 justify-center': isCompact },
-                    )}
-                  >
-                    <RadixIcons.ArrowUpIcon width={18} height={18} />
-                    {!isCompact && (
-                      <Text size='3'>
-                        {t('navigation.backToSite', 'Back to Site')}
-                      </Text>
-                    )}
-                  </Flex>
-                </Link>
+            {isCompact && (
+              <Box className='h-px bg-white/[0.06] mx-2 mb-2.5 mt-[-4px]' />
+            )}
+            <Flex direction='column' align='center' gap='0.5'>
+              <Box className={isCompact ? '' : 'w-full'}>
+                {renderLink({
+                  path: '/',
+                  label: t('navigation.backToSite', 'Back to Site'),
+                  icon: 'ArrowTopRightIcon',
+                  external: true,
+                })}
               </Box>
-            </Box>
+            </Flex>
           </Box>
         </Box>
 
         {/* User Footer */}
         {isAuth && user && (
-          <Flex
-            align='center'
-            justify={isCompact ? 'center' : 'space-between'}
-            p='4'
-            shrink='0'
-            className='border-t border-gray-a5 transition-colors hover:bg-gray-2 cursor-pointer'
-          >
-            <Flex align='center' gap='3'>
+          <Box shrink='0' className='border-t border-white/[0.06] w-full'>
+            {isCompact ? (
+              <Flex
+                direction='column'
+                align='center'
+                py='3'
+                className='group/footer w-full'
+              >
+                <Tooltip content={userDisplayName} side='right'>
+                  <Flex
+                    align='center'
+                    justify='center'
+                    className='w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 to-orange-500 text-white cursor-default select-none shadow-sm shadow-orange-500/25'
+                  >
+                    <RadixIcons.PersonIcon width={20} height={20} />
+                  </Flex>
+                </Tooltip>
+                <Tooltip
+                  content={t('navigation.logout', 'Logout')}
+                  side='right'
+                >
+                  <Flex
+                    align='center'
+                    justify='center'
+                    role='button'
+                    tabIndex={0}
+                    onClick={handleLogout}
+                    className='w-9 h-9 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200 cursor-pointer mt-1.5 opacity-0 group-hover/footer:opacity-100'
+                  >
+                    <RadixIcons.ExitIcon width={16} height={16} />
+                  </Flex>
+                </Tooltip>
+              </Flex>
+            ) : (
               <Flex
                 align='center'
-                justify='center'
-                width='32px'
-                height='32px'
-                shrink='0'
-                className='rounded-full bg-indigo-3 text-indigo-11 font-bold'
+                justify='between'
+                className='px-4 py-3.5 group/footer w-full'
               >
-                {userDisplayName.charAt(0).toUpperCase()}
-              </Flex>
-              {!isCompact && (
-                <Flex direction='column' overflow='hidden'>
-                  <Text size='3' weight='medium' truncate>
-                    {userDisplayName || t('common.admin', 'Admin')}
-                  </Text>
-                  <Text size='1' color='gray' truncate>
-                    {user.email}
-                  </Text>
+                <Flex align='center' gap='3' className='min-w-0'>
+                  <Flex
+                    align='center'
+                    justify='center'
+                    width='38px'
+                    height='38px'
+                    shrink='0'
+                    className='rounded-xl bg-gradient-to-br from-orange-400 to-orange-500 text-white shadow-sm shadow-orange-500/25'
+                  >
+                    <RadixIcons.PersonIcon width={20} height={20} />
+                  </Flex>
+                  <Flex direction='column' className='min-w-0'>
+                    <Text
+                      size='2'
+                      weight='bold'
+                      className='text-white truncate leading-none text-[13.5px]'
+                    >
+                      {userDisplayName || t('common.admin', 'Admin')}
+                    </Text>
+                    <Text className='text-slate-500 uppercase tracking-[0.08em] text-[10px] font-semibold mt-1 truncate leading-none'>
+                      {userDisplayRole}
+                    </Text>
+                  </Flex>
                 </Flex>
-              )}
-            </Flex>
-            {!isCompact && (
-              <Button
-                variant='ghost'
-                color='gray'
-                shrink='0'
-                p='2'
-                onClick={handleLogout}
-                title={t('navigation.logout', 'Logout')}
-              >
-                <RadixIcons.ExitIcon width={16} height={16} />
-              </Button>
+                <Tooltip content={t('navigation.logout', 'Logout')}>
+                  <Flex
+                    align='center'
+                    justify='center'
+                    role='button'
+                    tabIndex={0}
+                    onClick={handleLogout}
+                    className='w-8 h-8 rounded-lg shrink-0 text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer opacity-0 group-hover/footer:opacity-100'
+                  >
+                    <RadixIcons.ExitIcon width={15} height={15} />
+                  </Flex>
+                </Tooltip>
+              </Flex>
             )}
-          </Flex>
+          </Box>
         )}
 
         {/* Collapse trigger — desktop only */}
@@ -420,12 +587,13 @@ function Drawer({ minimal = false }) {
                 ? t('common.collapse', 'Collapse')
                 : t('common.expand', 'Expand')
             }
-            className='absolute top-1/2 -right-3 -translate-y-1/2 w-6 h-6 rounded-full bg-panel-solid border border-gray-a6 text-gray-9 cursor-pointer z-10 shadow-sm transition-all duration-200 hover:text-gray-12 hover:border-gray-8'
+            className='absolute top-1/2 -right-3 -translate-y-1/2 w-6 h-6 rounded-full bg-white border border-gray-200 text-gray-500 cursor-pointer z-10 shadow-sm transition-all duration-200 hover:text-gray-900 hover:border-gray-300 hover:shadow-md'
           >
             <Box
-              className={clsx('transition-transform duration-200 flex', {
-                'rotate-180': isExpanded,
-              })}
+              className={clsx(
+                'transition-transform duration-200 flex',
+                isExpanded && 'rotate-180',
+              )}
             >
               <RadixIcons.ChevronRightIcon width={14} height={14} />
             </Box>

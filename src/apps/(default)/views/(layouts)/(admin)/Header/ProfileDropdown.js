@@ -8,7 +8,6 @@
 import { useCallback, useMemo } from 'react';
 
 import {
-  ChevronDownIcon,
   PersonIcon,
   LightningBoltIcon,
   ArrowUpIcon,
@@ -60,11 +59,6 @@ function ProfileDropdown() {
     [dispatch, ws, history],
   );
 
-  // Get avatar initial
-  const avatarInitial = useMemo(() => {
-    return displayName ? displayName.charAt(0).toUpperCase() : 'A';
-  }, [displayName]);
-
   // Determine display role
   const displayRole = useMemo(() => {
     if (!roles || roles.length === 0) return t('common.user', 'User');
@@ -93,7 +87,7 @@ function ProfileDropdown() {
           <Flex
             align='center'
             justify='center'
-            className='w-8 h-8 rounded-full bg-indigo-3 text-indigo-11 overflow-hidden font-bold text-sm flex items-center justify-center'
+            className='w-8 h-8 rounded-md bg-orange-400 text-white overflow-hidden font-bold text-sm flex items-center justify-center'
           >
             {avatarUrl ? (
               <img
@@ -105,27 +99,9 @@ function ProfileDropdown() {
                 }}
               />
             ) : (
-              avatarInitial
+              <PersonIcon width={16} height={16} />
             )}
           </Flex>
-          <Flex
-            direction='column'
-            className='hidden md:flex md:flex-col items-start'
-          >
-            <Text
-              size='3'
-              weight='medium'
-              className='text-gray-12 leading-none'
-            >
-              {displayName}
-            </Text>
-            <Text size='1' color='gray' className='leading-none mt-[2px]'>
-              {displayRole}
-            </Text>
-          </Flex>
-          <Box className='flex text-gray-11 transition-transform duration-200 ml-1 data-[state=open]:rotate-180'>
-            <ChevronDownIcon width={12} height={12} />
-          </Box>
         </Button>
       </DropdownMenu.Trigger>
 

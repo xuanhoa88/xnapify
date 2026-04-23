@@ -6,7 +6,6 @@
  */
 
 import { Flex, Box } from '@radix-ui/themes';
-import clsx from 'clsx';
 import PropTypes from 'prop-types';
 
 import ImpersonationBanner from '../components/ImpersonationBanner';
@@ -24,7 +23,7 @@ import Header from './Header';
  */
 function AdminLayout({ children, minimal = true }) {
   return (
-    <Flex minHeight='100vh' className='bg-gray-2'>
+    <Flex minHeight='100vh' className='bg-[#f4f7fa]'>
       <Drawer minimal={minimal} />
 
       <Flex

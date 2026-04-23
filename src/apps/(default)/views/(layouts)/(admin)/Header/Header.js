@@ -7,16 +7,18 @@
 
 import { useCallback } from 'react';
 
-import { HamburgerMenuIcon } from '@radix-ui/react-icons';
-import { Flex, Box, Button } from '@radix-ui/themes';
+import {
+  HamburgerMenuIcon,
+  GearIcon,
+  QuestionMarkCircledIcon,
+} from '@radix-ui/react-icons';
+import { Flex, Box, Button, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 
 import { features } from '@shared/renderer/redux';
 
 import Breadcrumbs from './Breadcrumbs';
-import LanguageSwitcher from './LanguageSwitcher';
-import Messages from './Messages';
 import Notifications from './Notifications';
 import ProfileDropdown from './ProfileDropdown';
 
@@ -26,7 +28,7 @@ const { isAuthenticated, toggleDrawer } = features;
  * AdminHeader Component
  *
  * A modern, professional header specifically designed for admin panel pages.
- * Composed of: Breadcrumbs, SearchBar, and ProfileDropdown sub-components mapped to Radix UI.
+ * Composed of: Breadcrumbs, Notifications, and ProfileDropdown sub-components mapped to Radix UI.
  */
 function AdminHeader() {
   const { t } = useTranslation();
@@ -46,13 +48,9 @@ function AdminHeader() {
       as='header'
       position='sticky'
       top='0'
-      className='z-40 pt-4 px-4 pb-2 bg-gray-2/80 backdrop-blur-sm'
+      className='z-40 bg-white border-b border-gray-200 h-16'
     >
-      <Flex
-        align='center'
-        justify='between'
-        className='h-14 px-4 rounded-xl bg-panel-solid/90 shadow-sm border border-gray-a6 backdrop-blur-md'
-      >
+      <Flex align='center' justify='between' className='h-full px-6'>
         {/* Left Section - Toggle & Breadcrumbs */}
         <Flex align='center' gap='3'>
           <Button
@@ -69,21 +67,45 @@ function AdminHeader() {
           </Box>
         </Flex>
 
-        {/* Right Section - Language | Notifications Group | User */}
-        <Flex align='center'>
-          <Flex
-            align='center'
-            gap='1'
-            className='bg-gray-3 p-1 rounded-full border border-gray-a6'
+        {/* Right Section - Page Title & Action Icons */}
+        <Flex align='center' gap='5'>
+          <Text
+            size='3'
+            weight='bold'
+            className='text-gray-900 hidden lg:block'
           >
-            <LanguageSwitcher />
-            <Messages />
-            <Notifications />
-          </Flex>
+            {t('admin:dashboard.title', 'Dashboard')}
+          </Text>
 
-          <Box className='ml-3'>
-            <ProfileDropdown />
-          </Box>
+          <Flex align='center' gap='1'>
+            <Notifications />
+
+            <Flex
+              align='center'
+              justify='center'
+              role='button'
+              tabIndex={0}
+              title={t('common.settings', 'Settings')}
+              className='w-9 h-9 rounded-full text-gray-500 cursor-pointer transition-colors hover:bg-gray-100 hover:text-gray-900'
+            >
+              <GearIcon width={18} height={18} />
+            </Flex>
+
+            <Flex
+              align='center'
+              justify='center'
+              role='button'
+              tabIndex={0}
+              title={t('common.help', 'Help')}
+              className='w-9 h-9 rounded-full text-gray-500 cursor-pointer transition-colors hover:bg-gray-100 hover:text-gray-900'
+            >
+              <QuestionMarkCircledIcon width={18} height={18} />
+            </Flex>
+
+            <Box className='ml-1'>
+              <ProfileDropdown />
+            </Box>
+          </Flex>
         </Flex>
       </Flex>
     </Box>

@@ -84,14 +84,14 @@ function AdminNotifications() {
         <Button
           variant='ghost'
           title={t('common.notifications', 'Notifications')}
-          className='relative flex items-center justify-center w-9 h-9 rounded-full text-gray-11 cursor-pointer transition-colors bg-transparent hover:bg-gray-3 hover:text-gray-12 data-[state=open]:bg-gray-3 data-[state=open]:text-gray-12'
+          className='relative flex items-center justify-center w-9 h-9 rounded-full text-gray-500 cursor-pointer transition-colors bg-transparent hover:bg-gray-100 hover:text-gray-900 data-[state=open]:bg-gray-100 data-[state=open]:text-gray-900'
         >
           <RadixIcons.BellIcon width={18} height={18} />
           {unreadCount > 0 && (
             <Flex
               align='center'
               justify='center'
-              className='absolute top-1 right-1 bg-red-9 text-red-1 text-[10px] font-bold min-w-[16px] h-4 rounded-full px-1 border-2 border-panel-solid flex items-center justify-center'
+              className='absolute top-0.5 right-0.5 bg-red-500 text-white text-[9px] font-bold min-w-[16px] h-4 rounded-full px-1 border-2 border-white flex items-center justify-center'
             >
               {unreadCount}
             </Flex>
@@ -128,7 +128,7 @@ function AdminNotifications() {
                 gap='3'
                 className={clsx(
                   'px-4 py-3 border-b border-gray-a6 bg-transparent cursor-pointer transition-colors hover:bg-gray-3',
-                  { 'bg-indigo-2 hover:bg-indigo-3': !notification.read },
+                  !notification.read && 'bg-indigo-2 hover:bg-indigo-3',
                 )}
               >
                 <Flex

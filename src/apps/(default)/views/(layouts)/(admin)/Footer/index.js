@@ -69,10 +69,10 @@ function AdminFooter() {
         justify='center'
         p='4'
         px='6'
-        className='border-t border-gray-a6 bg-transparent'
+        className='border-t border-gray-200 bg-transparent'
       >
         <footer>
-          <Text size='3' color='gray'>
+          <Text size='2' className='text-gray-400'>
             {t('footer.copyright', { year: currentYear })}
           </Text>
         </footer>
@@ -81,15 +81,14 @@ function AdminFooter() {
       {/* Scroll to Top Button */}
       <Button
         variant='solid'
-        color='indigo'
-        onClick={scrollToTop}
-        title={t('common.scrollToTop', 'Scroll to top')}
         className={clsx(
-          'fixed bottom-6 right-6 w-10 h-10 rounded-xl shadow-md z-50 transition-all duration-300 flex items-center justify-center cursor-pointer',
+          'fixed bottom-6 right-6 w-10 h-10 rounded-xl shadow-lg z-50 transition-all duration-300 flex items-center justify-center cursor-pointer bg-[#0e1b38] text-white hover:bg-[#1a294b]',
           showScroll
             ? 'opacity-100 visible translate-y-0'
             : 'opacity-0 invisible translate-y-2',
         )}
+        onClick={scrollToTop}
+        title={t('common.scrollToTop', 'Scroll to top')}
       >
         <ArrowUpIcon width={20} height={20} />
       </Button>

@@ -1,0 +1,34 @@
+/* Drawer scrollbar styling — CSS Module edge case (Tailwind has no scrollbar utilities) */
+
+.scrollArea {
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+
+  /* WebKit */
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 9999px;
+  }
+
+  /* Reveal on hover */
+  &:hover {
+    scrollbar-color: rgb(255 255 255 / 12%) transparent;
+  }
+
+  &:hover::-webkit-scrollbar-thumb {
+    background: rgb(255 255 255 / 12%);
+  }
+
+  &:hover::-webkit-scrollbar-thumb:hover {
+    background: rgb(255 255 255 / 22%);
+  }
+}
