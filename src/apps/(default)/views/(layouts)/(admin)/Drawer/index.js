@@ -26,6 +26,8 @@ export const SIDER_WIDTH = 240;
 export const SIDER_COLLAPSED_WIDTH = 80;
 export const SIDER_MINIMAL_WIDTH = 64;
 
+
+
 function Drawer({ minimal = false }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
@@ -191,19 +193,17 @@ function Drawer({ minimal = false }) {
         align='center'
         gap='3'
         className={clsx(
-          'w-full rounded-md transition-all duration-200 cursor-pointer no-underline py-2.5 px-4 justify-start text-gray-11 bg-transparent hover:bg-gray-3 hover:text-gray-12',
+          'w-full rounded-md transition-all duration-200 cursor-pointer no-underline py-2 px-3 justify-start text-gray-11 bg-transparent hover:bg-gray-3 hover:text-gray-12',
           {
             'p-3 justify-center': isCompact,
-            'text-indigo-11 bg-indigo-3 hover:bg-indigo-3 hover:text-indigo-11':
-              active,
+            'text-gray-12 bg-gray-3 font-medium': active,
           },
         )}
       >
         {(() => {
-          const Comp =
-            typeof item.icon === 'string'
-              ? RadixIcons[item.icon] || RadixIcons.BoxIcon
-              : RadixIcons.BoxIcon;
+          const Comp = typeof item.icon === 'string'
+            ? RadixIcons[item.icon] || RadixIcons.BoxIcon
+            : (item.icon || RadixIcons.BoxIcon);
           return <Comp width={18} height={18} />;
         })()}
         {!isCompact && (
@@ -241,8 +241,8 @@ function Drawer({ minimal = false }) {
         ref={siderRef}
         direction='column'
         className={clsx(
-          'bg-panel-solid border-r border-gray-a6 transition-[width,transform] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] top-0 left-0 bottom-0',
-          { fixed: isMobile },
+          'bg-panel-solid border-r border-gray-a5 transition-[width,transform] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] top-0 left-0 bottom-0 z-40',
+          isMobile ? 'fixed' : 'fixed',
         )}
         // eslint-disable-next-line react/forbid-dom-props
         style={{
@@ -286,10 +286,8 @@ function Drawer({ minimal = false }) {
                 {/* Group Header */}
                 {!isCompact && (
                   <Text
-                    size='1'
-                    weight='bold'
-                    color='gray'
-                    className='uppercase tracking-wide px-2 mb-2 block'
+                    weight='semibold'
+                    className='uppercase tracking-wider text-[11px] px-2 mb-2 block text-gray-10'
                   >
                     {group.ns}
                   </Text>
@@ -297,10 +295,9 @@ function Drawer({ minimal = false }) {
                 {isCompact && group.icon && (
                   <Flex justify='center' className='mb-2 text-gray-8'>
                     {(() => {
-                      const Comp =
-                        typeof group.icon === 'string'
-                          ? RadixIcons[group.icon] || RadixIcons.BoxIcon
-                          : RadixIcons.BoxIcon;
+                      const Comp = typeof group.icon === 'string'
+                        ? RadixIcons[group.icon] || RadixIcons.BoxIcon
+                        : (group.icon || RadixIcons.BoxIcon);
                       return <Comp width={16} height={16} />;
                     })()}
                   </Flex>
@@ -324,10 +321,8 @@ function Drawer({ minimal = false }) {
           <Box mb='4'>
             {!isCompact && (
               <Text
-                size='1'
-                weight='bold'
-                color='gray'
-                className='uppercase tracking-wide px-2 mb-2 block'
+                weight='semibold'
+                className='uppercase tracking-wider text-[11px] px-2 mb-2 block text-gray-10'
               >
                 {t('navigation.quick', 'Quick Links')}
               </Text>
@@ -343,7 +338,7 @@ function Drawer({ minimal = false }) {
                     align='center'
                     gap='3'
                     className={clsx(
-                      'py-2.5 px-4 justify-start text-gray-11 rounded-md transition-all duration-200 bg-transparent hover:bg-gray-3 hover:text-gray-12',
+                      'py-2 px-3 justify-start text-gray-11 rounded-md transition-all duration-200 bg-transparent hover:bg-gray-3 hover:text-gray-12',
                       { 'p-3 justify-center': isCompact },
                     )}
                   >
@@ -367,7 +362,7 @@ function Drawer({ minimal = false }) {
             justify={isCompact ? 'center' : 'space-between'}
             p='4'
             shrink='0'
-            className='border-t border-gray-a6'
+            className='border-t border-gray-a5 transition-colors hover:bg-gray-2 cursor-pointer'
           >
             <Flex align='center' gap='3'>
               <Flex

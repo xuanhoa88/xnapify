@@ -6,9 +6,10 @@
  */
 
 import { features } from '@shared/renderer/redux';
-const { isAuthenticated, selectSetting } = features;
 
 import Register from './Register';
+
+const { isAuthenticated, selectSetting } = features;
 
 /**
  * Page metadata

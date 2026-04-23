@@ -1,13 +1,15 @@
 /**
  * Posts admin page — route definition
  */
+
 import { requirePermission } from '@shared/renderer/components/Rbac';
 import { features } from '@shared/renderer/redux';
-const { addBreadcrumb, registerMenu, unregisterMenu } = features;
 
 import reducer, { SLICE_NAME } from '../redux';
 
 import Posts from './Posts';
+
+const { addBreadcrumb, registerMenu, unregisterMenu } = features;
 
 export const middleware = requirePermission('posts:read');
 
@@ -30,12 +32,12 @@ export function setup({ store, i18n }) {
       id: 'content',
       label: i18n.t('admin:navigation.content', 'Content'),
       order: 20,
-      icon: 'folder',
+      icon: 'ArchiveIcon',
       items: [
         {
           path: '/admin/posts',
           label: i18n.t('admin:navigation.posts', 'Posts'),
-          icon: 'book-open',
+          icon: 'ReaderIcon',
           permission: 'posts:read',
           order: 10,
         },

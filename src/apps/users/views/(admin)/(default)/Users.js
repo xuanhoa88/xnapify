@@ -45,7 +45,6 @@ import {
   TableBulkActions,
 } from '@shared/renderer/components/Table';
 import { features } from '@shared/renderer/redux';
-const { getUserProfile, impersonateUser } = features;
 
 import ChangeStatusUserModal from '../components/ChangeStatusUserModal';
 import ConfirmImpersonateModal from '../components/ConfirmImpersonateModal';
@@ -66,6 +65,8 @@ import {
 } from '../redux';
 
 import s from './Users.css';
+
+const { getUserProfile, impersonateUser } = features;
 
 function Users({ context }) {
   const { t } = useTranslation();

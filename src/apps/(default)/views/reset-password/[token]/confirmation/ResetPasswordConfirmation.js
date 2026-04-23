@@ -20,6 +20,9 @@ import { useDispatch, useSelector } from 'react-redux';
 import Form, { useFormContext } from '@shared/renderer/components/Form';
 import { Link } from '@shared/renderer/components/History';
 import { features } from '@shared/renderer/redux';
+
+import { passwordResetConfirmFormSchema } from '../../../../../users/validator/auth';
+
 const {
   resetPasswordConfirmation,
   isResetPasswordLoading,
@@ -28,8 +31,6 @@ const {
   generatePassword,
   showSuccessMessage,
 } = features;
-
-import { passwordResetConfirmFormSchema } from '../../../../../users/validator/auth';
 
 /**
  * Reset Password Confirmation Page Component

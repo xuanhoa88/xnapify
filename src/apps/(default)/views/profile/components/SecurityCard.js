@@ -19,6 +19,11 @@ import { useDispatch, useSelector } from 'react-redux';
 
 import Form, { useFormContext } from '@shared/renderer/components/Form';
 import { features } from '@shared/renderer/redux';
+
+import { changePasswordFormSchema } from '../../../../users/validator/auth';
+
+import s from './SecurityCard.css';
+
 const {
   changeUserPassword,
   isPasswordLoading,
@@ -27,10 +32,6 @@ const {
   generatePassword,
   showSuccessMessage,
 } = features;
-
-import { changePasswordFormSchema } from '../../../../users/validator/auth';
-
-import s from './SecurityCard.css';
 
 function SecurityCard() {
   const { t } = useTranslation();

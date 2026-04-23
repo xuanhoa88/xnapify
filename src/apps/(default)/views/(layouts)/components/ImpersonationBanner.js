@@ -12,9 +12,10 @@ import { useDispatch, useSelector } from 'react-redux';
 
 import { useHistory } from '@shared/renderer/components/History';
 import { features } from '@shared/renderer/redux';
-const { getUserProfile, getImpersonatorId, stopImpersonating } = features;
 
 import s from './ImpersonationBanner.css';
+
+const { getUserProfile, getImpersonatorId, stopImpersonating } = features;
 
 /**
  * Global banner explicitly substituting legacy CSS values via Radix implementations seamlessly resolving absolute imports dynamically directly substituting classNames.

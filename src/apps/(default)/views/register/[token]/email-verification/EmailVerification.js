@@ -15,13 +15,14 @@ import { useDispatch, useSelector } from 'react-redux';
 
 import { Link, useHistory } from '@shared/renderer/components/History';
 import { features } from '@shared/renderer/redux';
+import { useWebSocket } from '@shared/ws/client';
+
 const {
   emailVerification,
   isEmailVerificationLoading,
   getEmailVerificationError,
   clearEmailVerificationError,
 } = features;
-import { useWebSocket } from '@shared/ws/client';
 
 /**
  * Email Verification Page Component

@@ -20,6 +20,12 @@ import {
   useQuery,
 } from '@shared/renderer/components/History';
 import { features } from '@shared/renderer/redux';
+import { useWebSocket } from '@shared/ws/client';
+
+import { loginFormSchema } from '../../../users/validator/auth';
+
+import s from './Login.css';
+
 const {
   login,
   getUserPreferences,
@@ -30,11 +36,6 @@ const {
   clearAuthError,
   selectSetting,
 } = features;
-import { useWebSocket } from '@shared/ws/client';
-
-import { loginFormSchema } from '../../../users/validator/auth';
-
-import s from './Login.css';
 
 /**
  * Login Page Component

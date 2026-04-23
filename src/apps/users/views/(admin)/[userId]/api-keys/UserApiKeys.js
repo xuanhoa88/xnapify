@@ -36,7 +36,6 @@ import Loader from '@shared/renderer/components/Loader';
 import Modal from '@shared/renderer/components/Modal';
 import { useRbac } from '@shared/renderer/components/Rbac';
 import { features } from '@shared/renderer/redux';
-const { showSuccessMessage } = features;
 
 import { createApiKeyFormSchema } from '../../../../validator/admin';
 import {
@@ -61,6 +60,7 @@ import {
 } from '../../redux';
 
 import s from './UserApiKeys.css';
+const { showSuccessMessage } = features;
 
 const DEFAULT_FORM_VALUES = { name: '', expiresIn: 365, scopes: [] };
 

@@ -21,6 +21,8 @@ import { useSelector, useDispatch } from 'react-redux';
 import { Link, useHistory } from '@shared/renderer/components/History';
 import { checkPermission } from '@shared/renderer/components/Rbac';
 import { features } from '@shared/renderer/redux';
+import { useWebSocket } from '@shared/ws/client';
+
 const {
   getUserDisplayName,
   getUserAvatarUrl,
@@ -28,7 +30,6 @@ const {
   getUserProfile,
   logout,
 } = features;
-import { useWebSocket } from '@shared/ws/client';
 
 /**
  * ProfileDropdown Component

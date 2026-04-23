@@ -13,12 +13,13 @@ import { useDispatch, useSelector } from 'react-redux';
 
 import Toast from '@shared/renderer/components/Toast';
 import { features } from '@shared/renderer/redux';
-const { getFlashMessage, clearFlashMessage } = features;
 
 import ImpersonationBanner from '../components/ImpersonationBanner';
 
 import Footer from './Footer';
 import Header from './Header';
+
+const { getFlashMessage, clearFlashMessage } = features;
 
 function DefaultLayout({ children }) {
   const dispatch = useDispatch();

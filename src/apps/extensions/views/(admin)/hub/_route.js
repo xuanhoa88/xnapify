@@ -7,10 +7,11 @@
 
 import { requirePermission } from '@shared/renderer/components/Rbac';
 import { features } from '@shared/renderer/redux';
-const { addBreadcrumb } = features;
 
 import Hub from './Hub';
-import hubReducer, { SLICE_NAME as HUB_SLICE_NAME } from './redux';
+import hubReducer, { SLICE_NAME } from './redux';
+
+const { addBreadcrumb } = features;
 
 // Load translations
 const translationsContext = require.context(
@@ -25,7 +26,7 @@ export const middleware = requirePermission('extensions:read');
  * Route boot — inject Redux reducer into the store.
  */
 export function init({ store }) {
-  store.injectReducer(HUB_SLICE_NAME, hubReducer);
+  store.injectReducer(SLICE_NAME, hubReducer);
 }
 
 /**

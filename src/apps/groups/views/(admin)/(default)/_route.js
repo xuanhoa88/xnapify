@@ -5,13 +5,15 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+
 import { requirePermission } from '@shared/renderer/components/Rbac';
 import { features } from '@shared/renderer/redux';
-const { addBreadcrumb, registerMenu, unregisterMenu } = features;
 
 import reducer, { SLICE_NAME } from '../redux';
 
 import Groups from './Groups';
+
+const { addBreadcrumb, registerMenu, unregisterMenu } = features;
 
 export const middleware = requirePermission('groups:read');
 
@@ -32,12 +34,12 @@ export function setup({ store, i18n }) {
       id: 'identity-access',
       label: i18n.t('admin:navigation.identityAccess', 'Identity & Access'),
       order: 10,
-      icon: 'shield',
+      icon: 'LockClosedIcon',
       items: [
         {
           path: '/admin/groups',
           label: i18n.t('admin:navigation.groups', 'Groups'),
-          icon: 'folder',
+          icon: 'ArchiveIcon',
           permission: 'groups:read',
           order: 20,
         },

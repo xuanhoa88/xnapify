@@ -17,12 +17,13 @@ import { useDispatch, useSelector } from 'react-redux';
 import Form, { useFormContext } from '@shared/renderer/components/Form';
 import { useHistory } from '@shared/renderer/components/History';
 import { features } from '@shared/renderer/redux';
-const { deleteUser, isDeleteLoading, getDeleteError, clearDeleteError } =
-  features;
 
 import { deleteAccountFormSchema } from '../../../../users/validator/auth';
 
 import s from './DeleteAccountCard.css';
+
+const { deleteUser, isDeleteLoading, getDeleteError, clearDeleteError } =
+  features;
 
 /**
  * DeleteAccountCard adopting pure functional Radix implementations overriding primitive mapped styles.

@@ -16,9 +16,10 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Link } from '@shared/renderer/components/History';
 import Toast from '@shared/renderer/components/Toast';
 import { features } from '@shared/renderer/redux';
-const { getFlashMessage, clearFlashMessage } = features;
 
 import s from './_layout.css';
+
+const { getFlashMessage, clearFlashMessage } = features;
 
 /**
  * Hero Section - Enterprise-grade deep slate with animated mesh gradients

@@ -13,13 +13,14 @@ import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 
 import { features } from '@shared/renderer/redux';
-const { isAuthenticated, toggleDrawer } = features;
 
 import Breadcrumbs from './Breadcrumbs';
 import LanguageSwitcher from './LanguageSwitcher';
 import Messages from './Messages';
 import Notifications from './Notifications';
 import ProfileDropdown from './ProfileDropdown';
+
+const { isAuthenticated, toggleDrawer } = features;
 
 /**
  * AdminHeader Component

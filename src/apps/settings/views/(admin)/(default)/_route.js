@@ -5,13 +5,15 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+
 import { requirePermission } from '@shared/renderer/components/Rbac';
 import { features } from '@shared/renderer/redux';
-const { addBreadcrumb, registerMenu, unregisterMenu } = features;
 
 import reducer, { SLICE_NAME } from '../redux';
 
 import SettingsPage from './SettingsPage';
+
+const { addBreadcrumb, registerMenu, unregisterMenu } = features;
 
 /**
  * Route boot — inject Redux reducer into the store.
@@ -32,12 +34,12 @@ export function setup({ store, i18n }) {
       id: 'system',
       label: i18n.t('admin:navigation.system', 'System'),
       order: 90,
-      icon: 'sliders',
+      icon: 'MixerHorizontalIcon',
       items: [
         {
           path: '/admin/settings',
           label: i18n.t('admin:navigation.settings', 'Settings'),
-          icon: 'settings',
+          icon: 'GearIcon',
           permission: 'settings:read',
           order: 10,
         },

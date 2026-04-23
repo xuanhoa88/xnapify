@@ -7,8 +7,9 @@
 
 import { discoverModules } from '@shared/renderer/autoloader';
 import { features } from '@shared/renderer/redux';
-const { getAppName, getAppDescription } = features;
 import Router from '@shared/renderer/router';
+
+const { getAppName, getAppDescription } = features;
 
 // Discover view lifecycle modules from apps directory
 const viewsContext = require.context(

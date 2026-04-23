@@ -18,12 +18,13 @@ import { useHistory } from '@shared/renderer/components/History';
 import { useDebounce } from '@shared/renderer/components/InfiniteScroll';
 import Modal from '@shared/renderer/components/Modal';
 import { features } from '@shared/renderer/redux';
-const { generatePassword, showSuccessMessage } = features;
 
 import { createUserFormSchema } from '../../../validator/admin';
 import { createUser, isUserCreateLoading } from '../redux';
 
 import s from './CreateUser.css';
+
+const { generatePassword, showSuccessMessage } = features;
 
 function CreateUser({ context }) {
   const dispatch = useDispatch();

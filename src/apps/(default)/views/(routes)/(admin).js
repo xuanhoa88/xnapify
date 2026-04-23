@@ -6,6 +6,7 @@
  */
 
 import { features } from '@shared/renderer/redux';
+
 const { isAuthenticated, setBreadcrumbs } = features;
 
 /**

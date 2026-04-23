@@ -15,6 +15,11 @@ import { useDispatch, useSelector } from 'react-redux';
 
 import Form, { useFormContext } from '@shared/renderer/components/Form';
 import { features } from '@shared/renderer/redux';
+
+import { updatePreferencesFormSchema } from '../../../../users/validator/auth';
+
+import s from './PreferencesCard.css';
+
 const {
   getUserPreferences,
   updateUserPreferences,
@@ -27,10 +32,6 @@ const {
   clearPreferencesError,
   showSuccessMessage,
 } = features;
-
-import { updatePreferencesFormSchema } from '../../../../users/validator/auth';
-
-import s from './PreferencesCard.css';
 
 // Default preferences values
 const DEFAULT_PREFERENCES = Object.freeze({

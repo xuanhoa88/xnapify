@@ -14,6 +14,9 @@ import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 
 import { features } from '@shared/renderer/redux';
+
+import s from './ProfileHeader.css';
+
 const {
   getUserProfile,
   getUserAvatarUrl,
@@ -22,8 +25,6 @@ const {
   getAvatarError,
   clearAvatarError,
 } = features;
-
-import s from './ProfileHeader.css';
 
 /**
  * ProfileHeader strictly rendered with explicit React structures bypassing CSS Module imports.

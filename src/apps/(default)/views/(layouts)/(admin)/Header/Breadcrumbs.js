@@ -13,6 +13,7 @@ import { useSelector } from 'react-redux';
 
 import { Link } from '@shared/renderer/components/History';
 import { features } from '@shared/renderer/redux';
+
 const { getBreadcrumbs } = features;
 
 /**

@@ -8,10 +8,11 @@
 import { useSelector } from 'react-redux';
 
 import { features } from '@shared/renderer/redux';
-const { isAuthenticated } = features;
 
 import GuestMode from './GuestMode';
 import ProfileDropdown from './ProfileDropdown';
+
+const { isAuthenticated } = features;
 
 /**
  * Auth Switcher Component

@@ -13,6 +13,7 @@ import clsx from 'clsx';
 import { useDispatch, useSelector } from 'react-redux';
 
 import { features } from '@shared/renderer/redux';
+
 const { getLocale, setLocale, getAvailableLocales } = features;
 
 /**

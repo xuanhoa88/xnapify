@@ -38,18 +38,17 @@ function splitSegments(pattern) {
  * Tests if a route pattern matches a given pathname and extracts params.
  * Supports static segments, named parameters (:id), and wildcards (:slug*).
  * @param {string} pattern - Route path pattern (e.g. '/users/:id')
- * @param {string} pathname - URL path to match against
+ * @param {string[]} pathSegs - Pre-split URL path segments
  * @param {boolean} end - If true, pattern must match entire path
  * @returns {{ path: string, params: Object }|null}
  */
-function matchPath(pattern, pathname, end) {
+function matchPath(pattern, pathSegs, end) {
   // Root/empty pattern always matches
   if (!pattern || pattern === ROUTE_PATH_ROOT) {
     return { path: '', params: {} };
   }
 
   const patternSegs = splitSegments(pattern);
-  const pathSegs = splitSegments(pathname);
   const params = {};
   let matchedLength = 0;
 
@@ -123,6 +122,7 @@ function getChildPath(pathname, consumedPath, matchedPath) {
  * @param {Object} options - Match options
  * @param {string} pathname - The URL pathname to match
  * @param {Object} [parentParams={}] - Accumulated params from parent matches
+ * @param {string[]} [pathSegs] - Pre-split path segments (avoids redundant splitting)
  * @returns {MatchIterator} Iterator with `next(skip)` method
  */
 export function createMatcher(
@@ -131,11 +131,14 @@ export function createMatcher(
   options,
   pathname,
   parentParams = {},
+  pathSegs = null,
 ) {
   let matchResult = null;
   let childMatcher = null;
   let childIndex = 0;
   const normalizedBase = normalizePath(baseUrl);
+  // Pre-split once; child matchers receive pre-split segments directly
+  const segments = pathSegs || splitSegments(pathname);
 
   return {
     /**
@@ -151,7 +154,7 @@ export function createMatcher(
 
         const result = matchPath(
           route.path || ROUTE_PATH_ROOT,
-          pathname,
+          segments,
           !hasChildren,
         );
 
@@ -196,14 +199,20 @@ export function createMatcher(
               ? matchResult.params
               : parentParams;
 
-            const childPathname =
-              child.path && child.path.startsWith(ROUTE_SEPARATOR)
-                ? pathname // Absolute path — match against full pathname
-                : getChildPath(
-                    pathname,
-                    route.path || ROUTE_PATH_ROOT,
-                    matchedPath,
-                  );
+            const isAbsolute =
+              child.path && child.path.startsWith(ROUTE_SEPARATOR);
+            const childPathname = isAbsolute
+              ? pathname // Absolute path — match against full pathname
+              : getChildPath(
+                  pathname,
+                  route.path || ROUTE_PATH_ROOT,
+                  matchedPath,
+                );
+
+            // Pre-split child pathname for downstream matchers
+            const childSegs = isAbsolute
+              ? segments
+              : splitSegments(childPathname);
 
             childMatcher = createMatcher(
               child,
@@ -211,6 +220,7 @@ export function createMatcher(
               options,
               childPathname,
               matchedParams,
+              childSegs,
             );
           }
 

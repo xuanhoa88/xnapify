@@ -6,9 +6,10 @@
  */
 
 import { features } from '@shared/renderer/redux';
-const { isAuthenticated } = features;
 
 import EmailVerification from './EmailVerification';
+
+const { isAuthenticated } = features;
 
 /**
  * Page metadata

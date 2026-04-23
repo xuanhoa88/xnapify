@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+
 import { requirePermission } from '@shared/renderer/components/Rbac';
 import { features } from '@shared/renderer/redux';
 const { addBreadcrumb, registerMenu, unregisterMenu } = features;
@@ -32,12 +33,12 @@ export function setup({ store, i18n }) {
       id: 'identity-access',
       label: i18n.t('admin:navigation.identityAccess', 'Identity & Access'),
       order: 10,
-      icon: 'shield',
+      icon: 'LockClosedIcon',
       items: [
         {
           path: '/admin/permissions',
           label: i18n.t('admin:navigation.permissions', 'Permissions'),
-          icon: 'key',
+          icon: 'LockOpen1Icon',
           permission: 'permissions:read',
           order: 40,
         },

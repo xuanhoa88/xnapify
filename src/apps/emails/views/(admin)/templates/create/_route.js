@@ -7,9 +7,10 @@
 
 import { requirePermission } from '@shared/renderer/components/Rbac';
 import { features } from '@shared/renderer/redux';
-const { addBreadcrumb } = features;
 
 import CreateEmailTemplate from './CreateEmailTemplate';
+
+const { addBreadcrumb } = features;
 
 export const middleware = requirePermission('emails:templates:create');
 

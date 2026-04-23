@@ -11,6 +11,7 @@ import { useDispatch, useSelector } from 'react-redux';
 
 import Toast from '@shared/renderer/components/Toast';
 import { features } from '@shared/renderer/redux';
+
 const { getFlashMessage, clearFlashMessage } = features;
 
 function FlashMessage() {

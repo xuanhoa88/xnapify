@@ -6,9 +6,10 @@
  */
 
 import { features } from '@shared/renderer/redux';
-const { isAuthenticated } = features;
 
 import ResetPasswordConfirmation from './ResetPasswordConfirmation';
+
+const { isAuthenticated } = features;
 
 /**
  * Page metadata

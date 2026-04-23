@@ -9,13 +9,15 @@
  * Activity Admin Route
  */
 
+
 import { requirePermission } from '@shared/renderer/components/Rbac';
 import { features } from '@shared/renderer/redux';
-const { addBreadcrumb, registerMenu, unregisterMenu } = features;
 
 import reducer, { SLICE_NAME } from '../redux';
 
 import ActivityList from './ActivityList';
+
+const { addBreadcrumb, registerMenu, unregisterMenu } = features;
 
 export const middleware = requirePermission('activities:read');
 
@@ -36,12 +38,12 @@ export function setup({ store, i18n }) {
       id: 'monitoring',
       label: i18n.t('admin:navigation.monitoring', 'Monitoring'),
       order: 30, // After Management
-      icon: 'activity',
+      icon: 'ActivityLogIcon',
       items: [
         {
           path: '/admin/activities',
           label: i18n.t('admin:navigation.activities', 'Activity Logs'),
-          icon: 'activity',
+          icon: 'ActivityLogIcon',
           permission: 'activities:read',
           order: 10,
         },

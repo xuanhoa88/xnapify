@@ -470,8 +470,6 @@ export class Router extends BaseRouter {
       ...context,
       _instance: this,
       _navigationEntry: navigationEntry,
-      [ROUTE_MOUNT_KEY]: new Set(),
-      [ROUTE_UNMOUNT_KEY]: new Set(),
       [ROUTE_PREV_KEY]: null,
       [ROUTE_PREV_CTX]: null,
     };
@@ -579,7 +577,11 @@ export class Router extends BaseRouter {
           });
         }
 
-        state.current = { ...ctx, ...state.matches.value };
+        // Reuse context object to avoid per-iteration allocation
+        if (!state.current) {
+          state.current = { ...ctx };
+        }
+        Object.assign(state.current, state.matches.value);
 
         // Check cancellation before init
         if (navigationEntry.cancelled) {
@@ -690,12 +692,14 @@ export class Router extends BaseRouter {
       }
       throw error;
     } finally {
-      // Cleanup: Clear Sets to prevent memory leaks
+      // Cleanup: Clear Sets to prevent memory leaks (only if allocated)
       if (ctx[ROUTE_MOUNT_KEY]) {
         ctx[ROUTE_MOUNT_KEY].clear();
+        ctx[ROUTE_MOUNT_KEY] = null;
       }
       if (ctx[ROUTE_UNMOUNT_KEY]) {
         ctx[ROUTE_UNMOUNT_KEY].clear();
+        ctx[ROUTE_UNMOUNT_KEY] = null;
       }
 
       // Reset matcher state

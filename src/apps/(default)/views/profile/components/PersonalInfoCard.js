@@ -23,6 +23,14 @@ import {
 } from '@shared/renderer/components/Extension';
 import Form, { useFormContext } from '@shared/renderer/components/Form';
 import { features } from '@shared/renderer/redux';
+import { z } from '@shared/validator';
+
+import { updateProfileFormSchema } from '../../../../users/validator/auth';
+
+import Loader from './Loader';
+
+import s from './PersonalInfoCard.css';
+
 const {
   getUserProfile,
   updateUserProfile,
@@ -31,13 +39,6 @@ const {
   clearProfileError,
   showSuccessMessage,
 } = features;
-import { z } from '@shared/validator';
-
-import { updateProfileFormSchema } from '../../../../users/validator/auth';
-
-import Loader from './Loader';
-
-import s from './PersonalInfoCard.css';
 
 function PersonalInfoCard() {
   const { t, i18n } = useTranslation();

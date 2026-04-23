@@ -5,12 +5,14 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+
 import { requirePermission } from '@shared/renderer/components/Rbac';
 import { features } from '@shared/renderer/redux';
-const { addBreadcrumb, registerMenu, unregisterMenu } = features;
 
 import Extensions from './Extensions';
 import reducer, { SLICE_NAME } from './redux';
+
+const { addBreadcrumb, registerMenu, unregisterMenu } = features;
 
 export const middleware = requirePermission('extensions:read');
 
@@ -31,19 +33,19 @@ export function setup({ store, i18n }) {
       id: 'extensions',
       label: i18n.t('admin:navigation.extensionsGroup', 'Extensions'),
       order: 90,
-      icon: 'extension',
+      icon: 'ComponentInstanceIcon',
       items: [
         {
           path: '/admin/extensions/hub',
           label: i18n.t('admin:navigation.hub', 'Hub'),
-          icon: 'globe',
+          icon: 'GlobeIcon',
           permission: 'extensions:read',
           order: 10,
         },
         {
           path: '/admin/extensions',
           label: i18n.t('admin:navigation.extensions', 'Manage'),
-          icon: 'extension',
+          icon: 'ComponentInstanceIcon',
           permission: 'extensions:read',
           order: 20,
           exact: true,

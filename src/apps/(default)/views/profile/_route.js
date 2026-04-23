@@ -6,9 +6,10 @@
  */
 
 import { features } from '@shared/renderer/redux';
-const { isAuthenticated } = features;
 
 import Profile from './Profile';
+
+const { isAuthenticated } = features;
 
 /**
  * Page metadata

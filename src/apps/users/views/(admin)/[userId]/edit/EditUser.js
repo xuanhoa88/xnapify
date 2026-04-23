@@ -13,14 +13,11 @@ import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-// import { Flex, Heading, Text, Box } from '@radix-ui/themes';
-// import { Button } from '@radix-ui/themes';
 import Form, { useFormContext } from '@shared/renderer/components/Form';
 import { useHistory } from '@shared/renderer/components/History';
 import { useDebounce } from '@shared/renderer/components/InfiniteScroll';
 import Modal from '@shared/renderer/components/Modal';
 import { features } from '@shared/renderer/redux';
-const { generatePassword, showSuccessMessage } = features;
 
 import { updateUserFormSchema } from '../../../../validator/admin';
 import {
@@ -34,6 +31,8 @@ import {
 } from '../../redux';
 
 import s from './EditUser.css';
+
+const { generatePassword, showSuccessMessage } = features;
 
 function EditUser({ userId, context }) {
   const dispatch = useDispatch();
