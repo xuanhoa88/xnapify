@@ -466,8 +466,8 @@ const FormCheckboxList = forwardRef(function FormCheckboxList$(
           disabled={disabled}
           aria-label={displaySearchPlaceholder}
         >
-          <TextField.Slot side='left'>
-            <Icon name='search' size={16} />
+          <TextField.Slot>
+            <Icon name='MagnifyingGlassIcon' size={14} />
           </TextField.Slot>
           {effectiveSearchValue && (
             <TextField.Slot side='right'>

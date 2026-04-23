@@ -13,7 +13,7 @@ import {
   ArrowUpIcon,
   ExitIcon,
 } from '@radix-ui/react-icons';
-import { Flex, Text, Box, DropdownMenu, Button } from '@radix-ui/themes';
+import { Flex, Text, Box, DropdownMenu } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 
@@ -80,14 +80,14 @@ function ProfileDropdown() {
   return (
     <DropdownMenu.Root modal={false}>
       <DropdownMenu.Trigger>
-        <Button
-          variant='ghost'
-          className='px-2 py-1 h-auto rounded-md cursor-pointer transition-colors bg-transparent hover:bg-gray-3 data-[state=open]:bg-gray-3 border-none outline-none flex items-center gap-2'
+        <button
+          type='button'
+          className='w-9 h-9 p-0 m-0 rounded-full cursor-pointer transition-colors bg-transparent hover:bg-gray-100 data-[state=open]:bg-gray-100 outline-none border-none flex items-center justify-center'
         >
           <Flex
             align='center'
             justify='center'
-            className='w-8 h-8 rounded-md bg-orange-400 text-white overflow-hidden font-bold text-sm flex items-center justify-center'
+            className='w-8 h-8 rounded-full bg-orange-400 text-white overflow-hidden font-bold text-xs flex items-center justify-center border border-gray-200'
           >
             {avatarUrl ? (
               <img
@@ -102,7 +102,7 @@ function ProfileDropdown() {
               <PersonIcon width={16} height={16} />
             )}
           </Flex>
-        </Button>
+        </button>
       </DropdownMenu.Trigger>
 
       <DropdownMenu.Content

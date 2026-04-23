@@ -107,7 +107,7 @@ function TableSearch({
         className={s.searchTextField}
       >
         <TextField.Slot side='left'>
-          <Icon name='search' size={16} />
+          <Icon name='MagnifyingGlassIcon' size={16} />
         </TextField.Slot>
         {value && (
           <TextField.Slot side='right'>
@@ -118,7 +118,7 @@ function TableSearch({
               onClick={handleClear}
               title='Clear search'
             >
-              <Icon name='close' size={14} />
+              <Icon name='Cross1Icon' size={14} />
             </IconButton>
           </TextField.Slot>
         )}

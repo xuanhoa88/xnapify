@@ -19,7 +19,7 @@ export default function ValidationFailure({ message, active, onDismiss }) {
       <Text as='span' className={s.validationFailureLabel}>
         {message}
       </Text>
-      <Icon name='x' size={15} className={s.jsonIconMiddle} />
+      <Icon name='Cross1Icon' size={15} className={s.jsonIconMiddle} />
     </Box>
   );
 }

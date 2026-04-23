@@ -83,7 +83,7 @@ function TableBulkActions({
               )}
               className={s.bulkMoreTrigger}
             >
-              <Icon name='more-vertical' size={16} />
+              <Icon name='DotsVerticalIcon' size={16} />
             </ContextMenu.Trigger>
             <ContextMenu.Menu>
               {moreActions.map((action, index) =>
@@ -110,7 +110,7 @@ function TableBulkActions({
         onClick={onClear}
         className={s.bulkClearButton}
       >
-        <Icon name='close' size={14} />
+        <Icon name='Cross1Icon' size={14} />
         {t('shared:components.bulkActions.clear', 'Clear')}
       </Button>
     </Flex>

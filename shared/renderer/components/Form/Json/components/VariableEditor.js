@@ -117,13 +117,13 @@ export default function VariableEditor({
             />
             <Box className={s.editIconContainer}>
               <Icon
-                name='x-circle'
+                name='CrossCircledIcon'
                 size={15}
                 className={s.cancelIcon}
                 onClick={() => setEditMode(false)}
               />
               <Icon
-                name='check-circle'
+                name='CheckCircledIcon'
                 size={15}
                 className={s.checkIcon}
                 onClick={() => handleSubmitEdit(false)}
@@ -148,7 +148,7 @@ export default function VariableEditor({
           )}
           {onEdit !== false && (
             <Icon
-              name='edit-2'
+              name='Pencil2Icon'
               size={15}
               className={s.editIcon}
               onClick={handleStartEdit}
@@ -156,7 +156,7 @@ export default function VariableEditor({
           )}
           {onDelete !== false && !isRoot && (
             <Icon
-              name='x-circle'
+              name='CrossCircledIcon'
               size={15}
               className={s.removeIcon}
               onClick={handleDelete}

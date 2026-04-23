@@ -12,7 +12,7 @@ import {
   GearIcon,
   QuestionMarkCircledIcon,
 } from '@radix-ui/react-icons';
-import { Flex, Box, Button, Text } from '@radix-ui/themes';
+import { Flex, Box } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 
@@ -53,59 +53,51 @@ function AdminHeader() {
       <Flex align='center' justify='between' className='h-full px-6'>
         {/* Left Section - Toggle & Breadcrumbs */}
         <Flex align='center' gap='3'>
-          <Button
-            display={{ initial: 'flex', md: 'none' }}
-            variant='ghost'
-            color='gray'
+          <Flex
+            align='center'
+            justify='center'
+            role='button'
+            tabIndex={0}
             onClick={handleToggleDrawer}
             title={t('common.toggleDrawer', 'Toggle drawer')}
+            className='md:hidden w-9 h-9 rounded-full text-gray-500 cursor-pointer transition-colors hover:bg-gray-100 hover:text-gray-900'
           >
-            <HamburgerMenuIcon width={20} height={20} />
-          </Button>
-          <Box display={{ initial: 'none', md: 'block' }}>
+            <HamburgerMenuIcon width={18} height={18} />
+          </Flex>
+          <Box className='hidden md:block'>
             <Breadcrumbs />
           </Box>
         </Flex>
 
         {/* Right Section - Page Title & Action Icons */}
         <Flex align='center' gap='5'>
-          <Text
-            size='3'
-            weight='bold'
-            className='text-gray-900 hidden lg:block'
+          <Notifications />
+
+          <Flex
+            align='center'
+            justify='center'
+            role='button'
+            tabIndex={0}
+            title={t('common.settings', 'Settings')}
+            className='w-9 h-9 rounded-full text-gray-500 cursor-pointer transition-colors hover:bg-gray-100 hover:text-gray-900'
           >
-            {t('admin:dashboard.title', 'Dashboard')}
-          </Text>
-
-          <Flex align='center' gap='1'>
-            <Notifications />
-
-            <Flex
-              align='center'
-              justify='center'
-              role='button'
-              tabIndex={0}
-              title={t('common.settings', 'Settings')}
-              className='w-9 h-9 rounded-full text-gray-500 cursor-pointer transition-colors hover:bg-gray-100 hover:text-gray-900'
-            >
-              <GearIcon width={18} height={18} />
-            </Flex>
-
-            <Flex
-              align='center'
-              justify='center'
-              role='button'
-              tabIndex={0}
-              title={t('common.help', 'Help')}
-              className='w-9 h-9 rounded-full text-gray-500 cursor-pointer transition-colors hover:bg-gray-100 hover:text-gray-900'
-            >
-              <QuestionMarkCircledIcon width={18} height={18} />
-            </Flex>
-
-            <Box className='ml-1'>
-              <ProfileDropdown />
-            </Box>
+            <GearIcon width={18} height={18} />
           </Flex>
+
+          <Flex
+            align='center'
+            justify='center'
+            role='button'
+            tabIndex={0}
+            title={t('common.help', 'Help')}
+            className='w-9 h-9 rounded-full text-gray-500 cursor-pointer transition-colors hover:bg-gray-100 hover:text-gray-900'
+          >
+            <QuestionMarkCircledIcon width={18} height={18} />
+          </Flex>
+
+          <Box className='ml-1'>
+            <ProfileDropdown />
+          </Box>
         </Flex>
       </Flex>
     </Box>

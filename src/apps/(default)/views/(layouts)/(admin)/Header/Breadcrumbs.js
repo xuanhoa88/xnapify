@@ -7,8 +7,8 @@
 
 import { Fragment } from 'react';
 
-import { ChevronDownIcon } from '@radix-ui/react-icons';
-import { Flex, Text } from '@radix-ui/themes';
+import { ChevronRightIcon } from '@radix-ui/react-icons';
+import { Flex, Text, Box } from '@radix-ui/themes';
 import { useSelector } from 'react-redux';
 
 import { Link } from '@shared/renderer/components/History';
@@ -30,6 +30,10 @@ function AdminBreadcrumbs() {
   const items = breadcrumbs || [];
   const lastIndex = items.length - 1;
 
+  if (items.length === 0) {
+    return <Box className='h-full' />;
+  }
+
   return (
     <Flex as='nav' align='center' aria-label='Breadcrumb' className='h-full'>
       {items.map((item, index) => {
@@ -39,33 +43,19 @@ function AdminBreadcrumbs() {
         return (
           <Fragment key={`${index}-${item.label}`}>
             {index > 0 && (
-              <Flex
-                asChild
-                align='center'
-                justify='center'
-                px='2'
-                className='text-gray-8'
-              >
-                <span>
-                  <ChevronDownIcon
-                    width={10}
-                    height={10}
-                    className='-rotate-90'
-                  />
-                </span>
+              <Flex align='center' className='text-gray-400 mx-1.5'>
+                <ChevronRightIcon width={14} height={14} />
               </Flex>
             )}
             {hasLink ? (
-              <Text size='3' asChild>
-                <Link
-                  to={item.url}
-                  className='text-gray-11 no-underline transition-colors duration-200 hover:text-gray-12'
-                >
-                  {item.label}
-                </Link>
-              </Text>
+              <Link
+                to={item.url}
+                className='text-[13.5px] font-medium text-gray-500 no-underline transition-colors hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-sm px-1 -mx-1'
+              >
+                {item.label}
+              </Link>
             ) : (
-              <Text size='3' weight='medium' className='text-gray-12'>
+              <Text className='text-[13.5px] font-semibold text-gray-900 px-1 -mx-1'>
                 {item.label}
               </Text>
             )}

@@ -123,9 +123,9 @@ export default function ObjectNode({
       >
         <Text as='span' className={s.iconContainer}>
           {expanded ? (
-            <Icon name='chevronDown' size={15} className={s.jsonIconInherit} />
+            <Icon name='ChevronDownIcon' size={15} className={s.jsonIconInherit} />
           ) : (
-            <Icon name='chevronRight' size={15} className={s.jsonIconInherit} />
+            <Icon name='ChevronRightIcon' size={15} className={s.jsonIconInherit} />
           )}
         </Text>
         {name !== false && (
@@ -150,7 +150,7 @@ export default function ObjectNode({
           {onAdd !== false && hovered && (
             <Text as='span' className={s.hoverActions}>
               <Icon
-                name='plus'
+                name='PlusIcon'
                 size={15}
                 className={s.addIcon}
                 onClick={e => {
@@ -163,7 +163,7 @@ export default function ObjectNode({
           {onDelete !== false && hovered && !isRoot && (
             <Text as='span' className={s.hoverActions}>
               <Icon
-                name='x-circle'
+                name='CrossCircledIcon'
                 size={15}
                 className={s.removeIcon}
                 onClick={e => {

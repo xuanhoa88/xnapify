@@ -113,7 +113,7 @@ export default function AddKeyModal({
           </Select.Root>
           {isValid && (
             <Icon
-              name='check-circle'
+              name='CheckCircledIcon'
               size={15}
               className={s.keyModalSubmit}
               onClick={handleSubmit}
@@ -122,7 +122,7 @@ export default function AddKeyModal({
         </Box>
         <Text as='span' className={s.keyModalCancel}>
           <Icon
-            name='x-circle'
+            name='CrossCircledIcon'
             size={15}
             className={s.jsonIcon15}
             onClick={onCancel}

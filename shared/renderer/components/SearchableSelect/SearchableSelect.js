@@ -303,7 +303,10 @@ function SearchableSelect({
             </Button>
           )}
           <Box className={s.chevronBox}>
-            <Icon name={isOpen ? 'chevronUp' : 'chevronDown'} size={16} />
+            <Icon
+              name={isOpen ? 'ChevronUpIcon' : 'ChevronDownIcon'}
+              size={16}
+            />
           </Box>
         </Flex>
       </Flex>
@@ -324,7 +327,7 @@ function SearchableSelect({
                     onClick={e => e.stopPropagation()}
                   >
                     <TextField.Slot>
-                      <Icon name='search' size={14} />
+                      <Icon name='MagnifyingGlassIcon' size={14} />
                     </TextField.Slot>
                     {loading && (
                       <TextField.Slot>
@@ -380,7 +383,11 @@ function SearchableSelect({
                               }
                             >
                               <Icon
-                                name={optSelected ? 'check-circle' : 'circle'}
+                                name={
+                                  optSelected
+                                    ? 'CheckCircledIcon'
+                                    : 'CircleIcon'
+                                }
                                 size={16}
                               />
                             </Box>

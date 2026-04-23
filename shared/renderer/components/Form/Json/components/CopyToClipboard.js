@@ -54,10 +54,10 @@ export default function CopyToClipboard({ src, enableClipboard }) {
       title='Copy to clipboard'
     >
       <Text as='span' className={s.clipboardIcon} onClick={handleCopy}>
-        <Icon name='copy' size={15} />
+        <Icon name='CopyIcon' size={15} />
         {copied && (
           <Text as='span' className={s.clipboardChecked}>
-            <Icon name='check' size={15} />
+            <Icon name='CheckIcon' size={15} />
           </Text>
         )}
       </Text>
