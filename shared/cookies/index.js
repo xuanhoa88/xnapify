@@ -15,17 +15,26 @@ const DEFAULT_COOKIE_CONFIG = Object.freeze({
   path: '/',
 });
 
+import ms from 'ms';
+
 /**
  * Predefined cookie types with their configurations
+ * Uses getters to ensure dynamic environment variables are read at runtime.
  */
 const COOKIE_TYPES = Object.freeze({
   jwt: {
     name: 'id_token',
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    get maxAge() {
+      // Keep in sync with DEFAULT_JWT_CONFIG in shared/jwt/constants.js
+      return ms(process.env.XNAPIFY_JWT_EXPIRY || '7d');
+    },
   },
   refresh: {
     name: 'refresh_token',
-    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    get maxAge() {
+      // Keep in sync with process.env.XNAPIFY_JWT_REFRESH_EXPIRY
+      return ms(process.env.XNAPIFY_JWT_REFRESH_EXPIRY || '30d');
+    },
   },
 });
 

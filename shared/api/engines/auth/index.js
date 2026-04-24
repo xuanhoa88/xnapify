@@ -5,9 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-// Cookie and Session utilities
-export * from './cookies';
-
 // Authentication middleware
 export * as middlewares from './middlewares';
 

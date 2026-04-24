@@ -11,6 +11,15 @@ jest.mock('@shared/validator', () => ({
   validateForm: jest.fn(),
 }));
 
+import * as cookies from '@shared/cookies';
+
+jest.mock('@shared/cookies', () => ({
+  setTokenCookie: jest.fn(),
+  setRefreshTokenCookie: jest.fn(),
+  clearAllAuthCookies: jest.fn(),
+  getRefreshTokenFromCookie: jest.fn(),
+}));
+
 jest.mock('../services/auth.service', () => ({
   registerUser: jest.fn(),
   authenticateUser: jest.fn(),
@@ -142,7 +151,7 @@ describe('Auth Controller', () => {
         expect.objectContaining({ defaultRoleName: 'user' }),
       );
       expect(mockJwt.generateTokenPair).toHaveBeenCalled();
-      expect(mockAuth.setTokenCookie).toHaveBeenCalledWith(res, 'access-token');
+      expect(cookies.setTokenCookie).toHaveBeenCalledWith(res, 'access-token');
       expect(mockHttp.sendSuccess).toHaveBeenCalledWith(
         res,
         expect.any(Object),
@@ -197,7 +206,7 @@ describe('Auth Controller', () => {
         'password123',
         expect.any(Object),
       );
-      expect(mockAuth.setTokenCookie).toHaveBeenCalledWith(
+      expect(cookies.setTokenCookie).toHaveBeenCalledWith(
         res,
         'access-token',
         {},
@@ -219,11 +228,9 @@ describe('Auth Controller', () => {
 
       await authController.login(req, res);
 
-      expect(mockAuth.setTokenCookie).toHaveBeenCalledWith(
-        res,
-        'access-token',
-        { maxAge: null },
-      );
+      expect(cookies.setTokenCookie).toHaveBeenCalledWith(res, 'access-token', {
+        maxAge: null,
+      });
     });
 
     it('should return unauthorized on InvalidCredentialsError', async () => {
@@ -252,7 +259,7 @@ describe('Auth Controller', () => {
         1,
         expect.any(Object),
       );
-      expect(mockAuth.clearAllAuthCookies).toHaveBeenCalledWith(res);
+      expect(cookies.clearAllAuthCookies).toHaveBeenCalledWith(res);
       expect(mockJwt.cache.delete).toHaveBeenCalledWith('some-token');
       expect(mockHttp.sendSuccess).toHaveBeenCalled();
     });
@@ -261,21 +268,21 @@ describe('Auth Controller', () => {
       await authController.logout(req, res);
 
       expect(authService.logoutUser).not.toHaveBeenCalled();
-      expect(mockAuth.clearAllAuthCookies).toHaveBeenCalledWith(res);
+      expect(cookies.clearAllAuthCookies).toHaveBeenCalledWith(res);
       expect(mockHttp.sendSuccess).toHaveBeenCalled();
     });
   });
 
   describe('refreshToken', () => {
     it('should refresh tokens successfully', async () => {
-      mockAuth.getRefreshTokenFromCookie.mockReturnValue('valid-refresh-token');
+      cookies.getRefreshTokenFromCookie.mockReturnValue('valid-refresh-token');
 
       await authController.refreshToken(req, res);
 
       expect(mockJwt.refreshTokenPair).toHaveBeenCalledWith(
         'valid-refresh-token',
       );
-      expect(mockAuth.setTokenCookie).toHaveBeenCalledWith(
+      expect(cookies.setTokenCookie).toHaveBeenCalledWith(
         res,
         'new-access-token',
       );
@@ -283,7 +290,7 @@ describe('Auth Controller', () => {
     });
 
     it('should return unauthorized if no refresh token provided', async () => {
-      mockAuth.getRefreshTokenFromCookie.mockReturnValue(null);
+      cookies.getRefreshTokenFromCookie.mockReturnValue(null);
 
       await authController.refreshToken(req, res);
 
@@ -294,7 +301,7 @@ describe('Auth Controller', () => {
     });
 
     it('should return unauthorized for TokenExpiredError', async () => {
-      mockAuth.getRefreshTokenFromCookie.mockReturnValue('expired-token');
+      cookies.getRefreshTokenFromCookie.mockReturnValue('expired-token');
       const error = new Error('Expired');
       error.name = 'TokenExpiredError';
       mockJwt.refreshTokenPair.mockImplementation(() => {
@@ -329,7 +336,7 @@ describe('Auth Controller', () => {
         'verify-token',
         expect.any(Object),
       );
-      expect(mockAuth.setTokenCookie).toHaveBeenCalledWith(res, 'access-token');
+      expect(cookies.setTokenCookie).toHaveBeenCalledWith(res, 'access-token');
       expect(mockHttp.sendSuccess).toHaveBeenCalled();
     });
   });

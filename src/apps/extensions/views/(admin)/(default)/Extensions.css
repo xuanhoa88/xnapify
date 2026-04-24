@@ -1,41 +1,4 @@
-.containerBox {
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-.adminHeader {
-  border-bottom: 1px solid var(--gray-a6);
-}
-
-.adminHeaderIcon {
-  border-radius: var(--radius-3);
-  background-color: var(--gray-3);
-  color: var(--gray-11);
-}
-
-.adminEmptyBlock {
-  opacity: 0.6;
-}
-
-
-
 .hiddenFileInput {
   display: none;
 }
-
-.tabsBox {
-  background-color: var(--gray-2);
-  border-radius: var(--radius-3);
-}
-
-.tabButton {
-  border-radius: var(--radius-2);
-  box-shadow: none;
-}
-
-.tabButtonActive {
-  box-shadow: var(--shadow-1);
-}
-
-
 

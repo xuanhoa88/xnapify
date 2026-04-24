@@ -12,22 +12,19 @@ import {
   Box,
   Flex,
   Text,
-  Grid,
-  Heading,
   Button,
   Badge,
+  SegmentedControl,
 } from '@radix-ui/themes';
-import clsx from 'clsx';
 import debounce from 'lodash/debounce';
 import toLower from 'lodash/toLower';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
 import { useDebounce } from '@shared/renderer/components/InfiniteScroll';
-import Loader from '@shared/renderer/components/Loader';
 import Modal from '@shared/renderer/components/Modal';
 import { useRbac } from '@shared/renderer/components/Rbac';
-import { TableSearch } from '@shared/renderer/components/Table';
+import { DataTable } from '@shared/renderer/components/Table';
 import { features } from '@shared/renderer/redux';
 import { useWebSocket } from '@shared/ws/client';
 
@@ -505,76 +502,32 @@ function Extensions() {
     return result;
   }, [extensions, activeFilter, debouncedSearch]);
 
-  if (!initialized || (loading && extensions.length === 0)) {
-    return (
-      <Box p='6' className={s.containerBox}>
-        <Flex
-          align='center'
-          justify='between'
-          wrap='wrap'
-          gap='4'
-          pb='4'
-          mb='6'
-          className={s.adminHeader}
-        >
-          <Flex align='center' gap='3'>
-            <Flex
-              align='center'
-              justify='center'
-              shrink='0'
-              width='40px'
-              height='40px'
-              className={s.adminHeaderIcon}
-            >
-              <CubeIcon width={24} height={24} />
-            </Flex>
-            <Flex direction='column'>
-              <Heading size='6'>
-                {t('admin:navigation.extensions', 'Extensions')}
-              </Heading>
-              <Text size='2' color='gray' mt='1'>
-                {t('admin:extensions.subtitle', 'Manage system extensions')}
-              </Text>
-            </Flex>
-          </Flex>
-        </Flex>
-        <Loader variant='cards' />
-      </Box>
-    );
-  }
-
   return (
-    <Box p='6' className={s.containerBox}>
-      <Flex
-        align='center'
-        justify='between'
-        wrap='wrap'
-        gap='4'
-        pb='4'
-        mb='6'
-        className={s.adminHeader}
+    <Box className='p-6 max-w-[1400px] mx-auto'>
+      <DataTable
+        viewType='grid'
+        gridCols={3}
+        dataSource={filteredExtensions}
+        rowKey='id'
+        loading={loading}
+        initialized={initialized}
+        renderCard={extension => (
+          <ExtensionCard
+            extension={extension}
+            actionLabel={actionMap[extension.id]}
+            onActivate={handleActivate}
+            onDeactivate={handleDeactivate}
+            onUpgrade={handleUpgrade}
+            onDelete={handleDelete}
+            canUpdate={canUpdate}
+          />
+        )}
       >
-        <Flex align='center' gap='3'>
-          <Flex
-            align='center'
-            justify='center'
-            shrink='0'
-            width='40px'
-            height='40px'
-            className={s.adminHeaderIcon}
-          >
-            <CubeIcon width={24} height={24} />
-          </Flex>
-          <Flex direction='column'>
-            <Heading size='6'>
-              {t('admin:navigation.extensions', 'Extensions')}
-            </Heading>
-            <Text size='2' color='gray' mt='1'>
-              {t('admin:extensions.subtitle', 'Manage system extensions')}
-            </Text>
-          </Flex>
-        </Flex>
-        <Flex gap='3' align='center'>
+        <DataTable.Header
+          title={t('admin:navigation.extensions', 'Extensions')}
+          subtitle={t('admin:extensions.subtitle', 'Manage system extensions')}
+          icon={<CubeIcon width={24} height={24} />}
+        >
           <Box
             as='input'
             type='file'
@@ -595,59 +548,41 @@ function Extensions() {
               ? t('admin:extensions.uploading', 'Uploading...')
               : t('admin:extensions.upload', 'Upload Extension')}
           </Button>
-        </Flex>
-      </Flex>
+        </DataTable.Header>
 
-      {/* Toolbar: Filter Tabs + Search */}
-      <Flex align='center' justify='between' mb='5' wrap='wrap' gap='4'>
-        <Flex gap='2' p='1' className={s.tabsBox}>
-          {FILTER_TABS.map(tab => (
-            <Button
-              key={tab.key}
-              type='button'
-              variant={activeFilter === tab.key ? 'primary' : 'ghost'}
-              onClick={() => setActiveFilter(tab.key)}
-              className={clsx(s.tabButton, {
-                [s.tabButtonActive]: activeFilter === tab.key,
-              })}
-            >
-              <Text as='span' mr='2'>
-                {t(tab.labelKey, tab.fallback)}
-              </Text>
-              <Badge
-                variant={activeFilter === tab.key ? 'neutral' : 'outline'}
-                color='gray'
-                radius='full'
-              >
-                {tabCounts[tab.key]}
-              </Badge>
-            </Button>
-          ))}
-        </Flex>
+        <DataTable.Toolbar justify='between'>
+          <SegmentedControl.Root
+            value={activeFilter}
+            onValueChange={setActiveFilter}
+            size='2'
+          >
+            {FILTER_TABS.map(tab => (
+              <SegmentedControl.Item key={tab.key} value={tab.key}>
+                <Flex align='center' gap='2'>
+                  <Text as='span'>{t(tab.labelKey, tab.fallback)}</Text>
+                  <Badge
+                    variant={activeFilter === tab.key ? 'solid' : 'soft'}
+                    color={activeFilter === tab.key ? 'indigo' : 'gray'}
+                    radius='full'
+                  >
+                    {tabCounts[tab.key]}
+                  </Badge>
+                </Flex>
+              </SegmentedControl.Item>
+            ))}
+          </SegmentedControl.Root>
 
-        <Box minWidth='280px'>
-          <TableSearch
+          <DataTable.Search
             value={search}
             onChange={setSearch}
             placeholder={t('admin:extensions.search', 'Search extensions...')}
           />
-        </Box>
-      </Flex>
+        </DataTable.Toolbar>
 
-      {filteredExtensions.length === 0 ? (
-        <Flex
-          direction='column'
-          align='center'
-          justify='center'
-          py='9'
-          className={s.adminEmptyBlock}
-        >
-          <Box mb='3'>
-            <CubeIcon width={48} height={48} />
-          </Box>
-
-          <Text as='h3' size='4' weight='bold' color='gray' mb='1'>
-            {search
+        <DataTable.Empty
+          icon={<CubeIcon width={48} height={48} />}
+          title={
+            search
               ? t(
                   'admin:extensions.noSearchResults',
                   'No extensions match your search',
@@ -655,10 +590,10 @@ function Extensions() {
               : t(
                   'admin:extensions.noExtensionsInFilter',
                   'No extensions in this category',
-                )}
-          </Text>
-          <Text as='p' size='2' color='gray'>
-            {search
+                )
+          }
+          description={
+            search
               ? t(
                   'admin:extensions.tryDifferentSearch',
                   'Try a different search term or clear the filter.',
@@ -666,25 +601,11 @@ function Extensions() {
               : t(
                   'admin:extensions.tryDifferentFilter',
                   'Try selecting a different filter tab.',
-                )}
-          </Text>
-        </Flex>
-      ) : (
-        <Grid columns={{ initial: '1', md: '2', lg: '3' }} gap='4'>
-          {filteredExtensions.map(extension => (
-            <ExtensionCard
-              key={extension.id}
-              extension={extension}
-              actionLabel={actionMap[extension.id]}
-              onActivate={handleActivate}
-              onDeactivate={handleDeactivate}
-              onUpgrade={handleUpgrade}
-              onDelete={handleDelete}
-              canUpdate={canUpdate}
-            />
-          ))}
-        </Grid>
-      )}
+                )
+          }
+        />
+        <DataTable.Loader variant='cards' />
+      </DataTable>
 
       {/* Uninstall confirmation */}
       <Modal.ConfirmDelete

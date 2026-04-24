@@ -303,13 +303,9 @@ function Groups({ context }) {
     ],
   );
 
-  // Empty columns placeholder — grid view uses renderCard, not columns
-  const columns = [];
-
   return (
     <Box className='p-6 max-w-[1400px] mx-auto'>
       <DataTable
-        columns={columns}
         dataSource={groups}
         rowKey='id'
         loading={loading}

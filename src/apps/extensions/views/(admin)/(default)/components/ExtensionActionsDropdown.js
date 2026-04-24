@@ -10,6 +10,7 @@ import {
   ArrowUpIcon,
   TrashIcon,
 } from '@radix-ui/react-icons';
+import { IconButton } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
@@ -23,10 +24,13 @@ function ExtensionActionsDropdown({ extension, onUpgrade, onDelete }) {
   return (
     <ContextMenu>
       <ContextMenu.Trigger
+        asChild
         title={t('admin:common.moreActions', 'More actions')}
-        className='rt-IconButton'
+        className='flex items-center justify-center'
       >
-        <DotsVerticalIcon width={16} height={16} />
+        <IconButton variant='ghost' color='gray' size='1'>
+          <DotsVerticalIcon width={16} height={16} />
+        </IconButton>
       </ContextMenu.Trigger>
       <ContextMenu.Menu>
         <ContextMenu.Item

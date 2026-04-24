@@ -41,6 +41,10 @@
   width: 160px;
 }
 
+.filterMd {
+  width: 150px;
+}
+
 .filterSm {
   width: 140px;
 }
@@ -52,6 +56,7 @@
   }
 
   .filterLg,
+  .filterMd,
   .filterSm {
     flex: 1 1 100%;
   }
@@ -81,11 +86,13 @@
 .headerCell {
   padding-top: var(--space-3);
   padding-bottom: var(--space-3);
+  white-space: nowrap;
 }
 
 .bodyCell {
   padding-top: var(--space-3);
   padding-bottom: var(--space-3);
+  white-space: nowrap;
 }
 
 .checkboxCol {
@@ -109,20 +116,56 @@
   z-index: 10;
 }
 
+/* Scrollbar styling */
+.customScrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--gray-a6) transparent;
+
+  &::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--gray-a4);
+    border-radius: var(--radius-full);
+  }
+
+  &:hover::-webkit-scrollbar-thumb {
+    background: var(--gray-a6);
+  }
+
+  &:hover::-webkit-scrollbar-thumb:hover {
+    background: var(--gray-a8);
+  }
+}
+
 /* Grid */
+.gridWrapper {
+  position: relative;
+  overflow-x: auto;
+  padding-bottom: var(--space-4);
+}
+
 .gridContainer {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(320px, 1fr));
   gap: var(--space-4);
   padding: var(--space-4);
+  padding-bottom: 0;
+  min-width: min-content;
 }
 
 .gridCols2 {
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(320px, 1fr));
 }
 
 .gridCols4 {
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(320px, 1fr));
 }
 
 @media (max-width: 768px) {
@@ -133,7 +176,7 @@
 
 @media (min-width: 769px) and (max-width: 1024px) {
   .gridContainer {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(320px, 1fr));
   }
 }
 

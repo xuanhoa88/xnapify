@@ -5,6 +5,12 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import {
+  setTokenCookie,
+  setRefreshTokenCookie,
+  clearAllAuthCookies,
+  getRefreshTokenFromCookie,
+} from '@shared/cookies';
 import { validateForm } from '@shared/validator';
 
 import {
@@ -74,8 +80,8 @@ export async function register(req, res) {
     });
 
     // Set token cookies
-    auth.setTokenCookie(res, tokens.accessToken);
-    auth.setRefreshTokenCookie(res, tokens.refreshToken);
+    setTokenCookie(res, tokens.accessToken);
+    setRefreshTokenCookie(res, tokens.refreshToken);
 
     // Return user data with RBAC information and access token for WS auth
     return http.sendSuccess(
@@ -151,8 +157,8 @@ export async function login(req, res) {
     // If rememberMe is false, don't set maxAge (session cookie - expires on browser close)
     // If rememberMe is true, use default maxAge from cookie config
     const cookieOptions = rememberMe ? {} : { maxAge: null };
-    auth.setTokenCookie(res, tokens.accessToken, cookieOptions);
-    auth.setRefreshTokenCookie(res, tokens.refreshToken, cookieOptions);
+    setTokenCookie(res, tokens.accessToken, cookieOptions);
+    setRefreshTokenCookie(res, tokens.refreshToken, cookieOptions);
 
     // Return user data with RBAC information and access token for WS auth
     return http.sendSuccess(res, {
@@ -200,7 +206,7 @@ export async function logout(req, res) {
     }
 
     // Clear token cookies
-    container.resolve('auth').clearAllAuthCookies(res);
+    clearAllAuthCookies(res);
 
     // Also clear cache entry for this token (if present)
     if (req.token) {
@@ -226,8 +232,7 @@ export async function refreshToken(req, res) {
   const http = container.resolve('http');
   try {
     // Get refresh token from cookie
-    const auth = container.resolve('auth');
-    const refreshToken = auth.getRefreshTokenFromCookie(req);
+    const refreshToken = getRefreshTokenFromCookie(req);
 
     if (!refreshToken) {
       return http.sendUnauthorized(res, 'Refresh token required');
@@ -240,8 +245,8 @@ export async function refreshToken(req, res) {
       .refreshTokenPair(refreshToken);
 
     // Set new token cookies
-    auth.setTokenCookie(res, newTokens.accessToken);
-    auth.setRefreshTokenCookie(res, newTokens.refreshToken);
+    setTokenCookie(res, newTokens.accessToken);
+    setRefreshTokenCookie(res, newTokens.refreshToken);
 
     return http.sendSuccess(res, { message: 'Token refreshed successfully' });
   } catch (error) {
@@ -315,9 +320,8 @@ export async function emailVerification(req, res) {
       });
 
     // Set token cookies
-    const auth = container.resolve('auth');
-    auth.setTokenCookie(res, tokens.accessToken);
-    auth.setRefreshTokenCookie(res, tokens.refreshToken);
+    setTokenCookie(res, tokens.accessToken);
+    setRefreshTokenCookie(res, tokens.refreshToken);
 
     return http.sendSuccess(res, {
       message: 'Email verified successfully',
@@ -511,8 +515,8 @@ export async function oauthCallback(req, res) {
     });
 
     // Set token cookies
-    auth.setTokenCookie(res, tokens.accessToken);
-    auth.setRefreshTokenCookie(res, tokens.refreshToken);
+    setTokenCookie(res, tokens.accessToken);
+    setRefreshTokenCookie(res, tokens.refreshToken);
 
     // Redirect to frontend.
     // Cookies are set, so the frontend will automatically be authenticated.
@@ -561,8 +565,8 @@ export async function stopImpersonating(req, res) {
     });
 
     // Set new token cookies
-    authConfig.setTokenCookie(res, tokens.accessToken);
-    authConfig.setRefreshTokenCookie(res, tokens.refreshToken);
+    setTokenCookie(res, tokens.accessToken);
+    setRefreshTokenCookie(res, tokens.refreshToken);
 
     // Log activity for auditing
     await req.app

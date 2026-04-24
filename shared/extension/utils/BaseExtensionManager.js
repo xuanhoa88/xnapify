@@ -313,8 +313,9 @@ export class BaseExtensionManager {
       if (isSequential) {
         // Sequential loading (e.g. for Server DB lock prevention)
         for (const item of extensions) {
-          const id = typeof item === 'object' ? item.id : item;
-          const manifest = typeof item === 'object' ? item : null;
+          const id = typeof item === 'object' && item !== null ? item.id : item;
+          const manifest =
+            typeof item === 'object' && item !== null ? item : null;
           try {
             // eslint-disable-next-line no-await-in-loop
             await this.loadExtension(id, manifest);
@@ -337,15 +338,17 @@ export class BaseExtensionManager {
         // Parallel loading (default for Client bundle fetching)
         await Promise.allSettled(
           extensions.map(item => {
-            const id = typeof item === 'object' ? item.id : item;
-            const manifest = typeof item === 'object' ? item : null;
+            const id =
+              typeof item === 'object' && item !== null ? item.id : item;
+            const manifest =
+              typeof item === 'object' && item !== null ? item : null;
             return this.loadExtension(id, manifest);
           }),
         );
 
         // Map telemetry manually because loadExtension swallows internal errors
         for (const item of extensions) {
-          const id = typeof item === 'object' ? item.id : item;
+          const id = typeof item === 'object' && item !== null ? item.id : item;
           const meta = this[EXTENSION_METADATA].get(id);
           if (meta && meta.state === ExtensionState.FAILED) {
             results.push({
@@ -366,7 +369,9 @@ export class BaseExtensionManager {
         console.warn(
           `[ExtensionManager] ${failures.length} extension(s) failed to load:`,
           failures.map(({ item }) =>
-            typeof item === 'object' ? item.id || item.name : item,
+            typeof item === 'object' && item !== null
+              ? item.id || item.name
+              : item,
           ),
         );
       }

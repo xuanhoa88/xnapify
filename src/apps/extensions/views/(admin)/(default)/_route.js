@@ -32,7 +32,6 @@ export function setup({ store, i18n }) {
       id: 'extensions',
       label: i18n.t('admin:navigation.extensionsGroup', 'Extensions'),
       order: 90,
-      icon: 'ComponentInstanceIcon',
       items: [
         {
           path: '/admin/extensions/hub',
@@ -44,7 +43,7 @@ export function setup({ store, i18n }) {
         {
           path: '/admin/extensions',
           label: i18n.t('admin:navigation.extensions', 'Manage'),
-          icon: 'ComponentInstanceIcon',
+          icon: 'CubeIcon',
           permission: 'extensions:read',
           order: 20,
           exact: true,

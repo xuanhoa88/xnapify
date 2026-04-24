@@ -28,10 +28,10 @@ import s from './ContextMenu.css';
 // Root
 // ---------------------------------------------------------------------------
 
-function ContextMenu({ children, className, isOpen, onToggle, modal = false }) {
+function ContextMenu({ children, isOpen, onToggle, modal = false }) {
   return (
     <DropdownMenu.Root open={isOpen} onOpenChange={onToggle} modal={modal}>
-      <Box className={clsx(className, s.container)}>{children}</Box>
+      {children}
     </DropdownMenu.Root>
   );
 }

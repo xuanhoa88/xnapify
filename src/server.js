@@ -23,6 +23,7 @@ import ReactDOM from 'react-dom/server';
 import Youch from 'youch';
 
 import { Container } from '@shared/container';
+import { setTokenCookie, setRefreshTokenCookie } from '@shared/cookies';
 import extensionManager from '@shared/extension/server';
 import { createFetch } from '@shared/fetch';
 import i18n, {
@@ -193,8 +194,9 @@ async function extractPageMetadata(page, req) {
   return metadata;
 }
 
-function validateCookieHeader(cookieHeader) {
-  if (!cookieHeader) return '';
+function validateCookieHeader(req, res) {
+  let cookieHeader = req.headers.cookie || '';
+  if (!cookieHeader) return { authHeader: '', authCookie: '' };
 
   // Reject oversized cookies to prevent hash DoS attacks
   if (cookieHeader.length > SERVER_CONFIG.maxCookieSize) {
@@ -213,7 +215,51 @@ function validateCookieHeader(cookieHeader) {
     throw err;
   }
 
-  return cookieHeader;
+  let authHeader = cookieHeader;
+  let authCookie = (req.cookies && req.cookies['id_token']) || '';
+
+  if (authCookie) {
+    const jwt = req.app.get('container').resolve('jwt');
+    if (jwt && jwt.isTokenExpired(authCookie)) {
+      const refreshCookie = (req.cookies && req.cookies['refresh_token']) || '';
+      if (refreshCookie) {
+        try {
+          const newTokens = jwt.refreshTokenPair(refreshCookie);
+
+          // Set refreshed cookies on the browser response
+          setTokenCookie(res, newTokens.accessToken);
+          setRefreshTokenCookie(res, newTokens.refreshToken);
+
+          // Update values used downstream (cache key + self-fetch header)
+          authCookie = newTokens.accessToken;
+          authHeader = authHeader
+            .replace(/\bid_token=[^;]*/, `id_token=${newTokens.accessToken}`)
+            .replace(
+              /\brefresh_token=[^;]*/,
+              `refresh_token=${newTokens.refreshToken}`,
+            );
+
+          if (__DEV__) {
+            console.info('🔄 SSR: Access token refreshed for', req.path);
+          }
+        } catch {
+          // Refresh token is also invalid — proceed as guest
+          authCookie = '';
+          if (__DEV__) {
+            console.info(
+              '⚠️ SSR: Token refresh failed, proceeding as guest for',
+              req.path,
+            );
+          }
+        }
+      } else {
+        // No refresh token — proceed as guest
+        authCookie = '';
+      }
+    }
+  }
+
+  return { authHeader, authCookie };
 }
 
 let requestCounter = 0;
@@ -529,9 +575,6 @@ function makeSsrMiddleware(baseUrl) {
     let context = null;
 
     try {
-      // Validate auth cookie
-      const authHeader = validateCookieHeader(req.headers.cookie || '');
-
       // Normalize bare language codes (e.g. 'en' → 'en-US')
       // express-request-language may return a prefix that doesn't exactly
       // match an available locale key.
@@ -540,10 +583,12 @@ function makeSsrMiddleware(baseUrl) {
       const locale = availableKeys.includes(rawLocale)
         ? rawLocale
         : availableKeys.find(k => k.startsWith(rawLocale)) || DEFAULT_LOCALE;
+      const { authHeader, authCookie } = validateCookieHeader(req, res);
 
-      // Extract auth-specific cookie for cache key and auth detection
-      const authCookie = (req.cookies && req.cookies['id_token']) || '';
+      // Compute cache key
       const cacheKey = computeSsrKey(req, baseUrl, locale, authCookie);
+
+      // Check cache
       const cached = fetchSsrCache(cacheKey);
       if (cached) {
         if (__DEV__) {

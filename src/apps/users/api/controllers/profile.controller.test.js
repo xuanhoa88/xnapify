@@ -1,9 +1,14 @@
+import * as cookies from '@shared/cookies';
 import { validateForm } from '@shared/validator';
 
 import * as profileService from '../services/profile.service';
 import { formatUserResponse } from '../utils/formatter';
 
 import * as profileController from './profile.controller';
+
+jest.mock('@shared/cookies', () => ({
+  clearAllAuthCookies: jest.fn(),
+}));
 
 jest.mock('@shared/validator', () => ({
   validateForm: jest.fn(),
@@ -341,7 +346,7 @@ describe('Profile Controller', () => {
       await profileController.deleteAccount(req, res);
 
       expect(profileService.deleteUserAccount).toHaveBeenCalled();
-      expect(mockAuth.clearAllAuthCookies).toHaveBeenCalledWith(res);
+      expect(cookies.clearAllAuthCookies).toHaveBeenCalledWith(res);
       expect(mockHttp.sendSuccess).toHaveBeenCalled();
     });
   });

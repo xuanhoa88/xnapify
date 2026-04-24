@@ -149,12 +149,12 @@ DataTableHeader.propTypes = {
  *   <DataTable.Filter component={Select} {...props} />
  * </DataTable.Toolbar>
  */
-function DataTableToolbar({ children }) {
+function DataTableToolbar({ justify = 'start', children }) {
   if (!children) return null;
 
   return (
     <Box className={s.toolbarBox}>
-      <Flex gap='3' wrap='wrap' align='center'>
+      <Flex gap='3' wrap='wrap' align='center' justify={justify}>
         {children}
       </Flex>
     </Box>
@@ -164,6 +164,7 @@ function DataTableToolbar({ children }) {
 DataTableToolbar.displayName = 'DataTableToolbar';
 
 DataTableToolbar.propTypes = {
+  justify: PropTypes.oneOf(['start', 'center', 'end', 'between', 'around']),
   children: PropTypes.node,
 };
 
@@ -185,6 +186,7 @@ function DataTableFilter({
   const widthClassMap = {
     search: s.toolbarSearch,
     lg: s.filterLg,
+    md: s.filterMd,
     sm: s.filterSm,
   };
 
@@ -200,7 +202,7 @@ DataTableFilter.displayName = 'DataTableFilter';
 
 DataTableFilter.propTypes = {
   component: PropTypes.elementType.isRequired,
-  width: PropTypes.oneOf(['search', 'lg', 'sm']),
+  width: PropTypes.oneOf(['search', 'lg', 'md', 'sm']),
 };
 
 /**
@@ -641,7 +643,7 @@ function DataTable({
 
           {/* Table view */}
           {viewType === 'table' && (
-            <Box className={s.tableWrapper}>
+            <Box className={clsx(s.tableWrapper, s.customScrollbar)}>
               <Table.Root variant={variant}>
                 <Table.Header className='bg-[var(--color-panel-solid)]'>
                   <Table.Row>
@@ -659,7 +661,11 @@ function DataTable({
                       <Table.ColumnHeaderCell
                         key={col.key}
                         className={clsx(s.headerCell, col.className)}
-                        style={col.width ? { width: col.width } : undefined}
+                        style={
+                          col.width
+                            ? { width: col.width, minWidth: col.width }
+                            : undefined
+                        }
                       >
                         {col.title}
                       </Table.ColumnHeaderCell>
@@ -729,7 +735,7 @@ function DataTable({
 
           {/* Grid view */}
           {viewType === 'grid' && (
-            <Box>
+            <Box className={clsx(s.gridWrapper, s.customScrollbar)}>
               {hasData ? (
                 <Box
                   className={clsx(
@@ -809,19 +815,36 @@ function DataTable({
 
 DataTable.propTypes = {
   // Data
-  columns: PropTypes.arrayOf(
-    PropTypes.shape({
-      key: PropTypes.string.isRequired,
-      dataIndex: PropTypes.string,
-      title: PropTypes.node,
-      width: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
-      order: PropTypes.number,
-      align: PropTypes.oneOf(['left', 'center', 'right']),
-      className: PropTypes.string,
-      hidden: PropTypes.bool,
-      render: PropTypes.func,
-    }),
-  ).isRequired,
+  columns: function (props, propName, componentName) {
+    if (props.viewType !== 'grid' && !props[propName]) {
+      return new Error(
+        `The prop \`${propName}\` is marked as required in \`${componentName}\` when viewType is 'table', but its value is \`undefined\`.`,
+      );
+    }
+    if (props[propName]) {
+      PropTypes.checkPropTypes(
+        {
+          [propName]: PropTypes.arrayOf(
+            PropTypes.shape({
+              key: PropTypes.string.isRequired,
+              dataIndex: PropTypes.string,
+              title: PropTypes.node,
+              width: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+              order: PropTypes.number,
+              align: PropTypes.oneOf(['left', 'center', 'right']),
+              className: PropTypes.string,
+              hidden: PropTypes.bool,
+              render: PropTypes.func,
+            }),
+          ),
+        },
+        props,
+        'prop',
+        componentName,
+      );
+    }
+    return null;
+  },
   dataSource: PropTypes.array,
   rowKey: PropTypes.oneOfType([PropTypes.string, PropTypes.func]).isRequired,
 

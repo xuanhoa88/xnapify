@@ -8,7 +8,7 @@
 import { useState, useCallback, useEffect } from 'react';
 
 import * as RadixIcons from '@radix-ui/react-icons';
-import { Box, Flex, Text, Button, Badge, Switch } from '@radix-ui/themes';
+import { Box, Flex, Text, Button, Badge, Switch, Avatar } from '@radix-ui/themes';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
@@ -77,35 +77,37 @@ function ExtensionCard({
       )}
     >
       <Flex p='4' gap='3' align='start' className={s.headerFlex}>
-        <Flex
-          align='center'
-          justify='center'
-          shrink='0'
-          width='48px'
-          height='48px'
-          overflow='hidden'
-          className={s.iconBox}
-        >
-          {extension.icon && /^https?:\/\//.test(extension.icon) ? (
-            <img
-              src={extension.icon}
-              alt={extension.name}
-              className={s.iconImage}
-            />
-          ) : extension.icon && /[./]/.test(extension.icon) ? (
-            <img
-              src={`/api/extensions/${extension.id}/static/${extension.icon}`}
-              alt={extension.name}
-              className={s.iconImage}
-            />
-          ) : (
-            (() => {
-              const iconName = extension.icon || 'BoxIcon';
-              const Comp = RadixIcons[iconName] || RadixIcons.BoxIcon;
-              return <Comp width={28} height={28} />;
-            })()
-          )}
-        </Flex>
+        <Avatar
+          size='5'
+          radius='medium'
+          src={
+            extension.icon && /^https?:\/\//.test(extension.icon)
+              ? extension.icon
+              : extension.icon && /[./]/.test(extension.icon)
+                ? `/api/extensions/${extension.id}/static/${extension.icon}`
+                : undefined
+          }
+          fallback={
+            extension.icon &&
+            !/[./]/.test(extension.icon) &&
+            RadixIcons[extension.icon] ? (
+              (() => {
+                const Comp = RadixIcons[extension.icon];
+                return <Comp width={24} height={24} />;
+              })()
+            ) : extension.name ? (
+              extension.name
+                .replace(/^@xnapify-extension\//, '')
+                .replace(/^xnapify-/, '')
+                .charAt(0)
+                .toUpperCase()
+            ) : (
+              <RadixIcons.CubeIcon width={24} height={24} />
+            )
+          }
+          color='indigo'
+          variant='soft'
+        />
         <Box grow='1' minWidth='0'>
           {isLoading ? (
             <Box className={s.skeletonTitle} />
@@ -161,7 +163,7 @@ function ExtensionCard({
       </Box>
 
       <Flex p='3' align='center' justify='between' className={s.footerFlex}>
-        <Flex gap='2'>
+        <Flex gap='2' align='center'>
           {extension.options && extension.options.repository && (
             <Button
               variant='outline'
