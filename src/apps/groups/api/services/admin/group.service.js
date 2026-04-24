@@ -422,6 +422,53 @@ export async function deleteGroup(
 }
 
 /**
+ * Bulk delete groups
+ *
+ * @param {string[]} ids - Array of group IDs to delete
+ * @param {Object} options - Options object
+ * @param {Object} options.models - Database models
+ * @param {string[]} options.systemGroups - System groups to protect
+ * @param {Function} options.hook - Hook emitter
+ * @returns {Promise<string[]>} Successfully deleted group IDs
+ */
+export async function bulkDeleteGroups(
+  ids,
+  { models, systemGroups = [], hook },
+) {
+  const { Group } = models;
+
+  if (!Array.isArray(ids) || ids.length === 0) return [];
+
+  const groups = await Group.findAll({
+    where: { id: ids },
+  });
+
+  const deletedIds = [];
+  const deletedNames = [];
+
+  for (const group of groups) {
+    // Prevent deletion of system groups
+    if (!systemGroups.includes(group.name)) {
+      deletedIds.push(group.id);
+      deletedNames.push(group.name);
+      await group.destroy();
+    }
+  }
+
+  // Emit hook events for each deleted group
+  if (hook && deletedIds.length > 0) {
+    for (let i = 0; i < deletedIds.length; i++) {
+      await hook('admin:groups').emit('deleted', {
+        group_id: deletedIds[i],
+        name: deletedNames[i],
+      });
+    }
+  }
+
+  return deletedIds;
+}
+
+/**
  * Get group users with pagination
  *
  * @param {string} group_id - Group ID

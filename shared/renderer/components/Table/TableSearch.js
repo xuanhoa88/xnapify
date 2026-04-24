@@ -96,7 +96,7 @@ function TableSearch({
   );
 
   return (
-    <Flex align='center' gap='2' className={className}>
+    <Flex align='center' gap='2' className={className} width={'100%'}>
       <TextField.Root
         ref={inputRef}
         type='text'

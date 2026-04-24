@@ -13,6 +13,7 @@ import {
   createGroup,
   updateGroup,
   deleteGroup,
+  bulkDeleteGroups,
   assignRolesToGroup,
   fetchGroupPermissions,
 } from './thunks';
@@ -49,6 +50,7 @@ const createFreshOperations = () => ({
   create: createOperationState(),
   update: createOperationState(),
   delete: createOperationState(),
+  bulkDelete: createOperationState(),
   assignRoles: createOperationState(),
   fetchPermissions: createOperationState(),
 });
@@ -169,6 +171,11 @@ const groupsSlice = createSlice({
       normalized.operations.delete.error = null;
       Object.assign(state, normalized);
     },
+    clearGroupsBulkDeleteError: state => {
+      const normalized = normalizeState(state);
+      normalized.operations.bulkDelete.error = null;
+      Object.assign(state, normalized);
+    },
     resetGroupsState: () => initialState,
   },
   extraReducers: builder => {
@@ -266,6 +273,21 @@ const groupsSlice = createSlice({
       .addCase(deleteGroup.rejected, createRejectedHandler('delete'));
 
     // =========================================================================
+    // BULK DELETE GROUPS (bulkDelete operation)
+    // =========================================================================
+    builder
+      .addCase(bulkDeleteGroups.pending, createPendingHandler('bulkDelete'))
+      .addCase(bulkDeleteGroups.fulfilled, (state, action) => {
+        const normalized = normalizeState(state);
+        normalized.data.groups = normalized.data.groups.filter(
+          group => !action.payload.includes(group.id),
+        );
+        normalized.operations.bulkDelete = createOperationState();
+        Object.assign(state, normalized);
+      })
+      .addCase(bulkDeleteGroups.rejected, createRejectedHandler('bulkDelete'));
+
+    // =========================================================================
     // ASSIGN ROLES TO GROUP (assignRoles operation)
     // =========================================================================
     builder
@@ -304,6 +326,7 @@ export const {
   clearGroupsCreateError,
   clearGroupsUpdateError,
   clearGroupsDeleteError,
+  clearGroupsBulkDeleteError,
   resetGroupsState,
 } = groupsSlice.actions;
 

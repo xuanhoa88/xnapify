@@ -141,6 +141,7 @@ DataTableHeader.propTypes = {
 
 /**
  * DataTable.Toolbar — Container for search, filters, and extras.
+ * Simply renders children in a flat flex row — no slot-finding needed.
  *
  * @example
  * <DataTable.Toolbar>
@@ -151,38 +152,11 @@ DataTableHeader.propTypes = {
 function DataTableToolbar({ children }) {
   if (!children) return null;
 
-  // Separate Search from other children
-  const searchSlot = findSlotOne(children, DataTableSearch);
-  const otherChildren = [];
-
-  Children.forEach(children, child => {
-    if (isValidElement(child) && child.type === DataTableSearch) {
-      return; // skip, handled separately
-    }
-    otherChildren.push(child);
-  });
-
-  if (searchSlot) {
-    // Render search input with other items as siblings
-    return (
-      <Box className={s.toolbarBox}>
-        <TableSearch
-          className={s.toolbarInner}
-          value={searchSlot.props.value || ''}
-          onChange={searchSlot.props.onChange}
-          placeholder={searchSlot.props.placeholder}
-          debounce={searchSlot.props.debounce}
-        >
-          {otherChildren}
-        </TableSearch>
-      </Box>
-    );
-  }
-
-  // No search — just render children in a flex container
   return (
     <Box className={s.toolbarBox}>
-      <Flex className={s.toolbarInner}>{otherChildren}</Flex>
+      <Flex gap='3' wrap='wrap' align='center'>
+        {children}
+      </Flex>
     </Box>
   );
 }
@@ -194,38 +168,29 @@ DataTableToolbar.propTypes = {
 };
 
 /**
- * DataTable.Search — Debounced search input.
- * Marker component consumed by DataTable.Toolbar.
- *
- * @example
- * <DataTable.Search value={search} onChange={setSearch} placeholder="Search..." />
- */
-function DataTableSearch() {
-  // Marker component — rendered by DataTableToolbar, not directly
-  return null;
-}
-
-DataTableSearch.displayName = 'DataTableSearch';
-
-DataTableSearch.propTypes = {
-  value: PropTypes.string,
-  onChange: PropTypes.func,
-  placeholder: PropTypes.string,
-  debounce: PropTypes.number,
-};
-
-/**
  * DataTable.Filter — Renders a filter component with sizing.
+ * Width controls the CSS class: 'search' | 'lg' | 'sm'.
  *
  * @example
  * <DataTable.Filter component={SearchableSelect} width="lg" options={opts} value={v} onChange={fn} />
+ * <DataTable.Filter component={TableSearch} width="search" value={s} onChange={fn} />
  */
-function DataTableFilter({ component: FilterComp, width, ...filterProps }) {
+function DataTableFilter({
+  component: FilterComp,
+  width = 'lg',
+  ...filterProps
+}) {
   if (!FilterComp) return null;
+
+  const widthClassMap = {
+    search: s.toolbarSearch,
+    lg: s.filterLg,
+    sm: s.filterSm,
+  };
 
   return (
     <FilterComp
-      className={width === 'sm' ? s.filterSm : s.filterLg}
+      className={widthClassMap[width] || s.filterLg}
       {...filterProps}
     />
   );
@@ -235,7 +200,27 @@ DataTableFilter.displayName = 'DataTableFilter';
 
 DataTableFilter.propTypes = {
   component: PropTypes.elementType.isRequired,
-  width: PropTypes.oneOf(['lg', 'sm']),
+  width: PropTypes.oneOf(['search', 'lg', 'sm']),
+};
+
+/**
+ * DataTable.Search — Convenience shorthand for a search filter.
+ * Internally renders DataTable.Filter with component=TableSearch and width='search'.
+ *
+ * @example
+ * <DataTable.Search value={search} onChange={setSearch} placeholder="Search..." />
+ */
+function DataTableSearch(props) {
+  return <DataTableFilter component={TableSearch} width='search' {...props} />;
+}
+
+DataTableSearch.displayName = 'DataTableSearch';
+
+DataTableSearch.propTypes = {
+  value: PropTypes.string,
+  onChange: PropTypes.func,
+  placeholder: PropTypes.string,
+  debounce: PropTypes.number,
 };
 
 /**
@@ -605,7 +590,12 @@ function DataTable({
         ? Math.ceil(paginationProps.total / paginationProps.pageSize)
         : 1)
     : 0;
-  const showPagination = resolvedTotalPages > 1;
+  const hasPageSizeOptions =
+    paginationProps &&
+    paginationProps.pageSizeOptions &&
+    paginationProps.pageSizeOptions.length > 0;
+  const showPagination =
+    !!paginationProps && (resolvedTotalPages > 1 || hasPageSizeOptions);
 
   // ─── Render ────────────────────────────────────────────────────────
   return (

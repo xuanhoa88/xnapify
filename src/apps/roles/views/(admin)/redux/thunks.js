@@ -77,6 +77,26 @@ export const deleteRole = createAsyncThunk(
 );
 
 /**
+ * Bulk delete roles
+ */
+export const bulkDeleteRoles = createAsyncThunk(
+  'admin/roles/bulkDeleteRoles',
+  async (ids, { extra: { fetch }, rejectWithValue }) => {
+    try {
+      const { data } = await fetch('/api/admin/roles', {
+        method: 'DELETE',
+        body: { ids },
+      });
+      return data.deletedIds || ids;
+    } catch (error) {
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
+    }
+  },
+);
+
+/**
  * Create a new role
  */
 export const createRole = createAsyncThunk(

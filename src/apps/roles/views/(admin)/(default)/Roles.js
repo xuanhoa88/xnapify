@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useEffect, useCallback, useState, useRef } from 'react';
+import { useEffect, useCallback, useState, useRef, useMemo } from 'react';
 
 import * as RadixIcons from '@radix-ui/react-icons';
 import { Flex, Box, Text, Button, Card } from '@radix-ui/themes';
@@ -29,12 +29,10 @@ import {
   isRolesListInitialized,
   getRolesListError,
   deleteRole,
+  bulkDeleteRoles,
 } from '../redux';
 
 import s from './Roles.css';
-
-// Pagination items per page
-const ITEMS_PER_PAGE = 10;
 
 // Map role names to icon names for visual consistency
 const ROLE_ICONS = Object.freeze({
@@ -68,6 +66,10 @@ function Roles() {
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Selection state
+  const [selectedRoles, setSelectedRoles] = useState([]);
 
   // Search state
   const [search, setSearch] = useState('');
@@ -85,13 +87,13 @@ function Roles() {
   const groupsModalRef = useRef();
 
   useEffect(() => {
-    dispatch(fetchRoles({ page: currentPage, limit: ITEMS_PER_PAGE, search }));
-  }, [dispatch, currentPage, search]);
+    dispatch(fetchRoles({ page: currentPage, limit: pageSize, search }));
+  }, [dispatch, currentPage, pageSize, search]);
 
   // Refresh roles list callback
   const refreshRoles = useCallback(() => {
-    dispatch(fetchRoles({ page: currentPage, limit: ITEMS_PER_PAGE, search }));
-  }, [dispatch, currentPage, search]);
+    dispatch(fetchRoles({ page: currentPage, limit: pageSize, search }));
+  }, [dispatch, currentPage, pageSize, search]);
 
   const handleAddRole = useCallback(() => {
     history.push('/admin/roles/create');
@@ -134,6 +136,34 @@ function Roles() {
     setSearch(value);
     setCurrentPage(1);
   }, []);
+
+  // Bulk actions
+  const bulkActions = useMemo(
+    () => [
+      {
+        key: 'delete',
+        label: t('admin:roles.bulkDelete', 'Delete Selected'),
+        onClick: () => {
+          if (
+            window.confirm(
+              t(
+                'admin:roles.bulkDeleteConfirm',
+                'Are you sure you want to delete the selected roles?',
+              ),
+            )
+          ) {
+            dispatch(bulkDeleteRoles(selectedRoles)).then(() => {
+              setSelectedRoles([]);
+              refreshRoles();
+            });
+          }
+        },
+        variant: 'danger',
+        permission: 'roles:delete',
+      },
+    ],
+    [t, dispatch, selectedRoles, refreshRoles],
+  );
 
   // Render card for each role
   const renderRoleCard = useCallback(
@@ -221,6 +251,9 @@ function Roles() {
         viewType='grid'
         gridCols={4}
         renderCard={renderRoleCard}
+        selectable
+        selectedKeys={selectedRoles}
+        onSelectionChange={setSelectedRoles}
       >
         <DataTable.Header
           title={t('admin:roles.title', 'Role Management')}
@@ -248,6 +281,7 @@ function Roles() {
         </DataTable.Header>
 
         <DataTable.Toolbar>
+          <DataTable.BulkActions actions={bulkActions} />
           <DataTable.Search
             value={search}
             onChange={handleSearchChange}
@@ -286,7 +320,10 @@ function Roles() {
           current={currentPage}
           totalPages={pagination ? pagination.pages : undefined}
           total={pagination ? pagination.total : undefined}
+          pageSize={pageSize}
+          pageSizeOptions={[10, 20, 50, 100]}
           onChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
         />
       </DataTable>
 

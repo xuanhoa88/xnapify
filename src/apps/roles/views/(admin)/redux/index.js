@@ -18,6 +18,7 @@ export {
   clearRoleCreateError,
   clearRoleUpdateError,
   clearRoleDeleteError,
+  clearRoleBulkDeleteError,
   resetRolesState,
   SLICE_NAME,
 } from './slice';

@@ -122,6 +122,7 @@ function Users({ context }) {
   const [groupFilter, setGroupFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // Selection state
   const [selectedUsers, setSelectedUsers] = useState([]);
@@ -138,13 +139,22 @@ function Users({ context }) {
     dispatch(
       fetchUsers({
         page: currentPage,
+        limit: pageSize,
         search,
         role: roleFilter,
         group: groupFilter,
         status: statusFilter,
       }),
     );
-  }, [dispatch, currentPage, search, roleFilter, groupFilter, statusFilter]);
+  }, [
+    dispatch,
+    currentPage,
+    pageSize,
+    search,
+    roleFilter,
+    groupFilter,
+    statusFilter,
+  ]);
 
   const refreshUsers = useCallback(() => {
     dispatch(
@@ -610,7 +620,10 @@ function Users({ context }) {
           current={currentPage}
           totalPages={pagination ? pagination.pages : undefined}
           total={pagination ? pagination.total : undefined}
+          pageSize={pageSize}
+          pageSizeOptions={[10, 20, 50, 100]}
           onChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
         />
       </DataTable>
 

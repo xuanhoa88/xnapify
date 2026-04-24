@@ -237,6 +237,45 @@ export async function deleteGroup(req, res) {
 }
 
 /**
+ * Bulk delete groups
+ *
+ * @route   DELETE /api/admin/groups
+ * @access  Admin (requires 'groups:delete' permission)
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export async function bulkDeleteGroups(req, res) {
+  const container = req.app.get('container');
+  const http = container.resolve('http');
+  try {
+    const { ids } = req.body;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return http.sendError(res, 'No group IDs provided', 400);
+    }
+
+    // Prevent user from deleting groups they belong to
+    const userGroups = req.user.groups || [];
+    if (ids.some(id => userGroups.includes(id))) {
+      return http.sendError(res, 'Cannot delete a group you belong to', 400);
+    }
+
+    const deletedIds = await groupService.bulkDeleteGroups(ids, {
+      models: container.resolve('models'),
+      hook: container.resolve('hook'),
+      systemGroups: container.resolve('auth').SYSTEM_GROUPS,
+    });
+
+    return http.sendSuccess(res, {
+      deletedIds,
+      message: `${deletedIds.length} group(s) deleted successfully`,
+    });
+  } catch (error) {
+    return http.sendServerError(res, 'Failed to bulk delete groups', error);
+  }
+}
+
+/**
  * Get group users
  *
  * @route   GET /api/admin/groups/:id/users

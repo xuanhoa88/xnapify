@@ -57,6 +57,7 @@ function EmailTemplates() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [selectedItems, setSelectedItems] = useState([]);
 
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -66,22 +67,24 @@ function EmailTemplates() {
     dispatch(
       fetchTemplates({
         page: currentPage,
+        limit: pageSize,
         search,
         status: statusFilter,
       }),
     );
-  }, [dispatch, currentPage, search, statusFilter]);
+  }, [dispatch, currentPage, pageSize, search, statusFilter]);
 
   const refreshList = useCallback(() => {
     dispatch(
       fetchTemplates({
         page: currentPage,
+        limit: pageSize,
         search,
         status: statusFilter,
       }),
     );
     setSelectedItems([]);
-  }, [dispatch, currentPage, search, statusFilter]);
+  }, [dispatch, currentPage, pageSize, search, statusFilter]);
 
   const handleSearchChange = useCallback(value => {
     setSearch(value);
@@ -359,7 +362,10 @@ function EmailTemplates() {
           current={currentPage}
           totalPages={pagination ? pagination.pages : undefined}
           total={pagination ? pagination.total : undefined}
+          pageSize={pageSize}
+          pageSizeOptions={[10, 20, 50, 100]}
           onChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
         />
       </DataTable>
 

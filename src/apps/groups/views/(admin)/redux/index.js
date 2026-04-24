@@ -18,6 +18,7 @@ export {
   clearGroupsCreateError,
   clearGroupsUpdateError,
   clearGroupsDeleteError,
+  clearGroupsBulkDeleteError,
   resetGroupsState,
   SLICE_NAME,
 } from './slice';

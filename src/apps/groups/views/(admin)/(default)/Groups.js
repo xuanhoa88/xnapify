@@ -43,12 +43,10 @@ import {
   getGroupsListError,
   getGroupsPagination,
   deleteGroup,
+  bulkDeleteGroups,
 } from '../redux';
 
 import s from './Groups.css';
-
-// Pagination items per page
-const ITEMS_PER_PAGE = 10;
 
 /**
  * Groups — Admin page for group management with card grid layout.
@@ -79,6 +77,10 @@ function Groups({ context }) {
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Selection state
+  const [selectedGroups, setSelectedGroups] = useState([]);
 
   // Search state
   const [search, setSearch] = useState('');
@@ -119,24 +121,24 @@ function Groups({ context }) {
     dispatch(
       fetchGroups({
         page: currentPage,
-        limit: ITEMS_PER_PAGE,
+        limit: pageSize,
         role: roleFilter,
         search,
       }),
     );
-  }, [dispatch, currentPage, roleFilter, search]);
+  }, [dispatch, currentPage, pageSize, roleFilter, search]);
 
   // Refresh groups list callback
   const refreshGroups = useCallback(() => {
     dispatch(
       fetchGroups({
         page: currentPage,
-        limit: ITEMS_PER_PAGE,
+        limit: pageSize,
         role: roleFilter,
         search,
       }),
     );
-  }, [dispatch, currentPage, roleFilter, search]);
+  }, [dispatch, currentPage, pageSize, roleFilter, search]);
 
   const handleAddGroup = useCallback(() => {
     history.push('/admin/groups/create');
@@ -190,6 +192,34 @@ function Groups({ context }) {
   }, []);
 
   const hasActiveFilters = Boolean(search || roleFilter);
+
+  // Bulk actions
+  const bulkActions = useMemo(
+    () => [
+      {
+        key: 'delete',
+        label: t('admin:groups.bulkDelete', 'Delete Selected'),
+        onClick: () => {
+          if (
+            window.confirm(
+              t(
+                'admin:groups.bulkDeleteConfirm',
+                'Are you sure you want to delete the selected groups?',
+              ),
+            )
+          ) {
+            dispatch(bulkDeleteGroups(selectedGroups)).then(() => {
+              setSelectedGroups([]);
+              refreshGroups();
+            });
+          }
+        },
+        variant: 'danger',
+        permission: 'groups:delete',
+      },
+    ],
+    [t, dispatch, selectedGroups, refreshGroups],
+  );
 
   // Render card for each group
   const renderGroupCard = useCallback(
@@ -345,6 +375,9 @@ function Groups({ context }) {
         viewType='grid'
         gridCols={3}
         renderCard={renderGroupCard}
+        selectable
+        selectedKeys={selectedGroups}
+        onSelectionChange={setSelectedGroups}
       >
         <DataTable.Header
           title={t('admin:groups.title', 'Group Management')}
@@ -372,6 +405,7 @@ function Groups({ context }) {
         </DataTable.Header>
 
         <DataTable.Toolbar>
+          <DataTable.BulkActions actions={bulkActions} />
           <DataTable.Search
             value={search}
             onChange={handleSearchChange}
@@ -428,7 +462,10 @@ function Groups({ context }) {
           current={currentPage}
           totalPages={pagination ? pagination.pages : undefined}
           total={pagination ? pagination.total : undefined}
+          pageSize={pageSize}
+          pageSizeOptions={[10, 20, 50, 100]}
           onChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
         />
       </DataTable>
 

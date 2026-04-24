@@ -30,21 +30,31 @@
   background-color: var(--gray-2);
 }
 
-.toolbarInner {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  align-items: center;
+/* Search input sizing within the flat toolbar row */
+.toolbarSearch {
+  flex: 1 1 220px;
+  min-width: 180px;
+  max-width: 320px;
 }
 
 .filterLg {
-  min-width: 180px;
-  flex: 1;
+  width: 160px;
 }
 
 .filterSm {
-  min-width: 150px;
-  flex: 1;
+  width: 140px;
+}
+
+@media (max-width: 768px) {
+  .toolbarSearch {
+    flex-basis: 100%;
+    max-width: none;
+  }
+
+  .filterLg,
+  .filterSm {
+    flex: 1 1 100%;
+  }
 }
 
 .clearFilterBox {

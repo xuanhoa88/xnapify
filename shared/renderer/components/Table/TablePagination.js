@@ -116,8 +116,8 @@ function TablePagination({
     [onPageSizeChange],
   );
 
-  // Don't render if only one page
-  if (totalPages <= 1) {
+  // Don't render if only one page and no page size options are available
+  if (totalPages <= 1 && (!pageSizeOptions || pageSizeOptions.length === 0)) {
     return null;
   }
 

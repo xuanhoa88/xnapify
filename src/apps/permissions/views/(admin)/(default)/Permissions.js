@@ -34,9 +34,6 @@ import {
   getPermissionsPagination,
 } from '../redux';
 
-// Pagination items per page
-const ITEMS_PER_PAGE = 10;
-
 function Permissions() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
@@ -51,6 +48,7 @@ function Permissions() {
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // Filter state
   const [search, setSearch] = useState('');
@@ -72,7 +70,7 @@ function Permissions() {
       dispatch(
         fetchPermissions({
           page: 1,
-          limit: ITEMS_PER_PAGE,
+          limit: pageSize,
           search,
           status: statusFilter,
         }),
@@ -84,7 +82,7 @@ function Permissions() {
         clearTimeout(debounceTimer.current);
       }
     };
-  }, [dispatch, search, statusFilter]);
+  }, [dispatch, pageSize, search, statusFilter]);
 
   // Fetch when page changes (separate from filter changes)
   useEffect(() => {
@@ -93,26 +91,26 @@ function Permissions() {
       dispatch(
         fetchPermissions({
           page: currentPage,
-          limit: ITEMS_PER_PAGE,
+          limit: pageSize,
           search,
           status: statusFilter,
         }),
       );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage]);
+  }, [currentPage, pageSize]);
 
   // Refresh permissions list callback
   const refreshPermissions = useCallback(() => {
     dispatch(
       fetchPermissions({
         page: currentPage,
-        limit: ITEMS_PER_PAGE,
+        limit: pageSize,
         search,
         status: statusFilter,
       }),
     );
-  }, [dispatch, currentPage, search, statusFilter]);
+  }, [dispatch, currentPage, pageSize, search, statusFilter]);
 
   // Modal refs
   const deleteModalRef = useRef();
@@ -452,7 +450,10 @@ function Permissions() {
           current={currentPage}
           totalPages={pagination ? pagination.pages : undefined}
           total={pagination ? pagination.total : undefined}
+          pageSize={pageSize}
+          pageSizeOptions={[10, 20, 50, 100]}
           onChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
         />
       </DataTable>
 
