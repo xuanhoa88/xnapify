@@ -14,19 +14,24 @@
 
 .bulkBarContainer {
   position: absolute;
-  bottom: var(--space-4);
+  bottom: var(--space-6);
   left: 50%;
   transform: translateX(-50%);
-  background-color: var(--gray-12);
-  border: 1px solid var(--gray-a3);
-  border-radius: var(--radius-4);
+  background-color: rgba(17, 17, 17, 0.85); /* Premium dark translucent */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 9999px; /* Perfect pill shape */
   box-shadow:
-    0 8px 30px rgb(0 0 0 / 12%),
-    0 2px 8px rgb(0 0 0 / 8%);
-  z-index: 20;
-  gap: var(--space-3);
-  animation: bulkBarSlideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    0 24px 48px rgba(0, 0, 0, 0.3),
+    0 12px 24px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1); /* Subtle inner highlight */
+  z-index: 50;
+  gap: var(--space-4);
+  animation: bulkBarSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   white-space: nowrap;
+  padding: 8px 12px 8px 16px;
+  align-items: center;
 }
 
 /* ── Count badge ────────────────────────────────────────────────────── */
@@ -34,48 +39,62 @@
 .bulkCountBadge {
   background-color: var(--indigo-9);
   color: white;
-  border-radius: var(--radius-2);
+  border-radius: 9999px;
   padding: 2px 8px;
-  font-size: var(--font-size-1);
+  font-size: 13px;
   font-weight: 600;
-  letter-spacing: 0.01em;
-  line-height: 1.4;
+  min-width: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .bulkItemCountText {
-  color: var(--gray-1);
+  color: rgba(255, 255, 255, 0.7);
   white-space: nowrap;
-  font-size: var(--font-size-2);
+  font-size: 13px;
+  font-weight: 500;
 }
 
 /* ── Action section ─────────────────────────────────────────────────── */
 
 .bulkActionsFlex {
-  border-left: 1px solid var(--gray-a6);
-  padding-left: var(--space-3);
+  border-left: 1px solid rgba(255, 255, 255, 0.15);
+  padding-left: var(--space-4);
+  gap: var(--space-2);
 }
 
 .bulkActionButton {
   font-weight: 500;
-  color: var(--gray-1);
+  color: white !important;
   letter-spacing: 0.01em;
+  border-radius: 9999px !important;
+  padding: 0 12px !important;
+  height: 28px !important;
+  transition: all 0.2s ease !important;
+  background-color: transparent !important;
 }
 
 .bulkActionButton:hover {
-  background-color: var(--gray-a3);
-  color: white;
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  transform: translateY(-1px);
 }
 
 /* ── Clear / dismiss ────────────────────────────────────────────────── */
 
 .bulkClearButton {
-  color: var(--gray-6);
-  border-left: 1px solid var(--gray-a6);
-  padding-left: var(--space-3);
-  border-radius: 0;
+  color: rgba(255, 255, 255, 0.5) !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.15) !important;
+  padding-left: var(--space-3) !important;
+  margin-left: var(--space-2);
+  border-radius: 9999px !important;
+  height: 28px !important;
+  padding-right: 12px !important;
+  transition: all 0.2s ease !important;
+  background-color: transparent !important;
 }
 
 .bulkClearButton:hover {
-  color: var(--gray-1);
-  background-color: transparent;
+  color: white !important;
+  background-color: rgba(255, 255, 255, 0.1) !important;
 }

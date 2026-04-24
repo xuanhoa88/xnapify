@@ -12,8 +12,10 @@ import {
   PlusIcon,
   Pencil2Icon,
   TrashIcon,
+  CheckIcon,
+  Cross2Icon,
 } from '@radix-ui/react-icons';
-import { Box, Flex, Text, Button, Badge } from '@radix-ui/themes';
+import { Box, Flex, Text, Button, Badge, IconButton } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
@@ -21,7 +23,7 @@ import { useHistory } from '@shared/renderer/components/History';
 import Modal from '@shared/renderer/components/Modal';
 import { useRbac } from '@shared/renderer/components/Rbac';
 import { SearchableSelect } from '@shared/renderer/components/SearchableSelect';
-import { DataTable } from '@shared/renderer/components/Table';
+import { DataTable, useTableColumns } from '@shared/renderer/components/Table';
 
 import ChangeStatusPermissionModal from '../components/ChangeStatusPermissionModal';
 import {
@@ -249,27 +251,34 @@ function Permissions() {
   );
 
   // Bulk action descriptors
-  const bulkActions = useMemo(
+  const bulkActions = useMemo(() => [], []);
+
+  const moreBulkActions = useMemo(
     () => [
       {
         label: t('admin:permissions.activate', 'Activate'),
+        icon: <CheckIcon width={16} height={16} />,
         onClick: handleBulkActivate,
       },
       {
         label: t('admin:permissions.deactivate', 'Deactivate'),
+        icon: <Cross2Icon width={16} height={16} />,
+        variant: 'warning',
         onClick: handleBulkDeactivate,
       },
+      { type: 'divider' },
       {
         label: t('admin:permissions.delete', 'Delete'),
-        onClick: handleBulkDelete,
+        icon: <TrashIcon width={16} height={16} />,
         variant: 'danger',
+        onClick: handleBulkDelete,
       },
     ],
     [t, handleBulkActivate, handleBulkDeactivate, handleBulkDelete],
   );
 
   // Column definitions
-  const columns = useMemo(
+  const baseColumns = useMemo(
     () => [
       {
         key: 'resource',
@@ -328,28 +337,33 @@ function Permissions() {
         order: 9999,
         className: 'text-right',
         render: (_, record) => (
-          <Flex gap='2' justify='end'>
-            <Button
+          <Flex gap='2' justify='end' onClick={e => e.stopPropagation()}>
+            <IconButton
               variant='ghost'
-              size='1'
+              size='2'
               title={t('admin:permissions.edit', 'Edit')}
               onClick={() => handleEdit(record.id)}
             >
               <Pencil2Icon width={16} height={16} />
-            </Button>
-            <Button
+            </IconButton>
+            <IconButton
               variant='ghost'
-              size='1'
+              size='2'
               title={t('admin:permissions.delete', 'Delete')}
               onClick={() => handleDelete(record)}
             >
               <TrashIcon width={16} height={16} />
-            </Button>
+            </IconButton>
           </Flex>
         ),
       },
     ],
     [t, handleEdit, handleDelete],
+  );
+
+  const { columns } = useTableColumns(
+    'table.columns.permissions.list',
+    baseColumns,
   );
 
   return (
@@ -360,7 +374,6 @@ function Permissions() {
         rowKey='id'
         loading={loading}
         initialized={initialized}
-        variant='surface'
         selectable
         selectedKeys={selectedPermissions}
         onSelectionChange={setSelectedPermissions}
@@ -418,7 +431,10 @@ function Permissions() {
           />
         </DataTable.Toolbar>
 
-        <DataTable.BulkActions actions={bulkActions} />
+        <DataTable.BulkActions
+          actions={bulkActions}
+          moreActions={moreBulkActions}
+        />
 
         <DataTable.Empty
           icon={<LockOpen1Icon width={48} height={48} />}

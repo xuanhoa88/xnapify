@@ -163,16 +163,47 @@ function Groups({ context }) {
     permissionsModalRef.current && permissionsModalRef.current.open(group);
   }, []);
 
+  const clearSelection = useCallback(() => setSelectedGroups([]), []);
+
+  const handleBulkDelete = useCallback(() => {
+    deleteModalRef.current &&
+      deleteModalRef.current.open({ ids: selectedGroups });
+  }, [selectedGroups]);
+
   const handleDeleteGroup = useCallback(group => {
-    deleteModalRef.current && deleteModalRef.current.open(group);
+    deleteModalRef.current &&
+      deleteModalRef.current.open({ ids: [group.id], items: [group] });
   }, []);
 
   const handleDeleteGroupAction = useCallback(
-    item => dispatch(deleteGroup(item.id)),
-    [dispatch],
+    async item => {
+      try {
+        if (item.ids && item.ids.length > 1) {
+          const result = await dispatch(bulkDeleteGroups(item.ids)).unwrap();
+          clearSelection();
+          return { success: true, ...result };
+        } else {
+          const id = item.ids ? item.ids[0] : item.id;
+          const result = await dispatch(deleteGroup(id)).unwrap();
+          clearSelection();
+          return { success: true, ...result };
+        }
+      } catch (err) {
+        return { success: false, error: err };
+      }
+    },
+    [dispatch, clearSelection],
   );
 
-  const getGroupName = useCallback(item => item.name, []);
+  const getGroupName = useCallback(item => {
+    if (item.items && item.items.length === 1) {
+      return item.items[0].name;
+    }
+    if (item.ids && item.ids.length > 0) {
+      return `${item.ids.length} group(s)`;
+    }
+    return item.name;
+  }, []);
 
   // Search handlers
   const handleSearchChange = useCallback(value => {
@@ -199,26 +230,13 @@ function Groups({ context }) {
       {
         key: 'delete',
         label: t('admin:groups.bulkDelete', 'Delete Selected'),
-        onClick: () => {
-          if (
-            window.confirm(
-              t(
-                'admin:groups.bulkDeleteConfirm',
-                'Are you sure you want to delete the selected groups?',
-              ),
-            )
-          ) {
-            dispatch(bulkDeleteGroups(selectedGroups)).then(() => {
-              setSelectedGroups([]);
-              refreshGroups();
-            });
-          }
-        },
+        icon: <ArchiveIcon width={16} height={16} />,
+        onClick: handleBulkDelete,
         variant: 'danger',
         permission: 'groups:delete',
       },
     ],
-    [t, dispatch, selectedGroups, refreshGroups],
+    [t, handleBulkDelete],
   );
 
   // Render card for each group
@@ -226,16 +244,6 @@ function Groups({ context }) {
     group => {
       const userCount = group.userCount || 0;
       const roleCount = group.roleCount || 0;
-      const users = group.users || [];
-      const roles = group.roles || [];
-
-      // Show up to 3 user avatars
-      const visibleUsers = users.slice(0, 3);
-      const remainingUserCount = userCount - visibleUsers.length;
-
-      // Show up to 3 role badges
-      const visibleRoles = roles.slice(0, 3);
-      const remainingRoleCount = roleCount - visibleRoles.length;
 
       return (
         <Card variant='surface' className={s.cardLayout}>
@@ -246,12 +254,18 @@ function Groups({ context }) {
             mb='3'
             className={s.cardHeaderFlex}
           >
-            <Flex gap='2'>
+            <Flex gap='2' className={s.badgesWrapper}>
               <Badge color='blue' radius='full' variant='soft'>
-                {userCount} {userCount === 1 ? 'user' : 'users'}
+                {t('admin:groups.usersCount', '{{count}} user', {
+                  count: userCount,
+                  defaultValue_other: '{{count}} users',
+                })}
               </Badge>
               <Badge color='gray' radius='full' variant='surface'>
-                {roleCount} {roleCount === 1 ? 'role' : 'roles'}
+                {t('admin:groups.rolesCount', '{{count}} role', {
+                  count: roleCount,
+                  defaultValue_other: '{{count}} roles',
+                })}
               </Badge>
             </Flex>
             <GroupActionsDropdown
@@ -263,7 +277,7 @@ function Groups({ context }) {
               onDelete={handleDeleteGroup}
             />
           </Flex>
-          <Heading size='4' weight='medium' className={s.groupNameHeading}>
+          <Heading size='4' weight='bold' className={s.groupNameHeading}>
             {group.name}
           </Heading>
           <Box className={s.groupBodyFlex}>
@@ -273,80 +287,8 @@ function Groups({ context }) {
               color='gray'
               className={s.groupDescriptionText}
             >
-              {group.description || 'No description'}
+              {group.description || t('common:notAvailable', 'N/A')}
             </Text>
-
-            {/* Roles Section */}
-            <Box className={s.sectionHeaderBox}>
-              <Text size='1' weight='bold' className={s.sectionTitleText}>
-                Roles:
-              </Text>
-              {roles.length === 0 ? (
-                <Text size='2' color='gray' className={s.emptySectionText}>
-                  {t('admin:groups.noRolesAssigned', 'No roles assigned')}
-                </Text>
-              ) : (
-                <Flex wrap='wrap' gap='2'>
-                  {visibleRoles.map((role, idx) => (
-                    <RoleTag
-                      key={`group-${group.id}-role-${idx}`}
-                      name={role.name || role}
-                      className={s.tagMargin}
-                    />
-                  ))}
-                  {remainingRoleCount > 0 && (
-                    <Badge
-                      className={s.tagMargin}
-                      color='gray'
-                      radius='full'
-                      variant='surface'
-                    >
-                      +{remainingRoleCount}
-                    </Badge>
-                  )}
-                </Flex>
-              )}
-            </Box>
-
-            {/* Users Section */}
-            <Box className={s.usersSectionBox}>
-              <Text size='1' weight='bold' className={s.sectionTitleText}>
-                Users:
-              </Text>
-              {visibleUsers.length > 0 ? (
-                <Flex align='center'>
-                  {visibleUsers.map((user, index) => (
-                    <Avatar
-                      key={user.id}
-                      fallback={(
-                        (user.profile && user.profile.display_name) ||
-                        user.email ||
-                        '?'
-                      )
-                        .charAt(0)
-                        .toUpperCase()}
-                      size='2'
-                      className={
-                        index > 0
-                          ? `${s.userAvatar} ${s.userAvatarStacked}`
-                          : s.userAvatar
-                      }
-                    />
-                  ))}
-                  {remainingUserCount > 0 && (
-                    <Avatar
-                      fallback={`+${remainingUserCount}`}
-                      size='2'
-                      className={s.extraUserAvatar}
-                    />
-                  )}
-                </Flex>
-              ) : (
-                <Text size='2' color='gray' className={s.emptySectionText}>
-                  {t('admin:groups.noUsers', 'No users yet')}
-                </Text>
-              )}
-            </Box>
           </Box>
         </Card>
       );
@@ -405,7 +347,6 @@ function Groups({ context }) {
         </DataTable.Header>
 
         <DataTable.Toolbar>
-          <DataTable.BulkActions actions={bulkActions} />
           <DataTable.Search
             value={search}
             onChange={handleSearchChange}
@@ -430,6 +371,8 @@ function Groups({ context }) {
             onClick={handleClearFilters}
           />
         </DataTable.Toolbar>
+
+        <DataTable.BulkActions actions={bulkActions} />
 
         <DataTable.Empty
           icon={<ArchiveIcon width={48} height={48} />}

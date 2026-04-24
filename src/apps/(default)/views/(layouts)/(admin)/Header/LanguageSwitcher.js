@@ -8,10 +8,11 @@
 import { useCallback, useMemo } from 'react';
 
 import { GlobeIcon, ChevronDownIcon, CheckIcon } from '@radix-ui/react-icons';
-import { Flex, Text, Button, DropdownMenu } from '@radix-ui/themes';
+import { Flex, Text, Button } from '@radix-ui/themes';
 import clsx from 'clsx';
 import { useDispatch, useSelector } from 'react-redux';
 
+import ContextMenu from '@shared/renderer/components/ContextMenu';
 import { features } from '@shared/renderer/redux';
 
 const { getLocale, setLocale, getAvailableLocales } = features;
@@ -55,8 +56,8 @@ function AdminLanguageSwitcher() {
   }
 
   return (
-    <DropdownMenu.Root modal={false}>
-      <DropdownMenu.Trigger asChild>
+    <ContextMenu>
+      <ContextMenu.Trigger asChild>
         <Button
           variant='ghost'
           className='flex items-center gap-2 px-2 py-1 rounded-md text-gray-11 transition-colors hover:bg-gray-3 cursor-pointer'
@@ -75,14 +76,14 @@ function AdminLanguageSwitcher() {
             <ChevronDownIcon width={12} height={12} />
           </Flex>
         </Button>
-      </DropdownMenu.Trigger>
+      </ContextMenu.Trigger>
 
-      <DropdownMenu.Content
+      <ContextMenu.Menu
         align='end'
         className='min-w-[160px] bg-panel-solid/90 backdrop-blur-md border border-gray-a6 rounded-md shadow-lg p-1 z-[100] data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95'
       >
         {localeEntries.map(([code, name]) => (
-          <DropdownMenu.Item
+          <ContextMenu.Item
             key={code}
             onClick={e => handleLocaleChange(code, e)}
             className={clsx(
@@ -97,10 +98,10 @@ function AdminLanguageSwitcher() {
             {code === currentLocale && (
               <CheckIcon width={14} height={14} className='text-indigo-11' />
             )}
-          </DropdownMenu.Item>
+          </ContextMenu.Item>
         ))}
-      </DropdownMenu.Content>
-    </DropdownMenu.Root>
+      </ContextMenu.Menu>
+    </ContextMenu>
   );
 }
 

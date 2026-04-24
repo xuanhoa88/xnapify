@@ -119,17 +119,48 @@ function Roles() {
     permissionsModalRef.current && permissionsModalRef.current.open(role);
   }, []);
 
+  const clearSelection = useCallback(() => setSelectedRoles([]), []);
+
+  const handleBulkDelete = useCallback(() => {
+    deleteModalRef.current &&
+      deleteModalRef.current.open({ ids: selectedRoles });
+  }, [selectedRoles]);
+
   // Open delete confirmation modal
   const handleDeleteClick = useCallback(role => {
-    deleteModalRef.current && deleteModalRef.current.open(role);
+    deleteModalRef.current &&
+      deleteModalRef.current.open({ ids: [role.id], items: [role] });
   }, []);
 
   const handleDeleteRole = useCallback(
-    item => dispatch(deleteRole(item.id)),
-    [dispatch],
+    async item => {
+      try {
+        if (item.ids && item.ids.length > 1) {
+          const result = await dispatch(bulkDeleteRoles(item.ids)).unwrap();
+          clearSelection();
+          return { success: true, ...result };
+        } else {
+          const id = item.ids ? item.ids[0] : item.id;
+          const result = await dispatch(deleteRole(id)).unwrap();
+          clearSelection();
+          return { success: true, ...result };
+        }
+      } catch (err) {
+        return { success: false, error: err };
+      }
+    },
+    [dispatch, clearSelection],
   );
 
-  const getRoleName = useCallback(item => item.name, []);
+  const getRoleName = useCallback(item => {
+    if (item.items && item.items.length === 1) {
+      return item.items[0].name;
+    }
+    if (item.ids && item.ids.length > 0) {
+      return `${item.ids.length} role(s)`;
+    }
+    return item.name;
+  }, []);
 
   // Search handlers
   const handleSearchChange = useCallback(value => {
@@ -143,26 +174,13 @@ function Roles() {
       {
         key: 'delete',
         label: t('admin:roles.bulkDelete', 'Delete Selected'),
-        onClick: () => {
-          if (
-            window.confirm(
-              t(
-                'admin:roles.bulkDeleteConfirm',
-                'Are you sure you want to delete the selected roles?',
-              ),
-            )
-          ) {
-            dispatch(bulkDeleteRoles(selectedRoles)).then(() => {
-              setSelectedRoles([]);
-              refreshRoles();
-            });
-          }
-        },
+        icon: <RadixIcons.TrashIcon width={16} height={16} />,
+        onClick: handleBulkDelete,
         variant: 'danger',
         permission: 'roles:delete',
       },
     ],
-    [t, dispatch, selectedRoles, refreshRoles],
+    [t, handleBulkDelete],
   );
 
   // Render card for each role
@@ -281,13 +299,21 @@ function Roles() {
         </DataTable.Header>
 
         <DataTable.Toolbar>
-          <DataTable.BulkActions actions={bulkActions} />
           <DataTable.Search
             value={search}
             onChange={handleSearchChange}
             placeholder={t('admin:roles.searchPlaceholder', 'Search roles...')}
           />
+          <DataTable.ClearFilters
+            visible={!!search}
+            onClick={() => {
+              setSearch('');
+              setCurrentPage(1);
+            }}
+          />
         </DataTable.Toolbar>
+
+        <DataTable.BulkActions actions={bulkActions} />
 
         <DataTable.Empty
           icon={<RadixIcons.LockClosedIcon width={48} height={48} />}

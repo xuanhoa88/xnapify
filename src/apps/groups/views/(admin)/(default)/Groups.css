@@ -4,15 +4,29 @@
   height: 100%;
   display: flex;
   flex-direction: column;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border-radius: var(--radius-4);
+}
+
+.cardLayout:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-4);
 }
 
 .cardHeaderFlex {
-  border-bottom: 1px solid var(--gray-a5);
+  /* Clean header without border */
+}
+
+.badgesWrapper {
+  /* Clear space for the absolutely positioned checkbox from DataTable */
+  padding-left: var(--space-4);
 }
 
 .groupNameHeading {
   word-break: break-word;
   margin-bottom: var(--space-2);
+  color: var(--gray-12);
+  line-height: 1.3;
 }
 
 .groupBodyFlex {
@@ -24,44 +38,6 @@
 .groupDescriptionText {
   margin-bottom: var(--space-4);
   min-height: 40px;
+  line-height: 1.5;
 }
 
-.sectionHeaderBox {
-  margin-bottom: var(--space-4);
-}
-
-.sectionTitleText {
-  text-transform: uppercase;
-  color: var(--gray-11);
-  display: block;
-  margin-bottom: var(--space-2);
-}
-
-.emptySectionText {
-  font-style: italic;
-}
-
-.tagMargin {
-  margin-bottom: 0;
-}
-
-.usersSectionBox {
-  margin-top: auto;
-}
-
-.userAvatar {
-  border: 2px solid var(--color-panel-solid);
-  box-shadow: 0 0 0 1px var(--gray-4);
-}
-
-.userAvatarStacked {
-  margin-left: -10px;
-}
-
-.extraUserAvatar {
-  margin-left: -10px;
-  border: 2px solid var(--color-panel-solid);
-  background-color: var(--gray-3);
-  color: var(--gray-11);
-  box-shadow: 0 0 0 1px var(--gray-4);
-}

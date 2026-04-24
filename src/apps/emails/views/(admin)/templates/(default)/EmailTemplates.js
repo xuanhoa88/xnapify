@@ -9,20 +9,21 @@ import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 
 import {
   EnvelopeClosedIcon,
-  TrashIcon,
-  EyeOpenIcon,
+  PlusIcon,
   Pencil2Icon,
-  CopyIcon,
+  TrashIcon,
 } from '@radix-ui/react-icons';
-import { Box, Flex, Text, Button, Badge } from '@radix-ui/themes';
+import { Box, Flex, Text, Button, Badge, IconButton } from '@radix-ui/themes';
 import format from 'date-fns/format';
+import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
 import { useHistory } from '@shared/renderer/components/History';
 import Modal from '@shared/renderer/components/Modal';
-import { DataTable } from '@shared/renderer/components/Table';
+import { DataTable, useTableColumns } from '@shared/renderer/components/Table';
 
+import TemplateActionsDropdown from '../../components/TemplateActionsDropdown';
 import TemplateEditor from '../../components/TemplateEditor';
 import {
   fetchTemplates,
@@ -40,10 +41,13 @@ import {
 
 import s from './EmailTemplates.css';
 
+/** Extension hook ID for injecting extra columns into the email templates table. */
+const COLUMNS_HOOK_ID = 'table.columns.emails.templates';
+
 /**
  * EmailTemplates — Admin page for managing email templates.
  */
-function EmailTemplates() {
+function EmailTemplates({ context }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const history = useHistory();
@@ -59,6 +63,9 @@ function EmailTemplates() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [selectedItems, setSelectedItems] = useState([]);
+
+  // Selection
+  const clearSelection = useCallback(() => setSelectedItems([]), []);
 
   const [previewOpen, setPreviewOpen] = useState(false);
   const confirmDeleteRef = useRef();
@@ -83,8 +90,12 @@ function EmailTemplates() {
         status: statusFilter,
       }),
     );
-    setSelectedItems([]);
   }, [dispatch, currentPage, pageSize, search, statusFilter]);
+
+  const handleRefreshList = useCallback(() => {
+    clearSelection();
+    refreshList();
+  }, [clearSelection, refreshList]);
 
   const handleSearchChange = useCallback(value => {
     setSearch(value);
@@ -192,7 +203,7 @@ function EmailTemplates() {
   );
 
   // Column definitions
-  const columns = useMemo(
+  const baseColumns = useMemo(
     () => [
       {
         key: 'name',
@@ -230,8 +241,8 @@ function EmailTemplates() {
         order: 40,
         render: isActive => (
           <Badge
-            color={isActive ? 'green' : 'gray'}
-            variant={isActive ? 'soft' : 'surface'}
+            variant={isActive ? 'success' : 'error'}
+            color='gray'
             radius='full'
           >
             {isActive
@@ -245,8 +256,11 @@ function EmailTemplates() {
         dataIndex: 'updated_at',
         title: t('admin:emails.list.updated', 'Updated'),
         order: 50,
-        render: value =>
-          value ? format(new Date(value), 'MMM dd, yyyy') : '—',
+        render: value => (
+          <Text size='2' color='gray'>
+            {value ? format(new Date(value), 'MMM dd, yyyy') : '—'}
+          </Text>
+        ),
       },
       {
         key: 'actions',
@@ -254,48 +268,39 @@ function EmailTemplates() {
         order: 9999,
         className: 'text-right',
         render: (_, record) => (
-          <Flex gap='1' justify='end'>
-            <Button
+          <Flex gap='2' justify='end' onClick={e => e.stopPropagation()}>
+            <IconButton
               variant='ghost'
-              size='1'
-              title={t('admin:emails.list.preview', 'Preview')}
-              onClick={() => handlePreview(record)}
-            >
-              <EyeOpenIcon width={16} height={16} />
-            </Button>
-            <Button
-              variant='ghost'
-              size='1'
+              size='2'
               title={t('admin:emails.list.edit', 'Edit')}
               onClick={() =>
                 history.push(`/admin/emails/templates/${record.id}/edit`)
               }
             >
               <Pencil2Icon width={16} height={16} />
-            </Button>
-            <Button
+            </IconButton>
+            <IconButton
               variant='ghost'
-              size='1'
-              title={t('admin:emails.list.duplicate', 'Duplicate')}
-              onClick={() => handleDuplicate(record)}
-            >
-              <CopyIcon width={16} height={16} />
-            </Button>
-            <Button
-              variant='ghost'
-              size='1'
+              size='2'
               title={t('admin:emails.list.delete', 'Delete')}
               onClick={() => handleDelete(record)}
-              className={s.deleteBtn}
             >
               <TrashIcon width={16} height={16} />
-            </Button>
+            </IconButton>
+            <TemplateActionsDropdown
+              template={record}
+              onPreview={handlePreview}
+              onDuplicate={handleDuplicate}
+            />
           </Flex>
         ),
       },
     ],
     [t, history, handlePreview, handleDuplicate, handleDelete],
   );
+
+  // Merge base columns with extension-injected columns
+  const { columns } = useTableColumns(COLUMNS_HOOK_ID, baseColumns);
 
   return (
     <Box className='p-6 max-w-[1400px] mx-auto'>
@@ -305,7 +310,6 @@ function EmailTemplates() {
         rowKey='id'
         loading={loading}
         initialized={initialized}
-        variant='surface'
         selectable
         selectedKeys={selectedItems}
         onSelectionChange={setSelectedItems}
@@ -323,6 +327,7 @@ function EmailTemplates() {
             color='indigo'
             onClick={() => history.push('/admin/emails/templates/create')}
           >
+            <PlusIcon width={16} height={16} />
             {t('admin:emails.list.addTemplate', 'New Template')}
           </Button>
         </DataTable.Header>
@@ -355,7 +360,7 @@ function EmailTemplates() {
             'Create your first email template to get started.',
           )}
         />
-        <DataTable.Error message={error} onRetry={refreshList} />
+        <DataTable.Error message={error} onRetry={handleRefreshList} />
         <DataTable.Loader />
 
         <DataTable.Pagination
@@ -374,7 +379,7 @@ function EmailTemplates() {
         title={t('admin:emails.deleteModal.title', 'Delete Template')}
         getItemName={getDeleteItemName}
         onDelete={onConfirmDelete}
-        onSuccess={refreshList}
+        onSuccess={handleRefreshList}
       />
 
       <Modal
@@ -392,5 +397,11 @@ function EmailTemplates() {
     </Box>
   );
 }
+
+EmailTemplates.propTypes = {
+  context: PropTypes.shape({
+    container: PropTypes.object.isRequired,
+  }),
+};
 
 export default EmailTemplates;

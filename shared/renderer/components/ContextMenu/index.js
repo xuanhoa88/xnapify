@@ -11,6 +11,7 @@ import { DropdownMenu, Flex, Text, Box } from '@radix-ui/themes';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 
+import Icon from '../Icon';
 import { useRbac } from '../Rbac/useRbac';
 
 import s from './ContextMenu.css';
@@ -27,9 +28,9 @@ import s from './ContextMenu.css';
 // Root
 // ---------------------------------------------------------------------------
 
-function ContextMenu({ children, className }) {
+function ContextMenu({ children, className, isOpen, onToggle, modal = false }) {
   return (
-    <DropdownMenu.Root>
+    <DropdownMenu.Root open={isOpen} onOpenChange={onToggle} modal={modal}>
       <Box className={clsx(className, s.container)}>{children}</Box>
     </DropdownMenu.Root>
   );
@@ -38,19 +39,30 @@ function ContextMenu({ children, className }) {
 ContextMenu.propTypes = {
   children: PropTypes.node.isRequired,
   className: PropTypes.string,
+  isOpen: PropTypes.bool,
+  onToggle: PropTypes.func,
+  modal: PropTypes.bool,
 };
 
 // ---------------------------------------------------------------------------
 // Trigger
 // ---------------------------------------------------------------------------
 
-function Trigger({ children, className, ...props }) {
+function Trigger({ children, className, asChild, ...props }) {
+  if (asChild) {
+    return (
+      <DropdownMenu.Trigger asChild className={className} {...props}>
+        {children}
+      </DropdownMenu.Trigger>
+    );
+  }
+
   return (
-    <DropdownMenu.Trigger>
+    <DropdownMenu.Trigger asChild>
       <button
         type='button'
-        className={clsx(className, s.trigger, 'rt-reset', 'rt-BaseButton')}
         {...props}
+        className={clsx(className, s.trigger, 'rt-reset', 'rt-BaseButton')}
       >
         {children}
       </button>
@@ -61,18 +73,26 @@ function Trigger({ children, className, ...props }) {
 Trigger.propTypes = {
   children: PropTypes.node,
   className: PropTypes.string,
+  asChild: PropTypes.bool,
 };
 
 // ---------------------------------------------------------------------------
 // Menu (→ DropdownMenu.Content)
 // ---------------------------------------------------------------------------
 
-function Menu({ children, className, align = 'end', sideOffset = 6 }) {
+function Menu({
+  children,
+  className,
+  align = 'end',
+  sideOffset = 6,
+  ...props
+}) {
   return (
     <DropdownMenu.Content
       align={align}
       sideOffset={sideOffset}
       className={className}
+      {...props}
     >
       {children}
     </DropdownMenu.Content>
@@ -167,7 +187,9 @@ const Item = forwardRef(
       >
         {icon && (
           <Flex align='center' asChild>
-            <span>{icon}</span>
+            <span>
+              <Icon name={icon} size={16} />
+            </span>
           </Flex>
         )}
         {children}

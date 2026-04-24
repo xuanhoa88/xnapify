@@ -14,10 +14,11 @@ import {
   GearIcon,
   ExitIcon,
 } from '@radix-ui/react-icons';
-import { Flex, Text, Box, DropdownMenu } from '@radix-ui/themes';
+import { Flex, Text, Box } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 
+import ContextMenu from '@shared/renderer/components/ContextMenu';
 import { useHistory } from '@shared/renderer/components/History';
 import { checkPermission } from '@shared/renderer/components/Rbac';
 import { features } from '@shared/renderer/redux';
@@ -113,13 +114,13 @@ function ProfileDropdown() {
     return <Box position='relative'>{triggerButton}</Box>;
   }
 
-  // After mount: full interactive DropdownMenu
+  // After mount: full interactive ContextMenu
   return (
     <Box position='relative'>
-      <DropdownMenu.Root modal={false}>
-        <DropdownMenu.Trigger asChild>{triggerButton}</DropdownMenu.Trigger>
+      <ContextMenu>
+        <ContextMenu.Trigger asChild>{triggerButton}</ContextMenu.Trigger>
 
-        <DropdownMenu.Content
+        <ContextMenu.Menu
           align='end'
           variant='soft'
           size='3'
@@ -134,20 +135,20 @@ function ProfileDropdown() {
               {email}
             </Text>
           </Box>
-          <DropdownMenu.Separator />
+          <ContextMenu.Divider />
 
           {/* Navigation Items */}
-          <DropdownMenu.Item onClick={() => history.push('/profile')}>
+          <ContextMenu.Item onClick={() => history.push('/profile')}>
             <PersonIcon
               width={16}
               height={16}
               className='mr-[var(--space-2)]'
             />
             {t('navigation.profile', 'Profile')}
-          </DropdownMenu.Item>
+          </ContextMenu.Item>
 
           {checkPermission(userProfile, 'nodered:admin') && (
-            <DropdownMenu.Item
+            <ContextMenu.Item
               onClick={() => {
                 window.location.href = '/~/red/admin';
               }}
@@ -158,22 +159,22 @@ function ProfileDropdown() {
                 className='mr-[var(--space-2)]'
               />
               {t('navigation.nodeRed', 'Node-RED')}
-            </DropdownMenu.Item>
+            </ContextMenu.Item>
           )}
 
-          <DropdownMenu.Item onClick={() => history.push('/admin')}>
+          <ContextMenu.Item onClick={() => history.push('/admin')}>
             <GearIcon width={16} height={16} className='mr-[var(--space-2)]' />
             {t('navigation.admin', 'Admin Panel')}
-          </DropdownMenu.Item>
+          </ContextMenu.Item>
 
-          <DropdownMenu.Separator />
+          <ContextMenu.Divider />
 
-          <DropdownMenu.Item color='red' onClick={handleLogout}>
+          <ContextMenu.Item variant='danger' onClick={handleLogout}>
             <ExitIcon width={16} height={16} className='mr-[var(--space-2)]' />
             {t('navigation.logout', 'Logout')}
-          </DropdownMenu.Item>
-        </DropdownMenu.Content>
-      </DropdownMenu.Root>
+          </ContextMenu.Item>
+        </ContextMenu.Menu>
+      </ContextMenu>
     </Box>
   );
 }

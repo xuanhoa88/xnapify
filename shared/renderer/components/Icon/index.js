@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { memo } from 'react';
+import { memo, isValidElement, cloneElement } from 'react';
 
 import * as RadixIcons from '@radix-ui/react-icons';
 import PropTypes from 'prop-types';
@@ -37,6 +37,17 @@ function isExternalIcon(name) {
 }
 
 function Icon({ name, size = 20, className, title, ...rest }) {
+  // If 'name' is already a React element (e.g. <ArchiveIcon />), clone it to inject size and classes
+  if (isValidElement(name)) {
+    return cloneElement(name, {
+      width: size,
+      height: size,
+      className,
+      ...(title ? { 'aria-label': title } : {}),
+      ...rest,
+    });
+  }
+
   // External icon: render as <img> for extension-provided assets
   if (isExternalIcon(name)) {
     const combinedClass = className
@@ -83,12 +94,12 @@ Icon.propTypes = {
           `\`${componentName}\`, but its value is \`${value}\`.`,
       );
     }
-    if (typeof value === 'string') {
+    if (typeof value === 'string' || isValidElement(value)) {
       return null;
     }
     return new Error(
       `Invalid prop \`${propName}\` supplied to \`${componentName}\`. ` +
-        `Expected a built-in icon name or an external URL/path. Got: "${value}"`,
+        `Expected a built-in icon name, an external URL/path, or a React element. Got: "${value}"`,
     );
   },
   size: PropTypes.number,

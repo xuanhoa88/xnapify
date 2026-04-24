@@ -37,13 +37,7 @@ function TableBulkActions({
   if (count <= 0) return null;
 
   return (
-    <Flex
-      align='center'
-      justify='between'
-      px='4'
-      py='2'
-      className={s.bulkBarContainer}
-    >
+    <Flex align='center' className={s.bulkBarContainer}>
       {/* Left: count badge */}
       <Flex align='center' gap='2'>
         <Box className={s.bulkCountBadge}>{count}</Box>
@@ -54,7 +48,7 @@ function TableBulkActions({
       </Flex>
 
       {/* Center: action buttons */}
-      <Flex align='center' gap='2' className={s.bulkActionsFlex}>
+      <Flex align='center' className={s.bulkActionsFlex}>
         {actions
           .filter(Boolean)
           .slice(0, 3)
@@ -133,7 +127,7 @@ TableBulkActions.propTypes = {
     PropTypes.shape({
       label: PropTypes.string.isRequired,
       onClick: PropTypes.func.isRequired,
-      icon: PropTypes.string,
+      icon: PropTypes.oneOfType([PropTypes.string, PropTypes.node]),
       variant: PropTypes.oneOf(['default', 'danger']),
     }),
   ).isRequired,

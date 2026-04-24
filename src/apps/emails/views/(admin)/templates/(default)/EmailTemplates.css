@@ -16,9 +16,6 @@
   white-space: nowrap;
 }
 
-.deleteBtn {
-  color: var(--red-11);
-}
 
 .modalBody {
   padding: 0;

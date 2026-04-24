@@ -13,10 +13,11 @@ import {
   ArrowUpIcon,
   ExitIcon,
 } from '@radix-ui/react-icons';
-import { Flex, Text, Box, DropdownMenu } from '@radix-ui/themes';
+import { Flex, Text, Box } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 
+import ContextMenu from '@shared/renderer/components/ContextMenu';
 import { Link, useHistory } from '@shared/renderer/components/History';
 import { checkPermission } from '@shared/renderer/components/Rbac';
 import { features } from '@shared/renderer/redux';
@@ -78,8 +79,8 @@ function ProfileDropdown() {
   }, [roles, t]);
 
   return (
-    <DropdownMenu.Root modal={false}>
-      <DropdownMenu.Trigger>
+    <ContextMenu>
+      <ContextMenu.Trigger asChild>
         <button
           type='button'
           className='w-9 h-9 p-0 m-0 rounded-full cursor-pointer transition-colors bg-transparent hover:bg-gray-100 data-[state=open]:bg-gray-100 outline-none border-none flex items-center justify-center'
@@ -103,9 +104,9 @@ function ProfileDropdown() {
             )}
           </Flex>
         </button>
-      </DropdownMenu.Trigger>
+      </ContextMenu.Trigger>
 
-      <DropdownMenu.Content
+      <ContextMenu.Menu
         align='end'
         className='min-w-[200px] bg-panel-solid/90 backdrop-blur-md border border-gray-a6 rounded-md shadow-lg p-1 z-[100] data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95'
       >
@@ -118,7 +119,7 @@ function ProfileDropdown() {
           </Text>
         </Box>
 
-        <DropdownMenu.Item asChild>
+        <ContextMenu.Item asChild>
           <Link
             to='/profile'
             className='w-full flex items-center gap-2 px-3 py-2 rounded-sm text-left cursor-pointer transition-colors text-gray-12 hover:bg-gray-3 hover:text-gray-12 focus:outline-none focus:bg-gray-3 no-underline'
@@ -126,10 +127,10 @@ function ProfileDropdown() {
             <PersonIcon width={16} height={16} />
             {t('navigation.profile', 'Profile')}
           </Link>
-        </DropdownMenu.Item>
+        </ContextMenu.Item>
 
         {checkPermission(userProfile, 'nodered:admin') && (
-          <DropdownMenu.Item asChild>
+          <ContextMenu.Item asChild>
             <a
               href='/~/red/admin'
               className='w-full flex items-center gap-2 px-3 py-2 rounded-sm text-left cursor-pointer transition-colors text-gray-12 hover:bg-gray-3 hover:text-gray-12 focus:outline-none focus:bg-gray-3 no-underline'
@@ -137,10 +138,10 @@ function ProfileDropdown() {
               <LightningBoltIcon width={16} height={16} />
               Node-RED
             </a>
-          </DropdownMenu.Item>
+          </ContextMenu.Item>
         )}
 
-        <DropdownMenu.Item asChild>
+        <ContextMenu.Item asChild>
           <Link
             to='/'
             className='w-full flex items-center gap-2 px-3 py-2 rounded-sm text-left cursor-pointer transition-colors text-gray-12 hover:bg-gray-3 hover:text-gray-12 focus:outline-none focus:bg-gray-3 no-underline'
@@ -148,19 +149,19 @@ function ProfileDropdown() {
             <ArrowUpIcon width={16} height={16} />
             {t('navigation.backToSite', 'Back to Site')}
           </Link>
-        </DropdownMenu.Item>
+        </ContextMenu.Item>
 
-        <DropdownMenu.Separator className='h-[1px] bg-gray-a6 my-1 mx-1' />
+        <ContextMenu.Divider className='h-[1px] bg-gray-a6 my-1 mx-1' />
 
-        <DropdownMenu.Item
+        <ContextMenu.Item
           onClick={handleLogout}
           className='w-full flex items-center gap-2 px-3 py-2 rounded-sm text-left cursor-pointer transition-colors text-red-11 hover:bg-red-3 hover:text-red-11 focus:outline-none focus:bg-red-3'
         >
           <ExitIcon width={16} height={16} />
           {t('navigation.logout', 'Logout')}
-        </DropdownMenu.Item>
-      </DropdownMenu.Content>
-    </DropdownMenu.Root>
+        </ContextMenu.Item>
+      </ContextMenu.Menu>
+    </ContextMenu>
   );
 }
 

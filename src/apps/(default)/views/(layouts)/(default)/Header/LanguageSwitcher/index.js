@@ -8,11 +8,12 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 
 import { GlobeIcon, ChevronDownIcon, CheckIcon } from '@radix-ui/react-icons';
-import { DropdownMenu, Text } from '@radix-ui/themes';
+import { Text } from '@radix-ui/themes';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
+import ContextMenu from '@shared/renderer/components/ContextMenu';
 import { features } from '@shared/renderer/redux';
 
 const { getLocale, setLocale, getAvailableLocales } = features;
@@ -74,16 +75,16 @@ function LanguageSwitcher() {
     return triggerButton;
   }
 
-  // After mount: full interactive DropdownMenu
+  // After mount: full interactive ContextMenu
   return (
-    <DropdownMenu.Root modal={false}>
-      <DropdownMenu.Trigger asChild>{triggerButton}</DropdownMenu.Trigger>
+    <ContextMenu>
+      <ContextMenu.Trigger asChild>{triggerButton}</ContextMenu.Trigger>
 
-      <DropdownMenu.Content align='end' variant='soft' size='3'>
+      <ContextMenu.Menu align='end' variant='soft' size='3'>
         {localeEntries.map(([code, name]) => (
-          <DropdownMenu.Item
+          <ContextMenu.Item
             key={code}
-            onSelect={() => handleLocaleChange(code)}
+            onClick={() => handleLocaleChange(code)}
             className={clsx({
               'bg-[var(--indigo-a3)] text-[var(--indigo-11)] font-medium hover:bg-[var(--indigo-a4)]':
                 code === currentLocale,
@@ -99,10 +100,10 @@ function LanguageSwitcher() {
                 className='text-[var(--indigo-11)] ml-auto'
               />
             )}
-          </DropdownMenu.Item>
+          </ContextMenu.Item>
         ))}
-      </DropdownMenu.Content>
-    </DropdownMenu.Root>
+      </ContextMenu.Menu>
+    </ContextMenu>
   );
 }
 

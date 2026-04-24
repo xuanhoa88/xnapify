@@ -67,13 +67,15 @@ export default function FileSidebar() {
     <Box className={s.sidebarContainer}>
       <Box className={s.topBox}>
         <ContextMenu>
-          <ContextMenu.Trigger variant='primary' fullWidth className={s.newBtn}>
-            <RadixIcons.PlusIcon
-              width={20}
-              height={20}
-              className={s.plusIcon}
-            />
-            {t('files:sidebar.new', 'New')}
+          <ContextMenu.Trigger asChild>
+            <Button variant='solid' className={s.newBtn}>
+              <RadixIcons.PlusIcon
+                width={20}
+                height={20}
+                className={s.plusIcon}
+              />
+              {t('files:sidebar.new', 'New')}
+            </Button>
           </ContextMenu.Trigger>
           <ContextMenu.Menu>
             <ContextMenu.Item
