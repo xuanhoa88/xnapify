@@ -174,13 +174,20 @@ const Modal = ({
   placement = 'center',
   children,
   className,
+  maxWidth,
+  width,
 }) => {
+  const resolvedMaxWidth =
+    maxWidth || (placement === 'right' ? '24rem' : undefined);
+
   return (
     <Dialog.Root
       open={isOpen}
       onOpenChange={open => !open && onClose && onClose()}
     >
       <Dialog.Content
+        maxWidth={resolvedMaxWidth}
+        width={width}
         className={clsx(className, {
           [s.rightPlacement]: placement === 'right',
         })}
@@ -197,6 +204,8 @@ Modal.propTypes = {
   placement: PropTypes.oneOf(['center', 'right']),
   children: PropTypes.node,
   className: PropTypes.string,
+  maxWidth: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
+  width: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
 };
 
 Modal.Header = ModalHeader;

@@ -5,18 +5,16 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useMemo, useEffect, useRef } from 'react';
+import { useMemo, useRef } from 'react';
 
 import { ExclamationTriangleIcon } from '@radix-ui/react-icons';
 import { Box, Flex, Text } from '@radix-ui/themes';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 
-import { getPreviewHtml, getPreviewError, clearPreview } from '../redux';
-
-import { TIPTAP_CORE_STYLES } from './styles';
+import { getPreviewHtml, getPreviewError } from '../redux';
 
 import s from './TemplateEditor.css';
 
@@ -25,38 +23,15 @@ import s from './TemplateEditor.css';
  */
 function TemplateEditor({ className }) {
   const { t } = useTranslation();
-  const dispatch = useDispatch();
   const previewHtml = useSelector(getPreviewHtml);
   const previewError = useSelector(getPreviewError);
   const iframeRef = useRef(null);
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      dispatch(clearPreview());
-    };
-  }, [dispatch]);
+  // Component relies on parent to clear preview state
+  // to avoid React 18 StrictMode unmount/remount issues
 
-  // Inject essential Tiptap styles so the iframe preview closely matches the editor
-  const injectedHtml = useMemo(() => {
-    if (!previewHtml) return '';
-    return `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1">
-          <style>
-${TIPTAP_CORE_STYLES}
-            body { margin: 0; padding: 1rem; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
-          </style>
-        </head>
-        <body class='ProseMirror'>
-          ${previewHtml}
-        </body>
-      </html>
-    `;
-  }, [previewHtml]);
+  // Render the raw HTML directly to ensure the preview accurately reflects the email client output
+  const injectedHtml = previewHtml || '';
 
   return (
     <Box className={clsx(s.container, className)}>
@@ -73,8 +48,7 @@ ${TIPTAP_CORE_STYLES}
             </Text>
           </Flex>
         ) : (
-          <Box
-            as='iframe'
+          <iframe
             ref={iframeRef}
             title={t('admin:emails.modal.previewTitle', 'Preview Template')}
             sandbox='allow-popups'

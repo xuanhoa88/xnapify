@@ -386,6 +386,8 @@ function EmailTemplates() {
         isOpen={previewOpen}
         onClose={handlePreviewClose}
         placement='right'
+        width='100%'
+        maxWidth={{ initial: '100%', md: '800px' }}
       >
         <Modal.Header onClose={handlePreviewClose}>
           {t('admin:emails.list.previewTitle', 'Template Preview')}

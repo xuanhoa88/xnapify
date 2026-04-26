@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { DotsVerticalIcon } from '@radix-ui/react-icons';
+import { DotsVerticalIcon, EyeOpenIcon, CopyIcon } from '@radix-ui/react-icons';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
@@ -28,14 +28,14 @@ function TemplateActionsDropdown({ template, onPreview, onDuplicate }) {
       <ContextMenu.Menu>
         <ContextMenu.Item
           onClick={() => onPreview(template)}
-          icon='EyeOpenIcon'
+          icon={<EyeOpenIcon width={16} height={16} />}
           permission='emails:read'
         >
           {t('admin:emails.list.preview', 'Preview')}
         </ContextMenu.Item>
         <ContextMenu.Item
           onClick={() => onDuplicate(template)}
-          icon='CopyIcon'
+          icon={<CopyIcon width={16} height={16} />}
           permission='emails:create'
         >
           {t('admin:emails.list.duplicate', 'Duplicate')}

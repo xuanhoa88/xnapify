@@ -37,6 +37,7 @@ import {
   getDetailError,
   isUpdateLoading,
   previewRawTemplate,
+  clearPreview,
 } from '../../../redux';
 
 import s from './EditEmailTemplate.css';
@@ -381,10 +382,20 @@ function EditFormFields({ onCancel, loading, isDirtyRef }) {
       {/* sliding modal for Live Preview */}
       <Modal
         isOpen={isPreviewOpen}
-        onClose={() => setIsPreviewOpen(false)}
+        onClose={() => {
+          setIsPreviewOpen(false);
+          dispatch(clearPreview());
+        }}
         placement='right'
+        width='100%'
+        maxWidth={{ initial: '100%', md: '800px' }}
       >
-        <Modal.Header onClose={() => setIsPreviewOpen(false)}>
+        <Modal.Header
+          onClose={() => {
+            setIsPreviewOpen(false);
+            dispatch(clearPreview());
+          }}
+        >
           {t('admin:emails.form.preview', 'Preview')}
         </Modal.Header>
         <Modal.Body className={s.modalBody}>
