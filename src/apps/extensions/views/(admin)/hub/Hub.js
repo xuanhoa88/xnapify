@@ -106,7 +106,7 @@ function Hub() {
 
   const renderHero = () => (
     <Box className={s.heroBox}>
-      <Text as='h1' size='8' className={s.heroTitle}>
+      <Text as='h1' size='8' weight='bold' className={s.heroTitle}>
         {t('admin:hub.title', 'Extension Hub')}
       </Text>
       <Text as='p' size='3' className={s.heroSubtitle}>
@@ -115,7 +115,7 @@ function Hub() {
           'Discover and install plugins and modules to extend your application.',
         )}
       </Text>
-      <Flex justify='center' align='stretch' className={s.searchFlex}>
+      <Flex justify='center' align='center' className={s.searchFlex} gap='3'>
         <TextField.Root
           placeholder={t(
             'admin:hub.searchPlaceholder',
@@ -126,8 +126,12 @@ function Hub() {
           onKeyDown={e => e.key === 'Enter' && handleSearch()}
           className={s.searchInput}
           size='3'
-        />
-        <Button icon='search' onClick={handleSearch} className={s.searchButton}>
+        >
+          <TextField.Slot>
+            <MagnifyingGlassIcon height='16' width='16' />
+          </TextField.Slot>
+        </TextField.Root>
+        <Button size='3' onClick={handleSearch}>
           {t('admin:hub.search', 'Search')}
         </Button>
       </Flex>
@@ -212,8 +216,8 @@ function Hub() {
           activeCategory={filters.category}
           onSelect={handleCategorySelect}
         />
-        <Flex align='center' className={s.toolbarFlex}>
-          <Text as='span' size='2' color='gray' weight='bold'>
+        <Flex align='center' justify='between' className={s.toolbarFlex}>
+          <Text as='span' size='2' color='gray' weight='medium'>
             {total} {t('admin:hub.results', 'results')}
           </Text>
           <Select.Root

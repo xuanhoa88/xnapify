@@ -812,7 +812,7 @@ class ServerExtensionManager extends BaseExtensionManager {
     if (!extensionKey) return { dir: null, isDevExtension: false };
 
     try {
-      // 1. Check dev/local dir
+      // 1. Check dev/local dir (SERVER_CWD/extensions/)
       if (this[SERVER_CWD]) {
         const devBaseDir = this.getDevExtensionsDir(this[SERVER_CWD]);
         if (devBaseDir) {
@@ -826,13 +826,27 @@ class ServerExtensionManager extends BaseExtensionManager {
         }
       }
 
-      // 2. Check installed dir
+      // 2. Check installed dir (~/.xnapify/extensions/)
       const baseDir = this.getInstalledExtensionsDir();
       if (baseDir) {
         const installedDir = path.join(baseDir, extensionKey);
         if (await fileExists(installedDir)) {
           return { dir: installedDir, isDevExtension: false };
         }
+      }
+
+      // 3. Fallback: check build/extensions/ relative to project root.
+      //    In development the server bundle may live in .cache/dev/ (via
+      //    BUILD_DIR override) while extensions are built to build/extensions/.
+      //    This fallback bridges the gap without requiring a full rebuild.
+      const fallbackDir = path.resolve(
+        process.cwd(),
+        'build',
+        'extensions',
+        extensionKey,
+      );
+      if (await fileExists(fallbackDir)) {
+        return { dir: fallbackDir, isDevExtension: true };
       }
     } catch (err) {
       console.error(

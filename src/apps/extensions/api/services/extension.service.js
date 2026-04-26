@@ -21,7 +21,7 @@ import {
 const diskExtensionCache = new Map();
 let lastDiskScan = 0;
 let diskScanPromise = null;
-const DISK_SCAN_TTL = 5000; // 5 seconds TTL
+const DISK_SCAN_TTL = 30_000; // 30 seconds TTL — extension HMR triggers explicit invalidation
 
 /**
  * Scan a directory and add extensions to the map
@@ -121,6 +121,20 @@ async function getDiskExtensionById(extensionManager, cwd, id) {
             ),
           );
         }
+
+        // Fallback: also scan build/extensions/ relative to project root.
+        // In dev mode BUILD_DIR may be .cache/dev/ while extensions were
+        // built to build/extensions/ from a prior production build.
+        const buildExtDir = path.resolve(process.cwd(), 'build', 'extensions');
+        if (
+          buildExtDir !== localExtensionsDir &&
+          buildExtDir !== installedExtensionsDir
+        ) {
+          scanTasks.push(
+            scanDirectory(buildExtDir, 'local', metadata, extensionManager),
+          );
+        }
+
         await Promise.all(scanTasks);
 
         diskExtensionCache.clear();
@@ -181,6 +195,20 @@ export async function manageExtensions({
       scanDirectory(localExtensionsDir, 'local', metadata, extensionManager),
     );
   }
+
+  // Fallback: also scan build/extensions/ relative to project root.
+  // In dev mode BUILD_DIR may be .cache/dev/ while extensions were
+  // built to build/extensions/ from a prior production build.
+  const buildExtDir = path.resolve(process.cwd(), 'build', 'extensions');
+  if (
+    buildExtDir !== localExtensionsDir &&
+    buildExtDir !== installedExtensionsDir
+  ) {
+    scanTasks.push(
+      scanDirectory(buildExtDir, 'local', metadata, extensionManager),
+    );
+  }
+
   await Promise.all(scanTasks);
 
   // 2. Fetch from DB

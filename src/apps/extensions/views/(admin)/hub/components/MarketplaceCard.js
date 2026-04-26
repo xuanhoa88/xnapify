@@ -6,7 +6,7 @@
  */
 
 import { CheckIcon, DownloadIcon } from '@radix-ui/react-icons';
-import { Flex, Box, Text, Badge } from '@radix-ui/themes';
+import { Flex, Box, Text, Badge, Card, Avatar } from '@radix-ui/themes';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
@@ -24,31 +24,23 @@ export default function MarketplaceCard({
   const isOfficial = listing.author === 'xnapify Team';
 
   return (
-    <Flex
-      direction='column'
-      onClick={() => onClick(listing)}
-      role='button'
-      tabIndex={0}
-      onKeyDown={e => e.key === 'Enter' && onClick(listing)}
-      className={clsx(s.cardFlex, isFeatured ? s.cardFeatured : s.cardNormal)}
+    <Card
+      asChild
+      variant={isFeatured ? 'classic' : 'surface'}
+      className={clsx(s.cardFlex, isFeatured && s.cardFeatured)}
     >
-      {isFeatured && <Box className={s.featuredOverlay} />}
-
-      <Flex gap='3' align='start' className={s.headerFlex}>
-        <Box
-          className={clsx(
-            s.iconBox,
-            isFeatured ? s.iconBoxFeatured : s.iconBoxNormal,
-          )}
-        >
-          {listing.icon ? (
-            <img
-              src={listing.icon}
-              alt={listing.name}
-              className={s.iconImage}
-            />
-          ) : (
-            (() => {
+      <Flex
+        direction='column'
+        onClick={() => onClick(listing)}
+        role='button'
+        tabIndex={0}
+        onKeyDown={e => e.key === 'Enter' && onClick(listing)}
+      >
+        <Flex gap='3' align='start' className={s.headerFlex}>
+          <Avatar
+            size={isFeatured ? '5' : '4'}
+            src={listing.icon}
+            fallback={(() => {
               const Comp = getCategoryIcon(listing.category);
               return (
                 <Comp
@@ -56,73 +48,77 @@ export default function MarketplaceCard({
                   height={isFeatured ? 28 : 24}
                 />
               );
-            })()
-          )}
-        </Box>
-        <Box className={s.infoBox}>
+            })()}
+            radius='medium'
+            color='indigo'
+            variant='soft'
+            className={s.avatar}
+          />
+          <Box className={s.infoBox}>
+            <Text
+              as='h3'
+              size={isFeatured ? '4' : '3'}
+              weight='bold'
+              className={s.titleText}
+            >
+              {listing.name}
+            </Text>
+            {listing.author && (
+              <Flex align='center' gap='1'>
+                <Text as='span' size='1' color='gray'>
+                  {t('admin:hub.byAuthor', 'by {{author}}', {
+                    author: listing.author,
+                  })}
+                </Text>
+                {isOfficial && (
+                  <Badge
+                    size='small'
+                    className={s.officialBadge}
+                    color='indigo'
+                    radius='full'
+                    variant='soft'
+                  >
+                    <CheckIcon width={10} height={10} className={s.checkIcon} />
+                    Official
+                  </Badge>
+                )}
+              </Flex>
+            )}
+          </Box>
+        </Flex>
+
+        <Box className={s.descriptionBox}>
           <Text
-            as='h3'
-            size={isFeatured ? '4' : '3'}
-            weight='bold'
-            className={s.titleText}
+            as='p'
+            size='2'
+            color='gray'
+            className={clsx(
+              s.descText,
+              isFeatured ? s.descTextFeatured : s.descTextNormal,
+            )}
           >
-            {listing.name}
+            {listing.short_description || listing.description}
           </Text>
-          {listing.author && (
-            <Flex align='center' gap='1'>
-              <Text as='span' size='1' color='gray'>
-                {t('admin:hub.byAuthor', 'by {{author}}', {
-                  author: listing.author,
-                })}
-              </Text>
-              {isOfficial && (
-                <Badge
-                  size='small'
-                  className={s.officialBadge}
-                  color='indigo'
-                  radius='full'
-                  variant='soft'
-                >
-                  <CheckIcon width={10} height={10} className={s.checkIcon} />
-                  Official
-                </Badge>
-              )}
-            </Flex>
-          )}
         </Box>
-      </Flex>
 
-      <Box className={s.descriptionBox}>
-        <Text
-          as='p'
-          size='2'
-          color='gray'
-          className={clsx(
-            s.descText,
-            isFeatured ? s.descTextFeatured : s.descTextNormal,
-          )}
-        >
-          {listing.short_description || listing.description}
-        </Text>
-      </Box>
-
-      <Flex align='center' justify='between' className={s.footerFlex}>
-        <Badge size='small' color='gray' radius='full' variant='surface'>
-          {listing.category}
-        </Badge>
-        <Flex gap='3' align='center'>
-          <Flex align='center' gap='1' className={s.downloadsFlex}>
-            <DownloadIcon width={14} height={14} />
-            <Text as='span' size='1' weight='medium'>
-              {(listing.install_count || 0).toLocaleString()}
+        <Flex align='center' justify='between' className={s.footerFlex}>
+          <Badge size='small' color='gray' radius='full' variant='surface'>
+            {listing.category}
+          </Badge>
+          <Flex gap='3' align='center'>
+            <Flex align='center' gap='1' className={s.downloadsFlex}>
+              <DownloadIcon width={14} height={14} />
+              <Text as='span' size='1' weight='medium'>
+                {(listing.install_count || 0).toLocaleString()}
+              </Text>
+            </Flex>
+            <Text as='span' size='1' color='gray'>
+              v{listing.version}
             </Text>
           </Flex>
-          <Text as='span' size='1' color='gray'>
-            v{listing.version}
-          </Text>
         </Flex>
       </Flex>
-    </Flex>
+    </Card>
   );
 }
 
