@@ -12,13 +12,13 @@ import { useState, useEffect, useCallback } from 'react';
 // =============================================================================
 
 const CORE_ICONS = Object.freeze({
-  core: 'globe',
-  auth: 'lock',
-  email: 'mail',
-  file: 'folder',
-  webhook: 'zap',
-  optimization: 'sliders',
-  nodered: 'layers',
+  core: 'GlobeIcon',
+  auth: 'LockClosedIcon',
+  email: 'EnvelopeClosedIcon',
+  file: 'ArchiveIcon',
+  webhook: 'LightningBoltIcon',
+  optimization: 'MixerHorizontalIcon',
+  nodered: 'LayersIcon',
 });
 
 const CORE_LABELS = Object.freeze({

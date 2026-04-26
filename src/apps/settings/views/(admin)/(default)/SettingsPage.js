@@ -18,7 +18,6 @@ import {
   Card,
   Button,
 } from '@radix-ui/themes';
-import clsx from 'clsx';
 import sortBy from 'lodash/sortBy';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
@@ -37,8 +36,6 @@ import {
   selectError,
   selectInitialized,
 } from '../redux';
-
-import s from './SettingsPage.css';
 
 // =============================================================================
 // Type-specific input components
@@ -96,7 +93,7 @@ function SettingRow({ setting, canWrite }) {
           upperKey.includes('TEXT');
         if (setting.type === 'string' && isDescriptive) {
           return (
-            <Box className={s.textareaBox}>
+            <Box className='[&_textarea]:font-mono [&_textarea]:min-h-[80px]'>
               <Form.Textarea disabled={!canWrite} rows={3} spellCheck={false} />
             </Box>
           );
@@ -126,11 +123,18 @@ function SettingRow({ setting, canWrite }) {
       direction={{ initial: 'column', md: 'row' }}
       gap='4'
       align={setting.type === 'boolean' ? 'center' : 'start'}
-      className={s.rowBase}
+      className='p-4 last:border-b-0'
+      style={{ borderBottom: '1px solid var(--gray-a4)' }}
     >
-      <Box className={s.rowContent}>
-        <Flex align='center' gap='2' wrap='wrap' className={s.rowHeaderFlex}>
-          <Text as='code' size='2' weight='bold' className={s.keyText}>
+      <Box className='flex-1 min-w-0 pr-5'>
+        <Flex align='center' gap='2' wrap='wrap' className='mb-2'>
+          <Text
+            as='code'
+            size='2'
+            weight='bold'
+            className='py-1 px-2 rounded-md'
+            style={{ backgroundColor: 'var(--gray-3)' }}
+          >
             {setting.key}
           </Text>
           <Badge size='1' color={getBadgeColor(setting.type)}>
@@ -152,11 +156,7 @@ function SettingRow({ setting, canWrite }) {
             as='p'
             size='2'
             color='gray'
-            className={
-              setting.defaultEnvVar
-                ? s.descriptionTextHasEnv
-                : s.descriptionText
-            }
+            className={setting.defaultEnvVar ? 'mb-1' : 'mb-0'}
           >
             {setting.description}
           </Text>
@@ -164,7 +164,7 @@ function SettingRow({ setting, canWrite }) {
         {setting.defaultEnvVar && (
           <Text as='p' size='1' color='gray'>
             {t('admin:settings.fallback', 'Fallback: ')}
-            <Text as='code' className={s.envVarText}>
+            <Text as='code' className='font-mono'>
               {setting.defaultEnvVar}
             </Text>
           </Text>
@@ -178,7 +178,7 @@ function SettingRow({ setting, canWrite }) {
           setting.type === 'boolean' ? { initial: 'start', md: 'end' } : 'start'
         }
       >
-        <Box className={s.inputWrapper}>
+        <Box width='100%'>
           <Form.Field name={name} showError={false}>
             {renderInput()}
           </Form.Field>
@@ -311,7 +311,11 @@ function SettingsBuilderForm({ namespace, settings, onSaved }) {
             gap='2'
             px='5'
             py='4'
-            className={s.saveButtonFlex}
+            className='rounded-b-md'
+            style={{
+              borderTop: '1px solid var(--gray-a4)',
+              backgroundColor: 'var(--gray-2)',
+            }}
           >
             <SaveButton />
           </Flex>
@@ -380,7 +384,7 @@ function SettingsPage({ context }) {
   // ── Loading ─────────────────────────────────────────────────────────────────
   if (!initialized || (loading && namespaces.length === 0)) {
     return (
-      <Box className={s.containerBox}>
+      <Box className='p-6 max-w-[1400px] mx-auto'>
         <Flex
           align='center'
           justify='between'
@@ -388,10 +392,20 @@ function SettingsPage({ context }) {
           gap='4'
           pb='4'
           mb='6'
-          className={s.adminHeader}
+          style={{ borderBottom: '1px solid var(--gray-a6)' }}
         >
           <Flex align='center' gap='3'>
-            <Flex align='center' justify='center' className={s.adminHeaderIcon}>
+            <Flex
+              align='center'
+              justify='center'
+              className='shrink-0 rounded-md'
+              style={{
+                width: 40,
+                height: 40,
+                backgroundColor: 'var(--gray-3)',
+                color: 'var(--gray-11)',
+              }}
+            >
               <RadixIcons.GearIcon width={24} height={24} />
             </Flex>
             <Flex direction='column'>
@@ -415,7 +429,7 @@ function SettingsPage({ context }) {
   // ── Error ───────────────────────────────────────────────────────────────────
   if (error) {
     return (
-      <Box className={s.containerBox}>
+      <Box className='p-6 max-w-[1400px] mx-auto'>
         <Flex
           align='center'
           justify='between'
@@ -423,10 +437,20 @@ function SettingsPage({ context }) {
           gap='4'
           pb='4'
           mb='6'
-          className={s.adminHeader}
+          style={{ borderBottom: '1px solid var(--gray-a6)' }}
         >
           <Flex align='center' gap='3'>
-            <Flex align='center' justify='center' className={s.adminHeaderIcon}>
+            <Flex
+              align='center'
+              justify='center'
+              className='shrink-0 rounded-md'
+              style={{
+                width: 40,
+                height: 40,
+                backgroundColor: 'var(--gray-3)',
+                color: 'var(--gray-11)',
+              }}
+            >
               <RadixIcons.GearIcon width={24} height={24} />
             </Flex>
             <Flex direction='column'>
@@ -444,7 +468,11 @@ function SettingsPage({ context }) {
           align='center'
           justify='center'
           p='6'
-          className={s.adminErrorBlock}
+          className='rounded-md'
+          style={{
+            border: '1px solid var(--red-6)',
+            backgroundColor: 'var(--red-2)',
+          }}
         >
           <Text color='red' size='4' weight='bold' mb='2'>
             {t('admin:settings.errorLoading', 'Error loading settings')}
@@ -466,7 +494,7 @@ function SettingsPage({ context }) {
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <Box className={s.containerBox}>
+    <Box className='p-6 max-w-[1400px] mx-auto'>
       <Flex
         align='center'
         justify='between'
@@ -474,10 +502,20 @@ function SettingsPage({ context }) {
         gap='4'
         pb='4'
         mb='6'
-        className={s.adminHeader}
+        style={{ borderBottom: '1px solid var(--gray-a6)' }}
       >
         <Flex align='center' gap='3'>
-          <Flex align='center' justify='center' className={s.adminHeaderIcon}>
+          <Flex
+            align='center'
+            justify='center'
+            className='shrink-0 rounded-md'
+            style={{
+              width: 40,
+              height: 40,
+              backgroundColor: 'var(--gray-3)',
+              color: 'var(--gray-11)',
+            }}
+          >
             <RadixIcons.GearIcon width={24} height={24} />
           </Flex>
           <Flex direction='column'>
@@ -503,10 +541,13 @@ function SettingsPage({ context }) {
               key={ns}
               type='button'
               onClick={() => setActiveTab(ns)}
-              className={clsx({
-                [s.tabActive]: activeTab === ns,
-                [s.tabInactive]: activeTab !== ns,
-              })}
+              className='flex items-center px-4 py-3 rounded-md border-none cursor-pointer transition-all text-left w-full hover:bg-gray-a3'
+              style={{
+                backgroundColor:
+                  activeTab === ns ? 'var(--indigo-3)' : 'transparent',
+                color: activeTab === ns ? 'var(--indigo-11)' : 'var(--gray-11)',
+                fontWeight: activeTab === ns ? 600 : 400,
+              }}
             >
               {(() => {
                 const iconName = icons[ns];
