@@ -10,6 +10,12 @@ import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
+import ConfirmAction from './ConfirmAction';
+import ConfirmBack from './ConfirmBack';
+import ConfirmDelete from './ConfirmDelete';
+import ConfirmPrompt from './ConfirmPrompt';
+
+import s from './Modal.css';
 /**
  * Modal - Reusable modal component backed by Radix Themes Dialog
  *
@@ -203,13 +209,6 @@ Modal.Button = ModalButton;
 
 // Backwards-compatible export
 export const modalStyles = {};
-
-import ConfirmAction from './ConfirmAction';
-import ConfirmBack from './ConfirmBack';
-import ConfirmDelete from './ConfirmDelete';
-import ConfirmPrompt from './ConfirmPrompt';
-
-import s from './Modal.css';
 
 Modal.ConfirmAction = ConfirmAction;
 Modal.ConfirmBack = ConfirmBack;

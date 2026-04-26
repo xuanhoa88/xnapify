@@ -7,12 +7,11 @@
 
 import { useEffect, useCallback, useState, useRef, useMemo } from 'react';
 
-import { ArchiveIcon, PlusIcon } from '@radix-ui/react-icons';
+import { GroupIcon, TrashIcon, PlusIcon } from '@radix-ui/react-icons';
 import {
   Box,
   Flex,
   Text,
-  Avatar,
   Heading,
   Button,
   Card,
@@ -57,10 +56,7 @@ function Groups({ context }) {
 
   // Get shared components and state from container
   const { container } = context;
-  const { RoleTag } = useMemo(
-    () => container.resolve('users:admin:components'),
-    [container],
-  );
+
   const { fetchRoles } = useMemo(() => {
     const { thunks } = container.resolve('roles:admin:state');
     return thunks;
@@ -230,7 +226,7 @@ function Groups({ context }) {
       {
         key: 'delete',
         label: t('admin:groups.bulkDelete', 'Delete Selected'),
-        icon: <ArchiveIcon width={16} height={16} />,
+        icon: <TrashIcon width={16} height={16} />,
         onClick: handleBulkDelete,
         variant: 'danger',
         permission: 'groups:delete',
@@ -323,7 +319,7 @@ function Groups({ context }) {
             'admin:groups.subtitle',
             'Organize users into groups for easier access control',
           )}
-          icon={<ArchiveIcon width={24} height={24} />}
+          icon={<GroupIcon width={24} height={24} />}
         >
           <Button
             variant='solid'
@@ -371,7 +367,7 @@ function Groups({ context }) {
         <DataTable.BulkActions actions={bulkActions} />
 
         <DataTable.Empty
-          icon={<ArchiveIcon width={48} height={48} />}
+          icon={<GroupIcon width={48} height={48} />}
           title={t('admin:groups.noGroupsFound', 'No groups found')}
           description={t(
             'admin:groups.noGroupsDescription',

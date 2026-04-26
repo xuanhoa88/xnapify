@@ -47,7 +47,7 @@ const COLUMNS_HOOK_ID = 'table.columns.emails.templates';
 /**
  * EmailTemplates — Admin page for managing email templates.
  */
-function EmailTemplates({ context }) {
+function EmailTemplates() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const history = useHistory();

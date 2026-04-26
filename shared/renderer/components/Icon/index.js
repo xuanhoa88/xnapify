@@ -37,7 +37,7 @@ function isExternalIcon(name) {
 }
 
 function Icon({ name, size = 20, className, title, ...rest }) {
-  // If 'name' is already a React element (e.g. <ArchiveIcon />), clone it to inject size and classes
+  // If 'name' is already a React element (e.g. <FileTextIcon />), clone it to inject size and classes
   if (isValidElement(name)) {
     return cloneElement(name, {
       width: size,

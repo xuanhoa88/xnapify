@@ -49,14 +49,14 @@ export function setup({ store, i18n }) {
       id: 'content',
       label: i18n.t('admin:navigation.content', 'Content'),
       order: 20,
-      icon: 'ArchiveIcon',
+      icon: 'FileTextIcon',
       items: [
         {
           path: '/admin/files',
-          label: i18n.t('files:page.title', 'Files'),
-          icon: 'ArchiveIcon',
+          label: i18n.t('admin:navigation.files', 'Files'),
+          icon: 'FileTextIcon',
           permission: 'files:read',
-          order: 50,
+          order: 10,
         },
       ],
     }),

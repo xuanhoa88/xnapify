@@ -38,7 +38,7 @@ export function setup({ store, i18n }) {
         {
           path: '/admin/groups',
           label: i18n.t('admin:navigation.groups', 'Groups'),
-          icon: 'ArchiveIcon',
+          icon: 'GroupIcon',
           permission: 'groups:read',
           order: 20,
         },

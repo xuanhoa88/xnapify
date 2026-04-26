@@ -32,7 +32,7 @@ export function setup({ store, i18n }) {
       id: 'content',
       label: i18n.t('admin:navigation.content', 'Content'),
       order: 20,
-      icon: 'ArchiveIcon',
+      icon: 'FileTextIcon',
       items: [
         {
           path: '/admin/posts',

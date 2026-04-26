@@ -1,3 +1,4 @@
+import * as cookies from '@shared/cookies';
 import { validateForm } from '@shared/validator';
 
 import * as authService from '../services/auth.service';
@@ -10,8 +11,6 @@ import * as authController from './auth.controller';
 jest.mock('@shared/validator', () => ({
   validateForm: jest.fn(),
 }));
-
-import * as cookies from '@shared/cookies';
 
 jest.mock('@shared/cookies', () => ({
   setTokenCookie: jest.fn(),

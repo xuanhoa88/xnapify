@@ -15,7 +15,7 @@ const ICON_MAP = {
   social: RadixIcons.PersonIcon, // better than users
   security: RadixIcons.LockClosedIcon,
   analytics: RadixIcons.ActivityLogIcon,
-  storage: RadixIcons.ArchiveIcon,
+  storage: RadixIcons.BoxIcon,
   auth: RadixIcons.LockClosedIcon,
   authentication: RadixIcons.LockClosedIcon,
   communication: RadixIcons.EnvelopeClosedIcon,

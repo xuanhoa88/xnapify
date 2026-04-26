@@ -37,7 +37,7 @@ export function setup({ store, i18n }) {
         {
           path: '/admin/roles',
           label: i18n.t('admin:navigation.roles', 'Roles'),
-          icon: 'LockClosedIcon',
+          icon: 'IdCardIcon',
           permission: 'roles:read',
           order: 30,
         },

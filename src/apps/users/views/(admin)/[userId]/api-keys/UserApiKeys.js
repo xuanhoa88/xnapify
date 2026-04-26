@@ -8,23 +8,14 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 
 import {
-  LockOpen1Icon,
+  TokensIcon,
   ArrowLeftIcon,
   PlusIcon,
   ClipboardIcon,
   TrashIcon,
   Cross2Icon,
 } from '@radix-ui/react-icons';
-import {
-  Box,
-  Flex,
-  Heading,
-  Text,
-  Table,
-  Button,
-  Badge,
-  IconButton,
-} from '@radix-ui/themes';
+import { Box, Flex, Text, Button, Badge, IconButton } from '@radix-ui/themes';
 import format from 'date-fns/format';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
@@ -32,9 +23,9 @@ import { useDispatch, useSelector } from 'react-redux';
 
 import Form from '@shared/renderer/components/Form';
 import { useHistory } from '@shared/renderer/components/History';
-import Loader from '@shared/renderer/components/Loader';
 import Modal from '@shared/renderer/components/Modal';
 import { useRbac } from '@shared/renderer/components/Rbac';
+import { DataTable } from '@shared/renderer/components/Table';
 import { features } from '@shared/renderer/redux';
 
 import { createApiKeyFormSchema } from '../../../../validator/admin';
@@ -182,68 +173,87 @@ export default function UserApiKeys({ userId }) {
   }, [dispatch]);
 
   // =========================================================================
-  // RENDER HELPERS
+  // TABLE COLUMNS
   // =========================================================================
 
-  const getHeader = () => (
-    <Flex
-      align='center'
-      justify='between'
-      wrap='wrap'
-      gap='4'
-      pb='4'
-      mb='6'
-      className={s.adminHeader}
-    >
-      <Flex align='center' gap='3'>
-        <Flex align='center' justify='center' className={s.adminHeaderIcon}>
-          <LockOpen1Icon width={24} height={24} />
-        </Flex>
-        <Flex direction='column'>
-          <Heading size='6'>
-            {user
-              ? t('admin:users.apiKeys.headerTitle', 'API Keys: {{name}}', {
-                  name:
-                    (user.profile && user.profile.display_name) || user.email,
-                })
-              : t('admin:users.apiKeys.headerTitle', 'User API Keys')}
-          </Heading>
-          <Text size='2' color='gray' mt='1'>
-            {t(
-              'admin:users.apiKeys.headerSubtitle',
-              'Manage API keys for this user',
-            )}
+  const columns = useMemo(
+    () => [
+      {
+        key: 'name',
+        dataIndex: 'name',
+        title: t('admin:users.apiKeys.name', 'Name'),
+        order: 10,
+      },
+      {
+        key: 'prefix',
+        dataIndex: 'token_prefix',
+        title: t('admin:users.apiKeys.prefix', 'Prefix'),
+        order: 20,
+        render: prefix => <code>{prefix}…</code>,
+      },
+      {
+        key: 'created',
+        dataIndex: 'created_at',
+        title: t('admin:users.apiKeys.created', 'Created'),
+        order: 30,
+        render: createdAt => (
+          <Text size='2' color='gray'>
+            {createdAt ? format(new Date(createdAt), 'yyyy-MM-dd') : '—'}
           </Text>
-        </Flex>
-      </Flex>
-      <Flex gap='2'>
-        <Button
-          variant='soft'
-          color='gray'
-          onClick={() => history.push('/admin/users')}
-        >
-          <ArrowLeftIcon />
-          {t('admin:users.apiKeys.backToUsers', 'Back to Users')}
-        </Button>
-        <Button
-          variant='solid'
-          color='indigo'
-          onClick={() => setIsCreateOpen(true)}
-          {...(canCreate
-            ? { title: t('admin:users.apiKeys.generateKey', 'Generate Key') }
-            : {
-                disabled: true,
-                title: t(
-                  'admin:users.apiKeys.noPermissionToCreate',
-                  'You do not have permission to create API keys',
-                ),
-              })}
-        >
-          <PlusIcon width={16} height={16} />
-          {t('admin:users.apiKeys.generateKey', 'Generate Key')}
-        </Button>
-      </Flex>
-    </Flex>
+        ),
+      },
+      {
+        key: 'lastUsed',
+        dataIndex: 'last_used_at',
+        title: t('admin:users.apiKeys.lastUsed', 'Last Used'),
+        order: 40,
+        render: lastUsedAt => (
+          <Text size='2' color='gray'>
+            {lastUsedAt
+              ? format(new Date(lastUsedAt), 'yyyy-MM-dd HH:mm')
+              : '—'}
+          </Text>
+        ),
+      },
+      {
+        key: 'status',
+        dataIndex: 'is_active',
+        title: t('admin:users.apiKeys.status', 'Status'),
+        order: 50,
+        render: isActive => (
+          <Badge
+            variant={isActive ? 'success' : 'error'}
+            color='gray'
+            radius='full'
+          >
+            {isActive
+              ? t('admin:users.apiKeys.statusActive', 'Active')
+              : t('admin:users.apiKeys.statusRevoked', 'Revoked')}
+          </Badge>
+        ),
+      },
+      {
+        key: 'actions',
+        title: '',
+        order: 9999,
+        className: 'text-right',
+        render: (_, record) => (
+          <Flex gap='2' justify='end' onClick={e => e.stopPropagation()}>
+            {record.is_active && (
+              <IconButton
+                variant='ghost'
+                size='2'
+                onClick={() => handleRevoke(record)}
+                title={t('admin:users.apiKeys.revoke', 'Revoke')}
+              >
+                <TrashIcon width={16} height={16} />
+              </IconButton>
+            )}
+          </Flex>
+        ),
+      },
+    ],
+    [t, handleRevoke],
   );
 
   // =========================================================================
@@ -252,208 +262,174 @@ export default function UserApiKeys({ userId }) {
 
   if (!userInitialized || userLoading) {
     return (
-      <Box className={s.containerBox}>
-        {getHeader()}
-        <Loader
-          variant='skeleton'
-          message={t('admin:users.apiKeys.loading', 'Loading...')}
-        />
+      <Box className='p-6 max-w-[1400px] mx-auto'>
+        <DataTable
+          columns={[]}
+          dataSource={[]}
+          rowKey='id'
+          loading={true}
+          initialized={false}
+        >
+          <DataTable.Header
+            title={t('admin:users.apiKeys.headerTitle', 'User API Keys')}
+            subtitle={t(
+              'admin:users.apiKeys.headerSubtitle',
+              'Manage API keys for this user',
+            )}
+            icon={<TokensIcon width={24} height={24} />}
+          >
+            <Button
+              variant='soft'
+              color='gray'
+              onClick={() => history.push('/admin/users')}
+            >
+              <ArrowLeftIcon />
+              {t('admin:users.apiKeys.backToUsers', 'Back to Users')}
+            </Button>
+          </DataTable.Header>
+          <DataTable.Loader />
+        </DataTable>
       </Box>
     );
   }
 
   if (userError || !user) {
     return (
-      <Box className={s.containerBox}>
-        {getHeader()}
-        <Box className={s.sectionMarginTop}>
-          <Flex
-            direction='column'
-            align='center'
-            justify='center'
-            p='6'
-            className={s.adminErrorBlock}
+      <Box className='p-6 max-w-[1400px] mx-auto'>
+        <DataTable
+          columns={[]}
+          dataSource={[]}
+          rowKey='id'
+          loading={false}
+          initialized={true}
+        >
+          <DataTable.Header
+            title={t('admin:users.apiKeys.headerTitle', 'User API Keys')}
+            subtitle={t(
+              'admin:users.apiKeys.headerSubtitle',
+              'Manage API keys for this user',
+            )}
+            icon={<TokensIcon width={24} height={24} />}
           >
-            <Text color='red' size='4' weight='bold' mb='2'>
-              {t('admin:users.apiKeys.userNotFoundError', 'User not found')}
-            </Text>
-            <Text color='red' size='2' mb='4'>
-              {userError || 'Cannot load user context'}
-            </Text>
             <Button
               variant='soft'
               color='gray'
               onClick={() => history.push('/admin/users')}
-              size='2'
             >
+              <ArrowLeftIcon />
               {t('admin:users.apiKeys.backToUsers', 'Back to Users')}
             </Button>
-          </Flex>
-        </Box>
+          </DataTable.Header>
+          <DataTable.Error
+            message={
+              userError ||
+              t('admin:users.apiKeys.userNotFoundError', 'User not found')
+            }
+          />
+        </DataTable>
       </Box>
     );
   }
 
   return (
-    <Box className={s.containerBox}>
-      {getHeader()}
-
-      <Box className={s.sectionMarginTop}>
-        {/* New key banner — shown once after generation */}
-        {newKey && (
-          <Box className={s.newKeyBox}>
-            <Flex
-              align='center'
-              justify='between'
-              className={s.newKeyHeaderFlex}
-            >
-              <Text as='strong' size='3' className={s.newKeyTitle}>
-                {t(
-                  'admin:users.apiKeys.newKeyGenerated',
-                  'New API Key Generated!',
-                )}
-              </Text>
-              <IconButton
-                variant='ghost'
-                color='green'
-                size='1'
-                onClick={handleCloseNewKeyAlert}
-                aria-label={t('admin:users.apiKeys.close', 'Close')}
-              >
-                <Cross2Icon />
-              </IconButton>
-            </Flex>
-            <Text as='p' size='2' className={s.newKeyDesc}>
+    <Box className='p-6 max-w-[1400px] mx-auto'>
+      {newKey && (
+        <Box className={s.newKeyBox} mb='6'>
+          <Flex align='center' justify='between' className={s.newKeyHeaderFlex}>
+            <Text as='strong' size='3' className={s.newKeyTitle}>
               {t(
-                'admin:users.apiKeys.newKeyGeneratedText',
-                'Please copy this key now. It will not be shown again.',
+                'admin:users.apiKeys.newKeyGenerated',
+                'New API Key Generated!',
               )}
             </Text>
-            <Flex
-              align='center'
-              justify='between'
-              className={s.newKeyTokenFlex}
+            <IconButton
+              variant='ghost'
+              color='green'
+              size='1'
+              onClick={handleCloseNewKeyAlert}
+              aria-label={t('admin:users.apiKeys.close', 'Close')}
             >
-              <Text as='code' className={s.newKeyTokenText}>
-                {newKey.token}
-              </Text>
-              <Button
-                variant='soft'
-                color='gray'
-                size='1'
-                onClick={() => handleCopy(newKey.token)}
-              >
-                <ClipboardIcon width={14} height={14} />
-                {t('admin:users.apiKeys.copy', 'Copy')}
-              </Button>
-            </Flex>
-          </Box>
-        )}
-
-        <Box className={s.tableWrapper}>
-          <Table.Root variant='surface'>
-            <Table.Header>
-              <Table.Row>
-                <Table.ColumnHeaderCell>
-                  {t('admin:users.apiKeys.name', 'Name')}
-                </Table.ColumnHeaderCell>
-                <Table.ColumnHeaderCell>
-                  {t('admin:users.apiKeys.prefix', 'Prefix')}
-                </Table.ColumnHeaderCell>
-                <Table.ColumnHeaderCell>
-                  {t('admin:users.apiKeys.created', 'Created')}
-                </Table.ColumnHeaderCell>
-                <Table.ColumnHeaderCell>
-                  {t('admin:users.apiKeys.lastUsed', 'Last Used')}
-                </Table.ColumnHeaderCell>
-                <Table.ColumnHeaderCell>
-                  {t('admin:users.apiKeys.status', 'Status')}
-                </Table.ColumnHeaderCell>
-                <Table.ColumnHeaderCell
-                  className={s.textRight}
-                ></Table.ColumnHeaderCell>
-              </Table.Row>
-            </Table.Header>
-            <Table.Body>
-              {keys.length === 0 ? (
-                <Table.Row>
-                  <Table.Cell colSpan={6}>
-                    <Flex
-                      justify='center'
-                      align='center'
-                      direction='column'
-                      py='9'
-                      className={s.adminEmptyBlock}
-                    >
-                      <LockOpen1Icon
-                        width={48}
-                        height={48}
-                        className={s.adminEmptyIcon}
-                      />
-
-                      <Text size='3' weight='bold' mb='1'>
-                        {t('admin:users.apiKeys.emptyState', 'No API keys yet')}
-                      </Text>
-                    </Flex>
-                  </Table.Cell>
-                </Table.Row>
-              ) : (
-                keys.map(key => (
-                  <Table.Row
-                    key={key.id}
-                    className={key.is_active ? '' : 'is-revoked'}
-                  >
-                    <Table.Cell>{key.name}</Table.Cell>
-                    <Table.Cell>
-                      <code>{key.token_prefix}…</code>
-                    </Table.Cell>
-                    <Table.Cell>
-                      {key.created_at
-                        ? format(new Date(key.created_at), 'yyyy-MM-dd')
-                        : '—'}
-                    </Table.Cell>
-                    <Table.Cell>
-                      {key.last_used_at
-                        ? format(new Date(key.last_used_at), 'yyyy-MM-dd HH:mm')
-                        : '—'}
-                    </Table.Cell>
-                    <Table.Cell>
-                      <Badge
-                        variant={key.is_active ? 'success' : 'neutral'}
-                        color='gray'
-                        radius='full'
-                      >
-                        {key.is_active
-                          ? t('admin:users.apiKeys.statusActive', 'Active')
-                          : t('admin:users.apiKeys.statusRevoked', 'Revoked')}
-                      </Badge>
-                    </Table.Cell>
-                    <Table.Cell className={s.textRight}>
-                      <Flex justify='end'>
-                        {key.is_active && (
-                          <Button
-                            variant='ghost'
-                            size='1'
-                            onClick={() => handleRevoke(key)}
-                            title={t('admin:users.apiKeys.revoke', 'Revoke')}
-                          >
-                            <TrashIcon width={16} height={16} />
-                          </Button>
-                        )}
-                      </Flex>
-                    </Table.Cell>
-                  </Table.Row>
-                ))
-              )}
-            </Table.Body>
-          </Table.Root>
-          {keysLoading && (
-            <Box className={s.loadingOverlay}>
-              <Loader variant='spinner' />
-            </Box>
-          )}
+              <Cross2Icon />
+            </IconButton>
+          </Flex>
+          <Text as='p' size='2' className={s.newKeyDesc}>
+            {t(
+              'admin:users.apiKeys.newKeyGeneratedText',
+              'Please copy this key now. It will not be shown again.',
+            )}
+          </Text>
+          <Flex align='center' justify='between' className={s.newKeyTokenFlex}>
+            <Text as='code' className={s.newKeyTokenText}>
+              {newKey.token}
+            </Text>
+            <Button
+              variant='soft'
+              color='gray'
+              size='1'
+              onClick={() => handleCopy(newKey.token)}
+            >
+              <ClipboardIcon width={14} height={14} />
+              {t('admin:users.apiKeys.copy', 'Copy')}
+            </Button>
+          </Flex>
         </Box>
-      </Box>
+      )}
+
+      <DataTable
+        columns={columns}
+        dataSource={keys}
+        rowKey='id'
+        loading={keysLoading}
+        initialized={true}
+      >
+        <DataTable.Header
+          title={
+            user
+              ? t('admin:users.apiKeys.headerTitle', 'API Keys: {{name}}', {
+                  name:
+                    (user.profile && user.profile.display_name) || user.email,
+                })
+              : t('admin:users.apiKeys.headerTitle', 'User API Keys')
+          }
+          subtitle={t(
+            'admin:users.apiKeys.headerSubtitle',
+            'Manage API keys for this user',
+          )}
+          icon={<TokensIcon width={24} height={24} />}
+        >
+          <Button
+            variant='soft'
+            color='gray'
+            onClick={() => history.push('/admin/users')}
+          >
+            <ArrowLeftIcon />
+            {t('admin:users.apiKeys.backToUsers', 'Back to Users')}
+          </Button>
+          <Button
+            variant='solid'
+            color='indigo'
+            onClick={() => setIsCreateOpen(true)}
+            {...(canCreate
+              ? { title: t('admin:users.apiKeys.generateKey', 'Generate Key') }
+              : {
+                  disabled: true,
+                  title: t(
+                    'admin:users.apiKeys.noPermissionToCreate',
+                    'You do not have permission to create API keys',
+                  ),
+                })}
+          >
+            <PlusIcon width={16} height={16} />
+            {t('admin:users.apiKeys.generateKey', 'Generate Key')}
+          </Button>
+        </DataTable.Header>
+
+        <DataTable.Empty
+          icon={<TokensIcon width={48} height={48} />}
+          title={t('admin:users.apiKeys.emptyState', 'No API keys yet')}
+        />
+        <DataTable.Loader />
+      </DataTable>
 
       {/* Create key modal */}
       <Modal isOpen={isCreateOpen} onClose={handleCloseCreate}>

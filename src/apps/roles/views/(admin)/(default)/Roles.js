@@ -275,7 +275,7 @@ function Roles() {
             'admin:roles.subtitle',
             'Define access levels and permissions',
           )}
-          icon={<RadixIcons.LockClosedIcon width={24} height={24} />}
+          icon={<RadixIcons.IdCardIcon width={24} height={24} />}
         >
           <Button
             variant='solid'
@@ -312,7 +312,7 @@ function Roles() {
         <DataTable.BulkActions actions={bulkActions} />
 
         <DataTable.Empty
-          icon={<RadixIcons.LockClosedIcon width={48} height={48} />}
+          icon={<RadixIcons.IdCardIcon width={48} height={48} />}
           title={t('admin:roles.noRolesFound', 'No roles found')}
           description={t(
             'admin:roles.noRolesDescription',

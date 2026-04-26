@@ -79,7 +79,7 @@ export default function FileSidebar() {
           </ContextMenu.Trigger>
           <ContextMenu.Menu>
             <ContextMenu.Item
-              icon={<RadixIcons.ArchiveIcon width={18} height={18} />}
+              icon={<RadixIcons.FileTextIcon width={18} height={18} />}
               onClick={() => dispatch(setUploadModalOpen(true))}
             >
               {t('files:uploader.new_folder', 'New folder')}

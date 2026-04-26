@@ -7,7 +7,7 @@
 
 import { useEffect, useRef } from 'react';
 
-import { ArchiveIcon } from '@radix-ui/react-icons';
+import { FileTextIcon } from '@radix-ui/react-icons';
 import { Box, Flex, Heading, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
@@ -68,7 +68,7 @@ function Files() {
       >
         <Flex align='center' gap='3'>
           <Flex align='center' justify='center' className={s.adminHeaderIcon}>
-            <ArchiveIcon width={24} height={24} />
+            <FileTextIcon width={24} height={24} />
           </Flex>
           <Flex direction='column'>
             <Heading size='6'>{t('admin:navigation.files', 'Files')}</Heading>

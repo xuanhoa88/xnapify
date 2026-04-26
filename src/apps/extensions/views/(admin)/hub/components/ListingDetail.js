@@ -73,7 +73,7 @@ export default function ListingDetail({ listing = null, onClose }) {
       value: ((listing && listing.install_count) || 0).toLocaleString(),
     },
     {
-      icon: RadixIcons.ArchiveIcon, // folder substitute
+      icon: RadixIcons.BoxIcon, // category substitute
       label: t('admin:hub.category', 'Category'),
       value: listing && listing.category,
     },

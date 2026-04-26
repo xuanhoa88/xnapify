@@ -7,7 +7,7 @@
 
 import { forwardRef } from 'react';
 
-import { DropdownMenu, Flex, Text, Box } from '@radix-ui/themes';
+import { DropdownMenu, Flex, Text } from '@radix-ui/themes';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 

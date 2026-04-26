@@ -8,7 +8,7 @@
 import { useState, useRef, useCallback } from 'react';
 
 import {
-  ArchiveIcon,
+  FileTextIcon,
   FileIcon,
   StarIcon,
   Pencil1Icon,
@@ -232,7 +232,7 @@ export default function FileGrid({ onShare }) {
         onKeyDown={e => e.key === 'Enter' && handleContainerClick()}
       >
         <Box className={s.emptyIconBox}>
-          <ArchiveIcon width={80} height={80} />
+          <FileTextIcon width={80} height={80} />
         </Box>
         <Text as='h3' size='4' weight='bold' className={s.emptyTitle}>
           {t('files:grid.empty_title', 'No files here')}
@@ -287,7 +287,7 @@ export default function FileGrid({ onShare }) {
                 )}
               >
                 {file.type === 'folder' ? (
-                  <ArchiveIcon width={48} height={48} />
+                  <FileTextIcon width={48} height={48} />
                 ) : (
                   <FileIcon width={48} height={48} />
                 )}
@@ -361,7 +361,7 @@ export default function FileGrid({ onShare }) {
                 )}
               >
                 {file.type === 'folder' ? (
-                  <ArchiveIcon width={24} height={24} />
+                  <FileTextIcon width={24} height={24} />
                 ) : (
                   <FileIcon width={24} height={24} />
                 )}

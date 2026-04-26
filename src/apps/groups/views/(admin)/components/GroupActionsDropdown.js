@@ -7,8 +7,8 @@
 
 import {
   DotsVerticalIcon,
-  GroupIcon,
-  LockClosedIcon,
+  PersonIcon,
+  IdCardIcon,
   LockOpen1Icon,
   Pencil2Icon,
   TrashIcon,
@@ -41,14 +41,14 @@ function GroupActionsDropdown({
       <ContextMenu.Menu>
         <ContextMenu.Item
           onClick={() => onViewUsers(group)}
-          icon={<GroupIcon width={16} height={16} />}
+          icon={<PersonIcon width={16} height={16} />}
           permission='users:read'
         >
           {t('admin:groups.viewUsers', 'View Users')}
         </ContextMenu.Item>
         <ContextMenu.Item
           onClick={() => onManageRoles(group)}
-          icon={<LockClosedIcon width={16} height={16} />}
+          icon={<IdCardIcon width={16} height={16} />}
           permission='roles:*'
         >
           {t('admin:groups.manageRoles', 'Manage Roles')}

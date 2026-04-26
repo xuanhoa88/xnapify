@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 
-import { ArchiveIcon } from '@radix-ui/react-icons';
+import { GroupIcon } from '@radix-ui/react-icons';
 import { Box, Flex, Heading, Button } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
@@ -123,7 +123,7 @@ function EditGroup({ groupId, context }) {
         >
           <Flex align='center' gap='3'>
             <Flex align='center' justify='center' className={s.adminHeaderIcon}>
-              <ArchiveIcon width={24} height={24} />
+              <GroupIcon width={24} height={24} />
             </Flex>
             <Flex direction='column'>
               <Heading size='6'>{null}</Heading>
@@ -148,7 +148,7 @@ function EditGroup({ groupId, context }) {
         >
           <Flex align='center' gap='3'>
             <Flex align='center' justify='center' className={s.adminHeaderIcon}>
-              <ArchiveIcon width={24} height={24} />
+              <GroupIcon width={24} height={24} />
             </Flex>
             <Flex direction='column'>
               <Heading size='6'>{null}</Heading>
@@ -181,7 +181,7 @@ function EditGroup({ groupId, context }) {
       >
         <Flex align='center' gap='3'>
           <Flex align='center' justify='center' className={s.adminHeaderIcon}>
-            <ArchiveIcon width={24} height={24} />
+            <GroupIcon width={24} height={24} />
           </Flex>
           <Flex direction='column'>
             <Heading size='6'>{null}</Heading>

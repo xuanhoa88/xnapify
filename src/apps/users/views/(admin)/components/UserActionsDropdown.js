@@ -10,8 +10,9 @@ import { useMemo } from 'react';
 import {
   DotsVerticalIcon,
   LockOpen1Icon,
-  ArchiveIcon,
-  LockClosedIcon,
+  GroupIcon,
+  IdCardIcon,
+  TokensIcon,
   PersonIcon,
   Cross2Icon,
   CheckIcon,
@@ -58,21 +59,21 @@ function UserActionsDropdown({
       <ContextMenu.Menu>
         <ContextMenu.Item
           onClick={() => history.push(`/admin/users/${user.id}/api-keys`)}
-          icon={<LockOpen1Icon width={16} height={16} />}
+          icon={<TokensIcon width={16} height={16} />}
           permission='apiKeys:read'
         >
           {t('admin:users.list.manageApiKeys', 'Manage API Keys')}
         </ContextMenu.Item>
         <ContextMenu.Item
           onClick={() => onManageGroups(user)}
-          icon={<ArchiveIcon width={16} height={16} />}
+          icon={<GroupIcon width={16} height={16} />}
           permission='groups:*'
         >
           {t('admin:users.list.manageGroups', 'Manage Groups')}
         </ContextMenu.Item>
         <ContextMenu.Item
           onClick={() => onManageRoles(user)}
-          icon={<LockClosedIcon width={16} height={16} />}
+          icon={<IdCardIcon width={16} height={16} />}
           permission='roles:*'
         >
           {t('admin:users.list.manageRoles', 'Manage Roles')}
@@ -80,7 +81,7 @@ function UserActionsDropdown({
         <ContextMenu.Divider />
         <ContextMenu.Item
           onClick={() => onViewPermissions(user)}
-          icon={<LockClosedIcon width={16} height={16} />}
+          icon={<LockOpen1Icon width={16} height={16} />}
           permission='permissions:read'
         >
           {t('admin:users.list.viewPermissions', 'View Permissions')}

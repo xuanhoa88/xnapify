@@ -8,7 +8,15 @@
 import { useState, useCallback, useEffect } from 'react';
 
 import * as RadixIcons from '@radix-ui/react-icons';
-import { Box, Flex, Text, Button, Badge, Switch, Avatar } from '@radix-ui/themes';
+import {
+  Box,
+  Flex,
+  Text,
+  Button,
+  Badge,
+  Switch,
+  Avatar,
+} from '@radix-ui/themes';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';

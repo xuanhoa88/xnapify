@@ -13,7 +13,7 @@ import {
   useEffect,
 } from 'react';
 
-import { ArchiveIcon } from '@radix-ui/react-icons';
+import { GroupIcon } from '@radix-ui/react-icons';
 import { Flex, Box, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
@@ -173,7 +173,7 @@ const RoleGroupsModal = forwardRef((props, ref) => {
                 className={s.itemFlex}
               >
                 <Flex align='center' justify='center' className={s.iconBox}>
-                  <ArchiveIcon width={20} height={20} />
+                  <GroupIcon width={20} height={20} />
                 </Flex>
                 <Box className={s.itemInfo}>
                   <Text as='div' size='2' weight='bold' className={s.itemName}>
