@@ -8,9 +8,11 @@
 import { useEffect, useRef } from 'react';
 
 import { FileTextIcon } from '@radix-ui/react-icons';
-import { Box, Flex, Heading, Text } from '@radix-ui/themes';
+import { Box, Flex } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
+
+import { DataTable } from '@shared/renderer/components/Table';
 
 import FileGrid from '../components/FileGrid';
 import FileSidebar from '../components/FileSidebar';
@@ -57,27 +59,14 @@ function Files() {
 
   return (
     <Box className={s.container}>
-      <Flex
-        align='center'
-        justify='between'
-        wrap='wrap'
-        gap='4'
-        pb='4'
-        mb='6'
-        className={s.adminHeader}
-      >
-        <Flex align='center' gap='3'>
-          <Flex align='center' justify='center' className={s.adminHeaderIcon}>
-            <FileTextIcon width={24} height={24} />
-          </Flex>
-          <Flex direction='column'>
-            <Heading size='6'>{t('admin:navigation.files', 'Files')}</Heading>
-            <Text size='2' color='gray' mt='1'>
-              {t('admin:files.subtitle', 'Manage digital assets')}
-            </Text>
-          </Flex>
-        </Flex>
-      </Flex>
+      <DataTable.Header
+        title={t('admin:files.title', 'File Management')}
+        subtitle={t(
+          'admin:files.subtitle',
+          'Manage digital assets, documents, and media',
+        )}
+        icon={<FileTextIcon width={24} height={24} />}
+      />
 
       <Flex className={s.mainFlex}>
         {/* Left Sidebar Pane */}

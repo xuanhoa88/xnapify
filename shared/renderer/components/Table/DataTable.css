@@ -21,6 +21,20 @@
   border: 1px solid var(--gray-a6);
   overflow: hidden;
   position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.fillHeight {
+  flex: 1;
+  height: 100%;
+}
+
+.borderless {
+  border: none;
+  box-shadow: none;
+  background-color: transparent;
+  border-radius: 0;
 }
 
 /* Toolbar */
@@ -81,6 +95,9 @@
 .tableWrapper {
   position: relative;
   overflow-x: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .headerCell {
@@ -149,6 +166,9 @@
   position: relative;
   overflow-x: auto;
   padding-bottom: var(--space-4);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .gridContainer {
@@ -194,6 +214,7 @@
 /* Empty state */
 .emptyBlock {
   opacity: 0.6;
+  flex: 1;
 }
 
 .emptyIcon {
@@ -210,4 +231,12 @@
 /* Pagination */
 .paginationBox {
   background-color: var(--gray-1);
+}
+
+.borderlessPaginationBox {
+  background-color: transparent;
+}
+
+.borderlessPagination {
+  border-top: none;
 }

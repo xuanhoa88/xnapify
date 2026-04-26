@@ -7,18 +7,7 @@
   flex-direction: column;
 }
 
-.adminHeader {
-  border-bottom: 1px solid var(--gray-a6);
-}
 
-.adminHeaderIcon {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-3);
-  background-color: var(--gray-3);
-  color: var(--gray-11);
-  flex-shrink: 0;
-}
 
 .mainFlex {
   flex: 1;
@@ -52,6 +41,5 @@
 .gridBox {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-4);
   position: relative;
 }

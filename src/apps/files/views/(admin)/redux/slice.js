@@ -83,6 +83,9 @@ export const filesSlice = createSlice({
     clearSelection(state) {
       state.selectedFileIds = [];
     },
+    setSelection(state, action) {
+      state.selectedFileIds = action.payload;
+    },
     setViewMode(state, action) {
       state.viewMode = action.payload; // 'grid' or 'list'
     },
@@ -208,6 +211,7 @@ export const {
   setView,
   toggleSelection,
   clearSelection,
+  setSelection,
   setViewMode,
   setUploadModalOpen,
   addUploadItem,

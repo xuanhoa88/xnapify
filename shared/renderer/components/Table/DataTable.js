@@ -517,6 +517,8 @@ function DataTable({
 
   // Table variant
   variant = 'ghost',
+  borderless = false,
+  fillHeight = false,
 
   // Children (compound slots)
   children,
@@ -626,7 +628,14 @@ function DataTable({
 
       {/* Normal content */}
       {!isFirstLoad && !hasError && (
-        <Box className={s.contentBox}>
+        <Box
+          className={clsx(
+            'data-table-content',
+            s.contentBox,
+            { [s.borderless]: borderless },
+            { [s.fillHeight]: fillHeight },
+          )}
+        >
           {/* Bulk actions */}
           {hasSelection && bulkActionsSlot && (
             <TableBulkActions
@@ -642,7 +651,7 @@ function DataTable({
           {toolbarSlot}
 
           {/* Table view */}
-          {viewType === 'table' && (
+          {viewType === 'table' ? (
             <Box className={clsx(s.tableWrapper, s.customScrollbar)}>
               <Table.Root variant={variant}>
                 <Table.Header className='bg-[var(--color-panel-solid)]'>
@@ -684,7 +693,9 @@ function DataTable({
                       return (
                         <Table.Row
                           key={key}
-                          className={clsx(isSelected && s.selectedRow)}
+                          className={clsx({
+                            [s.selectedRow]: isSelected,
+                          })}
                         >
                           {selectable && (
                             <Table.Cell
@@ -731,10 +742,7 @@ function DataTable({
                 </Table.Body>
               </Table.Root>
             </Box>
-          )}
-
-          {/* Grid view */}
-          {viewType === 'grid' && (
+          ) : (
             <Box className={clsx(s.gridWrapper, s.customScrollbar)}>
               {hasData ? (
                 <Box
@@ -794,8 +802,13 @@ function DataTable({
 
           {/* Pagination */}
           {showPagination && (
-            <Box className={s.paginationBox}>
+            <Box
+              className={clsx(s.paginationBox, {
+                [s.borderlessPaginationBox]: borderless,
+              })}
+            >
               <TablePagination
+                className={borderless ? s.borderlessPagination : undefined}
                 currentPage={paginationProps.current}
                 totalPages={resolvedTotalPages}
                 totalItems={paginationProps.total}
@@ -864,6 +877,8 @@ DataTable.propTypes = {
 
   // Table variant
   variant: PropTypes.oneOf(['surface', 'ghost']),
+  borderless: PropTypes.bool,
+  fillHeight: PropTypes.bool,
 
   // Compound children
   children: PropTypes.node,

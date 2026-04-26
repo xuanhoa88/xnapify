@@ -9,12 +9,12 @@
 }
 
 .newBtn {
-  justify-content: flex-start;
-  padding-left: var(--space-4);
+  justify-content: center;
   box-shadow: var(--shadow-3);
   transition: all 0.2s;
   height: 48px;
   font-size: 15px;
+  width: 100%;
 }
 
 .plusIcon {

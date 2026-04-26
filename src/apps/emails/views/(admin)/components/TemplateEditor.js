@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useMemo, useRef } from 'react';
+import { useRef } from 'react';
 
 import { ExclamationTriangleIcon } from '@radix-ui/react-icons';
 import { Box, Flex, Text } from '@radix-ui/themes';

@@ -45,6 +45,7 @@ function TablePagination({
   showInfo = true,
   prevLabel,
   nextLabel,
+  className,
 }) {
   const { t } = useTranslation();
 
@@ -128,7 +129,7 @@ function TablePagination({
       width='100%'
       px='4'
       py='3'
-      className={s.paginationContainer}
+      className={clsx(s.paginationContainer, className)}
     >
       <Flex align='center' gap='3'>
         {showInfo && totalItems != null && (
@@ -238,6 +239,7 @@ TablePagination.propTypes = {
   showInfo: PropTypes.bool,
   prevLabel: PropTypes.string,
   nextLabel: PropTypes.string,
+  className: PropTypes.string,
 };
 
 export default TablePagination;

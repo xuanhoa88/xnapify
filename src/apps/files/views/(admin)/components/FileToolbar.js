@@ -12,7 +12,7 @@ import {
   ListBulletIcon,
   DashboardIcon,
 } from '@radix-ui/react-icons';
-import { Flex, Box, Button } from '@radix-ui/themes';
+import { Flex, Box, Button, SegmentedControl } from '@radix-ui/themes';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
@@ -96,32 +96,23 @@ export default function FileToolbar() {
           />
         </Box>
 
-        <Flex align='center' gap='1' className={s.viewModeFlex}>
-          <Button
-            variant='ghost'
-            className={clsx(
-              s.viewModeBtn,
-              viewMode === 'list' ? s.viewModeBtnActive : s.viewModeBtnInactive,
-            )}
-            onClick={() => dispatch(setViewMode('list'))}
+        <SegmentedControl.Root
+          value={viewMode}
+          onValueChange={val => dispatch(setViewMode(val))}
+        >
+          <SegmentedControl.Item
+            value='list'
             title={t('files:toolbar.list_view', 'List view')}
-            iconOnly
           >
-            <ListBulletIcon width={18} height={18} />
-          </Button>
-          <Button
-            variant='ghost'
-            className={clsx(
-              s.viewModeBtn,
-              viewMode === 'grid' ? s.viewModeBtnActive : s.viewModeBtnInactive,
-            )}
-            onClick={() => dispatch(setViewMode('grid'))}
+            <ListBulletIcon width={16} height={16} />
+          </SegmentedControl.Item>
+          <SegmentedControl.Item
+            value='grid'
             title={t('files:toolbar.grid_view', 'Grid view')}
-            iconOnly
           >
-            <DashboardIcon width={18} height={18} />
-          </Button>
-        </Flex>
+            <DashboardIcon width={16} height={16} />
+          </SegmentedControl.Item>
+        </SegmentedControl.Root>
       </Flex>
     </Flex>
   );

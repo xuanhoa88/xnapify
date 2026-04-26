@@ -17,15 +17,15 @@
   bottom: var(--space-6);
   left: 50%;
   transform: translateX(-50%);
-  background-color: rgba(17, 17, 17, 0.85); /* Premium dark translucent */
+  background-color: rgb(17 17 17 / 85%); /* Premium dark translucent */
   backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid rgb(255 255 255 / 15%);
   border-radius: 9999px; /* Perfect pill shape */
   box-shadow:
-    0 24px 48px rgba(0, 0, 0, 0.3),
-    0 12px 24px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1); /* Subtle inner highlight */
+    0 24px 48px rgb(0 0 0 / 30%),
+    0 12px 24px rgb(0 0 0 / 20%),
+    inset 0 1px 0 rgb(255 255 255 / 10%); /* Subtle inner highlight */
+
   z-index: 50;
   gap: var(--space-4);
   animation: bulkBarSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
@@ -50,7 +50,7 @@
 }
 
 .bulkItemCountText {
-  color: rgba(255, 255, 255, 0.7);
+  color: rgb(255 255 255 / 70%);
   white-space: nowrap;
   font-size: 13px;
   font-weight: 500;
@@ -59,7 +59,7 @@
 /* ── Action section ─────────────────────────────────────────────────── */
 
 .bulkActionsFlex {
-  border-left: 1px solid rgba(255, 255, 255, 0.15);
+  border-left: 1px solid rgb(255 255 255 / 15%);
   padding-left: var(--space-4);
   gap: var(--space-2);
 }
@@ -76,15 +76,15 @@
 }
 
 .bulkActionButton:hover {
-  background-color: rgba(255, 255, 255, 0.1) !important;
+  background-color: rgb(255 255 255 / 10%) !important;
   transform: translateY(-1px);
 }
 
 /* ── Clear / dismiss ────────────────────────────────────────────────── */
 
 .bulkClearButton {
-  color: rgba(255, 255, 255, 0.5) !important;
-  border-left: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: rgb(255 255 255 / 50%) !important;
+  border-left: 1px solid rgb(255 255 255 / 15%) !important;
   padding-left: var(--space-3) !important;
   margin-left: var(--space-2);
   border-radius: 9999px !important;
@@ -96,5 +96,5 @@
 
 .bulkClearButton:hover {
   color: white !important;
-  background-color: rgba(255, 255, 255, 0.1) !important;
+  background-color: rgb(255 255 255 / 10%) !important;
 }

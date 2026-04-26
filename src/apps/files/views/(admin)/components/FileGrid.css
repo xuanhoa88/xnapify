@@ -1,46 +1,22 @@
-.emptyContainer {
-  height: 100%;
-  min-height: 300px;
-  width: 100%;
-  cursor: default;
-}
-
-.emptyIconBox {
-  color: var(--gray-7);
-  margin-bottom: var(--space-4);
-}
-
-.emptyTitle {
-  color: var(--gray-11);
-  margin-bottom: var(--space-2);
-}
-
 .gridContainer {
   height: 100%;
   min-height: 100%;
   user-select: none;
+
+  & :global(.data-table-content) {
+    height: 100%;
+    min-height: 100%;
+  }
 }
 
-.gridWrapper {
-  padding: var(--space-2);
+.tableContainer {
+  min-height: 100%;
 }
 
 .fileCard {
-  border-radius: var(--radius-3);
-  padding: var(--space-3);
   cursor: pointer;
   transition: all 0.15s ease-in-out;
   position: relative;
-}
-
-.fileCardUnselected {
-  background-color: var(--color-panel-solid);
-  border: 1px solid var(--gray-5);
-}
-
-.fileCardSelected {
-  background-color: var(--indigo-3);
-  border: 1px solid var(--indigo-8);
 }
 
 .iconContainer {
@@ -64,138 +40,58 @@
   color: var(--amber-9);
 }
 
+.starIconList {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  color: var(--amber-9);
+}
+
 .nameContainer {
   flex: 1;
   min-width: 0;
 }
 
-.listWrapper {
-  padding: var(--space-2);
+.cardActions {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  opacity: 0;
+  transition: opacity 0.15s ease-in-out;
 }
 
-.listHeader {
-  padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--gray-4);
-  color: var(--gray-11);
-  font-weight: 500;
-  font-size: var(--font-size-2);
-}
-
-.iconSpace {
-  width: 40px;
-}
-
-.flex3 {
-  flex: 3;
-}
-
-.flex2HiddenSm {
-  flex: 2;
-  display: none;
-}
-
-@media (min-width: 768px) {
-  .flex2HiddenSm {
-    display: block;
-  }
-}
-
-.flex2HiddenXs {
-  flex: 2;
-  display: none;
-}
-
-@media (min-width: 640px) {
-  .flex2HiddenXs {
-    display: block;
-  }
-}
-
-.flex1HiddenMd {
-  flex: 1;
-  display: none;
-  text-align: right;
-}
-
-@media (min-width: 1024px) {
-  .flex1HiddenMd {
-    display: block;
-  }
-}
-
-.listItem {
-  border-bottom: 1px solid var(--gray-3);
-  padding: var(--space-2) var(--space-3);
-  cursor: pointer;
-  transition: background-color 0.15s ease-in-out;
-  position: relative;
-}
-
-.listItemUnselected {
-  background-color: transparent;
-}
-
-.listItemSelected {
-  background-color: var(--indigo-3);
+.fileCard:hover .cardActions {
+  opacity: 1;
 }
 
 .listIconContainer {
-  width: 40px;
   position: relative;
 }
 
-.starIconList {
-  position: absolute;
-  bottom: -4px;
-  right: 0;
-  color: var(--amber-9);
-}
-
-.listNameBox {
-  flex: 3;
-  min-width: 0;
-  padding-right: var(--space-3);
-}
-
-.listOwnerBox {
-  flex: 2;
+/* Visibility helpers for Table columns */
+.hiddenSm {
   display: none;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
-
 @media (min-width: 768px) {
-  .listOwnerBox {
-    display: block;
+  .hiddenSm {
+    display: table-cell;
   }
 }
 
-.listModifiedBox {
-  flex: 2;
+.hiddenXs {
   display: none;
 }
-
 @media (min-width: 640px) {
-  .listModifiedBox {
-    display: block;
+  .hiddenXs {
+    display: table-cell;
   }
 }
 
-.listSizeBox {
-  flex: 1;
+.hiddenMd {
   display: none;
-  text-align: right;
 }
-
 @media (min-width: 1024px) {
-  .listSizeBox {
-    display: block;
+  .hiddenMd {
+    display: table-cell;
   }
-}
-
-.paginationContainer {
-  padding: var(--space-4);
-  margin-top: var(--space-4);
-  border-top: 1px solid var(--gray-4);
 }

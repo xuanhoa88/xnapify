@@ -39,32 +39,4 @@
   background-color: var(--gray-3);
 }
 
-.viewModeFlex {
-  background-color: var(--gray-3);
-  padding: 2px;
-  border-radius: var(--radius-3);
-}
 
-.viewModeBtn {
-  padding: 6px;
-  height: auto;
-  border-radius: var(--radius-2);
-  transition: all 0.2s;
-  cursor: pointer;
-}
-
-.viewModeBtnActive {
-  background-color: var(--color-panel-solid);
-  box-shadow: 0 1px 2px var(--black-a3);
-  color: var(--indigo-11);
-}
-
-.viewModeBtnInactive {
-  background-color: transparent;
-  box-shadow: none;
-  color: var(--gray-10);
-}
-
-.viewModeBtnInactive:hover {
-  color: var(--gray-12);
-}
