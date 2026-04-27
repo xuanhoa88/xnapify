@@ -14,7 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { v4 as uuidv4 } from 'uuid';
 
-import { DataTable } from '@shared/renderer/components/Table';
+import { PageHeader } from '@shared/renderer/components/PageHeader';
 
 import FileGrid from '../components/FileGrid';
 import FileSidebar from '../components/FileSidebar';
@@ -178,7 +178,7 @@ function Files() {
         </Flex>
       )}
 
-      <DataTable.Header
+      <PageHeader
         title={t('admin:files.title', 'File Management')}
         subtitle={t(
           'admin:files.subtitle',

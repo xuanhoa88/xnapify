@@ -8,16 +8,7 @@
 import { useEffect, useCallback, useState, useMemo } from 'react';
 
 import * as RadixIcons from '@radix-ui/react-icons';
-import {
-  Flex,
-  Box,
-  Text,
-  Badge,
-  Grid,
-  Heading,
-  Card,
-  Button,
-} from '@radix-ui/themes';
+import { Flex, Box, Text, Badge, Grid, Card, Button } from '@radix-ui/themes';
 import sortBy from 'lodash/sortBy';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
@@ -25,6 +16,7 @@ import { useDispatch, useSelector } from 'react-redux';
 
 import Form, { useFormContext } from '@shared/renderer/components/Form';
 import Loader from '@shared/renderer/components/Loader';
+import { PageHeader } from '@shared/renderer/components/PageHeader';
 import { useRbac } from '@shared/renderer/components/Rbac';
 
 import { useSettingsTabConfig } from '../hooks/useSettingsTabConfig';
@@ -385,39 +377,14 @@ function SettingsPage({ context }) {
   if (!initialized || (loading && namespaces.length === 0)) {
     return (
       <Box className='p-6 max-w-[1400px] mx-auto'>
-        <Flex
-          align='center'
-          justify='between'
-          wrap='wrap'
-          gap='4'
-          pb='4'
-          mb='6'
-          style={{ borderBottom: '1px solid var(--gray-a6)' }}
-        >
-          <Flex align='center' gap='3'>
-            <Flex
-              align='center'
-              justify='center'
-              className='shrink-0 rounded-md'
-              style={{
-                width: 40,
-                height: 40,
-                backgroundColor: 'var(--gray-3)',
-                color: 'var(--gray-11)',
-              }}
-            >
-              <RadixIcons.GearIcon width={24} height={24} />
-            </Flex>
-            <Flex direction='column'>
-              <Heading size='6'>
-                {t('admin:settings.title', 'Global Settings')}
-              </Heading>
-              <Text size='2' color='gray' mt='1'>
-                {t('admin:settings.subtitle', 'Configure system-wide settings')}
-              </Text>
-            </Flex>
-          </Flex>
-        </Flex>
+        <PageHeader
+          title={t('admin:settings.title', 'Global Settings')}
+          subtitle={t(
+            'admin:settings.subtitle',
+            'Configure system-wide settings',
+          )}
+          icon={<RadixIcons.GearIcon width={24} height={24} />}
+        />
         <Loader
           variant='spinner'
           message={t('admin:settings.loading', 'Loading settings...')}
@@ -430,39 +397,14 @@ function SettingsPage({ context }) {
   if (error) {
     return (
       <Box className='p-6 max-w-[1400px] mx-auto'>
-        <Flex
-          align='center'
-          justify='between'
-          wrap='wrap'
-          gap='4'
-          pb='4'
-          mb='6'
-          style={{ borderBottom: '1px solid var(--gray-a6)' }}
-        >
-          <Flex align='center' gap='3'>
-            <Flex
-              align='center'
-              justify='center'
-              className='shrink-0 rounded-md'
-              style={{
-                width: 40,
-                height: 40,
-                backgroundColor: 'var(--gray-3)',
-                color: 'var(--gray-11)',
-              }}
-            >
-              <RadixIcons.GearIcon width={24} height={24} />
-            </Flex>
-            <Flex direction='column'>
-              <Heading size='6'>
-                {t('admin:settings.title', 'Global Settings')}
-              </Heading>
-              <Text size='2' color='gray' mt='1'>
-                {t('admin:settings.subtitle', 'Configure system-wide settings')}
-              </Text>
-            </Flex>
-          </Flex>
-        </Flex>
+        <PageHeader
+          title={t('admin:settings.title', 'Global Settings')}
+          subtitle={t(
+            'admin:settings.subtitle',
+            'Configure system-wide settings',
+          )}
+          icon={<RadixIcons.GearIcon width={24} height={24} />}
+        />
         <Flex
           direction='column'
           align='center'
@@ -495,42 +437,14 @@ function SettingsPage({ context }) {
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <Box className='p-6 max-w-[1400px] mx-auto'>
-      <Flex
-        align='center'
-        justify='between'
-        wrap='wrap'
-        gap='4'
-        pb='4'
-        mb='6'
-        style={{ borderBottom: '1px solid var(--gray-a6)' }}
-      >
-        <Flex align='center' gap='3'>
-          <Flex
-            align='center'
-            justify='center'
-            className='shrink-0 rounded-md'
-            style={{
-              width: 40,
-              height: 40,
-              backgroundColor: 'var(--gray-3)',
-              color: 'var(--gray-11)',
-            }}
-          >
-            <RadixIcons.GearIcon width={24} height={24} />
-          </Flex>
-          <Flex direction='column'>
-            <Heading size='6'>
-              {t('admin:settings.title', 'Global Settings')}
-            </Heading>
-            <Text size='2' color='gray' mt='1'>
-              {t(
-                'admin:settings.subtitle',
-                'Configure system-wide settings for all modules',
-              )}
-            </Text>
-          </Flex>
-        </Flex>
-      </Flex>
+      <PageHeader
+        title={t('admin:settings.title', 'Global Settings')}
+        subtitle={t(
+          'admin:settings.subtitle',
+          'Configure system-wide settings for all modules',
+        )}
+        icon={<RadixIcons.GearIcon width={24} height={24} />}
+      />
 
       <Grid columns={{ initial: '1', lg: '250px 1fr' }} gap='6' align='start'>
         {/* Namespace tabs */}

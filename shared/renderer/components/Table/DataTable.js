@@ -16,7 +16,6 @@ import {
 import {
   Box,
   Flex,
-  Heading,
   Text,
   Table,
   Checkbox,
@@ -28,6 +27,7 @@ import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
 import Loader from '../Loader';
+import { PageHeader } from '../PageHeader';
 
 import TableBulkActions from './TableBulkActions';
 import TablePagination from './TablePagination';
@@ -89,45 +89,15 @@ function findSlotOne(children, SlotType) {
 
 /**
  * DataTable.Header — Page header with icon, title, subtitle, and action slot.
+ * Now wraps PageHeader to maintain backwards compatibility.
  *
  * @example
  * <DataTable.Header title="Users" subtitle="Manage users" icon={<GroupIcon />}>
  *   <Button>Add User</Button>
  * </DataTable.Header>
  */
-function DataTableHeader({ title, subtitle, icon, children }) {
-  if (!title) return null;
-
-  return (
-    <Flex
-      align='center'
-      justify='between'
-      wrap='wrap'
-      gap='4'
-      className={s.header}
-    >
-      <Flex align='center' gap='3'>
-        {icon && (
-          <Flex align='center' justify='center' className={s.headerIcon}>
-            {icon}
-          </Flex>
-        )}
-        <Flex direction='column'>
-          <Heading size='6'>{title}</Heading>
-          {subtitle && (
-            <Text size='2' color='gray' mt='1'>
-              {subtitle}
-            </Text>
-          )}
-        </Flex>
-      </Flex>
-      {children && (
-        <Flex align='center' gap='2'>
-          {children}
-        </Flex>
-      )}
-    </Flex>
-  );
+function DataTableHeader(props) {
+  return <PageHeader {...props} />;
 }
 
 DataTableHeader.displayName = 'DataTableHeader';
