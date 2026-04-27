@@ -24,7 +24,7 @@ import { useFormField, useMergeRefs, useComposedHandler } from '../FormContext';
 const FormRadio = forwardRef(function FormRadio$(
   {
     options = [],
-    size = '3',
+    size = '2',
     className,
     disabled,
     direction = 'vertical',

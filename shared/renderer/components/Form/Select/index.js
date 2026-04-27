@@ -25,7 +25,7 @@ const FormSelect = forwardRef(function FormSelect$(
   {
     options = [],
     placeholder,
-    size = '3',
+    size = '2',
     className,
     disabled,
     onValueChange,

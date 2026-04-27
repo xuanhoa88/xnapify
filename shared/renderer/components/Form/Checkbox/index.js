@@ -22,7 +22,7 @@ import { useFormField, useMergeRefs, useComposedHandler } from '../FormContext';
  *   </Form.Field>
  */
 const FormCheckbox = forwardRef(function FormCheckbox$(
-  { label, size = '3', className, disabled, ...props },
+  { label, size = '2', className, disabled, ...props },
   forwardedRef,
 ) {
   const { id, name, error } = useFormField();

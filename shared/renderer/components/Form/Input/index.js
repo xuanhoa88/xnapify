@@ -28,7 +28,7 @@ import {
 const FormInput = forwardRef(function FormInput$(
   {
     type = 'text',
-    size = '3',
+    size = '2',
     placeholder,
     className,
     disabled,
