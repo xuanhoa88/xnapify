@@ -455,12 +455,11 @@ function SettingsPage({ context }) {
               key={ns}
               type='button'
               onClick={() => setActiveTab(ns)}
-              className='flex items-center px-4 py-3 rounded-md border-none cursor-pointer transition-all text-left w-full hover:bg-gray-a3'
+              className='flex items-center px-3 py-2 rounded-md border-none cursor-pointer transition-colors text-left w-full hover:bg-gray-a3'
               style={{
                 backgroundColor:
                   activeTab === ns ? 'var(--indigo-3)' : 'transparent',
                 color: activeTab === ns ? 'var(--indigo-11)' : 'var(--gray-11)',
-                fontWeight: activeTab === ns ? 600 : 400,
               }}
             >
               {(() => {
@@ -469,12 +468,19 @@ function SettingsPage({ context }) {
                   typeof iconName === 'string'
                     ? RadixIcons[iconName] || RadixIcons.BoxIcon
                     : RadixIcons.GearIcon;
-                return <Comp width={16} height={16} />;
+                return <Comp width={16} height={16} className='shrink-0' />;
               })()}
-              <Text as='span' grow='1' truncate ml='2'>
+              <Text
+                as='span'
+                size='2'
+                weight={activeTab === ns ? 'medium' : 'regular'}
+                grow='1'
+                truncate
+                ml='2'
+              >
                 {getNamespaceLabel(ns, t, labels, translationKeys)}
               </Text>
-              <Badge size='1' color='gray' variant='soft'>
+              <Badge size='1' color={activeTab === ns ? 'indigo' : 'gray'} variant='soft'>
                 {groups[ns].length}
               </Badge>
             </Box>
