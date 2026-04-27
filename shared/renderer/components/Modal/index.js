@@ -188,6 +188,7 @@ const Modal = ({
       <Dialog.Content
         maxWidth={resolvedMaxWidth}
         width={width}
+        aria-describedby={undefined}
         className={clsx(className, {
           [s.rightPlacement]: placement === 'right',
         })}

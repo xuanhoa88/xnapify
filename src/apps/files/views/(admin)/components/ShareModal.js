@@ -5,7 +5,13 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useState, useCallback, useImperativeHandle, forwardRef } from 'react';
+import {
+  useState,
+  useCallback,
+  useImperativeHandle,
+  useRef,
+  forwardRef,
+} from 'react';
 
 import {
   LockClosedIcon,
@@ -13,8 +19,18 @@ import {
   GlobeIcon,
   PersonIcon,
   Cross2Icon,
+  Link2Icon,
 } from '@radix-ui/react-icons';
-import { Box, Flex, Text, Button, Select } from '@radix-ui/themes';
+import {
+  Avatar,
+  Box,
+  Flex,
+  Text,
+  Button,
+  Select,
+  Separator,
+  Badge,
+} from '@radix-ui/themes';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
@@ -26,8 +42,6 @@ import { validateForm } from '@shared/validator';
 
 import { shareFileFormSchema } from '../../../validator/admin/file';
 import { updateSharing, fetchFileShares, searchUsersAndGroups } from '../redux';
-
-import s from './ShareModal.css';
 
 const { getUserId } = features;
 
@@ -45,6 +59,7 @@ const ShareModal = forwardRef((props, ref) => {
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState(null);
   const [initError, setInitError] = useState(null);
+  const modalBodyRef = useRef(null);
 
   const resetState = useCallback(() => {
     setIsOpen(false);
@@ -103,7 +118,11 @@ const ShareModal = forwardRef((props, ref) => {
 
   const handleSearch = useCallback(
     async term => {
-      if (!term || term.length < 2) {
+      if (!term) {
+        // Dropdown just opened — don't clear, don't search
+        return;
+      }
+      if (term.length < 2) {
         setSearchResults([]);
         return;
       }
@@ -160,7 +179,12 @@ const ShareModal = forwardRef((props, ref) => {
             justify='center'
             width='32px'
             height='32px'
-            className={isGroup ? s.avatarGroup : s.avatarUser}
+            className={clsx(
+              'shrink-0',
+              isGroup
+                ? 'bg-[var(--indigo-3)] text-[var(--indigo-11)] rounded-[var(--radius-3)]'
+                : 'bg-[var(--teal-3)] text-[var(--teal-11)] rounded-full',
+            )}
           >
             {(() => {
               const Comp = isGroup ? GroupIcon : PersonIcon;
@@ -274,7 +298,13 @@ const ShareModal = forwardRef((props, ref) => {
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
       <Modal.Header onClose={handleClose}>
-        {t('files:share.title', { name: file.name })}
+        <Box
+          className='truncate pr-4'
+          title={t('files:share.title', { name: file.name })}
+          style={{ flex: 1, minWidth: 0 }}
+        >
+          {t('files:share.title', { name: file.name })}
+        </Box>
       </Modal.Header>
 
       <Modal.Body
@@ -286,42 +316,56 @@ const ShareModal = forwardRef((props, ref) => {
             direction='column'
             align='center'
             justify='center'
-            className={s.initErrorContainer}
+            className='py-8 px-6 text-center'
           >
-            <Box className={s.initErrorIcon}>
-              <LockClosedIcon width={48} height={48} />
+            <Box className='bg-[var(--red-a3)] text-[var(--red-9)] p-5 rounded-full mb-5 inline-flex items-center justify-center'>
+              <LockClosedIcon width={40} height={40} />
             </Box>
-            <Text as='p' size='3' weight='medium'>
+            <Text as='p' size='3' weight='medium' color='gray'>
               {initError}
             </Text>
           </Flex>
         ) : (
           <Flex direction='column' gap='5'>
+            {/* ── General access ─────────────────────────── */}
             <Box>
-              <Text as='h4' size='3' weight='bold' className={s.sectionTitle}>
+              <Text
+                as='label'
+                size='2'
+                weight='medium'
+                color='gray'
+                className='mb-2 block'
+              >
                 {t('files:share.general_access', 'General access')}
               </Text>
 
-              <Flex align='start' gap='3' className={s.generalAccessBox}>
+              <Flex
+                align='center'
+                gap='3'
+                className='bg-[var(--gray-a2)] px-3 py-2.5 rounded-[var(--radius-3)] border border-[var(--gray-a4)]'
+              >
                 <Flex
                   align='center'
                   justify='center'
                   className={clsx(
-                    s.accessIconBox,
-                    { [s.accessPrivate]: shareType === 'private' },
-                    { [s.accessShared]: shareType === 'shared_users' },
-                    { [s.accessPublic]: shareType === 'public' },
+                    'w-9 h-9 rounded-full shrink-0 transition-colors',
+                    shareType === 'private' &&
+                      'bg-[var(--gray-a4)] text-[var(--gray-11)]',
+                    shareType === 'shared_users' &&
+                      'bg-[var(--indigo-a4)] text-[var(--indigo-11)]',
+                    (shareType === 'public' || shareType === 'public_link') &&
+                      'bg-[var(--green-a4)] text-[var(--green-11)]',
                   )}
                 >
                   {shareType === 'private' ? (
-                    <LockClosedIcon width={20} height={20} />
+                    <LockClosedIcon width={18} height={18} />
                   ) : shareType === 'shared_users' ? (
-                    <GroupIcon width={20} height={20} />
+                    <GroupIcon width={18} height={18} />
                   ) : (
-                    <GlobeIcon width={20} height={20} />
+                    <GlobeIcon width={18} height={18} />
                   )}
                 </Flex>
-                <Flex direction='column' grow='1'>
+                <Flex direction='column' grow='1' gap='0' minWidth='0'>
                   <Select.Root
                     value={shareType}
                     onValueChange={setShareType}
@@ -329,9 +373,10 @@ const ShareModal = forwardRef((props, ref) => {
                   >
                     <Select.Trigger
                       variant='ghost'
-                      className={s.selectTrigger}
+                      size='1'
+                      className='!-ml-2 !h-6 font-semibold text-[var(--gray-12)] !justify-start'
                     />
-                    <Select.Content>
+                    <Select.Content position='popper' sideOffset={4}>
                       <Select.Item value='private'>
                         {t('files:share.restricted', 'Restricted')}
                       </Select.Item>
@@ -346,7 +391,7 @@ const ShareModal = forwardRef((props, ref) => {
                       </Select.Item>
                     </Select.Content>
                   </Select.Root>
-                  <Text as='p' size='1' color='gray'>
+                  <Text as='p' size='1' color='gray' className='-mt-0.5'>
                     {shareType === 'private'
                       ? t(
                           'files:share.restricted_desc',
@@ -366,49 +411,65 @@ const ShareModal = forwardRef((props, ref) => {
               </Flex>
             </Box>
 
+            {/* ── Shared users section ───────────────────── */}
             {shareType === 'shared_users' && (
               <Box>
-                <Box className={s.searchBoxMargin}>
-                  <SearchableSelect
-                    placeholder={t(
-                      'files:share.add_people_hint',
-                      'Add people and groups',
-                    )}
-                    onSearch={handleSearch}
-                    onChange={handleAddShare}
-                    options={searchResults}
-                    loading={searching}
-                    value=''
-                    clearable
-                    renderOption={renderSearchResult}
-                  />
-                </Box>
+                <SearchableSelect
+                  placeholder={t(
+                    'files:share.add_people_hint',
+                    'Add people and groups',
+                  )}
+                  emptyMessage={t(
+                    'files:share.search_hint',
+                    'Type at least 2 characters to search',
+                  )}
+                  usePortal={false}
+                  onSearch={handleSearch}
+                  onChange={handleAddShare}
+                  options={searchResults}
+                  loading={searching}
+                  value=''
+                  clearable
+                  renderOption={renderSearchResult}
+                />
 
                 {(shares.length > 0 || fileOwner) && (
-                  <Box>
+                  <Box className='mt-5'>
+                    <Separator size='4' className='mb-4' />
                     <Text
-                      as='h4'
-                      size='2'
-                      weight='bold'
-                      className={s.peopleTitle}
+                      as='label'
+                      size='1'
+                      weight='medium'
+                      color='gray'
+                      className='uppercase tracking-wider mb-3 block'
                     >
                       {t(
                         'files:share.people_with_access',
                         'People with access',
                       )}
                     </Text>
-                    <Flex direction='column' gap='2'>
+
+                    <Flex
+                      direction='column'
+                      gap='1'
+                      className='max-h-[240px] overflow-y-auto'
+                    >
+                      {/* Owner row */}
                       {fileOwner && (
-                        <Flex align='center' gap='3' py='2'>
-                          <Flex
-                            align='center'
-                            justify='center'
-                            width='32px'
-                            height='32px'
-                            className={s.avatarGroup}
-                          >
-                            <PersonIcon width={16} height={16} />
-                          </Flex>
+                        <Flex
+                          align='center'
+                          gap='3'
+                          className='py-2 px-2 rounded-[var(--radius-2)]'
+                        >
+                          <Avatar
+                            size='2'
+                            variant='soft'
+                            color='indigo'
+                            fallback={(fileOwner.name || fileOwner.email || '?')
+                              .charAt(0)
+                              .toUpperCase()}
+                            radius='full'
+                          />
                           <Flex direction='column' grow='1' minWidth='0'>
                             <Text
                               size='2'
@@ -418,38 +479,48 @@ const ShareModal = forwardRef((props, ref) => {
                             >
                               {fileOwner.name || fileOwner.email}
                             </Text>
-                            <Text as='span' size='1' color='gray'>
-                              {t('files:share.owner', 'Owner')}
+                            <Text as='span' size='1' color='gray' truncate>
+                              {fileOwner.email && fileOwner.name
+                                ? fileOwner.email
+                                : t('files:share.owner', 'Owner')}
                             </Text>
                           </Flex>
-                          <Text as='span' size='2' className={s.ownerLabel}>
+                          <Badge
+                            variant='soft'
+                            color='gray'
+                            size='1'
+                            radius='full'
+                            className='shrink-0'
+                          >
                             {t('files:share.owner', 'Owner')}
-                          </Text>
-                          <Box width='32px' />
-                          {/* Spacer for remove button */}
+                          </Badge>
                         </Flex>
                       )}
+
+                      {/* Share recipients */}
                       {shares.map((item, index) => (
-                        <Flex key={index} align='center' gap='3' py='2'>
-                          <Flex
-                            align='center'
-                            justify='center'
-                            width='32px'
-                            height='32px'
-                            className={
-                              item.entity_type === 'group'
-                                ? s.avatarGroup
-                                : s.avatarUser
+                        <Flex
+                          key={index}
+                          align='center'
+                          gap='3'
+                          className='py-2 px-2 rounded-[var(--radius-2)] hover:bg-[var(--gray-a2)] transition-colors group'
+                        >
+                          <Avatar
+                            size='2'
+                            variant='soft'
+                            color={
+                              item.entity_type === 'group' ? 'indigo' : 'teal'
                             }
-                          >
-                            {(() => {
-                              const Comp =
-                                item.entity_type === 'user'
-                                  ? PersonIcon
-                                  : GroupIcon;
-                              return <Comp width={16} height={16} />;
+                            fallback={(() => {
+                              const name = item.user
+                                ? item.user.name || item.user.email
+                                : item.group && item.group.name;
+                              return (name || '?').charAt(0).toUpperCase();
                             })()}
-                          </Flex>
+                            radius={
+                              item.entity_type === 'group' ? 'medium' : 'full'
+                            }
+                          />
                           <Flex direction='column' grow='1' minWidth='0'>
                             <Text
                               size='2'
@@ -457,12 +528,15 @@ const ShareModal = forwardRef((props, ref) => {
                               truncate
                               highContrast
                             >
-                              {(item.user && item.user.email) ||
-                                (item.group && item.group.name)}
+                              {item.user
+                                ? item.user.name || item.user.email
+                                : item.group && item.group.name}
                             </Text>
-                            <Text as='span' size='1' color='gray'>
+                            <Text as='span' size='1' color='gray' truncate>
                               {item.entity_type === 'user'
-                                ? t('files:share.user', 'User')
+                                ? item.user && item.user.name && item.user.email
+                                  ? item.user.email
+                                  : t('files:share.user', 'User')
                                 : t('files:share.group', 'Group')}
                             </Text>
                           </Flex>
@@ -474,15 +548,19 @@ const ShareModal = forwardRef((props, ref) => {
                             }
                             disabled={!isOwner && !item.isNew}
                           >
-                            <Select.Trigger variant='surface' size='1' />
-                            <Select.Content>
+                            <Select.Trigger
+                              variant='ghost'
+                              size='1'
+                              className='shrink-0'
+                            />
+                            <Select.Content position='popper' sideOffset={4}>
                               <Select.Item value='viewer'>
-                                {t('files:share.permission_view', 'View')}
+                                {t('files:share.permission_view', 'Viewer')}
                               </Select.Item>
                               <Select.Item value='editor'>
                                 {t(
                                   'files:share.permission_edit_download',
-                                  'Edit / Download',
+                                  'Editor',
                                 )}
                               </Select.Item>
                             </Select.Content>
@@ -491,14 +569,15 @@ const ShareModal = forwardRef((props, ref) => {
                           {isOwner || item.isNew ? (
                             <Button
                               variant='ghost'
+                              color='gray'
                               size='1'
-                              className={s.closeBtn}
+                              className='!w-7 !h-7 !p-0 shrink-0 opacity-0 group-hover:opacity-100 hover:!text-[var(--red-11)] hover:!bg-[var(--red-a3)] transition-all rounded-full'
                               onClick={() => handleRemoveShare(index)}
                             >
-                              <Cross2Icon width={16} height={16} />
+                              <Cross2Icon width={14} height={14} />
                             </Button>
                           ) : (
-                            <Box width='32px' />
+                            <Box className='w-7 shrink-0' />
                           )}
                         </Flex>
                       ))}
@@ -515,13 +594,20 @@ const ShareModal = forwardRef((props, ref) => {
         <Modal.Actions>
           {!initError ? (
             <>
-              <Button variant='outline' size='1' onClick={copyLink}>
+              <Button
+                variant='outline'
+                color='gray'
+                size='2'
+                onClick={copyLink}
+              >
+                <Link2Icon width={16} height={16} />
                 {t('files:share.copy_link', 'Copy link')}
               </Button>
               <Box grow='1' />
               <Button
                 variant='solid'
                 color='indigo'
+                size='2'
                 onClick={handleSave}
                 loading={loading}
               >
@@ -529,7 +615,12 @@ const ShareModal = forwardRef((props, ref) => {
               </Button>
             </>
           ) : (
-            <Button variant='solid' color='indigo' onClick={handleClose}>
+            <Button
+              variant='solid'
+              color='indigo'
+              size='2'
+              onClick={handleClose}
+            >
               {t('files:share.close', 'Close')}
             </Button>
           )}

@@ -45,6 +45,9 @@ function SearchableSelect({
   disabled = false,
   placeholder = 'Select...',
   searchPlaceholder = 'Search...',
+  emptyMessage,
+  portalContainer,
+  usePortal = true,
   debounceMs = 300,
   loading = false,
   loadingMore = false,
@@ -74,6 +77,7 @@ function SearchableSelect({
 
   // Dynamic positioning for Portal
   const updatePosition = useCallback(() => {
+    if (!usePortal) return;
     if (!containerRef.current || !isOpen || !menuRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
 
@@ -91,7 +95,7 @@ function SearchableSelect({
     menu.style.left = `${rect.left}px`;
     menu.style.width = `${rect.width}px`;
     menu.style.zIndex = '99999';
-  }, [isOpen]);
+  }, [isOpen, usePortal]);
 
   useEffect(() => {
     if (isOpen) {
@@ -311,18 +315,19 @@ function SearchableSelect({
         </Flex>
       </Flex>
 
-      {isOpen && (
-        <Portal>
+      {isOpen && (() => {
+        const menuContent = (
           <Theme>
             <Box
               ref={node => {
                 menuRef.current = node;
-                if (node && isOpen) {
+                if (node && isOpen && usePortal) {
                   // Small delay to ensure DOM is fully painted before measuring
                   requestAnimationFrame(() => updatePosition());
                 }
               }}
               className={s.menuContainer}
+              style={!usePortal ? { position: 'absolute', top: '100%', left: 0, width: '100%', zIndex: 10, marginTop: '4px' } : undefined}
             >
               {showSearch && (
                 <Box px='2' pb='2'>
@@ -431,18 +436,21 @@ function SearchableSelect({
                 ) : (
                   <Box p='3' className={s.messageBox}>
                     <Text size={size}>
-                      {t(
-                        'shared:components.searchableSelect.noOptions',
-                        'No options found',
-                      )}
+                      {emptyMessage ||
+                        t(
+                          'shared:components.searchableSelect.noOptions',
+                          'No options found',
+                        )}
                     </Text>
                   </Box>
                 )}
               </Box>
             </Box>
           </Theme>
-        </Portal>
-      )}
+        );
+
+        return usePortal ? <Portal container={portalContainer}>{menuContent}</Portal> : menuContent;
+      })()}
     </Box>
   );
 }
@@ -474,6 +482,9 @@ SearchableSelect.propTypes = {
   renderOption: PropTypes.func,
   placeholder: PropTypes.string,
   searchPlaceholder: PropTypes.string,
+  emptyMessage: PropTypes.string,
+  portalContainer: PropTypes.any,
+  usePortal: PropTypes.bool,
   debounceMs: PropTypes.number,
   size: PropTypes.string,
   className: PropTypes.string,

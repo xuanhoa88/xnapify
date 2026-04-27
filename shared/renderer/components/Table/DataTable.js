@@ -625,169 +625,177 @@ function DataTable({
                 (loaderSlot && loaderSlot.props.message) ||
                 t('shared:components.dataTable.loading', 'Loading...')
               }
+              className={s.fillHeight}
             />
           ) : (
             <>
               {/* Bulk actions */}
-          {hasSelection && bulkActionsSlot && (
-            <TableBulkActions
-              count={selectedKeys.length}
-              itemCountLabel={bulkActionsSlot.props.label}
-              actions={bulkActionsSlot.props.actions || []}
-              moreActions={bulkActionsSlot.props.moreActions}
-              onClear={clearSelection}
-            />
-          )}
+              {hasSelection && bulkActionsSlot && (
+                <TableBulkActions
+                  count={selectedKeys.length}
+                  itemCountLabel={bulkActionsSlot.props.label}
+                  actions={bulkActionsSlot.props.actions || []}
+                  moreActions={bulkActionsSlot.props.moreActions}
+                  onClear={clearSelection}
+                />
+              )}
 
-          {/* Toolbar */}
-          {toolbarSlot}
+              {/* Toolbar */}
+              {toolbarSlot}
 
-          {/* Table view */}
-          {viewType === 'table' ? (
-            <Box className={clsx(s.tableWrapper, s.customScrollbar)}>
-              <Table.Root variant={variant}>
-                <Table.Header className='bg-[var(--color-panel-solid)]'>
-                  <Table.Row>
-                    {selectable && (
-                      <Table.ColumnHeaderCell
-                        className={clsx(s.checkboxCol, s.headerCell)}
-                      >
-                        <Checkbox
-                          checked={isAllSelected}
-                          onCheckedChange={handleSelectAll}
-                        />
-                      </Table.ColumnHeaderCell>
-                    )}
-                    {visibleColumns.map(col => (
-                      <Table.ColumnHeaderCell
-                        key={col.key}
-                        className={clsx(s.headerCell, col.className)}
-                        style={
-                          col.width
-                            ? { width: col.width, minWidth: col.width }
-                            : undefined
-                        }
-                      >
-                        {col.title}
-                      </Table.ColumnHeaderCell>
-                    ))}
-                  </Table.Row>
-                </Table.Header>
-                <Table.Body>
-                  {hasData &&
-                    dataSource.map((record, rowIndex) => {
-                      const key = resolveRowKey(record, rowKey);
-                      const isSelected =
-                        selectable &&
-                        selectedKeys &&
-                        selectedKeys.includes(key);
-
-                      return (
-                        <Table.Row
-                          key={key}
-                          className={clsx({
-                            [s.selectedRow]: isSelected,
-                          })}
-                        >
-                          {selectable && (
-                            <Table.Cell
-                              className={clsx(s.checkboxCol, s.bodyCell)}
-                            >
-                              <Checkbox
-                                checked={isSelected}
-                                onCheckedChange={c => handleSelectRow(key, c)}
-                              />
-                            </Table.Cell>
-                          )}
-                          {visibleColumns.map(col => {
-                            const value = getNestedValue(record, col.dataIndex);
-                            return (
-                              <Table.Cell
-                                key={col.key}
-                                className={clsx(s.bodyCell, col.className)}
-                              >
-                                {col.render
-                                  ? col.render(value, record, rowIndex)
-                                  : value != null
-                                    ? value
-                                    : '—'}
-                              </Table.Cell>
-                            );
-                          })}
-                        </Table.Row>
-                      );
-                    })}
-                </Table.Body>
-              </Table.Root>
-              {!hasData &&
-                (emptySlot || (
-                  <DataTableEmpty
-                    title={t(
-                      'shared:components.dataTable.noData',
-                      'No data found',
-                    )}
-                  />
-                ))}
-            </Box>
-          ) : (
-            <Box className={clsx(s.gridWrapper, s.customScrollbar)}>
-              {hasData ? (
-                <Box
-                  className={clsx(
-                    s.gridContainer,
-                    gridCols === 2 && s.gridCols2,
-                    gridCols === 4 && s.gridCols4,
-                    gridCols === 5 && s.gridCols5,
-                    gridCols === 6 && s.gridCols6,
-                  )}
-                >
-                  {dataSource.map((record, rowIndex) => {
-                    const key = resolveRowKey(record, rowKey);
-                    const isSelected =
-                      selectable && selectedKeys && selectedKeys.includes(key);
-
-                    return (
-                      <Box
-                        key={key}
-                        className={clsx(
-                          s.gridItem,
-                          isSelected && s.selectedRow,
-                        )}
-                      >
+              {/* Table view */}
+              {viewType === 'table' ? (
+                <Box className={clsx(s.tableWrapper, s.customScrollbar)}>
+                  <Table.Root variant={variant}>
+                    <Table.Header className='bg-[var(--color-panel-solid)]'>
+                      <Table.Row>
                         {selectable && (
-                          <Box className={s.gridCheckbox}>
+                          <Table.ColumnHeaderCell
+                            className={clsx(s.checkboxCol, s.headerCell)}
+                          >
                             <Checkbox
-                              checked={isSelected}
-                              onCheckedChange={c => handleSelectRow(key, c)}
+                              checked={isAllSelected}
+                              onCheckedChange={handleSelectAll}
                             />
-                          </Box>
+                          </Table.ColumnHeaderCell>
                         )}
-                        {renderCard
-                          ? renderCard(record, visibleColumns, rowIndex)
-                          : JSON.stringify(record)}
-                      </Box>
-                    );
-                  })}
+                        {visibleColumns.map(col => (
+                          <Table.ColumnHeaderCell
+                            key={col.key}
+                            className={clsx(s.headerCell, col.className)}
+                            style={
+                              col.width
+                                ? { width: col.width, minWidth: col.width }
+                                : undefined
+                            }
+                          >
+                            {col.title}
+                          </Table.ColumnHeaderCell>
+                        ))}
+                      </Table.Row>
+                    </Table.Header>
+                    <Table.Body>
+                      {hasData &&
+                        dataSource.map((record, rowIndex) => {
+                          const key = resolveRowKey(record, rowKey);
+                          const isSelected =
+                            selectable &&
+                            selectedKeys &&
+                            selectedKeys.includes(key);
+
+                          return (
+                            <Table.Row
+                              key={key}
+                              className={clsx({
+                                [s.selectedRow]: isSelected,
+                              })}
+                            >
+                              {selectable && (
+                                <Table.Cell
+                                  className={clsx(s.checkboxCol, s.bodyCell)}
+                                >
+                                  <Checkbox
+                                    checked={isSelected}
+                                    onCheckedChange={c =>
+                                      handleSelectRow(key, c)
+                                    }
+                                  />
+                                </Table.Cell>
+                              )}
+                              {visibleColumns.map(col => {
+                                const value = getNestedValue(
+                                  record,
+                                  col.dataIndex,
+                                );
+                                return (
+                                  <Table.Cell
+                                    key={col.key}
+                                    className={clsx(s.bodyCell, col.className)}
+                                  >
+                                    {col.render
+                                      ? col.render(value, record, rowIndex)
+                                      : value != null
+                                        ? value
+                                        : '—'}
+                                  </Table.Cell>
+                                );
+                              })}
+                            </Table.Row>
+                          );
+                        })}
+                    </Table.Body>
+                  </Table.Root>
+                  {!hasData &&
+                    (emptySlot || (
+                      <DataTableEmpty
+                        title={t(
+                          'shared:components.dataTable.noData',
+                          'No data found',
+                        )}
+                      />
+                    ))}
                 </Box>
               ) : (
-                emptySlot || (
-                  <DataTableEmpty
-                    title={t(
-                      'shared:components.dataTable.noData',
-                      'No data found',
-                    )}
-                  />
-                )
-              )}
-            </Box>
-          )}
+                <Box className={clsx(s.gridWrapper, s.customScrollbar)}>
+                  {hasData ? (
+                    <Box
+                      className={clsx(
+                        s.gridContainer,
+                        gridCols === 2 && s.gridCols2,
+                        gridCols === 4 && s.gridCols4,
+                        gridCols === 5 && s.gridCols5,
+                        gridCols === 6 && s.gridCols6,
+                      )}
+                    >
+                      {dataSource.map((record, rowIndex) => {
+                        const key = resolveRowKey(record, rowKey);
+                        const isSelected =
+                          selectable &&
+                          selectedKeys &&
+                          selectedKeys.includes(key);
 
-          {/* Loading overlay */}
-          {loading && hasData && (
-            <Box className={s.loadingOverlay}>
-              <Loader variant='spinner' />
-            </Box>
-          )}
+                        return (
+                          <Box
+                            key={key}
+                            className={clsx(
+                              s.gridItem,
+                              isSelected && s.selectedRow,
+                            )}
+                          >
+                            {selectable && (
+                              <Box className={s.gridCheckbox}>
+                                <Checkbox
+                                  checked={isSelected}
+                                  onCheckedChange={c => handleSelectRow(key, c)}
+                                />
+                              </Box>
+                            )}
+                            {renderCard
+                              ? renderCard(record, visibleColumns, rowIndex)
+                              : JSON.stringify(record)}
+                          </Box>
+                        );
+                      })}
+                    </Box>
+                  ) : (
+                    emptySlot || (
+                      <DataTableEmpty
+                        title={t(
+                          'shared:components.dataTable.noData',
+                          'No data found',
+                        )}
+                      />
+                    )
+                  )}
+                </Box>
+              )}
+
+              {/* Loading overlay */}
+              {loading && hasData && (
+                <Box className={s.loadingOverlay}>
+                  <Loader variant='spinner' />
+                </Box>
+              )}
             </>
           )}
 

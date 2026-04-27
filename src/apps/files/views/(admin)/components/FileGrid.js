@@ -7,7 +7,11 @@
 
 import { useState, useRef, useCallback, useMemo } from 'react';
 
-import { FileTextIcon, FileIcon, StarIcon } from '@radix-ui/react-icons';
+import {
+  FileIcon,
+  StarIcon,
+  ArchiveIcon as FolderIcon,
+} from '@radix-ui/react-icons';
 import { Box, Flex, Text, Card } from '@radix-ui/themes';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
@@ -61,9 +65,22 @@ export default function FileGrid({ onShare }) {
   const [targetFile, setTargetFile] = useState(null);
   const renamePromptRef = useRef(null);
 
-  const handleContainerClick = useCallback(() => {
-    dispatch(clearSelection());
-  }, [dispatch]);
+  const handleContainerClick = useCallback(
+    e => {
+      // Do not clear selection if interacting with buttons, cards, or menus
+      if (
+        e.target.closest('button') ||
+        e.target.closest('[role="button"]') ||
+        e.target.closest('a') ||
+        e.target.closest('[role="menu"]') ||
+        e.target.closest('[role="menuitem"]')
+      ) {
+        return;
+      }
+      dispatch(clearSelection());
+    },
+    [dispatch],
+  );
 
   const handleDoubleClick = useCallback(
     file => {
@@ -123,9 +140,14 @@ export default function FileGrid({ onShare }) {
 
   const onTrash = useCallback(
     file => {
-      const idsToDelete = selectedIds.includes(file.id)
-        ? selectedIds
-        : [file.id];
+      let idsToDelete = [];
+      if (!file) {
+        idsToDelete = selectedIds;
+      } else {
+        idsToDelete = selectedIds.includes(file.id) ? selectedIds : [file.id];
+      }
+
+      if (idsToDelete.length === 0) return;
 
       if (currentView === 'trash') {
         dispatch(deleteItemsPermanently(idsToDelete));
@@ -176,7 +198,7 @@ export default function FileGrid({ onShare }) {
         title: t('files:grid.name', 'Name'),
         order: 10,
         render: (value, file) => (
-          <Flex align='center' gap='2'>
+          <Flex align='center' gap='2' style={{ minWidth: 0 }}>
             <Flex
               align='center'
               justify='center'
@@ -186,7 +208,7 @@ export default function FileGrid({ onShare }) {
               )}
             >
               {file.type === 'folder' ? (
-                <FileTextIcon width={24} height={24} />
+                <FolderIcon width={24} height={24} />
               ) : (
                 <FileIcon width={24} height={24} />
               )}
@@ -202,6 +224,7 @@ export default function FileGrid({ onShare }) {
               truncate
               highContrast
               title={file.name}
+              style={{ minWidth: 0, flex: 1 }}
             >
               {file.name}
             </Text>
@@ -295,7 +318,7 @@ export default function FileGrid({ onShare }) {
           )}
         >
           {file.type === 'folder' ? (
-            <FileTextIcon width={48} height={48} />
+            <FolderIcon width={48} height={48} />
           ) : (
             <FileIcon width={48} height={48} />
           )}
@@ -305,7 +328,7 @@ export default function FileGrid({ onShare }) {
             </Box>
           )}
         </Flex>
-        <Flex direction='column' align='center' className={s.nameContainer}>
+        <Flex direction='column' className={s.nameContainer}>
           <Text
             as='span'
             size='2'
@@ -314,6 +337,7 @@ export default function FileGrid({ onShare }) {
             align='center'
             highContrast
             title={file.name}
+            style={{ width: '100%' }}
           >
             {file.name}
           </Text>
@@ -356,7 +380,6 @@ export default function FileGrid({ onShare }) {
         initialized={initialized}
         viewType={viewMode === 'list' ? 'table' : 'grid'}
         columns={columns}
-        gridCols={5}
         borderless
         renderCard={renderCard}
         selectable
@@ -364,12 +387,24 @@ export default function FileGrid({ onShare }) {
         onSelectionChange={keys => dispatch(setSelection(keys))}
       >
         <DataTable.Empty
-          icon={<FileTextIcon width={48} height={48} />}
+          icon={<FolderIcon width={48} height={48} />}
           title={t('files:grid.empty_title', 'No files here')}
           description={t(
             'files:grid.empty_desc',
             'Drop files here or use the "New" button.',
           )}
+        />
+        <DataTable.BulkActions
+          count={selectedIds.length}
+          onClear={() => dispatch(clearSelection())}
+          actions={[
+            {
+              label: t('common:delete', 'Delete'),
+              icon: 'TrashIcon',
+              variant: 'danger',
+              onClick: () => onTrash(),
+            },
+          ]}
         />
         <DataTable.Loader
           variant={viewMode === 'grid' ? 'cards' : 'skeleton'}
