@@ -1,9 +1,17 @@
 .trigger {
   position: relative;
   z-index: 1;
-  cursor: pointer;
+  cursor: pointer !important;
 }
 
 .header {
   border-bottom: 1px solid var(--gray-a4);
+}
+
+.item {
+  cursor: pointer !important;
+}
+
+.item[data-disabled] {
+  cursor: not-allowed !important;
 }

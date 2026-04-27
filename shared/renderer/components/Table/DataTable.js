@@ -592,29 +592,13 @@ function DataTable({
         ? Math.ceil(paginationProps.total / paginationProps.pageSize)
         : 1)
     : 0;
-  const hasPageSizeOptions =
-    paginationProps &&
-    paginationProps.pageSizeOptions &&
-    paginationProps.pageSizeOptions.length > 0;
-  const showPagination =
-    !!paginationProps && (resolvedTotalPages > 1 || hasPageSizeOptions);
+  const showPagination = !!paginationProps;
 
   // ─── Render ────────────────────────────────────────────────────────
   return (
     <>
       {/* Header — always visible */}
       {headerSlot}
-
-      {/* First-load loader */}
-      {isFirstLoad && (
-        <Loader
-          variant={(loaderSlot && loaderSlot.props.variant) || 'skeleton'}
-          message={
-            (loaderSlot && loaderSlot.props.message) ||
-            t('shared:components.dataTable.loading', 'Loading...')
-          }
-        />
-      )}
 
       {/* Error state */}
       {!isFirstLoad && hasError && (
@@ -624,8 +608,8 @@ function DataTable({
         />
       )}
 
-      {/* Normal content */}
-      {!isFirstLoad && !hasError && (
+      {/* Main content box */}
+      {(!hasError || isFirstLoad) && (
         <Box
           className={clsx(
             'data-table-content',
@@ -634,7 +618,17 @@ function DataTable({
             { [s.fillHeight]: fillHeight },
           )}
         >
-          {/* Bulk actions */}
+          {isFirstLoad ? (
+            <Loader
+              variant={(loaderSlot && loaderSlot.props.variant) || 'skeleton'}
+              message={
+                (loaderSlot && loaderSlot.props.message) ||
+                t('shared:components.dataTable.loading', 'Loading...')
+              }
+            />
+          ) : (
+            <>
+              {/* Bulk actions */}
           {hasSelection && bulkActionsSlot && (
             <TableBulkActions
               count={selectedKeys.length}
@@ -793,6 +787,8 @@ function DataTable({
             <Box className={s.loadingOverlay}>
               <Loader variant='spinner' />
             </Box>
+          )}
+            </>
           )}
 
           {/* Pagination */}

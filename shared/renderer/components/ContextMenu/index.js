@@ -183,7 +183,7 @@ const Item = forwardRef(
           color={color}
           disabled={disabled}
           shortcut={shortcut}
-          className={className}
+          className={clsx(s.item, className)}
           onSelect={onClick}
           asChild
           {...props}
@@ -199,7 +199,7 @@ const Item = forwardRef(
         color={color}
         disabled={disabled}
         shortcut={shortcut}
-        className={className}
+        className={clsx(s.item, className)}
         onSelect={onClick}
         {...props}
       >
