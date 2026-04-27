@@ -576,8 +576,6 @@ function DataTable({
     [columns],
   );
 
-  const colSpan = visibleColumns.length + (selectable ? 1 : 0);
-
   // ─── Determine states ──────────────────────────────────────────────
   const isFirstLoad =
     !initialized || (loading && (!dataSource || dataSource.length === 0));
@@ -682,7 +680,7 @@ function DataTable({
                   </Table.Row>
                 </Table.Header>
                 <Table.Body>
-                  {hasData ? (
+                  {hasData &&
                     dataSource.map((record, rowIndex) => {
                       const key = resolveRowKey(record, rowKey);
                       const isSelected =
@@ -724,23 +722,18 @@ function DataTable({
                           })}
                         </Table.Row>
                       );
-                    })
-                  ) : (
-                    <Table.Row>
-                      <Table.Cell colSpan={colSpan}>
-                        {emptySlot || (
-                          <DataTableEmpty
-                            title={t(
-                              'shared:components.dataTable.noData',
-                              'No data found',
-                            )}
-                          />
-                        )}
-                      </Table.Cell>
-                    </Table.Row>
-                  )}
+                    })}
                 </Table.Body>
               </Table.Root>
+              {!hasData &&
+                (emptySlot || (
+                  <DataTableEmpty
+                    title={t(
+                      'shared:components.dataTable.noData',
+                      'No data found',
+                    )}
+                  />
+                ))}
             </Box>
           ) : (
             <Box className={clsx(s.gridWrapper, s.customScrollbar)}>
