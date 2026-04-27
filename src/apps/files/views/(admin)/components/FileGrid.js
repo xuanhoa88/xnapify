@@ -9,7 +9,7 @@ import { useState, useRef, useCallback, useMemo } from 'react';
 
 import {
   FileIcon,
-  StarIcon,
+  StarFilledIcon,
   ArchiveIcon as FolderIcon,
 } from '@radix-ui/react-icons';
 import { Box, Flex, Text, Card } from '@radix-ui/themes';
@@ -214,7 +214,7 @@ export default function FileGrid({ onShare }) {
               )}
               {file.is_starred && currentView !== 'trash' && (
                 <Box className={s.starIconList}>
-                  <StarIcon width={10} height={10} />
+                  <StarFilledIcon width={12} height={12} />
                 </Box>
               )}
             </Flex>
@@ -317,16 +317,18 @@ export default function FileGrid({ onShare }) {
             file.type === 'folder' ? s.folderIcon : s.fileIcon,
           )}
         >
-          {file.type === 'folder' ? (
-            <FolderIcon width={48} height={48} />
-          ) : (
-            <FileIcon width={48} height={48} />
-          )}
-          {file.is_starred && currentView !== 'trash' && (
-            <Box className={s.starIconGrid}>
-              <StarIcon width={16} height={16} />
-            </Box>
-          )}
+          <Box className='relative inline-flex'>
+            {file.type === 'folder' ? (
+              <FolderIcon width={48} height={48} />
+            ) : (
+              <FileIcon width={48} height={48} />
+            )}
+            {file.is_starred && currentView !== 'trash' && (
+              <Box className={s.starIconGrid}>
+                <StarFilledIcon width={16} height={16} />
+              </Box>
+            )}
+          </Box>
         </Flex>
         <Flex direction='column' className={s.nameContainer}>
           <Text

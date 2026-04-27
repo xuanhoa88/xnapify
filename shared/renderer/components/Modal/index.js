@@ -42,7 +42,13 @@ const ModalHeader = ({ children, onClose, className }) => (
     </Dialog.Title>
     {onClose && (
       <Dialog.Close>
-        <Button variant='ghost' color='gray' size='1' className='shrink-0' onClick={onClose}>
+        <Button
+          variant='ghost'
+          color='gray'
+          size='1'
+          className='shrink-0'
+          onClick={onClose}
+        >
           <Cross2Icon width={16} height={16} />
         </Button>
       </Dialog.Close>

@@ -5,13 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import {
-  useState,
-  useCallback,
-  useImperativeHandle,
-  useRef,
-  forwardRef,
-} from 'react';
+import { useState, useCallback, useImperativeHandle, forwardRef } from 'react';
 
 import {
   LockClosedIcon,
@@ -59,7 +53,6 @@ const ShareModal = forwardRef((props, ref) => {
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState(null);
   const [initError, setInitError] = useState(null);
-  const modalBodyRef = useRef(null);
 
   const resetState = useCallback(() => {
     setIsOpen(false);
@@ -298,13 +291,7 @@ const ShareModal = forwardRef((props, ref) => {
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
       <Modal.Header onClose={handleClose}>
-        <Box
-          className='truncate pr-4'
-          title={t('files:share.title', { name: file.name })}
-          style={{ flex: 1, minWidth: 0 }}
-        >
-          {t('files:share.title', { name: file.name })}
-        </Box>
+        {t('files:share.title', { name: file.name })}
       </Modal.Header>
 
       <Modal.Body

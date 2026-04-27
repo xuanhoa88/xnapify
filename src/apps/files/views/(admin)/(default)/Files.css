@@ -43,3 +43,42 @@
   overflow-y: auto;
   position: relative;
 }
+
+.isDragging {
+  position: relative;
+}
+
+.dragOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--indigo-a4);
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+  border-radius: var(--radius-4);
+  margin: var(--space-6);
+}
+
+.dragOverlayContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 3px dashed var(--indigo-9);
+  border-radius: var(--radius-4);
+  background-color: var(--color-panel-solid);
+  padding: var(--space-8);
+  box-shadow: var(--shadow-4);
+  pointer-events: none;
+}
+
+.dragOverlayIcon {
+  color: var(--indigo-9);
+  margin-bottom: var(--space-4);
+}
+
+.dragOverlayText {
+  color: var(--indigo-11);
+}

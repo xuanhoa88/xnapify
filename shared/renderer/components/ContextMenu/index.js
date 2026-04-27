@@ -158,9 +158,6 @@ const Item = forwardRef(
       groups,
       ownerId,
       shortcut,
-      // Consume legacy props so they don't spread to the DOM.
-      // eslint-disable-next-line no-unused-vars
-      as,
       asChild,
       ...props
     },
@@ -235,9 +232,9 @@ Item.propTypes = {
     PropTypes.arrayOf(PropTypes.string),
   ]),
   ownerId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-  as: PropTypes.elementType,
   to: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
   href: PropTypes.string,
+  asChild: PropTypes.bool,
 };
 
 Item.displayName = 'ContextMenu.Item';

@@ -315,142 +315,150 @@ function SearchableSelect({
         </Flex>
       </Flex>
 
-      {isOpen && (() => {
-        const menuContent = (
-          <Theme>
-            <Box
-              ref={node => {
-                menuRef.current = node;
-                if (node && isOpen && usePortal) {
-                  // Small delay to ensure DOM is fully painted before measuring
-                  requestAnimationFrame(() => updatePosition());
-                }
-              }}
-              className={s.menuContainer}
-              style={!usePortal ? { position: 'absolute', top: '100%', left: 0, width: '100%', zIndex: 10, marginTop: '4px' } : undefined}
-            >
-              {showSearch && (
-                <Box px='2' pb='2'>
-                  <TextField.Root
-                    ref={inputRef}
-                    size={size}
-                    value={searchTerm}
-                    onChange={handleSearchChange}
-                    placeholder={displaySearchPlaceholder}
-                    onKeyDown={e => e.key === 'Escape' && setIsOpen(false)}
-                    onClick={e => e.stopPropagation()}
-                  >
-                    <TextField.Slot>
-                      <Icon name='MagnifyingGlassIcon' size={14} />
-                    </TextField.Slot>
-                    {loading && (
-                      <TextField.Slot>
-                        <Spinner size='1' />
-                      </TextField.Slot>
-                    )}
-                  </TextField.Root>
-                </Box>
-              )}
+      {isOpen &&
+        (() => {
+          const menuContent = (
+            <Theme>
               <Box
-                ref={optionsListRef}
-                className={s.optionsList}
-                onScroll={handleScroll}
-                role='listbox'
-                aria-multiselectable={multiple}
+                ref={node => {
+                  menuRef.current = node;
+                  if (node && isOpen && usePortal) {
+                    // Small delay to ensure DOM is fully painted before measuring
+                    requestAnimationFrame(() => updatePosition());
+                  }
+                }}
+                className={clsx(s.menuContainer, {
+                  'absolute top-full left-0 w-full z-10 mt-1': !usePortal,
+                })}
               >
-                {loading && !filteredOptions.length ? (
-                  <Box p='3' className={s.messageBox}>
-                    <Text size={size}>
-                      {t(
-                        'shared:components.searchableSelect.loading',
-                        'Loading...',
+                {showSearch && (
+                  <Box px='2' pb='2'>
+                    <TextField.Root
+                      ref={inputRef}
+                      size={size}
+                      value={searchTerm}
+                      onChange={handleSearchChange}
+                      placeholder={displaySearchPlaceholder}
+                      onKeyDown={e => e.key === 'Escape' && setIsOpen(false)}
+                      onClick={e => e.stopPropagation()}
+                    >
+                      <TextField.Slot>
+                        <Icon name='MagnifyingGlassIcon' size={14} />
+                      </TextField.Slot>
+                      {loading && (
+                        <TextField.Slot>
+                          <Spinner size='1' />
+                        </TextField.Slot>
                       )}
-                    </Text>
-                  </Box>
-                ) : filteredOptions.length > 0 ? (
-                  <>
-                    {filteredOptions.map(option => {
-                      const optSelected = isSelected(option.value);
-                      return (
-                        <Flex
-                          as='li'
-                          key={option.value}
-                          role='option'
-                          tabIndex={0}
-                          aria-selected={optSelected}
-                          align='center'
-                          gap='2'
-                          onClick={() => handleSelect(option.value)}
-                          onKeyDown={e =>
-                            e.key === 'Enter' && handleSelect(option.value)
-                          }
-                          className={clsx(s.optionItem, {
-                            [s.optionItemSelected]: optSelected,
-                          })}
-                        >
-                          {multiple && (
-                            <Box
-                              className={
-                                optSelected
-                                  ? s.optionIconSelected
-                                  : s.optionIcon
-                              }
-                            >
-                              <Icon
-                                name={
-                                  optSelected
-                                    ? 'CheckCircledIcon'
-                                    : 'CircleIcon'
-                                }
-                                size={16}
-                              />
-                            </Box>
-                          )}
-                          <Text size={size} className={s.optionText}>
-                            {renderOption ? renderOption(option) : option.label}
-                          </Text>
-                        </Flex>
-                      );
-                    })}
-                    {loadingMore && (
-                      <Box p='2' className={s.messageBox}>
-                        <Text size='1'>
-                          {t(
-                            'shared:components.searchableSelect.loadingMore',
-                            'Loading more...',
-                          )}
-                        </Text>
-                      </Box>
-                    )}
-                    {!loadingMore && hasMore && (
-                      <Box p='2' className={s.messageBox}>
-                        <Text size='1'>
-                          {t(
-                            'shared:components.searchableSelect.scrollForMore',
-                            'Scroll for more',
-                          )}
-                        </Text>
-                      </Box>
-                    )}
-                  </>
-                ) : (
-                  <Box p='3' className={s.messageBox}>
-                    <Text size={size}>
-                      {emptyMessage ||
-                        t(
-                          'shared:components.searchableSelect.noOptions',
-                          'No options found',
-                        )}
-                    </Text>
+                    </TextField.Root>
                   </Box>
                 )}
+                <Box
+                  ref={optionsListRef}
+                  className={s.optionsList}
+                  onScroll={handleScroll}
+                  role='listbox'
+                  aria-multiselectable={multiple}
+                >
+                  {loading && !filteredOptions.length ? (
+                    <Box p='3' className={s.messageBox}>
+                      <Text size={size}>
+                        {t(
+                          'shared:components.searchableSelect.loading',
+                          'Loading...',
+                        )}
+                      </Text>
+                    </Box>
+                  ) : filteredOptions.length > 0 ? (
+                    <>
+                      {filteredOptions.map(option => {
+                        const optSelected = isSelected(option.value);
+                        return (
+                          <Flex
+                            as='li'
+                            key={option.value}
+                            role='option'
+                            tabIndex={0}
+                            aria-selected={optSelected}
+                            align='center'
+                            gap='2'
+                            onClick={() => handleSelect(option.value)}
+                            onKeyDown={e =>
+                              e.key === 'Enter' && handleSelect(option.value)
+                            }
+                            className={clsx(s.optionItem, {
+                              [s.optionItemSelected]: optSelected,
+                            })}
+                          >
+                            {multiple && (
+                              <Box
+                                className={
+                                  optSelected
+                                    ? s.optionIconSelected
+                                    : s.optionIcon
+                                }
+                              >
+                                <Icon
+                                  name={
+                                    optSelected
+                                      ? 'CheckCircledIcon'
+                                      : 'CircleIcon'
+                                  }
+                                  size={16}
+                                />
+                              </Box>
+                            )}
+                            <Text size={size} className={s.optionText}>
+                              {renderOption
+                                ? renderOption(option)
+                                : option.label}
+                            </Text>
+                          </Flex>
+                        );
+                      })}
+                      {loadingMore && (
+                        <Box p='2' className={s.messageBox}>
+                          <Text size='1'>
+                            {t(
+                              'shared:components.searchableSelect.loadingMore',
+                              'Loading more...',
+                            )}
+                          </Text>
+                        </Box>
+                      )}
+                      {!loadingMore && hasMore && (
+                        <Box p='2' className={s.messageBox}>
+                          <Text size='1'>
+                            {t(
+                              'shared:components.searchableSelect.scrollForMore',
+                              'Scroll for more',
+                            )}
+                          </Text>
+                        </Box>
+                      )}
+                    </>
+                  ) : (
+                    <Box p='3' className={s.messageBox}>
+                      <Text size={size}>
+                        {emptyMessage ||
+                          t(
+                            'shared:components.searchableSelect.noOptions',
+                            'No options found',
+                          )}
+                      </Text>
+                    </Box>
+                  )}
+                </Box>
               </Box>
-            </Box>
-          </Theme>
-        );
+            </Theme>
+          );
 
-        return usePortal ? <Portal container={portalContainer}>{menuContent}</Portal> : menuContent;
-      })()}
+          return usePortal ? (
+            <Portal container={portalContainer}>{menuContent}</Portal>
+          ) : (
+            menuContent
+          );
+        })()}
     </Box>
   );
 }
