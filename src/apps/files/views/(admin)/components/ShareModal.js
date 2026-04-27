@@ -374,7 +374,7 @@ const ShareModal = forwardRef((props, ref) => {
                     <Select.Trigger
                       variant='ghost'
                       size='1'
-                      className='!-ml-2 !h-6 font-semibold text-[var(--gray-12)] !justify-start'
+                      className='w-max !-ml-2 !h-6 font-semibold text-[var(--gray-12)] !justify-start'
                     />
                     <Select.Content position='popper' sideOffset={4}>
                       <Select.Item value='private'>

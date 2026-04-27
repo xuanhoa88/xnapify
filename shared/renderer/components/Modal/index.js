@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { Cross2Icon } from '@radix-ui/react-icons';
 import { Button, Dialog, Flex, Text } from '@radix-ui/themes';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
@@ -35,12 +36,14 @@ import s from './Modal.css';
  * Modal.Header
  */
 const ModalHeader = ({ children, onClose, className }) => (
-  <Flex align='center' justify='between' mb='4' className={className}>
-    <Dialog.Title>{children}</Dialog.Title>
+  <Flex align='center' justify='between' gap='3' mb='4' className={className}>
+    <Dialog.Title className='m-0 shrink grow min-w-0 truncate'>
+      {children}
+    </Dialog.Title>
     {onClose && (
       <Dialog.Close>
-        <Button variant='ghost' color='gray' size='1' onClick={onClose}>
-          ×
+        <Button variant='ghost' color='gray' size='1' className='shrink-0' onClick={onClose}>
+          <Cross2Icon width={16} height={16} />
         </Button>
       </Dialog.Close>
     )}
