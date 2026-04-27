@@ -13,6 +13,7 @@ import {
   InfoCircledIcon,
 } from '@radix-ui/react-icons';
 import { Box, Flex, Text, Button } from '@radix-ui/themes';
+import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { v4 as uuidv4 } from 'uuid';
@@ -176,7 +177,7 @@ function FileUploader() {
         id='hidden-file-upload'
         type='file'
         ref={fileInputRef}
-        className={s.hiddenInput}
+        className={clsx('hidden', s.hiddenInput)}
         onChange={handleFileChange}
         multiple
       />

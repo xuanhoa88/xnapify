@@ -161,6 +161,7 @@ const Item = forwardRef(
       // Consume legacy props so they don't spread to the DOM.
       // eslint-disable-next-line no-unused-vars
       as,
+      asChild,
       ...props
     },
     ref,
@@ -175,6 +176,23 @@ const Item = forwardRef(
 
     const color = VARIANT_COLOR_MAP[variant];
 
+    if (asChild) {
+      return (
+        <DropdownMenu.Item
+          ref={ref}
+          color={color}
+          disabled={disabled}
+          shortcut={shortcut}
+          className={className}
+          onSelect={onClick}
+          asChild
+          {...props}
+        >
+          {children}
+        </DropdownMenu.Item>
+      );
+    }
+
     return (
       <DropdownMenu.Item
         ref={ref}
@@ -186,10 +204,8 @@ const Item = forwardRef(
         {...props}
       >
         {icon && (
-          <Flex align='center' asChild>
-            <span>
-              <Icon name={icon} size={16} />
-            </span>
+          <Flex align='center' justify='center'>
+            <Icon name={icon} size={16} />
           </Flex>
         )}
         {children}
