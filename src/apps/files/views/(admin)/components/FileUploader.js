@@ -172,8 +172,7 @@ function FileUploader() {
 
   return (
     <>
-      <Box
-        as='input'
+      <input
         id='hidden-file-upload'
         type='file'
         ref={fileInputRef}
