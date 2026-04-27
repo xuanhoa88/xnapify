@@ -99,18 +99,23 @@ export default function FileToolbar() {
         <SegmentedControl.Root
           value={viewMode}
           onValueChange={val => dispatch(setViewMode(val))}
+          size='2'
         >
           <SegmentedControl.Item
             value='list'
             title={t('files:toolbar.list_view', 'List view')}
           >
-            <ListBulletIcon width={16} height={16} />
+            <Flex align='center' justify='center' className='w-6 h-6'>
+              <ListBulletIcon width={16} height={16} />
+            </Flex>
           </SegmentedControl.Item>
           <SegmentedControl.Item
             value='grid'
             title={t('files:toolbar.grid_view', 'Grid view')}
           >
-            <DashboardIcon width={16} height={16} />
+            <Flex align='center' justify='center' className='w-6 h-6'>
+              <DashboardIcon width={16} height={16} />
+            </Flex>
           </SegmentedControl.Item>
         </SegmentedControl.Root>
       </Flex>
