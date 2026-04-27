@@ -66,7 +66,7 @@ ModalHeader.propTypes = {
  * Modal.Body
  */
 const ModalBody = ({ children, error, className }) => (
-  <div className={className}>
+  <div className={clsx('flex-1 overflow-y-auto min-h-0', className)}>
     {error && (
       <Text size='2' color='red' weight='medium' mb='3' as='div'>
         {error}
@@ -86,7 +86,13 @@ ModalBody.propTypes = {
  * Modal.Footer
  */
 const ModalFooter = ({ children, className }) => (
-  <Flex justify='end' gap='2' mt='4' className={className}>
+  <Flex
+    justify='end'
+    gap='3'
+    pt='4'
+    mt='auto'
+    className={clsx('border-t border-[var(--gray-a4)]', className)}
+  >
     {children}
   </Flex>
 );
@@ -187,7 +193,7 @@ const Modal = ({
   width,
 }) => {
   const resolvedMaxWidth =
-    maxWidth || (placement === 'right' ? '24rem' : undefined);
+    maxWidth || (placement === 'right' ? '480px' : undefined);
 
   return (
     <Dialog.Root

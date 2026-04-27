@@ -480,7 +480,11 @@ function SettingsPage({ context }) {
               >
                 {getNamespaceLabel(ns, t, labels, translationKeys)}
               </Text>
-              <Badge size='1' color={activeTab === ns ? 'indigo' : 'gray'} variant='soft'>
+              <Badge
+                size='1'
+                color={activeTab === ns ? 'indigo' : 'gray'}
+                variant='soft'
+              >
                 {groups[ns].length}
               </Badge>
             </Box>

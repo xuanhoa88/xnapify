@@ -14,7 +14,6 @@ import {
 } from 'react';
 
 import { Flex, Box, Text, Checkbox } from '@radix-ui/themes';
-import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
@@ -31,11 +30,6 @@ import {
   isGroupAssignRolesLoading,
 } from '../redux';
 
-import s from './GroupRolesModal.css';
-
-/**
- * GroupRolesModal functionally properly strictly elegantly directly naturally smartly properly cleverly cleanly natively exclusively effortlessly intelligently gracefully intelligently correctly matching intelligently practically cleanly natively smoothly dynamically cleverly reliably perfectly smoothly structurally effectively intuitively easily structurally strictly natively fluently reliably structurally elegantly organically exactly strictly.
- */
 const ITEMS_PER_PAGE = 10;
 
 const GroupRolesModal = forwardRef(({ fetchRoles }, ref) => {
@@ -160,7 +154,10 @@ const GroupRolesModal = forwardRef(({ fetchRoles }, ref) => {
       dispatch(fetchGroups({ page: 1 }));
       handleClose();
     } catch (err) {
-      setError(err || t('admin:errors.assignRoles', 'An error occurred'));
+      setError(
+        (err && err.message) ||
+          t('admin:errors.assignRoles', 'An error occurred'),
+      );
     }
   }, [dispatch, group, selections, handleClose, t]);
 
@@ -173,7 +170,7 @@ const GroupRolesModal = forwardRef(({ fetchRoles }, ref) => {
         })}
       </Modal.Header>
       <Modal.Body error={error}>
-        <Modal.Description>
+        <Modal.Description className='mb-4 text-[var(--gray-11)]'>
           {t(
             'admin:groups.manageRolesDescription',
             'Select roles to assign to this group. All users of the group will inherit these roles.',
@@ -181,7 +178,7 @@ const GroupRolesModal = forwardRef(({ fetchRoles }, ref) => {
         </Modal.Description>
 
         {/* Search Input */}
-        <Box className={s.searchBox}>
+        <Box mb='4'>
           <TableSearch
             value={searchTerm}
             onChange={handleSearchChange}
@@ -190,75 +187,74 @@ const GroupRolesModal = forwardRef(({ fetchRoles }, ref) => {
           />
         </Box>
 
-        <Box className={s.roleListFlex}>
+        <Flex direction='column' gap='2'>
           {rolesLoading ? (
-            <Flex justify='center' align='center' className={s.loadingFlex}>
-              {t('admin:common.loadingRoles', 'Loading roles...')}
+            <Flex justify='center' align='center' p='6'>
+              <Text size='2' color='gray'>
+                {t('admin:common.loadingRoles', 'Loading roles...')}
+              </Text>
             </Flex>
           ) : roles.length === 0 ? (
-            <Flex justify='center' align='center' className={s.emptyFlex}>
-              {searchTerm
-                ? t('admin:roles.noRolesMatch', 'No roles match your search')
-                : t('admin:roles.noRolesAvailable', 'No roles available')}
+            <Flex justify='center' align='center' p='6'>
+              <Text size='2' color='gray'>
+                {searchTerm
+                  ? t('admin:roles.noRolesMatch', 'No roles match your search')
+                  : t('admin:roles.noRolesAvailable', 'No roles available')}
+              </Text>
             </Flex>
           ) : (
-            roles.map(role => (
-              <Flex
-                key={role.id}
-                align='center'
-                gap='3'
-                onClick={() => toggleSelection(role.name)}
-                role='checkbox'
-                aria-checked={selections.includes(role.name)}
-                tabIndex={0}
-                className={clsx(
-                  s.itemFlex,
-                  selections.includes(role.name)
-                    ? s.itemFlexSelected
-                    : s.itemFlexUnselected,
-                )}
-                onKeyDown={e => {
-                  if (e.key === ' ' || e.key === 'Enter') {
-                    e.preventDefault();
-                    toggleSelection(role.name);
-                  }
-                }}
-              >
-                <Checkbox
-                  size='2'
-                  checked={selections.includes(role.name)}
-                  onCheckedChange={() => toggleSelection(role.name)}
-                  tabIndex={-1}
-                  className={s.checkboxStyle}
-                />
-                <Box className={s.itemContentBox}>
-                  <Text
-                    as='div'
-                    size='2'
-                    weight='bold'
-                    className={s.itemNameText}
-                  >
-                    {role.name}
-                  </Text>
-                  {role.description && (
-                    <Text
-                      as='div'
-                      size='1'
-                      color='gray'
-                      className={s.itemDescriptionText}
-                    >
-                      {role.description}
+            roles.map(role => {
+              const isSelected = selections.includes(role.name);
+              return (
+                <Flex
+                  key={role.id}
+                  align='start'
+                  gap='3'
+                  p='3'
+                  onClick={() => toggleSelection(role.name)}
+                  role='checkbox'
+                  aria-checked={isSelected}
+                  tabIndex={0}
+                  className={`border shadow-sm rounded-md cursor-pointer transition-colors ${
+                    isSelected
+                      ? 'bg-[var(--indigo-a2)] border-[var(--indigo-a6)]'
+                      : 'border-[var(--gray-a5)] hover:bg-[var(--gray-a3)]'
+                  }`}
+                  onKeyDown={e => {
+                    if (e.key === ' ' || e.key === 'Enter') {
+                      e.preventDefault();
+                      toggleSelection(role.name);
+                    }
+                  }}
+                >
+                  <Box className='pt-1'>
+                    <Checkbox
+                      size='2'
+                      checked={isSelected}
+                      onCheckedChange={() => toggleSelection(role.name)}
+                      tabIndex={-1}
+                      className='pointer-events-none'
+                    />
+                  </Box>
+                  <Box className='flex-1'>
+                    <Text as='div' size='2' weight='bold' highContrast>
+                      {role.name}
                     </Text>
-                  )}
-                </Box>
-              </Flex>
-            ))
+                    {role.description && (
+                      <Text as='div' size='1' color='gray' mt='1'>
+                        {role.description}
+                      </Text>
+                    )}
+                  </Box>
+                </Flex>
+              );
+            })
           )}
-        </Box>
+        </Flex>
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <Box className={s.paginationBox}>
+          <Box mt='4'>
             <TablePagination
               currentPage={currentPage}
               totalPages={totalPages}

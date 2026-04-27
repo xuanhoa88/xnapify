@@ -25,11 +25,6 @@ import {
 
 import { fetchGroupUsers } from '../redux';
 
-import s from './GroupUsersModal.css';
-
-/**
- * GroupUsersModal smartly carefully smartly matching effortlessly smoothly securely intelligently beautifully completely completely explicitly gracefully precisely structurally nicely dependably.
- */
 const ITEMS_PER_PAGE = 10;
 
 const GroupUsersModal = forwardRef((props, ref) => {
@@ -73,7 +68,10 @@ const GroupUsersModal = forwardRef((props, ref) => {
           setTotalItems(data.pagination.total || 0);
         }
       } catch (err) {
-        setError(err || t('admin:errors.loadUsers', 'Failed to load users'));
+        setError(
+          (err && err.message) ||
+            t('admin:errors.loadUsers', 'Failed to load users'),
+        );
       } finally {
         setUsersLoading(false);
       }
@@ -134,7 +132,7 @@ const GroupUsersModal = forwardRef((props, ref) => {
         })}
       </Modal.Header>
       <Modal.Body error={error}>
-        <Modal.Description>
+        <Modal.Description className='mb-4 text-[var(--gray-11)]'>
           {t(
             'admin:groups.viewUsersDescription',
             'View all users that belong to this group.',
@@ -142,7 +140,7 @@ const GroupUsersModal = forwardRef((props, ref) => {
         </Modal.Description>
 
         {/* Search Input */}
-        <Box className={s.searchBox}>
+        <Box mb='4'>
           <TableSearch
             value={search}
             onChange={handleSearchChange}
@@ -150,19 +148,21 @@ const GroupUsersModal = forwardRef((props, ref) => {
           />
         </Box>
 
-        <Flex direction='column' gap='3'>
+        <Flex direction='column' gap='2'>
           {usersLoading ? (
-            <Flex
-              justify='center'
-              align='center'
-              p='8'
-              className={s.loadingFlex}
-            >
-              {t('admin:common.loadingUsers', 'Loading users...')}
+            <Flex justify='center' align='center' p='8'>
+              <Text size='2' color='gray'>
+                {t('admin:common.loadingUsers', 'Loading users...')}
+              </Text>
             </Flex>
           ) : users.length === 0 ? (
-            <Flex justify='center' align='center' p='8' className={s.emptyFlex}>
-              {t('admin:groups.noUsersInGroup', 'No users found in this group')}
+            <Flex justify='center' align='center' p='8'>
+              <Text size='2' color='gray'>
+                {t(
+                  'admin:groups.noUsersInGroup',
+                  'No users found in this group',
+                )}
+              </Text>
             </Flex>
           ) : (
             users.map(user => (
@@ -171,7 +171,7 @@ const GroupUsersModal = forwardRef((props, ref) => {
                 align='center'
                 gap='3'
                 p='3'
-                className={s.userItemFlex}
+                className='border border-[var(--gray-a5)] rounded-md bg-[var(--gray-a1)] hover:bg-[var(--gray-a2)] transition-colors shadow-sm'
               >
                 <Avatar
                   name={
@@ -185,6 +185,8 @@ const GroupUsersModal = forwardRef((props, ref) => {
                   )
                     .charAt(0)
                     .toUpperCase()}
+                  color='indigo'
+                  radius='full'
                 />
 
                 <Flex direction='column' grow='1' minWidth='0'>
@@ -198,9 +200,10 @@ const GroupUsersModal = forwardRef((props, ref) => {
                 </Flex>
                 <Box>
                   <Badge
-                    variant={user.is_active ? 'success' : 'error'}
-                    color='gray'
+                    variant={user.is_active ? 'soft' : 'surface'}
+                    color={user.is_active ? 'green' : 'gray'}
                     radius='full'
+                    size='1'
                   >
                     {user.is_active
                       ? t('admin:common.active', 'Active')
@@ -214,7 +217,7 @@ const GroupUsersModal = forwardRef((props, ref) => {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <Box className={s.paginationBox}>
+          <Box mt='4'>
             <TablePagination
               currentPage={currentPage}
               totalPages={totalPages}

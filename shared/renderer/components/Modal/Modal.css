@@ -4,4 +4,6 @@
   height: 100vh;
   border-radius: 0;
   animation: none;
+  display: flex;
+  flex-direction: column;
 }

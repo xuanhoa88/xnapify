@@ -14,7 +14,6 @@ import {
 } from 'react';
 
 import { Box, Flex, Text, Checkbox } from '@radix-ui/themes';
-import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
@@ -26,8 +25,6 @@ import {
 } from '@shared/renderer/components/Table';
 
 import { assignRolesToUser, isUserAssignRolesLoading } from '../redux';
-
-import s from './UserRolesModal.css';
 
 /**
  * UserRolesModal - Self-contained modal for managing user roles
@@ -229,36 +226,29 @@ const UserRolesModal = forwardRef(({ onSuccess, fetchRoles }, ref) => {
             })}
       </Modal.Header>
       <Modal.Body error={error}>
-        <Modal.Description>{description}</Modal.Description>
+        <Modal.Description className='mb-4 text-[var(--gray-11)]'>
+          {description}
+        </Modal.Description>
 
         {/* Search Input */}
-        <TableSearch
-          value={searchTerm}
-          onChange={handleSearchChange}
-          placeholder={t('admin:users.roles.searchRoles', 'Search roles...')}
-          debounce={300}
-          className={s.searchBox}
-        />
+        <Box mb='4'>
+          <TableSearch
+            value={searchTerm}
+            onChange={handleSearchChange}
+            placeholder={t('admin:users.roles.searchRoles', 'Search roles...')}
+            debounce={300}
+          />
+        </Box>
 
-        <Flex direction='column' gap='2' className={s.scrollList}>
+        <Flex direction='column' gap='2'>
           {rolesLoading ? (
-            <Flex
-              align='center'
-              justify='center'
-              p='6'
-              className={s.loadingBox}
-            >
+            <Flex align='center' justify='center' p='6'>
               <Text as='p' color='gray'>
                 {t('admin:users.roles.loadingRoles', 'Loading roles...')}
               </Text>
             </Flex>
           ) : roles.length === 0 ? (
-            <Flex
-              align='center'
-              justify='center'
-              p='6'
-              className={s.loadingBox}
-            >
+            <Flex align='center' justify='center' p='6'>
               <Text as='p' color='gray'>
                 {searchTerm
                   ? t(
@@ -275,15 +265,14 @@ const UserRolesModal = forwardRef(({ onSuccess, fetchRoles }, ref) => {
             roles.map(role => (
               <Flex
                 key={role.id}
-                align='center'
+                align='start'
                 gap='3'
                 p='3'
-                className={clsx(
-                  s.itemBox,
+                className={`border shadow-sm rounded-md cursor-pointer transition-colors ${
                   selections.includes(role.name)
-                    ? s.itemBoxSelected
-                    : s.itemBoxDefault,
-                )}
+                    ? 'bg-[var(--indigo-a2)] border-[var(--indigo-a6)]'
+                    : 'border-[var(--gray-a5)] hover:bg-[var(--gray-a3)]'
+                }`}
                 onClick={() => toggleSelection(role.name)}
                 role='checkbox'
                 aria-checked={selections.includes(role.name)}
@@ -295,20 +284,17 @@ const UserRolesModal = forwardRef(({ onSuccess, fetchRoles }, ref) => {
                   }
                 }}
               >
-                <Checkbox
-                  size='2'
-                  checked={selections.includes(role.name)}
-                  onCheckedChange={() => toggleSelection(role.name)}
-                  tabIndex={-1}
-                  className={s.checkboxCursor}
-                />
-                <Box>
-                  <Text
-                    as='div'
+                <Box className='pt-1'>
+                  <Checkbox
                     size='2'
-                    weight='bold'
-                    className={s.itemNameText}
-                  >
+                    checked={selections.includes(role.name)}
+                    onCheckedChange={() => toggleSelection(role.name)}
+                    tabIndex={-1}
+                    className='pointer-events-none'
+                  />
+                </Box>
+                <Box className='flex-1'>
+                  <Text as='div' size='2' weight='bold' highContrast>
                     {role.name}
                   </Text>
                   {role.description && (

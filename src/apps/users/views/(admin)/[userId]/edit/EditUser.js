@@ -57,8 +57,7 @@ const { generatePassword, showSuccessMessage, showErrorMessage } = features;
 function EditUserIdentityCard({ user }) {
   const { t } = useTranslation();
 
-  const displayName =
-    (user.profile && user.profile.display_name) || user.email;
+  const displayName = (user.profile && user.profile.display_name) || user.email;
   const fullName =
     [
       user.profile && user.profile.first_name,
@@ -242,7 +241,7 @@ function EditUser({ userId, context }) {
           });
         } else {
           const message =
-            (typeof err === 'string' ? err : err?.message) ||
+            (typeof err === 'string' ? err : err && err.message) ||
             t('admin:users.errors.updateUser', 'Failed to update user');
           setError(message);
           dispatch(showErrorMessage({ message }));
@@ -288,11 +287,7 @@ function EditUser({ userId, context }) {
           )}
           icon={<PersonIcon width={24} height={24} />}
         />
-        <Grid
-          columns={{ initial: '1', lg: '280px 1fr' }}
-          gap='6'
-          align='start'
-        >
+        <Grid columns={{ initial: '1', lg: '280px 1fr' }} gap='6' align='start'>
           <Loader variant='skeleton' skeletonCount={3} />
           <Loader variant='skeleton' skeletonCount={6} />
         </Grid>
@@ -367,11 +362,7 @@ function EditUser({ userId, context }) {
         defaultValues={defaultValues}
         onSubmit={handleSubmit}
       >
-        <Grid
-          columns={{ initial: '1', lg: '280px 1fr' }}
-          gap='6'
-          align='start'
-        >
+        <Grid columns={{ initial: '1', lg: '280px 1fr' }} gap='6' align='start'>
           {/* Left: identity card */}
           <EditUserIdentityCard user={user} />
 
@@ -550,7 +541,7 @@ function EditUserFormFields({
       );
     } catch (err) {
       const message =
-        (typeof err === 'string' ? err : err?.message) ||
+        (typeof err === 'string' ? err : err && err.message) ||
         t('admin:users.errors.generatePassword', 'Failed to generate password');
       setError(message);
       dispatch(showErrorMessage({ message }));
@@ -718,10 +709,7 @@ function EditUserFormFields({
             valueKey='name'
             labelKey='name'
             itemDescription='description'
-            emptyMessage={t(
-              'admin:users.edit.noRolesFound',
-              'No roles found',
-            )}
+            emptyMessage={t('admin:users.edit.noRolesFound', 'No roles found')}
             loadingMessage={t(
               'admin:users.edit.loadingRoles',
               'Loading roles...',
@@ -784,15 +772,15 @@ function EditUserFormFields({
           borderTop: '1px solid var(--gray-a4)',
         }}
       >
-        <Button variant='soft' color='gray' type='button' onClick={handleCancel}>
+        <Button
+          variant='soft'
+          color='gray'
+          type='button'
+          onClick={handleCancel}
+        >
           {t('admin:users.edit.cancel', 'Cancel')}
         </Button>
-        <Button
-          variant='solid'
-          color='indigo'
-          type='submit'
-          loading={loading}
-        >
+        <Button variant='solid' color='indigo' type='submit' loading={loading}>
           {loading
             ? t('admin:users.edit.saving', 'Saving...')
             : t('admin:users.edit.saveChanges', 'Save Changes')}

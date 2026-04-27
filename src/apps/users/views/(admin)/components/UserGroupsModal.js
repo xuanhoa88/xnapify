@@ -14,7 +14,6 @@ import {
 } from 'react';
 
 import { Box, Flex, Text, Checkbox } from '@radix-ui/themes';
-import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
@@ -26,8 +25,6 @@ import {
 } from '@shared/renderer/components/Table';
 
 import { assignGroupsToUser, isUserAssignGroupsLoading } from '../redux';
-
-import s from './UserGroupsModal.css';
 
 /**
  * UserGroupsModal - Self-contained modal for managing user groups
@@ -232,36 +229,32 @@ const UserGroupsModal = forwardRef(({ onSuccess, fetchGroups }, ref) => {
             )}
       </Modal.Header>
       <Modal.Body error={error}>
-        <Modal.Description>{description}</Modal.Description>
+        <Modal.Description className='mb-4 text-[var(--gray-11)]'>
+          {description}
+        </Modal.Description>
 
         {/* Search Input */}
-        <TableSearch
-          value={searchTerm}
-          onChange={handleSearchChange}
-          placeholder={t('admin:users.groups.searchGroups', 'Search groups...')}
-          debounce={300}
-          className={s.searchBox}
-        />
+        <Box mb='4'>
+          <TableSearch
+            value={searchTerm}
+            onChange={handleSearchChange}
+            placeholder={t(
+              'admin:users.groups.searchGroups',
+              'Search groups...',
+            )}
+            debounce={300}
+          />
+        </Box>
 
-        <Flex direction='column' gap='2' className={s.scrollList}>
+        <Flex direction='column' gap='2'>
           {groupsLoading ? (
-            <Flex
-              align='center'
-              justify='center'
-              p='6'
-              className={s.loadingBox}
-            >
+            <Flex align='center' justify='center' p='6'>
               <Text as='p' color='gray'>
                 {t('admin:users.groups.loadingGroups', 'Loading groups...')}
               </Text>
             </Flex>
           ) : groups.length === 0 ? (
-            <Flex
-              align='center'
-              justify='center'
-              p='6'
-              className={s.loadingBox}
-            >
+            <Flex align='center' justify='center' p='6'>
               <Text as='p' color='gray'>
                 {searchTerm
                   ? t(
@@ -278,15 +271,14 @@ const UserGroupsModal = forwardRef(({ onSuccess, fetchGroups }, ref) => {
             groups.map(group => (
               <Flex
                 key={group.id}
-                align='center'
+                align='start'
                 gap='3'
                 p='3'
-                className={clsx(
-                  s.itemBox,
+                className={`border shadow-sm rounded-md cursor-pointer transition-colors ${
                   selections.includes(group.id)
-                    ? s.itemBoxSelected
-                    : s.itemBoxDefault,
-                )}
+                    ? 'bg-[var(--indigo-a2)] border-[var(--indigo-a6)]'
+                    : 'border-[var(--gray-a5)] hover:bg-[var(--gray-a3)]'
+                }`}
                 onClick={() => toggleSelection(group.id)}
                 role='checkbox'
                 aria-checked={selections.includes(group.id)}
@@ -298,19 +290,16 @@ const UserGroupsModal = forwardRef(({ onSuccess, fetchGroups }, ref) => {
                   }
                 }}
               >
-                <Checkbox
-                  checked={selections.includes(group.id)}
-                  onCheckedChange={() => toggleSelection(group.id)}
-                  tabIndex={-1}
-                  className={s.checkboxCursor}
-                />
-                <Box>
-                  <Text
-                    as='div'
-                    size='2'
-                    weight='bold'
-                    className={s.itemNameText}
-                  >
+                <Box className='pt-1'>
+                  <Checkbox
+                    checked={selections.includes(group.id)}
+                    onCheckedChange={() => toggleSelection(group.id)}
+                    tabIndex={-1}
+                    className='pointer-events-none'
+                  />
+                </Box>
+                <Box className='flex-1'>
+                  <Text as='div' size='2' weight='bold' highContrast>
                     {group.name}
                   </Text>
                   {group.description && (

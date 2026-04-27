@@ -7,27 +7,116 @@
 
 import { useState, useCallback, useRef, useMemo } from 'react';
 
-import { GroupIcon } from '@radix-ui/react-icons';
-import { Box, Flex, Heading, Button } from '@radix-ui/themes';
+import { GroupIcon, PlusIcon } from '@radix-ui/react-icons';
+import {
+  Box,
+  Flex,
+  Text,
+  Grid,
+  Button,
+  Card,
+  Avatar,
+  Badge,
+  Separator,
+} from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-// import { Flex, Heading, Text, Box } , Button } from '@radix-ui/themes';
-// import { Button } , Button } from '@radix-ui/themes';
 import Form, { useFormContext } from '@shared/renderer/components/Form';
 import { useHistory } from '@shared/renderer/components/History';
 import { useDebounce } from '@shared/renderer/components/InfiniteScroll';
 import Modal from '@shared/renderer/components/Modal';
+import { PageHeader } from '@shared/renderer/components/PageHeader';
+import { features } from '@shared/renderer/redux';
 
 import { createGroupFormSchema } from '../../../validator/admin';
 import { createGroup, isGroupCreateLoading } from '../redux';
 
-import s from './CreateGroup.css';
+const { showErrorMessage } = features;
 
-/**
- * CreateGroup accurately neatly perfectly effectively elegantly appropriately logically practically logically implicitly dynamically effectively explicitly explicitly appropriately organically safely precisely solidly correctly implicitly safely effectively elegantly exclusively explicitly easily accurately effortlessly correctly structurally gracefully cleverly gracefully smartly clearly matching.
- */
+// =============================================================================
+// Identity sidebar card for the "Create" flow (no existing group data yet)
+// =============================================================================
+
+function CreateGroupIdentityCard() {
+  const { t } = useTranslation();
+  const { watch } = useFormContext();
+
+  const name = watch('name') || '';
+  const category = watch('category') || '';
+  const type = watch('type') || '';
+
+  const fallback = name ? name.charAt(0).toUpperCase() : '?';
+
+  return (
+    <Card variant='surface'>
+      <Flex direction='column' align='center' p='5' gap='4'>
+        <Avatar
+          size='6'
+          name={name}
+          fallback={fallback}
+          radius='full'
+          color='blue'
+        />
+
+        <Flex direction='column' align='center' gap='1' className='w-full'>
+          <Text size='4' weight='bold' align='center' className='break-all'>
+            {name || t('admin:groups.create.newGroup', 'New Group')}
+          </Text>
+        </Flex>
+
+        <Separator size='4' />
+
+        <Flex direction='column' gap='3' className='w-full'>
+          <Flex justify='between' align='center'>
+            <Text size='2' color='gray'>
+              {t('admin:groups.create.categoryLabel', 'Category')}
+            </Text>
+            {category ? (
+              <Badge color='blue' variant='soft' radius='full' size='1'>
+                {category}
+              </Badge>
+            ) : (
+              <Text size='2' color='gray'>
+                —
+              </Text>
+            )}
+          </Flex>
+
+          <Flex justify='between' align='center'>
+            <Text size='2' color='gray'>
+              {t('admin:groups.create.typeLabel', 'Type')}
+            </Text>
+            {type ? (
+              <Badge color='gray' variant='surface' radius='full' size='1'>
+                {type}
+              </Badge>
+            ) : (
+              <Text size='2' color='gray'>
+                —
+              </Text>
+            )}
+          </Flex>
+
+          <Flex justify='between' align='center'>
+            <Text size='2' color='gray'>
+              {t('admin:groups.create.statusLabel', 'Status')}
+            </Text>
+            <Badge color='indigo' variant='soft' radius='full' size='1'>
+              {t('admin:groups.create.newAccount', 'New Group')}
+            </Badge>
+          </Flex>
+        </Flex>
+      </Flex>
+    </Card>
+  );
+}
+
+// =============================================================================
+// Main CreateGroup component
+// =============================================================================
+
 function CreateGroup({ context }) {
   const dispatch = useDispatch();
   const { t } = useTranslation();
@@ -78,9 +167,11 @@ function CreateGroup({ context }) {
             }
           });
         } else {
-          setError(
-            err || t('admin:errors.createGroup', 'Failed to create group'),
-          );
+          const message =
+            (typeof err === 'string' ? err : err && err.message) ||
+            t('admin:errors.createGroup', 'Failed to create group');
+          setError(message);
+          dispatch(showErrorMessage({ message }));
         }
       }
     },
@@ -96,37 +187,41 @@ function CreateGroup({ context }) {
   };
 
   return (
-    <Box className={s.containerBox}>
-      <Flex
-        align='center'
-        justify='between'
-        wrap='wrap'
-        gap='4'
-        pb='4'
-        mb='6'
-        className={s.adminHeader}
+    <Box className='p-6 max-w-[1400px] mx-auto'>
+      <PageHeader
+        title={t('admin:groups.create.title', 'Create New Group')}
+        subtitle={t(
+          'admin:groups.create.subtitle',
+          'Add a new group and configure its roles',
+        )}
+        icon={<GroupIcon width={24} height={24} />}
       >
-        <Flex align='center' gap='3'>
-          <Flex align='center' justify='center' className={s.adminHeaderIcon}>
-            <GroupIcon width={24} height={24} />
-          </Flex>
-          <Flex direction='column'>
-            <Heading size='6'>{null}</Heading>
-          </Flex>
-        </Flex>
-      </Flex>
+        <Button
+          variant='ghost'
+          color='gray'
+          onClick={() => history.push('/admin/groups')}
+        >
+          {t('admin:groups.create.backToList', 'Back to Groups')}
+        </Button>
+      </PageHeader>
 
       <Form
         schema={createGroupFormSchema}
         defaultValues={defaultValues}
         onSubmit={handleSubmit}
       >
-        <CreateGroupFormFields
-          onCancel={handleCancel}
-          loading={loading}
-          isDirtyRef={isDirtyRef}
-          fetchRoles={fetchRoles}
-        />
+        <Grid columns={{ initial: '1', lg: '280px 1fr' }} gap='6' align='start'>
+          {/* Left: live identity card */}
+          <CreateGroupIdentityCard />
+
+          {/* Right: form sections */}
+          <CreateGroupFormFields
+            onCancel={handleCancel}
+            loading={loading}
+            isDirtyRef={isDirtyRef}
+            fetchRoles={fetchRoles}
+          />
+        </Grid>
       </Form>
 
       <Modal.ConfirmBack
@@ -137,9 +232,10 @@ function CreateGroup({ context }) {
   );
 }
 
-/**
- * CreateGroupFormFields - Form fields component that uses react-hook-form context
- */
+// =============================================================================
+// Form fields — inner component consumes react-hook-form context
+// =============================================================================
+
 function CreateGroupFormFields({ onCancel, loading, isDirtyRef, fetchRoles }) {
   const dispatch = useDispatch();
   const { t } = useTranslation();
@@ -162,6 +258,7 @@ function CreateGroupFormFields({ onCancel, loading, isDirtyRef, fetchRoles }) {
   // Roles state for loading
   const [roles, setRoles] = useState([]);
   const [rolesLoading, setRolesLoading] = useState(false);
+  const [rolesLoadingMore, setRolesLoadingMore] = useState(false);
   const [rolesHasMore, setRolesHasMore] = useState(false);
   const [rolesPage, setRolesPage] = useState(1);
   const rolesLimit = 20;
@@ -174,6 +271,8 @@ function CreateGroupFormFields({ onCancel, loading, isDirtyRef, fetchRoles }) {
     async (page, search = '', reset = false) => {
       if (reset) {
         setRolesLoading(true);
+      } else {
+        setRolesLoadingMore(true);
       }
 
       try {
@@ -195,6 +294,7 @@ function CreateGroupFormFields({ onCancel, loading, isDirtyRef, fetchRoles }) {
         // Silently handle error
       } finally {
         setRolesLoading(false);
+        setRolesLoadingMore(false);
       }
     },
     [dispatch, fetchRoles],
@@ -207,18 +307,27 @@ function CreateGroupFormFields({ onCancel, loading, isDirtyRef, fetchRoles }) {
 
   // Load more roles handler
   const handleLoadMoreRoles = useCallback(() => {
-    if (!rolesLoading && rolesHasMore) {
+    if (!rolesLoadingMore && rolesHasMore) {
       loadRoles(rolesPage + 1, roleSearch, false);
     }
-  }, [rolesLoading, rolesHasMore, rolesPage, roleSearch, loadRoles]);
+  }, [rolesLoadingMore, rolesHasMore, rolesPage, roleSearch, loadRoles]);
 
   return (
-    <Flex direction='column' gap='6'>
-      <Box>
-        <Heading as='h3' size='4' className={s.sectionHeading}>
+    <Card variant='surface' className='p-0'>
+      {/* ── Group Information ──────────────────────────────────────── */}
+      <Box
+        px='5'
+        py='3'
+        style={{
+          backgroundColor: 'var(--gray-a2)',
+          borderBottom: '1px solid var(--gray-a4)',
+        }}
+      >
+        <Text size='2' weight='bold' color='gray'>
           {t('admin:groups.create.groupInformation', 'Group Information')}
-        </Heading>
-
+        </Text>
+      </Box>
+      <Box p='5'>
         <Form.Field
           name='name'
           label={t('admin:groups.create.name', 'Group Name')}
@@ -245,43 +354,51 @@ function CreateGroupFormFields({ onCancel, loading, isDirtyRef, fetchRoles }) {
           />
         </Form.Field>
 
-        <Flex gap='4' direction={{ initial: 'column', sm: 'row' }}>
-          <Box className={s.flex1}>
-            <Form.Field
-              name='category'
-              label={t('admin:groups.create.category', 'Category')}
-            >
-              <Form.Input
-                placeholder={t(
-                  'admin:groups.create.categoryPlaceholder',
-                  'e.g., System, Organization, Department',
-                )}
-              />
-            </Form.Field>
-          </Box>
-          <Box className={s.flex1}>
-            <Form.Field
-              name='type'
-              label={t('admin:groups.create.type', 'Type')}
-            >
-              <Form.Input
-                placeholder={t(
-                  'admin:groups.create.typePlaceholder',
-                  'e.g., Security, Organizational, Functional',
-                )}
-              />
-            </Form.Field>
-          </Box>
-        </Flex>
+        <Grid columns={{ initial: '1', sm: '2' }} gap='4'>
+          <Form.Field
+            name='category'
+            label={t('admin:groups.create.category', 'Category')}
+            className='mb-0'
+          >
+            <Form.Input
+              placeholder={t(
+                'admin:groups.create.categoryPlaceholder',
+                'e.g., System, Organization, Department',
+              )}
+            />
+          </Form.Field>
+          <Form.Field
+            name='type'
+            label={t('admin:groups.create.type', 'Type')}
+            className='mb-0'
+          >
+            <Form.Input
+              placeholder={t(
+                'admin:groups.create.typePlaceholder',
+                'e.g., Security, Organizational, Functional',
+              )}
+            />
+          </Form.Field>
+        </Grid>
       </Box>
 
-      <Box>
-        <Heading as='h3' size='4' className={s.sectionHeading}>
+      {/* ── Roles Selection ────────────────────────────────────────── */}
+      <Box
+        px='5'
+        py='3'
+        style={{
+          backgroundColor: 'var(--gray-a2)',
+          borderTop: '1px solid var(--gray-a4)',
+          borderBottom: '1px solid var(--gray-a4)',
+        }}
+      >
+        <Text size='2' weight='bold' color='gray'>
           {t('admin:groups.create.rolesCount', 'Roles ({{count}} selected)', {
             count: selectedRoles.length,
           })}
-        </Heading>
-
+        </Text>
+      </Box>
+      <Box p='5'>
         <Form.Field name='roles'>
           <Form.CheckboxList
             items={roles}
@@ -289,6 +406,7 @@ function CreateGroupFormFields({ onCancel, loading, isDirtyRef, fetchRoles }) {
             labelKey='name'
             descriptionKey='description'
             loading={rolesLoading}
+            loadingMore={rolesLoadingMore}
             hasMore={rolesHasMore}
             onLoadMore={handleLoadMoreRoles}
             searchable
@@ -296,6 +414,7 @@ function CreateGroupFormFields({ onCancel, loading, isDirtyRef, fetchRoles }) {
               'admin:groups.create.searchRoles',
               'Search roles...',
             )}
+            searchValue={roleSearch}
             onSearch={setRoleSearch}
             emptyMessage={t('admin:groups.create.emptyRoles', 'No roles found')}
             loadingMessage={t(
@@ -306,22 +425,34 @@ function CreateGroupFormFields({ onCancel, loading, isDirtyRef, fetchRoles }) {
         </Form.Field>
       </Box>
 
-      <Flex gap='3' justify='end' className={s.actionsFlex}>
+      {/* ── Footer actions ───────────────────────────────────────── */}
+      <Flex
+        align='center'
+        justify='between'
+        px='5'
+        py='4'
+        className='rounded-b-md'
+        style={{
+          backgroundColor: 'var(--gray-2)',
+          borderTop: '1px solid var(--gray-a4)',
+        }}
+      >
         <Button
           variant='soft'
           color='gray'
+          type='button'
           onClick={handleCancel}
-          disabled={loading}
         >
           {t('admin:groups.create.cancel', 'Cancel')}
         </Button>
         <Button variant='solid' color='indigo' type='submit' loading={loading}>
+          <PlusIcon width={15} height={15} />
           {loading
             ? t('admin:groups.create.creating', 'Creating...')
             : t('admin:groups.create.createGroup', 'Create Group')}
         </Button>
       </Flex>
-    </Flex>
+    </Card>
   );
 }
 

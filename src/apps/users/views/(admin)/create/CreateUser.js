@@ -50,9 +50,7 @@ function CreateUserIdentityCard() {
   const isActive = watch('is_active');
 
   const resolvedName =
-    displayName ||
-    [firstName, lastName].filter(Boolean).join(' ') ||
-    email;
+    displayName || [firstName, lastName].filter(Boolean).join(' ') || email;
 
   const fallback = resolvedName ? resolvedName.charAt(0).toUpperCase() : '?';
 
@@ -69,8 +67,7 @@ function CreateUserIdentityCard() {
 
         <Flex direction='column' align='center' gap='1' className='w-full'>
           <Text size='4' weight='bold' align='center' className='break-all'>
-            {resolvedName ||
-              t('admin:users.create.newUser', 'New User')}
+            {resolvedName || t('admin:users.create.newUser', 'New User')}
           </Text>
           {email && resolvedName !== email && (
             <Text size='2' color='gray' align='center' className='break-all'>
@@ -171,7 +168,7 @@ function CreateUser({ context }) {
           });
         } else {
           const message =
-            (typeof err === 'string' ? err : err?.message) ||
+            (typeof err === 'string' ? err : err && err.message) ||
             t('admin:users.errors.createUser', 'Failed to create user');
           setError(message);
           dispatch(showErrorMessage({ message }));
@@ -219,11 +216,7 @@ function CreateUser({ context }) {
         defaultValues={defaultValues}
         onSubmit={handleSubmit}
       >
-        <Grid
-          columns={{ initial: '1', lg: '280px 1fr' }}
-          gap='6'
-          align='start'
-        >
+        <Grid columns={{ initial: '1', lg: '280px 1fr' }} gap='6' align='start'>
           {/* Left: live identity card */}
           <CreateUserIdentityCard />
 
@@ -404,7 +397,7 @@ function CreateUserFormFields({
       );
     } catch (err) {
       const message =
-        (typeof err === 'string' ? err : err?.message) ||
+        (typeof err === 'string' ? err : err && err.message) ||
         t('admin:users.errors.generatePassword', 'Failed to generate password');
       setError(message);
       dispatch(showErrorMessage({ message }));
@@ -512,10 +505,7 @@ function CreateUserFormFields({
             className='mb-0'
           >
             <Form.Input
-              placeholder={t(
-                'admin:users.create.firstNamePlaceholder',
-                'John',
-              )}
+              placeholder={t('admin:users.create.firstNamePlaceholder', 'John')}
             />
           </Form.Field>
           <Form.Field
@@ -524,10 +514,7 @@ function CreateUserFormFields({
             className='mb-0'
           >
             <Form.Input
-              placeholder={t(
-                'admin:users.create.lastNamePlaceholder',
-                'Doe',
-              )}
+              placeholder={t('admin:users.create.lastNamePlaceholder', 'Doe')}
             />
           </Form.Field>
         </Grid>
@@ -557,10 +544,7 @@ function CreateUserFormFields({
         }}
       >
         <Text size='2' weight='bold' color='gray'>
-          {t(
-            'admin:users.create.accessAndPermissions',
-            'Access & Permissions',
-          )}
+          {t('admin:users.create.accessAndPermissions', 'Access & Permissions')}
         </Text>
       </Box>
       <Box p='5'>
@@ -654,15 +638,15 @@ function CreateUserFormFields({
           borderTop: '1px solid var(--gray-a4)',
         }}
       >
-        <Button variant='soft' color='gray' type='button' onClick={handleCancel}>
+        <Button
+          variant='soft'
+          color='gray'
+          type='button'
+          onClick={handleCancel}
+        >
           {t('admin:users.create.cancel', 'Cancel')}
         </Button>
-        <Button
-          variant='solid'
-          color='indigo'
-          type='submit'
-          loading={loading}
-        >
+        <Button variant='solid' color='indigo' type='submit' loading={loading}>
           <PlusIcon width={15} height={15} />
           {loading
             ? t('admin:users.create.creating', 'Creating...')
