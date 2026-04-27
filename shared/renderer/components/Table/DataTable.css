@@ -188,6 +188,14 @@
   grid-template-columns: repeat(4, minmax(320px, 1fr));
 }
 
+.gridCols5 {
+  grid-template-columns: repeat(5, minmax(320px, 1fr));
+}
+
+.gridCols6 {
+  grid-template-columns: repeat(6, minmax(320px, 1fr));
+}
+
 @media (max-width: 768px) {
   .gridContainer {
     grid-template-columns: 1fr;

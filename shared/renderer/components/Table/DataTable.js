@@ -750,6 +750,8 @@ function DataTable({
                     s.gridContainer,
                     gridCols === 2 && s.gridCols2,
                     gridCols === 4 && s.gridCols4,
+                    gridCols === 5 && s.gridCols5,
+                    gridCols === 6 && s.gridCols6,
                   )}
                 >
                   {dataSource.map((record, rowIndex) => {
@@ -864,7 +866,7 @@ DataTable.propTypes = {
   // View type
   viewType: PropTypes.oneOf(['table', 'grid']),
   renderCard: PropTypes.func,
-  gridCols: PropTypes.oneOf([2, 3, 4]),
+  gridCols: PropTypes.oneOf([2, 3, 4, 5, 6]),
 
   // Selection
   selectable: PropTypes.bool,
