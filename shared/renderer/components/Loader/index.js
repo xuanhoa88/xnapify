@@ -8,8 +8,6 @@
 import { Flex, Skeleton, Spinner, Text } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 
-import s from './Loader.css';
-
 /**
  * Loader Component using Radix Themes Spinner and Skeleton
  *
@@ -28,12 +26,12 @@ function Loader({
         {Array.from({ length: skeletonCount }).map((_, i) => (
           // eslint-disable-next-line react/no-array-index-key
           <Flex key={i} align='center' gap='4' p='3'>
-            <Skeleton width='40px' height='40px' className={s.circleSkeleton} />
+            <Skeleton width='40px' height='40px' className='rounded-full' />
             <Flex direction='column' gap='2' flexGrow='1'>
               <Skeleton height='16px' width='75%' />
               <Skeleton height='12px' width='50%' />
             </Flex>
-            <Skeleton height='24px' width='64px' className={s.pillSkeleton} />
+            <Skeleton height='24px' width='64px' className='rounded-full' />
           </Flex>
         ))}
       </Flex>
@@ -42,7 +40,7 @@ function Loader({
 
   if (variant === 'cards') {
     return (
-      <Flex gap='4' py='4' wrap='wrap' className={className}>
+      <Flex gap='4' p='4' wrap='wrap' className={className}>
         {Array.from({ length: 4 }).map((_, i) => (
           // eslint-disable-next-line react/no-array-index-key
           <Flex
@@ -51,7 +49,11 @@ function Loader({
             gap='3'
             p='5'
             flexGrow='1'
-            className={s.cardSkeleton}
+            className='min-w-[200px]'
+            style={{
+              border: '1px solid var(--gray-a5)',
+              borderRadius: 'var(--radius-3)',
+            }}
           >
             <Flex justify='between' align='center'>
               <Skeleton height='16px' width='96px' />
