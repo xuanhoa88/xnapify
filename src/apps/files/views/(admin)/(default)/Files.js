@@ -156,7 +156,7 @@ function Files() {
 
   return (
     <Box
-      className={clsx(s.container, { [s.isDragging]: isDragging })}
+      className={clsx(s.container, isDragging && s.isDragging)}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}

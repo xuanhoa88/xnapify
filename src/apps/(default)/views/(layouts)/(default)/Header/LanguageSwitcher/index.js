@@ -85,10 +85,10 @@ function LanguageSwitcher() {
           <ContextMenu.Item
             key={code}
             onClick={() => handleLocaleChange(code)}
-            className={clsx({
-              'bg-[var(--indigo-a3)] text-[var(--indigo-11)] font-medium hover:bg-[var(--indigo-a4)]':
-                code === currentLocale,
-            })}
+            className={clsx(
+              code === currentLocale &&
+                'bg-[var(--indigo-a3)] text-[var(--indigo-11)] font-medium hover:bg-[var(--indigo-a4)]',
+            )}
           >
             <Text size='3' mr='3'>
               {name}

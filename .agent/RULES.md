@@ -42,8 +42,18 @@ Whenever you provide assistance to a Developer on this codebase, you MUST adhere
 - **React Components**: Strictly Functional Components with hooks. Refuse any request to build a Class component.
 - **i18n Requirement**: All user-facing strings in JSX must be wrapped in `i18n.t()`. No hardcoded strings are allowed in any UI file.
 - **Data Hooking**: You must honor the SSR lifecycle. Use `getInitialProps` on routing files (`_route.js`) for initial rendering. Do not fetch essential initial data on `useEffect` mounts.
-- **Styling**: Primary styling must use **Tailwind CSS** utility classes and **Radix UI primitives** (`@radix-ui/themes`). DO NOT use inline styles (`style={{...}}`). Use CSS Modules (`.css` extension) ONLY for complex edge cases that Tailwind cannot solve.
-- **clsx Utility**: When applying custom CSS modules or combining conditional class names, ALWAYS use `clsx` (never use template literals or raw concatenation). HOWEVER, do not use `clsx` for a single module class (e.g., `className={s.foo}`) or a simple shorthand ternary condition (e.g., `className={condition ? s.foo : s.bar}`). NEVER pass an object to `clsx` (e.g., `clsx(base, { [activeClass]: condition })`). Instead, use short-circuit or ternary logic: `clsx(base, condition ? activeClass : inactiveClass)` to prevent object instantiation overhead during re-renders.
+- **Styling**: Primary styling must use **Tailwind CSS** utility classes and **Radix UI primitives** (`@radix-ui/themes`).
+  - ✅ **DO** use Tailwind utility classes (e.g., `className="mt-4 bg-red-500"`).
+  - ❌ **DO NOT** use inline styles under ANY circumstances (e.g., `style={{ marginTop: '16px' }}` is strictly forbidden).
+  - ⚠️ Use CSS Modules (`.css` extension) ONLY for complex edge cases that Tailwind cannot solve.
+- **clsx Utility**: When applying custom CSS modules or combining conditional class names, ALWAYS use `clsx`. You must strictly follow these rules to prevent performance overhead during re-renders:
+  - ✅ **DO** use for dynamic combinations: `className={clsx(s.base, condition ? s.active : s.inactive)}`
+  - ✅ **DO** use multiple arguments for multiple conditions: `clsx(s.base, condA && s.a, condB && s.b)`
+  - ❌ **DO NOT** use template literals or raw concatenation: ``className={`${s.base} ${s.active}`}`` -> use `clsx(s.base, s.active)`
+  - ❌ **DO NOT** pass objects: `clsx({ [s.a]: condA, [s.b]: condB })` -> use `clsx(condA && s.a, condB && s.b)`
+  - ❌ **DO NOT** use for single variables: `clsx(s.foo)` -> just use `className={s.foo}`
+  - ❌ **DO NOT** use for simple ternaries: `clsx(cond ? s.a : s.b)` -> use `className={cond ? s.a : s.b}`
+  - ❌ **DO NOT** use for static strings: `clsx('a', 'b')` -> just use `className="a b"`
 
 ---
 
@@ -91,6 +101,14 @@ Whenever you provide assistance to a Developer on this codebase, you MUST adhere
 - **Versioning** (when needed): Use URL prefix `/api/v2/{resource}` alongside the original `/api/{resource}`. Both versions must coexist until consumers migrate.
 - **Deprecation**: Mark deprecated endpoints with a response header `X-Deprecated: true` and a `deprecatedAt` field in the response body. Log usage for tracking.
 - **Backward-compatible additions**: New optional query parameters, new response fields, and new endpoints are always safe to add without versioning.
+
+---
+
+## 10. Browser Verification Policy
+- **Never auto-launch** a browser agent to verify UI changes unless the developer explicitly requests visual verification.
+- When browser verification IS requested, the agent MUST follow the `browser-testing` skill — especially the **Port Discovery** section.
+- The dev server port is `XNAPIFY_PORT` (default `1337`), **not** 3000. Always resolve from user context or `.env` files first.
+- Before launching any browser automation, **verify the dev server is actually running** at the resolved port. If it is not running, inform the developer instead of failing silently.
 
 ---
 

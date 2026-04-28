@@ -49,9 +49,7 @@ function Features() {
             {featuresData.map((feature, index) => (
               <Box
                 key={feature.id}
-                className={clsx(s.featureCard, {
-                  [s.cardFeatured]: index === 0,
-                })}
+                className={clsx(s.featureCard, index === 0 && s.cardFeatured)}
               >
                 <Link to={`/features/${feature.id}`} className={s.featureLink}>
                   <Box className={s.cardGlow} />

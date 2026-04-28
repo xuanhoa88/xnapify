@@ -45,10 +45,11 @@ export default function DocsLayout({
                     e.preventDefault();
                     history.push(`/docs/${node.path}`);
                   }}
-                  className={clsx(s.link, {
-                    [s.active]:
-                      history.location.pathname === `/docs/${node.path}`,
-                  })}
+                  className={clsx(
+                    s.link,
+                    history.location.pathname === `/docs/${node.path}` &&
+                      s.active,
+                  )}
                 >
                   {node.name}
                 </a>

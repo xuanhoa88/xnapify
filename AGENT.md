@@ -514,7 +514,20 @@ export const fetchPosts = createAsyncThunk(
 
 We use **Tailwind CSS** for utility-first styling and **Radix UI** (`@radix-ui/themes`) for accessible design primitives. CSS Modules are reserved for specific edge cases or legacy components.
 
-When using custom CSS modules, ALWAYS use the `clsx` utility to apply multiple combined classes. Do not use template literals or raw concatenation. However, do not use `clsx` for a single custom module class (e.g., `className={s.foo}`) or a simple shorthand ternary condition (e.g., `className={cond ? s.a : s.b}`).
+**Styling Rules:**
+- ✅ **DO** use Tailwind utility classes (e.g., `className="mt-4 bg-red-500"`).
+- ❌ **DO NOT** use inline styles under ANY circumstances (e.g., `style={{ marginTop: '16px' }}` is strictly forbidden).
+- ⚠️ Use CSS Modules (`.css` extension) ONLY for complex edge cases that Tailwind cannot solve.
+
+**clsx Utility Rules:**
+When applying custom CSS modules or combining conditional class names, ALWAYS use `clsx`. You must strictly follow these rules to prevent performance overhead during re-renders:
+- ✅ **DO** use for dynamic combinations: `className={clsx(s.base, condition ? s.active : s.inactive)}`
+- ✅ **DO** use multiple arguments for multiple conditions: `clsx(s.base, condA && s.a, condB && s.b)`
+- ❌ **DO NOT** use template literals or raw concatenation: ``className={`${s.base} ${s.active}`}`` -> use `clsx(s.base, s.active)`
+- ❌ **DO NOT** pass objects: `clsx({ [s.a]: condA, [s.b]: condB })` -> use `clsx(condA && s.a, condB && s.b)`
+- ❌ **DO NOT** use for single variables: `clsx(s.foo)` -> just use `className={s.foo}`
+- ❌ **DO NOT** use for simple ternaries: `clsx(cond ? s.a : s.b)` -> use `className={cond ? s.a : s.b}`
+- ❌ **DO NOT** use for static strings: `clsx('a', 'b')` -> just use `className="a b"`
 
 ```javascript
 import React from 'react';
