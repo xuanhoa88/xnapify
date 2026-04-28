@@ -259,11 +259,16 @@ function EditEmailTemplate({ params }) {
 function EditFormFields({ onCancel, loading, isDirtyRef }) {
   const { t } = useTranslation();
   const {
+    watch,
     getValues,
     formState: { isDirty },
   } = useFormContext();
   const dispatch = useDispatch();
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
+  // Watch html_body to control Preview button state
+  const htmlBody = watch('html_body');
+  const isHtmlBodyEmpty = !htmlBody || !htmlBody.replace(/<[^>]*>/g, '').trim();
 
   // Keep isDirtyRef in sync
   isDirtyRef.current = isDirty;
@@ -353,6 +358,7 @@ function EditFormFields({ onCancel, loading, isDirtyRef }) {
             color='gray'
             size='1'
             onClick={handlePreviewEmail}
+            disabled={isHtmlBodyEmpty}
           >
             <EyeOpenIcon width={16} height={16} />
             {t('admin:emails.form.previewBtn', 'Preview')}
