@@ -343,7 +343,11 @@ export default function FileGrid({ onShare }) {
             </Box>
           )}
         </Flex>
-        <Box className={s.cardActions}>
+        <Box
+          className={s.cardActions}
+          onClick={e => e.stopPropagation()}
+          onPointerDown={e => e.stopPropagation()}
+        >
           <FileActionsDropdown
             file={file}
             onRename={onRename}

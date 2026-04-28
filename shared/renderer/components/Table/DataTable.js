@@ -792,7 +792,7 @@ function DataTable({
               })}
             >
               <TablePagination
-                className={borderless ? s.borderlessPagination : undefined}
+                className={clsx(borderless && s.borderlessPagination)}
                 currentPage={paginationProps.current}
                 totalPages={resolvedTotalPages}
                 totalItems={paginationProps.total}

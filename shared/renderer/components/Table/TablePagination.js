@@ -7,10 +7,13 @@
 
 import { useMemo, useCallback } from 'react';
 
-import { Button, Flex, Text } from '@radix-ui/themes';
+import { CaretDownIcon, CheckIcon } from '@radix-ui/react-icons';
+import { Button, Flex, Text, Box } from '@radix-ui/themes';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
+
+import ContextMenu from '../ContextMenu';
 
 import s from './TablePagination.css';
 
@@ -109,9 +112,9 @@ function TablePagination({
   );
 
   const handlePageSizeChange = useCallback(
-    e => {
+    size => {
       if (onPageSizeChange) {
-        onPageSizeChange(Number(e.target.value));
+        onPageSizeChange(Number(size));
       }
     },
     [onPageSizeChange],
@@ -146,24 +149,56 @@ function TablePagination({
         {/* Page size selector */}
         {pageSizeOptions && pageSizeOptions.length > 0 && onPageSizeChange && (
           <Flex align='center' gap='2'>
-            <select
-              value={pageSize}
-              onChange={handlePageSizeChange}
-              disabled={loading}
-              className={clsx(
-                'h-7 rounded-md border border-[var(--gray-a6)] bg-[var(--color-panel-solid)]',
-                'px-2 text-[var(--gray-11)] text-[13px]',
-                'focus:outline-none focus:ring-1 focus:ring-[var(--indigo-7)]',
-                'cursor-pointer',
-              )}
-            >
-              {pageSizeOptions.map(size => (
-                <option key={size} value={size}>
-                  {size} /{' '}
-                  {t('shared:components.table.pagination.page', 'page')}
-                </option>
-              ))}
-            </select>
+            <ContextMenu modal={false}>
+              <ContextMenu.Trigger asChild disabled={loading}>
+                <button type='button' className={s.pageSizeTrigger}>
+                  <span>
+                    {t(
+                      'shared:components.table.pagination.pageSize',
+                      '{{pageSize}} / page',
+                      { pageSize },
+                    )}
+                  </span>
+                  <Box className='flex text-[var(--gray-9)]'>
+                    <CaretDownIcon width={12} height={12} />
+                  </Box>
+                </button>
+              </ContextMenu.Trigger>
+              <ContextMenu.Menu
+                align='center'
+                sideOffset={4}
+                className='border border-[var(--gray-a4)] rounded-md shadow-md overflow-hidden p-1'
+              >
+                {pageSizeOptions.map(size => (
+                  <ContextMenu.Item
+                    key={size}
+                    onClick={() => handlePageSizeChange(size)}
+                    className={clsx(
+                      pageSize === size &&
+                        'bg-[var(--indigo-9)] text-white hover:bg-[var(--indigo-10)]',
+                    )}
+                  >
+                    <Flex align='center' gap='2' width='100%'>
+                      <Box width='16px' className='flex items-center'>
+                        {pageSize === size && (
+                          <CheckIcon width={16} height={16} />
+                        )}
+                      </Box>
+                      <Text
+                        size='2'
+                        className={clsx(pageSize === size && 'text-white')}
+                      >
+                        {t(
+                          'shared:components.table.pagination.page',
+                          '{{size}} / page',
+                          { size },
+                        )}
+                      </Text>
+                    </Flex>
+                  </ContextMenu.Item>
+                ))}
+              </ContextMenu.Menu>
+            </ContextMenu>
           </Flex>
         )}
       </Flex>

@@ -90,8 +90,15 @@
   box-shadow: var(--shadow-2);
 }
 
-.fileCard:hover .cardActions {
+.fileCard:hover .cardActions,
+.fileCard:focus-within .cardActions {
   opacity: 1;
+}
+
+@media (hover: none) and (pointer: coarse), (max-width: 768px) {
+  .cardActions {
+    opacity: 1;
+  }
 }
 
 @media (max-width: 768px) {

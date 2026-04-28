@@ -23,3 +23,29 @@
 .paginationInfo {
   white-space: nowrap;
 }
+
+.pageSizeTrigger {
+  height: 28px;
+  min-width: 90px;
+  border-radius: var(--radius-2);
+  border: 1px solid var(--gray-a7);
+  background-color: var(--color-surface);
+  padding: 0 var(--space-2);
+  color: var(--gray-11);
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  transition: background-color 0.15s;
+}
+
+.pageSizeTrigger:hover {
+  background-color: var(--gray-a3);
+}
+
+.pageSizeTrigger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
