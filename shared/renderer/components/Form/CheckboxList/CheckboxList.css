@@ -1,6 +1,6 @@
 .checkboxItem {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: var(--space-3);
   padding: var(--space-2) var(--space-4);
   transition: background-color 0.15s;
@@ -63,6 +63,7 @@
 
 .listContainer {
   overflow-y: auto;
+  overscroll-behavior-y: contain;
   border: 1px solid var(--gray-a6);
   border-radius: var(--radius-3);
   background-color: var(--color-surface);

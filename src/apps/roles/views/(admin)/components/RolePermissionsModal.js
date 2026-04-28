@@ -13,15 +13,13 @@ import {
   useEffect,
 } from 'react';
 
-import { Flex, Box, Text, Heading } from '@radix-ui/themes';
+import { Flex, Box, Text, Badge } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
 import Modal from '@shared/renderer/components/Modal';
 
 import { fetchRolePermissions, isRoleFetchPermissionsLoading } from '../redux';
-
-import s from './RolePermissionsModal.css';
 
 /**
  * RolePermissionsModal dynamically overriding absolute configurations exclusively formatting robustly smoothly intelligently gracefully correctly natively easily optimally intelligently smoothly automatically dynamically accurately cleanly robustly securely elegantly nicely perfectly precisely reliably functionally elegantly structurally logically cleanly exclusively safely correctly strictly simply fluently gracefully flawlessly optimally optimally automatically automatically neatly automatically matching.
@@ -94,37 +92,54 @@ const RolePermissionsModal = forwardRef((props, ref) => {
         </Modal.Description>
 
         {loading ? (
-          <Text size='2' color='gray'>
-            {t('admin:common.loading', 'Loading...')}
-          </Text>
+          <Flex justify='center' align='center' py='8'>
+            <Text size='2' color='gray'>
+              {t('admin:common.loadingPermissions', 'Loading permissions...')}
+            </Text>
+          </Flex>
         ) : (
-          <Box className={s.permissionsBox}>
-            <Heading as='h4' size='3' className={s.permissionsHeading}>
-              {t('admin:roles.permissions', 'Permissions')} (
-              {permissions.length})
-            </Heading>
-            {permissions.length > 0 ? (
-              <Flex wrap='wrap' gap='2'>
-                {permissions.map(perm => (
-                  <Text
-                    as='span'
-                    key={perm.id}
-                    size='1'
-                    className={s.permissionTag}
-                  >
-                    {perm.resource}:{perm.action}
-                  </Text>
-                ))}
+          <Flex direction='column' gap='6'>
+            <Box>
+              <Flex align='center' gap='2' mb='4'>
+                <Text as='h4' size='3' weight='bold'>
+                  {t('admin:roles.permissions', 'Permissions')}
+                </Text>
+                <Badge variant='soft' color='indigo' size='1' radius='full'>
+                  {permissions.length}
+                </Badge>
               </Flex>
-            ) : (
-              <Text as='p' size='2' color='gray' className={s.emptyPermissions}>
-                {t(
-                  'admin:roles.noPermissionsAssigned',
-                  'No permissions assigned to this role.',
-                )}
-              </Text>
-            )}
-          </Box>
+              {permissions.length > 0 ? (
+                <Flex wrap='wrap' gap='2'>
+                  {permissions.map(perm => (
+                    <Badge
+                      key={perm.id}
+                      variant='soft'
+                      color='gray'
+                      size='2'
+                      radius='medium'
+                      highContrast
+                    >
+                      {perm.resource}:{perm.action}
+                    </Badge>
+                  ))}
+                </Flex>
+              ) : (
+                <Flex
+                  justify='center'
+                  align='center'
+                  p='6'
+                  className='border border-dashed border-[var(--gray-a6)] rounded-md'
+                >
+                  <Text size='2' color='gray'>
+                    {t(
+                      'admin:roles.noPermissionsAssigned',
+                      'No permissions assigned to this role.',
+                    )}
+                  </Text>
+                </Flex>
+              )}
+            </Box>
+          </Flex>
         )}
       </Modal.Body>
       <Modal.Footer>

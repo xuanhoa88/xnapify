@@ -14,7 +14,7 @@ import {
 } from 'react';
 
 import { GroupIcon } from '@radix-ui/react-icons';
-import { Flex, Box, Text } from '@radix-ui/themes';
+import { Flex, Box, Text, Card, Badge } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 
@@ -25,8 +25,6 @@ import {
 } from '@shared/renderer/components/Table';
 
 import { fetchRoleGroups } from '../redux';
-
-import s from './RoleGroupsModal.css';
 
 /**
  * RoleGroupsModal abandoning arbitrary inline layout overrides simply dynamically cleanly perfectly smoothly statically optimally effortlessly securely gracefully matching consistently functionally securely elegantly correctly nicely thoroughly dependably dependably purely natively smartly perfectly solidly fluently optimally logically explicitly exactly carefully beautifully neatly.
@@ -142,7 +140,7 @@ const RoleGroupsModal = forwardRef((props, ref) => {
         </Modal.Description>
 
         {/* Search Input */}
-        <Box className={s.searchBox}>
+        <Box mb='4'>
           <TableSearch
             value={search}
             onChange={handleSearchChange}
@@ -150,13 +148,23 @@ const RoleGroupsModal = forwardRef((props, ref) => {
           />
         </Box>
 
-        <Box className={s.itemsFlex}>
+        <Flex direction='column' gap='3'>
           {groupsLoading ? (
-            <Flex justify='center' align='center' className={s.loadingFlex}>
+            <Flex
+              justify='center'
+              align='center'
+              p='8'
+              className='text-[var(--gray-9)] italic'
+            >
               {t('admin:common.loadingGroups', 'Loading groups...')}
             </Flex>
           ) : groups.length === 0 ? (
-            <Flex justify='center' align='center' className={s.emptyFlex}>
+            <Flex
+              justify='center'
+              align='center'
+              p='8'
+              className='text-[var(--gray-9)] italic bg-[var(--gray-2)] rounded-[var(--radius-3)]'
+            >
               {search
                 ? t('admin:roles.noGroupsMatch', 'No groups match your search')
                 : t(
@@ -166,44 +174,45 @@ const RoleGroupsModal = forwardRef((props, ref) => {
             </Flex>
           ) : (
             groups.map(group => (
-              <Flex
-                key={group.id}
-                align='center'
-                gap='3'
-                className={s.itemFlex}
-              >
-                <Flex align='center' justify='center' className={s.iconBox}>
-                  <GroupIcon width={20} height={20} />
-                </Flex>
-                <Box className={s.itemInfo}>
-                  <Text as='div' size='2' weight='bold' className={s.itemName}>
-                    {group.name}
-                  </Text>
-                  <Text
-                    as='div'
-                    size='1'
-                    color='gray'
-                    className={s.itemDescription}
+              <Card key={group.id} size='1'>
+                <Flex align='center' gap='3' p='1'>
+                  <Flex
+                    align='center'
+                    justify='center'
+                    className='w-10 h-10 rounded-[var(--radius-2)] bg-[var(--amber-3)] text-[var(--amber-11)] shrink-0'
                   >
-                    {group.description ||
-                      t('admin:common.noDescription', 'No description')}
-                  </Text>
-                </Box>
-                <Box>
-                  <Text size='1' weight='medium' className={s.countBadge}>
-                    {t('admin:common.usersCount', '{{count}} users', {
-                      count: group.userCount || 0,
-                    })}
-                  </Text>
-                </Box>
-              </Flex>
+                    <GroupIcon width={20} height={20} />
+                  </Flex>
+                  <Box className='flex-1 min-w-0'>
+                    <Text as='div' size='2' weight='bold' className='truncate'>
+                      {group.name}
+                    </Text>
+                    <Text
+                      as='div'
+                      size='1'
+                      color='gray'
+                      className='truncate mt-1'
+                    >
+                      {group.description ||
+                        t('admin:common.noDescription', 'No description')}
+                    </Text>
+                  </Box>
+                  <Box>
+                    <Badge variant='soft' color='indigo' size='1' radius='full'>
+                      {t('admin:common.usersCount', '{{count}} users', {
+                        count: group.userCount || 0,
+                      })}
+                    </Badge>
+                  </Box>
+                </Flex>
+              </Card>
             ))
           )}
-        </Box>
+        </Flex>
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <Box className={s.paginationBox}>
+          <Box mt='5'>
             <TablePagination
               currentPage={currentPage}
               totalPages={totalPages}

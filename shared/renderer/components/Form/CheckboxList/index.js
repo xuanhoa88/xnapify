@@ -8,14 +8,15 @@
 import {
   forwardRef,
   useRef,
+  useEffect,
   useCallback,
   useMemo,
   useState,
-  useEffect,
   memo,
 } from 'react';
 
 import {
+  Spinner,
   Flex,
   Text,
   Box,
@@ -49,7 +50,6 @@ const CheckboxItem = memo(function CheckboxItem({
 }) {
   return (
     <Box
-      as='label'
       className={clsx(
         s.checkboxItem,
         disabled ? s.checkboxItemCursorDisabled : s.checkboxItemCursor,
@@ -104,23 +104,22 @@ const GroupHeader = memo(function GroupHeader({
   disabled,
   onToggle,
 }) {
-  const checkboxRef = useRef(null);
   const isAllSelected = selectedCount === totalCount && totalCount > 0;
   const isIndeterminate = selectedCount > 0 && selectedCount < totalCount;
 
-  // Set indeterminate property via ref (can't be set via attribute)
-  useEffect(() => {
-    if (checkboxRef.current) {
-      checkboxRef.current.indeterminate = isIndeterminate;
-    }
-  }, [isIndeterminate]);
+  // Keep a ref to the latest isAllSelected so that handleChange can read it
+  // without being re-created when isAllSelected changes. A stable callback
+  // identity prevents Radix Checkbox from re-composing its internal refs,
+  // which avoids the setState-during-commit infinite loop bug.
+  const isAllSelectedRef = useRef(isAllSelected);
+  isAllSelectedRef.current = isAllSelected;
 
   const handleChange = useCallback(() => {
-    onToggle(groupKey, !isAllSelected);
-  }, [groupKey, isAllSelected, onToggle]);
+    onToggle(groupKey, !isAllSelectedRef.current);
+  }, [groupKey, onToggle]);
 
   return (
-    <Box as='label' className={s.groupHeader}>
+    <Box className={s.groupHeader}>
       <Checkbox
         size='1'
         checked={
@@ -212,7 +211,7 @@ const FormCheckboxList = forwardRef(function FormCheckboxList$(
     emptyMessage = 'No items found',
     loadingMessage = 'Loading...',
     // Dimensions
-    maxHeight = 320,
+    maxHeight = 240,
     minHeight = 160,
     size = '2',
     // Other
@@ -222,7 +221,16 @@ const FormCheckboxList = forwardRef(function FormCheckboxList$(
   forwardedRef,
 ) {
   const { t } = useTranslation();
-
+  // Track whether loading has completed at least once.
+  // Stays false until `loading` transitions to false, which prevents
+  // the empty-message from flashing before the first fetch resolves.
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  useEffect(() => {
+    if (!loading) {
+      setHasLoadedOnce(true);
+    }
+  }, [loading]);
+  const showLoading = loading || (!hasLoadedOnce && items.length === 0);
   const displayEmptyMessage =
     emptyMessage || t('shared:components.checkboxList.empty', 'No items found');
   const displayLoadingMessage =
@@ -355,9 +363,10 @@ const FormCheckboxList = forwardRef(function FormCheckboxList$(
 
       if (selectAll) {
         // Add all group items that aren't already selected
+        const currentSet = new Set(currentValues);
         const newValues = [...currentValues];
         groupItemValues.forEach(value => {
-          if (!selectedSet.has(value)) {
+          if (!currentSet.has(value)) {
             newValues.push(value);
           }
         });
@@ -372,7 +381,7 @@ const FormCheckboxList = forwardRef(function FormCheckboxList$(
         );
       }
     },
-    [groupedItems, getItemValue, getValues, selectedSet, setValue, name],
+    [groupedItems, getItemValue, getValues, setValue, name],
   );
 
   // Memoized group label formatter
@@ -490,7 +499,7 @@ const FormCheckboxList = forwardRef(function FormCheckboxList$(
         </TextField.Root>
       )}
 
-      {loading ? (
+      {showLoading ? (
         <Flex
           align='center'
           justify='center'
@@ -501,6 +510,8 @@ const FormCheckboxList = forwardRef(function FormCheckboxList$(
           )}
           style={dynamicSizing}
         >
+          {/* Add a spinner visual indicator */}
+          <Spinner size='2' mr='2' />
           <Text size='2' color='gray' className={s.centerItalic}>
             {displayLoadingMessage}
           </Text>

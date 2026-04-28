@@ -11,9 +11,17 @@
 @tailwind components;
 @tailwind utilities;
 
-html, body, #app {
+html,
+body {
   margin: 0 !important;
   padding: 0 !important;
+  height: 100%;
+  overflow-x: hidden;
+}
+
+/* Definite height root — makes height: 100% on all descendants resolve correctly */
+#app {
+  height: 100%;
   overflow-x: hidden;
 }
 

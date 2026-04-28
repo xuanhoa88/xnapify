@@ -5,11 +5,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useMemo } from 'react';
+import { useId } from 'react';
 
 import { Flex } from '@radix-ui/themes';
 import get from 'lodash/get';
-import uniqueId from 'lodash/uniqueId';
 import PropTypes from 'prop-types';
 import { useFormContext } from 'react-hook-form';
 
@@ -49,8 +48,10 @@ function FormField({
   debounceMs = 300,
   asyncMessages,
 }) {
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const id = useMemo(() => uniqueId(`field-${name}-`), [name]);
+  // useId generates a stable ID that matches between SSR and client hydration,
+  // avoiding the htmlFor mismatch warning caused by lodash/uniqueId's global counter.
+  const reactId = useId();
+  const id = `field-${name}-${reactId}`;
   const {
     formState: { errors },
   } = useFormContext();

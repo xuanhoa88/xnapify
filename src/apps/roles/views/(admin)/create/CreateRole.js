@@ -7,27 +7,90 @@
 
 import { useState, useCallback, useRef, useMemo } from 'react';
 
-import { LockClosedIcon } from '@radix-ui/react-icons';
-import { Box, Flex, Heading, Button } from '@radix-ui/themes';
+import { LockClosedIcon, PlusIcon } from '@radix-ui/react-icons';
+import {
+  Box,
+  Flex,
+  Text,
+  Grid,
+  Button,
+  Card,
+  Badge,
+  Separator,
+} from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-// import { Flex, Heading, Text, Box } , Button } from '@radix-ui/themes';
-// import { Button } , Button } from '@radix-ui/themes';
 import Form, { useFormContext } from '@shared/renderer/components/Form';
 import { useHistory } from '@shared/renderer/components/History';
 import { useDebounce } from '@shared/renderer/components/InfiniteScroll';
 import Modal from '@shared/renderer/components/Modal';
+import { PageHeader } from '@shared/renderer/components/PageHeader';
 
 import { createRoleFormSchema } from '../../../validator/admin';
 import { createRole, isRoleCreateLoading } from '../redux';
 
-import s from './CreateRole.css';
+// =============================================================================
+// Identity sidebar card for the "Create" flow
+// =============================================================================
 
-/**
- * CreateRole implementing layout primitives robustly efficiently simply perfectly strictly exactly smartly natively intelligently solidly efficiently elegantly explicitly fully automatically effectively effortlessly effortlessly effortlessly purely dependably nicely cleanly purely accurately.
- */
+function CreateRoleIdentityCard() {
+  const { t } = useTranslation();
+  const { watch } = useFormContext();
+
+  const name = watch('name') || '';
+  const selectedPermissions = watch('permissions') || [];
+
+  return (
+    <Card variant='surface'>
+      <Flex direction='column' align='center' p='5' gap='4'>
+        <Flex
+          align='center'
+          justify='center'
+          width='64px'
+          height='64px'
+          className='rounded-full bg-[var(--indigo-3)] text-[var(--indigo-11)]'
+        >
+          <LockClosedIcon width={28} height={28} />
+        </Flex>
+
+        <Flex direction='column' align='center' gap='1' className='w-full'>
+          <Text size='4' weight='bold' align='center' className='break-all'>
+            {name || t('admin:roles.create.newRole', 'New Role')}
+          </Text>
+        </Flex>
+
+        <Separator size='4' />
+
+        <Flex direction='column' gap='3' className='w-full'>
+          <Flex justify='between' align='center'>
+            <Text size='2' color='gray'>
+              {t('admin:roles.create.permissionsLabel', 'Permissions')}
+            </Text>
+            <Badge color='indigo' variant='soft' radius='full' size='1'>
+              {selectedPermissions.length}
+            </Badge>
+          </Flex>
+
+          <Flex justify='between' align='center'>
+            <Text size='2' color='gray'>
+              {t('admin:roles.create.statusLabel', 'Status')}
+            </Text>
+            <Badge color='indigo' variant='soft' radius='full' size='1'>
+              {t('admin:roles.create.newRole', 'New Role')}
+            </Badge>
+          </Flex>
+        </Flex>
+      </Flex>
+    </Card>
+  );
+}
+
+// =============================================================================
+// Main CreateRole component
+// =============================================================================
+
 function CreateRole({ context }) {
   const dispatch = useDispatch();
   const { t } = useTranslation();
@@ -94,37 +157,41 @@ function CreateRole({ context }) {
   };
 
   return (
-    <Box className={s.containerBox}>
-      <Flex
-        align='center'
-        justify='between'
-        wrap='wrap'
-        gap='4'
-        pb='4'
-        mb='6'
-        className={s.adminHeader}
+    <Box className='p-6 max-w-[1400px] mx-auto'>
+      <PageHeader
+        title={t('admin:roles.create.title', 'Create New Role')}
+        subtitle={t(
+          'admin:roles.create.subtitle',
+          'Define a role and assign permissions to it',
+        )}
+        icon={<LockClosedIcon width={24} height={24} />}
       >
-        <Flex align='center' gap='3'>
-          <Flex align='center' justify='center' className={s.adminHeaderIcon}>
-            <LockClosedIcon width={24} height={24} />
-          </Flex>
-          <Flex direction='column'>
-            <Heading size='6'>{null}</Heading>
-          </Flex>
-        </Flex>
-      </Flex>
+        <Button
+          variant='ghost'
+          color='gray'
+          onClick={() => history.push('/admin/roles')}
+        >
+          {t('admin:roles.create.backToList', 'Back to Roles')}
+        </Button>
+      </PageHeader>
 
       <Form
         schema={createRoleFormSchema}
         defaultValues={defaultValues}
         onSubmit={handleSubmit}
       >
-        <CreateRoleFormFields
-          onCancel={handleCancel}
-          loading={loading}
-          isDirtyRef={isDirtyRef}
-          fetchPermissions={fetchPermissions}
-        />
+        <Grid columns={{ initial: '1', lg: '280px 1fr' }} gap='6' align='start'>
+          {/* Left: live identity card */}
+          <CreateRoleIdentityCard />
+
+          {/* Right: form sections */}
+          <CreateRoleFormFields
+            onCancel={handleCancel}
+            loading={loading}
+            isDirtyRef={isDirtyRef}
+            fetchPermissions={fetchPermissions}
+          />
+        </Grid>
       </Form>
 
       <Modal.ConfirmBack
@@ -135,9 +202,10 @@ function CreateRole({ context }) {
   );
 }
 
-/**
- * CreateRoleFormFields - Form fields component that uses react-hook-form context
- */
+// =============================================================================
+// Form fields — inner component consumes react-hook-form context
+// =============================================================================
+
 function CreateRoleFormFields({
   onCancel,
   loading,
@@ -151,32 +219,29 @@ function CreateRoleFormFields({
     formState: { isDirty },
   } = useFormContext();
 
-  // Keep isDirtyRef in sync with form dirty state
   isDirtyRef.current = isDirty;
 
-  // Wrap onCancel to check dirty state
   const handleCancel = useCallback(() => {
     onCancel(isDirty);
   }, [onCancel, isDirty]);
 
-  // Watch selected permissions count
   const selectedPermissions = watch('permissions') || [];
 
-  // Permissions state for loading
   const [permissions, setPermissions] = useState([]);
   const [permissionsLoading, setPermissionsLoading] = useState(false);
+  const [permissionsLoadingMore, setPermissionsLoadingMore] = useState(false);
   const [permissionsHasMore, setPermissionsHasMore] = useState(false);
   const [permissionsPage, setPermissionsPage] = useState(1);
   const permissionsLimit = 20;
 
-  // Permission search state
   const [permissionSearch, setPermissionSearch] = useState('');
 
-  // Fetch permissions with pagination
   const loadPermissions = useCallback(
     async (page, search = '', reset = false) => {
       if (reset) {
         setPermissionsLoading(true);
+      } else {
+        setPermissionsLoadingMore(true);
       }
 
       try {
@@ -198,23 +263,22 @@ function CreateRoleFormFields({
         // Silently handle error
       } finally {
         setPermissionsLoading(false);
+        setPermissionsLoadingMore(false);
       }
     },
     [dispatch, fetchPermissions],
   );
 
-  // Debounced permission search (also handles initial load on mount)
   useDebounce(permissionSearch, 300, debouncedSearch => {
     loadPermissions(1, debouncedSearch, true);
   });
 
-  // Load more permissions handler
   const handleLoadMorePermissions = useCallback(() => {
-    if (!permissionsLoading && permissionsHasMore) {
+    if (!permissionsLoadingMore && permissionsHasMore) {
       loadPermissions(permissionsPage + 1, permissionSearch, false);
     }
   }, [
-    permissionsLoading,
+    permissionsLoadingMore,
     permissionsHasMore,
     permissionsPage,
     permissionSearch,
@@ -222,12 +286,18 @@ function CreateRoleFormFields({
   ]);
 
   return (
-    <Flex direction='column' gap='6'>
-      <Box>
-        <Heading as='h3' size='4' className={s.sectionHeading}>
+    <Card variant='surface' className='p-0'>
+      {/* ── Role Information ──────────────────────────────────────── */}
+      <Box
+        px='5'
+        py='3'
+        className='bg-[var(--gray-a2)] border-b border-[var(--gray-a4)]'
+      >
+        <Text size='2' weight='bold' color='gray'>
           {t('admin:roles.create.roleInformation', 'Role Information')}
-        </Heading>
-
+        </Text>
+      </Box>
+      <Box p='5'>
         <Form.Field
           name='name'
           label={t('admin:roles.create.roleName', 'Role Name')}
@@ -255,15 +325,23 @@ function CreateRoleFormFields({
         </Form.Field>
       </Box>
 
-      <Box>
-        <Heading as='h3' size='4' className={s.sectionHeading}>
+      {/* ── Permissions ───────────────────────────────────────────── */}
+      <Box
+        px='5'
+        py='3'
+        className='bg-[var(--gray-a2)] border-t border-[var(--gray-a4)] border-b border-[var(--gray-a4)]'
+      >
+        <Text size='2' weight='bold' color='gray'>
           {t(
             'admin:roles.create.permissionsCount',
             'Permissions ({{count}} selected)',
-            { count: selectedPermissions.length },
+            {
+              count: selectedPermissions.length,
+            },
           )}
-        </Heading>
-
+        </Text>
+      </Box>
+      <Box p='5'>
         <Form.Field name='permissions'>
           <Form.CheckboxList
             items={permissions}
@@ -271,6 +349,7 @@ function CreateRoleFormFields({
             labelKey='description'
             groupBy='resource'
             loading={permissionsLoading}
+            loadingMore={permissionsLoadingMore}
             hasMore={permissionsHasMore}
             onLoadMore={handleLoadMorePermissions}
             searchable
@@ -291,22 +370,31 @@ function CreateRoleFormFields({
         </Form.Field>
       </Box>
 
-      <Flex gap='3' justify='end' className={s.actionsFlex}>
+      {/* ── Footer actions ────────────────────────────────────────── */}
+      <Flex
+        align='center'
+        justify='between'
+        px='5'
+        py='4'
+        className='rounded-b-md bg-[var(--gray-2)] border-t border-[var(--gray-a4)]'
+      >
         <Button
           variant='soft'
           color='gray'
+          type='button'
           onClick={handleCancel}
           disabled={loading}
         >
           {t('admin:buttons.cancel', 'Cancel')}
         </Button>
         <Button variant='solid' color='indigo' type='submit' loading={loading}>
+          <PlusIcon width={15} height={15} />
           {loading
             ? t('admin:buttons.creating', 'Creating...')
             : t('admin:buttons.createRole', 'Create Role')}
         </Button>
       </Flex>
-    </Flex>
+    </Card>
   );
 }
 

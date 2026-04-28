@@ -37,7 +37,7 @@ const FormCheckbox = forwardRef(function FormCheckbox$(
   const handleBlur = useComposedHandler(props.onBlur, field.onBlur);
 
   return (
-    <Text as='label' size={size}>
+    <Text as='div' size={size}>
       <Flex gap='2' align='center' className={className}>
         <Checkbox
           id={id}

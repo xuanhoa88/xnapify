@@ -7,8 +7,17 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 
-import { LockClosedIcon } from '@radix-ui/react-icons';
-import { Box, Flex, Heading, Button } from '@radix-ui/themes';
+import { LockClosedIcon, Pencil1Icon } from '@radix-ui/react-icons';
+import {
+  Box,
+  Flex,
+  Text,
+  Grid,
+  Button,
+  Card,
+  Badge,
+  Separator,
+} from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
@@ -17,6 +26,7 @@ import Form, { useFormContext } from '@shared/renderer/components/Form';
 import { useHistory } from '@shared/renderer/components/History';
 import { useDebounce } from '@shared/renderer/components/InfiniteScroll';
 import Modal from '@shared/renderer/components/Modal';
+import { PageHeader } from '@shared/renderer/components/PageHeader';
 
 import { updateRoleFormSchema } from '../../../../validator/admin';
 import {
@@ -29,11 +39,70 @@ import {
   getFetchedRole,
 } from '../../redux';
 
-import s from './EditRole.css';
+// =============================================================================
+// Identity sidebar card — reflects live form values
+// =============================================================================
 
-/**
- * EditRole implementing explicit pure layout variables avoiding relative mappings smartly functionally effectively securely elegantly simply exclusively statically beautifully efficiently cleanly.
- */
+function EditRoleIdentityCard({ role }) {
+  const { t } = useTranslation();
+  const { watch } = useFormContext();
+
+  const name = watch('name') || (role && role.name) || '';
+  const selectedPermissions = watch('permissions') || [];
+
+  return (
+    <Card variant='surface'>
+      <Flex direction='column' align='center' p='5' gap='4'>
+        <Flex
+          align='center'
+          justify='center'
+          width='64px'
+          height='64px'
+          className='rounded-full bg-[var(--indigo-3)] text-[var(--indigo-11)]'
+        >
+          <LockClosedIcon width={28} height={28} />
+        </Flex>
+
+        <Flex direction='column' align='center' gap='1' className='w-full'>
+          <Text size='4' weight='bold' align='center' className='break-all'>
+            {name || t('admin:roles.edit.unnamedRole', 'Unnamed Role')}
+          </Text>
+        </Flex>
+
+        <Separator size='4' />
+
+        <Flex direction='column' gap='3' className='w-full'>
+          <Flex justify='between' align='center'>
+            <Text size='2' color='gray'>
+              {t('admin:roles.edit.permissionsLabel', 'Permissions')}
+            </Text>
+            <Badge color='indigo' variant='soft' radius='full' size='1'>
+              {selectedPermissions.length}
+            </Badge>
+          </Flex>
+
+          <Flex justify='between' align='center'>
+            <Text size='2' color='gray'>
+              {t('admin:roles.edit.statusLabel', 'Status')}
+            </Text>
+            <Badge color='green' variant='soft' radius='full' size='1'>
+              {t('admin:roles.edit.active', 'Active')}
+            </Badge>
+          </Flex>
+        </Flex>
+      </Flex>
+    </Card>
+  );
+}
+
+EditRoleIdentityCard.propTypes = {
+  role: PropTypes.object,
+};
+
+// =============================================================================
+// Main EditRole component
+// =============================================================================
+
 function EditRole({ roleId, context }) {
   const dispatch = useDispatch();
   const { t } = useTranslation();
@@ -44,24 +113,24 @@ function EditRole({ roleId, context }) {
     return thunks;
   }, [container]);
 
-  const defaultValues = useMemo(
-    () => ({
-      name: role.name || '',
-      description: role.description || '',
-      permissions:
-        role.permissions && role.permissions.length > 0
-          ? role.permissions.map(p => p.id)
-          : [],
-    }),
-    [role],
-  );
-
   const history = useHistory();
   const loading = useSelector(isRoleUpdateLoading);
   const fetchingRole = useSelector(isRoleFetchLoading);
   const fetchInitialized = useSelector(isRoleFetchInitialized);
   const role = useSelector(getFetchedRole);
   const roleLoadError = useSelector(getRoleFetchError);
+
+  const defaultValues = useMemo(
+    () => ({
+      name: role && role.name ? role.name : '',
+      description: role && role.description ? role.description : '',
+      permissions:
+        role && role.permissions && role.permissions.length > 0
+          ? role.permissions.map(p => p.id)
+          : [],
+    }),
+    [role],
+  );
 
   const [, setError] = useState(null);
   const confirmBackModalRef = useRef(null);
@@ -111,35 +180,36 @@ function EditRole({ roleId, context }) {
     [dispatch, role, history, t],
   );
 
-  // Fetch role data on mount
   useEffect(() => {
     if (roleId) {
       dispatch(fetchRoleById(roleId));
     }
   }, [dispatch, roleId]);
 
-  // Show loading on first fetch or when still fetching
-  if (!fetchInitialized || fetchingRole) {
+  const pageTitle =
+    !fetchInitialized || fetchingRole
+      ? t('admin:roles.edit.titleLoading', 'Loading Role...')
+      : roleLoadError || !role
+        ? t('admin:roles.edit.titleError', 'Error Loading Role')
+        : t('admin:roles.edit.title', 'Edit Role: {{name}}', {
+            name: role.name,
+          });
+
+  if (!fetchInitialized || fetchingRole || !role || roleLoadError) {
     return (
-      <Box className={s.containerBox}>
-        <Flex
-          align='center'
-          justify='between'
-          wrap='wrap'
-          gap='4'
-          pb='4'
-          mb='6'
-          className={s.adminHeader}
+      <Box className='p-6 max-w-[1400px] mx-auto'>
+        <PageHeader
+          title={pageTitle}
+          icon={<LockClosedIcon width={24} height={24} />}
         >
-          <Flex align='center' gap='3'>
-            <Flex align='center' justify='center' className={s.adminHeaderIcon}>
-              <LockClosedIcon width={24} height={24} />
-            </Flex>
-            <Flex direction='column'>
-              <Heading size='6'>{null}</Heading>
-            </Flex>
-          </Flex>
-        </Flex>
+          <Button
+            variant='ghost'
+            color='gray'
+            onClick={() => history.push('/admin/roles')}
+          >
+            {t('admin:roles.edit.backToList', 'Back to Roles')}
+          </Button>
+        </PageHeader>
         <Modal.ConfirmBack
           ref={confirmBackModalRef}
           onConfirm={handleConfirmBack}
@@ -148,63 +218,42 @@ function EditRole({ roleId, context }) {
     );
   }
 
-  if (!role || roleLoadError) {
-    return (
-      <Box className={s.containerBox}>
-        <Flex
-          align='center'
-          justify='between'
-          wrap='wrap'
-          gap='4'
-          pb='4'
-          mb='6'
-          className={s.adminHeader}
-        >
-          <Flex align='center' gap='3'>
-            <Flex align='center' justify='center' className={s.adminHeaderIcon}>
-              <LockClosedIcon width={24} height={24} />
-            </Flex>
-            <Flex direction='column'>
-              <Heading size='6'>{null}</Heading>
-            </Flex>
-          </Flex>
-        </Flex>
-      </Box>
-    );
-  }
-
   return (
-    <Box className={s.containerBox}>
-      <Flex
-        align='center'
-        justify='between'
-        wrap='wrap'
-        gap='4'
-        pb='4'
-        mb='6'
-        className={s.adminHeader}
+    <Box className='p-6 max-w-[1400px] mx-auto'>
+      <PageHeader
+        title={pageTitle}
+        subtitle={t(
+          'admin:roles.edit.subtitle',
+          'Update role details and permission assignments',
+        )}
+        icon={<LockClosedIcon width={24} height={24} />}
       >
-        <Flex align='center' gap='3'>
-          <Flex align='center' justify='center' className={s.adminHeaderIcon}>
-            <LockClosedIcon width={24} height={24} />
-          </Flex>
-          <Flex direction='column'>
-            <Heading size='6'>{null}</Heading>
-          </Flex>
-        </Flex>
-      </Flex>
+        <Button
+          variant='ghost'
+          color='gray'
+          onClick={() => history.push('/admin/roles')}
+        >
+          {t('admin:roles.edit.backToList', 'Back to Roles')}
+        </Button>
+      </PageHeader>
 
       <Form
         schema={updateRoleFormSchema}
         defaultValues={defaultValues}
         onSubmit={handleSubmit}
       >
-        <EditRoleFormFields
-          onCancel={handleCancel}
-          loading={loading}
-          isDirtyRef={isDirtyRef}
-          fetchPermissions={fetchPermissions}
-        />
+        <Grid columns={{ initial: '1', lg: '280px 1fr' }} gap='6' align='start'>
+          {/* Left: live identity card */}
+          <EditRoleIdentityCard role={role} />
+
+          {/* Right: form sections */}
+          <EditRoleFormFields
+            onCancel={handleCancel}
+            loading={loading}
+            isDirtyRef={isDirtyRef}
+            fetchPermissions={fetchPermissions}
+          />
+        </Grid>
       </Form>
 
       <Modal.ConfirmBack
@@ -215,48 +264,46 @@ function EditRole({ roleId, context }) {
   );
 }
 
-/**
- * EditRoleFormFields - Form fields component that uses react-hook-form context
- */
+// =============================================================================
+// Form fields — inner component consumes react-hook-form context
+// =============================================================================
+
 function EditRoleFormFields({
   onCancel,
   loading,
   isDirtyRef,
   fetchPermissions,
 }) {
-  const { t } = useTranslation();
   const dispatch = useDispatch();
+  const { t } = useTranslation();
   const {
     watch,
     formState: { isDirty },
   } = useFormContext();
 
-  // Keep isDirtyRef in sync with form dirty state
   isDirtyRef.current = isDirty;
 
-  // Wrap onCancel to check dirty state
   const handleCancel = useCallback(() => {
     onCancel(isDirty);
   }, [onCancel, isDirty]);
 
-  // Watch selected permissions count
   const selectedPermissions = watch('permissions') || [];
 
-  // Permissions state for loading
   const [permissions, setPermissions] = useState([]);
   const [permissionsLoading, setPermissionsLoading] = useState(false);
+  const [permissionsLoadingMore, setPermissionsLoadingMore] = useState(false);
   const [permissionsHasMore, setPermissionsHasMore] = useState(false);
   const [permissionsPage, setPermissionsPage] = useState(1);
   const permissionsLimit = 20;
 
-  // Permission search state
   const [permissionSearch, setPermissionSearch] = useState('');
 
-  // Fetch permissions with pagination
   const loadPermissions = useCallback(
     async (page, search = '', reset = false) => {
       if (reset) {
         setPermissionsLoading(true);
+      } else {
+        setPermissionsLoadingMore(true);
       }
 
       try {
@@ -278,23 +325,22 @@ function EditRoleFormFields({
         // Silently handle error
       } finally {
         setPermissionsLoading(false);
+        setPermissionsLoadingMore(false);
       }
     },
     [dispatch, fetchPermissions],
   );
 
-  // Debounced permission search (also handles initial load on mount)
   useDebounce(permissionSearch, 300, debouncedSearch => {
     loadPermissions(1, debouncedSearch, true);
   });
 
-  // Load more permissions handler
   const handleLoadMorePermissions = useCallback(() => {
-    if (!permissionsLoading && permissionsHasMore) {
+    if (!permissionsLoadingMore && permissionsHasMore) {
       loadPermissions(permissionsPage + 1, permissionSearch, false);
     }
   }, [
-    permissionsLoading,
+    permissionsLoadingMore,
     permissionsHasMore,
     permissionsPage,
     permissionSearch,
@@ -302,12 +348,18 @@ function EditRoleFormFields({
   ]);
 
   return (
-    <Flex direction='column' gap='6'>
-      <Box>
-        <Heading as='h3' size='4' className={s.sectionHeading}>
+    <Card variant='surface' className='p-0'>
+      {/* ── Role Information ──────────────────────────────────────── */}
+      <Box
+        px='5'
+        py='3'
+        className='bg-[var(--gray-a2)] border-b border-[var(--gray-a4)]'
+      >
+        <Text size='2' weight='bold' color='gray'>
           {t('admin:roles.edit.roleInformation', 'Role Information')}
-        </Heading>
-
+        </Text>
+      </Box>
+      <Box p='5'>
         <Form.Field
           name='name'
           label={t('admin:roles.edit.roleName', 'Role Name')}
@@ -335,8 +387,13 @@ function EditRoleFormFields({
         </Form.Field>
       </Box>
 
-      <Box>
-        <Heading as='h3' size='4' className={s.sectionHeading}>
+      {/* ── Permissions ───────────────────────────────────────────── */}
+      <Box
+        px='5'
+        py='3'
+        className='bg-[var(--gray-a2)] border-t border-[var(--gray-a4)] border-b border-[var(--gray-a4)]'
+      >
+        <Text size='2' weight='bold' color='gray'>
           {t(
             'admin:roles.edit.permissionsCount',
             'Permissions ({{count}} selected)',
@@ -344,8 +401,9 @@ function EditRoleFormFields({
               count: selectedPermissions.length,
             },
           )}
-        </Heading>
-
+        </Text>
+      </Box>
+      <Box p='5'>
         <Form.Field name='permissions'>
           <Form.CheckboxList
             items={permissions}
@@ -353,6 +411,7 @@ function EditRoleFormFields({
             labelKey='description'
             groupBy='resource'
             loading={permissionsLoading}
+            loadingMore={permissionsLoadingMore}
             hasMore={permissionsHasMore}
             onLoadMore={handleLoadMorePermissions}
             searchable
@@ -373,22 +432,31 @@ function EditRoleFormFields({
         </Form.Field>
       </Box>
 
-      <Flex gap='3' justify='end' className={s.actionsFlex}>
+      {/* ── Footer actions ────────────────────────────────────────── */}
+      <Flex
+        align='center'
+        justify='between'
+        px='5'
+        py='4'
+        className='rounded-b-md bg-[var(--gray-2)] border-t border-[var(--gray-a4)]'
+      >
         <Button
           variant='soft'
           color='gray'
+          type='button'
           onClick={handleCancel}
           disabled={loading}
         >
           {t('admin:buttons.cancel', 'Cancel')}
         </Button>
         <Button variant='solid' color='indigo' type='submit' loading={loading}>
+          <Pencil1Icon width={15} height={15} />
           {loading
             ? t('admin:buttons.saving', 'Saving...')
             : t('admin:buttons.saveChanges', 'Save Changes')}
         </Button>
       </Flex>
-    </Flex>
+    </Card>
   );
 }
 
