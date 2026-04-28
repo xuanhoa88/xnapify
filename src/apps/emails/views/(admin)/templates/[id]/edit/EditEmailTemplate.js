@@ -223,6 +223,14 @@ function EditEmailTemplate({ params }) {
             </Heading>
           </Flex>
         </Flex>
+        <Button
+          variant='ghost'
+          color='gray'
+          onClick={() => handleCancel(isDirtyRef.current)}
+        >
+          <ArrowLeftIcon />
+          {t('admin:emails.edit.backToList', 'Back to Email Templates')}
+        </Button>
       </Flex>
 
       <Form

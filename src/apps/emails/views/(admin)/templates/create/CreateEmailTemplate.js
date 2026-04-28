@@ -7,7 +7,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 
-import { PlusIcon, EyeOpenIcon } from '@radix-ui/react-icons';
+import { ArrowLeftIcon, PlusIcon, EyeOpenIcon } from '@radix-ui/react-icons';
 import { Box, Flex, Heading, Button } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
@@ -124,6 +124,14 @@ function CreateEmailTemplate() {
             </Heading>
           </Flex>
         </Flex>
+        <Button
+          variant='ghost'
+          color='gray'
+          onClick={() => handleCancel(isDirtyRef.current)}
+        >
+          <ArrowLeftIcon />
+          {t('admin:emails.create.backToList', 'Back to Email Templates')}
+        </Button>
       </Flex>
 
       <Form
