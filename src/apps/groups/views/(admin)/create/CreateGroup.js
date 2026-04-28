@@ -7,7 +7,7 @@
 
 import { useState, useCallback, useRef, useMemo } from 'react';
 
-import { GroupIcon, PlusIcon } from '@radix-ui/react-icons';
+import { ArrowLeftIcon, GroupIcon, PlusIcon } from '@radix-ui/react-icons';
 import {
   Box,
   Flex,
@@ -199,8 +199,9 @@ function CreateGroup({ context }) {
         <Button
           variant='ghost'
           color='gray'
-          onClick={() => history.push('/admin/groups')}
+          onClick={() => handleCancel(isDirtyRef.current)}
         >
+          <ArrowLeftIcon />
           {t('admin:groups.create.backToList', 'Back to Groups')}
         </Button>
       </PageHeader>
@@ -210,7 +211,7 @@ function CreateGroup({ context }) {
         defaultValues={defaultValues}
         onSubmit={handleSubmit}
       >
-        <Grid columns={{ initial: '1', lg: '280px 1fr' }} gap='6' align='start'>
+        <Grid columns={{ initial: '1', md: '280px 1fr' }} gap='6' align='start'>
           {/* Left: live identity card */}
           <CreateGroupIdentityCard />
 

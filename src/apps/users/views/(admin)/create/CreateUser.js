@@ -7,7 +7,12 @@
 
 import { useState, useCallback, useRef, useMemo } from 'react';
 
-import { PersonIcon, LockOpen1Icon, PlusIcon } from '@radix-ui/react-icons';
+import {
+  ArrowLeftIcon,
+  PersonIcon,
+  LockOpen1Icon,
+  PlusIcon,
+} from '@radix-ui/react-icons';
 import {
   Box,
   Flex,
@@ -205,8 +210,9 @@ function CreateUser({ context }) {
         <Button
           variant='ghost'
           color='gray'
-          onClick={() => history.push('/admin/users')}
+          onClick={() => handleCancel(isDirtyRef.current)}
         >
+          <ArrowLeftIcon />
           {t('admin:users.create.backToList', 'Back to Users')}
         </Button>
       </PageHeader>
@@ -216,7 +222,7 @@ function CreateUser({ context }) {
         defaultValues={defaultValues}
         onSubmit={handleSubmit}
       >
-        <Grid columns={{ initial: '1', lg: '280px 1fr' }} gap='6' align='start'>
+        <Grid columns={{ initial: '1', md: '280px 1fr' }} gap='6' align='start'>
           {/* Left: live identity card */}
           <CreateUserIdentityCard />
 

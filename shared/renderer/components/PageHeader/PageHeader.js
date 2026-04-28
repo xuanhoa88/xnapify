@@ -11,6 +11,11 @@ import PropTypes from 'prop-types';
 /**
  * PageHeader — Generic page header with icon, title, subtitle, and action slot.
  *
+ * Responsive behaviour:
+ * - Desktop: icon, title/subtitle, and actions on a single row.
+ * - Mobile (<768px): heading size shrinks, icon box shrinks, actions wrap
+ *   to a full-width row for better touch targets.
+ *
  * @example
  * <PageHeader title="Users" subtitle="Manage users" icon={<GroupIcon />}>
  *   <Button>Add User</Button>
@@ -25,29 +30,31 @@ function PageHeader({ title, subtitle, icon, children }) {
       justify='between'
       wrap='wrap'
       gap='4'
-      className='pb-4 mb-6'
+      className='pb-4 mb-6 border-b border-[var(--gray-a4)]'
     >
-      <Flex align='center' gap='3'>
+      <Flex align='center' gap='3' className='min-w-0'>
         {icon && (
           <Flex
             align='center'
             justify='center'
-            className='w-10 h-10 rounded-md bg-[var(--gray-3)] text-[var(--gray-11)] shrink-0'
+            className='w-9 h-9 md:w-10 md:h-10 rounded-md bg-[var(--gray-3)] text-[var(--gray-11)] shrink-0'
           >
             {icon}
           </Flex>
         )}
-        <Flex direction='column'>
-          <Heading size='6'>{title}</Heading>
+        <Flex direction='column' className='min-w-0'>
+          <Heading size={{ initial: '5', md: '6' }} className='truncate'>
+            {title}
+          </Heading>
           {subtitle && (
-            <Text size='2' color='gray' mt='1'>
+            <Text size='2' color='gray' mt='1' className='truncate'>
               {subtitle}
             </Text>
           )}
         </Flex>
       </Flex>
       {children && (
-        <Flex align='center' gap='2'>
+        <Flex align='center' gap='2' wrap='wrap'>
           {children}
         </Flex>
       )}

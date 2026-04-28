@@ -7,26 +7,121 @@
 
 import { useState, useCallback, useRef } from 'react';
 
-import { LockOpen1Icon } from '@radix-ui/react-icons';
-import { Box, Flex, Text, Heading, Button } from '@radix-ui/themes';
+import { ArrowLeftIcon, LockOpen1Icon, PlusIcon } from '@radix-ui/react-icons';
+import {
+  Box,
+  Flex,
+  Text,
+  Grid,
+  Button,
+  Card,
+  Badge,
+  Separator,
+} from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-// import { Flex, Heading, Text, Box } , Button } from '@radix-ui/themes';
-// import { Button } , Button } from '@radix-ui/themes';
 import Form, { useFormContext } from '@shared/renderer/components/Form';
 import { useHistory } from '@shared/renderer/components/History';
 import Modal from '@shared/renderer/components/Modal';
+import { PageHeader } from '@shared/renderer/components/PageHeader';
 
 import { createPermissionFormSchema } from '../../../validator/admin';
 import { createPermission, isPermissionCreateLoading } from '../redux';
 
-import s from './CreatePermission.css';
+// =============================================================================
+// Identity sidebar card — live preview of form values
+// =============================================================================
+
+function CreatePermissionIdentityCard() {
+  const { t } = useTranslation();
+  const { watch } = useFormContext();
+
+  const resource = watch('resource') || '';
+  const action = watch('action') || '';
+  const isActive = watch('is_active');
+  const generatedName = resource && action ? `${resource}:${action}` : '-';
+
+  return (
+    <Card variant='surface'>
+      <Flex direction='column' align='center' p='5' gap='4'>
+        <Flex
+          align='center'
+          justify='center'
+          width='64px'
+          height='64px'
+          className='rounded-full bg-[var(--indigo-3)] text-[var(--indigo-11)]'
+        >
+          <LockOpen1Icon width={28} height={28} />
+        </Flex>
+
+        <Flex direction='column' align='center' gap='1' className='w-full'>
+          <Text
+            size='3'
+            weight='bold'
+            align='center'
+            className='break-all font-mono'
+          >
+            {generatedName}
+          </Text>
+          <Text size='1' color='gray' align='center'>
+            {t(
+              'admin:permissions.create.generatedNameHint',
+              'Auto-generated from resource & action',
+            )}
+          </Text>
+        </Flex>
+
+        <Separator size='4' />
+
+        <Flex direction='column' gap='3' className='w-full'>
+          <Flex justify='between' align='center'>
+            <Text size='2' color='gray'>
+              {t('admin:permissions.create.resource', 'Resource')}
+            </Text>
+            <Badge color='indigo' variant='soft' radius='full' size='1'>
+              {resource || '-'}
+            </Badge>
+          </Flex>
+
+          <Flex justify='between' align='center'>
+            <Text size='2' color='gray'>
+              {t('admin:permissions.create.action', 'Action')}
+            </Text>
+            <Badge color='indigo' variant='soft' radius='full' size='1'>
+              {action || '-'}
+            </Badge>
+          </Flex>
+
+          <Flex justify='between' align='center'>
+            <Text size='2' color='gray'>
+              {t('admin:permissions.create.statusLabel', 'Status')}
+            </Text>
+            <Badge
+              color={isActive ? 'green' : 'gray'}
+              variant='soft'
+              radius='full'
+              size='1'
+            >
+              {isActive
+                ? t('admin:permissions.create.active', 'Active')
+                : t('admin:permissions.create.inactive', 'Inactive')}
+            </Badge>
+          </Flex>
+        </Flex>
+      </Flex>
+    </Card>
+  );
+}
+
+// =============================================================================
+// Main CreatePermission component
+// =============================================================================
 
 export default function CreatePermission() {
   const dispatch = useDispatch();
-
+  const { t } = useTranslation();
   const history = useHistory();
   const loading = useSelector(isPermissionCreateLoading);
   const [, setError] = useState(null);
@@ -81,36 +176,41 @@ export default function CreatePermission() {
   };
 
   return (
-    <Box className={s.containerBox}>
-      <Flex
-        align='center'
-        justify='between'
-        wrap='wrap'
-        gap='4'
-        pb='4'
-        mb='6'
-        className={s.adminHeader}
+    <Box className='p-6 max-w-[1400px] mx-auto'>
+      <PageHeader
+        title={t('admin:permissions.create.title', 'Create New Permission')}
+        subtitle={t(
+          'admin:permissions.create.subtitle',
+          'Define a resource-action pair for access control',
+        )}
+        icon={<LockOpen1Icon width={24} height={24} />}
       >
-        <Flex align='center' gap='3'>
-          <Flex align='center' justify='center' className={s.adminHeaderIcon}>
-            <LockOpen1Icon width={24} height={24} />
-          </Flex>
-          <Flex direction='column'>
-            <Heading size='6'>{null}</Heading>
-          </Flex>
-        </Flex>
-      </Flex>
+        <Button
+          variant='ghost'
+          color='gray'
+          onClick={() => handleCancel(isDirtyRef.current)}
+        >
+          <ArrowLeftIcon />
+          {t('admin:permissions.create.backToList', 'Back to Permissions')}
+        </Button>
+      </PageHeader>
 
       <Form
         schema={createPermissionFormSchema}
         defaultValues={defaultValues}
         onSubmit={handleSubmit}
       >
-        <CreatePermissionFormFields
-          onCancel={handleCancel}
-          loading={loading}
-          isDirtyRef={isDirtyRef}
-        />
+        <Grid columns={{ initial: '1', md: '280px 1fr' }} gap='6' align='start'>
+          {/* Left: live identity card */}
+          <CreatePermissionIdentityCard />
+
+          {/* Right: form sections */}
+          <CreatePermissionFormFields
+            onCancel={handleCancel}
+            loading={loading}
+            isDirtyRef={isDirtyRef}
+          />
+        </Grid>
       </Form>
 
       <Modal.ConfirmBack
@@ -121,13 +221,13 @@ export default function CreatePermission() {
   );
 }
 
-/**
- * CreatePermissionFormFields - Form fields component that uses react-hook-form context
- */
+// =============================================================================
+// Form fields — inner component consumes react-hook-form context
+// =============================================================================
+
 function CreatePermissionFormFields({ onCancel, loading, isDirtyRef }) {
   const { t } = useTranslation();
   const {
-    watch,
     formState: { isDirty },
   } = useFormContext();
 
@@ -139,23 +239,24 @@ function CreatePermissionFormFields({ onCancel, loading, isDirtyRef }) {
     onCancel(isDirty);
   }, [onCancel, isDirty]);
 
-  // Watch for auto-generated name preview
-  const resource = watch('resource') || '';
-  const action = watch('action') || '';
-  const generatedName = resource && action ? `${resource}:${action}` : '-';
-
   return (
-    <Flex direction='column' gap='6'>
-      <Box>
-        <Heading as='h3' size='4' className={s.sectionHeading}>
+    <Card variant='surface' className='p-0'>
+      {/* ── Permission Information ─────────────────────────────────── */}
+      <Box
+        px='5'
+        py='3'
+        className='bg-[var(--gray-a2)] border-b border-[var(--gray-a4)]'
+      >
+        <Text size='2' weight='bold' color='gray'>
           {t(
             'admin:permissions.create.permissionInformation',
             'Permission Information',
           )}
-        </Heading>
-
+        </Text>
+      </Box>
+      <Box p='5'>
         <Flex gap='4' direction={{ initial: 'column', sm: 'row' }}>
-          <Box className={s.flex1}>
+          <Box className='flex-1'>
             <Form.Field
               name='resource'
               label={t('admin:permissions.create.resource', 'Resource')}
@@ -169,7 +270,7 @@ function CreatePermissionFormFields({ onCancel, loading, isDirtyRef }) {
               />
             </Form.Field>
           </Box>
-          <Box className={s.flex1}>
+          <Box className='flex-1'>
             <Form.Field
               name='action'
               label={t('admin:permissions.create.action', 'Action')}
@@ -199,17 +300,23 @@ function CreatePermissionFormFields({ onCancel, loading, isDirtyRef }) {
         </Form.Field>
       </Box>
 
-      <Box>
-        <Heading as='h3' size='4' className={s.sectionHeading}>
+      {/* ── Status ─────────────────────────────────────────────────── */}
+      <Box
+        px='5'
+        py='3'
+        className='bg-[var(--gray-a2)] border-t border-[var(--gray-a4)] border-b border-[var(--gray-a4)]'
+      >
+        <Text size='2' weight='bold' color='gray'>
           {t('admin:permissions.create.status', 'Status')}
-        </Heading>
-
+        </Text>
+      </Box>
+      <Box p='5'>
         <Form.Field name='is_active'>
           <Form.Checkbox
             label={t('admin:permissions.create.isActive', 'Active')}
           />
         </Form.Field>
-        <Text as='p' size='1' color='gray' className={s.hintText}>
+        <Text as='p' size='1' color='gray' mt='1'>
           {t(
             'admin:permissions.create.isActiveHint',
             'Inactive permissions will not be enforced in authorization checks',
@@ -217,38 +324,34 @@ function CreatePermissionFormFields({ onCancel, loading, isDirtyRef }) {
         </Text>
       </Box>
 
-      <Box>
-        <Heading as='h3' size='4' className={s.sectionHeading}>
-          {t('admin:permissions.create.generatedName', 'Generated Name')}
-        </Heading>
-        <Box className={s.namePreview}>{generatedName}</Box>
-        <Text as='p' size='1' color='gray' className={s.hintText2}>
-          {t(
-            'admin:permissions.create.generatedNameHint',
-            'Permission name is auto-generated from resource and action',
-          )}
-        </Text>
-      </Box>
-
-      <Flex gap='3' justify='end' className={s.actionsFlex}>
+      {/* ── Footer actions ──────────────────────────────────────────── */}
+      <Flex
+        align='center'
+        justify='between'
+        px='5'
+        py='4'
+        className='rounded-b-md bg-[var(--gray-2)] border-t border-[var(--gray-a4)]'
+      >
         <Button
           variant='soft'
           color='gray'
+          type='button'
           onClick={handleCancel}
           disabled={loading}
         >
-          {t('admin:permissions.create.cancel', 'Cancel')}
+          {t('admin:buttons.cancel', 'Cancel')}
         </Button>
         <Button variant='solid' color='indigo' type='submit' loading={loading}>
+          <PlusIcon width={15} height={15} />
           {loading
-            ? t('admin:permissions.create.creating', 'Creating...')
+            ? t('admin:buttons.creating', 'Creating...')
             : t(
                 'admin:permissions.create.createPermission',
                 'Create Permission',
               )}
         </Button>
       </Flex>
-    </Flex>
+    </Card>
   );
 }
 

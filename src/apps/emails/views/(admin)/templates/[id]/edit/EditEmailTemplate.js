@@ -7,7 +7,7 @@
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 
-import { Pencil2Icon, EyeOpenIcon } from '@radix-ui/react-icons';
+import { ArrowLeftIcon, Pencil2Icon, EyeOpenIcon } from '@radix-ui/react-icons';
 import { Box, Flex, Heading, Button } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
@@ -192,8 +192,10 @@ function EditEmailTemplate({ params }) {
         </Box>
         <Button
           variant='ghost'
+          color='gray'
           onClick={() => history.push('/admin/emails/templates')}
         >
+          <ArrowLeftIcon />
           {t('admin:emails.edit.backToList', 'Back to Email Templates')}
         </Button>
       </Box>

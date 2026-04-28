@@ -279,7 +279,7 @@ export default function UserApiKeys({ userId }) {
             icon={<TokensIcon width={24} height={24} />}
           >
             <Button
-              variant='soft'
+              variant='ghost'
               color='gray'
               onClick={() => history.push('/admin/users')}
             >
@@ -312,7 +312,7 @@ export default function UserApiKeys({ userId }) {
             icon={<TokensIcon width={24} height={24} />}
           >
             <Button
-              variant='soft'
+              variant='ghost'
               color='gray'
               onClick={() => history.push('/admin/users')}
             >
@@ -398,7 +398,7 @@ export default function UserApiKeys({ userId }) {
           icon={<TokensIcon width={24} height={24} />}
         >
           <Button
-            variant='soft'
+            variant='ghost'
             color='gray'
             onClick={() => history.push('/admin/users')}
           >

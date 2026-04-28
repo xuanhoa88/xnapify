@@ -7,7 +7,11 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 
-import { LockClosedIcon, Pencil1Icon } from '@radix-ui/react-icons';
+import {
+  ArrowLeftIcon,
+  LockClosedIcon,
+  Pencil1Icon,
+} from '@radix-ui/react-icons';
 import {
   Box,
   Flex,
@@ -207,6 +211,7 @@ function EditRole({ roleId, context }) {
             color='gray'
             onClick={() => history.push('/admin/roles')}
           >
+            <ArrowLeftIcon />
             {t('admin:roles.edit.backToList', 'Back to Roles')}
           </Button>
         </PageHeader>
@@ -231,8 +236,9 @@ function EditRole({ roleId, context }) {
         <Button
           variant='ghost'
           color='gray'
-          onClick={() => history.push('/admin/roles')}
+          onClick={() => handleCancel(isDirtyRef.current)}
         >
+          <ArrowLeftIcon />
           {t('admin:roles.edit.backToList', 'Back to Roles')}
         </Button>
       </PageHeader>
@@ -242,7 +248,7 @@ function EditRole({ roleId, context }) {
         defaultValues={defaultValues}
         onSubmit={handleSubmit}
       >
-        <Grid columns={{ initial: '1', lg: '280px 1fr' }} gap='6' align='start'>
+        <Grid columns={{ initial: '1', md: '280px 1fr' }} gap='6' align='start'>
           {/* Left: live identity card */}
           <EditRoleIdentityCard role={role} />
 

@@ -8,6 +8,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 
 import {
+  ArrowLeftIcon,
   PersonIcon,
   LockOpen1Icon,
   CheckCircledIcon,
@@ -287,7 +288,7 @@ function EditUser({ userId, context }) {
           )}
           icon={<PersonIcon width={24} height={24} />}
         />
-        <Grid columns={{ initial: '1', lg: '280px 1fr' }} gap='6' align='start'>
+        <Grid columns={{ initial: '1', md: '280px 1fr' }} gap='6' align='start'>
           <Loader variant='skeleton' skeletonCount={3} />
           <Loader variant='skeleton' skeletonCount={6} />
         </Grid>
@@ -351,8 +352,9 @@ function EditUser({ userId, context }) {
         <Button
           variant='ghost'
           color='gray'
-          onClick={() => history.push('/admin/users')}
+          onClick={() => handleCancel(isDirtyRef.current)}
         >
+          <ArrowLeftIcon />
           {t('admin:users.edit.backToList', 'Back to Users')}
         </Button>
       </PageHeader>
@@ -362,7 +364,7 @@ function EditUser({ userId, context }) {
         defaultValues={defaultValues}
         onSubmit={handleSubmit}
       >
-        <Grid columns={{ initial: '1', lg: '280px 1fr' }} gap='6' align='start'>
+        <Grid columns={{ initial: '1', md: '280px 1fr' }} gap='6' align='start'>
           {/* Left: identity card */}
           <EditUserIdentityCard user={user} />
 

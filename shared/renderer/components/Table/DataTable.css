@@ -1,5 +1,3 @@
-
-
 /* Content panel */
 .contentBox {
   background-color: var(--color-panel-solid);
@@ -183,8 +181,26 @@
   grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
+@media (max-width: 1200px) {
+  .gridCols4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gridCols5 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .gridCols6 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 768px) {
-  .gridContainer {
+  .gridContainer,
+  .gridCols2,
+  .gridCols4,
+  .gridCols5,
+  .gridCols6 {
     grid-template-columns: 1fr;
   }
 }

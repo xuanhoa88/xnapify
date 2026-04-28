@@ -7,8 +7,6 @@
   flex-direction: column;
 }
 
-
-
 .mainFlex {
   flex: 1;
   overflow: hidden;
@@ -81,4 +79,10 @@
 
 .dragOverlayText {
   color: var(--indigo-11);
+}
+
+@media (max-width: 768px) {
+  .sidebarBox {
+    display: none;
+  }
 }
