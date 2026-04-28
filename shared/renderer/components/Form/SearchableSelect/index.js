@@ -97,7 +97,7 @@ const FormSearchableSelect = forwardRef(function FormSearchableSelect$(
         onChange={composeEventHandlers(customOnChange, onChange)}
         placeholder={placeholder}
         disabled={disabled}
-        className={clsx({ [s.error]: error }, className)}
+        className={clsx(error && s.error, className)}
         // Pass through SearchableSelect props
         onSearch={onSearch}
         onLoadMore={onLoadMore}

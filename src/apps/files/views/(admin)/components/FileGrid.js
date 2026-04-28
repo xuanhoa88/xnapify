@@ -82,7 +82,7 @@ export default function FileGrid({ onShare }) {
     [dispatch],
   );
 
-  const handleDoubleClick = useCallback(
+  const handleOpen = useCallback(
     file => {
       if (file.type === 'folder') {
         dispatch(setView({ view: currentView, folderId: file.id }));
@@ -306,8 +306,8 @@ export default function FileGrid({ onShare }) {
         className={s.fileCard}
         role='button'
         tabIndex={0}
-        onKeyDown={e => e.key === 'Enter' && handleDoubleClick(file)}
-        onDoubleClick={() => handleDoubleClick(file)}
+        onKeyDown={e => e.key === 'Enter' && handleOpen(file)}
+        onClick={() => handleOpen(file)}
       >
         <Flex
           align='center'
@@ -359,7 +359,7 @@ export default function FileGrid({ onShare }) {
     ),
     [
       currentView,
-      handleDoubleClick,
+      handleOpen,
       onRename,
       handleShareLocal,
       onCopyLink,
@@ -387,6 +387,7 @@ export default function FileGrid({ onShare }) {
         selectable
         selectedKeys={selectedIds}
         onSelectionChange={keys => dispatch(setSelection(keys))}
+        onRowClick={handleOpen}
       >
         <DataTable.Empty
           icon={<FolderIcon width={48} height={48} />}

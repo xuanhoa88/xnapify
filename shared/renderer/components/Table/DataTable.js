@@ -480,6 +480,8 @@ function DataTable({
   selectable,
   selectedKeys,
   onSelectionChange,
+  onRowClick,
+  onRowDoubleClick,
 
   // States
   loading,
@@ -656,9 +658,22 @@ function DataTable({
                           return (
                             <Table.Row
                               key={key}
-                              className={clsx({
-                                [s.selectedRow]: isSelected,
-                              })}
+                              className={clsx(
+                                isSelected && s.selectedRow,
+                                (typeof onRowClick === 'function' ||
+                                  typeof onRowDoubleClick === 'function') &&
+                                  'cursor-pointer',
+                              )}
+                              onClick={
+                                typeof onRowClick === 'function'
+                                  ? () => onRowClick(record)
+                                  : undefined
+                              }
+                              onDoubleClick={
+                                typeof onRowDoubleClick === 'function'
+                                  ? () => onRowDoubleClick(record)
+                                  : undefined
+                              }
                             >
                               {selectable && (
                                 <Table.Cell
@@ -839,6 +854,8 @@ DataTable.propTypes = {
   selectable: PropTypes.bool,
   selectedKeys: PropTypes.array,
   onSelectionChange: PropTypes.func,
+  onRowClick: PropTypes.func,
+  onRowDoubleClick: PropTypes.func,
 
   // States
   loading: PropTypes.bool,
