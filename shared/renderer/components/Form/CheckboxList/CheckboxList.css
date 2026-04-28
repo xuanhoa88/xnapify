@@ -67,6 +67,7 @@
   border: 1px solid var(--gray-a6);
   border-radius: var(--radius-3);
   background-color: var(--color-surface);
+  min-height: 0;
 }
 
 .listContainerError {

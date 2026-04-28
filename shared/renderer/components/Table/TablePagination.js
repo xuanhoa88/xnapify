@@ -121,14 +121,16 @@ function TablePagination({
     <Flex
       align='center'
       justify='between'
+      wrap='wrap'
+      gap='3'
       width='100%'
       px='4'
       py='3'
       className={clsx(s.paginationContainer, className)}
     >
-      <Flex align='center' gap='3'>
+      <Flex align='center' gap='3' wrap='wrap'>
         {showInfo && totalItems != null && (
-          <Text size='2' color='gray'>
+          <Text size='2' color='gray' className={s.paginationInfo}>
             {t(
               'shared:components.table.pagination.info',
               '{{total}} total · Page {{current}} of {{pages}}',

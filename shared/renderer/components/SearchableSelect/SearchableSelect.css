@@ -65,6 +65,8 @@
 .optionsList {
   max-height: 250px;
   overflow-y: auto;
+  overscroll-behavior-y: contain;
+  min-height: 0;
 }
 
 .messageBox {

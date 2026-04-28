@@ -309,40 +309,39 @@ export default function FileGrid({ onShare }) {
         onKeyDown={e => e.key === 'Enter' && handleOpen(file)}
         onClick={() => handleOpen(file)}
       >
-        <Flex
-          align='center'
-          justify='center'
-          className={clsx(
-            s.iconContainer,
-            file.type === 'folder' ? s.folderIcon : s.fileIcon,
-          )}
-        >
+        <Box className={s.previewArea}>
           <Box className='relative inline-flex'>
             {file.type === 'folder' ? (
-              <FolderIcon width={48} height={48} />
+              <FolderIcon width={64} height={64} className={s.folderIconLg} />
             ) : (
-              <FileIcon width={48} height={48} />
-            )}
-            {file.is_starred && currentView !== 'trash' && (
-              <Box className={s.starIconGrid}>
-                <StarFilledIcon width={16} height={16} />
-              </Box>
+              <FileIcon width={64} height={64} className={s.fileIconLg} />
             )}
           </Box>
-        </Flex>
-        <Flex direction='column' className={s.nameContainer}>
+        </Box>
+        <Flex className={s.footerArea} align='center' gap='2'>
+          <Box>
+            {file.type === 'folder' ? (
+              <FolderIcon width={16} height={16} className={s.folderIcon} />
+            ) : (
+              <FileIcon width={16} height={16} className={s.fileIcon} />
+            )}
+          </Box>
           <Text
             as='span'
             size='2'
             weight='medium'
             truncate
-            align='center'
             highContrast
             title={file.name}
-            style={{ width: '100%' }}
+            className={s.footerName}
           >
             {file.name}
           </Text>
+          {file.is_starred && currentView !== 'trash' && (
+            <Box className={s.starIconIndicator}>
+              <StarFilledIcon width={14} height={14} />
+            </Box>
+          )}
         </Flex>
         <Box className={s.cardActions}>
           <FileActionsDropdown

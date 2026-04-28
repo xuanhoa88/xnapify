@@ -19,3 +19,7 @@
 .paginationPageButtonCurrent {
   cursor: default;
 }
+
+.paginationInfo {
+  white-space: nowrap;
+}

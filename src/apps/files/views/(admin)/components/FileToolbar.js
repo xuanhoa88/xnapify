@@ -53,7 +53,13 @@ export default function FileToolbar() {
   );
 
   return (
-    <Flex align='center' justify='between' height='52px'>
+    <Flex
+      align='center'
+      justify='between'
+      wrap='wrap'
+      gap='3'
+      className={s.toolbarContainer}
+    >
       <Flex align='center' gap='1' className={s.breadcrumbFlex}>
         {breadcrumbs.map((crumb, index) => {
           const isLast = index === breadcrumbs.length - 1;
@@ -84,18 +90,15 @@ export default function FileToolbar() {
         })}
       </Flex>
 
-      <Flex align='center' gap='3' shrink='0'>
-        <Box width='250px'>
-          <TableSearch
-            value={search}
-            onChange={val => dispatch(setSearch(val))}
-            placeholder={t(
-              'files:toolbar.search_placeholder',
-              'Search files...',
-            )}
-          />
-        </Box>
+      <Box className={s.searchBox}>
+        <TableSearch
+          value={search}
+          onChange={val => dispatch(setSearch(val))}
+          placeholder={t('files:toolbar.search_placeholder', 'Search files...')}
+        />
+      </Box>
 
+      <Box className={s.viewToggleFlex}>
         <SegmentedControl.Root
           value={viewMode}
           onValueChange={val => dispatch(setViewMode(val))}
@@ -118,7 +121,7 @@ export default function FileToolbar() {
             </Flex>
           </SegmentedControl.Item>
         </SegmentedControl.Root>
-      </Flex>
+      </Box>
     </Flex>
   );
 }

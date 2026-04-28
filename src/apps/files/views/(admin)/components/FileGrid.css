@@ -17,12 +17,50 @@
   cursor: pointer;
   transition: all 0.15s ease-in-out;
   position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
-.iconContainer {
-  height: 80px;
-  margin-bottom: var(--space-3);
+/* Remove default padding from Card inner */
+.fileCard :global(.rt-CardInner) {
+  padding: 0;
+}
+
+.previewArea {
+  height: 140px;
+  background-color: var(--gray-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   position: relative;
+  transition: background-color 0.15s ease;
+}
+
+.fileCard:hover .previewArea {
+  background-color: var(--gray-3);
+}
+
+.footerArea {
+  height: 48px;
+  padding: 0 var(--space-3);
+  border-top: 1px solid var(--gray-4);
+  background-color: var(--color-panel-solid);
+}
+
+.footerName {
+  flex: 1;
+  min-width: 0;
+}
+
+.folderIconLg {
+  color: var(--indigo-9);
+  opacity: 0.8;
+}
+
+.fileIconLg {
+  color: var(--gray-9);
+  opacity: 0.8;
 }
 
 .folderIcon {
@@ -33,17 +71,48 @@
   color: var(--gray-10);
 }
 
-.starIconGrid {
-  position: absolute;
-  bottom: -6px;
-  right: -6px;
+.starIconIndicator {
   color: var(--amber-9);
-  background-color: var(--color-panel-solid);
-  border-radius: 50%;
-  padding: 2px;
   display: flex;
   align-items: center;
   justify-content: center;
+  margin-left: auto;
+}
+
+.cardActions {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  opacity: 0;
+  transition: opacity 0.15s ease-in-out;
+  background-color: var(--color-panel-solid);
+  border-radius: var(--radius-2);
+  box-shadow: var(--shadow-2);
+}
+
+.fileCard:hover .cardActions {
+  opacity: 1;
+}
+
+@media (max-width: 768px) {
+  .previewArea {
+    height: 100px;
+  }
+
+  .folderIconLg,
+  .fileIconLg {
+    width: 48px !important;
+    height: 48px !important;
+  }
+
+  .footerArea {
+    height: 40px;
+    padding: 0 var(--space-2);
+  }
+}
+
+.listIconContainer {
+  position: relative;
 }
 
 .starIconList {
@@ -57,27 +126,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.nameContainer {
-  flex: 1;
-  min-width: 0;
-}
-
-.cardActions {
-  position: absolute;
-  top: var(--space-2);
-  right: var(--space-2);
-  opacity: 0;
-  transition: opacity 0.15s ease-in-out;
-}
-
-.fileCard:hover .cardActions {
-  opacity: 1;
-}
-
-.listIconContainer {
-  position: relative;
 }
 
 /* Visibility helpers for Table columns */

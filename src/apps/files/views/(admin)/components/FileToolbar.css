@@ -1,10 +1,5 @@
-.breadcrumbFlex {
-  overflow-x: auto;
-  flex: 1;
-  padding-right: var(--space-4);
-  white-space: nowrap;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+.toolbarContainer {
+  min-height: 52px;
 }
 
 .breadcrumbFlex::-webkit-scrollbar {
@@ -21,7 +16,9 @@
   padding: 4px 8px;
   height: 32px;
   background-color: transparent;
-  transition: background-color 0.2s, color 0.2s;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
   cursor: pointer;
 }
 
@@ -39,4 +36,47 @@
   background-color: var(--gray-3);
 }
 
+.breadcrumbFlex {
+  overflow-x: auto;
+  flex: 1 1 100px;
+  padding-right: var(--space-4);
+  white-space: nowrap;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  order: 1;
+}
 
+.searchBox {
+  flex: 0 1 250px;
+  min-width: 140px;
+  order: 2;
+}
+
+/* Force TableSearch inside searchBox to be 100% width so it shrinks/grows nicely */
+.searchBox > * {
+  min-width: 100% !important;
+  max-width: 100% !important;
+}
+
+.viewToggleFlex {
+  flex: 0 0 auto;
+  order: 3;
+}
+
+@media (max-width: 768px) {
+  .searchBox {
+    order: 1;
+    flex-basis: 100%;
+    margin-bottom: var(--space-2);
+  }
+
+  .breadcrumbFlex {
+    order: 2;
+    flex-basis: auto;
+    padding-right: var(--space-2);
+  }
+
+  .viewToggleFlex {
+    order: 3;
+  }
+}
