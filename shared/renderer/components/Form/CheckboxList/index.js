@@ -221,15 +221,11 @@ const FormCheckboxList = forwardRef(function FormCheckboxList$(
   forwardedRef,
 ) {
   const { t } = useTranslation();
-  // Track whether loading has completed at least once.
-  // Stays false until `loading` transitions to false, which prevents
+  // Track whether a fetch has completed at least once.
+  // Stays false until `loading` transitions true → false, which prevents
   // the empty-message from flashing before the first fetch resolves.
+  const prevLoadingRef = useRef(loading);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
-  useEffect(() => {
-    if (!loading) {
-      setHasLoadedOnce(true);
-    }
-  }, [loading]);
   const showLoading = loading || (!hasLoadedOnce && items.length === 0);
   const displayEmptyMessage =
     emptyMessage || t('shared:components.checkboxList.empty', 'No items found');
@@ -330,8 +326,8 @@ const FormCheckboxList = forwardRef(function FormCheckboxList$(
   // Setup infinite scroll
   useInfiniteScroll({
     containerRef,
-    onLoadMore: handleLoadMore,
     hasMore,
+    onLoadMore: handleLoadMore,
     loading: loadingMore,
     threshold: 50,
   });
@@ -350,6 +346,14 @@ const FormCheckboxList = forwardRef(function FormCheckboxList$(
     });
     return grouped;
   }, [items, groupBy]);
+
+  // Only mark as loaded when loading transitions from true → false
+  useEffect(() => {
+    if (prevLoadingRef.current && !loading) {
+      setHasLoadedOnce(true);
+    }
+    prevLoadingRef.current = loading;
+  }, [loading]);
 
   // Handle group "Select All" toggle
   const handleGroupSelectAll = useCallback(
