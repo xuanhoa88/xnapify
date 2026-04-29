@@ -11,6 +11,22 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Enterprise-grade fluid typography scale for Radix UI Themes
+ * Scales smoothly from mobile (320px) to desktop (1280px+)
+ */
+:root {
+  --font-size-1: clamp(0.75rem, 0.71rem + 0.2vw, 0.8125rem);
+  --font-size-2: clamp(0.875rem, 0.835rem + 0.2vw, 0.9375rem);
+  --font-size-3: clamp(1rem, 0.96rem + 0.2vw, 1.0625rem);
+  --font-size-4: clamp(1.125rem, 1.085rem + 0.2vw, 1.25rem);
+  --font-size-5: clamp(1.25rem, 1.17rem + 0.4vw, 1.5rem);
+  --font-size-6: clamp(1.5rem, 1.34rem + 0.8vw, 2rem);
+  --font-size-7: clamp(1.75rem, 1.51rem + 1.2vw, 2.5rem);
+  --font-size-8: clamp(2.1875rem, 1.83rem + 1.8vw, 3.25rem);
+  --font-size-9: clamp(3.75rem, 3.11rem + 3.2vw, 5.5rem);
+}
+
 html,
 body {
   margin: 0 !important;

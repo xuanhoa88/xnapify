@@ -10,7 +10,7 @@
 }
 
 .pageTitle {
-  font-size: clamp(3rem, 6vw, 4.5rem);
+  font-size: var(--font-size-9);
   line-height: 1.1;
   letter-spacing: -0.04em;
   color: var(--gray-12);
@@ -29,7 +29,7 @@
 }
 
 .markdownContent h2 {
-  font-size: clamp(2rem, 4vw, 2.5rem);
+  font-size: var(--font-size-7);
   color: var(--gray-12);
   font-weight: 700;
   margin-top: calc(var(--space-8) * 1.2);
@@ -38,7 +38,7 @@
 }
 
 .markdownContent h3 {
-  font-size: clamp(1.5rem, 3vw, 1.75rem);
+  font-size: var(--font-size-6);
   color: var(--gray-12);
   font-weight: 600;
   margin-top: var(--space-8);

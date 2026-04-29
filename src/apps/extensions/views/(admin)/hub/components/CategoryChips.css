@@ -19,7 +19,7 @@
 }
 
 .countBadge {
-  font-size: 11px;
+  font-size: var(--font-size-1);
   padding: 0 6px;
   border-radius: 10px;
   line-height: 16px;
