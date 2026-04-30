@@ -1,0 +1,22 @@
+.card {
+  margin-bottom: var(--space-4);
+}
+
+.header {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--gray-a4);
+  background-color: var(--color-panel-solid);
+  cursor: move;
+}
+
+.title {
+  color: var(--gray-12);
+  margin: 0;
+}
+
+
+
+.body {
+  padding: var(--space-4);
+  background-color: var(--color-panel-solid);
+}

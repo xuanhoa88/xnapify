@@ -1,0 +1,9 @@
+.interactiveLink {
+  color: var(--blue-11);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.interactiveLink:hover {
+  text-decoration: underline;
+}

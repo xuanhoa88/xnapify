@@ -1,0 +1,11 @@
+.container {
+  padding: var(--space-4);
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+@media (min-width: 768px) {
+  .container {
+    padding: var(--space-6);
+  }
+}

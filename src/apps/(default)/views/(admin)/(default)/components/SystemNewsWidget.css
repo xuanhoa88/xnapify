@@ -1,0 +1,14 @@
+.interactiveLink {
+  color: var(--blue-11);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.interactiveLink:hover {
+  text-decoration: underline;
+}
+
+.sectionContainer {
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--gray-a4);
+}
