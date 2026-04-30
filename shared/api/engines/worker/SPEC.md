@@ -180,7 +180,7 @@ Test file: `worker.test.js` — 22 tests covering:
 - Timeout via Promise.race
 - Pool stats
 - Cleanup & idempotency
-- Factory signal handlers
+- Factory shutdown registry integration
 - WorkerError class
 
 ---

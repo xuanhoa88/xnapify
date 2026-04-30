@@ -369,16 +369,6 @@ describe('Hook Engine', () => {
         expect(err.statusCode).toBe(400);
       }
     });
-
-    test('should register SIGTERM and SIGINT handlers', () => {
-      const spy = jest.spyOn(process, 'once');
-      createFactory();
-
-      expect(spy).toHaveBeenCalledWith('SIGTERM', expect.any(Function));
-      expect(spy).toHaveBeenCalledWith('SIGINT', expect.any(Function));
-
-      spy.mockRestore();
-    });
   });
 
   describe('Default Export', () => {

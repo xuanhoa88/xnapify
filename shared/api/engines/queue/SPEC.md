@@ -106,7 +106,7 @@ Public export. Calls `buildFactory` with:
 - Fresh `Map` for channels
 - Fresh `Map` with `'memory' → MemoryQueue` pre-registered
 - Merged `DEFAULT_OPTIONS` (`{ type: 'memory', concurrency: 1 }`) with caller options
-- Registers `process.once('SIGTERM')` and `process.once('SIGINT')` handlers for graceful shutdown
+- Registers cleanup handler with the centralized shutdown registry (`shared/api/shutdown.js`) for coordinated graceful shutdown
 
 ### Key difference from `factory(name)` vs `factory.channel(name)`
 

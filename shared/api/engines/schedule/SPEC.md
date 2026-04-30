@@ -151,8 +151,7 @@ Called automatically on process termination signals.
 **File:** `factory.js`
 
 - Creates a `ScheduleManager` instance with the given config.
-- Registers `process.once('SIGTERM')` and `process.once('SIGINT')` handlers that trigger `schedule.cleanup().catch(console.error)`.
-- Replaces standard instance destruction by exposing a `schedule.destroy()` function that cleans up `process` event listeners and safely invokes `schedule.cleanup()` tracking completion.
+- Registers the engine's cleanup handler with the centralized shutdown registry (`shared/api/shutdown.js`).
 - Returns the instance.
 
 ## 5. Default Singleton
@@ -214,9 +213,8 @@ Tests instantiate `ScheduleManager` directly with `{ autoStart: false }` to avoi
 **createFactory():**
 
 - Returns `ScheduleManager` instance.
-- Registers `SIGTERM` and `SIGINT` via `process.once`.
+- Registers cleanup with centralized shutdown registry.
 - Default `autoStart: true` vs. explicit `autoStart: false`.
-- Signal handler triggers `cleanup()`.
 
 ## 7. Integration Points
 

@@ -995,26 +995,3 @@ describe('Queue Error Classes', () => {
     });
   });
 });
-
-// ======================================================================
-// Factory Signal Handler Tests
-// ======================================================================
-
-describe('createFactory() signal handlers', () => {
-  it('should register SIGTERM and SIGINT handlers', () => {
-    const spy = jest.spyOn(process, 'once');
-
-    // Reset mock to track only our call
-    spy.mockClear();
-
-    createFactory();
-
-    const sigTermCalls = spy.mock.calls.filter(c => c[0] === 'SIGTERM');
-    const sigIntCalls = spy.mock.calls.filter(c => c[0] === 'SIGINT');
-
-    expect(sigTermCalls.length).toBeGreaterThanOrEqual(1);
-    expect(sigIntCalls.length).toBeGreaterThanOrEqual(1);
-
-    spy.mockRestore();
-  });
-});

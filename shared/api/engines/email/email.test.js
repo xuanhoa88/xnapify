@@ -76,11 +76,7 @@ describe('Email Engine', () => {
       testEmail = createFactory({ provider: 'memory' });
     });
 
-    afterEach(() => {
-      if (testEmail.removeCleanupHandlers) {
-        testEmail.removeCleanupHandlers();
-      }
-    });
+    afterEach(() => {});
 
     it('should add custom provider', () => {
       const customProvider = {
@@ -133,11 +129,7 @@ describe('Email Engine', () => {
       testEmail = createFactory({ provider: 'memory' });
     });
 
-    afterEach(() => {
-      if (testEmail.removeCleanupHandlers) {
-        testEmail.removeCleanupHandlers();
-      }
-    });
+    afterEach(() => {});
 
     describe('Single Email', () => {
       it('should send basic email with html', async () => {
@@ -326,8 +318,6 @@ describe('Email Engine', () => {
         expect(result.success).toBe(false);
         expect(result.data.successCount).toBe(0);
         expect(result.data.failCount).toBe(2);
-
-        if (failEmail.removeCleanupHandlers) failEmail.removeCleanupHandlers();
       });
     });
 
@@ -384,10 +374,6 @@ describe('Email Engine', () => {
         expect(result.success).toBe(true);
         expect(result.data.totalEmails).toBe(6);
         expect(result.data.successCount + result.data.failCount).toBe(6);
-
-        if (failEmail.removeCleanupHandlers) {
-          failEmail.removeCleanupHandlers();
-        }
       }, 20000); // 20s timeout to account for exponential backoff retries
 
       it('should track successful and failed recipients', async () => {
@@ -895,11 +881,6 @@ describe('Email Engine', () => {
       await instance.cleanup();
 
       expect(instance.providers.size).toBe(0);
-
-      // Cleanup handlers
-      if (instance.removeCleanupHandlers) {
-        instance.removeCleanupHandlers();
-      }
     });
 
     it('should get all provider stats', () => {
@@ -908,10 +889,6 @@ describe('Email Engine', () => {
 
       expect(stats).toHaveProperty('memory');
       expect(stats.memory.provider).toBe('memory');
-
-      if (instance.removeCleanupHandlers) {
-        instance.removeCleanupHandlers();
-      }
     });
   });
 });

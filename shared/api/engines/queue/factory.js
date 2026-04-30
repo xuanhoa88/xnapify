@@ -5,6 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { register } from '../../shutdown';
+
 import FileQueue from './adapters/file';
 import MemoryQueue from './adapters/memory';
 import { Channel } from './channel';
@@ -159,12 +161,6 @@ function buildFactory(channelsMap, adaptersMap, baseOptions) {
    * @returns {Promise<void>}
    */
   factory.cleanup = async function () {
-    // Remove signal handlers to prevent listener leaks
-    if (factory.signalHandler) {
-      process.removeListener('SIGTERM', factory.signalHandler);
-      process.removeListener('SIGINT', factory.signalHandler);
-    }
-
     console.info('🧹 Closing all queue channels...');
     for (const [name, channel] of channelsMap) {
       try {
@@ -198,11 +194,8 @@ export function createFactory(options = {}) {
     ...options,
   });
 
-  // Register cleanup with global coordinator (named ref for removability)
-  const onSignal = () => factory.cleanup();
-  factory.signalHandler = onSignal;
-  process.once('SIGTERM', onSignal);
-  process.once('SIGINT', onSignal);
+  // Register with centralized shutdown coordinator
+  register('queue', () => factory.cleanup(), 10);
 
   return factory;
 }

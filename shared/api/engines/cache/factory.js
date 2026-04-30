@@ -5,6 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { register } from '../../shutdown';
+
 import FileCache from './adapters/file';
 import MemoryCache from './adapters/memory';
 import NoOpCache from './adapters/noop';
@@ -236,11 +238,9 @@ export function createFactory(options = {}) {
     return withNamespace(namespace, adapter);
   };
 
-  // Register process signal handlers for graceful shutdown
+  // Register with centralized shutdown coordinator
   if (typeof adapter.cleanup === 'function') {
-    const onSignal = () => adapter.cleanup();
-    process.once('SIGTERM', onSignal);
-    process.once('SIGINT', onSignal);
+    register('cache', () => adapter.cleanup());
   }
 
   return adapter;

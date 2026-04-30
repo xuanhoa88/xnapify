@@ -11,6 +11,8 @@ import path from 'path';
 
 import Piscina from 'piscina';
 
+import { register } from '../../shutdown';
+
 import { WorkerError } from './errors';
 
 // ---------------------------------------------------------------------------
@@ -421,8 +423,8 @@ export function createFactory(config) {
   const buildDir = process.env.BUILD_DIR || __dirname;
   engine.discoverWorkers(buildDir);
 
-  process.once('SIGTERM', () => engine.cleanup());
-  process.once('SIGINT', () => engine.cleanup());
+  // Register with centralized shutdown coordinator
+  register('worker', () => engine.cleanup(), 10);
 
   return engine;
 }

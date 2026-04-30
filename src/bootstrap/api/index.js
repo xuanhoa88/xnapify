@@ -7,7 +7,7 @@
 
 import express from 'express';
 
-import { discoverModules, engines } from '@shared/api';
+import { discoverModules, engines, shutdown } from '@shared/api';
 import { Router as DynamicRouter } from '@shared/api/router';
 
 import { createCorsMiddleware } from './middlewares/cors';
@@ -23,6 +23,9 @@ const apisContext = require.context(
 
 // Export all engines as providers
 export const APP_PROVIDERS = Object.keys(engines);
+
+// Export centralized engine lifecycle
+export { shutdown };
 
 // =============================================================================
 // LOGGING

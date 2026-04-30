@@ -7,6 +7,8 @@
 
 import cron from 'node-cron';
 
+import { register } from '../../shutdown';
+
 import { ScheduleError } from './errors';
 
 /**
@@ -321,19 +323,8 @@ export { ScheduleManager };
 export function createFactory(config = {}) {
   const schedule = new ScheduleManager(config);
 
-  // Register cleanup on process termination signals
-  schedule.onExitHandler = () => schedule.cleanup().catch(console.error);
-  process.once('SIGTERM', schedule.onExitHandler);
-  process.once('SIGINT', schedule.onExitHandler);
-
-  /**
-   * Destroy the instance, remove process listeners, and stop tasks
-   */
-  schedule.destroy = async () => {
-    process.removeListener('SIGTERM', schedule.onExitHandler);
-    process.removeListener('SIGINT', schedule.onExitHandler);
-    await schedule.cleanup();
-  };
+  // Register with centralized shutdown coordinator
+  register('schedule', () => schedule.cleanup(), 10);
 
   return schedule;
 }

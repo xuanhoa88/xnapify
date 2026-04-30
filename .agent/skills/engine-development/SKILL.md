@@ -62,6 +62,8 @@ shared/api/engines/<engine-name>/
 
 ```javascript
 // factory.js
+import { register } from '../../registry';
+
 export class EngineManager {
   constructor(config = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -89,9 +91,8 @@ export class EngineManager {
 export function createFactory(config) {
   const engine = new EngineManager(config);
 
-  // Register process signal handlers for graceful shutdown
-  process.once('SIGTERM', () => engine.cleanup());
-  process.once('SIGINT', () => engine.cleanup());
+  // Register with centralized shutdown registry (position: 0-20, higher runs first)
+  register('engineName', () => engine.cleanup());
 
   return engine;
 }
@@ -236,8 +237,29 @@ _Note: This spec reflects the CURRENT implementation._
 3. DI container binds singleton
 4. Module/extension boot() resolves engine
 5. Engine methods called during request handling
-6. Process signal → cleanup()
+6. Shutdown registry → cleanup()
 ```
+
+### Shutdown Registry
+
+Engines register cleanup with the centralized shutdown registry (`shared/api/registry.js`) instead of attaching individual `process.once('SIGTERM')` listeners. This ensures idempotent, HMR-safe teardown.
+
+```javascript
+import { register } from '../../registry';
+
+// In createFactory():
+register('engineName', () => engine.cleanup(), position);
+```
+
+**Position values** (higher runs first):
+
+| Position | Use case | Examples |
+|---|---|---|
+| `20` | Stop accepting traffic | `http` |
+| `10` | Drain in-flight work | `queue`, `hook`, `schedule`, `worker` |
+| `0` | Close resource handles | `email`, `cache`, `db` |
+
+Same-position handlers run **in parallel** (`Promise.allSettled`). Position batches run **sequentially** (high → low).
 
 ### Cleanup Pattern
 
@@ -287,14 +309,17 @@ item.activePromise = handler({ signal });
 item.activePromise = Promise.resolve(handler({ signal }));
 ```
 
-### Signal Registration
+### Shutdown Registration
 
-Always register cleanup on `SIGTERM` and `SIGINT` in `createFactory()`:
+Always register cleanup with the shutdown registry in `createFactory()`:
 
 ```javascript
-process.once('SIGTERM', () => engine.cleanup());
-process.once('SIGINT', () => engine.cleanup());
+import { register } from '../../registry';
+
+register('engineName', () => engine.cleanup(), 10);
 ```
+
+**Do NOT** use `process.once('SIGTERM')` or `process.once('SIGINT')` — these accumulate during HMR.
 
 ---
 
@@ -338,10 +363,10 @@ describe('[engine] EngineName', () => {
       expect(instance).toBeInstanceOf(EngineManager);
     });
 
-    it('should register signal handlers', () => {
-      const spy = jest.spyOn(process, 'once');
+    it('should register with shutdown registry', () => {
+      const { register } = require('../../registry');
       createFactory();
-      expect(spy).toHaveBeenCalledWith('SIGTERM', expect.any(Function));
+      expect(register).toHaveBeenCalledWith('engineName', expect.any(Function), expect.any(Number));
     });
   });
 });
@@ -377,7 +402,7 @@ module.exports = {
 - [ ] `SPEC.md` following the template above
 - [ ] `<name>.test.js` with coverage for: core methods, error handling, factory, cleanup
 - [ ] Environment variables prefixed with `XNAPIFY_`
-- [ ] Signal handlers (`SIGTERM`, `SIGINT`) registered in factory
+- [ ] Cleanup registered with shutdown registry (`shared/api/registry.js`) in factory
 - [ ] `cleanup()` method releases all resources
 
 ---
