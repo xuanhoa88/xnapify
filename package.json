@@ -54,11 +54,7 @@
     "test:watch": "node tools/run test --watch",
     "test:coverage": "node tools/run test --coverage",
     "test:ci": "node tools/run test --ci",
-    "test:benchmark": "node tools/run benchmark",
-    "test:e2e": "node tools/run e2e",
-    "test:e2e:headed": "node tools/run e2e --headed",
-    "test:e2e:template": "node tools/e2e/createTemplate.js",
-    "test:e2e:import": "node tools/e2e/excelToMd.js"
+    "test:benchmark": "node tools/run benchmark"
   },
   "dependencies": {
     "@hookform/resolvers": "3.9.1",
@@ -198,7 +194,6 @@
     "postcss-selector-parser": "7.1.1",
     "prettier": "3.3.3",
     "process": "0.11.10",
-    "puppeteer": "21.11.0",
     "raw-loader": "4.0.2",
     "react-refresh": "0.18.0",
     "react-test-renderer": "18.3.1",

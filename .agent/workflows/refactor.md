@@ -21,4 +21,4 @@ When executing the `/refactor` workflow, your goal is to reduce complexity in ex
 1. **Identify Scope**: Using the path provided by the user, investigate the file(s).
 2. **Analyze**: Find opportunities mapped to the simplification rules above.
 3. **Refine Output**: Update the code file.
-4. **Verify**: Check for syntax errors and suggest to run `/test-e2e` or unit tests to confirm the refactor didn't break functionality.
+4. **Verify**: Check for syntax errors and suggest to run unit tests to confirm the refactor didn't break functionality.

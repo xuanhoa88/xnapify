@@ -941,7 +941,6 @@ function getHmrWatchIgnored() {
   return [
     '**/node_modules/**',
     '**/__tests__/**',
-    '**/e2e/**',
     '**/*.test.*',
     '**/*.spec.*',
     `${buildDirGlob}/**`,

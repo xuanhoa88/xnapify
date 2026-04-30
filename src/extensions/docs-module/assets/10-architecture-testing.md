@@ -6,22 +6,11 @@ sidebar_position: 10
 
 # Testing Architecture
 
-The **xnapify** platform is tested through two distinct methodologies natively: 
-
-1. **E2E Browser Automation** (`tools/e2e` utilizing Puppeteer)
-2. **Automated Unit & Integration Tests** (utilizing Jest)
+The **xnapify** platform is tested natively utilizing **Jest** for Automated Unit & Integration Tests.
 
 ---
 
-## 1. End-to-End (E2E) Browser Testing
-
-xnapify integrates a powerful E2E framework built around **Puppeteer**. However, xnapify abstracts raw Puppeteer scripts behind an AI-interpreting SPA Stability Engine capable of reading markdown definitions and executing UI actions autonomously.
-
-For a deep dive into writing test cases, the LLM compilation flow, and the SPA Stability Engine, see [E2E Test Automation](/docs/11-e2e-automation).
-
----
-
-## 2. Unit and Integration Tests
+## Unit and Integration Tests
 
 For granular logic verification against isolated components (Sequelize database logic, Helper utilities, Backend Services), the framework utilizes **Jest**. 
 

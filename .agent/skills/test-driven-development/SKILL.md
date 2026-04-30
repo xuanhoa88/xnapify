@@ -371,7 +371,7 @@ No exceptions without your human partner's permission.
 |------|--------------------|
 | Spec requirement traceability | `requirement-traceability` skill |
 | xnapify test patterns (Redux, components, API) | `/add-test` workflow |
-| Browser-based E2E testing | `browser-testing` skill, `/test-e2e` workflow |
+| Browser-based testing | `browser-testing` skill |
 | Code quality review | `code-review` skill |
 | Coding standards | `coding-standards` skill |
 | Testing anti-patterns reference | `anti-patterns.md` (this skill) |

@@ -43,7 +43,7 @@ Each file includes `description:` YAML frontmatter so the AI knows strictly when
 
 - Orchestrators: `/build`, `/fix`, `/plan`
 - Scaffold: `/add-module`, `/add-extension`, `/add-engine`, `/add-route`, `/add-view`, `/add-data`, `/add-redux`, `/add-worker`, `/add-test`
-- Quality: `/modify` (includes lint & benchmark checks), `/audit-security`, `/test-e2e`, `/refactor`
+- Quality: `/modify` (includes lint & benchmark checks), `/audit-security`, `/refactor`
 - Operations: `/debug`, `/deploy`, `/commit`, `/lookup`, `/scout`, `/recap`
 
 ---

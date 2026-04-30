@@ -550,4 +550,3 @@ store.injectReducer(SLICE_NAME, reducer);
 - `/add-extension` — Extension testing for boot/shutdown symmetry
 - `/add-worker` — Worker handler testing (direct function calls)
 - `/modify` — Modify code with mandatory test verification
-- `/test-e2e` — Browser-based E2E tests for user flows

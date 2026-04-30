@@ -11,8 +11,6 @@ This skill enables comprehensive testing and debugging of the local `xnapify` we
 1. **Programmatic Automation (Puppeteer)**: For writing repeatable custom test scripts, validating complex UI flows, programmatically capturing screenshots, or debugging application issues via Node.js scripts.
 2. **Interactive AI Automation**: For exploratory testing, visual verification, and manually executing natural-language test cases via the AI agent's built-in browser automation tool.
 
-> [!TIP]
-> For executing the standardized **E2E lifecycle tests**, see the `/test-e2e` workflow. It reads `.md` test case files from each module's `e2e/` directory and executes them via the project's compiled runner (which natively uses Puppeteer).
 
 ---
 
@@ -71,8 +69,6 @@ Use this approach when you need to write and execute custom Node.js scripts to v
 
 ### Common Patterns & Usage Examples
 
-> [!TIP]
-> For advanced Puppeteer capabilities (network interception, stealth, multi-tab, iframes), see the `puppeteer-automation` skill (`view_file .agent/skills/puppeteer-automation/SKILL.md`).
 
 **Pattern: Navigation & Verification**
 ```javascript
@@ -116,7 +112,7 @@ page.on('console', msg => console.log('Browser log:', msg.text()));
 
 ## 🤖 Mode 2: Interactive AI Automation
 
-Use your IDE's browser automation capability (e.g., `browser_subagent`, MCP browser tool) for visual UI checks, exploratory testing, or when running individual manual `test.md` test cases from the `/test-e2e` framework.
+Use your IDE's browser automation capability (e.g., `browser_subagent`, MCP browser tool) for visual UI checks and exploratory testing.
 
 ### Interactive Task Template
 
@@ -148,12 +144,6 @@ Return: Describe what you observed. Did [expected behavior] occur?
 *Flow:* Wait for form -> Fill fields -> Click submit -> Observe loading state -> Wait for success/error network response or UI indication.
 *Return:* Submit result status (success/error message or redirect URL).
 
-**3. Test Case execution (Fallback for `/test-e2e`)**
-When instructed to run manual tests from `e2e/{category}/{case}/test.md`, parse the `Steps` and `Expected Results` directly into your browser tool task:
-*Steps 1..N*: Inject steps from the file.
-*Final Step*: Take a screenshot.
-*Return*: Pass/fail verification mapping directly to the "Expected Results".
-
 ### Interactive Rules & Anti-Patterns
 
 | Category | ❌ Don't | ✅ Do |
@@ -170,8 +160,6 @@ When instructed to run manual tests from `e2e/{category}/{case}/test.md`, parse 
 
 | Need | Skill / Workflow |
 |------|-----------------|
-| E2E CLI test runner framework | `/test-e2e` workflow |
-| Deep-dive Puppeteer patterns (standalone) | `puppeteer-automation` skill |
 | Backend/Unit integration testing | `test-driven-development` skill |
 | Adding test templates to modules | `/add-test` workflow |
 | Debugging runtime or build issues | `/debug` workflow |
