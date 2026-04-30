@@ -53,7 +53,7 @@
  * }
  *
  * // In server teardown
- * await shutdown();
+ * await drain();
  * ```
  */
 
@@ -111,7 +111,7 @@ export function unregister(name) {
  *   anyway so the process can exit.
  * @returns {Promise<void>}
  */
-export async function shutdown({ timeout = DEFAULT_TIMEOUT } = {}) {
+export async function drain({ timeout = DEFAULT_TIMEOUT } = {}) {
   if (isShuttingDown) return;
   isShuttingDown = true;
 

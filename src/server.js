@@ -1098,7 +1098,7 @@ export async function bootstrapApp(app, server, options = {}) {
   const api = await import('./bootstrap/api');
   const apiRouter = await api.default(app, extensionManager);
   app.use('/api', apiRouter);
-  appState.apiShutdown = api.shutdown;
+  appState.apiDrain = api.drain;
 
   // Node-RED
   await appState.nodeRed.init(app, server, {
@@ -1163,11 +1163,11 @@ export async function disposeApp() {
     errors.push(err);
   }
 
-  // Shutdown all engine singletons via centralized registry
+  // Drain all engine singletons via centralized registry
   try {
-    if (typeof appState.apiShutdown === 'function') {
-      await appState.apiShutdown();
-      appState.apiShutdown = null;
+    if (typeof appState.apiDrain === 'function') {
+      await appState.apiDrain();
+      appState.apiDrain = null;
     }
   } catch (err) {
     console.error('   ⚠️  Engine shutdown error:', err.message);
