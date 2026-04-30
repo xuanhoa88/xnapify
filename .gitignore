@@ -183,18 +183,3 @@ docker-compose.override.yml
 
 # Misc
 .DS_Store
-
-# E2E test infrastructure
-# Compile hash (regenerated on each compile)
-**/.test-hash
-
-# Binary evidence files (screenshots, videos) — too large for git
-**/e2e/**/_results/**/*.png
-**/e2e/**/_results/**/*.jpg
-**/e2e/**/_results/**/*.jpeg
-**/e2e/**/_results/**/*.webp
-**/e2e/**/_results/**/*.gif
-**/e2e/**/_results/**/*.mp4
-**/e2e/**/_results/**/*.webm
-
-# Text reports (result.md, _summary.md) are COMMITTED for audit history
