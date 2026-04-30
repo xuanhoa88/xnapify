@@ -31,10 +31,6 @@ export const getHubPage = state => getHubState(state).data.page;
 
 export const getHubTotalPages = state => getHubState(state).data.totalPages;
 
-export const getMySubmissions = state => getHubState(state).data.mySubmissions;
-
-export const getAdminSubmissions = state => getHubState(state).data.submissions;
-
 export const isHubInitialized = state => getHubState(state).data.initialized;
 
 // Filter selectors
@@ -50,16 +46,8 @@ export const isHubCategoriesLoading = state =>
 
 export const isHubDetailLoading = state => getOp(state, 'detail').loading;
 
-export const isHubSubmitting = state => getOp(state, 'submit').loading;
-
-export const isMySubmissionsLoading = state =>
-  getOp(state, 'mySubmissions').loading;
-
-export const isAdminSubmissionsLoading = state =>
-  getOp(state, 'submissions').loading;
-
-export const isReviewLoading = state => getOp(state, 'review').loading;
+export const isHubInstalling = state => getOp(state, 'install').loading;
 
 export const getHubBrowseError = state => getOp(state, 'browse').error;
 
-export const getHubSubmitError = state => getOp(state, 'submit').error;
+export const getHubInstallError = state => getOp(state, 'install').error;

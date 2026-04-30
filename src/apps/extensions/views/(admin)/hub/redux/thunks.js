@@ -22,7 +22,7 @@ export const fetchHubListings = createAsyncThunk(
       if (params && params.page) query.set('page', params.page);
       if (params && params.limit) query.set('limit', params.limit);
 
-      const { data } = await fetch(`/api/extensions/hub?${query}`, {
+      const { data } = await fetch(`/api/admin/extensions/hub?${query}`, {
         signal: params && params.signal,
       });
       return data;
@@ -39,7 +39,7 @@ export const fetchFeaturedListings = createAsyncThunk(
   'admin/hub/fetchFeatured',
   async (options, { extra: { fetch }, rejectWithValue }) => {
     try {
-      const { data } = await fetch('/api/extensions/hub/featured', {
+      const { data } = await fetch('/api/admin/extensions/hub/featured', {
         signal: options && options.signal,
       });
       return data.featured || [];
@@ -56,7 +56,7 @@ export const fetchCategories = createAsyncThunk(
   'admin/hub/fetchCategories',
   async (options, { extra: { fetch }, rejectWithValue }) => {
     try {
-      const { data } = await fetch('/api/extensions/hub/categories', {
+      const { data } = await fetch('/api/admin/extensions/hub/categories', {
         signal: options && options.signal,
       });
       return data.categories || [];
@@ -71,9 +71,11 @@ export const fetchCategories = createAsyncThunk(
 
 export const fetchListingDetail = createAsyncThunk(
   'admin/hub/fetchListingDetail',
-  async (id, { extra: { fetch }, rejectWithValue }) => {
+  async (name, { extra: { fetch }, rejectWithValue }) => {
     try {
-      const { data } = await fetch(`/api/extensions/hub/${id}`);
+      const { data } = await fetch(
+        `/api/admin/extensions/hub/${encodeURIComponent(name)}`,
+      );
       return data.listing;
     } catch (error) {
       return rejectWithValue(
@@ -84,81 +86,18 @@ export const fetchListingDetail = createAsyncThunk(
 );
 
 // ========================================================================
-// Hub Submit Thunks
+// Hub Install Thunk
 // ========================================================================
 
-export const submitExtension = createAsyncThunk(
-  'admin/hub/submitExtension',
-  async (formData, { extra: { fetch }, rejectWithValue }) => {
+export const installFromHub = createAsyncThunk(
+  'admin/hub/installFromHub',
+  async (extensionName, { extra: { fetch }, rejectWithValue }) => {
     try {
-      const { data } = await fetch('/api/admin/extensions/hub/submit', {
+      const { data } = await fetch('/api/admin/extensions/hub/install', {
         method: 'POST',
-        body: formData,
+        body: { name: extensionName },
       });
-      return data.submission;
-    } catch (error) {
-      return rejectWithValue(
-        (error.data && error.data.message) || error.message,
-      );
-    }
-  },
-);
-
-export const fetchMySubmissions = createAsyncThunk(
-  'admin/hub/fetchMySubmissions',
-  async (options, { extra: { fetch }, rejectWithValue }) => {
-    try {
-      const { data } = await fetch('/api/admin/extensions/hub/my', {
-        signal: options && options.signal,
-      });
-      return data.submissions || [];
-    } catch (error) {
-      if (error.name === 'AbortError') return [];
-      return rejectWithValue(
-        (error.data && error.data.message) || error.message,
-      );
-    }
-  },
-);
-
-// ========================================================================
-// Hub Review Thunks
-// ========================================================================
-
-export const fetchSubmissions = createAsyncThunk(
-  'admin/hub/fetchSubmissions',
-  async (params, { extra: { fetch }, rejectWithValue }) => {
-    try {
-      const query = new URLSearchParams();
-      if (params && params.status) query.set('status', params.status);
-      if (params && params.page) query.set('page', params.page);
-
-      const { data } = await fetch(
-        `/api/admin/extensions/hub/submissions?${query}`,
-        { signal: params && params.signal },
-      );
-      return data;
-    } catch (error) {
-      if (error.name === 'AbortError') return { submissions: [], total: 0 };
-      return rejectWithValue(
-        (error.data && error.data.message) || error.message,
-      );
-    }
-  },
-);
-
-export const reviewSubmission = createAsyncThunk(
-  'admin/hub/reviewSubmission',
-  async ({ id, action, notes }, { extra: { fetch }, rejectWithValue }) => {
-    try {
-      const { data } = await fetch(
-        `/api/admin/extensions/hub/submissions/${id}`,
-        {
-          method: 'PATCH',
-          body: { action, notes },
-        },
-      );
-      return data;
+      return data.extension;
     } catch (error) {
       return rejectWithValue(
         (error.data && error.data.message) || error.message,

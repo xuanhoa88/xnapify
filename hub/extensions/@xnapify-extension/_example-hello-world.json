@@ -1,0 +1,15 @@
+{
+  "name": "@xnapify-extension/example-hello-world",
+  "version": "1.0.0",
+  "description": "A minimal example extension that demonstrates the metadata format.\n\nThis file serves as a template for contributors submitting their own extensions to the hub.",
+  "short_description": "Example extension — use as a template for your submissions",
+  "category": "developer-tools",
+  "tags": ["example", "template", "getting-started"],
+  "icon": "👋",
+  "author": "xuanguyen",
+  "repository": "https://github.com/xuanhoa88/xnapify",
+  "compatibility": ">=1.0.0",
+  "type": "plugin",
+  "downloadUrl": "https://github.com/xuanhoa88/xnapify/releases/download/v1.0.0/example-hello-world-v1.0.0.zip",
+  "checksum": "0000000000000000000000000000000000000000000000000000000000000000"
+}

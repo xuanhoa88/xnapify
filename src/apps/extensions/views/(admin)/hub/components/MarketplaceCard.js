@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { CheckIcon, DownloadIcon } from '@radix-ui/react-icons';
+import { CheckIcon } from '@radix-ui/react-icons';
 import { Flex, Box, Text, Badge, Card, Avatar } from '@radix-ui/themes';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
@@ -106,12 +106,6 @@ export default function MarketplaceCard({
             {listing.category}
           </Badge>
           <Flex gap='3' align='center'>
-            <Flex align='center' gap='1' className={s.downloadsFlex}>
-              <DownloadIcon width={14} height={14} />
-              <Text as='span' size='1' weight='medium'>
-                {(listing.install_count || 0).toLocaleString()}
-              </Text>
-            </Flex>
             <Text as='span' size='1' color='gray'>
               v{listing.version}
             </Text>

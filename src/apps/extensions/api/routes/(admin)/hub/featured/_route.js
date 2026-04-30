@@ -5,6 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import * as hubController from '../../../controllers/hub.controller';
+import * as hubController from '../../../../controllers/hub.controller';
 
-export const get = [hubController.browseListings];
+export const get = [hubController.getFeaturedListings];

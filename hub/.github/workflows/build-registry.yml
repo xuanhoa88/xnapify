@@ -1,0 +1,79 @@
+name: Build Registry
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'extensions/**'
+
+  # Allow manual trigger from GitHub UI
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build registry.json
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build registry.json
+        run: |
+          node -e "
+            const fs = require('fs');
+            const path = require('path');
+
+            function collectJsonFiles(dir) {
+              const results = [];
+              if (!fs.existsSync(dir)) return results;
+
+              for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+                const full = path.join(dir, entry.name);
+                if (entry.isDirectory()) {
+                  results.push(...collectJsonFiles(full));
+                } else if (entry.name.endsWith('.json')) {
+                  try {
+                    const content = JSON.parse(fs.readFileSync(full, 'utf8'));
+                    // Validate minimum required fields
+                    if (content.name && content.key && content.version && content.downloadUrl) {
+                      results.push(content);
+                    } else {
+                      console.warn('Skipping invalid file (missing required fields):', full);
+                    }
+                  } catch (err) {
+                    console.warn('Skipping invalid JSON file:', full, err.message);
+                  }
+                }
+              }
+              return results;
+            }
+
+            const extensions = collectJsonFiles('extensions');
+
+            // Sort by name for deterministic output
+            extensions.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+            const registry = {
+              version: 1,
+              updatedAt: new Date().toISOString(),
+              totalCount: extensions.length,
+              extensions,
+            };
+
+            fs.writeFileSync('registry.json', JSON.stringify(registry, null, 2) + '\n');
+            console.log('✅ Built registry.json with ' + extensions.length + ' extension(s)');
+          "
+
+      - name: Commit and push registry.json
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add registry.json
+          # Only commit if there are changes
+          git diff --cached --quiet || git commit -m "chore: rebuild registry.json [skip ci]"
+          git push

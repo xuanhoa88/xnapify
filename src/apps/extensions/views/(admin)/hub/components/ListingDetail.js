@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 import * as RadixIcons from '@radix-ui/react-icons';
 import {
@@ -20,14 +20,20 @@ import {
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
+import { useDispatch, useSelector } from 'react-redux';
 
 import Modal from '@shared/renderer/components/Modal';
 import Portal from '@shared/renderer/components/Portal';
+
+import { installFromHub, isHubInstalling } from '../redux';
 
 import s from './ListingDetail.css';
 
 export default function ListingDetail({ listing = null, onClose }) {
   const { t } = useTranslation();
+  const dispatch = useDispatch();
+  const installing = useSelector(isHubInstalling);
+  const [installSuccess, setInstallSuccess] = useState(false);
   const tags = (listing && listing.tags) || [];
   const screenshots = (listing && listing.screenshots) || [];
   const isOfficial =
@@ -37,6 +43,13 @@ export default function ListingDetail({ listing = null, onClose }) {
 
   // Lightbox state: null = closed, number = index of active screenshot
   const [lightboxIdx, setLightboxIdx] = useState(null);
+
+  const listingName = listing ? listing.name : null;
+
+  // Reset install success when listing changes
+  useEffect(() => {
+    setInstallSuccess(false);
+  }, [listingName]);
 
   // Close lightbox on Esc, navigate with ← →
   useEffect(() => {
@@ -51,6 +64,16 @@ export default function ListingDetail({ listing = null, onClose }) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [lightboxIdx, screenshots.length]);
+
+  const handleInstall = useCallback(async () => {
+    if (!listing || !listing.name || installing) return;
+    try {
+      await dispatch(installFromHub(listing.name)).unwrap();
+      setInstallSuccess(true);
+    } catch {
+      // Error is handled by Redux state
+    }
+  }, [dispatch, listing, installing]);
 
   const metaItems = [
     {
@@ -68,12 +91,7 @@ export default function ListingDetail({ listing = null, onClose }) {
       value: (listing && listing.author) || '—',
     },
     {
-      icon: RadixIcons.DownloadIcon,
-      label: t('admin:hub.installs', 'Installs'),
-      value: ((listing && listing.install_count) || 0).toLocaleString(),
-    },
-    {
-      icon: RadixIcons.BoxIcon, // category substitute
+      icon: RadixIcons.BoxIcon,
       label: t('admin:hub.category', 'Category'),
       value: listing && listing.category,
     },
@@ -82,6 +100,23 @@ export default function ListingDetail({ listing = null, onClose }) {
           icon: RadixIcons.CheckCircledIcon,
           label: t('admin:hub.testedWith', 'Tested with'),
           value: `xnapify ${listing.compatibility}`,
+        }
+      : null,
+    listing && listing.repository
+      ? {
+          icon: RadixIcons.GitHubLogoIcon,
+          label: t('admin:hub.repository', 'Repository'),
+          value: (
+            <Text
+              as='a'
+              href={listing.repository}
+              target='_blank'
+              rel='noopener noreferrer'
+              className={s.repoLink}
+            >
+              {t('admin:hub.viewSource', 'View source')}
+            </Text>
+          ),
         }
       : null,
   ].filter(Boolean);
@@ -134,20 +169,6 @@ export default function ListingDetail({ listing = null, onClose }) {
                       {t('admin:hub.officialBadge', 'Official')}
                     </Badge>
                   )}
-                  <Badge
-                    size='small'
-                    color='gray'
-                    radius='full'
-                    variant='surface'
-                  >
-                    <RadixIcons.DownloadIcon
-                      width={12}
-                      height={12}
-                      className={s.badgeIcon}
-                    />
-
-                    {((listing && listing.install_count) || 0).toLocaleString()}
-                  </Badge>
                   <Badge
                     size='small'
                     color='gray'
@@ -281,8 +302,27 @@ export default function ListingDetail({ listing = null, onClose }) {
         </Modal.Body>
         <Modal.Footer>
           <Modal.Actions>
-            <Button variant='solid' color='indigo' icon='download'>
-              {t('admin:hub.install', 'Install')}
+            <Button
+              variant='solid'
+              color={installSuccess ? 'green' : 'indigo'}
+              onClick={handleInstall}
+              disabled={installing || installSuccess}
+            >
+              {installing && (
+                <RadixIcons.UpdateIcon
+                  width={16}
+                  height={16}
+                  className={s.spinIcon}
+                />
+              )}
+              {installSuccess && (
+                <RadixIcons.CheckIcon width={16} height={16} />
+              )}
+              {installing
+                ? t('admin:hub.installing', 'Installing...')
+                : installSuccess
+                  ? t('admin:hub.installed', 'Installed')
+                  : t('admin:hub.install', 'Install')}
             </Button>
           </Modal.Actions>
         </Modal.Footer>

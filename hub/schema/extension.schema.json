@@ -1,0 +1,107 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/xuanhoa88/xnapify-extension-hub/blob/main/schema/extension.schema.json",
+  "title": "xnapify Extension Hub Metadata",
+  "description": "Schema for extension metadata files in the xnapify Extension Hub registry.",
+  "type": "object",
+  "required": ["name", "version", "author", "category", "downloadUrl", "checksum"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "Full package name (e.g., @xnapify-extension/my-ext)"
+    },
+
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+",
+      "description": "SemVer version string"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 5000,
+      "description": "Full description (supports markdown)"
+    },
+    "short_description": {
+      "type": "string",
+      "maxLength": 160,
+      "description": "One-liner for catalog card display"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "authentication",
+        "communication",
+        "analytics",
+        "productivity",
+        "developer-tools",
+        "content",
+        "social",
+        "security",
+        "integration",
+        "other"
+      ],
+      "description": "Marketplace category"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 30
+      },
+      "maxItems": 10,
+      "uniqueItems": true,
+      "description": "Searchable tags"
+    },
+    "icon": {
+      "type": "string",
+      "maxLength": 255,
+      "description": "Emoji or icon URL"
+    },
+    "screenshots": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "uri"
+      },
+      "maxItems": 5,
+      "description": "Screenshot URLs"
+    },
+    "author": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "Author GitHub username or display name"
+    },
+    "repository": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL to extension source code"
+    },
+    "compatibility": {
+      "type": "string",
+      "maxLength": 20,
+      "description": "xnapify version requirement (SemVer range)"
+    },
+    "type": {
+      "type": "string",
+      "enum": ["plugin", "module"],
+      "default": "plugin",
+      "description": "Extension type"
+    },
+    "downloadUrl": {
+      "type": "string",
+      "format": "uri",
+      "description": "Direct URL to the .zip archive"
+    },
+    "checksum": {
+      "type": "string",
+      "minLength": 64,
+      "maxLength": 64,
+      "pattern": "^[a-f0-9]{64}$",
+      "description": "SHA-256 hex hash of the extension directory"
+    }
+  },
+  "additionalProperties": false
+}

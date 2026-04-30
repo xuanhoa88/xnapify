@@ -230,3 +230,28 @@
 .dotInactive {
   background: var(--white-a6);
 }
+
+.repoLink {
+  color: var(--indigo-11);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+
+.repoLink:hover {
+  color: var(--indigo-10);
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinIcon {
+  animation: spin 1s linear infinite;
+}

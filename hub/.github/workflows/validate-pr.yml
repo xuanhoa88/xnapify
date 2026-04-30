@@ -1,0 +1,140 @@
+name: Validate Extension PR
+
+on:
+  pull_request:
+    paths:
+      - 'extensions/**'
+
+jobs:
+  validate:
+    name: Validate Extension Metadata
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install ajv-cli for schema validation
+        run: npm install -g ajv-cli ajv-formats
+
+      - name: Find changed extension files
+        id: changed
+        run: |
+          FILES=$(git diff --name-only --diff-filter=ACMR origin/${{ github.base_ref }}...HEAD -- 'extensions/**/*.json' | tr '\n' ' ')
+          echo "files=$FILES" >> $GITHUB_OUTPUT
+          if [ -z "$FILES" ]; then
+            echo "No extension files changed."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "Changed files: $FILES"
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Validate changed files
+        if: steps.changed.outputs.skip == 'false'
+        run: |
+          EXIT_CODE=0
+
+          for file in ${{ steps.changed.outputs.files }}; do
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "📋 Validating: $file"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+            # 1. Valid JSON
+            if ! node -e "JSON.parse(require('fs').readFileSync('$file','utf8'))"; then
+              echo "❌ Invalid JSON syntax"
+              EXIT_CODE=1
+              continue
+            fi
+            echo "✅ Valid JSON"
+
+            # 2. Schema validation
+            if ! ajv validate -s schema/extension.schema.json -d "$file" --all-errors -c ajv-formats 2>&1; then
+              echo "❌ Schema validation failed"
+              EXIT_CODE=1
+              continue
+            fi
+            echo "✅ Schema valid"
+
+            # 3. Download URL is reachable
+            RESULT=$(node -e "
+              const ext = JSON.parse(require('fs').readFileSync('$file','utf8'));
+              fetch(ext.downloadUrl, { method: 'HEAD', redirect: 'follow' })
+                .then(r => {
+                  if (!r.ok) {
+                    console.log('FAIL:' + r.status);
+                    process.exit(1);
+                  }
+                  console.log('OK');
+                })
+                .catch(e => {
+                  console.log('FAIL:' + e.message);
+                  process.exit(1);
+                });
+            " 2>&1) || true
+
+            if echo "$RESULT" | grep -q "^OK$"; then
+              echo "✅ Download URL reachable"
+            else
+              echo "⚠️  Download URL check: $RESULT (non-blocking warning)"
+            fi
+
+            # 4. No duplicate names across the registry
+            DUPLICATE_CHECK=$(node -e "
+              const fs = require('fs');
+              const path = require('path');
+              const ext = JSON.parse(fs.readFileSync('$file','utf8'));
+
+              function collectFiles(dir) {
+                const results = [];
+                for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+                  const full = path.join(dir, entry.name);
+                  if (entry.isDirectory()) results.push(...collectFiles(full));
+                  else if (entry.name.endsWith('.json')) results.push(full);
+                }
+                return results;
+              }
+
+              const allFiles = collectFiles('extensions');
+              const currentFile = path.resolve('$file');
+
+              for (const f of allFiles) {
+                if (path.resolve(f) === currentFile) continue;
+                try {
+                  const other = JSON.parse(fs.readFileSync(f,'utf8'));
+                  if (other.name === ext.name) {
+                    console.log('DUPLICATE:' + f);
+                    process.exit(1);
+                  }
+                } catch {}
+              }
+              console.log('OK');
+            " 2>&1)
+
+            if echo "$DUPLICATE_CHECK" | grep -q "^OK$"; then
+              echo "✅ No duplicate names"
+            else
+              echo "❌ Duplicate name found: $DUPLICATE_CHECK"
+              EXIT_CODE=1
+            fi
+
+            echo ""
+          done
+
+          exit $EXIT_CODE
+
+      - name: Summary
+        if: always() && steps.changed.outputs.skip == 'false'
+        run: |
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Validation complete for: ${{ steps.changed.outputs.files }}"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

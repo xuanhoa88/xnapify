@@ -176,6 +176,7 @@ export async function installExtensionDependencies(extensionDir, extension) {
     const err = new Error(
       `Failed to install dependencies for extension ${extensionName}`,
     );
+    err.name = 'ExtensionDependencyError';
     err.status = 500;
     throw err;
   }

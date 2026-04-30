@@ -5,7 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import * as hubSubmissionController from '../../../../../controllers/hub.submission.controller';
+import * as hubController from '../../../../controllers/hub.controller';
+
+export const useRateLimit = false;
 
 function requirePermission(permission) {
   return (req, res, next) => {
@@ -16,12 +18,7 @@ function requirePermission(permission) {
   };
 }
 
-export const patch = [
-  requirePermission('marketplace:manage'),
-  hubSubmissionController.updateListing,
-];
-
-export const del = [
-  requirePermission('marketplace:manage'),
-  hubSubmissionController.removeListing,
+export const post = [
+  requirePermission('extensions:manage'),
+  hubController.installFromHub,
 ];

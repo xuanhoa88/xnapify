@@ -18,7 +18,7 @@ export {
   clearSelectedListing,
   resetHubState,
   clearBrowseError,
-  clearSubmitError,
+  clearInstallError,
   SLICE_NAME,
 } from './slice';
 

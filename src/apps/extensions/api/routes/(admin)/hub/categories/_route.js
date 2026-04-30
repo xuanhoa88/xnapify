@@ -7,4 +7,4 @@
 
 import * as hubController from '../../../../controllers/hub.controller';
 
-export const get = [hubController.downloadListing];
+export const get = [hubController.getCategories];

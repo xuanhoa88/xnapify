@@ -12,10 +12,7 @@ import {
   fetchFeaturedListings,
   fetchCategories,
   fetchListingDetail,
-  submitExtension,
-  fetchMySubmissions,
-  fetchSubmissions,
-  reviewSubmission,
+  installFromHub,
 } from './thunks';
 
 export const SLICE_NAME = 'hub';
@@ -27,10 +24,7 @@ const createFreshOperations = () => ({
   featured: createOperationState(),
   categories: createOperationState(),
   detail: createOperationState(),
-  submit: createOperationState(),
-  mySubmissions: createOperationState(),
-  submissions: createOperationState(),
-  review: createOperationState(),
+  install: createOperationState(),
 });
 
 const createFreshData = () => ({
@@ -41,9 +35,6 @@ const createFreshData = () => ({
   total: 0,
   page: 1,
   totalPages: 0,
-  mySubmissions: [],
-  submissions: [],
-  submissionsTotal: 0,
   initialized: false,
 });
 
@@ -52,7 +43,7 @@ const initialState = {
   filters: {
     search: '',
     category: 'all',
-    sort: 'popular',
+    sort: 'name',
     page: 1,
   },
   operations: createFreshOperations(),
@@ -109,8 +100,8 @@ const hubSlice = createSlice({
     clearBrowseError(state) {
       state.operations.browse.error = null;
     },
-    clearSubmitError(state) {
-      state.operations.submit.error = null;
+    clearInstallError(state) {
+      state.operations.install.error = null;
     },
   },
   extraReducers: builder => {
@@ -154,48 +145,13 @@ const hubSlice = createSlice({
       })
       .addCase(fetchListingDetail.rejected, createRejected('detail'));
 
-    // Submit
+    // Install from Hub
     builder
-      .addCase(submitExtension.pending, createPending('submit'))
-      .addCase(submitExtension.fulfilled, (state, action) => {
-        state.operations.submit = { loading: false, error: null };
-        state.data.mySubmissions.unshift(action.payload);
+      .addCase(installFromHub.pending, createPending('install'))
+      .addCase(installFromHub.fulfilled, (state, _action) => {
+        state.operations.install = { loading: false, error: null };
       })
-      .addCase(submitExtension.rejected, createRejected('submit'));
-
-    // My Submissions
-    builder
-      .addCase(fetchMySubmissions.pending, createPending('mySubmissions'))
-      .addCase(fetchMySubmissions.fulfilled, (state, action) => {
-        state.operations.mySubmissions = { loading: false, error: null };
-        state.data.mySubmissions = action.payload;
-      })
-      .addCase(fetchMySubmissions.rejected, createRejected('mySubmissions'));
-
-    // Admin Submissions
-    builder
-      .addCase(fetchSubmissions.pending, createPending('submissions'))
-      .addCase(fetchSubmissions.fulfilled, (state, action) => {
-        state.operations.submissions = { loading: false, error: null };
-        state.data.submissions = action.payload.submissions || [];
-        state.data.submissionsTotal = action.payload.total || 0;
-      })
-      .addCase(fetchSubmissions.rejected, createRejected('submissions'));
-
-    // Review
-    builder
-      .addCase(reviewSubmission.pending, createPending('review'))
-      .addCase(reviewSubmission.fulfilled, (state, action) => {
-        state.operations.review = { loading: false, error: null };
-        const submission = action.payload && action.payload.submission;
-        const reviewedId = submission && submission.id;
-        if (reviewedId) {
-          state.data.submissions = state.data.submissions.filter(
-            s => s.id !== reviewedId,
-          );
-        }
-      })
-      .addCase(reviewSubmission.rejected, createRejected('review'));
+      .addCase(installFromHub.rejected, createRejected('install'));
   },
 });
 
@@ -205,7 +161,7 @@ export const {
   clearSelectedListing,
   resetHubState,
   clearBrowseError,
-  clearSubmitError,
+  clearInstallError,
 } = hubSlice.actions;
 
 export default hubSlice.reducer;

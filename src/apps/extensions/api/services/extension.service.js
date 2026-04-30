@@ -424,6 +424,7 @@ export async function deleteExtension(
     const error = new Error(
       'Cannot delete an active extension. Deactivate it first.',
     );
+    error.name = 'ExtensionActiveError';
     error.statusCode = 400;
     throw error;
   }
