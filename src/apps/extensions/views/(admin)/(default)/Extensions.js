@@ -32,7 +32,6 @@ import ExtensionCard from './components/ExtensionCard';
 import {
   fetchExtensions,
   uploadExtension,
-  upgradeExtension,
   toggleExtensionStatus,
   uninstallExtension,
   getExtensions,
@@ -436,34 +435,6 @@ function Extensions() {
     pendingFileRef.current = null;
   }, []);
 
-  const handleUpgrade = useCallback(
-    async extension => {
-      if (actionMap[extension.id]) return;
-      setActionWithTimeout(
-        extension.id,
-        t('admin:common.upgrading', 'Upgrading...'),
-      );
-      try {
-        await dispatch(
-          upgradeExtension({ id: extension.id, data: {} }),
-        ).unwrap();
-        // Upgrade is synchronous (no queue job) — show feedback immediately
-        clearAction(extension.id);
-        dispatch(
-          showSuccessMessage({
-            message: t(
-              'admin:extensions.upgradeSuccess',
-              'Extension upgraded successfully.',
-            ),
-          }),
-        );
-      } catch {
-        clearAction(extension.id);
-      }
-    },
-    [actionMap, dispatch, t, setActionWithTimeout, clearAction],
-  );
-
   // Count per tab for badges
   const tabCounts = useMemo(() => {
     let activeCount = 0;
@@ -517,7 +488,6 @@ function Extensions() {
             actionLabel={actionMap[extension.id]}
             onActivate={handleActivate}
             onDeactivate={handleDeactivate}
-            onUpgrade={handleUpgrade}
             onDelete={handleDelete}
             canUpdate={canUpdate}
           />

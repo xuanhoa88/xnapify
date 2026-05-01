@@ -8,7 +8,7 @@
 import { useCallback, useRef, useState, useEffect, useMemo } from 'react';
 
 import * as RadixIcons from '@radix-ui/react-icons';
-import { Flex, Box, Text, Tooltip, HoverCard } from '@radix-ui/themes';
+import { Flex, Box, Text, Tooltip, HoverCard, Badge } from '@radix-ui/themes';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
@@ -227,13 +227,31 @@ function Drawer({ minimal = false }) {
           )}
         />
         {!treatAsCompact && (
-          <Text
-            size='2'
-            weight={active ? 'medium' : 'regular'}
-            className='truncate leading-normal text-[13.5px]'
+          <Flex
+            align='center'
+            justify='between'
+            className='w-full'
+            minWidth='0'
           >
-            {item.label}
-          </Text>
+            <Text
+              size='2'
+              weight={active ? 'medium' : 'regular'}
+              className='truncate leading-normal text-[13.5px]'
+            >
+              {item.label}
+            </Text>
+            {item.badge && (
+              <Badge
+                color={item.badgeColor || 'red'}
+                variant='solid'
+                radius='full'
+                size='1'
+                className='ml-2 shrink-0'
+              >
+                {item.badge}
+              </Badge>
+            )}
+          </Flex>
         )}
       </Flex>
     );

@@ -16,7 +16,6 @@ export {
   // Per-operation error clear actions
   clearExtensionListError,
   clearExtensionUploadError,
-  clearExtensionUpgradeError,
   clearExtensionToggleError,
   clearExtensionUninstallError,
   // Utility actions

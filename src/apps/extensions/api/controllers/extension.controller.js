@@ -9,10 +9,7 @@ import express from 'express';
 
 import { validateForm, z } from '@shared/validator';
 
-import {
-  extensionStatusSchema,
-  extensionUpgradeSchema,
-} from '../../validator/extension';
+import { extensionStatusSchema } from '../../validator/extension';
 import * as extensionService from '../services/extension.service';
 
 // Cache for static middleware
@@ -314,40 +311,6 @@ export const updateExtensionStatus = async (req, res) => {
       'Failed to update extension status',
       error,
     );
-  }
-};
-
-/**
- * Upgrade Extension (Admin)
- * Route: PATCH /api/admin/extensions/:id
- */
-export const upgradeExtension = async (req, res) => {
-  const container = req.app.get('container');
-  const http = container.resolve('http');
-  try {
-    const { id } = req.params;
-    const i18n = container.resolve('i18n');
-    const schema = extensionUpgradeSchema({ i18n, z });
-    const [isValid, result] = validateForm(() => schema, req.body);
-    if (!isValid) return http.sendValidationError(res, result);
-
-    const models = container.resolve('models');
-    const extension = await extensionService.upgradeExtension(id, result, {
-      models,
-      cache: container.resolve('cache'),
-      hook: container.resolve('hook'),
-      actorId: req.user && req.user.id,
-    });
-
-    const ws = container.resolve('ws');
-    ws.sendToPublicChannel('extension:updated', {
-      type: 'EXTENSION_UPDATED',
-      extensionId: extension.key || id,
-    });
-
-    return http.sendSuccess(res, { extension });
-  } catch (error) {
-    return http.sendServerError(res, 'Failed to upgrade extension', error);
   }
 };
 

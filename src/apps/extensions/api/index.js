@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { registerSchedules } from './schedules';
 import * as extensionService from './services/extension.service';
 import { registerExtensionWorkers } from './services/extension.workers';
 
@@ -34,6 +35,7 @@ export default {
 
   async boot({ container }) {
     registerExtensionWorkers(container);
+    registerSchedules(container);
 
     if (process.env.NODE_ENV !== 'production') {
       registerHmrIpcListener(container);

@@ -109,9 +109,27 @@ export function validateManifest(manifest) {
   const version =
     (typeof manifest.version === 'string' && manifest.version.trim()) ||
     '1.0.0';
+
   if (name.length === 0 || version.length === 0) {
     throw ExtensionError.invalidPackage(
       'Invalid extension manifest: missing required fields (name, version)',
+    );
+  }
+
+  // Security: prevent path traversal
+  // Allow scoped names (exactly one '/' after '@'), block everything else
+  const isScopedName =
+    name.startsWith('@') &&
+    name.indexOf('/') === name.lastIndexOf('/') &&
+    name.indexOf('/') > 1;
+
+  if (
+    name.includes('..') ||
+    name.includes('\\') ||
+    (!isScopedName && name.includes('/'))
+  ) {
+    throw ExtensionError.invalidPackage(
+      `Extension name "${name}" contains invalid path characters`,
     );
   }
 

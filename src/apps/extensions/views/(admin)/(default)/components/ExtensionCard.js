@@ -21,8 +21,6 @@ import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
-import ExtensionActionsDropdown from './ExtensionActionsDropdown';
-
 import s from './ExtensionCard.css';
 
 function ExtensionCard({
@@ -30,7 +28,6 @@ function ExtensionCard({
   actionLabel,
   onActivate,
   onDeactivate,
-  onUpgrade,
   onDelete,
   canUpdate,
 }) {
@@ -190,14 +187,6 @@ function ExtensionCard({
           >
             {t('admin:common.remove', 'Remove')}
           </Button>
-
-          {!isLoading && (
-            <ExtensionActionsDropdown
-              extension={extension}
-              onUpgrade={onUpgrade}
-              onDelete={onDelete}
-            />
-          )}
         </Flex>
 
         <Box>
@@ -249,7 +238,6 @@ ExtensionCard.propTypes = {
   actionLabel: PropTypes.string,
   onActivate: PropTypes.func.isRequired,
   onDeactivate: PropTypes.func.isRequired,
-  onUpgrade: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
   canUpdate: PropTypes.bool,
 };

@@ -677,7 +677,7 @@ export async function installExtensionFromPackage(
     if (existingExtension) {
       throw ExtensionError.conflict(
         `Extension "${manifest.id}" is already installed. ` +
-          'Uninstall it first or use upgrade.',
+          'Uninstall it first.',
       );
     }
 
@@ -847,41 +847,6 @@ export async function toggleExtensionStatus(
       isActive,
       actorId,
       isDevExtension,
-    });
-  }
-
-  return extension;
-}
-
-/**
- * Upgrade extension metadata.
- * Nulls out integrity so next activation re-verifies.
- * @param {string} id - Extension key (manifest.id)
- * @param {Object} data - Update data (name, description, version)
- * @param {Object} context - App context
- */
-export async function upgradeExtension(
-  id,
-  data,
-  { models, cache, hook, actorId },
-) {
-  const { extension } = await resolveExtension(models, id);
-
-  // Only null integrity when version changes — forces re-verification on next
-  // activation since the code may have changed. Avoid nulling on metadata-only
-  // updates (name, description) to prevent bypassing the integrity check.
-  const updatePayload = { ...data };
-  if (data.version) {
-    updatePayload.integrity = null;
-  }
-  await extension.update(updatePayload);
-  if (cache) await invalidateCaches(cache, id);
-
-  if (hook) {
-    hook('admin:extensions').emit('upgraded', {
-      extension_id: extension.key,
-      options: data,
-      actor_id: actorId,
     });
   }
 

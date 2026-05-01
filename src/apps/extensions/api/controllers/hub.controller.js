@@ -116,9 +116,9 @@ export const installFromHub = async (req, res) => {
       extensionManager: container.resolve('extension'),
       models: container.resolve('models'),
       cache: container.resolve('cache'),
-      fs: container.resolve('fs'),
       actorId: req.user && req.user.id,
       queue: container.resolve('queue'),
+      ws: container.resolve('ws'),
     });
 
     return http.sendSuccess(res, { extension }, 201);
@@ -157,9 +157,9 @@ export const updateFromHub = async (req, res) => {
       extensionManager: container.resolve('extension'),
       models: container.resolve('models'),
       cache: container.resolve('cache'),
-      fs: container.resolve('fs'),
       actorId: req.user && req.user.id,
       queue: container.resolve('queue'),
+      ws: container.resolve('ws'),
     });
 
     return http.sendSuccess(res, { extension });
@@ -201,6 +201,7 @@ export const uninstallFromHub = async (req, res) => {
       fs: container.resolve('fs'),
       actorId: req.user && req.user.id,
       queue: container.resolve('queue'),
+      ws: container.resolve('ws'),
       cwd: container.resolve('config').cwd,
     });
 

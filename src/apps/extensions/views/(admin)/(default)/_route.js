@@ -7,6 +7,7 @@
 
 import { requirePermission } from '@shared/renderer/components/Rbac';
 import { features } from '@shared/renderer/redux';
+import { useWebSocket } from '@shared/ws/client';
 
 import Extensions from './Extensions';
 import reducer, { SLICE_NAME } from './redux';
@@ -26,31 +27,63 @@ export function init({ store }) {
  * Register menu item for this route
  */
 export function setup({ store, i18n }) {
-  store.dispatch(
-    registerMenu({
-      ns: 'admin',
-      id: 'extensions',
-      label: i18n.t('admin:navigation.extensionsGroup', 'Extensions'),
-      order: 90,
-      items: [
-        {
-          path: '/admin/extensions/hub',
-          label: i18n.t('admin:navigation.hub', 'Hub'),
-          icon: 'GlobeIcon',
-          permission: 'extensions:read',
-          order: 10,
-        },
-        {
-          path: '/admin/extensions',
-          label: i18n.t('admin:navigation.extensions', 'Manage'),
-          icon: 'CubeIcon',
-          permission: 'extensions:read',
-          order: 20,
-          exact: true,
-        },
-      ],
-    }),
-  );
+  const registerHubMenu = (badgeCount = 0) => {
+    store.dispatch(
+      registerMenu({
+        ns: 'admin',
+        id: 'extensions',
+        label: i18n.t('admin:navigation.extensionsGroup', 'Extensions'),
+        order: 90,
+        items: [
+          {
+            path: '/admin/extensions/hub',
+            label: i18n.t('admin:navigation.hub', 'Hub'),
+            icon: 'GlobeIcon',
+            permission: 'extensions:read',
+            order: 10,
+            badge: badgeCount > 0 ? badgeCount : undefined,
+          },
+          {
+            path: '/admin/extensions',
+            label: i18n.t('admin:navigation.extensions', 'Manage'),
+            icon: 'CubeIcon',
+            permission: 'extensions:read',
+            order: 20,
+            exact: true,
+          },
+        ],
+      }),
+    );
+  };
+
+  // Register initially without badge
+  registerHubMenu(0);
+
+  // Client-side only
+  if (typeof window !== 'undefined') {
+    // 1. Fetch initial badge count
+    fetch('/api/admin/extensions/hub/updates/count')
+      .then(r => r.json())
+      .then(res => {
+        const count = (res.data && res.data.count) || 0;
+        if (count > 0) registerHubMenu(count);
+      })
+      .catch(() => {}); // Ignore network errors
+
+    // 2. Subscribe to WebSocket updates
+    // Use a slight timeout to ensure WS client is initialized
+    setTimeout(() => {
+      const ws = useWebSocket();
+      if (ws) {
+        // Assume 'admin' channel is subscribed globally by the layout
+        ws.on('extension:updates_available', data => {
+          if (data && data.type === 'UPDATES_AVAILABLE_COUNT') {
+            registerHubMenu(data.count || 0);
+          }
+        });
+      }
+    }, 2000);
+  }
 }
 
 /**

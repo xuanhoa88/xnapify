@@ -74,20 +74,6 @@ export const getExtensionUploadError = state => {
 };
 
 // =============================================================================
-// UPGRADE OPERATION
-// =============================================================================
-
-export const isExtensionUpgrading = state => {
-  const op = getOperationState(state, 'upgrade');
-  return !!(op && op.loading);
-};
-
-export const getExtensionUpgradeError = state => {
-  const op = getOperationState(state, 'upgrade');
-  return (op && op.error) || null;
-};
-
-// =============================================================================
 // TOGGLE STATUS OPERATION
 // =============================================================================
 

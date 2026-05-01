@@ -406,6 +406,13 @@ export async function installFromHub(extensionName, context) {
     );
 
     invalidateRegistryCache();
+
+    try {
+      await recalculateUpdateCount(context);
+    } catch (err) {
+      // Ignore background badge recalculation errors
+    }
+
     return result;
   } finally {
     // Cleanup temp file (best-effort)
@@ -485,6 +492,13 @@ export async function updateFromHub(extensionName, context) {
     );
 
     invalidateRegistryCache();
+    // Post-update: Re-calculate the global updates badge count
+    try {
+      await recalculateUpdateCount(context);
+    } catch (err) {
+      // Ignore background badge recalculation errors
+    }
+
     return result;
   } finally {
     fs.promises.unlink(tmpPath).catch(() => {});
@@ -530,5 +544,52 @@ export async function uninstallFromHub(extensionName, context) {
 
   await deleteExtension(existing.key, context);
   invalidateRegistryCache();
+
+  try {
+    await recalculateUpdateCount(context);
+  } catch (err) {
+    // Ignore background badge recalculation errors
+  }
+
   return true;
+}
+
+// ========================================================================
+// Update Badge synchronization
+// ========================================================================
+
+/**
+ * Re-calculate the available updates count and broadcast via WebSockets.
+ * Called by the background cron job and immediately after a successful update/uninstall.
+ *
+ * @param {Object} context - App context { models, cache, ws }
+ */
+export async function recalculateUpdateCount(context) {
+  const { models, cache, ws } = context;
+  if (!models || !cache || !ws) return;
+
+  const [registry, installedMap] = await Promise.all([
+    fetchRegistry(),
+    getInstalledExtensionsMap(models),
+  ]);
+
+  let updateCount = 0;
+
+  for (const localExt of Object.values(installedMap)) {
+    const hubExt = registry[localExt.key];
+    if (hubExt && !hubExt.deprecated) {
+      if (hubExt.version && hubExt.version !== localExt.version) {
+        updateCount++;
+      }
+    }
+  }
+
+  await cache.set('extension_update_count', updateCount, 3600 * 24);
+
+  ws.sendToChannel('admin', 'extension:updates_available', {
+    type: 'UPDATES_AVAILABLE_COUNT',
+    count: updateCount,
+  });
+
+  return updateCount;
 }

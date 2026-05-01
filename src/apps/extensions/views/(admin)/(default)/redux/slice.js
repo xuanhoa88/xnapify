@@ -10,7 +10,6 @@ import { createSlice } from '@reduxjs/toolkit';
 import {
   fetchExtensions,
   uploadExtension,
-  upgradeExtension,
   toggleExtensionStatus,
   uninstallExtension,
 } from './thunks';
@@ -27,7 +26,6 @@ const createOperationState = () => ({ loading: false, error: null });
 const createFreshOperations = () => ({
   list: createOperationState(),
   upload: createOperationState(),
-  upgrade: createOperationState(),
   toggleStatus: createOperationState(),
   uninstall: createOperationState(),
 });
@@ -115,11 +113,7 @@ const extensionsSlice = createSlice({
       normalized.operations.upload.error = null;
       Object.assign(state, normalized);
     },
-    clearExtensionUpgradeError: state => {
-      const normalized = normalizeState(state);
-      normalized.operations.upgrade.error = null;
-      Object.assign(state, normalized);
-    },
+
     clearExtensionToggleError: state => {
       const normalized = normalizeState(state);
       normalized.operations.toggleStatus.error = null;
@@ -164,22 +158,6 @@ const extensionsSlice = createSlice({
       })
       .addCase(uploadExtension.rejected, createRejectedHandler('upload'));
 
-    // Upgrade
-    builder
-      .addCase(upgradeExtension.pending, createPendingHandler('upgrade'))
-      .addCase(upgradeExtension.fulfilled, (state, action) => {
-        const normalized = normalizeState(state);
-        normalized.operations.upgrade = createOperationState();
-        const index = normalized.data.extensions.findIndex(
-          p => p.id === action.payload.id,
-        );
-        if (index !== -1) {
-          normalized.data.extensions[index] = action.payload;
-        }
-        Object.assign(state, normalized);
-      })
-      .addCase(upgradeExtension.rejected, createRejectedHandler('upgrade'));
-
     // Toggle Status
     builder
       .addCase(
@@ -221,7 +199,6 @@ const extensionsSlice = createSlice({
 export const {
   clearExtensionListError,
   clearExtensionUploadError,
-  clearExtensionUpgradeError,
   clearExtensionToggleError,
   clearExtensionUninstallError,
   resetExtensionsState,
