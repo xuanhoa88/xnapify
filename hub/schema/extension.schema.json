@@ -4,13 +4,20 @@
   "title": "xnapify Extension Hub Metadata",
   "description": "Schema for extension metadata files in the xnapify Extension Hub registry.",
   "type": "object",
-  "required": ["name", "version", "author", "category", "downloadUrl", "checksum"],
+  "required": ["name", "key", "version", "author", "category", "downloadUrl", "checksum"],
   "properties": {
     "name": {
       "type": "string",
       "minLength": 1,
       "maxLength": 100,
       "description": "Full package name (e.g., @xnapify-extension/my-ext)"
+    },
+
+    "key": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "Unique extension key matching manifest.id in the extension's package.json"
     },
 
     "version": {
@@ -89,6 +96,16 @@
       "enum": ["plugin", "module"],
       "default": "plugin",
       "description": "Extension type"
+    },
+    "featured": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this extension is featured in the marketplace"
+    },
+    "deprecated": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this extension is deprecated and should no longer be installed"
     },
     "downloadUrl": {
       "type": "string",

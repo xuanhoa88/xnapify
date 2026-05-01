@@ -62,6 +62,18 @@ When a user clicks **Install**, the app downloads the `.zip` directly from the e
 
 To publish a new version, update the `version`, `downloadUrl`, and `checksum` fields in your existing JSON file and submit a new PR.
 
+### Removing an Extension
+
+To remove your extension from the public registry:
+
+1. **Create a branch** named `remove/your-extension-name`.
+2. **Delete your metadata JSON file** from `extensions/`.
+3. **Open a Pull Request** against the `main` branch.
+4. **Explain the reason** for removal in the PR description.
+5. **Maintainer review** — removals require explicit maintainer approval.
+
+> **Note:** Removing an extension from the registry does not uninstall it from existing xnapify instances. It only prevents new installations from the Hub.
+
 ---
 
 ## 📋 Metadata Format
@@ -71,6 +83,7 @@ Each extension is described by a single JSON file with the following fields:
 ```json
 {
   "name": "@xnapify-extension/my-extension",
+  "key": "@xnapify-extension/my-extension",
   "version": "1.0.0",
   "description": "A longer description of what this extension does. Supports markdown.",
   "short_description": "One-liner for catalog display (max 160 chars)",
@@ -91,6 +104,7 @@ Each extension is described by a single JSON file with the following fields:
 | Field | Description |
 |-------|-------------|
 | `name` | Full package name (e.g., `@xnapify-extension/my-ext`) |
+| `key` | Unique extension key — must match `manifest.id` in your extension's `package.json` |
 | `version` | SemVer version string |
 | `author` | Your GitHub username or display name |
 | `category` | One of the [allowed categories](#categories) |
@@ -108,6 +122,8 @@ Each extension is described by a single JSON file with the following fields:
 | `repository` | URL to the extension's source code |
 | `compatibility` | xnapify version requirement (SemVer range) |
 | `type` | `plugin` (default) or `module` |
+| `featured` | `true` to feature in the marketplace (maintainer-only) |
+| `deprecated` | `true` to flag as deprecated — hidden from new installs |
 | `screenshots` | Array of screenshot URLs |
 
 ### Categories

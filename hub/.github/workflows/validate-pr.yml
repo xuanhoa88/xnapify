@@ -27,22 +27,53 @@ jobs:
       - name: Find changed extension files
         id: changed
         run: |
-          FILES=$(git diff --name-only --diff-filter=ACMR origin/${{ github.base_ref }}...HEAD -- 'extensions/**/*.json' | tr '\n' ' ')
-          echo "files=$FILES" >> $GITHUB_OUTPUT
-          if [ -z "$FILES" ]; then
+          ADDED_OR_MODIFIED=$(git diff --name-only --diff-filter=ACMR origin/${{ github.base_ref }}...HEAD -- 'extensions/**/*.json' | tr '\n' ' ')
+          DELETED=$(git diff --name-only --diff-filter=D origin/${{ github.base_ref }}...HEAD -- 'extensions/**/*.json' | tr '\n' ' ')
+
+          echo "files=$ADDED_OR_MODIFIED" >> $GITHUB_OUTPUT
+          echo "deleted=$DELETED" >> $GITHUB_OUTPUT
+
+          if [ -z "$ADDED_OR_MODIFIED" ] && [ -z "$DELETED" ]; then
             echo "No extension files changed."
             echo "skip=true" >> $GITHUB_OUTPUT
           else
-            echo "Changed files: $FILES"
+            echo "Changed files: $ADDED_OR_MODIFIED"
+            echo "Deleted files: $DELETED"
             echo "skip=false" >> $GITHUB_OUTPUT
           fi
 
+      - name: Report deleted extensions
+        if: steps.changed.outputs.skip == 'false' && steps.changed.outputs.deleted != ''
+        run: |
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🗑️  Extension Deletions Detected"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "The following extension files are being removed:"
+          for file in ${{ steps.changed.outputs.deleted }}; do
+            echo "  ❌ $file"
+          done
+          echo ""
+          echo "⚠️  Maintainer review required for extension deletions."
+          echo "   Existing xnapify instances with this extension installed"
+          echo "   will no longer see it in the Hub marketplace."
+          echo ""
+
       - name: Validate changed files
-        if: steps.changed.outputs.skip == 'false'
+        if: steps.changed.outputs.skip == 'false' && steps.changed.outputs.files != ''
         run: |
           EXIT_CODE=0
 
           for file in ${{ steps.changed.outputs.files }}; do
+            # Skip example/template files
+            BASENAME=$(basename "$file")
+            if [[ "$BASENAME" == _* ]]; then
+              echo ""
+              echo "⏭️  Skipping template file: $file"
+              continue
+            fi
+
             echo ""
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             echo "📋 Validating: $file"
@@ -64,7 +95,24 @@ jobs:
             fi
             echo "✅ Schema valid"
 
-            # 3. Download URL is reachable
+            # 3. Reject dummy checksums
+            CHECKSUM_CHECK=$(node -e "
+              const ext = JSON.parse(require('fs').readFileSync('$file','utf8'));
+              if (/^0+$/.test(ext.checksum)) {
+                console.log('DUMMY');
+                process.exit(1);
+              }
+              console.log('OK');
+            " 2>&1) || true
+
+            if echo "$CHECKSUM_CHECK" | grep -q "^OK$"; then
+              echo "✅ Checksum is not a placeholder"
+            else
+              echo "❌ Checksum is all zeros — please compute a real SHA-256 hash"
+              EXIT_CODE=1
+            fi
+
+            # 4. Download URL is reachable
             RESULT=$(node -e "
               const ext = JSON.parse(require('fs').readFileSync('$file','utf8'));
               fetch(ext.downloadUrl, { method: 'HEAD', redirect: 'follow' })
@@ -87,7 +135,7 @@ jobs:
               echo "⚠️  Download URL check: $RESULT (non-blocking warning)"
             fi
 
-            # 4. No duplicate names across the registry
+            # 5. No duplicate names or keys across the registry
             DUPLICATE_CHECK=$(node -e "
               const fs = require('fs');
               const path = require('path');
@@ -95,10 +143,11 @@ jobs:
 
               function collectFiles(dir) {
                 const results = [];
+                if (!fs.existsSync(dir)) return results;
                 for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
                   const full = path.join(dir, entry.name);
                   if (entry.isDirectory()) results.push(...collectFiles(full));
-                  else if (entry.name.endsWith('.json')) results.push(full);
+                  else if (entry.name.endsWith('.json') && !entry.name.startsWith('_')) results.push(full);
                 }
                 return results;
               }
@@ -111,7 +160,11 @@ jobs:
                 try {
                   const other = JSON.parse(fs.readFileSync(f,'utf8'));
                   if (other.name === ext.name) {
-                    console.log('DUPLICATE:' + f);
+                    console.log('DUPLICATE_NAME:' + f);
+                    process.exit(1);
+                  }
+                  if (other.key === ext.key) {
+                    console.log('DUPLICATE_KEY:' + f);
                     process.exit(1);
                   }
                 } catch {}
@@ -120,9 +173,9 @@ jobs:
             " 2>&1)
 
             if echo "$DUPLICATE_CHECK" | grep -q "^OK$"; then
-              echo "✅ No duplicate names"
+              echo "✅ No duplicate names or keys"
             else
-              echo "❌ Duplicate name found: $DUPLICATE_CHECK"
+              echo "❌ Duplicate detected: $DUPLICATE_CHECK"
               EXIT_CODE=1
             fi
 
@@ -136,5 +189,11 @@ jobs:
         run: |
           echo ""
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "Validation complete for: ${{ steps.changed.outputs.files }}"
+          echo "Validation complete"
+          if [ -n "${{ steps.changed.outputs.files }}" ]; then
+            echo "  Added/Modified: ${{ steps.changed.outputs.files }}"
+          fi
+          if [ -n "${{ steps.changed.outputs.deleted }}" ]; then
+            echo "  Deleted: ${{ steps.changed.outputs.deleted }}"
+          fi
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

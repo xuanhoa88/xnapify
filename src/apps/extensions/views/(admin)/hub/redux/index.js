@@ -19,6 +19,8 @@ export {
   resetHubState,
   clearBrowseError,
   clearInstallError,
+  clearUpdateError,
+  clearUninstallError,
   SLICE_NAME,
 } from './slice';
 

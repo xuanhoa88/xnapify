@@ -9,6 +9,8 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
+import { computeChecksum } from '../utils/checksum.util';
+
 import {
   CACHE_TTL,
   ExtensionError,
@@ -550,7 +552,15 @@ export async function getExtensionStaticDir(
  */
 export async function installExtensionFromPackage(
   file,
-  { extensionManager, models, cache, fs: fsEngine, actorId, queue },
+  {
+    extensionManager,
+    models,
+    cache,
+    fs: fsEngine,
+    actorId,
+    queue,
+    expectedChecksum,
+  },
 ) {
   if (!file || !file.path) {
     throw ExtensionError.invalidPackage('No file provided');
@@ -669,6 +679,19 @@ export async function installExtensionFromPackage(
         `Extension "${manifest.id}" is already installed. ` +
           'Uninstall it first or use upgrade.',
       );
+    }
+
+    // 5b. Verify checksum if provided (hub installs pass this from registry)
+    if (expectedChecksum) {
+      const actualChecksum = await computeChecksum(extensionRoot);
+      if (actualChecksum !== expectedChecksum) {
+        throw ExtensionError.invalidPackage(
+          `Checksum mismatch for "${extensionName}": ` +
+            `expected ${expectedChecksum.slice(0, 12)}…, ` +
+            `got ${actualChecksum.slice(0, 12)}…. ` +
+            'The extension may have been tampered with.',
+        );
+      }
     }
 
     // 6. Move to final destination (use manifest.name for directory — supports @org/name)

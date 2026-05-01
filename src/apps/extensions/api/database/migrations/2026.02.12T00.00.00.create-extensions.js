@@ -40,7 +40,7 @@ export async function up({ context, Sequelize }) {
     version: {
       type: DataTypes.STRING(20),
       allowNull: false,
-      defaultValue: '0.0.0',
+      defaultValue: '1.0.0',
       comment: 'Extension version',
     },
     integrity: {

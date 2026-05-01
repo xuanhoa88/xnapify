@@ -306,7 +306,7 @@ class ServerExtensionManager extends BaseExtensionManager {
       const viewModule = await this._loadViewModule(id, manifest);
 
       if (viewModule && __DEV__) {
-        const version = (manifest && manifest.version) || '0.0.0';
+        const version = (manifest && manifest.version) || '1.0.0';
         console.log(
           `[ServerExtensionManager] Loaded view for ${this._formatDisplayName(id)} v${version}`,
         );
@@ -360,7 +360,7 @@ class ServerExtensionManager extends BaseExtensionManager {
 
     if (__DEV__) {
       console.log(
-        `[ServerExtensionManager] Running install for ${this._formatDisplayName(id)} (v${manifest.version || '0.0.0'})`,
+        `[ServerExtensionManager] Running install for ${this._formatDisplayName(id)} (v${manifest.version || '1.0.0'})`,
       );
     }
 
@@ -426,7 +426,7 @@ class ServerExtensionManager extends BaseExtensionManager {
     if (typeof apiModule.uninstall === 'function') {
       if (__DEV__) {
         console.log(
-          `[ServerExtensionManager] Running uninstall for ${this._formatDisplayName(id)} (v${manifest.version || '0.0.0'})`,
+          `[ServerExtensionManager] Running uninstall for ${this._formatDisplayName(id)} (v${manifest.version || '1.0.0'})`,
         );
       }
 
@@ -1013,7 +1013,7 @@ class ServerExtensionManager extends BaseExtensionManager {
       }
 
       const extensionName = manifest.name;
-      const extensionVersion = manifest.version || '0.0.0';
+      const extensionVersion = manifest.version || '1.0.0';
 
       // 4. Security: prevent path traversal
       // Allow scoped names (exactly one '/' after '@'), block everything else

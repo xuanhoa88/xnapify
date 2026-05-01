@@ -105,3 +105,45 @@ export const installFromHub = createAsyncThunk(
     }
   },
 );
+
+// ========================================================================
+// Hub Update Thunk
+// ========================================================================
+
+export const updateFromHub = createAsyncThunk(
+  'admin/hub/updateFromHub',
+  async (extensionName, { extra: { fetch }, rejectWithValue }) => {
+    try {
+      const { data } = await fetch('/api/admin/extensions/hub/update', {
+        method: 'POST',
+        body: { name: extensionName },
+      });
+      return data.extension;
+    } catch (error) {
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
+    }
+  },
+);
+
+// ========================================================================
+// Hub Uninstall Thunk
+// ========================================================================
+
+export const uninstallFromHub = createAsyncThunk(
+  'admin/hub/uninstallFromHub',
+  async (extensionName, { extra: { fetch }, rejectWithValue }) => {
+    try {
+      await fetch('/api/admin/extensions/hub/uninstall', {
+        method: 'POST',
+        body: { name: extensionName },
+      });
+      return extensionName;
+    } catch (error) {
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
+    }
+  },
+);

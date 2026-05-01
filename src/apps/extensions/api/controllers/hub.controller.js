@@ -136,3 +136,83 @@ export const installFromHub = async (req, res) => {
     );
   }
 };
+
+/**
+ * Update an extension from the hub registry.
+ * Downloads the new version and replaces the existing installation.
+ *
+ * @route POST /api/admin/extensions/hub/update
+ */
+export const updateFromHub = async (req, res) => {
+  const container = req.app.get('container');
+  const http = container.resolve('http');
+  try {
+    const { name } = req.body;
+
+    if (!name || typeof name !== 'string') {
+      return http.sendError(res, 'Extension name is required', 400);
+    }
+
+    const extension = await hubService.updateFromHub(name, {
+      extensionManager: container.resolve('extension'),
+      models: container.resolve('models'),
+      cache: container.resolve('cache'),
+      fs: container.resolve('fs'),
+      actorId: req.user && req.user.id,
+      queue: container.resolve('queue'),
+    });
+
+    return http.sendSuccess(res, { extension });
+  } catch (err) {
+    if (err.status === 404 || err.status === 400 || err.status === 409) {
+      return http.sendError(res, err.message, err.status);
+    }
+    if (err.status === 502) {
+      return http.sendError(res, err.message, 502);
+    }
+    return http.sendServerError(
+      res,
+      'Failed to update extension from hub',
+      err,
+    );
+  }
+};
+
+/**
+ * Uninstall a hub-installed extension.
+ * Deactivates (if active) and removes the extension entirely.
+ *
+ * @route POST /api/admin/extensions/hub/uninstall
+ */
+export const uninstallFromHub = async (req, res) => {
+  const container = req.app.get('container');
+  const http = container.resolve('http');
+  try {
+    const { name } = req.body;
+
+    if (!name || typeof name !== 'string') {
+      return http.sendError(res, 'Extension name is required', 400);
+    }
+
+    await hubService.uninstallFromHub(name, {
+      extensionManager: container.resolve('extension'),
+      models: container.resolve('models'),
+      cache: container.resolve('cache'),
+      fs: container.resolve('fs'),
+      actorId: req.user && req.user.id,
+      queue: container.resolve('queue'),
+      cwd: container.resolve('config').cwd,
+    });
+
+    return http.sendSuccess(res, { success: true });
+  } catch (err) {
+    if (err.status === 400 || err.status === 404) {
+      return http.sendError(res, err.message, err.status);
+    }
+    return http.sendServerError(
+      res,
+      'Failed to uninstall extension from hub',
+      err,
+    );
+  }
+};

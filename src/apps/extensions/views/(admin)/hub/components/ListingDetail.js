@@ -20,6 +20,7 @@ import {
   ArrowLeftIcon,
   ArrowRightIcon,
   EyeOpenIcon,
+  TrashIcon,
 } from '@radix-ui/react-icons';
 import {
   Flex,
@@ -40,19 +41,38 @@ import Portal from '@shared/renderer/components/Portal';
 
 import {
   installFromHub,
+  updateFromHub,
+  uninstallFromHub,
+  fetchListingDetail,
   isHubInstalling,
+  isHubUpdating,
+  isHubUninstalling,
   getHubInstallError,
+  getHubUpdateError,
+  getHubUninstallError,
   clearInstallError,
+  clearUpdateError,
+  clearUninstallError,
 } from '../redux';
 
 import s from './ListingDetail.css';
+
+/**
+ * Detect whether a string is an emoji (non-URL) icon.
+ * URLs start with http:// or https://, everything else is treated as emoji.
+ */
+const isEmojiIcon = icon => icon && !icon.startsWith('http');
 
 export default function ListingDetail({ listing = null, onClose }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const installing = useSelector(isHubInstalling);
+  const updating = useSelector(isHubUpdating);
+  const uninstalling = useSelector(isHubUninstalling);
   const installError = useSelector(getHubInstallError);
-  const [installSuccess, setInstallSuccess] = useState(false);
+  const updateError = useSelector(getHubUpdateError);
+  const uninstallError = useSelector(getHubUninstallError);
+  const [actionSuccess, setActionSuccess] = useState(null); // 'install' | 'update' | 'uninstall' | null
   const tags = (listing && listing.tags) || [];
   const screenshots = (listing && listing.screenshots) || [];
   const isOfficial =
@@ -64,11 +84,17 @@ export default function ListingDetail({ listing = null, onClose }) {
   const [lightboxIdx, setLightboxIdx] = useState(null);
 
   const listingName = listing ? listing.name : null;
+  const isInstalled = listing && listing.installed;
+  const hasUpdate = listing && listing.updateAvailable;
+  const isBusy = installing || updating || uninstalling;
+  const operationError = installError || updateError || uninstallError;
 
-  // Reset install success when listing changes
+  // Reset success/error states when listing changes
   useEffect(() => {
-    setInstallSuccess(false);
+    setActionSuccess(null);
     dispatch(clearInstallError());
+    dispatch(clearUpdateError());
+    dispatch(clearUninstallError());
   }, [listingName, dispatch]);
 
   // Close lightbox on Esc, navigate with ← →
@@ -86,14 +112,38 @@ export default function ListingDetail({ listing = null, onClose }) {
   }, [lightboxIdx, screenshots.length]);
 
   const handleInstall = useCallback(async () => {
-    if (!listing || !listing.name || installing) return;
+    if (!listing || !listing.name || isBusy) return;
     try {
       await dispatch(installFromHub(listing.name)).unwrap();
-      setInstallSuccess(true);
+      setActionSuccess('install');
+      // Refresh listing to update install status
+      dispatch(fetchListingDetail(listing.name));
     } catch {
       // Error is handled by Redux state
     }
-  }, [dispatch, listing, installing]);
+  }, [dispatch, listing, isBusy]);
+
+  const handleUpdate = useCallback(async () => {
+    if (!listing || !listing.name || isBusy) return;
+    try {
+      await dispatch(updateFromHub(listing.name)).unwrap();
+      setActionSuccess('update');
+      dispatch(fetchListingDetail(listing.name));
+    } catch {
+      // Error is handled by Redux state
+    }
+  }, [dispatch, listing, isBusy]);
+
+  const handleUninstall = useCallback(async () => {
+    if (!listing || !listing.name || isBusy) return;
+    try {
+      await dispatch(uninstallFromHub(listing.name)).unwrap();
+      setActionSuccess('uninstall');
+      dispatch(fetchListingDetail(listing.name));
+    } catch {
+      // Error is handled by Redux state
+    }
+  }, [dispatch, listing, isBusy]);
 
   const metaItems = [
     {
@@ -153,11 +203,17 @@ export default function ListingDetail({ listing = null, onClose }) {
             <Flex gap='4' align='start' className={s.heroFlex}>
               <Box className={s.heroIconBox}>
                 {listing && listing.icon ? (
-                  <img
-                    src={listing.icon}
-                    alt={listing.name}
-                    className={s.iconImage}
-                  />
+                  isEmojiIcon(listing.icon) ? (
+                    <Text as='span' size='8'>
+                      {listing.icon}
+                    </Text>
+                  ) : (
+                    <img
+                      src={listing.icon}
+                      alt={listing.name}
+                      className={s.iconImage}
+                    />
+                  )
                 ) : (
                   <CubeIcon width={36} height={36} />
                 )}
@@ -311,30 +367,79 @@ export default function ListingDetail({ listing = null, onClose }) {
           </Box>
         </Modal.Body>
         <Modal.Footer>
-          {installError && (
+          {operationError && (
             <Box className={s.installErrorBox}>
               <Text as='p' size='2' color='red'>
-                {installError}
+                {operationError}
               </Text>
             </Box>
           )}
           <Modal.Actions>
-            <Button
-              variant='solid'
-              color={installSuccess ? 'green' : 'indigo'}
-              onClick={handleInstall}
-              disabled={installing || installSuccess}
-            >
-              {installing && (
-                <UpdateIcon width={16} height={16} className={s.spinIcon} />
-              )}
-              {installSuccess && <CheckIcon width={16} height={16} />}
-              {installing
-                ? t('admin:hub.installing', 'Installing...')
-                : installSuccess
-                  ? t('admin:hub.installed', 'Installed')
+            {/* Uninstall button — only shown when extension is installed */}
+            {isInstalled && !actionSuccess && (
+              <Button
+                variant='soft'
+                color='red'
+                onClick={handleUninstall}
+                disabled={isBusy}
+              >
+                {uninstalling && (
+                  <UpdateIcon width={16} height={16} className={s.spinIcon} />
+                )}
+                {!uninstalling && <TrashIcon width={16} height={16} />}
+                {uninstalling
+                  ? t('admin:hub.uninstalling', 'Removing...')
+                  : t('admin:hub.uninstall', 'Uninstall')}
+              </Button>
+            )}
+
+            {/* Primary action — Install, Update, or success state */}
+            {actionSuccess ? (
+              <Button variant='solid' color='green' disabled>
+                <CheckIcon width={16} height={16} />
+                {actionSuccess === 'install' &&
+                  t('admin:hub.installed', 'Installed')}
+                {actionSuccess === 'update' &&
+                  t('admin:hub.updated', 'Updated')}
+                {actionSuccess === 'uninstall' &&
+                  t('admin:hub.uninstalled', 'Removed')}
+              </Button>
+            ) : hasUpdate ? (
+              <Button
+                variant='solid'
+                color='amber'
+                onClick={handleUpdate}
+                disabled={isBusy}
+              >
+                {updating && (
+                  <UpdateIcon width={16} height={16} className={s.spinIcon} />
+                )}
+                {updating
+                  ? t('admin:hub.updating', 'Updating...')
+                  : t('admin:hub.update', 'Update to v{{version}}', {
+                      version: listing && listing.version,
+                    })}
+              </Button>
+            ) : !isInstalled ? (
+              <Button
+                variant='solid'
+                color='indigo'
+                onClick={handleInstall}
+                disabled={isBusy}
+              >
+                {installing && (
+                  <UpdateIcon width={16} height={16} className={s.spinIcon} />
+                )}
+                {installing
+                  ? t('admin:hub.installing', 'Installing...')
                   : t('admin:hub.install', 'Install')}
-            </Button>
+              </Button>
+            ) : (
+              <Button variant='solid' color='green' disabled>
+                <CheckIcon width={16} height={16} />
+                {t('admin:hub.upToDate', 'Up to date')}
+              </Button>
+            )}
           </Modal.Actions>
         </Modal.Footer>
       </Modal>

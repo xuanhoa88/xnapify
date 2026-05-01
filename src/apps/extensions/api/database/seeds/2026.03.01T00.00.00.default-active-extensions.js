@@ -95,7 +95,7 @@ export async function up(_, { container }) {
       defaults: {
         name: manifest.name,
         description: manifest.description || '',
-        version: manifest.version || '0.0.0',
+        version: manifest.version || '1.0.0',
         is_active: true,
         created_at: now,
         updated_at: now,

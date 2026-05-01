@@ -90,7 +90,7 @@ function discoverExtensions() {
           name: manifest.name,
           dirName: manifest.name,
           id: generateExtensionId(manifest.name),
-          version: semver.clean(manifest.version) || '0.0.0',
+          version: semver.clean(manifest.version) || '1.0.0',
           path: extensionPath,
         };
       } catch {

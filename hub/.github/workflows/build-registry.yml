@@ -36,11 +36,11 @@ jobs:
                 const full = path.join(dir, entry.name);
                 if (entry.isDirectory()) {
                   results.push(...collectJsonFiles(full));
-                } else if (entry.name.endsWith('.json')) {
+                } else if (entry.name.endsWith('.json') && !entry.name.startsWith('_')) {
                   try {
                     const content = JSON.parse(fs.readFileSync(full, 'utf8'));
                     // Validate minimum required fields
-                    if (content.name && content.key && content.version && content.downloadUrl) {
+                    if (content.name && content.key && content.version && content.downloadUrl && content.checksum) {
                       results.push(content);
                     } else {
                       console.warn('Skipping invalid file (missing required fields):', full);
@@ -55,8 +55,12 @@ jobs:
 
             const extensions = collectJsonFiles('extensions');
 
-            // Sort by name for deterministic output
-            extensions.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+            // Sort: featured first, then alphabetically by name
+            extensions.sort((a, b) => {
+              if (a.featured && !b.featured) return -1;
+              if (!a.featured && b.featured) return 1;
+              return (a.name || '').localeCompare(b.name || '');
+            });
 
             const registry = {
               version: 1,

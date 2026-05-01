@@ -11,17 +11,15 @@ import path from 'path';
 
 import fetch from 'node-fetch';
 
-import { installExtensionFromPackage } from './extension.service';
+import {
+  installExtensionFromPackage,
+  deleteExtension,
+  toggleExtensionStatus,
+} from './extension.service';
 
 // ========================================================================
 // Hub Service — GitHub Registry-backed Browse API
 // ========================================================================
-
-/**
- * Registry URL — configurable via env.
- * Points to the raw registry.json hosted on GitHub.
- */
-const REGISTRY_URL = process.env.XNAPIFY_HUB_REGISTRY_URL || '';
 
 /**
  * In-memory cache for the remote registry to avoid
@@ -66,12 +64,12 @@ async function fetchRegistry() {
     return registryCache;
   }
 
-  if (!REGISTRY_URL) {
+  if (!process.env.XNAPIFY_HUB_REGISTRY_URL) {
     return { version: 1, updatedAt: null, extensions: [] };
   }
 
   try {
-    const response = await fetch(REGISTRY_URL, {
+    const response = await fetch(process.env.XNAPIFY_HUB_REGISTRY_URL, {
       timeout: 10_000,
       headers: { Accept: 'application/json' },
     });
@@ -104,18 +102,63 @@ export function invalidateRegistryCache() {
 }
 
 // ========================================================================
+// Helpers
+// ========================================================================
+
+/**
+ * Build a Map of locally installed extensions keyed by their DB `key`.
+ * Used to enrich hub listings with install status.
+ *
+ * @param {Object} models - Sequelize models ({ Extension })
+ * @returns {Promise<Map<string, { version: string, is_active: boolean }>>}
+ */
+async function getInstalledExtensionsMap(models) {
+  if (!models) return new Map();
+  const { Extension } = models;
+  const rows = await Extension.findAll({
+    attributes: ['key', 'version', 'is_active'],
+  });
+  const map = new Map();
+  for (const row of rows) {
+    map.set(row.key, { version: row.version, isActive: row.is_active });
+  }
+  return map;
+}
+
+/**
+ * Enrich a hub listing with local installation status.
+ *
+ * Adds: `installed`, `installedVersion`, `isActive`, `updateAvailable`.
+ *
+ * @param {Object} listing - Raw hub listing from registry
+ * @param {Map} installedMap - Map from getInstalledExtensionsMap()
+ * @returns {Object} Enriched listing
+ */
+function enrichListing(listing, installedMap) {
+  const local = installedMap.get(listing.key) || null;
+  return {
+    ...listing,
+    installed: !!local,
+    installedVersion: local ? local.version : null,
+    isActive: local ? local.isActive : false,
+    updateAvailable: local ? listing.version !== local.version : false,
+  };
+}
+
+// ========================================================================
 // Browse API
 // ========================================================================
 
 /**
  * Browse marketplace listings with search, filtering, sorting, and pagination.
  * Reads from the GitHub-hosted registry.json instead of the local DB.
+ * Cross-references with local DB to show install status.
  *
- * @param {Object} _deps - Unused (kept for controller signature compatibility)
+ * @param {Object} deps - { models }
  * @param {Object} params - { search, category, sort, page, limit }
  * @returns {Object} { listings, total, page, totalPages }
  */
-export async function browseListings(_deps, params = {}) {
+export async function browseListings(deps, params = {}) {
   const {
     search = '',
     category = '',
@@ -124,7 +167,10 @@ export async function browseListings(_deps, params = {}) {
     limit = 20,
   } = params;
 
-  const registry = await fetchRegistry();
+  const [registry, installedMap] = await Promise.all([
+    fetchRegistry(),
+    getInstalledExtensionsMap(deps.models),
+  ]);
   let results = [...(registry.extensions || [])];
 
   // Filter by category
@@ -152,7 +198,7 @@ export async function browseListings(_deps, params = {}) {
     // Extensions don't have install_count in GitHub registry,
     // sort by version as a proxy for recency
     results.sort((a, b) =>
-      (b.version || '0.0.0').localeCompare(a.version || '0.0.0'),
+      (b.version || '1.0.0').localeCompare(a.version || '1.0.0'),
     );
   }
 
@@ -160,7 +206,9 @@ export async function browseListings(_deps, params = {}) {
   const total = results.length;
   const offset = (Math.max(1, page) - 1) * limit;
   const clampedLimit = Math.min(limit, 100);
-  const listings = results.slice(offset, offset + clampedLimit);
+  const listings = results
+    .slice(offset, offset + clampedLimit)
+    .map(l => enrichListing(l, installedMap));
 
   return {
     listings,
@@ -171,15 +219,25 @@ export async function browseListings(_deps, params = {}) {
 }
 
 /**
- * Get featured listings (first N from the registry).
+ * Get featured listings from the registry.
+ * Filters extensions that have `featured: true` in their metadata.
+ * Cross-references with local DB to show install status.
  *
- * @param {Object} _deps - Unused
+ * @param {Object} deps - { models }
  * @param {number} limit - Max results
- * @returns {Array} Featured listings
+ * @returns {Array} Featured listings enriched with install status
  */
-export async function getFeaturedListings(_deps, limit = 10) {
-  const registry = await fetchRegistry();
-  return (registry.extensions || []).slice(0, limit);
+export async function getFeaturedListings(deps, limit = 10) {
+  const [registry, installedMap] = await Promise.all([
+    fetchRegistry(),
+    getInstalledExtensionsMap(deps.models),
+  ]);
+  const extensions = registry.extensions || [];
+  const featured = extensions
+    .filter(e => e.featured === true && !e.deprecated)
+    .slice(0, limit)
+    .map(l => enrichListing(l, installedMap));
+  return featured;
 }
 
 /**
@@ -206,17 +264,94 @@ export async function getCategories(_deps) {
 
 /**
  * Get listing detail by name from the registry.
+ * Cross-references with local DB to show install status.
  *
- * @param {Object} _deps - Unused
+ * @param {Object} deps - { models }
  * @param {string} name - Extension name (e.g., '@xnapify-extension/my-ext')
- * @returns {Object} Listing detail
+ * @returns {Object} Listing detail enriched with install status
  */
-export async function getListingDetail(_deps, name) {
-  const registry = await fetchRegistry();
+export async function getListingDetail(deps, name) {
+  const [registry, installedMap] = await Promise.all([
+    fetchRegistry(),
+    getInstalledExtensionsMap(deps.models),
+  ]);
   const listing = (registry.extensions || []).find(e => e.name === name);
 
   if (!listing) {
     const err = new Error('Listing not found');
+    err.name = 'ExtensionNotFoundError';
+    err.status = 404;
+    throw err;
+  }
+
+  return enrichListing(listing, installedMap);
+}
+
+// ========================================================================
+// Shared Download Helper
+// ========================================================================
+
+/**
+ * Download a .zip from the hub registry to a temp file.
+ *
+ * @param {Object} listing - Registry listing with `downloadUrl` and `name`
+ * @returns {Promise<string>} Absolute path to the downloaded temp file
+ */
+async function downloadHubPackage(listing) {
+  if (!listing.downloadUrl) {
+    const err = new Error(
+      `Extension "${listing.name}" has no download URL in registry`,
+    );
+    err.name = 'ExtensionDownloadUrlError';
+    err.status = 400;
+    throw err;
+  }
+
+  const response = await fetch(listing.downloadUrl, { timeout: 60_000 });
+  if (!response.ok) {
+    const err = new Error(
+      `Failed to download ${listing.name} from hub registry: HTTP ${response.status}`,
+    );
+    err.name = 'ExtensionDownloadError';
+    err.status = 502;
+    throw err;
+  }
+
+  const tmpDir = path.join(os.tmpdir(), 'xnapify-hub-install');
+  await fs.promises.mkdir(tmpDir, { recursive: true });
+
+  const tmpPath = path.join(
+    tmpDir,
+    `${listing.name.replace(/\//g, '-')}-${Date.now()}.zip`,
+  );
+
+  // Stream the response body to disk
+  const dest = fs.createWriteStream(tmpPath);
+  await new Promise((resolve, reject) => {
+    response.body.pipe(dest);
+    response.body.on('error', reject);
+    dest.on('finish', resolve);
+  });
+
+  return tmpPath;
+}
+
+/**
+ * Look up a registry listing by name. Throws 404 if not found.
+ *
+ * @param {string} extensionName - Extension name
+ * @returns {Promise<Object>} Registry listing
+ */
+async function resolveHubListing(extensionName) {
+  const registry = await fetchRegistry();
+  const listing = (registry.extensions || []).find(
+    e => e.name === extensionName,
+  );
+
+  if (!listing) {
+    const err = new Error(
+      `Extension "${extensionName}" not found in hub registry`,
+    );
     err.name = 'ExtensionNotFoundError';
     err.status = 404;
     throw err;
@@ -242,68 +377,158 @@ export async function getListingDetail(_deps, name) {
  * @returns {Promise<Object>} Installed extension record
  */
 export async function installFromHub(extensionName, context) {
-  const registry = await fetchRegistry();
-  const listing = (registry.extensions || []).find(
-    e => e.name === extensionName,
-  );
+  const listing = await resolveHubListing(extensionName);
 
-  if (!listing) {
+  // Guard: reject deprecated extensions
+  if (listing.deprecated) {
     const err = new Error(
-      `Extension "${extensionName}" not found in hub registry`,
+      `Extension "${extensionName}" is deprecated and can no longer be installed.`,
     );
-    err.name = 'ExtensionNotFoundError';
-    err.status = 404;
-    throw err;
-  }
-
-  if (!listing.downloadUrl) {
-    const err = new Error(
-      `Extension "${extensionName}" has no download URL in registry`,
-    );
-    err.name = 'ExtensionDownloadUrlError';
+    err.name = 'ExtensionDeprecatedError';
     err.status = 400;
     throw err;
   }
 
-  // Download the .zip to a temp file
-  const response = await fetch(listing.downloadUrl, { timeout: 60_000 });
-  if (!response.ok) {
-    const err = new Error(
-      `Failed to download ${extensionName} from hub registry: HTTP ${response.status}`,
-    );
-    err.name = 'ExtensionDownloadError';
-    err.status = 502;
-    throw err;
-  }
-
-  const tmpDir = path.join(os.tmpdir(), 'xnapify-hub-install');
-  await fs.promises.mkdir(tmpDir, { recursive: true });
-
-  const tmpPath = path.join(
-    tmpDir,
-    `${extensionName.replace(/\//g, '-')}-${Date.now()}.zip`,
-  );
-
-  // Stream the response body to disk
-  const dest = fs.createWriteStream(tmpPath);
-  await new Promise((resolve, reject) => {
-    response.body.pipe(dest);
-    response.body.on('error', reject);
-    dest.on('finish', resolve);
-  });
+  const tmpPath = await downloadHubPackage(listing);
 
   try {
-    // Delegate to the existing install pipeline
+    // Delegate to the existing install pipeline, passing the expected
+    // checksum from the hub registry for post-install verification
     const result = await installExtensionFromPackage(
       {
         path: tmpPath,
         originalname: `${extensionName.replace(/\//g, '-')}.zip`,
       },
-      context,
+      {
+        ...context,
+        expectedChecksum: listing.checksum || null,
+      },
     );
+
+    invalidateRegistryCache();
     return result;
   } finally {
     // Cleanup temp file (best-effort)
     fs.promises.unlink(tmpPath).catch(() => {});
   }
+}
+
+// ========================================================================
+// Update from Hub
+// ========================================================================
+
+/**
+ * Update an already-installed extension from the hub registry.
+ *
+ * Flow:
+ *  1. Look up the extension in the remote registry.
+ *  2. Verify it is already installed locally.
+ *  3. Deactivate the extension if currently active.
+ *  4. Delete the existing installation (DB + FS).
+ *  5. Re-install the new version from the hub.
+ *
+ * This reuses the existing `deleteExtension()` and `installExtensionFromPackage()`
+ * pipelines to maintain consistency with the core extension lifecycle.
+ *
+ * @param {string} extensionName - Extension name from registry
+ * @param {Object} context - App context
+ * @returns {Promise<Object>} New extension record after update
+ */
+export async function updateFromHub(extensionName, context) {
+  const listing = await resolveHubListing(extensionName);
+
+  // Guard: reject deprecated extensions
+  if (listing.deprecated) {
+    const err = new Error(
+      `Extension "${extensionName}" is deprecated and can no longer be updated.`,
+    );
+    err.name = 'ExtensionDeprecatedError';
+    err.status = 400;
+    throw err;
+  }
+
+  const { Extension } = context.models;
+  const existing = await Extension.findOne({
+    where: { key: listing.key || extensionName },
+  });
+
+  if (!existing) {
+    const err = new Error(
+      `Extension "${extensionName}" is not installed. Use install instead.`,
+    );
+    err.name = 'ExtensionNotInstalledError';
+    err.status = 400;
+    throw err;
+  }
+
+  // 1. Deactivate if currently active (deleteExtension requires inactive state)
+  if (existing.is_active) {
+    await toggleExtensionStatus(existing.key, false, context);
+  }
+
+  // 2. Delete the existing installation — this removes the DB record and FS dir
+  await deleteExtension(existing.key, context);
+
+  // 3. Re-install the new version from hub
+  const tmpPath = await downloadHubPackage(listing);
+
+  try {
+    const result = await installExtensionFromPackage(
+      {
+        path: tmpPath,
+        originalname: `${extensionName.replace(/\//g, '-')}.zip`,
+      },
+      {
+        ...context,
+        expectedChecksum: listing.checksum || null,
+      },
+    );
+
+    invalidateRegistryCache();
+    return result;
+  } finally {
+    fs.promises.unlink(tmpPath).catch(() => {});
+  }
+}
+
+// ========================================================================
+// Uninstall from Hub
+// ========================================================================
+
+/**
+ * Uninstall a hub-installed extension.
+ *
+ * Delegates to the existing `deleteExtension()` pipeline which handles:
+ *  - Deactivation guard (must be inactive to delete)
+ *  - DB record removal
+ *  - FS directory cleanup
+ *  - Cache invalidation
+ *
+ * @param {string} extensionName - Extension name from registry
+ * @param {Object} context - App context
+ * @returns {Promise<boolean>} True on success
+ */
+export async function uninstallFromHub(extensionName, context) {
+  const listing = await resolveHubListing(extensionName);
+
+  const { Extension } = context.models;
+  const existing = await Extension.findOne({
+    where: { key: listing.key || extensionName },
+  });
+
+  if (!existing) {
+    const err = new Error(`Extension "${extensionName}" is not installed.`);
+    err.name = 'ExtensionNotInstalledError';
+    err.status = 400;
+    throw err;
+  }
+
+  // Deactivate if currently active (deleteExtension requires inactive state)
+  if (existing.is_active) {
+    await toggleExtensionStatus(existing.key, false, context);
+  }
+
+  await deleteExtension(existing.key, context);
+  invalidateRegistryCache();
+  return true;
 }

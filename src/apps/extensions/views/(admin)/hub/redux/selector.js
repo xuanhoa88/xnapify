@@ -54,6 +54,14 @@ export const isHubDetailLoading = state => getOp(state, 'detail').loading;
 
 export const isHubInstalling = state => getOp(state, 'install').loading;
 
+export const isHubUpdating = state => getOp(state, 'update').loading;
+
+export const isHubUninstalling = state => getOp(state, 'uninstall').loading;
+
 export const getHubBrowseError = state => getOp(state, 'browse').error;
 
 export const getHubInstallError = state => getOp(state, 'install').error;
+
+export const getHubUpdateError = state => getOp(state, 'update').error;
+
+export const getHubUninstallError = state => getOp(state, 'uninstall').error;

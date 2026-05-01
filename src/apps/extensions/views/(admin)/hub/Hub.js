@@ -199,7 +199,7 @@ function Hub() {
           <Grid columns={{ initial: '1', sm: '2', lg: '4' }} gap='4'>
             {featured.slice(0, 4).map(item => (
               <MarketplaceCard
-                key={item.id}
+                key={item.name}
                 listing={item}
                 onClick={handleCardClick}
                 isFeatured
@@ -225,14 +225,11 @@ function Hub() {
             <Select.Root value={filters.sort} onValueChange={handleSortChange}>
               <Select.Trigger className={s.sortSelect} />
               <Select.Content>
-                <Select.Item value='popular'>
-                  {t('admin:hub.sortPopular', 'Most popular')}
+                <Select.Item value='name'>
+                  {t('admin:hub.sortName', 'Name')}
                 </Select.Item>
                 <Select.Item value='recent'>
                   {t('admin:hub.sortRecent', 'Recently added')}
-                </Select.Item>
-                <Select.Item value='name'>
-                  {t('admin:hub.sortName', 'Name')}
                 </Select.Item>
               </Select.Content>
             </Select.Root>
@@ -259,7 +256,7 @@ function Hub() {
           >
             {listings.map(item => (
               <MarketplaceCard
-                key={item.id}
+                key={item.name}
                 listing={item}
                 onClick={handleCardClick}
               />

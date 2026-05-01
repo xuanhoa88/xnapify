@@ -13,6 +13,8 @@ import {
   fetchCategories,
   fetchListingDetail,
   installFromHub,
+  updateFromHub,
+  uninstallFromHub,
 } from './thunks';
 
 export const SLICE_NAME = '@admin/hub';
@@ -25,6 +27,8 @@ const createFreshOperations = () => ({
   categories: createOperationState(),
   detail: createOperationState(),
   install: createOperationState(),
+  update: createOperationState(),
+  uninstall: createOperationState(),
 });
 
 const createFreshData = () => ({
@@ -103,6 +107,12 @@ const hubSlice = createSlice({
     clearInstallError(state) {
       state.operations.install.error = null;
     },
+    clearUpdateError(state) {
+      state.operations.update.error = null;
+    },
+    clearUninstallError(state) {
+      state.operations.uninstall.error = null;
+    },
   },
   extraReducers: builder => {
     // Browse
@@ -152,6 +162,22 @@ const hubSlice = createSlice({
         state.operations.install = { loading: false, error: null };
       })
       .addCase(installFromHub.rejected, createRejected('install'));
+
+    // Update from Hub
+    builder
+      .addCase(updateFromHub.pending, createPending('update'))
+      .addCase(updateFromHub.fulfilled, (state, _action) => {
+        state.operations.update = { loading: false, error: null };
+      })
+      .addCase(updateFromHub.rejected, createRejected('update'));
+
+    // Uninstall from Hub
+    builder
+      .addCase(uninstallFromHub.pending, createPending('uninstall'))
+      .addCase(uninstallFromHub.fulfilled, (state, _action) => {
+        state.operations.uninstall = { loading: false, error: null };
+      })
+      .addCase(uninstallFromHub.rejected, createRejected('uninstall'));
   },
 });
 
@@ -162,6 +188,8 @@ export const {
   resetHubState,
   clearBrowseError,
   clearInstallError,
+  clearUpdateError,
+  clearUninstallError,
 } = hubSlice.actions;
 
 export default hubSlice.reducer;

@@ -108,7 +108,7 @@ export function validateManifest(manifest) {
     (typeof manifest.name === 'string' && manifest.name.trim()) || '';
   const version =
     (typeof manifest.version === 'string' && manifest.version.trim()) ||
-    '0.0.0';
+    '1.0.0';
   if (name.length === 0 || version.length === 0) {
     throw ExtensionError.invalidPackage(
       'Invalid extension manifest: missing required fields (name, version)',
@@ -219,7 +219,7 @@ export function notifyExtensionChange(container, type, extensionKey) {
           ? {
               hasClientCss: metadata.manifest.hasClientCss || false,
               hasClientScript: metadata.manifest.hasClientScript || false,
-              version: metadata.manifest.version || '0.0.0',
+              version: metadata.manifest.version || '1.0.0',
             }
           : null,
     };
