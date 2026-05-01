@@ -1,7 +1,7 @@
 ---
 id: architecture-rbac
 title: Role-Based Access Control (RBAC)
-sidebar_position: 7
+sidebar_position: 8
 ---
 
 # Role-Based Access Control (RBAC)
