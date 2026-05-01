@@ -360,18 +360,12 @@ function Drawer({ minimal = false }) {
         ref={siderRef}
         direction='column'
         className={clsx(
-          'bg-[#0a1628] transition-[width,transform] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] top-0 left-0 bottom-0 z-40',
-          isMobile ? 'fixed' : 'fixed',
+          'bg-[#0a1628] transition-[width,transform] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] top-0 left-0 bottom-0 z-40 fixed',
+          s.drawerContainer,
         )}
-        // eslint-disable-next-line react/forbid-dom-props
-        style={{
-          width: isMobile ? '80vw' : `${siderWidth}px`,
-          maxWidth: isMobile ? '300px' : 'none',
-          zIndex: isMobile ? 100 : 40,
-          transform:
-            isMobile && !drawerOpen ? 'translateX(-100%)' : 'translateX(0)',
-          boxShadow: isMobile ? 'var(--shadow-5)' : 'none',
-        }}
+        data-mobile={isMobile ? 'true' : 'false'}
+        data-open={drawerOpen ? 'true' : 'false'}
+        data-sider-width={siderWidth}
         data-sider
       >
         {/* Logo */}

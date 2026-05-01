@@ -254,8 +254,9 @@ function FileUploader() {
                   <Box className={s.progressTrack}>
                     <Box
                       className={s.progressFill}
-                      // eslint-disable-next-line react/forbid-dom-props
-                      style={{ width: `${upload.progress}%` }}
+                      ref={el => {
+                        if (el) el.style.width = `${upload.progress}%`;
+                      }}
                     />
                   </Box>
                 )}

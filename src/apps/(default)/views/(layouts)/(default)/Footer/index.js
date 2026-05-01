@@ -87,9 +87,13 @@ function Footer() {
         className='bg-[var(--color-panel-solid)] border-t border-[var(--gray-a6)] pt-12 pb-6 mt-16'
       >
         <Container size='4' px='4'>
-          <Grid columns={{ initial: '1', md: '4', lg: '5' }} gap='8' mb='9'>
+          <Grid
+            columns={{ initial: '2', md: '4', lg: '5' }}
+            gap={{ initial: '6', md: '8' }}
+            mb='9'
+          >
             {/* Brand Column */}
-            <Box className='md:col-span-2 lg:col-span-2'>
+            <Box className='col-span-2 md:col-span-2 lg:col-span-2'>
               <Flex align='center' gap='2' mb='4'>
                 <img
                   src='/xnapify_38x38.png'
@@ -154,10 +158,13 @@ function Footer() {
 
           {/* Bottom Bar */}
           <Box className='pt-6 border-t border-[var(--gray-a6)] flex flex-col md:flex-row justify-between items-center gap-4'>
-            <Text size='2' className='text-[var(--gray-11)]'>
+            <Text
+              size='2'
+              className='text-[var(--gray-11)] text-center md:text-left'
+            >
               {t('footer.copyright', { year: currentYear })}
             </Text>
-            <Flex gap='4'>
+            <Flex gap='4' wrap='wrap' justify='center'>
               <Link
                 to='/not-found'
                 className='text-[var(--gray-10)] text-xs hover:text-[var(--gray-12)] no-underline transition-colors'

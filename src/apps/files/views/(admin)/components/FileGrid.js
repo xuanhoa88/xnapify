@@ -198,7 +198,7 @@ export default function FileGrid({ onShare }) {
         title: t('files:grid.name', 'Name'),
         order: 10,
         render: (value, file) => (
-          <Flex align='center' gap='2' style={{ minWidth: 0 }}>
+          <Flex align='center' gap='2' className='min-w-0'>
             <Flex
               align='center'
               justify='center'
@@ -224,7 +224,7 @@ export default function FileGrid({ onShare }) {
               truncate
               highContrast
               title={file.name}
-              style={{ minWidth: 0, flex: 1 }}
+              className='min-w-0 flex-1'
             >
               {file.name}
             </Text>

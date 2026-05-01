@@ -29,6 +29,8 @@ import {
   selectInitialized,
 } from '../redux';
 
+import s from './SettingsPage.css';
+
 // =============================================================================
 // Type-specific input components
 // =============================================================================
@@ -115,8 +117,7 @@ function SettingRow({ setting, canWrite }) {
       direction={{ initial: 'column', md: 'row' }}
       gap='4'
       align={setting.type === 'boolean' ? 'center' : 'start'}
-      className='p-4 last:border-b-0'
-      style={{ borderBottom: '1px solid var(--gray-a4)' }}
+      className={`p-4 ${s.settingRow}`}
     >
       <Box className='flex-1 min-w-0 pr-5'>
         <Flex align='center' gap='2' wrap='wrap' className='mb-2'>
@@ -124,8 +125,7 @@ function SettingRow({ setting, canWrite }) {
             as='code'
             size='2'
             weight='bold'
-            className='py-1 px-2 rounded-md'
-            style={{ backgroundColor: 'var(--gray-3)' }}
+            className={`py-1 px-2 rounded-md ${s.keyText}`}
           >
             {setting.key}
           </Text>
@@ -303,11 +303,7 @@ function SettingsBuilderForm({ namespace, settings, onSaved }) {
             gap='2'
             px='5'
             py='4'
-            className='rounded-b-md'
-            style={{
-              borderTop: '1px solid var(--gray-a4)',
-              backgroundColor: 'var(--gray-2)',
-            }}
+            className={`rounded-b-md ${s.saveContainer}`}
           >
             <SaveButton />
           </Flex>
@@ -410,11 +406,7 @@ function SettingsPage({ context }) {
           align='center'
           justify='center'
           p='6'
-          className='rounded-md'
-          style={{
-            border: '1px solid var(--red-6)',
-            backgroundColor: 'var(--red-2)',
-          }}
+          className={`rounded-md ${s.errorContainer}`}
         >
           <Text color='red' size='4' weight='bold' mb='2'>
             {t('admin:settings.errorLoading', 'Error loading settings')}
@@ -455,12 +447,8 @@ function SettingsPage({ context }) {
               key={ns}
               type='button'
               onClick={() => setActiveTab(ns)}
-              className='flex items-center px-3 py-2 rounded-md border-none cursor-pointer transition-colors text-left w-full hover:bg-gray-a3'
-              style={{
-                backgroundColor:
-                  activeTab === ns ? 'var(--indigo-3)' : 'transparent',
-                color: activeTab === ns ? 'var(--indigo-11)' : 'var(--gray-11)',
-              }}
+              className={`flex items-center px-3 py-2 rounded-md border-none cursor-pointer transition-colors text-left w-full hover:bg-gray-a3 ${s.navButton}`}
+              data-state={activeTab === ns ? 'active' : 'inactive'}
             >
               {(() => {
                 const iconName = icons[ns];

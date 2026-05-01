@@ -15,6 +15,8 @@ import FlashMessage from './FlashMessage';
 import Footer from './Footer';
 import Header from './Header';
 
+import s from './_layout.css';
+
 /**
  * AdminLayout Component
  *
@@ -30,11 +32,8 @@ function AdminLayout({ children, minimal = true }) {
         direction='column'
         minHeight='100vh'
         grow='1'
-        className='transition-[margin-left,width] duration-200 ease-in-out'
-        style={{
-          marginLeft: `var(--sider-width, ${minimal ? '64px' : '240px'})`,
-          width: `calc(100% - var(--sider-width, ${minimal ? '64px' : '240px'}))`,
-        }}
+        className={`transition-[margin-left,width] duration-200 ease-in-out ${s.layoutContent}`}
+        data-minimal={minimal ? 'true' : 'false'}
       >
         <ImpersonationBanner />
         <Header />

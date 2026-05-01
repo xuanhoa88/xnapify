@@ -52,12 +52,7 @@ export default function ActivityWidget() {
             <Loader variant='skeleton' skeletonCount={3} />
           ) : displayActivities ? (
             displayActivities.map((activity, idx) => (
-              <Flex
-                key={idx}
-                justify='between'
-                align='center'
-                style={{ marginBottom: 'var(--space-2)' }}
-              >
+              <Flex key={idx} justify='between' align='center' mb='2'>
                 <Text size='2' color='gray'>
                   {activity.created_at
                     ? new Date(activity.created_at).toLocaleDateString()

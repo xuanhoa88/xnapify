@@ -1,0 +1,38 @@
+/**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+.settingRow {
+  border-bottom: 1px solid var(--gray-a4);
+}
+
+.settingRow:last-child {
+  border-bottom: none;
+}
+
+.keyText {
+  background-color: var(--gray-3);
+}
+
+.saveContainer {
+  border-top: 1px solid var(--gray-a4);
+  background-color: var(--gray-2);
+}
+
+.errorContainer {
+  border: 1px solid var(--red-6);
+  background-color: var(--red-2);
+}
+
+.navButton {
+  background-color: transparent;
+  color: var(--gray-11);
+}
+
+.navButton[data-state='active'] {
+  background-color: var(--indigo-3);
+  color: var(--indigo-11);
+}

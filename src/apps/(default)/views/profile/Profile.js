@@ -33,46 +33,43 @@ function Profile() {
 
         <Box className='mt-6'>
           <Tabs.Root defaultValue='personal'>
-            <Box
-              className='overflow-x-auto pb-2 [&::-webkit-scrollbar]:hidden'
-              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-            >
+            <Box className='overflow-x-auto pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]'>
               <Tabs.List className='min-w-max'>
                 <Tabs.Trigger
                   value='personal'
                   className='cursor-pointer whitespace-nowrap'
                 >
-                  <Box className='inline-flex mr-2'>
+                  <span className='flex items-center gap-2'>
                     <PersonIcon width={18} height={18} />
-                  </Box>
-                  {t('profile.personalInfo', 'Personal Info')}
+                    {t('profile.personalInfo', 'Personal Info')}
+                  </span>
                 </Tabs.Trigger>
                 <Tabs.Trigger
                   value='preferences'
                   className='cursor-pointer whitespace-nowrap'
                 >
-                  <Box className='inline-flex mr-2'>
+                  <span className='flex items-center gap-2'>
                     <GearIcon width={18} height={18} />
-                  </Box>
-                  {t('profile.preferences', 'Preferences')}
+                    {t('profile.preferences', 'Preferences')}
+                  </span>
                 </Tabs.Trigger>
                 <Tabs.Trigger
                   value='security'
                   className='cursor-pointer whitespace-nowrap'
                 >
-                  <Box className='inline-flex mr-2'>
+                  <span className='flex items-center gap-2'>
                     <LockClosedIcon width={18} height={18} />
-                  </Box>
-                  {t('profile.security', 'Security')}
+                    {t('profile.security', 'Security')}
+                  </span>
                 </Tabs.Trigger>
                 <Tabs.Trigger
                   value='danger'
                   className='cursor-pointer whitespace-nowrap'
                 >
-                  <Box className='inline-flex mr-2'>
+                  <span className='flex items-center gap-2'>
                     <TrashIcon width={18} height={18} />
-                  </Box>
-                  {t('profile.dangerZone', 'Danger Zone')}
+                    {t('profile.dangerZone', 'Danger Zone')}
+                  </span>
                 </Tabs.Trigger>
               </Tabs.List>
             </Box>

@@ -14,3 +14,7 @@
 .interactiveLink:hover {
   text-decoration: underline;
 }
+
+.flex1 {
+  flex: 1;
+}

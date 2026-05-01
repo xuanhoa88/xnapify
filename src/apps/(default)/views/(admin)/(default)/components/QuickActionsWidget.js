@@ -21,34 +21,19 @@ export default function QuickActionsWidget() {
   return (
     <WidgetCard title={t('admin:dashboard.quickActions', 'Quick Actions')}>
       <Flex direction='column' gap='3'>
-        <Button
-          variant='soft'
-          color='blue'
-          style={{ justifyContent: 'flex-start' }}
-          asChild
-        >
+        <Button variant='soft' color='blue' justify='start' asChild>
           <Link to='/admin/users/create' className={s.interactiveLink}>
             <PlusIcon width='16' height='16' />
             {t('admin:dashboard.inviteUser', 'Invite User')}
           </Link>
         </Button>
-        <Button
-          variant='soft'
-          color='indigo'
-          style={{ justifyContent: 'flex-start' }}
-          asChild
-        >
+        <Button variant='soft' color='indigo' justify='start' asChild>
           <Link to='/admin/roles/create' className={s.interactiveLink}>
             <PlusIcon width='16' height='16' />
             {t('admin:dashboard.createRole', 'Create Role')}
           </Link>
         </Button>
-        <Button
-          variant='soft'
-          color='gray'
-          style={{ justifyContent: 'flex-start' }}
-          asChild
-        >
+        <Button variant='soft' color='gray' justify='start' asChild>
           <Link to='/admin/extensions' className={s.interactiveLink}>
             <PlusIcon width='16' height='16' />
             {t('admin:dashboard.addExtension', 'Add Extension')}

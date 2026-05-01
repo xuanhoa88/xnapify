@@ -22,14 +22,3 @@
   border-color: var(--gray-a6);
   transform: translateY(-2px);
 }
-
-.spinner {
-  color: var(--indigo-11);
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}

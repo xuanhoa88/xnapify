@@ -19,3 +19,7 @@
   padding-top: var(--space-4);
   border-top: 1px solid var(--gray-a4);
 }
+
+.headerBox {
+  border-bottom: 1px solid var(--gray-a4);
+}

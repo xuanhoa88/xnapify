@@ -7,13 +7,13 @@
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 
-import { ReloadIcon } from '@radix-ui/react-icons';
-import { Flex, Box, Grid, Text, Button } from '@radix-ui/themes';
+import { Flex, Box, Grid, Button } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
 import Form, { useFormContext } from '@shared/renderer/components/Form';
+import Loader from '@shared/renderer/components/Loader';
 import { features } from '@shared/renderer/redux';
 
 import { updatePreferencesFormSchema } from '../../../../users/validator/auth';
@@ -133,12 +133,7 @@ function PreferencesCard() {
   if (loading && (!user || !user.profile || !user.profile.language)) {
     return (
       <Box className={s.cardContainer}>
-        <Flex align='center' justify='center' gap='3' p='8'>
-          <ReloadIcon width={24} height={24} className={s.spinner} />
-          <Text size='3' color='gray'>
-            {t('common.loading', 'Loading...')}
-          </Text>
-        </Flex>
+        <Loader message={t('common.loading', 'Loading...')} />
       </Box>
     );
   }

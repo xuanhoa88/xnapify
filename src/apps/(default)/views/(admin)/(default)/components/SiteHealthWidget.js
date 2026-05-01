@@ -19,14 +19,14 @@ export default function SiteHealthWidget() {
 
   return (
     <WidgetCard title={t('admin:dashboard.systemStatus', 'System Status')}>
-      <Flex align='center' gap='4' style={{ padding: 'var(--space-2) 0' }}>
-        <Text size='2' color='gray' style={{ flex: 1 }}>
+      <Flex align='center' gap='4' py='2'>
+        <Text size='2' color='gray' className={s.flex1}>
           <Text color='green' weight='bold'>
             ✓{' '}
           </Text>
           {t('admin:dashboard.dbConnected', 'Database Connected')}
         </Text>
-        <Text size='2' color='gray' style={{ flex: 1 }}>
+        <Text size='2' color='gray' className={s.flex1}>
           {t(
             'admin:dashboard.systemRunning',
             'All systems are running smoothly. You can monitor system details or modify variables in the ',

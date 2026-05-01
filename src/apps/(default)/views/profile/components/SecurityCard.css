@@ -23,19 +23,6 @@
   transform: translateY(-2px);
 }
 
-.infoItem {
-  color: var(--blue-11);
-}
-
-.tipsBox {
-  background-color: var(--blue-2);
-  border: 1px solid var(--blue-5);
-  border-left: 4px solid var(--blue-9);
-  border-radius: var(--radius-3);
-  padding: var(--space-3) var(--space-4);
-  margin-bottom: var(--space-6);
-}
-
 .generateBtnReady {
   cursor: pointer;
   opacity: 1;

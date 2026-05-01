@@ -155,8 +155,9 @@ export default function FileSidebar() {
               s.quotaFill,
               percentage > 90 ? s.quotaFillDanger : s.quotaFillNormal,
             )}
-            // eslint-disable-next-line react/forbid-dom-props
-            style={{ width: `${percentage}%` }}
+            ref={el => {
+              if (el) el.style.width = `${percentage}%`;
+            }}
           />
         </Box>
         <Text as='div' size='1' color='gray' className={s.quotaText}>

@@ -20,12 +20,11 @@ import {
   useExtensionFormData,
 } from '@shared/renderer/components/Extension';
 import Form, { useFormContext } from '@shared/renderer/components/Form';
+import Loader from '@shared/renderer/components/Loader';
 import { features } from '@shared/renderer/redux';
 import { z } from '@shared/validator';
 
 import { updateProfileFormSchema } from '../../../../users/validator/auth';
-
-import Loader from './Loader';
 
 import s from './PersonalInfoCard.css';
 

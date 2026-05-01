@@ -41,17 +41,8 @@ export default function SystemNewsWidget() {
       title={t('admin:dashboard.systemNews', 'System News & Updates')}
     >
       <Flex direction='column' gap='4'>
-        <Box
-          style={{
-            paddingBottom: 'var(--space-4)',
-            borderBottom: '1px solid var(--gray-a4)',
-          }}
-        >
-          <Text
-            size='2'
-            color='gray'
-            style={{ display: 'block', marginBottom: 'var(--space-2)' }}
-          >
+        <Box pb='4' className={s.headerBox}>
+          <Text as='p' size='2' color='gray' mb='2'>
             {t(
               'admin:dashboard.discoverExtensions',
               'Discover new capabilities for your app.',
@@ -64,12 +55,7 @@ export default function SystemNewsWidget() {
 
         <Flex direction='column' gap='3'>
           {news.map((item, index) => (
-            <Text
-              key={index}
-              size='2'
-              color='blue'
-              style={{ display: 'block' }}
-            >
+            <Text key={index} as='p' size='2' color='blue'>
               {item}
             </Text>
           ))}

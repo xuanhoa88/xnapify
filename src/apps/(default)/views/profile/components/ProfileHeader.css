@@ -47,17 +47,6 @@
   z-index: 0;
 }
 
-/* Soften the gradient-to-card transition */
-.coverBackground::after {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 40px;
-  background: linear-gradient(to bottom, transparent, var(--color-panel-solid));
-}
-
 @keyframes gradient-shift {
   0% {
     background-position: 0% 50%;
@@ -76,7 +65,7 @@
   position: relative;
   z-index: 1;
   padding: var(--space-6);
-  padding-top: 48px;
+  padding-top: 140px; /* Starts exactly where the mobile banner ends */
   display: flex;
   gap: var(--space-5);
   flex-direction: column;
@@ -86,8 +75,8 @@
 @media (min-width: 768px) {
   .headerContent {
     flex-direction: row;
-    align-items: flex-end;
-    padding-top: 72px;
+    align-items: flex-start;
+    padding-top: 160px; /* Starts exactly where the desktop banner ends */
   }
 
   .coverBackground {
@@ -98,6 +87,13 @@
 .avatarSection {
   position: relative;
   flex-shrink: 0;
+  margin-top: -48px; /* Pull up to overlap the banner */
+}
+
+@media (min-width: 768px) {
+  .avatarSection {
+    margin-top: -80px; /* Pull up to overlap the banner */
+  }
 }
 
 .avatarBox {
@@ -121,10 +117,16 @@
   justify-content: center;
   font-size: var(--font-size-7);
   font-weight: bold;
+
+  /* Hardware acceleration fix for WebKit shadow clipping artifact */
+  transform: translateZ(0);
+  /* stylelint-disable-next-line property-no-vendor-prefix */
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 
 .avatarBox:hover {
-  transform: scale(1.06);
+  transform: scale(1.06) translateZ(0);
   box-shadow:
     var(--shadow-5),
     0 0 0 3px var(--indigo-7);
@@ -197,8 +199,15 @@
 /* Stats row */
 .statsRow {
   display: flex;
+  justify-content: center;
   gap: var(--space-5);
-  margin-top: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+@media (min-width: 768px) {
+  .statsRow {
+    justify-content: flex-start;
+  }
 }
 
 .statBadge {
