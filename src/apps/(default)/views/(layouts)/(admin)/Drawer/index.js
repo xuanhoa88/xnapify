@@ -360,12 +360,15 @@ function Drawer({ minimal = false }) {
         ref={siderRef}
         direction='column'
         className={clsx(
-          'bg-[#0a1628] transition-[width,transform] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] top-0 left-0 bottom-0 z-40 fixed',
+          'bg-[#0a1628] transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] top-0 bottom-0 fixed',
+          isMobile ? 'z-[100]' : 'z-40',
+          isMobile && !drawerOpen ? '-translate-x-full' : 'translate-x-0',
+          isMobile ? 'left-0 right-12 max-w-[300px]' : 'left-0',
           s.drawerContainer,
         )}
         data-mobile={isMobile ? 'true' : 'false'}
         data-open={drawerOpen ? 'true' : 'false'}
-        data-sider-width={siderWidth}
+        data-sider-width={isMobile ? undefined : siderWidth}
         data-sider
       >
         {/* Logo */}
@@ -406,12 +409,6 @@ function Drawer({ minimal = false }) {
               >
                 {t('header.brand', 'xnapify')}
               </Text>
-              <Text
-                size='1'
-                className='text-slate-400 font-medium tracking-wide uppercase text-[9px] mt-1'
-              >
-                {t('header.brandSub', 'Admin Panel')}
-              </Text>
             </Flex>
           )}
         </Flex>
@@ -423,38 +420,35 @@ function Drawer({ minimal = false }) {
           pt='4'
           className={clsx('overflow-y-auto overflow-x-hidden', s.scrollArea)}
         >
-          {menuItems.map((group, gi) => {
-            return (
-              <Box key={group.id || group.ns} mb='4' className='w-full'>
-                {/* Group Header */}
-                {!isCompact && (
-                  <Text
-                    as='div'
-                    className='uppercase tracking-[0.08em] text-slate-500 px-3 mb-1.5 select-none text-[10.5px] font-semibold'
-                  >
-                    {group.ns}
-                  </Text>
-                )}
+          {menuItems.map((group, gi) => (
+            <Box key={group.id || group.ns} mb='4' className='w-full'>
+              {/* Group Header */}
+              {!isCompact && (
+                <Text
+                  as='div'
+                  className='uppercase tracking-[0.08em] text-slate-500 px-3 mb-1.5 select-none text-[10.5px] font-semibold'
+                >
+                  {group.ns}
+                </Text>
+              )}
 
-                {/* Divider for compact mode */}
-                {isCompact && gi > 0 && (
-                  <Box className='h-px bg-white/[0.06] mx-2 mb-2.5 mt-[-4px]' />
-                )}
+              {/* Divider for compact mode */}
+              {isCompact && gi > 0 && (
+                <Box className='h-px bg-white/[0.06] mx-2 mb-2.5 mt-[-4px]' />
+              )}
 
-                {/* Items */}
-                <Flex direction='column' align='center' gap='0.5'>
-                  {isCompact
-                    ? renderCompactGroup(group)
-                    : group.items.map(item => (
-                        <Box key={item.path} className='w-full'>
-                          {renderLink(item)}
-                        </Box>
-                      ))}
-                </Flex>
-              </Box>
-            );
-          })}
-
+              {/* Items */}
+              <Flex direction='column' align='center' gap='0.5'>
+                {isCompact
+                  ? renderCompactGroup(group)
+                  : group.items.map(item => (
+                      <Box key={item.path} className='w-full'>
+                        {renderLink(item)}
+                      </Box>
+                    ))}
+              </Flex>
+            </Box>
+          ))}
           {/* Quick Links */}
           <Box mb='4' className='w-full'>
             {!isCompact && (

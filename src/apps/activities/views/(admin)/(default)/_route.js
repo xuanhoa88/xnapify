@@ -25,9 +25,9 @@ export function setup({ store, i18n }) {
   store.dispatch(
     registerMenu({
       ns: 'admin',
-      id: 'monitoring',
-      label: i18n.t('admin:navigation.monitoring', 'Monitoring'),
-      order: 30, // After Management
+      id: 'system',
+      label: i18n.t('admin:navigation.system', 'System'),
+      order: 99,
       icon: 'ActivityLogIcon',
       items: [
         {

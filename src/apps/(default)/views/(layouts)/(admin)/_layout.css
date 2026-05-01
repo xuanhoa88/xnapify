@@ -14,3 +14,11 @@
   margin-left: var(--sider-width, 64px);
   width: calc(100% - var(--sider-width, 64px));
 }
+
+@media (max-width: 767px) {
+  .layoutContent,
+  .layoutContent[data-minimal='true'] {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+}

@@ -32,7 +32,7 @@ export function setup({ store, i18n }) {
       ns: 'admin',
       id: 'system',
       label: i18n.t('admin:navigation.system', 'System'),
-      order: 90,
+      order: 99,
       icon: 'MixerHorizontalIcon',
       items: [
         {
@@ -40,7 +40,7 @@ export function setup({ store, i18n }) {
           label: i18n.t('admin:navigation.settings', 'Settings'),
           icon: 'GearIcon',
           permission: 'settings:read',
-          order: 10,
+          order: 0,
         },
       ],
     }),

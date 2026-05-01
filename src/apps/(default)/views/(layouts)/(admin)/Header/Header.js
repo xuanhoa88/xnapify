@@ -60,10 +60,11 @@ function AdminHeader() {
             tabIndex={0}
             onClick={handleToggleDrawer}
             title={t('common.toggleDrawer', 'Toggle drawer')}
-            className='md:hidden w-9 h-9 rounded-full text-gray-500 cursor-pointer transition-colors hover:bg-gray-100 hover:text-gray-900'
+            className='md:hidden w-9 h-9 rounded-full text-gray-500 cursor-pointer transition-colors hover:bg-gray-100 hover:text-gray-900 shrink-0'
           >
             <HamburgerMenuIcon width={18} height={18} />
           </Flex>
+
           <Box className='hidden md:block'>
             <Breadcrumbs />
           </Box>
