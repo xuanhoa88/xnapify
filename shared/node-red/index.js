@@ -6,6 +6,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { getTokenFromCookie, getRefreshTokenFromCookie } from '@shared/cookies';
 import { createWebpackContextAdapter } from '@shared/utils/contextAdapter';
 import { createNativeRequire } from '@shared/utils/createNativeRequire';
 
@@ -554,7 +555,7 @@ export class NodeRedManager {
         if (!auth || !jwt) return next();
 
         // Check for main app's JWT cookie
-        const token = auth.getTokenFromCookie(req);
+        const token = getTokenFromCookie(req);
         if (token) {
           try {
             jwt.verifyTypedToken(token, 'access');
@@ -564,7 +565,7 @@ export class NodeRedManager {
             // Access token expired — check if refresh token still exists.
             // If so, the user hasn't logged out; keep Node-RED's own
             // bearer token alive so deploys don't fail mid-session.
-            if (auth.getRefreshTokenFromCookie(req)) {
+            if (getRefreshTokenFromCookie(req)) {
               return next();
             }
           }

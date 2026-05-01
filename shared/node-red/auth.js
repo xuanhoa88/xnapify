@@ -7,6 +7,8 @@
 
 import { Strategy } from 'passport-strategy';
 
+import { getTokenFromCookie } from '@shared/cookies';
+
 /**
  * Custom Passport Strategy for xnapify Authentication
  *
@@ -41,7 +43,7 @@ class XnapifyAuthStrategy extends Strategy {
       }
 
       // Extract JWT token from cookie
-      const token = auth.getTokenFromCookie(req);
+      const token = getTokenFromCookie(req);
 
       if (!token) {
         console.warn('⚠️  [Node-RED Auth] No token found in request cookies');
