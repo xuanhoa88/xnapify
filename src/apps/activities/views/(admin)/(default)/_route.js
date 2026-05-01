@@ -12,20 +12,11 @@
 import { requirePermission } from '@shared/renderer/components/Rbac';
 import { features } from '@shared/renderer/redux';
 
-import reducer, { SLICE_NAME } from '../redux';
-
 import ActivityList from './ActivityList';
 
 const { addBreadcrumb, registerMenu, unregisterMenu } = features;
 
 export const middleware = requirePermission('activities:read');
-
-/**
- * Route boot — inject Redux reducer into the store.
- */
-export function init({ store }) {
-  store.injectReducer(SLICE_NAME, reducer);
-}
 
 /**
  * Register menu item

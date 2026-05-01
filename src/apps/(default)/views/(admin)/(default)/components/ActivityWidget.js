@@ -4,13 +4,13 @@ import { Box, Flex, Text } from '@radix-ui/themes';
 import {
   getActivities,
   isActivitiesInitialized,
-  isActivitiesLoading,
 } from 'apps/activities/views/(admin)/redux/selector';
 import { fetchActivities } from 'apps/activities/views/(admin)/redux/thunks';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 
 import { Link } from '@shared/renderer/components/History';
+import Loader from '@shared/renderer/components/Loader';
 
 import WidgetCard from './WidgetCard';
 
@@ -22,7 +22,6 @@ export default function ActivityWidget() {
 
   const activities = useSelector(getActivities);
   const isInitialized = useSelector(isActivitiesInitialized);
-  const isLoading = useSelector(isActivitiesLoading);
 
   useEffect(() => {
     if (!isInitialized) {
@@ -42,10 +41,8 @@ export default function ActivityWidget() {
             {t('admin:dashboard.recentActivity', 'Recent Activity')}
           </Text>
 
-          {isLoading && !isInitialized ? (
-            <Text size='2' color='gray'>
-              {t('admin:dashboard.loading', 'Loading...')}
-            </Text>
+          {!isInitialized ? (
+            <Loader variant='skeleton' skeletonCount={3} />
           ) : displayActivities ? (
             displayActivities.map((activity, idx) => (
               <Flex

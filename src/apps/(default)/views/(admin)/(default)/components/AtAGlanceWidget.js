@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 
 import {
   ChatBubbleIcon,
@@ -25,6 +25,7 @@ import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 
 import { Link } from '@shared/renderer/components/History';
+import Loader from '@shared/renderer/components/Loader';
 
 import WidgetCard from './WidgetCard';
 
@@ -38,58 +39,72 @@ export default function AtAGlanceWidget() {
   const rolesPagination = useSelector(getRolesPagination);
   const groupsPagination = useSelector(getGroupsPagination);
 
-  const isUsersInitialized = useSelector(isUsersListInitialized);
-  const isRolesInitialized = useSelector(isRolesListInitialized);
-  const isGroupsInitialized = useSelector(isGroupsListInitialized);
+  const isUsersReady = useSelector(isUsersListInitialized);
+  const isRolesReady = useSelector(isRolesListInitialized);
+  const isGroupsReady = useSelector(isGroupsListInitialized);
 
   useEffect(() => {
-    // Only fetch if data is not already present to avoid redundant API calls
-    if (!isUsersInitialized) dispatch(fetchUsers({ page: 1, limit: 1 }));
-    if (!isRolesInitialized) dispatch(fetchRoles({ page: 1, limit: 1 }));
-    if (!isGroupsInitialized) dispatch(fetchGroups({ page: 1, limit: 1 }));
-  }, [dispatch, isUsersInitialized, isRolesInitialized, isGroupsInitialized]);
+    if (!isUsersReady) dispatch(fetchUsers({ page: 1, limit: 1 }));
+    if (!isRolesReady) dispatch(fetchRoles({ page: 1, limit: 1 }));
+    if (!isGroupsReady) dispatch(fetchGroups({ page: 1, limit: 1 }));
+  }, [dispatch, isUsersReady, isRolesReady, isGroupsReady]);
 
-  const usersCount =
-    isUsersInitialized && usersPagination ? usersPagination.total : 0;
-  const rolesCount =
-    isRolesInitialized && rolesPagination ? rolesPagination.total : 0;
-  const groupsCount =
-    isGroupsInitialized && groupsPagination ? groupsPagination.total : 0;
+  const isInitialized = isUsersReady && isRolesReady && isGroupsReady;
+
+  const stats = useMemo(
+    () => [
+      {
+        icon: PersonIcon,
+        color: 'var(--blue-9)',
+        path: '/admin/users',
+        label: t('admin:dashboard.usersCount', '{{count}} Users', {
+          count: isUsersReady && usersPagination ? usersPagination.total : 0,
+        }),
+      },
+      {
+        icon: FileTextIcon,
+        color: 'var(--blue-9)',
+        path: '/admin/roles',
+        label: t('admin:dashboard.rolesCount', '{{count}} Roles', {
+          count: isRolesReady && rolesPagination ? rolesPagination.total : 0,
+        }),
+      },
+      {
+        icon: ChatBubbleIcon,
+        color: 'var(--blue-9)',
+        path: '/admin/groups',
+        label: t('admin:dashboard.groupsCount', '{{count}} Groups', {
+          count: isGroupsReady && groupsPagination ? groupsPagination.total : 0,
+        }),
+      },
+    ],
+    [
+      t,
+      isUsersReady,
+      isRolesReady,
+      isGroupsReady,
+      usersPagination,
+      rolesPagination,
+      groupsPagination,
+    ],
+  );
 
   return (
     <WidgetCard title={t('admin:dashboard.atAGlance', 'At a Glance')}>
-      <Flex wrap='wrap' gap='4'>
-        <Flex align='center' gap='2' className={s.statColumn}>
-          <PersonIcon color='var(--blue-9)' />
-          <Link to='/admin/users' className={s.interactiveLink}>
-            <Text size='2'>
-              {t('admin:dashboard.usersCount', '{{count}} Users', {
-                count: usersCount,
-              })}
-            </Text>
-          </Link>
+      {!isInitialized ? (
+        <Loader variant='skeleton' skeletonCount={3} />
+      ) : (
+        <Flex wrap='wrap' gap='4'>
+          {stats.map(({ icon: Icon, color, path, label }) => (
+            <Flex key={path} align='center' gap='2' className={s.statColumn}>
+              <Icon color={color} />
+              <Link to={path} className={s.interactiveLink}>
+                <Text size='2'>{label}</Text>
+              </Link>
+            </Flex>
+          ))}
         </Flex>
-        <Flex align='center' gap='2' className={s.statColumn}>
-          <FileTextIcon color='var(--blue-9)' />
-          <Link to='/admin/roles' className={s.interactiveLink}>
-            <Text size='2'>
-              {t('admin:dashboard.rolesCount', '{{count}} Roles', {
-                count: rolesCount,
-              })}
-            </Text>
-          </Link>
-        </Flex>
-        <Flex align='center' gap='2' className={s.statColumn}>
-          <ChatBubbleIcon color='var(--blue-9)' />
-          <Link to='/admin/groups' className={s.interactiveLink}>
-            <Text size='2'>
-              {t('admin:dashboard.groupsCount', '{{count}} Groups', {
-                count: groupsCount,
-              })}
-            </Text>
-          </Link>
-        </Flex>
-      </Flex>
+      )}
 
       <Box mt='4'>
         <Text size='2' color='gray'>
