@@ -17,17 +17,18 @@ const { registerMenu, unregisterMenu } = features;
 export function setup({ store, i18n }) {
   store.dispatch(
     registerMenu({
-      ns: 'admin',
-      id: 'dashboard',
-      label: i18n.t('admin:navigation.dashboard', 'Dashboard'),
-      order: 1, // First item
-      icon: 'HomeIcon',
+      ns: i18n.t('admin:navigation.main', 'Main'),
+      id: 'main',
+      label: i18n.t('admin:navigation.main', 'Main'),
+      order: 0, // First section
+      icon: 'DashboardIcon',
       items: [
         {
           path: '/admin',
-          label: i18n.t('admin:navigation.home', 'Home'),
-          icon: 'HomeIcon',
-          order: 10,
+          label: i18n.t('admin:navigation.dashboard', 'Dashboard'),
+          icon: 'DashboardIcon',
+          exact: true,
+          order: 0,
         },
       ],
     }),
@@ -37,10 +38,10 @@ export function setup({ store, i18n }) {
 /**
  * Unregister menu item
  */
-export function teardown({ store }) {
+export function teardown({ store, i18n }) {
   store.dispatch(
     unregisterMenu({
-      ns: 'admin',
+      ns: i18n.t('admin:navigation.main', 'Main'),
       path: '/admin',
     }),
   );

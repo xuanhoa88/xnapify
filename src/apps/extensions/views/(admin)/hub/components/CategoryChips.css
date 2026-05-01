@@ -28,7 +28,7 @@
 
 .countActive {
   background-color: var(--indigo-11);
-  color: white;
+  color: var(--white-a12);
 }
 
 .countInactive {

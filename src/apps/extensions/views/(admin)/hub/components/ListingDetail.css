@@ -87,7 +87,7 @@
   right: 0;
   bottom: 0;
   background-color: var(--black-a8);
-  color: white;
+  color: var(--white-a12);
   opacity: 0;
   transition: opacity 0.2s;
 
@@ -224,7 +224,7 @@
 }
 
 .dotActive {
-  background: white;
+  background: var(--white-a12);
 }
 
 .dotInactive {
@@ -254,4 +254,10 @@
 
 .spinIcon {
   animation: spin 1s linear infinite;
+}
+
+.installErrorBox {
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--red-6);
+  background-color: var(--red-2);
 }

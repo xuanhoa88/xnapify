@@ -7,7 +7,20 @@
 
 import { useEffect, useState, useCallback } from 'react';
 
-import * as RadixIcons from '@radix-ui/react-icons';
+import {
+  StarIcon,
+  PersonIcon,
+  BoxIcon,
+  CheckCircledIcon,
+  GitHubLogoIcon,
+  CubeIcon,
+  UpdateIcon,
+  CheckIcon,
+  Cross2Icon,
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  EyeOpenIcon,
+} from '@radix-ui/react-icons';
 import {
   Flex,
   Box,
@@ -25,7 +38,12 @@ import { useDispatch, useSelector } from 'react-redux';
 import Modal from '@shared/renderer/components/Modal';
 import Portal from '@shared/renderer/components/Portal';
 
-import { installFromHub, isHubInstalling } from '../redux';
+import {
+  installFromHub,
+  isHubInstalling,
+  getHubInstallError,
+  clearInstallError,
+} from '../redux';
 
 import s from './ListingDetail.css';
 
@@ -33,6 +51,7 @@ export default function ListingDetail({ listing = null, onClose }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const installing = useSelector(isHubInstalling);
+  const installError = useSelector(getHubInstallError);
   const [installSuccess, setInstallSuccess] = useState(false);
   const tags = (listing && listing.tags) || [];
   const screenshots = (listing && listing.screenshots) || [];
@@ -49,7 +68,8 @@ export default function ListingDetail({ listing = null, onClose }) {
   // Reset install success when listing changes
   useEffect(() => {
     setInstallSuccess(false);
-  }, [listingName]);
+    dispatch(clearInstallError());
+  }, [listingName, dispatch]);
 
   // Close lightbox on Esc, navigate with ← →
   useEffect(() => {
@@ -77,7 +97,7 @@ export default function ListingDetail({ listing = null, onClose }) {
 
   const metaItems = [
     {
-      icon: RadixIcons.StarIcon,
+      icon: StarIcon,
       label: t('admin:hub.version', 'Version'),
       value: listing && (
         <Text as='span' className={s.versionText}>
@@ -86,25 +106,25 @@ export default function ListingDetail({ listing = null, onClose }) {
       ),
     },
     {
-      icon: RadixIcons.PersonIcon,
+      icon: PersonIcon,
       label: t('admin:hub.author', 'Author'),
       value: (listing && listing.author) || '—',
     },
     {
-      icon: RadixIcons.BoxIcon,
+      icon: BoxIcon,
       label: t('admin:hub.category', 'Category'),
       value: listing && listing.category,
     },
     listing && listing.compatibility
       ? {
-          icon: RadixIcons.CheckCircledIcon,
+          icon: CheckCircledIcon,
           label: t('admin:hub.testedWith', 'Tested with'),
           value: `xnapify ${listing.compatibility}`,
         }
       : null,
     listing && listing.repository
       ? {
-          icon: RadixIcons.GitHubLogoIcon,
+          icon: GitHubLogoIcon,
           label: t('admin:hub.repository', 'Repository'),
           value: (
             <Text
@@ -139,7 +159,7 @@ export default function ListingDetail({ listing = null, onClose }) {
                     className={s.iconImage}
                   />
                 ) : (
-                  <RadixIcons.CubeIcon width={36} height={36} />
+                  <CubeIcon width={36} height={36} />
                 )}
               </Box>
               <Box className={s.heroInfoBox}>
@@ -154,13 +174,8 @@ export default function ListingDetail({ listing = null, onClose }) {
                   className={s.badgesFlex}
                 >
                   {isOfficial && (
-                    <Badge
-                      size='small'
-                      color='indigo'
-                      radius='full'
-                      variant='soft'
-                    >
-                      <RadixIcons.CheckCircledIcon
+                    <Badge size='1' color='indigo' radius='full' variant='soft'>
+                      <CheckCircledIcon
                         width={12}
                         height={12}
                         className={s.badgeIcon}
@@ -169,17 +184,12 @@ export default function ListingDetail({ listing = null, onClose }) {
                       {t('admin:hub.officialBadge', 'Official')}
                     </Badge>
                   )}
-                  <Badge
-                    size='small'
-                    color='gray'
-                    radius='full'
-                    variant='surface'
-                  >
+                  <Badge size='1' color='gray' radius='full' variant='surface'>
                     v{listing && listing.version}
                   </Badge>
                   {listing && listing.category && (
                     <Badge
-                      size='small'
+                      size='1'
                       color='gray'
                       radius='full'
                       variant='surface'
@@ -220,7 +230,7 @@ export default function ListingDetail({ listing = null, onClose }) {
                       <img src={url} alt='' className={s.screenshotImage} />
 
                       <Flex className={s.screenshotOverlay}>
-                        <RadixIcons.EyeOpenIcon width={24} height={24} />
+                        <EyeOpenIcon width={24} height={24} />
                       </Flex>
                     </Box>
                   ))}
@@ -281,13 +291,13 @@ export default function ListingDetail({ listing = null, onClose }) {
             {tags.length > 0 && (
               <Box>
                 <Text as='h3' size='3' weight='bold' className={s.tagsTitle}>
-                  Tags
+                  {t('admin:hub.tags', 'Tags')}
                 </Text>
                 <Flex gap='2' wrap='wrap'>
                   {tags.map(tag => (
                     <Badge
                       key={tag}
-                      size='small'
+                      size='1'
                       color='gray'
                       radius='full'
                       variant='soft'
@@ -301,6 +311,13 @@ export default function ListingDetail({ listing = null, onClose }) {
           </Box>
         </Modal.Body>
         <Modal.Footer>
+          {installError && (
+            <Box className={s.installErrorBox}>
+              <Text as='p' size='2' color='red'>
+                {installError}
+              </Text>
+            </Box>
+          )}
           <Modal.Actions>
             <Button
               variant='solid'
@@ -309,15 +326,9 @@ export default function ListingDetail({ listing = null, onClose }) {
               disabled={installing || installSuccess}
             >
               {installing && (
-                <RadixIcons.UpdateIcon
-                  width={16}
-                  height={16}
-                  className={s.spinIcon}
-                />
+                <UpdateIcon width={16} height={16} className={s.spinIcon} />
               )}
-              {installSuccess && (
-                <RadixIcons.CheckIcon width={16} height={16} />
-              )}
+              {installSuccess && <CheckIcon width={16} height={16} />}
               {installing
                 ? t('admin:hub.installing', 'Installing...')
                 : installSuccess
@@ -352,7 +363,7 @@ export default function ListingDetail({ listing = null, onClose }) {
                 onClick={() => setLightboxIdx(null)}
                 aria-label={t('common.close', 'Close')}
               >
-                <RadixIcons.Cross2Icon width={24} height={24} />
+                <Cross2Icon width={24} height={24} />
               </IconButton>
 
               {screenshots.length > 1 && (
@@ -368,9 +379,9 @@ export default function ListingDetail({ listing = null, onClose }) {
                       i => (i - 1 + screenshots.length) % screenshots.length,
                     )
                   }
-                  aria-label='Previous'
+                  aria-label={t('common.previous', 'Previous')}
                 >
-                  <RadixIcons.ArrowLeftIcon width={24} height={24} />
+                  <ArrowLeftIcon width={24} height={24} />
                 </IconButton>
               )}
 
@@ -393,9 +404,9 @@ export default function ListingDetail({ listing = null, onClose }) {
                   onClick={() =>
                     setLightboxIdx(i => (i + 1) % screenshots.length)
                   }
-                  aria-label='Next'
+                  aria-label={t('common.next', 'Next')}
                 >
-                  <RadixIcons.ArrowRightIcon width={24} height={24} />
+                  <ArrowRightIcon width={24} height={24} />
                 </IconButton>
               )}
 
@@ -410,7 +421,11 @@ export default function ListingDetail({ listing = null, onClose }) {
                       i === lightboxIdx ? s.dotActive : s.dotInactive,
                     )}
                     onClick={() => setLightboxIdx(i)}
-                    aria-label={`Screenshot ${i + 1}`}
+                    aria-label={t(
+                      'admin:hub.screenshotAlt',
+                      'Screenshot {{number}}',
+                      { number: i + 1 },
+                    )}
                   />
                 ))}
               </Flex>

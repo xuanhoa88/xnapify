@@ -15,7 +15,7 @@ import {
   installFromHub,
 } from './thunks';
 
-export const SLICE_NAME = 'hub';
+export const SLICE_NAME = '@admin/hub';
 
 const createOperationState = () => ({ loading: false, error: null });
 

@@ -7,7 +7,7 @@
 
 import { useEffect, useRef } from 'react';
 
-import * as RadixIcons from '@radix-ui/react-icons';
+import { ClipboardIcon } from '@radix-ui/react-icons';
 import { Text, Box, Button, Flex } from '@radix-ui/themes';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
@@ -39,9 +39,7 @@ export default function CategoryChips({
 
   const renderChip = (id, labelKey, count, isAll = false) => {
     const isActive = activeCategory === id;
-    const iconName = isAll
-      ? RadixIcons.ClipboardIcon
-      : getCategoryIcon(labelKey);
+    const iconName = isAll ? ClipboardIcon : getCategoryIcon(labelKey);
     const labelText = isAll ? t('admin:hub.categoryAll', 'All') : labelKey;
 
     return (

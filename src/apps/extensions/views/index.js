@@ -5,6 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import hubReducer, { SLICE_NAME as HUB_SLICE } from './(admin)/hub/redux';
+
 // Auto-load contexts
 const viewsContext = require.context(
   '.',
@@ -17,5 +19,8 @@ const viewsContext = require.context(
 // =============================================================================
 
 export default {
+  providers({ store }) {
+    store.injectReducer(HUB_SLICE, hubReducer);
+  },
   routes: () => viewsContext,
 };

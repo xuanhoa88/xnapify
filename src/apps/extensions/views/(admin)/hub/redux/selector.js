@@ -5,9 +5,15 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { createSelector } from '@reduxjs/toolkit';
+
 import { normalizeState, SLICE_NAME } from './slice';
 
-const getHubState = state => normalizeState(state && state[SLICE_NAME]);
+const selectRawSlice = state => state && state[SLICE_NAME];
+
+const getHubState = createSelector([selectRawSlice], raw =>
+  normalizeState(raw),
+);
 
 const getOp = (state, key) => {
   const s = getHubState(state);

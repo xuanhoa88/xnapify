@@ -72,14 +72,14 @@ export default function MarketplaceCard({
                 </Text>
                 {isOfficial && (
                   <Badge
-                    size='small'
+                    size='1'
                     className={s.officialBadge}
                     color='indigo'
                     radius='full'
                     variant='soft'
                   >
                     <CheckIcon width={10} height={10} className={s.checkIcon} />
-                    Official
+                    {t('admin:hub.officialBadge', 'Official')}
                   </Badge>
                 )}
               </Flex>
@@ -102,7 +102,7 @@ export default function MarketplaceCard({
         </Box>
 
         <Flex align='center' justify='between' className={s.footerFlex}>
-          <Badge size='small' color='gray' radius='full' variant='surface'>
+          <Badge size='1' color='gray' radius='full' variant='surface'>
             {listing.category}
           </Badge>
           <Flex gap='3' align='center'>

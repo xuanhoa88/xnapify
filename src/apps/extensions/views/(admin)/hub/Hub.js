@@ -63,8 +63,10 @@ function Hub() {
   useEffect(() => {
     dispatch(fetchFeaturedListings());
     dispatch(fetchCategories());
-    dispatch(fetchHubListings(filters));
-  }, [dispatch]); // eslint-disable-line react-hooks/exhaustive-deps
+    dispatch(
+      fetchHubListings({ search: '', category: 'all', sort: 'name', page: 1 }),
+    );
+  }, [dispatch]);
 
   const handleCategorySelect = useCallback(
     category => {
@@ -238,42 +240,38 @@ function Hub() {
         </Box>
 
         {/* Listing grid */}
-        {loading ? (
+        {loading && listings.length === 0 ? (
           <Loader />
+        ) : listings.length === 0 ? (
+          <DataTable.Empty
+            icon={<MagnifyingGlassIcon width={48} height={48} />}
+            title={t('admin:hub.noResults', 'No extensions found')}
+            description={t(
+              'admin:hub.tryDifferentSearch',
+              'Try a different search term or category.',
+            )}
+          />
         ) : (
-          <>
-            {listings.length === 0 ? (
-              <DataTable.Empty
-                icon={<MagnifyingGlassIcon width={48} height={48} />}
-                title={t('admin:hub.noResults', 'No extensions found')}
-                description={t(
-                  'admin:hub.tryDifferentSearch',
-                  'Try a different search term or category.',
-                )}
+          <Grid
+            columns={{ initial: '1', sm: '2', lg: '3' }}
+            gap='4'
+            className={s.gridBox}
+          >
+            {listings.map(item => (
+              <MarketplaceCard
+                key={item.id}
+                listing={item}
+                onClick={handleCardClick}
               />
-            ) : (
-              <Grid
-                columns={{ initial: '1', sm: '2', lg: '3' }}
-                gap='4'
-                className={s.gridBox}
-              >
-                {listings.map(item => (
-                  <MarketplaceCard
-                    key={item.id}
-                    listing={item}
-                    onClick={handleCardClick}
-                  />
-                ))}
-              </Grid>
-            )}
+            ))}
+          </Grid>
+        )}
 
-            {/* Loading overlay for subsequent fetches */}
-            {loading && listings.length > 0 && (
-              <Box className={s.loadingOverlay}>
-                <Loader variant='spinner' />
-              </Box>
-            )}
-          </>
+        {/* Loading overlay for subsequent fetches */}
+        {loading && listings.length > 0 && (
+          <Box className={s.loadingOverlay}>
+            <Loader variant='spinner' />
+          </Box>
         )}
 
         {/* Pagination inside content box */}

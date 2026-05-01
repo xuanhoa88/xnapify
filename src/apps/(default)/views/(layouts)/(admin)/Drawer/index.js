@@ -124,24 +124,7 @@ function Drawer({ minimal = false }) {
       return checkPermission(u, permission);
     };
 
-    const mainKey = t('admin:navigation.main', 'Main');
-    const sections = [
-      {
-        id: 'main',
-        ns: mainKey,
-        order: 0,
-        icon: 'DashboardIcon',
-        items: [
-          {
-            path: '/admin',
-            label: t('admin:navigation.dashboard', 'Dashboard'),
-            icon: 'DashboardIcon',
-            exact: true,
-            order: 0,
-          },
-        ],
-      },
-    ];
+    const sections = [];
 
     dynamicMenus.forEach(section => {
       if (!section || !section.items) return;
@@ -169,7 +152,7 @@ function Drawer({ minimal = false }) {
     return sections.sort(
       (a, b) => a.order - b.order || a.ns.localeCompare(b.ns),
     );
-  }, [t, user, dynamicMenus]);
+  }, [user, dynamicMenus]);
 
   const userDisplayName = useMemo(() => {
     if (!isAuth || !user) return '';
@@ -480,6 +463,7 @@ function Drawer({ minimal = false }) {
                   label: t('navigation.backToSite', 'Back to Site'),
                   icon: 'ArrowTopRightIcon',
                   external: true,
+                  exact: true,
                 })}
               </Box>
             </Flex>
