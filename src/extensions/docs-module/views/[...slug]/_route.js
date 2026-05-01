@@ -50,8 +50,11 @@ function parseFrontmatter(raw) {
   if (!fm) return { content: raw, title: null };
 
   const body = raw.slice(fm[0].length).trim();
-  const titleMatch = fm[1].match(/^title:\s*(['"]?)(.+?)\1/m);
-  return { content: body, title: titleMatch ? titleMatch[2] : null };
+  const titleMatch = fm[1].match(/^title:\s*(.+)$/m);
+  return {
+    content: body,
+    title: titleMatch ? titleMatch[1].replace(/^['"]|['"]$/g, '').trim() : null,
+  };
 }
 
 /**
@@ -105,7 +108,7 @@ export async function getInitialProps({ fetch, params }) {
       if (first) {
         return { redirect: `/docs/${first.path}` };
       }
-      return { error: true, htmlResult: '', title: null, tree };
+      return { error: true, htmlResult: '', title: 'Documentation', tree };
     }
 
     // Document page: fetch the markdown source
@@ -117,17 +120,27 @@ export async function getInitialProps({ fetch, params }) {
 
     // Guard: static endpoint returned non-string (404 JSON, etc.)
     if (typeof rawText !== 'string') {
-      return { error: true, htmlResult: '', title: null, tree };
+      return { error: true, htmlResult: '', title: 'Documentation', tree };
     }
 
     // Parse frontmatter and render markdown
     const { content, title } = parseFrontmatter(rawText);
     const htmlResult = await sanitize(marked.parse(content));
 
-    return { htmlResult, title, error: false, tree };
+    return {
+      htmlResult,
+      title,
+      tree,
+      error: false,
+    };
   } catch (err) {
     console.error('getInitialProps failed for docs:', err);
-    return { error: true, htmlResult: '', title: null, tree: [] };
+    return {
+      error: true,
+      htmlResult: '',
+      title: 'Documentation',
+      tree: [],
+    };
   }
 }
 
