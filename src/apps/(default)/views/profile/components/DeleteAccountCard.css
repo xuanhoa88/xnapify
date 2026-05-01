@@ -5,35 +5,22 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-
 .cardContainer {
   background-color: var(--color-panel-solid);
   border-radius: var(--radius-4);
   border: 1px solid var(--gray-a5);
   box-shadow: var(--shadow-2);
   padding: var(--space-6);
+  transition:
+    box-shadow 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
 }
 
-.cardHeader {
-  margin-bottom: var(--space-6);
-}
-
-.cardHeaderIcon {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.cardHeaderIconRed {
-  background-color: var(--red-3);
-  color: var(--red-11);
-}
-
-.cardTitle {
-  color: var(--gray-12);
+.cardContainer:hover {
+  box-shadow: var(--shadow-3);
+  border-color: var(--red-a6);
+  transform: translateY(-2px);
 }
 
 .cardAction {
@@ -42,9 +29,10 @@
 
 .warningBox {
   background-color: var(--red-2);
-  border: 1px solid var(--red-5);
+  border: 1px solid var(--red-6);
+  border-left: 4px solid var(--red-9);
   border-radius: var(--radius-3);
-  padding: var(--space-4);
+  padding: var(--space-4) var(--space-5);
   margin-bottom: var(--space-6);
 }
 

@@ -432,7 +432,12 @@ const WYSIWYG = forwardRef(function WYSIWYG$(
 
         try {
           this.view.updateState(state);
-        } catch {
+        } catch (err) {
+          // DragHandle ↔ column-resize decoration conflict — reset decorations
+          console.warn(
+            '[WYSIWYG] updateState recovered from decoration conflict:',
+            err.message,
+          );
           // Reset decorations by reconfiguring with same plugins
           const cleanState = state.reconfigure({ plugins: state.plugins });
           this.view.updateState(cleanState);
@@ -467,11 +472,11 @@ const WYSIWYG = forwardRef(function WYSIWYG$(
       // create a new comment mark around it.
       let currentId = activeCommentId;
       if (!currentId) {
-        currentId = `comment-${Date.now()}`;
+        currentId = `comment-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
       }
 
       const newComment = {
-        id: `c-${Date.now()}`,
+        id: `c-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         text,
         createdAt: new Date().toISOString(),
       };

@@ -6,7 +6,7 @@
  */
 
 import { FaceIcon } from '@radix-ui/react-icons';
-import { IconButton } from '@radix-ui/themes';
+import { ScrollArea } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 
 import ContextMenu from '../ContextMenu';
@@ -19,26 +19,34 @@ import s from './EmojiPickerButton.css';
 export default function EmojiPickerButton({ onSelect, title, disabled }) {
   return (
     <ContextMenu align='left'>
-      <ContextMenu.Trigger
-        as={ToolbarButton}
-        icon={<FaceIcon width={16} height={16} />}
-        title={title}
-        disabled={disabled}
-      />
+      <ContextMenu.Trigger asChild>
+        <ToolbarButton
+          icon={<FaceIcon width={16} height={16} />}
+          title={title}
+          disabled={disabled}
+        />
+      </ContextMenu.Trigger>
 
       <ContextMenu.Menu>
-        <div className={s.emojiContainer}>
-          {COMMON_EMOJIS.map(emoji => (
-            <IconButton
-              key={emoji}
-              variant='ghost'
-              color='gray'
-              onClick={() => onSelect(emoji)}
-              className={s.emojiButton}
-            >
-              {emoji}
-            </IconButton>
-          ))}
+        <div className={s.emojiPopup}>
+          <ScrollArea
+            type='auto'
+            scrollbars='vertical'
+            className={s.scrollArea}
+          >
+            <div className={s.emojiGrid}>
+              {COMMON_EMOJIS.map(emoji => (
+                <button
+                  key={emoji}
+                  type='button'
+                  onClick={() => onSelect(emoji)}
+                  className={s.emojiButton}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          </ScrollArea>
         </div>
       </ContextMenu.Menu>
     </ContextMenu>

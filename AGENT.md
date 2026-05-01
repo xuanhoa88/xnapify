@@ -724,6 +724,7 @@ function LoginForm() {
 10. **Testing:** Write tests for critical functionality
 11. **File Naming:** Use PascalCase for components, camelCase for utilities, kebab-case for CSS modules
 12. **Styling:** ABSOLUTE BAN on inline styles (e.g., `style={{...}}`). Prefer Tailwind CSS classes and Radix UI primitives. Use CSS Modules only for complex custom styling.
+13. **Mandatory License Headers:** Every new source file must begin with the xnapify MIT License header (block comment for JS/TS/CSS, hash comment for YML/SH).
 
 ## Mandatory Verification After Code Changes
 

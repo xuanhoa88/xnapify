@@ -8,7 +8,10 @@ Before executing any task, you MUST dynamically load and read:
 2. `.agent/RULES.md` (for hard coding constraints)
 
 **[CRITICAL CSS RULE]**
-ABSOLUTE BAN on inline styles (e.g., `style={{...}}`). You MUST use CSS Modules (`.css` extension) for styling. Never generate or suggest inline styles unless it's strictly for `display: 'none'` on hidden inputs.
+ABSOLUTE BAN on inline styles (e.g., `style={{...}}`). Use Tailwind CSS utility classes and Radix UI primitives for styling. CSS Modules (`.css` extension) are reserved for complex edge cases only.
+
+**[CRITICAL LICENSE RULE]**
+You MUST prepend the standard xnapify MIT License header to every single new source file you create (.js, .ts, .css, etc).
 
 **[IF YOU CANNOT READ FILES (Standard Chat AIs)]**
 You must explicitly ask the user: "Please mention or paste the contents of `AGENT.md` and `.agent/RULES.md` before we proceed." Do NOT hallucinate their contents.

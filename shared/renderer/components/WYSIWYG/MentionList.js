@@ -16,6 +16,7 @@ import {
 import { Button } from '@radix-ui/themes';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import s from './MentionList.css';
 
@@ -27,6 +28,7 @@ import s from './MentionList.css';
  * keyboard events for arrow-key navigation and Enter selection.
  */
 const MentionList = forwardRef(function MentionList$({ items, command }, ref) {
+  const { t } = useTranslation();
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   // Reset selection whenever the items list changes (new query).
@@ -83,7 +85,9 @@ const MentionList = forwardRef(function MentionList$({ items, command }, ref) {
   if (!items.length) {
     return (
       <div className={s.mentionList}>
-        <div className={s.mentionEmpty}>No results</div>
+        <div className={s.mentionEmpty}>
+          {t('shared:form.wysiwyg.noMentionResults', 'No results')}
+        </div>
       </div>
     );
   }

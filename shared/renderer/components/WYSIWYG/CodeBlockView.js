@@ -5,13 +5,14 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 
 import { CheckIcon, CopyIcon } from '@radix-ui/react-icons';
 import { Button } from '@radix-ui/themes';
 import { NodeViewContent, NodeViewWrapper } from '@tiptap/react';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import s from './CodeBlockView.css';
 
@@ -26,15 +27,32 @@ import s from './CodeBlockView.css';
  * `NodeViewContent`, preserving full editing + syntax highlighting.
  */
 export default function CodeBlockView({ node }) {
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
+  const timerRef = useRef(null);
+
+  // Clean up copy-feedback timer on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, []);
 
   const language = node.attrs.language || 'auto';
 
   const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(node.textContent).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
+    navigator.clipboard
+      .writeText(node.textContent)
+      .then(() => {
+        setCopied(true);
+        if (timerRef.current) clearTimeout(timerRef.current);
+        timerRef.current = setTimeout(() => setCopied(false), 2000);
+      })
+      .catch(() => {
+        // Clipboard API may fail on non-HTTPS origins or denied permissions
+      });
   }, [node.textContent]);
 
   return (
@@ -50,7 +68,11 @@ export default function CodeBlockView({ node }) {
           size='1'
           className={clsx(s.copyButton, { [s.copied]: copied })}
           onClick={handleCopy}
-          title={copied ? 'Copied!' : 'Copy code'}
+          title={
+            copied
+              ? t('shared:form.wysiwyg.copied', 'Copied!')
+              : t('shared:form.wysiwyg.copyCode', 'Copy code')
+          }
         >
           <span className={s.copyIcon}>
             {copied ? (
@@ -59,7 +81,9 @@ export default function CodeBlockView({ node }) {
               <CopyIcon width={16} height={16} />
             )}
           </span>
-          {copied ? 'Copied!' : 'Copy'}
+          {copied
+            ? t('shared:form.wysiwyg.copied', 'Copied!')
+            : t('shared:form.wysiwyg.copy', 'Copy')}
         </Button>
       </div>
 

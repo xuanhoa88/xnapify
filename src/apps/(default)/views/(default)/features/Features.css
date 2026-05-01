@@ -65,7 +65,7 @@
   background-color: var(--color-panel-solid);
   border-radius: var(--radius-5);
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 4px 24px -12px rgb(0 0 0 / 10%);
+  box-shadow: 0 4px 24px -12px var(--black-a3);
   border: 1px solid var(--gray-4);
   overflow: hidden;
 }
@@ -117,7 +117,7 @@
 
 .featureCard:hover {
   transform: translateY(-8px);
-  box-shadow: 0 20px 40px -16px rgb(0 0 0 / 15%);
+  box-shadow: 0 20px 40px -16px var(--black-a4);
   border-color: var(--indigo-6);
 }
 

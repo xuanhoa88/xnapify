@@ -14,7 +14,7 @@
 
 .previewPane {
   flex: 1;
-  background-color: white;
+  background-color: var(--white-a12);
   border-radius: var(--radius-3);
   overflow: hidden;
   border: 1px solid var(--gray-5);

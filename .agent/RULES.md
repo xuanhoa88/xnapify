@@ -15,9 +15,15 @@ Whenever you provide assistance to a Developer on this codebase, you MUST adhere
 
 ## 2. Hard Coding Boundaries
 - **Strict Node 14/16 Syntax Constraints**: DO NOT use optional chaining (`?.`), nullish coalescing (`??`), or nullish assignment (`??=`) under ANY circumstances. The underlying compilation target DOES NOT support these. Always use traditional boolean fallback evaluations (e.g. `const x = obj && obj.prop ? obj.prop : null;`).
-- **Use the Single Source of Truth**: The `AGENT.md` file defines the overarching architecture (React 18 SSR, Express 4, Sequelize, Redux Toolkit). **Never deviate** from these technologies. If a developer asks you to "install Tailwind," ask for explicit override permission first, because `AGENT.md` strictly enforces CSS Modules.
+- **Use the Single Source of Truth**: The `AGENT.md` file defines the overarching architecture (React 18 SSR, Express 4, Sequelize, Redux Toolkit). **Never deviate** from these technologies without explicit developer permission.
 - **Stop at Domain Boundaries**: Never write deeply coupled code between two isolated applications (`@apps/billing` should not `import` from `@apps/invoices`). Always utilize the DI container, hook system, or standard HTTP APIs for cross-domain communication.
 - **No Raw SQL**: Unless debugging a confirmed performance bottleneck, strictly utilize Sequelize ORM methods (`findAll`, `create`). Access models via `container.resolve('db').models` or `container.resolve('models')`.
+- **Mandatory License Headers**: Every new source file you create MUST begin with the standard `xnapify` MIT License header.
+  - For `.js`, `.jsx`, `.ts`, `.tsx`, `.css`, `.scss`, `.sass`, `.less`, `.styl`, `.sss` files, use the `/** ... */` block comment style.
+  - For `.yml`, `.sh`, and `Dockerfile` files, use the `#` comment style.
+  - The exact text is:
+    `xnapify (https://github.com/xuanhoa88/xnapify/)`
+    `This source code is licensed under the MIT license found in the LICENSE.txt file in the root directory of this source tree.`
 
 ---
 

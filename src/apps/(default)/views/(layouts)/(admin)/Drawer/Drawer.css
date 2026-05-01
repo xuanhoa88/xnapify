@@ -28,14 +28,14 @@
 
   /* Reveal on hover */
   &:hover {
-    scrollbar-color: rgb(255 255 255 / 12%) transparent;
+    scrollbar-color: var(--white-a4) transparent;
   }
 
   &:hover::-webkit-scrollbar-thumb {
-    background: rgb(255 255 255 / 12%);
+    background: var(--white-a4);
   }
 
   &:hover::-webkit-scrollbar-thumb:hover {
-    background: rgb(255 255 255 / 22%);
+    background: var(--white-a5);
   }
 }

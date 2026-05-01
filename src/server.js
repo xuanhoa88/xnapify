@@ -770,27 +770,37 @@ function makeSsrMiddleware(baseUrl) {
 // Error Handling & Auth
 // ---------------------------------------------------------------------------
 
+/**
+ * Derive an HTTP status code and user-facing message from an error without
+ * mutating the original object.
+ */
+function normalizeError(err) {
+  const isMaintenance = err.code === 'E_MAINTENANCE';
+
+  if (err.name === 'JsonWebTokenError') {
+    return { status: 401, message: 'Invalid token', isMaintenance };
+  }
+  if (err.name === 'TokenExpiredError') {
+    return { status: 401, message: 'Token expired', isMaintenance };
+  }
+
+  return {
+    status: err.status || 500,
+    message: isMaintenance
+      ? 'Maintenance mode is enabled. Please try again later.'
+      : err.message || 'Service is unavailable. Please try again later.',
+    isMaintenance,
+  };
+}
+
 function makeErrorMiddleware() {
   return async (err, req, res, next) => {
     if (res.headersSent) return next(err);
 
-    const isMaintenance = err.code === 'E_MAINTENANCE';
-
-    if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
-      err.status = 401;
-      err.message =
-        err.name === 'JsonWebTokenError' ? 'Invalid token' : 'Token expired';
-    } else {
-      err.status = err.status || 500;
-      err.message = isMaintenance
-        ? 'Maintenance mode is enabled. Please try again later.'
-        : err.message || 'Service is unavailable. Please try again later.';
-    }
-
-    const { status } = err;
+    const { status, message, isMaintenance } = normalizeError(err);
     res.status(status);
 
-    // Skip noisy logging for expected maintenance blocks
+    // Log everything except expected maintenance blocks
     if (!isMaintenance) {
       console.error('❌ Error:', {
         status,
@@ -803,27 +813,49 @@ function makeErrorMiddleware() {
       });
     }
 
-    try {
-      if (
-        req.path.startsWith('/api') ||
-        req.accepts(['html', 'json']) === 'json'
-      ) {
-        return res.json({
-          status,
-          success: false,
-          error:
-            __DEV__ || isMaintenance ? err.message : 'Internal server error',
-          maintenance: isMaintenance,
-          requestId: req.id,
-        });
-      }
+    // --- JSON response (API routes or explicit Accept: application/json) ---
+    const wantsJson =
+      req.path.startsWith('/api') || req.accepts(['html', 'json']) === 'json';
 
-      const youch = new Youch(err, req);
+    if (wantsJson) {
+      return res.json({
+        status,
+        success: false,
+        error: __DEV__ || isMaintenance ? message : 'Internal server error',
+        maintenance: isMaintenance,
+        requestId: req.id,
+      });
+    }
+
+    // --- HTML response via Youch ---
+    try {
+      // In production, feed Youch a sanitised error (no stack frames) and a
+      // stripped request (no headers / cookies) so nothing internal leaks.
+      const youchErr = __DEV__
+        ? err
+        : Object.assign(new Error(message), {
+            name: isMaintenance ? 'Maintenance' : err.name || 'Error',
+            status,
+            stack: '', // empty → Youch renders zero frames
+          });
+
+      const youchReq = __DEV__
+        ? req
+        : { url: req.url, method: req.method, httpVersion: req.httpVersion };
+
+      const youch = new Youch(youchErr, youchReq);
       return res.send(await youch.toHTML());
-    } catch (youchError) {
-      console.error('⚠️  Youch rendering failed:', youchError.message);
+    } catch (renderErr) {
+      console.error('⚠️  Youch rendering failed:', renderErr.message);
+
+      // Ultra-safe fallback — HTML-escape the message to prevent XSS
+      const safeMsg = (isMaintenance ? message : 'Internal server error')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
       return res.send(
-        `<h1>${status} ${isMaintenance ? err.message : 'Internal server error'}</h1><p>Please try again later.</p>`,
+        `<h1>${status} ${safeMsg}</h1><p>Please try again later.</p>`,
       );
     }
   };

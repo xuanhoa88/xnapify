@@ -115,8 +115,8 @@ function createTurndownService() {
     },
     replacement(_content, node) {
       const src = node.getAttribute('src');
-      const alt = node.getAttribute('alt') || '';
-      const title = node.getAttribute('title') || '';
+      const alt = (node.getAttribute('alt') || '').replace(/"/g, '&quot;');
+      const title = (node.getAttribute('title') || '').replace(/"/g, '&quot;');
       const width = node.getAttribute('width');
       const height = node.getAttribute('height');
 
@@ -387,7 +387,7 @@ export function markdownToHtml(markdown) {
       const idMatch = attrString.match(/id="([^"]+)"/);
       const dataMatch = attrString.match(/data="([^"]+)"/);
 
-      const id = idMatch ? idMatch[1] : '';
+      const id = idMatch ? idMatch[1].replace(/"/g, '&quot;') : '';
       let dataAttr = '';
 
       if (dataMatch) {

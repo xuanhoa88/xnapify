@@ -6,26 +6,26 @@
  */
 
 .container {
-  --primary-color: #0366d6;
-  --bg-color: #fff;
-  --text-color: #24292e;
-  --text-muted: #586069;
-  --border-color: #eaecef;
-  --code-bg: #f6f8fa;
+  --primary-color: var(--blue-9);
+  --bg-color: var(--color-panel-solid);
+  --text-color: var(--gray-12);
+  --text-muted: var(--gray-11);
+  --border-color: var(--gray-4);
+  --code-bg: var(--gray-3);
   --radius-sm: 6px;
   --radius-md: 8px;
 
   /* GitHub Alert Theme Variables */
-  --alert-note-bg: rgb(9 105 218 / 5%);
-  --alert-note-border: #0969da;
-  --alert-warning-bg: rgb(154 103 0 / 5%);
-  --alert-warning-border: #9a6700;
-  --alert-important-bg: rgb(130 80 223 / 5%);
-  --alert-important-border: #8250df;
-  --alert-tip-bg: rgb(26 127 55 / 5%);
-  --alert-tip-border: #1a7f37;
-  --alert-caution-bg: rgb(207 34 46 / 5%);
-  --alert-caution-border: #cf222e;
+  --alert-note-bg: var(--blue-a2);
+  --alert-note-border: var(--blue-9);
+  --alert-warning-bg: var(--amber-a2);
+  --alert-warning-border: var(--amber-9);
+  --alert-important-bg: var(--purple-a2);
+  --alert-important-border: var(--purple-9);
+  --alert-tip-bg: var(--green-a2);
+  --alert-tip-border: var(--green-9);
+  --alert-caution-bg: var(--red-a2);
+  --alert-caution-border: var(--red-9);
 
   /* Typography */
   --font-family: 'Inter', -apple-system, blinkmacsystemfont, 'Segoe UI', roboto,
@@ -117,7 +117,7 @@
 .article code {
   font-family: var(--font-mono);
   background-color: var(--code-bg);
-  color: #24292e;
+  color: var(--gray-12);
   padding: 0.2em 0.4em;
   margin: 0;
   font-size: 0.9em;
@@ -135,19 +135,19 @@
   margin: 1.5rem 0;
   padding: 0.5rem 1.5rem;
   color: var(--text-muted);
-  border-left: 4px solid #dfe2e5;
-  background-color: #fafbfc;
+  border-left: 4px solid var(--gray-5);
+  background-color: var(--gray-2);
   border-radius: 0 var(--radius-3) var(--radius-3) 0;
 }
 
 .errorContainer {
   text-align: center;
   padding: 4rem 2rem;
-  background-color: #fff3f3;
+  background-color: var(--red-2);
   border: 1px solid var(--alert-caution-border);
   border-radius: var(--radius-3);
   color: var(--alert-caution-border);
-  box-shadow: 0 4px 12px rgb(207 34 46 / 10%);
+  box-shadow: 0 4px 12px var(--red-a3);
 }
 
 .errorContainer h2 {

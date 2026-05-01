@@ -57,13 +57,14 @@ export default function CodeBlockActionsPopup({
 
   return (
     <ContextMenu align='left'>
-      <ContextMenu.Trigger
-        as={ToolbarButton}
-        icon={<CodeIcon width={16} height={16} />}
-        title={t('shared:form.wysiwyg.codeBlock', 'Code Block')}
-        isActive={isActive}
-        disabled={disabled}
-      />
+      <ContextMenu.Trigger asChild>
+        <ToolbarButton
+          icon={<CodeIcon width={16} height={16} />}
+          title={t('shared:form.wysiwyg.codeBlock', 'Code Block')}
+          isActive={isActive}
+          disabled={disabled}
+        />
+      </ContextMenu.Trigger>
 
       <ContextMenu.Menu>
         {/* Toggle Code Block */}
@@ -106,8 +107,11 @@ export default function CodeBlockActionsPopup({
                     .run()
                 }
               >
-                Auto ({t('shared:form.wysiwyg.autoLanguage', 'Auto-detect')})
-                {activeLanguage === 'auto' && ' ✓'}
+                {t(
+                  'shared:form.wysiwyg.autoLanguageLabel',
+                  'Auto (Auto-detect)',
+                )}
+                {activeLanguage === 'auto' ? ' ✓' : ''}
               </ContextMenu.Item>
 
               {filteredLanguages.map(lang => (
@@ -122,7 +126,7 @@ export default function CodeBlockActionsPopup({
                   }
                 >
                   {lang}
-                  {activeLanguage === lang && ' ✓'}
+                  {activeLanguage === lang ? ' ✓' : ''}
                 </ContextMenu.Item>
               ))}
 

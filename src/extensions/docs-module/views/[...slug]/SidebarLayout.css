@@ -8,27 +8,27 @@
 .layout {
   display: flex;
   min-height: 100vh;
-  background-color: #fff;
+  background-color: var(--color-background);
 }
 
 .sidebar {
   width: 280px;
   flex-shrink: 0;
-  border-right: 1px solid #eaecef;
-  background-color: #f8f9fa;
+  border-right: 1px solid var(--gray-4);
+  background-color: var(--gray-2);
   display: flex;
   flex-direction: column;
 }
 
 .sidebarHeader {
   padding: 1.5rem;
-  border-bottom: 1px solid #eaecef;
+  border-bottom: 1px solid var(--gray-4);
 }
 
 .sidebarHeader h2 {
   margin: 0;
   font-size: 1.25rem;
-  color: #24292e;
+  color: var(--gray-12);
 }
 
 .brandLink {
@@ -53,7 +53,7 @@
 .mainContent {
   flex-grow: 1;
   min-width: 0; /* allows text truncation if needed inside */
-  background: #fff;
+  background: var(--color-panel-solid);
 }
 
 .rootList {
@@ -74,7 +74,7 @@
 
 .dirLabel {
   font-weight: 600;
-  color: #586069;
+  color: var(--gray-11);
   text-transform: capitalize;
   margin-bottom: 0.25rem;
   font-size: 0.9rem;
@@ -87,20 +87,20 @@
 .link {
   display: block;
   padding: 0.35rem 0.5rem;
-  color: #24292e;
+  color: var(--gray-12);
   text-decoration: none;
   border-radius: 4px;
   font-size: 0.95rem;
 }
 
 .link:hover {
-  background-color: rgb(3 102 214 / 8%);
-  color: #0366d6;
+  background-color: var(--blue-a3);
+  color: var(--blue-9);
 }
 
 .link.active {
-  background-color: #0366d6;
-  color: #fff;
+  background-color: var(--blue-9);
+  color: var(--white-a12);
   font-weight: 500;
 }
 
@@ -114,7 +114,7 @@
   .sidebar {
     width: 100%;
     border-right: none;
-    border-bottom: 1px solid #eaecef;
+    border-bottom: 1px solid var(--gray-4);
     max-height: 50vh;
   }
 

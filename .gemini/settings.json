@@ -1,4 +1,4 @@
 {
   "preferredEditor": "vscode",
-  "contextFileName": ["AGENT.md", "AGENT.local.md"]
+  "contextFileName": ["AGENT.md", "AGENT.local.md", ".agent/RULES.md"]
 }

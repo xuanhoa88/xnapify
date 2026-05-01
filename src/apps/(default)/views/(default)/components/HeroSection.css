@@ -41,7 +41,7 @@
   height: 60vw;
   max-width: 800px;
   max-height: 800px;
-  background: radial-gradient(circle, rgb(62 99 221 / 15%) 0%, rgb(206 112 224 / 8%) 40%, rgb(255 255 255 / 0%) 70%);
+  background: radial-gradient(circle, var(--indigo-a4) 0%, var(--plum-a3) 40%, transparent 70%);
   border-radius: 50%;
   z-index: 0;
   pointer-events: none;
@@ -65,7 +65,7 @@
   border-radius: 9999px;
   margin-bottom: var(--space-6);
   border: 1px solid var(--indigo-6);
-  box-shadow: 0 4px 14px 0 rgb(62 99 221 / 10%);
+  box-shadow: 0 4px 14px 0 var(--indigo-a3);
 }
 
 .heroTitleModern {

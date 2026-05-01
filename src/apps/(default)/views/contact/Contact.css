@@ -74,7 +74,7 @@
   background-color: var(--color-panel-solid);
   padding: var(--space-7);
   border-radius: var(--radius-5);
-  box-shadow: 0 4px 24px -12px rgb(0 0 0 / 10%);
+  box-shadow: 0 4px 24px -12px var(--black-a3);
   border: 1px solid var(--gray-4);
 }
 
@@ -109,7 +109,7 @@
 
 .infoCard:hover {
   transform: translateY(-4px);
-  box-shadow: 0 12px 24px -12px rgb(0 0 0 / 10%);
+  box-shadow: 0 12px 24px -12px var(--black-a3);
 }
 
 .cardTitle {

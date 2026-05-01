@@ -71,24 +71,6 @@ export default function createSuggestion(onMentionQuery) {
             theme: 'mention',
             maxWidth: 'none',
             zIndex: 9999,
-            onCreate(instance) {
-              const box = instance.popper.querySelector('.tippy-box');
-              if (box) {
-                Object.assign(box.style, {
-                  background: '#fff',
-                  borderRadius: '8px',
-                  boxShadow:
-                    '0 1px 3px 0 rgb(0 0 0 / 10%), 0 4px 12px rgb(0 0 0 / 15%)',
-                  border: '1px solid #e4e4e7',
-                  overflow: 'hidden',
-                  padding: '0',
-                });
-              }
-              const arrow = instance.popper.querySelector('.tippy-arrow');
-              if (arrow) {
-                arrow.style.display = 'none';
-              }
-            },
           });
         },
 

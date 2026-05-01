@@ -33,13 +33,14 @@ export default function TableActionsPopup({ editor, disabled }) {
 
   return (
     <ContextMenu align='left'>
-      <ContextMenu.Trigger
-        as={ToolbarButton}
-        icon={<TableIcon width={16} height={16} />}
-        title={t('shared:form.wysiwyg.tableActions', 'Table Actions')}
-        isActive={editor.isActive('table')}
-        disabled={disabled}
-      />
+      <ContextMenu.Trigger asChild>
+        <ToolbarButton
+          icon={<TableIcon width={16} height={16} />}
+          title={t('shared:form.wysiwyg.tableActions', 'Table Actions')}
+          isActive={editor.isActive('table')}
+          disabled={disabled}
+        />
+      </ContextMenu.Trigger>
 
       <ContextMenu.Menu>
         {/* Insert */}

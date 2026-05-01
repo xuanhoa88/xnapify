@@ -7,8 +7,8 @@
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 
-import { ReloadIcon, GearIcon } from '@radix-ui/react-icons';
-import { Flex, Box, Text, Heading, Button } from '@radix-ui/themes';
+import { ReloadIcon } from '@radix-ui/react-icons';
+import { Flex, Box, Grid, Text, Button } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
@@ -145,29 +145,6 @@ function PreferencesCard() {
 
   return (
     <Box className={s.cardContainer}>
-      <Flex align='center' gap='4' mb='6'>
-        <Flex
-          align='center'
-          justify='center'
-          width='48px'
-          height='48px'
-          className={s.cardHeaderIconIndigo}
-        >
-          <GearIcon width={24} height={24} />
-        </Flex>
-        <Box>
-          <Heading as='h2' size='5' highContrast>
-            {t('profile.preferences', 'Preferences')}
-          </Heading>
-          <Text size='3' color='gray'>
-            {t(
-              'profile.preferencesDesc',
-              'Customize your experience and notifications',
-            )}
-          </Text>
-        </Box>
-      </Flex>
-
       <Form.Error message={error || ''} />
 
       <Form
@@ -190,26 +167,28 @@ function PreferencesFormFields({ loading }) {
 
   return (
     <Flex direction='column' gap='4'>
-      <Form.Field name='theme' label={t('profile.theme', 'Theme')}>
-        <Form.Select
-          options={[
-            { value: 'system', label: t('profile.themeSystem', 'System') },
-            { value: 'light', label: t('profile.themeLight', 'Light') },
-            { value: 'dark', label: t('profile.themeDark', 'Dark') },
-          ]}
-          placeholder={t('profile.themePlaceholder', 'Select a theme')}
-        />
-      </Form.Field>
+      <Grid columns={{ initial: '1', sm: '2' }} gap='4'>
+        <Form.Field name='theme' label={t('profile.theme', 'Theme')}>
+          <Form.Select
+            options={[
+              { value: 'system', label: t('profile.themeSystem', 'System') },
+              { value: 'light', label: t('profile.themeLight', 'Light') },
+              { value: 'dark', label: t('profile.themeDark', 'Dark') },
+            ]}
+            placeholder={t('profile.themePlaceholder', 'Select a theme')}
+          />
+        </Form.Field>
 
-      <Form.Field name='language' label={t('profile.language', 'Language')}>
-        <Form.Select
-          options={Object.entries(availableLocales).map(([code, name]) => ({
-            value: code,
-            label: name,
-          }))}
-          placeholder={t('profile.languagePlaceholder', 'Select a language')}
-        />
-      </Form.Field>
+        <Form.Field name='language' label={t('profile.language', 'Language')}>
+          <Form.Select
+            options={Object.entries(availableLocales).map(([code, name]) => ({
+              value: code,
+              label: name,
+            }))}
+            placeholder={t('profile.languagePlaceholder', 'Select a language')}
+          />
+        </Form.Field>
+      </Grid>
 
       <Form.Field name='timezone' label={t('profile.timezone', 'Timezone')}>
         <Form.Select

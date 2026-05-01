@@ -7,9 +7,8 @@
 
 import { useCallback, useEffect } from 'react';
 
-import { TrashIcon, ExclamationTriangleIcon } from '@radix-ui/react-icons';
-import { Flex, Box, Text, Heading, Button } from '@radix-ui/themes';
-import clsx from 'clsx';
+import { ExclamationTriangleIcon } from '@radix-ui/react-icons';
+import { Flex, Box, Text, Button } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
@@ -64,23 +63,6 @@ function DeleteAccountCard() {
 
   return (
     <Box className={s.cardContainer}>
-      <Flex align='center' gap='4' className={s.cardHeader}>
-        <Box className={clsx(s.cardHeaderIcon, s.cardHeaderIconRed)}>
-          <TrashIcon width={24} height={24} />
-        </Box>
-        <Box>
-          <Heading as='h2' size='5' className={s.cardTitle}>
-            {t('profile.deleteAccount', 'Delete Account')}
-          </Heading>
-          <Text size='3' color='gray'>
-            {t(
-              'profile.deleteAccountDesc',
-              'Permanently delete your account and all data',
-            )}
-          </Text>
-        </Box>
-      </Flex>
-
       <Flex align='start' gap='3' className={s.warningBox}>
         <Box className={s.warningIcon}>
           <ExclamationTriangleIcon width={20} height={20} />

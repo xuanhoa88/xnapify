@@ -42,13 +42,14 @@ export default function ColorPickerPopup({
 }) {
   return (
     <ContextMenu align='left'>
-      <ContextMenu.Trigger
-        as={ToolbarButton}
-        icon={icon}
-        title={title}
-        isActive={isActive}
-        disabled={disabled}
-      />
+      <ContextMenu.Trigger asChild>
+        <ToolbarButton
+          icon={icon}
+          title={title}
+          isActive={isActive}
+          disabled={disabled}
+        />
+      </ContextMenu.Trigger>
 
       <ContextMenu.Menu>
         <div className={s.popupContainer}>

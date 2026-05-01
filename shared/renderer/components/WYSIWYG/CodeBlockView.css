@@ -8,8 +8,8 @@
 /* Code block wrapper — replaces default <pre> rendering */
 .codeBlockWrapper {
   position: relative;
-  background-color: #1e1e1e;
-  border: 1px solid var(--color-border);
+  background-color: var(--gray-2);
+  border: 1px solid var(--gray-a5);
   border-radius: var(--radius-3);
   margin: 0.5em 0;
   overflow: hidden;
@@ -21,15 +21,15 @@
   align-items: center;
   justify-content: space-between;
   padding: var(--space-1) var(--space-3);
-  background: #2d2d2d;
-  border-bottom: 1px solid rgba(255 255 255 / 8%);
+  background: var(--gray-a2);
+  border-bottom: 1px solid var(--gray-a4);
   user-select: none;
 }
 
 .languageLabel {
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
-  color: #999;
+  color: var(--gray-a9);
   text-transform: lowercase;
   letter-spacing: 0.03em;
   font-family: var(
@@ -50,10 +50,12 @@
   background: transparent;
   border: none;
   border-radius: var(--radius-2);
-  color: #999;
+  color: var(--gray-a9);
   font-size: var(--font-size-xs);
   cursor: pointer;
-  transition: var(--transition-base);
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease;
   font-family: var(
     --font-family-mono,
     'Menlo',
@@ -64,12 +66,12 @@
 }
 
 .copyButton:hover {
-  background: rgba(255 255 255 / 10%);
-  color: #d4d4d4;
+  background: var(--gray-a3);
+  color: var(--gray-12);
 }
 
 .copyButton.copied {
-  color: #4ade80;
+  color: var(--green-9);
 }
 
 .copyIcon {
@@ -85,7 +87,7 @@
   border: none !important;
   border-radius: 0 !important;
   overflow-x: auto;
-  color: #d4d4d4;
+  color: var(--gray-12);
   font-family: var(
     --font-family-mono,
     'Menlo',

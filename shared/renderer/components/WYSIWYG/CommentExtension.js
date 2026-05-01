@@ -140,7 +140,10 @@ export const CommentExtension = Mark.create({
 
   addKeyboardShortcuts() {
     return {
-      'Mod-Shift-c': () => this.editor.commands.setComment(),
+      'Mod-Shift-c': () => {
+        const id = `comment-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        return this.editor.commands.setComment(id, '[]');
+      },
     };
   },
 

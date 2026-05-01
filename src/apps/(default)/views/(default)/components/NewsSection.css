@@ -79,17 +79,17 @@
   padding: var(--space-6);
   border: 1px solid var(--gray-4);
   box-shadow:
-    0 4px 6px -1px rgb(0 0 0 / 2%),
-    inset 0 2px 4px 0 rgb(255 255 255 / 50%);
+    0 4px 6px -1px var(--black-a1),
+    inset 0 2px 4px 0 var(--white-a8);
   transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .newsCard:hover {
   transform: translateY(-4px);
   box-shadow:
-    0 12px 20px -5px rgb(0 0 0 / 6%),
-    0 4px 6px -4px rgb(0 0 0 / 3%),
-    inset 0 2px 4px 0 rgb(255 255 255 / 80%);
+    0 12px 20px -5px var(--black-a2),
+    0 4px 6px -4px var(--black-a1),
+    inset 0 2px 4px 0 var(--white-a11);
   border-color: var(--indigo-5);
 }
 

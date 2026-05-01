@@ -7,9 +7,7 @@
 
 import { useCallback, useMemo, useEffect } from 'react';
 
-import { PersonIcon } from '@radix-ui/react-icons';
-import { Flex, Box, Grid, Text, Heading, Button } from '@radix-ui/themes';
-import clsx from 'clsx';
+import { Flex, Box, Grid, Button } from '@radix-ui/themes';
 import merge from 'lodash/merge';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
@@ -107,20 +105,6 @@ function PersonalInfoCard() {
 
   return (
     <Box className={s.cardContainer}>
-      <Flex align='center' gap='4' className={s.cardHeader}>
-        <Box className={clsx(s.cardHeaderIcon, s.cardHeaderIconIndigo)}>
-          <PersonIcon width={24} height={24} />
-        </Box>
-        <Box>
-          <Heading as='h2' size='5' className={s.cardTitle}>
-            {t('profile.personalInfo', 'Personal Information')}
-          </Heading>
-          <Text size='3' color='gray'>
-            {t('profile.personalInfoDesc', 'Update your personal details')}
-          </Text>
-        </Box>
-      </Flex>
-
       <Form.Error message={error || ''} />
 
       <Form

@@ -33,32 +33,49 @@ function Profile() {
 
         <Box className='mt-6'>
           <Tabs.Root defaultValue='personal'>
-            <Tabs.List>
-              <Tabs.Trigger value='personal' className='cursor-pointer'>
-                <Box className='inline-flex mr-2'>
-                  <PersonIcon width={18} height={18} />
-                </Box>
-                {t('profile.personalInfo', 'Personal Info')}
-              </Tabs.Trigger>
-              <Tabs.Trigger value='preferences' className='cursor-pointer'>
-                <Box className='inline-flex mr-2'>
-                  <GearIcon width={18} height={18} />
-                </Box>
-                {t('profile.preferences', 'Preferences')}
-              </Tabs.Trigger>
-              <Tabs.Trigger value='security' className='cursor-pointer'>
-                <Box className='inline-flex mr-2'>
-                  <LockClosedIcon width={18} height={18} />
-                </Box>
-                {t('profile.security', 'Security')}
-              </Tabs.Trigger>
-              <Tabs.Trigger value='danger' className='cursor-pointer'>
-                <Box className='inline-flex mr-2'>
-                  <TrashIcon width={18} height={18} />
-                </Box>
-                {t('profile.dangerZone', 'Danger Zone')}
-              </Tabs.Trigger>
-            </Tabs.List>
+            <Box
+              className='overflow-x-auto pb-2 [&::-webkit-scrollbar]:hidden'
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
+              <Tabs.List className='min-w-max'>
+                <Tabs.Trigger
+                  value='personal'
+                  className='cursor-pointer whitespace-nowrap'
+                >
+                  <Box className='inline-flex mr-2'>
+                    <PersonIcon width={18} height={18} />
+                  </Box>
+                  {t('profile.personalInfo', 'Personal Info')}
+                </Tabs.Trigger>
+                <Tabs.Trigger
+                  value='preferences'
+                  className='cursor-pointer whitespace-nowrap'
+                >
+                  <Box className='inline-flex mr-2'>
+                    <GearIcon width={18} height={18} />
+                  </Box>
+                  {t('profile.preferences', 'Preferences')}
+                </Tabs.Trigger>
+                <Tabs.Trigger
+                  value='security'
+                  className='cursor-pointer whitespace-nowrap'
+                >
+                  <Box className='inline-flex mr-2'>
+                    <LockClosedIcon width={18} height={18} />
+                  </Box>
+                  {t('profile.security', 'Security')}
+                </Tabs.Trigger>
+                <Tabs.Trigger
+                  value='danger'
+                  className='cursor-pointer whitespace-nowrap'
+                >
+                  <Box className='inline-flex mr-2'>
+                    <TrashIcon width={18} height={18} />
+                  </Box>
+                  {t('profile.dangerZone', 'Danger Zone')}
+                </Tabs.Trigger>
+              </Tabs.List>
+            </Box>
 
             <Box pt='4'>
               <Tabs.Content value='personal'>

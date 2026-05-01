@@ -7,7 +7,7 @@
 
 .bannerContainer {
   background-color: var(--orange-9);
-  color: white;
+  color: var(--white-a12);
   padding: var(--space-2) var(--space-4);
   position: sticky;
   top: 0;
@@ -20,7 +20,7 @@
 }
 
 .stopBtn {
-  color: white;
+  color: var(--white-a12);
   background-color: var(--orange-10);
   border: 1px solid var(--orange-11);
 }

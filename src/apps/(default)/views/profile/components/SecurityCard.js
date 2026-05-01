@@ -7,12 +7,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-import {
-  LockClosedIcon,
-  CheckCircledIcon,
-  LockOpen1Icon,
-} from '@radix-ui/react-icons';
-import { Flex, Box, Text, Heading, Button } from '@radix-ui/themes';
+import { CheckCircledIcon, LockOpen1Icon } from '@radix-ui/react-icons';
+import { Flex, Box, Grid, Text, Button } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
@@ -74,36 +70,21 @@ function SecurityCard() {
 
   return (
     <Box className={s.cardContainer}>
-      <Flex align='center' gap='4' mb='6'>
-        <Flex
-          align='center'
-          justify='center'
-          width='48px'
-          height='48px'
-          className={s.cardHeaderIconIndigo}
-        >
-          <LockClosedIcon width={24} height={24} />
-        </Flex>
-        <Box>
-          <Heading as='h2' size='5' highContrast>
-            {t('profile.security', 'Security')}
-          </Heading>
-          <Text size='3' color='gray'>
-            {t('profile.securityDesc', 'Manage your password and security')}
-          </Text>
-        </Box>
-      </Flex>
-
-      <Flex direction='column' gap='3' className={s.tipsBox}>
+      <Flex
+        direction={{ initial: 'column', md: 'row' }}
+        wrap='wrap'
+        gap='4'
+        className={s.tipsBox}
+      >
         <Flex align='center' gap='2' className={s.infoItem}>
           <CheckCircledIcon width={16} height={16} />
-          <Text size='3'>
+          <Text size='2'>
             {t('profile.passwordTip1', 'Use at least 8 characters')}
           </Text>
         </Flex>
         <Flex align='center' gap='2' className={s.infoItem}>
           <CheckCircledIcon width={16} height={16} />
-          <Text size='3'>
+          <Text size='2'>
             {t(
               'profile.passwordTip2',
               'Mix uppercase, lowercase, numbers & symbols',
@@ -112,7 +93,7 @@ function SecurityCard() {
         </Flex>
         <Flex align='center' gap='2' className={s.infoItem}>
           <CheckCircledIcon width={16} height={16} />
-          <Text size='3'>
+          <Text size='2'>
             {t('profile.passwordTip3', 'Avoid common words or personal info')}
           </Text>
         </Flex>
@@ -175,19 +156,21 @@ function SecurityFormFields({ loading, dispatch }) {
         <Form.Password />
       </Form.Field>
 
-      <Form.Field
-        name='newPassword'
-        label={t('profile.newPassword', 'New Password')}
-      >
-        <Form.Password />
-      </Form.Field>
+      <Grid columns={{ initial: '1', sm: '2' }} gap='4'>
+        <Form.Field
+          name='newPassword'
+          label={t('profile.newPassword', 'New Password')}
+        >
+          <Form.Password />
+        </Form.Field>
 
-      <Form.Field
-        name='confirmNewPassword'
-        label={t('profile.confirmNewPassword', 'Confirm New Password')}
-      >
-        <Form.Password />
-      </Form.Field>
+        <Form.Field
+          name='confirmNewPassword'
+          label={t('profile.confirmNewPassword', 'Confirm New Password')}
+        >
+          <Form.Password />
+        </Form.Field>
+      </Grid>
 
       <Flex justify='end'>
         <Button

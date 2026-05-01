@@ -37,12 +37,13 @@ export default function MediaActionsPopup({
 
   return (
     <ContextMenu align='left'>
-      <ContextMenu.Trigger
-        as={ToolbarButton}
-        icon={<VideoIcon width={16} height={16} />}
-        title={t('shared:form.wysiwyg.mediaActions', 'Media')}
-        disabled={disabled}
-      />
+      <ContextMenu.Trigger asChild>
+        <ToolbarButton
+          icon={<VideoIcon width={16} height={16} />}
+          title={t('shared:form.wysiwyg.mediaActions', 'Media')}
+          disabled={disabled}
+        />
+      </ContextMenu.Trigger>
 
       <ContextMenu.Menu>
         {hasVideo && (

@@ -8,8 +8,8 @@
 .meshGradient1 {
   background: radial-gradient(
     circle,
-    rgb(79 70 229 / 100%) 0%,
-    rgb(30 27 75 / 0%) 70%
+    var(--indigo-9) 0%,
+    transparent 70%
   );
   animation-duration: 8s;
 }
@@ -17,8 +17,8 @@
 .meshGradient2 {
   background: radial-gradient(
     circle,
-    rgb(56 189 248 / 100%) 0%,
-    rgb(15 23 42 / 0%) 70%
+    var(--blue-9) 0%,
+    transparent 70%
   );
   animation-duration: 12s;
   animation-delay: 1s;

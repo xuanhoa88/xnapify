@@ -27,7 +27,7 @@ const {
 } = features;
 
 /**
- * ProfileHeader strictly rendered with explicit React structures bypassing CSS Module imports.
+ * ProfileHeader with cover gradient, avatar ring, and stat badges.
  */
 function ProfileHeader() {
   const { t } = useTranslation();
@@ -79,87 +79,89 @@ function ProfileHeader() {
     [dispatch],
   );
 
+  const rolesCount =
+    (user && Array.isArray(user.roles) && user.roles.length) || 0;
+  const groupsCount =
+    (user && Array.isArray(user.groups) && user.groups.length) || 0;
+
   return (
-    <Flex
-      align='center'
-      gap='5'
-      direction={{ initial: 'column', md: 'row' }}
-      className={s.headerContainer}
-    >
-      <Flex direction='column' align='center' className={s.avatarSection}>
-        <Box
-          onClick={handleAvatarClick}
-          role='button'
-          tabIndex={0}
-          onKeyDown={e => {
-            if (e.key === 'Enter') handleAvatarClick();
-          }}
-          className={clsx(s.avatarBox, loading && s.avatarBoxLoading)}
-        >
-          {avatarUrl ? (
-            <img src={avatarUrl} alt='Profile' className={s.avatarImg} />
-          ) : (
-            <Text>{avatarInitial}</Text>
-          )}
-          <Flex
-            className={clsx(s.avatarOverlay, loading && s.avatarOverlayLoading)}
-            align='center'
-            justify='center'
+    <Box className={s.headerContainer}>
+      <Box className={s.coverBackground} />
+      <Flex className={s.headerContent}>
+        {/* Avatar */}
+        <Flex direction='column' align='center' className={s.avatarSection}>
+          <Box
+            onClick={handleAvatarClick}
+            role='button'
+            tabIndex={0}
+            onKeyDown={e => {
+              if (e.key === 'Enter') handleAvatarClick();
+            }}
+            className={clsx(s.avatarBox, loading && s.avatarBoxLoading)}
           >
-            {loading ? (
-              <ReloadIcon width={32} height={32} className={s.spinner} />
+            {avatarUrl ? (
+              <img src={avatarUrl} alt='Profile' className={s.avatarImg} />
             ) : (
-              <CameraIcon width={32} height={32} />
+              <Text>{avatarInitial}</Text>
             )}
-          </Flex>
-        </Box>
-        <input
-          type='file'
-          ref={fileInputRef}
-          className={s.avatarInput}
-          onChange={handleFileChange}
-          accept='image/*'
-          disabled={loading}
-        />
-        {error && (
-          <Text size='3' color='red' align='center' className={s.errorText}>
-            {error}
+            <Flex
+              className={clsx(
+                s.avatarOverlay,
+                loading && s.avatarOverlayLoading,
+              )}
+              align='center'
+              justify='center'
+            >
+              {loading ? (
+                <ReloadIcon width={28} height={28} className={s.spinner} />
+              ) : (
+                <CameraIcon width={28} height={28} />
+              )}
+            </Flex>
+          </Box>
+          <input
+            type='file'
+            ref={fileInputRef}
+            className={s.avatarInput}
+            onChange={handleFileChange}
+            accept='image/*'
+            disabled={loading}
+          />
+          {error && (
+            <Text size='2' color='red' align='center' className={s.errorText}>
+              {error}
+            </Text>
+          )}
+        </Flex>
+
+        {/* Name, email, stats */}
+        <Flex direction='column' grow='1' className={s.infoSection}>
+          <Heading as='h1' size='7' mb='1' className={s.displayName}>
+            {displayName || t('navigation.profile', 'Profile')}
+          </Heading>
+          <Text size='3' className={s.emailText}>
+            {(user && user.email) || ''}
           </Text>
-        )}
-      </Flex>
 
-      <Flex
-        direction='column'
-        grow='1'
-        align={{ initial: 'center', md: 'start' }}
-      >
-        <Heading as='h1' size='7' mb='1' highContrast>
-          {displayName || t('navigation.profile', 'Profile')}
-        </Heading>
-        <Text size='3' color='gray' mb='4'>
-          {(user && user.email) || ''}
-        </Text>
-
-        <Flex gap='5' justify={{ initial: 'center', md: 'start' }}>
-          <Flex direction='column' align={{ initial: 'center', md: 'start' }}>
-            <Text size='6' weight='bold' className={s.statValue}>
-              {(user && Array.isArray(user.roles) && user.roles.length) || 0}
-            </Text>
-            <Text size='3' color='gray' weight='medium' className={s.statLabel}>
-              {t('profile.roles', 'Roles')}
-            </Text>
-          </Flex>
-          <Flex direction='column' align={{ initial: 'center', md: 'start' }}>
-            <Text size='6' weight='bold' className={s.statValue}>
-              {(user && Array.isArray(user.groups) && user.groups.length) || 0}
-            </Text>
-            <Text size='3' color='gray' weight='medium' className={s.statLabel}>
-              {t('profile.groups', 'Groups')}
-            </Text>
-          </Flex>
+          <Box className={s.statsRow}>
+            <Box className={s.statBadge}>
+              <Text size='5' weight='bold' className={s.statValue}>
+                {rolesCount}
+              </Text>
+              <Text className={s.statLabel}>{t('profile.roles', 'Roles')}</Text>
+            </Box>
+            <Box className={s.statBadge}>
+              <Text size='5' weight='bold' className={s.statValue}>
+                {groupsCount}
+              </Text>
+              <Text className={s.statLabel}>
+                {t('profile.groups', 'Groups')}
+              </Text>
+            </Box>
+          </Box>
         </Flex>
       </Flex>
-    </Flex>
+    </Box>
   );
 }
 

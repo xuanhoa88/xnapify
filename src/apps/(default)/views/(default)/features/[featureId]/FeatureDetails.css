@@ -119,7 +119,7 @@
   background-color: var(--color-panel-solid);
   border-radius: var(--radius-5);
   padding: var(--space-7);
-  box-shadow: 0 8px 32px -16px rgb(0 0 0 / 10%);
+  box-shadow: 0 8px 32px -16px var(--black-a3);
   border: 1px solid var(--gray-4);
 }
 

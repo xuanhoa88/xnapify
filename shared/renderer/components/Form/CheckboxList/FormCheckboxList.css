@@ -97,7 +97,7 @@
 
 .searchClear:hover {
   background-color: var(--color-error);
-  color: white;
+  color: var(--white-a12);
   transform: scale(1.1);
 }
 
