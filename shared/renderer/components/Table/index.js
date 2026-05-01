@@ -1,3 +1,10 @@
+/**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
 export { default as DataTable } from './DataTable';
 export { default as TableBulkActions } from './TableBulkActions';
 export { default as TablePagination } from './TablePagination';

@@ -1,6 +1,13 @@
 #!/usr/bin/env node
 
 /**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+/**
  * xnapify Secret Scanner — Pre-commit hook
  *
  * Scans staged files for hardcoded secrets, API keys, tokens, and credentials.

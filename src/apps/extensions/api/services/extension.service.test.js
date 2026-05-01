@@ -1,3 +1,10 @@
+/**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
 // Mock fs (for existsSync and fs.promises.rm, etc.)
 jest.mock('fs', () => {
   const mockRm = jest.fn();

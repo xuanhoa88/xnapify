@@ -101,7 +101,7 @@ function AdminNotifications() {
 
       <Popover.Content
         align='end'
-        className='p-0 bg-panel-solid/90 backdrop-blur-md border border-gray-a6 rounded-md shadow-lg overflow-hidden z-[100] w-[320px] data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95'
+        className='p-0 bg-panel-solid/90 backdrop-blur-md border border-gray-a6 rounded-md shadow-lg overflow-hidden z-[100] w-[calc(100vw-24px)] sm:w-[380px] data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95'
       >
         <Flex
           align='center'
@@ -111,7 +111,7 @@ function AdminNotifications() {
           <Text size='3' weight='bold'>
             {t('common.notifications', 'Notifications')}
           </Text>
-          <Text size='1' color='gray'>
+          <Text size='2' color='gray'>
             {t('common.newNotificationsCount', '{{count}} new', {
               count: unreadCount,
             })}
@@ -148,14 +148,15 @@ function AdminNotifications() {
                 <Flex direction='column' width='100%' overflow='hidden'>
                   <Flex justify='between' align='start'>
                     <Text
-                      size='3'
+                      size='2'
                       weight={notification.read ? 'regular' : 'bold'}
                       highContrast
+                      className='line-clamp-1'
                     >
                       {notification.title}
                     </Text>
                   </Flex>
-                  <Text size='3' color='gray' mt='1'>
+                  <Text size='2' color='gray' mt='1' className='line-clamp-2'>
                     {notification.message}
                   </Text>
                   <Text size='1' color='gray' mt='1'>

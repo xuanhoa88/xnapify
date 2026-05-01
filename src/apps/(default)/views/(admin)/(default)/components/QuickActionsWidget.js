@@ -1,3 +1,10 @@
+/**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
 import { PlusIcon } from '@radix-ui/react-icons';
 import { Flex, Button } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';

@@ -1,3 +1,10 @@
+/**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
 jest.mock('../utils/checksum.util', () => ({
   computeChecksum: jest.fn().mockResolvedValue('abc123hash'),
   verifyExtensionChecksum: jest

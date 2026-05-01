@@ -1,6 +1,13 @@
 #!/usr/bin/env node
 
 /**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+/**
  * File Naming Format Check
  *
  * Scans directories for .js files to ensure they follow camelCase format

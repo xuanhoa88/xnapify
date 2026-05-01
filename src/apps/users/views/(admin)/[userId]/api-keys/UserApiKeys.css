@@ -1,4 +1,9 @@
-
+/**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
 
 .newKeyBox {
   margin-bottom: var(--space-6);
@@ -34,8 +39,6 @@
   color: var(--green-12);
   font-size: var(--font-size-3);
 }
-
-
 
 .fieldPaddingBox {
   margin-bottom: var(--space-4);
