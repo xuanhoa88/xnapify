@@ -105,3 +105,58 @@
   color: var(--white-a12) !important;
   background-color: rgb(255 255 255 / 10%) !important;
 }
+
+/* ── Mobile Responsiveness ──────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .bulkBarContainer {
+    width: calc(100vw - 32px); /* Fallback for browsers not supporting dynamic viewport units */
+    max-width: 100%;
+    padding: 8px 12px;
+    gap: var(--space-2);
+    border-radius: 16px;
+    white-space: normal;
+    overflow-x: auto;
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+
+  .bulkBarContainer::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
+  }
+
+  .bulkItemCountText {
+    display: none;
+  }
+
+  .bulkActionsFlex {
+    border-left: none;
+    padding-left: var(--space-2);
+  }
+
+  .bulkClearButton {
+    border-left: none !important;
+    padding-left: var(--space-2) !important;
+    margin-left: auto;
+  }
+
+  .clearText {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .bulkBarContainer {
+    width: calc(100vw - 24px);
+    bottom: var(--space-4);
+  }
+  
+  .actionLabel {
+    display: none;
+  }
+  
+  .bulkActionButton {
+    padding: 0 8px !important;
+  }
+}
+

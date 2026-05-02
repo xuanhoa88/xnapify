@@ -63,7 +63,7 @@ function TableBulkActions({
               className={s.bulkActionButton}
             >
               {action.icon && <Icon name={action.icon} size={14} />}
-              {action.label}
+              <span className={s.actionLabel}>{action.label}</span>
             </Button>
           ))}
         {Array.isArray(moreActions) && moreActions.length > 0 && (
@@ -114,7 +114,9 @@ function TableBulkActions({
         className={s.bulkClearButton}
       >
         <Icon name='Cross1Icon' size={14} />
-        {t('shared:components.bulkActions.clear', 'Clear')}
+        <span className={s.clearText}>
+          {t('shared:components.bulkActions.clear', 'Clear')}
+        </span>
       </Button>
     </Flex>
   );
