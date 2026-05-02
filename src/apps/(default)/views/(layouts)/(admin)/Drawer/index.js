@@ -379,13 +379,13 @@ function Drawer({ minimal = false }) {
           height='64px'
           px={isCompact ? '0' : '5'}
           shrink='0'
-          className='border-b border-white/[0.06]'
+          className='border-b border-white/[0.06] overflow-hidden'
         >
           <Flex
             align='center'
             justify='center'
             className={clsx(
-              'relative group/logo cursor-pointer overflow-hidden shrink-0',
+              'relative group/logo overflow-hidden shrink-0',
               isCompact ? 'w-10 h-10' : 'w-8 h-8',
             )}
           >
@@ -401,15 +401,13 @@ function Drawer({ minimal = false }) {
             />
           </Flex>
           {!isCompact && (
-            <Flex direction='column' justify='center'>
-              <Text
-                size='4'
-                weight='bold'
-                className='text-white tracking-tight leading-none mt-0.5'
-              >
-                {t('header.brand', 'xnapify')}
-              </Text>
-            </Flex>
+            <Text
+              size='4'
+              weight='bold'
+              className='text-white tracking-tight whitespace-nowrap'
+            >
+              {t('header.brand', 'xnapify')}
+            </Text>
           )}
         </Flex>
 
@@ -426,7 +424,7 @@ function Drawer({ minimal = false }) {
               {!isCompact && (
                 <Text
                   as='div'
-                  className='uppercase tracking-[0.08em] text-slate-500 px-3 mb-1.5 select-none text-[10.5px] font-semibold'
+                  className='uppercase tracking-[0.08em] text-slate-500 px-3 mb-1.5 select-none text-[10.5px] font-semibold whitespace-nowrap truncate'
                 >
                   {group.ns}
                 </Text>
@@ -454,7 +452,7 @@ function Drawer({ minimal = false }) {
             {!isCompact && (
               <Text
                 as='div'
-                className='uppercase tracking-[0.08em] text-slate-500 px-3 mb-1.5 select-none text-[10.5px] font-semibold mt-6'
+                className='uppercase tracking-[0.08em] text-slate-500 px-3 mb-1.5 select-none text-[10.5px] font-semibold mt-6 whitespace-nowrap truncate'
               >
                 {t('navigation.quick', 'Quick Links')}
               </Text>
@@ -478,7 +476,10 @@ function Drawer({ minimal = false }) {
 
         {/* User Footer */}
         {isAuth && user && (
-          <Box shrink='0' className='border-t border-white/[0.06] w-full'>
+          <Box
+            shrink='0'
+            className='border-t border-white/[0.06] w-full overflow-hidden'
+          >
             {isCompact ? (
               <Flex
                 direction='column'
