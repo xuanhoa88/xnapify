@@ -30,6 +30,7 @@ import {
   selectSearch,
   selectPage,
   selectPageSize,
+  selectViewMode,
 } from '../redux';
 
 import s from './Files.css';
@@ -47,23 +48,36 @@ function Files() {
   const search = useSelector(selectSearch);
   const page = useSelector(selectPage);
   const pageSize = useSelector(selectPageSize);
+  const viewMode = useSelector(selectViewMode);
   const shareModalRef = useRef(null);
 
   const [isDragging, setIsDragging] = useState(false);
   const dragCounter = useRef(0);
 
-  // Initial fetch and fetch on view/folder/search/pagination change
+  // Initial fetch and fetch on view/folder/search/pagination change.
+  // In masonry mode, page increments are handled by FileGrid.handleLoadMore
+  // (which passes append: true), so we only fetch page 1 here.
   useEffect(() => {
+    if (viewMode === 'masonry' && page > 1) return;
+
     dispatch(
       fetchFiles({
         view: currentView,
         parentId: currentFolderId,
         search,
-        page,
+        page: viewMode === 'masonry' ? 1 : page,
         pageSize,
       }),
     );
-  }, [dispatch, currentView, currentFolderId, search, page, pageSize]);
+  }, [
+    dispatch,
+    currentView,
+    currentFolderId,
+    search,
+    page,
+    pageSize,
+    viewMode,
+  ]);
 
   const handleDragEnter = useCallback(e => {
     e.preventDefault();

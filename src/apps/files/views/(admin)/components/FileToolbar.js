@@ -9,8 +9,8 @@ import React, { useCallback } from 'react';
 
 import {
   ChevronRightIcon,
+  ColumnsIcon,
   ListBulletIcon,
-  DashboardIcon,
 } from '@radix-ui/react-icons';
 import { Flex, Box, Button, SegmentedControl } from '@radix-ui/themes';
 import clsx from 'clsx';
@@ -113,11 +113,11 @@ export default function FileToolbar() {
             </Flex>
           </SegmentedControl.Item>
           <SegmentedControl.Item
-            value='grid'
-            title={t('files:toolbar.grid_view', 'Grid view')}
+            value='masonry'
+            title={t('files:toolbar.masonry_view', 'Masonry view')}
           >
             <Flex align='center' justify='center' className='w-6 h-6'>
-              <DashboardIcon width={16} height={16} />
+              <ColumnsIcon width={16} height={16} />
             </Flex>
           </SegmentedControl.Item>
         </SegmentedControl.Root>

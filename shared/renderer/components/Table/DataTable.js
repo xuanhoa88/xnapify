@@ -5,7 +5,14 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useCallback, useMemo, Children, isValidElement } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  Children,
+  isValidElement,
+} from 'react';
 
 import {
   ColumnsIcon,
@@ -494,6 +501,11 @@ function DataTable({
   gridCols = 3,
   columnWidth = 240,
 
+  // Infinite scroll (masonry)
+  onLoadMore,
+  hasMore,
+  loadingMore,
+
   // Selection
   selectable,
   selectedKeys,
@@ -595,7 +607,35 @@ function DataTable({
         ? Math.ceil(paginationProps.total / paginationProps.pageSize)
         : 1)
     : 0;
-  const showPagination = !!paginationProps;
+  const showPagination = !!paginationProps && as !== 'masonry';
+
+  // ─── Infinite scroll sentinel for masonry ──────────────────────────
+  const sentinelRef = useRef(null);
+
+  useEffect(() => {
+    if (as !== 'masonry' || !onLoadMore || !hasMore || loadingMore) {
+      return undefined;
+    }
+
+    const sentinel = sentinelRef.current;
+    const scrollRoot = masonryContainerRef.current;
+    if (!sentinel || !scrollRoot) return undefined;
+
+    const observer = new IntersectionObserver(
+      function handleIntersect(entries) {
+        if (entries[0] && entries[0].isIntersecting) {
+          onLoadMore();
+        }
+      },
+      { root: scrollRoot, rootMargin: '200px' },
+    );
+
+    observer.observe(sentinel);
+
+    return function cleanupObserver() {
+      observer.disconnect();
+    };
+  }, [as, onLoadMore, hasMore, loadingMore, masonryContainerRef]);
 
   // ─── Render ────────────────────────────────────────────────────────
   return (
@@ -840,6 +880,18 @@ function DataTable({
                       />
                     )
                   )}
+
+                  {/* Infinite scroll sentinel */}
+                  {hasData && as === 'masonry' && hasMore && (
+                    <Box ref={sentinelRef} className={s.masonrySentinel} />
+                  )}
+
+                  {/* Loading more indicator */}
+                  {loadingMore && (
+                    <Flex justify='center' align='center' py='4'>
+                      <Loader variant='spinner' />
+                    </Flex>
+                  )}
                 </Box>
               ) : (
                 <Box className={clsx(s.gridWrapper, s.customScrollbar)}>
@@ -971,6 +1023,11 @@ DataTable.propTypes = {
   renderCard: PropTypes.func,
   gridCols: PropTypes.oneOf([2, 3, 4, 5, 6]),
   columnWidth: PropTypes.number,
+
+  // Infinite scroll (masonry)
+  onLoadMore: PropTypes.func,
+  hasMore: PropTypes.bool,
+  loadingMore: PropTypes.bool,
 
   // Selection
   selectable: PropTypes.bool,

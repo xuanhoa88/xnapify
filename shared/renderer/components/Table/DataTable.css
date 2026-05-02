@@ -258,6 +258,7 @@
   position: absolute;
   top: 0;
   left: 0;
+  box-sizing: border-box;
 }
 
 .masonryMeasure {
@@ -268,8 +269,18 @@
   overflow: hidden;
 }
 
+.masonryMeasure * {
+  transition: none !important;
+  animation: none !important;
+}
+
 .masonryMeasureItem {
   float: left;
+}
+
+.masonrySentinel {
+  width: 100%;
+  height: 1px;
 }
 
 /* Empty state */

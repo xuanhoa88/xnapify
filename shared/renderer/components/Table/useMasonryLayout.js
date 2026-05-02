@@ -9,7 +9,6 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 
 const DEFAULT_COLUMN_WIDTH = 240;
 const GUTTER = 16;
-const RESIZE_DEBOUNCE_MS = 200;
 
 /**
  * Compute masonry positions for items using the shortest-column algorithm.
@@ -73,9 +72,8 @@ function computePositions(heights, columnCount, columnWidth, gutter) {
  * @returns {{ containerRef: React.RefObject, measureRef: React.RefObject, positions: Array, containerHeight: number, containerWidth: number, columnWidth: number, isReady: boolean }}
  */
 export function useMasonryLayout({ items, columnWidth: targetColumnWidth }) {
-  const containerRef = useRef(null);
+  const [containerNode, setContainerNode] = useState(null);
   const measureRef = useRef(null);
-  const resizeTimerRef = useRef(null);
 
   const colWidth = targetColumnWidth || DEFAULT_COLUMN_WIDTH;
 
@@ -91,16 +89,23 @@ export function useMasonryLayout({ items, columnWidth: targetColumnWidth }) {
    * Measure all child elements in the measurement container and compute layout.
    */
   const measureAndLayout = useCallback(() => {
-    const container = containerRef.current;
+    const container = containerNode;
     const measureContainer = measureRef.current;
     if (!container || !measureContainer) return;
 
-    const containerWidth = container.clientWidth;
+    const computedStyle = window.getComputedStyle(container);
+    const paddingLeft = parseFloat(computedStyle.paddingLeft) || 0;
+    const paddingRight = parseFloat(computedStyle.paddingRight) || 0;
+    const containerWidth = container.clientWidth - paddingLeft - paddingRight;
+
     if (containerWidth <= 0) return;
+
+    // Dynamically adjust target column width for smaller screens to allow 2 columns on mobile
+    const dynamicColWidth = containerWidth < 640 ? 150 : colWidth;
 
     // Calculate column count from available width
     const rawColumnCount = Math.floor(
-      (containerWidth + GUTTER) / (colWidth + GUTTER),
+      (containerWidth + GUTTER) / (dynamicColWidth + GUTTER),
     );
     const columnCount = Math.max(1, rawColumnCount);
 
@@ -113,6 +118,13 @@ export function useMasonryLayout({ items, columnWidth: targetColumnWidth }) {
     // Measure heights from hidden measurement container
     const measureChildren = measureContainer.children;
     const heights = [];
+
+    // Force the new width synchronously onto the measurement DOM nodes
+    // so we can read the correct offsetHeight before React re-renders.
+    for (let i = 0; i < measureChildren.length; i++) {
+      measureChildren[i].style.width = actualColumnWidth + 'px';
+    }
+
     for (let i = 0; i < measureChildren.length; i++) {
       heights.push(measureChildren[i].offsetHeight);
     }
@@ -133,34 +145,43 @@ export function useMasonryLayout({ items, columnWidth: targetColumnWidth }) {
       resolvedColumnWidth: actualColumnWidth,
       isReady: true,
     });
-  }, [colWidth]);
+  }, [colWidth, containerNode]);
 
-  // Observe container resize
+  // Observe container resize + window resize
   useEffect(() => {
-    const container = containerRef.current;
+    const container = containerNode;
     if (!container) return undefined;
 
-    const observer = new ResizeObserver(function handleResize() {
-      if (resizeTimerRef.current) {
-        clearTimeout(resizeTimerRef.current);
-      }
-      resizeTimerRef.current = setTimeout(function debouncedLayout() {
-        measureAndLayout();
-      }, RESIZE_DEBOUNCE_MS);
-    });
+    let frameId;
 
+    function scheduleLayout() {
+      if (frameId) {
+        cancelAnimationFrame(frameId);
+      }
+      frameId = requestAnimationFrame(function onFrame() {
+        measureAndLayout();
+      });
+    }
+
+    // ResizeObserver for container-level size changes (sidebar toggle, etc.)
+    const observer = new ResizeObserver(scheduleLayout);
     observer.observe(container);
+
+    // Window resize listener — catches browser window drag-resize even when
+    // the container element's own box dimensions don't trigger ResizeObserver.
+    window.addEventListener('resize', scheduleLayout);
 
     // Initial measurement
     measureAndLayout();
 
     return function cleanup() {
       observer.disconnect();
-      if (resizeTimerRef.current) {
-        clearTimeout(resizeTimerRef.current);
+      window.removeEventListener('resize', scheduleLayout);
+      if (frameId) {
+        cancelAnimationFrame(frameId);
       }
     };
-  }, [measureAndLayout]);
+  }, [measureAndLayout, containerNode]);
 
   // Re-measure when items change
   useEffect(() => {
@@ -174,7 +195,7 @@ export function useMasonryLayout({ items, columnWidth: targetColumnWidth }) {
   }, [items, measureAndLayout]);
 
   return {
-    containerRef: containerRef,
+    containerRef: setContainerNode, // Callback ref!
     measureRef: measureRef,
     positions: state.positions,
     containerHeight: state.containerHeight,

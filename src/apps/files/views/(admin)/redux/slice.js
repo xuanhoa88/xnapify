@@ -18,7 +18,7 @@ const initialState = {
   files: [],
   currentFolder: null,
   selectedFileIds: [],
-  viewMode: 'grid', // 'grid' | 'list'
+  viewMode: 'masonry', // 'masonry' | 'list'
 
   // Pagination & Search
   search: '',
@@ -28,7 +28,9 @@ const initialState = {
 
   // Async states
   loadingFiles: false,
+  loadingMore: false,
   initializedFiles: false,
+  hasMore: true,
   error: null,
 
   // Upload UI State
@@ -51,6 +53,7 @@ export const filesSlice = createSlice({
       state.currentFolderId = action.payload.folderId || null;
       state.selectedFileIds = [];
       state.error = null;
+      state.hasMore = true;
       // Reset pagination and search on view change
       state.page = 1;
       state.search = '';
@@ -58,6 +61,7 @@ export const filesSlice = createSlice({
     setSearch(state, action) {
       state.search = action.payload;
       state.page = 1; // Reset to first page on search
+      state.hasMore = true;
     },
     setPage(state, action) {
       state.page = action.payload;
@@ -87,7 +91,9 @@ export const filesSlice = createSlice({
       state.selectedFileIds = action.payload;
     },
     setViewMode(state, action) {
-      state.viewMode = action.payload; // 'grid' or 'list'
+      state.viewMode = action.payload; // 'masonry' or 'list'
+      state.page = 1;
+      state.hasMore = true;
     },
     setUploadModalOpen(state, action) {
       state.uploadModalOpen = action.payload;
@@ -112,21 +118,40 @@ export const filesSlice = createSlice({
   },
   extraReducers: builder => {
     // Fetch Files
-    builder.addCase(thunks.fetchFiles.pending, state => {
-      state.loadingFiles = true;
+    builder.addCase(thunks.fetchFiles.pending, (state, action) => {
+      const isAppend = action.meta && action.meta.arg && action.meta.arg.append;
+      if (isAppend) {
+        state.loadingMore = true;
+      } else {
+        state.loadingFiles = true;
+        state.selectedFileIds = [];
+      }
       state.error = null;
-      state.selectedFileIds = [];
     });
     builder.addCase(thunks.fetchFiles.fulfilled, (state, action) => {
+      const isAppend = action.meta && action.meta.arg && action.meta.arg.append;
       state.loadingFiles = false;
+      state.loadingMore = false;
       state.initializedFiles = true;
-      state.files = action.payload.files;
-      state.currentFolder = action.payload.currentFolder;
-      state.breadcrumbs = action.payload.breadcrumbs;
+
+      if (isAppend) {
+        // Append new items to existing list
+        state.files = state.files.concat(action.payload.files || []);
+      } else {
+        state.files = action.payload.files;
+        state.currentFolder = action.payload.currentFolder;
+        state.breadcrumbs = action.payload.breadcrumbs;
+      }
+
       state.total = action.payload.total || 0;
+
+      // Determine if there are more items to load
+      const totalLoaded = state.files.length;
+      state.hasMore = totalLoaded < state.total;
     });
     builder.addCase(thunks.fetchFiles.rejected, (state, action) => {
       state.loadingFiles = false;
+      state.loadingMore = false;
       state.initializedFiles = true;
       state.error = action.error.message;
     });

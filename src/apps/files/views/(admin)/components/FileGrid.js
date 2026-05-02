@@ -31,15 +31,20 @@ import {
   toggleStarItem,
   renameItem,
   deleteItemsPermanently,
+  fetchFiles,
   selectFiles,
   selectViewMode,
   selectSelectedFileIds,
   selectLoadingFiles,
   selectInitializedFiles,
   selectCurrentView,
+  selectCurrentFolderId,
   selectPage,
   selectPageSize,
   selectTotalItems,
+  selectHasMore,
+  selectLoadingMore,
+  selectSearch,
   setPage,
   setPageSize,
 } from '../redux';
@@ -57,13 +62,42 @@ export default function FileGrid({ onShare }) {
   const loading = useSelector(selectLoadingFiles);
   const initialized = useSelector(selectInitializedFiles);
   const currentView = useSelector(selectCurrentView);
+  const currentFolderId = useSelector(selectCurrentFolderId);
   const page = useSelector(selectPage);
   const pageSize = useSelector(selectPageSize);
   const totalItems = useSelector(selectTotalItems);
+  const hasMore = useSelector(selectHasMore);
+  const loadingMore = useSelector(selectLoadingMore);
+  const search = useSelector(selectSearch);
   const totalPages = Math.ceil(totalItems / pageSize);
 
   const [targetFile, setTargetFile] = useState(null);
   const renamePromptRef = useRef(null);
+
+  const handleLoadMore = useCallback(() => {
+    if (loadingMore || !hasMore) return;
+    const nextPage = page + 1;
+    dispatch(
+      fetchFiles({
+        view: currentView,
+        parentId: currentFolderId,
+        search: search,
+        page: nextPage,
+        pageSize: pageSize,
+        append: true,
+      }),
+    );
+    dispatch(setPage(nextPage));
+  }, [
+    dispatch,
+    loadingMore,
+    hasMore,
+    page,
+    currentView,
+    currentFolderId,
+    search,
+    pageSize,
+  ]);
 
   const handleContainerClick = useCallback(
     e => {
@@ -383,7 +417,7 @@ export default function FileGrid({ onShare }) {
         rowKey='id'
         loading={loading}
         initialized={initialized}
-        as={viewMode === 'list' ? 'table' : 'grid'}
+        as={viewMode === 'list' ? 'table' : 'masonry'}
         columns={columns}
         borderless
         renderCard={renderCard}
@@ -391,6 +425,9 @@ export default function FileGrid({ onShare }) {
         selectedKeys={selectedIds}
         onSelectionChange={keys => dispatch(setSelection(keys))}
         onRowClick={handleOpen}
+        onLoadMore={handleLoadMore}
+        hasMore={hasMore}
+        loadingMore={loadingMore}
       >
         <DataTable.Empty
           icon={<FolderIcon width={48} height={48} />}
@@ -413,7 +450,7 @@ export default function FileGrid({ onShare }) {
           ]}
         />
         <DataTable.Loader
-          variant={viewMode === 'grid' ? 'cards' : 'skeleton'}
+          variant={viewMode === 'masonry' ? 'cards' : 'skeleton'}
         />
         <DataTable.Pagination
           current={page}

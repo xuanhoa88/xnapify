@@ -20,11 +20,15 @@ export const selectCurrentFolder = state =>
 export const selectSelectedFileIds = state =>
   (state.files && state.files.selectedFileIds) || [];
 export const selectViewMode = state =>
-  (state.files && state.files.viewMode) || 'grid';
+  (state.files && state.files.viewMode) || 'masonry';
 export const selectLoadingFiles = state =>
   (state.files && state.files.loadingFiles) || false;
 export const selectInitializedFiles = state =>
   (state.files && state.files.initializedFiles) || false;
+export const selectHasMore = state =>
+  state.files && state.files.hasMore !== undefined ? state.files.hasMore : true;
+export const selectLoadingMore = state =>
+  (state.files && state.files.loadingMore) || false;
 export const selectError = state => (state.files && state.files.error) || null;
 export const selectUploadModalOpen = state =>
   (state.files && state.files.uploadModalOpen) || false;
