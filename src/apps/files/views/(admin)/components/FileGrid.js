@@ -383,7 +383,7 @@ export default function FileGrid({ onShare }) {
         rowKey='id'
         loading={loading}
         initialized={initialized}
-        viewType={viewMode === 'list' ? 'table' : 'grid'}
+        as={viewMode === 'list' ? 'table' : 'grid'}
         columns={columns}
         borderless
         renderCard={renderCard}

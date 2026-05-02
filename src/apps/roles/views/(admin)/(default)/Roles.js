@@ -262,7 +262,7 @@ function Roles() {
         rowKey='id'
         loading={loading}
         initialized={initialized}
-        viewType='grid'
+        as='grid'
         gridCols={4}
         renderCard={renderRoleCard}
         selectable

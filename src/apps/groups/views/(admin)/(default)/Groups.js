@@ -306,7 +306,7 @@ function Groups({ context }) {
         rowKey='id'
         loading={loading}
         initialized={initialized}
-        viewType='grid'
+        as='grid'
         gridCols={3}
         renderCard={renderGroupCard}
         selectable

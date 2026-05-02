@@ -238,6 +238,40 @@
   z-index: 2;
 }
 
+/* Masonry */
+.masonryWrapper {
+  position: relative;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: var(--space-4);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.masonryContainer {
+  position: relative;
+  width: 100%;
+}
+
+.masonryItem {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.masonryMeasure {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: -1;
+  overflow: hidden;
+}
+
+.masonryMeasureItem {
+  float: left;
+}
+
 /* Empty state */
 .emptyBlock {
   opacity: 0.6;

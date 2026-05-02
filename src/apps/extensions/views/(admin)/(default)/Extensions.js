@@ -476,7 +476,7 @@ function Extensions() {
   return (
     <Box className='p-6 max-w-[1400px] mx-auto'>
       <DataTable
-        viewType='grid'
+        as='grid'
         gridCols={3}
         dataSource={filteredExtensions}
         rowKey='id'

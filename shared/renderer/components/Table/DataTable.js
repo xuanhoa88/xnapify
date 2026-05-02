@@ -8,6 +8,7 @@
 import { useCallback, useMemo, Children, isValidElement } from 'react';
 
 import {
+  ColumnsIcon,
   Cross2Icon,
   DashboardIcon,
   ExclamationTriangleIcon,
@@ -32,6 +33,7 @@ import { PageHeader } from '../PageHeader';
 import TableBulkActions from './TableBulkActions';
 import TablePagination from './TablePagination';
 import TableSearch from './TableSearch';
+import { useMasonryLayout } from './useMasonryLayout';
 
 import s from './DataTable.css';
 
@@ -230,34 +232,47 @@ DataTableClearFilters.propTypes = {
 };
 
 /**
- * DataTable.ViewToggle — Table/grid view toggle.
+ * DataTable.ViewToggle — Table/grid/masonry view toggle.
  *
  * @example
- * <DataTable.ViewToggle viewType="table" onChange={setViewType} />
+ * <DataTable.ViewToggle as="table" onChange={setViewType} enableMasonry />
  */
-function DataTableViewToggle({ viewType, onChange }) {
+function DataTableViewToggle({ as, onChange, enableMasonry }) {
+  const { t } = useTranslation();
+
   if (!onChange) return null;
 
   return (
     <Flex className={s.viewToggle}>
       <IconButton
-        variant={viewType === 'table' ? 'soft' : 'ghost'}
-        color={viewType === 'table' ? 'indigo' : 'gray'}
+        variant={as === 'table' ? 'soft' : 'ghost'}
+        color={as === 'table' ? 'indigo' : 'gray'}
         size='1'
         onClick={() => onChange('table')}
-        title='Table view'
+        title={t('shared:components.dataTable.viewTable', 'Table view')}
       >
         <TableIcon width={14} height={14} />
       </IconButton>
       <IconButton
-        variant={viewType === 'grid' ? 'soft' : 'ghost'}
-        color={viewType === 'grid' ? 'indigo' : 'gray'}
+        variant={as === 'grid' ? 'soft' : 'ghost'}
+        color={as === 'grid' ? 'indigo' : 'gray'}
         size='1'
         onClick={() => onChange('grid')}
-        title='Grid view'
+        title={t('shared:components.dataTable.viewGrid', 'Grid view')}
       >
         <DashboardIcon width={14} height={14} />
       </IconButton>
+      {enableMasonry && (
+        <IconButton
+          variant={as === 'masonry' ? 'soft' : 'ghost'}
+          color={as === 'masonry' ? 'indigo' : 'gray'}
+          size='1'
+          onClick={() => onChange('masonry')}
+          title={t('shared:components.dataTable.viewMasonry', 'Masonry view')}
+        >
+          <ColumnsIcon width={14} height={14} />
+        </IconButton>
+      )}
     </Flex>
   );
 }
@@ -265,8 +280,9 @@ function DataTableViewToggle({ viewType, onChange }) {
 DataTableViewToggle.displayName = 'DataTableViewToggle';
 
 DataTableViewToggle.propTypes = {
-  viewType: PropTypes.oneOf(['table', 'grid']),
+  as: PropTypes.oneOf(['table', 'grid', 'masonry']),
   onChange: PropTypes.func,
+  enableMasonry: PropTypes.bool,
 };
 
 /**
@@ -473,9 +489,10 @@ function DataTable({
   rowKey,
 
   // View type
-  viewType = 'table',
+  as = 'table',
   renderCard,
   gridCols = 3,
+  columnWidth = 240,
 
   // Selection
   selectable,
@@ -549,6 +566,19 @@ function DataTable({
     [columns],
   );
 
+  // ─── Masonry layout ────────────────────────────────────────────────
+  const {
+    containerRef: masonryContainerRef,
+    measureRef: masonryMeasureRef,
+    positions: masonryPositions,
+    containerHeight: masonryHeight,
+    columnWidth: resolvedColumnWidth,
+    isReady: masonryReady,
+  } = useMasonryLayout({
+    items: as === 'masonry' ? dataSource || [] : [],
+    columnWidth: columnWidth,
+  });
+
   // ─── Determine states ──────────────────────────────────────────────
   const isFirstLoad =
     !initialized || (loading && (!dataSource || dataSource.length === 0));
@@ -617,7 +647,7 @@ function DataTable({
               {toolbarSlot}
 
               {/* Table view */}
-              {viewType === 'table' ? (
+              {as === 'table' ? (
                 <Box className={clsx(s.tableWrapper, s.customScrollbar)}>
                   <Table.Root variant={variant}>
                     <Table.Header className='bg-[var(--color-panel-solid)]'>
@@ -721,6 +751,96 @@ function DataTable({
                       />
                     ))}
                 </Box>
+              ) : as === 'masonry' ? (
+                <Box
+                  className={clsx(s.masonryWrapper, s.customScrollbar)}
+                  ref={masonryContainerRef}
+                >
+                  {hasData ? (
+                    <>
+                      {/* Hidden measurement container */}
+                      <Box ref={masonryMeasureRef} className={s.masonryMeasure}>
+                        {dataSource.map((record, rowIndex) => {
+                          const key = resolveRowKey(record, rowKey);
+                          return (
+                            <Box
+                              key={key}
+                              className={s.masonryMeasureItem}
+                              style={{
+                                width: resolvedColumnWidth + 'px',
+                              }}
+                            >
+                              {renderCard
+                                ? renderCard(record, visibleColumns, rowIndex)
+                                : JSON.stringify(record)}
+                            </Box>
+                          );
+                        })}
+                      </Box>
+
+                      {/* Positioned masonry container */}
+                      {masonryReady && (
+                        <Box
+                          className={s.masonryContainer}
+                          style={{ height: masonryHeight + 'px' }}
+                        >
+                          {dataSource.map((record, rowIndex) => {
+                            const key = resolveRowKey(record, rowKey);
+                            const isSelected =
+                              selectable &&
+                              selectedKeys &&
+                              selectedKeys.includes(key);
+                            const pos = masonryPositions[rowIndex];
+
+                            if (!pos) return null;
+
+                            return (
+                              <Box
+                                key={key}
+                                className={clsx(
+                                  s.masonryItem,
+                                  isSelected && s.selectedRow,
+                                )}
+                                style={{
+                                  transform:
+                                    'translateX(' +
+                                    pos.left +
+                                    'px) translateY(' +
+                                    pos.top +
+                                    'px)',
+                                  width: pos.width + 'px',
+                                }}
+                              >
+                                {selectable && (
+                                  <Box className={s.gridCheckbox}>
+                                    <Checkbox
+                                      checked={isSelected}
+                                      onCheckedChange={c =>
+                                        handleSelectRow(key, c)
+                                      }
+                                    />
+                                  </Box>
+                                )}
+                                {renderCard
+                                  ? renderCard(record, visibleColumns, rowIndex)
+                                  : JSON.stringify(record)}
+                              </Box>
+                            );
+                          })}
+                        </Box>
+                      )}
+                    </>
+                  ) : (
+                    emptySlot || (
+                      <DataTableEmpty
+                        title={t(
+                          'shared:components.dataTable.noData',
+                          'No data found',
+                        )}
+                      />
+                    )
+                  )}
+                </Box>
               ) : (
                 <Box className={clsx(s.gridWrapper, s.customScrollbar)}>
                   {hasData ? (
@@ -814,9 +934,9 @@ function DataTable({
 DataTable.propTypes = {
   // Data
   columns: function (props, propName, componentName) {
-    if (props.viewType !== 'grid' && !props[propName]) {
+    if (props.as !== 'grid' && props.as !== 'masonry' && !props[propName]) {
       return new Error(
-        `The prop \`${propName}\` is marked as required in \`${componentName}\` when viewType is 'table', but its value is \`undefined\`.`,
+        `The prop \`${propName}\` is marked as required in \`${componentName}\` when \`as\` is 'table', but its value is \`undefined\`.`,
       );
     }
     if (props[propName]) {
@@ -847,9 +967,10 @@ DataTable.propTypes = {
   rowKey: PropTypes.oneOfType([PropTypes.string, PropTypes.func]).isRequired,
 
   // View type
-  viewType: PropTypes.oneOf(['table', 'grid']),
+  as: PropTypes.oneOf(['table', 'grid', 'masonry']),
   renderCard: PropTypes.func,
   gridCols: PropTypes.oneOf([2, 3, 4, 5, 6]),
+  columnWidth: PropTypes.number,
 
   // Selection
   selectable: PropTypes.bool,
