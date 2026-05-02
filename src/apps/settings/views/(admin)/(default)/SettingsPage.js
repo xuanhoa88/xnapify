@@ -7,14 +7,15 @@
 
 import { useEffect, useCallback, useState, useMemo } from 'react';
 
-import * as RadixIcons from '@radix-ui/react-icons';
 import { Flex, Box, Text, Badge, Grid, Card, Button } from '@radix-ui/themes';
+import clsx from 'clsx';
 import sortBy from 'lodash/sortBy';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
 import Form, { useFormContext } from '@shared/renderer/components/Form';
+import Icon from '@shared/renderer/components/Icon';
 import Loader from '@shared/renderer/components/Loader';
 import { PageHeader } from '@shared/renderer/components/PageHeader';
 import { useRbac } from '@shared/renderer/components/Rbac';
@@ -48,7 +49,7 @@ function SaveButton() {
       color='indigo'
       disabled={!isDirty || isSubmitting}
     >
-      <RadixIcons.DiscIcon width={16} height={16} />
+      <Icon name='DiscIcon' size={16} />
       {isSubmitting
         ? t('admin:common.saving', 'Saving...')
         : t('admin:common.save', 'Save Changes')}
@@ -114,18 +115,26 @@ function SettingRow({ setting, canWrite }) {
 
   return (
     <Flex
-      direction={{ initial: 'column', md: 'row' }}
+      direction={
+        setting.type === 'boolean' ? 'row' : { initial: 'column', md: 'row' }
+      }
+      justify={setting.type === 'boolean' ? 'between' : 'start'}
       gap='4'
       align={setting.type === 'boolean' ? 'center' : 'start'}
-      className={`p-4 ${s.settingRow}`}
+      className={clsx('p-4 md:p-5', s.settingRow)}
     >
-      <Box className='flex-1 min-w-0 pr-5'>
+      <Box
+        className={clsx(
+          'flex-1 min-w-0',
+          setting.type === 'boolean' ? 'md:pr-2' : 'md:pr-5',
+        )}
+      >
         <Flex align='center' gap='2' wrap='wrap' className='mb-2'>
           <Text
             as='code'
             size='2'
             weight='bold'
-            className={`py-1 px-2 rounded-md ${s.keyText}`}
+            className={clsx('py-1 px-2 rounded-md', s.keyText)}
           >
             {setting.key}
           </Text>
@@ -163,12 +172,10 @@ function SettingRow({ setting, canWrite }) {
         )}
       </Box>
       <Flex
-        width='100%'
+        width={setting.type === 'boolean' ? 'auto' : '100%'}
         maxWidth={{ initial: '100%', md: '400px' }}
         shrink='0'
-        justify={
-          setting.type === 'boolean' ? { initial: 'start', md: 'end' } : 'start'
-        }
+        justify={setting.type === 'boolean' ? 'end' : 'start'}
       >
         <Box width='100%'>
           <Form.Field name={name} showError={false}>
@@ -303,7 +310,7 @@ function SettingsBuilderForm({ namespace, settings, onSaved }) {
             gap='2'
             px='5'
             py='4'
-            className={`rounded-b-md ${s.saveContainer}`}
+            className={clsx('rounded-b-md', s.saveContainer)}
           >
             <SaveButton />
           </Flex>
@@ -372,14 +379,14 @@ function SettingsPage({ context }) {
   // ── Loading ─────────────────────────────────────────────────────────────────
   if (!initialized || (loading && namespaces.length === 0)) {
     return (
-      <Box className='p-6 max-w-[1400px] mx-auto'>
+      <Box className='p-4 md:p-6 max-w-[1400px] mx-auto'>
         <PageHeader
           title={t('admin:settings.title', 'Global Settings')}
           subtitle={t(
             'admin:settings.subtitle',
             'Configure system-wide settings',
           )}
-          icon={<RadixIcons.GearIcon width={24} height={24} />}
+          icon={<Icon name='GearIcon' size={24} />}
         />
         <Loader
           variant='spinner'
@@ -392,21 +399,21 @@ function SettingsPage({ context }) {
   // ── Error ───────────────────────────────────────────────────────────────────
   if (error) {
     return (
-      <Box className='p-6 max-w-[1400px] mx-auto'>
+      <Box className='p-4 md:p-6 max-w-[1400px] mx-auto'>
         <PageHeader
           title={t('admin:settings.title', 'Global Settings')}
           subtitle={t(
             'admin:settings.subtitle',
             'Configure system-wide settings',
           )}
-          icon={<RadixIcons.GearIcon width={24} height={24} />}
+          icon={<Icon name='GearIcon' size={24} />}
         />
         <Flex
           direction='column'
           align='center'
           justify='center'
           p='6'
-          className={`rounded-md ${s.errorContainer}`}
+          className={clsx('rounded-md', s.errorContainer)}
         >
           <Text color='red' size='4' weight='bold' mb='2'>
             {t('admin:settings.errorLoading', 'Error loading settings')}
@@ -428,36 +435,45 @@ function SettingsPage({ context }) {
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <Box className='p-6 max-w-[1400px] mx-auto'>
+    <Box className='p-4 md:p-6 max-w-[1400px] mx-auto'>
       <PageHeader
         title={t('admin:settings.title', 'Global Settings')}
         subtitle={t(
           'admin:settings.subtitle',
           'Configure system-wide settings for all modules',
         )}
-        icon={<RadixIcons.GearIcon width={24} height={24} />}
+        icon={<Icon name='GearIcon' size={24} />}
       />
 
-      <Grid columns={{ initial: '1', lg: '250px 1fr' }} gap='6' align='start'>
+      <Grid
+        columns={{ initial: '1', lg: '250px 1fr' }}
+        gap={{ initial: '4', md: '6' }}
+        align='start'
+      >
         {/* Namespace tabs */}
-        <Flex as='nav' direction='column' gap='1'>
+        <Flex
+          as='nav'
+          direction={{ initial: 'row', lg: 'column' }}
+          gap='1'
+          className={clsx('overflow-x-auto pb-2 lg:pb-0', s.hideScrollbar)}
+        >
           {namespaces.map(ns => (
             <Box
               as='button'
               key={ns}
               type='button'
               onClick={() => setActiveTab(ns)}
-              className={`flex items-center px-3 py-2 rounded-md border-none cursor-pointer transition-colors text-left w-full hover:bg-gray-a3 ${s.navButton}`}
+              className={clsx(
+                'flex items-center px-3 py-2 rounded-md border-none cursor-pointer transition-colors text-left w-auto lg:w-full shrink-0 hover:bg-gray-a3',
+                s.navButton,
+              )}
               data-state={activeTab === ns ? 'active' : 'inactive'}
             >
-              {(() => {
-                const iconName = icons[ns];
-                const Comp =
-                  typeof iconName === 'string'
-                    ? RadixIcons[iconName] || RadixIcons.BoxIcon
-                    : RadixIcons.GearIcon;
-                return <Comp width={16} height={16} className='shrink-0' />;
-              })()}
+              <Icon
+                name={typeof icons[ns] === 'string' ? icons[ns] : 'GearIcon'}
+                size={16}
+                className='shrink-0'
+              />
               <Text
                 as='span'
                 size='2'

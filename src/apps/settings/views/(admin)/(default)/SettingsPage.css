@@ -36,3 +36,13 @@
   background-color: var(--indigo-3);
   color: var(--indigo-11);
 }
+
+.hideScrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.hideScrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
