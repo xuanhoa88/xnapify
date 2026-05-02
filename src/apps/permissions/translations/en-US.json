@@ -1,0 +1,49 @@
+{
+  "permissions": {
+    "title": "Permission Management",
+    "addPermission": "Add Permission",
+    "searchPlaceholder": "Search permissions...",
+    "noPermissionsFound": "No permissions found",
+    "noMatchesFound": "No permissions match your search",
+    "resource": "Resource",
+    "action": "Action",
+    "description": "Description",
+    "status": "Status",
+    "active": "Active",
+    "inactive": "Inactive",
+    "statusActive": "Active",
+    "statusInactive": "Inactive",
+    "statusFilterPlaceholder": "All Status",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "delete": "Delete",
+    "changeStatusTitle": "Change Permission Status",
+    "deleteTitle": "Delete Permission",
+    "deleteError": "Failed to delete permission",
+    "edit": {
+      "title": "Edit Permission: {{name}}",
+      "titleLoading": "Loading Permission...",
+      "titleError": "Error Loading Permission",
+      "backToList": "Back to Permissions",
+      "resource": "Resource",
+      "action": "Action",
+      "description": "Description",
+      "status": "Status",
+      "statusLabel": "Status",
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "create": {
+      "title": "Create New Permission",
+      "backToList": "Back to Permissions",
+      "resource": "Resource",
+      "action": "Action",
+      "description": "Description",
+      "status": "Status",
+      "statusLabel": "Status",
+      "isActive": "Active",
+      "active": "Active",
+      "inactive": "Inactive"
+    }
+  }
+}

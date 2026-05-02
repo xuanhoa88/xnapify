@@ -1,0 +1,145 @@
+{
+  "components": {
+    "confirmModal": {
+      "action": {
+        "cancel": "Cancel",
+        "confirm": "Confirm"
+      },
+      "back": {
+        "title": "Unsaved Changes",
+        "description": "You have unsaved changes. Are you sure you want to leave?",
+        "stay": "Stay",
+        "leave": "Leave"
+      },
+      "delete": {
+        "description": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
+        "cancel": "Cancel",
+        "delete": "Delete"
+      },
+      "prompt": {
+        "cancel": "Cancel",
+        "submit": "Create",
+        "error": {
+          "failed": "Operation failed",
+          "occurred": "An error occurred"
+        }
+      },
+      "impersonate": {
+        "title": "Impersonate User",
+        "description": "You are about to impersonate this user. Are you sure?",
+        "confirm": "Impersonate",
+        "cancel": "Cancel",
+        "submitting": "Impersonating...",
+        "error": {
+          "occurred": "An error occurred"
+        }
+      }
+    },
+    "dataTable": {
+      "clearFilters": "Clear Filters",
+      "clear": "Clear Filters",
+      "noData": "No data found",
+      "error": "Error loading data",
+      "loading": "Loading..."
+    },
+    "bulkActions": {
+      "itemsSelected": "items selected",
+      "clear": "Clear",
+      "moreActions": "More actions"
+    },
+    "table": {
+      "pagination": {
+        "prev": "‹ Prev",
+        "next": "Next ›",
+        "info": "Page {{page}} of {{pages}}",
+        "page": "Page",
+        "pageSize": "{{size}} per page"
+      }
+    },
+    "toolbarPrompt": {
+      "cancel": "Cancel",
+      "confirm": "OK"
+    },
+    "searchableSelect": {
+      "placeholder": "Select...",
+      "searchPlaceholder": "Search...",
+      "oneSelected": "{{count}} selected",
+      "multipleSelected": "{{count}} selected",
+      "clearSelection": "Clear selection",
+      "loading": "Loading...",
+      "loadingMore": "Loading more...",
+      "noOptions": "No options",
+      "scrollForMore": "Scroll for more"
+    },
+    "checkboxList": {
+      "empty": "No items found",
+      "loading": "Loading...",
+      "loadingMore": "Loading more...",
+      "searchPlaceholder": "Search...",
+      "clearSearch": "Clear search"
+    }
+  },
+  "form": {
+    "wysiwyg": {
+      "bold": "Bold",
+      "italic": "Italic",
+      "underline": "Underline",
+      "strikethrough": "Strikethrough",
+      "bulletList": "Bullet list",
+      "orderedList": "Numbered list",
+      "taskList": "Task list",
+      "blockquote": "Blockquote",
+      "details": "Collapsible Details",
+      "codeBlock": "Code Block",
+      "insertCodeBlock": "Insert Code Block",
+      "removeCodeBlock": "Remove Code Block",
+      "noLanguageMatch": "No match",
+      "searchLanguage": "Search language...",
+      "autoLanguageLabel": "Auto",
+      "horizontalRule": "Horizontal Rule",
+      "link": "Link",
+      "unlink": "Unlink",
+      "image": "Image",
+      "imageUrl": "Image URL",
+      "video": "Video",
+      "videoUrl": "Video URL",
+      "audio": "Audio",
+      "audioUrl": "Audio URL",
+      "youtube": "YouTube",
+      "youtubeUrl": "YouTube URL",
+      "textColor": "Text Color",
+      "resetTextColor": "Reset",
+      "highlight": "Background Color",
+      "resetHighlight": "Reset",
+      "emoji": "Emoji",
+      "math": "Math",
+      "enterLatex": "Enter LaTeX",
+      "fontSize": "Font Size",
+      "fullScreen": "Full Screen",
+      "exitFullScreen": "Exit Full Screen",
+      "undo": "Undo",
+      "redo": "Redo",
+      "copy": "Copy",
+      "copyCode": "Copy code",
+      "copied": "Copied!",
+      "cancel": "Cancel",
+      "comment": "Comment",
+      "type_a_comment": "Type a comment...",
+      "delete_comment": "Delete comment",
+      "mediaActions": "Media Actions",
+      "tableActions": "Table Actions",
+      "tableInsert": "Insert Table",
+      "tableDelete": "Delete Table",
+      "tableRowBefore": "Add Row Before",
+      "tableRowAfter": "Add Row After",
+      "tableColBefore": "Add Column Before",
+      "tableColAfter": "Add Column After",
+      "tableDeleteRow": "Delete Row",
+      "tableDeleteCol": "Delete Column",
+      "tableMergeOrSplit": "Merge or Split",
+      "tableToggleHeaderRow": "Toggle Header Row",
+      "tableToggleHeaderCol": "Toggle Header Column",
+      "noMentionResults": "No results"
+    }
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "emails": {
+    "templates": "Mẫu Email",
+    "list": {
+      "title": "Mẫu",
+      "name": "Tên",
+      "slug": "Slug",
+      "subject": "Tiêu đề",
+      "status": "Trạng thái",
+      "active": "Hoạt động",
+      "inactive": "Không hoạt động",
+      "updated": "Cập nhật",
+      "edit": "Chỉnh sửa",
+      "delete": "Xóa",
+      "addTemplate": "Mẫu mới",
+      "preview": "Xem trước",
+      "duplicate": "Nhân bản",
+      "previewTitle": "Xem trước mẫu"
+    },
+    "form": {
+      "templateInfo": "Thông tin mẫu",
+      "name": "Tên mẫu",
+      "slug": "Slug",
+      "isActive": "Hoạt động",
+      "emailContent": "Nội dung email",
+      "emailSubject": "Tiêu đề email",
+      "emailBody": "Nội dung email",
+      "previewBtn": "Xem trước",
+      "preview": "Xem trước",
+      "save": "Tạo mẫu",
+      "createTemplate": "Tạo mẫu email",
+      "editTemplate": "Chỉnh sửa mẫu email",
+      "detectedVariables": "Biến được phát hiện:",
+      "clickToCopy": "Nhấn để sao chép"
+    },
+    "create": {
+      "title": "Tạo mẫu email",
+      "backToList": "Quay lại danh sách"
+    },
+    "edit": {
+      "title": "Chỉnh sửa mẫu email",
+      "loading": "Đang tải mẫu...",
+      "notFound": "Không tìm thấy mẫu",
+      "backToList": "Quay lại danh sách"
+    },
+    "modal": {
+      "previewTitle": "Xem trước mẫu",
+      "previewError": "Lỗi hiển thị"
+    },
+    "deleteModal": {
+      "title": "Xóa mẫu",
+      "bulkCount": "{{count}} mẫu"
+    },
+    "templates": {
+      "insertTemplate": "Chèn mẫu",
+      "chooseBlock": "Chọn một khối..."
+    }
+  }
+}

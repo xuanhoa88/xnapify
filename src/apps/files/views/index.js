@@ -12,10 +12,18 @@ const viewsContext = require.context(
   /(?:\/_route|\/_layout|\(routes\)\/\([^)]+\)|\(layouts\)\/\([^)]+\)\/_layout)\.[cm]?[jt]sx?$/i,
 );
 
+const translationsContext = require.context(
+  '../translations',
+  false,
+  /\.json$/i,
+);
+
 // =============================================================================
 // LIFECYCLE HOOKS
 // =============================================================================
 
 export default {
   routes: () => viewsContext,
+  translations: () => translationsContext,
 };
+

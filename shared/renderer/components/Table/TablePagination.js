@@ -7,7 +7,12 @@
 
 import { useMemo, useCallback } from 'react';
 
-import { CaretDownIcon, CheckIcon } from '@radix-ui/react-icons';
+import {
+  CaretDownIcon,
+  CheckIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+} from '@radix-ui/react-icons';
 import { Button, Flex, Text, Box } from '@radix-ui/themes';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
@@ -58,9 +63,9 @@ function TablePagination({
     (totalItems != null && pageSize ? Math.ceil(totalItems / pageSize) : 1);
 
   const displayPrevLabel =
-    prevLabel || t('shared:components.table.pagination.prev', '‹ Prev');
+    prevLabel || t('shared:components.table.pagination.prev', 'Prev');
   const displayNextLabel =
-    nextLabel || t('shared:components.table.pagination.next', 'Next ›');
+    nextLabel || t('shared:components.table.pagination.next', 'Next');
 
   // Generate page numbers with ellipsis
   const pageNumbers = useMemo(() => {
@@ -131,9 +136,10 @@ function TablePagination({
       py='3'
       className={clsx(s.paginationContainer, className)}
     >
-      <Flex align='center' gap='3' wrap='wrap'>
+      {/* Left: info + page-size selector */}
+      <Flex align='center' gap='3' wrap='wrap' className={s.leftControls}>
         {showInfo && totalItems != null && (
-          <Text size='2' color='gray' className={s.paginationInfo}>
+          <Text size='2' className={s.paginationInfo}>
             {t(
               'shared:components.table.pagination.info',
               '{{total}} total · Page {{current}} of {{pages}}',
@@ -146,83 +152,92 @@ function TablePagination({
           </Text>
         )}
 
+        {/* Divider between info and page-size */}
+        {showInfo &&
+          totalItems != null &&
+          pageSizeOptions &&
+          pageSizeOptions.length > 0 &&
+          onPageSizeChange && <Box className={s.infoDivider} />}
+
         {/* Page size selector */}
         {pageSizeOptions && pageSizeOptions.length > 0 && onPageSizeChange && (
-          <Flex align='center' gap='2'>
-            <ContextMenu modal={false}>
-              <ContextMenu.Trigger asChild disabled={loading}>
-                <button type='button' className={s.pageSizeTrigger}>
-                  <span>
-                    {t(
-                      'shared:components.table.pagination.pageSize',
-                      '{{pageSize}} / page',
-                      { pageSize },
-                    )}
-                  </span>
-                  <Box className='flex text-[var(--gray-9)]'>
-                    <CaretDownIcon width={12} height={12} />
-                  </Box>
-                </button>
-              </ContextMenu.Trigger>
-              <ContextMenu.Menu
-                align='center'
-                sideOffset={4}
-                className='border border-[var(--gray-a4)] rounded-md shadow-md overflow-hidden p-1'
-              >
-                {pageSizeOptions.map(size => (
-                  <ContextMenu.Item
-                    key={size}
-                    onClick={() => handlePageSizeChange(size)}
-                    className={clsx(
-                      pageSize === size &&
-                        'bg-[var(--indigo-9)] text-white hover:bg-[var(--indigo-10)]',
-                    )}
-                  >
-                    <Flex align='center' gap='2' width='100%'>
-                      <Box width='16px' className='flex items-center'>
-                        {pageSize === size && (
-                          <CheckIcon width={16} height={16} />
-                        )}
-                      </Box>
-                      <Text
-                        size='2'
-                        className={clsx(pageSize === size && 'text-white')}
-                      >
-                        {t(
-                          'shared:components.table.pagination.page',
-                          '{{size}} / page',
-                          { size },
-                        )}
-                      </Text>
-                    </Flex>
-                  </ContextMenu.Item>
-                ))}
-              </ContextMenu.Menu>
-            </ContextMenu>
-          </Flex>
+          <ContextMenu modal={false}>
+            <ContextMenu.Trigger asChild disabled={loading}>
+              <button type='button' className={s.pageSizeTrigger}>
+                <span>
+                  {t(
+                    'shared:components.table.pagination.pageSize',
+                    '{{pageSize}} / page',
+                    { pageSize },
+                  )}
+                </span>
+                <Box className='flex text-[var(--gray-9)]'>
+                  <CaretDownIcon width={12} height={12} />
+                </Box>
+              </button>
+            </ContextMenu.Trigger>
+            <ContextMenu.Menu
+              align='center'
+              sideOffset={4}
+              className='border border-[var(--gray-a4)] rounded-md shadow-md overflow-hidden p-1'
+            >
+              {pageSizeOptions.map(size => (
+                <ContextMenu.Item
+                  key={size}
+                  onClick={() => handlePageSizeChange(size)}
+                  className={clsx(
+                    pageSize === size &&
+                      'bg-[var(--indigo-9)] text-white hover:bg-[var(--indigo-10)]',
+                  )}
+                >
+                  <Flex align='center' gap='2' width='100%'>
+                    <Box width='16px' className='flex items-center'>
+                      {pageSize === size && (
+                        <CheckIcon width={16} height={16} />
+                      )}
+                    </Box>
+                    <Text
+                      size='2'
+                      className={clsx(pageSize === size && 'text-white')}
+                    >
+                      {t(
+                        'shared:components.table.pagination.page',
+                        '{{size}} / page',
+                        { size },
+                      )}
+                    </Text>
+                  </Flex>
+                </ContextMenu.Item>
+              ))}
+            </ContextMenu.Menu>
+          </ContextMenu>
         )}
       </Flex>
 
+      {/* Right: navigation controls */}
       <Flex
         align='center'
-        gap='2'
+        gap='1'
         className={showInfo ? s.paginationControlsAuto : s.paginationControls}
       >
+        {/* Prev button */}
         <Button
           variant='ghost'
           size='2'
           onClick={handlePrev}
           disabled={currentPage === 1 || loading}
-          className='cursor-pointer'
+          className={s.navButton}
         >
+          <ChevronLeftIcon width={14} height={14} />
           {displayPrevLabel}
         </Button>
 
-        <Flex align='center' gap='1'>
+        {/* Page numbers */}
+        <Flex align='center' className={s.pageNumbersFlex}>
           {pageNumbers.map((page, idx) =>
             page === '...' ? (
-              <Text key={`ellipsis-${idx}`} size='2' color='gray' px='2'>
-                ...
+              <Text key={`ellipsis-${idx}`} size='2' className={s.ellipsis}>
+                ···
               </Text>
             ) : (
               <Button
@@ -235,8 +250,7 @@ function TablePagination({
                 className={clsx(
                   s.paginationPageButton,
                   currentPage === page && s.paginationPageButtonCurrent,
-                  'flex items-center justify-center font-medium transition-colors',
-                  currentPage !== page && 'hover:bg-[var(--gray-3)]',
+                  'flex items-center justify-center',
                 )}
               >
                 {page}
@@ -245,14 +259,16 @@ function TablePagination({
           )}
         </Flex>
 
+        {/* Next button */}
         <Button
           variant='ghost'
           size='2'
           onClick={handleNext}
           disabled={currentPage >= totalPages || loading}
-          className='cursor-pointer'
+          className={s.navButton}
         >
           {displayNextLabel}
+          <ChevronRightIcon width={14} height={14} />
         </Button>
       </Flex>
     </Flex>

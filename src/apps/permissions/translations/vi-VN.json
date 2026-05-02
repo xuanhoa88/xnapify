@@ -1,0 +1,49 @@
+{
+  "permissions": {
+    "title": "Quản lý quyền",
+    "addPermission": "Thêm quyền",
+    "searchPlaceholder": "Tìm kiếm quyền...",
+    "noPermissionsFound": "Không tìm thấy quyền",
+    "noMatchesFound": "Không tìm thấy quyền phù hợp",
+    "resource": "Tài nguyên",
+    "action": "Hành động",
+    "description": "Mô tả",
+    "status": "Trạng thái",
+    "active": "Hoạt động",
+    "inactive": "Không hoạt động",
+    "statusActive": "Hoạt động",
+    "statusInactive": "Không hoạt động",
+    "statusFilterPlaceholder": "Tất cả trạng thái",
+    "activate": "Kích hoạt",
+    "deactivate": "Vô hiệu hóa",
+    "delete": "Xóa",
+    "changeStatusTitle": "Thay đổi trạng thái quyền",
+    "deleteTitle": "Xóa quyền",
+    "deleteError": "Lỗi khi xóa quyền",
+    "edit": {
+      "title": "Chỉnh sửa quyền: {{name}}",
+      "titleLoading": "Đang tải quyền...",
+      "titleError": "Lỗi khi tải quyền",
+      "backToList": "Quay lại danh sách",
+      "resource": "Tài nguyên",
+      "action": "Hành động",
+      "description": "Mô tả",
+      "status": "Trạng thái",
+      "statusLabel": "Trạng thái",
+      "active": "Hoạt động",
+      "inactive": "Không hoạt động"
+    },
+    "create": {
+      "title": "Tạo quyền mới",
+      "backToList": "Quay lại danh sách",
+      "resource": "Tài nguyên",
+      "action": "Hành động",
+      "description": "Mô tả",
+      "status": "Trạng thái",
+      "statusLabel": "Trạng thái",
+      "isActive": "Hoạt động",
+      "active": "Hoạt động",
+      "inactive": "Không hoạt động"
+    }
+  }
+}

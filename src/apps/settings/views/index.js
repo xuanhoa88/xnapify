@@ -5,6 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { getTranslations } from '@shared/i18n/loader';
+import { addNamespace } from '@shared/i18n/utils';
 import { features } from '@shared/renderer/redux';
 
 import * as selectors from './(admin)/redux/selector';
@@ -34,6 +36,9 @@ const translationsContext = require.context(
 
 export default {
   providers({ container }) {
+    // Merge module-specific translations into the shared 'admin' namespace
+    addNamespace('admin', getTranslations(translationsContext));
+
     container.bind(
       'settings:admin:state',
       () => ({ selectors, thunks }),
@@ -51,5 +56,4 @@ export default {
   },
 
   routes: () => viewsContext,
-  translations: () => translationsContext,
 };

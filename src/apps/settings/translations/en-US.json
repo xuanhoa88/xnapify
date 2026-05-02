@@ -1,31 +1,20 @@
 {
-  "admin": {
-    "settings": {
-      "title": "Global Settings",
-      "subtitle": "Configure system-wide settings for all modules",
-      "loading": "Loading settings...",
-      "errorLoading": "Error loading settings",
-      "resetToDefault": "Reset to env default",
-      "badgePublic": "public",
-      "badgeDefault": "env default",
-      "fallback": "Fallback: "
-    },
-    "navigation": {
-      "settings": "Settings",
-      "system": "System"
-    },
-    "common": {
-      "saving": "Saving...",
-      "save": "Save Changes",
-      "retry": "Retry"
-    },
-    "namespaces": {
-      "core": "General",
-      "auth": "Authentication",
-      "email": "Email",
-      "file": "File Storage",
-      "webhook": "Webhook",
-      "optimization": "Optimization"
-    }
+  "settings": {
+    "title": "Global Settings",
+    "subtitle": "Configure system-wide settings for all modules",
+    "loading": "Loading settings...",
+    "errorLoading": "Error loading settings",
+    "resetToDefault": "Reset to env default",
+    "badgePublic": "public",
+    "badgeDefault": "env default",
+    "fallback": "Fallback: "
+  },
+  "namespaces": {
+    "core": "General",
+    "auth": "Authentication",
+    "email": "Email",
+    "file": "File Storage",
+    "webhook": "Webhook",
+    "optimization": "Optimization"
   }
 }

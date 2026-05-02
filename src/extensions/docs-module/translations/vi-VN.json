@@ -1,0 +1,12 @@
+{
+  "title": "xnapify",
+  "sidebar": {
+    "title": "Tài liệu",
+    "loading": "Đang tải..."
+  },
+  "viewer": {
+    "notFound": "Không tìm thấy tài liệu",
+    "notFoundDescription": "Chúng tôi không thể tìm thấy tài liệu tại đường dẫn này.",
+    "parseError": "Lỗi khi phân tích tài liệu."
+  }
+}

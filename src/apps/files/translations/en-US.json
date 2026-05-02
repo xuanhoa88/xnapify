@@ -10,16 +10,25 @@
   },
   "toolbar": {
     "list_view": "List view",
-    "grid_view": "Grid view"
+    "grid_view": "Grid view",
+    "search_placeholder": "Search files..."
   },
   "grid": {
     "loading": "Loading files...",
     "empty_title": "No files here",
     "empty_desc": "Drop files here or use the \"New\" button.",
+    "name": "Name",
+    "owner": "Owner",
     "owner_me": "Me",
+    "last_modified": "Last Modified",
+    "file_size": "File Size",
     "rename": "Rename",
+    "invalid_name": "Invalid name",
+    "rename_failed": "Rename failed",
     "share": "Share",
     "download": "Download",
+    "copy_link": "Copy link",
+    "link_copied": "Link copied to clipboard!",
     "add_star": "Add Star",
     "remove_star": "Remove Star",
     "delete_permanently": "Delete Permanently",
@@ -31,6 +40,9 @@
     "file_upload": "File upload",
     "cancel": "Cancel",
     "create": "Create",
+    "create_failed": "Failed to create folder",
+    "invalid_name": "Invalid folder name",
+    "drop_to_upload": "Drop files to upload",
     "uploads_status": "Uploads ({{count}}/{{total}})",
     "done": "Done",
     "failed": "Failed"
@@ -47,7 +59,14 @@
     "copy_link": "Copy link",
     "saving": "Saving...",
     "done": "Done",
-    "link_copied": "Link copied to clipboard!"
+    "close": "Close",
+    "link_copied": "Link copied to clipboard!",
+    "user": "User",
+    "group": "Group",
+    "owner": "Owner",
+    "permission_view": "Viewer",
+    "invalid_type": "Invalid share settings",
+    "save_failed": "Failed to save settings"
   },
   "page": {
     "title": "Files",

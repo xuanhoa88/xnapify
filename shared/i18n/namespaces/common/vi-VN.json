@@ -1,0 +1,23 @@
+{
+  "retry": "Thử lại",
+  "cancel": "Hủy",
+  "delete": "Xóa",
+  "notAvailable": "N/A",
+  "save": "Lưu",
+  "saving": "Đang lưu...",
+  "loading": "Đang tải...",
+  "error": "Lỗi",
+  "success": "Thành công",
+  "confirm": "Xác nhận",
+  "close": "Đóng",
+  "back": "Quay lại",
+  "next": "Tiếp",
+  "submit": "Gửi",
+  "search": "Tìm kiếm",
+  "edit": "Chỉnh sửa",
+  "create": "Tạo",
+  "update": "Cập nhật",
+  "actions": "Hành động",
+  "yes": "Có",
+  "no": "Không"
+}
