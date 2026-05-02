@@ -1,0 +1,25 @@
+/**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+.interactiveLink {
+  color: var(--blue-11);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.interactiveLink:hover {
+  text-decoration: underline;
+}
+
+.sectionContainer {
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--gray-a4);
+}
+
+.headerBox {
+  border-bottom: 1px solid var(--gray-a4);
+}

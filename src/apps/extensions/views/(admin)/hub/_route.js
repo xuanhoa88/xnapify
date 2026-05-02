@@ -6,10 +6,12 @@
  */
 
 import { requirePermission } from '@shared/renderer/components/Rbac';
-import { addBreadcrumb } from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
 
 import Hub from './Hub';
-import hubReducer, { SLICE_NAME as HUB_SLICE_NAME } from './redux';
+import { resetHubState } from './redux';
+
+const { addBreadcrumb } = features;
 
 // Load translations
 const translationsContext = require.context(
@@ -21,10 +23,10 @@ const translationsContext = require.context(
 export const middleware = requirePermission('extensions:read');
 
 /**
- * Route boot — inject Redux reducer into the store.
+ * Unmount — clean up Redux state when leaving the hub page.
  */
-export function init({ store }) {
-  store.injectReducer(HUB_SLICE_NAME, hubReducer);
+export function unmount({ store }) {
+  store.dispatch(resetHubState());
 }
 
 /**

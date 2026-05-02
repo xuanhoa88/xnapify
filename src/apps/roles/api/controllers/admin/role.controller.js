@@ -267,6 +267,46 @@ export async function deleteRole(req, res) {
 }
 
 /**
+ * Bulk delete roles
+ *
+ * @route   DELETE /api/admin/roles
+ * @access  Admin (requires 'roles:delete' permission)
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export async function bulkDeleteRoles(req, res) {
+  const container = req.app.get('container');
+  const http = container.resolve('http');
+  const auth = container.resolve('auth');
+  try {
+    const { ids } = req.body;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return http.sendError(res, 'No role IDs provided', 400);
+    }
+
+    // Get models from app context
+    const models = container.resolve('models');
+
+    // We would need to fetch the roles first to check their names against userRoles
+    // For bulk operations, the service will handle the deletion and system role protection
+
+    const deletedIds = await roleService.bulkDeleteRoles(ids, {
+      models,
+      hook: container.resolve('hook'),
+      systemRoles: auth.SYSTEM_ROLES,
+    });
+
+    return http.sendSuccess(res, {
+      deletedIds,
+      message: `${deletedIds.length} role(s) deleted successfully`,
+    });
+  } catch (error) {
+    return http.sendServerError(res, 'Failed to bulk delete roles', error);
+  }
+}
+
+/**
  * Get users assigned to a role
  *
  * @route   GET /api/admin/roles/:id/users

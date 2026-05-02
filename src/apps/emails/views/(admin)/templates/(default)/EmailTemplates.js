@@ -5,22 +5,25 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 
+import {
+  EnvelopeClosedIcon,
+  PlusIcon,
+  Pencil2Icon,
+  TrashIcon,
+} from '@radix-ui/react-icons';
+import { Box, Flex, Text, Button, Badge, IconButton } from '@radix-ui/themes';
 import format from 'date-fns/format';
+import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import * as Box from '@shared/renderer/components/Box';
-import Button from '@shared/renderer/components/Button';
-import ConfirmModal from '@shared/renderer/components/ConfirmModal';
 import { useHistory } from '@shared/renderer/components/History';
-import Icon from '@shared/renderer/components/Icon';
-import Loader from '@shared/renderer/components/Loader';
 import Modal from '@shared/renderer/components/Modal';
-import Table from '@shared/renderer/components/Table';
-import Tag from '@shared/renderer/components/Tag';
+import { DataTable, useTableColumns } from '@shared/renderer/components/Table';
 
+import TemplateActionsDropdown from '../../components/TemplateActionsDropdown';
 import TemplateEditor from '../../components/TemplateEditor';
 import {
   fetchTemplates,
@@ -38,6 +41,12 @@ import {
 
 import s from './EmailTemplates.css';
 
+/** Extension hook ID for injecting extra columns into the email templates table. */
+const COLUMNS_HOOK_ID = 'table.columns.emails.templates';
+
+/**
+ * EmailTemplates — Admin page for managing email templates.
+ */
 function EmailTemplates() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
@@ -52,7 +61,11 @@ function EmailTemplates() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [selectedItems, setSelectedItems] = useState([]);
+
+  // Selection
+  const clearSelection = useCallback(() => setSelectedItems([]), []);
 
   const [previewOpen, setPreviewOpen] = useState(false);
   const confirmDeleteRef = useRef();
@@ -61,22 +74,28 @@ function EmailTemplates() {
     dispatch(
       fetchTemplates({
         page: currentPage,
+        limit: pageSize,
         search,
         status: statusFilter,
       }),
     );
-  }, [dispatch, currentPage, search, statusFilter]);
+  }, [dispatch, currentPage, pageSize, search, statusFilter]);
 
   const refreshList = useCallback(() => {
     dispatch(
       fetchTemplates({
         page: currentPage,
+        limit: pageSize,
         search,
         status: statusFilter,
       }),
     );
-    setSelectedItems([]);
-  }, [dispatch, currentPage, search, statusFilter]);
+  }, [dispatch, currentPage, pageSize, search, statusFilter]);
+
+  const handleRefreshList = useCallback(() => {
+    clearSelection();
+    refreshList();
+  }, [clearSelection, refreshList]);
 
   const handleSearchChange = useCallback(value => {
     setSearch(value);
@@ -170,260 +189,221 @@ function EmailTemplates() {
 
   const hasActiveFilters = search || statusFilter;
 
-  // Loading state (first load)
-  if (!initialized || (loading && templates.length === 0)) {
-    return (
-      <div className={s.root}>
-        <Box.Header
-          icon={<Icon name='mail' size={24} />}
-          title={t('admin:emails.list.title', 'Templates')}
-          subtitle={t(
-            'admin:emails.list.subtitle',
-            'Manage email templates with LiquidJS',
-          )}
-        />
-        <Loader
-          variant='skeleton'
-          message={t('admin:emails.list.loading', 'Loading email templates...')}
-        />
-      </div>
-    );
-  }
+  // Bulk action descriptors
+  const moreBulkActions = useMemo(
+    () => [
+      {
+        label: t('admin:emails.list.delete', 'Delete'),
+        icon: <TrashIcon width={16} height={16} />,
+        variant: 'danger',
+        onClick: handleBulkDelete,
+      },
+    ],
+    [t, handleBulkDelete],
+  );
 
-  if (error) {
-    return (
-      <div className={s.root}>
-        <Box.Header
-          icon={<Icon name='mail' size={24} />}
-          title={t('admin:emails.list.title', 'Templates')}
-          subtitle={t(
-            'admin:emails.list.subtitle',
-            'Manage email templates with LiquidJS',
-          )}
-        />
-        <Table.Error
-          title={t(
-            'admin:emails.errors.loadTemplates',
-            'Error loading templates',
-          )}
-          error={error}
-          onRetry={refreshList}
-        />
-      </div>
-    );
-  }
+  // Column definitions
+  const baseColumns = useMemo(
+    () => [
+      {
+        key: 'name',
+        dataIndex: 'name',
+        title: t('admin:emails.list.name', 'Name'),
+        order: 10,
+        render: value => <Text weight='bold'>{value}</Text>,
+      },
+      {
+        key: 'slug',
+        dataIndex: 'slug',
+        title: t('admin:emails.list.slug', 'Slug'),
+        order: 20,
+        render: value => (
+          <Text as='code' className={s.slugText}>
+            {value}
+          </Text>
+        ),
+      },
+      {
+        key: 'subject',
+        dataIndex: 'subject',
+        title: t('admin:emails.list.subject', 'Subject'),
+        order: 30,
+        render: value => (
+          <Text color='gray' className={s.subjectText}>
+            {value || '—'}
+          </Text>
+        ),
+      },
+      {
+        key: 'status',
+        dataIndex: 'is_active',
+        title: t('admin:emails.list.status', 'Status'),
+        order: 40,
+        render: isActive => (
+          <Badge
+            variant={isActive ? 'success' : 'error'}
+            color='gray'
+            radius='full'
+          >
+            {isActive
+              ? t('admin:emails.list.active', 'Active')
+              : t('admin:emails.list.inactive', 'Inactive')}
+          </Badge>
+        ),
+      },
+      {
+        key: 'updated',
+        dataIndex: 'updated_at',
+        title: t('admin:emails.list.updated', 'Updated'),
+        order: 50,
+        render: value => (
+          <Text size='2' color='gray'>
+            {value ? format(new Date(value), 'MMM dd, yyyy') : '—'}
+          </Text>
+        ),
+      },
+      {
+        key: 'actions',
+        title: '',
+        order: 9999,
+        className: 'text-right',
+        render: (_, record) => (
+          <Flex gap='2' justify='end' onClick={e => e.stopPropagation()}>
+            <IconButton
+              variant='ghost'
+              size='2'
+              title={t('admin:emails.list.edit', 'Edit')}
+              onClick={() =>
+                history.push(`/admin/emails/templates/${record.id}/edit`)
+              }
+            >
+              <Pencil2Icon width={16} height={16} />
+            </IconButton>
+            <IconButton
+              variant='ghost'
+              size='2'
+              title={t('admin:emails.list.delete', 'Delete')}
+              onClick={() => handleDelete(record)}
+            >
+              <TrashIcon width={16} height={16} />
+            </IconButton>
+            <TemplateActionsDropdown
+              template={record}
+              onPreview={handlePreview}
+              onDuplicate={handleDuplicate}
+            />
+          </Flex>
+        ),
+      },
+    ],
+    [t, history, handlePreview, handleDuplicate, handleDelete],
+  );
+
+  // Merge base columns with extension-injected columns
+  const { columns } = useTableColumns(COLUMNS_HOOK_ID, baseColumns);
 
   return (
-    <div className={s.root}>
-      <Box.Header
-        icon={<Icon name='mail' size={24} />}
-        title={t('admin:emails.list.title', 'Templates')}
-        subtitle={t(
-          'admin:emails.list.subtitle',
-          'Manage email templates with LiquidJS',
-        )}
-      >
-        <Button
-          variant='primary'
-          onClick={() => history.push('/admin/emails/templates/create')}
-        >
-          {t('admin:emails.list.addTemplate', 'New Template')}
-        </Button>
-      </Box.Header>
-
-      {selectedItems.length > 0 && (
-        <Table.BulkActionsBar
-          count={selectedItems.length}
-          actions={[]}
-          moreActions={[
-            {
-              label: t('admin:emails.list.delete', 'Delete'),
-              icon: <Icon name='trash' size={16} />,
-              variant: 'danger',
-              onClick: handleBulkDelete,
-            },
-          ]}
-          onClear={() => setSelectedItems([])}
-        />
-      )}
-
-      <Table.SearchBar
-        className={s.filters}
-        value={search}
-        onChange={handleSearchChange}
-        placeholder={t(
-          'admin:emails.list.searchTemplates',
-          'Search templates...',
-        )}
-      >
-        <div className={s.filterActions}>
-          {hasActiveFilters && (
-            <Button
-              variant='ghost'
-              size='small'
-              onClick={handleClearAllFilters}
-              type='button'
-              title={t(
-                'admin:emails.list.resetAllFilters',
-                'Reset all filters',
-              )}
-            >
-              <Icon name='x' size={12} />
-              {t('admin:emails.list.clearFilters', 'Clear Filters')}
-            </Button>
-          )}
-        </div>
-      </Table.SearchBar>
-
-      <Table
-        rowSelection={{
-          selectedRowKeys: selectedItems,
-          onChange: keys => setSelectedItems(keys),
-        }}
-        columns={[
-          {
-            title: t('admin:emails.list.name', 'Name'),
-            dataIndex: 'name',
-            render: name => (
-              <div className={s.nameCell}>
-                <strong>{name}</strong>
-              </div>
-            ),
-          },
-          {
-            title: t('admin:emails.list.slug', 'Slug'),
-            dataIndex: 'slug',
-            render: slug => <code className={s.slug}>{slug}</code>,
-          },
-          {
-            title: t('admin:emails.list.subject', 'Subject'),
-            dataIndex: 'subject',
-            render: subject => (
-              <span className={s.subject}>{subject || '—'}</span>
-            ),
-          },
-          {
-            title: t('admin:emails.list.status', 'Status'),
-            key: 'status',
-            render: (_, record) => (
-              <Tag variant={record.is_active ? 'success' : 'default'}>
-                {record.is_active
-                  ? t('admin:emails.list.active', 'Active')
-                  : t('admin:emails.list.inactive', 'Inactive')}
-              </Tag>
-            ),
-          },
-          {
-            title: t('admin:emails.list.updated', 'Updated'),
-            dataIndex: 'updated_at',
-            render: date =>
-              date ? format(new Date(date), 'MMM dd, yyyy') : '—',
-          },
-          {
-            key: 'actions',
-            render: (_, record) => (
-              <div className={s.actions}>
-                <Button
-                  variant='ghost'
-                  size='small'
-                  iconOnly
-                  title={t('admin:emails.list.preview', 'Preview')}
-                  onClick={() => handlePreview(record)}
-                >
-                  <Icon name='eye' size={16} />
-                </Button>
-                <Button
-                  variant='ghost'
-                  size='small'
-                  iconOnly
-                  title={t('admin:emails.list.edit', 'Edit')}
-                  onClick={() =>
-                    history.push(`/admin/emails/templates/${record.id}/edit`)
-                  }
-                >
-                  <Icon name='edit' size={16} />
-                </Button>
-                <Button
-                  variant='ghost'
-                  size='small'
-                  iconOnly
-                  title={t('admin:emails.list.duplicate', 'Duplicate')}
-                  onClick={() => handleDuplicate(record)}
-                >
-                  <Icon name='copy' size={16} />
-                </Button>
-                <Button
-                  variant='ghost'
-                  size='small'
-                  iconOnly
-                  title={t('admin:emails.list.delete', 'Delete')}
-                  onClick={() => handleDelete(record)}
-                >
-                  <Icon name='trash' size={16} />
-                </Button>
-              </div>
-            ),
-          },
-        ]}
+    <Box className='p-6 max-w-[1400px] mx-auto'>
+      <DataTable
+        columns={columns}
         dataSource={templates}
         rowKey='id'
         loading={loading}
-        pagination={
-          pagination && pagination.pages > 1
-            ? {
-                current: currentPage,
-                pages: pagination.pages,
-                total: pagination.total,
-                onChange: setCurrentPage,
-              }
-            : false
-        }
-        locale={{
-          emptyText: (
-            <Table.Empty
-              icon='mail'
-              title={t(
-                'admin:emails.list.noTemplatesFound',
-                'No email templates found',
-              )}
-              description={t(
-                'admin:emails.list.noTemplatesDescription',
-                'Create your first email template to get started.',
-              )}
-            >
-              <Button
-                variant='primary'
-                onClick={() => history.push('/admin/emails/templates/create')}
-              >
-                {t('admin:emails.list.addTemplate', 'New Template')}
-              </Button>
-            </Table.Empty>
-          ),
-        }}
-      />
+        initialized={initialized}
+        selectable
+        selectedKeys={selectedItems}
+        onSelectionChange={setSelectedItems}
+      >
+        <DataTable.Header
+          title={t('admin:emails.list.title', 'Templates')}
+          subtitle={t(
+            'admin:emails.list.subtitle',
+            'Manage email templates with LiquidJS',
+          )}
+          icon={<EnvelopeClosedIcon width={24} height={24} />}
+        >
+          <Button
+            variant='solid'
+            color='indigo'
+            onClick={() => history.push('/admin/emails/templates/create')}
+          >
+            <PlusIcon width={16} height={16} />
+            {t('admin:emails.list.addTemplate', 'New Template')}
+          </Button>
+        </DataTable.Header>
 
-      <ConfirmModal.Delete
+        <DataTable.Toolbar>
+          <DataTable.Search
+            value={search}
+            onChange={handleSearchChange}
+            placeholder={t(
+              'admin:emails.list.searchTemplates',
+              'Search templates...',
+            )}
+          />
+          <DataTable.ClearFilters
+            visible={!!hasActiveFilters}
+            onClick={handleClearAllFilters}
+          />
+        </DataTable.Toolbar>
+
+        <DataTable.BulkActions actions={[]} moreActions={moreBulkActions} />
+
+        <DataTable.Empty
+          icon={<EnvelopeClosedIcon width={48} height={48} />}
+          title={t(
+            'admin:emails.list.noTemplatesFound',
+            'No email templates found',
+          )}
+          description={t(
+            'admin:emails.list.noTemplatesDescription',
+            'Create your first email template to get started.',
+          )}
+        />
+        <DataTable.Error message={error} onRetry={handleRefreshList} />
+        <DataTable.Loader />
+
+        <DataTable.Pagination
+          current={currentPage}
+          totalPages={pagination ? pagination.pages : undefined}
+          total={pagination ? pagination.total : undefined}
+          pageSize={pageSize}
+          pageSizeOptions={[10, 20, 50, 100]}
+          onChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+        />
+      </DataTable>
+
+      <Modal.ConfirmDelete
         ref={confirmDeleteRef}
         title={t('admin:emails.deleteModal.title', 'Delete Template')}
         getItemName={getDeleteItemName}
         onDelete={onConfirmDelete}
-        onSuccess={refreshList}
+        onSuccess={handleRefreshList}
       />
 
       <Modal
         isOpen={previewOpen}
         onClose={handlePreviewClose}
         placement='right'
+        width='100%'
+        maxWidth={{ initial: '100%', md: '800px' }}
       >
         <Modal.Header onClose={handlePreviewClose}>
           {t('admin:emails.list.previewTitle', 'Template Preview')}
         </Modal.Header>
-        <Modal.Body className={s.previewBody}>
-          <TemplateEditor />
+        <Modal.Body className={s.modalBody}>
+          <TemplateEditor className={s.templateEditor} />
         </Modal.Body>
       </Modal>
-    </div>
+    </Box>
   );
 }
+
+EmailTemplates.propTypes = {
+  context: PropTypes.shape({
+    container: PropTypes.object.isRequired,
+  }),
+};
 
 export default EmailTemplates;

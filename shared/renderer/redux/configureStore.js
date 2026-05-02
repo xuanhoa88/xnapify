@@ -66,6 +66,15 @@ function validateReducerInjection(key, reducer) {
     error.name = 'ReduxInjectionError';
     throw error;
   }
+
+  // Guard against Object.prototype property collisions
+  if (Object.prototype.hasOwnProperty.call(Object.prototype, key)) {
+    const error = new Error(
+      `[Redux] injectReducer: key "${key}" conflicts with Object.prototype`,
+    );
+    error.name = 'ReduxInjectionError';
+    throw error;
+  }
 }
 
 /**
@@ -247,67 +256,60 @@ export default function configureStore(
    * @returns {boolean} True if injection was successful
    */
   store.injectReducer = (key, reducer, options = {}) => {
-    try {
-      validateReducerInjection(key, reducer);
+    validateReducerInjection(key, reducer);
 
-      const existingReducer = injectedReducers[key];
-      const isIdentityReducer =
-        existingReducer && existingReducer[IDENTITY_REDUCER] === true;
+    const existingReducer = injectedReducers[key];
+    const isIdentityReducer =
+      existingReducer && existingReducer[IDENTITY_REDUCER] === true;
 
-      // Check if reducer is in root reducers
-      if (rootReducerKeys.includes(key)) {
-        const error = new Error(
-          `[Redux] injectReducer: key "${key}" conflicts with root reducer`,
-        );
-        error.name = 'ReduxInjectionError';
-        throw error;
-      }
-
-      // Skip injection if:
-      // 1. Reducer already exists
-      // 2. It's not an identity reducer
-      // 3. Force option is not set
-      if (existingReducer && !isIdentityReducer && !options.force) {
-        if (__DEV__ && !serverSide && !options.silent) {
-          console.log(`[Redux] Reducer already injected: ${key}`);
-        }
-        return false;
-      }
-
-      // Inject the reducer
-      injectedReducers[key] = reducer;
-
-      // Rebuild the root reducer with injected reducers
-      store.replaceReducer(rebuildRootReducer());
-
-      // Determine action type for logging
-      let action = 'injected';
-      if (isIdentityReducer) {
-        action = 'replaced_identity';
-      } else if (options.force) {
-        action = 'force_reinjected';
-      }
-
-      // Log the injection
-      if (__DEV__ && !serverSide && !options.silent) {
-        const actionLabels = {
-          injected: 'Injected',
-          replaced_identity: 'Replaced identity',
-          force_reinjected: 'Force re-injected',
-        };
-        console.log(`[Redux] ${actionLabels[action]} reducer: ${key}`);
-      }
-
-      // Notify listeners
-      notifyReducerListeners(key, action);
-
-      return true;
-    } catch (error) {
-      if (__DEV__) {
-        console.error(error);
-      }
+    // Check if reducer is in root reducers
+    if (rootReducerKeys.includes(key)) {
+      const error = new Error(
+        `[Redux] injectReducer: key "${key}" conflicts with root reducer`,
+      );
+      error.name = 'ReduxInjectionError';
       throw error;
     }
+
+    // Skip injection if:
+    // 1. Reducer already exists
+    // 2. It's not an identity reducer
+    // 3. Force option is not set
+    if (existingReducer && !isIdentityReducer && !options.force) {
+      if (__DEV__ && !serverSide && !options.silent) {
+        console.log(`[Redux] Reducer already injected: ${key}`);
+      }
+      return false;
+    }
+
+    // Inject the reducer
+    injectedReducers[key] = reducer;
+
+    // Rebuild the root reducer with injected reducers
+    store.replaceReducer(rebuildRootReducer());
+
+    // Determine action type for logging
+    let action = 'injected';
+    if (isIdentityReducer) {
+      action = 'replaced_identity';
+    } else if (options.force) {
+      action = 'force_reinjected';
+    }
+
+    // Log the injection
+    if (__DEV__ && !serverSide && !options.silent) {
+      const actionLabels = {
+        injected: 'Injected',
+        replaced_identity: 'Replaced identity',
+        force_reinjected: 'Force re-injected',
+      };
+      console.log(`[Redux] ${actionLabels[action]} reducer: ${key}`);
+    }
+
+    // Notify listeners
+    notifyReducerListeners(key, action);
+
+    return true;
   };
 
   /**
@@ -357,27 +359,50 @@ export default function configureStore(
 
     const injected = [];
     const skipped = [];
-    const errors = {};
+    const failed = {};
+    let needsRebuild = false;
 
     Object.entries(reducers).forEach(([key, reducer]) => {
       try {
-        const success = store.injectReducer(key, reducer, {
-          ...options,
-          silent: true,
-        });
-        if (success) {
-          injected.push(key);
-        } else {
-          skipped.push(key);
+        validateReducerInjection(key, reducer);
+
+        // Check root reducer conflict
+        if (rootReducerKeys.includes(key)) {
+          const conflictErr = new Error(
+            `[Redux] injectReducer: key "${key}" conflicts with root reducer`,
+          );
+          conflictErr.name = 'ReduxInjectionError';
+          throw conflictErr;
         }
+
+        const existingReducer = injectedReducers[key];
+        const isIdentity =
+          existingReducer && existingReducer[IDENTITY_REDUCER] === true;
+
+        // Skip if already exists and not identity/force
+        if (existingReducer && !isIdentity && !options.force) {
+          skipped.push(key);
+          return;
+        }
+
+        injectedReducers[key] = reducer;
+        injected.push(key);
+        needsRebuild = true;
       } catch (err) {
-        skipped.push(key);
-        errors[key] = err.message;
+        failed[key] = err.message;
         if (__DEV__) {
           console.error(`[Redux] Failed to inject reducer "${key}":`, err);
         }
       }
     });
+
+    // Single rebuild after all reducers are added
+    if (needsRebuild) {
+      store.replaceReducer(rebuildRootReducer());
+
+      // Notify listeners for each injected reducer
+      injected.forEach(key => notifyReducerListeners(key, 'injected'));
+    }
 
     if (__DEV__ && !serverSide && !options.silent) {
       if (injected.length > 0) {
@@ -386,9 +411,14 @@ export default function configureStore(
       if (skipped.length > 0) {
         console.log(`[Redux] Skipped reducers: ${skipped.join(', ')}`);
       }
+      if (Object.keys(failed).length > 0) {
+        console.log(
+          `[Redux] Failed reducers: ${Object.keys(failed).join(', ')}`,
+        );
+      }
     }
 
-    return { injected, skipped, errors };
+    return { injected, skipped, failed };
   };
 
   /**
@@ -454,7 +484,7 @@ export default function configureStore(
    * @param {string} key - Reducer key
    * @returns {boolean} True if reducer is injected
    */
-  store.hasReducer = key => key in injectedReducers;
+  store.hasReducer = key => Object.hasOwn(injectedReducers, key);
 
   /**
    * Checks if a reducer is an identity reducer.
@@ -523,6 +553,8 @@ export default function configureStore(
   if (serverSide) {
     store.close = () => {
       reducerListeners.clear();
+      // Clear injected reducers for defense-in-depth GC
+      Object.keys(injectedReducers).forEach(k => delete injectedReducers[k]);
     };
   }
 

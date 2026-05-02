@@ -1,0 +1,46 @@
+/**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+.emojiPopup {
+  width: 280px;
+  padding: var(--space-2);
+}
+
+.scrollArea {
+  height: 260px;
+}
+
+.emojiGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--space-1);
+  padding-right: var(--space-3); /* Space for scrollbar */
+}
+
+.emojiButton {
+  font-size: var(--font-size-5);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-3);
+  transition: background-color 0.2s, transform 0.2s;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.emojiButton:hover {
+  background-color: var(--gray-4);
+  transform: scale(1.15);
+}
+
+.emojiButton:active {
+  transform: scale(0.95);
+}

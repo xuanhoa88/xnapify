@@ -74,8 +74,8 @@ async function findFiles(dir) {
  */
 function getParser(ext) {
   const parsers = {
-    '.js': 'babel',
-    '.jsx': 'babel',
+    '.js': 'meriyah',
+    '.jsx': 'meriyah',
     '.ts': 'typescript',
     '.tsx': 'typescript',
     '.json': 'json',
@@ -83,7 +83,7 @@ function getParser(ext) {
     '.scss': 'scss',
     '.md': 'markdown',
   };
-  return parsers[ext] || 'babel';
+  return parsers[ext] || 'meriyah';
 }
 
 /**

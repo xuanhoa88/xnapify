@@ -1,3 +1,10 @@
+/**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
 // Private symbol for handlers
 const HANDLERS = Symbol('handlers');
 
@@ -8,7 +15,7 @@ export default {
     // Inject custom settings tab configuration metadata
     registry.registerHook('settings.tabs.config', () => ({
       demo_ext: {
-        icon: 'star',
+        icon: 'StarIcon',
         label: 'Demo Config', // Fallback label
         i18nKey: 'admin:extensions.demoSettings.title',
         order: 90, // Place it towards the end but before 'system'

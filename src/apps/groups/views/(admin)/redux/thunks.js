@@ -33,10 +33,10 @@ export const fetchGroups = createAsyncThunk(
         query: {
           page,
           limit,
-          search: search || undefined,
-          category: category || undefined,
-          type: type || undefined,
-          role: role || undefined,
+          search,
+          category,
+          type,
+          role,
         },
       });
 
@@ -126,6 +126,26 @@ export const deleteGroup = createAsyncThunk(
 );
 
 /**
+ * Bulk delete groups
+ */
+export const bulkDeleteGroups = createAsyncThunk(
+  'admin/groups/bulkDeleteGroups',
+  async (ids, { extra: { fetch }, rejectWithValue }) => {
+    try {
+      const { data } = await fetch('/api/admin/groups', {
+        method: 'DELETE',
+        body: { ids },
+      });
+      return data.deletedIds || ids;
+    } catch (error) {
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
+    }
+  },
+);
+
+/**
  * Fetch group users
  */
 export const fetchGroupUsers = createAsyncThunk(
@@ -139,7 +159,7 @@ export const fetchGroupUsers = createAsyncThunk(
         query: {
           page,
           limit,
-          search: search || undefined,
+          search,
         },
       });
 

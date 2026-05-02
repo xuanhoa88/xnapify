@@ -378,4 +378,360 @@ describe('[redux] configureStore.js', () => {
       expect(state.other.value).toBe('other');
     });
   });
+
+  describe('Reducer Removal', () => {
+    it('should remove an injected reducer', () => {
+      const store = configureStore();
+      const testReducer = (state = { value: 'test' }) => state;
+
+      store.injectReducer('removable', testReducer);
+      expect(store.getState().removable).toEqual({ value: 'test' });
+
+      const result = store.removeReducer('removable');
+      expect(result).toBe(true);
+      expect(store.hasReducer('removable')).toBe(false);
+      expect(store.getState().removable).toBeUndefined();
+    });
+
+    it('should return false when removing non-existent reducer', () => {
+      const store = configureStore();
+      const consoleWarn = jest.spyOn(console, 'warn').mockImplementation();
+
+      const result = store.removeReducer('nonExistent');
+      expect(result).toBe(false);
+
+      consoleWarn.mockRestore();
+    });
+
+    it('should preserve other reducers after removal', () => {
+      const store = configureStore();
+      const reducer1 = (state = { v: 1 }) => state;
+      const reducer2 = (state = { v: 2 }) => state;
+
+      store.injectReducer('mod1', reducer1);
+      store.injectReducer('mod2', reducer2);
+
+      store.removeReducer('mod1');
+
+      expect(store.hasReducer('mod1')).toBe(false);
+      expect(store.getState().mod2).toEqual({ v: 2 });
+    });
+  });
+
+  describe('Batch Inject Reducers', () => {
+    it('should inject multiple reducers with single rebuild', () => {
+      const store = configureStore();
+      const replaceReducerSpy = jest.spyOn(store, 'replaceReducer');
+
+      const result = store.batchInjectReducers({
+        batchA: (state = { a: 1 }) => state,
+        batchB: (state = { b: 2 }) => state,
+        batchC: (state = { c: 3 }) => state,
+      });
+
+      expect(result.injected).toEqual(['batchA', 'batchB', 'batchC']);
+      expect(result.skipped).toEqual([]);
+      expect(result.failed).toEqual({});
+
+      // Should only call replaceReducer once for all three
+      expect(replaceReducerSpy).toHaveBeenCalledTimes(1);
+
+      const state = store.getState();
+      expect(state.batchA).toEqual({ a: 1 });
+      expect(state.batchB).toEqual({ b: 2 });
+      expect(state.batchC).toEqual({ c: 3 });
+
+      replaceReducerSpy.mockRestore();
+    });
+
+    it('should separate skipped from failed reducers', () => {
+      const store = configureStore();
+      const existingReducer = (state = { existing: true }) => state;
+      store.injectReducer('existing', existingReducer);
+
+      const result = store.batchInjectReducers({
+        existing: (state = { new: true }) => state, // should be skipped
+        '@@reserved': (state = {}) => state, // should fail (reserved key)
+        newModule: (state = { val: 1 }) => state, // should succeed
+      });
+
+      expect(result.injected).toEqual(['newModule']);
+      expect(result.skipped).toEqual(['existing']);
+      expect(result.failed).toHaveProperty('@@reserved');
+      expect(result.failed['@@reserved']).toContain('reserved');
+    });
+
+    it('should throw for non-object input', () => {
+      const store = configureStore();
+
+      expect(() => store.batchInjectReducers(null)).toThrow(
+        'reducers must be a plain object',
+      );
+      expect(() => store.batchInjectReducers([1, 2])).toThrow(
+        'reducers must be a plain object',
+      );
+      expect(() => store.batchInjectReducers('string')).toThrow(
+        'reducers must be a plain object',
+      );
+    });
+
+    it('should not call replaceReducer when all reducers are skipped', () => {
+      const store = configureStore();
+      const reducer = (state = {}) => state;
+      store.injectReducer('mod1', reducer);
+
+      const replaceReducerSpy = jest.spyOn(store, 'replaceReducer');
+
+      store.batchInjectReducers({ mod1: reducer });
+
+      expect(replaceReducerSpy).not.toHaveBeenCalled();
+      replaceReducerSpy.mockRestore();
+    });
+  });
+
+  describe('Batch Remove Reducers', () => {
+    it('should remove multiple reducers with single rebuild', () => {
+      const store = configureStore();
+      const reducer = (state = {}) => state;
+
+      store.injectReducer('rem1', reducer);
+      store.injectReducer('rem2', reducer);
+      store.injectReducer('rem3', reducer);
+
+      const replaceReducerSpy = jest.spyOn(store, 'replaceReducer');
+
+      const result = store.batchRemoveReducers(['rem1', 'rem2']);
+
+      expect(result.removed).toEqual(['rem1', 'rem2']);
+      expect(result.notFound).toEqual([]);
+      expect(replaceReducerSpy).toHaveBeenCalledTimes(1);
+
+      expect(store.hasReducer('rem1')).toBe(false);
+      expect(store.hasReducer('rem2')).toBe(false);
+      expect(store.hasReducer('rem3')).toBe(true);
+
+      replaceReducerSpy.mockRestore();
+    });
+
+    it('should report not-found keys', () => {
+      const store = configureStore();
+      const consoleWarn = jest.spyOn(console, 'warn').mockImplementation();
+
+      const result = store.batchRemoveReducers([
+        'nonExistent1',
+        'nonExistent2',
+      ]);
+
+      expect(result.removed).toEqual([]);
+      expect(result.notFound).toEqual(['nonExistent1', 'nonExistent2']);
+
+      consoleWarn.mockRestore();
+    });
+
+    it('should throw for non-array input', () => {
+      const store = configureStore();
+
+      expect(() => store.batchRemoveReducers('key')).toThrow(
+        'keys must be an array',
+      );
+      expect(() => store.batchRemoveReducers({})).toThrow(
+        'keys must be an array',
+      );
+    });
+  });
+
+  describe('Reducer Change Listeners', () => {
+    it('should notify listeners on inject', () => {
+      const store = configureStore();
+      const listener = jest.fn();
+
+      store.onReducerChange(listener);
+      store.injectReducer('listened', (state = {}) => state);
+
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(listener).toHaveBeenCalledWith(
+        expect.objectContaining({
+          key: 'listened',
+          action: 'injected',
+          timestamp: expect.any(Number),
+        }),
+      );
+    });
+
+    it('should notify listeners on remove', () => {
+      const store = configureStore();
+      const listener = jest.fn();
+      store.injectReducer('toRemove', (state = {}) => state);
+
+      store.onReducerChange(listener);
+      store.removeReducer('toRemove');
+
+      expect(listener).toHaveBeenCalledWith(
+        expect.objectContaining({
+          key: 'toRemove',
+          action: 'removed',
+        }),
+      );
+    });
+
+    it('should return unsubscribe function', () => {
+      const store = configureStore();
+      const listener = jest.fn();
+
+      const unsubscribe = store.onReducerChange(listener);
+      unsubscribe();
+
+      store.injectReducer('afterUnsub', (state = {}) => state);
+      expect(listener).not.toHaveBeenCalled();
+    });
+
+    it('should throw for non-function listener', () => {
+      const store = configureStore();
+
+      expect(() => store.onReducerChange('not a function')).toThrow(
+        'listener must be a function',
+      );
+      expect(() => store.onReducerChange(null)).toThrow(
+        'listener must be a function',
+      );
+    });
+
+    it('should handle listener errors without breaking others', () => {
+      const store = configureStore();
+      const consoleError = jest.spyOn(console, 'error').mockImplementation();
+      const badListener = () => {
+        throw new Error('listener crash');
+      };
+      const goodListener = jest.fn();
+
+      store.onReducerChange(badListener);
+      store.onReducerChange(goodListener);
+
+      store.injectReducer('robust', (state = {}) => state);
+
+      expect(goodListener).toHaveBeenCalledTimes(1);
+      expect(consoleError).toHaveBeenCalled();
+
+      consoleError.mockRestore();
+    });
+  });
+
+  describe('Store Statistics', () => {
+    it('should return correct stats shape', () => {
+      const store = configureStore();
+      const stats = store.getStats();
+
+      expect(stats).toEqual(
+        expect.objectContaining({
+          rootReducers: expect.any(Number),
+          injectedReducers: expect.any(Number),
+          identityReducers: expect.any(Number),
+          listeners: expect.any(Number),
+        }),
+      );
+    });
+
+    it('should reflect injected and identity reducer counts', () => {
+      const initialState = {
+        ssrModule: { data: 'ssr' },
+      };
+      const store = configureStore(initialState);
+
+      let stats = store.getStats();
+      expect(stats.injectedReducers).toBe(1);
+      expect(stats.identityReducers).toBe(1);
+
+      store.injectReducer('ssrModule', (state = {}) => state);
+      store.injectReducer('newModule', (state = {}) => state);
+
+      stats = store.getStats();
+      expect(stats.injectedReducers).toBe(2);
+      expect(stats.identityReducers).toBe(0);
+    });
+
+    it('should reflect listener count', () => {
+      const store = configureStore();
+      expect(store.getStats().listeners).toBe(0);
+
+      const unsub = store.onReducerChange(() => {});
+      expect(store.getStats().listeners).toBe(1);
+
+      unsub();
+      expect(store.getStats().listeners).toBe(0);
+    });
+  });
+
+  describe('Reserved and Conflicting Keys', () => {
+    it('should reject keys starting with @@', () => {
+      const store = configureStore();
+      expect(() =>
+        store.injectReducer('@@internal', (state = {}) => state),
+      ).toThrow('reserved and cannot be used');
+    });
+
+    it('should reject keys starting with __', () => {
+      const store = configureStore();
+      expect(() =>
+        store.injectReducer('__private', (state = {}) => state),
+      ).toThrow('reserved and cannot be used');
+    });
+
+    it('should reject keys that conflict with Object.prototype', () => {
+      const store = configureStore();
+      expect(() =>
+        store.injectReducer('constructor', (state = {}) => state),
+      ).toThrow('conflicts with Object.prototype');
+
+      expect(() =>
+        store.injectReducer('toString', (state = {}) => state),
+      ).toThrow('conflicts with Object.prototype');
+
+      expect(() =>
+        store.injectReducer('hasOwnProperty', (state = {}) => state),
+      ).toThrow('conflicts with Object.prototype');
+    });
+
+    it('should reject keys that conflict with root reducers', () => {
+      const store = configureStore();
+      expect(() => store.injectReducer('user', (state = {}) => state)).toThrow(
+        'conflicts with root reducer',
+      );
+    });
+  });
+
+  describe('Force Re-injection', () => {
+    it('should replace existing reducer with force option', () => {
+      const store = configureStore();
+      const original = (state = { version: 1 }, action) => {
+        if (action.type === 'V1_ACTION') return { ...state, v1: true };
+        return state;
+      };
+      const replacement = (state = { version: 2 }, action) => {
+        if (action.type === 'V2_ACTION') return { ...state, v2: true };
+        return state;
+      };
+
+      store.injectReducer('forceTest', original);
+      expect(store.getState().forceTest).toEqual({ version: 1 });
+
+      const result = store.injectReducer('forceTest', replacement, {
+        force: true,
+      });
+      expect(result).toBe(true);
+
+      // Existing state is preserved by replaceReducer, but the new reducer handles actions
+      store.dispatch({ type: 'V2_ACTION' });
+      expect(store.getState().forceTest.v2).toBe(true);
+    });
+  });
+
+  describe('hasReducer Prototype Safety', () => {
+    it('should return false for Object.prototype properties', () => {
+      const store = configureStore();
+      // These would return true with the `in` operator
+      expect(store.hasReducer('constructor')).toBe(false);
+      expect(store.hasReducer('toString')).toBe(false);
+      expect(store.hasReducer('valueOf')).toBe(false);
+    });
+  });
 });

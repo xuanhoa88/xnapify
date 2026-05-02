@@ -7,13 +7,17 @@
 
 import React, { useCallback } from 'react';
 
+import {
+  ChevronRightIcon,
+  ColumnsIcon,
+  ListBulletIcon,
+} from '@radix-ui/react-icons';
+import { Flex, Box, Button, SegmentedControl } from '@radix-ui/themes';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Button from '@shared/renderer/components/Button';
-import Icon from '@shared/renderer/components/Icon';
-import SearchBar from '@shared/renderer/components/Table/SearchBar';
+import { TableSearch } from '@shared/renderer/components/Table';
 
 import {
   setView,
@@ -49,24 +53,31 @@ export default function FileToolbar() {
   );
 
   return (
-    <div className={s.toolbar}>
-      <div className={s.breadcrumbsContainer}>
+    <Flex
+      align='center'
+      justify='between'
+      wrap='wrap'
+      gap='3'
+      className={s.toolbarContainer}
+    >
+      <Flex align='center' gap='1' className={s.breadcrumbFlex}>
         {breadcrumbs.map((crumb, index) => {
           const isLast = index === breadcrumbs.length - 1;
           return (
             <React.Fragment key={crumb.id}>
               {/* Separator icon (chevron right) */}
               {index > 0 && (
-                <span className={s.separator}>
-                  <Icon name='chevronRight' size={16} />
-                </span>
+                <Box className={s.breadcrumbSeparator}>
+                  <ChevronRightIcon width={16} height={16} />
+                </Box>
               )}
 
               <Button
                 variant='ghost'
-                className={clsx(s.crumbBtn, {
-                  [s.activeCrumb]: isLast,
-                })}
+                className={clsx(
+                  s.breadcrumbBtn,
+                  isLast ? s.breadcrumbBtnActive : s.breadcrumbBtnInactive,
+                )}
                 onClick={() => !isLast && handleBreadcrumbClick(crumb)}
                 disabled={isLast}
               >
@@ -77,43 +88,40 @@ export default function FileToolbar() {
             </React.Fragment>
           );
         })}
-      </div>
+      </Flex>
 
-      <div className={s.searchContainer}>
-        <SearchBar
+      <Box className={s.searchBox}>
+        <TableSearch
           value={search}
           onChange={val => dispatch(setSearch(val))}
           placeholder={t('files:toolbar.search_placeholder', 'Search files...')}
-          className={s.searchBar}
         />
-      </div>
+      </Box>
 
-      <div className={s.actionsContainer}>
-        <div className={s.viewToggles}>
-          <Button
-            variant='ghost'
-            className={clsx(s.iconBtn, {
-              [s.active]: viewMode === 'list',
-            })}
-            onClick={() => dispatch(setViewMode('list'))}
+      <Box className={s.viewToggleFlex}>
+        <SegmentedControl.Root
+          value={viewMode}
+          onValueChange={val => dispatch(setViewMode(val))}
+          size='2'
+        >
+          <SegmentedControl.Item
+            value='list'
             title={t('files:toolbar.list_view', 'List view')}
-            iconOnly
           >
-            <Icon name='list' size={20} />
-          </Button>
-          <Button
-            variant='ghost'
-            className={clsx(s.iconBtn, {
-              [s.active]: viewMode === 'grid',
-            })}
-            onClick={() => dispatch(setViewMode('grid'))}
-            title={t('files:toolbar.grid_view', 'Grid view')}
-            iconOnly
+            <Flex align='center' justify='center' className='w-6 h-6'>
+              <ListBulletIcon width={16} height={16} />
+            </Flex>
+          </SegmentedControl.Item>
+          <SegmentedControl.Item
+            value='masonry'
+            title={t('files:toolbar.masonry_view', 'Masonry view')}
           >
-            <Icon name='dashboard' size={20} />
-          </Button>
-        </div>
-      </div>
-    </div>
+            <Flex align='center' justify='center' className='w-6 h-6'>
+              <ColumnsIcon width={16} height={16} />
+            </Flex>
+          </SegmentedControl.Item>
+        </SegmentedControl.Root>
+      </Box>
+    </Flex>
   );
 }

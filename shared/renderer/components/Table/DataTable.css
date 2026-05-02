@@ -1,0 +1,314 @@
+/**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+/* Content panel */
+.contentBox {
+  background-color: var(--color-panel-solid);
+  border-radius: var(--radius-4);
+  box-shadow: var(--shadow-2);
+  border: 1px solid var(--gray-a6);
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.fillHeight {
+  flex: 1;
+  height: 100%;
+}
+
+.borderless {
+  border: none;
+  box-shadow: none;
+  background-color: transparent;
+  border-radius: 0;
+}
+
+/* Toolbar */
+.toolbarBox {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--gray-a6);
+  background-color: var(--gray-2);
+}
+
+/* Search input sizing within the flat toolbar row */
+.toolbarSearch {
+  flex: 1 1 220px;
+  min-width: 180px;
+  max-width: 320px;
+}
+
+.filterLg {
+  width: 160px;
+}
+
+.filterMd {
+  width: 150px;
+}
+
+.filterSm {
+  width: 140px;
+}
+
+@media (max-width: 768px) {
+  .toolbarSearch {
+    flex-basis: 100%;
+    max-width: none;
+  }
+
+  .filterLg,
+  .filterMd,
+  .filterSm {
+    flex: 1 1 100%;
+  }
+}
+
+.clearFilterBox {
+  display: flex;
+  align-items: center;
+  min-width: max-content;
+}
+
+.viewToggle {
+  margin-left: auto;
+  display: inline-flex;
+  gap: 2px;
+  background-color: var(--gray-3);
+  border-radius: var(--radius-2);
+  padding: 2px;
+}
+
+/* Table */
+.tableWrapper {
+  position: relative;
+  overflow-x: auto;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.headerCell {
+  padding-top: var(--space-3);
+  padding-bottom: var(--space-3);
+  white-space: nowrap;
+}
+
+.bodyCell {
+  padding-top: var(--space-3);
+  padding-bottom: var(--space-3);
+  white-space: nowrap;
+}
+
+.checkboxCol {
+  width: 48px;
+  text-align: center;
+}
+
+.selectedRow {
+  background-color: var(--indigo-a3);
+}
+
+/* Loading overlay */
+.loadingOverlay {
+  position: absolute;
+  inset: 0;
+  background-color: var(--color-background);
+  opacity: 0.5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+/* Scrollbar styling */
+.customScrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--gray-a6) transparent;
+
+  &::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--gray-a4);
+    border-radius: var(--radius-full);
+  }
+
+  &:hover::-webkit-scrollbar-thumb {
+    background: var(--gray-a6);
+  }
+
+  &:hover::-webkit-scrollbar-thumb:hover {
+    background: var(--gray-a8);
+  }
+}
+
+/* Grid */
+.gridWrapper {
+  position: relative;
+  overflow-x: auto;
+  padding-bottom: var(--space-4);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.gridContainer {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-4);
+  padding: var(--space-4);
+  padding-bottom: 0;
+  width: 100%;
+}
+
+.gridCols2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.gridCols4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.gridCols5 {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.gridCols6 {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+@media (max-width: 1200px) {
+  .gridCols4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gridCols5 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .gridCols6 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .gridContainer {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: var(--space-3);
+    padding: var(--space-3);
+  }
+
+  .gridCols2,
+  .gridCols4,
+  .gridCols5,
+  .gridCols6 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .gridCols2,
+  .gridCols4,
+  .gridCols5,
+  .gridCols6 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.gridItem {
+  position: relative;
+}
+
+.gridCheckbox {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  z-index: 2;
+}
+
+/* Masonry */
+.masonryWrapper {
+  position: relative;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: var(--space-4);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.masonryContainer {
+  position: relative;
+  width: 100%;
+}
+
+.masonryItem {
+  position: absolute;
+  top: 0;
+  left: 0;
+  box-sizing: border-box;
+}
+
+.masonryMeasure {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: -1;
+  overflow: hidden;
+}
+
+.masonryMeasure * {
+  transition: none !important;
+  animation: none !important;
+}
+
+.masonryMeasureItem {
+  float: left;
+}
+
+.masonrySentinel {
+  width: 100%;
+  height: 1px;
+}
+
+/* Empty state */
+.emptyBlock {
+  opacity: 0.6;
+  flex: 1;
+}
+
+.emptyIcon {
+  margin-bottom: var(--space-3);
+}
+
+/* Error state */
+.errorBlock {
+  border: 1px solid var(--red-6);
+  border-radius: var(--radius-3);
+  background-color: var(--red-2);
+}
+
+/* Pagination */
+.paginationBox {
+  background-color: var(--gray-1);
+}
+
+.borderlessPaginationBox {
+  background-color: transparent;
+}
+
+.borderlessPagination {
+  border-top: none;
+}

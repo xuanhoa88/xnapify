@@ -7,29 +7,32 @@
 
 import { useCallback, useRef, useState, useEffect, useMemo } from 'react';
 
+import * as RadixIcons from '@radix-ui/react-icons';
+import { Flex, Box, Text, Tooltip, HoverCard, Badge } from '@radix-ui/themes';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Button from '@shared/renderer/components/Button';
 import { useHistory, Link } from '@shared/renderer/components/History';
-import Icon from '@shared/renderer/components/Icon';
 import { checkPermission } from '@shared/renderer/components/Rbac';
-import {
-  isAuthenticated,
-  logout,
-  getUserProfile,
-  toggleDrawer,
-  isDrawerOpen,
-} from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
 import { useWebSocket } from '@shared/ws/client';
 
 import s from './Drawer.css';
 
-export const SIDER_WIDTH = 200;
+const {
+  isAuthenticated,
+  logout,
+  getUserProfile,
+  getUserRoles,
+  toggleDrawer,
+  isDrawerOpen,
+} = features;
+
+export const SIDER_WIDTH = 240;
 export const SIDER_COLLAPSED_WIDTH = 80;
-export const SIDER_MINIMAL_WIDTH = 48;
+export const SIDER_MINIMAL_WIDTH = 64;
 
 function Drawer({ minimal = false }) {
   const { t } = useTranslation();
@@ -66,7 +69,6 @@ function Drawer({ minimal = false }) {
   }, []);
 
   // Publish sider width as CSS custom property for layout coordination
-  // Initial value is set inline on .root in _layout.js; this handles dynamic toggling
   useEffect(() => {
     const el = siderRef.current;
     const root = el && el.parentElement;
@@ -122,24 +124,7 @@ function Drawer({ minimal = false }) {
       return checkPermission(u, permission);
     };
 
-    const mainKey = t('admin:navigation.main', 'Main');
-    const sections = [
-      {
-        id: 'main',
-        ns: mainKey,
-        order: 0,
-        icon: 'dashboard',
-        items: [
-          {
-            path: '/admin',
-            label: t('admin:navigation.dashboard', 'Dashboard'),
-            icon: 'dashboard',
-            exact: true,
-            order: 0,
-          },
-        ],
-      },
-    ];
+    const sections = [];
 
     dynamicMenus.forEach(section => {
       if (!section || !section.items) return;
@@ -167,7 +152,7 @@ function Drawer({ minimal = false }) {
     return sections.sort(
       (a, b) => a.order - b.order || a.ns.localeCompare(b.ns),
     );
-  }, [t, user, dynamicMenus]);
+  }, [user, dynamicMenus]);
 
   const userDisplayName = useMemo(() => {
     if (!isAuth || !user) return '';
@@ -176,15 +161,21 @@ function Drawer({ minimal = false }) {
       : user.email;
   }, [isAuth, user]);
 
-  // On desktop the sider is always visible; on mobile it overlays via redux toggle
-  // In minimal mode, collapsed=false means narrow (minimal), collapsed=true means expanded
-  // In normal mode, collapsed=false means expanded, collapsed=true means collapsed
+  const roles = useSelector(getUserRoles);
+
+  const userDisplayRole = useMemo(() => {
+    if (!roles || roles.length === 0) return t('common.user', 'User');
+    const specializedRole = roles.find(r => {
+      const roleName = typeof r === 'string' ? r : r.name;
+      return roleName !== 'user';
+    });
+    const roleToDisplay = specializedRole || roles[0];
+    const roleName =
+      typeof roleToDisplay === 'string' ? roleToDisplay : roleToDisplay.name;
+    return roleName.charAt(0).toUpperCase() + roleName.slice(1);
+  }, [roles, t]);
+
   const isExpanded = minimal ? collapsed : !collapsed;
-  const siderClass = clsx(s.sider, {
-    [s.collapsed]: !minimal && collapsed && !isMobile,
-    [s.minimal]: minimal && !collapsed && !isMobile,
-    [s.mobileOpen]: isMobile && drawerOpen,
-  });
 
   let siderWidth;
   if (minimal && !collapsed) {
@@ -198,147 +189,381 @@ function Drawer({ minimal = false }) {
   const isCompact = !isExpanded && !isMobile;
 
   const renderLink = item => {
-    const linkClass = clsx(s.menuItem, {
-      [s.active]: isActive(item.path, item.exact),
-    });
+    const active = isActive(item.path, item.exact);
+    const Icon = resolveIcon(item.icon);
+    const treatAsCompact = isCompact && !item.isSubItem;
 
     const content = (
-      <>
-        <Icon name={item.icon} size={18} className={s.menuItemIcon} />
-        <span className={s.menuItemLabel}>{item.label}</span>
-        {isCompact && <span className={s.tooltip}>{item.label}</span>}
-      </>
+      <Flex
+        align='center'
+        gap='3'
+        className={clsx(
+          'rounded-lg transition-all duration-200 cursor-pointer select-none relative group/item no-underline',
+          treatAsCompact
+            ? 'w-10 h-10 p-0 justify-center mx-auto flex'
+            : 'w-full py-2.5 px-3',
+          !active && 'text-slate-400 hover:text-white hover:bg-white/[0.06]',
+          active && 'text-white font-medium bg-blue-500/15',
+        )}
+      >
+        {active && (
+          <Box
+            className={clsx(
+              'absolute left-0 w-[3px] rounded-r-full bg-blue-400',
+              treatAsCompact
+                ? 'top-[15%] bottom-[15%]'
+                : 'top-[15%] bottom-[15%]',
+            )}
+          />
+        )}
+        <Icon
+          width={treatAsCompact ? 20 : 18}
+          height={treatAsCompact ? 20 : 18}
+          className={clsx(
+            'shrink-0 transition-colors',
+            active
+              ? 'text-blue-400'
+              : 'text-slate-500 group-hover/item:text-slate-300',
+          )}
+        />
+        {!treatAsCompact && (
+          <Flex
+            align='center'
+            justify='between'
+            className='w-full'
+            minWidth='0'
+          >
+            <Text
+              size='2'
+              weight={active ? 'medium' : 'regular'}
+              className='truncate leading-normal text-[13.5px]'
+            >
+              {item.label}
+            </Text>
+            {item.badge && (
+              <Badge
+                color={item.badgeColor || 'red'}
+                variant='solid'
+                radius='full'
+                size='1'
+                className='ml-2 shrink-0'
+              >
+                {item.badge}
+              </Badge>
+            )}
+          </Flex>
+        )}
+      </Flex>
     );
 
     const linkProps = {
-      className: linkClass,
       onClick: isMobile ? handleCloseMobileDrawer : undefined,
+      className:
+        'no-underline block mb-0.5 focus-visible:outline-none [color:inherit]',
     };
 
     if (item.external) {
       return (
         <a href={item.path} {...linkProps}>
-          {content}
+          {treatAsCompact ? (
+            <Tooltip content={item.label} side='right'>
+              {content}
+            </Tooltip>
+          ) : (
+            content
+          )}
         </a>
       );
     }
 
     return (
       <Link to={item.path} {...linkProps}>
-        {content}
+        {treatAsCompact ? (
+          <Tooltip content={item.label} side='right' delayDuration={80}>
+            {content}
+          </Tooltip>
+        ) : (
+          content
+        )}
       </Link>
+    );
+  };
+
+  const resolveIcon = icon => {
+    if (typeof icon === 'string') return RadixIcons[icon] || RadixIcons.BoxIcon;
+    return icon || RadixIcons.BoxIcon;
+  };
+
+  const renderCompactGroup = group => {
+    if (!group.items || group.items.length === 0) return null;
+    if (group.items.length === 1) return renderLink(group.items[0]);
+
+    const firstItem = group.items[0];
+    const groupActive = group.items.some(item =>
+      isActive(item.path, item.exact),
+    );
+    const Icon = resolveIcon(firstItem.icon || group.icon);
+
+    return (
+      <HoverCard.Root
+        openDelay={100}
+        closeDelay={100}
+        key={group.id || group.ns}
+      >
+        <HoverCard.Trigger>
+          <Box className='cursor-pointer outline-none w-full'>
+            <Flex
+              align='center'
+              justify='center'
+              className={clsx(
+                'w-10 h-10 rounded-lg mx-auto transition-all duration-200 relative flex',
+                !groupActive &&
+                  'text-slate-500 hover:text-white hover:bg-white/[0.06]',
+                groupActive && 'text-blue-400 bg-blue-500/15',
+              )}
+            >
+              {groupActive && (
+                <Box className='absolute left-0 top-[15%] bottom-[15%] w-[3px] rounded-r-full bg-blue-400' />
+              )}
+              <Icon width={20} height={20} />
+            </Flex>
+          </Box>
+        </HoverCard.Trigger>
+        <HoverCard.Content
+          side='right'
+          align='start'
+          sideOffset={16}
+          className='p-2 bg-[#0a1628] border border-white/[0.06] shadow-xl min-w-[220px]'
+        >
+          <Text
+            as='div'
+            className='uppercase tracking-[0.08em] text-slate-500 px-2 mb-2 select-none text-[10px] font-semibold'
+          >
+            {group.ns}
+          </Text>
+          <Flex direction='column' gap='0.5'>
+            {group.items.map(item => (
+              <Box key={item.path}>
+                {renderLink({ ...item, isSubItem: true })}
+              </Box>
+            ))}
+          </Flex>
+        </HoverCard.Content>
+      </HoverCard.Root>
     );
   };
 
   return (
     <>
-      <aside
+      <Flex
+        as='aside'
         ref={siderRef}
-        className={siderClass}
-        {...(!isMobile && { style: { width: siderWidth } })}
+        direction='column'
+        className={clsx(
+          'bg-[#0a1628] transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] top-0 bottom-0 fixed',
+          isMobile ? 'z-[100]' : 'z-40',
+          isMobile && !drawerOpen ? '-translate-x-full' : 'translate-x-0',
+          isMobile ? 'left-0 right-12 max-w-[300px]' : 'left-0',
+          s.drawerContainer,
+        )}
+        data-mobile={isMobile ? 'true' : 'false'}
+        data-open={drawerOpen ? 'true' : 'false'}
+        data-sider-width={isMobile ? undefined : siderWidth}
         data-sider
       >
         {/* Logo */}
-        <div className={s.logo}>
-          <span className={s.logoIcon}>
-            <img alt={t('header.brand', 'xnapify')} src='/xnapify.png' />
-          </span>
-          <span className={s.logoText}>{t('header.brand', 'xnapify')}</span>
-        </div>
+        <Flex
+          align='center'
+          justify={isCompact ? 'center' : 'flex-start'}
+          gap='3'
+          height='64px'
+          px={isCompact ? '0' : '5'}
+          shrink='0'
+          className='border-b border-white/[0.06] overflow-hidden'
+        >
+          <Flex
+            align='center'
+            justify='center'
+            className={clsx(
+              'relative group/logo overflow-hidden shrink-0',
+              isCompact ? 'w-10 h-10' : 'w-8 h-8',
+            )}
+          >
+            <Box className='absolute inset-0 bg-white/5 opacity-0 group-hover/logo:opacity-100 transition-opacity duration-300' />
+            <img
+              alt={t('header.brand', 'xnapify')}
+              src='/xnapify_38x38.png'
+              srcSet='/xnapify_72x72.png 2x'
+              className={clsx(
+                'rounded-md transition-transform duration-300 group-hover/logo:scale-110',
+                isCompact ? 'w-[24px] h-[24px]' : 'w-[20px] h-[20px]',
+              )}
+            />
+          </Flex>
+          {!isCompact && (
+            <Text
+              size='4'
+              weight='bold'
+              className='text-white tracking-tight whitespace-nowrap'
+            >
+              {t('header.brand', 'xnapify')}
+            </Text>
+          )}
+        </Flex>
 
-        {/* Menu */}
-        <nav className={s.menu}>
-          {menuItems.map(group => {
-            const hasActiveChild = group.items.some(item =>
-              isActive(item.path, item.exact),
-            );
-
-            return (
-              <div
-                key={group.id || group.ns}
-                className={clsx(s.menuGroup, {
-                  [s.groupActive]: hasActiveChild,
-                })}
-              >
-                {/* Group trigger for minimal mode / Header for expanded mode */}
-                <div className={s.menuGroupHeader}>
-                  {group.icon && (
-                    <div className={s.menuGroupIconWrapper}>
-                      <Icon
-                        name={group.icon}
-                        size={20}
-                        className={s.menuGroupIcon}
-                      />
-                    </div>
-                  )}
-                  <div className={s.menuGroupLabel}>{group.ns}</div>
-                </div>
-
-                {/* Flyout panel (or inline list in expanded mode) */}
-                <div className={s.menuFlyoutContent}>
-                  <ul className={s.menuList}>
-                    {group.items.map(item => (
-                      <li key={item.path}>{renderLink(item)}</li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            );
-          })}
-
-          {/* Divider */}
-          <div className={s.divider} />
-
-          {/* Quick Links */}
-          <div className={s.menuGroup}>
-            <div className={s.menuGroupLabel}>
-              {t('navigation.quick', 'Quick Links')}
-            </div>
-            <ul className={s.menuList}>
-              <li>
-                <Link
-                  to='/'
-                  className={s.menuItem}
-                  onClick={isMobile ? handleCloseMobileDrawer : undefined}
+        <Box
+          as='nav'
+          grow='1'
+          p={isCompact ? '2' : '3'}
+          pt='4'
+          className={clsx('overflow-y-auto overflow-x-hidden', s.scrollArea)}
+        >
+          {menuItems.map((group, gi) => (
+            <Box key={group.id || group.ns} mb='4' className='w-full'>
+              {/* Group Header */}
+              {!isCompact && (
+                <Text
+                  as='div'
+                  className='uppercase tracking-[0.08em] text-slate-500 px-3 mb-1.5 select-none text-[10.5px] font-semibold whitespace-nowrap truncate'
                 >
-                  <Icon name='arrowUp' size={18} className={s.menuItemIcon} />
-                  <span className={s.menuItemLabel}>
-                    {t('navigation.backToSite', 'Back to Site')}
-                  </span>
-                </Link>
-              </li>
-            </ul>
-          </div>
-        </nav>
+                  {group.ns}
+                </Text>
+              )}
+
+              {/* Divider for compact mode */}
+              {isCompact && gi > 0 && (
+                <Box className='h-px bg-white/[0.06] mx-2 mb-2.5 mt-[-4px]' />
+              )}
+
+              {/* Items */}
+              <Flex direction='column' align='center' gap='0.5'>
+                {isCompact
+                  ? renderCompactGroup(group)
+                  : group.items.map(item => (
+                      <Box key={item.path} className='w-full'>
+                        {renderLink(item)}
+                      </Box>
+                    ))}
+              </Flex>
+            </Box>
+          ))}
+          {/* Quick Links */}
+          <Box mb='4' className='w-full'>
+            {!isCompact && (
+              <Text
+                as='div'
+                className='uppercase tracking-[0.08em] text-slate-500 px-3 mb-1.5 select-none text-[10.5px] font-semibold mt-6 whitespace-nowrap truncate'
+              >
+                {t('navigation.quick', 'Quick Links')}
+              </Text>
+            )}
+            {isCompact && (
+              <Box className='h-px bg-white/[0.06] mx-2 mb-2.5 mt-[-4px]' />
+            )}
+            <Flex direction='column' align='center' gap='0.5'>
+              <Box className={isCompact ? '' : 'w-full'}>
+                {renderLink({
+                  path: '/',
+                  label: t('navigation.backToSite', 'Back to Site'),
+                  icon: 'ArrowTopRightIcon',
+                  external: true,
+                  exact: true,
+                })}
+              </Box>
+            </Flex>
+          </Box>
+        </Box>
 
         {/* User Footer */}
         {isAuth && user && (
-          <div className={s.footer}>
-            <div className={s.userAvatar}>
-              {userDisplayName.charAt(0).toUpperCase()}
-            </div>
-            <div className={s.userDetails}>
-              <span className={s.userName}>
-                {userDisplayName || t('common.admin', 'Admin')}
-              </span>
-              <span className={s.userRole}>{user.email}</span>
-            </div>
-            <Button
-              variant='ghost'
-              iconOnly
-              onClick={handleLogout}
-              title={t('navigation.logout', 'Logout')}
-              className={s.logoutBtn}
-            >
-              <Icon name='logout' size={16} />
-            </Button>
-          </div>
+          <Box
+            shrink='0'
+            className='border-t border-white/[0.06] w-full overflow-hidden'
+          >
+            {isCompact ? (
+              <Flex
+                direction='column'
+                align='center'
+                py='3'
+                className='group/footer w-full'
+              >
+                <Tooltip content={userDisplayName} side='right'>
+                  <Flex
+                    align='center'
+                    justify='center'
+                    className='w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 to-orange-500 text-white cursor-default select-none shadow-sm shadow-orange-500/25'
+                  >
+                    <RadixIcons.PersonIcon width={20} height={20} />
+                  </Flex>
+                </Tooltip>
+                <Tooltip
+                  content={t('navigation.logout', 'Logout')}
+                  side='right'
+                >
+                  <Flex
+                    align='center'
+                    justify='center'
+                    role='button'
+                    tabIndex={0}
+                    onClick={handleLogout}
+                    className='w-9 h-9 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200 cursor-pointer mt-1.5 opacity-0 group-hover/footer:opacity-100'
+                  >
+                    <RadixIcons.ExitIcon width={16} height={16} />
+                  </Flex>
+                </Tooltip>
+              </Flex>
+            ) : (
+              <Flex
+                align='center'
+                justify='between'
+                className='px-4 py-3.5 group/footer w-full'
+              >
+                <Flex align='center' gap='3' className='min-w-0'>
+                  <Flex
+                    align='center'
+                    justify='center'
+                    width='38px'
+                    height='38px'
+                    shrink='0'
+                    className='rounded-xl bg-gradient-to-br from-orange-400 to-orange-500 text-white shadow-sm shadow-orange-500/25'
+                  >
+                    <RadixIcons.PersonIcon width={20} height={20} />
+                  </Flex>
+                  <Flex direction='column' className='min-w-0'>
+                    <Text
+                      size='2'
+                      weight='bold'
+                      className='text-white truncate leading-none text-[13.5px]'
+                    >
+                      {userDisplayName || t('common.admin', 'Admin')}
+                    </Text>
+                    <Text className='text-slate-500 uppercase tracking-[0.08em] text-[10px] font-semibold mt-1 truncate leading-none'>
+                      {userDisplayRole}
+                    </Text>
+                  </Flex>
+                </Flex>
+                <Tooltip content={t('navigation.logout', 'Logout')}>
+                  <Flex
+                    align='center'
+                    justify='center'
+                    role='button'
+                    tabIndex={0}
+                    onClick={handleLogout}
+                    className='w-8 h-8 rounded-lg shrink-0 text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer opacity-0 group-hover/footer:opacity-100'
+                  >
+                    <RadixIcons.ExitIcon width={15} height={15} />
+                  </Flex>
+                </Tooltip>
+              </Flex>
+            )}
+          </Box>
         )}
 
         {/* Collapse trigger — desktop only */}
         {!isMobile && (
-          <div
-            className={s.trigger}
+          <Flex
+            align='center'
+            justify='center'
             onClick={handleToggleCollapse}
             onKeyDown={e => {
               if (e.key === 'Enter' || e.key === ' ') {
@@ -353,21 +578,24 @@ function Drawer({ minimal = false }) {
                 ? t('common.collapse', 'Collapse')
                 : t('common.expand', 'Expand')
             }
+            className='absolute top-1/2 -right-3 -translate-y-1/2 w-6 h-6 rounded-full bg-white border border-gray-200 text-gray-500 cursor-pointer z-10 shadow-sm transition-all duration-200 hover:text-gray-900 hover:border-gray-300 hover:shadow-md'
           >
-            <span
-              className={s.triggerIcon}
-              style={isExpanded ? { transform: 'rotate(180deg)' } : undefined}
+            <Box
+              className={clsx(
+                'transition-transform duration-200 flex',
+                isExpanded && 'rotate-180',
+              )}
             >
-              <Icon name='chevronRight' size={16} />
-            </span>
-          </div>
+              <RadixIcons.ChevronRightIcon width={14} height={14} />
+            </Box>
+          </Flex>
         )}
-      </aside>
+      </Flex>
 
       {/* Mobile overlay */}
       {isMobile && drawerOpen && (
-        <div
-          className={s.overlay}
+        <Box
+          className='fixed inset-0 bg-current opacity-50 z-[90]'
           onClick={handleCloseMobileDrawer}
           role='presentation'
         />

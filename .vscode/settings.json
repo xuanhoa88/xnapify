@@ -54,6 +54,9 @@
   "[json]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
+  "[markdown]": {
+    "editor.formatOnSave": false
+  },
   // Stylelint configuration
   "stylelint.enable": true,
   "stylelint.validate": [

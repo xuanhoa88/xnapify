@@ -5,17 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import BulkActionsBar from './BulkActionsBar';
-import Empty from './Empty';
-import Error from './Error';
-import Pagination from './Pagination';
-import SearchBar from './SearchBar';
-import Table from './Table';
-
-Table.Error = Error;
-Table.Empty = Empty;
-Table.Pagination = Pagination;
-Table.BulkActionsBar = BulkActionsBar;
-Table.SearchBar = SearchBar;
-
-export default Table;
+export { default as DataTable } from './DataTable';
+export { default as TableBulkActions } from './TableBulkActions';
+export { default as TablePagination } from './TablePagination';
+export { default as TableSearch } from './TableSearch';
+export { useTableColumns } from './useTableColumns';
+export { useMasonryLayout } from './useMasonryLayout';

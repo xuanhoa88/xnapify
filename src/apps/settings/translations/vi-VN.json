@@ -1,0 +1,20 @@
+{
+  "settings": {
+    "title": "Cài đặt hệ thống",
+    "subtitle": "Cấu hình cài đặt toàn hệ thống cho tất cả module",
+    "loading": "Đang tải cài đặt...",
+    "errorLoading": "Lỗi khi tải cài đặt",
+    "resetToDefault": "Đặt lại mặc định",
+    "badgePublic": "công khai",
+    "badgeDefault": "mặc định môi trường",
+    "fallback": "Dự phòng: "
+  },
+  "namespaces": {
+    "core": "Tổng quát",
+    "auth": "Xác thực",
+    "email": "Email",
+    "file": "Lưu trữ tệp",
+    "webhook": "Webhook",
+    "optimization": "Tối ưu hóa"
+  }
+}

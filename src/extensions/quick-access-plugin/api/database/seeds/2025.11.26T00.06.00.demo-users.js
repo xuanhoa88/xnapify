@@ -121,7 +121,7 @@ export async function up(_, { container }) {
     const eavProfile = [];
     if (user.profile) {
       for (const [key, value] of Object.entries(user.profile)) {
-        if (value !== undefined && value !== null) {
+        if (value != null) {
           let attribute_type = 'string';
           if (typeof value === 'object') attribute_type = 'json';
           else if (typeof value === 'boolean') attribute_type = 'boolean';

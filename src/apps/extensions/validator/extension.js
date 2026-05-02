@@ -17,15 +17,3 @@ export const extensionStatusSchema = ({ i18n, z }) =>
       ),
     }),
   });
-
-/**
- * Extension upgrade schema
- */
-export const extensionUpgradeSchema = ({ i18n: _i18n, z }) =>
-  z
-    .object({
-      name: z.string().optional(),
-      description: z.string().optional(),
-      version: z.string().optional(),
-    })
-    .strict();

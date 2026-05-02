@@ -5,20 +5,17 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useEffect, useCallback, useState, useRef } from 'react';
+import { useEffect, useCallback, useState, useRef, useMemo } from 'react';
 
+import * as RadixIcons from '@radix-ui/react-icons';
+import { Flex, Box, Text, Button, Card } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import * as Box from '@shared/renderer/components/Box';
-import Button from '@shared/renderer/components/Button';
-import Card from '@shared/renderer/components/Card';
-import ConfirmModal from '@shared/renderer/components/ConfirmModal';
 import { useHistory } from '@shared/renderer/components/History';
-import Icon from '@shared/renderer/components/Icon';
-import Loader from '@shared/renderer/components/Loader';
+import Modal from '@shared/renderer/components/Modal';
 import { useRbac } from '@shared/renderer/components/Rbac';
-import Table from '@shared/renderer/components/Table';
+import { DataTable } from '@shared/renderer/components/Table';
 
 import RoleActionsDropdown from '../components/RoleActionsDropdown';
 import RoleGroupsModal from '../components/RoleGroupsModal';
@@ -32,28 +29,29 @@ import {
   isRolesListInitialized,
   getRolesListError,
   deleteRole,
+  bulkDeleteRoles,
 } from '../redux';
 
 import s from './Roles.css';
 
-// Pagination items per page
-const ITEMS_PER_PAGE = 10;
-
 // Map role names to icon names for visual consistency
 const ROLE_ICONS = Object.freeze({
-  admin: 'crown',
-  mod: 'shield',
-  user: 'user',
-  guest: 'eye',
-  editor: 'edit',
-  viewer: 'eye',
+  admin: RadixIcons.LockClosedIcon,
+  mod: RadixIcons.StarIcon,
+  user: RadixIcons.PersonIcon,
+  guest: RadixIcons.EyeOpenIcon,
+  editor: RadixIcons.Pencil1Icon,
+  viewer: RadixIcons.EyeOpenIcon,
 });
 
 const getRoleIcon = roleName => {
-  const iconName = ROLE_ICONS[roleName.toLowerCase()] || 'clipboard';
-  return <Icon name={iconName} size={24} />;
+  const Comp = ROLE_ICONS[roleName.toLowerCase()] || RadixIcons.ClipboardIcon;
+  return <Comp width={24} height={24} />;
 };
 
+/**
+ * Roles — Admin page for role management with card grid layout.
+ */
 function Roles() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
@@ -68,6 +66,10 @@ function Roles() {
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Selection state
+  const [selectedRoles, setSelectedRoles] = useState([]);
 
   // Search state
   const [search, setSearch] = useState('');
@@ -84,17 +86,14 @@ function Roles() {
   // Groups modal ref
   const groupsModalRef = useRef();
 
-  // Dropdown state
-  const [activeDropdownId, setActiveDropdownId] = useState(null);
-
   useEffect(() => {
-    dispatch(fetchRoles({ page: currentPage, limit: ITEMS_PER_PAGE, search }));
-  }, [dispatch, currentPage, search]);
+    dispatch(fetchRoles({ page: currentPage, limit: pageSize, search }));
+  }, [dispatch, currentPage, pageSize, search]);
 
   // Refresh roles list callback
   const refreshRoles = useCallback(() => {
-    dispatch(fetchRoles({ page: currentPage, limit: ITEMS_PER_PAGE, search }));
-  }, [dispatch, currentPage, search]);
+    dispatch(fetchRoles({ page: currentPage, limit: pageSize, search }));
+  }, [dispatch, currentPage, pageSize, search]);
 
   const handleAddRole = useCallback(() => {
     history.push('/admin/roles/create');
@@ -120,21 +119,48 @@ function Roles() {
     permissionsModalRef.current && permissionsModalRef.current.open(role);
   }, []);
 
-  const handleToggleDropdown = useCallback(id => {
-    setActiveDropdownId(prev => (prev === id ? null : id));
-  }, []);
+  const clearSelection = useCallback(() => setSelectedRoles([]), []);
+
+  const handleBulkDelete = useCallback(() => {
+    deleteModalRef.current &&
+      deleteModalRef.current.open({ ids: selectedRoles });
+  }, [selectedRoles]);
 
   // Open delete confirmation modal
   const handleDeleteClick = useCallback(role => {
-    deleteModalRef.current && deleteModalRef.current.open(role);
+    deleteModalRef.current &&
+      deleteModalRef.current.open({ ids: [role.id], items: [role] });
   }, []);
 
   const handleDeleteRole = useCallback(
-    item => dispatch(deleteRole(item.id)),
-    [dispatch],
+    async item => {
+      try {
+        if (item.ids && item.ids.length > 1) {
+          const result = await dispatch(bulkDeleteRoles(item.ids)).unwrap();
+          clearSelection();
+          return { success: true, ...result };
+        } else {
+          const id = item.ids ? item.ids[0] : item.id;
+          const result = await dispatch(deleteRole(id)).unwrap();
+          clearSelection();
+          return { success: true, ...result };
+        }
+      } catch (err) {
+        return { success: false, error: err };
+      }
+    },
+    [dispatch, clearSelection],
   );
 
-  const getRoleName = useCallback(item => item.name, []);
+  const getRoleName = useCallback(item => {
+    if (item.items && item.items.length === 1) {
+      return item.items[0].name;
+    }
+    if (item.ids && item.ids.length > 0) {
+      return `${item.ids.length} role(s)`;
+    }
+    return item.name;
+  }, []);
 
   // Search handlers
   const handleSearchChange = useCallback(value => {
@@ -142,83 +168,151 @@ function Roles() {
     setCurrentPage(1);
   }, []);
 
-  // Show loading on first fetch (not initialized) or when loading with no data
-  if (!initialized || (loading && roles.length === 0)) {
-    return (
-      <div className={s.root}>
-        <Box.Header
-          icon={<Icon name='shield' size={24} />}
-          title={t('admin:roles.title', 'Role Management')}
-          subtitle='Define access levels and permissions'
-        />
-        <Loader
-          variant='cards'
-          message={t('admin:roles.loading', 'Loading roles...')}
-        />
-      </div>
-    );
-  }
+  // Bulk actions
+  const bulkActions = useMemo(
+    () => [
+      {
+        key: 'delete',
+        label: t('admin:roles.bulkDelete', 'Delete Selected'),
+        icon: <RadixIcons.TrashIcon width={16} height={16} />,
+        onClick: handleBulkDelete,
+        variant: 'danger',
+        permission: 'roles:delete',
+      },
+    ],
+    [t, handleBulkDelete],
+  );
 
-  if (error) {
-    return (
-      <div className={s.root}>
-        <Box.Header
-          icon={<Icon name='shield' size={24} />}
-          title={t('admin:roles.title', 'Role Management')}
-          subtitle='Define access levels and permissions'
-        />
-        <Table.Error
-          title={t('admin:roles.errorLoading', 'Error loading roles')}
-          error={error}
-          retryLabel={t('admin:common.retry', 'Retry')}
-          onRetry={() =>
-            dispatch(
-              fetchRoles({
-                page: currentPage,
-                limit: ITEMS_PER_PAGE,
-                search,
-              }),
-            )
-          }
-        />
-      </div>
-    );
-  }
+  // Render card for each role
+  const renderRoleCard = useCallback(
+    role => (
+      <Card variant='surface' className={s.cardContent}>
+        <Flex
+          align='center'
+          justify='between'
+          pb='3'
+          mb='3'
+          className={s.cardHeader}
+        >
+          <Flex align='center' gap='3'>
+            <Flex align='center' justify='center' className={s.cardIconBox}>
+              {getRoleIcon(role.name)}
+            </Flex>
+            <Text size='4' weight='bold' className={s.cardTitle}>
+              {role.name}
+            </Text>
+          </Flex>
+          <RoleActionsDropdown
+            role={role}
+            onViewUsers={handleViewUsers}
+            onViewGroups={handleViewGroups}
+            onViewPermissions={handleViewPermissions}
+            onEdit={handleEditRole}
+            onDelete={handleDeleteClick}
+          />
+        </Flex>
+        <Box className={s.cardBody}>
+          <Text size='2' color='gray' className={s.cardDescription}>
+            {role.description ||
+              t('admin:roles.noDescription', 'No description available')}
+          </Text>
+          <Flex direction='column' gap='2' className={s.cardStatsFlex}>
+            <Flex justify='between' align='center'>
+              <Text size='2' className={s.statLabel}>
+                {t('admin:roles.users', 'Users')}:
+              </Text>
+              <Text size='2' weight='medium' className={s.statValue}>
+                {role.usersCount || 0}
+              </Text>
+            </Flex>
+            <Flex justify='between' align='center'>
+              <Text size='2' className={s.statLabel}>
+                {t('admin:roles.groups', 'Groups')}:
+              </Text>
+              <Text size='2' weight='medium' className={s.statValue}>
+                {role.groupsCount || 0}
+              </Text>
+            </Flex>
+            <Flex justify='between' align='center'>
+              <Text size='2' className={s.statLabel}>
+                {t('admin:roles.permissions', 'Permissions')}:
+              </Text>
+              <Text size='2' weight='medium' className={s.statValue}>
+                {role.permissionsCount || 0}
+              </Text>
+            </Flex>
+          </Flex>
+        </Box>
+      </Card>
+    ),
+    [
+      t,
+      handleViewUsers,
+      handleViewGroups,
+      handleViewPermissions,
+      handleEditRole,
+      handleDeleteClick,
+    ],
+  );
 
   return (
-    <div className={s.root}>
-      <Box.Header
-        icon={<Icon name='shield' size={24} />}
-        title={t('admin:roles.title', 'Role Management')}
-        subtitle='Define access levels and permissions'
+    <Box className='p-6 max-w-[1400px] mx-auto'>
+      <DataTable
+        dataSource={roles}
+        rowKey='id'
+        loading={loading}
+        initialized={initialized}
+        as='grid'
+        gridCols={4}
+        renderCard={renderRoleCard}
+        selectable
+        selectedKeys={selectedRoles}
+        onSelectionChange={setSelectedRoles}
       >
-        <Button
-          variant='primary'
-          onClick={handleAddRole}
-          {...(!canCreate && {
-            disabled: true,
-            title: t(
-              'admin:roles.noPermissionToCreate',
-              'You do not have permission to create roles',
-            ),
-          })}
+        <DataTable.Header
+          title={t('admin:roles.title', 'Role Management')}
+          subtitle={t(
+            'admin:roles.subtitle',
+            'Define access levels and permissions',
+          )}
+          icon={<RadixIcons.IdCardIcon width={24} height={24} />}
         >
-          <Icon name='plus' size={16} />
-          {t('admin:roles.addRole', 'Add Role')}
-        </Button>
-      </Box.Header>
+          <Button
+            variant='solid'
+            color='indigo'
+            onClick={handleAddRole}
+            {...(!canCreate && {
+              disabled: true,
+              title: t(
+                'admin:roles.noPermissionToCreate',
+                'You do not have permission to create roles',
+              ),
+            })}
+          >
+            <RadixIcons.PlusIcon width={16} height={16} />
+            {t('admin:roles.addRole', 'Add Role')}
+          </Button>
+        </DataTable.Header>
 
-      {/* Search/Filter Section */}
-      <Table.SearchBar
-        className={s.filters}
-        value={search}
-        onChange={handleSearchChange}
-        placeholder={t('admin:roles.searchPlaceholder', 'Search roles...')}
-      />
+        <DataTable.Toolbar>
+          <DataTable.Search
+            value={search}
+            onChange={handleSearchChange}
+            placeholder={t('admin:roles.searchPlaceholder', 'Search roles...')}
+          />
+          <DataTable.ClearFilters
+            visible={!!search}
+            onClick={() => {
+              setSearch('');
+              setCurrentPage(1);
+            }}
+          />
+        </DataTable.Toolbar>
 
-      {roles.length === 0 ? (
-        <Table.Empty
-          icon='shield'
+        <DataTable.BulkActions actions={bulkActions} />
+
+        <DataTable.Empty
+          icon={<RadixIcons.IdCardIcon width={48} height={48} />}
           title={t('admin:roles.noRolesFound', 'No roles found')}
           description={t(
             'admin:roles.noRolesDescription',
@@ -226,8 +320,10 @@ function Roles() {
           )}
         >
           <Button
-            variant='primary'
+            variant='solid'
+            color='indigo'
             onClick={handleAddRole}
+            mt='3'
             {...(!canCreate && {
               disabled: true,
               title: t(
@@ -238,79 +334,20 @@ function Roles() {
           >
             {t('admin:roles.addRole', 'Add Role')}
           </Button>
-        </Table.Empty>
-      ) : (
-        <div className={s.grid}>
-          {roles.map(role => (
-            <Card
-              key={role.id}
-              variant='default'
-              interactive
-              className={s.roleCard}
-            >
-              <Card.Header
-                className={s.roleCardHeader}
-                actions={
-                  <RoleActionsDropdown
-                    role={role}
-                    isOpen={activeDropdownId === role.id}
-                    onToggle={handleToggleDropdown}
-                    onViewUsers={handleViewUsers}
-                    onViewGroups={handleViewGroups}
-                    onViewPermissions={handleViewPermissions}
-                    onEdit={handleEditRole}
-                    onDelete={handleDeleteClick}
-                  />
-                }
-              >
-                <div className={s.roleHeaderContent}>
-                  <div className={s.roleIcon}>{getRoleIcon(role.name)}</div>
-                  <h3 className={s.roleName}>{role.name}</h3>
-                </div>
-              </Card.Header>
-              <Card.Body className={s.roleCardBody}>
-                <p className={s.roleDescription}>
-                  {role.description ||
-                    t('admin:roles.noDescription', 'No description available')}
-                </p>
-                <div className={s.roleStats}>
-                  <div className={s.stat}>
-                    <span className={s.statLabel}>
-                      {t('admin:roles.users', 'Users')}:
-                    </span>
-                    <span className={s.statValue}>{role.usersCount || 0}</span>
-                  </div>
-                  <div className={s.stat}>
-                    <span className={s.statLabel}>
-                      {t('admin:roles.groups', 'Groups')}:
-                    </span>
-                    <span className={s.statValue}>{role.groupsCount || 0}</span>
-                  </div>
-                  <div className={s.stat}>
-                    <span className={s.statLabel}>
-                      {t('admin:roles.permissions', 'Permissions')}:
-                    </span>
-                    <span className={s.statValue}>
-                      {role.permissionsCount || 0}
-                    </span>
-                  </div>
-                </div>
-              </Card.Body>
-            </Card>
-          ))}
-        </div>
-      )}
+        </DataTable.Empty>
+        <DataTable.Error message={error} onRetry={refreshRoles} />
+        <DataTable.Loader variant='cards' />
 
-      {/* Pagination */}
-      {pagination && pagination.pages > 1 && (
-        <Table.Pagination
-          currentPage={currentPage}
-          totalPages={pagination.pages}
-          totalItems={pagination.total}
-          onPageChange={setCurrentPage}
-          loading={loading}
+        <DataTable.Pagination
+          current={currentPage}
+          totalPages={pagination ? pagination.pages : undefined}
+          total={pagination ? pagination.total : undefined}
+          pageSize={pageSize}
+          pageSizeOptions={[10, 20, 50, 100]}
+          onChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
         />
-      )}
+      </DataTable>
 
       {/* Permissions Modal */}
       <RolePermissionsModal ref={permissionsModalRef} />
@@ -322,14 +359,14 @@ function Roles() {
       <RoleGroupsModal ref={groupsModalRef} />
 
       {/* Delete Confirmation Modal */}
-      <ConfirmModal.Delete
+      <Modal.ConfirmDelete
         ref={deleteModalRef}
         title='Delete Role'
         getItemName={getRoleName}
         onDelete={handleDeleteRole}
         onSuccess={refreshRoles}
       />
-    </div>
+    </Box>
   );
 }
 

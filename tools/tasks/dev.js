@@ -7,6 +7,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+const { execSync } = require('child_process');
 const http = require('http');
 const path = require('path');
 
@@ -57,10 +58,43 @@ const host = config.env('XNAPIFY_HOST', '127.0.0.1');
 // - app: Holds the Express application instance
 // - server: Holds the HTTP server instance
 // - dispose: Dispose server bundle (Node-RED, etc.)
+// - invalidateServerCaches: Lightweight SSR cache invalidation (no service shutdown)
 // - hmr: Tracks Hot Module Replacement state and configuration
 // - hotMiddleware: Webpack hot middleware instance
 // - devMiddleware: Webpack dev middleware instance
-let app, server, dispose, hmr, hotMiddleware, devMiddleware;
+let app,
+  server,
+  dispose,
+  invalidateServerCaches,
+  hmr,
+  hotMiddleware,
+  devMiddleware;
+
+// Synchronized HMR: buffers client HMR 'built' events while the server
+// compiler is still recompiling, then flushes them once the server bundle
+// is refreshed. This keeps client and server in lock-step, preventing
+// hydration mismatches without blocking any HTTP requests.
+let serverCompiling = false;
+let pendingHmrPublishes = [];
+let originalHmrPublish = null;
+
+/**
+ * Flushes any buffered client HMR events. Called after the server HMR
+ * cycle completes (success or failure) so the client receives updates
+ * only when the server is also ready.
+ */
+function flushPendingHmrPublishes() {
+  serverCompiling = false;
+  if (pendingHmrPublishes.length > 0 && originalHmrPublish) {
+    const queued = pendingHmrPublishes.splice(0);
+    for (const payload of queued) {
+      originalHmrPublish(payload);
+    }
+    if (!silent) {
+      logInfo(`🔄 Flushed ${queued.length} deferred client HMR update(s)`);
+    }
+  }
+}
 
 /**
  * Create compilation promise for webpack compiler
@@ -69,7 +103,7 @@ function createCompilationPromise(name, compiler) {
   return new Promise((resolve, reject) => {
     compiler.hooks.compile.tap(name, () => {
       if (!silent) {
-        logInfo(`🔄 Compiling '${name}'...`);
+        logInfo(`🔨 Compiling '${name}'...`);
       }
     });
 
@@ -139,40 +173,27 @@ function configureWebpackForDev(cfg, isClient = true) {
       }),
     );
 
-    // Add react-refresh/babel plugin to babel-loader for React Fast Refresh
-    const addBabelPluginToRules = (rules, plugin) => {
-      if (!Array.isArray(rules)) return;
-
-      rules.forEach(rule => {
-        if (!rule) return;
-
-        // Process loader array
-        const loaders = (
-          Array.isArray(rule.use) ? rule.use : [rule.use]
-        ).filter(Boolean);
-        loaders.forEach(loaderConfig => {
-          const loader =
-            typeof loaderConfig === 'string'
-              ? loaderConfig
-              : loaderConfig && loaderConfig.loader;
-
-          if (loader === 'babel-loader' && typeof loaderConfig === 'object') {
-            loaderConfig.options = loaderConfig.options || {};
-            loaderConfig.options.plugins = loaderConfig.options.plugins || [];
-            if (!loaderConfig.options.plugins.includes(plugin)) {
-              loaderConfig.options.plugins.push(plugin);
-            }
-          }
-        });
-
-        // Recursively process nested rules (like oneOf)
-        if (rule.oneOf) addBabelPluginToRules(rule.oneOf, plugin);
-      });
-    };
-
-    const refreshBabelPlugin = require.resolve('react-refresh/babel');
+    // Enable React Fast Refresh in swc-loader
+    // SWC handles refresh natively via jsc.transform.react.refresh
     const rules = cfg.module && cfg.module.rules ? cfg.module.rules : [];
-    addBabelPluginToRules(rules, refreshBabelPlugin);
+    rules.forEach(rule => {
+      if (!rule || !rule.use) return;
+      const loaders = (Array.isArray(rule.use) ? rule.use : [rule.use]).filter(
+        Boolean,
+      );
+      loaders.forEach(loaderConfig => {
+        if (
+          typeof loaderConfig === 'object' &&
+          loaderConfig.loader === 'swc-loader' &&
+          loaderConfig.options &&
+          loaderConfig.options.jsc &&
+          loaderConfig.options.jsc.transform &&
+          loaderConfig.options.jsc.transform.react
+        ) {
+          loaderConfig.options.jsc.transform.react.refresh = true;
+        }
+      });
+    });
 
     // Use shared HMR client to ensure singleton connection
     const whm = require.resolve('../webpack/hotClient');
@@ -206,12 +227,23 @@ function loadServerBundle() {
       path.join(config.BUILD_DIR, 'server'),
     );
 
-    // Only the server bundle entry needs clearing — framework singletons
-    // (express, http, react) are injected from dev.js and never bundled.
-    delete require.cache[serverBundlePath];
+    // Clear require.cache for ALL files in the build directory.
+    // Webpack code-splits server modules into separate chunk files
+    // (e.g. src_bootstrap_views_js.js). These chunks are loaded via
+    // Node's require() and cached independently. Clearing only the
+    // main entry leaves stale chunk code in memory after recompilation.
+    const buildDir = path.resolve(config.BUILD_DIR);
+    Object.keys(require.cache).forEach(id => {
+      if (id.startsWith(buildDir)) {
+        delete require.cache[id];
+      }
+    });
 
     // Load the server bundle
-    const { hot, ...bundle } = require(serverBundlePath);
+    const { hot, invalidateCaches, ...bundle } = require(serverBundlePath);
+
+    // Expose lightweight cache invalidation for extension HMR
+    invalidateServerCaches = invalidateCaches;
 
     // Set up HMR if available (for development)
     hmr = hot;
@@ -327,7 +359,9 @@ function createWebpackMiddlewares(clientCompiler) {
       chunks: false, // Hide chunk details to reduce noise
       modules: false, // Hide module details
     },
-    writeToDisk: true, // Write files to disk for SSR
+    // Only write stats.json and CSS to disk (needed for SSR template).
+    // JS chunks are served from memory by dev middleware — faster I/O.
+    writeToDisk: filePath => /\.(json|css)$/.test(filePath),
     serverSideRender: true, // Enable SSR access to webpack stats
   });
 
@@ -339,6 +373,24 @@ function createWebpackMiddlewares(clientCompiler) {
     path: '/~/__webpack_hmr', // WebSocket path for HMR
     heartbeat: 10_000, // Heartbeat interval in ms
   });
+
+  // Intercept publish() to synchronize client HMR with server readiness.
+  // When the server compiler is still recompiling, 'built' events are
+  // buffered so React Fast Refresh won't fire ahead of the server bundle.
+  // Heartbeats and other control messages pass through immediately.
+  originalHmrPublish = hotMiddlewareInstance.publish.bind(
+    hotMiddlewareInstance,
+  );
+  hotMiddlewareInstance.publish = payload => {
+    if (serverCompiling && payload && payload.action === 'built') {
+      pendingHmrPublishes.push(payload);
+      if (verbose) {
+        logInfo('⏳ Deferring client HMR until server bundle is ready...');
+      }
+      return;
+    }
+    originalHmrPublish(payload);
+  };
 
   return { devMiddleware, hotMiddleware: hotMiddlewareInstance };
 }
@@ -368,93 +420,117 @@ function attachWebpackMiddlewares(expressApp) {
 }
 
 /**
- * Check for HMR updates and optionally apply them.
- *
- * @returns {Promise<boolean>} True if updates detected, false otherwise.
+ * Tracks the compilation hash of the server bundle that is currently loaded
+ * in memory. Used to skip redundant reloads when the compiler fires but
+ * produces identical output.
  */
-async function checkForUpdate() {
-  try {
-    // Return early if Express app is not initialized (e.g. during initial compilation)
-    if (!app) {
-      if (verbose) logInfo('App not initialized, skipping update check');
-      return false;
-    }
+let loadedServerHash = null;
 
-    // Skip if HMR runtime is not available or not in 'idle' state
-    if (!hmr || typeof hmr.status !== 'function' || hmr.status() !== 'idle') {
-      if (verbose) logInfo('HMR not ready, skipping update check');
-      return false;
-    }
-
-    // Small delay to ensure all modules are loaded before checking
-    await new Promise(resolve => setTimeout(resolve, 50));
-
-    // Check for updates but DO NOT auto-apply them (we reload the bundle manually)
-    // Applying updates to the old bundle can cause freezes if dispose handlers hang
-    const updatedModules = await hmr.check(false);
-
-    // No updates found
-    if (!updatedModules || updatedModules.length === 0) {
-      if (verbose) logInfo('No HMR updates available (ignoring for debug).');
-      // return false;
-    }
-
-    logInfo(
-      `🔥 HMR: Detected ${updatedModules ? updatedModules.length : 0} updated module(s).`,
-    );
-
-    // Clean up previous bundle resources (Node-RED, etc.)
-    if (typeof dispose === 'function') {
-      try {
-        await dispose();
-      } catch (err) {
-        logError('❌ Error disposing previous bundle:', err);
-      }
-    }
-
-    // Notify browser sync BEFORE reloading the bundle
-    // so clients see "restarting" before the "ready/reload" message
-    await notifyBrowserSyncRestart();
-
-    // Load new server bundle
-    let createServer, bootstrapApp;
-    ({ createServer, bootstrapApp, disposeApp: dispose } = loadServerBundle());
-
-    // Recreate dev server with new bundle
-    await prepareDevServer({ createServer, bootstrapApp }, server);
-
-    return true;
-  } catch (err) {
-    // Capture HMR status for context; fallback if hmr is unavailable
-    const hmrStatus =
-      hmr && typeof hmr.status === 'function' ? hmr.status() : 'no-hmr';
-
-    // Log detailed error information
-    logError(`❌ HMR update failed (status: ${hmrStatus}).`);
-    logError(err && err.stack ? err.stack : err.message || err);
-
-    // Provide guidance based on HMR state
-    switch (hmrStatus) {
-      case 'abort':
-      case 'fail':
-        logInfo('⚠️ HMR in a bad state, consider restarting the server.');
-        break;
-      case 'dispose':
-      case 'prepare':
-        logInfo('⏳ HMR is processing, will retry on next check.');
-        break;
-      default:
-        logError('⚠️ Unexpected HMR state, monitoring for next update.');
-    }
-
+/**
+ * Reload the server bundle after a successful recompilation.
+ *
+ * Three-tier strategy, from fastest to most reliable:
+ *
+ * 1. **Skip** — compilation hash unchanged → nothing to do.
+ * 2. **HMR fast-path** — `hmr.check(true)` applies the update in-place
+ *    and `invalidateServerCaches()` clears SSR caches. No Express restart.
+ *    Works for typical edits (changing a component, fixing a string, etc.).
+ * 3. **Full reload** — clears require.cache, re-requires the bundle from
+ *    disk, and re-bootstraps Express. Required when HMR can't apply the
+ *    update (e.g. new files added to a `require.context`, deleted modules,
+ *    or structural changes that break the module graph).
+ *
+ * @param {string} [currentHash] Compilation hash from `stats.hash`.
+ * @returns {Promise<boolean>} True if the server was reloaded.
+ */
+async function checkForUpdate(currentHash) {
+  // -----------------------------------------------------------------------
+  // Guard: app must be initialized (initial compilation is handled by main)
+  // -----------------------------------------------------------------------
+  if (!app) {
+    if (verbose) logInfo('App not initialized, skipping update check');
     return false;
   }
+
+  // -----------------------------------------------------------------------
+  // Tier 1: Skip if hash unchanged
+  // -----------------------------------------------------------------------
+  if (currentHash && currentHash === loadedServerHash) {
+    if (verbose) logInfo('Server bundle hash unchanged, skipping reload');
+    return false;
+  }
+
+  // -----------------------------------------------------------------------
+  // Tier 2: Try HMR fast-path (in-memory update, no Express restart)
+  // -----------------------------------------------------------------------
+  if (hmr && typeof hmr.status === 'function' && hmr.status() === 'idle') {
+    try {
+      const updatedModules = await hmr.check(/* autoApply */ true);
+
+      if (updatedModules && updatedModules.length > 0) {
+        // HMR applied successfully — module.hot.accept() in server.js
+        // already called invalidateCaches(). Just update the hash.
+        loadedServerHash = currentHash;
+        logInfo(`🔥 HMR: Applied ${updatedModules.length} module(s) in-place`);
+        return true;
+      }
+
+      // hmr.check returned empty — the compiler ran but produced
+      // identical HMR output. This is effectively a no-op.
+      if (verbose) logInfo('HMR found no updated modules');
+      loadedServerHash = currentHash;
+      return false;
+    } catch {
+      // HMR apply failed — expected for structural changes (new context
+      // entries, deleted modules, etc.). Fall through to full reload.
+      // After a failed apply HMR status may be 'abort' or 'fail';
+      // loadServerBundle() below captures a fresh `module.hot` from
+      // the re-required bundle, restoring the runtime to 'idle'.
+      logInfo('⚠️ HMR apply failed, falling back to full reload');
+    }
+  }
+
+  // -----------------------------------------------------------------------
+  // Tier 3: Full bundle reload from disk
+  // -----------------------------------------------------------------------
+  logInfo('🔄 Full server bundle reload...');
+
+  // Clean up previous bundle resources (Node-RED, etc.)
+  if (typeof dispose === 'function') {
+    try {
+      await dispose();
+    } catch (err) {
+      logError('❌ Error disposing previous bundle:', err);
+    }
+  }
+
+  // Notify browser sync BEFORE reloading the bundle
+  // so clients see "restarting" before the "ready/reload" message
+  await notifyBrowserSyncRestart();
+
+  // Re-require the server bundle from disk.
+  // loadServerBundle() clears require.cache for the build dir, captures
+  // a fresh `hmr` (module.hot) from the new bundle, and returns
+  // the new { createServer, bootstrapApp } surface.
+  let createServer, bootstrapApp;
+  ({ createServer, bootstrapApp, disposeApp: dispose } = loadServerBundle());
+
+  // Recreate the Express app with the new bundle
+  await prepareDevServer({ createServer, bootstrapApp }, server);
+
+  loadedServerHash = currentHash;
+  return true;
 }
 
 /**
  * Sets up a file watcher for the server bundle that triggers HMR updates when server code changes.
  */
 function setupServerBundleWatcher(serverCompiler) {
+  // Mark server as compiling so client HMR events are buffered.
+  serverCompiler.hooks.compile.tap('HmrSync', () => {
+    serverCompiling = true;
+  });
+
   // Start watch mode on the server compiler
   serverCompiler.watch(
     {
@@ -468,11 +544,13 @@ function setupServerBundleWatcher(serverCompiler) {
       if (error) {
         logError('❌ Server compilation failed: ' + error.message);
         if (error.stack) logError(error.stack);
+        flushPendingHmrPublishes();
         return;
       }
 
       if (!stats) {
         logError('❌ Server compilation failed: no stats returned.');
+        flushPendingHmrPublishes();
         return;
       }
 
@@ -492,6 +570,7 @@ function setupServerBundleWatcher(serverCompiler) {
           });
         }
 
+        flushPendingHmrPublishes();
         return;
       }
 
@@ -499,11 +578,12 @@ function setupServerBundleWatcher(serverCompiler) {
       if (verbose) {
         const time = stats.endTime - stats.startTime;
         logInfo('✅ Server bundle compiled in ' + time + 'ms');
-        logInfo('🔄 Checking for HMR updates...');
       }
 
-      // Run HMR check using a Promise chain (ES2015-safe)
-      await checkForUpdate();
+      // Reload the server with the new bundle, THEN flush client HMR
+      // so both sides have the new code before React Fast Refresh fires.
+      await checkForUpdate(stats.hash);
+      flushPendingHmrPublishes();
     },
   );
 }
@@ -521,6 +601,29 @@ async function main() {
   const startTime = Date.now();
   logInfo('🚀 Starting development server...');
 
+  // Forward extension rebuild events to the client browser via hot middleware
+  // and invalidate server-side SSR caches so stale chunk URLs aren't served.
+  process.on('message', msg => {
+    if (msg && msg.type === 'extensions-refreshed') {
+      // Invalidate SSR resource cache so stale extension asset URLs
+      // (with old content hashes) aren't injected into server-rendered HTML.
+      // The extension rebuild changes chunk hashes; without this, the cached
+      // SSR resources reference deleted chunk files → MIME type errors.
+      if (typeof invalidateServerCaches === 'function') {
+        invalidateServerCaches();
+        if (!silent) logInfo('🗑️  Extension rebuild: SSR caches cleared');
+      }
+
+      if (hotMiddleware && typeof hotMiddleware.publish === 'function') {
+        hotMiddleware.publish({
+          type: 'extensions-refreshed',
+          extensions: msg.extensions,
+        });
+        logInfo('🔌 Forwarded extensions-refreshed to client');
+      }
+    }
+  });
+
   // Setup graceful shutdown handler
   setupGracefulShutdown(async () => {
     logInfo('🛑 Development server shutting down...');
@@ -531,6 +634,19 @@ async function main() {
 
       // Dispose server bundle (Node-RED, etc.)
       typeof dispose === 'function' ? dispose() : Promise.resolve(),
+
+      // Shutdown embedded database daemons gracefully
+      new Promise(resolve => {
+        try {
+          execSync('npm run predev -- --stop', {
+            stdio: 'inherit',
+            timeout: 20_000,
+          });
+        } catch {
+          // Failure to stop db shouldn't crash the shutdown process
+        }
+        resolve();
+      }),
 
       // Print goodbye message (synchronous)
       new Promise(resolve => {
@@ -550,27 +666,8 @@ async function main() {
     });
   });
 
-  // Clean before starting
-  await clean();
-
-  // Generate JWT
-  await generateJWT(config.CWD);
-
-  // Build extensions
-  await buildExtensions({ watch: true });
-
-  // Forward extension rebuild events to the client browser via hot middleware
-  process.on('message', msg => {
-    if (msg && msg.type === 'extensions-refreshed' && hotMiddleware) {
-      if (typeof hotMiddleware.publish === 'function') {
-        hotMiddleware.publish({
-          type: 'extensions-refreshed',
-          extensions: msg.extensions,
-        });
-        logInfo('🔌 Forwarded extensions-refreshed to client');
-      }
-    }
-  });
+  // Clean and generate JWT in parallel (JWT only touches .env, independent of build dir)
+  await Promise.all([clean(), generateJWT(config.CWD)]);
 
   try {
     // Setup webpack compilers
@@ -606,11 +703,17 @@ async function main() {
       createWebpackMiddlewares(clientCompiler));
 
     // Wait for both server and client bundle compilations to finish (they run in parallel)
-    await Promise.all([serverPromise, clientPromise]);
+    const [, serverStats] = await Promise.all([
+      buildExtensions({ watch: true }),
+      serverPromise,
+      clientPromise,
+    ]);
 
-    // Load server bundle
+    // Load server bundle and record its hash so checkForUpdate()
+    // can skip redundant reloads when the watcher fires.
     let createServer, bootstrapApp;
     ({ createServer, bootstrapApp, disposeApp: dispose } = loadServerBundle());
+    loadedServerHash = serverStats.hash;
 
     // Start server
     const startServer = await prepareDevServer(

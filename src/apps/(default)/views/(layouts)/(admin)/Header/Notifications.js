@@ -5,15 +5,13 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 
+import { Flex, Text, Box, Button, Popover } from '@radix-ui/themes';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 
-import Button from '@shared/renderer/components/Button';
 import Icon from '@shared/renderer/components/Icon';
-
-import s from './Notifications.css';
 
 // Mock notification data
 const mockNotifications = [
@@ -45,107 +43,143 @@ const mockNotifications = [
 
 /**
  * Notifications Component
- * Notification bell with dropdown panel showing recent notifications
+ * Notification bell with dropdown panel natively mapped to Radix Flex/Box layout
  */
 function AdminNotifications() {
   const { t } = useTranslation();
-  const [isOpen, setIsOpen] = useState(false);
   const [notifications] = useState(mockNotifications);
-  const dropdownRef = useRef(null);
-
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = event => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen]);
-
-  const handleToggle = useCallback(() => {
-    setIsOpen(prev => !prev);
-  }, []);
-
-  const getTypeIcon = type => {
+  const getTypeStyle = type => {
     switch (type) {
       case 'warning':
-        return <Icon name='alert-triangle' size={16} />;
+        return {
+          colorClass: 'text-amber-11',
+          bgClass: 'bg-amber-3',
+          icon: 'ExclamationTriangleIcon',
+        };
       case 'success':
-        return <Icon name='check-circle' size={16} />;
+        return {
+          colorClass: 'text-green-11',
+          bgClass: 'bg-green-3',
+          icon: 'CheckCircledIcon',
+        };
       case 'error':
-        return <Icon name='x-circle' size={16} />;
+        return {
+          colorClass: 'text-red-11',
+          bgClass: 'bg-red-3',
+          icon: 'CrossCircledIcon',
+        };
       default:
-        return <Icon name='info' size={16} />;
+        return {
+          colorClass: 'text-blue-11',
+          bgClass: 'bg-blue-3',
+          icon: 'InfoCircledIcon',
+        };
     }
   };
 
   return (
-    <div className={s.notificationWrapper} ref={dropdownRef}>
-      <Button
-        variant='unstyled'
-        iconOnly
-        className={s.notificationBtn}
-        onClick={handleToggle}
-        title={t('common.notifications', 'Notifications')}
+    <Popover.Root>
+      <Popover.Trigger>
+        <button
+          type='button'
+          title={t('common.notifications', 'Notifications')}
+          className='relative flex items-center justify-center w-9 h-9 rounded-full text-gray-500 cursor-pointer transition-colors bg-transparent hover:bg-gray-100 hover:text-gray-900 data-[state=open]:bg-gray-100 data-[state=open]:text-gray-900 outline-none border-none'
+        >
+          <Icon name='BellIcon' size={18} />
+          {unreadCount > 0 && (
+            <Flex
+              align='center'
+              justify='center'
+              className='absolute top-1 right-1 bg-red-500 text-white text-[9px] font-bold min-w-[14px] h-[14px] rounded-full px-0.5 border border-white'
+            >
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </Flex>
+          )}
+        </button>
+      </Popover.Trigger>
+
+      <Popover.Content
+        align='end'
+        className='p-0 bg-panel-solid/90 backdrop-blur-md border border-gray-a6 rounded-md shadow-lg overflow-hidden z-[100] w-[calc(100vw-24px)] sm:w-[380px] data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95'
       >
-        <Icon name='bell' size={18} />
-        {unreadCount > 0 && (
-          <span className={s.notificationBadge}>{unreadCount}</span>
-        )}
-      </Button>
+        <Flex
+          align='center'
+          justify='between'
+          className='px-4 py-3 border-b border-gray-a6 bg-gray-2'
+        >
+          <Text size='3' weight='bold'>
+            {t('common.notifications', 'Notifications')}
+          </Text>
+          <Text size='2' color='gray'>
+            {t('common.newNotificationsCount', '{{count}} new', {
+              count: unreadCount,
+            })}
+          </Text>
+        </Flex>
 
-      {isOpen && (
-        <div className={s.dropdown}>
-          <div className={s.dropdownHeader}>
-            <span className={s.dropdownTitle}>
-              {t('common.notifications', 'Notifications')}
-            </span>
-            <span className={s.dropdownCount}>
-              {t('common.newNotificationsCount', '{{count}} new', {
-                count: unreadCount,
-              })}
-            </span>
-          </div>
+        <Box className='max-h-[360px] overflow-y-auto'>
+          {notifications.map(notification => {
+            const typeStyle = getTypeStyle(notification.type);
 
-          <div className={s.dropdownList}>
-            {notifications.map(notification => (
-              <div
+            return (
+              <Flex
                 key={notification.id}
-                className={clsx(s.notificationItem, {
-                  [s.unread]: !notification.read,
-                })}
+                gap='3'
+                className={clsx(
+                  'px-4 py-3 border-b border-gray-a6 bg-transparent cursor-pointer transition-colors hover:bg-gray-3',
+                  !notification.read && 'bg-indigo-2 hover:bg-indigo-3',
+                )}
               >
-                <span className={s.notificationIcon}>
-                  {getTypeIcon(notification.type)}
-                </span>
-                <div className={s.notificationContent}>
-                  <div className={s.notificationTitle}>
-                    {notification.title}
-                  </div>
-                  <div className={s.notificationMessage}>
+                <Flex
+                  align='center'
+                  justify='center'
+                  className={clsx(
+                    'w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center',
+                    typeStyle.bgClass,
+                    typeStyle.colorClass,
+                  )}
+                >
+                  <Icon name={typeStyle.icon} size={16} />
+                </Flex>
+                <Flex direction='column' width='100%' overflow='hidden'>
+                  <Flex justify='between' align='start'>
+                    <Text
+                      size='2'
+                      weight={notification.read ? 'regular' : 'bold'}
+                      highContrast
+                      className='line-clamp-1'
+                    >
+                      {notification.title}
+                    </Text>
+                  </Flex>
+                  <Text size='2' color='gray' mt='1' className='line-clamp-2'>
                     {notification.message}
-                  </div>
-                  <div className={s.notificationTime}>{notification.time}</div>
-                </div>
-              </div>
-            ))}
-          </div>
+                  </Text>
+                  <Text size='1' color='gray' mt='1'>
+                    {notification.time}
+                  </Text>
+                </Flex>
+              </Flex>
+            );
+          })}
+        </Box>
 
-          <div className={s.dropdownFooter}>
-            <Button variant='unstyled' className={s.viewAllBtn}>
-              {t('common.viewAll', 'View all notifications')}
-            </Button>
-          </div>
-        </div>
-      )}
-    </div>
+        <Flex
+          justify='center'
+          className='p-2 bg-gray-2 border-t border-gray-a6'
+        >
+          <Button
+            variant='ghost'
+            size='2'
+            className='text-indigo-11 font-medium cursor-pointer no-underline hover:underline'
+          >
+            {t('common.viewAll', 'View all notifications')}
+          </Button>
+        </Flex>
+      </Popover.Content>
+    </Popover.Root>
   );
 }
 

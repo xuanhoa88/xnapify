@@ -5,8 +5,14 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-// Mock uuid to avoid Jest compatibility issues
-jest.mock('uuid');
+jest.mock('uuid', () => ({
+  v4: () =>
+    'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+      const r = (Math.random() * 16) | 0;
+      const v = c === 'x' ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    }),
+}));
 
 import { Channel } from './channel';
 import { createFactory } from './factory';
@@ -987,28 +993,5 @@ describe('Queue Error Classes', () => {
       expect(err.statusCode).toBe(503);
       expect(err).toBeInstanceOf(errors.QueueError);
     });
-  });
-});
-
-// ======================================================================
-// Factory Signal Handler Tests
-// ======================================================================
-
-describe('createFactory() signal handlers', () => {
-  it('should register SIGTERM and SIGINT handlers', () => {
-    const spy = jest.spyOn(process, 'once');
-
-    // Reset mock to track only our call
-    spy.mockClear();
-
-    createFactory();
-
-    const sigTermCalls = spy.mock.calls.filter(c => c[0] === 'SIGTERM');
-    const sigIntCalls = spy.mock.calls.filter(c => c[0] === 'SIGINT');
-
-    expect(sigTermCalls.length).toBeGreaterThanOrEqual(1);
-    expect(sigIntCalls.length).toBeGreaterThanOrEqual(1);
-
-    spy.mockRestore();
   });
 });

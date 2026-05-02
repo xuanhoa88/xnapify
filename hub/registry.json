@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "updatedAt": "2026-05-01T03:22:04.427Z",
+  "totalCount": 1,
+  "extensions": [
+    {
+      "name": "@xnapify-extension/docs",
+      "key": "28GriwETSZPJMe",
+      "version": "1.0.0",
+      "description": "Serve public/documents files explicitly as a Docusaurus-like viewer.",
+      "short_description": "Serve public/documents files explicitly as a Docusaurus-like viewer.",
+      "category": "content",
+      "tags": [
+        "docs",
+        "documentation",
+        "viewer"
+      ],
+      "icon": "📚",
+      "author": "xuanhoa88",
+      "repository": "https://github.com/xuanhoa88/xnapify/tree/main/src/extensions/docs-module",
+      "compatibility": ">=1.0.0",
+      "type": "module",
+      "downloadUrl": "https://github.com/xuanhoa88/xnapify/releases/download/v1.0.0/docs-v1.0.0.zip",
+      "checksum": "c4b1895f458fd1191361369d0d0c051ada48d5df34e7e73299280402e0650f51"
+    }
+  ]
+}

@@ -1,55 +1,36 @@
-.root {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-lg, 16px);
+/**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+/* Template-specific styles — shared layout handled by DataTable */
+
+.slugText {
+  background-color: var(--gray-3);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-1);
+  font-family: monospace;
+  font-size: var(--font-size-1);
 }
 
-.filters {
-  display: flex;
-  gap: var(--spacing-sm, 8px);
-  align-items: center;
-}
-
-.filterActions {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-xs, 4px);
-  margin-left: auto;
-}
-
-.nameCell {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.nameCell strong {
-  font-weight: 600;
-}
-
-.slug {
-  font-size: var(--font-size-sm, 12px);
-  color: var(--text-secondary, #6b7280);
-  background: var(--bg-subtle, #f3f4f6);
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-family: var(--font-mono, monospace);
-}
-
-.subject {
-  max-width: 250px;
+.subjectText {
+  max-width: 300px;
+  display: inline-block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  display: inline-block;
 }
 
-.actions {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-xs, 4px);
-}
 
-.previewBody {
+.modalBody {
   padding: 0;
+  height: calc(100vh - 64px);
+  overflow: hidden;
+}
+
+.templateEditor {
+  height: 100%;
+  border: none;
 }

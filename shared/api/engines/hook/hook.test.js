@@ -1,3 +1,10 @@
+/**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
 import hook, {
   createFactory,
   HookChannel,
@@ -368,16 +375,6 @@ describe('Hook Engine', () => {
         expect(err.code).toBe('ERR_INVALID_CHANNEL_NAME');
         expect(err.statusCode).toBe(400);
       }
-    });
-
-    test('should register SIGTERM and SIGINT handlers', () => {
-      const spy = jest.spyOn(process, 'once');
-      createFactory();
-
-      expect(spy).toHaveBeenCalledWith('SIGTERM', expect.any(Function));
-      expect(spy).toHaveBeenCalledWith('SIGINT', expect.any(Function));
-
-      spy.mockRestore();
     });
   });
 

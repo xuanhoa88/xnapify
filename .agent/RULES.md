@@ -14,9 +14,16 @@ Whenever you provide assistance to a Developer on this codebase, you MUST adhere
 ---
 
 ## 2. Hard Coding Boundaries
-- **Use the Single Source of Truth**: The `AGENT.md` file defines the overarching architecture (React 18 SSR, Express 4, Sequelize, Redux Toolkit). **Never deviate** from these technologies. If a developer asks you to "install Tailwind," ask for explicit override permission first, because `AGENT.md` strictly enforces CSS Modules.
+- **Strict Node 14/16 Syntax Constraints**: DO NOT use optional chaining (`?.`), nullish coalescing (`??`), or nullish assignment (`??=`) under ANY circumstances. The underlying compilation target DOES NOT support these. Always use traditional boolean fallback evaluations (e.g. `const x = obj && obj.prop ? obj.prop : null;`).
+- **Use the Single Source of Truth**: The `AGENT.md` file defines the overarching architecture (React 18 SSR, Express 4, Sequelize, Redux Toolkit). **Never deviate** from these technologies without explicit developer permission.
 - **Stop at Domain Boundaries**: Never write deeply coupled code between two isolated applications (`@apps/billing` should not `import` from `@apps/invoices`). Always utilize the DI container, hook system, or standard HTTP APIs for cross-domain communication.
 - **No Raw SQL**: Unless debugging a confirmed performance bottleneck, strictly utilize Sequelize ORM methods (`findAll`, `create`). Access models via `container.resolve('db').models` or `container.resolve('models')`.
+- **Mandatory License Headers**: Every new source file you create MUST begin with the standard `xnapify` MIT License header.
+  - For `.js`, `.jsx`, `.ts`, `.tsx`, `.css`, `.scss`, `.sass`, `.less`, `.styl`, `.sss` files, use the `/** ... */` block comment style.
+  - For `.yml`, `.sh`, and `Dockerfile` files, use the `#` comment style.
+  - The exact text is:
+    `xnapify (https://github.com/xuanhoa88/xnapify/)`
+    `This source code is licensed under the MIT license found in the LICENSE.txt file in the root directory of this source tree.`
 
 ---
 
@@ -40,8 +47,19 @@ Whenever you provide assistance to a Developer on this codebase, you MUST adhere
 ## 4. Frontend Rigidity
 - **React Components**: Strictly Functional Components with hooks. Refuse any request to build a Class component.
 - **i18n Requirement**: All user-facing strings in JSX must be wrapped in `i18n.t()`. No hardcoded strings are allowed in any UI file.
-- **Data Hooking**: You must honor the SSR lifecycle. Use `getInitialProps` on routing files (`_route.js`) for initial server rendering. Do not fetch essential initial data on `useEffect` mounts.
-- **CSS Modules**: Use `.module.css` extension for component-scoped styles. Do not use inline styles or global CSS for component styling.
+- **Data Hooking**: You must honor the SSR lifecycle. Use `getInitialProps` on routing files (`_route.js`) for initial rendering. Do not fetch essential initial data on `useEffect` mounts.
+- **Styling**: Primary styling must use **Tailwind CSS** utility classes and **Radix UI primitives** (`@radix-ui/themes`).
+  - ✅ **DO** use Tailwind utility classes (e.g., `className="mt-4 bg-red-500"`).
+  - ❌ **DO NOT** use inline styles under ANY circumstances (e.g., `style={{ marginTop: '16px' }}` is strictly forbidden).
+  - ⚠️ Use CSS Modules (`.css` extension) ONLY for complex edge cases that Tailwind cannot solve.
+- **clsx Utility**: When applying custom CSS modules or combining conditional class names, ALWAYS use `clsx`. You must strictly follow these rules to prevent performance overhead during re-renders:
+  - ✅ **DO** use for dynamic combinations: `className={clsx(s.base, condition ? s.active : s.inactive)}`
+  - ✅ **DO** use multiple arguments for multiple conditions: `clsx(s.base, condA && s.a, condB && s.b)`
+  - ❌ **DO NOT** use template literals or raw concatenation: ``className={`${s.base} ${s.active}`}`` -> use `clsx(s.base, s.active)`
+  - ❌ **DO NOT** pass objects: `clsx({ [s.a]: condA, [s.b]: condB })` -> use `clsx(condA && s.a, condB && s.b)`
+  - ❌ **DO NOT** use for single variables: `clsx(s.foo)` -> just use `className={s.foo}`
+  - ❌ **DO NOT** use for simple ternaries: `clsx(cond ? s.a : s.b)` -> use `className={cond ? s.a : s.b}`
+  - ❌ **DO NOT** use for static strings: `clsx('a', 'b')` -> just use `className="a b"`
 
 ---
 
@@ -89,6 +107,14 @@ Whenever you provide assistance to a Developer on this codebase, you MUST adhere
 - **Versioning** (when needed): Use URL prefix `/api/v2/{resource}` alongside the original `/api/{resource}`. Both versions must coexist until consumers migrate.
 - **Deprecation**: Mark deprecated endpoints with a response header `X-Deprecated: true` and a `deprecatedAt` field in the response body. Log usage for tracking.
 - **Backward-compatible additions**: New optional query parameters, new response fields, and new endpoints are always safe to add without versioning.
+
+---
+
+## 10. Browser Verification Policy
+- **Never auto-launch** a browser agent to verify UI changes unless the developer explicitly requests visual verification.
+- When browser verification IS requested, the agent MUST follow the `browser-testing` skill — especially the **Port Discovery** section.
+- The dev server port is `XNAPIFY_PORT` (default `1337`), **not** 3000. Always resolve from user context or `.env` files first.
+- Before launching any browser automation, **verify the dev server is actually running** at the resolved port. If it is not running, inform the developer instead of failing silently.
 
 ---
 

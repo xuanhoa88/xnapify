@@ -12,41 +12,51 @@
  * Links groups to roles (many-to-many relationship).
  * A group can have multiple roles, and a role can be assigned to multiple groups.
  *
- * @param {Object} connection - Sequelize connection instance
- * @param {Object} DataTypes - Sequelize data types
+ * @param {Object} db - Sequelize connection instance
+ * @param {Object} db.connection - Sequelize connection instance
+ * @param {Object} db.DataTypes - Sequelize data types
+ * @param {Object} container - DI container
  * @returns {Model} GroupRole model
  */
-export default function createGroupRoleModel({ connection, DataTypes }) {
-  const GroupRole = connection.define(
-    'GroupRole',
-    {
-      id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
-        primaryKey: true,
-        comment: 'Unique group-role assignment identifier',
-      },
-
-      group_id: {
-        type: DataTypes.UUID,
-        allowNull: false,
-        comment: 'Group ID',
-      },
-
-      role_id: {
-        type: DataTypes.UUID,
-        allowNull: false,
-        comment: 'Role ID',
-      },
+export default async function createGroupRoleModel(
+  { connection, DataTypes },
+  container,
+) {
+  const attributes = {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+      comment: 'Unique group-role assignment identifier',
     },
-    {
-      tableName: 'group_roles',
-      timestamps: true,
-      underscored: true,
-      createdAt: 'created_at',
-      updatedAt: 'updated_at',
+
+    group_id: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      comment: 'Group ID',
     },
-  );
+
+    role_id: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      comment: 'Role ID',
+    },
+  };
+
+  // Invoke hook to allow extensions to modify the model
+  const hook = container.resolve('hook');
+  await hook('models').invoke('GroupRole:define', {
+    attributes,
+    container,
+  });
+
+  const GroupRole = connection.define('GroupRole', attributes, {
+    tableName: 'group_roles',
+    timestamps: true,
+    underscored: true,
+    createdAt: 'created_at',
+    updatedAt: 'updated_at',
+  });
 
   return GroupRole;
 }

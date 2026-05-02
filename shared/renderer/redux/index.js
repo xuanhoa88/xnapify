@@ -15,8 +15,8 @@ export { default as configureStore } from './configureStore';
 // FEATURES (Actions, Constants, Selectors, Reducers)
 // =============================================================================
 
-// Re-export all features from the centralized features index
-export * from './features';
+// Export the single features object (dynamic imports)
+export { default as features } from './features';
 
 // =============================================================================
 // ROOT REDUCER

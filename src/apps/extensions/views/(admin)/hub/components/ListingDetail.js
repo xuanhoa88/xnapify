@@ -5,21 +5,74 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
+import {
+  StarIcon,
+  PersonIcon,
+  BoxIcon,
+  CheckCircledIcon,
+  GitHubLogoIcon,
+  CubeIcon,
+  UpdateIcon,
+  CheckIcon,
+  Cross2Icon,
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  EyeOpenIcon,
+  TrashIcon,
+} from '@radix-ui/react-icons';
+import {
+  Flex,
+  Box,
+  Text,
+  Grid,
+  Button,
+  Badge,
+  IconButton,
+} from '@radix-ui/themes';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
+import { useDispatch, useSelector } from 'react-redux';
 
-import Button from '@shared/renderer/components/Button';
-import Icon from '@shared/renderer/components/Icon';
 import Modal from '@shared/renderer/components/Modal';
 import Portal from '@shared/renderer/components/Portal';
 
+import {
+  installFromHub,
+  updateFromHub,
+  uninstallFromHub,
+  fetchListingDetail,
+  isHubInstalling,
+  isHubUpdating,
+  isHubUninstalling,
+  getHubInstallError,
+  getHubUpdateError,
+  getHubUninstallError,
+  clearInstallError,
+  clearUpdateError,
+  clearUninstallError,
+} from '../redux';
+
 import s from './ListingDetail.css';
+
+/**
+ * Detect whether a string is an emoji (non-URL) icon.
+ * URLs start with http:// or https://, everything else is treated as emoji.
+ */
+const isEmojiIcon = icon => icon && !icon.startsWith('http');
 
 export default function ListingDetail({ listing = null, onClose }) {
   const { t } = useTranslation();
+  const dispatch = useDispatch();
+  const installing = useSelector(isHubInstalling);
+  const updating = useSelector(isHubUpdating);
+  const uninstalling = useSelector(isHubUninstalling);
+  const installError = useSelector(getHubInstallError);
+  const updateError = useSelector(getHubUpdateError);
+  const uninstallError = useSelector(getHubUninstallError);
+  const [actionSuccess, setActionSuccess] = useState(null); // 'install' | 'update' | 'uninstall' | null
   const tags = (listing && listing.tags) || [];
   const screenshots = (listing && listing.screenshots) || [];
   const isOfficial =
@@ -29,6 +82,20 @@ export default function ListingDetail({ listing = null, onClose }) {
 
   // Lightbox state: null = closed, number = index of active screenshot
   const [lightboxIdx, setLightboxIdx] = useState(null);
+
+  const listingName = listing ? listing.name : null;
+  const isInstalled = listing && listing.installed;
+  const hasUpdate = listing && listing.updateAvailable;
+  const isBusy = installing || updating || uninstalling;
+  const operationError = installError || updateError || uninstallError;
+
+  // Reset success/error states when listing changes
+  useEffect(() => {
+    setActionSuccess(null);
+    dispatch(clearInstallError());
+    dispatch(clearUpdateError());
+    dispatch(clearUninstallError());
+  }, [listingName, dispatch]);
 
   // Close lightbox on Esc, navigate with ← →
   useEffect(() => {
@@ -44,34 +111,82 @@ export default function ListingDetail({ listing = null, onClose }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [lightboxIdx, screenshots.length]);
 
+  const handleInstall = useCallback(async () => {
+    if (!listing || !listing.name || isBusy) return;
+    try {
+      await dispatch(installFromHub(listing.name)).unwrap();
+      setActionSuccess('install');
+      // Refresh listing to update install status
+      dispatch(fetchListingDetail(listing.name));
+    } catch {
+      // Error is handled by Redux state
+    }
+  }, [dispatch, listing, isBusy]);
+
+  const handleUpdate = useCallback(async () => {
+    if (!listing || !listing.name || isBusy) return;
+    try {
+      await dispatch(updateFromHub(listing.name)).unwrap();
+      setActionSuccess('update');
+      dispatch(fetchListingDetail(listing.name));
+    } catch {
+      // Error is handled by Redux state
+    }
+  }, [dispatch, listing, isBusy]);
+
+  const handleUninstall = useCallback(async () => {
+    if (!listing || !listing.name || isBusy) return;
+    try {
+      await dispatch(uninstallFromHub(listing.name)).unwrap();
+      setActionSuccess('uninstall');
+      dispatch(fetchListingDetail(listing.name));
+    } catch {
+      // Error is handled by Redux state
+    }
+  }, [dispatch, listing, isBusy]);
+
   const metaItems = [
     {
-      icon: 'star',
+      icon: StarIcon,
       label: t('admin:hub.version', 'Version'),
       value: listing && (
-        <span style={{ textTransform: 'none' }}>v{listing.version}</span>
+        <Text as='span' className={s.versionText}>
+          v{listing.version}
+        </Text>
       ),
     },
     {
-      icon: 'user',
+      icon: PersonIcon,
       label: t('admin:hub.author', 'Author'),
       value: (listing && listing.author) || '—',
     },
     {
-      icon: 'download',
-      label: t('admin:hub.installs', 'Installs'),
-      value: ((listing && listing.install_count) || 0).toLocaleString(),
-    },
-    {
-      icon: 'folder',
+      icon: BoxIcon,
       label: t('admin:hub.category', 'Category'),
       value: listing && listing.category,
     },
     listing && listing.compatibility
       ? {
-          icon: 'check-circle',
+          icon: CheckCircledIcon,
           label: t('admin:hub.testedWith', 'Tested with'),
           value: `xnapify ${listing.compatibility}`,
+        }
+      : null,
+    listing && listing.repository
+      ? {
+          icon: GitHubLogoIcon,
+          label: t('admin:hub.repository', 'Repository'),
+          value: (
+            <Text
+              as='a'
+              href={listing.repository}
+              target='_blank'
+              rel='noopener noreferrer'
+              className={s.repoLink}
+            >
+              {t('admin:hub.viewSource', 'View source')}
+            </Text>
+          ),
         }
       : null,
   ].filter(Boolean);
@@ -83,181 +198,344 @@ export default function ListingDetail({ listing = null, onClose }) {
           {t('admin:hub.extensionDetail', 'Extension Detail')}
         </Modal.Header>
         <Modal.Body>
-          <div className={s.drawerContent}>
+          <Box className={s.bodyBox}>
             {/* ── Hero ───────────────────────────────── */}
-            <div className={s.detailHero}>
-              <div className={s.detailHeroIcon}>
+            <Flex gap='4' align='start' className={s.heroFlex}>
+              <Box className={s.heroIconBox}>
                 {listing && listing.icon ? (
-                  <img src={listing.icon} alt={listing.name} />
+                  isEmojiIcon(listing.icon) ? (
+                    <Text as='span' size='8'>
+                      {listing.icon}
+                    </Text>
+                  ) : (
+                    <img
+                      src={listing.icon}
+                      alt={listing.name}
+                      className={s.iconImage}
+                    />
+                  )
                 ) : (
-                  <Icon name='extension' size={36} />
+                  <CubeIcon width={36} height={36} />
                 )}
-              </div>
-              <div className={s.detailHeroInfo}>
-                <h2 className={s.detailName}>
+              </Box>
+              <Box className={s.heroInfoBox}>
+                <Text as='h2' size='6' weight='bold' className={s.heroTitle}>
                   {(listing && listing.name) || ''}
-                </h2>
-                <div className={s.detailHeroMeta}>
+                </Text>
+
+                <Flex
+                  gap='2'
+                  align='center'
+                  wrap='wrap'
+                  className={s.badgesFlex}
+                >
                   {isOfficial && (
-                    <span className={s.officialPill}>
-                      <Icon name='check-circle' size={12} />
+                    <Badge size='1' color='indigo' radius='full' variant='soft'>
+                      <CheckCircledIcon
+                        width={12}
+                        height={12}
+                        className={s.badgeIcon}
+                      />
+
                       {t('admin:hub.officialBadge', 'Official')}
-                    </span>
+                    </Badge>
                   )}
-                  <span className={s.metaPill}>
-                    <Icon name='download' size={12} />
-                    {((listing && listing.install_count) || 0).toLocaleString()}
-                  </span>
-                  <span className={s.metaPill}>
+                  <Badge size='1' color='gray' radius='full' variant='surface'>
                     v{listing && listing.version}
-                  </span>
+                  </Badge>
                   {listing && listing.category && (
-                    <span className={s.categoryPill}>{listing.category}</span>
+                    <Badge
+                      size='1'
+                      color='gray'
+                      radius='full'
+                      variant='surface'
+                    >
+                      {listing.category}
+                    </Badge>
                   )}
-                </div>
+                </Flex>
+
                 {listing && listing.author && (
-                  <p className={s.detailAuthor}>
+                  <Text as='p' size='2' color='gray' className={s.authorText}>
                     {t('admin:hub.byAuthor', 'by {{author}}', {
                       author: listing.author,
                     })}
-                  </p>
+                  </Text>
                 )}
-              </div>
-            </div>
+              </Box>
+            </Flex>
 
             {/* ── Screenshots strip ──────────────────── */}
             {screenshots.length > 0 && (
-              <div className={s.screenshotStrip}>
-                {screenshots.map((url, idx) => (
-                  <button
-                    key={idx}
-                    type='button'
-                    className={s.screenshotThumb}
-                    onClick={() => setLightboxIdx(idx)}
-                    aria-label={t(
-                      'admin:hub.screenshotAlt',
-                      'Screenshot {{number}}',
-                      { number: idx + 1 },
-                    )}
-                  >
-                    <img src={url} alt='' />
-                    <span className={s.screenshotZoom}>
-                      <Icon name='eye' size={16} />
-                    </span>
-                  </button>
-                ))}
-              </div>
+              <Box className={s.screenshotsBox}>
+                <Flex gap='3' className={s.screenshotsStripFlex}>
+                  {screenshots.map((url, idx) => (
+                    <Box
+                      key={idx}
+                      onClick={() => setLightboxIdx(idx)}
+                      role='button'
+                      tabIndex={0}
+                      aria-label={t(
+                        'admin:hub.screenshotAlt',
+                        'Screenshot {{number}}',
+                        { number: idx + 1 },
+                      )}
+                      onKeyDown={e => e.key === 'Enter' && setLightboxIdx(idx)}
+                      className={s.screenshotBox}
+                    >
+                      <img src={url} alt='' className={s.screenshotImage} />
+
+                      <Flex className={s.screenshotOverlay}>
+                        <EyeOpenIcon width={24} height={24} />
+                      </Flex>
+                    </Box>
+                  ))}
+                </Flex>
+              </Box>
             )}
 
             {/* ── Description ───────────────────────── */}
-            <div className={s.detailDescription}>
-              <h3>{t('admin:hub.overview', 'Overview')}</h3>
-              <p>{listing && listing.description}</p>
-            </div>
+            <Box className={s.descBox}>
+              <Text as='h3' size='4' weight='bold' className={s.descTitle}>
+                {t('admin:hub.overview', 'Overview')}
+              </Text>
+              <Text as='p' size='3' className={s.descText}>
+                {listing &&
+                  (listing.description ||
+                    t(
+                      'admin:hub.noDescription',
+                      'No description available for this extension.',
+                    ))}
+              </Text>
+            </Box>
 
             {/* ── Metadata rows ─────────────────────── */}
-            <div className={s.sidebarMeta}>
-              {metaItems.map(row => (
-                <div key={row.label} className={s.metaRow}>
-                  <span className={s.metaRowIcon}>
-                    <Icon name={row.icon} size={14} />
-                  </span>
-                  <span className={s.metaRowLabel}>{row.label}</span>
-                  <span className={s.metaRowValue}>{row.value}</span>
-                </div>
-              ))}
-            </div>
+            <Box className={s.metaBox}>
+              <Grid columns='1' gap='3'>
+                {metaItems.map((row, i) => (
+                  <Flex
+                    key={row.label}
+                    align='center'
+                    justify='between'
+                    className={
+                      i < metaItems.length - 1 ? s.metaRowNormal : s.metaRowLast
+                    }
+                  >
+                    <Flex align='center' gap='2' className={s.metaLabelFlex}>
+                      {(() => {
+                        const Comp = row.icon;
+                        return <Comp width={16} height={16} />;
+                      })()}
+                      <Text as='span' size='2' weight='medium'>
+                        {row.label}
+                      </Text>
+                    </Flex>
+                    <Text
+                      as='span'
+                      size='2'
+                      weight='bold'
+                      className={s.metaValueText}
+                    >
+                      {row.value}
+                    </Text>
+                  </Flex>
+                ))}
+              </Grid>
+            </Box>
 
             {/* ── Tags ──────────────────────────────── */}
             {tags.length > 0 && (
-              <div className={s.tags}>
-                {tags.map(tag => (
-                  <span key={tag} className={s.tag}>
-                    {tag}
-                  </span>
-                ))}
-              </div>
+              <Box>
+                <Text as='h3' size='3' weight='bold' className={s.tagsTitle}>
+                  {t('admin:hub.tags', 'Tags')}
+                </Text>
+                <Flex gap='2' wrap='wrap'>
+                  {tags.map(tag => (
+                    <Badge
+                      key={tag}
+                      size='1'
+                      color='gray'
+                      radius='full'
+                      variant='soft'
+                    >
+                      {tag}
+                    </Badge>
+                  ))}
+                </Flex>
+              </Box>
             )}
-          </div>
+          </Box>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant='primary' icon='download'>
-            {t('admin:hub.install', 'Install')}
-          </Button>
+          {operationError && (
+            <Box className={s.installErrorBox}>
+              <Text as='p' size='2' color='red'>
+                {operationError}
+              </Text>
+            </Box>
+          )}
+          <Modal.Actions>
+            {/* Uninstall button — only shown when extension is installed */}
+            {isInstalled && !actionSuccess && (
+              <Button
+                variant='soft'
+                color='red'
+                onClick={handleUninstall}
+                disabled={isBusy}
+              >
+                {uninstalling && (
+                  <UpdateIcon width={16} height={16} className={s.spinIcon} />
+                )}
+                {!uninstalling && <TrashIcon width={16} height={16} />}
+                {uninstalling
+                  ? t('admin:hub.uninstalling', 'Removing...')
+                  : t('admin:hub.uninstall', 'Uninstall')}
+              </Button>
+            )}
+
+            {/* Primary action — Install, Update, or success state */}
+            {actionSuccess ? (
+              <Button variant='solid' color='green' disabled>
+                <CheckIcon width={16} height={16} />
+                {actionSuccess === 'install' &&
+                  t('admin:hub.installed', 'Installed')}
+                {actionSuccess === 'update' &&
+                  t('admin:hub.updated', 'Updated')}
+                {actionSuccess === 'uninstall' &&
+                  t('admin:hub.uninstalled', 'Removed')}
+              </Button>
+            ) : hasUpdate ? (
+              <Button
+                variant='solid'
+                color='amber'
+                onClick={handleUpdate}
+                disabled={isBusy}
+              >
+                {updating && (
+                  <UpdateIcon width={16} height={16} className={s.spinIcon} />
+                )}
+                {updating
+                  ? t('admin:hub.updating', 'Updating...')
+                  : t('admin:hub.update', 'Update to v{{version}}', {
+                      version: listing && listing.version,
+                    })}
+              </Button>
+            ) : !isInstalled ? (
+              <Button
+                variant='solid'
+                color='indigo'
+                onClick={handleInstall}
+                disabled={isBusy}
+              >
+                {installing && (
+                  <UpdateIcon width={16} height={16} className={s.spinIcon} />
+                )}
+                {installing
+                  ? t('admin:hub.installing', 'Installing...')
+                  : t('admin:hub.install', 'Install')}
+              </Button>
+            ) : (
+              <Button variant='solid' color='green' disabled>
+                <CheckIcon width={16} height={16} />
+                {t('admin:hub.upToDate', 'Up to date')}
+              </Button>
+            )}
+          </Modal.Actions>
         </Modal.Footer>
       </Modal>
 
       {/* ── Lightbox overlay ───────────────────────── */}
       {lightboxIdx !== null && screenshots.length > 0 && (
         <Portal>
-          <div
-            className={s.lightboxOverlay}
+          <Box
+            className={s.portalOverlay}
             onClick={() => setLightboxIdx(null)}
             role='presentation'
           >
-            {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events */}
-            <div
-              className={s.lightboxContent}
+            <Box
+              className={s.portalDialog}
               onClick={e => e.stopPropagation()}
               role='dialog'
               aria-modal='true'
             >
-              <button
-                type='button'
-                className={s.lightboxClose}
+              <IconButton
+                variant='solid'
+                color='gray'
+                highContrast
+                radius='full'
+                size='3'
+                className={s.closeButton}
                 onClick={() => setLightboxIdx(null)}
                 aria-label={t('common.close', 'Close')}
               >
-                <Icon name='x' size={20} />
-              </button>
+                <Cross2Icon width={24} height={24} />
+              </IconButton>
+
               {screenshots.length > 1 && (
-                <button
-                  type='button'
-                  className={clsx(s.lightboxNav, s.lightboxNavPrev)}
+                <IconButton
+                  variant='solid'
+                  color='gray'
+                  highContrast
+                  radius='full'
+                  size='4'
+                  className={s.prevButton}
                   onClick={() =>
                     setLightboxIdx(
                       i => (i - 1 + screenshots.length) % screenshots.length,
                     )
                   }
-                  aria-label='Previous'
+                  aria-label={t('common.previous', 'Previous')}
                 >
-                  <Icon name='arrowLeft' size={20} />
-                </button>
+                  <ArrowLeftIcon width={24} height={24} />
+                </IconButton>
               )}
+
               <img
                 src={screenshots[lightboxIdx]}
                 alt={t('admin:hub.screenshotAlt', 'Screenshot {{number}}', {
                   number: lightboxIdx + 1,
                 })}
-                className={s.lightboxImg}
+                className={s.lightboxImage}
               />
+
               {screenshots.length > 1 && (
-                <button
-                  type='button'
-                  className={clsx(s.lightboxNav, s.lightboxNavNext)}
+                <IconButton
+                  variant='solid'
+                  color='gray'
+                  highContrast
+                  radius='full'
+                  size='4'
+                  className={s.nextButton}
                   onClick={() =>
                     setLightboxIdx(i => (i + 1) % screenshots.length)
                   }
-                  aria-label='Next'
+                  aria-label={t('common.next', 'Next')}
                 >
-                  <Icon name='arrowRight' size={20} />
-                </button>
+                  <ArrowRightIcon width={24} height={24} />
+                </IconButton>
               )}
-              <div className={s.lightboxDots}>
+
+              <Flex gap='2' className={s.dotsFlex}>
                 {screenshots.map((_, i) => (
-                  <button
+                  <Box
+                    as='button'
                     key={i}
                     type='button'
-                    className={clsx(s.lightboxDot, {
-                      [s.lightboxDotActive]: i === lightboxIdx,
-                    })}
+                    className={clsx(
+                      s.dotButton,
+                      i === lightboxIdx ? s.dotActive : s.dotInactive,
+                    )}
                     onClick={() => setLightboxIdx(i)}
-                    aria-label={`Screenshot ${i + 1}`}
+                    aria-label={t(
+                      'admin:hub.screenshotAlt',
+                      'Screenshot {{number}}',
+                      { number: i + 1 },
+                    )}
                   />
                 ))}
-              </div>
-            </div>
-          </div>
+              </Flex>
+            </Box>
+          </Box>
         </Portal>
       )}
     </>

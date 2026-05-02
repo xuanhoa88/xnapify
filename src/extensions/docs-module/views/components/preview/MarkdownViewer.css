@@ -1,0 +1,156 @@
+/**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+.container {
+  --primary-color: var(--blue-9);
+  --bg-color: var(--color-panel-solid);
+  --text-color: var(--gray-12);
+  --text-muted: var(--gray-11);
+  --border-color: var(--gray-4);
+  --code-bg: var(--gray-3);
+  --radius-sm: 6px;
+  --radius-md: 8px;
+
+  /* GitHub Alert Theme Variables */
+  --alert-note-bg: var(--blue-a2);
+  --alert-note-border: var(--blue-9);
+  --alert-warning-bg: var(--amber-a2);
+  --alert-warning-border: var(--amber-9);
+  --alert-important-bg: var(--purple-a2);
+  --alert-important-border: var(--purple-9);
+  --alert-tip-bg: var(--green-a2);
+  --alert-tip-border: var(--green-9);
+  --alert-caution-bg: var(--red-a2);
+  --alert-caution-border: var(--red-9);
+
+  /* Typography */
+  --font-family: 'Inter', -apple-system, blinkmacsystemfont, 'Segoe UI', roboto,
+    helvetica, arial, sans-serif;
+  --font-mono: 'SFMono-Regular', consolas, 'Liberation Mono', menlo, monospace;
+
+  max-width: 840px;
+  margin: 0 auto;
+  padding: 3rem 2rem;
+  font-family: var(--font-family);
+  color: var(--text-color);
+  line-height: 1.65;
+  background-color: var(--bg-color);
+  box-shadow: 0 4px 6px rgb(0 0 0 / 2%);
+  border-radius: var(--radius-3);
+}
+
+.article {
+  flex-grow: 1;
+}
+
+.article h1 {
+  font-size: 2.75rem;
+  margin-bottom: 1.5rem;
+  font-weight: 800;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.4em;
+  letter-spacing: -0.02em;
+}
+
+.article h2 {
+  font-size: 2rem;
+  margin-top: 3rem;
+  margin-bottom: 1.25rem;
+  font-weight: 700;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.3em;
+  letter-spacing: -0.01em;
+}
+
+.article h3 {
+  font-size: 1.5rem;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.article p {
+  margin-bottom: 1.5rem;
+  font-size: 1.05rem;
+  color: var(--text-color);
+}
+
+.article a {
+  color: var(--primary-color);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-bottom-color 0.2s ease-in-out;
+}
+
+.article a:hover {
+  border-bottom-color: var(--primary-color);
+}
+
+.article img {
+  max-width: 100%;
+  border-radius: var(--radius-3);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 8%);
+  transition: transform 0.3s ease;
+}
+
+.article img:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgb(0 0 0 / 12%);
+}
+
+.article pre {
+  background-color: var(--code-bg);
+  border-radius: var(--radius-2);
+  padding: 1.25rem;
+  overflow: auto;
+  font-size: 0.9em;
+  line-height: 1.5;
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 4%);
+}
+
+.article code {
+  font-family: var(--font-mono);
+  background-color: var(--code-bg);
+  color: var(--gray-12);
+  padding: 0.2em 0.4em;
+  margin: 0;
+  font-size: 0.9em;
+  border-radius: 4px;
+}
+
+.article pre code {
+  background-color: transparent;
+  padding: 0;
+  border-radius: 0;
+  color: inherit;
+}
+
+.article blockquote {
+  margin: 1.5rem 0;
+  padding: 0.5rem 1.5rem;
+  color: var(--text-muted);
+  border-left: 4px solid var(--gray-5);
+  background-color: var(--gray-2);
+  border-radius: 0 var(--radius-3) var(--radius-3) 0;
+}
+
+.errorContainer {
+  text-align: center;
+  padding: 4rem 2rem;
+  background-color: var(--red-2);
+  border: 1px solid var(--alert-caution-border);
+  border-radius: var(--radius-3);
+  color: var(--alert-caution-border);
+  box-shadow: 0 4px 12px var(--red-a3);
+}
+
+.errorContainer h2 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+}

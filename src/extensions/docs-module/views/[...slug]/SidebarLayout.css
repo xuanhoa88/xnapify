@@ -1,0 +1,124 @@
+/**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+.layout {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--color-background);
+}
+
+.sidebar {
+  width: 280px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--gray-4);
+  background-color: var(--gray-2);
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebarHeader {
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--gray-4);
+}
+
+.sidebarHeader h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--gray-12);
+}
+
+.brandLink {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: inherit;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+.brandLink:hover {
+  opacity: 0.8;
+}
+
+.sidebarContent {
+  padding: 1rem;
+  overflow-y: auto;
+  flex-grow: 1;
+}
+
+.mainContent {
+  flex-grow: 1;
+  min-width: 0; /* allows text truncation if needed inside */
+  background: var(--color-panel-solid);
+}
+
+.rootList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.nestedList {
+  list-style: none;
+  padding-left: 1rem;
+  margin: 0.25rem 0 0;
+}
+
+.dirNode {
+  margin-bottom: 0.5rem;
+}
+
+.dirLabel {
+  font-weight: 600;
+  color: var(--gray-11);
+  text-transform: capitalize;
+  margin-bottom: 0.25rem;
+  font-size: 0.9rem;
+}
+
+.fileNode {
+  margin-bottom: 0.25rem;
+}
+
+.link {
+  display: block;
+  padding: 0.35rem 0.5rem;
+  color: var(--gray-12);
+  text-decoration: none;
+  border-radius: 4px;
+  font-size: 0.95rem;
+}
+
+.link:hover {
+  background-color: var(--blue-a3);
+  color: var(--blue-9);
+}
+
+.link.active {
+  background-color: var(--blue-9);
+  color: var(--white-a12);
+  font-weight: 500;
+}
+
+
+/* Responsive: stack layout on mobile */
+@media (max-width: 768px) {
+  .layout {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--gray-4);
+    max-height: 50vh;
+  }
+
+  .mainContent {
+    min-height: 50vh;
+  }
+}

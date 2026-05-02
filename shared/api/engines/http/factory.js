@@ -5,6 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { register } from '../../shutdown';
+
 import * as constants from './constants';
 import * as errors from './errors';
 import * as request from './request';
@@ -34,8 +36,8 @@ class HttpEngine {
 export function createFactory(config) {
   const engine = new HttpEngine(config);
 
-  process.once('SIGTERM', () => engine.cleanup());
-  process.once('SIGINT', () => engine.cleanup());
+  // Register with centralized shutdown coordinator
+  register('http', () => engine.cleanup(), 20);
 
   return engine;
 }

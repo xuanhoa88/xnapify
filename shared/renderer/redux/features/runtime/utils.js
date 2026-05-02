@@ -12,6 +12,7 @@
 const createFreshState = () => ({
   appName: null,
   appDescription: null,
+  appUrl: null,
   initialNow: null,
 });
 

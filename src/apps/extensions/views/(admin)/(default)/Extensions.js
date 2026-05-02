@@ -7,30 +7,31 @@
 
 import { useEffect, useCallback, useState, useRef, useMemo } from 'react';
 
-import clsx from 'clsx';
+import { CubeIcon, PlusIcon } from '@radix-ui/react-icons';
+import {
+  Box,
+  Flex,
+  Text,
+  Button,
+  Badge,
+  SegmentedControl,
+} from '@radix-ui/themes';
+import debounce from 'lodash/debounce';
 import toLower from 'lodash/toLower';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import * as Box from '@shared/renderer/components/Box';
-import Button from '@shared/renderer/components/Button';
-import ConfirmModal from '@shared/renderer/components/ConfirmModal';
-import Icon from '@shared/renderer/components/Icon';
 import { useDebounce } from '@shared/renderer/components/InfiniteScroll';
-import Loader from '@shared/renderer/components/Loader';
+import Modal from '@shared/renderer/components/Modal';
 import { useRbac } from '@shared/renderer/components/Rbac';
-import Table from '@shared/renderer/components/Table';
-import {
-  showSuccessMessage,
-  showWarningMessage,
-} from '@shared/renderer/redux/features/ui/slice';
+import { DataTable } from '@shared/renderer/components/Table';
+import { features } from '@shared/renderer/redux';
 import { useWebSocket } from '@shared/ws/client';
 
 import ExtensionCard from './components/ExtensionCard';
 import {
   fetchExtensions,
   uploadExtension,
-  upgradeExtension,
   toggleExtensionStatus,
   uninstallExtension,
   getExtensions,
@@ -40,6 +41,8 @@ import {
 } from './redux';
 
 import s from './Extensions.css';
+
+const { showSuccessMessage, showWarningMessage } = features;
 
 /**
  * Safety timeout for actionMap entries (ms).
@@ -81,7 +84,6 @@ function Extensions() {
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
   const [activeFilter, setActiveFilter] = useState('all');
-  const [activeDropdownId, setActiveDropdownId] = useState(null);
   const [actionMap, setActionMap] = useState({});
 
   // Safety timeout timers — keyed by extension ID
@@ -189,22 +191,32 @@ function Extensions() {
     });
   }, [extensions]);
 
+  const debouncedFetch = useMemo(
+    () =>
+      debounce(
+        signal => {
+          if (!signal.aborted) {
+            dispatch(fetchExtensions({ signal }));
+          }
+        },
+        500,
+        { maxWait: 1000 },
+      ),
+    [dispatch],
+  );
+
+  useEffect(() => {
+    return () => {
+      debouncedFetch.cancel();
+    };
+  }, [debouncedFetch]);
+
   // Listen for background job completion via WebSocket to refresh extension list
   const ws = useWebSocket();
   useEffect(() => {
     if (!ws) return;
     const controller = new AbortController();
     const { signal } = controller;
-    let debounceTimer = null;
-
-    const debouncedFetch = () => {
-      if (debounceTimer) clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(() => {
-        if (!signal.aborted) {
-          dispatch(fetchExtensions({ signal }));
-        }
-      }, 500);
-    };
 
     const handler = async data => {
       if (!data || signal.aborted) return;
@@ -227,7 +239,7 @@ function Extensions() {
           // EXTENSION_UPDATED toast is handled inline in handleUpgrade —
           // no need to show it again from WS. The debouncedFetch below
           // still keeps other tabs/clients in sync.
-          debouncedFetch();
+          debouncedFetch(signal);
           break;
         }
         case 'EXTENSION_UNINSTALLED': {
@@ -242,7 +254,7 @@ function Extensions() {
               ),
             }),
           );
-          debouncedFetch();
+          debouncedFetch(signal);
           break;
         }
         case 'EXTENSION_ACTIVATED': {
@@ -257,7 +269,7 @@ function Extensions() {
               ),
             }),
           );
-          debouncedFetch();
+          debouncedFetch(signal);
           break;
         }
         case 'EXTENSION_DEACTIVATED': {
@@ -272,7 +284,11 @@ function Extensions() {
               ),
             }),
           );
-          debouncedFetch();
+          debouncedFetch(signal);
+          break;
+        }
+        case 'EXTENSIONS_REFRESHED': {
+          debouncedFetch(signal);
           break;
         }
         case 'EXTENSION_INSTALL_FAILED':
@@ -290,7 +306,7 @@ function Extensions() {
               ),
             }),
           );
-          debouncedFetch();
+          debouncedFetch(signal);
           break;
         }
         case 'EXTENSION_TAMPERED': {
@@ -302,7 +318,7 @@ function Extensions() {
               ),
             }),
           );
-          debouncedFetch();
+          debouncedFetch(signal);
           break;
         }
         default:
@@ -311,19 +327,10 @@ function Extensions() {
     };
     ws.on('extension:updated', handler);
     return () => {
-      if (debounceTimer) clearTimeout(debounceTimer);
       controller.abort();
       ws.off('extension:updated', handler);
     };
-  }, [ws, dispatch, t, clearAction]);
-
-  const handleSearchChange = useCallback(value => {
-    setSearch(value);
-  }, []);
-
-  const handleToggleDropdown = useCallback(id => {
-    setActiveDropdownId(prev => (prev === id ? null : id));
-  }, []);
+  }, [ws, dispatch, t, clearAction, debouncedFetch]);
 
   // --- Uninstall (existing ConfirmModal.Delete) ---
   const handleDelete = useCallback(extension => {
@@ -428,34 +435,6 @@ function Extensions() {
     pendingFileRef.current = null;
   }, []);
 
-  const handleUpgrade = useCallback(
-    async extension => {
-      if (actionMap[extension.id]) return;
-      setActionWithTimeout(
-        extension.id,
-        t('admin:common.upgrading', 'Upgrading...'),
-      );
-      try {
-        await dispatch(
-          upgradeExtension({ id: extension.id, data: {} }),
-        ).unwrap();
-        // Upgrade is synchronous (no queue job) — show feedback immediately
-        clearAction(extension.id);
-        dispatch(
-          showSuccessMessage({
-            message: t(
-              'admin:extensions.upgradeSuccess',
-              'Extension upgraded successfully.',
-            ),
-          }),
-        );
-      } catch {
-        clearAction(extension.id);
-      }
-    },
-    [actionMap, dispatch, t, setActionWithTimeout, clearAction],
-  );
-
   // Count per tab for badges
   const tabCounts = useMemo(() => {
     let activeCount = 0;
@@ -494,80 +473,86 @@ function Extensions() {
     return result;
   }, [extensions, activeFilter, debouncedSearch]);
 
-  if (!initialized || (loading && extensions.length === 0)) {
-    return (
-      <div className={s.root}>
-        <Box.Header
-          icon={<Icon name='extension' size={24} />}
+  return (
+    <Box className='p-6 max-w-[1400px] mx-auto'>
+      <DataTable
+        as='grid'
+        gridCols={3}
+        dataSource={filteredExtensions}
+        rowKey='id'
+        loading={loading}
+        initialized={initialized}
+        renderCard={extension => (
+          <ExtensionCard
+            extension={extension}
+            actionLabel={actionMap[extension.id]}
+            onActivate={handleActivate}
+            onDeactivate={handleDeactivate}
+            onDelete={handleDelete}
+            canUpdate={canUpdate}
+          />
+        )}
+      >
+        <DataTable.Header
           title={t('admin:navigation.extensions', 'Extensions')}
           subtitle={t('admin:extensions.subtitle', 'Manage system extensions')}
-        />
-        <Loader variant='cards' />
-      </div>
-    );
-  }
-
-  return (
-    <div className={s.root}>
-      <Box.Header
-        icon={<Icon name='extension' size={24} />}
-        title={t('admin:navigation.extensions', 'Extensions')}
-        subtitle={t('admin:extensions.subtitle', 'Manage system extensions')}
-      >
-        <div className={s.headerActions}>
-          <input
+          icon={<CubeIcon width={24} height={24} />}
+        >
+          <Box
+            as='input'
             type='file'
             ref={fileInputRef}
-            style={{ display: 'none' }}
+            className={s.hiddenFileInput}
             accept='.zip'
             onChange={handleFileChange}
           />
+
           <Button
-            variant='primary'
+            variant='solid'
+            color='indigo'
             onClick={handleUploadClick}
             disabled={!canCreate || uploading}
           >
-            <Icon name='plus' size={16} />
+            <PlusIcon width={16} height={16} />
             {uploading
               ? t('admin:extensions.uploading', 'Uploading...')
               : t('admin:extensions.upload', 'Upload Extension')}
           </Button>
-        </div>
-      </Box.Header>
+        </DataTable.Header>
 
-      {/* Toolbar: Filter Tabs + Search */}
-      <div className={clsx(s.toolbar, 'extensions-toolbar')}>
-        <div className={s.filterTabs}>
-          {FILTER_TABS.map(tab => (
-            <Button
-              key={tab.key}
-              type='button'
-              className={clsx(s.filterTab, {
-                [s.filterTabActive]: activeFilter === tab.key,
-              })}
-              onClick={() => setActiveFilter(tab.key)}
-            >
-              {t(tab.labelKey, tab.fallback)}
-              <span className={s.filterTabCount}>{tabCounts[tab.key]}</span>
-            </Button>
-          ))}
-        </div>
+        <DataTable.Toolbar justify='between'>
+          <SegmentedControl.Root
+            value={activeFilter}
+            onValueChange={setActiveFilter}
+            size='2'
+          >
+            {FILTER_TABS.map(tab => (
+              <SegmentedControl.Item key={tab.key} value={tab.key}>
+                <Flex align='center' gap='2'>
+                  <Text as='span'>{t(tab.labelKey, tab.fallback)}</Text>
+                  <Badge
+                    variant={activeFilter === tab.key ? 'solid' : 'soft'}
+                    color={activeFilter === tab.key ? 'indigo' : 'gray'}
+                    radius='full'
+                  >
+                    {tabCounts[tab.key]}
+                  </Badge>
+                </Flex>
+              </SegmentedControl.Item>
+            ))}
+          </SegmentedControl.Root>
 
-        <div className={s.searchContainer}>
-          <Table.SearchBar
-            className={s.searchBar}
+          <DataTable.Search
             value={search}
-            onChange={handleSearchChange}
+            onChange={setSearch}
             placeholder={t('admin:extensions.search', 'Search extensions...')}
           />
-        </div>
-      </div>
+        </DataTable.Toolbar>
 
-      {filteredExtensions.length === 0 ? (
-        <div className={s.emptyState}>
-          <Icon name='extension' size={48} />
-          <p className={s.emptyTitle}>
-            {search
+        <DataTable.Empty
+          icon={<CubeIcon width={48} height={48} />}
+          title={
+            search
               ? t(
                   'admin:extensions.noSearchResults',
                   'No extensions match your search',
@@ -575,10 +560,10 @@ function Extensions() {
               : t(
                   'admin:extensions.noExtensionsInFilter',
                   'No extensions in this category',
-                )}
-          </p>
-          <p className={s.emptySubtitle}>
-            {search
+                )
+          }
+          description={
+            search
               ? t(
                   'admin:extensions.tryDifferentSearch',
                   'Try a different search term or clear the filter.',
@@ -586,30 +571,14 @@ function Extensions() {
               : t(
                   'admin:extensions.tryDifferentFilter',
                   'Try selecting a different filter tab.',
-                )}
-          </p>
-        </div>
-      ) : (
-        <div className={clsx(s.grid, 'card-grid')}>
-          {filteredExtensions.map(extension => (
-            <ExtensionCard
-              key={extension.id}
-              extension={extension}
-              actionLabel={actionMap[extension.id]}
-              activeDropdownId={activeDropdownId}
-              onToggleDropdown={handleToggleDropdown}
-              onActivate={handleActivate}
-              onDeactivate={handleDeactivate}
-              onUpgrade={handleUpgrade}
-              onDelete={handleDelete}
-              canUpdate={canUpdate}
-            />
-          ))}
-        </div>
-      )}
+                )
+          }
+        />
+        <DataTable.Loader variant='cards' />
+      </DataTable>
 
       {/* Uninstall confirmation */}
-      <ConfirmModal.Delete
+      <Modal.ConfirmDelete
         ref={deleteModalRef}
         title={t('admin:extensions.uninstall', 'Uninstall Extension')}
         message={t(
@@ -621,7 +590,7 @@ function Extensions() {
       />
 
       {/* Activate confirmation */}
-      <ConfirmModal.Action
+      <Modal.ConfirmAction
         ref={activateModalRef}
         title={t('admin:extensions.activate', 'Activate Extension')}
         getDescription={p =>
@@ -636,7 +605,7 @@ function Extensions() {
       />
 
       {/* Deactivate confirmation */}
-      <ConfirmModal.Action
+      <Modal.ConfirmAction
         ref={deactivateModalRef}
         title={t('admin:extensions.deactivate', 'Deactivate Extension')}
         getDescription={p =>
@@ -651,7 +620,7 @@ function Extensions() {
       />
 
       {/* Install confirmation */}
-      <ConfirmModal.Action
+      <Modal.ConfirmAction
         ref={installModalRef}
         title={t('admin:extensions.install', 'Install Extension')}
         getDescription={p =>
@@ -665,7 +634,7 @@ function Extensions() {
         onSuccess={handleInstallCancel}
         confirmLabel={t('admin:extensions.installButton', 'Install')}
       />
-    </div>
+    </Box>
   );
 }
 

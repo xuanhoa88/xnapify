@@ -18,11 +18,6 @@ function requirePermission(permission) {
   };
 }
 
-export const PATCH = [
-  requirePermission('extensions:upgrade'),
-  extensionController.upgradeExtension,
-];
-
 export const DELETE = [
   requirePermission('extensions:delete'),
   extensionController.deleteExtension,

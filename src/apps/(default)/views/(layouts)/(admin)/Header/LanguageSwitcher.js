@@ -5,31 +5,34 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useCallback, useMemo } from 'react';
 
+import { Text } from '@radix-ui/themes';
 import clsx from 'clsx';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Button from '@shared/renderer/components/Button';
+import ContextMenu from '@shared/renderer/components/ContextMenu';
 import Icon from '@shared/renderer/components/Icon';
-import {
-  getLocale,
-  setLocale,
-  getAvailableLocales,
-} from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
 
-import s from './LanguageSwitcher.css';
+const { getLocale, setLocale, getAvailableLocales } = features;
 
 /**
  * LanguageSwitcher Component
- * Dropdown-based language switcher for scalable multi-language support
+ * Dropdown-based language switcher natively mapped for scalable multi-language support
  */
 function AdminLanguageSwitcher() {
   const dispatch = useDispatch();
   const currentLocale = useSelector(getLocale);
   const availableLocales = useSelector(getAvailableLocales);
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef(null);
+
+  const handleLocaleChange = useCallback(
+    (locale, e) => {
+      e.preventDefault();
+      dispatch(setLocale(locale));
+    },
+    [dispatch],
+  );
 
   // Get current language name
   const currentLanguageName = useMemo(() => {
@@ -40,33 +43,6 @@ function AdminLanguageSwitcher() {
   const languageCode = useMemo(() => {
     return currentLocale.split('-')[0].toUpperCase();
   }, [currentLocale]);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = event => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen]);
-
-  const handleToggle = useCallback(() => {
-    setIsOpen(prev => !prev);
-  }, []);
-
-  const handleLocaleChange = useCallback(
-    (locale, e) => {
-      e.preventDefault();
-      dispatch(setLocale(locale));
-      setIsOpen(false);
-    },
-    [dispatch],
-  );
 
   // Memoize available locales
   const localeEntries = useMemo(
@@ -80,37 +56,50 @@ function AdminLanguageSwitcher() {
   }
 
   return (
-    <div className={s.wrapper} ref={dropdownRef}>
-      <Button variant='unstyled' className={s.trigger} onClick={handleToggle}>
-        <span className={s.globeIcon}>
-          <Icon name='globe' size={18} />
-        </span>
-        <span className={s.code}>{currentLanguageName || languageCode}</span>
-        <Icon
-          name='chevronDown'
-          size={12}
-          className={clsx(s.chevron, { [s.chevronOpen]: isOpen })}
-        />
-      </Button>
+    <ContextMenu>
+      <ContextMenu.Trigger asChild>
+        <button
+          type='button'
+          title={currentLanguageName || languageCode}
+          className='flex items-center gap-2 px-3 h-9 rounded-full text-gray-500 bg-transparent outline-none border-none cursor-pointer transition-colors hover:bg-gray-100 hover:text-gray-900 data-[state=open]:bg-gray-100 data-[state=open]:text-gray-900'
+        >
+          <Icon name='GlobeIcon' size={18} />
+          <Text size='2' weight='medium' className='hidden sm:block'>
+            {currentLanguageName || languageCode}
+          </Text>
+          <Text size='2' weight='medium' className='block sm:hidden'>
+            {languageCode}
+          </Text>
+          <Icon
+            name='ChevronDownIcon'
+            size={16}
+            className='opacity-70 transition-transform data-[state=open]:rotate-180'
+          />
+        </button>
+      </ContextMenu.Trigger>
 
-      {isOpen && (
-        <div className={s.dropdown}>
-          {localeEntries.map(([code, name]) => (
-            <Button
-              key={code}
-              variant='unstyled'
-              onClick={e => handleLocaleChange(code, e)}
-              className={clsx(s.option, {
-                [s.optionActive]: code === currentLocale,
-              })}
-            >
-              <span className={s.optionName}>{name}</span>
-              {code === currentLocale && <span className={s.checkmark}>✓</span>}
-            </Button>
-          ))}
-        </div>
-      )}
-    </div>
+      <ContextMenu.Menu
+        align='end'
+        className='min-w-[160px] bg-panel-solid/90 backdrop-blur-md border border-gray-a6 rounded-md shadow-lg p-1 z-[100] data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95'
+      >
+        {localeEntries.map(([code, name]) => (
+          <ContextMenu.Item
+            key={code}
+            onClick={e => handleLocaleChange(code, e)}
+            className={clsx(
+              'w-full flex items-center justify-between px-3 py-2 rounded-sm text-left cursor-pointer transition-colors text-gray-12 hover:bg-gray-3 focus:outline-none focus:bg-gray-3',
+              code === currentLocale &&
+                'bg-indigo-3 text-indigo-11 hover:bg-indigo-3 focus:bg-indigo-3',
+            )}
+          >
+            <Text size='2'>{name}</Text>
+            {code === currentLocale && (
+              <Icon name='CheckIcon' size={14} className='text-indigo-11' />
+            )}
+          </ContextMenu.Item>
+        ))}
+      </ContextMenu.Menu>
+    </ContextMenu>
   );
 }
 

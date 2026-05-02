@@ -5,38 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-/**
- * Root Application Component
- *
- * Composes all application-level providers and renders the application tree.
- * This component sets up the core infrastructure including:
- * - Redux store for state management
- * - i18next for internationalization
- * - History for client-side routing
- *
- * @example
- * const context = {
- *   store: configureStore(),
- *   i18n: i18nextInstance,
- *   history: createBrowserHistory(),
- *   fetch: customFetch,
- *   locale: 'en',
- *   pathname: '/',
- *   query: {}
- * };
- *
- * ReactDOM.render(
- *   <App context={context}>
- *     <Routes />
- *   </App>,
- *   document.getElementById('root')
- * );
- */
+import './global.css';
 
-import 'normalize.css';
-import './components/variables.css';
 import React, { useMemo } from 'react';
 
+import { Theme } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { I18nextProvider } from 'react-i18next';
 import { Provider as ReduxProvider } from 'react-redux';
@@ -90,15 +63,17 @@ export default function App({ context, children }) {
       : {};
 
     return (
-      <ReduxProvider store={context.store}>
-        <I18nextProvider i18n={context.i18n}>
-          <HistoryProvider history={context.history}>
-            <ExtensionProvider registry={registry}>
-              {React.Children.only(children)}
-            </ExtensionProvider>
-          </HistoryProvider>
-        </I18nextProvider>
-      </ReduxProvider>
+      <Theme>
+        <ReduxProvider store={context.store}>
+          <I18nextProvider i18n={context.i18n}>
+            <HistoryProvider history={context.history}>
+              <ExtensionProvider registry={registry}>
+                {React.Children.only(children)}
+              </ExtensionProvider>
+            </HistoryProvider>
+          </I18nextProvider>
+        </ReduxProvider>
+      </Theme>
     );
   }, [context, children]);
 
@@ -113,7 +88,3 @@ App.propTypes = {
   context: contextPropTypes,
   children: PropTypes.node.isRequired,
 };
-
-/* test 2 */
-
-/* test 3 */

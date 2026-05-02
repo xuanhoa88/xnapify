@@ -7,18 +7,29 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 
+import { ArrowLeftIcon, GroupIcon } from '@radix-ui/react-icons';
+import {
+  Box,
+  Flex,
+  Text,
+  Grid,
+  Button,
+  Card,
+  Avatar,
+  Badge,
+  Separator,
+} from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import * as Box from '@shared/renderer/components/Box';
-import Button from '@shared/renderer/components/Button';
-import ConfirmModal from '@shared/renderer/components/ConfirmModal';
 import Form, { useFormContext } from '@shared/renderer/components/Form';
 import { useHistory } from '@shared/renderer/components/History';
-import Icon from '@shared/renderer/components/Icon';
 import { useDebounce } from '@shared/renderer/components/InfiniteScroll';
 import Loader from '@shared/renderer/components/Loader';
+import Modal from '@shared/renderer/components/Modal';
+import { PageHeader } from '@shared/renderer/components/PageHeader';
+import { features } from '@shared/renderer/redux';
 
 import { updateGroupFormSchema } from '../../../../validator/admin';
 import {
@@ -31,7 +42,104 @@ import {
   getGroupFetchError,
 } from '../../redux';
 
-import s from './EditGroup.css';
+const { showErrorMessage } = features;
+
+// =============================================================================
+// Identity sidebar card — shows existing group metadata
+// =============================================================================
+
+function EditGroupIdentityCard({ group }) {
+  const { t } = useTranslation();
+
+  const fallback = group.name ? group.name.charAt(0).toUpperCase() : '?';
+
+  return (
+    <Card variant='surface'>
+      <Flex direction='column' align='center' p='5' gap='4'>
+        <Avatar
+          size='6'
+          name={group.name}
+          fallback={fallback}
+          radius='full'
+          color='blue'
+        />
+
+        <Flex direction='column' align='center' gap='1' className='w-full'>
+          <Text size='4' weight='bold' align='center' className='break-all'>
+            {group.name}
+          </Text>
+        </Flex>
+
+        <Separator size='4' />
+
+        <Flex direction='column' gap='3' className='w-full'>
+          <Flex justify='between' align='center'>
+            <Text size='2' color='gray'>
+              {t('admin:groups.edit.categoryLabel', 'Category')}
+            </Text>
+            {group.category ? (
+              <Badge color='blue' variant='soft' radius='full' size='1'>
+                {group.category}
+              </Badge>
+            ) : (
+              <Text size='2' color='gray'>
+                —
+              </Text>
+            )}
+          </Flex>
+
+          <Flex justify='between' align='center'>
+            <Text size='2' color='gray'>
+              {t('admin:groups.edit.typeLabel', 'Type')}
+            </Text>
+            {group.type ? (
+              <Badge color='gray' variant='surface' radius='full' size='1'>
+                {group.type}
+              </Badge>
+            ) : (
+              <Text size='2' color='gray'>
+                —
+              </Text>
+            )}
+          </Flex>
+
+          <Flex justify='between' align='center'>
+            <Text size='2' color='gray'>
+              {t('admin:groups.edit.usersCountLabel', 'Users')}
+            </Text>
+            <Badge color='indigo' variant='soft' radius='full' size='1'>
+              {group.userCount || 0}
+            </Badge>
+          </Flex>
+
+          <Flex justify='between' align='center'>
+            <Text size='2' color='gray'>
+              {t('admin:groups.edit.rolesCountLabel', 'Roles')}
+            </Text>
+            <Badge color='gray' variant='soft' radius='full' size='1'>
+              {group.roleCount || (group.roles && group.roles.length) || 0}
+            </Badge>
+          </Flex>
+        </Flex>
+      </Flex>
+    </Card>
+  );
+}
+
+EditGroupIdentityCard.propTypes = {
+  group: PropTypes.shape({
+    name: PropTypes.string,
+    category: PropTypes.string,
+    type: PropTypes.string,
+    userCount: PropTypes.number,
+    roleCount: PropTypes.number,
+    roles: PropTypes.arrayOf(PropTypes.string),
+  }).isRequired,
+};
+
+// =============================================================================
+// Main EditGroup component
+// =============================================================================
 
 function EditGroup({ groupId, context }) {
   const dispatch = useDispatch();
@@ -50,9 +158,16 @@ function EditGroup({ groupId, context }) {
   const group = useSelector(getFetchedGroup);
   const groupLoadError = useSelector(getGroupFetchError);
 
-  const [error, setError] = useState(null);
+  const [, setError] = useState(null);
   const confirmBackModalRef = useRef(null);
   const isDirtyRef = useRef(false);
+
+  // Fetch group data on mount
+  useEffect(() => {
+    if (groupId) {
+      dispatch(fetchGroupById(groupId));
+    }
+  }, [dispatch, groupId]);
 
   const handleCancel = useCallback(
     isDirty => {
@@ -89,143 +204,141 @@ function EditGroup({ groupId, context }) {
             }
           });
         } else {
-          setError(
-            err || t('admin:errors.updateGroup', 'Failed to update group'),
-          );
+          const message =
+            (typeof err === 'string' ? err : err && err.message) ||
+            t('admin:errors.updateGroup', 'Failed to update group');
+          setError(message);
+          dispatch(showErrorMessage({ message }));
         }
       }
     },
     [dispatch, group, history, t],
   );
 
-  // Fetch group data on mount
-  useEffect(() => {
-    if (groupId) {
-      dispatch(fetchGroupById(groupId));
-    }
-  }, [dispatch, groupId]);
+  const defaultValues = useMemo(
+    () =>
+      group
+        ? {
+            name: group.name || '',
+            description: group.description || '',
+            category: group.category || '',
+            type: group.type || '',
+            roles:
+              Array.isArray(group.roles) && group.roles.length > 0
+                ? group.roles
+                : [],
+          }
+        : {},
+    [group],
+  );
 
-  // Show loading on first fetch or when still fetching
+  // ── Loading state ──────────────────────────────────────────────────
   if (!fetchInitialized || fetchingGroup) {
     return (
-      <div className={s.root}>
-        <Box.Header
-          icon={<Icon name='folder' size={24} />}
+      <Box className='p-6 max-w-[1400px] mx-auto'>
+        <PageHeader
           title={t('admin:groups.edit.title', 'Edit Group')}
-          subtitle={t('admin:groups.edit.subtitle', 'Modify group details')}
-        >
-          <Button
-            variant='secondary'
-            onClick={() => handleCancel(isDirtyRef.current)}
-          >
-            <Icon name='arrowLeft' />
-            {t('admin:groups.backToGroups', 'Back to Groups')}
-          </Button>
-        </Box.Header>
-        <div className={s.formContainer}>
-          <Loader variant='spinner' message='Loading group data...' />
-        </div>
-        <ConfirmModal.Back
-          ref={confirmBackModalRef}
-          onConfirm={handleConfirmBack}
+          subtitle={t('admin:groups.edit.subtitle', 'Update group details')}
+          icon={<GroupIcon width={24} height={24} />}
         />
-      </div>
+        <Grid columns={{ initial: '1', md: '280px 1fr' }} gap='6' align='start'>
+          <Loader variant='skeleton' skeletonCount={3} />
+          <Loader variant='skeleton' skeletonCount={6} />
+        </Grid>
+      </Box>
     );
   }
 
+  // ── Error state ────────────────────────────────────────────────────
   if (!group || groupLoadError) {
     return (
-      <div className={s.root}>
-        <Box.Header
-          icon={<Icon name='folder' size={24} />}
+      <Box className='p-6 max-w-[1400px] mx-auto'>
+        <PageHeader
           title={t('admin:groups.edit.title', 'Edit Group')}
-          subtitle={t('admin:groups.edit.subtitle', 'Modify group details')}
-        >
-          <Button
-            variant='secondary'
-            onClick={() => handleCancel(isDirtyRef.current)}
-          >
-            <Icon name='arrowLeft' />
-            {t('admin:groups.backToGroups', 'Back to Groups')}
-          </Button>
-        </Box.Header>
-        <div className={s.formContainer}>
-          <div className={s.formError}>
-            {t(
-              'admin:errors.failedToLoadGroupData',
-              'Failed to load group data',
-            )}
-          </div>
-          <div className={s.formActions}>
-            <Button
-              variant='secondary'
-              onClick={() => handleCancel(isDirtyRef.current)}
-            >
-              {t('admin:groups.backToGroups', 'Back to Groups')}
-            </Button>
-          </div>
-        </div>
-        <ConfirmModal.Back
-          ref={confirmBackModalRef}
-          onConfirm={handleConfirmBack}
+          subtitle={t('admin:groups.edit.subtitle', 'Update group details')}
+          icon={<GroupIcon width={24} height={24} />}
         />
-      </div>
+        <Flex
+          direction='column'
+          align='center'
+          justify='center'
+          p='6'
+          className='rounded-md border border-[var(--red-6)] bg-[var(--red-2)]'
+        >
+          <Text color='red' size='4' weight='bold' mb='2'>
+            {t('admin:groups.edit.errorLoading', 'Error loading group')}
+          </Text>
+          <Text color='red' size='2' mb='4'>
+            {groupLoadError ||
+              t(
+                'admin:groups.edit.errorLoadingDescription',
+                'The group could not be found or loaded.',
+              )}
+          </Text>
+          <Button
+            variant='soft'
+            color='red'
+            onClick={() => dispatch(fetchGroupById(groupId))}
+          >
+            {t('common:retry', 'Retry')}
+          </Button>
+        </Flex>
+      </Box>
     );
   }
 
-  const defaultValues = {
-    name: group.name || '',
-    description: group.description || '',
-    category: group.category || '',
-    type: group.type || '',
-    roles:
-      Array.isArray(group.roles) && group.roles.length > 0 ? group.roles : [],
-  };
-
+  // ── Render ─────────────────────────────────────────────────────────
   return (
-    <div className={s.root}>
-      <Box.Header
-        icon={<Icon name='folder' size={24} />}
-        title={t('admin:groups.edit.title', 'Edit Group')}
-        subtitle={t('admin:groups.edit.subtitle', 'Modify group details')}
+    <Box className='p-6 max-w-[1400px] mx-auto'>
+      <PageHeader
+        title={group.name}
+        subtitle={
+          group.description ||
+          t('admin:groups.edit.manageGroup', 'Manage group settings')
+        }
+        icon={<GroupIcon width={24} height={24} />}
       >
         <Button
-          variant='secondary'
+          variant='ghost'
+          color='gray'
           onClick={() => handleCancel(isDirtyRef.current)}
         >
-          <Icon name='arrowLeft' />
-          {t('admin:groups.backToGroups', 'Back to Groups')}
+          <ArrowLeftIcon />
+          {t('admin:groups.edit.backToList', 'Back to Groups')}
         </Button>
-      </Box.Header>
+      </PageHeader>
 
-      <div className={s.formContainer}>
-        <Form.Error message={error} />
+      <Form
+        schema={updateGroupFormSchema}
+        defaultValues={defaultValues}
+        onSubmit={handleSubmit}
+      >
+        <Grid columns={{ initial: '1', md: '280px 1fr' }} gap='6' align='start'>
+          {/* Left: identity card */}
+          <EditGroupIdentityCard group={group} />
 
-        <Form
-          schema={updateGroupFormSchema}
-          defaultValues={defaultValues}
-          onSubmit={handleSubmit}
-          className={s.form}
-        >
+          {/* Right: form sections */}
           <EditGroupFormFields
             onCancel={handleCancel}
             loading={loading}
             isDirtyRef={isDirtyRef}
             fetchRoles={fetchRoles}
           />
-        </Form>
-      </div>
-      <ConfirmModal.Back
+        </Grid>
+      </Form>
+
+      <Modal.ConfirmBack
         ref={confirmBackModalRef}
         onConfirm={handleConfirmBack}
       />
-    </div>
+    </Box>
   );
 }
 
-/**
- * EditGroupFormFields - Form fields component that uses react-hook-form context
- */
+// =============================================================================
+// Form fields — inner component consumes react-hook-form context
+// =============================================================================
+
 function EditGroupFormFields({ onCancel, loading, isDirtyRef, fetchRoles }) {
   const dispatch = useDispatch();
   const { t } = useTranslation();
@@ -248,6 +361,7 @@ function EditGroupFormFields({ onCancel, loading, isDirtyRef, fetchRoles }) {
   // Roles state for loading
   const [roles, setRoles] = useState([]);
   const [rolesLoading, setRolesLoading] = useState(false);
+  const [rolesLoadingMore, setRolesLoadingMore] = useState(false);
   const [rolesHasMore, setRolesHasMore] = useState(false);
   const [rolesPage, setRolesPage] = useState(1);
   const rolesLimit = 20;
@@ -260,6 +374,8 @@ function EditGroupFormFields({ onCancel, loading, isDirtyRef, fetchRoles }) {
     async (page, search = '', reset = false) => {
       if (reset) {
         setRolesLoading(true);
+      } else {
+        setRolesLoadingMore(true);
       }
 
       try {
@@ -281,6 +397,7 @@ function EditGroupFormFields({ onCancel, loading, isDirtyRef, fetchRoles }) {
         // Silently handle error
       } finally {
         setRolesLoading(false);
+        setRolesLoadingMore(false);
       }
     },
     [dispatch, fetchRoles],
@@ -293,18 +410,24 @@ function EditGroupFormFields({ onCancel, loading, isDirtyRef, fetchRoles }) {
 
   // Load more roles handler
   const handleLoadMoreRoles = useCallback(() => {
-    if (!rolesLoading && rolesHasMore) {
+    if (!rolesLoadingMore && rolesHasMore) {
       loadRoles(rolesPage + 1, roleSearch, false);
     }
-  }, [rolesLoading, rolesHasMore, rolesPage, roleSearch, loadRoles]);
+  }, [rolesLoadingMore, rolesHasMore, rolesPage, roleSearch, loadRoles]);
 
   return (
-    <>
-      <div className={s.formSection}>
-        <h3 className={s.sectionTitle}>
+    <Card variant='surface' className='p-0'>
+      {/* ── Group Information ──────────────────────────────────────── */}
+      <Box
+        px='5'
+        py='3'
+        className='bg-[var(--gray-a2)] border-b border-[var(--gray-a4)]'
+      >
+        <Text size='2' weight='bold' color='gray'>
           {t('admin:groups.edit.groupInformation', 'Group Information')}
-        </h3>
-
+        </Text>
+      </Box>
+      <Box p='5'>
         <Form.Field
           name='name'
           label={t('admin:groups.edit.groupName', 'Group Name')}
@@ -331,10 +454,11 @@ function EditGroupFormFields({ onCancel, loading, isDirtyRef, fetchRoles }) {
           />
         </Form.Field>
 
-        <div className={s.formRow}>
+        <Grid columns={{ initial: '1', sm: '2' }} gap='4'>
           <Form.Field
             name='category'
             label={t('admin:groups.edit.category', 'Category')}
+            className='mb-0'
           >
             <Form.Input
               placeholder={t(
@@ -343,7 +467,11 @@ function EditGroupFormFields({ onCancel, loading, isDirtyRef, fetchRoles }) {
               )}
             />
           </Form.Field>
-          <Form.Field name='type' label={t('admin:groups.edit.type', 'Type')}>
+          <Form.Field
+            name='type'
+            label={t('admin:groups.edit.type', 'Type')}
+            className='mb-0'
+          >
             <Form.Input
               placeholder={t(
                 'admin:groups.edit.typePlaceholder',
@@ -351,16 +479,22 @@ function EditGroupFormFields({ onCancel, loading, isDirtyRef, fetchRoles }) {
               )}
             />
           </Form.Field>
-        </div>
-      </div>
+        </Grid>
+      </Box>
 
-      <div className={s.formSection}>
-        <h3 className={s.sectionTitle}>
+      {/* ── Roles Selection ────────────────────────────────────────── */}
+      <Box
+        px='5'
+        py='3'
+        className='bg-[var(--gray-a2)] border-y border-[var(--gray-a4)]'
+      >
+        <Text size='2' weight='bold' color='gray'>
           {t('admin:groups.edit.rolesCount', 'Roles ({{count}} selected)', {
             count: selectedRoles.length,
           })}
-        </h3>
-
+        </Text>
+      </Box>
+      <Box p='5'>
         <Form.Field name='roles'>
           <Form.CheckboxList
             items={roles}
@@ -368,6 +502,7 @@ function EditGroupFormFields({ onCancel, loading, isDirtyRef, fetchRoles }) {
             labelKey='name'
             descriptionKey='description'
             loading={rolesLoading}
+            loadingMore={rolesLoadingMore}
             hasMore={rolesHasMore}
             onLoadMore={handleLoadMoreRoles}
             searchable
@@ -375,6 +510,7 @@ function EditGroupFormFields({ onCancel, loading, isDirtyRef, fetchRoles }) {
               'admin:groups.edit.searchRoles',
               'Search roles...',
             )}
+            searchValue={roleSearch}
             onSearch={setRoleSearch}
             emptyMessage={t('admin:groups.edit.noRolesFound', 'No roles found')}
             loadingMessage={t(
@@ -383,19 +519,31 @@ function EditGroupFormFields({ onCancel, loading, isDirtyRef, fetchRoles }) {
             )}
           />
         </Form.Field>
-      </div>
+      </Box>
 
-      <div className={s.formActions}>
-        <Button variant='secondary' onClick={handleCancel} disabled={loading}>
+      {/* ── Footer actions ───────────────────────────────────────── */}
+      <Flex
+        align='center'
+        justify='between'
+        px='5'
+        py='4'
+        className='rounded-b-md bg-[var(--gray-2)] border-t border-[var(--gray-a4)]'
+      >
+        <Button
+          variant='soft'
+          color='gray'
+          type='button'
+          onClick={handleCancel}
+        >
           {t('admin:groups.edit.cancel', 'Cancel')}
         </Button>
-        <Button variant='primary' type='submit' loading={loading}>
+        <Button variant='solid' color='indigo' type='submit' loading={loading}>
           {loading
             ? t('admin:groups.edit.saving', 'Saving...')
             : t('admin:groups.edit.saveChanges', 'Save Changes')}
         </Button>
-      </div>
-    </>
+      </Flex>
+    </Card>
   );
 }
 

@@ -118,7 +118,8 @@ xnapify/
 | Redux Toolkit         | Global state management    |
 | React Hook Form + Zod | Form handling & validation |
 | Tiptap 3              | Rich text editor (WYSIWYG) |
-| CSS Modules + PostCSS | Scoped styling             |
+| Radix UI + Tailwind   | Design system & styling    |
+| CSS Modules + PostCSS | Scoped custom styling      |
 | i18next               | Internationalization       |
 
 ### Backend
@@ -139,7 +140,7 @@ xnapify/
 | Technology                    | Purpose                       |
 | ----------------------------- | ----------------------------- |
 | Webpack 5                     | Bundling, code splitting, HMR |
-| Babel 7                       | ES2015+ transpilation         |
+| SWC                           | ES2015+ transpilation         |
 | Jest                          | Testing & benchmarks          |
 | ESLint + Prettier + Stylelint | Code quality & formatting     |
 

@@ -5,30 +5,35 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useState, useCallback, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 
-import clsx from 'clsx';
+import {
+  PersonIcon,
+  LightningBoltIcon,
+  ArrowUpIcon,
+  ExitIcon,
+} from '@radix-ui/react-icons';
+import { Flex, Text, Box } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 
 import ContextMenu from '@shared/renderer/components/ContextMenu';
 import { Link, useHistory } from '@shared/renderer/components/History';
-import Icon from '@shared/renderer/components/Icon';
 import { checkPermission } from '@shared/renderer/components/Rbac';
-import {
+import { features } from '@shared/renderer/redux';
+import { useWebSocket } from '@shared/ws/client';
+
+const {
   getUserDisplayName,
   getUserAvatarUrl,
   getUserRoles,
   getUserProfile,
   logout,
-} from '@shared/renderer/redux';
-import { useWebSocket } from '@shared/ws/client';
-
-import s from './ProfileDropdown.css';
+} = features;
 
 /**
  * ProfileDropdown Component
- * User profile dropdown with navigation and logout
+ * User profile dropdown with navigation and logout, using native Radix primitives
  */
 function ProfileDropdown() {
   const { t } = useTranslation();
@@ -42,18 +47,9 @@ function ProfileDropdown() {
   const roles = useSelector(getUserRoles);
   const userProfile = useSelector(getUserProfile);
 
-  // Local state
-  const [isOpen, setIsOpen] = useState(false);
-
-  // Handlers
-  const handleClose = useCallback(() => {
-    setIsOpen(false);
-  }, []);
-
   const handleLogout = useCallback(
     async e => {
       e.preventDefault();
-      setIsOpen(false);
       await dispatch(logout());
       if (ws) {
         ws.logout();
@@ -63,11 +59,6 @@ function ProfileDropdown() {
     },
     [dispatch, ws, history],
   );
-
-  // Get avatar initial
-  const avatarInitial = useMemo(() => {
-    return displayName ? displayName.charAt(0).toUpperCase() : 'A';
-  }, [displayName]);
 
   // Determine display role
   const displayRole = useMemo(() => {
@@ -88,65 +79,89 @@ function ProfileDropdown() {
   }, [roles, t]);
 
   return (
-    <div className={s.userMenu}>
-      <ContextMenu isOpen={isOpen} onToggle={setIsOpen}>
-        <ContextMenu.Trigger variant='unstyled' className={s.userMenuBtn}>
-          <div className={s.userAvatar}>
+    <ContextMenu>
+      <ContextMenu.Trigger asChild>
+        <button
+          type='button'
+          className='w-9 h-9 p-0 m-0 rounded-full cursor-pointer transition-colors bg-transparent hover:bg-gray-100 data-[state=open]:bg-gray-100 outline-none border-none flex items-center justify-center'
+        >
+          <Flex
+            align='center'
+            justify='center'
+            className='w-8 h-8 rounded-full bg-orange-400 text-white overflow-hidden font-bold text-xs flex items-center justify-center border border-gray-200'
+          >
             {avatarUrl ? (
               <img
                 src={avatarUrl}
                 alt=''
-                className={s.userAvatarImg}
+                className='w-full h-full object-cover'
                 onError={e => {
                   e.target.style.display = 'none';
                 }}
               />
             ) : (
-              avatarInitial
+              <PersonIcon width={16} height={16} />
             )}
-          </div>
-          <div className={s.userInfo}>
-            <span className={s.userName}>{displayName}</span>
-            <span className={s.userRole}>{displayRole}</span>
-          </div>
-          <Icon
-            name='chevronDown'
-            size={12}
-            className={clsx(s.dropdownIcon, {
-              [s.dropdownIconOpen]: isOpen,
-            })}
-          />
-        </ContextMenu.Trigger>
+          </Flex>
+        </button>
+      </ContextMenu.Trigger>
 
-        <ContextMenu.Menu>
-          <ContextMenu.Header title={displayName} subtitle={displayRole} />
+      <ContextMenu.Menu
+        align='end'
+        className='min-w-[200px] bg-panel-solid/90 backdrop-blur-md border border-gray-a6 rounded-md shadow-lg p-1 z-[100] data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95'
+      >
+        <Box py='2' px='3' mb='1' className='border-b border-gray-a6 mb-2'>
+          <Text as='div' size='2' weight='bold'>
+            {displayName}
+          </Text>
+          <Text as='div' size='1' color='gray' mt='1'>
+            {displayRole}
+          </Text>
+        </Box>
 
-          <ContextMenu.Item as={Link} to='/profile' onClick={handleClose}>
-            <Icon name='user' size={16} />
-            {t('navigation.profile', 'Profile')}
+        <ContextMenu.Item asChild>
+          <Link
+            to='/profile'
+            className='w-full flex items-center gap-2 px-3 py-2 rounded-sm text-left cursor-pointer transition-colors text-gray-12 hover:bg-gray-3 hover:text-gray-12 focus:outline-none focus:bg-gray-3 no-underline'
+          >
+            <PersonIcon width={16} height={16} />
+            <Text size='2'>{t('navigation.profile', 'Profile')}</Text>
+          </Link>
+        </ContextMenu.Item>
+
+        {checkPermission(userProfile, 'nodered:admin') && (
+          <ContextMenu.Item asChild>
+            <a
+              href='/~/red/admin'
+              className='w-full flex items-center gap-2 px-3 py-2 rounded-sm text-left cursor-pointer transition-colors text-gray-12 hover:bg-gray-3 hover:text-gray-12 focus:outline-none focus:bg-gray-3 no-underline'
+            >
+              <LightningBoltIcon width={16} height={16} />
+              <Text size='2'>Node-RED</Text>
+            </a>
           </ContextMenu.Item>
+        )}
 
-          {checkPermission(userProfile, 'nodered:admin') && (
-            <ContextMenu.Item as='a' href='/~/red/admin' onClick={handleClose}>
-              <Icon name='node-red' size={16} />
-              Node-RED
-            </ContextMenu.Item>
-          )}
+        <ContextMenu.Item asChild>
+          <Link
+            to='/'
+            className='w-full flex items-center gap-2 px-3 py-2 rounded-sm text-left cursor-pointer transition-colors text-gray-12 hover:bg-gray-3 hover:text-gray-12 focus:outline-none focus:bg-gray-3 no-underline'
+          >
+            <ArrowUpIcon width={16} height={16} />
+            <Text size='2'>{t('navigation.backToSite', 'Back to Site')}</Text>
+          </Link>
+        </ContextMenu.Item>
 
-          <ContextMenu.Item as={Link} to='/' onClick={handleClose}>
-            <Icon name='arrowUp' size={16} />
-            {t('navigation.backToSite', 'Back to Site')}
-          </ContextMenu.Item>
+        <ContextMenu.Divider className='h-[1px] bg-gray-a6 my-1 mx-1' />
 
-          <ContextMenu.Divider />
-
-          <ContextMenu.Item onClick={handleLogout} variant='danger'>
-            <Icon name='logout' size={16} />
-            {t('navigation.logout', 'Logout')}
-          </ContextMenu.Item>
-        </ContextMenu.Menu>
-      </ContextMenu>
-    </div>
+        <ContextMenu.Item
+          onClick={handleLogout}
+          className='w-full flex items-center gap-2 px-3 py-2 rounded-sm text-left cursor-pointer transition-colors text-red-11 hover:bg-red-3 hover:text-red-11 focus:outline-none focus:bg-red-3'
+        >
+          <ExitIcon width={16} height={16} />
+          <Text size='2'>{t('navigation.logout', 'Logout')}</Text>
+        </ContextMenu.Item>
+      </ContextMenu.Menu>
+    </ContextMenu>
   );
 }
 

@@ -27,7 +27,7 @@ When executing the `/build` workflow, you are acting as an intelligent orchestra
    - Always ask for user approval at each step or file creation/modification.
 
 5. **Verify:**
-   - Run tests if applicable (e.g., using `/test-e2e` or unit test scripts).
+   - Run tests if applicable (e.g., using unit test scripts).
 
 6. **Finalize:**
    - Give a short summary of the updates.

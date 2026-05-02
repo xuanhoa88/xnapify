@@ -1,0 +1,49 @@
+/**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+.meshGradient1 {
+  background: radial-gradient(
+    circle,
+    var(--indigo-9) 0%,
+    transparent 70%
+  );
+  animation-duration: 8s;
+}
+
+.meshGradient2 {
+  background: radial-gradient(
+    circle,
+    var(--blue-9) 0%,
+    transparent 70%
+  );
+  animation-duration: 12s;
+  animation-delay: 1s;
+}
+
+.noiseTexture {
+  background-image: url('data:image/svg+xml,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)"/%3E%3C/svg%3E');
+}
+
+.heroHeading {
+  font-size: 3.5rem;
+}
+
+@keyframes slideUpFade {
+  0% {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animateSlideUp {
+  animation: slideUpFade 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}

@@ -8,9 +8,11 @@
 import PropTypes from 'prop-types';
 
 import { requirePermission } from '@shared/renderer/components/Rbac';
-import { addBreadcrumb } from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
 
 import EditRole from './EditRole';
+
+const { addBreadcrumb } = features;
 
 export const middleware = requirePermission('roles:update');
 

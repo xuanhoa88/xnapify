@@ -7,11 +7,12 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react';
 
+import { CodeIcon } from '@radix-ui/react-icons';
+import { TextField } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
 import ContextMenu from '../ContextMenu';
-import Icon from '../Icon';
 
 import ToolbarButton from './ToolbarButton';
 
@@ -56,13 +57,14 @@ export default function CodeBlockActionsPopup({
 
   return (
     <ContextMenu align='left'>
-      <ContextMenu.Trigger
-        as={ToolbarButton}
-        icon={<Icon name='code' size={16} strokeWidth={2.5} />}
-        title={t('shared:form.wysiwyg.codeBlock', 'Code Block')}
-        isActive={isActive}
-        disabled={disabled}
-      />
+      <ContextMenu.Trigger asChild>
+        <ToolbarButton
+          icon={<CodeIcon width={16} height={16} />}
+          title={t('shared:form.wysiwyg.codeBlock', 'Code Block')}
+          isActive={isActive}
+          disabled={disabled}
+        />
+      </ContextMenu.Trigger>
 
       <ContextMenu.Menu>
         {/* Toggle Code Block */}
@@ -80,9 +82,8 @@ export default function CodeBlockActionsPopup({
 
             {/* Search filter */}
             <div className={s.searchWrapper}>
-              <input
+              <TextField.Root
                 ref={inputRef}
-                type='text'
                 className={s.searchInput}
                 placeholder={t(
                   'shared:form.wysiwyg.searchLanguage',
@@ -106,8 +107,11 @@ export default function CodeBlockActionsPopup({
                     .run()
                 }
               >
-                Auto ({t('shared:form.wysiwyg.autoLanguage', 'Auto-detect')})
-                {activeLanguage === 'auto' && ' ✓'}
+                {t(
+                  'shared:form.wysiwyg.autoLanguageLabel',
+                  'Auto (Auto-detect)',
+                )}
+                {activeLanguage === 'auto' ? ' ✓' : ''}
               </ContextMenu.Item>
 
               {filteredLanguages.map(lang => (
@@ -122,7 +126,7 @@ export default function CodeBlockActionsPopup({
                   }
                 >
                   {lang}
-                  {activeLanguage === lang && ' ✓'}
+                  {activeLanguage === lang ? ' ✓' : ''}
                 </ContextMenu.Item>
               ))}
 

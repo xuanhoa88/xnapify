@@ -6,11 +6,8 @@
  */
 
 import { requirePermission } from '@shared/renderer/components/Rbac';
-import {
-  addBreadcrumb,
-  registerMenu,
-  unregisterMenu,
-} from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
+const { addBreadcrumb, registerMenu, unregisterMenu } = features;
 
 import EmailTemplates from './EmailTemplates';
 
@@ -26,12 +23,12 @@ export function setup({ store, i18n }) {
       id: 'communications',
       label: i18n.t('admin:navigation.communications', 'Communications'),
       order: 40,
-      icon: 'mail',
+      icon: 'EnvelopeClosedIcon',
       items: [
         {
           path: '/admin/emails/templates',
-          label: i18n.t('admin:emails.templates', 'Email Templates'),
-          icon: 'mail-open',
+          label: i18n.t('admin:navigation.emailTemplates', 'Email Templates'),
+          icon: 'EnvelopeOpenIcon',
           permission: 'emails:templates:read',
           order: 50,
         },
@@ -57,7 +54,7 @@ export function teardown({ store }) {
  */
 export async function getInitialProps({ i18n }) {
   return {
-    title: i18n.t('admin:emails.templates', 'Email Templates'),
+    title: i18n.t('admin:navigation.emailTemplates', 'Email Templates'),
   };
 }
 
@@ -68,7 +65,7 @@ export function mount({ store, i18n, path }) {
   store.dispatch(
     addBreadcrumb(
       {
-        label: i18n.t('admin:emails.templates', 'Email Templates'),
+        label: i18n.t('admin:navigation.emailTemplates', 'Email Templates'),
         url: path,
       },
       'admin',

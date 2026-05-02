@@ -108,10 +108,28 @@ export function validateManifest(manifest) {
     (typeof manifest.name === 'string' && manifest.name.trim()) || '';
   const version =
     (typeof manifest.version === 'string' && manifest.version.trim()) ||
-    '0.0.0';
+    '1.0.0';
+
   if (name.length === 0 || version.length === 0) {
     throw ExtensionError.invalidPackage(
       'Invalid extension manifest: missing required fields (name, version)',
+    );
+  }
+
+  // Security: prevent path traversal
+  // Allow scoped names (exactly one '/' after '@'), block everything else
+  const isScopedName =
+    name.startsWith('@') &&
+    name.indexOf('/') === name.lastIndexOf('/') &&
+    name.indexOf('/') > 1;
+
+  if (
+    name.includes('..') ||
+    name.includes('\\') ||
+    (!isScopedName && name.includes('/'))
+  ) {
+    throw ExtensionError.invalidPackage(
+      `Extension name "${name}" contains invalid path characters`,
     );
   }
 
@@ -176,6 +194,7 @@ export async function installExtensionDependencies(extensionDir, extension) {
     const err = new Error(
       `Failed to install dependencies for extension ${extensionName}`,
     );
+    err.name = 'ExtensionDependencyError';
     err.status = 500;
     throw err;
   }
@@ -218,7 +237,7 @@ export function notifyExtensionChange(container, type, extensionKey) {
           ? {
               hasClientCss: metadata.manifest.hasClientCss || false,
               hasClientScript: metadata.manifest.hasClientScript || false,
-              version: metadata.manifest.version || '0.0.0',
+              version: metadata.manifest.version || '1.0.0',
             }
           : null,
     };

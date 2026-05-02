@@ -7,26 +7,27 @@
 
 import { useState, useCallback, useEffect } from 'react';
 
+import * as RadixIcons from '@radix-ui/react-icons';
+import {
+  Box,
+  Flex,
+  Text,
+  Button,
+  Badge,
+  Switch,
+  Avatar,
+} from '@radix-ui/themes';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
-
-import Button from '@shared/renderer/components/Button';
-import Card from '@shared/renderer/components/Card';
-import Icon from '@shared/renderer/components/Icon';
-
-import ExtensionActionsDropdown from './ExtensionActionsDropdown';
 
 import s from './ExtensionCard.css';
 
 function ExtensionCard({
   extension,
   actionLabel,
-  activeDropdownId,
-  onToggleDropdown,
   onActivate,
   onDeactivate,
-  onUpgrade,
   onDelete,
   canUpdate,
 }) {
@@ -56,7 +57,7 @@ function ExtensionCard({
 
   const handleToggleStatus = useCallback(
     e => {
-      e.preventDefault();
+      if (e && e.preventDefault) e.preventDefault();
       if (!canUpdate || isLoading) return;
       if (extension.is_active) {
         onDeactivate(extension);
@@ -73,100 +74,105 @@ function ExtensionCard({
     extension.source === 'local' || extension.source === 'db+local';
 
   return (
-    <Card
-      variant='default'
+    <Flex
+      direction='column'
       className={clsx(
-        'extension-card',
-        extension.is_active
-          ? 'active-extension-card'
-          : 'inactive-extension-card',
-        s.root,
-        {
-          [s.loading]: isLoading,
-          [s.inactive]: !extension.is_active,
-        },
+        s.cardContainer,
+        extension.is_active ? s.cardActive : s.cardInactive,
       )}
     >
-      <div className={s.header}>
-        <div className={s.iconWrapper}>
-          {extension.icon && /^https?:\/\//.test(extension.icon) ? (
-            <img
-              src={extension.icon}
-              alt={extension.name}
-              className={s.iconImage}
-            />
-          ) : extension.icon && /[./]/.test(extension.icon) ? (
-            <img
-              src={`/api/extensions/${extension.id}/static/${extension.icon}`}
-              alt={extension.name}
-              className={s.iconImage}
-            />
-          ) : (
-            <Icon name={extension.icon || 'extension'} size={28} />
-          )}
-        </div>
-        <div className={s.headerText}>
+      <Flex p='4' gap='3' align='start' className={s.headerFlex}>
+        <Avatar
+          size='5'
+          radius='medium'
+          src={
+            extension.icon && /^https?:\/\//.test(extension.icon)
+              ? extension.icon
+              : extension.icon && /[./]/.test(extension.icon)
+                ? `/api/extensions/${extension.id}/static/${extension.icon}`
+                : undefined
+          }
+          fallback={
+            extension.icon &&
+            !/[./]/.test(extension.icon) &&
+            RadixIcons[extension.icon] ? (
+              (() => {
+                const Comp = RadixIcons[extension.icon];
+                return <Comp width={24} height={24} />;
+              })()
+            ) : extension.name ? (
+              extension.name
+                .replace(/^@xnapify-extension\//, '')
+                .replace(/^xnapify-/, '')
+                .charAt(0)
+                .toUpperCase()
+            ) : (
+              <RadixIcons.CubeIcon width={24} height={24} />
+            )
+          }
+          color='indigo'
+          variant='soft'
+        />
+        <Box grow='1' minWidth='0'>
           {isLoading ? (
-            <div className={s.skeletonWrapper}>
-              <div className={clsx(s.skeleton, s.skeletonTitle)} />
-            </div>
+            <Box className={s.skeletonTitle} />
           ) : (
             <>
-              <div className={s.titleRow}>
-                <h3 className={s.name} title={extension.name}>
+              <Flex align='center' gap='2' mb='1'>
+                <Text as='h3' size='3' weight='bold' truncate>
                   {extension.name}
-                </h3>
-                <span className={s.version}>v{extension.version}</span>
-              </div>
-              <div className={s.subtitleRow}>
+                </Text>
+                <Badge color='gray' radius='full' variant='surface'>
+                  v{extension.version}
+                </Badge>
+              </Flex>
+              <Flex align='center' gap='2' wrap='wrap'>
                 {extension.source && (
-                  <span
-                    className={clsx(s.typeBadge, s.sourceBadge, {
-                      [s.sourceLocal]: isLocal,
-                    })}
+                  <Badge
+                    variant={isLocal ? 'secondary' : 'primary'}
+                    color='gray'
+                    radius='full'
                   >
                     {isLocal
                       ? t('admin:extensions.sourceLocal', 'LOCAL')
                       : t('admin:extensions.sourceRemote', 'REMOTE')}
-                  </span>
+                  </Badge>
                 )}
                 {authorText && (
-                  <span className={s.author}>&bull; {authorText}</span>
+                  <Text as='span' size='1' color='gray'>
+                    &bull; {authorText}
+                  </Text>
                 )}
-              </div>
+              </Flex>
             </>
           )}
-        </div>
-      </div>
+        </Box>
+      </Flex>
 
-      <div className={s.body}>
+      <Box p='4' grow='1'>
         {isLoading ? (
-          <div className={s.skeletonWrapper}>
-            <div className={clsx(s.skeleton, s.skeletonText)} />
-            <div className={clsx(s.skeleton, s.skeletonText)} />
-            <div
-              className={clsx(s.skeleton, s.skeletonText, s.skeletonShort)}
-            />
-          </div>
-        ) : (
-          <>
-            <p className={s.description}>
-              {extension.description ||
-                t(
-                  'admin:extensions.noDescriptionAvailable',
-                  'No description available',
-                )}
-            </p>
-          </>
-        )}
-      </div>
+          <Flex direction='column' gap='2'>
+            <Box className={s.skeletonDesc1} />
 
-      <div className={s.footer}>
-        <div className={s.footerActions}>
+            <Box className={s.skeletonDesc2} />
+          </Flex>
+        ) : (
+          <Text as='p' size='2' color='gray' className={s.descriptionText}>
+            {extension.description ||
+              t(
+                'admin:extensions.noDescriptionAvailable',
+                'No description available',
+              )}
+          </Text>
+        )}
+      </Box>
+
+      <Flex p='3' align='center' justify='between' className={s.footerFlex}>
+        <Flex gap='2' align='center'>
           {extension.options && extension.options.repository && (
             <Button
               variant='outline'
-              size='small'
+              size='1'
               onClick={() =>
                 window.open(extension.options.repository, '_blank')
               }
@@ -176,44 +182,38 @@ function ExtensionCard({
           )}
           <Button
             variant='outline'
-            size='small'
+            size='1'
             onClick={() => onDelete(extension)}
           >
             {t('admin:common.remove', 'Remove')}
           </Button>
+        </Flex>
 
-          {!isLoading && (
-            <ExtensionActionsDropdown
-              extension={extension}
-              isOpen={activeDropdownId === extension.id}
-              onToggle={onToggleDropdown}
-              onUpgrade={onUpgrade}
-              onDelete={onDelete}
-            />
-          )}
-        </div>
-
-        <div className={s.footerToggle}>
+        <Box>
           {isLoading ? (
-            <div className={clsx(s.skeleton, s.skeletonSwitch)} />
+            <Box className={s.skeletonSwitch} />
           ) : isActionPending ? (
-            <span className={s.actionTag}>{resolvedActionLabel}</span>
+            <Badge color='yellow' radius='full' variant='soft'>
+              {resolvedActionLabel}
+            </Badge>
           ) : (
-            <label className={s.toggleSwitch}>
-              <input
-                type='checkbox'
-                checked={extension.is_active}
-                onChange={() => {}}
-                onClick={handleToggleStatus}
+            <Flex align='center'>
+              <Switch
+                size='2'
+                color='green'
+                checked={Boolean(extension.is_active)}
+                onCheckedChange={handleToggleStatus}
                 disabled={!canUpdate}
                 aria-label={t('admin:common.toggleStatus', 'Toggle status')}
+                className={
+                  canUpdate ? s.switchControl : s.switchControlDisabled
+                }
               />
-              <span className={s.toggleSlider} />
-            </label>
+            </Flex>
           )}
-        </div>
-      </div>
-    </Card>
+        </Box>
+      </Flex>
+    </Flex>
   );
 }
 
@@ -236,11 +236,8 @@ ExtensionCard.propTypes = {
     }),
   }).isRequired,
   actionLabel: PropTypes.string,
-  activeDropdownId: PropTypes.string,
-  onToggleDropdown: PropTypes.func.isRequired,
   onActivate: PropTypes.func.isRequired,
   onDeactivate: PropTypes.func.isRequired,
-  onUpgrade: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
   canUpdate: PropTypes.bool,
 };

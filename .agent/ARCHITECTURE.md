@@ -20,7 +20,7 @@ flowchart TD
         Build["/build Feature Implementer"]
         Plan["/plan System Designer"]
         Fix["/fix Diagnostic Router"]
-        MoreWFS["(/test-e2e, /audit-security, /deploy) 22 Total Workflows"]
+        MoreWFS["(/audit-security, /deploy) 21 Total Workflows"]
     end
 
     subgraph Specialized [Specialized Execution]

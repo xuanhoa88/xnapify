@@ -11,56 +11,66 @@
  * Represents permissions granted to other users or groups for specific files/folders.
  * Uses a polymorphic association: entity_id + entity_type to reference either a User or Group.
  *
- * @param {Object} connection - Sequelize connection instance
- * @param {Object} [DataTypes] - Sequelize DataTypes
+ * @param {Object} db - Sequelize connection instance
+ * @param {Object} db.connection - Sequelize connection instance
+ * @param {Object} db.DataTypes - Sequelize data types
+ * @param {Object} container - DI container
  * @returns {Model} FileShare model
  */
-export default function createFileShareModel({ connection, DataTypes }) {
-  const FileShare = connection.define(
-    'FileShare',
-    {
-      id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
-        primaryKey: true,
-        comment: 'Unique share identifier',
-      },
-
-      file_id: {
-        type: DataTypes.UUID,
-        allowNull: false,
-        comment: 'File or folder being shared',
-      },
-
-      entity_id: {
-        type: DataTypes.UUID,
-        allowNull: false,
-        comment: 'ID of the user or group granted access',
-      },
-
-      entity_type: {
-        type: DataTypes.ENUM('user', 'group'),
-        allowNull: false,
-        comment: 'Type of entity: user or group',
-      },
-
-      permission: {
-        type: DataTypes.ENUM('viewer', 'editor'),
-        defaultValue: 'viewer',
-        allowNull: false,
-        comment: 'Access level: viewer or editor',
-      },
+export default async function createFileShareModel(
+  { connection, DataTypes },
+  container,
+) {
+  const attributes = {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+      comment: 'Unique share identifier',
     },
-    {
-      tableName: 'file_shares',
-      underscored: true,
-      timestamps: true,
-      createdAt: 'created_at',
-      updatedAt: 'updated_at',
-    },
-  );
 
-  FileShare.associate = models => {
+    file_id: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      comment: 'File or folder being shared',
+    },
+
+    entity_id: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      comment: 'ID of the user or group granted access',
+    },
+
+    entity_type: {
+      type: DataTypes.ENUM('user', 'group'),
+      allowNull: false,
+      comment: 'Type of entity: user or group',
+    },
+
+    permission: {
+      type: DataTypes.ENUM('viewer', 'editor'),
+      defaultValue: 'viewer',
+      allowNull: false,
+      comment: 'Access level: viewer or editor',
+    },
+  };
+
+  // Invoke hook to allow extensions to modify the model
+  const hook = container.resolve('hook');
+  await hook('models').invoke('FileShare:define', {
+    attributes,
+    container,
+  });
+
+  const FileShare = connection.define('FileShare', attributes, {
+    tableName: 'file_shares',
+    underscored: true,
+    timestamps: true,
+    createdAt: 'created_at',
+    updatedAt: 'updated_at',
+  });
+
+  FileShare.associate = async function (models) {
     // Shared File
     if (models.File) {
       FileShare.belongsTo(models.File, {
@@ -86,6 +96,13 @@ export default function createFileShareModel({ connection, DataTypes }) {
         as: 'group',
       });
     }
+
+    const hook = container.resolve('hook');
+    await hook('models').invoke('FileShare:associate', {
+      models,
+      model: FileShare,
+      container,
+    });
   };
 
   return FileShare;

@@ -7,32 +7,26 @@
 
 import { useCallback, useEffect } from 'react';
 
+import { Flex, Text, Heading, Button } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Button from '@shared/renderer/components/Button';
 import Form, { useFormContext } from '@shared/renderer/components/Form';
 import {
   Link,
   useHistory,
   useQuery,
 } from '@shared/renderer/components/History';
-import {
-  register,
-  isAuthLoading,
-  getAuthError,
-  clearAuthError,
-} from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
 import { useWebSocket } from '@shared/ws/client';
 
 import { registerFormSchema } from '../../../users/validator/auth';
 
-import s from './Register.css';
+const { register, isAuthLoading, getAuthError, clearAuthError } = features;
 
 /**
  * Register Page Component
- * Standalone full-page registration without header/footer
  */
 function Register() {
   const { t } = useTranslation();
@@ -74,70 +68,58 @@ function Register() {
   );
 
   return (
-    <div className={s.root}>
-      <HeroSection />
-
-      <div className={s.formSection}>
-        <div className={s.formContainer}>
-          <h2 className={s.formTitle}>
-            {t('navigation.register', 'Register')}
-          </h2>
-
-          <Form.Error message={error} />
-
-          <Form
-            schema={registerFormSchema}
-            defaultValues={{
-              email: '',
-              password: '',
-              confirmPassword: '',
-            }}
-            onSubmit={handleSubmit}
-          >
-            <RegisterFormFields loading={loading} />
-          </Form>
-
-          <div className={s.loginLink}>
-            <Trans
-              t={t}
-              i18nKey='register.alreadyHaveAccount'
-              // eslint-disable-next-line react/jsx-key, jsx-a11y/anchor-has-content
-              components={[<Link to='/login' className={s.link} />]}
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/**
- * Hero Section
- */
-function HeroSection() {
-  const { t } = useTranslation();
-
-  return (
-    <div className={s.hero}>
-      <div className={s.heroContent}>
-        <Link to='/' className={s.brand}>
-          <img
-            src='/xnapify_38x38.png'
-            srcSet='/xnapify_72x72.png 2x'
-            width='48'
-            height='48'
-            alt='xnapify'
-          />
-          <span className={s.brandText}>xnapify</span>
-        </Link>
-        <h1 className={s.heroTitle}>
+    <>
+      <Flex direction='column' align='center' mb='7'>
+        <Heading
+          as='h2'
+          size='7'
+          mb='2'
+          weight='bold'
+          className='text-slate-900 tracking-tight'
+        >
           {t('register.welcome', 'Create Account')}
-        </h1>
-        <p className={s.heroSubtitle}>
+        </Heading>
+        <Text size='3' className='text-slate-500 font-medium'>
           {t('register.heroSubtitle', 'Join us and start your journey')}
-        </p>
-      </div>
-    </div>
+        </Text>
+      </Flex>
+
+      <Form.Error message={error} />
+
+      <Form
+        schema={registerFormSchema}
+        defaultValues={{
+          email: '',
+          password: '',
+          confirmPassword: '',
+        }}
+        onSubmit={handleSubmit}
+      >
+        <RegisterFormFields loading={loading} />
+      </Form>
+
+      <Flex
+        justify='center'
+        mt='6'
+        pt='6'
+        className='border-t border-slate-200/80'
+      >
+        <Text size='2' className='text-slate-500'>
+          <Trans
+            t={t}
+            i18nKey='register.alreadyHaveAccount'
+            // eslint-disable-next-line jsx-a11y/anchor-has-content
+            components={[
+              <Link
+                key='login'
+                to='/login'
+                className='text-indigo-600 hover:text-indigo-700 font-medium no-underline transition-colors duration-200'
+              />,
+            ]}
+          />
+        </Text>
+      </Flex>
+    </>
   );
 }
 
@@ -151,7 +133,7 @@ function RegisterFormFields({ loading }) {
   } = useFormContext();
 
   return (
-    <>
+    <Flex direction='column' gap='4'>
       <Form.Field name='email' label={t('register.email', 'Email')}>
         <Form.Input
           type='email'
@@ -171,17 +153,19 @@ function RegisterFormFields({ loading }) {
       </Form.Field>
 
       <Button
-        variant='primary'
+        variant='solid'
+        color='indigo'
+        size='3'
         type='submit'
-        fullWidth
-        className={s.submitButton}
+        mt='3'
+        className='w-full cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md'
         loading={loading || isSubmitting}
       >
         {loading
           ? t('register.loading', 'Loading...')
           : t('register.submit', 'Register')}
       </Button>
-    </>
+    </Flex>
   );
 }
 

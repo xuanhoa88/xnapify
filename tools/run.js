@@ -139,11 +139,7 @@ const AVAILABLE_TASKS = [
     description: 'Run tests with Jest',
     processEnv: { NODE_ENV: 'test' },
   },
-  {
-    name: 'e2e',
-    description: 'Run E2E tests with Puppeteer/LLM',
-    processEnv: { NODE_ENV: 'test' },
-  },
+
   {
     name: 'benchmark',
     description: 'Run performance benchmarks (*.benchmark.js)',

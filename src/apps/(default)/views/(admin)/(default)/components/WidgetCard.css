@@ -1,0 +1,27 @@
+/**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+.card {
+  margin-bottom: var(--space-4);
+}
+
+.header {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--gray-a4);
+  background-color: var(--color-panel-solid);
+  cursor: move;
+}
+
+.title {
+  color: var(--gray-12);
+  margin: 0;
+}
+
+.body {
+  padding: var(--space-4);
+  background-color: var(--color-panel-solid);
+}

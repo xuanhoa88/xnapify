@@ -1,0 +1,51 @@
+{
+  "roles": {
+    "title": "Quản lý vai trò",
+    "addRole": "Thêm vai trò",
+    "searchPlaceholder": "Tìm kiếm vai trò...",
+    "noRolesFound": "Không tìm thấy vai trò",
+    "noDescription": "Chưa có mô tả",
+    "users": "Người dùng",
+    "groups": "Nhóm",
+    "permissions": "Quyền",
+    "viewUsers": "Xem người dùng",
+    "viewGroups": "Xem nhóm",
+    "viewPermissions": "Xem quyền",
+    "editRole": "Chỉnh sửa vai trò",
+    "deleteRole": "Xóa vai trò",
+    "deleteTitle": "Xóa vai trò",
+    "deleteError": "Lỗi khi xóa vai trò",
+    "bulkDelete": "Xóa đã chọn",
+    "permissionsFor": "Quyền cho",
+    "usersWithRole": "Người dùng với vai trò \"{{roleName}}\"",
+    "groupsWithRole": "Nhóm với vai trò \"{{roleName}}\"",
+    "noUsersMatch": "Không tìm thấy người dùng",
+    "noGroupsMatch": "Không tìm thấy nhóm",
+    "noRolesMatch": "Không tìm thấy vai trò",
+    "noRolesAvailable": "Không có vai trò",
+    "noGroupsAvailable": "Không có nhóm",
+    "create": {
+      "title": "Tạo vai trò mới",
+      "newRole": "Vai trò mới",
+      "backToList": "Quay lại danh sách",
+      "roleInformation": "Thông tin vai trò",
+      "roleName": "Tên vai trò",
+      "description": "Mô tả",
+      "statusLabel": "Trạng thái",
+      "permissionsLabel": "Quyền"
+    },
+    "edit": {
+      "title": "Chỉnh sửa vai trò: {{name}}",
+      "titleLoading": "Đang tải vai trò...",
+      "titleError": "Lỗi khi tải vai trò",
+      "backToList": "Quay lại danh sách",
+      "roleInformation": "Thông tin vai trò",
+      "roleName": "Tên vai trò",
+      "description": "Mô tả",
+      "statusLabel": "Trạng thái",
+      "active": "Hoạt động",
+      "permissionsLabel": "Quyền",
+      "unnamedRole": "Vai trò chưa đặt tên"
+    }
+  }
+}

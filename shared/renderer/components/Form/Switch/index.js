@@ -7,16 +7,14 @@
 
 import { forwardRef } from 'react';
 
-import clsx from 'clsx';
+import { Switch, Flex, Text } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
-import { useFormContext } from 'react-hook-form';
+import { useController, useFormContext } from 'react-hook-form';
 
-import { useFormField, useMergeRefs } from '../FormContext';
-
-import s from './FormSwitch.css';
+import { useFormField, useMergeRefs, useComposedHandler } from '../FormContext';
 
 /**
- * FormSwitch - Toggle switch (modern alternative to checkbox)
+ * FormSwitch - Toggle switch backed by Radix Themes
  *
  * Usage:
  *   <Form.Field name="notifications">
@@ -24,32 +22,37 @@ import s from './FormSwitch.css';
  *   </Form.Field>
  */
 const FormSwitch = forwardRef(function FormSwitch$(
-  { label, className, disabled, ...props },
+  { label, size = '2', className, disabled, ...props },
   forwardedRef,
 ) {
-  const { id, name } = useFormField();
-  const { register } = useFormContext();
+  const { id, name, error } = useFormField();
+  const { control } = useFormContext();
 
-  // Get registration props including ref
-  const { ref: registerRef, ...registerProps } = register(name);
-
-  // Merge refs
-  const handleRef = useMergeRefs(registerRef, forwardedRef);
+  const { field } = useController({ name, control });
+  const handleRef = useMergeRefs(field.ref, forwardedRef);
+  const handleCheckedChange = useComposedHandler(
+    props.onCheckedChange,
+    field.onChange,
+  );
+  const handleBlur = useComposedHandler(props.onBlur, field.onBlur);
 
   return (
-    <label className={clsx(s.switchWrapper, className)} htmlFor={id}>
-      <input
-        id={id}
-        type='checkbox'
-        disabled={disabled}
-        className={s.input}
-        {...registerProps}
-        {...props}
-        ref={handleRef}
-      />
-      <span className={s.slider} />
-      {label && <span className={s.label}>{label}</span>}
-    </label>
+    <Text as='label' size={size}>
+      <Flex gap='2' align='center' className={className}>
+        <Switch
+          id={id}
+          size={size}
+          disabled={disabled}
+          checked={field.value || false}
+          color={error ? 'red' : undefined}
+          {...props}
+          onCheckedChange={handleCheckedChange}
+          onBlur={handleBlur}
+          ref={handleRef}
+        />
+        {label}
+      </Flex>
+    </Text>
   );
 });
 
@@ -58,8 +61,14 @@ FormSwitch.propTypes = {
   label: PropTypes.node,
   /** Additional CSS class names */
   className: PropTypes.string,
+  /** Radix size (1, 2, 3) */
+  size: PropTypes.string,
   /** Disabled state */
   disabled: PropTypes.bool,
+  /** Custom onCheckedChange handler */
+  onCheckedChange: PropTypes.func,
+  /** Custom onBlur handler */
+  onBlur: PropTypes.func,
 };
 
 export default FormSwitch;

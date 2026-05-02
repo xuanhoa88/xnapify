@@ -7,18 +7,30 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 
+import {
+  ArrowLeftIcon,
+  LockClosedIcon,
+  Pencil1Icon,
+} from '@radix-ui/react-icons';
+import {
+  Box,
+  Flex,
+  Text,
+  Grid,
+  Button,
+  Card,
+  Badge,
+  Separator,
+} from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import * as Box from '@shared/renderer/components/Box';
-import Button from '@shared/renderer/components/Button';
-import ConfirmModal from '@shared/renderer/components/ConfirmModal';
 import Form, { useFormContext } from '@shared/renderer/components/Form';
 import { useHistory } from '@shared/renderer/components/History';
-import Icon from '@shared/renderer/components/Icon';
 import { useDebounce } from '@shared/renderer/components/InfiniteScroll';
-import Loader from '@shared/renderer/components/Loader';
+import Modal from '@shared/renderer/components/Modal';
+import { PageHeader } from '@shared/renderer/components/PageHeader';
 
 import { updateRoleFormSchema } from '../../../../validator/admin';
 import {
@@ -26,12 +38,74 @@ import {
   fetchRoleById,
   isRoleUpdateLoading,
   isRoleFetchLoading,
+  getRoleFetchError,
   isRoleFetchInitialized,
   getFetchedRole,
-  getRoleFetchError,
 } from '../../redux';
 
-import s from './EditRole.css';
+// =============================================================================
+// Identity sidebar card — reflects live form values
+// =============================================================================
+
+function EditRoleIdentityCard({ role }) {
+  const { t } = useTranslation();
+  const { watch } = useFormContext();
+
+  const name = watch('name') || (role && role.name) || '';
+  const selectedPermissions = watch('permissions') || [];
+
+  return (
+    <Card variant='surface'>
+      <Flex direction='column' align='center' p='5' gap='4'>
+        <Flex
+          align='center'
+          justify='center'
+          width='64px'
+          height='64px'
+          className='rounded-full bg-[var(--indigo-3)] text-[var(--indigo-11)]'
+        >
+          <LockClosedIcon width={28} height={28} />
+        </Flex>
+
+        <Flex direction='column' align='center' gap='1' className='w-full'>
+          <Text size='4' weight='bold' align='center' className='break-all'>
+            {name || t('admin:roles.edit.unnamedRole', 'Unnamed Role')}
+          </Text>
+        </Flex>
+
+        <Separator size='4' />
+
+        <Flex direction='column' gap='3' className='w-full'>
+          <Flex justify='between' align='center'>
+            <Text size='2' color='gray'>
+              {t('admin:roles.edit.permissionsLabel', 'Permissions')}
+            </Text>
+            <Badge color='indigo' variant='soft' radius='full' size='1'>
+              {selectedPermissions.length}
+            </Badge>
+          </Flex>
+
+          <Flex justify='between' align='center'>
+            <Text size='2' color='gray'>
+              {t('admin:roles.edit.statusLabel', 'Status')}
+            </Text>
+            <Badge color='green' variant='soft' radius='full' size='1'>
+              {t('admin:roles.edit.active', 'Active')}
+            </Badge>
+          </Flex>
+        </Flex>
+      </Flex>
+    </Card>
+  );
+}
+
+EditRoleIdentityCard.propTypes = {
+  role: PropTypes.object,
+};
+
+// =============================================================================
+// Main EditRole component
+// =============================================================================
 
 function EditRole({ roleId, context }) {
   const dispatch = useDispatch();
@@ -50,7 +124,19 @@ function EditRole({ roleId, context }) {
   const role = useSelector(getFetchedRole);
   const roleLoadError = useSelector(getRoleFetchError);
 
-  const [error, setError] = useState(null);
+  const defaultValues = useMemo(
+    () => ({
+      name: role && role.name ? role.name : '',
+      description: role && role.description ? role.description : '',
+      permissions:
+        role && role.permissions && role.permissions.length > 0
+          ? role.permissions.map(p => p.id)
+          : [],
+    }),
+    [role],
+  );
+
+  const [, setError] = useState(null);
   const confirmBackModalRef = useRef(null);
   const isDirtyRef = useRef(false);
 
@@ -98,182 +184,132 @@ function EditRole({ roleId, context }) {
     [dispatch, role, history, t],
   );
 
-  // Fetch role data on mount
   useEffect(() => {
     if (roleId) {
       dispatch(fetchRoleById(roleId));
     }
   }, [dispatch, roleId]);
 
-  // Show loading on first fetch or when still fetching
-  if (!fetchInitialized || fetchingRole) {
+  const pageTitle =
+    !fetchInitialized || fetchingRole
+      ? t('admin:roles.edit.titleLoading', 'Loading Role...')
+      : roleLoadError || !role
+        ? t('admin:roles.edit.titleError', 'Error Loading Role')
+        : t('admin:roles.edit.title', 'Edit Role: {{name}}', {
+            name: role.name,
+          });
+
+  if (!fetchInitialized || fetchingRole || !role || roleLoadError) {
     return (
-      <div className={s.root}>
-        <Box.Header
-          icon={<Icon name='shield' size={24} />}
-          title={t('admin:roles.edit.editRole', 'Edit Role')}
-          subtitle={t(
-            'admin:roles.edit.modifyRolePermissions',
-            'Modify role permissions',
-          )}
+      <Box className='p-6 max-w-[1400px] mx-auto'>
+        <PageHeader
+          title={pageTitle}
+          icon={<LockClosedIcon width={24} height={24} />}
         >
           <Button
-            variant='secondary'
-            onClick={() => handleCancel(isDirtyRef.current)}
+            variant='ghost'
+            color='gray'
+            onClick={() => history.push('/admin/roles')}
           >
-            <Icon name='arrowLeft' />
-            {t('admin:buttons.backToRoles', 'Back to Roles')}
+            <ArrowLeftIcon />
+            {t('admin:roles.edit.backToList', 'Back to Roles')}
           </Button>
-        </Box.Header>
-        <div className={s.formContainer}>
-          <Loader
-            variant='spinner'
-            message={t('admin:roles.loadingRoleData', 'Loading role data...')}
-          />
-        </div>
-        <ConfirmModal.Back
+        </PageHeader>
+        <Modal.ConfirmBack
           ref={confirmBackModalRef}
           onConfirm={handleConfirmBack}
         />
-      </div>
+      </Box>
     );
   }
-
-  if (!role || roleLoadError) {
-    return (
-      <div className={s.root}>
-        <Box.Header
-          icon={<Icon name='shield' size={24} />}
-          title={t('admin:roles.edit.editRole', 'Edit Role')}
-          subtitle={t(
-            'admin:roles.edit.modifyRolePermissions',
-            'Modify role permissions',
-          )}
-        >
-          <Button
-            variant='secondary'
-            onClick={() => handleCancel(isDirtyRef.current)}
-          >
-            <Icon name='arrowLeft' />
-            {t('admin:buttons.backToRoles', 'Back to Roles')}
-          </Button>
-        </Box.Header>
-        <div className={s.formContainer}>
-          <div className={s.formError}>
-            {t('admin:errors.failedToLoadRoleData', 'Failed to load role data')}
-          </div>
-          <div className={s.formActions}>
-            <Button
-              variant='secondary'
-              onClick={() => handleCancel(isDirtyRef.current)}
-            >
-              {t('admin:buttons.backToRoles', 'Back to Roles')}
-            </Button>
-          </div>
-        </div>
-        <ConfirmModal.Back
-          ref={confirmBackModalRef}
-          onConfirm={handleConfirmBack}
-        />
-      </div>
-    );
-  }
-
-  const defaultValues = {
-    name: role.name || '',
-    description: role.description || '',
-    permissions:
-      role.permissions && role.permissions.length > 0
-        ? role.permissions.map(p => p.id)
-        : [],
-  };
 
   return (
-    <div className={s.root}>
-      <Box.Header
-        icon={<Icon name='shield' size={24} />}
-        title={t('admin:roles.edit.editRole', 'Edit Role')}
+    <Box className='p-6 max-w-[1400px] mx-auto'>
+      <PageHeader
+        title={pageTitle}
         subtitle={t(
-          'admin:roles.edit.modifyRolePermissions',
-          'Modify role permissions',
+          'admin:roles.edit.subtitle',
+          'Update role details and permission assignments',
         )}
+        icon={<LockClosedIcon width={24} height={24} />}
       >
         <Button
-          variant='secondary'
+          variant='ghost'
+          color='gray'
           onClick={() => handleCancel(isDirtyRef.current)}
         >
-          <Icon name='arrowLeft' />
-          {t('admin:buttons.backToRoles', 'Back to Roles')}
+          <ArrowLeftIcon />
+          {t('admin:roles.edit.backToList', 'Back to Roles')}
         </Button>
-      </Box.Header>
+      </PageHeader>
 
-      <div className={s.formContainer}>
-        <Form.Error message={error} />
+      <Form
+        schema={updateRoleFormSchema}
+        defaultValues={defaultValues}
+        onSubmit={handleSubmit}
+      >
+        <Grid columns={{ initial: '1', md: '280px 1fr' }} gap='6' align='start'>
+          {/* Left: live identity card */}
+          <EditRoleIdentityCard role={role} />
 
-        <Form
-          schema={updateRoleFormSchema}
-          defaultValues={defaultValues}
-          onSubmit={handleSubmit}
-          className={s.form}
-        >
+          {/* Right: form sections */}
           <EditRoleFormFields
             onCancel={handleCancel}
             loading={loading}
             isDirtyRef={isDirtyRef}
             fetchPermissions={fetchPermissions}
           />
-        </Form>
-      </div>
-      <ConfirmModal.Back
+        </Grid>
+      </Form>
+
+      <Modal.ConfirmBack
         ref={confirmBackModalRef}
         onConfirm={handleConfirmBack}
       />
-    </div>
+    </Box>
   );
 }
 
-/**
- * EditRoleFormFields - Form fields component that uses react-hook-form context
- */
+// =============================================================================
+// Form fields — inner component consumes react-hook-form context
+// =============================================================================
+
 function EditRoleFormFields({
   onCancel,
   loading,
   isDirtyRef,
   fetchPermissions,
 }) {
-  const { t } = useTranslation();
   const dispatch = useDispatch();
+  const { t } = useTranslation();
   const {
     watch,
     formState: { isDirty },
   } = useFormContext();
 
-  // Keep isDirtyRef in sync with form dirty state
   isDirtyRef.current = isDirty;
 
-  // Wrap onCancel to check dirty state
   const handleCancel = useCallback(() => {
     onCancel(isDirty);
   }, [onCancel, isDirty]);
 
-  // Watch selected permissions count
   const selectedPermissions = watch('permissions') || [];
 
-  // Permissions state for loading
   const [permissions, setPermissions] = useState([]);
   const [permissionsLoading, setPermissionsLoading] = useState(false);
+  const [permissionsLoadingMore, setPermissionsLoadingMore] = useState(false);
   const [permissionsHasMore, setPermissionsHasMore] = useState(false);
   const [permissionsPage, setPermissionsPage] = useState(1);
   const permissionsLimit = 20;
 
-  // Permission search state
   const [permissionSearch, setPermissionSearch] = useState('');
 
-  // Fetch permissions with pagination
   const loadPermissions = useCallback(
     async (page, search = '', reset = false) => {
       if (reset) {
         setPermissionsLoading(true);
+      } else {
+        setPermissionsLoadingMore(true);
       }
 
       try {
@@ -295,23 +331,22 @@ function EditRoleFormFields({
         // Silently handle error
       } finally {
         setPermissionsLoading(false);
+        setPermissionsLoadingMore(false);
       }
     },
     [dispatch, fetchPermissions],
   );
 
-  // Debounced permission search (also handles initial load on mount)
   useDebounce(permissionSearch, 300, debouncedSearch => {
     loadPermissions(1, debouncedSearch, true);
   });
 
-  // Load more permissions handler
   const handleLoadMorePermissions = useCallback(() => {
-    if (!permissionsLoading && permissionsHasMore) {
+    if (!permissionsLoadingMore && permissionsHasMore) {
       loadPermissions(permissionsPage + 1, permissionSearch, false);
     }
   }, [
-    permissionsLoading,
+    permissionsLoadingMore,
     permissionsHasMore,
     permissionsPage,
     permissionSearch,
@@ -319,12 +354,18 @@ function EditRoleFormFields({
   ]);
 
   return (
-    <>
-      <div className={s.formSection}>
-        <h3 className={s.sectionTitle}>
+    <Card variant='surface' className='p-0'>
+      {/* ── Role Information ──────────────────────────────────────── */}
+      <Box
+        px='5'
+        py='3'
+        className='bg-[var(--gray-a2)] border-b border-[var(--gray-a4)]'
+      >
+        <Text size='2' weight='bold' color='gray'>
           {t('admin:roles.edit.roleInformation', 'Role Information')}
-        </h3>
-
+        </Text>
+      </Box>
+      <Box p='5'>
         <Form.Field
           name='name'
           label={t('admin:roles.edit.roleName', 'Role Name')}
@@ -350,10 +391,15 @@ function EditRoleFormFields({
             rows={3}
           />
         </Form.Field>
-      </div>
+      </Box>
 
-      <div className={s.formSection}>
-        <h3 className={s.sectionTitle}>
+      {/* ── Permissions ───────────────────────────────────────────── */}
+      <Box
+        px='5'
+        py='3'
+        className='bg-[var(--gray-a2)] border-t border-[var(--gray-a4)] border-b border-[var(--gray-a4)]'
+      >
+        <Text size='2' weight='bold' color='gray'>
           {t(
             'admin:roles.edit.permissionsCount',
             'Permissions ({{count}} selected)',
@@ -361,8 +407,9 @@ function EditRoleFormFields({
               count: selectedPermissions.length,
             },
           )}
-        </h3>
-
+        </Text>
+      </Box>
+      <Box p='5'>
         <Form.Field name='permissions'>
           <Form.CheckboxList
             items={permissions}
@@ -370,6 +417,7 @@ function EditRoleFormFields({
             labelKey='description'
             groupBy='resource'
             loading={permissionsLoading}
+            loadingMore={permissionsLoadingMore}
             hasMore={permissionsHasMore}
             onLoadMore={handleLoadMorePermissions}
             searchable
@@ -388,19 +436,33 @@ function EditRoleFormFields({
             )}
           />
         </Form.Field>
-      </div>
+      </Box>
 
-      <div className={s.formActions}>
-        <Button variant='secondary' onClick={handleCancel} disabled={loading}>
+      {/* ── Footer actions ────────────────────────────────────────── */}
+      <Flex
+        align='center'
+        justify='between'
+        px='5'
+        py='4'
+        className='rounded-b-md bg-[var(--gray-2)] border-t border-[var(--gray-a4)]'
+      >
+        <Button
+          variant='soft'
+          color='gray'
+          type='button'
+          onClick={handleCancel}
+          disabled={loading}
+        >
           {t('admin:buttons.cancel', 'Cancel')}
         </Button>
-        <Button variant='primary' type='submit' loading={loading}>
+        <Button variant='solid' color='indigo' type='submit' loading={loading}>
+          <Pencil1Icon width={15} height={15} />
           {loading
             ? t('admin:buttons.saving', 'Saving...')
             : t('admin:buttons.saveChanges', 'Save Changes')}
         </Button>
-      </div>
-    </>
+      </Flex>
+    </Card>
   );
 }
 

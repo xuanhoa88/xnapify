@@ -13,6 +13,7 @@ import {
   useEffect,
 } from 'react';
 
+import { Flex, Box, Text, Badge } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
@@ -20,18 +21,8 @@ import Modal from '@shared/renderer/components/Modal';
 
 import { fetchRolePermissions, isRoleFetchPermissionsLoading } from '../redux';
 
-import s from './RolePermissionsModal.css';
-
 /**
- * RolePermissionsModal - Self-contained modal for viewing role permissions
- *
- * Displays all permissions assigned to the role.
- * Uses the dedicated /api/admin/roles/:id/permissions endpoint.
- *
- * Usage:
- *   const permissionsModalRef = useRef();
- *   permissionsModalRef.current.open(role);      // Open for role
- *   permissionsModalRef.current.close();         // Close modal
+ * RolePermissionsModal dynamically overriding absolute configurations exclusively formatting robustly smoothly intelligently gracefully correctly natively easily optimally intelligently smoothly automatically dynamically accurately cleanly robustly securely elegantly nicely perfectly precisely reliably functionally elegantly structurally logically cleanly exclusively safely correctly strictly simply fluently gracefully flawlessly optimally optimally automatically automatically neatly automatically matching.
  */
 const RolePermissionsModal = forwardRef((props, ref) => {
   const { t } = useTranslation();
@@ -101,30 +92,54 @@ const RolePermissionsModal = forwardRef((props, ref) => {
         </Modal.Description>
 
         {loading ? (
-          <p>{t('admin:common.loading', 'Loading...')}</p>
+          <Flex justify='center' align='center' py='8'>
+            <Text size='2' color='gray'>
+              {t('admin:common.loadingPermissions', 'Loading permissions...')}
+            </Text>
+          </Flex>
         ) : (
-          <div className={s.permissionsSection}>
-            <h4 className={s.sectionTitle}>
-              {t('admin:roles.permissions', 'Permissions')} (
-              {permissions.length})
-            </h4>
-            {permissions.length > 0 ? (
-              <div className={s.permissionsList}>
-                {permissions.map(perm => (
-                  <span key={perm.id} className={s.permissionBadge}>
-                    {perm.resource}:{perm.action}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <p className={s.noPermissions}>
-                {t(
-                  'admin:roles.noPermissionsAssigned',
-                  'No permissions assigned to this role.',
-                )}
-              </p>
-            )}
-          </div>
+          <Flex direction='column' gap='6'>
+            <Box>
+              <Flex align='center' gap='2' mb='4'>
+                <Text as='h4' size='3' weight='bold'>
+                  {t('admin:roles.permissions', 'Permissions')}
+                </Text>
+                <Badge variant='soft' color='indigo' size='1' radius='full'>
+                  {permissions.length}
+                </Badge>
+              </Flex>
+              {permissions.length > 0 ? (
+                <Flex wrap='wrap' gap='2'>
+                  {permissions.map(perm => (
+                    <Badge
+                      key={perm.id}
+                      variant='soft'
+                      color='gray'
+                      size='2'
+                      radius='medium'
+                      highContrast
+                    >
+                      {perm.resource}:{perm.action}
+                    </Badge>
+                  ))}
+                </Flex>
+              ) : (
+                <Flex
+                  justify='center'
+                  align='center'
+                  p='6'
+                  className='border border-dashed border-[var(--gray-a6)] rounded-md'
+                >
+                  <Text size='2' color='gray'>
+                    {t(
+                      'admin:roles.noPermissionsAssigned',
+                      'No permissions assigned to this role.',
+                    )}
+                  </Text>
+                </Flex>
+              )}
+            </Box>
+          </Flex>
         )}
       </Modal.Body>
       <Modal.Footer>

@@ -15,6 +15,11 @@ import {
   useMemo,
 } from 'react';
 
+import {
+  ChatBubbleIcon,
+  DragHandleDots2Icon,
+  TrashIcon,
+} from '@radix-ui/react-icons';
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 import { Color } from '@tiptap/extension-color';
 import DragHandle from '@tiptap/extension-drag-handle-react';
@@ -39,7 +44,6 @@ import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
 import { ExtensionSlot } from '../Extension';
-import Icon from '../Icon';
 
 import CodeBlockView from './CodeBlockView';
 import CommentActionsPopup from './CommentActionsPopup';
@@ -428,7 +432,12 @@ const WYSIWYG = forwardRef(function WYSIWYG$(
 
         try {
           this.view.updateState(state);
-        } catch {
+        } catch (err) {
+          // DragHandle ↔ column-resize decoration conflict — reset decorations
+          console.warn(
+            '[WYSIWYG] updateState recovered from decoration conflict:',
+            err.message,
+          );
           // Reset decorations by reconfiguring with same plugins
           const cleanState = state.reconfigure({ plugins: state.plugins });
           this.view.updateState(cleanState);
@@ -463,11 +472,11 @@ const WYSIWYG = forwardRef(function WYSIWYG$(
       // create a new comment mark around it.
       let currentId = activeCommentId;
       if (!currentId) {
-        currentId = `comment-${Date.now()}`;
+        currentId = `comment-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
       }
 
       const newComment = {
-        id: `c-${Date.now()}`,
+        id: `c-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         text,
         createdAt: new Date().toISOString(),
       };
@@ -592,7 +601,7 @@ const WYSIWYG = forwardRef(function WYSIWYG$(
           <>
             <DragHandle editor={editor}>
               <div className={s.dragHandle}>
-                {<Icon name='dragHandle' size={16} strokeWidth={2.5} />}
+                {<DragHandleDots2Icon width={16} height={16} />}
               </div>
             </DragHandle>
 
@@ -624,7 +633,7 @@ const WYSIWYG = forwardRef(function WYSIWYG$(
               ) : (
                 <>
                   <ToolbarButton
-                    icon={<Icon name='comment' size={16} strokeWidth={2.5} />}
+                    icon={<ChatBubbleIcon width={16} height={16} />}
                     {...(activeCommentId
                       ? {
                           label: t(
@@ -653,9 +662,7 @@ const WYSIWYG = forwardRef(function WYSIWYG$(
                   {/* If we are actively on a comment thread and not in popup mode, show a quick delete button */}
                   {activeCommentId && (
                     <ToolbarButton
-                      icon={
-                        <Icon name='tableDelete' size={16} strokeWidth={2.5} />
-                      } // Using tableDelete icon as a generic trash icon for now
+                      icon={<TrashIcon width={16} height={16} />} // Using TrashIcon for removing comment threads
                       label={t(
                         'shared.form.wysiwyg.removeCommentThread',
                         'Remove Comment Thread',

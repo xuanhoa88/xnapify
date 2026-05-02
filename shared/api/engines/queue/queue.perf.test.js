@@ -18,7 +18,21 @@
 import fs from 'fs';
 import path from 'path';
 
-jest.mock('uuid');
+// Mock uuid before any imports that might use it
+jest.mock('uuid', () => ({
+  v4: () => {
+    // We'll use a global to track counter since we can't easily access closure vars in hoisted mock
+    // eslint-disable-next-line no-underscore-dangle
+    global.__UUID_COUNTER__ = (global.__UUID_COUNTER__ || 0) + 1;
+    // eslint-disable-next-line no-underscore-dangle
+    return `uuid-${global.__UUID_COUNTER__}`;
+  },
+}));
+
+const resetUuidCounter = () => {
+  // eslint-disable-next-line no-underscore-dangle
+  global.__UUID_COUNTER__ = 0;
+};
 
 // ======================================================================
 // Helpers
@@ -84,8 +98,8 @@ describe('MemoryQueue Performance', () => {
   const results = [];
 
   beforeAll(async () => {
-    const mod = await import('./adapters/memory');
-    MemoryQueue = mod.default;
+    resetUuidCounter();
+    MemoryQueue = require('./adapters/memory').default;
   });
 
   beforeEach(() => {
@@ -278,8 +292,7 @@ describe('FileQueue Performance', () => {
 
   beforeAll(() => {
     jest.resetModules();
-    const uuidMock = require('uuid');
-    uuidMock.resetCounter();
+    resetUuidCounter();
     FileQueue = require('./adapters/file').default;
   });
 
@@ -494,11 +507,9 @@ describe('Adapter Comparison', () => {
 
   beforeAll(async () => {
     jest.resetModules();
-    const uuidMock = require('uuid');
-    uuidMock.resetCounter();
+    resetUuidCounter();
 
-    const memMod = await import('./adapters/memory');
-    MemoryQueue = memMod.default;
+    MemoryQueue = require('./adapters/memory').default;
     FileQueue = require('./adapters/file').default;
   });
 

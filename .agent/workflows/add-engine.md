@@ -53,16 +53,38 @@ const engine = new {EngineName}Engine();
 export default engine;
 ```
 
-**Alternative — Function-based engine:**
+**Alternative — Factory-based engine with shutdown registry:**
 
 ```javascript
-export function create(options) {
-  // Factory function
+import { register } from '../../registry';
+
+class {EngineName}Engine {
+  constructor() {
+    // Initialize engine state
+  }
+
+  doSomething(options) {
+    // Engine logic
+  }
+
+  async cleanup() {
+    // Release resources
+  }
 }
 
-export function destroy(instance) {
-  // Cleanup
+export function createFactory(config = {}) {
+  const engine = new {EngineName}Engine(config);
+
+  // Register with centralized shutdown registry
+  // Position: 20 = traffic, 10 = work draining, 0 = resources
+  register('{engineName}', () => engine.cleanup(), 0);
+
+  return engine;
 }
+
+// Singleton instance
+const engine = createFactory();
+export default engine;
 ```
 
 ### 3. Verify Auto-Loading

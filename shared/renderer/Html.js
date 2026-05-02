@@ -39,7 +39,7 @@ import serialize from 'serialize-javascript';
 // =============================================================================
 
 /**
- * Renders Open Graph meta tags for social media sharing
+ * Renders Open Graph and Twitter meta tags for social media sharing
  *
  * @param {Object} props
  * @param {string} props.title - Page title for social sharing
@@ -47,24 +47,34 @@ import serialize from 'serialize-javascript';
  * @param {string} props.type - Open Graph type (e.g., 'website', 'article')
  * @param {string} [props.url] - Canonical URL for the page
  * @param {string} [props.image] - Image URL for social sharing preview
- * @returns {React.ReactElement} Open Graph meta tags
+ * @returns {React.ReactElement} Social meta tags
  */
-function OpenGraphMeta({ title, description, type, url, image }) {
+function SocialMetaTags({ title, description, type, url, image }) {
   return (
     <>
+      {/* Open Graph Tags */}
       {title && <meta property='og:title' content={title} />}
       {description && <meta property='og:description' content={description} />}
       {type && <meta property='og:type' content={type} />}
       {url && <meta property='og:url' content={url} />}
       {image && <meta property='og:image' content={image} />}
+
+      {/* Twitter Card Tags */}
+      <meta
+        name='twitter:card'
+        content={image ? 'summary_large_image' : 'summary'}
+      />
+      {title && <meta name='twitter:title' content={title} />}
+      {description && <meta name='twitter:description' content={description} />}
+      {image && <meta name='twitter:image' content={image} />}
     </>
   );
 }
 
 /**
- * PropTypes for the OpenGraphMeta component
+ * PropTypes for the SocialMetaTags component
  */
-OpenGraphMeta.propTypes = {
+SocialMetaTags.propTypes = {
   title: PropTypes.string,
   description: PropTypes.string,
   type: PropTypes.string,
@@ -150,8 +160,8 @@ export default function Html({
         {/* Windows tile configuration */}
         <meta name='msapplication-config' content='/browserconfig.xml' />
 
-        {/* Open Graph meta tags for social media */}
-        <OpenGraphMeta
+        {/* Open Graph and Twitter meta tags for social media */}
+        <SocialMetaTags
           title={title}
           description={description}
           type={type}
@@ -176,6 +186,17 @@ export default function Html({
             />
           );
         })}
+
+        {/* Locale signal — read by shared/i18n before Redux state is parsed.
+             Injected as a separate, stable script so i18n stays decoupled
+             from the Redux state shape. Must appear before __PRELOADED_STATE__. */}
+        <script
+          nonce={nonce}
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{
+            __html: `window.__XNAPIFY_LOCALE__=${serialize(locale || 'en-US')}`,
+          }}
+        />
 
         {/* Application state for client hydration */}
         <script
@@ -259,6 +280,7 @@ Html.propTypes = {
   /** Application state for client-side hydration */
   appState: PropTypes.shape({
     redux: PropTypes.object.isRequired,
+    extensions: PropTypes.arrayOf(PropTypes.object),
   }).isRequired,
   /** CSP nonce for inline scripts */
   nonce: PropTypes.string,

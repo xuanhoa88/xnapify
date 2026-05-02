@@ -5,9 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useMemo } from 'react';
+import { useId } from 'react';
 
-import clsx from 'clsx';
+import { Flex } from '@radix-ui/themes';
 import get from 'lodash/get';
 import PropTypes from 'prop-types';
 import { useFormContext } from 'react-hook-form';
@@ -17,10 +17,8 @@ import { FormFieldContext } from '../FormContext';
 import FormLabel from '../Label';
 import useAsyncValidator from '../useAsyncValidator';
 
-import s from './FormField.css';
-
 /**
- * FormField - Wrapper for form field with optional label and error message
+ * FormField - Wrapper for form field with optional label and error message backed by Radix Themes
  *
  * Usage:
  *   <Form.Field name="email" label="Email">
@@ -50,7 +48,10 @@ function FormField({
   debounceMs = 300,
   asyncMessages,
 }) {
-  const id = useMemo(() => `field-${name}`, [name]);
+  // useId generates a stable ID that matches between SSR and client hydration,
+  // avoiding the htmlFor mismatch warning caused by lodash/uniqueId's global counter.
+  const reactId = useId();
+  const id = `field-${name}-${reactId}`;
   const {
     formState: { errors },
   } = useFormContext();
@@ -71,11 +72,11 @@ function FormField({
     <FormFieldContext.Provider
       value={{ id, name, error, isValidating, validationStatus, asyncMessages }}
     >
-      <div className={clsx(s.formGroup, className)}>
+      <Flex direction='column' gap='1' mb='4' className={className}>
         {label && <FormLabel required={required}>{label}</FormLabel>}
         {children}
         {showError && <FormError />}
-      </div>
+      </Flex>
     </FormFieldContext.Provider>
   );
 }

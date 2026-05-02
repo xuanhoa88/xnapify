@@ -5,39 +5,62 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import * as RadixIcons from '@radix-ui/react-icons';
+import { Badge } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
-
-import Tag from '@shared/renderer/components/Tag';
 
 import s from './RoleTag.css';
 
-/**
- * CSS class mapping for role-based styling
- */
-const ROLE_CLASS_MAP = {
-  admin: s.roleAdmin,
-  mod: s.roleModerator,
-  moderator: s.roleModerator,
-  editor: s.roleUser,
-  user: s.roleUser,
-};
-
-/**
- * RoleTag component - specialized tag for displaying user roles
- * Automatically determines style based on role name
- */
-function RoleTag({ name, className = '' }) {
+export default function RoleTag({ name, className = '' }) {
   const roleLower = typeof name === 'string' ? name.toLowerCase() : '';
-  const roleClass = ROLE_CLASS_MAP[roleLower] || s.roleUser;
   const displayName = typeof name === 'string' ? name : String(name);
-  const classes = [roleClass, className].filter(Boolean).join(' ');
 
-  return roleLower ? <Tag className={classes}>{displayName}</Tag> : null;
+  if (!roleLower) return null;
+
+  // Determine tag variant based on role name
+  let variant = 'neutral';
+  let icon = null;
+
+  if (roleLower.includes('admin')) {
+    variant = 'primary';
+    icon = RadixIcons.LockClosedIcon;
+  } else if (roleLower.includes('mod')) {
+    variant = 'warning';
+    icon = RadixIcons.StarIcon;
+  } else if (roleLower.includes('editor')) {
+    variant = 'secondary';
+  }
+
+  return (
+    <Badge
+      color={
+        variant === 'neutral'
+          ? 'gray'
+          : variant === 'primary'
+            ? 'indigo'
+            : variant === 'warning'
+              ? 'yellow'
+              : variant === 'secondary'
+                ? 'gray'
+                : 'gray'
+      }
+      variant={
+        variant === 'neutral' || variant === 'secondary' ? 'surface' : 'soft'
+      }
+      className={className}
+      radius='full'
+    >
+      {icon &&
+        (() => {
+          const Comp = icon;
+          return <Comp width={12} height={12} className={s.roleIconFlex} />;
+        })()}
+      {displayName}
+    </Badge>
+  );
 }
 
 RoleTag.propTypes = {
   name: PropTypes.string,
   className: PropTypes.string,
 };
-
-export default RoleTag;

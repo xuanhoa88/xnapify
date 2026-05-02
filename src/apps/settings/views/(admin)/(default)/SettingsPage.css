@@ -5,290 +5,44 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-.root {
-  padding: var(--spacing-8);
-  background: var(--color-background-secondary);
-  flex: 1;
-}
-
-/* =============================================================================
-   LAYOUT — sidebar tabs + content panel
-   ============================================================================= */
-
-.layout {
-  display: grid;
-  grid-template-columns: 220px 1fr;
-  gap: var(--spacing-6);
-  align-items: start;
-}
-
-/* =============================================================================
-   NAMESPACE TABS
-   ============================================================================= */
-
-.tabs {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-1);
-  background: var(--color-background);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-3);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--color-border);
-}
-
-.tab {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-3);
-  padding: var(--spacing-3) var(--spacing-4);
-  border: none;
-  background: none;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-secondary);
-  text-align: left;
-  transition: all 0.15s ease;
-  text-transform: capitalize;
-}
-
-.tab:hover:not(.tabActive) {
-  background: var(--color-background-secondary);
-  color: var(--color-text-primary);
-}
-
-.tabActive {
-  background: var(--color-primary);
-  color: white;
-  font-weight: var(--font-weight-semibold);
-  box-shadow: 0 2px 4px rgb(37 99 235 / 20%);
-}
-
-.tabLabel {
-  flex: 1;
-}
-
-.tabCount {
-  font-size: var(--font-size-xs);
-  background: var(--color-background-tertiary);
-  padding: 1px 6px;
-  border-radius: var(--radius-full);
-  color: var(--color-text-tertiary);
-  font-weight: var(--font-weight-bold);
-}
-
-.tabActive .tabCount {
-  background: rgb(0 0 0 / 20%);
-  color: white;
-}
-
-/* =============================================================================
-   SETTINGS PANEL
-   ============================================================================= */
-
-.panel {
-  min-width: 0;
-}
-
-.panelHeader {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-3);
-}
-
-.panelHeaderActions {
-  margin-left: auto;
-}
-
-.panelTitle {
-  margin: 0;
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text-primary);
-  text-transform: capitalize;
-}
-
-.panelBody {
-  padding: 0;
-}
-
-/* =============================================================================
-   SETTING ROW
-   ============================================================================= */
-
 .settingRow {
-  display: grid;
-  grid-template-columns: 1fr minmax(280px, 40%);
-  align-items: flex-start;
-  gap: var(--spacing-6);
-  padding: var(--spacing-5) var(--spacing-6);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--gray-a4);
 }
 
 .settingRow:last-child {
   border-bottom: none;
 }
 
-.settingMeta {
-  flex: 1;
-  min-width: 0;
+.keyText {
+  background-color: var(--gray-3);
 }
 
-.settingKeyRow {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-2);
-  flex-wrap: wrap;
-  margin-bottom: var(--spacing-1);
+.saveContainer {
+  border-top: 1px solid var(--gray-a4);
+  background-color: var(--gray-2);
 }
 
-.settingKey {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
-  font-family: var(--font-family-mono, 'SF Mono', Consolas, monospace);
+.errorContainer {
+  border: 1px solid var(--red-6);
+  background-color: var(--red-2);
 }
 
-.settingDesc {
-  margin: var(--spacing-1) 0 0;
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-  line-height: 1.5;
+.navButton {
+  background-color: transparent;
+  color: var(--gray-11);
 }
 
-.settingEnvHint {
-  margin: var(--spacing-2) 0 0;
-  font-size: 12px;
-  color: var(--color-text-secondary);
+.navButton[data-state='active'] {
+  background-color: var(--indigo-3);
+  color: var(--indigo-11);
 }
 
-.settingEnvHint code {
-  font-size: 11px;
-  background: var(--color-background-tertiary);
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
-  color: var(--color-text-primary);
-  border: 1px solid var(--color-border);
+.hideScrollbar::-webkit-scrollbar {
+  display: none;
 }
 
-/* =============================================================================
-   SETTING CONTROLS
-   ============================================================================= */
-
-.settingControl {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-2);
-  min-width: 0;
-  width: 100%;
-}
-
-.settingControlRight {
-  justify-content: flex-end;
-}
-
-.formFieldReset {
-  margin-bottom: 0;
-  flex: 1;
-}
-
-.textarea {
-  resize: vertical;
-  min-height: 80px;
-  font-family: var(--font-family-mono, 'SF Mono', Consolas, monospace);
-  font-size: var(--font-size-xs);
-}
-
-/* =============================================================================
-   BADGES
-   ============================================================================= */
-
-.badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 1px 6px;
-  border-radius: var(--radius-full);
-  font-size: 10px;
-  font-weight: var(--font-weight-bold);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.badge-string {
-  background: var(--color-background-secondary);
-  color: var(--color-text-tertiary);
-}
-
-.badge-boolean {
-  background: rgb(16 185 129 / 10%);
-  color: rgb(16 185 129);
-}
-
-.badge-integer {
-  background: rgb(99 102 241 / 10%);
-  color: rgb(99 102 241);
-}
-
-.badge-json {
-  background: rgb(245 158 11 / 10%);
-  color: rgb(245 158 11);
-}
-
-.badge-password {
-  background: rgb(239 68 68 / 10%);
-  color: rgb(239 68 68);
-}
-
-.badgePublic {
-  background: rgb(37 99 235 / 10%);
-  color: var(--color-primary);
-}
-
-.badgeDefault {
-  background: rgb(107 114 128 / 8%);
-  color: var(--color-text-tertiary);
-  border: 1px dashed var(--color-border);
-}
-
-/* =============================================================================
-   RESPONSIVE
-   ============================================================================= */
-
-@media (max-width: 768px) {
-  .root {
-    padding: var(--spacing-3);
-  }
-
-  .layout {
-    grid-template-columns: 1fr;
-  }
-
-  .tabs {
-    flex-direction: row;
-    overflow-x: auto;
-    padding: var(--spacing-2);
-    gap: var(--spacing-1);
-  }
-
-  .tab {
-    padding: var(--spacing-2) var(--spacing-3);
-    white-space: nowrap;
-    font-size: var(--font-size-xs);
-  }
-
-  .settingRow {
-    grid-template-columns: 1fr;
-    gap: var(--spacing-3);
-    padding: var(--spacing-4);
-  }
-
-  .settingControl {
-    min-width: 0;
-  }
-
-  .settingControlRight {
-    justify-content: flex-start;
-  }
+.hideScrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
 }

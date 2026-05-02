@@ -1,0 +1,25 @@
+/**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+.clipboardIcon {
+  cursor: pointer;
+  color: var(--json-clipboard, #93a1a1);
+}
+
+.clipboardIcon:hover {
+  opacity: 0.8;
+}
+
+.clipboardChecked {
+  color: var(--json-check-icon, #859900);
+  margin-left: -12px;
+}
+
+.copyContainer {
+  vertical-align: top;
+  display: none;
+}

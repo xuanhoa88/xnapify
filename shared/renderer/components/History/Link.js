@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, forwardRef } from 'react';
 
 import PropTypes from 'prop-types';
 
@@ -73,17 +73,20 @@ const shouldNavigate = event => {
  * // As a custom component
  * <Link as={MyButton} to="/users/:id" params={{ id: 123 }}>Profile</Link>
  */
-export function Link({
-  as: Component = 'a',
-  to,
-  params,
-  query,
-  hash,
-  swap = false,
-  children,
-  onClick,
-  ...props
-}) {
+export const Link = forwardRef(function Link(
+  {
+    as: Component = 'a',
+    to,
+    params,
+    query,
+    hash,
+    swap = false,
+    children,
+    onClick,
+    ...props
+  },
+  ref,
+) {
   const history = useHistory();
 
   // Build final URL from pattern + params/query/hash
@@ -121,7 +124,7 @@ export function Link({
   // External links — render as normal anchor
   if (isExternalUrl(to)) {
     return (
-      <Component href={to} {...props} onClick={onClick}>
+      <Component href={to} {...props} onClick={onClick} ref={ref}>
         {children}
       </Component>
     );
@@ -139,11 +142,11 @@ export function Link({
         };
 
   return (
-    <Component {...linkProps} onClick={handleClick}>
+    <Component {...linkProps} onClick={handleClick} ref={ref}>
       {children}
     </Component>
   );
-}
+});
 
 Link.propTypes = {
   as: PropTypes.oneOfType([PropTypes.string, PropTypes.elementType]),

@@ -5,25 +5,23 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useCallback } from 'react';
-
+import {
+  DotsVerticalIcon,
+  PersonIcon,
+  GroupIcon,
+  LockOpen1Icon,
+  Pencil2Icon,
+  TrashIcon,
+} from '@radix-ui/react-icons';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
 import ContextMenu from '@shared/renderer/components/ContextMenu';
-import Icon from '@shared/renderer/components/Icon';
-
 /**
  * RoleActionsDropdown - Dropdown menu for role actions
- *
- * To ensure only one dropdown is open at a time, pass `isOpen` and `onToggle` from parent.
- * Parent should manage activeDropdownId state and pass `isOpen={activeDropdownId === role.id}`
- * and `onToggle={(id) => setActiveDropdownId(prev => prev === id ? null : id)}`
  */
 function RoleActionsDropdown({
   role,
-  isOpen,
-  onToggle,
   onViewUsers,
   onViewGroups,
   onViewPermissions,
@@ -32,35 +30,32 @@ function RoleActionsDropdown({
 }) {
   const { t } = useTranslation();
 
-  const handleToggle = useCallback(() => {
-    onToggle(isOpen ? null : role.id);
-  }, [isOpen, role.id, onToggle]);
-
   return (
-    <ContextMenu isOpen={isOpen} onToggle={handleToggle}>
+    <ContextMenu>
       <ContextMenu.Trigger
         title={t('admin:common.moreActions', 'More actions')}
+        className='rt-IconButton'
       >
-        <Icon name='more-vertical' size={18} />
+        <DotsVerticalIcon width={16} height={16} />
       </ContextMenu.Trigger>
       <ContextMenu.Menu>
         <ContextMenu.Item
           onClick={() => onViewUsers(role)}
-          icon={<Icon name='users' size={16} />}
+          icon={<PersonIcon width={16} height={16} />}
           permission='users:read'
         >
           {t('admin:roles.viewUsers', 'View Users')}
         </ContextMenu.Item>
         <ContextMenu.Item
           onClick={() => onViewGroups(role)}
-          icon={<Icon name='folder' size={16} />}
+          icon={<GroupIcon width={16} height={16} />}
           permission='groups:read'
         >
           {t('admin:roles.viewGroups', 'View Groups')}
         </ContextMenu.Item>
         <ContextMenu.Item
           onClick={() => onViewPermissions(role)}
-          icon={<Icon name='key' size={16} />}
+          icon={<LockOpen1Icon width={16} height={16} />}
           permission='permissions:read'
         >
           {t('admin:roles.viewPermissions', 'View Permissions')}
@@ -68,14 +63,14 @@ function RoleActionsDropdown({
         <ContextMenu.Divider />
         <ContextMenu.Item
           onClick={() => onEdit(role)}
-          icon={<Icon name='edit' size={16} />}
+          icon={<Pencil2Icon width={16} height={16} />}
           permission='roles:update'
         >
           {t('admin:roles.editRole', 'Edit Role')}
         </ContextMenu.Item>
         <ContextMenu.Item
           onClick={() => onDelete(role)}
-          icon={<Icon name='trash' size={16} />}
+          icon={<TrashIcon width={16} height={16} />}
           variant='danger'
           permission='roles:delete'
         >
@@ -88,8 +83,6 @@ function RoleActionsDropdown({
 
 RoleActionsDropdown.propTypes = {
   role: PropTypes.object.isRequired,
-  isOpen: PropTypes.bool.isRequired,
-  onToggle: PropTypes.func.isRequired,
   onViewUsers: PropTypes.func.isRequired,
   onViewGroups: PropTypes.func.isRequired,
   onViewPermissions: PropTypes.func.isRequired,

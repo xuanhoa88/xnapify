@@ -7,16 +7,18 @@
 
 import { forwardRef } from 'react';
 
-import clsx from 'clsx';
+import { TextArea } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useFormContext } from 'react-hook-form';
 
-import { useFormField, useMergeRefs } from '../FormContext';
-
-import s from './FormTextarea.css';
+import {
+  useFormField,
+  useMergeRefs,
+  composeEventHandlers,
+} from '../FormContext';
 
 /**
- * FormTextarea - Simple textarea element to be used inside Form.Field
+ * FormTextarea - Simple textarea element to be used inside Form.Field backed by Radix Themes
  *
  * Usage:
  *   <Form.Field name="bio" label="Bio">
@@ -24,27 +26,36 @@ import s from './FormTextarea.css';
  *   </Form.Field>
  */
 const FormTextarea = forwardRef(function FormTextarea$(
-  { placeholder, className, disabled, rows = 4, ...props },
+  { placeholder, size = '2', className, disabled, rows = 4, ...props },
   forwardedRef,
 ) {
   const { id, name, error } = useFormField();
   const { register } = useFormContext();
 
   // Get registration props including ref
-  const { ref: registerRef, ...registerProps } = register(name);
+  const {
+    ref: registerRef,
+    onChange,
+    onBlur,
+    ...registerProps
+  } = register(name);
 
   // Merge refs - both react-hook-form ref and forwarded ref
   const handleRef = useMergeRefs(registerRef, forwardedRef);
 
   return (
-    <textarea
+    <TextArea
       id={id}
+      size={size}
       placeholder={placeholder}
       disabled={disabled}
+      color={error ? 'red' : undefined}
       rows={rows}
-      className={clsx(s.textarea, { [s.textareaError]: error }, className)}
+      className={className}
       {...registerProps}
       {...props}
+      onChange={composeEventHandlers(props.onChange, onChange)}
+      onBlur={composeEventHandlers(props.onBlur, onBlur)}
       ref={handleRef}
     />
   );
@@ -53,12 +64,18 @@ const FormTextarea = forwardRef(function FormTextarea$(
 FormTextarea.propTypes = {
   /** Placeholder text */
   placeholder: PropTypes.string,
+  /** Radix size */
+  size: PropTypes.string,
   /** Additional CSS class names */
   className: PropTypes.string,
   /** Disabled state */
   disabled: PropTypes.bool,
   /** Number of visible rows */
   rows: PropTypes.number,
+  /** Custom onChange handler */
+  onChange: PropTypes.func,
+  /** Custom onBlur handler */
+  onBlur: PropTypes.func,
 };
 
 export default FormTextarea;

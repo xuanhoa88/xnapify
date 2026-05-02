@@ -13,30 +13,18 @@ import {
   useEffect,
 } from 'react';
 
+import { Flex, Box, Text, Avatar, Badge } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 
-import Avatar from '@shared/renderer/components/Avatar';
 import Modal from '@shared/renderer/components/Modal';
-import Table from '@shared/renderer/components/Table';
-import Tag from '@shared/renderer/components/Tag';
+import {
+  TablePagination,
+  TableSearch,
+} from '@shared/renderer/components/Table';
 
 import { fetchGroupUsers } from '../redux';
 
-import s from './GroupUsersModal.css';
-
-/**
- * GroupUsersModal - Self-contained modal for viewing group users
- *
- * Usage:
- *   const usersModalRef = useRef();
- *   usersModalRef.current.open(group);    // Open for a group
- *   usersModalRef.current.close();        // Close modal
- *
- * Features:
- *   - Independent data fetching (not dependent on shared Redux state)
- *   - Pagination with page navigation
- */
 const ITEMS_PER_PAGE = 10;
 
 const GroupUsersModal = forwardRef((props, ref) => {
@@ -80,7 +68,10 @@ const GroupUsersModal = forwardRef((props, ref) => {
           setTotalItems(data.pagination.total || 0);
         }
       } catch (err) {
-        setError(err || t('admin:errors.loadUsers', 'Failed to load users'));
+        setError(
+          (err && err.message) ||
+            t('admin:errors.loadUsers', 'Failed to load users'),
+        );
       } finally {
         setUsersLoading(false);
       }
@@ -141,7 +132,7 @@ const GroupUsersModal = forwardRef((props, ref) => {
         })}
       </Modal.Header>
       <Modal.Body error={error}>
-        <Modal.Description>
+        <Modal.Description className='mb-4 text-[var(--gray-11)]'>
           {t(
             'admin:groups.viewUsersDescription',
             'View all users that belong to this group.',
@@ -149,60 +140,92 @@ const GroupUsersModal = forwardRef((props, ref) => {
         </Modal.Description>
 
         {/* Search Input */}
-        <Table.SearchBar
-          value={search}
-          onChange={handleSearchChange}
-          placeholder={t('admin:common.searchUsers', 'Search users...')}
-          className={s.modalSearchBar}
-        />
+        <Box mb='4'>
+          <TableSearch
+            value={search}
+            onChange={handleSearchChange}
+            placeholder={t('admin:common.searchUsers', 'Search users...')}
+          />
+        </Box>
 
-        <div className={s.usersList}>
+        <Flex direction='column' gap='2'>
           {usersLoading ? (
-            <div className={s.noUsers}>
-              {t('admin:common.loadingUsers', 'Loading users...')}
-            </div>
+            <Flex justify='center' align='center' p='8'>
+              <Text size='2' color='gray'>
+                {t('admin:common.loadingUsers', 'Loading users...')}
+              </Text>
+            </Flex>
           ) : users.length === 0 ? (
-            <div className={s.noUsers}>
-              {t('admin:groups.noUsersInGroup', 'No users found in this group')}
-            </div>
+            <Flex justify='center' align='center' p='8'>
+              <Text size='2' color='gray'>
+                {t(
+                  'admin:groups.noUsersInGroup',
+                  'No users found in this group',
+                )}
+              </Text>
+            </Flex>
           ) : (
             users.map(user => (
-              <div key={user.id} className={s.userItem}>
+              <Flex
+                key={user.id}
+                align='center'
+                gap='3'
+                p='3'
+                className='border border-[var(--gray-a5)] rounded-md bg-[var(--gray-a1)] hover:bg-[var(--gray-a2)] transition-colors shadow-sm'
+              >
                 <Avatar
                   name={
                     (user.profile && user.profile.display_name) || user.email
                   }
-                  size='small'
-                  className={s.userAvatar}
+                  size='2'
+                  fallback={(
+                    (user.profile && user.profile.display_name) ||
+                    user.email ||
+                    '?'
+                  )
+                    .charAt(0)
+                    .toUpperCase()}
+                  color='indigo'
+                  radius='full'
                 />
-                <div className={s.userInfo}>
-                  <span className={s.userName}>
+
+                <Flex direction='column' grow='1' minWidth='0'>
+                  <Text as='div' size='2' weight='bold' truncate highContrast>
                     {(user.profile && user.profile.display_name) ||
                       t('admin:common.na', 'N/A')}
-                  </span>
-                  <span className={s.userEmail}>{user.email}</span>
-                </div>
-                <div className={s.userMeta}>
-                  <Tag variant={user.is_active ? 'success' : 'error'}>
+                  </Text>
+                  <Text as='div' size='1' color='gray' truncate>
+                    {user.email}
+                  </Text>
+                </Flex>
+                <Box>
+                  <Badge
+                    variant={user.is_active ? 'soft' : 'surface'}
+                    color={user.is_active ? 'green' : 'gray'}
+                    radius='full'
+                    size='1'
+                  >
                     {user.is_active
                       ? t('admin:common.active', 'Active')
                       : t('admin:common.inactive', 'Inactive')}
-                  </Tag>
-                </div>
-              </div>
+                  </Badge>
+                </Box>
+              </Flex>
             ))
           )}
-        </div>
+        </Flex>
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <Table.Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={totalItems}
-            onPageChange={setCurrentPage}
-            loading={usersLoading}
-          />
+          <Box mt='4'>
+            <TablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              onPageChange={setCurrentPage}
+              loading={usersLoading}
+            />
+          </Box>
         )}
       </Modal.Body>
       <Modal.Footer>

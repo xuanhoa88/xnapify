@@ -18,7 +18,11 @@ import { forwardRef, useMemo, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { useController } from 'react-hook-form';
 
-import { useFormField, useMergeRefs } from '../FormContext';
+import {
+  useFormField,
+  useMergeRefs,
+  composeEventHandlers,
+} from '../FormContext';
 
 import JsonView from './JsonView';
 
@@ -98,7 +102,7 @@ const FormJson = forwardRef(function FormJson$(
       onEdit={disabled ? false : handleMutation}
       onAdd={disabled ? false : handleMutation}
       onDelete={disabled ? false : handleMutation}
-      onBlur={onBlur}
+      onBlur={composeEventHandlers(props.onBlur, onBlur)}
       disabled={disabled}
       error={!!error}
       className={className}
@@ -129,6 +133,8 @@ FormJson.propTypes = {
   className: PropTypes.string,
   /** Inline styles */
   style: PropTypes.object,
+  /** Custom onBlur handler */
+  onBlur: PropTypes.func,
 };
 
 export default FormJson;

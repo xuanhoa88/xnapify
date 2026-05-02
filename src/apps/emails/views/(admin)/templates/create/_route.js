@@ -6,9 +6,11 @@
  */
 
 import { requirePermission } from '@shared/renderer/components/Rbac';
-import { addBreadcrumb } from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
 
 import CreateEmailTemplate from './CreateEmailTemplate';
+
+const { addBreadcrumb } = features;
 
 export const middleware = requirePermission('emails:templates:create');
 

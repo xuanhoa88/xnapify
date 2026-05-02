@@ -5,21 +5,30 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { Box, Heading, Container } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 
 import s from './About.css';
 
 /**
  * About Page Component
+ * Natively mapped avoiding div components. Upgraded to premium editorial layout.
  */
 function AboutPage({ context: { initialProps: { title, html } = {} } = {} }) {
   return (
-    <div className={s.root}>
-      <div className={s.container}>
-        <h1>{title}</h1>
-        <div dangerouslySetInnerHTML={{ __html: html }} />
-      </div>
-    </div>
+    <Box className={s.pageWrapper}>
+      <Container size='4'>
+        <Box className={s.contentContainer}>
+          <Heading as='h1' className={s.pageTitle}>
+            {title}
+          </Heading>
+          <Box
+            dangerouslySetInnerHTML={{ __html: html }}
+            className={s.markdownContent}
+          />
+        </Box>
+      </Container>
+    </Box>
   );
 }
 

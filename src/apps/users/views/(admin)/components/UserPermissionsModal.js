@@ -14,6 +14,7 @@ import {
   useMemo,
 } from 'react';
 
+import { Box, Flex, Text, Badge, Card, Separator } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
@@ -25,8 +26,6 @@ import {
   getUserPermissions,
   isUserPermissionsOperationLoading,
 } from '../redux';
-
-import s from './UserPermissionsModal.css';
 
 /**
  * UserPermissionsModal - Self-contained modal for viewing user permissions
@@ -70,10 +69,24 @@ const UserPermissionsModal = forwardRef((props, ref) => {
     const userRoles = Array.isArray(user.roles) ? user.roles : [];
 
     return userRoles.map(role => ({
-      id: role.id,
+      id: role.id || role,
       name: typeof role === 'string' ? role : role.name,
       // Use permissions count from role object if available
       permissionCount: role.permissions ? role.permissions.length : 0,
+    }));
+  }, [user]);
+
+  // Calculate group details from user's groups
+  const groupDetails = useMemo(() => {
+    if (!user || !user.groups) {
+      return [];
+    }
+
+    const userGroups = Array.isArray(user.groups) ? user.groups : [];
+
+    return userGroups.map(group => ({
+      id: group.id || group,
+      name: typeof group === 'string' ? group : group.name,
     }));
   }, [user]);
 
@@ -112,7 +125,7 @@ const UserPermissionsModal = forwardRef((props, ref) => {
         })}
       </Modal.Header>
       <Modal.Body>
-        <Modal.Description>
+        <Modal.Description className='mb-4 text-[var(--gray-11)]'>
           {t(
             'admin:users.permissions.description',
             "These permissions are inherited from the user's assigned roles and groups.",
@@ -120,62 +133,125 @@ const UserPermissionsModal = forwardRef((props, ref) => {
         </Modal.Description>
 
         {loading ? (
-          <p>
-            {t('admin:users.permissions.loading', 'Loading permissions...')}
-          </p>
+          <Flex justify='center' align='center' py='8'>
+            <Text size='2' color='gray'>
+              {t('admin:users.permissions.loading', 'Loading permissions...')}
+            </Text>
+          </Flex>
         ) : (
           <>
-            {/* Role breakdown */}
-            {roleDetails.length > 0 && (
-              <div className={s.roleBreakdown}>
-                <h4 className={s.sectionTitle}>
-                  {t('admin:users.permissions.assignedRoles', 'Assigned Roles')}
-                </h4>
-                <div className={s.rolesList}>
-                  {roleDetails.map(role => (
-                    <div key={role.id || role.name} className={s.roleItem}>
-                      <span className={s.roleName}>{role.name}</span>
-                      {role.permissionCount > 0 && (
-                        <span className={s.rolePermCount}>
-                          {t(
-                            'admin:users.permissions.permissionCount',
-                            '{{count}} permission(s)',
-                            { count: role.permissionCount },
-                          )}
-                        </span>
+            <Flex direction='column' gap='6'>
+              {/* Inherited Sources */}
+              {(roleDetails.length > 0 || groupDetails.length > 0) && (
+                <Box>
+                  <Flex align='center' gap='2' mb='4'>
+                    <Text as='h4' size='3' weight='bold'>
+                      {t(
+                        'admin:users.permissions.inheritanceSources',
+                        'Inherited From',
                       )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+                    </Text>
+                  </Flex>
+                  <Card size='2' className='shadow-sm'>
+                    <Flex direction='column' gap='3'>
+                      {roleDetails.length > 0 && (
+                        <Flex align='start' gap='3'>
+                          <Text size='2' color='gray' className='w-20 mt-0.5'>
+                            {t('admin:users.permissions.rolesLabel', 'Roles:')}
+                          </Text>
+                          <Flex wrap='wrap' gap='2' className='flex-1'>
+                            {roleDetails.map(role => (
+                              <Badge
+                                key={role.id || role.name}
+                                color='indigo'
+                                variant='soft'
+                                highContrast
+                                size='2'
+                              >
+                                {role.name}
+                              </Badge>
+                            ))}
+                          </Flex>
+                        </Flex>
+                      )}
 
-            {/* All permissions */}
-            <div className={s.permissionsSection}>
-              <h4 className={s.sectionTitle}>
-                {t(
-                  'admin:users.permissions.effectivePermissions',
-                  'Effective Permissions ({{count}})',
-                  { count: permissions.length },
-                )}
-              </h4>
-              {permissions.length > 0 ? (
-                <div className={s.permissionsList}>
-                  {permissions.map(perm => (
-                    <span key={perm.name} className={s.permissionBadge}>
-                      {perm.name}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <p className={s.noPermissions}>
-                  {t(
-                    'admin:users.permissions.noPermissions',
-                    'No permissions. Assign roles to grant permissions.',
-                  )}
-                </p>
+                      {groupDetails.length > 0 && (
+                        <Flex align='start' gap='3'>
+                          <Text size='2' color='gray' className='w-20 mt-0.5'>
+                            {t(
+                              'admin:users.permissions.groupsLabel',
+                              'Groups:',
+                            )}
+                          </Text>
+                          <Flex wrap='wrap' gap='2' className='flex-1'>
+                            {groupDetails.map(group => (
+                              <Badge
+                                key={group.id || group.name}
+                                color='cyan'
+                                variant='soft'
+                                highContrast
+                                size='2'
+                              >
+                                {group.name}
+                              </Badge>
+                            ))}
+                          </Flex>
+                        </Flex>
+                      )}
+                    </Flex>
+                  </Card>
+                </Box>
               )}
-            </div>
+
+              {(roleDetails.length > 0 || groupDetails.length > 0) && (
+                <Separator size='4' />
+              )}
+
+              {/* All permissions */}
+              <Box>
+                <Flex align='center' gap='2' mb='4'>
+                  <Text as='h4' size='3' weight='bold'>
+                    {t(
+                      'admin:users.permissions.effectivePermissions',
+                      'Effective Permissions',
+                    )}
+                  </Text>
+                  <Badge variant='soft' color='indigo' size='1' radius='full'>
+                    {permissions.length}
+                  </Badge>
+                </Flex>
+                {permissions.length > 0 ? (
+                  <Flex wrap='wrap' gap='2'>
+                    {permissions.map(perm => (
+                      <Badge
+                        key={perm.name}
+                        size='2'
+                        color='gray'
+                        radius='medium'
+                        variant='soft'
+                        highContrast
+                      >
+                        {perm.name}
+                      </Badge>
+                    ))}
+                  </Flex>
+                ) : (
+                  <Flex
+                    justify='center'
+                    align='center'
+                    p='6'
+                    className='border border-dashed border-[var(--gray-a6)] rounded-md'
+                  >
+                    <Text size='2' color='gray'>
+                      {t(
+                        'admin:users.permissions.noPermissions',
+                        'No permissions. Assign roles to grant permissions.',
+                      )}
+                    </Text>
+                  </Flex>
+                )}
+              </Box>
+            </Flex>
           </>
         )}
       </Modal.Body>

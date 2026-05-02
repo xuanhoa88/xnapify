@@ -149,9 +149,13 @@ const createCSSRule = ({
     sourceMap: isDev,
     esModule: false,
     modules: {
-      auto: resourcePath =>
-        resourcePath.includes(config.APP_DIR) ||
-        resourcePath.includes(path.resolve(config.CWD, 'shared')),
+      auto: resourcePath => {
+        if (resourcePath.endsWith('global.css')) return false;
+        return (
+          resourcePath.includes(config.APP_DIR) ||
+          resourcePath.includes(path.resolve(config.CWD, 'shared'))
+        );
+      },
       exportOnlyLocals,
       localIdentName:
         localIdentName ||
@@ -164,17 +168,16 @@ const createCSSRule = ({
     sourceMap: isDev,
     postcssOptions: ctx => {
       // Get global postcss config path
-      const cssConfigPath = path.resolve(__dirname, '../postcss.factory');
+      const cssConfigPath = path.resolve(__dirname, '..', 'postcss.factory');
 
-      // Clear require cache in dev (HMR needs fresh reads).
       // Production builds skip cache-busting — global config is static.
-      if (isDev) {
-        delete require.cache[cssConfigPath];
-      }
 
       // Get global postcss config
       const globalConfigFn = require(cssConfigPath);
-      const globalConfig = globalConfigFn({ options: postcssOptions });
+      const globalConfig = globalConfigFn({
+        options: postcssOptions,
+        cwd: config.CWD,
+      });
 
       // Look up local postcss config from the registry
       let localPlugins = [];
@@ -338,6 +341,7 @@ function createSharedDependencies(dependencies, options = {}) {
         // Use caret range so compatible patch versions from transitive
         // dependencies are accepted (no lockfile → patches may float).
         const version = dependencies[dep];
+        const rawVersion = version.replace(/^[\^~]/, '');
         const requiredVersion = /^\d/.test(version) ? `^${version}` : version;
         return [
           dep,
@@ -346,6 +350,7 @@ function createSharedDependencies(dependencies, options = {}) {
             eager: isEager,
             requiredVersion,
             strictVersion,
+            version: rawVersion,
           },
         ];
       }),
@@ -483,22 +488,49 @@ function createCacheGroups(
 
 /**
  * Create script rule for JS/JSX/TS files
+ * @param {boolean} isServer - True for server bundle, false for client bundle
  * @returns {Object} Webpack rule
  */
-const createScriptRule = () => ({
+const createScriptRule = (isServer = false) => ({
   test: reScript,
   include: [config.APP_DIR, path.resolve(config.CWD, 'shared')],
   exclude: [/node_modules/],
   use: [
     {
-      loader: 'babel-loader',
+      loader: 'swc-loader',
       options: {
-        comments: false,
-        cacheDirectory: isDev,
-        configFile: path.resolve(__dirname, '..', 'babel.factory.js'),
-        // Override babel-loader's default sourceRoot (process.cwd()) to prevent
-        // Windows-specific Invalid URL TypeError in @pmmmwh/react-refresh-webpack-plugin
-        sourceRoot: '',
+        jsc: {
+          parser: {
+            syntax: 'ecmascript',
+            jsx: true,
+            dynamicImport: true,
+          },
+          transform: {
+            react: {
+              runtime: 'automatic',
+              development: isDev,
+              // React Fast Refresh is enabled per-compiler in
+              // configureWebpackForDev (dev.js) — default off here
+              // so the server bundle is not affected.
+              refresh: false,
+            },
+          },
+          // Disable loose mode to ensure iterables (Set, Map, etc) spread correctly
+          loose: false,
+        },
+        // Production: inject core-js polyfills for browser compatibility
+        // (polyfill injection based on browser targets + core-js usage).
+        // Development and Server: skip polyfills. Server doesn't need browser
+        // core-js polyfills like DOMException, and dev targets modern browsers.
+        ...(isDev || isServer
+          ? {}
+          : {
+              env: {
+                targets: 'defaults',
+                mode: 'usage',
+                coreJs: '3.46',
+              },
+            }),
       },
     },
   ],
@@ -654,6 +686,12 @@ function createWebpackConfig(name, options = {}) {
           nodeExternals({
             allowlist: [reStyle, reImage, reFont, reSvg, /^\.\.\?\//],
           }),
+          'sqlite3',
+          'mysql2',
+          'pg',
+          'pg-hstore',
+          'mariadb',
+          'tedious',
         ],
       }),
 
@@ -731,7 +769,7 @@ function createWebpackConfig(name, options = {}) {
       module: {
         strictExportPresence: true,
         rules: [
-          createScriptRule(),
+          createScriptRule(isServer),
           createImageRule(),
           createFontRule(),
           createSVGRule(),
@@ -903,7 +941,6 @@ function getHmrWatchIgnored() {
   return [
     '**/node_modules/**',
     '**/__tests__/**',
-    '**/e2e/**',
     '**/*.test.*',
     '**/*.spec.*',
     `${buildDirGlob}/**`,

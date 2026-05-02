@@ -5,19 +5,25 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { createContext, useContext, useCallback } from 'react';
+/* eslint-disable no-underscore-dangle */
+
+import { createContext, useContext, useCallback, useRef } from 'react';
 
 // Context for form field state (provided by Form.Field)
-export const FormFieldContext = createContext({});
+export const FormFieldContext = createContext(null);
 
 // Context for schema and validation instance (to detect required fields and provide z)
-export const FormValidationContext = createContext({});
+export const FormValidationContext = createContext(null);
 
 /**
  * Hook to get validation context (schema, z)
  */
 export function useFormValidation() {
-  return useContext(FormValidationContext);
+  const context = useContext(FormValidationContext);
+  if (!context) {
+    throw new Error('useFormValidation must be used within a Form component');
+  }
+  return context;
 }
 
 /**
@@ -54,7 +60,6 @@ function getSchemaShape(schema, path) {
     if (!currentSchema) return null;
 
     // Unwrap effects/refinements/optionals/nullables to get to the underlying shape
-    /* eslint-disable no-underscore-dangle */
     // eslint-disable-next-line no-constant-condition
     while (true) {
       if (currentSchema._def && currentSchema._def.schema) {
@@ -143,4 +148,50 @@ export function useMergeRefs(...refs) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     refs,
   );
+}
+
+/**
+ * Compose multiple event handlers into a single function.
+ * This is crucial for preventing custom props from overwriting react-hook-form's internal handlers.
+ *
+ * @param {Function} externalHandler - The custom handler passed via props
+ * @param {Function} internalHandler - The internal react-hook-form handler
+ * @returns {Function} - Composed handler that calls both
+ */
+export function composeEventHandlers(externalHandler, internalHandler) {
+  return function handleEvent(...args) {
+    if (typeof internalHandler === 'function') {
+      internalHandler(...args);
+    }
+    if (typeof externalHandler === 'function') {
+      externalHandler(...args);
+    }
+  };
+}
+
+/**
+ * Hook version of composeEventHandlers that returns a **stable** function
+ * reference across renders. Uses refs internally so the returned callback
+ * never changes identity, which prevents unnecessary re-renders on
+ * memoized Radix primitives (Select, Checkbox, Switch, RadioGroup).
+ *
+ * @param {Function} externalHandler - The custom handler passed via props
+ * @param {Function} internalHandler - The internal react-hook-form handler
+ * @returns {Function} - Stable composed handler
+ */
+export function useComposedHandler(externalHandler, internalHandler) {
+  const externalRef = useRef(externalHandler);
+  const internalRef = useRef(internalHandler);
+  externalRef.current = externalHandler;
+  internalRef.current = internalHandler;
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useCallback(function stableHandler(...args) {
+    if (typeof internalRef.current === 'function') {
+      internalRef.current(...args);
+    }
+    if (typeof externalRef.current === 'function') {
+      externalRef.current(...args);
+    }
+  }, []);
 }

@@ -479,97 +479,111 @@ function writeConfig(config, rootPath) {
  * @returns {function} - Event handler
  */
 function handleFlowsStarted(RED) {
-  return async eventData => {
-    RED.log.info(`${EXTENSION_LOG_PREFIX} Flow start event detected`);
+  let isProcessing = false;
 
-    const { userDir } = RED.settings;
-    if (!userDir) {
-      RED.log.error(`${EXTENSION_LOG_PREFIX} userDir not configured`);
+  return async eventData => {
+    if (isProcessing) {
+      RED.log.info(
+        `${EXTENSION_LOG_PREFIX} Flow start event ignored (already processing)`,
+      );
       return;
     }
 
-    const rootPath = userDir;
-    const config = readConfig(rootPath);
-    config.monolithFilename = RED.settings.flowFile || 'flows.json';
+    isProcessing = true;
+    try {
+      RED.log.info(`${EXTENSION_LOG_PREFIX} Flow start event detected`);
 
-    const flowsFromEvent =
-      eventData && eventData.config && eventData.config.flows;
-    const hasFlows = flowsFromEvent && flowsFromEvent.length > 0;
-
-    if (!hasFlows) {
-      // ─── Rebuild mode: no flows loaded, try to reconstruct ─────────
-      RED.log.info(
-        `${EXTENSION_LOG_PREFIX} No flows in runtime, attempting rebuild from split files`,
-      );
-
-      // Try to apply latest migration if no split files exist
-      const splitDir = path.join(rootPath, config.destinationFolder);
-      const adapter = RED.settings.migrationsAdapter;
-      if (adapter && !fs.existsSync(splitDir)) {
-        applyLatestMigration(splitDir, adapter, RED);
-      }
-
-      const rebuilt = rebuildFlows(config, rootPath, RED);
-      if (!rebuilt) {
-        RED.log.info(
-          `${EXTENSION_LOG_PREFIX} No split files found, nothing to do`,
-        );
+      const { userDir } = RED.settings;
+      if (!userDir) {
+        RED.log.error(`${EXTENSION_LOG_PREFIX} userDir not configured`);
         return;
       }
 
-      // Write the rebuilt flows.json
-      const monolithPath = path.join(rootPath, config.monolithFilename);
-      fs.writeFileSync(monolithPath, JSON.stringify(rebuilt, null, 4));
-      RED.log.info(
-        `${EXTENSION_LOG_PREFIX} Rebuilt ${config.monolithFilename} with ${rebuilt.length} node(s)`,
-      );
+      const rootPath = userDir;
+      const config = readConfig(rootPath);
+      config.monolithFilename = RED.settings.flowFile || 'flows.json';
 
-      // Reload flows in the runtime
-      try {
-        RED.log.info(`${EXTENSION_LOG_PREFIX} Reloading flows...`);
-        await RED.nodes.loadFlows(true);
-        RED.log.info(`${EXTENSION_LOG_PREFIX} Flows reloaded`);
-      } catch (err) {
-        RED.log.error(
-          `${EXTENSION_LOG_PREFIX} Failed to reload flows: ${err.message}`,
-        );
-      }
-      return;
-    }
+      const flowsFromEvent =
+        eventData && eventData.config && eventData.config.flows;
+      const hasFlows = flowsFromEvent && flowsFromEvent.length > 0;
 
-    // ─── Split mode: flows exist, split them ─────────────────────────
-    RED.log.info(
-      `${EXTENSION_LOG_PREFIX} Splitting ${flowsFromEvent.length} node(s) into individual files`,
-    );
-
-    splitFlows(flowsFromEvent, config, rootPath, RED);
-    writeConfig(config, rootPath);
-
-    // Auto-save migration snapshot
-    const { migrationsAdapter } = RED.settings;
-    if (migrationsAdapter) {
-      const splitDir = path.join(rootPath, config.destinationFolder);
-      saveMigration(splitDir, migrationsAdapter, RED);
-    }
-
-    // Delete the monolith file after splitting
-    const monolithPath = path.join(rootPath, config.monolithFilename);
-    try {
-      // Small delay to ensure Node-RED has finished writing
-      await new Promise(resolve => setTimeout(resolve, 200));
-      if (fs.existsSync(monolithPath)) {
-        fs.unlinkSync(monolithPath);
+      if (!hasFlows) {
+        // ─── Rebuild mode: no flows loaded, try to reconstruct ─────────
         RED.log.info(
-          `${EXTENSION_LOG_PREFIX} Deleted ${config.monolithFilename} (split files are the source of truth)`,
+          `${EXTENSION_LOG_PREFIX} No flows in runtime, attempting rebuild from split files`,
+        );
+
+        // Try to apply latest migration if no split files exist
+        const splitDir = path.join(rootPath, config.destinationFolder);
+        const adapter = RED.settings.migrationsAdapter;
+        if (adapter && !fs.existsSync(splitDir)) {
+          applyLatestMigration(splitDir, adapter, RED);
+        }
+
+        const rebuilt = rebuildFlows(config, rootPath, RED);
+        if (!rebuilt) {
+          RED.log.info(
+            `${EXTENSION_LOG_PREFIX} No split files found, nothing to do`,
+          );
+          return;
+        }
+
+        // Write the rebuilt flows.json
+        const monolithPath = path.join(rootPath, config.monolithFilename);
+        fs.writeFileSync(monolithPath, JSON.stringify(rebuilt, null, 4));
+        RED.log.info(
+          `${EXTENSION_LOG_PREFIX} Rebuilt ${config.monolithFilename} with ${rebuilt.length} node(s)`,
+        );
+
+        // Reload flows in the runtime
+        try {
+          RED.log.info(`${EXTENSION_LOG_PREFIX} Reloading flows...`);
+          await RED.nodes.loadFlows(true);
+          RED.log.info(`${EXTENSION_LOG_PREFIX} Flows reloaded`);
+        } catch (err) {
+          RED.log.error(
+            `${EXTENSION_LOG_PREFIX} Failed to reload flows: ${err.message}`,
+          );
+        }
+        return;
+      }
+
+      // ─── Split mode: flows exist, split them ─────────────────────────
+      RED.log.info(
+        `${EXTENSION_LOG_PREFIX} Splitting ${flowsFromEvent.length} node(s) into individual files`,
+      );
+
+      splitFlows(flowsFromEvent, config, rootPath, RED);
+      writeConfig(config, rootPath);
+
+      // Auto-save migration snapshot
+      const { migrationsAdapter } = RED.settings;
+      if (migrationsAdapter) {
+        const splitDir = path.join(rootPath, config.destinationFolder);
+        saveMigration(splitDir, migrationsAdapter, RED);
+      }
+
+      // Delete the monolith file after splitting
+      const monolithPath = path.join(rootPath, config.monolithFilename);
+      try {
+        // Small delay to ensure Node-RED has finished writing
+        await new Promise(resolve => setTimeout(resolve, 200));
+        if (fs.existsSync(monolithPath)) {
+          fs.unlinkSync(monolithPath);
+          RED.log.info(
+            `${EXTENSION_LOG_PREFIX} Deleted ${config.monolithFilename} (split files are the source of truth)`,
+          );
+        }
+      } catch (err) {
+        RED.log.warn(
+          `${EXTENSION_LOG_PREFIX} Could not delete ${config.monolithFilename}: ${err.message}`,
         );
       }
-    } catch (err) {
-      RED.log.warn(
-        `${EXTENSION_LOG_PREFIX} Could not delete ${config.monolithFilename}: ${err.message}`,
-      );
-    }
 
-    RED.log.info(`${EXTENSION_LOG_PREFIX} Split complete ✅`);
+      RED.log.info(`${EXTENSION_LOG_PREFIX} Split complete ✅`);
+    } finally {
+      isProcessing = false;
+    }
   };
 }
 

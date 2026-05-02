@@ -6,22 +6,11 @@
  */
 
 import { requirePermission } from '@shared/renderer/components/Rbac';
-import {
-  addBreadcrumb,
-  registerMenu,
-  unregisterMenu,
-} from '@shared/renderer/redux';
-
-import reducer, { SLICE_NAME } from '../redux';
+import { features } from '@shared/renderer/redux';
 
 import Roles from './Roles';
 
-/**
- * Route boot — inject Redux reducer into the store.
- */
-export function init({ store }) {
-  store.injectReducer(SLICE_NAME, reducer);
-}
+const { addBreadcrumb, registerMenu, unregisterMenu } = features;
 
 export const middleware = requirePermission('roles:read');
 
@@ -35,12 +24,12 @@ export function setup({ store, i18n }) {
       id: 'identity-access',
       label: i18n.t('admin:navigation.identityAccess', 'Identity & Access'),
       order: 10,
-      icon: 'shield',
+      icon: 'LockClosedIcon',
       items: [
         {
           path: '/admin/roles',
           label: i18n.t('admin:navigation.roles', 'Roles'),
-          icon: 'shield',
+          icon: 'IdCardIcon',
           permission: 'roles:read',
           order: 30,
         },

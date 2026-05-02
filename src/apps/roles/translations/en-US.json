@@ -1,0 +1,51 @@
+{
+  "roles": {
+    "title": "Role Management",
+    "addRole": "Add Role",
+    "searchPlaceholder": "Search roles...",
+    "noRolesFound": "No roles found",
+    "noDescription": "No description available",
+    "users": "Users",
+    "groups": "Groups",
+    "permissions": "Permissions",
+    "viewUsers": "View Users",
+    "viewGroups": "View Groups",
+    "viewPermissions": "View Permissions",
+    "editRole": "Edit Role",
+    "deleteRole": "Delete Role",
+    "deleteTitle": "Delete Role",
+    "deleteError": "Failed to delete role",
+    "bulkDelete": "Delete Selected",
+    "permissionsFor": "Permissions for",
+    "usersWithRole": "Users with \"{{roleName}}\" Role",
+    "groupsWithRole": "Groups with \"{{roleName}}\" Role",
+    "noUsersMatch": "No users match your search",
+    "noGroupsMatch": "No groups match your search",
+    "noRolesMatch": "No roles match your search",
+    "noRolesAvailable": "No roles available",
+    "noGroupsAvailable": "No groups available",
+    "create": {
+      "title": "Create New Role",
+      "newRole": "New Role",
+      "backToList": "Back to Roles",
+      "roleInformation": "Role Information",
+      "roleName": "Role Name",
+      "description": "Description",
+      "statusLabel": "Status",
+      "permissionsLabel": "Permissions"
+    },
+    "edit": {
+      "title": "Edit Role: {{name}}",
+      "titleLoading": "Loading Role...",
+      "titleError": "Error Loading Role",
+      "backToList": "Back to Roles",
+      "roleInformation": "Role Information",
+      "roleName": "Role Name",
+      "description": "Description",
+      "statusLabel": "Status",
+      "active": "Active",
+      "permissionsLabel": "Permissions",
+      "unnamedRole": "Unnamed Role"
+    }
+  }
+}

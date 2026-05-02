@@ -15,6 +15,7 @@ describe('[runtime] slice.js', () => {
       expect(result).toEqual({
         appName: null,
         appDescription: null,
+        appUrl: null,
         initialNow: null,
       });
     });
@@ -24,6 +25,7 @@ describe('[runtime] slice.js', () => {
       expect(result).toEqual({
         appName: null,
         appDescription: null,
+        appUrl: null,
         initialNow: null,
       });
     });
@@ -32,6 +34,7 @@ describe('[runtime] slice.js', () => {
       const state = {
         appName: 'Test App',
         appDescription: 'Description',
+        appUrl: null,
         initialNow: 123456,
       };
       const result = normalizeState(state);
@@ -45,6 +48,7 @@ describe('[runtime] slice.js', () => {
       expect(result).toEqual({
         appName: 'Test App',
         appDescription: null,
+        appUrl: null,
         initialNow: null,
       });
     });
@@ -56,6 +60,7 @@ describe('[runtime] slice.js', () => {
       expect(state).toEqual({
         appName: null,
         appDescription: null,
+        appUrl: null,
         initialNow: null,
       });
     });
@@ -83,6 +88,7 @@ describe('[runtime] slice.js', () => {
       expect(state).toEqual({
         appName: 'My App',
         appDescription: 'Description',
+        appUrl: null,
         initialNow: 123456,
       });
     });
@@ -108,6 +114,7 @@ describe('[runtime] slice.js', () => {
       expect(state).toEqual({
         appName: 'My App',
         appDescription: 'Description',
+        appUrl: null,
         initialNow: 123456,
       });
     });
@@ -127,6 +134,7 @@ describe('[runtime] slice.js', () => {
       expect(state).toEqual({
         appName: null,
         appDescription: null,
+        appUrl: null,
         initialNow: null,
       });
     });

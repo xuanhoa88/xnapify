@@ -1,0 +1,24 @@
+/**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+.layoutContent {
+  margin-left: var(--sider-width, 240px);
+  width: calc(100% - var(--sider-width, 240px));
+}
+
+.layoutContent[data-minimal='true'] {
+  margin-left: var(--sider-width, 64px);
+  width: calc(100% - var(--sider-width, 64px));
+}
+
+@media (max-width: 767px) {
+  .layoutContent,
+  .layoutContent[data-minimal='true'] {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+}

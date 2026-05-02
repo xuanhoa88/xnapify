@@ -5,369 +5,189 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-/* =============================================================================
-   ROOT & HERO SECTION
-   ============================================================================= */
-
-.root {
-  min-height: 60vh;
-}
-
-/* Hero header with gradient */
-.hero {
-  background: linear-gradient(
-    135deg,
-    var(--color-primary) 0%,
-    var(--color-secondary) 100%
-  );
-  padding: var(--spacing-16) var(--spacing-6);
-  text-align: center;
-  position: relative;
-  overflow: hidden;
-}
-
-.hero::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: radial-gradient(
-      circle at 20% 50%,
-      rgb(255 255 255 / 10%) 0%,
-      transparent 50%
-    ),
-    radial-gradient(
-      circle at 80% 80%,
-      rgb(255 255 255 / 8%) 0%,
-      transparent 50%
-    );
-  pointer-events: none;
+.pageWrapper {
+  background-color: var(--color-background);
+  min-height: 100vh;
+  padding: var(--space-8) var(--space-4) calc(var(--space-9) * 2);
 }
 
 .heroContent {
-  position: relative;
-  z-index: 1;
-  max-width: 600px;
+  padding-top: var(--space-8);
+  padding-bottom: var(--space-8);
+  text-align: center;
+  max-width: 800px;
   margin: 0 auto;
 }
 
 .heroTitle {
-  font-size: var(--font-size-4xl);
-  font-weight: var(--font-weight-bold);
-  color: white;
-  margin: 0 0 var(--spacing-4);
-  letter-spacing: -0.03em;
+  font-size: var(--font-size-9);
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+  color: var(--gray-12);
+  margin-bottom: var(--space-5);
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--gray-12) 0%, var(--gray-9) 100%);
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .heroSubtitle {
-  font-size: var(--font-size-lg);
-  color: rgb(255 255 255 / 90%);
-  line-height: var(--line-height-relaxed);
-  margin: 0;
+  font-size: var(--font-size-6);
+  line-height: 1.5;
+  color: var(--gray-11);
+  font-weight: 400;
 }
 
-/* =============================================================================
-   MAIN CONTENT - TWO COLUMN LAYOUT
-   ============================================================================= */
-
-.container {
-  max-width: var(--max-content-width);
-  margin: 0 auto;
-  padding: var(--spacing-12) var(--spacing-6);
+.mainContent {
+  margin-top: var(--space-8);
 }
 
-.content {
-  display: grid;
-  grid-template-columns: 1fr 380px;
-  gap: var(--spacing-10);
+.grid {
   align-items: start;
 }
 
-/* =============================================================================
-   CONTACT FORM (LEFT COLUMN)
-   ============================================================================= */
-
 .formSection {
-  background: var(--color-background);
-  border-radius: var(--radius-xl);
-  padding: var(--spacing-10);
-  box-shadow: var(--shadow-lg);
-  border: 1px solid var(--color-border);
+  grid-column: span 1;
 }
 
-.formTitle {
-  font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text-primary);
-  margin: 0 0 var(--spacing-2);
+@media (min-width: 1024px) {
+  .formSection {
+    grid-column: span 2;
+  }
 }
 
-.formSubtitle {
-  font-size: var(--font-size-base);
-  color: var(--color-text-secondary);
-  margin: 0 0 var(--spacing-8);
-  line-height: var(--line-height-relaxed);
+.sectionTitle {
+  font-size: var(--font-size-7);
+  color: var(--gray-12);
+  font-weight: 700;
+  margin-bottom: var(--space-3);
+  letter-spacing: -0.02em;
 }
 
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-6);
+.sectionSubtitle {
+  font-size: var(--font-size-4);
+  color: var(--gray-11);
+  line-height: 1.6;
 }
 
-.formRow {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--spacing-6);
+.formBox {
+  background-color: var(--color-panel-solid);
+  padding: var(--space-7);
+  border-radius: var(--radius-5);
+  box-shadow: 0 4px 24px -12px var(--black-a3);
+  border: 1px solid var(--gray-4);
 }
 
-.submitButton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--spacing-2);
+.fullWidthBtn {
+  width: 100%;
+}
+
+.submitBtnWrapper button {
+  background-color: var(--gray-12);
+  color: var(--color-background);
   height: 44px;
-  padding: 0 var(--spacing-6);
-  background: var(--color-primary);
-  color: white;
-  border: none;
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  cursor: pointer;
-  transition: var(--transition-base);
-  align-self: flex-start;
+  font-size: var(--font-size-3);
+  font-weight: 600;
+  border-radius: var(--radius-3);
+  transition: transform 0.2s, opacity 0.2s;
+  width: 100%;
 }
 
-.submitButton:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+.submitBtnWrapper button:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
 }
 
-.submitButton:hover:not(:disabled) {
-  background: var(--color-primary-dark);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgb(59 130 246 / 30%);
+/* Sidebar Info Cards */
+.infoCard {
+  background-color: var(--color-panel-solid);
+  padding: var(--space-6);
+  border-radius: var(--radius-4);
+  border: 1px solid var(--gray-4);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-.submitButton:active:not(:disabled) {
-  transform: translateY(0);
+.infoCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px -12px var(--black-a3);
 }
 
-/* =============================================================================
-   SIDEBAR (RIGHT COLUMN)
-   ============================================================================= */
-
-.sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-6);
+.cardTitle {
+  font-size: var(--font-size-2);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  color: var(--gray-9);
+  margin-bottom: var(--space-2);
+  border-bottom: 1px solid var(--gray-4);
+  padding-bottom: var(--space-4);
 }
 
-.sidebarCard {
-  background: var(--color-background);
-  border-radius: var(--radius-xl);
-  padding: var(--spacing-6);
-  box-shadow: var(--shadow-md);
-  border: 1px solid var(--color-border);
-}
-
-.sidebarTitle {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text-primary);
-  margin: 0 0 var(--spacing-5);
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-2);
-}
-
-.sidebarTitle svg {
-  color: var(--color-primary);
-}
-
-/* Contact Info Items */
-.contactInfo {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-4);
-}
-
-.contactItem {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--spacing-3);
-}
-
-.contactIcon {
-  width: 40px;
-  height: 40px;
-  background: linear-gradient(
-    135deg,
-    var(--color-primary) 0%,
-    var(--color-secondary) 100%
-  );
-  border-radius: var(--radius-lg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.iconWrapper {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-3);
+  background-color: var(--indigo-3);
+  color: var(--indigo-11);
   flex-shrink: 0;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s ease;
 }
 
-.contactIcon svg {
-  width: 20px;
-  height: 20px;
-  color: white;
+.infoCard:hover .iconWrapper {
+  transform: scale(1.1) rotate(-5deg);
+  background-color: var(--indigo-4);
 }
 
-.contactDetails {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-1);
+.itemLabel {
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
-.contactLabel {
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-tertiary);
-}
-
-.contactValue {
-  font-size: var(--font-size-base);
-  color: var(--color-text-primary);
-  font-weight: var(--font-weight-medium);
-}
-
-.contactValue a {
-  color: var(--color-primary);
+.itemLink {
+  color: var(--gray-12);
   text-decoration: none;
-  transition: color var(--transition-fast);
+  transition: color 0.2s;
 }
 
-.contactValue a:hover {
-  color: var(--color-primary-hover);
+.itemLink:hover {
+  color: var(--indigo-11);
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }
 
-/* Social Links */
-.socialLinks {
-  display: flex;
-  gap: var(--spacing-3);
+.itemValue {
+  color: var(--gray-12);
 }
 
-.socialLink {
+.socialIconWrapper {
   width: 44px;
   height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--color-background-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  color: var(--color-text-secondary);
-  text-decoration: none;
-  transition: all var(--transition-fast);
+  border-radius: var(--radius-3);
+  background-color: var(--gray-3);
+  color: var(--gray-11);
+  transition: background-color 0.2s, color 0.2s, transform 0.2s;
 }
 
-.socialLink:hover {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
-  color: white;
+.socialIconWrapper:hover {
+  background-color: var(--indigo-4);
+  color: var(--indigo-11);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgb(102 126 234 / 30%);
 }
 
-.socialLink svg {
-  width: 20px;
-  height: 20px;
+.officeHourItem {
+  padding: var(--space-3) 0;
+  border-bottom: 1px dashed var(--gray-4);
 }
 
-/* Office Hours */
-.hours {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-3);
+.officeHourItem:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
 }
 
-.hourItem {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--spacing-3);
-  background: var(--color-background-secondary);
-  border-radius: var(--radius-md);
+.officeHourDay {
+  text-transform: capitalize;
 }
 
-.hourItem span:first-child {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-primary);
-}
-
-.hourItem span:last-child {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-}
-
-/* =============================================================================
-   RESPONSIVE DESIGN
-   ============================================================================= */
-
-@media (max-width: 992px) {
-  .content {
-    grid-template-columns: 1fr;
-    gap: var(--spacing-8);
-  }
-
-  .sidebar {
-    order: -1;
-  }
-
-  .hero {
-    padding: var(--spacing-12) var(--spacing-4);
-  }
-
-  .heroTitle {
-    font-size: var(--font-size-3xl);
-  }
-}
-
-@media (max-width: 768px) {
-  .container {
-    padding: var(--spacing-8) var(--spacing-4);
-  }
-
-  .formSection {
-    padding: var(--spacing-6);
-  }
-
-  .formRow {
-    grid-template-columns: 1fr;
-    gap: var(--spacing-5);
-  }
-
-  .hero {
-    padding: var(--spacing-10) var(--spacing-4);
-  }
-
-  .heroTitle {
-    font-size: var(--font-size-2xl);
-  }
-
-  .heroSubtitle {
-    font-size: var(--font-size-base);
-  }
-
-  .sidebarCard {
-    padding: var(--spacing-5);
-  }
-
-  .socialLinks {
-    flex-wrap: wrap;
-  }
-
-  .submitButton {
-    width: 100%;
-  }
+.officeHourValue {
+  color: var(--gray-12);
 }

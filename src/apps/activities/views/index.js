@@ -9,6 +9,10 @@
  * Activity Module Views Entry Point
  */
 
+import { getTranslations } from '@shared/i18n/loader';
+import { addNamespace } from '@shared/i18n/utils';
+
+import reducer, { SLICE_NAME } from './(admin)/redux';
 import * as selectors from './(admin)/redux/selector';
 import * as thunks from './(admin)/redux/thunks';
 
@@ -22,12 +26,22 @@ const viewsContext = require.context(
   /(?:\/_route|\/_layout|\(routes\)\/\([^)]+\)|\(layouts\)\/\([^)]+\)\/_layout)\.[cm]?[jt]sx?$/i,
 );
 
+const translationsContext = require.context(
+  '../translations',
+  false,
+  /\.json$/i,
+);
+
 // =============================================================================
 // LIFECYCLE HOOKS
 // =============================================================================
 
 export default {
-  providers({ container }) {
+  providers({ store, container }) {
+    // Merge module-specific translations into the shared 'admin' namespace
+    addNamespace('admin', getTranslations(translationsContext));
+
+    store.injectReducer(SLICE_NAME, reducer);
     container.bind(
       'activities:admin:state',
       () => ({ selectors, thunks }),

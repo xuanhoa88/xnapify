@@ -1,9 +1,21 @@
+/**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+import * as cookies from '@shared/cookies';
 import { validateForm } from '@shared/validator';
 
 import * as profileService from '../services/profile.service';
 import { formatUserResponse } from '../utils/formatter';
 
 import * as profileController from './profile.controller';
+
+jest.mock('@shared/cookies', () => ({
+  clearAllAuthCookies: jest.fn(),
+}));
 
 jest.mock('@shared/validator', () => ({
   validateForm: jest.fn(),
@@ -27,7 +39,7 @@ jest.mock('../services/profile.service', () => ({
 }));
 
 jest.mock('../utils/formatter', () => ({
-  formatUserResponse: jest.fn(user => ({ ...user, formatted: true })),
+  formatUserResponse: jest.fn(),
 }));
 
 describe('Profile Controller', () => {
@@ -115,6 +127,7 @@ describe('Profile Controller', () => {
         id: 1,
         email: 'test@example.com',
       });
+      formatUserResponse.mockResolvedValue({ id: 1, formatted: true });
 
       await profileController.getProfile(req, res);
 
@@ -340,7 +353,7 @@ describe('Profile Controller', () => {
       await profileController.deleteAccount(req, res);
 
       expect(profileService.deleteUserAccount).toHaveBeenCalled();
-      expect(mockAuth.clearAllAuthCookies).toHaveBeenCalledWith(res);
+      expect(cookies.clearAllAuthCookies).toHaveBeenCalledWith(res);
       expect(mockHttp.sendSuccess).toHaveBeenCalled();
     });
   });

@@ -7,12 +7,33 @@
 
 import { useCallback, useState, useEffect, useRef } from 'react';
 
+import {
+  DividerHorizontalIcon,
+  EnterFullScreenIcon,
+  ExitFullScreenIcon,
+  FontBoldIcon,
+  FontItalicIcon,
+  ImageIcon,
+  Link2Icon,
+  LinkBreak2Icon,
+  ListBulletIcon,
+  OpacityIcon,
+  QuoteIcon,
+  ReloadIcon,
+  ResetIcon,
+  StrikethroughIcon,
+  SymbolIcon,
+  TextIcon,
+  TriangleRightIcon,
+  UnderlineIcon,
+  CheckboxIcon,
+} from '@radix-ui/react-icons';
+import { TextField } from '@radix-ui/themes';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
 import { ExtensionSlot } from '../Extension';
-import Icon from '../Icon';
 
 import CodeBlockActionsPopup from './CodeBlockActionsPopup';
 import ColorPickerPopup from './ColorPickerPopup';
@@ -55,10 +76,10 @@ export default function Toolbar({
   const { t } = useTranslation();
   const { openPrompt } = useToolbarPrompt();
   const btn = useCallback(
-    (key, title, command, activeCheck) => (
+    (IconComp, key, title, command, activeCheck) => (
       <ToolbarButton
         key={key}
-        icon={<Icon name={key} size={16} strokeWidth={2.5} />}
+        icon={<IconComp width={16} height={16} />}
         title={title}
         isActive={activeCheck ? editor.isActive(activeCheck) : false}
         onClick={() => command()}
@@ -118,12 +139,14 @@ export default function Toolbar({
       {/* Text formatting */}
       <div className={s.toolbarGroup}>
         {btn(
+          FontBoldIcon,
           'bold',
           t('shared:form.wysiwyg.bold', 'Bold'),
           () => editor.chain().focus().toggleBold().run(),
           'bold',
         )}
         {btn(
+          FontItalicIcon,
           'italic',
           t('shared:form.wysiwyg.italic', 'Italic'),
           () => editor.chain().focus().toggleItalic().run(),
@@ -131,12 +154,14 @@ export default function Toolbar({
         )}
         {has('underline') &&
           btn(
+            UnderlineIcon,
             'underline',
             t('shared:form.wysiwyg.underline', 'Underline'),
             () => editor.chain().focus().toggleUnderline().run(),
             'underline',
           )}
         {btn(
+          StrikethroughIcon,
           'strikethrough',
           t('shared:form.wysiwyg.strikethrough', 'Strikethrough'),
           () => editor.chain().focus().toggleStrike().run(),
@@ -149,12 +174,14 @@ export default function Toolbar({
       {/* Block formatting */}
       <div className={s.toolbarGroup}>
         {btn(
+          ListBulletIcon,
           'bulletList',
           t('shared:form.wysiwyg.bulletList', 'Bullet list'),
           () => editor.chain().focus().toggleBulletList().run(),
           'bulletList',
         )}
         {btn(
+          ListBulletIcon,
           'orderedList',
           t('shared:form.wysiwyg.orderedList', 'Numbered list'),
           () => editor.chain().focus().toggleOrderedList().run(),
@@ -162,12 +189,14 @@ export default function Toolbar({
         )}
         {has('taskList') &&
           btn(
+            CheckboxIcon,
             'taskList',
             t('shared:form.wysiwyg.taskList', 'Task list'),
             () => editor.chain().focus().toggleTaskList().run(),
             'taskList',
           )}
         {btn(
+          QuoteIcon,
           'blockquote',
           t('shared:form.wysiwyg.blockquote', 'Blockquote'),
           () => editor.chain().focus().toggleBlockquote().run(),
@@ -175,6 +204,7 @@ export default function Toolbar({
         )}
         {has('details') &&
           btn(
+            TriangleRightIcon,
             'details',
             t('shared:form.wysiwyg.details', 'Collapsible Details'),
             () => editor.chain().focus().setDetails().run(),
@@ -200,7 +230,7 @@ export default function Toolbar({
       <div className={s.toolbarGroup}>
         {has('color') && (
           <ColorPickerPopup
-            icon={<Icon name='textColor' size={16} strokeWidth={2.5} />}
+            icon={<TextIcon width={16} height={16} />}
             title={t('shared:form.wysiwyg.textColor', 'Text Color')}
             value={editor.getAttributes('textStyle').color}
             defaultValue='#000000'
@@ -213,7 +243,7 @@ export default function Toolbar({
         )}
         {has('highlight') && (
           <ColorPickerPopup
-            icon={<Icon name='highlight' size={16} strokeWidth={2.5} />}
+            icon={<OpacityIcon width={16} height={16} />}
             title={t('shared:form.wysiwyg.highlight', 'Background Color')}
             value={editor.getAttributes('highlight').color}
             defaultValue='#ffffff'
@@ -231,7 +261,7 @@ export default function Toolbar({
             className={s.fontSizeWrapper}
             data-tooltip={t('shared:form.wysiwyg.fontSize', 'Font Size (px)')}
           >
-            <input
+            <TextField.Root
               ref={fontSizeRef}
               type='number'
               className={s.fontSizeInput}
@@ -258,6 +288,7 @@ export default function Toolbar({
         {has('link') && (
           <>
             {btn(
+              Link2Icon,
               'link',
               t('shared:form.wysiwyg.link', 'Add Link'),
               () => {
@@ -290,6 +321,7 @@ export default function Toolbar({
             )}
             {editor.isActive('link') &&
               btn(
+                LinkBreak2Icon,
                 'unlink',
                 t('shared:form.wysiwyg.unlink', 'Remove Link'),
                 () => editor.chain().focus().unsetLink().run(),
@@ -298,16 +330,21 @@ export default function Toolbar({
         )}
 
         {has('image') &&
-          btn('image', t('shared:form.wysiwyg.image', 'Image'), () => {
-            openPrompt({
-              title: t('shared:form.wysiwyg.image', 'Image'),
-              label: t('shared:form.wysiwyg.imageUrl', 'Image URL'),
-              slotName: 'wysiwyg.prompt.image',
-              onSubmit: url => {
-                if (url) editor.chain().focus().setImage({ src: url }).run();
-              },
-            });
-          })}
+          btn(
+            ImageIcon,
+            'image',
+            t('shared:form.wysiwyg.image', 'Image'),
+            () => {
+              openPrompt({
+                title: t('shared:form.wysiwyg.image', 'Image'),
+                label: t('shared:form.wysiwyg.imageUrl', 'Image URL'),
+                slotName: 'wysiwyg.prompt.image',
+                onSubmit: url => {
+                  if (url) editor.chain().focus().setImage({ src: url }).run();
+                },
+              });
+            },
+          )}
         {(has('video') || has('audio') || has('youtube')) && (
           <MediaActionsPopup
             editor={editor}
@@ -342,6 +379,7 @@ export default function Toolbar({
         )}
         {has('mathematics') &&
           btn(
+            SymbolIcon,
             'inlineMath',
             t('shared:form.wysiwyg.math', 'Math'),
             () => {
@@ -368,6 +406,7 @@ export default function Toolbar({
             'inlineMath',
           )}
         {btn(
+          DividerHorizontalIcon,
           'horizontalRule',
           t('shared:form.wysiwyg.horizontalRule', 'Horizontal rule'),
           () => editor.chain().focus().setHorizontalRule().run(),
@@ -379,13 +418,13 @@ export default function Toolbar({
       {/* Undo / Redo */}
       <div className={s.toolbarGroup}>
         <ToolbarButton
-          icon={<Icon name='undo' size={16} strokeWidth={2.5} />}
+          icon={<ResetIcon width={16} height={16} />}
           title={t('shared:form.wysiwyg.undo', 'Undo')}
           onClick={() => editor.chain().focus().undo().run()}
           disabled={!editor.can().undo()}
         />
         <ToolbarButton
-          icon={<Icon name='redo' size={16} strokeWidth={2.5} />}
+          icon={<ReloadIcon width={16} height={16} />}
           title={t('shared:form.wysiwyg.redo', 'Redo')}
           onClick={() => editor.chain().focus().redo().run()}
           disabled={!editor.can().redo()}
@@ -407,9 +446,9 @@ export default function Toolbar({
         <ToolbarButton
           icon={
             isFullScreen ? (
-              <Icon name='minimize' size={16} strokeWidth={2.5} />
+              <ExitFullScreenIcon width={16} height={16} />
             ) : (
-              <Icon name='fullscreen' size={16} strokeWidth={2.5} />
+              <EnterFullScreenIcon width={16} height={16} />
             )
           }
           title={

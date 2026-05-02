@@ -110,11 +110,7 @@ describe('Filesystem Engine', () => {
       testFs = createFactory({ provider: 'memory' });
     });
 
-    afterEach(() => {
-      if (testFs.removeCleanupHandlers) {
-        testFs.removeCleanupHandlers();
-      }
-    });
+    afterEach(() => {});
 
     it('should add custom provider', () => {
       const customProvider = {
@@ -174,11 +170,7 @@ describe('Filesystem Engine', () => {
       testFs = createFactory({ provider: 'memory' });
     });
 
-    afterEach(() => {
-      if (testFs.removeCleanupHandlers) {
-        testFs.removeCleanupHandlers();
-      }
-    });
+    afterEach(() => {});
 
     describe('Single File Upload', () => {
       it('should upload file with buffer', async () => {
@@ -357,11 +349,7 @@ describe('Filesystem Engine', () => {
       );
     });
 
-    afterEach(() => {
-      if (testFs.removeCleanupHandlers) {
-        testFs.removeCleanupHandlers();
-      }
-    });
+    afterEach(() => {});
 
     it('should download existing file', async () => {
       const result = await testFs.download('download-test.txt', {
@@ -421,11 +409,7 @@ describe('Filesystem Engine', () => {
       );
     });
 
-    afterEach(() => {
-      if (testFs.removeCleanupHandlers) {
-        testFs.removeCleanupHandlers();
-      }
-    });
+    afterEach(() => {});
 
     it('should copy file', async () => {
       const result = await testFs.copy(
@@ -506,11 +490,7 @@ describe('Filesystem Engine', () => {
       );
     });
 
-    afterEach(() => {
-      if (testFs.removeCleanupHandlers) {
-        testFs.removeCleanupHandlers();
-      }
-    });
+    afterEach(() => {});
 
     it('should rename file', async () => {
       const result = await testFs.rename(
@@ -579,11 +559,7 @@ describe('Filesystem Engine', () => {
       );
     });
 
-    afterEach(() => {
-      if (testFs.removeCleanupHandlers) {
-        testFs.removeCleanupHandlers();
-      }
-    });
+    afterEach(() => {});
 
     it('should remove file', async () => {
       const result = await testFs.remove('to-delete.txt', {
@@ -660,11 +636,7 @@ describe('Filesystem Engine', () => {
       );
     });
 
-    afterEach(() => {
-      if (testFs.removeCleanupHandlers) {
-        testFs.removeCleanupHandlers();
-      }
-    });
+    afterEach(() => {});
 
     it('should get file info', async () => {
       const result = await testFs.info('info-test.txt', {
@@ -959,10 +931,6 @@ describe('Filesystem Engine', () => {
       });
 
       expect(typeof middleware).toBe('function');
-
-      if (testFs.removeCleanupHandlers) {
-        testFs.removeCleanupHandlers();
-      }
     });
 
     it('should create middleware with custom options', () => {
@@ -975,10 +943,6 @@ describe('Filesystem Engine', () => {
       });
 
       expect(typeof middleware).toBe('function');
-
-      if (testFs.removeCleanupHandlers) {
-        testFs.removeCleanupHandlers();
-      }
     });
   });
 
@@ -989,11 +953,7 @@ describe('Filesystem Engine', () => {
       testFs = createFactory({ provider: 'memory' });
     });
 
-    afterEach(() => {
-      if (testFs.removeCleanupHandlers) {
-        testFs.removeCleanupHandlers();
-      }
-    });
+    afterEach(() => {});
 
     it('should handle invalid upload input', async () => {
       const result = await testFs.upload([], {
@@ -1050,9 +1010,6 @@ describe('Filesystem Engine', () => {
 
       // After cleanup, we should be able to still use the instance
       // but it's good practice to create a new one
-      if (testFs.removeCleanupHandlers) {
-        testFs.removeCleanupHandlers();
-      }
     });
   });
 });

@@ -16,6 +16,7 @@ export {
   setView,
   toggleSelection,
   clearSelection,
+  setSelection,
   setViewMode,
   setUploadModalOpen,
   addUploadItem,

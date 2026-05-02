@@ -57,29 +57,6 @@ export const uploadExtension = createAsyncThunk(
 );
 
 /**
- * Upgrade an extension
- */
-export const upgradeExtension = createAsyncThunk(
-  'admin/extensions/upgradeExtension',
-  async ({ id, data }, { extra: { fetch }, rejectWithValue }) => {
-    try {
-      const { data: responseData } = await fetch(
-        `/api/admin/extensions/${id}`,
-        {
-          method: 'PATCH',
-          body: data,
-        },
-      );
-      return responseData.extension;
-    } catch (error) {
-      return rejectWithValue(
-        (error.data && error.data.message) || error.message,
-      );
-    }
-  },
-);
-
-/**
  * Toggle extension status
  */
 export const toggleExtensionStatus = createAsyncThunk(

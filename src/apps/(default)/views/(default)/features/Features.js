@@ -5,6 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import * as RadixIcons from '@radix-ui/react-icons';
+import { Flex, Box, Text, Heading, Container } from '@radix-ui/themes';
+import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 
 import { Link } from '@shared/renderer/components/History';
@@ -13,57 +16,94 @@ import { featuresData } from '../data';
 
 import s from './Features.css';
 
+/**
+ * Premium Features listing showcasing a maximalist typography hero and a dynamic,
+ * asymmetrical grid layout to highlight architectural capabilities.
+ */
 function Features() {
   const { t } = useTranslation();
 
   return (
-    <div className={s.root}>
-      {/* Hero Section */}
-      <section className={s.hero}>
-        <div className={s.heroContent}>
-          <h1 className={s.heroTitle}>
-            {t('features.hero.title', 'Our Features')}
-          </h1>
-          <p className={s.heroSubtitle}>
-            {t(
-              'features.hero.subtitle',
-              'Discover the powerful features that make this starter kit amazing',
-            )}
-          </p>
-        </div>
-      </section>
+    <Box className={s.pageWrapper}>
+      {/* Dramatic Hero Section */}
+      <Box as='section' className={clsx(s.heroSection, s.sectionPadding)}>
+        <Container size='4'>
+          <Flex direction='column' className={s.heroContent}>
+            <Heading as='h1' className={s.heroTitle}>
+              {t('features.hero.title', 'Architecture that scales.')}
+            </Heading>
+            <Text className={s.heroSubtitle}>
+              {t(
+                'features.hero.subtitle',
+                'No generic templates. No compromises. Discover the powerful features that make this starter kit an industrial-grade foundation.',
+              )}
+            </Text>
+          </Flex>
+        </Container>
+      </Box>
 
-      {/* Features Grid */}
-      <section className={s.features}>
-        <div className={s.container}>
-          <div className={s.grid}>
-            {featuresData.map(feature => (
-              <Link
+      {/* Asymmetrical Features Grid */}
+      <Box as='section' className={clsx(s.featuresSection, s.sectionPadding)}>
+        <Container size='4'>
+          <Box className={s.gridContainer}>
+            {featuresData.map((feature, index) => (
+              <Box
                 key={feature.id}
-                to={`/features/${feature.id}`}
-                className={s.card}
+                className={clsx(s.featureCard, index === 0 && s.cardFeatured)}
               >
-                <div className={s.cardHeader}>
-                  <div className={s.icon}>{feature.icon}</div>
-                  <h3 className={s.cardTitle}>{feature.name}</h3>
-                </div>
-                <p className={s.cardDesc}>{feature.description}</p>
-                <div className={s.tags}>
-                  {feature.tags.map(tag => (
-                    <span key={tag} className={s.tag}>
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-                <span className={s.link}>
-                  {t('features.learnMore', 'Learn more →')}
-                </span>
-              </Link>
+                <Link to={`/features/${feature.id}`} className={s.featureLink}>
+                  <Box className={s.cardGlow} />
+                  <Flex direction='column' className={s.cardContent}>
+                    <Flex
+                      justify='between'
+                      align='start'
+                      className={s.cardHeader}
+                    >
+                      <Flex
+                        align='center'
+                        justify='center'
+                        className={s.featureIcon}
+                      >
+                        {(() => {
+                          const IconComp =
+                            RadixIcons[feature.icon] || RadixIcons.CubeIcon;
+                          return <IconComp width={28} height={28} />;
+                        })()}
+                      </Flex>
+                      <Text className={s.featureNumber}>{`0${index + 1}`}</Text>
+                    </Flex>
+
+                    <Box className={s.cardBody}>
+                      <Heading as='h3' className={s.cardTitle}>
+                        {feature.name}
+                      </Heading>
+                      <Text className={s.cardDescription}>
+                        {feature.description}
+                      </Text>
+                    </Box>
+
+                    <Flex
+                      className={s.cardFooter}
+                      justify='between'
+                      align='center'
+                    >
+                      <Flex wrap='wrap' gap='2'>
+                        {feature.tags.slice(0, 2).map(tag => (
+                          <Text key={tag} className={s.tagBadge}>
+                            {tag}
+                          </Text>
+                        ))}
+                      </Flex>
+                      <Box className={s.arrowIcon}>→</Box>
+                    </Flex>
+                  </Flex>
+                </Link>
+              </Box>
             ))}
-          </div>
-        </div>
-      </section>
-    </div>
+          </Box>
+        </Container>
+      </Box>
+    </Box>
   );
 }
 

@@ -1,0 +1,7 @@
+# Extension Hub — Maintainer ownership
+# All extension submissions require maintainer review
+
+extensions/ @xuanhoa88
+schema/ @xuanhoa88
+.github/ @xuanhoa88
+registry.json @xuanhoa88

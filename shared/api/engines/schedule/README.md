@@ -88,11 +88,11 @@ Bulk start or stop all registered tasks. Note: `stop()` also sets `autoStart = f
 
 ### `schedule.cleanup() → Promise<void>`
 
-Stop and remove all tasks. Awaits all active execution promises up to a maximum safety timeout (5000ms), and aborts their signals to forcefully conclude them. Called automatically on `SIGTERM` and `SIGINT`.
+Stop and remove all tasks. Awaits all active execution promises up to a maximum safety timeout (5000ms), and aborts their signals to forcefully conclude them. Called automatically during coordinated process shutdown via the centralized shutdown registry.
 
 ### `schedule.destroy() → Promise<void>`
 
-Removes built-in `process` event listeners and calls `cleanup()`. Use this for dynamically spawned instances to prevent memory leaks in the Node process handler map.
+Calls `cleanup()`. Use this for dynamically spawned instances to release resources.
 
 ### `ScheduleError`
 
@@ -137,7 +137,7 @@ extensionSchedule.register('extension:sync', '*/10 * * * *', syncHandler);
 extensionSchedule.start(); // manually start when ready
 ```
 
-Each instance registers its own `SIGTERM`/`SIGINT` cleanup handlers.
+Each instance registers cleanup with the centralized shutdown registry (`shared/api/shutdown.js`).
 
 ## See Also
 

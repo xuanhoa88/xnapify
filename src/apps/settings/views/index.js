@@ -5,9 +5,14 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { getTranslations } from '@shared/i18n/loader';
+import { addNamespace } from '@shared/i18n/utils';
+import { features } from '@shared/renderer/redux';
+
 import * as selectors from './(admin)/redux/selector';
 import * as thunks from './(admin)/redux/thunks';
-import settingsReducer, { fetchPublicSettings } from './redux/settings';
+
+const { fetchPublicSettings } = features;
 
 /** @type {Symbol} Ownership key for this module's persistent bindings */
 const OWNER_KEY = Symbol('__xnapify.module.settings.views__');
@@ -30,15 +35,15 @@ const translationsContext = require.context(
 // =============================================================================
 
 export default {
-  providers({ container, store }) {
+  providers({ container }) {
+    // Merge module-specific translations into the shared 'admin' namespace
+    addNamespace('admin', getTranslations(translationsContext));
+
     container.bind(
       'settings:admin:state',
       () => ({ selectors, thunks }),
       OWNER_KEY,
     );
-
-    // Inject the global settings slice into the redux root early
-    store.injectReducer('settings', settingsReducer);
   },
 
   async boot({ store }) {
@@ -51,5 +56,4 @@ export default {
   },
 
   routes: () => viewsContext,
-  translations: () => translationsContext,
 };

@@ -7,16 +7,14 @@
 
 import { forwardRef } from 'react';
 
-import clsx from 'clsx';
+import { Select } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
-import { useFormContext } from 'react-hook-form';
+import { useController, useFormContext } from 'react-hook-form';
 
-import { useFormField, useMergeRefs } from '../FormContext';
-
-import s from './FormSelect.css';
+import { useFormField, useMergeRefs, useComposedHandler } from '../FormContext';
 
 /**
- * FormSelect - Simple select element to be used inside Form.Field
+ * FormSelect - Select element to be used inside Form.Field baked by Radix Themes
  *
  * Usage:
  *   <Form.Field name="role" label="Role">
@@ -24,41 +22,46 @@ import s from './FormSelect.css';
  *   </Form.Field>
  */
 const FormSelect = forwardRef(function FormSelect$(
-  { options = [], placeholder, className, disabled, ...props },
+  {
+    options = [],
+    placeholder,
+    size = '2',
+    className,
+    disabled,
+    onValueChange,
+    ...props
+  },
   forwardedRef,
 ) {
-  const { id, name, error } = useFormField();
-  const { register } = useFormContext();
+  const { name, error } = useFormField();
+  const { control } = useFormContext();
 
-  // Get registration props including ref
-  const { ref: registerRef, ...registerProps } = register(name);
-
-  // Merge refs - both react-hook-form ref and forwarded ref
-  const handleRef = useMergeRefs(registerRef, forwardedRef);
+  const { field } = useController({ name, control });
+  const handleRef = useMergeRefs(field.ref, forwardedRef);
+  const handleValueChange = useComposedHandler(onValueChange, field.onChange);
 
   return (
-    <div className={s.selectWrapper}>
-      <select
-        id={id}
-        disabled={disabled}
-        className={clsx(s.select, { [s.selectError]: error }, className)}
-        {...registerProps}
+    <Select.Root
+      size={size}
+      value={field.value !== undefined ? String(field.value) : undefined}
+      onValueChange={handleValueChange}
+      disabled={disabled}
+    >
+      <Select.Trigger
+        placeholder={placeholder}
+        color={error ? 'red' : undefined}
+        className={className}
         {...props}
         ref={handleRef}
-      >
-        {placeholder && (
-          <option value='' disabled>
-            {placeholder}
-          </option>
-        )}
+      />
+      <Select.Content>
         {options.map(option => (
-          <option key={option.value} value={option.value}>
+          <Select.Item key={option.value} value={String(option.value)}>
             {option.label}
-          </option>
+          </Select.Item>
         ))}
-      </select>
-      <span className={s.selectIcon}>▼</span>
-    </div>
+      </Select.Content>
+    </Select.Root>
   );
 });
 
@@ -73,10 +76,14 @@ FormSelect.propTypes = {
   ),
   /** Placeholder text (shown as disabled first option) */
   placeholder: PropTypes.string,
+  /** Radix size */
+  size: PropTypes.string,
   /** Additional CSS class names */
   className: PropTypes.string,
   /** Disabled state */
   disabled: PropTypes.bool,
+  /** Custom onValueChange handler */
+  onValueChange: PropTypes.func,
 };
 
 export default FormSelect;

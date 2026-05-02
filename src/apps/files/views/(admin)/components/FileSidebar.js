@@ -1,12 +1,19 @@
+/**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
 import { useEffect, useCallback } from 'react';
 
+import * as RadixIcons from '@radix-ui/react-icons';
+import { Box, Flex, Text, Button } from '@radix-ui/themes';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Button from '@shared/renderer/components/Button';
 import ContextMenu from '@shared/renderer/components/ContextMenu';
-import Icon from '@shared/renderer/components/Icon';
 
 import {
   setView,
@@ -20,11 +27,15 @@ import FileUploader from './FileUploader';
 import s from './FileSidebar.css';
 
 const NAV_ITEMS = [
-  { id: 'my_drive', label: 'sidebar.my_drive', icon: 'hard-drive' },
-  { id: 'shared_with_me', label: 'sidebar.shared_with_me', icon: 'users' },
-  { id: 'recent', label: 'sidebar.recent', icon: 'clock' },
-  { id: 'starred', label: 'sidebar.starred', icon: 'star' },
-  { id: 'trash', label: 'sidebar.trash', icon: 'trash' },
+  { id: 'my_drive', label: 'sidebar.my_drive', icon: RadixIcons.FileTextIcon },
+  {
+    id: 'shared_with_me',
+    label: 'sidebar.shared_with_me',
+    icon: RadixIcons.PersonIcon,
+  },
+  { id: 'recent', label: 'sidebar.recent', icon: RadixIcons.ClockIcon },
+  { id: 'starred', label: 'sidebar.starred', icon: RadixIcons.StarIcon },
+  { id: 'trash', label: 'sidebar.trash', icon: RadixIcons.TrashIcon },
 ];
 
 const formatStorage = bytes => {
@@ -60,23 +71,29 @@ export default function FileSidebar() {
     storage.used > 0 ? Math.max(1, Math.round(rawPercentage)) : 0;
 
   return (
-    <div className={s.sidebar}>
-      <div className={s.newButtonContainer}>
-        <ContextMenu align='left'>
-          <ContextMenu.Trigger as={Button} variant='primary' fullWidth>
-            <Icon name='plus' size={24} />
-            {t('files:sidebar.new', 'New')}
+    <Box className={s.sidebarContainer}>
+      <Box className={s.topBox}>
+        <ContextMenu>
+          <ContextMenu.Trigger asChild>
+            <Button variant='solid' className={s.newBtn}>
+              <RadixIcons.PlusIcon
+                width={20}
+                height={20}
+                className={s.plusIcon}
+              />
+              {t('files:sidebar.new', 'New')}
+            </Button>
           </ContextMenu.Trigger>
           <ContextMenu.Menu>
             <ContextMenu.Item
-              icon={<Icon name='folder' size={18} />}
+              icon={<RadixIcons.FileTextIcon width={18} height={18} />}
               onClick={() => dispatch(setUploadModalOpen(true))}
             >
               {t('files:uploader.new_folder', 'New folder')}
             </ContextMenu.Item>
             <ContextMenu.Divider />
             <ContextMenu.Item
-              icon={<Icon name='upload' size={18} />}
+              icon={<RadixIcons.UploadIcon width={18} height={18} />}
               onClick={() => {
                 // Pass a signal to open file dialog natively
                 const inputElement =
@@ -91,39 +108,65 @@ export default function FileSidebar() {
           </ContextMenu.Menu>
         </ContextMenu>
         <FileUploader />
-      </div>
+      </Box>
 
-      <nav className={s.navMenu}>
+      <Flex as='nav' direction='column' gap='1' className={s.navBox}>
         {NAV_ITEMS.map(item => (
           <Button
             key={item.id}
             variant='ghost'
-            className={clsx(s.navItem, { [s.active]: currentView === item.id })}
+            className={clsx(
+              s.navBtn,
+              currentView === item.id ? s.navBtnActive : s.navBtnInactive,
+            )}
             onClick={() => handleNavClick(item.id)}
           >
-            <div className={s.navIconWrapper}>
-              <Icon name={item.icon} size={20} />
-            </div>
-            <span className={s.navLabel}>{t(`files:${item.label}`)}</span>
+            <Flex align='center' justify='center' className={s.navIconBox}>
+              {(() => {
+                const Comp =
+                  typeof item.icon === 'string'
+                    ? RadixIcons.BoxIcon
+                    : item.icon;
+                return (
+                  <Comp
+                    width={18}
+                    height={18}
+                    className={
+                      currentView === item.id
+                        ? s.navIconActive
+                        : s.navIconInactive
+                    }
+                  />
+                );
+              })()}
+            </Flex>
+            <Text as='span' size='2'>
+              {t(`files:${item.label}`)}
+            </Text>
           </Button>
         ))}
-      </nav>
+      </Flex>
 
       {/* Storage Quota */}
-      <div className={s.storageWidget}>
-        <div className={s.storageBar}>
-          <div
-            className={s.storageFill}
-            style={{ '--fill-width': `${percentage}%` }}
+      <Box className={s.quotaBox}>
+        <Box className={s.quotaTrack}>
+          <Box
+            className={clsx(
+              s.quotaFill,
+              percentage > 90 ? s.quotaFillDanger : s.quotaFillNormal,
+            )}
+            ref={el => {
+              if (el) el.style.width = `${percentage}%`;
+            }}
           />
-        </div>
-        <div className={s.storageText}>
+        </Box>
+        <Text as='div' size='1' color='gray' className={s.quotaText}>
           {t('files:sidebar.storage', {
             used: usedDisplay,
             total: totalDisplay,
           })}
-        </div>
-      </div>
-    </div>
+        </Text>
+      </Box>
+    </Box>
   );
 }

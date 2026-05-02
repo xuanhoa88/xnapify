@@ -7,14 +7,20 @@
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 
+import { Flex, Box, Grid, Button } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Button from '@shared/renderer/components/Button';
 import Form, { useFormContext } from '@shared/renderer/components/Form';
-import Icon from '@shared/renderer/components/Icon';
-import {
+import Loader from '@shared/renderer/components/Loader';
+import { features } from '@shared/renderer/redux';
+
+import { updatePreferencesFormSchema } from '../../../../users/validator/auth';
+
+import s from './PreferencesCard.css';
+
+const {
   getUserPreferences,
   updateUserPreferences,
   getUserProfile,
@@ -25,11 +31,7 @@ import {
   getPreferencesError,
   clearPreferencesError,
   showSuccessMessage,
-} from '@shared/renderer/redux';
-
-import { updatePreferencesFormSchema } from '../../../../users/validator/auth';
-
-import s from './PreferencesCard.css';
+} = features;
 
 // Default preferences values
 const DEFAULT_PREFERENCES = Object.freeze({
@@ -47,6 +49,7 @@ function PreferencesCard() {
   // Get preferences from Redux
   const user = useSelector(getUserProfile);
   const currentLocale = useSelector(getLocale);
+  const availableLocales = useSelector(getAvailableLocales);
   const loading = useSelector(isPreferencesLoading);
   const error = useSelector(getPreferencesError);
 
@@ -69,11 +72,15 @@ function PreferencesCard() {
   }, [dispatch, user]);
 
   // Derive default values from Redux preferences (memoized)
-  const defaultValues = useMemo(
-    () => ({
-      language:
-        (user && user.profile && user.profile.language) ||
-        DEFAULT_PREFERENCES.language,
+  const defaultValues = useMemo(() => {
+    const userLang = user && user.profile && user.profile.language;
+    const validLang =
+      userLang && availableLocales[userLang]
+        ? userLang
+        : DEFAULT_PREFERENCES.language;
+
+    return {
+      language: validLang,
       timezone:
         (user && user.profile && user.profile.timezone) ||
         DEFAULT_PREFERENCES.timezone,
@@ -83,9 +90,8 @@ function PreferencesCard() {
       notifications:
         (user && user.profile && user.profile.notifications) ||
         DEFAULT_PREFERENCES.notifications,
-    }),
-    [user],
-  );
+    };
+  }, [user, availableLocales]);
 
   // Handle form submit
   const handleSubmit = useCallback(
@@ -126,34 +132,14 @@ function PreferencesCard() {
   // Show loading state while fetching preferences
   if (loading && (!user || !user.profile || !user.profile.language)) {
     return (
-      <div className={s.card}>
-        <div className={s.loading}>
-          <Icon name='loader' size={24} />
-          <span>{t('common.loading', 'Loading...')}</span>
-        </div>
-      </div>
+      <Box className={s.cardContainer}>
+        <Loader message={t('common.loading', 'Loading...')} />
+      </Box>
     );
   }
 
   return (
-    <div className={s.card}>
-      <div className={s.cardHeader}>
-        <div className={s.cardIcon}>
-          <Icon name='settings' size={22} />
-        </div>
-        <div>
-          <h2 className={s.cardTitle}>
-            {t('profile.preferences', 'Preferences')}
-          </h2>
-          <p className={s.cardDescription}>
-            {t(
-              'profile.preferencesDesc',
-              'Customize your experience and notifications',
-            )}
-          </p>
-        </div>
-      </div>
-
+    <Box className={s.cardContainer}>
       <Form.Error message={error || ''} />
 
       <Form
@@ -163,7 +149,7 @@ function PreferencesCard() {
       >
         <PreferencesFormFields loading={loading} />
       </Form>
-    </div>
+    </Box>
   );
 }
 
@@ -175,27 +161,29 @@ function PreferencesFormFields({ loading }) {
   } = useFormContext();
 
   return (
-    <>
-      <Form.Field name='theme' label={t('profile.theme', 'Theme')}>
-        <Form.Select
-          options={[
-            { value: 'system', label: t('profile.themeSystem', 'System') },
-            { value: 'light', label: t('profile.themeLight', 'Light') },
-            { value: 'dark', label: t('profile.themeDark', 'Dark') },
-          ]}
-          placeholder={t('profile.themePlaceholder', 'Select a theme')}
-        />
-      </Form.Field>
+    <Flex direction='column' gap='4'>
+      <Grid columns={{ initial: '1', sm: '2' }} gap='4'>
+        <Form.Field name='theme' label={t('profile.theme', 'Theme')}>
+          <Form.Select
+            options={[
+              { value: 'system', label: t('profile.themeSystem', 'System') },
+              { value: 'light', label: t('profile.themeLight', 'Light') },
+              { value: 'dark', label: t('profile.themeDark', 'Dark') },
+            ]}
+            placeholder={t('profile.themePlaceholder', 'Select a theme')}
+          />
+        </Form.Field>
 
-      <Form.Field name='language' label={t('profile.language', 'Language')}>
-        <Form.Select
-          options={Object.entries(availableLocales).map(([code, name]) => ({
-            value: code,
-            label: name,
-          }))}
-          placeholder={t('profile.languagePlaceholder', 'Select a language')}
-        />
-      </Form.Field>
+        <Form.Field name='language' label={t('profile.language', 'Language')}>
+          <Form.Select
+            options={Object.entries(availableLocales).map(([code, name]) => ({
+              value: code,
+              label: name,
+            }))}
+            placeholder={t('profile.languagePlaceholder', 'Select a language')}
+          />
+        </Form.Field>
+      </Grid>
 
       <Form.Field name='timezone' label={t('profile.timezone', 'Timezone')}>
         <Form.Select
@@ -239,17 +227,20 @@ function PreferencesFormFields({ loading }) {
         />
       </Form.Field>
 
-      <Button
-        variant='primary'
-        type='submit'
-        className={s.button}
-        loading={loading || isSubmitting}
-      >
-        {loading
-          ? t('profile.saving', 'Saving...')
-          : t('profile.savePreferences', 'Save Preferences')}
-      </Button>
-    </>
+      <Flex justify='end' mt='4'>
+        <Button
+          variant='solid'
+          color='indigo'
+          size='3'
+          type='submit'
+          loading={loading || isSubmitting}
+        >
+          {loading
+            ? t('profile.saving', 'Saving...')
+            : t('profile.savePreferences', 'Save Preferences')}
+        </Button>
+      </Flex>
+    </Flex>
   );
 }
 

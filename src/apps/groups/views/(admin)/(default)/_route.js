@@ -6,24 +6,13 @@
  */
 
 import { requirePermission } from '@shared/renderer/components/Rbac';
-import {
-  addBreadcrumb,
-  registerMenu,
-  unregisterMenu,
-} from '@shared/renderer/redux';
-
-import reducer, { SLICE_NAME } from '../redux';
+import { features } from '@shared/renderer/redux';
 
 import Groups from './Groups';
 
-export const middleware = requirePermission('groups:read');
+const { addBreadcrumb, registerMenu, unregisterMenu } = features;
 
-/**
- * Route boot — inject Redux reducer into the store.
- */
-export function init({ store }) {
-  store.injectReducer(SLICE_NAME, reducer);
-}
+export const middleware = requirePermission('groups:read');
 
 /**
  * Register menu item for this route
@@ -35,12 +24,12 @@ export function setup({ store, i18n }) {
       id: 'identity-access',
       label: i18n.t('admin:navigation.identityAccess', 'Identity & Access'),
       order: 10,
-      icon: 'shield',
+      icon: 'LockClosedIcon',
       items: [
         {
           path: '/admin/groups',
           label: i18n.t('admin:navigation.groups', 'Groups'),
-          icon: 'folder',
+          icon: 'GroupIcon',
           permission: 'groups:read',
           order: 20,
         },

@@ -1,3 +1,11 @@
+/**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+import * as collector from './collector';
 import { getUserRbacData } from './fetcher';
 
 // Mock dependencies
@@ -15,6 +23,14 @@ jest.mock('./collector', () => ({
 }));
 
 describe('RBAC Fetcher', () => {
+  beforeEach(() => {
+    // Restore mock implementation after resetMocks clears it
+    collector.collectUserRbacData.mockImplementation(user => ({
+      roles: user.roles ? user.roles.map(r => r.name) : [],
+      groups: user.groups ? user.groups.map(g => g.name) : [],
+      permissions: [],
+    }));
+  });
   let req;
   let modelsMock;
   let cacheMock;

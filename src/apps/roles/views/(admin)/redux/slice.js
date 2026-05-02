@@ -13,6 +13,7 @@ import {
   createRole,
   updateRole,
   deleteRole,
+  bulkDeleteRoles,
   fetchRolePermissions,
 } from './thunks';
 
@@ -48,6 +49,7 @@ const createFreshOperations = () => ({
   create: createOperationState(),
   update: createOperationState(),
   delete: createOperationState(),
+  bulkDelete: createOperationState(),
   fetchPermissions: createOperationState(),
 });
 
@@ -167,6 +169,11 @@ const rolesSlice = createSlice({
       normalized.operations.delete.error = null;
       Object.assign(state, normalized);
     },
+    clearRoleBulkDeleteError: state => {
+      const normalized = normalizeState(state);
+      normalized.operations.bulkDelete.error = null;
+      Object.assign(state, normalized);
+    },
     resetRolesState: () => initialState,
   },
   extraReducers: builder => {
@@ -264,6 +271,21 @@ const rolesSlice = createSlice({
       .addCase(deleteRole.rejected, createRejectedHandler('delete'));
 
     // =========================================================================
+    // BULK DELETE ROLES (bulkDelete operation)
+    // =========================================================================
+    builder
+      .addCase(bulkDeleteRoles.pending, createPendingHandler('bulkDelete'))
+      .addCase(bulkDeleteRoles.fulfilled, (state, action) => {
+        const normalized = normalizeState(state);
+        normalized.data.roles = normalized.data.roles.filter(
+          role => !action.payload.includes(role.id),
+        );
+        normalized.operations.bulkDelete = createOperationState();
+        Object.assign(state, normalized);
+      })
+      .addCase(bulkDeleteRoles.rejected, createRejectedHandler('bulkDelete'));
+
+    // =========================================================================
     // FETCH ROLE PERMISSIONS (fetchPermissions operation)
     // =========================================================================
     builder
@@ -288,6 +310,7 @@ export const {
   clearRoleCreateError,
   clearRoleUpdateError,
   clearRoleDeleteError,
+  clearRoleBulkDeleteError,
   resetRolesState,
 } = rolesSlice.actions;
 

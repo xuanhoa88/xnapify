@@ -156,9 +156,9 @@ describe('ServerExtensionManager', () => {
         {},
       );
 
-      // Returns a minimal { setup() {} } so the lifecycle continues
+      // Returns a minimal { boot() {} } so the lifecycle continues
       expect(result).toBeDefined();
-      expect(typeof result.setup).toBe('function');
+      expect(typeof result.boot).toBe('function');
     });
 
     it('returns fallback object for API-only extensions', async () => {
@@ -174,7 +174,7 @@ describe('ServerExtensionManager', () => {
       );
 
       expect(result).toBeDefined();
-      expect(typeof result.setup).toBe('function');
+      expect(typeof result.boot).toBe('function');
     });
 
     it('returns view module when available', async () => {

@@ -15,11 +15,11 @@ import { createNativeRequire } from '@shared/utils/createNativeRequire';
 
 import {
   BaseExtensionManager,
-  ExtensionState,
   EXTENSION_METADATA,
   BUFFERED_ROUTES,
   STORED_ADAPTERS,
   CONNECTED_ROUTERS,
+  SEQUENTIAL_SYNC,
 } from '../utils/BaseExtensionManager';
 import { normalizeRouteAdapter } from '../utils/routeAdapter';
 
@@ -53,6 +53,9 @@ class ServerExtensionManager extends BaseExtensionManager {
 
   constructor() {
     super(registry);
+
+    // Override sync() behavior in base class to prevent SQLite WAL locking issues
+    this[SEQUENTIAL_SYNC] = true;
     this[EXTENSION_API_ENTRY_POINTS] = new Map();
     this[EXTENSION_CSS_ENTRY_POINTS] = new Map();
     this[EXTENSION_SCRIPT_ENTRY_POINTS] = new Map();
@@ -62,12 +65,6 @@ class ServerExtensionManager extends BaseExtensionManager {
 
     // eslint-disable-next-line no-underscore-dangle
     this.on('extension:unloaded', ({ id }) => this._onExtensionUnloaded(id));
-
-    // Discover dev extensions after full refresh (extensionIds: null)
-    this.on('extensions:refreshed', ({ extensionIds }) => {
-      // eslint-disable-next-line no-underscore-dangle
-      if (extensionIds === null) this._discoverDevExtensions();
-    });
 
     // eslint-disable-next-line no-underscore-dangle
     this.on('manager:destroyed', () => this._onDestroy());
@@ -309,7 +306,7 @@ class ServerExtensionManager extends BaseExtensionManager {
       const viewModule = await this._loadViewModule(id, manifest);
 
       if (viewModule && __DEV__) {
-        const version = (manifest && manifest.version) || '0.0.0';
+        const version = (manifest && manifest.version) || '1.0.0';
         console.log(
           `[ServerExtensionManager] Loaded view for ${this._formatDisplayName(id)} v${version}`,
         );
@@ -318,7 +315,7 @@ class ServerExtensionManager extends BaseExtensionManager {
       // Always return a non-null object so the base class emits
       // 'extension:loaded' and triggers _onExtensionLoaded → activateExtension.
       // Without this, API-only or view-failed extensions would never activate.
-      return viewModule || { setup() {} };
+      return viewModule || { boot() {} };
     } catch (error) {
       console.error(
         `[ServerExtensionManager] Failed to load view module for ${this._formatDisplayName(id)}:`,
@@ -333,7 +330,7 @@ class ServerExtensionManager extends BaseExtensionManager {
 
     // Even on error, return a minimal object so the extension lifecycle
     // continues and API routes can still be registered.
-    return { setup() {} };
+    return { boot() {} };
   }
 
   // ---------------------------------------------------------------------------
@@ -363,7 +360,7 @@ class ServerExtensionManager extends BaseExtensionManager {
 
     if (__DEV__) {
       console.log(
-        `[ServerExtensionManager] Running install for ${this._formatDisplayName(id)} (v${manifest.version || '0.0.0'})`,
+        `[ServerExtensionManager] Running install for ${this._formatDisplayName(id)} (v${manifest.version || '1.0.0'})`,
       );
     }
 
@@ -429,7 +426,7 @@ class ServerExtensionManager extends BaseExtensionManager {
     if (typeof apiModule.uninstall === 'function') {
       if (__DEV__) {
         console.log(
-          `[ServerExtensionManager] Running uninstall for ${this._formatDisplayName(id)} (v${manifest.version || '0.0.0'})`,
+          `[ServerExtensionManager] Running uninstall for ${this._formatDisplayName(id)} (v${manifest.version || '1.0.0'})`,
         );
       }
 
@@ -517,7 +514,7 @@ class ServerExtensionManager extends BaseExtensionManager {
           const models = this.apiContainer.resolve('models');
           if (models && typeof models.discover === 'function') {
             await models.discover(modelCtx, id);
-            models.associate();
+            await models.associate();
           }
         }
       }
@@ -673,64 +670,6 @@ class ServerExtensionManager extends BaseExtensionManager {
   }
 
   // ---------------------------------------------------------------------------
-  // 7. Sync (serialized — prevents SQLITE_BUSY)
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Override base sync() to serialize extension loading.
-   * SQLite only supports a single writer — loading extensions in parallel
-   * (via Promise.allSettled in the base class) causes SQLITE_BUSY when
-   * multiple extensions run migrations/seeds concurrently.
-   *
-   * The client-side base class keeps parallel loading (no SQLite concern).
-   */
-  async sync() {
-    try {
-      const { data: response } = await this.fetch('/api/extensions');
-      const extensions =
-        response && Array.isArray(response.extensions)
-          ? response.extensions
-          : [];
-
-      let loaded = 0;
-      let failed = 0;
-
-      // Sequential loading prevents concurrent SQLite writes
-      for (const item of extensions) {
-        const id = typeof item === 'object' ? item.id : item;
-        const manifest = typeof item === 'object' ? item : null;
-        try {
-          // eslint-disable-next-line no-await-in-loop
-          await this.loadExtension(id, manifest);
-
-          // loadExtension catches errors internally and returns undefined
-          // (does not re-throw), so check metadata state for accurate count
-          const meta = this[EXTENSION_METADATA].get(id);
-          if (meta && meta.state === ExtensionState.FAILED) {
-            failed++;
-          } else {
-            loaded++;
-          }
-        } catch (err) {
-          failed++;
-          console.warn(
-            `[ServerExtensionManager] Failed to load extension "${this._formatDisplayName(id)}":`,
-            err.message,
-          );
-        }
-      }
-
-      await this.emit('extensions:initialized', {
-        total: extensions.length,
-        loaded,
-        failed,
-      });
-    } catch (error) {
-      console.error('[ExtensionManager] Failed to fetch extensions:', error);
-      await this.emit('extensions:init-failed', { error });
-    }
-  }
-
   // ---------------------------------------------------------------------------
   // 8. Refresh
   // ---------------------------------------------------------------------------
@@ -805,91 +744,6 @@ class ServerExtensionManager extends BaseExtensionManager {
     }
   }
 
-  /**
-   * Scan the dev extensions directory for extensions not yet in the DB.
-   * Uses async I/O throughout. Called after full refresh to enable
-   * "plug & play" development without DB registration.
-   *
-   * @private
-   */
-  async _discoverDevExtensions() {
-    try {
-      const devBaseDir = this.getDevExtensionsDir(this[SERVER_CWD]);
-      if (!devBaseDir || !(await fileExists(devBaseDir))) return;
-
-      const entries = await fs.promises.readdir(devBaseDir, {
-        withFileTypes: true,
-      });
-
-      const loadedNames = new Set(
-        Array.from(this[EXTENSION_METADATA].values())
-          .map(m => m.manifest && m.manifest.name)
-          .filter(Boolean),
-      );
-
-      const extDirs = [];
-      for (const entry of entries) {
-        if (!entry.isDirectory()) continue;
-        if (entry.name.startsWith('@')) {
-          const scopeDir = path.join(devBaseDir, entry.name);
-          try {
-            const scopeEntries = await fs.promises.readdir(scopeDir, {
-              withFileTypes: true,
-            });
-            for (const subEntry of scopeEntries) {
-              if (subEntry.isDirectory()) {
-                extDirs.push(path.join(scopeDir, subEntry.name));
-              }
-            }
-          } catch {
-            // skip
-          }
-        } else {
-          extDirs.push(path.join(devBaseDir, entry.name));
-        }
-      }
-
-      const devExtensions = (
-        await Promise.all(
-          extDirs.map(async extDir => {
-            const manifest = await this.readManifest(extDir);
-            if (!manifest || !manifest.id) return null;
-            if (loadedNames.has(manifest.name)) return null;
-
-            return { ...manifest, fromDisk: true };
-          }),
-        )
-      ).filter(Boolean);
-
-      if (devExtensions.length > 0) {
-        if (__DEV__) {
-          console.log(
-            `[ServerExtensionManager] Discovered dev extensions: ${devExtensions.map(m => this._formatDisplayName(m.id)).join(', ')}`,
-          );
-        }
-        // Sequential loading — prevents concurrent SQLite writes
-        for (const manifest of devExtensions) {
-          try {
-            // eslint-disable-next-line no-await-in-loop
-            await this.loadExtension(manifest.id, manifest);
-          } catch (err) {
-            console.warn(
-              `[ServerExtensionManager] Failed to load dev extension "${this._formatDisplayName(manifest.id)}":`,
-              err.message,
-            );
-          }
-        }
-      }
-    } catch (err) {
-      if (__DEV__) {
-        console.warn(
-          '[ServerExtensionManager] Dev extension scan failed:',
-          err.message,
-        );
-      }
-    }
-  }
-
   // ---------------------------------------------------------------------------
   // 8. Filesystem & Paths
   // ---------------------------------------------------------------------------
@@ -958,7 +812,7 @@ class ServerExtensionManager extends BaseExtensionManager {
     if (!extensionKey) return { dir: null, isDevExtension: false };
 
     try {
-      // 1. Check dev/local dir
+      // 1. Check dev/local dir (SERVER_CWD/extensions/)
       if (this[SERVER_CWD]) {
         const devBaseDir = this.getDevExtensionsDir(this[SERVER_CWD]);
         if (devBaseDir) {
@@ -972,13 +826,27 @@ class ServerExtensionManager extends BaseExtensionManager {
         }
       }
 
-      // 2. Check installed dir
+      // 2. Check installed dir (~/.xnapify/extensions/)
       const baseDir = this.getInstalledExtensionsDir();
       if (baseDir) {
         const installedDir = path.join(baseDir, extensionKey);
         if (await fileExists(installedDir)) {
           return { dir: installedDir, isDevExtension: false };
         }
+      }
+
+      // 3. Fallback: check build/extensions/ relative to project root.
+      //    In development the server bundle may live in .cache/dev/ (via
+      //    BUILD_DIR override) while extensions are built to build/extensions/.
+      //    This fallback bridges the gap without requiring a full rebuild.
+      const fallbackDir = path.resolve(
+        process.cwd(),
+        'build',
+        'extensions',
+        extensionKey,
+      );
+      if (await fileExists(fallbackDir)) {
+        return { dir: fallbackDir, isDevExtension: true };
       }
     } catch (err) {
       console.error(
@@ -1058,166 +926,6 @@ class ServerExtensionManager extends BaseExtensionManager {
       return manifest;
     } catch {
       return null;
-    }
-  }
-
-  /**
-   * Install an extension from an in-memory package buffer (tarball/zip).
-   *
-   * Filesystem-only operation:
-   *  1. Write buffer to a temp file
-   *  2. Extract into a temp directory
-   *  3. Locate and validate package.json
-   *  4. Move to the installed extensions directory
-   *  5. Load the extension into the manager
-   *
-   * Does NOT interact with the database — the caller (e.g. marketplace
-   * engine) is responsible for creating/updating DB records.
-   *
-   * @param {Buffer} packageBuffer - Raw package contents
-   * @returns {Promise<{ name: string, version: string, manifest: Object, dir: string }>}
-   */
-  async installFromBuffer(packageBuffer) {
-    if (!Buffer.isBuffer(packageBuffer) || packageBuffer.length === 0) {
-      const error = new Error('installFromBuffer requires a non-empty Buffer');
-      error.code = 'INVALID_BUFFER';
-      throw error;
-    }
-
-    const tempDir = path.join(
-      os.tmpdir(),
-      'xnapify-ext-install-' + Date.now().toString(36),
-    );
-    const tempFile = tempDir + '.pkg';
-
-    try {
-      // 1. Write buffer to temp file
-      await fs.promises.writeFile(tempFile, packageBuffer);
-
-      // 2. Extract
-      await fs.promises.mkdir(tempDir, { recursive: true });
-
-      // Try tar.gz first, fall back to treating as zip via child_process
-      const { exec } = await import('child_process');
-      const { promisify } = await import('util');
-      const execAsync = promisify(exec);
-
-      try {
-        await execAsync(`tar -xzf "${tempFile}" -C "${tempDir}"`);
-      } catch {
-        // Fall back to unzip
-        await execAsync(`unzip -o "${tempFile}" -d "${tempDir}"`);
-      }
-
-      // 3. Locate package.json (may be at root or one level deep)
-      let extensionRoot = tempDir;
-      let manifest = await this.readManifest(extensionRoot);
-
-      if (!manifest) {
-        // Deeply search for package.json through single subdirectories (handles scoped formats as well as package/)
-        let currentDir = tempDir;
-        let depth = 0;
-        while (currentDir && depth < 5) {
-          depth++;
-          const entries = await fs.promises.readdir(currentDir, {
-            withFileTypes: true,
-          });
-          const subdirs = entries.filter(d => d.isDirectory());
-          if (subdirs.length === 1) {
-            currentDir = path.join(currentDir, subdirs[0].name);
-            manifest = await this.readManifest(currentDir);
-            if (manifest) {
-              extensionRoot = currentDir;
-              break;
-            }
-          } else {
-            break;
-          }
-        }
-      }
-
-      if (!manifest || !manifest.name) {
-        const error = new Error(
-          'Invalid extension package: package.json not found or missing "name"',
-        );
-        error.code = 'INVALID_PACKAGE';
-        throw error;
-      }
-
-      const extensionName = manifest.name;
-      const extensionVersion = manifest.version || '0.0.0';
-
-      // 4. Security: prevent path traversal
-      // Allow scoped names (exactly one '/' after '@'), block everything else
-      const isScopedName =
-        extensionName.startsWith('@') &&
-        extensionName.indexOf('/') === extensionName.lastIndexOf('/') &&
-        extensionName.indexOf('/') > 1;
-
-      if (
-        extensionName.includes('..') ||
-        extensionName.includes('\\') ||
-        (!isScopedName && extensionName.includes('/'))
-      ) {
-        const error = new Error(
-          `Extension name "${extensionName}" contains invalid path characters`,
-        );
-        error.code = 'INVALID_EXTENSION_NAME';
-        throw error;
-      }
-
-      // 5. Move to installed extensions directory
-      const extensionsDir = this.getInstalledExtensionsDir();
-      if (!extensionsDir) {
-        const error = new Error(
-          'Installed extensions directory not configured',
-        );
-        error.code = 'NO_EXTENSIONS_DIR';
-        throw error;
-      }
-
-      await fs.promises.mkdir(extensionsDir, { recursive: true });
-      const finalDir = path.join(extensionsDir, extensionName);
-
-      // Remove existing version if present
-      if (await fileExists(finalDir)) {
-        await fs.promises.rm(finalDir, { recursive: true, force: true });
-      }
-
-      await fs.promises.rename(extensionRoot, finalDir);
-
-      // 6. Load the extension
-      await this.loadExtension(extensionName, manifest);
-
-      if (__DEV__) {
-        console.log(
-          `[ServerExtensionManager] Installed from buffer: ${extensionName}@${extensionVersion}`,
-        );
-      }
-
-      return {
-        name: extensionName,
-        version: extensionVersion,
-        manifest,
-        dir: finalDir,
-      };
-    } finally {
-      // Cleanup temp files
-      try {
-        if (await fileExists(tempFile)) {
-          await fs.promises.unlink(tempFile);
-        }
-        if (await fileExists(tempDir)) {
-          await fs.promises.rm(tempDir, { recursive: true, force: true });
-        }
-      } catch (cleanupErr) {
-        if (__DEV__) {
-          console.warn(
-            '[ServerExtensionManager] installFromBuffer cleanup failed:',
-            cleanupErr.message,
-          );
-        }
-      }
     }
   }
 

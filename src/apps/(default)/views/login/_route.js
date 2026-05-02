@@ -5,9 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { isAuthenticated } from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
 
 import Login from './Login';
+
+const { isAuthenticated } = features;
 
 /**
  * Page metadata
@@ -33,7 +35,7 @@ export async function middleware(context, next) {
 /**
  * Route config
  */
-export const layout = false;
+export const layout = 'unauth';
 
 /**
  * Default export - Page component

@@ -13,8 +13,10 @@ import {
   useState,
 } from 'react';
 
+import { Button } from '@radix-ui/themes';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 import s from './MentionList.css';
 
@@ -26,6 +28,7 @@ import s from './MentionList.css';
  * keyboard events for arrow-key navigation and Enter selection.
  */
 const MentionList = forwardRef(function MentionList$({ items, command }, ref) {
+  const { t } = useTranslation();
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   // Reset selection whenever the items list changes (new query).
@@ -82,7 +85,9 @@ const MentionList = forwardRef(function MentionList$({ items, command }, ref) {
   if (!items.length) {
     return (
       <div className={s.mentionList}>
-        <div className={s.mentionEmpty}>No results</div>
+        <div className={s.mentionEmpty}>
+          {t('shared:form.wysiwyg.noMentionResults', 'No results')}
+        </div>
       </div>
     );
   }
@@ -90,18 +95,19 @@ const MentionList = forwardRef(function MentionList$({ items, command }, ref) {
   return (
     <div className={s.mentionList} role='listbox'>
       {items.map((item, index) => (
-        <button
+        <Button
           key={item}
           role='option'
+          variant={index === selectedIndex ? 'soft' : 'ghost'}
+          color='gray'
           aria-selected={index === selectedIndex}
-          className={clsx(s.mentionItem, {
+          onClick={() => selectItem(index)}
+          className={clsx(s.mentionItem, s.alignStart, {
             [s.isSelected]: index === selectedIndex,
           })}
-          onClick={() => selectItem(index)}
-          type='button'
         >
           @{item}
-        </button>
+        </Button>
       ))}
     </div>
   );

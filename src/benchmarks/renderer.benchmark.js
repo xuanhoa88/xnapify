@@ -1,3 +1,10 @@
+/**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
 // Benchmarks for renderer-related utilities such as store configuration and
 // simple server-side rendering. These help ensure the bootstrap cost of the
 // client/server entrypoints stays reasonable.
@@ -9,7 +16,7 @@ const React = require('react');
 const ReactDOMServer = require('react-dom/server');
 
 const App = require('@shared/renderer/App').default;
-const configureStore = require('@shared/renderer/redux/configureStore').default;
+const { configureStore } = require('@shared/renderer/redux');
 
 // simple dummy context that mimics what the real application provides
 function createDummyContext() {

@@ -1,0 +1,204 @@
+# xnapify (https://github.com/xuanhoa88/xnapify/)
+#
+# This source code is licensed under the MIT license found in the
+# LICENSE.txt file in the root directory of this source tree.
+
+name: Validate Extension PR
+
+on:
+  pull_request:
+    paths:
+      - 'extensions/**'
+
+jobs:
+  validate:
+    name: Validate Extension Metadata
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install ajv-cli for schema validation
+        run: npm install -g ajv-cli ajv-formats
+
+      - name: Find changed extension files
+        id: changed
+        run: |
+          ADDED_OR_MODIFIED=$(git diff --name-only --diff-filter=ACMR origin/${{ github.base_ref }}...HEAD -- 'extensions/**/*.json' | tr '\n' ' ')
+          DELETED=$(git diff --name-only --diff-filter=D origin/${{ github.base_ref }}...HEAD -- 'extensions/**/*.json' | tr '\n' ' ')
+
+          echo "files=$ADDED_OR_MODIFIED" >> $GITHUB_OUTPUT
+          echo "deleted=$DELETED" >> $GITHUB_OUTPUT
+
+          if [ -z "$ADDED_OR_MODIFIED" ] && [ -z "$DELETED" ]; then
+            echo "No extension files changed."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "Changed files: $ADDED_OR_MODIFIED"
+            echo "Deleted files: $DELETED"
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Report deleted extensions
+        if: steps.changed.outputs.skip == 'false' && steps.changed.outputs.deleted != ''
+        run: |
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🗑️  Extension Deletions Detected"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "The following extension files are being removed:"
+          for file in ${{ steps.changed.outputs.deleted }}; do
+            echo "  ❌ $file"
+          done
+          echo ""
+          echo "⚠️  Maintainer review required for extension deletions."
+          echo "   Existing xnapify instances with this extension installed"
+          echo "   will no longer see it in the Hub marketplace."
+          echo ""
+
+      - name: Validate changed files
+        if: steps.changed.outputs.skip == 'false' && steps.changed.outputs.files != ''
+        run: |
+          EXIT_CODE=0
+
+          for file in ${{ steps.changed.outputs.files }}; do
+            # Skip example/template files
+            BASENAME=$(basename "$file")
+            if [[ "$BASENAME" == _* ]]; then
+              echo ""
+              echo "⏭️  Skipping template file: $file"
+              continue
+            fi
+
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "📋 Validating: $file"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+            # 1. Valid JSON
+            if ! node -e "JSON.parse(require('fs').readFileSync('$file','utf8'))"; then
+              echo "❌ Invalid JSON syntax"
+              EXIT_CODE=1
+              continue
+            fi
+            echo "✅ Valid JSON"
+
+            # 2. Schema validation
+            if ! ajv validate -s schema/extension.schema.json -d "$file" --all-errors -c ajv-formats 2>&1; then
+              echo "❌ Schema validation failed"
+              EXIT_CODE=1
+              continue
+            fi
+            echo "✅ Schema valid"
+
+            # 3. Reject dummy checksums
+            CHECKSUM_CHECK=$(node -e "
+              const ext = JSON.parse(require('fs').readFileSync('$file','utf8'));
+              if (/^0+$/.test(ext.checksum)) {
+                console.log('DUMMY');
+                process.exit(1);
+              }
+              console.log('OK');
+            " 2>&1) || true
+
+            if echo "$CHECKSUM_CHECK" | grep -q "^OK$"; then
+              echo "✅ Checksum is not a placeholder"
+            else
+              echo "❌ Checksum is all zeros — please compute a real SHA-256 hash"
+              EXIT_CODE=1
+            fi
+
+            # 4. Download URL is reachable
+            RESULT=$(node -e "
+              const ext = JSON.parse(require('fs').readFileSync('$file','utf8'));
+              fetch(ext.downloadUrl, { method: 'HEAD', redirect: 'follow' })
+                .then(r => {
+                  if (!r.ok) {
+                    console.log('FAIL:' + r.status);
+                    process.exit(1);
+                  }
+                  console.log('OK');
+                })
+                .catch(e => {
+                  console.log('FAIL:' + e.message);
+                  process.exit(1);
+                });
+            " 2>&1) || true
+
+            if echo "$RESULT" | grep -q "^OK$"; then
+              echo "✅ Download URL reachable"
+            else
+              echo "⚠️  Download URL check: $RESULT (non-blocking warning)"
+            fi
+
+            # 5. No duplicate names or keys across the registry
+            DUPLICATE_CHECK=$(node -e "
+              const fs = require('fs');
+              const path = require('path');
+              const ext = JSON.parse(fs.readFileSync('$file','utf8'));
+
+              function collectFiles(dir) {
+                const results = [];
+                if (!fs.existsSync(dir)) return results;
+                for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+                  const full = path.join(dir, entry.name);
+                  if (entry.isDirectory()) results.push(...collectFiles(full));
+                  else if (entry.name.endsWith('.json') && !entry.name.startsWith('_')) results.push(full);
+                }
+                return results;
+              }
+
+              const allFiles = collectFiles('extensions');
+              const currentFile = path.resolve('$file');
+
+              for (const f of allFiles) {
+                if (path.resolve(f) === currentFile) continue;
+                try {
+                  const other = JSON.parse(fs.readFileSync(f,'utf8'));
+                  if (other.name === ext.name) {
+                    console.log('DUPLICATE_NAME:' + f);
+                    process.exit(1);
+                  }
+                  if (other.key === ext.key) {
+                    console.log('DUPLICATE_KEY:' + f);
+                    process.exit(1);
+                  }
+                } catch {}
+              }
+              console.log('OK');
+            " 2>&1)
+
+            if echo "$DUPLICATE_CHECK" | grep -q "^OK$"; then
+              echo "✅ No duplicate names or keys"
+            else
+              echo "❌ Duplicate detected: $DUPLICATE_CHECK"
+              EXIT_CODE=1
+            fi
+
+            echo ""
+          done
+
+          exit $EXIT_CODE
+
+      - name: Summary
+        if: always() && steps.changed.outputs.skip == 'false'
+        run: |
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Validation complete"
+          if [ -n "${{ steps.changed.outputs.files }}" ]; then
+            echo "  Added/Modified: ${{ steps.changed.outputs.files }}"
+          fi
+          if [ -n "${{ steps.changed.outputs.deleted }}" ]; then
+            echo "  Deleted: ${{ steps.changed.outputs.deleted }}"
+          fi
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

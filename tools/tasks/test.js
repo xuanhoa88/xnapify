@@ -37,7 +37,7 @@ async function main() {
     const jestArgs = [
       // Config file
       '--config',
-      require.resolve('../jest'),
+      require.resolve('../jest/config'),
 
       // Disable cache
       '--no-cache',

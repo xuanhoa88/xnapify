@@ -23,6 +23,7 @@ import ReactDOM from 'react-dom/server';
 import Youch from 'youch';
 
 import { Container } from '@shared/container';
+import { setTokenCookie, setRefreshTokenCookie } from '@shared/cookies';
 import extensionManager from '@shared/extension/server';
 import { createFetch } from '@shared/fetch';
 import i18n, {
@@ -33,12 +34,8 @@ import i18n, {
 } from '@shared/i18n';
 import { configureJwt } from '@shared/jwt';
 import { NodeRedManager } from '@shared/node-red';
-import {
-  configureStore,
-  setRuntimeVariable,
-  setLocale,
-  me,
-} from '@shared/renderer/redux';
+import { configureStore, features } from '@shared/renderer/redux';
+const { setRuntimeVariable, setLocale, me } = features;
 import { createWebSocketServer } from '@shared/ws/server';
 
 // ---------------------------------------------------------------------------
@@ -197,8 +194,9 @@ async function extractPageMetadata(page, req) {
   return metadata;
 }
 
-function validateCookieHeader(cookieHeader) {
-  if (!cookieHeader) return '';
+function validateCookieHeader(req, res) {
+  let cookieHeader = req.headers.cookie || '';
+  if (!cookieHeader) return { authHeader: '', authCookie: '' };
 
   // Reject oversized cookies to prevent hash DoS attacks
   if (cookieHeader.length > SERVER_CONFIG.maxCookieSize) {
@@ -217,7 +215,51 @@ function validateCookieHeader(cookieHeader) {
     throw err;
   }
 
-  return cookieHeader;
+  let authHeader = cookieHeader;
+  let authCookie = (req.cookies && req.cookies['id_token']) || '';
+
+  if (authCookie) {
+    const jwt = req.app.get('container').resolve('jwt');
+    if (jwt && jwt.isTokenExpired(authCookie)) {
+      const refreshCookie = (req.cookies && req.cookies['refresh_token']) || '';
+      if (refreshCookie) {
+        try {
+          const newTokens = jwt.refreshTokenPair(refreshCookie);
+
+          // Set refreshed cookies on the browser response
+          setTokenCookie(res, newTokens.accessToken);
+          setRefreshTokenCookie(res, newTokens.refreshToken);
+
+          // Update values used downstream (cache key + self-fetch header)
+          authCookie = newTokens.accessToken;
+          authHeader = authHeader
+            .replace(/\bid_token=[^;]*/, `id_token=${newTokens.accessToken}`)
+            .replace(
+              /\brefresh_token=[^;]*/,
+              `refresh_token=${newTokens.refreshToken}`,
+            );
+
+          if (__DEV__) {
+            console.info('🔄 SSR: Access token refreshed for', req.path);
+          }
+        } catch {
+          // Refresh token is also invalid — proceed as guest
+          authCookie = '';
+          if (__DEV__) {
+            console.info(
+              '⚠️ SSR: Token refresh failed, proceeding as guest for',
+              req.path,
+            );
+          }
+        }
+      } else {
+        // No refresh token — proceed as guest
+        authCookie = '';
+      }
+    }
+  }
+
+  return { authHeader, authCookie };
 }
 
 let requestCounter = 0;
@@ -302,10 +344,11 @@ const appState = {
   nodeRed: new NodeRedManager(),
 };
 
-function invalidateCaches() {
+export function invalidateCaches() {
   appState.localeCache.clear();
   appState.ssrCache.clear();
   appState.ssrResourcesPromise = null;
+  appState.ssrRetryCount = 0;
   if (__DEV__) console.log('🗑️  Caches cleared');
 }
 
@@ -389,6 +432,7 @@ async function createReduxStore({ fetch, history, locale }, options = {}) {
       initialNow: Date.now(),
       appName: APP_METADATA.title,
       appDescription: APP_METADATA.description,
+      appUrl: APP_METADATA.url,
     }),
   );
 
@@ -490,9 +534,12 @@ async function renderToHtml({ context, component, metadata = {}, nonce }) {
     children,
     styleLinks: [...styleLinks, ...safeExtUrls('cssUrls')],
     scriptLinks: [...scriptLinks, ...safeExtUrls('scriptUrls')],
+    locale: context.locale,
     appState: {
       redux: context.store.getState(),
-      appUrl: APP_METADATA.url,
+      extensions: extensionManager
+        .getAllExtensionMetadata()
+        .map(m => m.manifest),
     },
     nonce,
   };
@@ -528,9 +575,6 @@ function makeSsrMiddleware(baseUrl) {
     let context = null;
 
     try {
-      // Validate auth cookie
-      const authHeader = validateCookieHeader(req.headers.cookie || '');
-
       // Normalize bare language codes (e.g. 'en' → 'en-US')
       // express-request-language may return a prefix that doesn't exactly
       // match an available locale key.
@@ -539,10 +583,12 @@ function makeSsrMiddleware(baseUrl) {
       const locale = availableKeys.includes(rawLocale)
         ? rawLocale
         : availableKeys.find(k => k.startsWith(rawLocale)) || DEFAULT_LOCALE;
+      const { authHeader, authCookie } = validateCookieHeader(req, res);
 
-      // Extract auth-specific cookie for cache key and auth detection
-      const authCookie = (req.cookies && req.cookies['id_token']) || '';
+      // Compute cache key
       const cacheKey = computeSsrKey(req, baseUrl, locale, authCookie);
+
+      // Check cache
       const cached = fetchSsrCache(cacheKey);
       if (cached) {
         if (__DEV__) {
@@ -724,27 +770,37 @@ function makeSsrMiddleware(baseUrl) {
 // Error Handling & Auth
 // ---------------------------------------------------------------------------
 
+/**
+ * Derive an HTTP status code and user-facing message from an error without
+ * mutating the original object.
+ */
+function normalizeError(err) {
+  const isMaintenance = err.code === 'E_MAINTENANCE';
+
+  if (err.name === 'JsonWebTokenError') {
+    return { status: 401, message: 'Invalid token', isMaintenance };
+  }
+  if (err.name === 'TokenExpiredError') {
+    return { status: 401, message: 'Token expired', isMaintenance };
+  }
+
+  return {
+    status: err.status || 500,
+    message: isMaintenance
+      ? 'Maintenance mode is enabled. Please try again later.'
+      : err.message || 'Service is unavailable. Please try again later.',
+    isMaintenance,
+  };
+}
+
 function makeErrorMiddleware() {
   return async (err, req, res, next) => {
     if (res.headersSent) return next(err);
 
-    const isMaintenance = err.code === 'E_MAINTENANCE';
-
-    if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
-      err.status = 401;
-      err.message =
-        err.name === 'JsonWebTokenError' ? 'Invalid token' : 'Token expired';
-    } else {
-      err.status = err.status || 500;
-      err.message = isMaintenance
-        ? 'Maintenance mode is enabled. Please try again later.'
-        : err.message || 'Service is unavailable. Please try again later.';
-    }
-
-    const { status } = err;
+    const { status, message, isMaintenance } = normalizeError(err);
     res.status(status);
 
-    // Skip noisy logging for expected maintenance blocks
+    // Log everything except expected maintenance blocks
     if (!isMaintenance) {
       console.error('❌ Error:', {
         status,
@@ -757,27 +813,49 @@ function makeErrorMiddleware() {
       });
     }
 
-    try {
-      if (
-        req.path.startsWith('/api') ||
-        req.accepts(['html', 'json']) === 'json'
-      ) {
-        return res.json({
-          status,
-          success: false,
-          error:
-            __DEV__ || isMaintenance ? err.message : 'Internal server error',
-          maintenance: isMaintenance,
-          requestId: req.id,
-        });
-      }
+    // --- JSON response (API routes or explicit Accept: application/json) ---
+    const wantsJson =
+      req.path.startsWith('/api') || req.accepts(['html', 'json']) === 'json';
 
-      const youch = new Youch(err, req);
+    if (wantsJson) {
+      return res.json({
+        status,
+        success: false,
+        error: __DEV__ || isMaintenance ? message : 'Internal server error',
+        maintenance: isMaintenance,
+        requestId: req.id,
+      });
+    }
+
+    // --- HTML response via Youch ---
+    try {
+      // In production, feed Youch a sanitised error (no stack frames) and a
+      // stripped request (no headers / cookies) so nothing internal leaks.
+      const youchErr = __DEV__
+        ? err
+        : Object.assign(new Error(message), {
+            name: isMaintenance ? 'Maintenance' : err.name || 'Error',
+            status,
+            stack: '', // empty → Youch renders zero frames
+          });
+
+      const youchReq = __DEV__
+        ? req
+        : { url: req.url, method: req.method, httpVersion: req.httpVersion };
+
+      const youch = new Youch(youchErr, youchReq);
       return res.send(await youch.toHTML());
-    } catch (youchError) {
-      console.error('⚠️  Youch rendering failed:', youchError.message);
+    } catch (renderErr) {
+      console.error('⚠️  Youch rendering failed:', renderErr.message);
+
+      // Ultra-safe fallback — HTML-escape the message to prevent XSS
+      const safeMsg = (isMaintenance ? message : 'Internal server error')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
       return res.send(
-        `<h1>${status} ${isMaintenance ? err.message : 'Internal server error'}</h1><p>Please try again later.</p>`,
+        `<h1>${status} ${safeMsg}</h1><p>Please try again later.</p>`,
       );
     }
   };
@@ -1052,6 +1130,7 @@ export async function bootstrapApp(app, server, options = {}) {
   const api = await import('./bootstrap/api');
   const apiRouter = await api.default(app, extensionManager);
   app.use('/api', apiRouter);
+  appState.apiDrain = api.drain;
 
   // Node-RED
   await appState.nodeRed.init(app, server, {
@@ -1116,6 +1195,17 @@ export async function disposeApp() {
     errors.push(err);
   }
 
+  // Drain all engine singletons via centralized registry
+  try {
+    if (typeof appState.apiDrain === 'function') {
+      await appState.apiDrain();
+      appState.apiDrain = null;
+    }
+  } catch (err) {
+    console.error('   ⚠️  Engine shutdown error:', err.message);
+    errors.push(err);
+  }
+
   invalidateCaches();
   console.info('   ✔ Caches cleared');
 
@@ -1164,15 +1254,13 @@ export async function destroyServer(server) {
 // ---------------------------------------------------------------------------
 
 if (module.hot) {
-  module.hot.accept(err => {
-    if (err) {
-      console.error('❌ HMR error:', err);
-      return;
-    }
-
-    invalidateCaches();
-    console.log('🔄 HMR: Caches cleared');
-  });
+  module.hot.accept(
+    ['./bootstrap/views', '@shared/renderer/App', '@shared/renderer/Html'],
+    () => {
+      invalidateCaches();
+      console.log('🔄 HMR: SSR dependencies updated, caches cleared');
+    },
+  );
 
   exports.hot = module.hot;
 } else {

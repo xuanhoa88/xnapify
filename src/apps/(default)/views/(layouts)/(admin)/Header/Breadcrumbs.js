@@ -7,18 +7,19 @@
 
 import { Fragment } from 'react';
 
+import { ChevronRightIcon } from '@radix-ui/react-icons';
+import { Flex, Text, Box } from '@radix-ui/themes';
 import { useSelector } from 'react-redux';
 
 import { Link } from '@shared/renderer/components/History';
-import Icon from '@shared/renderer/components/Icon';
-import { getBreadcrumbs } from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
 
-import s from './Breadcrumbs.css';
+const { getBreadcrumbs } = features;
 
 /**
  * Breadcrumbs Component
  *
- * Renders breadcrumb navigation from Redux state.
+ * Renders breadcrumb navigation from Redux state natively injected via Radix UI.
  * Breadcrumbs are accumulated from route hierarchy by the navigator.
  */
 function AdminBreadcrumbs() {
@@ -29,8 +30,12 @@ function AdminBreadcrumbs() {
   const items = breadcrumbs || [];
   const lastIndex = items.length - 1;
 
+  if (items.length === 0) {
+    return <Box className='h-full' />;
+  }
+
   return (
-    <nav className={s.breadcrumbs} aria-label='Breadcrumb'>
+    <Flex as='nav' align='center' aria-label='Breadcrumb' className='h-full'>
       {items.map((item, index) => {
         const isLast = index === lastIndex;
         const hasLink = item.url && !isLast;
@@ -38,19 +43,32 @@ function AdminBreadcrumbs() {
         return (
           <Fragment key={`${index}-${item.label}`}>
             {index > 0 && (
-              <Icon name='chevronDown' size={10} className={s.separator} />
+              <Flex align='center' className='text-gray-400 mx-1.5'>
+                <ChevronRightIcon width={14} height={14} />
+              </Flex>
             )}
             {hasLink ? (
-              <Link className={s.link} to={item.url}>
-                {item.label}
-              </Link>
+              <Text size='2' weight='medium' asChild>
+                <Link
+                  to={item.url}
+                  className='text-gray-500 no-underline transition-colors hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-sm px-1 -mx-1'
+                >
+                  {item.label}
+                </Link>
+              </Text>
             ) : (
-              <span className={s.current}>{item.label}</span>
+              <Text
+                size='2'
+                weight='medium'
+                className='text-gray-900 px-1 -mx-1'
+              >
+                {item.label}
+              </Text>
             )}
           </Fragment>
         );
       })}
-    </nav>
+    </Flex>
   );
 }
 

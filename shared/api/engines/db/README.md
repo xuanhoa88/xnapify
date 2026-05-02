@@ -25,15 +25,11 @@ Creates a Sequelize instance with migration methods attached.
 
 ### `closeConnection()`
 
-Drains the default connection pool. Call during graceful shutdown to release file locks (SQLite) and TCP connections (PostgreSQL/MySQL).
+Drains the default connection pool. Called automatically during coordinated process shutdown via the centralized shutdown registry (`shared/api/shutdown.js`). Can also be called manually:
 
 ```javascript
 import { closeConnection } from '@shared/api/engines/db';
-
-process.on('SIGTERM', async () => {
-  await closeConnection();
-  process.exit(0);
-});
+await closeConnection();
 ```
 
 ### Migration Methods (attached to connection)

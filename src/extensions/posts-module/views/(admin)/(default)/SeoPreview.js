@@ -1,9 +1,17 @@
 /**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+/**
  * SeoPreview — Google SERP preview using react-serp-preview
  *
  * Shows how a post would appear in Google search results.
  * Opens as a right-side slide-in panel.
  */
+import { Box, Text } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import SerpPreview from 'react-serp-preview';
@@ -17,7 +25,7 @@ function SeoPreview({ post, isOpen, onClose }) {
 
   if (!post) return null;
 
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+  const baseUrl = (globalThis.location && globalThis.location.origin) || '';
   const postUrl = `${baseUrl}/posts/${post.slug || post.id}`;
 
   return (
@@ -26,17 +34,21 @@ function SeoPreview({ post, isOpen, onClose }) {
         {t('posts:seoPreview.title', 'SEO Preview')}
       </Modal.Header>
       <Modal.Body>
-        <div className={s.previewInfo}>
-          <div className={s.postTitle}>{post.title}</div>
-          <div className={s.postUrl}>{postUrl}</div>
-        </div>
-        <div className={s.previewPanel}>
+        <Box className={s.previewInfo}>
+          <Text as='div' className={s.postTitle}>
+            {post.title}
+          </Text>
+          <Text as='div' className={s.postUrl}>
+            {postUrl}
+          </Text>
+        </Box>
+        <Box className={s.previewPanel}>
           <SerpPreview
             title={post.title || ''}
             metaDescription={post.excerpt || ''}
             url={postUrl}
           />
-        </div>
+        </Box>
       </Modal.Body>
     </Modal>
   );

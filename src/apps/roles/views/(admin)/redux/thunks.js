@@ -27,7 +27,7 @@ export const fetchRoles = createAsyncThunk(
         query: {
           page,
           limit,
-          search: search || undefined,
+          search,
         },
       });
 
@@ -68,6 +68,26 @@ export const deleteRole = createAsyncThunk(
         method: 'DELETE',
       });
       return roleId;
+    } catch (error) {
+      return rejectWithValue(
+        (error.data && error.data.message) || error.message,
+      );
+    }
+  },
+);
+
+/**
+ * Bulk delete roles
+ */
+export const bulkDeleteRoles = createAsyncThunk(
+  'admin/roles/bulkDeleteRoles',
+  async (ids, { extra: { fetch }, rejectWithValue }) => {
+    try {
+      const { data } = await fetch('/api/admin/roles', {
+        method: 'DELETE',
+        body: { ids },
+      });
+      return data.deletedIds || ids;
     } catch (error) {
       return rejectWithValue(
         (error.data && error.data.message) || error.message,
@@ -130,7 +150,7 @@ export const fetchRoleUsers = createAsyncThunk(
         query: {
           page,
           limit,
-          search: search || undefined,
+          search,
         },
       });
 
@@ -157,7 +177,7 @@ export const fetchRoleGroups = createAsyncThunk(
         query: {
           page,
           limit,
-          search: search || undefined,
+          search,
         },
       });
 

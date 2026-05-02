@@ -66,14 +66,14 @@ xnapify/
 
 - **Runtime:** Node.js >= 16.14.0
 - **Package Manager:** npm >= 8.0.0
-- **Language:** JavaScript (ES2015+) with JSX
+- **Language:** JavaScript (ES2015+) with JSX. **Strict Constraint:** DO NOT use optional chaining (`?.`), nullish coalescing (`??`), or assignment (`??=`) since they break our raw Node loader environment. Use traditional boolean guards (`if (x && x.y)`).
 
 ### Frontend
 
 - **React:** 18.3.1 with SSR and hydration
 - **State Management:** Redux 5.0.1 + Redux Toolkit 2.11.1
 - **Routing:** Custom page auto-discovery with dynamic imports
-- **Styling:** CSS Modules + PostCSS
+- **Styling:** Tailwind CSS + Radix UI Primitives (with CSS Modules + PostCSS for custom scoping)
 - **Forms:** React Hook Form 7.51.5 + Zod 3.23.8 validation
 - **i18n:** i18next 23.15.2 + react-i18next 14.1.3
 
@@ -90,13 +90,13 @@ xnapify/
 ### Build Tools
 
 - **Bundler:** Webpack 5.96.0 with code splitting and tree shaking
-- **Transpiler:** Babel 7.28.5 with preset-env and preset-react
+- **Transpiler:** SWC (via swc-loader) with core-js polyfill injection
 - **CSS Processing:** PostCSS with autoprefixer and CSS Modules
 - **HMR:** React Refresh + webpack-hot-middleware
 
 ### Code Quality
 
-- **Linting:** ESLint 8.57.0 with @babel/eslint-parser
+- **Linting:** ESLint 8.57.0 with espree (built-in parser)
 - **CSS Linting:** Stylelint 14.16.1
 - **Formatting:** Prettier 3.3.3
 - **Testing:** Jest 24.9.0 with React Testing Library
@@ -181,7 +181,7 @@ The application uses an auto-discovery system for both API modules and page comp
 - **Store Configuration:** `shared/renderer/redux/configureStore.js`
 - **Middleware:** Redux Logger (dev only), custom middleware for async actions
 - **Helpers:** Store receives `fetch`, `history`, `i18n` as extra arguments
-- **Dynamic Injection:** Use `store.injectReducer(SLICE_NAME, reducer)` in module `_route.js` `init({ store })` hook
+- **Dynamic Injection:** Use `store.injectReducer(SLICE_NAME, reducer)` in module `views/index.js` `providers({ store })` hook
 
 ### 5. Authentication & Authorization
 
@@ -510,14 +510,39 @@ export const fetchPosts = createAsyncThunk(
 );
 ```
 
-### 3. Styling with CSS Modules
+### 3. Styling with Tailwind CSS & Radix UI
+
+We use **Tailwind CSS** for utility-first styling and **Radix UI** (`@radix-ui/themes`) for accessible design primitives. CSS Modules are reserved for specific edge cases or legacy components.
+
+**Styling Rules:**
+- ✅ **DO** use Tailwind utility classes (e.g., `className="mt-4 bg-red-500"`).
+- ❌ **DO NOT** use inline styles under ANY circumstances (e.g., `style={{ marginTop: '16px' }}` is strictly forbidden).
+- ⚠️ Use CSS Modules (`.css` extension) ONLY for complex edge cases that Tailwind cannot solve.
+
+**clsx Utility Rules:**
+When applying custom CSS modules or combining conditional class names, ALWAYS use `clsx`. You must strictly follow these rules to prevent performance overhead during re-renders:
+- ✅ **DO** use for dynamic combinations: `className={clsx(s.base, condition ? s.active : s.inactive)}`
+- ✅ **DO** use multiple arguments for multiple conditions: `clsx(s.base, condA && s.a, condB && s.b)`
+- ❌ **DO NOT** use template literals or raw concatenation: ``className={`${s.base} ${s.active}`}`` -> use `clsx(s.base, s.active)`
+- ❌ **DO NOT** pass objects: `clsx({ [s.a]: condA, [s.b]: condB })` -> use `clsx(condA && s.a, condB && s.b)`
+- ❌ **DO NOT** use for single variables: `clsx(s.foo)` -> just use `className={s.foo}`
+- ❌ **DO NOT** use for simple ternaries: `clsx(cond ? s.a : s.b)` -> use `className={cond ? s.a : s.b}`
+- ❌ **DO NOT** use for static strings: `clsx('a', 'b')` -> just use `className="a b"`
 
 ```javascript
 import React from 'react';
-import s from './MyComponent.module.css';
+import { Box, Button, Text } from '@radix-ui/themes';
+import clsx from 'clsx';
+// Avoid CSS modules when Tailwind classes suffice
+// import s from './MyComponent.module.css';
 
 function MyComponent() {
-  return <div className={s.container}>Content</div>;
+  return (
+    <Box className={clsx("p-4 bg-gray-50 rounded-md", s.customClass)}>
+      <Text size="3" className="mb-2 block">Content</Text>
+      <Button variant="solid" color="blue">Action</Button>
+    </Box>
+  );
 }
 ```
 
@@ -528,13 +553,11 @@ Each `_route.js` can export lifecycle hooks that the router calls at specific po
 ```javascript
 // @apps/activities/views/(admin)/(default)/_route.js
 import ActivityList from './ActivityList';
-import {
-  addBreadcrumb,
-  registerMenu,
-  unregisterMenu,
-} from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
 import { requirePermission } from '@shared/renderer/components/Rbac';
 import reducer, { SLICE_NAME } from '../redux';
+
+const { addBreadcrumb, registerMenu, unregisterMenu } = features;
 
 // 1. Middleware — permission guard (const, not function)
 export const middleware = requirePermission('activities:read');
@@ -700,6 +723,8 @@ function LoginForm() {
 9. **Documentation:** Add JSDoc comments for complex functions
 10. **Testing:** Write tests for critical functionality
 11. **File Naming:** Use PascalCase for components, camelCase for utilities, kebab-case for CSS modules
+12. **Styling:** ABSOLUTE BAN on inline styles (e.g., `style={{...}}`). Prefer Tailwind CSS classes and Radix UI primitives. Use CSS Modules only for complex custom styling.
+13. **Mandatory License Headers:** Every new source file must begin with the xnapify MIT License header (block comment for JS/TS/CSS, hash comment for YML/SH).
 
 ## Mandatory Verification After Code Changes
 
@@ -960,7 +985,7 @@ describe('MyComponent', () => {
 });
 
 // Redux tests
-import configureStore from '@shared/renderer/redux/configureStore';
+import { configureStore } from '@shared/renderer/redux';
 import { increment } from './slice';
 
 describe('myFeature slice', () => {

@@ -174,7 +174,9 @@ Use `export async function middleware` for authentication, authorization, or red
 
 ```javascript
 // @apps/(default)/views/dashboard/_route.js
-import { isAuthenticated } from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
+
+const { isAuthenticated } = features;
 import Dashboard from './Dashboard';
 
 /**
@@ -289,7 +291,9 @@ Use parentheses `(groupName)` to organize routes without affecting the URL path:
 
 ```javascript
 // @apps/(default)/views/(admin)/dashboard/_route.js
-import { isAuthenticated, hasPermission } from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
+
+const { isAuthenticated, hasPermission } = features;
 import Dashboard from './Dashboard';
 
 export async function middleware(context, next) {

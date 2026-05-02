@@ -147,15 +147,14 @@ boundFactory.channel('users')  // → same
 
 The bound factory has all the same methods (`has`, `remove`, `getChannelNames`, `cleanup`), which delegate to the **same underlying manager**. The bound factory supports chaining: `boundFactory.withContext(newContext)` creates a new factory bound to the new context.
 
-### Signal Handlers
+### Shutdown Registration
 
-`createFactory()` registers graceful shutdown handlers:
+`createFactory()` registers cleanup with the centralized shutdown registry (`shared/api/shutdown.js`):
 ```javascript
-process.once('SIGTERM', () => manager.cleanup());
-process.once('SIGINT', () => manager.cleanup());
+register('hook', () => manager.cleanup());
 ```
 
-This ensures all hook channels are cleaned up on process termination.
+This ensures all hook channels are cleaned up during coordinated process shutdown.
 
 ## 5. Default Singleton
 
@@ -218,7 +217,7 @@ Factory function that returns a native `AggregateError` on Node 17+, or a plain 
 - Cleanup
 - Invalid name rejection
 - `InvalidChannelNameError` properties (code, statusCode)
-- SIGTERM/SIGINT signal handler registration
+- Centralized shutdown registry registration
 
 **Default Export (1 test):**
 - Callable factory returning `HookChannel` instance

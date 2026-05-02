@@ -388,7 +388,7 @@ src/apps/[module_name]/
 | ----------------- | --------------------------------------------------- | --------------------------------------------------------------------------- |
 | Import style      | `import s from './Component.css'`                   | `import './Component.css'`                                                  |
 | Class usage       | `className={s.container}`                           | `className="container"`                                                     |
-| Dynamic classes   | `className={clsx(s.tab, { [s.active]: isActive })}` | String concatenation                                                        |
+| Dynamic classes   | `className={clsx(s.tab, isActive ? s.active : s.inactive)}` | `className={clsx(s.tab, { [s.active]: isActive })}`                         |
 | Composition       | CSS Modules `composes`                              | Duplicate CSS across files                                                  |
 | No inline styles  | —                                                   | `style={{ color: 'red' }}` (except `{ display: 'none' }` for hidden inputs) |
 | No global classes | —                                                   | Global `.container {}` overriding module scope                              |

@@ -5,240 +5,126 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import {
-  useEffect,
-  useCallback,
-  useState,
-  createContext,
-  useContext,
-  useRef,
-  forwardRef,
-} from 'react';
+import { forwardRef } from 'react';
 
+import { DropdownMenu, Flex, Text } from '@radix-ui/themes';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 
-import Button from '../Button';
-import Portal from '../Portal';
+import Icon from '../Icon';
 import { useRbac } from '../Rbac/useRbac';
 
-// eslint-disable-next-line css-modules/no-unused-class -- dynamic classes
 import s from './ContextMenu.css';
 
 /**
- * ContextMenu - Reusable context menu component with composable sub-components
- * Supports both controlled (isOpen/onToggle) and uncontrolled internally managed state.
+ * ContextMenu – Composable dropdown backed by Radix Themes DropdownMenu.
+ *
+ * Supports both controlled (isOpen/onToggle) and uncontrolled state.
+ * All toggle, outside-click, focus-trap, and positioning logic is
+ * delegated to Radix, eliminating the custom race-condition-prone code.
  */
 
-const ContextMenuContext = createContext(null);
+// ---------------------------------------------------------------------------
+// Root
+// ---------------------------------------------------------------------------
 
-function ContextMenu({
-  children,
-  isOpen: controlledIsOpen,
-  onToggle: controlledOnToggle,
-  align = 'right',
-  x = null,
-  y = null,
-  className,
-}) {
-  const triggerRef = useRef(null);
-  const menuRef = useRef(null);
-  const [internalIsOpen, setInternalIsOpen] = useState(false);
-
-  const isControlled = controlledIsOpen !== undefined;
-  const isOpen = isControlled ? controlledIsOpen : internalIsOpen;
-
-  const onToggle = useCallback(
-    value => {
-      if (isControlled && controlledOnToggle) {
-        controlledOnToggle(value);
-      } else if (!isControlled) {
-        setInternalIsOpen(prev =>
-          typeof value === 'function' ? value(prev) : value,
-        );
-      }
-    },
-    [isControlled, controlledOnToggle],
-  );
-
-  // Close on outside click
-  useEffect(() => {
-    if (!isOpen) return undefined;
-
-    const handleClickOutside = event => {
-      // Don't close if clicking trigger (trigger handles its own toggle)
-      if (triggerRef.current && triggerRef.current.contains(event.target)) {
-        return;
-      }
-      // Don't close if clicking inside the menu itself
-      if (menuRef.current && menuRef.current.contains(event.target)) {
-        return;
-      }
-      onToggle(null);
-    };
-
-    // Need to use mousedown to capture before click events bubble up
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen, onToggle]);
-
+function ContextMenu({ children, isOpen, onToggle, modal = false }) {
   return (
-    <ContextMenuContext.Provider
-      value={{ isOpen, onToggle, align, x, y, triggerRef, menuRef }}
-    >
-      <div className={clsx(s.dropdown, { [s.open]: isOpen }, className)}>
-        {children}
-      </div>
-    </ContextMenuContext.Provider>
+    <DropdownMenu.Root open={isOpen} onOpenChange={onToggle} modal={modal}>
+      {children}
+    </DropdownMenu.Root>
   );
 }
 
 ContextMenu.propTypes = {
   children: PropTypes.node.isRequired,
+  className: PropTypes.string,
   isOpen: PropTypes.bool,
   onToggle: PropTypes.func,
-  align: PropTypes.oneOf(['left', 'right']),
-  x: PropTypes.number,
-  y: PropTypes.number,
-  className: PropTypes.string,
+  modal: PropTypes.bool,
 };
 
-// Trigger button
-function Trigger({
-  children,
-  className,
-  as: Component = Button,
-  variant = 'ghost',
-  ...props
-}) {
-  const ctx = useContext(ContextMenuContext);
+// ---------------------------------------------------------------------------
+// Trigger
+// ---------------------------------------------------------------------------
 
-  const handleClick = useCallback(
-    e => {
-      e.stopPropagation();
-      e.preventDefault();
-      ctx.onToggle(prev => !prev);
-    },
-    [ctx],
-  );
-
-  if (Component === Button) {
+function Trigger({ children, className, asChild, ...props }) {
+  if (asChild) {
     return (
-      <Button
-        ref={ctx.triggerRef}
-        variant={variant}
-        className={clsx(s.trigger, className)}
-        onClick={handleClick}
-        {...props}
-      >
+      <DropdownMenu.Trigger asChild className={className} {...props}>
         {children}
-      </Button>
+      </DropdownMenu.Trigger>
     );
   }
 
   return (
-    <Component
-      ref={ctx.triggerRef}
-      className={clsx(s.trigger, className)}
-      onClick={handleClick}
-      {...props}
-    >
-      {children}
-    </Component>
+    <DropdownMenu.Trigger asChild>
+      <button
+        type='button'
+        {...props}
+        className={clsx(className, s.trigger, 'rt-reset', 'rt-BaseButton')}
+      >
+        {children}
+      </button>
+    </DropdownMenu.Trigger>
   );
 }
 
 Trigger.propTypes = {
   children: PropTypes.node,
   className: PropTypes.string,
-  as: PropTypes.elementType,
-  variant: PropTypes.string,
+  asChild: PropTypes.bool,
 };
 
-// Menu container
-function Menu({ children, className }) {
-  const ctx = useContext(ContextMenuContext);
-  const [position, setPosition] = useState({ top: 0, left: 0, right: 'auto' });
+// ---------------------------------------------------------------------------
+// Menu (→ DropdownMenu.Content)
+// ---------------------------------------------------------------------------
 
-  // Calculate position when menu opens and update on scroll/resize
-  useEffect(() => {
-    if (!ctx.isOpen) return undefined;
-
-    const updatePosition = () => {
-      if (ctx.x !== null && ctx.y !== null) {
-        // Explicit coordinates provided (e.g. for right-click context menus without a trigger button)
-        setPosition({ top: ctx.y, left: ctx.x, right: 'auto' });
-        return;
-      }
-
-      if (!ctx.triggerRef.current) return;
-
-      const rect = ctx.triggerRef.current.getBoundingClientRect();
-      const newPosition = {
-        top: rect.bottom + 6,
-      };
-
-      if (ctx.align === 'right') {
-        newPosition.right = window.innerWidth - rect.right;
-        newPosition.left = 'auto';
-      } else {
-        newPosition.left = rect.left;
-        newPosition.right = 'auto';
-      }
-
-      setPosition(newPosition);
-    };
-
-    updatePosition();
-
-    // Re-calculate position strictly during any scrolling (capture phase to catch nested scroll areas)
-    // or window resizing to ensure the fixed portal stays glued to the trigger button.
-    window.addEventListener('scroll', updatePosition, true);
-    window.addEventListener('resize', updatePosition);
-
-    return () => {
-      window.removeEventListener('scroll', updatePosition, true);
-      window.removeEventListener('resize', updatePosition);
-    };
-  }, [ctx.isOpen, ctx.align, ctx.triggerRef, ctx.x, ctx.y]);
-
-  if (!ctx.isOpen) return null;
-
+function Menu({
+  children,
+  className,
+  align = 'end',
+  sideOffset = 6,
+  ...props
+}) {
   return (
-    <Portal>
-      <div
-        ref={ctx.menuRef}
-        className={clsx(s.menu, className)}
-        style={{
-          position: 'fixed',
-          top: position.top,
-          left: position.left,
-          right: position.right,
-        }}
-        onClick={e => e.stopPropagation()}
-        onKeyDown={e => e.stopPropagation()}
-        role='menu'
-        tabIndex={-1}
-      >
-        {children}
-      </div>
-    </Portal>
+    <DropdownMenu.Content
+      align={align}
+      sideOffset={sideOffset}
+      className={className}
+      {...props}
+    >
+      {children}
+    </DropdownMenu.Content>
   );
 }
 
 Menu.propTypes = {
   children: PropTypes.node.isRequired,
   className: PropTypes.string,
+  align: PropTypes.oneOf(['start', 'center', 'end']),
+  sideOffset: PropTypes.number,
 };
 
-// Header
+// ---------------------------------------------------------------------------
+// Header (→ DropdownMenu.Label)
+// ---------------------------------------------------------------------------
+
 function Header({ children, title, subtitle, className }) {
   return (
-    <div className={clsx(s.header, className)}>
-      {title && <div className={s.headerTitle}>{title}</div>}
-      {subtitle && <div className={s.headerSubtitle}>{subtitle}</div>}
+    <DropdownMenu.Label className={clsx(className, s.header)}>
+      {title && (
+        <Text as='div' size='2' weight='bold'>
+          {title}
+        </Text>
+      )}
+      {subtitle && (
+        <Text as='div' size='1' color='gray' mt='1'>
+          {subtitle}
+        </Text>
+      )}
       {children}
-    </div>
+    </DropdownMenu.Label>
   );
 }
 
@@ -249,7 +135,15 @@ Header.propTypes = {
   className: PropTypes.string,
 };
 
-// Menu item
+// ---------------------------------------------------------------------------
+// Item (→ DropdownMenu.Item)
+// ---------------------------------------------------------------------------
+
+const VARIANT_COLOR_MAP = {
+  danger: 'red',
+  warning: 'yellow',
+};
+
 const Item = forwardRef(
   (
     {
@@ -263,56 +157,56 @@ const Item = forwardRef(
       roles,
       groups,
       ownerId,
-      as: Component = 'button',
+      shortcut,
+      asChild,
       ...props
     },
     ref,
   ) => {
-    const ctx = useContext(ContextMenuContext);
     const { hasPermission, hasRole, hasGroup, isOwner } = useRbac();
 
-    const handleClick = useCallback(
-      e => {
-        e.stopPropagation();
-        if (!disabled && onClick) {
-          onClick(e);
-        }
-        if (!disabled) {
-          ctx.onToggle(null);
-        }
-      },
-      [onClick, disabled, ctx],
-    );
-
-    // Check permissions
+    // Check permissions — render nothing when unauthorized.
     if (permission && !hasPermission(permission)) return null;
     if (roles && !hasRole(roles)) return null;
     if (groups && !hasGroup(groups)) return null;
     if (ownerId && !isOwner(ownerId)) return null;
 
-    const ComponentType =
-      Component !== 'button'
-        ? Component
-        : props.to || props.href
-          ? 'a'
-          : Component;
+    const color = VARIANT_COLOR_MAP[variant];
+
+    if (asChild) {
+      return (
+        <DropdownMenu.Item
+          ref={ref}
+          color={color}
+          disabled={disabled}
+          shortcut={shortcut}
+          className={clsx(s.item, className)}
+          onSelect={onClick}
+          asChild
+          {...props}
+        >
+          {children}
+        </DropdownMenu.Item>
+      );
+    }
 
     return (
-      <ComponentType
+      <DropdownMenu.Item
         ref={ref}
-        role='menuitem'
-        className={clsx(
-          s.item,
-          { [s[variant]]: variant, [s.disabled]: disabled },
-          className,
-        )}
-        onClick={handleClick}
+        color={color}
         disabled={disabled}
+        shortcut={shortcut}
+        className={clsx(s.item, className)}
+        onSelect={onClick}
         {...props}
       >
-        {icon && <span className={s.itemIcon}>{icon}</span>}
+        {icon && (
+          <Flex align='center' justify='center'>
+            <Icon name={icon} size={16} />
+          </Flex>
+        )}
         {children}
-      </ComponentType>
+      </DropdownMenu.Item>
     );
   },
 );
@@ -324,6 +218,7 @@ Item.propTypes = {
   variant: PropTypes.oneOf(['danger', 'warning']),
   disabled: PropTypes.bool,
   className: PropTypes.string,
+  shortcut: PropTypes.string,
   permission: PropTypes.oneOfType([
     PropTypes.string,
     PropTypes.arrayOf(PropTypes.string),
@@ -337,23 +232,29 @@ Item.propTypes = {
     PropTypes.arrayOf(PropTypes.string),
   ]),
   ownerId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
-  as: PropTypes.elementType,
   to: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
   href: PropTypes.string,
+  asChild: PropTypes.bool,
 };
 
 Item.displayName = 'ContextMenu.Item';
 
-// Divider
+// ---------------------------------------------------------------------------
+// Divider (→ DropdownMenu.Separator)
+// ---------------------------------------------------------------------------
+
 function Divider({ className }) {
-  return <div className={clsx(s.divider, className)} role='separator' />;
+  return <DropdownMenu.Separator className={className} />;
 }
 
 Divider.propTypes = {
   className: PropTypes.string,
 };
 
+// ---------------------------------------------------------------------------
 // Attach sub-components
+// ---------------------------------------------------------------------------
+
 ContextMenu.Trigger = Trigger;
 ContextMenu.Menu = Menu;
 ContextMenu.Header = Header;

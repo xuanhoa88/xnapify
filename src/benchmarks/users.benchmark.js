@@ -1,4 +1,11 @@
 /**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+/**
  * User services performance benchmarks
  *
  * Measures cost of fetching user with nested associations and
@@ -10,15 +17,15 @@
 
 const { performance } = require('perf_hooks');
 
-// allow longer execution since database operations may take a few seconds
-jest.setTimeout(30000);
-const { setupTestDb, closeTestDb } = require('../../tools/jest/dbTest.setup');
 const {
   getUserList,
 } = require('../apps/users/api/services/admin/user.service');
 const {
   getUserWithProfile,
 } = require('../apps/users/api/services/profile.service');
+
+// allow longer execution since database operations may take a few seconds
+jest.setTimeout(30000);
 
 // helper to create a dummy user with profile/roles/groups
 async function createUserWithRelations(models, idx) {
@@ -68,7 +75,8 @@ describe('users.benchmark', () => {
   // jest's test runner cannot inadvertently clear state between hooks.
 
   async function prepare(numUsers = 500) {
-    const db = await setupTestDb();
+    const db = globalThis.testDb;
+
     const { Role, Group } = db.models;
     await Role.findOrCreate({
       where: { name: 'member' },
@@ -108,16 +116,13 @@ describe('users.benchmark', () => {
       `\n  getUserWithProfile: ${duration.toFixed(1)}ms (${tps.toFixed(0)} calls/sec)`,
     );
     expect(tps).toBeGreaterThan(100);
-
-    await closeTestDb();
   });
 
   it('list users with search/filter performance', async () => {
     const db = await prepare();
     const { models } = db;
     const options = { page: 1, limit: 50, search: 'user' };
-    // eslint-disable-next-line no-unused-vars
-    const ctx = { models, hook: name => ({ emit: async () => {} }) };
+    const ctx = { models, hook: () => ({ emit: async () => {} }) };
     const count = 50;
     const start = performance.now();
     for (let i = 0; i < count; i++) {
@@ -129,7 +134,5 @@ describe('users.benchmark', () => {
       `\n  getUserList: ${duration.toFixed(1)}ms (${tps.toFixed(0)} calls/sec)`,
     );
     expect(tps).toBeGreaterThan(10);
-
-    await closeTestDb();
   });
 });

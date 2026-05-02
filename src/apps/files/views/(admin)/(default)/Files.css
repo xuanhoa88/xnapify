@@ -4,75 +4,92 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
  */
-.root {
-  padding: var(--spacing-8);
-  background: var(--color-background-secondary);
+
+.container {
+  padding: var(--space-6);
+  max-width: 1400px;
+  margin: 0 auto;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.mainFlex {
   flex: 1;
-}
-
-.filesAppContainer {
-  display: flex;
-  height: calc(100vh - 180px); /* Adjust based on top nav and header */
-  gap: var(--spacing-6); /* Add gap between sidebar and main pane */
-  color: var(--color-text);
   overflow: hidden;
+  background-color: var(--color-panel-solid);
+  border: 1px solid var(--gray-4);
+  border-radius: var(--radius-4);
+  box-shadow: var(--shadow-1);
+  min-height: 600px;
 }
 
-/* Sidebar Styling */
-.sidebarPane {
-  width: 240px; /* Slightly narrower */
+.sidebarBox {
+  width: 250px;
+  border-right: 1px solid var(--gray-4);
   flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
+  overflow-y: auto;
 }
 
-/* Main Content Styling */
-.mainPane {
-  flex-grow: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0; /* Prevent flex overflow */
-  background: var(--color-background);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
-  box-shadow: var(--shadow-sm);
-  position: relative;
+.contentFlex {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
 }
 
-.contentArea {
-  flex-grow: 1;
+.toolbarBox {
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--gray-4);
+  background-color: var(--gray-2);
+}
+
+.gridBox {
+  flex: 1;
   overflow-y: auto;
-  padding: var(--spacing-4) var(--spacing-6);
+  position: relative;
 }
 
-/* Scrollbar customization for webkit to feel premium */
-.contentArea::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+.isDragging {
+  position: relative;
 }
 
-.contentArea::-webkit-scrollbar-track {
-  background: transparent;
+.dragOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--indigo-a4);
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+  border-radius: var(--radius-4);
+  margin: var(--space-6);
 }
 
-.contentArea::-webkit-scrollbar-thumb {
-  background-color: var(--color-border-hover);
-  border-radius: var(--radius-sm);
+.dragOverlayContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 3px dashed var(--indigo-9);
+  border-radius: var(--radius-4);
+  background-color: var(--color-panel-solid);
+  padding: var(--space-8);
+  box-shadow: var(--shadow-4);
+  pointer-events: none;
 }
 
-.contentArea::-webkit-scrollbar-thumb:hover {
-  background-color: var(--color-text-tertiary);
+.dragOverlayIcon {
+  color: var(--indigo-9);
+  margin-bottom: var(--space-4);
 }
 
-/* Responsive adjustments */
+.dragOverlayText {
+  color: var(--indigo-11);
+}
+
 @media (max-width: 768px) {
-  .root {
-    padding: var(--spacing-3);
-  }
-}
-@media (max-width: 375px) {
-  .root {
-    padding: var(--spacing-2);
+  .sidebarBox {
+    display: none;
   }
 }

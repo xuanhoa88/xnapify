@@ -7,6 +7,7 @@
 
 import { useMemo } from 'react';
 
+import { Text } from '@radix-ui/themes';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
@@ -17,10 +18,10 @@ import {
   isFieldRequired,
 } from '../FormContext';
 
-import s from './FormLabel.css';
+import s from './Index.css';
 
 /**
- * FormLabel - Label element for form fields
+ * FormLabel - Label element for form fields backed by Radix Themes Text
  *
  * Usage:
  *   <Form.Field name="email">
@@ -51,10 +52,21 @@ function FormLabel({ children, className, required: requiredProp }) {
   const required = requiredProp || isFieldRequired(resolvedSchema, name);
 
   return (
-    <label className={clsx(s.label, className)} htmlFor={id}>
+    <Text
+      as='label'
+      size='2'
+      weight='medium'
+      mb='1'
+      htmlFor={id}
+      className={clsx(className, s.labelBlock)}
+    >
       {children}
-      {required && <span className={clsx(s.required, 'required')}>*</span>}
-    </label>
+      {required && (
+        <Text as='span' color='red' ml='1' className='required'>
+          *
+        </Text>
+      )}
+    </Text>
   );
 }
 

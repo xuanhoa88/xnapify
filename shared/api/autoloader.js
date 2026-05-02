@@ -290,9 +290,7 @@ export async function discoverModules(modulesContext, container) {
   );
 
   // ─── Phase 4: models ──────────────────────────────────────────────────────
-  const registry = new ModelRegistry(
-    container.has('db') ? container.resolve('db') : null,
-  );
+  const registry = new ModelRegistry(container);
 
   errors.push(
     ...(await runPhase('models', lifecycles, async (name, hook) => {
@@ -308,7 +306,7 @@ export async function discoverModules(modulesContext, container) {
   );
 
   // Initialise associations and seal core models
-  errors.push(...registry.associate());
+  errors.push(...(await registry.associate()));
   registry.seal();
 
   container.instance('models', registry);

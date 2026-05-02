@@ -1,10 +1,17 @@
 #!/usr/bin/env node
 
 /**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+/**
  * Run benchmark suites using Jest. Benchmarks are simple jest files
  * ending with `.benchmark.js` and are only executed when the
  * JEST_BENCHMARK environment variable is set. This task wraps the
- * existing test infrastructure so you can reuse babel-jest, module
+ * existing test infrastructure so you can reuse @swc/jest, module
  * aliases, etc.
  */
 
@@ -31,7 +38,7 @@ async function main() {
     const jestArgs = [
       // Config file
       '--config',
-      require.resolve('../jest'),
+      require.resolve('../jest/config'),
 
       // Run in single thread
       '--runInBand',

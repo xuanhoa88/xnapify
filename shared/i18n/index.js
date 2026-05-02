@@ -88,6 +88,29 @@ Object.entries(DEFAULT_RESOURCES).forEach(([locale, resource]) => {
 });
 
 // =============================================================================
+// BUILT-IN NAMESPACES
+// =============================================================================
+
+// Register the 'shared' namespace — translations for shared renderer components
+// (Modal, Table, WYSIWYG, Form, SearchableSelect, etc.)
+const sharedContext = require.context(
+  '../renderer/translations',
+  false,
+  /\.json$/i,
+);
+addNamespace('shared', getTranslations(sharedContext));
+
+// Register the 'common' namespace — cross-cutting UI labels
+// (retry, cancel, delete, save, etc.)
+const commonContext = require.context('./namespaces/common', false, /\.json$/i);
+addNamespace('common', getTranslations(commonContext));
+
+// Register the 'admin' namespace — shared admin panel labels
+// (navigation, common admin UI, buttons, error messages)
+const adminContext = require.context('./namespaces/admin', false, /\.json$/i);
+addNamespace('admin', getTranslations(adminContext));
+
+// =============================================================================
 // DEFAULT EXPORT
 // =============================================================================
 

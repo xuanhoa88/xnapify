@@ -20,3 +20,8 @@ export const post = [
   requirePermission('roles:create'),
   roleController.createRole,
 ];
+
+export const del = [
+  requirePermission('roles:delete'),
+  roleController.bulkDeleteRoles,
+];

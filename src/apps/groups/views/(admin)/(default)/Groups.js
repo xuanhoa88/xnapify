@@ -7,25 +7,28 @@
 
 import { useEffect, useCallback, useState, useRef, useMemo } from 'react';
 
+import { GroupIcon, TrashIcon, PlusIcon } from '@radix-ui/react-icons';
+import {
+  Box,
+  Flex,
+  Text,
+  Heading,
+  Button,
+  Card,
+  Badge,
+} from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Avatar from '@shared/renderer/components/Avatar';
-import * as Box from '@shared/renderer/components/Box';
-import Button from '@shared/renderer/components/Button';
-import Card from '@shared/renderer/components/Card';
-import ConfirmModal from '@shared/renderer/components/ConfirmModal';
 import { useHistory } from '@shared/renderer/components/History';
-import Icon from '@shared/renderer/components/Icon';
-import Loader from '@shared/renderer/components/Loader';
+import Modal from '@shared/renderer/components/Modal';
 import { useRbac } from '@shared/renderer/components/Rbac';
 import {
   SearchableSelect,
   useSearchableSelect,
 } from '@shared/renderer/components/SearchableSelect';
-import Table from '@shared/renderer/components/Table';
-import Tag from '@shared/renderer/components/Tag';
+import { DataTable } from '@shared/renderer/components/Table';
 
 import GroupActionsDropdown from '../components/GroupActionsDropdown';
 import GroupPermissionsModal from '../components/GroupPermissionsModal';
@@ -39,23 +42,21 @@ import {
   getGroupsListError,
   getGroupsPagination,
   deleteGroup,
+  bulkDeleteGroups,
 } from '../redux';
 
 import s from './Groups.css';
 
-// Pagination items per page
-const ITEMS_PER_PAGE = 10;
-
+/**
+ * Groups — Admin page for group management with card grid layout.
+ */
 function Groups({ context }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
 
   // Get shared components and state from container
   const { container } = context;
-  const { RoleTag } = useMemo(
-    () => container.resolve('users:admin:components'),
-    [container],
-  );
+
   const { fetchRoles } = useMemo(() => {
     const { thunks } = container.resolve('roles:admin:state');
     return thunks;
@@ -72,6 +73,10 @@ function Groups({ context }) {
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Selection state
+  const [selectedGroups, setSelectedGroups] = useState([]);
 
   // Search state
   const [search, setSearch] = useState('');
@@ -90,9 +95,6 @@ function Groups({ context }) {
 
   // Ref for DeleteGroupModal
   const deleteModalRef = useRef();
-
-  // State for managing which dropdown is open
-  const [activeDropdownId, setActiveDropdownId] = useState(null);
 
   // Use hook for role filter with caching
   const {
@@ -115,24 +117,24 @@ function Groups({ context }) {
     dispatch(
       fetchGroups({
         page: currentPage,
-        limit: ITEMS_PER_PAGE,
+        limit: pageSize,
         role: roleFilter,
         search,
       }),
     );
-  }, [dispatch, currentPage, roleFilter, search]);
+  }, [dispatch, currentPage, pageSize, roleFilter, search]);
 
   // Refresh groups list callback
   const refreshGroups = useCallback(() => {
     dispatch(
       fetchGroups({
         page: currentPage,
-        limit: ITEMS_PER_PAGE,
+        limit: pageSize,
         role: roleFilter,
         search,
       }),
     );
-  }, [dispatch, currentPage, roleFilter, search]);
+  }, [dispatch, currentPage, pageSize, roleFilter, search]);
 
   const handleAddGroup = useCallback(() => {
     history.push('/admin/groups/create');
@@ -146,34 +148,57 @@ function Groups({ context }) {
   );
 
   const handleViewUsers = useCallback(group => {
-    // Open the users modal for this group
     usersModalRef.current && usersModalRef.current.open(group);
   }, []);
 
   const handleManageRoles = useCallback(group => {
-    // Open the roles modal for this group
     rolesModalRef.current && rolesModalRef.current.open(group);
   }, []);
 
   const handleViewPermissions = useCallback(group => {
-    // Open the permissions modal for this group
     permissionsModalRef.current && permissionsModalRef.current.open(group);
   }, []);
 
+  const clearSelection = useCallback(() => setSelectedGroups([]), []);
+
+  const handleBulkDelete = useCallback(() => {
+    deleteModalRef.current &&
+      deleteModalRef.current.open({ ids: selectedGroups });
+  }, [selectedGroups]);
+
   const handleDeleteGroup = useCallback(group => {
-    // Open the delete modal for this group
-    deleteModalRef.current && deleteModalRef.current.open(group);
+    deleteModalRef.current &&
+      deleteModalRef.current.open({ ids: [group.id], items: [group] });
   }, []);
 
   const handleDeleteGroupAction = useCallback(
-    item => dispatch(deleteGroup(item.id)),
-    [dispatch],
+    async item => {
+      try {
+        if (item.ids && item.ids.length > 1) {
+          const result = await dispatch(bulkDeleteGroups(item.ids)).unwrap();
+          clearSelection();
+          return { success: true, ...result };
+        } else {
+          const id = item.ids ? item.ids[0] : item.id;
+          const result = await dispatch(deleteGroup(id)).unwrap();
+          clearSelection();
+          return { success: true, ...result };
+        }
+      } catch (err) {
+        return { success: false, error: err };
+      }
+    },
+    [dispatch, clearSelection],
   );
 
-  const getGroupName = useCallback(item => item.name, []);
-
-  const handleToggleDropdown = useCallback(id => {
-    setActiveDropdownId(prev => (prev === id ? null : id));
+  const getGroupName = useCallback(item => {
+    if (item.items && item.items.length === 1) {
+      return item.items[0].name;
+    }
+    if (item.ids && item.ids.length > 0) {
+      return `${item.ids.length} group(s)`;
+    }
+    return item.name;
   }, []);
 
   // Search handlers
@@ -195,111 +220,154 @@ function Groups({ context }) {
 
   const hasActiveFilters = Boolean(search || roleFilter);
 
-  // Show loading on first fetch (not initialized) or when loading with no data
-  if (!initialized || (loading && groups.length === 0)) {
-    return (
-      <div className={s.root}>
-        <Box.Header
-          icon={<Icon name='folder' size={24} />}
-          title={t('admin:groups.title', 'Group Management')}
-          subtitle={t(
-            'admin:groups.subtitle',
-            'Organize users into groups for easier access control',
-          )}
-        />
-        <Loader
-          variant='cards'
-          message={t('admin:groups.loading', 'Loading groups...')}
-        />
-      </div>
-    );
-  }
+  // Bulk actions
+  const bulkActions = useMemo(
+    () => [
+      {
+        key: 'delete',
+        label: t('admin:groups.bulkDelete', 'Delete Selected'),
+        icon: <TrashIcon width={16} height={16} />,
+        onClick: handleBulkDelete,
+        variant: 'danger',
+        permission: 'groups:delete',
+      },
+    ],
+    [t, handleBulkDelete],
+  );
 
-  if (error) {
-    return (
-      <div className={s.root}>
-        <Box.Header
-          icon={<Icon name='folder' size={24} />}
-          title={t('admin:groups.title', 'Group Management')}
-          subtitle={t(
-            'admin:groups.subtitle',
-            'Organize users into groups for easier access control',
-          )}
-        />
-        <Table.Error
-          title={t('admin:groups.errorLoading', 'Error loading groups')}
-          error={error}
-          onRetry={refreshGroups}
-        />
-      </div>
-    );
-  }
+  // Render card for each group
+  const renderGroupCard = useCallback(
+    group => {
+      const userCount = group.userCount || 0;
+      const roleCount = group.roleCount || 0;
+
+      return (
+        <Card variant='surface' className={s.cardLayout}>
+          <Flex
+            align='center'
+            justify='between'
+            pb='3'
+            mb='3'
+            className={s.cardHeaderFlex}
+          >
+            <Flex gap='2' className={s.badgesWrapper}>
+              <Badge color='blue' radius='full' variant='soft'>
+                {t('admin:groups.usersCount', '{{count}} user', {
+                  count: userCount,
+                  defaultValue_other: '{{count}} users',
+                })}
+              </Badge>
+              <Badge color='gray' radius='full' variant='surface'>
+                {t('admin:groups.rolesCount', '{{count}} role', {
+                  count: roleCount,
+                  defaultValue_other: '{{count}} roles',
+                })}
+              </Badge>
+            </Flex>
+            <GroupActionsDropdown
+              group={group}
+              onViewUsers={handleViewUsers}
+              onManageRoles={handleManageRoles}
+              onViewPermissions={handleViewPermissions}
+              onEdit={handleEditGroup}
+              onDelete={handleDeleteGroup}
+            />
+          </Flex>
+          <Heading size='4' weight='bold' className={s.groupNameHeading}>
+            {group.name}
+          </Heading>
+          <Box className={s.groupBodyFlex}>
+            <Text
+              as='p'
+              size='2'
+              color='gray'
+              className={s.groupDescriptionText}
+            >
+              {group.description || t('common:notAvailable', 'N/A')}
+            </Text>
+          </Box>
+        </Card>
+      );
+    },
+    [
+      t,
+      handleViewUsers,
+      handleManageRoles,
+      handleViewPermissions,
+      handleEditGroup,
+      handleDeleteGroup,
+    ],
+  );
 
   return (
-    <div className={s.root}>
-      <Box.Header
-        icon={<Icon name='folder' size={24} />}
-        title={t('admin:groups.title', 'Group Management')}
-        subtitle={t(
-          'admin:groups.subtitle',
-          'Organize users into groups for easier access control',
-        )}
+    <Box className='p-6 max-w-[1400px] mx-auto'>
+      <DataTable
+        dataSource={groups}
+        rowKey='id'
+        loading={loading}
+        initialized={initialized}
+        as='grid'
+        gridCols={3}
+        renderCard={renderGroupCard}
+        selectable
+        selectedKeys={selectedGroups}
+        onSelectionChange={setSelectedGroups}
       >
-        <Button
-          variant='primary'
-          onClick={handleAddGroup}
-          {...(!canCreate && {
-            disabled: true,
-            title: t(
-              'admin:groups.noPermissionToCreate',
-              'You do not have permission to create groups',
-            ),
-          })}
-        >
-          <Icon name='plus' size={16} />
-          {t('admin:groups.addGroup', 'Add Group')}
-        </Button>
-      </Box.Header>
-
-      {/* Filters */}
-      <Table.SearchBar
-        className={s.filters}
-        value={search}
-        onChange={handleSearchChange}
-        placeholder={t('admin:groups.search', 'Search groups...')}
-      >
-        <SearchableSelect
-          className={s.filterSearchableSelect}
-          options={roleOptions}
-          value={roleFilter}
-          onChange={handleRoleFilterChange}
-          onSearch={handleRoleSearch}
-          onLoadMore={handleRoleLoadMore}
-          hasMore={rolesHasMore}
-          loading={rolesLoading}
-          loadingMore={rolesLoadingMore}
-          placeholder={t('admin:groups.allRoles', 'All Roles')}
-          searchPlaceholder={t('admin:groups.searchRoles', 'Search roles...')}
-        />
-        <div className={s.filterActions}>
-          {hasActiveFilters && (
-            <Button
-              variant='ghost'
-              size='small'
-              onClick={handleClearFilters}
-              type='button'
-              title={t('admin:groups.clearFilters', 'Reset all filters')}
-            >
-              <Icon name='x' size={12} />
-              {t('admin:groups.clearFilters', 'Clear Filters')}
-            </Button>
+        <DataTable.Header
+          title={t('admin:groups.title', 'Group Management')}
+          subtitle={t(
+            'admin:groups.subtitle',
+            'Organize users into groups for easier access control',
           )}
-        </div>
-      </Table.SearchBar>
+          icon={<GroupIcon width={24} height={24} />}
+        >
+          <Button
+            variant='solid'
+            color='indigo'
+            onClick={handleAddGroup}
+            {...(!canCreate && {
+              disabled: true,
+              title: t(
+                'admin:groups.noPermissionToCreate',
+                'You do not have permission to create groups',
+              ),
+            })}
+          >
+            <PlusIcon width={16} height={16} />
+            {t('admin:groups.addGroup', 'Add Group')}
+          </Button>
+        </DataTable.Header>
 
-      {groups.length === 0 ? (
-        <Table.Empty
-          icon='folder'
+        <DataTable.Toolbar>
+          <DataTable.Search
+            value={search}
+            onChange={handleSearchChange}
+            placeholder={t('admin:groups.search', 'Search groups...')}
+          />
+          <DataTable.Filter
+            component={SearchableSelect}
+            width='lg'
+            options={roleOptions}
+            value={roleFilter}
+            onChange={handleRoleFilterChange}
+            onSearch={handleRoleSearch}
+            onLoadMore={handleRoleLoadMore}
+            hasMore={rolesHasMore}
+            loading={rolesLoading}
+            loadingMore={rolesLoadingMore}
+            placeholder={t('admin:groups.allRoles', 'All Roles')}
+            searchPlaceholder={t('admin:groups.searchRoles', 'Search roles...')}
+          />
+          <DataTable.ClearFilters
+            visible={hasActiveFilters}
+            onClick={handleClearFilters}
+          />
+        </DataTable.Toolbar>
+
+        <DataTable.BulkActions actions={bulkActions} />
+
+        <DataTable.Empty
+          icon={<GroupIcon width={48} height={48} />}
           title={t('admin:groups.noGroupsFound', 'No groups found')}
           description={t(
             'admin:groups.noGroupsDescription',
@@ -307,8 +375,10 @@ function Groups({ context }) {
           )}
         >
           <Button
-            variant='primary'
+            variant='solid'
+            color='indigo'
             onClick={handleAddGroup}
+            mt='3'
             {...(!canCreate && {
               disabled: true,
               title: t(
@@ -319,131 +389,20 @@ function Groups({ context }) {
           >
             {t('admin:groups.addGroup', 'Add Group')}
           </Button>
-        </Table.Empty>
-      ) : (
-        <div className={s.grid}>
-          {groups.map(group => {
-            const userCount = group.userCount || 0;
-            const roleCount = group.roleCount || 0;
-            const users = group.users || [];
-            const roles = group.roles || [];
+        </DataTable.Empty>
+        <DataTable.Error message={error} onRetry={refreshGroups} />
+        <DataTable.Loader variant='cards' />
 
-            // Show up to 3 user avatars
-            const visibleUsers = users.slice(0, 3);
-            const remainingUserCount = userCount - visibleUsers.length;
-
-            // Show up to 3 role badges
-            const visibleRoles = roles.slice(0, 3);
-            const remainingRoleCount = roleCount - visibleRoles.length;
-
-            return (
-              <Card
-                key={group.id}
-                variant='default'
-                interactive
-                className={s.groupCard}
-              >
-                <Card.Header
-                  className={s.groupCardHeader}
-                  actions={
-                    <div className={s.headerRight}>
-                      <div className={s.headerBadges}>
-                        <Tag variant='info'>
-                          {userCount} {userCount === 1 ? 'user' : 'users'}
-                        </Tag>
-                        <Tag variant='secondary'>
-                          {roleCount} {roleCount === 1 ? 'role' : 'roles'}
-                        </Tag>
-                      </div>
-                      <GroupActionsDropdown
-                        group={group}
-                        isOpen={activeDropdownId === group.id}
-                        onToggle={handleToggleDropdown}
-                        onViewUsers={handleViewUsers}
-                        onManageRoles={handleManageRoles}
-                        onViewPermissions={handleViewPermissions}
-                        onEdit={handleEditGroup}
-                        onDelete={handleDeleteGroup}
-                      />
-                    </div>
-                  }
-                >
-                  <h3 className={s.groupName}>{group.name}</h3>
-                </Card.Header>
-                <Card.Body className={s.groupCardBody}>
-                  <p className={s.groupDescription}>
-                    {group.description || 'No description'}
-                  </p>
-
-                  {/* Roles Section */}
-                  <div className={s.rolesSection}>
-                    <span className={s.sectionLabel}>Roles:</span>
-                    <Tag.List
-                      emptyText={t(
-                        'admin:groups.noRolesAssigned',
-                        'No roles assigned',
-                      )}
-                    >
-                      {visibleRoles.map((role, idx) => (
-                        <RoleTag
-                          key={`group-${group.id}-role-${idx}`}
-                          name={role}
-                          className={s.roleTag}
-                        />
-                      ))}
-                      {remainingRoleCount > 0 && (
-                        <Tag variant='neutral' className={s.roleTag}>
-                          +{remainingRoleCount}
-                        </Tag>
-                      )}
-                    </Tag.List>
-                  </div>
-
-                  {/* Users Section */}
-                  <div className={s.usersSection}>
-                    <span className={s.usersSectionLabel}>Users:</span>
-                    {visibleUsers.length > 0 ? (
-                      <div className={s.usersAvatars}>
-                        {visibleUsers.map(user => (
-                          <Avatar
-                            key={user.id}
-                            name={
-                              (user.profile && user.profile.display_name) ||
-                              user.email
-                            }
-                            size='small'
-                          />
-                        ))}
-                        {remainingUserCount > 0 && (
-                          <Avatar
-                            name={`+${remainingUserCount}`}
-                            size='small'
-                          />
-                        )}
-                      </div>
-                    ) : (
-                      <span className={s.noUsers}>
-                        {t('admin:groups.noUsers', 'No users yet')}
-                      </span>
-                    )}
-                  </div>
-                </Card.Body>
-              </Card>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Pagination */}
-      {pagination && pagination.pages > 1 && (
-        <Table.Pagination
-          currentPage={currentPage}
-          totalPages={pagination.pages}
-          totalItems={pagination.total}
-          onPageChange={setCurrentPage}
-          loading={loading}
+        <DataTable.Pagination
+          current={currentPage}
+          totalPages={pagination ? pagination.pages : undefined}
+          total={pagination ? pagination.total : undefined}
+          pageSize={pageSize}
+          pageSizeOptions={[10, 20, 50, 100]}
+          onChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
         />
-      )}
+      </DataTable>
 
       {/* Group Roles Modal */}
       <GroupRolesModal ref={rolesModalRef} fetchRoles={fetchRoles} />
@@ -455,14 +414,14 @@ function Groups({ context }) {
       <GroupUsersModal ref={usersModalRef} />
 
       {/* Delete Confirmation Modal */}
-      <ConfirmModal.Delete
+      <Modal.ConfirmDelete
         ref={deleteModalRef}
         title={t('admin:groups.deleteTitle', 'Delete Group')}
         getItemName={getGroupName}
         onDelete={handleDeleteGroupAction}
         onSuccess={refreshGroups}
       />
-    </div>
+    </Box>
   );
 }
 

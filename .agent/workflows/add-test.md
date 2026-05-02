@@ -220,7 +220,7 @@ Test thunks with mocked `fetch` via store helpers:
 
 ```javascript
 // @apps/blog/views/(admin)/posts/redux/thunks.test.js
-import configureStore from '@shared/renderer/redux/configureStore';
+import { configureStore } from '@shared/renderer/redux';
 import { fetchPosts, createPost } from './thunks';
 import reducer, { SLICE_NAME } from './slice';
 import { getPosts, isPostsListLoading, getPostsListError } from './selector';
@@ -550,4 +550,3 @@ store.injectReducer(SLICE_NAME, reducer);
 - `/add-extension` — Extension testing for boot/shutdown symmetry
 - `/add-worker` — Worker handler testing (direct function calls)
 - `/modify` — Modify code with mandatory test verification
-- `/test-e2e` — Browser-based E2E tests for user flows

@@ -45,6 +45,29 @@ export async function init(container) { /* register hooks, workers */ }
 export function routes() { return require.context('./routes', ...); }
 ```
 
+## Dynamic Model Modification
+
+Extensions and core modules can dynamically extend core models (by injecting new columns or configuration) right before they are sealed by Sequelize. Using the `providers` phase, you can listen to the `[PascalCaseModelName]:define` hook (e.g. `User:define`):
+
+```javascript
+export async function providers({ container }) {
+  const hook = container.resolve('hook');
+  
+  hook('models').on('User:define', ({ attributes, DataTypes }) => {
+    // Inject a new column before `connection.define` finishes!
+    attributes.my_new_field = { type: DataTypes.STRING, allowNull: true };
+  });
+
+  hook('models').on('User:associate', ({ models, model: User }) => {
+    // Dynamically inject a relation to an extension model
+    User.hasMany(models.MyCustomModel, {
+      foreignKey: 'user_id',
+      as: 'customData',
+    });
+  });
+}
+```
+
 ## File-Based Router
 
 Routes are defined by filesystem structure under `api/routes/`:

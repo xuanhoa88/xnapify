@@ -7,28 +7,27 @@
 
 import { useCallback, useState, useEffect } from 'react';
 
+import { CrossCircledIcon } from '@radix-ui/react-icons';
+import { Flex, Text, Heading, Button } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Button from '@shared/renderer/components/Button';
 import Form, { useFormContext } from '@shared/renderer/components/Form';
 import { Link } from '@shared/renderer/components/History';
-import Icon from '@shared/renderer/components/Icon';
-import {
+import { features } from '@shared/renderer/redux';
+
+import { passwordResetRequestFormSchema } from '../../../users/validator/auth';
+
+const {
   resetPasswordRequest,
   isResetPasswordLoading,
   getResetPasswordError,
   clearResetPasswordError,
-} from '@shared/renderer/redux';
-
-import { passwordResetRequestFormSchema } from '../../../users/validator/auth';
-
-import s from './ResetPasswordRequest.css';
+} = features;
 
 /**
  * Reset Password Request Page Component
- * Standalone full-page form without header/footer
  */
 function ResetPasswordRequest() {
   const { t } = useTranslation();
@@ -57,76 +56,89 @@ function ResetPasswordRequest() {
   );
 
   return (
-    <div className={s.root}>
-      <HeroSection />
-
-      <div className={s.formSection}>
-        <div className={s.formContainer}>
-          <Form.Error message={error} />
-
-          {success ? (
-            <div className={s.successBox}>
-              <div className={s.successIcon}>✓</div>
-              <Trans
-                t={t}
-                i18nKey='resetPassword.success'
-                // eslint-disable-next-line react/jsx-key
-                components={[<strong />]}
-              />
-            </div>
-          ) : (
-            <Form
-              schema={passwordResetRequestFormSchema}
-              defaultValues={{ email: '' }}
-              onSubmit={handleSubmit}
-            >
-              <RequestFormFields loading={loading} />
-            </Form>
-          )}
-
-          <div className={s.backLink}>
-            <Link to='/login' className={s.link}>
-              <Icon name='arrowLeft' />
-              {t('resetPassword.backToLogin', 'Back to Login')}
-            </Link>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/**
- * Hero Section
- */
-function HeroSection() {
-  const { t } = useTranslation();
-
-  return (
-    <div className={s.hero}>
-      <div className={s.heroContent}>
-        <Link to='/' className={s.brand}>
-          <img
-            src='/xnapify_38x38.png'
-            srcSet='/xnapify_72x72.png 2x'
-            width='48'
-            height='48'
-            alt='xnapify'
-          />
-          <span className={s.brandText}>xnapify</span>
-        </Link>
-        <div className={s.heroIcon}>🔑</div>
-        <h1 className={s.heroTitle}>
+    <>
+      <Flex direction='column' align='center' mb='7'>
+        <Heading
+          as='h2'
+          size='7'
+          mb='2'
+          weight='bold'
+          className='text-slate-900 tracking-tight'
+        >
           {t('resetPassword.title', 'Reset Password')}
-        </h1>
-        <p className={s.heroSubtitle}>
+        </Heading>
+        <Text size='3' className='text-slate-500 font-medium'>
           {t(
             'resetPassword.subtitle',
             "Enter your email and we'll send you a reset link",
           )}
-        </p>
-      </div>
-    </div>
+        </Text>
+      </Flex>
+
+      {success ? (
+        <Flex
+          direction='column'
+          align='center'
+          p='5'
+          className='bg-emerald-50/50 rounded-xl border border-emerald-100'
+        >
+          <Text size='8' mb='3' className='text-emerald-500'>
+            ✓
+          </Text>
+          <Text size='3' className='text-emerald-700 font-semibold'>
+            <Trans t={t} i18nKey='resetPassword.success' />
+          </Text>
+        </Flex>
+      ) : (
+        <>
+          {error && (
+            <Flex
+              direction='column'
+              align='center'
+              p='5'
+              mb='5'
+              className='bg-red-50/50 rounded-xl border border-red-100'
+            >
+              <CrossCircledIcon className='w-8 h-8 text-red-500 mb-3' />
+              <Text size='3' className='text-red-700 font-medium text-center'>
+                {(error && error.message) ||
+                  (typeof error === 'string' ? error : null) ||
+                  t('resetPassword.error', 'Failed to request password reset')}
+              </Text>
+            </Flex>
+          )}
+          <Form
+            schema={passwordResetRequestFormSchema}
+            defaultValues={{ email: '' }}
+            onSubmit={handleSubmit}
+          >
+            <RequestFormFields loading={loading} />
+          </Form>
+        </>
+      )}
+
+      <Flex
+        justify='center'
+        mt='6'
+        pt='6'
+        className='border-t border-slate-200/80'
+      >
+        <Text size='2' className='text-slate-500'>
+          <Trans
+            t={t}
+            i18nKey='resetPassword.backToLogin'
+            defaults='Remember your password? <0>Back to Login</0>'
+            components={[
+              <Link
+                key='link'
+                to='/login'
+                className='text-indigo-600 hover:text-indigo-700 font-medium no-underline transition-colors duration-200'
+              />,
+            ]}
+          />
+        </Text>
+      </Flex>
+    </>
   );
 }
 
@@ -140,7 +152,7 @@ function RequestFormFields({ loading }) {
   } = useFormContext();
 
   return (
-    <>
+    <Flex direction='column' gap='4'>
       <Form.Field
         name='email'
         label={t('resetPassword.email', 'Email Address')}
@@ -155,17 +167,19 @@ function RequestFormFields({ loading }) {
       </Form.Field>
 
       <Button
-        variant='primary'
+        variant='solid'
+        color='indigo'
+        size='3'
         type='submit'
-        fullWidth
-        className={s.submitButton}
+        mt='3'
+        className='w-full cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md'
         loading={loading || isSubmitting}
       >
         {loading
           ? t('resetPassword.loading', 'Sending...')
           : t('resetPassword.submit', 'Send Reset Link')}
       </Button>
-    </>
+    </Flex>
   );
 }
 

@@ -1,0 +1,58 @@
+{
+  "emails": {
+    "list": {
+      "title": "Templates",
+      "name": "Name",
+      "slug": "Slug",
+      "subject": "Subject",
+      "status": "Status",
+      "active": "Active",
+      "inactive": "Inactive",
+      "updated": "Updated",
+      "edit": "Edit",
+      "delete": "Delete",
+      "addTemplate": "New Template",
+      "preview": "Preview",
+      "duplicate": "Duplicate",
+      "previewTitle": "Template Preview"
+    },
+    "form": {
+      "templateInfo": "Template Information",
+      "name": "Template Name",
+      "slug": "Slug",
+      "isActive": "Active",
+      "emailContent": "Email Content",
+      "emailSubject": "Email Subject",
+      "emailBody": "Email Body",
+      "previewBtn": "Preview",
+      "preview": "Preview",
+      "save": "Create Template",
+      "createTemplate": "Create Email Template",
+      "editTemplate": "Edit Email Template",
+      "detectedVariables": "Detected Variables:",
+      "clickToCopy": "Click to copy"
+    },
+    "create": {
+      "title": "Create Email Template",
+      "backToList": "Back to Email Templates"
+    },
+    "edit": {
+      "title": "Edit Email Template",
+      "loading": "Loading template...",
+      "notFound": "Template not found",
+      "backToList": "Back to Email Templates"
+    },
+    "modal": {
+      "previewTitle": "Preview Template",
+      "previewError": "Rendering error"
+    },
+    "deleteModal": {
+      "title": "Delete Template",
+      "bulkCount": "{{count}} templates"
+    },
+    "templates": {
+      "insertTemplate": "Insert Template",
+      "chooseBlock": "Choose a Block..."
+    }
+  }
+}

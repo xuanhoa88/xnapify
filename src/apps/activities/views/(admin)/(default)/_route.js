@@ -10,24 +10,13 @@
  */
 
 import { requirePermission } from '@shared/renderer/components/Rbac';
-import {
-  addBreadcrumb,
-  registerMenu,
-  unregisterMenu,
-} from '@shared/renderer/redux';
-
-import reducer, { SLICE_NAME } from '../redux';
+import { features } from '@shared/renderer/redux';
 
 import ActivityList from './ActivityList';
 
-export const middleware = requirePermission('activities:read');
+const { addBreadcrumb, registerMenu, unregisterMenu } = features;
 
-/**
- * Route boot — inject Redux reducer into the store.
- */
-export function init({ store }) {
-  store.injectReducer(SLICE_NAME, reducer);
-}
+export const middleware = requirePermission('activities:read');
 
 /**
  * Register menu item
@@ -36,15 +25,15 @@ export function setup({ store, i18n }) {
   store.dispatch(
     registerMenu({
       ns: 'admin',
-      id: 'monitoring',
-      label: i18n.t('admin:navigation.monitoring', 'Monitoring'),
-      order: 30, // After Management
-      icon: 'activity',
+      id: 'system',
+      label: i18n.t('admin:navigation.system', 'System'),
+      order: 99,
+      icon: 'ActivityLogIcon',
       items: [
         {
           path: '/admin/activities',
           label: i18n.t('admin:navigation.activities', 'Activity Logs'),
-          icon: 'activity',
+          icon: 'ActivityLogIcon',
           permission: 'activities:read',
           order: 10,
         },

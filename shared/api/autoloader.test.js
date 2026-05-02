@@ -1,3 +1,10 @@
+/**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
 jest.mock('@shared/i18n/loader', () => ({
   getTranslations: jest.fn(),
 }));
@@ -120,20 +127,19 @@ describe('shared/api/autoloader', () => {
   });
 
   describe('discoverModules', () => {
-    const mockDb = {};
-    const mockContainer = {
-      resolve: jest.fn(key => {
-        if (key === 'db') return mockDb;
-        return null;
-      }),
-      has: jest.fn(key => key === 'db'),
-      instance: jest.fn(),
-    };
+    let mockDb;
+    let mockContainer;
 
     beforeEach(() => {
-      mockContainer.resolve.mockClear();
-      mockContainer.has.mockClear();
-      mockContainer.instance.mockClear();
+      mockDb = { isMock: true };
+      mockContainer = {
+        resolve: jest.fn(key => {
+          if (key === 'db') return mockDb;
+          return null;
+        }),
+        has: jest.fn(key => key === 'db'),
+        instance: jest.fn(),
+      };
     });
 
     it('should load translations via hooks.translations()', async () => {
@@ -229,10 +235,10 @@ describe('shared/api/autoloader', () => {
         .mockReturnValue(['./User.js', './Post.js']);
       mockModelContext.mockImplementation(key => {
         if (key === './User.js') {
-          return { default: jest.fn().mockResolvedValue(userModel) };
+          return { default: jest.fn().mockReturnValue(userModel) };
         }
         if (key === './Post.js') {
-          return { default: jest.fn().mockResolvedValue(postModel) };
+          return { default: jest.fn().mockReturnValue(postModel) };
         }
       });
 
@@ -272,8 +278,8 @@ describe('shared/api/autoloader', () => {
       const { apiModels } = await discoverModules(mockContext, mockContainer);
 
       // Verify models loaded via hooks.models()
-      expect(apiModels).toHaveProperty('User', userModel);
-      expect(apiModels).toHaveProperty('Post', postModel);
+      expect(apiModels.User).toEqual(userModel);
+      expect(apiModels.Post).toEqual(postModel);
 
       // Verify associations called
       expect(userModel.associate).toHaveBeenCalledWith(apiModels);
@@ -317,7 +323,7 @@ describe('shared/api/autoloader', () => {
       const mockModelContext = jest.fn();
       mockModelContext.keys = jest.fn().mockReturnValue(['./User.js']);
       mockModelContext.mockImplementation(() => {
-        return { default: jest.fn().mockResolvedValue(userModel) };
+        return { default: jest.fn().mockReturnValue(userModel) };
       });
 
       mockContext.mockImplementation(key => {
@@ -351,8 +357,8 @@ describe('shared/api/autoloader', () => {
 
       const { apiModels } = await discoverModules(mockContext, mockContainer);
 
-      expect(apiModels).toHaveProperty('User');
-      expect(Object.keys(apiModels)).toHaveLength(1);
+      expect(apiModels.User).toBeDefined();
+      expect(apiModels.size).toBe(1);
     });
   });
 });

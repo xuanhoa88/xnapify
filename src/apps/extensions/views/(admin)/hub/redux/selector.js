@@ -5,9 +5,15 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { createSelector } from '@reduxjs/toolkit';
+
 import { normalizeState, SLICE_NAME } from './slice';
 
-const getHubState = state => normalizeState(state && state[SLICE_NAME]);
+const selectRawSlice = state => state && state[SLICE_NAME];
+
+const getHubState = createSelector([selectRawSlice], raw =>
+  normalizeState(raw),
+);
 
 const getOp = (state, key) => {
   const s = getHubState(state);
@@ -31,10 +37,6 @@ export const getHubPage = state => getHubState(state).data.page;
 
 export const getHubTotalPages = state => getHubState(state).data.totalPages;
 
-export const getMySubmissions = state => getHubState(state).data.mySubmissions;
-
-export const getAdminSubmissions = state => getHubState(state).data.submissions;
-
 export const isHubInitialized = state => getHubState(state).data.initialized;
 
 // Filter selectors
@@ -50,16 +52,16 @@ export const isHubCategoriesLoading = state =>
 
 export const isHubDetailLoading = state => getOp(state, 'detail').loading;
 
-export const isHubSubmitting = state => getOp(state, 'submit').loading;
+export const isHubInstalling = state => getOp(state, 'install').loading;
 
-export const isMySubmissionsLoading = state =>
-  getOp(state, 'mySubmissions').loading;
+export const isHubUpdating = state => getOp(state, 'update').loading;
 
-export const isAdminSubmissionsLoading = state =>
-  getOp(state, 'submissions').loading;
-
-export const isReviewLoading = state => getOp(state, 'review').loading;
+export const isHubUninstalling = state => getOp(state, 'uninstall').loading;
 
 export const getHubBrowseError = state => getOp(state, 'browse').error;
 
-export const getHubSubmitError = state => getOp(state, 'submit').error;
+export const getHubInstallError = state => getOp(state, 'install').error;
+
+export const getHubUpdateError = state => getOp(state, 'update').error;
+
+export const getHubUninstallError = state => getOp(state, 'uninstall').error;

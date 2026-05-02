@@ -8,24 +8,32 @@
 import {
   forwardRef,
   useRef,
+  useEffect,
   useCallback,
   useMemo,
   useState,
-  useEffect,
   memo,
 } from 'react';
 
+import {
+  Spinner,
+  Flex,
+  Text,
+  Box,
+  TextField,
+  IconButton,
+  Checkbox,
+} from '@radix-ui/themes';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useFormContext } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import Button from '../../Button';
 import Icon from '../../Icon';
 import { useInfiniteScroll } from '../../InfiniteScroll';
 import { useFormField, useMergeRefs } from '../FormContext';
 
-import s from './FormCheckboxList.css';
+import s from './CheckboxList.css';
 
 /**
  * CheckboxItem - Memoized individual checkbox for better performance
@@ -41,22 +49,36 @@ const CheckboxItem = memo(function CheckboxItem({
   onChange,
 }) {
   return (
-    <label className={s.checkboxItem}>
-      <input
-        type='checkbox'
+    <Box
+      className={clsx(
+        s.checkboxItem,
+        disabled ? s.checkboxItemCursorDisabled : s.checkboxItemCursor,
+      )}
+    >
+      <Checkbox
+        size='1'
         name={name}
         value={value}
         checked={isChecked}
-        onChange={onChange}
+        onCheckedChange={checked =>
+          onChange({ target: { name, value, checked } })
+        }
         disabled={disabled}
+        className={
+          disabled ? s.checkboxItemCursorDisabled : s.checkboxItemCursor
+        }
       />
-      <span>
-        <span className={s.itemLabel}>{label}</span>
+      <Flex direction='column' gap='1' className={s.checkboxFlex1}>
+        <Text as='span' size='2' weight='medium' className={s.checkboxLabel}>
+          {label}
+        </Text>
         {description && (
-          <span className={s.itemDescription}>{description}</span>
+          <Text as='span' size='1' color='gray' className={s.checkboxDesc}>
+            {description}
+          </Text>
         )}
-      </span>
-    </label>
+      </Flex>
+    </Box>
   );
 });
 
@@ -82,36 +104,40 @@ const GroupHeader = memo(function GroupHeader({
   disabled,
   onToggle,
 }) {
-  const checkboxRef = useRef(null);
   const isAllSelected = selectedCount === totalCount && totalCount > 0;
   const isIndeterminate = selectedCount > 0 && selectedCount < totalCount;
 
-  // Set indeterminate property via ref (can't be set via attribute)
-  useEffect(() => {
-    if (checkboxRef.current) {
-      checkboxRef.current.indeterminate = isIndeterminate;
-    }
-  }, [isIndeterminate]);
+  // Keep a ref to the latest isAllSelected so that handleChange can read it
+  // without being re-created when isAllSelected changes. A stable callback
+  // identity prevents Radix Checkbox from re-composing its internal refs,
+  // which avoids the setState-during-commit infinite loop bug.
+  const isAllSelectedRef = useRef(isAllSelected);
+  isAllSelectedRef.current = isAllSelected;
 
   const handleChange = useCallback(() => {
-    onToggle(groupKey, !isAllSelected);
-  }, [groupKey, isAllSelected, onToggle]);
+    onToggle(groupKey, !isAllSelectedRef.current);
+  }, [groupKey, onToggle]);
 
   return (
-    <label className={s.groupHeader}>
-      <input
-        ref={checkboxRef}
-        type='checkbox'
-        checked={isAllSelected}
-        onChange={handleChange}
+    <Box className={s.groupHeader}>
+      <Checkbox
+        size='1'
+        checked={
+          isAllSelected ? true : isIndeterminate ? 'indeterminate' : false
+        }
+        onCheckedChange={handleChange}
         disabled={disabled}
-        className={s.groupCheckbox}
+        className={
+          disabled ? s.checkboxItemCursorDisabled : s.checkboxItemCursor
+        }
       />
-      <span className={s.groupTitle}>{label}</span>
-      <span className={s.groupCount}>
+      <Text as='span' size='2' weight='bold' className={s.groupHeaderLabel}>
+        {label}
+      </Text>
+      <Text as='span' size='1' color='gray'>
         ({selectedCount}/{totalCount})
-      </span>
-    </label>
+      </Text>
+    </Box>
   );
 });
 
@@ -185,8 +211,9 @@ const FormCheckboxList = forwardRef(function FormCheckboxList$(
     emptyMessage = 'No items found',
     loadingMessage = 'Loading...',
     // Dimensions
-    maxHeight = 320,
+    maxHeight = 240,
     minHeight = 160,
+    size = '2',
     // Other
     className,
     disabled,
@@ -194,7 +221,12 @@ const FormCheckboxList = forwardRef(function FormCheckboxList$(
   forwardedRef,
 ) {
   const { t } = useTranslation();
-
+  // Track whether a fetch has completed at least once.
+  // Stays false until `loading` transitions true → false, which prevents
+  // the empty-message from flashing before the first fetch resolves.
+  const prevLoadingRef = useRef(loading);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const showLoading = loading || (!hasLoadedOnce && items.length === 0);
   const displayEmptyMessage =
     emptyMessage || t('shared:components.checkboxList.empty', 'No items found');
   const displayLoadingMessage =
@@ -294,8 +326,8 @@ const FormCheckboxList = forwardRef(function FormCheckboxList$(
   // Setup infinite scroll
   useInfiniteScroll({
     containerRef,
-    onLoadMore: handleLoadMore,
     hasMore,
+    onLoadMore: handleLoadMore,
     loading: loadingMore,
     threshold: 50,
   });
@@ -315,6 +347,14 @@ const FormCheckboxList = forwardRef(function FormCheckboxList$(
     return grouped;
   }, [items, groupBy]);
 
+  // Only mark as loaded when loading transitions from true → false
+  useEffect(() => {
+    if (prevLoadingRef.current && !loading) {
+      setHasLoadedOnce(true);
+    }
+    prevLoadingRef.current = loading;
+  }, [loading]);
+
   // Handle group "Select All" toggle
   const handleGroupSelectAll = useCallback(
     (groupKey, selectAll) => {
@@ -327,9 +367,10 @@ const FormCheckboxList = forwardRef(function FormCheckboxList$(
 
       if (selectAll) {
         // Add all group items that aren't already selected
+        const currentSet = new Set(currentValues);
         const newValues = [...currentValues];
         groupItemValues.forEach(value => {
-          if (!selectedSet.has(value)) {
+          if (!currentSet.has(value)) {
             newValues.push(value);
           }
         });
@@ -344,7 +385,7 @@ const FormCheckboxList = forwardRef(function FormCheckboxList$(
         );
       }
     },
-    [groupedItems, getItemValue, getValues, selectedSet, setValue, name],
+    [groupedItems, getItemValue, getValues, setValue, name],
   );
 
   // Memoized group label formatter
@@ -416,66 +457,80 @@ const FormCheckboxList = forwardRef(function FormCheckboxList$(
     ],
   );
 
-  // Memoized container styles
-  const containerStyle = useMemo(
-    () => ({ maxHeight, minHeight }),
+  // Dynamic sizing styles preserved as object, styling rules migrated to CSS module
+  const dynamicSizing = useMemo(
+    () => ({
+      maxHeight,
+      minHeight,
+    }),
     [maxHeight, minHeight],
   );
 
-  // Memoized container className
-  const containerClassName = useMemo(
-    () =>
-      clsx(
-        s.checkboxGroup,
-        { [s.checkboxGroupError]: error },
-        { [s.checkboxGroupGrouped]: groupBy },
-      ),
-    [error, groupBy],
-  );
-
   return (
-    <div className={clsx(s.wrapper, className)}>
+    <Flex direction='column' gap='2' className={className}>
       {(searchable || onSearch) && (
-        <div className={s.searchContainer}>
-          <span className={s.searchIcon}>
-            <Icon name='search' size={16} />
-          </span>
-          <input
-            type='text'
-            placeholder={displaySearchPlaceholder}
-            value={effectiveSearchValue}
-            onChange={handleSearchChange}
-            className={s.searchInput}
-            disabled={disabled}
-            aria-label={displaySearchPlaceholder}
-          />
+        <TextField.Root
+          type='text'
+          size={size}
+          placeholder={displaySearchPlaceholder}
+          value={effectiveSearchValue}
+          onChange={handleSearchChange}
+          color={error ? 'red' : undefined}
+          disabled={disabled}
+          aria-label={displaySearchPlaceholder}
+        >
+          <TextField.Slot>
+            <Icon name='MagnifyingGlassIcon' size={14} />
+          </TextField.Slot>
           {effectiveSearchValue && (
-            <Button
-              variant='ghost'
-              size='small'
-              iconOnly
-              className={s.searchClear}
-              onClick={handleClearSearch}
-              title={t(
-                'shared:components.checkboxList.clearSearch',
-                'Clear search',
-              )}
-              disabled={disabled}
-            >
-              ✕
-            </Button>
+            <TextField.Slot side='right'>
+              <IconButton
+                type='button'
+                variant='ghost'
+                color='gray'
+                size='1'
+                onClick={handleClearSearch}
+                title={t(
+                  'shared:components.checkboxList.clearSearch',
+                  'Clear search',
+                )}
+                disabled={disabled}
+              >
+                ✕
+              </IconButton>
+            </TextField.Slot>
           )}
-        </div>
+        </TextField.Root>
       )}
 
-      {loading ? (
-        <div className={s.loading}>{displayLoadingMessage}</div>
+      {showLoading ? (
+        <Flex
+          align='center'
+          justify='center'
+          className={clsx(
+            s.listContainer,
+            { [s.listContainerError]: error },
+            groupBy ? s.listContainerNoPadding : s.listContainerPadding,
+          )}
+          style={dynamicSizing}
+        >
+          {/* Add a spinner visual indicator */}
+          <Spinner size='2' mr='2' />
+          <Text size='2' color='gray' className={s.centerItalic}>
+            {displayLoadingMessage}
+          </Text>
+        </Flex>
       ) : (
         <div
           ref={handleRef}
           id={id}
-          className={containerClassName}
-          style={containerStyle}
+          className={clsx(
+            s.listContainer,
+            { [s.listContainerError]: error },
+            groupBy ? s.listContainerNoPadding : s.listContainerPadding,
+          )}
+          // eslint-disable-next-line react/forbid-dom-props
+          style={dynamicSizing}
           role='group'
           aria-labelledby={`${id}-label`}
         >
@@ -483,45 +538,60 @@ const FormCheckboxList = forwardRef(function FormCheckboxList$(
             <>
               {groupBy && groupedItems
                 ? // Grouped rendering
-                  Object.entries(groupedItems).map(([groupKey, groupItems]) => {
-                    // Calculate selected count for this group
-                    const groupSelectedCount = groupItems.filter(item =>
-                      selectedSet.has(getItemValue(item)),
-                    ).length;
+                  Object.entries(groupedItems).map(
+                    ([groupKey, groupItems], index) => {
+                      // Calculate selected count for this group
+                      const groupSelectedCount = groupItems.filter(item =>
+                        selectedSet.has(getItemValue(item)),
+                      ).length;
 
-                    return (
-                      <div key={groupKey} className={s.permissionGroup}>
-                        <GroupHeader
-                          groupKey={groupKey}
-                          label={formatGroupLabel(groupKey)}
-                          selectedCount={groupSelectedCount}
-                          totalCount={groupItems.length}
-                          disabled={disabled}
-                          onToggle={handleGroupSelectAll}
-                        />
-                        <div className={s.groupItems}>
-                          {groupItems.map(renderCheckboxItem)}
+                      return (
+                        <div
+                          key={groupKey}
+                          className={
+                            index === Object.entries(groupedItems).length - 1
+                              ? ''
+                              : s.groupItemsFlexBorder
+                          }
+                        >
+                          <GroupHeader
+                            groupKey={groupKey}
+                            label={formatGroupLabel(groupKey)}
+                            selectedCount={groupSelectedCount}
+                            totalCount={groupItems.length}
+                            disabled={disabled}
+                            onToggle={handleGroupSelectAll}
+                          />
+                          <Flex direction='column' className={s.groupItemsFlex}>
+                            {groupItems.map(renderCheckboxItem)}
+                          </Flex>
                         </div>
-                      </div>
-                    );
-                  })
+                      );
+                    },
+                  )
                 : // Flat rendering
                   items.map(renderCheckboxItem)}
               {loadingMore && (
-                <div className={s.loadingMore}>
-                  {t(
-                    'shared:components.checkboxList.loadingMore',
-                    'Loading more...',
-                  )}
-                </div>
+                <Box p='3' className={s.centerItalic}>
+                  <Text size='2' color='gray' className={s.centerItalic}>
+                    {t(
+                      'shared:components.checkboxList.loadingMore',
+                      'Loading more...',
+                    )}
+                  </Text>
+                </Box>
               )}
             </>
           ) : (
-            <div className={s.empty}>{displayEmptyMessage}</div>
+            <Box p='4' className={s.centerItalic}>
+              <Text size='2' color='gray' className={s.centerItalic}>
+                {displayEmptyMessage}
+              </Text>
+            </Box>
           )}
         </div>
       )}
-    </div>
+    </Flex>
   );
 });
 
@@ -570,6 +640,8 @@ FormCheckboxList.propTypes = {
   minHeight: PropTypes.number,
   /** Additional CSS class names */
   className: PropTypes.string,
+  /** Radix size */
+  size: PropTypes.string,
   /** Disabled state */
   disabled: PropTypes.bool,
 };

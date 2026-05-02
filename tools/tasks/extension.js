@@ -90,7 +90,7 @@ function discoverExtensions() {
           name: manifest.name,
           dirName: manifest.name,
           id: generateExtensionId(manifest.name),
-          version: semver.clean(manifest.version) || '0.0.0',
+          version: semver.clean(manifest.version) || '1.0.0',
           path: extensionPath,
         };
       } catch {
@@ -142,7 +142,17 @@ async function generateManifests(extensions) {
       );
     }
 
-    const checksum = await computeChecksum(outputDir);
+    let checksum;
+    try {
+      checksum = await computeChecksum(outputDir);
+    } catch (checksumErr) {
+      // Gracefully degrade — use a timestamp-based fallback so the build
+      // continues even if hashing fails (e.g. broken symlinks).
+      logError(
+        `⚠️  Checksum failed for ${name}: ${checksumErr.message} — using fallback`,
+      );
+      checksum = `fallback-${Date.now()}`;
+    }
 
     const outputManifest = {
       ...pick(manifest, MANIFEST_FIELDS),
@@ -247,17 +257,25 @@ function handleBuildResult(err, stats, isWatch) {
   return null;
 }
 
+let notifyTimer = null;
+
 /** Notify the dev server that extension bundles have been rebuilt. */
 function notifyServer(extensions) {
-  const names = extensions.map(p => p.name);
-  const msg = { type: 'extensions-refreshed', extensions: names };
-
-  if (typeof process.send === 'function') {
-    process.send(msg);
-  } else {
-    process.emit('message', msg);
+  if (notifyTimer) {
+    clearTimeout(notifyTimer);
   }
-  logInfo(`🔌 Sent extensions-refreshed: ${names.join(', ')}`);
+
+  notifyTimer = setTimeout(() => {
+    const names = extensions.map(p => p.name);
+    const msg = { type: 'extensions-refreshed', extensions: names };
+
+    if (typeof process.send === 'function') {
+      process.send(msg);
+    } else {
+      process.emit('message', msg);
+    }
+    logInfo(`🔌 Sent extensions-refreshed: ${names.join(', ')}`);
+  }, 300);
 }
 
 // ---------------------------------------------------------------------------
@@ -328,7 +346,7 @@ async function buildExtensions(options = {}) {
     return;
   }
 
-  logInfo(`🚀 Building ${extensions.length} extension(s)...`);
+  logInfo(`🔨 Compiling ${extensions.length} extension(s)...`);
   const start = Date.now();
 
   // Auto-cleanup: remove stale build directories that no longer match
@@ -389,11 +407,13 @@ async function buildExtensions(options = {}) {
         return;
       }
 
+      // Link node_modules and copy assets first so the output directory
+      // is complete before generateManifests checksums it.
       await Promise.all([
-        generateManifests(extensions),
         copyStaticAssets(extensions),
         linkExtensionNodeModules(extensions),
       ]);
+      await generateManifests(extensions);
 
       logInfo(
         `✅ Extension build completed in ${formatDuration(Date.now() - start)}`,

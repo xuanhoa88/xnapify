@@ -7,16 +7,20 @@
 
 import { forwardRef } from 'react';
 
-import clsx from 'clsx';
+import { TextField, IconButton, Flex } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useFormContext } from 'react-hook-form';
 
-import { useFormField, useMergeRefs } from '../FormContext';
+import {
+  useFormField,
+  useMergeRefs,
+  composeEventHandlers,
+} from '../FormContext';
 
-import s from './FormNumberInput.css';
+import s from './Index.css';
 
 /**
- * FormNumberInput - Number input with +/- buttons
+ * FormNumberInput - Number input with +/- buttons baked by Radix Themes
  *
  * Usage:
  *   <Form.Field name="quantity" label="Quantity">
@@ -26,6 +30,7 @@ import s from './FormNumberInput.css';
 const FormNumberInput = forwardRef(function FormNumberInput$(
   {
     placeholder,
+    size = '2',
     className,
     disabled,
     min = 0,
@@ -46,7 +51,12 @@ const FormNumberInput = forwardRef(function FormNumberInput$(
       : Number(formValue);
 
   // Get registration props including ref
-  const { ref: registerRef, ...registerProps } = register(name, {
+  const {
+    ref: registerRef,
+    onChange,
+    onBlur,
+    ...registerProps
+  } = register(name, {
     valueAsNumber: true,
   });
 
@@ -68,43 +78,49 @@ const FormNumberInput = forwardRef(function FormNumberInput$(
   };
 
   return (
-    <div className={clsx(s.numberWrapper, { [s.error]: error }, className)}>
-      <button
+    <Flex align='center' gap='2' className={className}>
+      <IconButton
         type='button'
-        className={s.button}
+        variant='soft'
+        color='gray'
         onClick={decrement}
         disabled={disabled || numericValue <= min}
         aria-label='Decrease'
         tabIndex={-1}
       >
         −
-      </button>
-      <input
+      </IconButton>
+      <TextField.Root
         id={id}
         type='number'
+        size={size}
         placeholder={placeholder}
         disabled={disabled}
         min={min}
         max={max}
         step={step}
-        className={clsx(s.input, { [s.inputError]: error })}
+        color={error ? 'red' : undefined}
         // eslint-disable-next-line jsx-a11y/no-autofocus
         autoFocus={autoFocus}
+        className={s.numberInput}
         {...registerProps}
         {...props}
+        onChange={composeEventHandlers(props.onChange, onChange)}
+        onBlur={composeEventHandlers(props.onBlur, onBlur)}
         ref={handleRef}
       />
-      <button
+      <IconButton
         type='button'
-        className={s.button}
+        variant='soft'
+        color='gray'
         onClick={increment}
         disabled={disabled || (max != null && numericValue >= max)}
         aria-label='Increase'
         tabIndex={-1}
       >
         +
-      </button>
-    </div>
+      </IconButton>
+    </Flex>
   );
 });
 
@@ -113,6 +129,8 @@ FormNumberInput.propTypes = {
   placeholder: PropTypes.string,
   /** Additional CSS class names */
   className: PropTypes.string,
+  /** Radix size */
+  size: PropTypes.string,
   /** Disabled state */
   disabled: PropTypes.bool,
   /** Minimum value */
@@ -123,6 +141,10 @@ FormNumberInput.propTypes = {
   step: PropTypes.number,
   /** Auto focus on mount */
   autoFocus: PropTypes.bool,
+  /** Custom onChange handler */
+  onChange: PropTypes.func,
+  /** Custom onBlur handler */
+  onBlur: PropTypes.func,
 };
 
 export default FormNumberInput;

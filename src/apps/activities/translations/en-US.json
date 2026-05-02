@@ -1,0 +1,16 @@
+{
+  "activities": {
+    "title": "Activity Logs",
+    "noLogsFound": "No activity logs found",
+    "filter": {
+      "allEvents": "All Events",
+      "allEntities": "All Entities"
+    },
+    "column": {
+      "event": "Event",
+      "entity": "Entity",
+      "actor": "Actor",
+      "timestamp": "Timestamp"
+    }
+  }
+}

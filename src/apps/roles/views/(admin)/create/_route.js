@@ -6,9 +6,11 @@
  */
 
 import { requirePermission } from '@shared/renderer/components/Rbac';
-import { addBreadcrumb } from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
 
 import CreateRole from './CreateRole';
+
+const { addBreadcrumb } = features;
 
 export const middleware = requirePermission('roles:create');
 

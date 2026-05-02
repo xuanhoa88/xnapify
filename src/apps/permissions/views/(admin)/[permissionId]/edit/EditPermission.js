@@ -7,17 +7,29 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 
+import {
+  ArrowLeftIcon,
+  LockOpen1Icon,
+  Pencil1Icon,
+} from '@radix-ui/react-icons';
+import {
+  Box,
+  Flex,
+  Text,
+  Grid,
+  Button,
+  Card,
+  Badge,
+  Separator,
+} from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import * as Box from '@shared/renderer/components/Box';
-import Button from '@shared/renderer/components/Button';
-import ConfirmModal from '@shared/renderer/components/ConfirmModal';
 import Form, { useFormContext } from '@shared/renderer/components/Form';
 import { useHistory } from '@shared/renderer/components/History';
-import Icon from '@shared/renderer/components/Icon';
-import Loader from '@shared/renderer/components/Loader';
+import Modal from '@shared/renderer/components/Modal';
+import { PageHeader } from '@shared/renderer/components/PageHeader';
 
 import { updatePermissionFormSchema } from '../../../../validator/admin';
 import {
@@ -26,22 +38,115 @@ import {
   isPermissionFetchLoading,
   isPermissionUpdateLoading,
   isPermissionFetchInitialized,
-  getFetchedPermission,
   getPermissionFetchError,
+  getFetchedPermission,
 } from '../../redux';
 
-import s from './EditPermission.css';
+// =============================================================================
+// Identity sidebar card — reflects live form values
+// =============================================================================
 
-export default function EditPermission({ permissionId }) {
+function EditPermissionIdentityCard({ permission }) {
+  const { t } = useTranslation();
+  const { watch } = useFormContext();
+
+  const resource =
+    watch('resource') || (permission && permission.resource) || '';
+  const action = watch('action') || (permission && permission.action) || '';
+  const isActive = watch('is_active');
+  const generatedName = resource && action ? `${resource}:${action}` : '-';
+
+  return (
+    <Card variant='surface'>
+      <Flex direction='column' align='center' p='5' gap='4'>
+        <Flex
+          align='center'
+          justify='center'
+          width='64px'
+          height='64px'
+          className='rounded-full bg-[var(--indigo-3)] text-[var(--indigo-11)]'
+        >
+          <LockOpen1Icon width={28} height={28} />
+        </Flex>
+
+        <Flex direction='column' align='center' gap='1' className='w-full'>
+          <Text
+            size='3'
+            weight='bold'
+            align='center'
+            className='break-all font-mono'
+          >
+            {generatedName}
+          </Text>
+          <Text size='1' color='gray' align='center'>
+            {t(
+              'admin:permissions.edit.generatedNameHint',
+              'Auto-generated from resource & action',
+            )}
+          </Text>
+        </Flex>
+
+        <Separator size='4' />
+
+        <Flex direction='column' gap='3' className='w-full'>
+          <Flex justify='between' align='center'>
+            <Text size='2' color='gray'>
+              {t('admin:permissions.edit.resource', 'Resource')}
+            </Text>
+            <Badge color='indigo' variant='soft' radius='full' size='1'>
+              {resource || '-'}
+            </Badge>
+          </Flex>
+
+          <Flex justify='between' align='center'>
+            <Text size='2' color='gray'>
+              {t('admin:permissions.edit.action', 'Action')}
+            </Text>
+            <Badge color='indigo' variant='soft' radius='full' size='1'>
+              {action || '-'}
+            </Badge>
+          </Flex>
+
+          <Flex justify='between' align='center'>
+            <Text size='2' color='gray'>
+              {t('admin:permissions.edit.statusLabel', 'Status')}
+            </Text>
+            <Badge
+              color={isActive ? 'green' : 'gray'}
+              variant='soft'
+              radius='full'
+              size='1'
+            >
+              {isActive
+                ? t('admin:permissions.edit.active', 'Active')
+                : t('admin:permissions.edit.inactive', 'Inactive')}
+            </Badge>
+          </Flex>
+        </Flex>
+      </Flex>
+    </Card>
+  );
+}
+
+EditPermissionIdentityCard.propTypes = {
+  permission: PropTypes.object,
+};
+
+// =============================================================================
+// Main EditPermission component
+// =============================================================================
+
+function EditPermission({ permissionId }) {
   const dispatch = useDispatch();
   const { t } = useTranslation();
   const history = useHistory();
-  const loading = useSelector(isPermissionFetchLoading);
   const saving = useSelector(isPermissionUpdateLoading);
+  const fetchingPermission = useSelector(isPermissionFetchLoading);
   const fetchInitialized = useSelector(isPermissionFetchInitialized);
   const permission = useSelector(getFetchedPermission);
   const permissionLoadError = useSelector(getPermissionFetchError);
-  const [error, setError] = useState(null);
+
+  const [, setError] = useState(null);
   const confirmBackModalRef = useRef(null);
   const isDirtyRef = useRef(false);
 
@@ -113,128 +218,102 @@ export default function EditPermission({ permissionId }) {
     [permission],
   );
 
-  // Show loading on first fetch or when still fetching
-  if (!fetchInitialized || loading) {
-    return (
-      <div className={s.root}>
-        <Box.Header
-          icon={<Icon name='key' size={24} />}
-          title={t('admin:permissions.edit.title', 'Edit Permission')}
-          subtitle={t(
-            'admin:permissions.edit.subtitle',
-            'Modify permission rule',
-          )}
-        >
-          <Button
-            variant='secondary'
-            onClick={() => handleCancel(isDirtyRef.current)}
-          >
-            <Icon name='arrowLeft' />
-            {t('admin:permissions.backToPermissions', 'Back to Permissions')}
-          </Button>
-        </Box.Header>
-        <div className={s.formContainer}>
-          <Loader
-            variant='spinner'
-            message={t(
-              'admin:permissions.edit.loadingPermission',
-              'Loading permission...',
-            )}
-          />
-        </div>
-      </div>
-    );
-  }
+  const pageTitle =
+    !fetchInitialized || fetchingPermission
+      ? t('admin:permissions.edit.titleLoading', 'Loading Permission...')
+      : permissionLoadError || !permission
+        ? t('admin:permissions.edit.titleError', 'Error Loading Permission')
+        : t('admin:permissions.edit.title', 'Edit Permission: {{name}}', {
+            name: `${permission.resource}:${permission.action}`,
+          });
 
-  if (permissionLoadError) {
+  // Show loading or error state
+  if (
+    !fetchInitialized ||
+    fetchingPermission ||
+    !permission ||
+    permissionLoadError
+  ) {
     return (
-      <div className={s.root}>
-        <Box.Header
-          icon={<Icon name='key' size={24} />}
-          title={t('admin:permissions.edit.title', 'Edit Permission')}
-          subtitle={t(
-            'admin:permissions.edit.subtitle',
-            'Modify permission rule',
-          )}
+      <Box className='p-6 max-w-[1400px] mx-auto'>
+        <PageHeader
+          title={pageTitle}
+          icon={<LockOpen1Icon width={24} height={24} />}
         >
           <Button
-            variant='secondary'
-            onClick={() => handleCancel(isDirtyRef.current)}
+            variant='ghost'
+            color='gray'
+            onClick={() => history.push('/admin/permissions')}
           >
-            <Icon name='arrowLeft' />
-            {t('admin:permissions.backToPermissions', 'Back to Permissions')}
+            <ArrowLeftIcon />
+            {t('admin:permissions.edit.backToList', 'Back to Permissions')}
           </Button>
-        </Box.Header>
-        <div className={s.formContainer}>
-          <div className={s.formError}>
-            {t(
-              'admin:permissions.edit.loadPermissionError',
-              'Failed to load permission data',
-            )}
-          </div>
-          <div className={s.formActions}>
-            <Button
-              variant='secondary'
-              onClick={() => handleCancel(isDirtyRef.current)}
-            >
-              {t('admin:permissions.backToPermissions', 'Back to Permissions')}
-            </Button>
-          </div>
-        </div>
-      </div>
+        </PageHeader>
+        <Modal.ConfirmBack
+          ref={confirmBackModalRef}
+          onConfirm={handleConfirmBack}
+        />
+      </Box>
     );
   }
 
   return (
-    <div className={s.root}>
-      <Box.Header
-        icon={<Icon name='key' size={24} />}
-        title={t('admin:permissions.edit.title', 'Edit Permission')}
+    <Box className='p-6 max-w-[1400px] mx-auto'>
+      <PageHeader
+        title={pageTitle}
         subtitle={t(
           'admin:permissions.edit.subtitle',
-          'Modify permission rule',
+          'Update permission details and status',
         )}
+        icon={<LockOpen1Icon width={24} height={24} />}
       >
         <Button
-          variant='secondary'
+          variant='ghost'
+          color='gray'
           onClick={() => handleCancel(isDirtyRef.current)}
         >
-          <Icon name='arrowLeft' />
-          {t('admin:permissions.backToPermissions', 'Back to Permissions')}
+          <ArrowLeftIcon />
+          {t('admin:permissions.edit.backToList', 'Back to Permissions')}
         </Button>
-      </Box.Header>
+      </PageHeader>
 
-      <div className={s.formContainer}>
-        <Form.Error message={error} />
+      <Form
+        schema={updatePermissionFormSchema}
+        defaultValues={defaultValues}
+        onSubmit={handleSubmit}
+      >
+        <Grid columns={{ initial: '1', md: '280px 1fr' }} gap='6' align='start'>
+          {/* Left: live identity card */}
+          <EditPermissionIdentityCard permission={permission} />
 
-        <Form
-          schema={updatePermissionFormSchema}
-          defaultValues={defaultValues}
-          onSubmit={handleSubmit}
-          className={s.form}
-        >
+          {/* Right: form sections */}
           <EditPermissionFormFields
             onCancel={handleCancel}
             saving={saving}
             isDirtyRef={isDirtyRef}
           />
-        </Form>
-      </div>
-      <ConfirmModal.Back
+        </Grid>
+      </Form>
+
+      <Modal.ConfirmBack
         ref={confirmBackModalRef}
         onConfirm={handleConfirmBack}
       />
-    </div>
+    </Box>
   );
 }
 
-/**
- * EditPermissionFormFields - Form fields component that uses react-hook-form context
- */
+EditPermission.propTypes = {
+  permissionId: PropTypes.string.isRequired,
+};
+
+// =============================================================================
+// Form fields — inner component consumes react-hook-form context
+// =============================================================================
+
 function EditPermissionFormFields({ onCancel, saving, isDirtyRef }) {
   const { t } = useTranslation();
   const {
-    watch,
     formState: { isDirty },
   } = useFormContext();
 
@@ -246,47 +325,52 @@ function EditPermissionFormFields({ onCancel, saving, isDirtyRef }) {
     onCancel(isDirty);
   }, [onCancel, isDirty]);
 
-  // Watch for auto-generated name preview
-  const resource = watch('resource') || '';
-  const action = watch('action') || '';
-  const generatedName = resource && action ? `${resource}:${action}` : '-';
-
   return (
-    <>
-      <div className={s.formSection}>
-        <h3 className={s.sectionTitle}>
+    <Card variant='surface' className='p-0'>
+      {/* ── Permission Information ─────────────────────────────────── */}
+      <Box
+        px='5'
+        py='3'
+        className='bg-[var(--gray-a2)] border-b border-[var(--gray-a4)]'
+      >
+        <Text size='2' weight='bold' color='gray'>
           {t(
             'admin:permissions.edit.permissionInformation',
             'Permission Information',
           )}
-        </h3>
-
-        <div className={s.formRow}>
-          <Form.Field
-            name='resource'
-            label={t('admin:permissions.edit.resource', 'Resource')}
-            required
-          >
-            <Form.Input
-              placeholder={t(
-                'admin:permissions.edit.resourcePlaceholder',
-                'e.g. users, posts, comments',
-              )}
-            />
-          </Form.Field>
-          <Form.Field
-            name='action'
-            label={t('admin:permissions.edit.action', 'Action')}
-            required
-          >
-            <Form.Input
-              placeholder={t(
-                'admin:permissions.edit.actionPlaceholder',
-                'e.g. read, write, delete',
-              )}
-            />
-          </Form.Field>
-        </div>
+        </Text>
+      </Box>
+      <Box p='5'>
+        <Flex gap='4' direction={{ initial: 'column', sm: 'row' }}>
+          <Box className='flex-1'>
+            <Form.Field
+              name='resource'
+              label={t('admin:permissions.edit.resource', 'Resource')}
+              required
+            >
+              <Form.Input
+                placeholder={t(
+                  'admin:permissions.edit.resourcePlaceholder',
+                  'e.g. users, posts, comments',
+                )}
+              />
+            </Form.Field>
+          </Box>
+          <Box className='flex-1'>
+            <Form.Field
+              name='action'
+              label={t('admin:permissions.edit.action', 'Action')}
+              required
+            >
+              <Form.Input
+                placeholder={t(
+                  'admin:permissions.edit.actionPlaceholder',
+                  'e.g. read, write, delete',
+                )}
+              />
+            </Form.Field>
+          </Box>
+        </Flex>
 
         <Form.Field
           name='description'
@@ -300,48 +384,55 @@ function EditPermissionFormFields({ onCancel, saving, isDirtyRef }) {
             rows={3}
           />
         </Form.Field>
-      </div>
+      </Box>
 
-      <div className={s.formSection}>
-        <h3 className={s.sectionTitle}>
+      {/* ── Status ─────────────────────────────────────────────────── */}
+      <Box
+        px='5'
+        py='3'
+        className='bg-[var(--gray-a2)] border-t border-[var(--gray-a4)] border-b border-[var(--gray-a4)]'
+      >
+        <Text size='2' weight='bold' color='gray'>
           {t('admin:permissions.edit.status', 'Status')}
-        </h3>
-
+        </Text>
+      </Box>
+      <Box p='5'>
         <Form.Field name='is_active'>
           <Form.Checkbox label={t('admin:permissions.edit.active', 'Active')} />
         </Form.Field>
-        <p className={s.checkboxHint}>
+        <Text as='p' size='1' color='gray' mt='1'>
           {t(
             'admin:permissions.edit.inactivePermission',
             'Inactive permissions will not be enforced in authorization checks',
           )}
-        </p>
-      </div>
+        </Text>
+      </Box>
 
-      <div className={s.formSection}>
-        <h3 className={s.sectionTitle}>
-          {t('admin:permissions.edit.generatedName', 'Generated Name')}
-        </h3>
-        <div className={s.previewName}>{generatedName}</div>
-        <p className={s.previewHint}>
-          {t(
-            'admin:permissions.edit.generatedNameHint',
-            'Permission name is auto-generated from resource and action',
-          )}
-        </p>
-      </div>
-
-      <div className={s.formActions}>
-        <Button variant='secondary' onClick={handleCancel} disabled={saving}>
-          {t('admin:permissions.edit.cancel', 'Cancel')}
+      {/* ── Footer actions ──────────────────────────────────────────── */}
+      <Flex
+        align='center'
+        justify='between'
+        px='5'
+        py='4'
+        className='rounded-b-md bg-[var(--gray-2)] border-t border-[var(--gray-a4)]'
+      >
+        <Button
+          variant='soft'
+          color='gray'
+          type='button'
+          onClick={handleCancel}
+          disabled={saving}
+        >
+          {t('admin:buttons.cancel', 'Cancel')}
         </Button>
-        <Button variant='primary' type='submit' loading={saving}>
+        <Button variant='solid' color='indigo' type='submit' loading={saving}>
+          <Pencil1Icon width={15} height={15} />
           {saving
-            ? t('admin:permissions.edit.saving', 'Saving...')
-            : t('admin:permissions.edit.saveChanges', 'Save Changes')}
+            ? t('admin:buttons.saving', 'Saving...')
+            : t('admin:buttons.saveChanges', 'Save Changes')}
         </Button>
-      </div>
-    </>
+      </Flex>
+    </Card>
   );
 }
 
@@ -351,6 +442,4 @@ EditPermissionFormFields.propTypes = {
   isDirtyRef: PropTypes.shape({ current: PropTypes.bool }).isRequired,
 };
 
-EditPermission.propTypes = {
-  permissionId: PropTypes.string.isRequired,
-};
+export default EditPermission;

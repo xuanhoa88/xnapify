@@ -30,6 +30,17 @@ const getRuntimeState = createSelector([selectRuntimeRaw], runtime =>
 // =============================================================================
 
 /**
+ * Get initial timestamp (set during SSR)
+ *
+ * @param {Object} state - Redux state
+ * @returns {number|null} Initial timestamp in milliseconds, or null if not set
+ */
+export const getInitialNow = state => {
+  const runtime = getRuntimeState(state);
+  return runtime.initialNow != null ? runtime.initialNow : null;
+};
+
+/**
  * Get application name
  *
  * @param {Object} state - Redux state
@@ -57,14 +68,15 @@ export const getAppDescription = (
 };
 
 /**
- * Get initial timestamp (set during SSR)
+ * Get application URL
  *
  * @param {Object} state - Redux state
- * @returns {number|null} Initial timestamp in milliseconds, or null if not set
+ * @param {string} [defaultValue=''] - Default value if not set
+ * @returns {string} Application URL
  */
-export const getInitialNow = state => {
+export const getAppUrl = (state, defaultValue = '') => {
   const runtime = getRuntimeState(state);
-  return runtime.initialNow != null ? runtime.initialNow : null;
+  return runtime.appUrl != null ? runtime.appUrl : defaultValue;
 };
 
 // =============================================================================

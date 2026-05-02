@@ -7,11 +7,11 @@
 
 import { useCallback, useEffect } from 'react';
 
+import { Flex, Text, Heading, Button, Box } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
-import { useTranslation, Trans } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Button from '@shared/renderer/components/Button';
 import { ExtensionSlot } from '@shared/renderer/components/Extension';
 import Form from '@shared/renderer/components/Form';
 import {
@@ -19,7 +19,14 @@ import {
   useHistory,
   useQuery,
 } from '@shared/renderer/components/History';
-import {
+import { features } from '@shared/renderer/redux';
+import { useWebSocket } from '@shared/ws/client';
+
+import { loginFormSchema } from '../../../users/validator/auth';
+
+import s from './Login.css';
+
+const {
   login,
   getUserPreferences,
   setLocale,
@@ -27,12 +34,8 @@ import {
   isAuthLoading,
   getAuthError,
   clearAuthError,
-} from '@shared/renderer/redux';
-import { useWebSocket } from '@shared/ws/client';
-
-import { loginFormSchema } from '../../../users/validator/auth';
-
-import s from './Login.css';
+  selectSetting,
+} = features;
 
 /**
  * Login Page Component
@@ -46,9 +49,10 @@ function Login() {
   const error = useSelector(getAuthError);
   const currentLocale = useSelector(getLocale);
   const returnTo = useQuery('returnTo') || '/';
-  const settings = useSelector(state => state.settings || {});
-  const isRegistrationAllowed =
-    settings && settings['auth.ALLOW_REGISTRATION'] !== false;
+  const allowRegistration = useSelector(state =>
+    selectSetting(state, 'auth.ALLOW_REGISTRATION'),
+  );
+  const isRegistrationAllowed = allowRegistration !== false;
 
   // Clear error on unmount
   useEffect(() => {
@@ -95,84 +99,78 @@ function Login() {
   );
 
   return (
-    <div className={s.root}>
-      <HeroSection />
-
-      <div className={s.formSection}>
-        <div className={s.formContainer}>
-          <h2 className={s.formTitle}>{t('navigation.login', 'Log In')}</h2>
-
-          <Form.Error message={error} />
-
-          {/* OAuth buttons slot — container is always rendered for SSR hydration safety.
-             CSS hides the wrapper when the slot is empty (no children). */}
-          <div className={s.oauthSection}>
-            <div className={s.oauthButtonsContainer}>
-              <ExtensionSlot
-                name='auth.oauth.buttons'
-                className={s.oauthButton}
-              />
-            </div>
-
-            <div className={s.divider}>
-              <span className={s.dividerLine} />
-              <span className={s.dividerText}>
-                {t('login.orDivider', 'OR')}
-              </span>
-              <span className={s.dividerLine} />
-            </div>
-          </div>
-
-          <Form
-            schema={loginFormSchema}
-            defaultValues={{ email: '', password: '', rememberMe: false }}
-            onSubmit={handleSubmit}
-          >
-            <LoginFormFields loading={loading} />
-            <ExtensionSlot name='auth.login.quickAccess' />
-          </Form>
-
-          {isRegistrationAllowed && (
-            <div className={s.registerLink}>
-              <Trans
-                t={t}
-                i18nKey='login.dontHaveAccount'
-                // eslint-disable-next-line jsx-a11y/anchor-has-content, react/jsx-key
-                components={[<Link to='/register' className={s.link} />]}
-              />
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/**
- * Hero Section - Left side branding
- */
-function HeroSection() {
-  const { t } = useTranslation();
-
-  return (
-    <div className={s.hero}>
-      <div className={s.heroContent}>
-        <Link to='/' className={s.brand}>
-          <img
-            src='/xnapify_38x38.png'
-            srcSet='/xnapify_72x72.png 2x'
-            width='48'
-            height='48'
-            alt='xnapify'
-          />
-          <span className={s.brandText}>xnapify</span>
-        </Link>
-        <h1 className={s.heroTitle}>{t('login.welcome', 'Welcome Back')}</h1>
-        <p className={s.heroSubtitle}>
+    <>
+      <Flex direction='column' align='center' mb='7'>
+        <Heading
+          as='h2'
+          size='7'
+          mb='2'
+          weight='bold'
+          className='text-slate-900 tracking-tight'
+        >
+          {t('login.welcome', 'Welcome Back')}
+        </Heading>
+        <Text size='3' className='text-slate-500 font-medium'>
           {t('login.heroSubtitle', 'Sign in to continue to your account')}
-        </p>
-      </div>
-    </div>
+        </Text>
+      </Flex>
+
+      <Form.Error message={error} />
+
+      {/* OAuth buttons slot — hidden when no plugins registered */}
+      <Box className={s.oauthSection}>
+        <Flex wrap='wrap' gap='3' mb='6'>
+          <ExtensionSlot name='auth.oauth.buttons' />
+        </Flex>
+
+        <Flex align='center' mb='6' className='opacity-60'>
+          <Box className='flex-1 h-px bg-[var(--gray-a6)]' />
+          <Text
+            size='1'
+            mx='3'
+            color='gray'
+            weight='medium'
+            className='uppercase tracking-wider'
+          >
+            {t('login.orDivider', 'OR')}
+          </Text>
+          <Box className='flex-1 h-px bg-[var(--gray-a6)]' />
+        </Flex>
+      </Box>
+
+      <Form
+        schema={loginFormSchema}
+        defaultValues={{ email: '', password: '', rememberMe: false }}
+        onSubmit={handleSubmit}
+      >
+        <LoginFormFields loading={loading} />
+        <ExtensionSlot name='auth.login.quickAccess' />
+      </Form>
+
+      {isRegistrationAllowed && (
+        <Flex
+          justify='center'
+          mt='6'
+          pt='6'
+          className='border-t border-slate-200/80'
+        >
+          <Text size='2' className='text-slate-500'>
+            <Trans
+              t={t}
+              i18nKey='login.dontHaveAccount'
+              // eslint-disable-next-line jsx-a11y/anchor-has-content
+              components={[
+                <Link
+                  key='register'
+                  to='/register'
+                  className='text-indigo-600 hover:text-indigo-700 font-medium no-underline transition-colors duration-200'
+                />,
+              ]}
+            />
+          </Text>
+        </Flex>
+      )}
+    </>
   );
 }
 
@@ -183,7 +181,7 @@ function LoginFormFields({ loading }) {
   const { t } = useTranslation();
 
   return (
-    <>
+    <Flex direction='column' gap='4'>
       <Form.Field name='email' label={t('login.email', 'Email')}>
         <Form.Input
           type='email'
@@ -192,12 +190,15 @@ function LoginFormFields({ loading }) {
       </Form.Field>
 
       <Form.Field name='password' showError={false}>
-        <div className={s.labelRow}>
+        <Flex justify='between' align='baseline'>
           <Form.Label>{t('login.password', 'Password')}</Form.Label>
-          <Link to='/reset-password' className={s.forgotLink}>
+          <Link
+            to='/reset-password'
+            className='text-xs text-indigo-600 hover:text-indigo-700 no-underline font-medium transition-colors duration-200'
+          >
             {t('login.forgotPassword', 'Forgot password?')}
           </Link>
-        </div>
+        </Flex>
         <Form.Password />
         <Form.Error />
       </Form.Field>
@@ -207,17 +208,19 @@ function LoginFormFields({ loading }) {
       </Form.Field>
 
       <Button
-        variant='primary'
+        variant='solid'
+        color='indigo'
+        size='3'
         type='submit'
-        fullWidth
-        className={s.submitButton}
+        mt='3'
+        className='w-full cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md'
         loading={loading}
       >
         {loading
           ? t('login.loading', 'Loading...')
-          : t('login.submit', 'Submit')}
+          : t('login.submit', 'Log in')}
       </Button>
-    </>
+    </Flex>
   );
 }
 

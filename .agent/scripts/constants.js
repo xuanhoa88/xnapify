@@ -1,4 +1,11 @@
 /**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+/**
  * Shared Constants — Single Source of Truth
  *
  * All agent scripts MUST import from this module rather than
@@ -48,7 +55,6 @@ const SKIP_DIRS = new Set([
 const SKIP_FILES = new Set([
   'package-lock.json',
   'eslint.factory.js',
-  'babel.factory.js',
   'postcss.factory.js',
   'registry.factory.js',
   'jest.config.js',

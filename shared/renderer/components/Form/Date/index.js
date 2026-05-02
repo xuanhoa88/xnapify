@@ -5,16 +5,20 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { forwardRef, useMemo } from 'react';
+import { forwardRef, useMemo, useState } from 'react';
 
 import Cleave from 'cleave.js/react';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useFormContext, useController } from 'react-hook-form';
 
-import { useFormField, useMergeRefs } from '../FormContext';
+import {
+  useFormField,
+  useMergeRefs,
+  composeEventHandlers,
+} from '../FormContext';
 
-import s from './FormDate.css';
+import s from './Date.css';
 
 /** Time-related tokens that distinguish a datetime format from a date-only format */
 const TIME_TOKENS = /[Hhms]/;
@@ -82,6 +86,7 @@ const FormDate = forwardRef(function FormDate$(
   const { id, name, error } = useFormField();
   const { control } = useFormContext();
   const { field } = useController({ name, control });
+  const [isFocused, setIsFocused] = useState(false);
 
   // Merge refs - both react-hook-form ref and forwarded ref
   const handleRef = useMergeRefs(field.ref, forwardedRef);
@@ -105,15 +110,25 @@ const FormDate = forwardRef(function FormDate$(
       id={id}
       options={options}
       disabled={disabled}
-      className={clsx(s.input, { [s.inputError]: error }, className)}
+      className={clsx(
+        className,
+        s.dateInput,
+        { [s.dateInputError]: error },
+        { [s.dateInputFocus]: isFocused },
+        { [s.dateInputDisabled]: disabled },
+      )}
       // eslint-disable-next-line jsx-a11y/no-autofocus
       autoFocus={autoFocus}
       placeholder={placeholder || format}
-      onChange={field.onChange}
-      onBlur={field.onBlur}
+      {...props}
+      onChange={composeEventHandlers(props.onChange, field.onChange)}
+      onFocus={composeEventHandlers(props.onFocus, () => setIsFocused(true))}
+      onBlur={composeEventHandlers(props.onBlur, e => {
+        setIsFocused(false);
+        field.onBlur(e);
+      })}
       value={field.value || ''}
       name={field.name}
-      {...props}
       htmlRef={handleRef}
     />
   );
@@ -130,6 +145,12 @@ FormDate.propTypes = {
   format: PropTypes.string,
   /** Placeholder text */
   placeholder: PropTypes.string,
+  /** Custom onChange handler */
+  onChange: PropTypes.func,
+  /** Custom onFocus handler */
+  onFocus: PropTypes.func,
+  /** Custom onBlur handler */
+  onBlur: PropTypes.func,
 };
 
 export default FormDate;

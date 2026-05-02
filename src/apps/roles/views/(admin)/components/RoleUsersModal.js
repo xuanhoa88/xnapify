@@ -13,25 +13,20 @@ import {
   useEffect,
 } from 'react';
 
+import { Flex, Box, Text, Avatar, Badge, Card } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 
-import Avatar from '@shared/renderer/components/Avatar';
 import Modal from '@shared/renderer/components/Modal';
-import Table from '@shared/renderer/components/Table';
-import Tag from '@shared/renderer/components/Tag';
+import {
+  TablePagination,
+  TableSearch,
+} from '@shared/renderer/components/Table';
 
 import { fetchRoleUsers } from '../redux';
 
-import s from './RoleUsersModal.css';
-
 /**
- * RoleUsersModal - Self-contained modal for viewing users with a role
- *
- * Usage:
- *   const usersModalRef = useRef();
- *   usersModalRef.current.open(role);    // Open for a role
- *   usersModalRef.current.close();       // Close modal
+ * RoleUsersModal mapping custom implicit models easily flexibly.
  */
 const ITEMS_PER_PAGE = 10;
 
@@ -144,65 +139,93 @@ const RoleUsersModal = forwardRef((props, ref) => {
         </Modal.Description>
 
         {/* Search Input */}
-        <Table.SearchBar
-          value={search}
-          onChange={handleSearchChange}
-          placeholder={t('admin:common.searchUsers', 'Search users...')}
-          className={s.modalSearchBar}
-        />
+        <Box mb='4'>
+          <TableSearch
+            value={search}
+            onChange={handleSearchChange}
+            placeholder={t('admin:common.searchUsers', 'Search users...')}
+          />
+        </Box>
 
-        <div className={s.usersList}>
+        <Flex direction='column' gap='3'>
           {usersLoading ? (
-            <div className={s.noUsers}>
+            <Flex
+              justify='center'
+              align='center'
+              p='8'
+              className='text-[var(--gray-9)] italic'
+            >
               {t('admin:common.loadingUsers', 'Loading users...')}
-            </div>
+            </Flex>
           ) : users.length === 0 ? (
-            <div className={s.noUsers}>
+            <Flex
+              justify='center'
+              align='center'
+              p='8'
+              className='text-[var(--gray-9)] italic bg-[var(--gray-2)] rounded-[var(--radius-3)]'
+            >
               {search
                 ? t('admin:roles.noUsersMatch', 'No users match your search')
                 : t(
                     'admin:roles.noUsersWithRole',
                     'No users found with this role',
                   )}
-            </div>
+            </Flex>
           ) : (
             users.map(user => (
-              <div key={user.id} className={s.userItem}>
-                <Avatar
-                  name={
-                    (user.profile && user.profile.display_name) || user.email
-                  }
-                  size='small'
-                  className={s.userAvatar}
-                />
-                <div className={s.userInfo}>
-                  <span className={s.userName}>
-                    {(user.profile && user.profile.display_name) ||
-                      t('admin:common.na', 'N/A')}
-                  </span>
-                  <span className={s.userEmail}>{user.email}</span>
-                </div>
-                <div className={s.userMeta}>
-                  <Tag variant={user.is_active ? 'success' : 'error'}>
-                    {user.is_active
-                      ? t('admin:common.active', 'Active')
-                      : t('admin:common.inactive', 'Inactive')}
-                  </Tag>
-                </div>
-              </div>
+              <Card key={user.id} size='1'>
+                <Flex align='center' gap='3' p='1'>
+                  <Avatar
+                    name={
+                      (user.profile && user.profile.display_name) || user.email
+                    }
+                    size='2'
+                    fallback={(
+                      (user.profile && user.profile.display_name) ||
+                      user.email ||
+                      '?'
+                    )
+                      .charAt(0)
+                      .toUpperCase()}
+                  />
+
+                  <Flex direction='column' grow='1' minWidth='0'>
+                    <Text as='div' size='2' weight='bold' truncate highContrast>
+                      {(user.profile && user.profile.display_name) ||
+                        t('admin:common.na', 'N/A')}
+                    </Text>
+                    <Text as='div' size='1' color='gray' truncate>
+                      {user.email}
+                    </Text>
+                  </Flex>
+                  <Box>
+                    <Badge
+                      variant={user.is_active ? 'soft' : 'outline'}
+                      color={user.is_active ? 'green' : 'gray'}
+                      radius='full'
+                    >
+                      {user.is_active
+                        ? t('admin:common.active', 'Active')
+                        : t('admin:common.inactive', 'Inactive')}
+                    </Badge>
+                  </Box>
+                </Flex>
+              </Card>
             ))
           )}
-        </div>
+        </Flex>
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <Table.Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={totalItems}
-            onPageChange={setCurrentPage}
-            loading={usersLoading}
-          />
+          <Box mt='5'>
+            <TablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              onPageChange={setCurrentPage}
+              loading={usersLoading}
+            />
+          </Box>
         )}
       </Modal.Body>
       <Modal.Footer>

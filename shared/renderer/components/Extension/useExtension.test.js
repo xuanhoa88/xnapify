@@ -95,7 +95,9 @@ describe('useExtension', () => {
       act(() => {
         comp = renderer.create(
           <ExtensionProvider registry={registry}>
-            <ExtensionProvider registry={registry}><Dummy /></ExtensionProvider>
+            <ExtensionProvider registry={registry}>
+              <Dummy />
+            </ExtensionProvider>
           </ExtensionProvider>,
         );
       });
@@ -131,7 +133,11 @@ describe('useExtension', () => {
       };
 
       await act(async () => {
-        comp = renderer.create(<ExtensionProvider registry={registry}><Dummy /></ExtensionProvider>);
+        comp = renderer.create(
+          <ExtensionProvider registry={registry}>
+            <Dummy />
+          </ExtensionProvider>,
+        );
       });
 
       expect(isLoading).toBe(false);
@@ -157,7 +163,11 @@ describe('useExtension', () => {
       };
 
       await act(async () => {
-        comp = renderer.create(<ExtensionProvider registry={registry}><Dummy /></ExtensionProvider>);
+        comp = renderer.create(
+          <ExtensionProvider registry={registry}>
+            <Dummy />
+          </ExtensionProvider>,
+        );
       });
 
       expect(isLoading).toBe(false);
@@ -185,7 +195,11 @@ describe('useExtension', () => {
       };
 
       await act(async () => {
-        comp = renderer.create(<ExtensionProvider registry={registry}><Dummy /></ExtensionProvider>);
+        comp = renderer.create(
+          <ExtensionProvider registry={registry}>
+            <Dummy />
+          </ExtensionProvider>,
+        );
       });
 
       expect(isLoading).toBe(false);
@@ -201,7 +215,11 @@ describe('useExtension', () => {
       };
 
       await act(async () => {
-        comp = renderer.create(<ExtensionProvider registry={registry}><Dummy /></ExtensionProvider>);
+        comp = renderer.create(
+          <ExtensionProvider registry={registry}>
+            <Dummy />
+          </ExtensionProvider>,
+        );
       });
 
       expect(isLoading).toBe(false);

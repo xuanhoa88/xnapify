@@ -7,26 +7,25 @@
 
 import { useCallback } from 'react';
 
+import { Flex, Box } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 
-import Button from '@shared/renderer/components/Button';
 import Icon from '@shared/renderer/components/Icon';
-import { isAuthenticated, toggleDrawer } from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
 
 import Breadcrumbs from './Breadcrumbs';
 import LanguageSwitcher from './LanguageSwitcher';
-import Messages from './Messages';
 import Notifications from './Notifications';
 import ProfileDropdown from './ProfileDropdown';
 
-import s from './Header.css';
+const { isAuthenticated, toggleDrawer } = features;
 
 /**
  * AdminHeader Component
  *
  * A modern, professional header specifically designed for admin panel pages.
- * Composed of: Breadcrumbs, SearchBar, and ProfileDropdown sub-components.
+ * Composed of: Breadcrumbs, Notifications, and ProfileDropdown sub-components mapped to Radix UI.
  */
 function AdminHeader() {
   const { t } = useTranslation();
@@ -42,34 +41,44 @@ function AdminHeader() {
   }
 
   return (
-    <header className={s.adminHeader}>
-      <div className={s.headerContainer}>
+    <Box
+      as='header'
+      position='sticky'
+      top='0'
+      className='z-40 bg-white border-b border-gray-200 h-16'
+    >
+      <Flex align='center' justify='between' className='h-full px-6'>
         {/* Left Section - Toggle & Breadcrumbs */}
-        <div className={s.leftSection}>
-          <span className={s.mobileToggle}>
-            <Button
-              variant='ghost'
-              iconOnly
-              onClick={handleToggleDrawer}
-              title={t('common.toggleDrawer', 'Toggle drawer')}
-            >
-              <Icon name='menu' size={20} />
-            </Button>
-          </span>
-          <Breadcrumbs />
-        </div>
+        <Flex align='center' gap='3'>
+          <Flex
+            align='center'
+            justify='center'
+            role='button'
+            tabIndex={0}
+            onClick={handleToggleDrawer}
+            title={t('common.toggleDrawer', 'Toggle drawer')}
+            className='md:hidden w-9 h-9 rounded-full text-gray-500 cursor-pointer transition-colors hover:bg-gray-100 hover:text-gray-900 shrink-0'
+          >
+            <Icon name='HamburgerMenuIcon' size={18} />
+          </Flex>
 
-        {/* Right Section - Language | Notifications Group | User */}
-        <div className={s.rightSection}>
+          <Box className='hidden md:block'>
+            <Breadcrumbs />
+          </Box>
+        </Flex>
+
+        {/* Right Section - Page Title & Action Icons */}
+        <Flex align='center' gap='1'>
           <LanguageSwitcher />
-          <span className={s.divider} />
-          <Messages />
+
           <Notifications />
-          <span className={s.divider} />
-          <ProfileDropdown />
-        </div>
-      </div>
-    </header>
+
+          <Box className='ml-1'>
+            <ProfileDropdown />
+          </Box>
+        </Flex>
+      </Flex>
+    </Box>
   );
 }
 

@@ -5,68 +5,48 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { FaceIcon } from '@radix-ui/react-icons';
+import { ScrollArea } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 
 import ContextMenu from '../ContextMenu';
-import Icon from '../Icon';
 
 import { COMMON_EMOJIS } from './constants';
 import ToolbarButton from './ToolbarButton';
 
+import s from './EmojiPickerButton.css';
+
 export default function EmojiPickerButton({ onSelect, title, disabled }) {
   return (
     <ContextMenu align='left'>
-      <ContextMenu.Trigger
-        as={ToolbarButton}
-        icon={<Icon name='emoji' size={16} strokeWidth={2.5} />}
-        title={title}
-        disabled={disabled}
-      />
+      <ContextMenu.Trigger asChild>
+        <ToolbarButton
+          icon={<FaceIcon width={16} height={16} />}
+          title={title}
+          disabled={disabled}
+        />
+      </ContextMenu.Trigger>
 
       <ContextMenu.Menu>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(5, 1fr)',
-            gap: '4px',
-            padding: '8px',
-          }}
-        >
-          {COMMON_EMOJIS.map(emoji => (
-            <button
-              key={emoji}
-              type='button'
-              onClick={() => onSelect(emoji)}
-              style={{
-                width: '32px',
-                height: '32px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '20px',
-                background: 'transparent',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-              }}
-              onMouseOver={e => {
-                e.currentTarget.style.backgroundColor =
-                  'var(--color-background-hover)';
-              }}
-              onFocus={e => {
-                e.currentTarget.style.backgroundColor =
-                  'var(--color-background-hover)';
-              }}
-              onMouseOut={e => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-              }}
-              onBlur={e => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-              }}
-            >
-              {emoji}
-            </button>
-          ))}
+        <div className={s.emojiPopup}>
+          <ScrollArea
+            type='auto'
+            scrollbars='vertical'
+            className={s.scrollArea}
+          >
+            <div className={s.emojiGrid}>
+              {COMMON_EMOJIS.map(emoji => (
+                <button
+                  key={emoji}
+                  type='button'
+                  onClick={() => onSelect(emoji)}
+                  className={s.emojiButton}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          </ScrollArea>
         </div>
       </ContextMenu.Menu>
     </ContextMenu>

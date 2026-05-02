@@ -5,6 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { register } from '../../shutdown';
+
 import { send } from './services';
 import { createProviderByName } from './utils/providers';
 
@@ -223,16 +225,8 @@ export class EmailManager {
 export function createFactory(config = {}) {
   const manager = new EmailManager(config);
 
-  // Register graceful shutdown handlers
-  const onShutdown = () => manager.cleanup();
-  process.once('SIGTERM', onShutdown);
-  process.once('SIGINT', onShutdown);
-
-  // Expose for test cleanup
-  manager.removeCleanupHandlers = () => {
-    process.removeListener('SIGTERM', onShutdown);
-    process.removeListener('SIGINT', onShutdown);
-  };
+  // Register with centralized shutdown coordinator
+  register('email', () => manager.cleanup());
 
   return manager;
 }

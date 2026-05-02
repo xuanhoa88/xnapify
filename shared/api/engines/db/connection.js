@@ -12,6 +12,8 @@ import path from 'path';
 import merge from 'lodash/merge';
 import Sequelize from 'sequelize';
 
+import { register } from '../../shutdown';
+
 import {
   runMigrations,
   runSeeds,
@@ -230,7 +232,7 @@ export function createConnection(url, options) {
  * @returns {Promise<void>}
  */
 export async function closeConnection() {
-  if (connection) {
+  if (connection && typeof connection.close === 'function') {
     await connection.close();
   }
 }
@@ -239,3 +241,6 @@ export async function closeConnection() {
  * Default Sequelize connection instance with migration methods
  */
 export const connection = createConnection();
+
+// Register with centralized shutdown coordinator
+register('db', () => closeConnection());

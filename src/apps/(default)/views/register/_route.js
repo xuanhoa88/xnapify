@@ -5,9 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { isAuthenticated } from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
 
 import Register from './Register';
+
+const { isAuthenticated, selectSetting } = features;
 
 /**
  * Page metadata
@@ -28,8 +30,7 @@ export async function middleware(context, next) {
     return { redirect: query.returnTo || '/' };
   }
 
-  const allowRegistration =
-    state.settings && state.settings['auth.ALLOW_REGISTRATION'];
+  const allowRegistration = selectSetting(state, 'auth.ALLOW_REGISTRATION');
   if (allowRegistration === false) {
     return { redirect: '/login' };
   }
@@ -40,7 +41,7 @@ export async function middleware(context, next) {
 /**
  * Route config
  */
-export const layout = false;
+export const layout = 'unauth';
 
 /**
  * Default export - Page component

@@ -5,8 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import merge from 'lodash/merge';
-
 import { getTranslations } from '@shared/i18n/loader';
 import { addNamespace } from '@shared/i18n/utils';
 import { composeMiddleware } from '@shared/utils/middleware';
@@ -18,6 +16,53 @@ import {
   ROUTE_TRANSLATIONS_KEY,
 } from './constants';
 import { log } from './utils';
+
+// =============================================================================
+// HELPERS
+// =============================================================================
+
+/** @type {symbol} Cached hierarchy key — avoids re-walking .parent pointers */
+const ROUTE_HIERARCHY_KEY = Symbol('__xnapify.route.hierarchy__');
+
+/**
+ * Returns the parent→child hierarchy for a route.
+ * Result is cached on the route object via symbol key to avoid
+ * repeated O(n²) unshift traversals on every navigation.
+ *
+ * @param {Object} route - Leaf route node
+ * @returns {Object[]} Array from root to leaf
+ */
+function getHierarchy(route) {
+  if (route[ROUTE_HIERARCHY_KEY]) return route[ROUTE_HIERARCHY_KEY];
+
+  const hierarchy = [];
+  let current = route;
+  while (current) {
+    hierarchy.push(current); // O(1) push instead of O(n) unshift
+    current = current.parent;
+  }
+  hierarchy.reverse(); // single O(n) reverse
+
+  route[ROUTE_HIERARCHY_KEY] = hierarchy;
+  return hierarchy;
+}
+
+/**
+ * Extracts the router options from the context.
+ * Avoids repeated `ctx._instance && ctx._instance.options` property chains.
+ *
+ * @param {Object} ctx - Route context
+ * @returns {Object|null} Router options or null
+ * @private
+ */
+function getRouterOptions(ctx) {
+  // eslint-disable-next-line no-underscore-dangle
+  return (ctx._instance && ctx._instance.options) || null;
+}
+
+// =============================================================================
+// LIFECYCLE FACTORIES — called once at build time, closures returned
+// =============================================================================
 
 /**
  * Creates init function for config and route initialization
@@ -33,19 +78,17 @@ export function createInit(configs, init) {
   }
 
   return async function (ctx) {
-    // 1. Init configs first (once per config, tracked by module)
-    await Promise.all(
-      initConfigs.map(async config => {
+    // 1. Init configs sequentially (order-dependent, avoids microtask overhead)
+    for (const config of initConfigs) {
+      if (!config.module[ROUTE_INIT_KEY]) {
         try {
-          if (!config.module[ROUTE_INIT_KEY]) {
-            await config.module.init(ctx);
-            config.module[ROUTE_INIT_KEY] = true;
-          }
+          await config.module.init(ctx);
+          config.module[ROUTE_INIT_KEY] = true;
         } catch (error) {
           log(`Config init error: ${error.message}`, 'error');
         }
-      }),
-    );
+      }
+    }
 
     // 2. Init route (original behavior)
     if (typeof init === 'function') {
@@ -68,6 +111,11 @@ export function createMount(configs, routeMount) {
     c => typeof c.module.mount === 'function',
   );
 
+  // Early return when nothing to do (matches createInit/createUnmount pattern)
+  if (mountableConfigs.length === 0 && typeof routeMount !== 'function') {
+    return undefined;
+  }
+
   // Return combined function if needed
   return async function (ctx) {
     // Initialize per-navigation mount tracking if not exists
@@ -75,21 +123,19 @@ export function createMount(configs, routeMount) {
       ctx[ROUTE_MOUNT_KEY] = new Set();
     }
 
-    // Mount configs first (once per navigation, tracked by module)
-    await Promise.all(
-      mountableConfigs.map(async config => {
-        try {
-          // Skip if this config module already mounted during this navigation
-          if (ctx[ROUTE_MOUNT_KEY].has(config.module)) {
-            return;
-          }
-          ctx[ROUTE_MOUNT_KEY].add(config.module);
-          await config.module.mount(ctx);
-        } catch (error) {
-          log(`Config mount error: ${error.message}`, 'error');
-        }
-      }),
-    );
+    // Mount configs sequentially (avoids microtask overhead)
+    for (const config of mountableConfigs) {
+      // Skip if this config module already mounted during this navigation
+      if (ctx[ROUTE_MOUNT_KEY].has(config.module)) {
+        continue;
+      }
+      ctx[ROUTE_MOUNT_KEY].add(config.module);
+      try {
+        await config.module.mount(ctx);
+      } catch (error) {
+        log(`Config mount error: ${error.message}`, 'error');
+      }
+    }
 
     // Route mount always runs (it's specific to this route)
     if (typeof routeMount === 'function') {
@@ -130,22 +176,20 @@ export function createUnmount(configs, routeUnmount) {
       }
     }
 
-    // 2. Config unmounts (in order)
-    await Promise.all(
-      unmountableConfigs.map(async config => {
-        // Skip if this config module already unmounted during this pass
-        if (ctx[ROUTE_UNMOUNT_KEY].has(config.module)) {
-          return;
-        }
-        ctx[ROUTE_UNMOUNT_KEY].add(config.module);
+    // 2. Config unmounts sequentially (avoids microtask overhead)
+    for (const config of unmountableConfigs) {
+      // Skip if this config module already unmounted during this pass
+      if (ctx[ROUTE_UNMOUNT_KEY].has(config.module)) {
+        continue;
+      }
+      ctx[ROUTE_UNMOUNT_KEY].add(config.module);
 
-        try {
-          await config.module.unmount(ctx);
-        } catch (error) {
-          log(`Config unmount error: ${error.message}`, 'error');
-        }
-      }),
-    );
+      try {
+        await config.module.unmount(ctx);
+      } catch (error) {
+        log(`Config unmount error: ${error.message}`, 'error');
+      }
+    }
   };
 }
 
@@ -153,6 +197,9 @@ export function createUnmount(configs, routeUnmount) {
  * Creates a translations registration function for the route.
  * Merges translations from configs and route-level `translations()` export,
  * then registers them via addNamespace using the route path as the namespace.
+ *
+ * Uses shallow spread instead of lodash/merge since i18n message objects
+ * are flat per locale (no nested keys to deep-clone).
  *
  * @param {Object[]} configs - Matched config modules
  * @param {Function|undefined} routeTranslations - Route module's translations export
@@ -178,17 +225,24 @@ export function buildTranslationsLoader(
   }
 
   return function (inheritedTranslations = {}) {
-    // Start with inherited translations (deep clone to avoid mutating parent)
-    const merged = merge({}, inheritedTranslations);
+    // Shallow clone to avoid mutating parent (no deep-clone needed)
+    const merged = {};
+    const inheritedKeys = Object.keys(inheritedTranslations);
+    for (let i = 0; i < inheritedKeys.length; i++) {
+      const key = inheritedKeys[i];
+      merged[key] = { ...inheritedTranslations[key] };
+    }
 
     // 1. Collect config translations first
     for (const config of translatableConfigs) {
       try {
         const translations = getTranslations(config.module.translations());
         if (translations && typeof translations === 'object') {
-          Object.entries(translations).forEach(([locale, messages]) => {
-            merged[locale] = merge({}, merged[locale], messages);
-          });
+          const locales = Object.keys(translations);
+          for (let i = 0; i < locales.length; i++) {
+            const locale = locales[i];
+            merged[locale] = { ...merged[locale], ...translations[locale] };
+          }
         }
       } catch (error) {
         log(`Config translations error: ${error.message}`, 'error');
@@ -200,9 +254,11 @@ export function buildTranslationsLoader(
       try {
         const translations = getTranslations(routeTranslations());
         if (translations && typeof translations === 'object') {
-          Object.entries(translations).forEach(([locale, messages]) => {
-            merged[locale] = merge({}, merged[locale], messages);
-          });
+          const locales = Object.keys(translations);
+          for (let i = 0; i < locales.length; i++) {
+            const locale = locales[i];
+            merged[locale] = { ...merged[locale], ...translations[locale] };
+          }
         }
       } catch (error) {
         log(`Route translations error: ${error.message}`, 'error');
@@ -227,16 +283,12 @@ export function buildTranslationsLoader(
 /**
  * Runs translation registration for a route hierarchy (parent → child).
  * Each route's translations are registered once (tracked via ROUTE_TRANSLATIONS_KEY).
+ * Uses cached hierarchy to avoid redundant .parent walks.
  */
 export async function loadRouteTranslations(route, _ctx) {
   if (!route) return;
 
-  const hierarchy = [];
-  let current = route;
-  while (current) {
-    hierarchy.unshift(current);
-    current = current.parent;
-  }
+  const hierarchy = getHierarchy(route);
 
   // Track the accumulated translations as we move down the tree
   let accumulatedTranslations = {};
@@ -335,31 +387,24 @@ export function createAction(pageInfo, configs = [], layouts = []) {
   };
 }
 
+// =============================================================================
+// RUNTIME LIFECYCLE — called during navigation
+// =============================================================================
+
 /**
- * Runs init hooks sequentially from parent to child route
+ * Runs init hooks sequentially from parent to child route.
+ * Uses cached hierarchy to avoid redundant .parent walks.
  */
 export async function runInit(route, ctx) {
   if (!route) return;
 
-  // Get route hierarchy from root to current (parent → child)
-  const hierarchy = [];
-  let current = route;
-  while (current) {
-    hierarchy.unshift(current);
-    current = current.parent;
-  }
+  // Use cached hierarchy (shared with loadRouteTranslations)
+  const hierarchy = getHierarchy(route);
 
-  if (
-    // eslint-disable-next-line no-underscore-dangle
-    ctx._instance &&
-    // eslint-disable-next-line no-underscore-dangle
-    ctx._instance.options &&
-    // eslint-disable-next-line no-underscore-dangle
-    typeof ctx._instance.options.onRouteInit === 'function'
-  ) {
+  const options = getRouterOptions(ctx);
+  if (options && typeof options.onRouteInit === 'function') {
     try {
-      // eslint-disable-next-line no-underscore-dangle
-      await ctx._instance.options.onRouteInit(route, ctx);
+      await options.onRouteInit(route, ctx);
     } catch (error) {
       log(`onRouteInit error for "${route.path}": ${error.message}`, 'error');
     }
@@ -384,17 +429,10 @@ export async function runInit(route, ctx) {
 export async function runMount(route, ctx) {
   if (!route) return null;
 
-  if (
-    // eslint-disable-next-line no-underscore-dangle
-    ctx._instance &&
-    // eslint-disable-next-line no-underscore-dangle
-    ctx._instance.options &&
-    // eslint-disable-next-line no-underscore-dangle
-    typeof ctx._instance.options.onRouteMount === 'function'
-  ) {
+  const options = getRouterOptions(ctx);
+  if (options && typeof options.onRouteMount === 'function') {
     try {
-      // eslint-disable-next-line no-underscore-dangle
-      await ctx._instance.options.onRouteMount(route, ctx);
+      await options.onRouteMount(route, ctx);
     } catch (error) {
       log(`onRouteMount error for "${route.path}": ${error.message}`, 'error');
     }
@@ -414,6 +452,8 @@ export async function runMount(route, ctx) {
  * Traverses up the route hierarchy (child -> parent) to unmount everything.
  */
 export async function runUnmount(route, ctx) {
+  const options = getRouterOptions(ctx);
+
   let current = route;
   while (current) {
     if (typeof current.unmount === 'function') {
@@ -425,17 +465,9 @@ export async function runUnmount(route, ctx) {
     }
 
     // Auto-uninstall extensions via router options callback
-    if (
-      // eslint-disable-next-line no-underscore-dangle
-      ctx._instance &&
-      // eslint-disable-next-line no-underscore-dangle
-      ctx._instance.options &&
-      // eslint-disable-next-line no-underscore-dangle
-      typeof ctx._instance.options.onRouteUnmount === 'function'
-    ) {
+    if (options && typeof options.onRouteUnmount === 'function') {
       try {
-        // eslint-disable-next-line no-underscore-dangle
-        await ctx._instance.options.onRouteUnmount(current, ctx);
+        await options.onRouteUnmount(current, ctx);
       } catch (error) {
         log(
           `onRouteUnmount error for "${current.path}": ${error.message}`,

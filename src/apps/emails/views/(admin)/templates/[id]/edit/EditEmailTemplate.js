@@ -7,16 +7,16 @@
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 
+import { ArrowLeftIcon, Pencil2Icon, EyeOpenIcon } from '@radix-ui/react-icons';
+import { Box, Flex, Heading, Button } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import * as Box from '@shared/renderer/components/Box';
-import Button from '@shared/renderer/components/Button';
-import ConfirmModal from '@shared/renderer/components/ConfirmModal';
+// import { Flex, Heading, Text, Box } , Button } from '@radix-ui/themes';
+// import { Button } , Button } from '@radix-ui/themes';
 import Form, { useFormContext } from '@shared/renderer/components/Form';
 import { useHistory } from '@shared/renderer/components/History';
-import Icon from '@shared/renderer/components/Icon';
 import Loader from '@shared/renderer/components/Loader';
 import Modal from '@shared/renderer/components/Modal';
 
@@ -37,10 +37,14 @@ import {
   getDetailError,
   isUpdateLoading,
   previewRawTemplate,
+  clearPreview,
 } from '../../../redux';
 
 import s from './EditEmailTemplate.css';
 
+/**
+ * EditEmailTemplate swapping arbitrary structural classes elegantly replacing them natively.
+ */
 function EditEmailTemplate({ params }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
@@ -53,7 +57,7 @@ function EditEmailTemplate({ params }) {
   const detailError = useSelector(getDetailError);
   const updateLoading = useSelector(isUpdateLoading);
 
-  const [error, setError] = useState(null);
+  const [, setError] = useState(null);
   const confirmBackModalRef = useRef(null);
   const isDirtyRef = useRef(false);
 
@@ -119,89 +123,133 @@ function EditEmailTemplate({ params }) {
       slug: template.slug || '',
       subject: template.subject || '',
       html_body: template.html_body || '',
-      is_active: template.is_active !== undefined ? template.is_active : true,
+      is_active: template.is_active != null ? template.is_active : true,
     };
   }, [template]);
 
   // Loading state
   if (!detailInitialized || detailLoading) {
     return (
-      <div className={s.root}>
-        <Box.Header
-          icon={<Icon name='edit' size={24} />}
-          title={t('admin:emails.edit.title', 'Edit Email Template')}
-        />
-        <div className={s.formContainer}>
+      <Box className={s.containerBox}>
+        <Flex
+          align='center'
+          justify='between'
+          wrap='wrap'
+          gap='4'
+          pb='4'
+          mb='6'
+          className={s.adminHeader}
+        >
+          <Flex align='center' gap='3'>
+            <Flex align='center' justify='center' className={s.adminHeaderIcon}>
+              <Pencil2Icon width={24} height={24} />
+            </Flex>
+            <Flex direction='column'>
+              <Heading size='6'>
+                {t('admin:emails.form.editTemplate', 'Edit Email Template')}
+              </Heading>
+            </Flex>
+          </Flex>
+        </Flex>
+        <Box className={s.loaderBox}>
           <Loader
             variant='spinner'
             message={t('admin:emails.edit.loading', 'Loading template...')}
           />
-        </div>
-      </div>
+        </Box>
+      </Box>
     );
   }
 
   if (detailError || !template) {
     return (
-      <div className={s.root}>
-        <Box.Header
-          icon={<Icon name='edit' size={24} />}
-          title={t('admin:emails.edit.title', 'Edit Email Template')}
-        />
-        <div className={s.errorBanner}>
+      <Box className={s.containerBox}>
+        <Flex
+          align='center'
+          justify='between'
+          wrap='wrap'
+          gap='4'
+          pb='4'
+          mb='6'
+          className={s.adminHeader}
+        >
+          <Flex align='center' gap='3'>
+            <Flex align='center' justify='center' className={s.adminHeaderIcon}>
+              <Pencil2Icon width={24} height={24} />
+            </Flex>
+            <Flex direction='column'>
+              <Heading size='6'>
+                {t('admin:emails.form.editTemplate', 'Edit Email Template')}
+              </Heading>
+            </Flex>
+          </Flex>
+        </Flex>
+        <Box className={s.errorBox}>
           {(typeof detailError === 'string'
             ? detailError
             : (detailError && detailError.message) || '') ||
             t('admin:emails.edit.notFound', 'Template not found')}
-        </div>
+        </Box>
         <Button
           variant='ghost'
+          color='gray'
           onClick={() => history.push('/admin/emails/templates')}
         >
+          <ArrowLeftIcon />
           {t('admin:emails.edit.backToList', 'Back to Email Templates')}
         </Button>
-      </div>
+      </Box>
     );
   }
 
   return (
-    <div className={s.root}>
-      <Box.Header
-        icon={<Icon name='edit' size={24} />}
-        title={t('admin:emails.edit.title', 'Edit Email Template')}
-        subtitle={template.name}
+    <Box className={s.containerBox}>
+      <Flex
+        align='center'
+        justify='between'
+        wrap='wrap'
+        gap='4'
+        pb='4'
+        mb='6'
+        className={s.adminHeader}
       >
+        <Flex align='center' gap='3'>
+          <Flex align='center' justify='center' className={s.adminHeaderIcon}>
+            <Pencil2Icon width={24} height={24} />
+          </Flex>
+          <Flex direction='column'>
+            <Heading size='6'>
+              {t('admin:emails.form.editTemplate', 'Edit Email Template')}
+            </Heading>
+          </Flex>
+        </Flex>
         <Button
-          variant='secondary'
+          variant='ghost'
+          color='gray'
           onClick={() => handleCancel(isDirtyRef.current)}
         >
-          <Icon name='arrowLeft' />
-          {t('admin:buttons.backToTemplates', 'Back to Templates')}
+          <ArrowLeftIcon />
+          {t('admin:emails.edit.backToList', 'Back to Email Templates')}
         </Button>
-      </Box.Header>
+      </Flex>
 
-      <div className={s.formContainer}>
-        <Form.Error message={error} />
+      <Form
+        schema={updateEmailTemplateFormSchema}
+        defaultValues={defaultValues}
+        onSubmit={handleSubmit}
+      >
+        <EditFormFields
+          onCancel={handleCancel}
+          loading={updateLoading}
+          isDirtyRef={isDirtyRef}
+        />
+      </Form>
 
-        <Form
-          schema={updateEmailTemplateFormSchema}
-          defaultValues={defaultValues}
-          onSubmit={handleSubmit}
-          className={s.form}
-        >
-          <EditFormFields
-            onCancel={handleCancel}
-            loading={updateLoading}
-            isDirtyRef={isDirtyRef}
-          />
-        </Form>
-      </div>
-
-      <ConfirmModal.Back
+      <Modal.ConfirmBack
         ref={confirmBackModalRef}
         onConfirm={handleConfirmBack}
       />
-    </div>
+    </Box>
   );
 }
 
@@ -211,11 +259,16 @@ function EditEmailTemplate({ params }) {
 function EditFormFields({ onCancel, loading, isDirtyRef }) {
   const { t } = useTranslation();
   const {
+    watch,
     getValues,
     formState: { isDirty },
   } = useFormContext();
   const dispatch = useDispatch();
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
+  // Watch html_body to control Preview button state
+  const htmlBody = watch('html_body');
+  const isHtmlBodyEmpty = !htmlBody || !htmlBody.replace(/<[^>]*>/g, '').trim();
 
   // Keep isDirtyRef in sync
   isDirtyRef.current = isDirty;
@@ -247,64 +300,70 @@ function EditFormFields({ onCancel, loading, isDirtyRef }) {
   );
 
   return (
-    <>
+    <Flex direction='column' gap='6'>
       {/* Template Information */}
-      <div className={s.formSection}>
-        <h3 className={s.sectionTitle}>
+      <Box>
+        <Heading as='h3' size='4' className={s.sectionHeading}>
           {t('admin:emails.form.templateInfo', 'Template Information')}
-        </h3>
+        </Heading>
 
-        <div className={s.formRow}>
-          <Form.Field
-            name='name'
-            label={t('admin:emails.form.name', 'Template Name')}
-            required
-          >
-            <Form.Input
-              placeholder={t(
-                'admin:emails.form.namePlaceholder',
-                'e.g. Welcome Email',
-              )}
-            />
-          </Form.Field>
+        <Flex gap='4' direction={{ initial: 'column', sm: 'row' }}>
+          <Box className={s.flexOne}>
+            <Form.Field
+              name='name'
+              label={t('admin:emails.form.name', 'Template Name')}
+              required
+            >
+              <Form.Input
+                placeholder={t(
+                  'admin:emails.form.namePlaceholder',
+                  'e.g. Welcome Email',
+                )}
+              />
+            </Form.Field>
+          </Box>
 
-          <Form.Field
-            name='slug'
-            label={t('admin:emails.form.slug', 'Slug')}
-            required
-          >
-            <Form.InputMask
-              mask={'s'.repeat(100)}
-              maskPlaceholder=''
-              placeholder={t(
-                'admin:emails.form.slugPlaceholder',
-                'e.g. welcome-email',
-              )}
-            />
-          </Form.Field>
-        </div>
+          <Box className={s.flexOne}>
+            <Form.Field
+              name='slug'
+              label={t('admin:emails.form.slug', 'Slug')}
+              required
+            >
+              <Form.InputMask
+                mask={'s'.repeat(100)}
+                maskPlaceholder=''
+                placeholder={t(
+                  'admin:emails.form.slugPlaceholder',
+                  'e.g. welcome-email',
+                )}
+              />
+            </Form.Field>
+          </Box>
+        </Flex>
 
         <Form.Field name='is_active'>
           <Form.Switch label={t('admin:emails.form.isActive', 'Active')} />
         </Form.Field>
-      </div>
+      </Box>
 
       {/* Email Content */}
-      <div className={s.formSection}>
-        <div className={s.sectionHeader}>
-          <h3 className={s.sectionTitle} style={{ margin: 0 }}>
+      <Box>
+        <Flex align='center' justify='between' className={s.emailContentHeader}>
+          <Heading as='h3' size='4' className={s.emailContentHeading}>
             {t('admin:emails.form.emailContent', 'Email Content')}
-          </h3>
+          </Heading>
           <Button
             type='button'
-            variant='secondary'
-            size='small'
+            variant='soft'
+            color='gray'
+            size='1'
             onClick={handlePreviewEmail}
+            disabled={isHtmlBodyEmpty}
           >
-            <Icon name='eye' size={16} />
+            <EyeOpenIcon width={16} height={16} />
             {t('admin:emails.form.previewBtn', 'Preview')}
           </Button>
-        </div>
+        </Flex>
 
         <Form.Field
           name='subject'
@@ -334,34 +393,49 @@ function EditFormFields({ onCancel, loading, isDirtyRef }) {
         </Form.Field>
 
         <TemplateVariables />
-      </div>
+      </Box>
 
       {/* sliding modal for Live Preview */}
       <Modal
         isOpen={isPreviewOpen}
-        onClose={() => setIsPreviewOpen(false)}
+        onClose={() => {
+          setIsPreviewOpen(false);
+          dispatch(clearPreview());
+        }}
         placement='right'
+        width='100%'
+        maxWidth={{ initial: '100%', md: '800px' }}
       >
-        <Modal.Header onClose={() => setIsPreviewOpen(false)}>
+        <Modal.Header
+          onClose={() => {
+            setIsPreviewOpen(false);
+            dispatch(clearPreview());
+          }}
+        >
           {t('admin:emails.form.preview', 'Preview')}
         </Modal.Header>
-        <Modal.Body className={s.previewBody}>
-          <TemplateEditor />
+        <Modal.Body className={s.modalBody}>
+          <TemplateEditor className={s.templateEditor} />
         </Modal.Body>
       </Modal>
 
       {/* Actions */}
-      <div className={s.formActions}>
-        <Button variant='secondary' onClick={handleCancel} disabled={loading}>
+      <Flex gap='3' justify='end' className={s.actionsFlex}>
+        <Button
+          variant='soft'
+          color='gray'
+          onClick={handleCancel}
+          disabled={loading}
+        >
           {t('admin:buttons.cancel', 'Cancel')}
         </Button>
-        <Button variant='primary' type='submit' loading={loading}>
+        <Button variant='solid' color='indigo' type='submit' loading={loading}>
           {loading
             ? t('admin:buttons.saving', 'Saving...')
             : t('admin:emails.form.save', 'Save Changes')}
         </Button>
-      </div>
-    </>
+      </Flex>
+    </Flex>
   );
 }
 

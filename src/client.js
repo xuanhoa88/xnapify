@@ -15,12 +15,8 @@ import extensionManager from '@shared/extension/client';
 import { createFetch } from '@shared/fetch';
 import i18n, { DEFAULT_LOCALE } from '@shared/i18n';
 import App from '@shared/renderer/App';
-import {
-  configureStore,
-  refreshToken,
-  logout,
-  isAuthenticated,
-} from '@shared/renderer/redux';
+import { configureStore, features } from '@shared/renderer/redux';
+const { refreshToken, logout, isAuthenticated } = features;
 import {
   createWebSocketClient,
   EventType,
@@ -42,14 +38,25 @@ const REACT_DOM_UNAVAILABLE = false;
 // INITIALIZATION
 // =============================================================================
 
-// eslint-disable-next-line no-underscore-dangle
-const preloadedState = merge({}, window.__PRELOADED_STATE__);
+let preloadedState;
+if (module.hot && module.hot.data && module.hot.data.reduxState) {
+  preloadedState = { redux: module.hot.data.reduxState };
+} else {
+  // eslint-disable-next-line no-underscore-dangle
+  preloadedState = merge({}, window.__PRELOADED_STATE__);
+  // eslint-disable-next-line no-underscore-dangle
+  delete window.__PRELOADED_STATE__; // avoid memory leaks / exposure
+}
+
+const { redux: preloadedReduxState = {} } = preloadedState;
 
 // Create browser history with configurable basename
 let parsedBasename = '';
 try {
   const appUrl =
-    preloadedState.appUrl || process.env.XNAPIFY_PUBLIC_APP_URL || '';
+    (preloadedReduxState.runtime && preloadedReduxState.runtime.appUrl) ||
+    process.env.XNAPIFY_PUBLIC_APP_URL ||
+    '';
   if (appUrl.startsWith('http')) {
     parsedBasename = new URL(appUrl).pathname;
     if (parsedBasename === '/') parsedBasename = '';
@@ -68,10 +75,6 @@ let fetchAbortController = new AbortController();
 const fetch = createFetch(window.fetch, {
   signal: fetchAbortController.signal,
 });
-
-const { redux: preloadedReduxState = {} } = preloadedState;
-// eslint-disable-next-line no-underscore-dangle
-delete window.__PRELOADED_STATE__; // avoid memory leaks / exposure
 
 // Initialize Redux store
 const store = configureStore(preloadedReduxState, { fetch, history, i18n });
@@ -131,44 +134,60 @@ function log(message, level = 'log') {
 // =============================================================================
 
 function updateMetaTag(name, content, isProperty = false) {
-  if (!content) return;
   const attr = isProperty ? 'property' : 'name';
   let meta = document.querySelector(`meta[${attr}="${name}"]`);
+
+  // Remove stale tags when navigating to a page without them
+  if (!content) {
+    if (meta) {
+      meta.remove();
+    }
+    return;
+  }
+
+  // Create new tag if it doesn't exist
   if (!meta) {
     meta = document.createElement('meta');
     meta.setAttribute(attr, name);
     document.head.appendChild(meta);
   }
+
   meta.setAttribute('content', content);
 }
 
 function updateMetadata({ title, description, image, url, type = 'website' }) {
+  // Title
   if (title) {
     document.title = title;
     updateMetaTag('og:title', title, true);
     updateMetaTag('twitter:title', title);
   }
-  if (description) {
-    updateMetaTag('description', description);
-    updateMetaTag('og:description', description, true);
-    updateMetaTag('twitter:description', description);
-  }
-  if (image) {
-    updateMetaTag('og:image', image, true);
-    updateMetaTag('twitter:image', image);
-  }
+
+  // Description
+  updateMetaTag('description', description);
+  updateMetaTag('og:description', description, true);
+  updateMetaTag('twitter:description', description);
+
+  // Image
+  updateMetaTag('og:image', image, true);
+  updateMetaTag('twitter:image', image);
+
+  // Type
+  updateMetaTag('og:type', type, true);
+
+  // Canonical URL
+  updateMetaTag('og:url', url, true);
+
+  let link = document.querySelector('link[rel="canonical"]');
   if (url) {
-    updateMetaTag('og:url', url, true);
-    let link = document.querySelector('link[rel="canonical"]');
     if (!link) {
       link = document.createElement('link');
       link.setAttribute('rel', 'canonical');
       document.head.appendChild(link);
     }
     link.setAttribute('href', url);
-  }
-  if (type) {
-    updateMetaTag('og:type', type, true);
+  } else if (link) {
+    link.remove();
   }
 }
 
@@ -558,6 +577,14 @@ function cleanup() {
     }
   });
 
+  // Unmount React root so createRoot() can re-attach on HMR re-init
+  safeCleanup('Unmount React root', () => {
+    if (root && typeof root.unmount === 'function') {
+      root.unmount();
+    }
+    root = null;
+  });
+
   // Clear scroll positions history
   safeCleanup('Clear scroll positions history', () => {
     scrollPositionsHistory.clear();
@@ -694,7 +721,7 @@ async function attemptStartup() {
 
   // Phase 1b: Load active extensions (API is already reachable on the client)
   try {
-    await extensionManager.sync();
+    await extensionManager.sync(preloadedState.extensions);
   } catch (error) {
     log(`⚠️ Extension sync failed: ${error.message}`, 'error');
   }
@@ -717,11 +744,7 @@ if (isDOMReady) {
 // =============================================================================
 
 if (module.hot) {
-  module.hot.accept(err => {
-    if (err) {
-      log(`❌ HMR error: ${err.message}`, 'error');
-      return;
-    }
+  module.hot.accept('./bootstrap/views', () => {
     cachedViews = null;
     const loc = { ...currentLocation };
     const schedule = window.requestIdleCallback || setTimeout;
@@ -806,8 +829,11 @@ if (module.hot) {
     }
   });
 
-  module.hot.dispose(() => {
+  module.hot.dispose(data => {
     log('🔥 HMR dispose', 'info');
+    if (store) {
+      data.reduxState = store.getState();
+    }
     if (hmrEventSource) {
       hmrEventSource.close();
       hmrEventSource = null;

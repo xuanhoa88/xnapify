@@ -1,3 +1,10 @@
+/**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
 import { createSelector } from '@reduxjs/toolkit';
 
 import { normalizeState, SLICE_NAME } from './slice';
@@ -70,20 +77,6 @@ export const isExtensionUploading = state => {
 
 export const getExtensionUploadError = state => {
   const op = getOperationState(state, 'upload');
-  return (op && op.error) || null;
-};
-
-// =============================================================================
-// UPGRADE OPERATION
-// =============================================================================
-
-export const isExtensionUpgrading = state => {
-  const op = getOperationState(state, 'upgrade');
-  return !!(op && op.loading);
-};
-
-export const getExtensionUpgradeError = state => {
-  const op = getOperationState(state, 'upgrade');
   return (op && op.error) || null;
 };
 

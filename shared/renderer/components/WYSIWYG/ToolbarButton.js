@@ -5,7 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-/* eslint-disable css-modules/no-unused-class */
 import { forwardRef } from 'react';
 
 import clsx from 'clsx';

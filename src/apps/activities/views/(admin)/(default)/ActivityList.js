@@ -7,21 +7,16 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 
+import { ActivityLogIcon } from '@radix-ui/react-icons';
+import { Box, Flex, Text, Badge } from '@radix-ui/themes';
 import format from 'date-fns/format';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import * as Box from '@shared/renderer/components/Box';
-import Button from '@shared/renderer/components/Button';
-import Icon from '@shared/renderer/components/Icon';
-import Loader from '@shared/renderer/components/Loader';
 import { SearchableSelect } from '@shared/renderer/components/SearchableSelect';
-import Table from '@shared/renderer/components/Table';
-import Tag from '@shared/renderer/components/Tag';
+import { DataTable, useTableColumns } from '@shared/renderer/components/Table';
 
 import { selectors, thunks } from '../redux';
-
-import s from './ActivityList.css';
 
 const ActivityList = () => {
   const { t } = useTranslation();
@@ -35,6 +30,7 @@ const ActivityList = () => {
 
   // Filter state
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [eventFilter, setEventFilter] = useState('');
   const [entityTypeFilter, setEntityTypeFilter] = useState('');
 
@@ -42,21 +38,23 @@ const ActivityList = () => {
     dispatch(
       thunks.fetchActivities({
         page: currentPage,
+        limit: pageSize,
         event: eventFilter,
         entity_type: entityTypeFilter,
       }),
     );
-  }, [dispatch, currentPage, eventFilter, entityTypeFilter]);
+  }, [dispatch, currentPage, pageSize, eventFilter, entityTypeFilter]);
 
   const refreshActivities = useCallback(() => {
     dispatch(
       thunks.fetchActivities({
         page: currentPage,
+        limit: pageSize,
         event: eventFilter,
         entity_type: entityTypeFilter,
       }),
     );
-  }, [dispatch, currentPage, eventFilter, entityTypeFilter]);
+  }, [dispatch, currentPage, pageSize, eventFilter, entityTypeFilter]);
 
   // Filter handlers
   const handleEventFilterChange = useCallback(value => {
@@ -97,6 +95,7 @@ const ActivityList = () => {
       { value: 'admin:roles:updated', label: 'Roles: Updated' },
       { value: 'admin:roles:deleted', label: 'Roles: Deleted' },
     ],
+
     [t],
   );
 
@@ -111,174 +110,150 @@ const ActivityList = () => {
       { value: 'role', label: 'Role' },
       { value: 'permission', label: 'Permission' },
     ],
+
     [t],
   );
 
-  const columns = [
-    {
-      title: t('admin:activities.column.event', 'Event'),
-      dataIndex: 'event',
-      key: 'event',
-      render: event => <Tag variant='info'>{event}</Tag>,
-    },
-    {
-      title: t('admin:activities.column.entity', 'Entity'),
-      key: 'entity',
-      render: (_, record) => (
-        <span>
-          <Tag variant='secondary'>{record.entity_type}</Tag>
-          {record.entity_id && (
-            <code className='ml-2 text-xs'>{record.entity_id}</code>
-          )}
-        </span>
-      ),
-    },
-    {
-      title: t('admin:activities.column.actor', 'Actor'),
-      dataIndex: 'actor_id',
-      key: 'actor',
-      render: actorId =>
-        actorId ? <code className='text-xs'>{actorId}</code> : '—',
-    },
-    {
-      title: t('admin:activities.column.timestamp', 'Timestamp'),
-      dataIndex: 'created_at',
-      key: 'timestamp',
-      render: date =>
-        date ? format(new Date(date), 'MMM dd, yyyy HH:mm') : '—',
-    },
-  ];
+  const baseColumns = useMemo(
+    () => [
+      {
+        key: 'event',
+        dataIndex: 'event',
+        title: t('admin:activities.column.event', 'Event'),
+        order: 10,
+        render: event => (
+          <Badge color='blue' radius='full' variant='soft' size='2'>
+            {event}
+          </Badge>
+        ),
+      },
+      {
+        key: 'entity',
+        title: t('admin:activities.column.entity', 'Entity'),
+        order: 20,
+        render: (_, record) => (
+          <Flex align='center' gap='2'>
+            <Badge color='gray' radius='full' variant='surface' size='2'>
+              {record.entity_type}
+            </Badge>
+            {record.entity_id && (
+              <Box
+                as='code'
+                className='font-mono bg-[var(--indigo-2)] text-[var(--indigo-11)] py-1 px-2 rounded-[var(--radius-1)] text-[13px]'
+              >
+                {record.entity_id}
+              </Box>
+            )}
+          </Flex>
+        ),
+      },
+      {
+        key: 'actor',
+        dataIndex: 'actor_id',
+        title: t('admin:activities.column.actor', 'Actor'),
+        order: 30,
+        render: actor_id =>
+          actor_id ? (
+            <Box
+              as='code'
+              className='font-mono bg-[var(--indigo-2)] text-[var(--indigo-11)] py-1 px-2 rounded-[var(--radius-1)] text-[13px]'
+            >
+              {actor_id}
+            </Box>
+          ) : (
+            '—'
+          ),
+      },
+      {
+        key: 'timestamp',
+        dataIndex: 'created_at',
+        title: t('admin:activities.column.timestamp', 'Timestamp'),
+        order: 40,
+        render: createdAt => (
+          <Text size='2' color='gray'>
+            {createdAt
+              ? format(new Date(createdAt), 'MMM dd, yyyy HH:mm')
+              : '—'}
+          </Text>
+        ),
+      },
+    ],
+    [t],
+  );
 
-  // Loading state (first fetch / not initialized)
-  if (!initialized || (loading && activities.length === 0)) {
-    return (
-      <div className={s.root}>
-        <Box.Header
-          icon={<Icon name='activity' size={24} />}
-          title={t('admin:activities.title', 'Activity Logs')}
-          subtitle={t(
-            'admin:activities.subtitle',
-            'System audit trail and event history',
-          )}
-        />
-        <Loader
-          variant='skeleton'
-          message={t('admin:activities.loading', 'Loading activity logs...')}
-        />
-      </div>
-    );
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <div className={s.root}>
-        <Box.Header
-          icon={<Icon name='activity' size={24} />}
-          title={t('admin:activities.title', 'Activity Logs')}
-          subtitle={t(
-            'admin:activities.subtitle',
-            'System audit trail and event history',
-          )}
-        />
-        <Table.Error
-          title={t(
-            'admin:activities.errorLoading',
-            'Error loading activity logs',
-          )}
-          error={error}
-          onRetry={refreshActivities}
-        />
-      </div>
-    );
-  }
+  const { columns } = useTableColumns(
+    'table.columns.activities.list',
+    baseColumns,
+  );
 
   return (
-    <div className={s.root}>
-      <Box.Header
-        icon={<Icon name='activity' size={24} />}
-        title={t('admin:activities.title', 'Activity Logs')}
-        subtitle={t(
-          'admin:activities.subtitle',
-          'System audit trail and event history',
-        )}
-      >
-        <Button
-          variant='ghost'
-          size='small'
-          onClick={refreshActivities}
-          loading={loading}
-        >
-          <Icon name='refresh-cw' size={16} />
-          {t('common:refresh', 'Refresh')}
-        </Button>
-      </Box.Header>
-
-      <div className={s.filters}>
-        <SearchableSelect
-          className={s.filterSearchableSelect}
-          options={eventOptions}
-          value={eventFilter}
-          onChange={handleEventFilterChange}
-          placeholder={t('admin:activities.filter.allEvents', 'All Events')}
-          showSearch={false}
-        />
-        <SearchableSelect
-          className={s.filterSearchableSelect}
-          options={entityTypeOptions}
-          value={entityTypeFilter}
-          onChange={handleEntityTypeFilterChange}
-          placeholder={t('admin:activities.filter.allEntities', 'All Entities')}
-          showSearch={false}
-        />
-        <div className={s.filterActions}>
-          {hasActiveFilters && (
-            <Button
-              variant='ghost'
-              size='small'
-              onClick={handleClearAllFilters}
-              type='button'
-              title={t('admin:activities.filter.resetAll', 'Reset all filters')}
-            >
-              <Icon name='x' size={12} />
-              {t('admin:activities.filter.clear', 'Clear Filters')}
-            </Button>
-          )}
-        </div>
-      </div>
-
-      <Table
+    <Box className='p-6 max-w-[1400px] mx-auto'>
+      <DataTable
         columns={columns}
         dataSource={activities}
         rowKey='id'
         loading={loading}
-        pagination={
-          pagination && pagination.pages > 1
-            ? {
-                current: currentPage,
-                pages: pagination.pages,
-                total: pagination.total,
-                onChange: setCurrentPage,
-              }
-            : false
-        }
-        locale={{
-          emptyText: (
-            <Table.Empty
-              icon='activity'
-              title={t(
-                'admin:activities.noLogsFound',
-                'No activity logs found',
-              )}
-              description={t(
-                'admin:activities.noLogsDescription',
-                'Activity logs will appear here as system events occur. Try adjusting your filters.',
-              )}
-            />
-          ),
-        }}
-      />
-    </div>
+        initialized={initialized}
+      >
+        <DataTable.Header
+          title={t('admin:activities.title', 'Activity Logs')}
+          subtitle={t(
+            'admin:activities.subtitle',
+            'System audit trail and event history',
+          )}
+          icon={<ActivityLogIcon width={24} height={24} />}
+        />
+
+        <DataTable.Toolbar>
+          <DataTable.Filter
+            component={SearchableSelect}
+            width='md'
+            options={eventOptions}
+            value={eventFilter}
+            onChange={handleEventFilterChange}
+            placeholder={t('admin:activities.filter.allEvents', 'All Events')}
+            showSearch={false}
+          />
+          <DataTable.Filter
+            component={SearchableSelect}
+            width='md'
+            options={entityTypeOptions}
+            value={entityTypeFilter}
+            onChange={handleEntityTypeFilterChange}
+            placeholder={t(
+              'admin:activities.filter.allEntities',
+              'All Entities',
+            )}
+            showSearch={false}
+          />
+          <DataTable.ClearFilters
+            visible={!!hasActiveFilters}
+            onClick={handleClearAllFilters}
+          />
+        </DataTable.Toolbar>
+
+        <DataTable.Empty
+          icon={<ActivityLogIcon width={48} height={48} />}
+          title={t('admin:activities.noLogsFound', 'No activity logs found')}
+          description={t(
+            'admin:activities.noLogsDescription',
+            'Activity logs will appear here as system events occur. Try adjusting your filters.',
+          )}
+        />
+        <DataTable.Error message={error} onRetry={refreshActivities} />
+        <DataTable.Loader />
+
+        <DataTable.Pagination
+          current={currentPage}
+          totalPages={pagination ? pagination.pages : undefined}
+          total={pagination ? pagination.total : undefined}
+          pageSize={pageSize}
+          pageSizeOptions={[20, 50, 100]}
+          onChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+        />
+      </DataTable>
+    </Box>
   );
 };
 

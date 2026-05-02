@@ -5,10 +5,14 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import {
+  PersonIcon,
+  GearIcon,
+  LockClosedIcon,
+  TrashIcon,
+} from '@radix-ui/react-icons';
+import { Box, Tabs } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
-
-import Icon from '@shared/renderer/components/Icon';
-import Tabs from '@shared/renderer/components/Tabs';
 
 import DeleteAccountCard from './components/DeleteAccountCard';
 import PersonalInfoCard from './components/PersonalInfoCard';
@@ -16,55 +20,81 @@ import PreferencesCard from './components/PreferencesCard';
 import ProfileHeader from './components/ProfileHeader';
 import SecurityCard from './components/SecurityCard';
 
-import s from './Profile.css';
-
+/**
+ * Profile layout component natively migrating from pure CSS to absolute Box and Flex parameters.
+ */
 function Profile() {
   const { t } = useTranslation();
 
   return (
-    <div className={s.root}>
-      <div className={s.wrapper}>
+    <Box className='min-h-screen p-6 bg-slate-50'>
+      <Box className='max-w-[860px] mx-auto'>
         <ProfileHeader />
 
-        <Tabs defaultTab='personal'>
-          <Tabs.List>
-            <Tabs.Tab id='personal' icon={<Icon name='user' size={18} />}>
-              {t('profile.personalInfo', 'Personal Info')}
-            </Tabs.Tab>
-            <Tabs.Tab
-              id='preferences'
-              icon={<Icon name='settings' size={18} />}
-            >
-              {t('profile.preferences', 'Preferences')}
-            </Tabs.Tab>
-            <Tabs.Tab id='security' icon={<Icon name='shield' size={18} />}>
-              {t('profile.security', 'Security')}
-            </Tabs.Tab>
-            <Tabs.Tab id='danger' icon={<Icon name='trash' size={18} />}>
-              {t('profile.dangerZone', 'Danger Zone')}
-            </Tabs.Tab>
-          </Tabs.List>
+        <Box className='mt-6'>
+          <Tabs.Root defaultValue='personal'>
+            <Box className='overflow-x-auto pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]'>
+              <Tabs.List className='min-w-max'>
+                <Tabs.Trigger
+                  value='personal'
+                  className='cursor-pointer whitespace-nowrap'
+                >
+                  <span className='flex items-center gap-2'>
+                    <PersonIcon width={18} height={18} />
+                    {t('profile.personalInfo', 'Personal Info')}
+                  </span>
+                </Tabs.Trigger>
+                <Tabs.Trigger
+                  value='preferences'
+                  className='cursor-pointer whitespace-nowrap'
+                >
+                  <span className='flex items-center gap-2'>
+                    <GearIcon width={18} height={18} />
+                    {t('profile.preferences', 'Preferences')}
+                  </span>
+                </Tabs.Trigger>
+                <Tabs.Trigger
+                  value='security'
+                  className='cursor-pointer whitespace-nowrap'
+                >
+                  <span className='flex items-center gap-2'>
+                    <LockClosedIcon width={18} height={18} />
+                    {t('profile.security', 'Security')}
+                  </span>
+                </Tabs.Trigger>
+                <Tabs.Trigger
+                  value='danger'
+                  className='cursor-pointer whitespace-nowrap'
+                >
+                  <span className='flex items-center gap-2'>
+                    <TrashIcon width={18} height={18} />
+                    {t('profile.dangerZone', 'Danger Zone')}
+                  </span>
+                </Tabs.Trigger>
+              </Tabs.List>
+            </Box>
 
-          <Tabs.Panels>
-            <Tabs.Panel id='personal'>
-              <PersonalInfoCard />
-            </Tabs.Panel>
+            <Box pt='4'>
+              <Tabs.Content value='personal'>
+                <PersonalInfoCard />
+              </Tabs.Content>
 
-            <Tabs.Panel id='preferences'>
-              <PreferencesCard />
-            </Tabs.Panel>
+              <Tabs.Content value='preferences'>
+                <PreferencesCard />
+              </Tabs.Content>
 
-            <Tabs.Panel id='security'>
-              <SecurityCard />
-            </Tabs.Panel>
+              <Tabs.Content value='security'>
+                <SecurityCard />
+              </Tabs.Content>
 
-            <Tabs.Panel id='danger'>
-              <DeleteAccountCard />
-            </Tabs.Panel>
-          </Tabs.Panels>
-        </Tabs>
-      </div>
-    </div>
+              <Tabs.Content value='danger'>
+                <DeleteAccountCard />
+              </Tabs.Content>
+            </Box>
+          </Tabs.Root>
+        </Box>
+      </Box>
+    </Box>
   );
 }
 

@@ -5,9 +5,55 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { features } from '@shared/renderer/redux';
+
+import Dashboard from './Dashboard';
+
+const { registerMenu, unregisterMenu } = features;
+
 /**
- * Admin index route - redirects to activities
+ * Register menu item
  */
-export function middleware() {
-  return { redirect: '/admin/activities' };
+export function setup({ store, i18n }) {
+  store.dispatch(
+    registerMenu({
+      ns: i18n.t('admin:navigation.main', 'Main'),
+      id: 'main',
+      label: i18n.t('admin:navigation.main', 'Main'),
+      order: 0, // First section
+      icon: 'DashboardIcon',
+      items: [
+        {
+          path: '/admin',
+          label: i18n.t('admin:navigation.dashboard', 'Dashboard'),
+          icon: 'DashboardIcon',
+          exact: true,
+          order: 0,
+        },
+      ],
+    }),
+  );
 }
+
+/**
+ * Unregister menu item
+ */
+export function teardown({ store, i18n }) {
+  store.dispatch(
+    unregisterMenu({
+      ns: i18n.t('admin:navigation.main', 'Main'),
+      path: '/admin',
+    }),
+  );
+}
+
+/**
+ * Page metadata
+ */
+export async function getInitialProps({ i18n }) {
+  return {
+    title: i18n.t('admin:navigation.dashboard', 'Dashboard'),
+  };
+}
+
+export default Dashboard;

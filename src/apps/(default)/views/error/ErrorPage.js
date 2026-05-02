@@ -5,93 +5,118 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { Flex, Box, Text, Heading, Button } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
-import Button from '@shared/renderer/components/Button';
 import { Link } from '@shared/renderer/components/History';
 
 import s from './ErrorPage.css';
 
 /**
  * Error Page Component
- * Standalone full-page error display without header/footer
+ * Upgraded to use massive watermark typography and premium button aesthetics.
  */
-function ErrorPage({ error = null }) {
+function ErrorPage({ error = null, context }) {
   const { t } = useTranslation();
+  const { history } = context || {};
 
-  // Development mode - show detailed error
-  if (error) {
-    return (
-      <div className={s.root}>
-        <div className={s.hero}>
-          <div className={s.heroIcon}>⚠️</div>
-          <h1 className={s.heroTitle}>{error.name}</h1>
-          <p className={s.heroSubtitle}>{error.message}</p>
-        </div>
-        <div className={s.content}>
-          <div className={s.container}>
-            {__DEV__ && error.stack && (
-              <pre className={s.stackTrace} suppressHydrationWarning>
-                {error.stack}
-              </pre>
-            )}
-            <div className={s.actions}>
-              <Link to='/' className={s.btnPrimary}>
-                {t('error.backToHome', 'Back to Home')}
-              </Link>
-              <Button
-                variant='secondary'
-                className={s.btnSecondary}
-                onClick={() => window.location.reload()}
-              >
-                {t('error.tryAgain', 'Try Again')}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
+  const actualError =
+    error ||
+    (context && context.error) ||
+    (context && context.initialProps && context.initialProps.error) ||
+    null;
+
+  let errorCode = 'Error';
+  let title = t('error.title', 'Oops! Something went wrong');
+  let subtitle = t(
+    'error.message',
+    'Sorry, a critical error occurred on this page.',
+  );
+
+  if (actualError && actualError.status === 403) {
+    errorCode = '403';
+    title = t('error.forbidden.title', 'Access Denied');
+    subtitle =
+      actualError.message ||
+      t(
+        'error.forbidden.message',
+        "You don't have permission to access this page.",
+      );
+  } else if (actualError && actualError.status === 404) {
+    errorCode = '404';
+    title = t('error.notFound.title', 'Page Not Found');
+    subtitle = t(
+      'error.notFound.message',
+      "The page you are looking for doesn't exist or has been moved.",
     );
+  } else if (actualError && (__DEV__ || actualError.stack)) {
+    errorCode = '500';
+    title = actualError.name || 'Error';
+    subtitle = actualError.message;
   }
 
-  // Production mode - show user-friendly message
   return (
-    <div className={s.root}>
-      <div className={s.hero}>
-        <div className={s.heroIcon}>😕</div>
-        <h1 className={s.heroTitle}>
-          {t('error.title', 'Oops! Something went wrong')}
-        </h1>
-        <p className={s.heroSubtitle}>
-          {t('error.message', 'Sorry, a critical error occurred on this page.')}
-        </p>
-      </div>
-      <div className={s.content}>
-        <div className={s.container}>
-          <div className={s.actions}>
-            <Link to='/' className={s.btnPrimary}>
-              {t('error.backToHome', 'Back to Home')}
-            </Link>
+    <Box className={s.pageWrapper}>
+      <Flex
+        direction='column'
+        align='center'
+        justify='center'
+        className={s.contentContainer}
+      >
+        <Box className={s.watermarkWrapper} aria-hidden='true'>
+          {errorCode}
+        </Box>
+
+        <Heading as='h1' className={s.heroTitle}>
+          {title}
+        </Heading>
+
+        <Text className={s.heroSubtitle}>{subtitle}</Text>
+
+        {__DEV__ && actualError && actualError.stack && (
+          <Box as='pre' suppressHydrationWarning className={s.stackTrace}>
+            {actualError.stack}
+          </Box>
+        )}
+
+        <Flex gap='4' justify='center' align='center' className={s.actionsRow}>
+          <Button asChild size='3' variant='solid'>
+            <Link to='/'>{t('error.backToHome', 'Back to Home')}</Link>
+          </Button>
+          {history && (
             <Button
-              variant='secondary'
-              className={s.btnSecondary}
-              onClick={() => window.location.reload()}
+              size='3'
+              variant='soft'
+              color='gray'
+              onClick={() => {
+                if (actualError && actualError.status === 403) {
+                  history.goBack();
+                } else {
+                  history.push(history.location.pathname);
+                }
+              }}
             >
-              {t('error.tryAgain', 'Try Again')}
+              {actualError && actualError.status === 403
+                ? t('error.goBack', 'Go Back')
+                : t('error.tryAgain', 'Try Again')}
             </Button>
-          </div>
-        </div>
-      </div>
-    </div>
+          )}
+        </Flex>
+      </Flex>
+    </Box>
   );
 }
 
 ErrorPage.propTypes = {
   error: PropTypes.shape({
-    name: PropTypes.string.isRequired,
-    message: PropTypes.string.isRequired,
+    name: PropTypes.string,
+    message: PropTypes.string,
     stack: PropTypes.string,
+    status: PropTypes.number,
   }),
+  context: PropTypes.object,
+  children: PropTypes.node,
 };
 
 export default ErrorPage;

@@ -7,25 +7,27 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
+import { CheckCircledIcon, LockOpen1Icon } from '@radix-ui/react-icons';
+import { Flex, Box, Grid, Text, Button } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Button from '@shared/renderer/components/Button';
 import Form, { useFormContext } from '@shared/renderer/components/Form';
-import Icon from '@shared/renderer/components/Icon';
-import {
+import { features } from '@shared/renderer/redux';
+
+import { changePasswordFormSchema } from '../../../../users/validator/auth';
+
+import s from './SecurityCard.css';
+
+const {
   changeUserPassword,
   isPasswordLoading,
   getPasswordError,
   clearPasswordError,
   generatePassword,
   showSuccessMessage,
-} from '@shared/renderer/redux';
-
-import { changePasswordFormSchema } from '../../../../users/validator/auth';
-
-import s from './SecurityCard.css';
+} = features;
 
 function SecurityCard() {
   const { t } = useTranslation();
@@ -67,40 +69,35 @@ function SecurityCard() {
   );
 
   return (
-    <div className={s.card}>
-      <div className={s.cardHeader}>
-        <div className={s.cardIcon}>
-          <Icon name='lock' size={22} />
-        </div>
-        <div>
-          <h2 className={s.cardTitle}>{t('profile.security', 'Security')}</h2>
-          <p className={s.cardDescription}>
-            {t('profile.securityDesc', 'Manage your password and security')}
-          </p>
-        </div>
-      </div>
-
-      <div className={s.securityTips}>
-        <div className={s.tipItem}>
-          <Icon name='check-circle' size={16} />
-          <span>{t('profile.passwordTip1', 'Use at least 8 characters')}</span>
-        </div>
-        <div className={s.tipItem}>
-          <Icon name='check-circle' size={16} />
-          <span>
+    <Box className={s.cardContainer}>
+      <Grid
+        columns={{ initial: '1', md: '2' }}
+        gapY='2'
+        gapX='4'
+        className='bg-[var(--blue-2)] border border-[var(--blue-5)] border-l-[4px] border-l-[var(--blue-9)] rounded-[var(--radius-3)] py-3 px-4 mb-6'
+      >
+        <Flex align='center' gap='2' className='text-[var(--blue-11)]'>
+          <CheckCircledIcon width={16} height={16} />
+          <Text size='2'>
+            {t('profile.passwordTip1', 'Use at least 8 characters')}
+          </Text>
+        </Flex>
+        <Flex align='center' gap='2' className='text-[var(--blue-11)]'>
+          <CheckCircledIcon width={16} height={16} />
+          <Text size='2'>
             {t(
               'profile.passwordTip2',
               'Mix uppercase, lowercase, numbers & symbols',
             )}
-          </span>
-        </div>
-        <div className={s.tipItem}>
-          <Icon name='check-circle' size={16} />
-          <span>
+          </Text>
+        </Flex>
+        <Flex align='center' gap='2' className='text-[var(--blue-11)]'>
+          <CheckCircledIcon width={16} height={16} />
+          <Text size='2'>
             {t('profile.passwordTip3', 'Avoid common words or personal info')}
-          </span>
-        </div>
-      </div>
+          </Text>
+        </Flex>
+      </Grid>
 
       <Form.Error message={error || ''} />
 
@@ -115,7 +112,7 @@ function SecurityCard() {
       >
         <SecurityFormFields loading={loading} dispatch={dispatch} />
       </Form>
-    </div>
+    </Box>
   );
 }
 
@@ -151,7 +148,7 @@ function SecurityFormFields({ loading, dispatch }) {
   }, [dispatch, setValue, t]);
 
   return (
-    <>
+    <Flex direction='column' gap='4'>
       <Form.Field
         name='currentPassword'
         label={t('profile.currentPassword', 'Current Password')}
@@ -159,50 +156,56 @@ function SecurityFormFields({ loading, dispatch }) {
         <Form.Password />
       </Form.Field>
 
-      <Form.Field
-        name='newPassword'
-        label={t('profile.newPassword', 'New Password')}
-      >
-        <Form.Password />
-      </Form.Field>
+      <Grid columns={{ initial: '1', sm: '2' }} gap='4'>
+        <Form.Field
+          name='newPassword'
+          label={t('profile.newPassword', 'New Password')}
+        >
+          <Form.Password />
+        </Form.Field>
 
-      <Form.Field
-        name='confirmNewPassword'
-        label={t('profile.confirmNewPassword', 'Confirm New Password')}
-      >
-        <Form.Password />
-      </Form.Field>
+        <Form.Field
+          name='confirmNewPassword'
+          label={t('profile.confirmNewPassword', 'Confirm New Password')}
+        >
+          <Form.Password />
+        </Form.Field>
+      </Grid>
 
-      <div className={s.generatePasswordLink}>
+      <Flex justify='end'>
         <Button
-          variant='unstyled'
-          size='small'
+          variant='ghost'
+          size='1'
           onClick={handleGeneratePassword}
           disabled={generatingPassword}
-          className={s.generateBtn}
+          className={
+            generatingPassword ? s.generateBtnLoading : s.generateBtnReady
+          }
         >
           {generatingPassword ? (
             t('profile.generatingPassword', 'Generating...')
           ) : (
             <>
-              <Icon name='key' size={14} />
+              <LockOpen1Icon width={14} height={14} />
               {t('profile.generatePassword', 'Generate Secure Password')}
             </>
           )}
         </Button>
-      </div>
+      </Flex>
 
-      <Button
-        variant='secondary'
-        type='submit'
-        className={s.buttonSecondary}
-        loading={loading || isSubmitting}
-      >
-        {loading
-          ? t('profile.changingPassword', 'Changing Password...')
-          : t('profile.updatePassword', 'Update Password')}
-      </Button>
-    </>
+      <Flex justify='end' mt='4'>
+        <Button
+          variant='solid'
+          size='3'
+          type='submit'
+          loading={loading || isSubmitting}
+        >
+          {loading
+            ? t('profile.changingPassword', 'Changing Password...')
+            : t('profile.updatePassword', 'Update Password')}
+        </Button>
+      </Flex>
+    </Flex>
   );
 }
 

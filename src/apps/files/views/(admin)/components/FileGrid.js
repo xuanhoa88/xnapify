@@ -5,79 +5,118 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useMemo } from 'react';
 
+import {
+  FileIcon,
+  StarFilledIcon,
+  ArchiveIcon as FolderIcon,
+} from '@radix-ui/react-icons';
+import { Box, Flex, Text, Card } from '@radix-ui/themes';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import ConfirmModal from '@shared/renderer/components/ConfirmModal';
-import ContextMenu from '@shared/renderer/components/ContextMenu';
-import Icon from '@shared/renderer/components/Icon';
-import Loader from '@shared/renderer/components/Loader';
-import Pagination from '@shared/renderer/components/Table/Pagination';
-import { getUserId } from '@shared/renderer/redux/features/user/selector';
+import Modal from '@shared/renderer/components/Modal';
+import { DataTable } from '@shared/renderer/components/Table';
 import { validateForm } from '@shared/validator';
 
 import { renameFileFormSchema } from '../../../validator/admin/file';
 import {
-  toggleSelection,
+  setSelection,
   clearSelection,
   setView,
   trashItems,
   toggleStarItem,
   renameItem,
   deleteItemsPermanently,
+  fetchFiles,
   selectFiles,
   selectViewMode,
   selectSelectedFileIds,
   selectLoadingFiles,
   selectInitializedFiles,
   selectCurrentView,
+  selectCurrentFolderId,
   selectPage,
   selectPageSize,
   selectTotalItems,
+  selectHasMore,
+  selectLoadingMore,
+  selectSearch,
   setPage,
+  setPageSize,
 } from '../redux';
+
+import FileActionsDropdown from './FileActionsDropdown';
 
 import s from './FileGrid.css';
 
 export default function FileGrid({ onShare }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
-  const currentUserId = useSelector(getUserId);
   const files = useSelector(selectFiles);
   const viewMode = useSelector(selectViewMode);
   const selectedIds = useSelector(selectSelectedFileIds);
   const loading = useSelector(selectLoadingFiles);
   const initialized = useSelector(selectInitializedFiles);
   const currentView = useSelector(selectCurrentView);
+  const currentFolderId = useSelector(selectCurrentFolderId);
   const page = useSelector(selectPage);
   const pageSize = useSelector(selectPageSize);
   const totalItems = useSelector(selectTotalItems);
+  const hasMore = useSelector(selectHasMore);
+  const loadingMore = useSelector(selectLoadingMore);
+  const search = useSelector(selectSearch);
   const totalPages = Math.ceil(totalItems / pageSize);
 
-  const [contextMenu, setContextMenu] = useState(null);
   const [targetFile, setTargetFile] = useState(null);
   const renamePromptRef = useRef(null);
 
-  // Close context menu on any outside click handled by Shared ContextMenu so we don't need body click listener
+  const handleLoadMore = useCallback(() => {
+    if (loadingMore || !hasMore) return;
+    const nextPage = page + 1;
+    dispatch(
+      fetchFiles({
+        view: currentView,
+        parentId: currentFolderId,
+        search: search,
+        page: nextPage,
+        pageSize: pageSize,
+        append: true,
+      }),
+    );
+    dispatch(setPage(nextPage));
+  }, [
+    dispatch,
+    loadingMore,
+    hasMore,
+    page,
+    currentView,
+    currentFolderId,
+    search,
+    pageSize,
+  ]);
 
-  const handleFileClick = useCallback(
-    (e, fileId) => {
-      e.stopPropagation(); // Prevent deselecting
-      const multi = e.ctrlKey || e.metaKey;
-      dispatch(toggleSelection({ fileId, multi }));
+  const handleContainerClick = useCallback(
+    e => {
+      // Do not clear selection if interacting with buttons, cards, or menus
+      if (
+        e.target.closest('button') ||
+        e.target.closest('[role="button"]') ||
+        e.target.closest('a') ||
+        e.target.closest('[role="menu"]') ||
+        e.target.closest('[role="menuitem"]')
+      ) {
+        return;
+      }
+      dispatch(clearSelection());
     },
     [dispatch],
   );
 
-  const handleContainerClick = useCallback(() => {
-    dispatch(clearSelection());
-  }, [dispatch]);
-
-  const handleDoubleClick = useCallback(
+  const handleOpen = useCallback(
     file => {
       if (file.type === 'folder') {
         dispatch(setView({ view: currentView, folderId: file.id }));
@@ -89,35 +128,16 @@ export default function FileGrid({ onShare }) {
     [dispatch, currentView],
   );
 
-  const handleContextMenu = useCallback(
-    (e, file) => {
-      e.preventDefault();
-      e.stopPropagation();
-
-      // Select the file if not already selected
-      if (!selectedIds.includes(file.id)) {
-        dispatch(toggleSelection({ fileId: file.id, multi: false }));
-      }
-
-      setContextMenu({
-        x: e.clientX,
-        y: e.clientY,
-        file,
+  const onRename = useCallback(
+    file => {
+      setTargetFile(file);
+      renamePromptRef.current.open({
+        title: t('files:grid.rename', 'Rename'),
+        defaultValue: file.name,
       });
     },
-    [dispatch, selectedIds],
+    [t],
   );
-
-  const onRename = useCallback(() => {
-    if (!contextMenu) return;
-    const { file } = contextMenu;
-    setContextMenu(null); // Close the menu
-    setTargetFile(file);
-    renamePromptRef.current.open({
-      title: t('files:grid.rename', 'Rename'),
-      defaultValue: file.name,
-    });
-  }, [contextMenu, t]);
 
   const handleRenameSubmit = useCallback(
     async newName => {
@@ -152,233 +172,303 @@ export default function FileGrid({ onShare }) {
     [dispatch, targetFile, t],
   );
 
-  const onTrash = useCallback(() => {
-    if (!contextMenu) return;
-    const idsToDelete =
-      selectedIds.length > 0 ? selectedIds : [contextMenu.file.id];
+  const onTrash = useCallback(
+    file => {
+      let idsToDelete = [];
+      if (!file) {
+        idsToDelete = selectedIds;
+      } else {
+        idsToDelete = selectedIds.includes(file.id) ? selectedIds : [file.id];
+      }
 
-    setContextMenu(null); // Close menu
-    if (currentView === 'trash') {
-      dispatch(deleteItemsPermanently(idsToDelete));
-    } else {
-      dispatch(trashItems(idsToDelete));
-    }
-  }, [contextMenu, currentView, dispatch, selectedIds]);
+      if (idsToDelete.length === 0) return;
 
-  const onStar = useCallback(() => {
-    if (!contextMenu) return;
-    setContextMenu(null); // Close menu
-    dispatch(
-      toggleStarItem({
-        id: contextMenu.file.id,
-        isStarred: !contextMenu.file.is_starred,
-      }),
-    );
-  }, [contextMenu, dispatch]);
+      if (currentView === 'trash') {
+        dispatch(deleteItemsPermanently(idsToDelete));
+      } else {
+        dispatch(trashItems(idsToDelete));
+      }
+    },
+    [currentView, dispatch, selectedIds],
+  );
 
-  const onDownload = useCallback(() => {
-    if (!contextMenu) return;
-    setContextMenu(null); // Close menu
-    window.open(
-      `/api/files/${contextMenu.file.id}/download?download=true`,
-      '_blank',
-    );
-  }, [contextMenu]);
+  const onStar = useCallback(
+    file => {
+      dispatch(
+        toggleStarItem({
+          id: file.id,
+          isStarred: !file.is_starred,
+        }),
+      );
+    },
+    [dispatch],
+  );
 
-  const onCopyLink = useCallback(() => {
-    if (!contextMenu) return;
-    setContextMenu(null); // Close menu
-    const link = `${window.location.origin}/api/files/${contextMenu.file.id}/download`;
-    navigator.clipboard.writeText(link);
-    alert(t('files:grid.link_copied', 'Link copied to clipboard!'));
-  }, [contextMenu, t]);
+  const onDownload = useCallback(file => {
+    window.open(`/api/files/${file.id}/download?download=true`, '_blank');
+  }, []);
 
-  const handleShare = useCallback(() => {
-    if (!contextMenu) return;
-    setContextMenu(null); // Close menu
-    if (onShare) onShare(contextMenu.file);
-  }, [contextMenu, onShare]);
+  const onCopyLink = useCallback(
+    file => {
+      const link = `${window.location.origin}/api/files/${file.id}/download`;
+      navigator.clipboard.writeText(link);
+      alert(t('files:grid.link_copied', 'Link copied to clipboard!'));
+    },
+    [t],
+  );
 
-  if (!initialized || (loading && (!files || files.length === 0))) {
-    return (
-      <Loader
-        variant={viewMode === 'grid' ? 'cards' : 'skeleton'}
-        message={t('files:grid.loading', 'Loading files...')}
-      />
-    );
-  }
+  const handleShareLocal = useCallback(
+    file => {
+      if (onShare) onShare(file);
+    },
+    [onShare],
+  );
 
-  if (!files || files.length === 0) {
-    return (
-      <div
+  const columns = useMemo(
+    () => [
+      {
+        key: 'name',
+        dataIndex: 'name',
+        title: t('files:grid.name', 'Name'),
+        order: 10,
+        render: (value, file) => (
+          <Flex align='center' gap='2' className='min-w-0'>
+            <Flex
+              align='center'
+              justify='center'
+              className={clsx(
+                s.listIconContainer,
+                file.type === 'folder' ? s.folderIcon : s.fileIcon,
+              )}
+            >
+              {file.type === 'folder' ? (
+                <FolderIcon width={24} height={24} />
+              ) : (
+                <FileIcon width={24} height={24} />
+              )}
+              {file.is_starred && currentView !== 'trash' && (
+                <Box className={s.starIconList}>
+                  <StarFilledIcon width={12} height={12} />
+                </Box>
+              )}
+            </Flex>
+            <Text
+              size='2'
+              weight='medium'
+              truncate
+              highContrast
+              title={file.name}
+              className='min-w-0 flex-1'
+            >
+              {file.name}
+            </Text>
+          </Flex>
+        ),
+      },
+      {
+        key: 'owner',
+        dataIndex: 'owner',
+        title: t('files:grid.owner', 'Owner'),
+        order: 20,
+        className: s.hiddenSm,
+        render: (value, file) => (
+          <Text size='1' color='gray'>
+            {file.owner && file.owner.email
+              ? file.owner.email
+              : t('files:grid.owner_me', 'Me')}
+          </Text>
+        ),
+      },
+      {
+        key: 'last_modified',
+        dataIndex: 'updated_at',
+        title: t('files:grid.last_modified', 'Last Modified'),
+        order: 30,
+        className: s.hiddenXs,
+        render: value => (
+          <Text size='1' color='gray'>
+            {new Date(value).toLocaleDateString()}
+          </Text>
+        ),
+      },
+      {
+        key: 'size',
+        dataIndex: 'size',
+        title: t('files:grid.file_size', 'File Size'),
+        order: 40,
+        className: s.hiddenMd,
+        render: value => (
+          <Text size='1' color='gray'>
+            {value ? `${(value / 1024 / 1024).toFixed(2)} MB` : '-'}
+          </Text>
+        ),
+      },
+      {
+        key: 'actions',
+        order: 100,
+        width: 60,
+        align: 'right',
+        render: (_, file) => (
+          <FileActionsDropdown
+            file={file}
+            onRename={onRename}
+            onShare={handleShareLocal}
+            onCopyLink={onCopyLink}
+            onDownload={onDownload}
+            onStar={onStar}
+            onTrash={onTrash}
+          />
+        ),
+      },
+    ],
+    [
+      t,
+      currentView,
+      onRename,
+      handleShareLocal,
+      onCopyLink,
+      onDownload,
+      onStar,
+      onTrash,
+    ],
+  );
+
+  const renderCard = useCallback(
+    file => (
+      <Card
+        variant='surface'
+        className={s.fileCard}
         role='button'
         tabIndex={0}
-        className={s.emptyState}
-        onClick={handleContainerClick}
-        onKeyDown={e => e.key === 'Enter' && handleContainerClick()}
+        onKeyDown={e => e.key === 'Enter' && handleOpen(file)}
+        onClick={() => handleOpen(file)}
       >
-        <div className={s.emptyStateIcon}>
-          <Icon name='folder' size={80} />
-        </div>
-        <h3>{t('files:grid.empty_title', 'No files here')}</h3>
-        <p>
-          {t(
+        <Box className={s.previewArea}>
+          <Box className='relative inline-flex'>
+            {file.type === 'folder' ? (
+              <FolderIcon width={64} height={64} className={s.folderIconLg} />
+            ) : (
+              <FileIcon width={64} height={64} className={s.fileIconLg} />
+            )}
+          </Box>
+        </Box>
+        <Flex className={s.footerArea} align='center' gap='2'>
+          <Box>
+            {file.type === 'folder' ? (
+              <FolderIcon width={16} height={16} className={s.folderIcon} />
+            ) : (
+              <FileIcon width={16} height={16} className={s.fileIcon} />
+            )}
+          </Box>
+          <Text
+            as='span'
+            size='2'
+            weight='medium'
+            truncate
+            highContrast
+            title={file.name}
+            className={s.footerName}
+          >
+            {file.name}
+          </Text>
+          {file.is_starred && currentView !== 'trash' && (
+            <Box className={s.starIconIndicator}>
+              <StarFilledIcon width={14} height={14} />
+            </Box>
+          )}
+        </Flex>
+        <Box
+          className={s.cardActions}
+          onClick={e => e.stopPropagation()}
+          onPointerDown={e => e.stopPropagation()}
+        >
+          <FileActionsDropdown
+            file={file}
+            onRename={onRename}
+            onShare={handleShareLocal}
+            onCopyLink={onCopyLink}
+            onDownload={onDownload}
+            onStar={onStar}
+            onTrash={onTrash}
+          />
+        </Box>
+      </Card>
+    ),
+    [
+      currentView,
+      handleOpen,
+      onRename,
+      handleShareLocal,
+      onCopyLink,
+      onDownload,
+      onStar,
+      onTrash,
+    ],
+  );
+
+  return (
+    <Box
+      role='presentation'
+      className={s.gridContainer}
+      onClick={handleContainerClick}
+    >
+      <DataTable
+        dataSource={files}
+        rowKey='id'
+        loading={loading}
+        initialized={initialized}
+        as={viewMode === 'list' ? 'table' : 'masonry'}
+        columns={columns}
+        borderless
+        renderCard={renderCard}
+        selectable
+        selectedKeys={selectedIds}
+        onSelectionChange={keys => dispatch(setSelection(keys))}
+        onRowClick={handleOpen}
+        onLoadMore={handleLoadMore}
+        hasMore={hasMore}
+        loadingMore={loadingMore}
+      >
+        <DataTable.Empty
+          icon={<FolderIcon width={48} height={48} />}
+          title={t('files:grid.empty_title', 'No files here')}
+          description={t(
             'files:grid.empty_desc',
             'Drop files here or use the "New" button.',
           )}
-        </p>
-      </div>
-    );
-  }
+        />
+        <DataTable.BulkActions
+          count={selectedIds.length}
+          onClear={() => dispatch(clearSelection())}
+          actions={[
+            {
+              label: t('common:delete', 'Delete'),
+              icon: 'TrashIcon',
+              variant: 'danger',
+              onClick: () => onTrash(),
+            },
+          ]}
+        />
+        <DataTable.Loader
+          variant={viewMode === 'masonry' ? 'cards' : 'skeleton'}
+        />
+        <DataTable.Pagination
+          current={page}
+          totalPages={totalPages || 1}
+          total={totalItems}
+          pageSize={pageSize}
+          pageSizeOptions={[10, 20, 50, 100]}
+          onChange={p => dispatch(setPage(p))}
+          onPageSizeChange={s => dispatch(setPageSize(s))}
+        />
+      </DataTable>
 
-  return (
-    <div
-      role='presentation'
-      className={clsx(s.container, {
-        [s.gridView]: viewMode === 'grid',
-        [s.listView]: viewMode === 'list',
-      })}
-      onClick={handleContainerClick}
-      onContextMenu={e => e.preventDefault()}
-    >
-      {/* File Items */}
-      <div className={s.grid}>
-        {files.map(file => (
-          <div
-            key={file.id}
-            role='button'
-            tabIndex={0}
-            className={clsx(s.fileItem, {
-              [s.selected]: selectedIds.includes(file.id),
-            })}
-            onClick={e => handleFileClick(e, file.id)}
-            onKeyDown={e => e.key === 'Enter' && handleDoubleClick(file)}
-            onDoubleClick={() => handleDoubleClick(file)}
-            onContextMenu={e => handleContextMenu(e, file)}
-          >
-            <div className={s.iconContainer}>
-              {file.type === 'folder' ? (
-                <Icon name='folder' size={48} className={s.fileIcon} />
-              ) : (
-                <Icon name='file' size={48} className={s.fileIcon} />
-              )}
-              {file.is_starred && currentView !== 'trash' && (
-                <div className={s.starBadge}>
-                  <Icon name='star' size={16} className={s.starIcon} />
-                </div>
-              )}
-            </div>
-            <div className={s.nameContainer}>
-              <span className={s.fileName} title={file.name}>
-                {file.name}
-              </span>
-              {viewMode === 'list' && (
-                <>
-                  <span className={s.fileDetail}>
-                    {file.owner && file.owner.email
-                      ? file.owner.email
-                      : t('files:grid.owner_me', 'Me')}
-                  </span>
-                  <span className={s.fileDetail}>
-                    {new Date(file.updated_at).toLocaleDateString()}
-                  </span>
-                  <span className={s.fileDetail}>
-                    {file.size
-                      ? `${(file.size / 1024 / 1024).toFixed(2)} MB`
-                      : '-'}
-                  </span>
-                </>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-      {/* Context Menu logic utilizing shared component */}
-      {contextMenu && (
-        <ContextMenu
-          isOpen={true}
-          onToggle={() => setContextMenu(null)}
-          x={contextMenu.x}
-          y={contextMenu.y}
-        >
-          <div className={s.contextMenuContainer}>
-            <ContextMenu.Menu>
-              {contextMenu.file.owner_id === currentUserId && (
-                <ContextMenu.Item
-                  onClick={onRename}
-                  icon={<Icon name='edit-2' size={16} />}
-                >
-                  {t('files:grid.rename', 'Rename')}
-                </ContextMenu.Item>
-              )}
-              <ContextMenu.Item
-                onClick={handleShare}
-                icon={<Icon name='share' size={16} />}
-              >
-                {t('files:grid.share', 'Share')}
-              </ContextMenu.Item>
-
-              <ContextMenu.Item
-                onClick={onCopyLink}
-                icon={<Icon name='copy' size={16} />}
-              >
-                {t('files:grid.copy_link', 'Copy link')}
-              </ContextMenu.Item>
-
-              {contextMenu.file.type === 'file' && (
-                <ContextMenu.Item
-                  onClick={onDownload}
-                  icon={<Icon name='download' size={16} />}
-                >
-                  {t('files:grid.download', 'Download')}
-                </ContextMenu.Item>
-              )}
-
-              <ContextMenu.Item
-                onClick={onStar}
-                icon={<Icon name='star' size={16} />}
-              >
-                {contextMenu.file.is_starred
-                  ? t('files:grid.remove_star', 'Remove Star')
-                  : t('files:grid.add_star', 'Add Star')}
-              </ContextMenu.Item>
-
-              {contextMenu.file.owner_id === currentUserId && (
-                <>
-                  <ContextMenu.Divider />
-                  <ContextMenu.Item
-                    onClick={onTrash}
-                    variant='danger'
-                    icon={<Icon name='trash' size={16} />}
-                  >
-                    {currentView === 'trash'
-                      ? t('files:grid.delete_permanently', 'Delete Permanently')
-                      : t('files:grid.move_to_trash', 'Move to Trash')}
-                  </ContextMenu.Item>
-                </>
-              )}
-            </ContextMenu.Menu>
-          </div>
-        </ContextMenu>
-      )}
       {/* RENAME PROMPT */}
-      <ConfirmModal.Prompt
+      <Modal.ConfirmPrompt
         ref={renamePromptRef}
         onSubmit={handleRenameSubmit}
       />
-      {/* PAGINATION */}
-      {totalPages > 1 && (
-        <div className={s.paginationWrapper}>
-          <Pagination
-            currentPage={page}
-            totalPages={totalPages}
-            totalItems={totalItems}
-            onPageChange={newPage => dispatch(setPage(newPage))}
-            loading={loading}
-          />
-        </div>
-      )}
-    </div>
+    </Box>
   );
 }
 

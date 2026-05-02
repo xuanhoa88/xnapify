@@ -6,15 +6,13 @@
  */
 
 import { requirePermission } from '@shared/renderer/components/Rbac';
-import {
-  addBreadcrumb,
-  registerMenu,
-  unregisterMenu,
-} from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
 
 import reducer, { SLICE_NAME } from '../redux';
 
 import Files from './Files';
+
+const { addBreadcrumb, registerMenu, unregisterMenu } = features;
 
 // Load translations
 const translationsContext = require.context(
@@ -51,14 +49,14 @@ export function setup({ store, i18n }) {
       id: 'content',
       label: i18n.t('admin:navigation.content', 'Content'),
       order: 20,
-      icon: 'folder',
+      icon: 'FileTextIcon',
       items: [
         {
           path: '/admin/files',
-          label: i18n.t('files:page.title', 'Files'),
-          icon: 'folder',
+          label: i18n.t('admin:navigation.files', 'Files'),
+          icon: 'FileTextIcon',
           permission: 'files:read',
-          order: 50,
+          order: 10,
         },
       ],
     }),

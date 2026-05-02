@@ -5,14 +5,19 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { forwardRef, useCallback } from 'react';
+import { forwardRef } from 'react';
 
+import { Box } from '@radix-ui/themes';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useFormContext, useController } from 'react-hook-form';
 
 import SearchableSelect from '../../SearchableSelect/SearchableSelect';
-import { useFormField, useMergeRefs } from '../FormContext';
+import {
+  useFormField,
+  useMergeRefs,
+  composeEventHandlers,
+} from '../FormContext';
 
 import s from './FormSearchableSelect.css';
 
@@ -62,6 +67,8 @@ const FormSearchableSelect = forwardRef(function FormSearchableSelect$(
     multiple,
     showSearch,
     clearable,
+    size,
+    onChange: customOnChange,
     ...props
   },
   forwardedRef,
@@ -80,24 +87,17 @@ const FormSearchableSelect = forwardRef(function FormSearchableSelect$(
   // Merge refs - react-hook-form ref and forwarded ref
   const handleRef = useMergeRefs(fieldRef, forwardedRef);
 
-  // Handle change with react-hook-form
-  const handleChange = useCallback(
-    newValue => {
-      onChange(newValue);
-    },
-    [onChange],
-  );
-
   return (
-    <div className={s.wrapper} ref={handleRef}>
+    <Box className={s.wrapper} ref={handleRef}>
       <SearchableSelect
         id={id}
         options={options}
         value={value}
-        onChange={handleChange}
+        {...props}
+        onChange={composeEventHandlers(customOnChange, onChange)}
         placeholder={placeholder}
         disabled={disabled}
-        className={clsx({ [s.error]: error }, className)}
+        className={clsx(error && s.error, className)}
         // Pass through SearchableSelect props
         onSearch={onSearch}
         onLoadMore={onLoadMore}
@@ -109,9 +109,9 @@ const FormSearchableSelect = forwardRef(function FormSearchableSelect$(
         multiple={multiple}
         showSearch={showSearch}
         clearable={clearable}
-        {...props}
+        size={size || '2'}
       />
-    </div>
+    </Box>
   );
 });
 
@@ -128,6 +128,8 @@ FormSearchableSelect.propTypes = {
   placeholder: PropTypes.string,
   /** Additional CSS class names */
   className: PropTypes.string,
+  /** Radix size */
+  size: PropTypes.string,
   /** Disabled state */
   disabled: PropTypes.bool,
   /** Callback for async search (receives search term) */
@@ -150,6 +152,8 @@ FormSearchableSelect.propTypes = {
   showSearch: PropTypes.bool,
   /** Show clear button when has value */
   clearable: PropTypes.bool,
+  /** Custom onChange handler */
+  onChange: PropTypes.func,
 };
 
 export default FormSearchableSelect;

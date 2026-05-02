@@ -8,9 +8,11 @@
 import PropTypes from 'prop-types';
 
 import { requirePermission } from '@shared/renderer/components/Rbac';
-import { addBreadcrumb } from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
 
 import UserApiKeys from './UserApiKeys';
+
+const { addBreadcrumb } = features;
 
 export const middleware = requirePermission('apiKeys:read');
 

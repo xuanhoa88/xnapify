@@ -29,14 +29,3 @@ Notes
 - Adjust environment variables to simulate different load profiles.
 - Keep thresholds in tests generous for CI variance. For deeper profiling, capture `process.hrtime` or use external profilers.
 
-Standalone runner
-
-- A standalone runner is available at `tools/bench/extensionIpcProd.runner.js`. It runs outside Jest and records a small summary JSON file when `BENCH_RECORD` is set.
-
-Example (standalone run with recording):
-
-```bash
-BENCH_HANDLERS=100 BENCH_REQUESTS=5000 BENCH_CONCURRENCY=500 BENCH_PAYLOAD_BYTES=1024 \
-  BENCH_IO_MS=10 BENCH_RECORD=build/bench-results/extensionIpcProd.json \
-  node tools/bench/extensionIpcProd.runner.js
-```

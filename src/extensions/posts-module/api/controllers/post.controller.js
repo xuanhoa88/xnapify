@@ -1,4 +1,11 @@
 /**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+/**
  * Post Controller — Admin CRUD
  *
  * @route   /api/admin/posts
@@ -6,6 +13,8 @@
  */
 
 import kebabCase from 'lodash/kebabCase';
+import pick from 'lodash/pick';
+import pickBy from 'lodash/pickBy';
 
 import { validateForm } from '@shared/validator';
 
@@ -146,11 +155,10 @@ export async function updatePost(req, res) {
       return http.sendValidationError(res, errors);
     }
 
-    const updates = {};
-    if (title !== undefined) updates.title = title;
-    if (slug !== undefined) updates.slug = slug;
-    if (content !== undefined) updates.content = content;
-    if (excerpt !== undefined) updates.excerpt = excerpt;
+    const updates = pickBy(
+      pick(req.body, ['title', 'slug', 'content', 'excerpt']),
+      v => v !== undefined,
+    );
     if (status !== undefined) {
       updates.status = status;
       if (status === 'published' && !post.published_at) {

@@ -1,0 +1,16 @@
+{
+  "activities": {
+    "title": "Nhật ký hoạt động",
+    "noLogsFound": "Không tìm thấy nhật ký",
+    "filter": {
+      "allEvents": "Tất cả sự kiện",
+      "allEntities": "Tất cả thực thể"
+    },
+    "column": {
+      "event": "Sự kiện",
+      "entity": "Thực thể",
+      "actor": "Người thực hiện",
+      "timestamp": "Thời gian"
+    }
+  }
+}

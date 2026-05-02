@@ -9,6 +9,8 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
+import { computeChecksum } from '../utils/checksum.util';
+
 import {
   CACHE_TTL,
   ExtensionError,
@@ -16,6 +18,12 @@ import {
   validateManifest,
   invalidateCaches,
 } from './extension.helpers';
+
+// Cache for disk-only extensions
+const diskExtensionCache = new Map();
+let lastDiskScan = 0;
+let diskScanPromise = null;
+const DISK_SCAN_TTL = 30_000; // 30 seconds TTL — extension HMR triggers explicit invalidation
 
 /**
  * Scan a directory and add extensions to the map
@@ -80,21 +88,71 @@ async function scanDirectory(dirPath, source, metadata, extensionManager) {
  */
 async function getDiskExtensionById(extensionManager, cwd, id) {
   if (!id) return null;
-  const installedExtensionsDir = extensionManager.getInstalledExtensionsDir();
-  const localExtensionsDir = extensionManager.getDevExtensionsDir(cwd);
 
-  const metadata = new Map();
-  const scanTasks = [
-    scanDirectory(installedExtensionsDir, 'remote', metadata, extensionManager),
-  ];
-  if (localExtensionsDir && localExtensionsDir !== installedExtensionsDir) {
-    scanTasks.push(
-      scanDirectory(localExtensionsDir, 'local', metadata, extensionManager),
-    );
+  const now = Date.now();
+  if (now - lastDiskScan < DISK_SCAN_TTL && diskExtensionCache.has(id)) {
+    return diskExtensionCache.get(id);
   }
-  await Promise.all(scanTasks);
 
-  return metadata.get(id) || null;
+  if (!diskScanPromise) {
+    diskScanPromise = (async () => {
+      try {
+        const installedExtensionsDir =
+          extensionManager.getInstalledExtensionsDir();
+        const localExtensionsDir = extensionManager.getDevExtensionsDir(cwd);
+
+        const metadata = new Map();
+        const scanTasks = [
+          scanDirectory(
+            installedExtensionsDir,
+            'remote',
+            metadata,
+            extensionManager,
+          ),
+        ];
+        if (
+          localExtensionsDir &&
+          localExtensionsDir !== installedExtensionsDir
+        ) {
+          scanTasks.push(
+            scanDirectory(
+              localExtensionsDir,
+              'local',
+              metadata,
+              extensionManager,
+            ),
+          );
+        }
+
+        // Fallback: also scan build/extensions/ relative to project root.
+        // In dev mode BUILD_DIR may be .cache/dev/ while extensions were
+        // built to build/extensions/ from a prior production build.
+        const buildExtDir = path.resolve(process.cwd(), 'build', 'extensions');
+        if (
+          buildExtDir !== localExtensionsDir &&
+          buildExtDir !== installedExtensionsDir
+        ) {
+          scanTasks.push(
+            scanDirectory(buildExtDir, 'local', metadata, extensionManager),
+          );
+        }
+
+        await Promise.all(scanTasks);
+
+        diskExtensionCache.clear();
+        for (const [key, val] of metadata.entries()) {
+          diskExtensionCache.set(key, val);
+        }
+        lastDiskScan = Date.now();
+      } finally {
+        diskScanPromise = null;
+      }
+    })();
+  }
+
+  await diskScanPromise;
+
+  return diskExtensionCache.get(id) || null;
 }
 
 // ========================================================================
@@ -139,6 +197,20 @@ export async function manageExtensions({
       scanDirectory(localExtensionsDir, 'local', metadata, extensionManager),
     );
   }
+
+  // Fallback: also scan build/extensions/ relative to project root.
+  // In dev mode BUILD_DIR may be .cache/dev/ while extensions were
+  // built to build/extensions/ from a prior production build.
+  const buildExtDir = path.resolve(process.cwd(), 'build', 'extensions');
+  if (
+    buildExtDir !== localExtensionsDir &&
+    buildExtDir !== installedExtensionsDir
+  ) {
+    scanTasks.push(
+      scanDirectory(buildExtDir, 'local', metadata, extensionManager),
+    );
+  }
+
   await Promise.all(scanTasks);
 
   // 2. Fetch from DB
@@ -354,6 +426,7 @@ export async function deleteExtension(
     const error = new Error(
       'Cannot delete an active extension. Deactivate it first.',
     );
+    error.name = 'ExtensionActiveError';
     error.statusCode = 400;
     throw error;
   }
@@ -479,7 +552,15 @@ export async function getExtensionStaticDir(
  */
 export async function installExtensionFromPackage(
   file,
-  { extensionManager, models, cache, fs: fsEngine, actorId, queue },
+  {
+    extensionManager,
+    models,
+    cache,
+    fs: fsEngine,
+    actorId,
+    queue,
+    expectedChecksum,
+  },
 ) {
   if (!file || !file.path) {
     throw ExtensionError.invalidPackage('No file provided');
@@ -596,8 +677,21 @@ export async function installExtensionFromPackage(
     if (existingExtension) {
       throw ExtensionError.conflict(
         `Extension "${manifest.id}" is already installed. ` +
-          'Uninstall it first or use upgrade.',
+          'Uninstall it first.',
       );
+    }
+
+    // 5b. Verify checksum if provided (hub installs pass this from registry)
+    if (expectedChecksum) {
+      const actualChecksum = await computeChecksum(extensionRoot);
+      if (actualChecksum !== expectedChecksum) {
+        throw ExtensionError.invalidPackage(
+          `Checksum mismatch for "${extensionName}": ` +
+            `expected ${expectedChecksum.slice(0, 12)}…, ` +
+            `got ${actualChecksum.slice(0, 12)}…. ` +
+            'The extension may have been tampered with.',
+        );
+      }
     }
 
     // 6. Move to final destination (use manifest.name for directory — supports @org/name)
@@ -753,41 +847,6 @@ export async function toggleExtensionStatus(
       isActive,
       actorId,
       isDevExtension,
-    });
-  }
-
-  return extension;
-}
-
-/**
- * Upgrade extension metadata.
- * Nulls out integrity so next activation re-verifies.
- * @param {string} id - Extension key (manifest.id)
- * @param {Object} data - Update data (name, description, version)
- * @param {Object} context - App context
- */
-export async function upgradeExtension(
-  id,
-  data,
-  { models, cache, hook, actorId },
-) {
-  const { extension } = await resolveExtension(models, id);
-
-  // Only null integrity when version changes — forces re-verification on next
-  // activation since the code may have changed. Avoid nulling on metadata-only
-  // updates (name, description) to prevent bypassing the integrity check.
-  const updatePayload = { ...data };
-  if (data.version) {
-    updatePayload.integrity = null;
-  }
-  await extension.update(updatePayload);
-  if (cache) await invalidateCaches(cache, id);
-
-  if (hook) {
-    hook('admin:extensions').emit('upgraded', {
-      extension_id: extension.key,
-      options: data,
-      actor_id: actorId,
     });
   }
 

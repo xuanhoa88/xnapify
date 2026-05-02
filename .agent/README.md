@@ -1,4 +1,4 @@
-# xnapify AI Architecture Guide
+# AI Architecture Guide
 
 The `xnapify` application is officially engineered to support intelligent developer assistance via a unified "Single Source of Truth" AI directory. Various AI agents (`Cursor`, `Claude`, `Gemini`, `Antigravity`) are configured to pull custom rules and workflows exclusively from the `.agent/` directory.
 
@@ -43,7 +43,7 @@ Each file includes `description:` YAML frontmatter so the AI knows strictly when
 
 - Orchestrators: `/build`, `/fix`, `/plan`
 - Scaffold: `/add-module`, `/add-extension`, `/add-engine`, `/add-route`, `/add-view`, `/add-data`, `/add-redux`, `/add-worker`, `/add-test`
-- Quality: `/modify` (includes lint & benchmark checks), `/audit-security`, `/test-e2e`, `/refactor`
+- Quality: `/modify` (includes lint & benchmark checks), `/audit-security`, `/refactor`
 - Operations: `/debug`, `/deploy`, `/commit`, `/lookup`, `/scout`, `/recap`
 
 ---

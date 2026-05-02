@@ -5,114 +5,105 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 
+import { GlobeIcon, ChevronDownIcon, CheckIcon } from '@radix-ui/react-icons';
+import { Text } from '@radix-ui/themes';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Button from '@shared/renderer/components/Button';
-import Icon from '@shared/renderer/components/Icon';
-import {
-  getLocale,
-  setLocale,
-  getAvailableLocales,
-} from '@shared/renderer/redux';
+import ContextMenu from '@shared/renderer/components/ContextMenu';
+import { features } from '@shared/renderer/redux';
 
-import s from './LanguageSwitcher.css';
+const { getLocale, setLocale, getAvailableLocales } = features;
 
 /**
  * LanguageSwitcher Component
- * Dropdown-based language switcher for the main header
+ *
+ * Renders a static trigger button during SSR to avoid hydration mismatches
+ * and layout shift. After mount, upgrades to the full interactive DropdownMenu.
+ * @version 2
  */
 function LanguageSwitcher() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const currentLocale = useSelector(getLocale);
   const availableLocales = useSelector(getAvailableLocales);
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef(null);
+  const [mounted, setMounted] = useState(false);
 
-  // Get current language name
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const currentLanguageName = useMemo(() => {
     return availableLocales[currentLocale] || currentLocale;
   }, [availableLocales, currentLocale]);
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = event => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen]);
-
-  const handleToggle = useCallback(() => {
-    setIsOpen(prev => !prev);
-  }, []);
-
   const handleLocaleChange = useCallback(
-    (locale, e) => {
-      e.preventDefault();
+    locale => {
       dispatch(setLocale(locale));
-      setIsOpen(false);
     },
     [dispatch],
   );
 
-  // Memoize available locales
   const localeEntries = useMemo(
     () => Object.entries(availableLocales),
     [availableLocales],
   );
 
-  // If no locales or only one locale, return null
   if (localeEntries.length <= 1) {
     return null;
   }
 
-  return (
-    <div className={s.wrapper} ref={dropdownRef}>
-      <Button
-        variant='unstyled'
-        className={s.trigger}
-        onClick={handleToggle}
-        title={t('common.languageSwitcher', 'Language switcher')}
-      >
-        <Icon name='globe' size={18} className={s.globeIcon} />
-        <span className={s.langName}>{currentLanguageName}</span>
-        <Icon
-          name='chevronDown'
-          size={12}
-          className={clsx(s.chevron, { [s.chevronOpen]: isOpen })}
-        />
-      </Button>
+  // Static trigger button — rendered identically on server and client
+  // before mount to guarantee zero hydration mismatch and no layout shift.
+  const triggerButton = (
+    <button
+      type='button'
+      title={t('common.languageSwitcher', 'Language switcher')}
+      className='bg-transparent border-none cursor-pointer flex items-center gap-[var(--space-2)] text-[var(--gray-11)] px-[var(--space-2)] py-[var(--space-1)] rounded-[var(--radius-3)] transition-colors duration-150 ease-in-out hover:bg-[var(--gray-a3)] hover:text-[var(--gray-12)] focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus-8)] focus-visible:outline-offset-[-1px] data-[state=open]:bg-[var(--gray-a3)] data-[state=open]:text-[var(--gray-12)]'
+    >
+      <GlobeIcon width={16} height={16} />
+      <Text size='3'>{currentLanguageName}</Text>
+      <ChevronDownIcon width={12} height={12} />
+    </button>
+  );
 
-      {isOpen && (
-        <div className={s.dropdown} role='menu'>
-          {localeEntries.map(([code, name]) => (
-            <Button
-              key={code}
-              variant='unstyled'
-              onClick={e => handleLocaleChange(code, e)}
-              className={clsx(s.option, {
-                [s.optionActive]: code === currentLocale,
-              })}
-            >
-              <span className={s.optionName}>{name}</span>
-              {code === currentLocale && (
-                <Icon name='check' size={14} className={s.checkmark} />
-              )}
-            </Button>
-          ))}
-        </div>
-      )}
-    </div>
+  // Before mount: render static placeholder (no DropdownMenu wrapper)
+  if (!mounted) {
+    return triggerButton;
+  }
+
+  // After mount: full interactive ContextMenu
+  return (
+    <ContextMenu>
+      <ContextMenu.Trigger asChild>{triggerButton}</ContextMenu.Trigger>
+
+      <ContextMenu.Menu align='end' variant='soft' size='3'>
+        {localeEntries.map(([code, name]) => (
+          <ContextMenu.Item
+            key={code}
+            onClick={() => handleLocaleChange(code)}
+            className={clsx(
+              code === currentLocale &&
+                'bg-[var(--indigo-a3)] text-[var(--indigo-11)] font-medium hover:bg-[var(--indigo-a4)]',
+            )}
+          >
+            <Text size='3' mr='3'>
+              {name}
+            </Text>
+            {code === currentLocale && (
+              <CheckIcon
+                width={14}
+                height={14}
+                className='text-[var(--indigo-11)] ml-auto'
+              />
+            )}
+          </ContextMenu.Item>
+        ))}
+      </ContextMenu.Menu>
+    </ContextMenu>
   );
 }
 

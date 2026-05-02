@@ -7,6 +7,9 @@
 
 import { createWebpackContextAdapter } from '@shared/utils/contextAdapter';
 
+// Drain for graceful shutdown
+export { drain } from './shutdown';
+
 // Auto-load engines via require.context
 const enginesAdapter = createWebpackContextAdapter(
   require.context('./engines', true, /^\.\/[^/]+\/index\.[cm]?[jt]s$/i),

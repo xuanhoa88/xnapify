@@ -1,4 +1,11 @@
 /**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+/**
  * Mock for node-cron
  * Jest can't handle node-cron's TypeScript sources and node:crypto imports
  */

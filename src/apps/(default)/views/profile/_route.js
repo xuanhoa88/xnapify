@@ -5,9 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { isAuthenticated } from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
 
 import Profile from './Profile';
+
+const { isAuthenticated } = features;
 
 /**
  * Page metadata

@@ -5,6 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { register } from '../../shutdown';
+
 import { HookChannel } from './channel';
 import { InvalidChannelNameError } from './errors';
 
@@ -129,10 +131,8 @@ export function createFactory() {
     return boundFactory;
   };
 
-  // Register graceful shutdown handlers
-  const onShutdown = () => manager.cleanup();
-  process.once('SIGTERM', onShutdown);
-  process.once('SIGINT', onShutdown);
+  // Register with centralized shutdown coordinator
+  register('hook', () => manager.cleanup(), 10);
 
   return factory;
 }

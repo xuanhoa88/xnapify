@@ -62,6 +62,8 @@ Discovers and boots API modules in deterministic lifecycle order.
 | 3 | `migrations` | `migrations()` → `require.context` | Create/alter database schema (declarative) |
 | 4 | `models` | `models()` → `require.context` | Load Sequelize model factories |
 | 5 | `seeds` | `seeds()` → `require.context` | Populate initial data (declarative) |
+
+> **Dynamic Model Injection**: During Phase 4, the core model factories are passed the DI `container`. They emit a `[PascalCaseModelName]:define` hook (e.g. `hook('models').invoke('User:define', { attributes, container })`) right before executing `connection.define`. This allows extensions (binding early in Phase 2 `providers`) to safely slip new attributes into the schema before it seals. Furthermore, they emit a `[PascalCaseModelName]:associate` hook at the end of their `associate` definitions, allowing dynamic relational binding (e.g., `User.hasMany(...)`).
 | 6 | `boot` | `boot({ container })` | Hook registration, workers, schedulers |
 | 7 | `routes` | `routes()` → `require.context` | Expose file-based API routes |
 

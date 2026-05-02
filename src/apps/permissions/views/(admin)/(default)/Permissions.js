@@ -7,19 +7,23 @@
 
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 
+import {
+  LockOpen1Icon,
+  PlusIcon,
+  Pencil2Icon,
+  TrashIcon,
+  CheckIcon,
+  Cross2Icon,
+} from '@radix-ui/react-icons';
+import { Box, Flex, Text, Button, Badge, IconButton } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import * as Box from '@shared/renderer/components/Box';
-import Button from '@shared/renderer/components/Button';
-import ConfirmModal from '@shared/renderer/components/ConfirmModal';
 import { useHistory } from '@shared/renderer/components/History';
-import Icon from '@shared/renderer/components/Icon';
-import Loader from '@shared/renderer/components/Loader';
+import Modal from '@shared/renderer/components/Modal';
 import { useRbac } from '@shared/renderer/components/Rbac';
 import { SearchableSelect } from '@shared/renderer/components/SearchableSelect';
-import Table from '@shared/renderer/components/Table';
-import Tag from '@shared/renderer/components/Tag';
+import { DataTable, useTableColumns } from '@shared/renderer/components/Table';
 
 import ChangeStatusPermissionModal from '../components/ChangeStatusPermissionModal';
 import {
@@ -28,14 +32,9 @@ import {
   isPermissionsListLoading,
   isPermissionsListInitialized,
   getPermissionsListError,
-  getPermissionsPagination,
   bulkDeletePermissions,
+  getPermissionsPagination,
 } from '../redux';
-
-import s from './Permissions.css';
-
-// Pagination items per page
-const ITEMS_PER_PAGE = 10;
 
 function Permissions() {
   const { t } = useTranslation();
@@ -51,6 +50,7 @@ function Permissions() {
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // Filter state
   const [search, setSearch] = useState('');
@@ -72,7 +72,7 @@ function Permissions() {
       dispatch(
         fetchPermissions({
           page: 1,
-          limit: ITEMS_PER_PAGE,
+          limit: pageSize,
           search,
           status: statusFilter,
         }),
@@ -84,7 +84,7 @@ function Permissions() {
         clearTimeout(debounceTimer.current);
       }
     };
-  }, [dispatch, search, statusFilter]);
+  }, [dispatch, pageSize, search, statusFilter]);
 
   // Fetch when page changes (separate from filter changes)
   useEffect(() => {
@@ -93,26 +93,26 @@ function Permissions() {
       dispatch(
         fetchPermissions({
           page: currentPage,
-          limit: ITEMS_PER_PAGE,
+          limit: pageSize,
           search,
           status: statusFilter,
         }),
       );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage]);
+  }, [currentPage, pageSize]);
 
   // Refresh permissions list callback
   const refreshPermissions = useCallback(() => {
     dispatch(
       fetchPermissions({
         page: currentPage,
-        limit: ITEMS_PER_PAGE,
+        limit: pageSize,
         search,
         status: statusFilter,
       }),
     );
-  }, [dispatch, currentPage, search, statusFilter]);
+  }, [dispatch, currentPage, pageSize, search, statusFilter]);
 
   // Modal refs
   const deleteModalRef = useRef();
@@ -170,8 +170,6 @@ function Permissions() {
     setStatusFilter('');
     setCurrentPage(1);
   }, []);
-
-  // Selection handlers handled internally by Table rowSelection
 
   // Bulk action handlers
   const handleBulkActivate = useCallback(() => {
@@ -233,293 +231,261 @@ function Permissions() {
     );
   }, [sortedResources, groupedPermissions]);
 
-  // Show loading on first fetch (not initialized) or when loading with no data
-  if (!initialized || (loading && permissions.length === 0)) {
-    return (
-      <div className={s.root}>
-        <Box.Header
-          icon={<Icon name='key' size={24} />}
-          title={t('admin:permissions.title', 'Permission Management')}
-          subtitle={t(
-            'admin:permissions.subtitle',
-            'Configure granular access controls',
-          )}
-        />
-        <Loader
-          variant='skeleton'
-          message={t('admin:permissions.loading', 'Loading permissions...')}
-        />
-      </div>
-    );
-  }
+  // Status filter options
+  const statusOptions = useMemo(
+    () => [
+      {
+        value: '',
+        label: t('admin:permissions.statusFilterPlaceholder', 'All Status'),
+      },
+      {
+        value: 'active',
+        label: t('admin:permissions.statusActive', 'Active'),
+      },
+      {
+        value: 'inactive',
+        label: t('admin:permissions.statusInactive', 'Inactive'),
+      },
+    ],
+    [t],
+  );
 
-  if (error) {
-    return (
-      <div className={s.root}>
-        <Box.Header
-          icon={<Icon name='key' size={24} />}
-          title={t('admin:permissions.title', 'Permission Management')}
-          subtitle={t(
-            'admin:permissions.subtitle',
-            'Configure granular access controls',
-          )}
-        />
-        <Table.Error
-          title={t(
-            'admin:permissions.errorLoading',
-            'Error loading permissions',
-          )}
-          error={error}
-          onRetry={refreshPermissions}
-        />
-      </div>
-    );
-  }
+  // Bulk action descriptors
+  const bulkActions = useMemo(() => [], []);
+
+  const moreBulkActions = useMemo(
+    () => [
+      {
+        label: t('admin:permissions.activate', 'Activate'),
+        icon: <CheckIcon width={16} height={16} />,
+        onClick: handleBulkActivate,
+      },
+      {
+        label: t('admin:permissions.deactivate', 'Deactivate'),
+        icon: <Cross2Icon width={16} height={16} />,
+        variant: 'warning',
+        onClick: handleBulkDeactivate,
+      },
+      { type: 'divider' },
+      {
+        label: t('admin:permissions.delete', 'Delete'),
+        icon: <TrashIcon width={16} height={16} />,
+        variant: 'danger',
+        onClick: handleBulkDelete,
+      },
+    ],
+    [t, handleBulkActivate, handleBulkDeactivate, handleBulkDelete],
+  );
+
+  // Column definitions
+  const baseColumns = useMemo(
+    () => [
+      {
+        key: 'resource',
+        dataIndex: 'resourceName',
+        title: t('admin:permissions.resource', 'Resource'),
+        order: 10,
+        render: (value, record) =>
+          record.groupIndex === 0 ? (
+            <Badge color='indigo' radius='full' variant='soft'>
+              {value}
+            </Badge>
+          ) : null,
+      },
+      {
+        key: 'action',
+        dataIndex: 'action',
+        title: t('admin:permissions.action', 'Action'),
+        order: 20,
+        render: value => (
+          <Badge color='gray' radius='full' variant='surface'>
+            {value}
+          </Badge>
+        ),
+      },
+      {
+        key: 'description',
+        dataIndex: 'description',
+        title: t('admin:permissions.description', 'Description'),
+        order: 30,
+        render: value => (
+          <Text size='2' color='gray'>
+            {value || '—'}
+          </Text>
+        ),
+      },
+      {
+        key: 'status',
+        dataIndex: 'is_active',
+        title: t('admin:permissions.status', 'Status'),
+        order: 40,
+        render: isActive => (
+          <Badge
+            variant={isActive ? 'success' : 'neutral'}
+            color='gray'
+            radius='full'
+          >
+            {isActive
+              ? t('admin:permissions.active', 'Active')
+              : t('admin:permissions.inactive', 'Inactive')}
+          </Badge>
+        ),
+      },
+      {
+        key: 'actions',
+        title: '',
+        order: 9999,
+        className: 'text-right',
+        render: (_, record) => (
+          <Flex gap='2' justify='end' onClick={e => e.stopPropagation()}>
+            <IconButton
+              variant='ghost'
+              size='2'
+              title={t('admin:permissions.edit', 'Edit')}
+              onClick={() => handleEdit(record.id)}
+            >
+              <Pencil2Icon width={16} height={16} />
+            </IconButton>
+            <IconButton
+              variant='ghost'
+              size='2'
+              title={t('admin:permissions.delete', 'Delete')}
+              onClick={() => handleDelete(record)}
+            >
+              <TrashIcon width={16} height={16} />
+            </IconButton>
+          </Flex>
+        ),
+      },
+    ],
+    [t, handleEdit, handleDelete],
+  );
+
+  const { columns } = useTableColumns(
+    'table.columns.permissions.list',
+    baseColumns,
+  );
 
   return (
-    <div className={s.root}>
-      <Box.Header
-        icon={<Icon name='key' size={24} />}
-        title={t('admin:permissions.title', 'Permission Management')}
-        subtitle={t(
-          'admin:permissions.subtitle',
-          'Configure granular access controls',
-        )}
-      >
-        <Button
-          variant='primary'
-          onClick={handleAdd}
-          {...(!canCreate && {
-            disabled: true,
-            title: t(
-              'admin:permissions.noPermissionToCreate',
-              'You do not have permission to create permissions',
-            ),
-          })}
-        >
-          <Icon name='plus' size={16} />
-          {t('admin:permissions.addPermission', 'Add Permission')}
-        </Button>
-      </Box.Header>
-
-      {/* Bulk Actions Bar */}
-      {selectedPermissions.length > 0 && (
-        <Table.BulkActionsBar
-          count={selectedPermissions.length}
-          itemLabel={t('admin:permissions.itemLabel', 'permission')}
-          actions={[
-            {
-              label: t('admin:permissions.activate', 'Activate'),
-              onClick: handleBulkActivate,
-            },
-            {
-              label: t('admin:permissions.deactivate', 'Deactivate'),
-              onClick: handleBulkDeactivate,
-            },
-            {
-              label: t('admin:permissions.delete', 'Delete'),
-              onClick: handleBulkDelete,
-              variant: 'danger',
-            },
-          ]}
-          onClear={clearSelection}
-        />
-      )}
-
-      {/* Search/Filter Section */}
-      <Table.SearchBar
-        className={s.filters}
-        value={search}
-        onChange={handleSearchChange}
-        placeholder={t(
-          'admin:permissions.searchPlaceholder',
-          'Search e.g. users, users:read, :create',
-        )}
-        debounce={300}
-      >
-        <SearchableSelect
-          className={s.filterSearchableSelect}
-          options={[
-            {
-              value: '',
-              label: t(
-                'admin:permissions.statusFilterPlaceholder',
-                'All Status',
-              ),
-            },
-            {
-              value: 'active',
-              label: t('admin:permissions.statusFilterPlaceholder', 'Active'),
-            },
-            {
-              value: 'inactive',
-              label: t('admin:permissions.statusFilterPlaceholder', 'Inactive'),
-            },
-          ]}
-          value={statusFilter}
-          onChange={setStatusFilter}
-          placeholder={t(
-            'admin:permissions.statusFilterPlaceholder',
-            'All Status',
-          )}
-          showSearch={false}
-        />
-        <div className={s.filterActions}>
-          {hasActiveFilters && (
-            <Button
-              variant='ghost'
-              size='small'
-              type='button'
-              onClick={handleClearFilters}
-              title={t('admin:permissions.clearFilters', 'Reset all filters')}
-            >
-              <Icon name='x' size={12} />
-              {t('admin:permissions.clearFilters', 'Clear Filters')}
-            </Button>
-          )}
-        </div>
-      </Table.SearchBar>
-
-      <Table
-        rowSelection={{
-          selectedRowKeys: selectedPermissions,
-          onChange: keys => setSelectedPermissions(keys),
-        }}
-        columns={[
-          {
-            title: t('admin:permissions.resource', 'Resource'),
-            key: 'resource',
-            render: (_, permission) =>
-              permission.groupIndex === 0 ? (
-                <Tag variant='primary'>{permission.resourceName}</Tag>
-              ) : (
-                <span className={s.resourceEmpty} />
-              ),
-          },
-          {
-            title: t('admin:permissions.action', 'Action'),
-            key: 'action',
-            render: (_, permission) => (
-              <Tag variant='secondary'>{permission.action}</Tag>
-            ),
-          },
-          {
-            title: t('admin:permissions.description', 'Description'),
-            key: 'description',
-            className: s.descriptionCell,
-            render: (_, permission) =>
-              permission.description || (
-                <span className={s.noDescription}>—</span>
-              ),
-          },
-          {
-            title: t('admin:permissions.status', 'Status'),
-            key: 'status',
-            render: (_, permission) => (
-              <Tag variant={permission.is_active ? 'success' : 'neutral'}>
-                {permission.is_active
-                  ? t('admin:permissions.active', 'Active')
-                  : t('admin:permissions.inactive', 'Inactive')}
-              </Tag>
-            ),
-          },
-          {
-            key: 'actions',
-            render: (_, permission) => (
-              <div className={s.actions}>
-                <Button
-                  variant='ghost'
-                  size='small'
-                  iconOnly
-                  title={t('admin:permissions.edit', 'Edit')}
-                  onClick={() => handleEdit(permission.id)}
-                >
-                  <Icon name='edit' size={16} />
-                </Button>
-                <Button
-                  variant='ghost'
-                  size='small'
-                  iconOnly
-                  title={t('admin:permissions.delete', 'Delete')}
-                  onClick={() => handleDelete(permission)}
-                >
-                  <Icon name='trash' size={16} />
-                </Button>
-              </div>
-            ),
-          },
-        ]}
+    <Box className='p-6 max-w-[1400px] mx-auto'>
+      <DataTable
+        columns={columns}
         dataSource={flatPermissions}
         rowKey='id'
         loading={loading}
-        pagination={
-          pagination && pagination.pages > 1
-            ? {
-                current: currentPage,
-                pages: pagination.pages,
-                total: pagination.total,
-                onChange: setCurrentPage,
-              }
-            : false
-        }
-        locale={{
-          emptyText: (
-            <Table.Empty
-              icon='key'
-              {...(search
-                ? {
-                    title: t(
-                      'admin:permissions.noMatchesFound',
-                      'No matches found',
-                    ),
-                    description: t(
-                      'admin:permissions.noMatchesFound',
-                      'No permissions match "{search}". Try a different search.',
-                      { search },
-                    ),
-                  }
-                : {
-                    title: t(
-                      'admin:permissions.noPermissionsFound',
-                      'No permissions found',
-                    ),
-                    description: t(
-                      'admin:permissions.noPermissionsFound',
-                      'Create granular permissions to control access to resources.',
-                    ),
-                  })}
-            >
-              <Button
-                variant='primary'
-                onClick={search ? () => handleSearchChange('') : handleAdd}
-                {...(!search &&
-                  !canCreate && {
-                    disabled: true,
-                    title: t(
-                      'admin:permissions.noPermissionToCreate',
-                      'You do not have permission to create permissions',
-                    ),
-                  })}
-              >
-                {search ? 'Clear Search' : 'Add Permission'}
-              </Button>
-            </Table.Empty>
-          ),
-        }}
-      />
+        initialized={initialized}
+        selectable
+        selectedKeys={selectedPermissions}
+        onSelectionChange={setSelectedPermissions}
+      >
+        <DataTable.Header
+          title={t('admin:permissions.title', 'Permission Management')}
+          subtitle={t(
+            'admin:permissions.subtitle',
+            'Configure granular access controls',
+          )}
+          icon={<LockOpen1Icon width={24} height={24} />}
+        >
+          <Button
+            variant='solid'
+            color='indigo'
+            onClick={handleAdd}
+            {...(!canCreate && {
+              disabled: true,
+              title: t(
+                'admin:permissions.noPermissionToCreate',
+                'You do not have permission to create permissions',
+              ),
+            })}
+          >
+            <PlusIcon width={16} height={16} />
+            {t('admin:permissions.addPermission', 'Add Permission')}
+          </Button>
+        </DataTable.Header>
 
-      <ConfirmModal.Delete
+        <DataTable.Toolbar>
+          <DataTable.Search
+            value={search}
+            onChange={handleSearchChange}
+            placeholder={t(
+              'admin:permissions.searchPlaceholder',
+              'Search e.g. users, users:read, :create',
+            )}
+            debounce={300}
+          />
+          <DataTable.Filter
+            component={SearchableSelect}
+            width='sm'
+            options={statusOptions}
+            value={statusFilter}
+            onChange={setStatusFilter}
+            placeholder={t(
+              'admin:permissions.statusFilterPlaceholder',
+              'All Status',
+            )}
+            showSearch={false}
+          />
+          <DataTable.ClearFilters
+            visible={!!hasActiveFilters}
+            onClick={handleClearFilters}
+          />
+        </DataTable.Toolbar>
+
+        <DataTable.BulkActions
+          actions={bulkActions}
+          moreActions={moreBulkActions}
+        />
+
+        <DataTable.Empty
+          icon={<LockOpen1Icon width={48} height={48} />}
+          title={
+            search
+              ? t('admin:permissions.noMatchesFound', 'No matches found')
+              : t(
+                  'admin:permissions.noPermissionsFound',
+                  'No permissions found',
+                )
+          }
+          description={
+            search
+              ? t(
+                  'admin:permissions.noMatchesFoundSearch',
+                  'No permissions match "{search}". Try a different search.',
+                  { search },
+                )
+              : t(
+                  'admin:permissions.noPermissionsFoundDesc',
+                  'Create granular permissions to control access to resources.',
+                )
+          }
+        />
+        <DataTable.Error message={error} onRetry={refreshPermissions} />
+        <DataTable.Loader />
+
+        <DataTable.Pagination
+          current={currentPage}
+          totalPages={pagination ? pagination.pages : undefined}
+          total={pagination ? pagination.total : undefined}
+          pageSize={pageSize}
+          pageSizeOptions={[10, 20, 50, 100]}
+          onChange={setCurrentPage}
+          onPageSizeChange={setPageSize}
+        />
+      </DataTable>
+
+      <Modal.ConfirmDelete
         ref={deleteModalRef}
         title={t('admin:permissions.delete', 'Delete Permission(s)')}
         getItemName={getDeleteName}
         onDelete={handleDeleteConfirm}
         onSuccess={handleRefreshPermissions}
       />
+
       <ChangeStatusPermissionModal
         ref={changeStatusModalRef}
         onSuccess={handleRefreshPermissions}
       />
-    </div>
+    </Box>
   );
 }
 

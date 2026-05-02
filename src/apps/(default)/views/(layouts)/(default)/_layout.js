@@ -7,18 +7,19 @@
 
 import { useEffect, useRef } from 'react';
 
+import { Flex, Box } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
 
 import Toast from '@shared/renderer/components/Toast';
-import { getFlashMessage, clearFlashMessage } from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
 
 import ImpersonationBanner from '../components/ImpersonationBanner';
 
 import Footer from './Footer';
 import Header from './Header';
 
-import s from './Layout.css';
+const { getFlashMessage, clearFlashMessage } = features;
 
 function DefaultLayout({ children }) {
   const dispatch = useDispatch();
@@ -41,13 +42,15 @@ function DefaultLayout({ children }) {
   }, [flashMessage, dispatch]);
 
   return (
-    <div className={s.root}>
+    <Flex direction='column' minHeight='100vh'>
       <ImpersonationBanner />
       <Header />
-      <main className={s.content}>{children}</main>
+      <Box as='main' grow='1'>
+        {children}
+      </Box>
       <Footer />
       <Toast ref={toastRef} />
-    </div>
+    </Flex>
   );
 }
 

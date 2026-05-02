@@ -20,3 +20,8 @@ export const post = [
   requirePermission('groups:create'),
   groupController.createGroup,
 ];
+
+export const del = [
+  requirePermission('groups:delete'),
+  groupController.bulkDeleteGroups,
+];

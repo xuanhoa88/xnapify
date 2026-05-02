@@ -6,15 +6,13 @@
  */
 
 import { requirePermission } from '@shared/renderer/components/Rbac';
-import {
-  addBreadcrumb,
-  registerMenu,
-  unregisterMenu,
-} from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
 
 import reducer, { SLICE_NAME } from '../redux';
 
 import SettingsPage from './SettingsPage';
+
+const { addBreadcrumb, registerMenu, unregisterMenu } = features;
 
 /**
  * Route boot — inject Redux reducer into the store.
@@ -34,15 +32,15 @@ export function setup({ store, i18n }) {
       ns: 'admin',
       id: 'system',
       label: i18n.t('admin:navigation.system', 'System'),
-      order: 90,
-      icon: 'sliders',
+      order: 99,
+      icon: 'MixerHorizontalIcon',
       items: [
         {
           path: '/admin/settings',
           label: i18n.t('admin:navigation.settings', 'Settings'),
-          icon: 'settings',
+          icon: 'GearIcon',
           permission: 'settings:read',
-          order: 10,
+          order: 0,
         },
       ],
     }),

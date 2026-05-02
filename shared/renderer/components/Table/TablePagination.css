@@ -1,0 +1,202 @@
+/**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+/* ── Container ──────────────────────────────────────────────────────── */
+
+.paginationContainer {
+  border-top: 1px solid var(--gray-a4);
+  background: linear-gradient(to bottom, var(--gray-a2), transparent);
+  min-height: 52px;
+  transition: background-color 0.2s ease;
+}
+
+/* ── Left controls (info + page-size) ───────────────────────────────── */
+
+.leftControls {
+  flex-shrink: 0;
+}
+
+.paginationInfo {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  color: var(--gray-10);
+}
+
+.infoDivider {
+  width: 1px;
+  height: 16px;
+  background-color: var(--gray-a5);
+  flex-shrink: 0;
+}
+
+/* ── Page-size trigger ──────────────────────────────────────────────── */
+
+.pageSizeTrigger {
+  height: 30px;
+  min-width: 92px;
+  border-radius: var(--radius-2);
+  border: 1px solid var(--gray-a5);
+  background-color: var(--color-surface);
+  padding: 0 var(--space-2) 0 var(--space-3);
+  color: var(--gray-11);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.pageSizeTrigger:hover {
+  background-color: var(--gray-a3);
+  border-color: var(--gray-a7);
+}
+
+.pageSizeTrigger:focus-visible {
+  outline: 2px solid var(--focus-8);
+  outline-offset: -1px;
+}
+
+.pageSizeTrigger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ── Navigation controls ────────────────────────────────────────────── */
+
+.paginationControls {
+  margin-left: 0;
+}
+
+.paginationControlsAuto {
+  margin-left: auto;
+}
+
+.navButton {
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 13px;
+  letter-spacing: 0.01em;
+  border-radius: var(--radius-2);
+  padding: 0 var(--space-3) !important;
+  height: 30px !important;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+  user-select: none;
+}
+
+.navButton:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.navButton:not(:disabled):hover {
+  background-color: var(--gray-a3) !important;
+}
+
+/* ── Page number buttons ────────────────────────────────────────────── */
+
+.pageNumbersFlex {
+  gap: 2px;
+}
+
+.paginationPageButton {
+  cursor: pointer;
+  min-width: 30px;
+  height: 30px !important;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  border-radius: var(--radius-2) !important;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.1s ease;
+}
+
+.paginationPageButton:not(.paginationPageButtonCurrent):hover {
+  background-color: var(--gray-a3) !important;
+  transform: translateY(-1px);
+}
+
+.paginationPageButtonCurrent {
+  cursor: default;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
+}
+
+.ellipsis {
+  min-width: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gray-8);
+  font-weight: 600;
+  letter-spacing: 2px;
+  user-select: none;
+}
+
+/* ── Responsive: Tablet (≤ 768px) ───────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .paginationContainer {
+    padding: var(--space-2) var(--space-3) !important;
+    gap: var(--space-2) !important;
+  }
+
+  .pageSizeTrigger {
+    min-width: 80px;
+    font-size: 12px;
+  }
+}
+
+/* ── Responsive: Mobile (≤ 640px) ───────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .paginationContainer {
+    flex-direction: column !important;
+    gap: var(--space-2) !important;
+    padding: var(--space-3) !important;
+    min-height: auto;
+  }
+
+  .leftControls {
+    width: 100%;
+    justify-content: center;
+    order: 1;
+  }
+
+  .paginationInfo {
+    font-size: 12px;
+  }
+
+  .infoDivider,
+  .pageSizeTrigger,
+  .pageNumbersFlex {
+    display: none !important;
+  }
+
+  .paginationControls,
+  .paginationControlsAuto {
+    margin-left: 0;
+    width: 100%;
+    justify-content: space-between;
+    order: 2;
+  }
+
+  .navButton {
+    flex: 1;
+    justify-content: center;
+  }
+}

@@ -5,15 +5,19 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback } from 'react';
 
+import { MagnifyingGlassIcon, StarFilledIcon } from '@radix-ui/react-icons';
+import { Box, Flex, Text, Grid, Badge, Select } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Button from '@shared/renderer/components/Button';
-import Icon from '@shared/renderer/components/Icon';
 import Loader from '@shared/renderer/components/Loader';
-import Pagination from '@shared/renderer/components/Table/Pagination';
+import {
+  TablePagination,
+  TableSearch,
+  DataTable,
+} from '@shared/renderer/components/Table';
 
 import CategoryChips from './components/CategoryChips';
 import ListingDetail from './components/ListingDetail';
@@ -56,18 +60,13 @@ function Hub() {
   const error = useSelector(getHubBrowseError);
   const selectedListing = useSelector(getSelectedListing);
 
-  const [searchInput, setSearchInput] = useState('');
-
   useEffect(() => {
     dispatch(fetchFeaturedListings());
     dispatch(fetchCategories());
-    dispatch(fetchHubListings(filters));
-  }, [dispatch]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleSearch = useCallback(() => {
-    dispatch(setFilter({ search: searchInput, page: 1 }));
-    dispatch(fetchHubListings({ ...filters, search: searchInput, page: 1 }));
-  }, [dispatch, searchInput, filters]);
+    dispatch(
+      fetchHubListings({ search: '', category: 'all', sort: 'name', page: 1 }),
+    );
+  }, [dispatch]);
 
   const handleCategorySelect = useCallback(
     category => {
@@ -77,18 +76,9 @@ function Hub() {
     [dispatch, filters],
   );
 
-  const handleSortChange = useCallback(
-    e => {
-      const sort = e.target.value;
-      dispatch(setFilter({ sort }));
-      dispatch(fetchHubListings({ ...filters, sort }));
-    },
-    [dispatch, filters],
-  );
-
   const handleCardClick = useCallback(
     listing => {
-      dispatch(fetchListingDetail(listing.id));
+      dispatch(fetchListingDetail(listing.name));
     },
     [dispatch],
   );
@@ -105,171 +95,199 @@ function Hub() {
     [dispatch, filters],
   );
 
-  // First-render skeleton — wait until the initial browse completes
+  const handleRetry = useCallback(() => {
+    dispatch(fetchFeaturedListings());
+    dispatch(fetchCategories());
+    dispatch(fetchHubListings(filters));
+  }, [dispatch, filters]);
+
+  const handleSearchChange = useCallback(
+    val => {
+      dispatch(setFilter({ search: val, page: 1 }));
+      dispatch(fetchHubListings({ ...filters, search: val, page: 1 }));
+    },
+    [dispatch, filters],
+  );
+
+  const handleSortChange = useCallback(
+    sort => {
+      dispatch(setFilter({ sort }));
+      dispatch(fetchHubListings({ ...filters, sort }));
+    },
+    [dispatch, filters],
+  );
+
+  // ─── Hero banner ─────────────────────────────────────────────────────
+  const renderHero = () => (
+    <Box className={s.heroBox}>
+      <Text
+        as='h1'
+        size={{ initial: '8', md: '9' }}
+        weight='bold'
+        className={s.heroTitle}
+      >
+        {t('admin:hub.title', 'Extension Hub')}
+      </Text>
+      <Text as='p' size={{ initial: '3', md: '4' }} className={s.heroSubtitle}>
+        {t(
+          'admin:hub.subtitle',
+          'Discover and install plugins and modules to extend your application.',
+        )}
+      </Text>
+      <Box className={s.searchFlex}>
+        <TableSearch
+          value={filters.search || ''}
+          onChange={handleSearchChange}
+          placeholder={t(
+            'admin:hub.searchPlaceholder',
+            'Search extensions by name or tag...',
+          )}
+        />
+      </Box>
+    </Box>
+  );
+
+  // ─── First-render skeleton ───────────────────────────────────────────
   if (!initialized) {
     return (
-      <div className={s.root}>
-        <div className={s.hero}>
-          <div className={s.heroContent}>
-            <h1 className={s.heroTitle}>
-              {t('admin:hub.title', 'Extension Hub')}
-            </h1>
-            <p className={s.heroSubtitle}>
-              {t(
-                'admin:hub.subtitle',
-                'Discover and install plugins and modules to extend your application.',
-              )}
-            </p>
-          </div>
-        </div>
-        <Loader
-          variant='skeleton'
-          message={t('admin:hub.loading', 'Loading extensions...')}
-        />
-      </div>
+      <Box className={s.containerBox}>
+        {renderHero()}
+        <Box className={s.browseContentBox}>
+          <Loader
+            variant='skeleton'
+            message={t('admin:hub.loading', 'Loading extensions...')}
+          />
+        </Box>
+      </Box>
     );
   }
 
+  // ─── Error state ─────────────────────────────────────────────────────
   if (error) {
     return (
-      <div className={s.root}>
-        <div className={s.hero}>
-          <div className={s.heroContent}>
-            <h1 className={s.heroTitle}>
-              {t('admin:hub.title', 'Extension Hub')}
-            </h1>
-          </div>
-        </div>
-        <div className={s.empty}>
-          <Icon name='alert-circle' size={48} />
-          <p>{t('admin:hub.loadError', 'Failed to load extensions')}</p>
-          <Button
-            variant='outline'
-            onClick={() => {
-              dispatch(fetchFeaturedListings());
-              dispatch(fetchCategories());
-              dispatch(fetchHubListings(filters));
-            }}
-          >
-            {t('admin:hub.retry', 'Retry')}
-          </Button>
-        </div>
-      </div>
+      <Box className={s.containerBox}>
+        {renderHero()}
+        <Box className={s.browseContentBox}>
+          <DataTable.Error message={error} onRetry={handleRetry} />
+        </Box>
+      </Box>
     );
   }
 
+  // ─── Main layout ─────────────────────────────────────────────────────
   return (
-    <div className={s.root}>
-      {/* Search Hero */}
-      <div className={s.hero}>
-        <div className={s.heroContent}>
-          <h1 className={s.heroTitle}>
-            {t('admin:hub.title', 'Extension Hub')}
-          </h1>
-          <p className={s.heroSubtitle}>
-            {t(
-              'admin:hub.subtitle',
-              'Discover and install plugins and modules to extend your application.',
-            )}
-          </p>
-          <div className={s.searchBar}>
-            <input
-              type='text'
-              placeholder={t(
-                'admin:hub.searchPlaceholder',
-                'Search extensions by name or tag...',
-              )}
-              value={searchInput}
-              onChange={e => setSearchInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleSearch()}
-              className={s.searchInput}
-            />
-            <Button icon='search' onClick={handleSearch} size='large'>
-              {t('admin:hub.search', 'Search')}
-            </Button>
-          </div>
-        </div>
-      </div>
+    <Box className={s.containerBox}>
+      {renderHero()}
 
       {/* Featured carousel */}
       {featured.length > 0 && !featuredLoading && (
-        <div className={s.featuredSection}>
-          <h2 className={s.sectionTitle}>
-            {t('admin:hub.featured', 'Featured')}
-          </h2>
-          <div className={s.featuredGrid}>
+        <Box className={s.featuredBox}>
+          <Flex align='center' gap='2' className={s.featuredHeaderFlex}>
+            <Text as='h2' size='5' weight='bold' className={s.featuredHeading}>
+              {t('admin:hub.featured', 'Featured')}
+            </Text>
+            <Badge
+              color='amber'
+              variant='soft'
+              radius='full'
+              className={s.featuredBadge}
+            >
+              <StarFilledIcon width={12} height={12} />
+              {t('admin:hub.curated', 'Curated')}
+            </Badge>
+          </Flex>
+          <Grid columns={{ initial: '1', sm: '2', lg: '4' }} gap='4'>
             {featured.slice(0, 4).map(item => (
               <MarketplaceCard
-                key={item.id}
+                key={item.name}
                 listing={item}
                 onClick={handleCardClick}
                 isFeatured
               />
             ))}
-          </div>
-        </div>
+          </Grid>
+        </Box>
       )}
 
-      {/* Sticky categories & toolbars */}
-      <div className={s.stickyHeader}>
-        <CategoryChips
-          categories={categories}
-          activeCategory={filters.category}
-          onSelect={handleCategorySelect}
-        />
-        <div className={s.toolbar}>
-          <span className={s.resultCount}>
-            {total} {t('admin:hub.results', 'results')}
-          </span>
-          <select
-            value={filters.sort}
-            onChange={handleSortChange}
-            className={s.sortSelect}
+      {/* Browse section — content box (mirrors DataTable chrome) */}
+      <Box className={s.browseContentBox}>
+        {/* Toolbar: categories + result count + sort */}
+        <Box className={s.browseToolbar}>
+          <CategoryChips
+            categories={categories}
+            activeCategory={filters.category}
+            onSelect={handleCategorySelect}
+          />
+          <Flex align='center' justify='between' mt='3'>
+            <Text as='span' size='2' color='gray' weight='medium'>
+              {t('admin:hub.results', '{{total}} results', { total })}
+            </Text>
+            <Select.Root value={filters.sort} onValueChange={handleSortChange}>
+              <Select.Trigger className={s.sortSelect} />
+              <Select.Content>
+                <Select.Item value='name'>
+                  {t('admin:hub.sortName', 'Name')}
+                </Select.Item>
+                <Select.Item value='recent'>
+                  {t('admin:hub.sortRecent', 'Recently added')}
+                </Select.Item>
+              </Select.Content>
+            </Select.Root>
+          </Flex>
+        </Box>
+
+        {/* Listing grid */}
+        {loading && listings.length === 0 ? (
+          <Loader />
+        ) : listings.length === 0 ? (
+          <DataTable.Empty
+            icon={<MagnifyingGlassIcon width={48} height={48} />}
+            title={t('admin:hub.noResults', 'No extensions found')}
+            description={t(
+              'admin:hub.tryDifferentSearch',
+              'Try a different search term or category.',
+            )}
+          />
+        ) : (
+          <Grid
+            columns={{ initial: '1', sm: '2', lg: '3' }}
+            gap='4'
+            className={s.gridBox}
           >
-            <option value='popular'>
-              {t('admin:hub.sortPopular', 'Most popular')}
-            </option>
-            <option value='recent'>
-              {t('admin:hub.sortRecent', 'Recently added')}
-            </option>
-            <option value='name'>{t('admin:hub.sortName', 'Name')}</option>
-          </select>
-        </div>
-      </div>
+            {listings.map(item => (
+              <MarketplaceCard
+                key={item.name}
+                listing={item}
+                onClick={handleCardClick}
+              />
+            ))}
+          </Grid>
+        )}
 
-      {/* Listing grid */}
-      {loading ? (
-        <Loader />
-      ) : (
-        <div className={s.grid}>
-          {listings.map(item => (
-            <MarketplaceCard
-              key={item.id}
-              listing={item}
-              onClick={handleCardClick}
+        {/* Loading overlay for subsequent fetches */}
+        {loading && listings.length > 0 && (
+          <Box className={s.loadingOverlay}>
+            <Loader variant='spinner' />
+          </Box>
+        )}
+
+        {/* Pagination inside content box */}
+        {total > 0 && (
+          <Box className={s.paginationBox}>
+            <TablePagination
+              currentPage={filters.page}
+              totalPages={totalPages}
+              totalItems={total}
+              onPageChange={handlePageChange}
+              loading={loading}
             />
-          ))}
-          {listings.length === 0 && (
-            <div className={s.empty}>
-              <Icon name='search' size={48} />
-              <p>{t('admin:hub.noResults', 'No extensions found')}</p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Pagination */}
-      <Pagination
-        currentPage={filters.page}
-        totalPages={totalPages}
-        totalItems={total}
-        onPageChange={handlePageChange}
-        loading={loading}
-      />
+          </Box>
+        )}
+      </Box>
 
       {/* Detail drawer */}
       <ListingDetail listing={selectedListing} onClose={handleCloseDetail} />
-    </div>
+    </Box>
   );
 }
 

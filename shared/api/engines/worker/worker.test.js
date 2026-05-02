@@ -479,15 +479,6 @@ describe('[engine] Worker Pool', () => {
       expect(instance).toBeInstanceOf(WorkerPoolManager);
       instance.cleanup();
     });
-
-    it('should register signal handlers', () => {
-      const spy = jest.spyOn(process, 'once');
-      const instance = createFactory();
-      expect(spy).toHaveBeenCalledWith('SIGTERM', expect.any(Function));
-      expect(spy).toHaveBeenCalledWith('SIGINT', expect.any(Function));
-      spy.mockRestore();
-      instance.cleanup();
-    });
   });
 
   // -------------------------------------------------------------------------

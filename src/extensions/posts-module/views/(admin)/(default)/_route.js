@@ -1,16 +1,22 @@
 /**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+/**
  * Posts admin page — route definition
  */
+
 import { requirePermission } from '@shared/renderer/components/Rbac';
-import {
-  addBreadcrumb,
-  registerMenu,
-  unregisterMenu,
-} from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux';
 
 import reducer, { SLICE_NAME } from '../redux';
 
 import Posts from './Posts';
+
+const { addBreadcrumb, registerMenu, unregisterMenu } = features;
 
 export const middleware = requirePermission('posts:read');
 
@@ -33,12 +39,12 @@ export function setup({ store, i18n }) {
       id: 'content',
       label: i18n.t('admin:navigation.content', 'Content'),
       order: 20,
-      icon: 'folder',
+      icon: 'FileTextIcon',
       items: [
         {
           path: '/admin/posts',
           label: i18n.t('admin:navigation.posts', 'Posts'),
-          icon: 'book-open',
+          icon: 'ReaderIcon',
           permission: 'posts:read',
           order: 10,
         },

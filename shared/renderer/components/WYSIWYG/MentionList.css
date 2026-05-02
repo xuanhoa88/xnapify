@@ -12,6 +12,19 @@
    on an ancestor `:root` scope should use hardcoded fallbacks to be safe.
 */
 
+:global(.tippy-box[data-theme~='mention']) {
+  background: var(--color-panel-solid, #fff);
+  border-radius: 8px;
+  box-shadow: var(--shadow-3, 0 1px 3px 0 rgb(0 0 0 / 10%), 0 4px 12px rgb(0 0 0 / 15%));
+  border: 1px solid var(--gray-a6, #e4e4e7);
+  overflow: hidden;
+  padding: 0;
+}
+
+:global(.tippy-box[data-theme~='mention'] .tippy-arrow) {
+  display: none;
+}
+
 .mentionList {
   padding: 4px;
   min-width: 180px;
@@ -29,21 +42,26 @@
   cursor: pointer;
   font-size: 14px;
   line-height: 1.4;
-  color: #18181b;
+  color: var(--gray-12, #18181b);
   transition: background 0.15s ease;
 }
 
 .mentionItem:hover {
-  background: #f4f4f5;
+  background: var(--gray-a3, #f4f4f5);
 }
 
 .mentionItem.isSelected {
-  background: #e4e4e7;
+  background: var(--gray-a4, #e4e4e7);
 }
 
 .mentionEmpty {
   padding: 8px 12px;
-  color: #a1a1aa;
+  color: var(--gray-a8, #a1a1aa);
   font-size: 13px;
   text-align: center;
+}
+
+.alignStart {
+  width: 100%;
+  justify-content: flex-start;
 }

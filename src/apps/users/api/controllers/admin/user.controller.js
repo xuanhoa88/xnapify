@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { setTokenCookie, setRefreshTokenCookie } from '@shared/cookies';
 import { validateForm } from '@shared/validator';
 
 import {
@@ -531,8 +532,8 @@ export async function impersonate(req, res) {
     });
 
     // Set both cookies
-    authConfig.setTokenCookie(res, tokens.accessToken);
-    authConfig.setRefreshTokenCookie(res, tokens.refreshToken);
+    setTokenCookie(res, tokens.accessToken);
+    setRefreshTokenCookie(res, tokens.refreshToken);
 
     // Log activity for auditing
     await req.app

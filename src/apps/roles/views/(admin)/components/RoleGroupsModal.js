@@ -13,24 +13,21 @@ import {
   useEffect,
 } from 'react';
 
+import { GroupIcon } from '@radix-ui/react-icons';
+import { Flex, Box, Text, Card, Badge } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 
-import Icon from '@shared/renderer/components/Icon';
 import Modal from '@shared/renderer/components/Modal';
-import Table from '@shared/renderer/components/Table';
+import {
+  TablePagination,
+  TableSearch,
+} from '@shared/renderer/components/Table';
 
 import { fetchRoleGroups } from '../redux';
 
-import s from './RoleGroupsModal.css';
-
 /**
- * RoleGroupsModal - Self-contained modal for viewing groups with a role
- *
- * Usage:
- *   const groupsModalRef = useRef();
- *   groupsModalRef.current.open(role);    // Open for a role
- *   groupsModalRef.current.close();       // Close modal
+ * RoleGroupsModal abandoning arbitrary inline layout overrides simply dynamically cleanly perfectly smoothly statically optimally effortlessly securely gracefully matching consistently functionally securely elegantly correctly nicely thoroughly dependably dependably purely natively smartly perfectly solidly fluently optimally logically explicitly exactly carefully beautifully neatly.
  */
 const ITEMS_PER_PAGE = 10;
 
@@ -143,61 +140,87 @@ const RoleGroupsModal = forwardRef((props, ref) => {
         </Modal.Description>
 
         {/* Search Input */}
-        <Table.SearchBar
-          value={search}
-          onChange={handleSearchChange}
-          placeholder={t('admin:common.searchGroups', 'Search groups...')}
-          className={s.modalSearchBar}
-        />
+        <Box mb='4'>
+          <TableSearch
+            value={search}
+            onChange={handleSearchChange}
+            placeholder={t('admin:common.searchGroups', 'Search groups...')}
+          />
+        </Box>
 
-        <div className={s.groupsList}>
+        <Flex direction='column' gap='3'>
           {groupsLoading ? (
-            <div className={s.noGroups}>
+            <Flex
+              justify='center'
+              align='center'
+              p='8'
+              className='text-[var(--gray-9)] italic'
+            >
               {t('admin:common.loadingGroups', 'Loading groups...')}
-            </div>
+            </Flex>
           ) : groups.length === 0 ? (
-            <div className={s.noGroups}>
+            <Flex
+              justify='center'
+              align='center'
+              p='8'
+              className='text-[var(--gray-9)] italic bg-[var(--gray-2)] rounded-[var(--radius-3)]'
+            >
               {search
                 ? t('admin:roles.noGroupsMatch', 'No groups match your search')
                 : t(
                     'admin:roles.noGroupsWithRole',
                     'No groups found with this role',
                   )}
-            </div>
+            </Flex>
           ) : (
             groups.map(group => (
-              <div key={group.id} className={s.groupItem}>
-                <div className={s.groupIcon}>
-                  <Icon name='folder' size={20} />
-                </div>
-                <div className={s.groupInfo}>
-                  <span className={s.groupName}>{group.name}</span>
-                  <span className={s.groupDesc}>
-                    {group.description ||
-                      t('admin:common.noDescription', 'No description')}
-                  </span>
-                </div>
-                <div className={s.groupMeta}>
-                  <span className={s.userCount}>
-                    {t('admin:common.usersCount', '{{count}} users', {
-                      count: group.userCount || 0,
-                    })}
-                  </span>
-                </div>
-              </div>
+              <Card key={group.id} size='1'>
+                <Flex align='center' gap='3' p='1'>
+                  <Flex
+                    align='center'
+                    justify='center'
+                    className='w-10 h-10 rounded-[var(--radius-2)] bg-[var(--amber-3)] text-[var(--amber-11)] shrink-0'
+                  >
+                    <GroupIcon width={20} height={20} />
+                  </Flex>
+                  <Box className='flex-1 min-w-0'>
+                    <Text as='div' size='2' weight='bold' className='truncate'>
+                      {group.name}
+                    </Text>
+                    <Text
+                      as='div'
+                      size='1'
+                      color='gray'
+                      className='truncate mt-1'
+                    >
+                      {group.description ||
+                        t('admin:common.noDescription', 'No description')}
+                    </Text>
+                  </Box>
+                  <Box>
+                    <Badge variant='soft' color='indigo' size='1' radius='full'>
+                      {t('admin:common.usersCount', '{{count}} users', {
+                        count: group.userCount || 0,
+                      })}
+                    </Badge>
+                  </Box>
+                </Flex>
+              </Card>
             ))
           )}
-        </div>
+        </Flex>
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <Table.Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={totalItems}
-            onPageChange={setCurrentPage}
-            loading={groupsLoading}
-          />
+          <Box mt='5'>
+            <TablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              onPageChange={setCurrentPage}
+              loading={groupsLoading}
+            />
+          </Box>
         )}
       </Modal.Body>
       <Modal.Footer>

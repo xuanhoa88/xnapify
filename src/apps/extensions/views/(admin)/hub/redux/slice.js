@@ -12,13 +12,12 @@ import {
   fetchFeaturedListings,
   fetchCategories,
   fetchListingDetail,
-  submitExtension,
-  fetchMySubmissions,
-  fetchSubmissions,
-  reviewSubmission,
+  installFromHub,
+  updateFromHub,
+  uninstallFromHub,
 } from './thunks';
 
-export const SLICE_NAME = 'hub';
+export const SLICE_NAME = '@admin/hub';
 
 const createOperationState = () => ({ loading: false, error: null });
 
@@ -27,10 +26,9 @@ const createFreshOperations = () => ({
   featured: createOperationState(),
   categories: createOperationState(),
   detail: createOperationState(),
-  submit: createOperationState(),
-  mySubmissions: createOperationState(),
-  submissions: createOperationState(),
-  review: createOperationState(),
+  install: createOperationState(),
+  update: createOperationState(),
+  uninstall: createOperationState(),
 });
 
 const createFreshData = () => ({
@@ -41,9 +39,6 @@ const createFreshData = () => ({
   total: 0,
   page: 1,
   totalPages: 0,
-  mySubmissions: [],
-  submissions: [],
-  submissionsTotal: 0,
   initialized: false,
 });
 
@@ -52,7 +47,7 @@ const initialState = {
   filters: {
     search: '',
     category: 'all',
-    sort: 'popular',
+    sort: 'name',
     page: 1,
   },
   operations: createFreshOperations(),
@@ -109,8 +104,14 @@ const hubSlice = createSlice({
     clearBrowseError(state) {
       state.operations.browse.error = null;
     },
-    clearSubmitError(state) {
-      state.operations.submit.error = null;
+    clearInstallError(state) {
+      state.operations.install.error = null;
+    },
+    clearUpdateError(state) {
+      state.operations.update.error = null;
+    },
+    clearUninstallError(state) {
+      state.operations.uninstall.error = null;
     },
   },
   extraReducers: builder => {
@@ -154,48 +155,29 @@ const hubSlice = createSlice({
       })
       .addCase(fetchListingDetail.rejected, createRejected('detail'));
 
-    // Submit
+    // Install from Hub
     builder
-      .addCase(submitExtension.pending, createPending('submit'))
-      .addCase(submitExtension.fulfilled, (state, action) => {
-        state.operations.submit = { loading: false, error: null };
-        state.data.mySubmissions.unshift(action.payload);
+      .addCase(installFromHub.pending, createPending('install'))
+      .addCase(installFromHub.fulfilled, (state, _action) => {
+        state.operations.install = { loading: false, error: null };
       })
-      .addCase(submitExtension.rejected, createRejected('submit'));
+      .addCase(installFromHub.rejected, createRejected('install'));
 
-    // My Submissions
+    // Update from Hub
     builder
-      .addCase(fetchMySubmissions.pending, createPending('mySubmissions'))
-      .addCase(fetchMySubmissions.fulfilled, (state, action) => {
-        state.operations.mySubmissions = { loading: false, error: null };
-        state.data.mySubmissions = action.payload;
+      .addCase(updateFromHub.pending, createPending('update'))
+      .addCase(updateFromHub.fulfilled, (state, _action) => {
+        state.operations.update = { loading: false, error: null };
       })
-      .addCase(fetchMySubmissions.rejected, createRejected('mySubmissions'));
+      .addCase(updateFromHub.rejected, createRejected('update'));
 
-    // Admin Submissions
+    // Uninstall from Hub
     builder
-      .addCase(fetchSubmissions.pending, createPending('submissions'))
-      .addCase(fetchSubmissions.fulfilled, (state, action) => {
-        state.operations.submissions = { loading: false, error: null };
-        state.data.submissions = action.payload.submissions || [];
-        state.data.submissionsTotal = action.payload.total || 0;
+      .addCase(uninstallFromHub.pending, createPending('uninstall'))
+      .addCase(uninstallFromHub.fulfilled, (state, _action) => {
+        state.operations.uninstall = { loading: false, error: null };
       })
-      .addCase(fetchSubmissions.rejected, createRejected('submissions'));
-
-    // Review
-    builder
-      .addCase(reviewSubmission.pending, createPending('review'))
-      .addCase(reviewSubmission.fulfilled, (state, action) => {
-        state.operations.review = { loading: false, error: null };
-        const submission = action.payload && action.payload.submission;
-        const reviewedId = submission && submission.id;
-        if (reviewedId) {
-          state.data.submissions = state.data.submissions.filter(
-            s => s.id !== reviewedId,
-          );
-        }
-      })
-      .addCase(reviewSubmission.rejected, createRejected('review'));
+      .addCase(uninstallFromHub.rejected, createRejected('uninstall'));
   },
 });
 
@@ -205,7 +187,9 @@ export const {
   clearSelectedListing,
   resetHubState,
   clearBrowseError,
-  clearSubmitError,
+  clearInstallError,
+  clearUpdateError,
+  clearUninstallError,
 } = hubSlice.actions;
 
 export default hubSlice.reducer;

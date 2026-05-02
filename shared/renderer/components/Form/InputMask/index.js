@@ -5,20 +5,22 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { forwardRef, useCallback } from 'react';
+import { forwardRef } from 'react';
 
-import clsx from 'clsx';
+import { TextField } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useFormContext } from 'react-hook-form';
 
-import { useFormField, useMergeRefs } from '../FormContext';
+import {
+  useFormField,
+  useMergeRefs,
+  composeEventHandlers,
+} from '../FormContext';
 
 import useMask from './useMask';
 
-import s from '../Input/FormInput.css';
-
 /**
- * FormInputMask - Masked input element to be used inside Form.Field
+ * FormInputMask - Masked input element to be used inside Form.Field baked by Radix Themes
  *
  * Supports mask patterns:
  *   9 — digit (0-9)
@@ -35,6 +37,7 @@ import s from '../Input/FormInput.css';
 const FormInputMask = forwardRef(function FormInputMask$(
   {
     type = 'text',
+    size = '2',
     placeholder: userPlaceholder,
     className,
     disabled,
@@ -52,6 +55,7 @@ const FormInputMask = forwardRef(function FormInputMask$(
   const {
     ref: registerRef,
     onChange: rhfOnChange,
+    onBlur: rhfOnBlur,
     ...registerProps
   } = register(name);
 
@@ -63,35 +67,38 @@ const FormInputMask = forwardRef(function FormInputMask$(
   // Merge refs — both react-hook-form ref and forwarded ref
   const handleRef = useMergeRefs(registerRef, forwardedRef);
 
-  // Compose onChange to run mask handler first, then react-hook-form
-  const handleChange = useCallback(
-    event => {
-      if (maskHandlers.onChange) {
-        maskHandlers.onChange(event);
-      }
-      if (customOnChange) {
-        customOnChange(event);
-      }
-      if (rhfOnChange) {
-        rhfOnChange(event);
-      }
-    },
-    [maskHandlers, customOnChange, rhfOnChange],
+  // Use composeEventHandlers to safely chain mask, custom, and RHF handlers
+  const handleChange = composeEventHandlers(
+    customOnChange,
+    composeEventHandlers(maskHandlers.onChange, rhfOnChange),
+  );
+  const handleBlur = composeEventHandlers(
+    props.onBlur,
+    composeEventHandlers(maskHandlers.onBlur, rhfOnBlur),
+  );
+  const handleFocus = composeEventHandlers(props.onFocus, maskHandlers.onFocus);
+  const handleKeyDown = composeEventHandlers(
+    props.onKeyDown,
+    maskHandlers.onKeyDown,
   );
 
   return (
-    <input
+    <TextField.Root
       id={id}
       type={type}
+      size={size}
       placeholder={userPlaceholder || maskPlaceholderText}
       disabled={disabled}
-      className={clsx(s.input, { [s.inputError]: error }, className)}
+      color={error ? 'red' : undefined}
+      className={className}
       // eslint-disable-next-line jsx-a11y/no-autofocus
       autoFocus={autoFocus}
       {...registerProps}
       {...props}
-      {...maskHandlers}
       onChange={handleChange}
+      onBlur={handleBlur}
+      onFocus={handleFocus}
+      onKeyDown={handleKeyDown}
       ref={handleRef}
     />
   );
@@ -108,12 +115,20 @@ FormInputMask.propTypes = {
   placeholder: PropTypes.string,
   /** Additional CSS class names */
   className: PropTypes.string,
+  /** Radix size */
+  size: PropTypes.string,
   /** Disabled state */
   disabled: PropTypes.bool,
   /** Auto focus on mount */
   autoFocus: PropTypes.bool,
   /** Custom onChange handler */
   onChange: PropTypes.func,
+  /** Custom onBlur handler */
+  onBlur: PropTypes.func,
+  /** Custom onFocus handler */
+  onFocus: PropTypes.func,
+  /** Custom onKeyDown handler */
+  onKeyDown: PropTypes.func,
 };
 
 export default FormInputMask;

@@ -1,4 +1,11 @@
 /**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+/**
  * PostForm — Slide-in modal for creating / editing a post
  *
  * Renders inside a right-side Modal with Form + Zod validation.
@@ -6,6 +13,7 @@
  */
 import { useMemo, useCallback, useEffect, useRef } from 'react';
 
+import { Box, Text } from '@radix-ui/themes';
 import kebabCase from 'lodash/kebabCase';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
@@ -53,7 +61,7 @@ function PostFormFields({ isEdit, saving }) {
   }, []);
 
   return (
-    <div className={s.form}>
+    <Box className={s.form}>
       <Form.Field name='title' label={t('posts:form.title', 'Title')} required>
         <Form.Input
           placeholder={t('posts:form.titlePlaceholder', 'Enter post title')}
@@ -65,12 +73,12 @@ function PostFormFields({ isEdit, saving }) {
           placeholder={t('posts:form.slugPlaceholder', 'url-friendly-slug')}
           onChange={handleSlugChange}
         />
-        <div className={s.slugHint}>
+        <Text as='div' className={s.slugHint}>
           {t(
             'posts:form.slugHint',
             'Auto-generated from title. Edit to customize.',
           )}
-        </div>
+        </Text>
       </Form.Field>
 
       <Form.Field name='status' label={t('posts:form.status', 'Status')}>
@@ -121,7 +129,7 @@ function PostFormFields({ isEdit, saving }) {
           </Modal.Button>
         </Modal.Actions>
       </Modal.Footer>
-    </div>
+    </Box>
   );
 }
 

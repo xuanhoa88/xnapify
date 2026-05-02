@@ -7,23 +7,116 @@
 
 import { useState, useCallback, useRef, useMemo } from 'react';
 
+import {
+  ArrowLeftIcon,
+  PersonIcon,
+  LockOpen1Icon,
+  PlusIcon,
+} from '@radix-ui/react-icons';
+import {
+  Box,
+  Flex,
+  Text,
+  Grid,
+  Button,
+  Card,
+  Avatar,
+  Badge,
+  Separator,
+} from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import * as Box from '@shared/renderer/components/Box';
-import Button from '@shared/renderer/components/Button';
-import ConfirmModal from '@shared/renderer/components/ConfirmModal';
 import Form, { useFormContext } from '@shared/renderer/components/Form';
 import { useHistory } from '@shared/renderer/components/History';
-import Icon from '@shared/renderer/components/Icon';
 import { useDebounce } from '@shared/renderer/components/InfiniteScroll';
-import { generatePassword, showSuccessMessage } from '@shared/renderer/redux';
+import Modal from '@shared/renderer/components/Modal';
+import { PageHeader } from '@shared/renderer/components/PageHeader';
+import { features } from '@shared/renderer/redux';
 
 import { createUserFormSchema } from '../../../validator/admin';
 import { createUser, isUserCreateLoading } from '../redux';
 
-import s from './CreateUser.css';
+const { generatePassword, showSuccessMessage, showErrorMessage } = features;
+
+// =============================================================================
+// Identity sidebar card for the "Create" flow (no existing user data yet)
+// =============================================================================
+
+function CreateUserIdentityCard() {
+  const { t } = useTranslation();
+  const { watch } = useFormContext();
+
+  const email = watch('email') || '';
+  const displayName = watch('profile.display_name') || '';
+  const firstName = watch('profile.first_name') || '';
+  const lastName = watch('profile.last_name') || '';
+  const isActive = watch('is_active');
+
+  const resolvedName =
+    displayName || [firstName, lastName].filter(Boolean).join(' ') || email;
+
+  const fallback = resolvedName ? resolvedName.charAt(0).toUpperCase() : '?';
+
+  return (
+    <Card variant='surface'>
+      <Flex direction='column' align='center' p='5' gap='4'>
+        <Avatar
+          size='6'
+          name={resolvedName}
+          fallback={fallback}
+          radius='full'
+          color='indigo'
+        />
+
+        <Flex direction='column' align='center' gap='1' className='w-full'>
+          <Text size='4' weight='bold' align='center' className='break-all'>
+            {resolvedName || t('admin:users.create.newUser', 'New User')}
+          </Text>
+          {email && resolvedName !== email && (
+            <Text size='2' color='gray' align='center' className='break-all'>
+              {email}
+            </Text>
+          )}
+        </Flex>
+
+        <Separator size='4' />
+
+        <Flex direction='column' gap='3' className='w-full'>
+          <Flex justify='between' align='center'>
+            <Text size='2' color='gray'>
+              {t('admin:users.create.status', 'Status')}
+            </Text>
+            <Badge
+              color={isActive ? 'green' : 'gray'}
+              variant='soft'
+              radius='full'
+              size='1'
+            >
+              {isActive
+                ? t('admin:users.create.active', 'Active')
+                : t('admin:users.create.inactive', 'Inactive')}
+            </Badge>
+          </Flex>
+
+          <Flex justify='between' align='center'>
+            <Text size='2' color='gray'>
+              {t('admin:users.create.type', 'Type')}
+            </Text>
+            <Badge color='indigo' variant='soft' radius='full' size='1'>
+              {t('admin:users.create.newAccount', 'New Account')}
+            </Badge>
+          </Flex>
+        </Flex>
+      </Flex>
+    </Card>
+  );
+}
+
+// =============================================================================
+// Main CreateUser component
+// =============================================================================
 
 function CreateUser({ context }) {
   const dispatch = useDispatch();
@@ -42,7 +135,7 @@ function CreateUser({ context }) {
   const history = useHistory();
   const loading = useSelector(isUserCreateLoading);
 
-  const [error, setError] = useState(null);
+  const [, setError] = useState(null);
   const confirmBackModalRef = useRef(null);
   const isDirtyRef = useRef(false);
 
@@ -70,7 +163,6 @@ function CreateUser({ context }) {
         history.push('/admin/users');
       } catch (err) {
         if (err && typeof err === 'object' && err.errors) {
-          // It's a validation error object with field-specific errors
           Object.keys(err.errors).forEach(key => {
             if (methods && typeof methods.setError === 'function') {
               methods.setError(key, {
@@ -80,10 +172,11 @@ function CreateUser({ context }) {
             }
           });
         } else {
-          // General string error or object without errors dictionary
-          setError(
-            err || t('admin:users.errors.createUser', 'Failed to create user'),
-          );
+          const message =
+            (typeof err === 'string' ? err : err && err.message) ||
+            t('admin:users.errors.createUser', 'Failed to create user');
+          setError(message);
+          dispatch(showErrorMessage({ message }));
         }
       }
     },
@@ -105,29 +198,35 @@ function CreateUser({ context }) {
   };
 
   return (
-    <div className={s.root}>
-      <Box.Header
-        icon={<Icon name='users' size={24} />}
+    <Box className='p-6 max-w-[1400px] mx-auto'>
+      <PageHeader
         title={t('admin:users.create.title', 'Create New User')}
-        subtitle={t('admin:users.create.subtitle', 'Add a new user account')}
+        subtitle={t(
+          'admin:users.create.subtitle',
+          'Add a new user and configure their access permissions',
+        )}
+        icon={<PersonIcon width={24} height={24} />}
       >
         <Button
-          variant='secondary'
+          variant='ghost'
+          color='gray'
           onClick={() => handleCancel(isDirtyRef.current)}
         >
-          <Icon name='arrowLeft' />
-          {t('admin:users.create.backToUsers', 'Back to Users')}
+          <ArrowLeftIcon />
+          {t('admin:users.create.backToList', 'Back to Users')}
         </Button>
-      </Box.Header>
-      <div className={s.formContainer}>
-        <Form.Error message={error} />
+      </PageHeader>
 
-        <Form
-          schema={createUserFormSchema}
-          defaultValues={defaultValues}
-          onSubmit={handleSubmit}
-          className={s.form}
-        >
+      <Form
+        schema={createUserFormSchema}
+        defaultValues={defaultValues}
+        onSubmit={handleSubmit}
+      >
+        <Grid columns={{ initial: '1', md: '280px 1fr' }} gap='6' align='start'>
+          {/* Left: live identity card */}
+          <CreateUserIdentityCard />
+
+          {/* Right: form sections */}
           <CreateUserFormFields
             setError={setError}
             onCancel={handleCancel}
@@ -136,19 +235,21 @@ function CreateUser({ context }) {
             fetchRoles={fetchRoles}
             fetchGroups={fetchGroups}
           />
-        </Form>
-      </div>
-      <ConfirmModal.Back
+        </Grid>
+      </Form>
+
+      <Modal.ConfirmBack
         ref={confirmBackModalRef}
         onConfirm={handleConfirmBack}
       />
-    </div>
+    </Box>
   );
 }
 
-/**
- * CreateUserFormFields - Form fields component that uses react-hook-form context
- */
+// =============================================================================
+// Form fields — inner component consumes react-hook-form context
+// =============================================================================
+
 function CreateUserFormFields({
   setError,
   onCancel,
@@ -165,15 +266,13 @@ function CreateUserFormFields({
     formState: { isDirty },
   } = useFormContext();
 
-  // Keep isDirtyRef in sync with form dirty state
   isDirtyRef.current = isDirty;
 
-  // Wrap onCancel to check dirty state
   const handleCancel = useCallback(() => {
     onCancel(isDirty);
   }, [onCancel, isDirty]);
 
-  // Roles state for infinite loading
+  // ── Roles state ────────────────────────────────────────────────────
   const [roles, setRoles] = useState([]);
   const [rolesLoading, setRolesLoading] = useState(false);
   const [rolesLoadingMore, setRolesLoadingMore] = useState(false);
@@ -181,7 +280,7 @@ function CreateUserFormFields({
   const [rolesPage, setRolesPage] = useState(1);
   const rolesLimit = 10;
 
-  // Groups state for infinite loading
+  // ── Groups state ───────────────────────────────────────────────────
   const [groups, setGroups] = useState([]);
   const [groupsLoading, setGroupsLoading] = useState(false);
   const [groupsLoadingMore, setGroupsLoadingMore] = useState(false);
@@ -189,18 +288,17 @@ function CreateUserFormFields({
   const [groupsPage, setGroupsPage] = useState(1);
   const groupsLimit = 10;
 
-  // Search state
+  // ── Search state ───────────────────────────────────────────────────
   const [roleSearch, setRoleSearch] = useState('');
   const [groupSearch, setGroupSearch] = useState('');
 
-  // Password generation state
+  // ── Password generation ────────────────────────────────────────────
   const [generatingPassword, setGeneratingPassword] = useState(false);
 
-  // Watch the roles and groups arrays for display count
   const selectedRoles = watch('roles') || [];
   const selectedGroups = watch('groups') || [];
 
-  // Fetch roles with pagination
+  // ── Load roles ─────────────────────────────────────────────────────
   const loadRoles = useCallback(
     async (page, search = '', reset = false) => {
       if (reset) {
@@ -225,7 +323,7 @@ function CreateUserFormFields({
         setRolesHasMore(pagination && pagination.page < pagination.pages);
         setRolesPage(page);
       } catch (err) {
-        // Silently handle error
+        // silently handle
       } finally {
         setRolesLoading(false);
         setRolesLoadingMore(false);
@@ -234,19 +332,17 @@ function CreateUserFormFields({
     [dispatch, fetchRoles],
   );
 
-  // Debounced role search using RxJS (also handles initial load on mount)
   useDebounce(roleSearch, 300, debouncedSearch => {
     loadRoles(1, debouncedSearch, true);
   });
 
-  // Load more roles handler
   const handleLoadMoreRoles = useCallback(() => {
     if (!rolesLoadingMore && rolesHasMore) {
       loadRoles(rolesPage + 1, roleSearch, false);
     }
   }, [rolesLoadingMore, rolesHasMore, rolesPage, roleSearch, loadRoles]);
 
-  // Fetch groups with pagination
+  // ── Load groups ────────────────────────────────────────────────────
   const loadGroups = useCallback(
     async (page, search = '', reset = false) => {
       if (reset) {
@@ -271,7 +367,7 @@ function CreateUserFormFields({
         setGroupsHasMore(pagination && pagination.page < pagination.pages);
         setGroupsPage(page);
       } catch (err) {
-        // Silently handle error
+        // silently handle
       } finally {
         setGroupsLoading(false);
         setGroupsLoadingMore(false);
@@ -280,18 +376,17 @@ function CreateUserFormFields({
     [dispatch, fetchGroups],
   );
 
-  // Debounced group search using RxJS (also handles initial load on mount)
   useDebounce(groupSearch, 300, debouncedSearch => {
     loadGroups(1, debouncedSearch, true);
   });
 
-  // Load more groups handler
   const handleLoadMoreGroups = useCallback(() => {
     if (!groupsLoadingMore && groupsHasMore) {
       loadGroups(groupsPage + 1, groupSearch, false);
     }
   }, [groupsLoadingMore, groupsHasMore, groupsPage, groupSearch, loadGroups]);
 
+  // ── Password generation ────────────────────────────────────────────
   const handleGeneratePassword = useCallback(async () => {
     setGeneratingPassword(true);
     try {
@@ -307,25 +402,29 @@ function CreateUserFormFields({
         }),
       );
     } catch (err) {
-      setError(
-        err ||
-          t(
-            'admin:users.errors.generatePassword',
-            'Failed to generate password',
-          ),
-      );
+      const message =
+        (typeof err === 'string' ? err : err && err.message) ||
+        t('admin:users.errors.generatePassword', 'Failed to generate password');
+      setError(message);
+      dispatch(showErrorMessage({ message }));
     } finally {
       setGeneratingPassword(false);
     }
   }, [dispatch, setValue, setError, t]);
 
   return (
-    <>
-      <div className={s.formSection}>
-        <h3 className={s.sectionTitle}>
+    <Card variant='surface' className='p-0'>
+      {/* ── Account Information ──────────────────────────────────── */}
+      <Box
+        px='5'
+        py='3'
+        className='bg-[var(--gray-a2)] border-b border-[var(--gray-a4)]'
+      >
+        <Text size='2' weight='bold' color='gray'>
           {t('admin:users.create.accountInfo', 'Account Information')}
-        </h3>
-
+        </Text>
+      </Box>
+      <Box p='5'>
         <Form.Field
           name='email'
           label={t('admin:users.create.email', 'Email')}
@@ -340,65 +439,69 @@ function CreateUserFormFields({
           />
         </Form.Field>
 
-        <div className={s.formRow}>
-          <Form.Field
-            name='password'
-            label={t('admin:users.create.password', 'Password')}
-            required
-          >
-            <Form.Password
-              placeholder={t(
-                'admin:users.create.passwordPlaceholder',
-                'Enter password',
-              )}
-            />
-          </Form.Field>
-          <Form.Field
-            name='confirm_password'
-            label={t('admin:users.create.confirmPassword', 'Confirm Password')}
-            required
-          >
-            <Form.Password
-              placeholder={t(
-                'admin:users.create.confirmPasswordPlaceholder',
-                'Confirm password',
-              )}
-            />
-          </Form.Field>
-        </div>
+        <Form.Field
+          name='password'
+          label={t('admin:users.create.password', 'Password')}
+          required
+        >
+          <Form.Password
+            placeholder={t(
+              'admin:users.create.passwordPlaceholder',
+              'Enter password',
+            )}
+          />
+        </Form.Field>
 
-        <div className={s.generatePasswordLink}>
+        <Form.Field
+          name='confirm_password'
+          label={t('admin:users.create.confirmPassword', 'Confirm Password')}
+          required
+        >
+          <Form.Password
+            placeholder={t(
+              'admin:users.create.confirmPasswordPlaceholder',
+              'Confirm password',
+            )}
+          />
+        </Form.Field>
+
+        <Flex justify='end'>
           <Button
-            variant='unstyled'
-            size='small'
+            type='button'
+            variant='ghost'
+            size='1'
             onClick={handleGeneratePassword}
             disabled={generatingPassword}
-            className={s.generateBtn}
+            className='inline-flex items-center gap-1'
+            color='indigo'
           >
-            {generatingPassword ? (
-              t('admin:users.generatingPassword', 'Generating...')
-            ) : (
-              <>
-                <Icon name='key' size={14} />
-                {t(
+            <LockOpen1Icon width={13} height={13} />
+            {generatingPassword
+              ? t('admin:users.generatingPassword', 'Generating...')
+              : t(
                   'admin:users.generateSecurePassword',
                   'Generate Secure Password',
                 )}
-              </>
-            )}
           </Button>
-        </div>
-      </div>
+        </Flex>
+      </Box>
 
-      <div className={s.formSection}>
-        <h3 className={s.sectionTitle}>
+      {/* ── Personal Information ─────────────────────────────────── */}
+      <Box
+        px='5'
+        py='3'
+        className='bg-[var(--gray-a2)] border-y border-[var(--gray-a4)]'
+      >
+        <Text size='2' weight='bold' color='gray'>
           {t('admin:users.create.personalInfo', 'Personal Information')}
-        </h3>
-
-        <div className={s.formRow}>
+        </Text>
+      </Box>
+      <Box p='5'>
+        <Grid columns={{ initial: '1', sm: '2' }} gap='4'>
           <Form.Field
             name='profile.first_name'
             label={t('admin:users.create.firstName', 'First Name')}
+            className='mb-0'
           >
             <Form.Input
               placeholder={t('admin:users.create.firstNamePlaceholder', 'John')}
@@ -407,16 +510,18 @@ function CreateUserFormFields({
           <Form.Field
             name='profile.last_name'
             label={t('admin:users.create.lastName', 'Last Name')}
+            className='mb-0'
           >
             <Form.Input
               placeholder={t('admin:users.create.lastNamePlaceholder', 'Doe')}
             />
           </Form.Field>
-        </div>
+        </Grid>
 
         <Form.Field
           name='profile.display_name'
           label={t('admin:users.create.displayName', 'Display Name')}
+          className='mt-4'
         >
           <Form.Input
             placeholder={t(
@@ -425,13 +530,19 @@ function CreateUserFormFields({
             )}
           />
         </Form.Field>
-      </div>
+      </Box>
 
-      <div className={s.formSection}>
-        <h3 className={s.sectionTitle}>
+      {/* ── Access & Permissions ─────────────────────────────────── */}
+      <Box
+        px='5'
+        py='3'
+        className='bg-[var(--gray-a2)] border-y border-[var(--gray-a4)]'
+      >
+        <Text size='2' weight='bold' color='gray'>
           {t('admin:users.create.accessAndPermissions', 'Access & Permissions')}
-        </h3>
-
+        </Text>
+      </Box>
+      <Box p='5'>
         <Form.Field
           name='roles'
           label={t(
@@ -502,22 +613,38 @@ function CreateUserFormFields({
           />
         </Form.Field>
 
-        <Form.Field name='is_active'>
+        <Form.Field
+          name='is_active'
+          label={t('admin:users.create.accountStatus', 'Account Status')}
+        >
           <Form.Checkbox label={t('admin:users.create.active', 'Active')} />
         </Form.Field>
-      </div>
+      </Box>
 
-      <div className={s.formActions}>
-        <Button variant='secondary' onClick={handleCancel}>
+      {/* ── Footer actions ───────────────────────────────────────── */}
+      <Flex
+        align='center'
+        justify='between'
+        px='5'
+        py='4'
+        className='rounded-b-md bg-[var(--gray-2)] border-t border-[var(--gray-a4)]'
+      >
+        <Button
+          variant='soft'
+          color='gray'
+          type='button'
+          onClick={handleCancel}
+        >
           {t('admin:users.create.cancel', 'Cancel')}
         </Button>
-        <Button variant='primary' type='submit' loading={loading}>
+        <Button variant='solid' color='indigo' type='submit' loading={loading}>
+          <PlusIcon width={15} height={15} />
           {loading
             ? t('admin:users.create.creating', 'Creating...')
             : t('admin:users.create.submit', 'Create User')}
         </Button>
-      </div>
-    </>
+      </Flex>
+    </Card>
   );
 }
 

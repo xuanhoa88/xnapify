@@ -12,41 +12,51 @@
  * Links users to roles (many-to-many relationship).
  * A user can have multiple roles, and a role can be assigned to multiple users.
  *
- * @param {Object} connection - Sequelize connection instance
- * @param {Object} DataTypes - Sequelize data types
+ * @param {Object} db - Sequelize connection instance
+ * @param {Object} db.connection - Sequelize connection instance
+ * @param {Object} db.DataTypes - Sequelize data types
+ * @param {Object} container - DI container
  * @returns {Model} UserRole model
  */
-export default function createUserRoleModel({ connection, DataTypes }) {
-  const UserRole = connection.define(
-    'UserRole',
-    {
-      id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
-        primaryKey: true,
-        comment: 'Unique user-role assignment identifier',
-      },
-
-      user_id: {
-        type: DataTypes.UUID,
-        allowNull: false,
-        comment: 'User ID',
-      },
-
-      role_id: {
-        type: DataTypes.UUID,
-        allowNull: false,
-        comment: 'Role ID',
-      },
+export default async function createUserRoleModel(
+  { connection, DataTypes },
+  container,
+) {
+  const attributes = {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+      comment: 'Unique user-role assignment identifier',
     },
-    {
-      tableName: 'user_roles',
-      timestamps: true,
-      underscored: true,
-      createdAt: 'created_at',
-      updatedAt: 'updated_at',
+
+    user_id: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      comment: 'User ID',
     },
-  );
+
+    role_id: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      comment: 'Role ID',
+    },
+  };
+
+  // Invoke hook to allow extensions to modify the model
+  const hook = container.resolve('hook');
+  await hook('models').invoke('UserRole:define', {
+    attributes,
+    container,
+  });
+
+  const UserRole = connection.define('UserRole', attributes, {
+    tableName: 'user_roles',
+    timestamps: true,
+    underscored: true,
+    createdAt: 'created_at',
+    updatedAt: 'updated_at',
+  });
 
   return UserRole;
 }

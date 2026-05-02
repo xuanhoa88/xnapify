@@ -1,3 +1,10 @@
+/**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
 // Simple benchmark example
 // Run using `npm run test:benchmark` (or `node tools/run benchmark`)
 // Benchmarks are plain Jest tests that log timing information.

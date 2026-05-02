@@ -5,230 +5,214 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-/* =============================================================================
-   ROOT
-   ============================================================================= */
-
-.root {
-  background: var(--color-background);
+.pageWrapper {
+  background-color: var(--color-background);
+  min-height: 100vh;
+  overflow-x: hidden;
 }
 
-/* =============================================================================
-   HERO SECTION
-   ============================================================================= */
+.sectionPadding {
+  padding: var(--space-9) var(--space-5);
+}
 
-.hero {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: var(--spacing-16) var(--spacing-6);
-  text-align: center;
+/* Hero Section */
+.heroSection {
   position: relative;
-  overflow: hidden;
-}
-
-.hero::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: radial-gradient(
-      circle at 30% 50%,
-      rgb(255 255 255 / 10%) 0%,
-      transparent 50%
-    ),
-    radial-gradient(
-      circle at 70% 80%,
-      rgb(255 255 255 / 8%) 0%,
-      transparent 50%
-    );
-  pointer-events: none;
+  padding-top: calc(var(--space-9) * 2);
+  padding-bottom: calc(var(--space-9) * 1.5);
 }
 
 .heroContent {
-  max-width: 800px;
-  margin: 0 auto;
+  max-width: 900px;
+}
+
+.heroTitle {
+  font-size: var(--font-size-9);
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  color: var(--gray-12);
+  margin-bottom: var(--space-6);
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--gray-12) 0%, var(--gray-9) 100%);
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.heroSubtitle {
+  font-size: var(--font-size-6);
+  line-height: 1.5;
+  color: var(--gray-11);
+  max-width: 750px;
+  font-weight: 400;
+}
+
+/* Grid Layout */
+.featuresSection {
   position: relative;
   z-index: 1;
 }
 
-.heroTitle {
-  font-size: var(--font-size-4xl);
-  font-weight: var(--font-weight-bold);
-  color: white;
-  margin: 0 0 var(--spacing-4);
-  letter-spacing: -0.03em;
-  text-shadow: 0 2px 8px rgb(0 0 0 / 15%);
-}
-
-.heroSubtitle {
-  font-size: var(--font-size-xl);
-  color: rgb(255 255 255 / 90%);
-  margin: 0;
-  line-height: 1.6;
-}
-
-/* =============================================================================
-   FEATURES GRID SECTION
-   ============================================================================= */
-
-.features {
-  padding: var(--spacing-16) 0;
-  background: var(--color-background-secondary);
-}
-
-.container {
-  max-width: var(--max-content-width);
-  margin: 0 auto;
-  padding: 0 var(--spacing-6);
-}
-
-.grid {
+.gridContainer {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: var(--spacing-8);
+  grid-template-columns: repeat(12, 1fr);
+  gap: var(--space-6);
 }
 
-.card {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  padding: var(--spacing-8);
-  transition: all var(--transition-base);
-  background: var(--color-background);
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-4);
+/* Feature Cards */
+.featureCard {
+  grid-column: span 12;
+  position: relative;
+  background-color: var(--color-panel-solid);
+  border-radius: var(--radius-5);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 24px -12px var(--black-a3);
+  border: 1px solid var(--gray-4);
+  overflow: hidden;
+}
+
+@media (min-width: 768px) {
+  .featureCard {
+    grid-column: span 6;
+  }
+
+  .cardFeatured {
+    grid-column: span 12;
+  }
+}
+
+@media (min-width: 1024px) {
+  .featureCard {
+    grid-column: span 4;
+  }
+
+  .cardFeatured {
+    grid-column: span 8;
+    grid-row: span 2;
+  }
+}
+
+.featureLink {
   text-decoration: none;
   color: inherit;
+  display: block;
+  height: 100%;
 }
 
-.card:hover {
+.cardGlow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(
+    circle at 50% 0%,
+    var(--indigo-3) 0%,
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.featureCard:hover {
   transform: translateY(-8px);
-  box-shadow: 0 12px 24px rgb(0 0 0 / 12%);
-  border-color: var(--color-primary);
+  box-shadow: 0 20px 40px -16px var(--black-a4);
+  border-color: var(--indigo-6);
+}
+
+.featureCard:hover .cardGlow {
+  opacity: 1;
+}
+
+.cardContent {
+  position: relative;
+  z-index: 1;
+  padding: var(--space-7);
+  height: 100%;
 }
 
 .cardHeader {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-4);
+  margin-bottom: var(--space-6);
 }
 
-.icon {
-  font-size: 3rem;
-  line-height: 1;
-  flex-shrink: 0;
+.featureIcon {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-4);
+  background-color: var(--indigo-3);
+  color: var(--indigo-11);
+  font-size: var(--font-size-6);
+  transition:
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 0.3s ease;
+}
+
+.featureCard:hover .featureIcon {
+  transform: scale(1.1) rotate(-5deg);
+  background-color: var(--indigo-4);
+}
+
+.featureNumber {
+  font-family: monospace;
+  font-size: var(--font-size-2);
+  color: var(--gray-8);
+  font-weight: 600;
+}
+
+.cardBody {
+  flex-grow: 1;
+  margin-bottom: var(--space-6);
 }
 
 .cardTitle {
-  margin: 0;
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text-primary);
+  font-size: var(--font-size-6);
+  font-weight: 700;
+  color: var(--gray-12);
+  margin-bottom: var(--space-3);
+  letter-spacing: -0.02em;
 }
 
-.cardDesc {
-  color: var(--color-text-secondary);
-  line-height: 1.7;
-  margin: 0;
-  flex-grow: 1;
+.cardFeatured .cardTitle {
+  font-size: var(--font-size-8);
 }
 
-.tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-2);
+.cardDescription {
+  font-size: var(--font-size-3);
+  color: var(--gray-11);
+  line-height: 1.6;
 }
 
-.tag {
-  display: inline-block;
-  background: var(--color-background-secondary);
-  padding: var(--spacing-1) var(--spacing-3);
-  border-radius: var(--radius-full);
-  font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
-  font-weight: var(--font-weight-medium);
+.cardFeatured .cardDescription {
+  font-size: var(--font-size-4);
+  max-width: 80%;
 }
 
-.link {
-  color: var(--color-primary);
-  font-weight: var(--font-weight-semibold);
-  font-size: var(--font-size-sm);
+.cardFooter {
+  border-top: 1px solid var(--gray-4);
+  padding-top: var(--space-5);
   margin-top: auto;
-  transition: color var(--transition-fast);
 }
 
-.card:hover .link {
-  color: var(--color-primary-dark);
+.tagBadge {
+  background-color: var(--gray-3);
+  color: var(--gray-11);
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-1);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
-/* =============================================================================
-   RESPONSIVE
-   ============================================================================= */
-
-@media (max-width: 992px) {
-  .hero {
-    padding: var(--spacing-12) var(--spacing-4);
-  }
-
-  .heroTitle {
-    font-size: var(--font-size-3xl);
-  }
-
-  .heroSubtitle {
-    font-size: var(--font-size-lg);
-  }
-
-  .features {
-    padding: var(--spacing-12) 0;
-  }
-
-  .grid {
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: var(--spacing-6);
-  }
+.arrowIcon {
+  color: var(--indigo-11);
+  font-size: var(--font-size-5);
+  font-weight: bold;
+  transform: translateX(0);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@media (max-width: 768px) {
-  .hero {
-    padding: var(--spacing-10) var(--spacing-4);
-  }
-
-  .heroTitle {
-    font-size: var(--font-size-2xl);
-  }
-
-  .heroSubtitle {
-    font-size: var(--font-size-base);
-  }
-
-  .container {
-    padding: 0 var(--spacing-4);
-  }
-
-  .features {
-    padding: var(--spacing-8) 0;
-  }
-
-  .grid {
-    grid-template-columns: 1fr;
-    gap: var(--spacing-4);
-  }
-
-  .card {
-    padding: var(--spacing-6);
-    border-radius: var(--radius-lg);
-  }
-
-  .card:hover {
-    transform: translateY(-4px);
-  }
-
-  .icon {
-    font-size: 2.5rem;
-  }
-
-  .cardTitle {
-    font-size: var(--font-size-lg);
-  }
+.featureCard:hover .arrowIcon {
+  transform: translateX(8px);
 }

@@ -11,6 +11,8 @@ This skill equips you to build entirely encapsulated extensions for the `xnapify
 
 Unlike Modules (which contain core domain logic), Extensions (`src/extensions/`) are isolated and modify behavior dynamically via Extension Slots and Event Hooks. They are loaded and unloaded during runtime via the Extension Manager.
 
+> **Important Activation Rule:** All extensions (including local development plugins in `src/extensions/`) MUST be registered in the database with `is_active: true` to be discovered and loaded via the API. Building the web app or dragging a folder into the source tree will NOT magically auto-activate an extension without database correlation.
+
 ## Extension Lifecycle
 
 Extensions follow a well-defined phase-sequential lifecycle. Each phase runs for **all extensions** before the next phase begins, ensuring cross-extension dependencies are resolved.
@@ -72,6 +74,19 @@ Extensions follow a well-defined phase-sequential lifecycle. Each phase runs for
    - **`boot({ container, registry })`**: Re-runs on every server boot. Register IPC handlers and subscribe to Backend Hooks. Models, migrations, and seeds are already processed before this runs.
    - **`uninstall({ container })`**: Runs ONCE when deleted. Undo migrations/seeds via `db.connection.revertSeeds()`/`revertMigrations()`.
    - **`shutdown({ container, registry })`**: Called on deactivation. MUST unsubscribe from all hooks (`.off()`). Extension models are auto-unregistered from the `ModelRegistry`. Translations are auto-cleaned via `removeNamespace()`.
+
+   **Modifying Core DB Models (Dynamic Model Injection):**
+   Extensions can inject columns into core models (like `User` or `Setting`) securely *before* the models are constructed by subscribing to their `define` hook during the `providers()` phase:
+   ```javascript
+   export async function providers({ container }) {
+     const hook = container.resolve('hook');
+     // The core framework emits [PascalCaseModelName]:define
+     hook('models').on('User:define', async ({ attributes, DataTypes }) => {
+       attributes.my_plugin_field = { type: DataTypes.STRING, allowNull: true };
+     });
+   }
+   ```
+   *Note: Ensure your extension's migrations actually alter the core database table to support your new field!*
 
 3. **Frontend Entry (`views/index.js`):**
 

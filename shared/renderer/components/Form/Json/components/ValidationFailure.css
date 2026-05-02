@@ -1,0 +1,24 @@
+/**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+.validationFailure {
+  float: right;
+  padding: 3px 6px;
+  border-radius: 2px;
+  cursor: pointer;
+  color: var(--color-error, #dc2626);
+  background: var(--color-error-bg, rgb(220 38 38 / 8%));
+  font-size: 11px;
+}
+
+.validationFailureLabel {
+  margin-right: 6px;
+}
+
+.jsonIconMiddle {
+  vertical-align: middle;
+}

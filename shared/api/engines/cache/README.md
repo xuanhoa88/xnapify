@@ -97,9 +97,9 @@ import {
 | `InvalidNamespaceError` | `INVALID_NAMESPACE`  | `400`  | Invalid namespace          |
 | `InvalidCacheError`     | `INVALID_CACHE`      | `400`  | Missing/invalid base cache |
 
-## Signal Handling
+## Graceful Shutdown
 
-`createFactory()` registers `SIGTERM` and `SIGINT` handlers that call `adapter.cleanup()` for graceful shutdown.
+`createFactory()` registers cleanup with the centralized shutdown registry (`shared/api/shutdown.js`). The `adapter.cleanup()` method is called automatically during coordinated process shutdown — no manual signal handling needed.
 
 ## See Also
 

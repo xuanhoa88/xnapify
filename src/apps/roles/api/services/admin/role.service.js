@@ -399,6 +399,63 @@ export async function deleteRole(role_id, { models, hook, systemRoles }) {
 }
 
 /**
+ * Bulk delete roles
+ *
+ * @param {string[]} ids - Array of role IDs to delete
+ * @param {Object} options - Options object
+ * @param {Object} options.models - Database models
+ * @param {string[]} options.systemRoles - System roles to protect
+ * @param {Function} options.hook - Hook emitter
+ * @returns {Promise<string[]>} Successfully deleted role IDs
+ */
+export async function bulkDeleteRoles(ids, { models, hook, systemRoles = [] }) {
+  const { Role, UserRole } = models;
+
+  if (!Array.isArray(ids) || ids.length === 0) return [];
+
+  const roles = await Role.findAll({
+    where: { id: ids },
+  });
+
+  const deletedIds = [];
+  const deletedNames = [];
+
+  for (const role of roles) {
+    // Prevent deletion of system roles
+    if (!systemRoles.includes(role.name)) {
+      deletedIds.push(role.id);
+      deletedNames.push(role.name);
+
+      // Get all user IDs with this role before deletion for cache invalidation
+      const userRoles = await UserRole.findAll({
+        where: { role_id: role.id },
+        attributes: ['user_id'],
+        raw: true,
+      });
+
+      await role.destroy();
+
+      // Invalidate RBAC cache for affected users
+      if (userRoles.length > 0) {
+        await rbacCache.invalidateUsers(userRoles.map(ur => ur.user_id));
+      }
+    }
+  }
+
+  // Emit hook events for each deleted role
+  if (hook && deletedIds.length > 0) {
+    for (let i = 0; i < deletedIds.length; i++) {
+      await hook('admin:roles').emit('deleted', {
+        role_id: deletedIds[i],
+        name: deletedNames[i],
+      });
+    }
+  }
+
+  return deletedIds;
+}
+
+/**
  * Get users with specific role
  *
  * @param {string} role_id - Role ID

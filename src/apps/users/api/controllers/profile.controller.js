@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { clearAllAuthCookies } from '@shared/cookies';
 import { validateForm, z } from '@shared/validator';
 
 import {
@@ -469,7 +470,7 @@ export async function deleteAccount(req, res) {
       hook: container.resolve('hook'),
     });
 
-    container.resolve('auth').clearAllAuthCookies(res);
+    clearAllAuthCookies(res);
 
     return http.sendSuccess(res, {
       message: 'User deleted successfully',

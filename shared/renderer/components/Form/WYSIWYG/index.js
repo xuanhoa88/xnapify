@@ -11,7 +11,11 @@ import PropTypes from 'prop-types';
 import { useController } from 'react-hook-form';
 
 import { WYSIWYG } from '../../WYSIWYG';
-import { useFormField, useMergeRefs } from '../FormContext';
+import {
+  useFormField,
+  useMergeRefs,
+  composeEventHandlers,
+} from '../FormContext';
 
 /**
  * FormWYSIWYG — A rich-text editor field powered by Tiptap.
@@ -38,6 +42,7 @@ const FormWYSIWYG = forwardRef(function FormWYSIWYG$(
     markdown,
     placeholder,
     onChange: onChangeProp,
+    onBlur: onBlurProp,
     onMentionQuery,
     addExtensions,
     excludeExtensions,
@@ -53,13 +58,6 @@ const FormWYSIWYG = forwardRef(function FormWYSIWYG$(
 
   const handleRef = useMergeRefs(registerRef, forwardedRef);
 
-  const handleChange = html => {
-    onChange(html);
-    if (onChangeProp) {
-      onChangeProp(html);
-    }
-  };
-
   return (
     <WYSIWYG
       ref={handleRef}
@@ -70,8 +68,8 @@ const FormWYSIWYG = forwardRef(function FormWYSIWYG$(
       markdown={markdown}
       placeholder={placeholder}
       value={value}
-      onChange={handleChange}
-      onBlur={onBlur}
+      onChange={composeEventHandlers(onChangeProp, onChange)}
+      onBlur={composeEventHandlers(onBlurProp, onBlur)}
       onMentionQuery={onMentionQuery}
       addExtensions={addExtensions}
       excludeExtensions={excludeExtensions}
@@ -87,6 +85,7 @@ FormWYSIWYG.propTypes = {
   markdown: PropTypes.bool,
   placeholder: PropTypes.string,
   onChange: PropTypes.func,
+  onBlur: PropTypes.func,
   onMentionQuery: PropTypes.func,
   addExtensions: PropTypes.array,
   excludeExtensions: PropTypes.arrayOf(PropTypes.string),

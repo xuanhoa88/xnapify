@@ -34,7 +34,7 @@ api/index.js
 
 views.js
 ├── @shared/renderer/autoloader (discoverModules)
-├── @shared/renderer/redux (getAppName, getAppDescription)
+├── @shared/renderer/redux (features, rootReducer)
 └── @shared/renderer/router (Router)
 ```
 

@@ -13,17 +13,18 @@ import {
   useEffect,
 } from 'react';
 
-import clsx from 'clsx';
+import { Box, Flex, Text, Checkbox } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
 import Modal from '@shared/renderer/components/Modal';
-import Table from '@shared/renderer/components/Table';
+import {
+  TablePagination,
+  TableSearch,
+} from '@shared/renderer/components/Table';
 
 import { assignGroupsToUser, isUserAssignGroupsLoading } from '../redux';
-
-import s from './UserGroupsModal.css';
 
 /**
  * UserGroupsModal - Self-contained modal for managing user groups
@@ -228,41 +229,56 @@ const UserGroupsModal = forwardRef(({ onSuccess, fetchGroups }, ref) => {
             )}
       </Modal.Header>
       <Modal.Body error={error}>
-        <Modal.Description>{description}</Modal.Description>
+        <Modal.Description className='mb-4 text-[var(--gray-11)]'>
+          {description}
+        </Modal.Description>
 
         {/* Search Input */}
-        <Table.SearchBar
-          value={searchTerm}
-          onChange={handleSearchChange}
-          placeholder={t('admin:users.groups.searchGroups', 'Search groups...')}
-          debounce={300}
-          className={s.modalSearchBar}
-        />
+        <Box mb='4'>
+          <TableSearch
+            value={searchTerm}
+            onChange={handleSearchChange}
+            placeholder={t(
+              'admin:users.groups.searchGroups',
+              'Search groups...',
+            )}
+            debounce={300}
+          />
+        </Box>
 
-        <div className={s.checkboxList}>
+        <Flex direction='column' gap='2'>
           {groupsLoading ? (
-            <div className={s.noItems}>
-              {t('admin:users.groups.loadingGroups', 'Loading groups...')}
-            </div>
+            <Flex align='center' justify='center' p='6'>
+              <Text as='p' color='gray'>
+                {t('admin:users.groups.loadingGroups', 'Loading groups...')}
+              </Text>
+            </Flex>
           ) : groups.length === 0 ? (
-            <div className={s.noItems}>
-              {searchTerm
-                ? t(
-                    'admin:users.groups.noGroupsMatch',
-                    'No groups match your search',
-                  )
-                : t(
-                    'admin:users.groups.noGroupsAvailable',
-                    'No groups available',
-                  )}
-            </div>
+            <Flex align='center' justify='center' p='6'>
+              <Text as='p' color='gray'>
+                {searchTerm
+                  ? t(
+                      'admin:users.groups.noGroupsMatch',
+                      'No groups match your search',
+                    )
+                  : t(
+                      'admin:users.groups.noGroupsAvailable',
+                      'No groups available',
+                    )}
+              </Text>
+            </Flex>
           ) : (
             groups.map(group => (
-              <div
+              <Flex
                 key={group.id}
-                className={clsx(s.checkboxListItem, {
-                  [s.selected]: selections.includes(group.id),
-                })}
+                align='start'
+                gap='3'
+                p='3'
+                className={`border shadow-sm rounded-md cursor-pointer transition-colors ${
+                  selections.includes(group.id)
+                    ? 'bg-[var(--indigo-a2)] border-[var(--indigo-a6)]'
+                    : 'border-[var(--gray-a5)] hover:bg-[var(--gray-a3)]'
+                }`}
                 onClick={() => toggleSelection(group.id)}
                 role='checkbox'
                 aria-checked={selections.includes(group.id)}
@@ -274,35 +290,40 @@ const UserGroupsModal = forwardRef(({ onSuccess, fetchGroups }, ref) => {
                   }
                 }}
               >
-                <input
-                  type='checkbox'
-                  className={s.checkbox}
-                  checked={selections.includes(group.id)}
-                  onChange={() => {}}
-                  tabIndex={-1}
-                />
-                <div className={s.checkboxContent}>
-                  <span className={s.checkboxListLabel}>{group.name}</span>
+                <Box className='pt-1'>
+                  <Checkbox
+                    checked={selections.includes(group.id)}
+                    onCheckedChange={() => toggleSelection(group.id)}
+                    tabIndex={-1}
+                    className='pointer-events-none'
+                  />
+                </Box>
+                <Box className='flex-1'>
+                  <Text as='div' size='2' weight='bold' highContrast>
+                    {group.name}
+                  </Text>
                   {group.description && (
-                    <span className={s.checkboxListDesc}>
+                    <Text as='div' size='1' color='gray' mt='1'>
                       {group.description}
-                    </span>
+                    </Text>
                   )}
-                </div>
-              </div>
+                </Box>
+              </Flex>
             ))
           )}
-        </div>
+        </Flex>
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <Table.Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={totalItems}
-            onPageChange={setCurrentPage}
-            loading={groupsLoading}
-          />
+          <Box mt='4'>
+            <TablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              onPageChange={setCurrentPage}
+              loading={groupsLoading}
+            />
+          </Box>
         )}
       </Modal.Body>
       <Modal.Footer>

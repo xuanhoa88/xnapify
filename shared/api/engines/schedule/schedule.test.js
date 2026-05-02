@@ -13,6 +13,35 @@ import cron from 'node-cron';
 import { ScheduleError } from './errors';
 import { ScheduleManager, createFactory } from './factory';
 
+beforeEach(() => {
+  cron.validate.mockImplementation(expression => {
+    if (!expression || typeof expression !== 'string') return false;
+    const parts = expression.trim().split(/\s+/);
+    if (parts.length < 5 || parts.length > 6) return false;
+    return true;
+  });
+
+  cron.schedule.mockImplementation((expression, callback, options) => {
+    let status = 'stopped';
+    const task = {
+      start: jest.fn(() => {
+        status = 'scheduled';
+      }),
+      stop: jest.fn(() => {
+        status = 'stopped';
+      }),
+      getStatus: jest.fn(() => status),
+      _callback: callback,
+      _options: options,
+    };
+    if (options && options.scheduled) task.start();
+    const taskId = `${expression}-${Date.now()}-${Math.random()}`;
+    // eslint-disable-next-line no-underscore-dangle
+    cron.__getMockTasks().set(taskId, { task, callback });
+    return task;
+  });
+});
+
 describe('ScheduleManager', () => {
   let manager;
 
@@ -532,32 +561,10 @@ describe('ScheduleError', () => {
 });
 
 describe('createFactory()', () => {
-  let processOnceSpy;
-
-  beforeEach(() => {
-    processOnceSpy = jest.spyOn(process, 'once').mockImplementation();
-  });
-
-  afterEach(() => {
-    processOnceSpy.mockRestore();
-  });
-
   it('should return a ScheduleManager instance', () => {
     const schedule = createFactory({ autoStart: false });
 
     expect(schedule).toBeInstanceOf(ScheduleManager);
-
-    schedule.cleanup();
-  });
-
-  it('should register SIGTERM and SIGINT cleanup handlers', () => {
-    const schedule = createFactory({ autoStart: false });
-
-    expect(processOnceSpy).toHaveBeenCalledWith(
-      'SIGTERM',
-      expect.any(Function),
-    );
-    expect(processOnceSpy).toHaveBeenCalledWith('SIGINT', expect.any(Function));
 
     schedule.cleanup();
   });
@@ -576,40 +583,5 @@ describe('createFactory()', () => {
     expect(schedule.autoStart).toBe(false);
 
     schedule.cleanup();
-  });
-
-  it('should call cleanup on SIGTERM', () => {
-    const schedule = createFactory({ autoStart: false });
-
-    const sigTermCall = processOnceSpy.mock.calls.find(
-      ([signal]) => signal === 'SIGTERM',
-    );
-    const cleanupFn = sigTermCall[1];
-
-    schedule.register('test', '* * * * *', jest.fn());
-    expect(schedule.getAllTasks()).toHaveLength(1);
-
-    cleanupFn();
-    expect(schedule.getAllTasks()).toHaveLength(0);
-  });
-
-  it('should support destroy() to clean process listeners', async () => {
-    const processRemoveListenerSpy = jest
-      .spyOn(process, 'removeListener')
-      .mockImplementation();
-    const schedule = createFactory({ autoStart: false });
-
-    await schedule.destroy();
-
-    expect(processRemoveListenerSpy).toHaveBeenCalledWith(
-      'SIGTERM',
-      expect.any(Function),
-    );
-    expect(processRemoveListenerSpy).toHaveBeenCalledWith(
-      'SIGINT',
-      expect.any(Function),
-    );
-
-    processRemoveListenerSpy.mockRestore();
   });
 });

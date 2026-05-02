@@ -85,7 +85,7 @@ All errors have: `name`, `code`, `statusCode`, `timestamp`, and stack trace.
 
 ### `createFactory(options?) → CacheAdapter`
 
-Creates a cache adapter instance, attaches `withNamespace()`, and registers signal handlers.
+Creates a cache adapter instance, attaches `withNamespace()`, and registers cleanup with the centralized shutdown registry.
 
 1. Extracts `type` from options (default: `'memory'`).
 2. **`__DEV__` guard:** If `__DEV__` is truthy, always creates `NoOpCache` regardless of `type`.
@@ -94,7 +94,7 @@ Creates a cache adapter instance, attaches `withNamespace()`, and registers sign
    - `'file'` → `FileCache`
    - Other → throws `InvalidCacheTypeError`.
 4. Attaches `adapter.withNamespace = (ns) => withNamespace(ns, adapter)`.
-5. Registers `process.once('SIGTERM')` and `process.once('SIGINT')` handlers that call `adapter.cleanup()`.
+5. Registers cleanup handler with the centralized shutdown registry (`shared/api/shutdown.js`) if the adapter has a `cleanup()` method.
 
 ### `withNamespace(namespace, baseCache) → NamespacedCache`
 
@@ -267,7 +267,7 @@ The singleton is registered on the DI container as `container.resolve('cache')` 
 - File cache creation.
 - Independent instances.
 - Throws `InvalidCacheTypeError` for unsupported type.
-- Registers SIGTERM/SIGINT signal handlers.
+- Registers cleanup with centralized shutdown registry.
 
 **withNamespace():**
 
@@ -315,7 +315,7 @@ The singleton is registered on the DI container as `container.resolve('cache')` 
 - **Module `boot({ container })`**: Access via `container.resolve('cache')`. Use `withNamespace()` to scope by module.
 - **`__DEV__` global**: When truthy, all `createFactory` calls produce `NoOpCache` — ensures fresh data during development.
 - **Schedule engine**: Can pair with scheduled `cleanup()` calls for periodic expired-entry removal.
-- **Signal handlers**: `SIGTERM`/`SIGINT` automatically call `cleanup()` on the adapter for graceful shutdown.
+- **Shutdown registry**: `shared/api/shutdown.js` automatically calls `cleanup()` on the adapter during coordinated process shutdown.
 
 ---
 
