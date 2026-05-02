@@ -378,7 +378,7 @@ export default function FileGrid({ onShare }) {
           )}
         </Flex>
         <Box
-          className={s.cardActions}
+          className={clsx(s.cardActions, 'flex items-center')}
           onClick={e => e.stopPropagation()}
           onPointerDown={e => e.stopPropagation()}
         >
