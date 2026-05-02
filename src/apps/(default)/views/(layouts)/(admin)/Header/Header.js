@@ -7,18 +7,15 @@
 
 import { useCallback } from 'react';
 
-import {
-  HamburgerMenuIcon,
-  GearIcon,
-  QuestionMarkCircledIcon,
-} from '@radix-ui/react-icons';
 import { Flex, Box } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 
+import Icon from '@shared/renderer/components/Icon';
 import { features } from '@shared/renderer/redux';
 
 import Breadcrumbs from './Breadcrumbs';
+import LanguageSwitcher from './LanguageSwitcher';
 import Notifications from './Notifications';
 import ProfileDropdown from './ProfileDropdown';
 
@@ -62,7 +59,7 @@ function AdminHeader() {
             title={t('common.toggleDrawer', 'Toggle drawer')}
             className='md:hidden w-9 h-9 rounded-full text-gray-500 cursor-pointer transition-colors hover:bg-gray-100 hover:text-gray-900 shrink-0'
           >
-            <HamburgerMenuIcon width={18} height={18} />
+            <Icon name='HamburgerMenuIcon' size={18} />
           </Flex>
 
           <Box className='hidden md:block'>
@@ -72,29 +69,9 @@ function AdminHeader() {
 
         {/* Right Section - Page Title & Action Icons */}
         <Flex align='center' gap='1'>
+          <LanguageSwitcher />
+
           <Notifications />
-
-          <Flex
-            align='center'
-            justify='center'
-            role='button'
-            tabIndex={0}
-            title={t('common.settings', 'Settings')}
-            className='w-9 h-9 rounded-full text-gray-500 cursor-pointer transition-colors hover:bg-gray-100 hover:text-gray-900'
-          >
-            <GearIcon width={18} height={18} />
-          </Flex>
-
-          <Flex
-            align='center'
-            justify='center'
-            role='button'
-            tabIndex={0}
-            title={t('common.help', 'Help')}
-            className='w-9 h-9 rounded-full text-gray-500 cursor-pointer transition-colors hover:bg-gray-100 hover:text-gray-900'
-          >
-            <QuestionMarkCircledIcon width={18} height={18} />
-          </Flex>
 
           <Box className='ml-1'>
             <ProfileDropdown />

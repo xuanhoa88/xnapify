@@ -125,7 +125,7 @@ function ProfileDropdown() {
             className='w-full flex items-center gap-2 px-3 py-2 rounded-sm text-left cursor-pointer transition-colors text-gray-12 hover:bg-gray-3 hover:text-gray-12 focus:outline-none focus:bg-gray-3 no-underline'
           >
             <PersonIcon width={16} height={16} />
-            {t('navigation.profile', 'Profile')}
+            <Text size='2'>{t('navigation.profile', 'Profile')}</Text>
           </Link>
         </ContextMenu.Item>
 
@@ -136,7 +136,7 @@ function ProfileDropdown() {
               className='w-full flex items-center gap-2 px-3 py-2 rounded-sm text-left cursor-pointer transition-colors text-gray-12 hover:bg-gray-3 hover:text-gray-12 focus:outline-none focus:bg-gray-3 no-underline'
             >
               <LightningBoltIcon width={16} height={16} />
-              Node-RED
+              <Text size='2'>Node-RED</Text>
             </a>
           </ContextMenu.Item>
         )}
@@ -147,7 +147,7 @@ function ProfileDropdown() {
             className='w-full flex items-center gap-2 px-3 py-2 rounded-sm text-left cursor-pointer transition-colors text-gray-12 hover:bg-gray-3 hover:text-gray-12 focus:outline-none focus:bg-gray-3 no-underline'
           >
             <ArrowUpIcon width={16} height={16} />
-            {t('navigation.backToSite', 'Back to Site')}
+            <Text size='2'>{t('navigation.backToSite', 'Back to Site')}</Text>
           </Link>
         </ContextMenu.Item>
 
@@ -158,7 +158,7 @@ function ProfileDropdown() {
           className='w-full flex items-center gap-2 px-3 py-2 rounded-sm text-left cursor-pointer transition-colors text-red-11 hover:bg-red-3 hover:text-red-11 focus:outline-none focus:bg-red-3'
         >
           <ExitIcon width={16} height={16} />
-          {t('navigation.logout', 'Logout')}
+          <Text size='2'>{t('navigation.logout', 'Logout')}</Text>
         </ContextMenu.Item>
       </ContextMenu.Menu>
     </ContextMenu>

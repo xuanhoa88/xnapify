@@ -27,7 +27,7 @@ export function setup({ store, i18n }) {
       items: [
         {
           path: '/admin/emails/templates',
-          label: i18n.t('admin:emails.templates', 'Email Templates'),
+          label: i18n.t('admin:navigation.emailTemplates', 'Email Templates'),
           icon: 'EnvelopeOpenIcon',
           permission: 'emails:templates:read',
           order: 50,
@@ -54,7 +54,7 @@ export function teardown({ store }) {
  */
 export async function getInitialProps({ i18n }) {
   return {
-    title: i18n.t('admin:emails.templates', 'Email Templates'),
+    title: i18n.t('admin:navigation.emailTemplates', 'Email Templates'),
   };
 }
 
@@ -65,7 +65,7 @@ export function mount({ store, i18n, path }) {
   store.dispatch(
     addBreadcrumb(
       {
-        label: i18n.t('admin:emails.templates', 'Email Templates'),
+        label: i18n.t('admin:navigation.emailTemplates', 'Email Templates'),
         url: path,
       },
       'admin',

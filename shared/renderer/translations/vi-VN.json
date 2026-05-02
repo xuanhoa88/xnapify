@@ -51,9 +51,9 @@
       "pagination": {
         "prev": "‹ Trước",
         "next": "Tiếp ›",
-        "info": "Trang {{page}} / {{pages}}",
-        "page": "Trang",
-        "pageSize": "{{size}} mỗi trang"
+        "info": "Tổng số {{total}} · Trang {{current}} / {{pages}}",
+        "page": "{{size}} / trang",
+        "pageSize": "{{pageSize}} / trang"
       }
     },
     "toolbarPrompt": {

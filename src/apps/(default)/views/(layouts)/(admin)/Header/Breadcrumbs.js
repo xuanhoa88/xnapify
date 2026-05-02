@@ -48,14 +48,20 @@ function AdminBreadcrumbs() {
               </Flex>
             )}
             {hasLink ? (
-              <Link
-                to={item.url}
-                className='text-[13.5px] font-medium text-gray-500 no-underline transition-colors hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-sm px-1 -mx-1'
-              >
-                {item.label}
-              </Link>
+              <Text size='2' weight='medium' asChild>
+                <Link
+                  to={item.url}
+                  className='text-gray-500 no-underline transition-colors hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-sm px-1 -mx-1'
+                >
+                  {item.label}
+                </Link>
+              </Text>
             ) : (
-              <Text className='text-[13.5px] font-semibold text-gray-900 px-1 -mx-1'>
+              <Text
+                size='2'
+                weight='medium'
+                className='text-gray-900 px-1 -mx-1'
+              >
                 {item.label}
               </Text>
             )}

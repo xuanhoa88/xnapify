@@ -7,10 +7,11 @@
 
 import { useState } from 'react';
 
-import * as RadixIcons from '@radix-ui/react-icons';
 import { Flex, Text, Box, Button, Popover } from '@radix-ui/themes';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
+
+import Icon from '@shared/renderer/components/Icon';
 
 // Mock notification data
 const mockNotifications = [
@@ -55,25 +56,25 @@ function AdminNotifications() {
         return {
           colorClass: 'text-amber-11',
           bgClass: 'bg-amber-3',
-          icon: RadixIcons.ExclamationTriangleIcon,
+          icon: 'ExclamationTriangleIcon',
         };
       case 'success':
         return {
           colorClass: 'text-green-11',
           bgClass: 'bg-green-3',
-          icon: RadixIcons.CheckCircledIcon,
+          icon: 'CheckCircledIcon',
         };
       case 'error':
         return {
           colorClass: 'text-red-11',
           bgClass: 'bg-red-3',
-          icon: RadixIcons.CrossCircledIcon,
+          icon: 'CrossCircledIcon',
         };
       default:
         return {
           colorClass: 'text-blue-11',
           bgClass: 'bg-blue-3',
-          icon: RadixIcons.InfoCircledIcon,
+          icon: 'InfoCircledIcon',
         };
     }
   };
@@ -86,12 +87,12 @@ function AdminNotifications() {
           title={t('common.notifications', 'Notifications')}
           className='relative flex items-center justify-center w-9 h-9 rounded-full text-gray-500 cursor-pointer transition-colors bg-transparent hover:bg-gray-100 hover:text-gray-900 data-[state=open]:bg-gray-100 data-[state=open]:text-gray-900 outline-none border-none'
         >
-          <RadixIcons.BellIcon width={18} height={18} />
+          <Icon name='BellIcon' size={18} />
           {unreadCount > 0 && (
             <Flex
               align='center'
               justify='center'
-              className='absolute top-0 right-0 bg-red-500 text-white text-[9px] font-bold min-w-[14px] h-[14px] rounded-full px-0.5 border border-white'
+              className='absolute top-1 right-1 bg-red-500 text-white text-[9px] font-bold min-w-[14px] h-[14px] rounded-full px-0.5 border border-white'
             >
               {unreadCount > 9 ? '9+' : unreadCount}
             </Flex>
@@ -140,10 +141,7 @@ function AdminNotifications() {
                     typeStyle.colorClass,
                   )}
                 >
-                  {(() => {
-                    const NotificationIcon = typeStyle.icon;
-                    return <NotificationIcon width={16} height={16} />;
-                  })()}
+                  <Icon name={typeStyle.icon} size={16} />
                 </Flex>
                 <Flex direction='column' width='100%' overflow='hidden'>
                   <Flex justify='between' align='start'>
@@ -174,7 +172,8 @@ function AdminNotifications() {
         >
           <Button
             variant='ghost'
-            className='text-indigo-11 text-sm font-medium cursor-pointer no-underline hover:underline'
+            size='2'
+            className='text-indigo-11 font-medium cursor-pointer no-underline hover:underline'
           >
             {t('common.viewAll', 'View all notifications')}
           </Button>

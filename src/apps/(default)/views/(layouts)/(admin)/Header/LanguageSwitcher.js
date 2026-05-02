@@ -7,12 +7,12 @@
 
 import { useCallback, useMemo } from 'react';
 
-import { GlobeIcon, ChevronDownIcon, CheckIcon } from '@radix-ui/react-icons';
-import { Flex, Text, Button } from '@radix-ui/themes';
+import { Text } from '@radix-ui/themes';
 import clsx from 'clsx';
 import { useDispatch, useSelector } from 'react-redux';
 
 import ContextMenu from '@shared/renderer/components/ContextMenu';
+import Icon from '@shared/renderer/components/Icon';
 import { features } from '@shared/renderer/redux';
 
 const { getLocale, setLocale, getAvailableLocales } = features;
@@ -26,6 +26,14 @@ function AdminLanguageSwitcher() {
   const currentLocale = useSelector(getLocale);
   const availableLocales = useSelector(getAvailableLocales);
 
+  const handleLocaleChange = useCallback(
+    (locale, e) => {
+      e.preventDefault();
+      dispatch(setLocale(locale));
+    },
+    [dispatch],
+  );
+
   // Get current language name
   const currentLanguageName = useMemo(() => {
     return availableLocales[currentLocale] || currentLocale;
@@ -35,14 +43,6 @@ function AdminLanguageSwitcher() {
   const languageCode = useMemo(() => {
     return currentLocale.split('-')[0].toUpperCase();
   }, [currentLocale]);
-
-  const handleLocaleChange = useCallback(
-    (locale, e) => {
-      e.preventDefault();
-      dispatch(setLocale(locale));
-    },
-    [dispatch],
-  );
 
   // Memoize available locales
   const localeEntries = useMemo(
@@ -58,24 +58,24 @@ function AdminLanguageSwitcher() {
   return (
     <ContextMenu>
       <ContextMenu.Trigger asChild>
-        <Button
-          variant='ghost'
-          className='flex items-center gap-2 px-2 py-1 rounded-md text-gray-11 transition-colors hover:bg-gray-3 cursor-pointer'
+        <button
+          type='button'
+          title={currentLanguageName || languageCode}
+          className='flex items-center gap-2 px-3 h-9 rounded-full text-gray-500 bg-transparent outline-none border-none cursor-pointer transition-colors hover:bg-gray-100 hover:text-gray-900 data-[state=open]:bg-gray-100 data-[state=open]:text-gray-900'
         >
-          <Flex align='center' justify='center' width='20px' height='20px'>
-            <GlobeIcon width={18} height={18} />
-          </Flex>
-          <Text
-            size='3'
-            weight='medium'
-            display={{ initial: 'none', md: 'block' }}
-          >
+          <Icon name='GlobeIcon' size={18} />
+          <Text size='2' weight='medium' className='hidden sm:block'>
             {currentLanguageName || languageCode}
           </Text>
-          <Flex className='transition-transform duration-200 text-gray-9 data-[state=open]:rotate-180'>
-            <ChevronDownIcon width={12} height={12} />
-          </Flex>
-        </Button>
+          <Text size='2' weight='medium' className='block sm:hidden'>
+            {languageCode}
+          </Text>
+          <Icon
+            name='ChevronDownIcon'
+            size={16}
+            className='opacity-70 transition-transform data-[state=open]:rotate-180'
+          />
+        </button>
       </ContextMenu.Trigger>
 
       <ContextMenu.Menu
@@ -88,15 +88,13 @@ function AdminLanguageSwitcher() {
             onClick={e => handleLocaleChange(code, e)}
             className={clsx(
               'w-full flex items-center justify-between px-3 py-2 rounded-sm text-left cursor-pointer transition-colors text-gray-12 hover:bg-gray-3 focus:outline-none focus:bg-gray-3',
-              {
-                'bg-indigo-3 text-indigo-11 hover:bg-indigo-3 focus:bg-indigo-3':
-                  code === currentLocale,
-              },
+              code === currentLocale &&
+                'bg-indigo-3 text-indigo-11 hover:bg-indigo-3 focus:bg-indigo-3',
             )}
           >
-            <Text size='3'>{name}</Text>
+            <Text size='2'>{name}</Text>
             {code === currentLocale && (
-              <CheckIcon width={14} height={14} className='text-indigo-11' />
+              <Icon name='CheckIcon' size={14} className='text-indigo-11' />
             )}
           </ContextMenu.Item>
         ))}

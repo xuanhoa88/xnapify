@@ -51,9 +51,9 @@
       "pagination": {
         "prev": "‹ Prev",
         "next": "Next ›",
-        "info": "Page {{page}} of {{pages}}",
-        "page": "Page",
-        "pageSize": "{{size}} per page"
+        "info": "{{total}} total · Page {{current}} of {{pages}}",
+        "page": "{{size}} / page",
+        "pageSize": "{{pageSize}} / page"
       }
     },
     "toolbarPrompt": {
