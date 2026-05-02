@@ -102,20 +102,12 @@ addNamespace('shared', getTranslations(sharedContext));
 
 // Register the 'common' namespace — cross-cutting UI labels
 // (retry, cancel, delete, save, etc.)
-const commonContext = require.context(
-  './namespaces/common',
-  false,
-  /\.json$/i,
-);
+const commonContext = require.context('./namespaces/common', false, /\.json$/i);
 addNamespace('common', getTranslations(commonContext));
 
 // Register the 'admin' namespace — shared admin panel labels
 // (navigation, common admin UI, buttons, error messages)
-const adminContext = require.context(
-  './namespaces/admin',
-  false,
-  /\.json$/i,
-);
+const adminContext = require.context('./namespaces/admin', false, /\.json$/i);
 addNamespace('admin', getTranslations(adminContext));
 
 // =============================================================================
