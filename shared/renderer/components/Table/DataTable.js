@@ -312,14 +312,15 @@ function DataTableEmpty({ icon, title, description, children }) {
       align='center'
       direction='column'
       py='9'
+      px='4'
       className={s.emptyBlock}
     >
       {icon && <Box className={s.emptyIcon}>{icon}</Box>}
-      <Text size='3' weight='bold' mb='1'>
+      <Text size='3' weight='bold' mb='1' align='center'>
         {title || t('shared:components.dataTable.noData', 'No data found')}
       </Text>
       {description && (
-        <Text size='2' color='gray'>
+        <Text size='2' color='gray' align='center'>
           {description}
         </Text>
       )}
@@ -357,10 +358,10 @@ function DataTableError({ message, onRetry }) {
       className={s.errorBlock}
     >
       <ExclamationTriangleIcon width={32} height={32} color='var(--red-9)' />
-      <Text color='red' size='4' weight='bold' mb='2' mt='3'>
+      <Text color='red' size='4' weight='bold' mb='2' mt='3' align='center'>
         {t('shared:components.dataTable.error', 'Error loading data')}
       </Text>
-      <Text color='red' size='2' mb='4'>
+      <Text color='red' size='2' mb='4' align='center'>
         {message}
       </Text>
       {onRetry && (
