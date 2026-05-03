@@ -172,7 +172,7 @@ export default async function initializeRouter(context, extension) {
 
   // Append catch-all route for 404s
   router.routes.push({
-    path: '/*path',
+    path: '/:path*',
     action: context => router.resolve({ ...context, pathname: '/not-found' }),
   });
 

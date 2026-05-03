@@ -52,6 +52,16 @@ export async function defaultResolver(ctx, options) {
     // Passing (false, ctx.route) enforces the isDescendant check in the resolve loop.
     const childResult = await ctx.next(false, ctx.route);
     if (childResult != null) return childResult;
+
+    // If children were tried and none matched, check whether this route is only
+    // a prefix match (unconsumed path segments remain). In that case, do NOT
+    // fall through to the parent's own action — return undefined so the matcher
+    // continues to the next sibling (e.g. a catch-all like /*path).
+    const consumed = (ctx.baseUrl || '') + (ctx.path || '');
+    const full = ctx.pathname || '';
+    if (consumed !== full && full.length > consumed.length) {
+      return undefined;
+    }
   }
 
   const result = await ctx.route.action(ctx, options);
