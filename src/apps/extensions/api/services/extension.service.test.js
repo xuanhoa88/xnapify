@@ -134,6 +134,7 @@ describe('Extension Service', () => {
     it('should list extensions from DB and FS', async () => {
       // Mock FS via imported mocked module
       // Mock FS via fs.promises.readdir used in service for sequential calls
+      fs.promises.readdir.mockResolvedValue([]);
       // 1st call: Installed extensions (remote)
       fs.promises.readdir.mockResolvedValueOnce([
         { name: 'fs-extension', isDirectory: () => true },
