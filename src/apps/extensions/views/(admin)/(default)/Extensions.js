@@ -601,7 +601,7 @@ function Extensions() {
           )
         }
         onConfirm={handleActivateAction}
-        confirmLabel={t('admin:common.activate', 'Activate')}
+        confirmLabel={t('admin:common.activateBtn', 'Activate')}
       />
 
       {/* Deactivate confirmation */}
@@ -616,7 +616,7 @@ function Extensions() {
           )
         }
         onConfirm={handleDeactivateAction}
-        confirmLabel={t('admin:common.deactivate', 'Deactivate')}
+        confirmLabel={t('admin:common.deactivateBtn', 'Deactivate')}
       />
 
       {/* Install confirmation */}
