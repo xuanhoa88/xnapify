@@ -53,3 +53,49 @@ Instead of storing configurations inside monolithic `flows.json`, this module pl
 - **Execution (Split Mode)**: Triggered post-deployment. The script analyzes the raw JSON array configuration grouping nodes into `tabs`, `subflows`, and `config-nodes`. It stores separated JSON arrays natively into `~/.xnapify/node-red/src/`. It auto-deletes the monolithic `flows.json`.
 - **Execution (Rebuild Mode)**: Triggered on boot if `flows.json` does NOT exist or the runtime passes an empty flow array. It reads the files in `~/.xnapify/node-red/src/`, merges them, constructs a temporary `flows.json`, and orders `RED.nodes.loadFlows()` to parse them immediately.
 - **Migration Engine**: `saveMigration` automatically maps the `/src/` state into a `YYYY.MM.DDThh.mm.ss` timestamped backup under the `migrations/` directory to prevent layout loss during git swaps.
+
+## Extension Hot-Loading
+
+Extensions can provide custom Node-RED nodes via `api/nodes/` directories. These nodes are dynamically injected into the running Node-RED runtime using the same registry APIs as the built-in Palette Manager — **zero restart, zero downtime**.
+
+### Boot-Time Discovery
+
+During settings creation (`writeCustomNodes`), all active extensions are scanned for `api/nodes/` directories. Each extension's node files are:
+
+1. Loaded via `moduleRequire` to extract `getNodeJS()` and `getNodeHTML()`
+2. Written to `<userDir>/ext-modules/xnapify-ext-<id>/` as plain `.js` and `.html` files
+3. Bundled with a `package.json` containing a `"node-red": { "nodes": {...} }` stanza
+
+Node-RED's `scanTreeForNodesModules` discovers these modules automatically since `ext-modules/` is included in the `nodesDir` array.
+
+### Runtime Hot-Loading
+
+After boot, when an extension is toggled:
+
+- **`extension:loaded`** → `_onExtensionLoaded()` → `writeExtensionNodeModule()` → `registry.addModule(name)` → node live in palette
+- **`extension:unloaded`** → `_onExtensionUnloaded()` → `registry.removeModule(name)` → `removeExtensionNodeModule()` → node removed
+
+Connected Node-RED editors receive WebSocket notifications (`runtime-event: node/added` or `node/removed`) so palettes update automatically without manual browser refresh.
+
+### Concurrency Safety
+
+Operations for the same extension are serialized via `_enqueueExtOp()` to prevent race conditions when an admin rapidly toggles an extension. Different extensions can be loaded/unloaded in parallel.
+
+### Extension Developer Contract
+
+Extensions providing Node-RED nodes must:
+
+1. Create `api/nodes/*.js` files in the extension directory
+2. Export `getNodeJS()` returning a **CommonJS module string**: `module.exports = function(RED) { ... }`
+3. Export `getNodeHTML()` returning HTML with `<script data-template-name="...">` and `<script data-help-name="...">` sections
+4. Register node types via `RED.nodes.registerType("type-name", Constructor)` in the JS string
+
+### Dynamic Settings Integration
+
+Node-RED settings are resolved from the database-backed settings service (`nodered` namespace) at initialization, with environment variable fallbacks:
+
+| DB Key | Env Variable | Maps To |
+|---|---|---|
+| `HOME` | `XNAPIFY_NODERED_HOME` | `userDir` |
+| `LOG_LEVEL` | `XNAPIFY_NODERED_LOG_LEVEL` | `logLevel` |
+| `PROJECTS` | `XNAPIFY_NODERED_PROJECTS` | `enableProjects` |

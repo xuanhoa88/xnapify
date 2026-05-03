@@ -6,6 +6,7 @@
  */
 
 /* eslint-disable no-underscore-dangle */
+import path from 'path';
 
 import { getTokenFromCookie, getRefreshTokenFromCookie } from '@shared/cookies';
 import { createWebpackContextAdapter } from '@shared/utils/contextAdapter';
@@ -15,6 +16,8 @@ import initFlowSplitter from './flowSplitter';
 import {
   createProductionSettings,
   createDevelopmentSettings,
+  writeExtensionNodeModule,
+  removeExtensionNodeModule,
 } from './settings';
 
 // Bundle all migration JSON files at build time
@@ -137,6 +140,18 @@ export class NodeRedManager {
     this._util = null;
     this._runtime = null;
     this._editorApi = null;
+    this._app = null;
+    this._configOptions = null;
+    this._extLoadedHandler = null;
+    this._extUnloadedHandler = null;
+    this._readyForExtEvents = false;
+    this._routesMounted = false;
+    // Tracks which extensions have been hot-loaded as NR modules
+    // Map<extensionId, { moduleName, manifest }>
+    this._extModuleMap = new Map();
+    // Per-extension operation queue to prevent concurrent toggle races
+    // Map<extensionId, Promise>
+    this._extOpQueue = new Map();
   }
 
   /**
@@ -321,6 +336,188 @@ export class NodeRedManager {
   }
 
   /**
+   * Restart Node-RED (shutdown, re-initialize, and start)
+   * This allows dynamic reloading of nodes and flows without restarting the Node server.
+   */
+  async restart() {
+    Logger.restart('Restarting Node-RED...');
+
+    // Capture refs BEFORE shutdown nullifies _server
+    const app = this._app;
+    const server = this._server;
+    const config = this._configOptions;
+
+    if (this._isInitializedOrRunning()) {
+      await this.shutdown();
+    }
+    if (app && server && config) {
+      await this.init(app, server, config);
+      await this.start();
+    } else {
+      Logger.error('Cannot restart: missing initialization arguments');
+    }
+  }
+
+  /**
+   * Enqueue a per-extension operation to prevent concurrent toggle races.
+   * Operations for the same extension are serialized; different extensions
+   * can run in parallel.
+   *
+   * @param {string} extId - Extension ID
+   * @param {Function} fn - Async operation to execute
+   * @returns {Promise<void>}
+   * @private
+   */
+  _enqueueExtOp(extId, fn) {
+    const prev = this._extOpQueue.get(extId) || Promise.resolve();
+    const next = prev.then(fn, fn); // run regardless of prior result
+    this._extOpQueue.set(extId, next);
+    // Auto-cleanup when the chain settles
+    next.finally(() => {
+      if (this._extOpQueue.get(extId) === next) {
+        this._extOpQueue.delete(extId);
+      }
+    });
+    return next;
+  }
+
+  /**
+   * Hot-load an extension's nodes into the running Node-RED runtime.
+   * Uses the same mechanism as the Palette Manager — no restart needed.
+   * Operations are serialized per-extension to prevent race conditions.
+   *
+   * @param {{ id: string, manifest: object }} payload
+   * @private
+   */
+  async _onExtensionLoaded({ id, manifest }) {
+    if (!this._readyForExtEvents || !manifest || !manifest.name) return;
+
+    return this._enqueueExtOp(id, async () => {
+      try {
+        const container =
+          typeof this._app.get === 'function'
+            ? this._app.get('container')
+            : null;
+        const extensionManager = container
+          ? container.resolve('extension')
+          : null;
+        if (!extensionManager) return;
+
+        // Resolve the extension's physical directory using the canonical
+        // async resolver from ServerExtensionManager (single source of truth)
+        const { dir: extDir } = await extensionManager.resolveExtensionDir(
+          manifest.name,
+        );
+        if (!extDir) return;
+
+        const extNodesDir = path.join(extDir, 'api', 'nodes');
+        const { userDir } = this._settings;
+
+        // Write node files as a proper NR module (with package.json).
+        // Use `id` (the extension registry key) consistently for module naming.
+        const result = writeExtensionNodeModule(userDir, id, extNodesDir);
+        if (!result) return; // No nodes in this extension
+
+        const { moduleName } = result;
+
+        // Hot-load into the running registry using the same API as Palette Manager
+        const registry = (await import('@node-red/registry')).default;
+
+        // Check if already loaded (e.g. from boot)
+        const existing = registry.getModuleInfo(moduleName);
+        if (existing) {
+          Logger.info(
+            `Extension module "${moduleName}" already loaded (from boot)`,
+          );
+        } else {
+          await registry.addModule(moduleName);
+          Logger.success(
+            `Hot-loaded extension module "${moduleName}" into Node-RED`,
+          );
+
+          // Notify connected editors via WebSocket so palettes update live
+          try {
+            const { events } = (await import('@node-red/runtime')).default;
+            if (events) {
+              const moduleInfo = registry.getModuleInfo(moduleName);
+              events.emit('runtime-event', {
+                id: 'node/added',
+                retain: false,
+                payload: moduleInfo ? moduleInfo.nodes : [],
+              });
+            }
+          } catch {
+            // Editor notification is best-effort
+          }
+        }
+
+        // Track for cleanup on unload
+        this._extModuleMap.set(id, { moduleName, manifest });
+      } catch (err) {
+        Logger.error(
+          `Failed to hot-load extension "${id}" into Node-RED:`,
+          err.message || err,
+        );
+      }
+    });
+  }
+
+  /**
+   * Hot-unload an extension's nodes from the running Node-RED runtime.
+   * Uses registry.removeModule — same as Palette Manager uninstall.
+   * Operations are serialized per-extension to prevent race conditions.
+   *
+   * @param {{ id: string }} payload
+   * @private
+   */
+  async _onExtensionUnloaded({ id }) {
+    if (!this._readyForExtEvents) return;
+
+    const tracked = this._extModuleMap.get(id);
+    if (!tracked) return; // Extension had no nodes
+
+    return this._enqueueExtOp(id, async () => {
+      const { moduleName } = tracked;
+
+      try {
+        // Remove from NR registry (clears node types, constructors, configs)
+        const registry = (await import('@node-red/registry')).default;
+        const moduleInfo = registry.getModuleInfo(moduleName);
+        if (moduleInfo) {
+          // Notify connected editors before removal
+          try {
+            const { events } = (await import('@node-red/runtime')).default;
+            if (events) {
+              events.emit('runtime-event', {
+                id: 'node/removed',
+                retain: false,
+                payload: moduleInfo.nodes || [],
+              });
+            }
+          } catch {
+            // Editor notification is best-effort
+          }
+
+          registry.removeModule(moduleName);
+          Logger.success(
+            `Hot-unloaded extension module "${moduleName}" from Node-RED`,
+          );
+        }
+
+        // Remove files from disk — use `id` consistently
+        removeExtensionNodeModule(this._settings.userDir, id);
+
+        this._extModuleMap.delete(id);
+      } catch (err) {
+        Logger.error(
+          `Failed to hot-unload extension "${id}" from Node-RED:`,
+          err.message || err,
+        );
+      }
+    });
+  }
+
+  /**
    * Setup API proxy middleware
    */
   setupApiProxy(app, routePrefix) {
@@ -374,6 +571,8 @@ export class NodeRedManager {
    */
   async _performInit(app, server, config) {
     this._state = LifecycleState.INITIALIZING;
+    this._app = app;
+    this._configOptions = config;
 
     try {
       this._validateInitArgs(app, server, config);
@@ -416,10 +615,35 @@ export class NodeRedManager {
       // Small delay to ensure cache flush completes
       await new Promise(resolve => setImmediate(resolve));
 
+      // Fetch user-defined Node-RED settings from the database (settings service)
+      const container =
+        typeof app.get === 'function' ? app.get('container') : null;
+      const settingsSvc = container ? container.resolve('settings') : null;
+      const dynamicConfig = {};
+
+      if (settingsSvc) {
+        try {
+          const userDir = await settingsSvc.get('nodered', 'HOME');
+          if (userDir) dynamicConfig.userDir = userDir;
+
+          const logLevel = await settingsSvc.get('nodered', 'LOG_LEVEL');
+          if (logLevel) dynamicConfig.logLevel = logLevel;
+
+          const enableProjects = await settingsSvc.get('nodered', 'PROJECTS');
+          if (enableProjects != null) {
+            dynamicConfig.enableProjects = enableProjects;
+          }
+        } catch (err) {
+          Logger.warn('Failed to resolve dynamic Node-RED settings:', err);
+        }
+      }
+
+      const mergedConfig = { ...config, ...dynamicConfig, app };
+
       // Create settings with app instance for authentication
       this._settings = __DEV__
-        ? createDevelopmentSettings({ ...config, app })
-        : createProductionSettings({ ...config, app });
+        ? createDevelopmentSettings(mergedConfig)
+        : createProductionSettings(mergedConfig);
 
       // Dynamic import for util
       this._util = (await import('@node-red/util')).default;
@@ -437,6 +661,21 @@ export class NodeRedManager {
       // Transition to initialized
       this._state = LifecycleState.INITIALIZED;
       Logger.success('Initialized');
+
+      // Hook into extension manager for hot-loading extension nodes.
+      // Uses addModule/removeModule from @node-red/registry — same API
+      // as the Palette Manager. No restart needed.
+      const extensionManager = container
+        ? container.resolve('extension')
+        : null;
+      if (extensionManager && !this._extLoadedHandler) {
+        this._extLoadedHandler = payload => this._onExtensionLoaded(payload);
+        this._extUnloadedHandler = payload =>
+          this._onExtensionUnloaded(payload);
+
+        extensionManager.on('extension:loaded', this._extLoadedHandler);
+        extensionManager.on('extension:unloaded', this._extUnloadedHandler);
+      }
 
       // Auto-start if configured OR server is already listening
       if (server.listening) {
@@ -538,10 +777,30 @@ export class NodeRedManager {
   }
 
   /**
-   * Mount Node-RED routes to Express app
+   * Mount Node-RED routes to Express app.
+   *
+   * Uses a proxy/delegation pattern so that routes are mounted ONCE
+   * but delegate to the current `_editorApi` / `_runtime` instances.
+   * This prevents stacking duplicate middleware on every restart().
    * @private
    */
   _mountRoutes(app) {
+    // Only mount Express middleware once — subsequent restarts
+    // swap the internal _editorApi/_runtime refs which the closures
+    // already reference via `this`.
+    if (this._routesMounted) {
+      // Re-link admin APIs for the new runtime/editor instances
+      if (
+        this._editorApi &&
+        this._editorApi.httpAdmin &&
+        this._runtime &&
+        this._runtime.httpAdmin
+      ) {
+        this._editorApi.httpAdmin.use(this._runtime.httpAdmin);
+      }
+      return;
+    }
+
     try {
       // Cookie-guard: ensure main app session is still valid.
       // When the main app's JWT cookie is cleared (user logged out
@@ -579,13 +838,11 @@ export class NodeRedManager {
         return next();
       });
 
-      // Serve Node-RED admin and runtime with error boundaries.
-      // Node-RED's internal registry can throw when nodeList contains
-      // undefined entries (bug in @node-red/registry/lib/loader.js where
-      // loadNodeConfig failures are swallowed). Without this guard the
-      // unhandled rejection terminates the dev server.
+      // Serve Node-RED admin — delegates to current _editorApi via `this`.
+      // The closure captures `this` (the NodeRedManager), not the
+      // _editorApi instance, so it survives restarts.
       app.use(this._settings.httpAdminRoot, (req, res, next) => {
-        // During HMR transitions _editorApi is null
+        // During restarts _editorApi is null
         if (!this._editorApi) {
           if (!res.headersSent) {
             res.status(503).json({ error: 'Node-RED restarting' });
@@ -610,12 +867,24 @@ export class NodeRedManager {
           }
         }
       });
-      app.use(this._settings.httpNodeRoot, this._runtime.httpNode);
+
+      // Serve Node-RED HTTP node endpoints — delegates to current _runtime.
+      app.use(this._settings.httpNodeRoot, (req, res, next) => {
+        if (!this._runtime || !this._runtime.httpNode) {
+          if (!res.headersSent) {
+            res.status(503).json({ error: 'Node-RED restarting' });
+          }
+          return;
+        }
+        this._runtime.httpNode(req, res, next);
+      });
 
       // Link admin APIs
       if (this._editorApi.httpAdmin && this._runtime.httpAdmin) {
         this._editorApi.httpAdmin.use(this._runtime.httpAdmin);
       }
+
+      this._routesMounted = true;
     } catch (error) {
       throw new NodeRedError('Route mounting failed', 'MOUNT_FAILED', error);
     }
@@ -645,6 +914,7 @@ export class NodeRedManager {
       await this._sanitizeRegistry();
 
       this._state = LifecycleState.RUNNING;
+      this._readyForExtEvents = true;
       Logger.success('Ready');
     } catch (error) {
       this._state = LifecycleState.ERROR;
@@ -664,6 +934,11 @@ export class NodeRedManager {
     // The runtime's EventEmitter will be orphaned after require.cache invalidation,
     // so we must sever this link now while we still have a reference to it.
     this._cleanupFlowSplitter(errors);
+
+    // NOTE: Extension manager listeners are NOT removed during shutdown.
+    // They are idempotent (gated by _readyForExtEvents) and must survive
+    // across restart() cycles. They are only created once in the constructor
+    // lifetime and cleaned up in destroy() if needed.
 
     // Stop runtime and editor with proper sequencing
     try {
@@ -713,6 +988,7 @@ export class NodeRedManager {
     this._serverListeners = [];
     this._flowSplitterHandler = null;
     this._settings = null;
+    this._readyForExtEvents = false;
     this._util = null;
     this._runtime = null;
     this._editorApi = null;

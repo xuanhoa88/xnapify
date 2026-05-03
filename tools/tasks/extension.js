@@ -180,17 +180,32 @@ async function generateManifests(extensions) {
 }
 
 // ---------------------------------------------------------------------------
-// Static Assets
+// Static Assets & Node-RED Nodes
 // ---------------------------------------------------------------------------
 
 async function copyStaticAssets(extensions) {
   for (const { name, dirName, path: extensionPath } of extensions) {
-    const source = path.join(extensionPath, 'assets');
-    const target = path.join(EXTENSIONS_BUILD_DIR, dirName, 'assets');
+    // 1. Copy public assets/
+    const assetSource = path.join(extensionPath, 'assets');
+    const assetTarget = path.join(EXTENSIONS_BUILD_DIR, dirName, 'assets');
 
-    if (await pathExists(source)) {
-      await copyDir(source, target);
+    if (await pathExists(assetSource)) {
+      await copyDir(assetSource, assetTarget);
       logInfo(`📁 Copied static assets for ${name}`);
+    }
+
+    // 2. Copy Node-RED custom nodes (api/nodes/)
+    const nodesSource = path.join(extensionPath, 'api', 'nodes');
+    const nodesTarget = path.join(
+      EXTENSIONS_BUILD_DIR,
+      dirName,
+      'api',
+      'nodes',
+    );
+
+    if (await pathExists(nodesSource)) {
+      await copyDir(nodesSource, nodesTarget);
+      logInfo(`🔴 Copied Node-RED nodes for ${name}`);
     }
   }
 }

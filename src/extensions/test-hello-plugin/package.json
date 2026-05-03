@@ -1,0 +1,6 @@
+{
+  "name": "@xnapify-extension/test-hello-plugin",
+  "version": "1.0.0",
+  "main": "api/index.js",
+  "description": "Node-RED nodes for xnapify extension"
+}

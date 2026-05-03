@@ -173,7 +173,7 @@ const DEFAULT_SETTINGS = [
   // ── Node-RED ─────────────────────────────────────────────────────────────
   {
     namespace: 'nodered',
-    key: 'NODERED_HOME',
+    key: 'HOME',
     type: 'string',
     value: null,
     default_env_var: 'XNAPIFY_NODERED_HOME',
@@ -182,7 +182,7 @@ const DEFAULT_SETTINGS = [
   },
   {
     namespace: 'nodered',
-    key: 'NODERED_LOG_LEVEL',
+    key: 'LOG_LEVEL',
     type: 'string',
     value: 'info',
     default_env_var: 'XNAPIFY_NODERED_LOG_LEVEL',
@@ -190,7 +190,7 @@ const DEFAULT_SETTINGS = [
   },
   {
     namespace: 'nodered',
-    key: 'NODERED_PROJECTS',
+    key: 'PROJECTS',
     type: 'boolean',
     value: 'false',
     default_env_var: 'XNAPIFY_NODERED_PROJECTS',

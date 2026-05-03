@@ -1115,6 +1115,99 @@ See `src/extensions/posts-module/` for a complete working module-type extension 
 
 ---
 
+## Node-RED Extension Nodes
+
+Extensions can provide custom Node-RED nodes that are **hot-loaded into the palette without restarting** the Node-RED runtime. This is useful for extensions that need to expose custom processing logic within the Node-RED visual editor.
+
+### Structure
+
+```
+src/extensions/{extension-name}/
+├── package.json
+├── api/
+│   ├── index.js
+│   └── nodes/
+│       └── {node-type}.js   # Exports getNodeJS() + getNodeHTML()
+```
+
+### Node File Contract
+
+Each file in `api/nodes/` must export two functions:
+
+```javascript
+// src/extensions/{extension-name}/api/nodes/{node-type}.js
+
+export function getNodeJS() {
+  // MUST return a CommonJS module STRING (not a function!)
+  return `module.exports = function(RED) {
+    function MyNode(config) {
+      RED.nodes.createNode(this, config);
+      const node = this;
+
+      node.on('input', function(msg, send, done) {
+        // Access xnapify DI container via global context
+        const globalContext = node.context().global;
+        const container = globalContext.get('container');
+        const models = container().resolve('models');
+
+        msg.payload = "Processed by extension node";
+        send(msg);
+        if (done) done();
+      });
+    }
+
+    RED.nodes.registerType("{node-type}", MyNode);
+  };`;
+}
+
+export function getNodeHTML() {
+  return `
+    <script type="text/javascript">
+      RED.nodes.registerType('{node-type}', {
+        category: 'xnapify',
+        color: '#a6bbcf',
+        defaults: { name: { value: "" } },
+        inputs: 1,
+        outputs: 1,
+        icon: "font-awesome/fa-cog",
+        label: function() { return this.name || "{node-type}"; }
+      });
+    </script>
+    <script type="text/html" data-template-name="{node-type}">
+      <div class="form-row">
+        <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
+        <input type="text" id="node-input-name" placeholder="Name">
+      </div>
+    </script>
+    <script type="text/html" data-help-name="{node-type}">
+      <p>Description of what this node does.</p>
+    </script>
+  `;
+}
+```
+
+### How It Works
+
+1. At boot, active extensions' `api/nodes/` directories are scanned and written to `<userDir>/node_modules/`
+2. After boot, toggling an extension triggers `registry.addModule()` / `registry.removeModule()` — the same API as Node-RED's Palette Manager
+3. Connected editors receive WebSocket notifications so the palette updates automatically
+4. Operations per extension are serialized to prevent race conditions during rapid toggles
+
+### Key Rules
+
+- `getNodeJS()` must return a **string** (CommonJS format), NOT a function
+- `getNodeHTML()` must return an HTML string with `data-template-name` and `data-help-name` script tags
+- The `type` in `registerType()` must match the `data-template-name` and `data-help-name` values
+- Use the `xnapify` category for consistency in the palette
+- Access the DI container via `node.context().global.get('container')`
+- Extensions that only provide Node-RED nodes do not need `"browser"` in `package.json`
+
+### Example
+
+See `src/extensions/test-hello-plugin/` for a working reference implementation.
+
+---
+
 ## See Also
 
 - `/add-module` — Full-stack module (when you need a core app, not an extension)

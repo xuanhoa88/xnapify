@@ -60,19 +60,185 @@ function ensureDir(dirPath) {
 }
 
 /**
+ * Get the extension modules directory path.
+ * Extension nodes are written here as proper Node-RED modules (with package.json)
+ * so they can be hot-loaded at runtime via the registry's addModule/removeModule API.
+ *
+ * @param {string} userDir - Node-RED user directory
+ * @returns {string} Absolute path to the ext-modules directory
+ */
+export function getExtModulesDir(userDir) {
+  return path.join(userDir, 'node_modules');
+}
+
+/**
+ * Resolve an extension's physical directory on disk by checking known paths.
+ * Used internally by writeCustomNodes during boot (synchronous context).
+ * For hot-load paths, use extensionManager.resolveExtensionDir() instead.
+ *
+ * @param {object} extensionManager - The server ExtensionManager instance
+ * @param {string} extensionName - Extension name (e.g. '@xnapify-extension/foo')
+ * @returns {string|null} Absolute path or null
+ */
+function resolveExtensionDirSync(extensionManager, extensionName) {
+  const searchDirs = [];
+  const installedDir = extensionManager.getInstalledExtensionsDir();
+  if (installedDir) searchDirs.push(installedDir);
+  const devDir = extensionManager.getDevExtensionsDir();
+  if (devDir) searchDirs.push(devDir);
+
+  // Fallback: build/extensions/
+  const fallbackDir = path.resolve(process.cwd(), 'build', 'extensions');
+  if (fs.existsSync(fallbackDir)) searchDirs.push(fallbackDir);
+
+  for (const baseDir of searchDirs) {
+    const candidate = path.join(baseDir, extensionName);
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return null;
+}
+
+/**
+ * Write an extension's nodes as a proper Node-RED module.
+ *
+ * Creates a directory with package.json + .js/.html files so that
+ * Node-RED's registry can discover and hot-load them via addModule().
+ *
+ * @param {string} userDir - Node-RED user directory
+ * @param {string} moduleId - Unique module name (e.g. 'xnapify-ext-abc123')
+ * @param {string} extNodesDir - Path to the extension's api/nodes/ directory
+ * @returns {{ moduleName: string, nodeNames: string[] } | null}
+ */
+export function writeExtensionNodeModule(userDir, moduleId, extNodesDir) {
+  if (!fs.existsSync(extNodesDir)) return null;
+
+  const files = fs
+    .readdirSync(extNodesDir)
+    .filter(f => /\.[cm]?[jt]s$/i.test(f));
+  if (files.length === 0) return null;
+
+  const moduleName = `xnapify-ext-${moduleId}`;
+  const moduleDir = path.join(getExtModulesDir(userDir), moduleName);
+
+  // Wipe and recreate to ensure clean state
+  if (fs.existsSync(moduleDir)) {
+    fs.rmSync(moduleDir, { recursive: true, force: true });
+  }
+  fs.mkdirSync(moduleDir, { recursive: true });
+
+  const nodeEntries = {};
+  const nodeNames = [];
+  const nativeReq = moduleRequire;
+
+  files.forEach(file => {
+    const baseName = path.basename(file).replace(/\.[cm]?[jt]s$/i, '');
+    try {
+      const modPath = path.join(extNodesDir, file);
+
+      // Clear require cache to pick up changes
+      try {
+        const resolved = nativeReq.resolve(modPath);
+        delete nativeReq.cache[resolved];
+      } catch {
+        // not cached yet
+      }
+
+      const mod = nativeReq(modPath);
+      const getJS = mod.getNodeJS || (mod.default && mod.default.getNodeJS);
+      const getHTML =
+        mod.getNodeHTML || (mod.default && mod.default.getNodeHTML);
+
+      if (typeof getJS !== 'function' || typeof getHTML !== 'function') {
+        console.warn(
+          `⚠️  [Node-RED Settings] Skipping ext node "${baseName}" — missing getNodeJS() or getNodeHTML()`,
+        );
+        return;
+      }
+
+      const jsFile = `${baseName}.js`;
+      fs.writeFileSync(path.join(moduleDir, jsFile), getJS(), 'utf8');
+      fs.writeFileSync(
+        path.join(moduleDir, `${baseName}.html`),
+        getHTML(),
+        'utf8',
+      );
+
+      nodeEntries[baseName] = jsFile;
+      nodeNames.push(baseName);
+
+      console.log(
+        `📦 [Node-RED Settings] Extension node "${moduleName}/${baseName}" written`,
+      );
+    } catch (err) {
+      console.warn(
+        `⚠️  [Node-RED Settings] Failed to write ext node "${baseName}":`,
+        err.message,
+      );
+    }
+  });
+
+  if (Object.keys(nodeEntries).length === 0) {
+    // No valid nodes — clean up
+    fs.rmSync(moduleDir, { recursive: true, force: true });
+    return null;
+  }
+
+  // Write package.json with "node-red" section so the registry can discover it
+  const pkg = {
+    name: moduleName,
+    version: '1.0.0',
+    description: `Node-RED nodes from xnapify extension ${moduleId}`,
+    'node-red': {
+      nodes: nodeEntries,
+    },
+  };
+  fs.writeFileSync(
+    path.join(moduleDir, 'package.json'),
+    JSON.stringify(pkg, null, 2),
+    'utf8',
+  );
+
+  return { moduleName, nodeNames };
+}
+
+/**
+ * Remove an extension's Node-RED module from disk.
+ *
+ * @param {string} userDir - Node-RED user directory
+ * @param {string} moduleId - Extension module ID
+ */
+export function removeExtensionNodeModule(userDir, moduleId) {
+  const moduleName = `xnapify-ext-${moduleId}`;
+  const moduleDir = path.join(getExtModulesDir(userDir), moduleName);
+  if (fs.existsSync(moduleDir)) {
+    fs.rmSync(moduleDir, { recursive: true, force: true });
+    console.log(
+      `🗑️  [Node-RED Settings] Removed extension module "${moduleName}"`,
+    );
+  }
+}
+
+/**
  * Write custom Node-RED nodes to userDir so they can be loaded from disk.
  * Node-RED requires real files on the filesystem (it cannot load from a webpack bundle).
  *
- * Auto-discovers all modules in ./nodes/ that export getNodeJS() and getNodeHTML().
- * Each module's basename becomes the filename written to <userDir>/nodes/xnapify/.
+ * Handles ONLY core xnapify nodes (from ./nodes/ webpack context).
+ * Extension nodes are handled separately via writeExtensionNodeModule()
+ * and hot-loaded at runtime using the registry's addModule() API.
  *
  * @param {string} userDir - Node-RED user directory
- * @returns {string} Path to the nodes directory
+ * @param {object} [app] - Express app instance
+ * @returns {string[]} Array of nodesDir paths for Node-RED settings
  */
-function writeCustomNodes(userDir) {
+function writeCustomNodes(userDir, app) {
   const nodesDir = path.join(userDir, 'nodes');
   const xnapifyDir = path.join(nodesDir, 'xnapify');
-  ensureDir(xnapifyDir);
+
+  // Wipe and recreate the xnapify core nodes directory
+  if (fs.existsSync(xnapifyDir)) {
+    fs.rmSync(xnapifyDir, { recursive: true, force: true });
+  }
+  fs.mkdirSync(xnapifyDir, { recursive: true });
 
   // Create adapter for nodes context
   const nodesAdapter = createWebpackContextAdapter(nodesContexts);
@@ -122,7 +288,44 @@ function writeCustomNodes(userDir) {
     }
   });
 
-  return nodesDir;
+  // Write extension node modules for all currently active extensions.
+  // During boot, these will be auto-discovered by NR's scanTreeForNodesModules
+  // via the extModulesDir entry in nodesDir. After boot, new extensions
+  // use the hot-load path (addModule) in NodeRedManager.
+  const extModDir = getExtModulesDir(userDir);
+  ensureDir(extModDir);
+
+  if (app) {
+    const container =
+      typeof app.get === 'function' ? app.get('container') : null;
+    const extensionManager = container ? container.resolve('extension') : null;
+
+    if (extensionManager) {
+      try {
+        const activeExtensions = extensionManager.getAllExtensionMetadata();
+        activeExtensions.forEach(metadata => {
+          const { id: extId, manifest } = metadata;
+          if (!extId || !manifest || !manifest.name) return;
+          const extDir = resolveExtensionDirSync(
+            extensionManager,
+            manifest.name,
+          );
+          if (!extDir) return;
+          const extNodesDir = path.join(extDir, 'api', 'nodes');
+          // Use extId (registry key) — same key used by hot-load path
+          writeExtensionNodeModule(userDir, extId, extNodesDir);
+        });
+      } catch (err) {
+        console.warn(
+          `⚠️  [Node-RED Settings] Failed to scan extension nodes:`,
+          err.message,
+        );
+      }
+    }
+  }
+
+  // Return ONLY core nodesDir. Node-RED automatically discovers node_modules/
+  return [nodesDir];
 }
 
 /**
@@ -381,7 +584,11 @@ export default function createSettings(options = {}) {
     debugUseColors: true,
 
     // Custom nodes — write to userDir so Node-RED can load from disk
-    nodesDir: writeCustomNodes(userDir),
+    nodesDir: writeCustomNodes(userDir, app),
+
+    // Extension modules directory — used by NodeRedManager to resolve
+    // the ext-modules path for hot-loading after boot.
+    _extModulesDir: getExtModulesDir(userDir),
 
     // Palette settings
     editorTheme: (() => {

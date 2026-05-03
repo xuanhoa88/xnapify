@@ -15,6 +15,7 @@
     "email": "Email",
     "file": "Lưu trữ tệp",
     "webhook": "Webhook",
-    "optimization": "Tối ưu hóa"
+    "optimization": "Tối ưu hóa",
+    "nodered": "Node-RED"
   }
 }

@@ -100,6 +100,17 @@ Extensions follow a well-defined phase-sequential lifecycle. Each phase runs for
    - Backend: `registry.registerHook('ipc:${__EXTENSION_ID__}:action', registry.createPipeline(...middlewares, handler), __EXTENSION_ID__)`
    - Frontend: `context.fetch('/api/extensions/${__EXTENSION_ID__}/ipc', { method: 'POST', body: { action, data } })`
 
+5. **Node-RED Nodes (`api/nodes/`):**
+   Extensions can provide custom Node-RED palette nodes that are **hot-loaded without restarting** the runtime.
+   - Create files in `api/nodes/` that export `getNodeJS()` and `getNodeHTML()`
+   - `getNodeJS()` must return a **CommonJS module string** (`module.exports = function(RED) { ... }`) — NOT a function
+   - `getNodeHTML()` must return HTML with `<script data-template-name>` and `<script data-help-name>` sections
+   - At boot, active extensions' nodes are auto-discovered and written to `<userDir>/node_modules/`
+   - After boot, toggling the extension triggers `registry.addModule()` / `registry.removeModule()` — same API as Node-RED's Palette Manager
+   - Connected editors receive WebSocket notifications (`node/added`, `node/removed`) so palettes update automatically
+   - Access the xnapify DI container inside nodes via `node.context().global.get('container')`
+   - Extensions that only provide Node-RED nodes do NOT need `"browser"` in `package.json`
+   - Reference: `src/extensions/test-hello-plugin/` for a working example
 ## Router Connection (Plug & Play)
 
 Extension API and view routes are connected symmetrically:

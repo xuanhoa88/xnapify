@@ -15,6 +15,7 @@
     "email": "Email",
     "file": "File Storage",
     "webhook": "Webhook",
-    "optimization": "Optimization"
+    "optimization": "Optimization",
+    "nodered": "Node-RED"
   }
 }

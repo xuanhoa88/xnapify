@@ -8,6 +8,7 @@
  */
 
 const fs = require('fs');
+const path = require('path');
 
 const { format: prettierFormatter } = require('prettier');
 
@@ -133,7 +134,7 @@ async function main() {
     const targetArg = process.argv[2];
     const targetDirs = targetArg
       ? [targetArg]
-      : [config.APP_DIR, require('path').resolve(config.CWD, 'shared')];
+      : [config.APP_DIR, path.resolve(config.CWD, 'shared')];
 
     // Check if it's a --check mode (no modifications)
     const checkOnly = process.argv.includes('--check');

@@ -100,6 +100,79 @@ Instead of generating one massive `flows.json`, you will see:
 
 If you delete `flows.json` and start the server, the flow splitter will read these segmented files and dynamically rebuild the monolithic configuration needed by Node-RED internally.
 
+### Extension Node-RED Nodes (Hot-Loading)
+
+Extensions can provide custom Node-RED nodes that are **hot-loaded into the palette without restarting** the runtime. This uses the same mechanism as Node-RED's built-in Palette Manager (`registry.addModule` / `registry.removeModule`).
+
+To add Node-RED nodes to an extension, create files in `api/nodes/` that export `getNodeJS()` and `getNodeHTML()`:
+
+```
+src/extensions/my-extension/
+├── package.json
+├── api/
+│   ├── index.js
+│   └── nodes/
+│       └── my-node.js      # Exports getNodeJS() + getNodeHTML()
+```
+
+```javascript
+// src/extensions/my-extension/api/nodes/my-node.js
+
+export function getNodeJS() {
+  // Must return a CommonJS module STRING (not a function)
+  return `module.exports = function(RED) {
+    function MyNode(config) {
+      RED.nodes.createNode(this, config);
+      this.on('input', function(msg, send, done) {
+        msg.payload = "Hello from extension!";
+        send(msg);
+        if (done) done();
+      });
+    }
+    RED.nodes.registerType("my-node", MyNode);
+  };`;
+}
+
+export function getNodeHTML() {
+  return `
+    <script type="text/javascript">
+      RED.nodes.registerType('my-node', {
+        category: 'xnapify',
+        color: '#a6bbcf',
+        defaults: { name: { value: "" } },
+        inputs: 1,
+        outputs: 1,
+        icon: "file.svg",
+        label: function() { return this.name || "my-node"; }
+      });
+    </script>
+    <script type="text/html" data-template-name="my-node">
+      <div class="form-row">
+        <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
+        <input type="text" id="node-input-name" placeholder="Name">
+      </div>
+    </script>
+    <script type="text/html" data-help-name="my-node">
+      <p>Help text for my custom node.</p>
+    </script>
+  `;
+}
+```
+
+When the extension is enabled, the node appears in the Node-RED palette immediately. When disabled, it is removed — all without restarting the runtime. Connected editors receive live WebSocket notifications (`node/added`, `node/removed`) so the palette updates automatically.
+
+> **Important:** `getNodeJS()` must return a **string** (CommonJS module format), not a JavaScript function. The string is written to disk and loaded by Node-RED's native module loader.
+
+### Dynamic Settings
+
+Node-RED settings (`HOME`, `LOG_LEVEL`, `PROJECTS`) are resolved from the database-backed settings service at initialization, with environment variable fallbacks:
+
+| Setting Key | Env Variable | Default |
+|---|---|---|
+| `nodered.HOME` | `XNAPIFY_NODERED_HOME` | `<cwd>/.xnapify/node-red` |
+| `nodered.LOG_LEVEL` | `XNAPIFY_NODERED_LOG_LEVEL` | `info` |
+| `nodered.PROJECTS` | `XNAPIFY_NODERED_PROJECTS` | `false` |
+
 ## See Also
 
 - [SPEC.md](./SPEC.md) — Technical specification
