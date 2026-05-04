@@ -79,7 +79,7 @@ const ActivityList = () => {
     () => [
       {
         value: '',
-        label: t('admin:activities.filter.allEvents', 'All Events'),
+        label: t('activities:admin.filter.allEvents', 'All Events'),
       },
       { value: 'auth.logged_in', label: 'Auth: Login' },
       { value: 'auth.logout', label: 'Auth: Logout' },
@@ -103,7 +103,7 @@ const ActivityList = () => {
     () => [
       {
         value: '',
-        label: t('admin:activities.filter.allEntities', 'All Entities'),
+        label: t('activities:admin.filter.allEntities', 'All Entities'),
       },
       { value: 'user', label: 'User' },
       { value: 'group', label: 'Group' },
@@ -119,7 +119,7 @@ const ActivityList = () => {
       {
         key: 'event',
         dataIndex: 'event',
-        title: t('admin:activities.column.event', 'Event'),
+        title: t('activities:admin.column.event', 'Event'),
         order: 10,
         render: event => (
           <Badge color='blue' radius='full' variant='soft' size='2'>
@@ -129,7 +129,7 @@ const ActivityList = () => {
       },
       {
         key: 'entity',
-        title: t('admin:activities.column.entity', 'Entity'),
+        title: t('activities:admin.column.entity', 'Entity'),
         order: 20,
         render: (_, record) => (
           <Flex align='center' gap='2'>
@@ -150,7 +150,7 @@ const ActivityList = () => {
       {
         key: 'actor',
         dataIndex: 'actor_id',
-        title: t('admin:activities.column.actor', 'Actor'),
+        title: t('activities:admin.column.actor', 'Actor'),
         order: 30,
         render: actor_id =>
           actor_id ? (
@@ -167,7 +167,7 @@ const ActivityList = () => {
       {
         key: 'timestamp',
         dataIndex: 'created_at',
-        title: t('admin:activities.column.timestamp', 'Timestamp'),
+        title: t('activities:admin.column.timestamp', 'Timestamp'),
         order: 40,
         render: createdAt => (
           <Text size='2' color='gray'>
@@ -196,9 +196,9 @@ const ActivityList = () => {
         initialized={initialized}
       >
         <DataTable.Header
-          title={t('admin:activities.title', 'Activity Logs')}
+          title={t('activities:admin.title', 'Activity Logs')}
           subtitle={t(
-            'admin:activities.subtitle',
+            'activities:admin.subtitle',
             'System audit trail and event history',
           )}
           icon={<ActivityLogIcon width={24} height={24} />}
@@ -211,7 +211,7 @@ const ActivityList = () => {
             options={eventOptions}
             value={eventFilter}
             onChange={handleEventFilterChange}
-            placeholder={t('admin:activities.filter.allEvents', 'All Events')}
+            placeholder={t('activities:admin.filter.allEvents', 'All Events')}
             showSearch={false}
           />
           <DataTable.Filter
@@ -221,7 +221,7 @@ const ActivityList = () => {
             value={entityTypeFilter}
             onChange={handleEntityTypeFilterChange}
             placeholder={t(
-              'admin:activities.filter.allEntities',
+              'activities:admin.filter.allEntities',
               'All Entities',
             )}
             showSearch={false}
@@ -234,9 +234,9 @@ const ActivityList = () => {
 
         <DataTable.Empty
           icon={<ActivityLogIcon width={48} height={48} />}
-          title={t('admin:activities.noLogsFound', 'No activity logs found')}
+          title={t('activities:admin.noLogsFound', 'No activity logs found')}
           description={t(
-            'admin:activities.noLogsDescription',
+            'activities:admin.noLogsDescription',
             'Activity logs will appear here as system events occur. Try adjusting your filters.',
           )}
         />

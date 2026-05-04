@@ -52,9 +52,11 @@ function safeRequire(moduleName) {
  * Ensure a directory exists, create if it doesn't
  * @param {string} dirPath - Directory path to ensure
  */
-function ensureDir(dirPath) {
-  if (!fs.existsSync(dirPath)) {
-    fs.mkdirSync(dirPath, { recursive: true });
+async function ensureDir(dirPath) {
+  try {
+    await fs.promises.access(dirPath);
+  } catch {
+    await fs.promises.mkdir(dirPath, { recursive: true });
     console.log(`📁 [Node-RED Settings] Created directory: ${dirPath}`);
   }
 }
@@ -65,7 +67,7 @@ function ensureDir(dirPath) {
  * so they can be hot-loaded at runtime via the registry's addModule/removeModule API.
  *
  * @param {string} userDir - Node-RED user directory
- * @returns {string} Absolute path to the ext-modules directory
+ * @returns {string} Absolute path to the extension node_modules directory
  */
 export function getExtModulesDir(userDir) {
   return path.join(userDir, 'node_modules');
@@ -105,32 +107,35 @@ function resolveExtensionDirSync(extensionManager, extensionName) {
  * Node-RED's registry can discover and hot-load them via addModule().
  *
  * @param {string} userDir - Node-RED user directory
- * @param {string} moduleId - Unique module name (e.g. 'xnapify-ext-abc123')
+ * @param {string} moduleId - Unique module name (e.g. 'xnapify-nodered-abc123')
  * @param {string} extNodesDir - Path to the extension's api/nodes/ directory
  * @returns {{ moduleName: string, nodeNames: string[] } | null}
  */
-export function writeExtensionNodeModule(userDir, moduleId, extNodesDir) {
-  if (!fs.existsSync(extNodesDir)) return null;
+export async function writeExtensionNodeModule(userDir, moduleId, extNodesDir) {
+  try {
+    await fs.promises.access(extNodesDir);
+  } catch {
+    return null;
+  }
 
-  const files = fs
-    .readdirSync(extNodesDir)
-    .filter(f => /\.[cm]?[jt]s$/i.test(f));
+  const allFiles = await fs.promises.readdir(extNodesDir);
+  const files = allFiles.filter(f => /\.[cm]?[jt]s$/i.test(f));
   if (files.length === 0) return null;
 
-  const moduleName = `xnapify-ext-${moduleId}`;
+  const moduleName = `xnapify-nodered-${moduleId}`;
   const moduleDir = path.join(getExtModulesDir(userDir), moduleName);
 
   // Wipe and recreate to ensure clean state
-  if (fs.existsSync(moduleDir)) {
-    fs.rmSync(moduleDir, { recursive: true, force: true });
-  }
-  fs.mkdirSync(moduleDir, { recursive: true });
+  await fs.promises
+    .rm(moduleDir, { recursive: true, force: true })
+    .catch(() => {});
+  await fs.promises.mkdir(moduleDir, { recursive: true });
 
   const nodeEntries = {};
   const nodeNames = [];
   const nativeReq = moduleRequire;
 
-  files.forEach(file => {
+  for (const file of files) {
     const baseName = path.basename(file).replace(/\.[cm]?[jt]s$/i, '');
     try {
       const modPath = path.join(extNodesDir, file);
@@ -152,12 +157,16 @@ export function writeExtensionNodeModule(userDir, moduleId, extNodesDir) {
         console.warn(
           `⚠️  [Node-RED Settings] Skipping ext node "${baseName}" — missing getNodeJS() or getNodeHTML()`,
         );
-        return;
+        continue;
       }
 
       const jsFile = `${baseName}.js`;
-      fs.writeFileSync(path.join(moduleDir, jsFile), getJS(), 'utf8');
-      fs.writeFileSync(
+      await fs.promises.writeFile(
+        path.join(moduleDir, jsFile),
+        getJS(),
+        'utf8',
+      );
+      await fs.promises.writeFile(
         path.join(moduleDir, `${baseName}.html`),
         getHTML(),
         'utf8',
@@ -175,11 +184,11 @@ export function writeExtensionNodeModule(userDir, moduleId, extNodesDir) {
         err.message,
       );
     }
-  });
+  }
 
   if (Object.keys(nodeEntries).length === 0) {
     // No valid nodes — clean up
-    fs.rmSync(moduleDir, { recursive: true, force: true });
+    await fs.promises.rm(moduleDir, { recursive: true, force: true });
     return null;
   }
 
@@ -192,7 +201,7 @@ export function writeExtensionNodeModule(userDir, moduleId, extNodesDir) {
       nodes: nodeEntries,
     },
   };
-  fs.writeFileSync(
+  await fs.promises.writeFile(
     path.join(moduleDir, 'package.json'),
     JSON.stringify(pkg, null, 2),
     'utf8',
@@ -207,14 +216,17 @@ export function writeExtensionNodeModule(userDir, moduleId, extNodesDir) {
  * @param {string} userDir - Node-RED user directory
  * @param {string} moduleId - Extension module ID
  */
-export function removeExtensionNodeModule(userDir, moduleId) {
-  const moduleName = `xnapify-ext-${moduleId}`;
+export async function removeExtensionNodeModule(userDir, moduleId) {
+  const moduleName = `xnapify-nodered-${moduleId}`;
   const moduleDir = path.join(getExtModulesDir(userDir), moduleName);
-  if (fs.existsSync(moduleDir)) {
-    fs.rmSync(moduleDir, { recursive: true, force: true });
+  try {
+    await fs.promises.access(moduleDir);
+    await fs.promises.rm(moduleDir, { recursive: true, force: true });
     console.log(
       `🗑️  [Node-RED Settings] Removed extension module "${moduleName}"`,
     );
+  } catch {
+    // Directory doesn't exist — nothing to remove
   }
 }
 
@@ -230,15 +242,15 @@ export function removeExtensionNodeModule(userDir, moduleId) {
  * @param {object} [app] - Express app instance
  * @returns {string[]} Array of nodesDir paths for Node-RED settings
  */
-function writeCustomNodes(userDir, app) {
+async function writeCustomNodes(userDir, app) {
   const nodesDir = path.join(userDir, 'nodes');
   const xnapifyDir = path.join(nodesDir, 'xnapify');
 
   // Wipe and recreate the xnapify core nodes directory
-  if (fs.existsSync(xnapifyDir)) {
-    fs.rmSync(xnapifyDir, { recursive: true, force: true });
-  }
-  fs.mkdirSync(xnapifyDir, { recursive: true });
+  await fs.promises
+    .rm(xnapifyDir, { recursive: true, force: true })
+    .catch(() => {});
+  await fs.promises.mkdir(xnapifyDir, { recursive: true });
 
   // Create adapter for nodes context
   const nodesAdapter = createWebpackContextAdapter(nodesContexts);
@@ -246,10 +258,10 @@ function writeCustomNodes(userDir, app) {
   const modulePaths = nodesAdapter.files();
   const seen = new Set();
 
-  modulePaths.forEach(modulePath => {
+  for (const modulePath of modulePaths) {
     // Extract basename without extension, e.g. './xnapify-middleware.js' → 'xnapify-middleware'
     const baseName = path.basename(modulePath).replace(/\.[cm]?[jt]s$/i, '');
-    if (seen.has(baseName)) return;
+    if (seen.has(baseName)) continue;
     seen.add(baseName);
 
     try {
@@ -262,15 +274,15 @@ function writeCustomNodes(userDir, app) {
         console.warn(
           `⚠️  [Node-RED Settings] Skipping "${baseName}" — missing getNodeJS() or getNodeHTML()`,
         );
-        return;
+        continue;
       }
 
-      fs.writeFileSync(
+      await fs.promises.writeFile(
         path.join(xnapifyDir, `${baseName}.js`),
         getJS(),
         'utf8',
       );
-      fs.writeFileSync(
+      await fs.promises.writeFile(
         path.join(xnapifyDir, `${baseName}.html`),
         getHTML(),
         'utf8',
@@ -286,14 +298,13 @@ function writeCustomNodes(userDir, app) {
         err.message,
       );
     }
-  });
+  }
 
   // Write extension node modules for all currently active extensions.
-  // During boot, these will be auto-discovered by NR's scanTreeForNodesModules
-  // via the extModulesDir entry in nodesDir. After boot, new extensions
-  // use the hot-load path (addModule) in NodeRedManager.
+  // During boot, these will be auto-discovered by NR's scanTreeForNodesModules.
+  // After boot, new extensions use the hot-load path (addModule) in NodeRedManager.
   const extModDir = getExtModulesDir(userDir);
-  ensureDir(extModDir);
+  await ensureDir(extModDir);
 
   if (app) {
     const container =
@@ -303,18 +314,18 @@ function writeCustomNodes(userDir, app) {
     if (extensionManager) {
       try {
         const activeExtensions = extensionManager.getAllExtensionMetadata();
-        activeExtensions.forEach(metadata => {
+        for (const metadata of activeExtensions) {
           const { id: extId, manifest } = metadata;
-          if (!extId || !manifest || !manifest.name) return;
+          if (!extId || !manifest || !manifest.name) continue;
           const extDir = resolveExtensionDirSync(
             extensionManager,
             manifest.name,
           );
-          if (!extDir) return;
+          if (!extDir) continue;
           const extNodesDir = path.join(extDir, 'api', 'nodes');
           // Use extId (registry key) — same key used by hot-load path
-          writeExtensionNodeModule(userDir, extId, extNodesDir);
-        });
+          await writeExtensionNodeModule(userDir, extId, extNodesDir);
+        }
       } catch (err) {
         console.warn(
           `⚠️  [Node-RED Settings] Failed to scan extension nodes:`,
@@ -337,9 +348,9 @@ function writeCustomNodes(userDir, app) {
  * @param {string} userDir - Node-RED user directory
  * @returns {string[]} Array of absolute paths to written script files
  */
-function writeClientScripts(userDir) {
+async function writeClientScripts(userDir) {
   const scriptsDir = path.join(userDir, 'scripts');
-  ensureDir(scriptsDir);
+  await ensureDir(scriptsDir);
 
   // Create adapter for client scripts context
   const clientScriptsAdapter = createWebpackContextAdapter(
@@ -350,9 +361,9 @@ function writeClientScripts(userDir) {
   const modulePaths = clientScriptsAdapter.files();
   const seen = new Set();
 
-  modulePaths.forEach(modulePath => {
+  for (const modulePath of modulePaths) {
     const baseName = path.basename(modulePath).replace(/\.[cm]?[jt]s$/i, '');
-    if (seen.has(baseName)) return;
+    if (seen.has(baseName)) continue;
     seen.add(baseName);
 
     try {
@@ -363,11 +374,11 @@ function writeClientScripts(userDir) {
         console.warn(
           `\u26a0\ufe0f  [Node-RED Settings] Skipping script "${baseName}" \u2014 missing getScript()`,
         );
-        return;
+        continue;
       }
 
       const outputPath = path.join(scriptsDir, `${baseName}.js`);
-      fs.writeFileSync(outputPath, getScript(), 'utf8');
+      await fs.promises.writeFile(outputPath, getScript(), 'utf8');
       scriptPaths.push(outputPath);
 
       console.log(
@@ -380,7 +391,7 @@ function writeClientScripts(userDir) {
         err.message,
       );
     }
-  });
+  }
 
   return scriptPaths;
 }
@@ -445,7 +456,7 @@ function validateConfig(options) {
  * @param {object} [options.additionalSettings] - Any additional Node-RED settings to merge
  * @returns {object} Frozen Node-RED settings
  */
-export default function createSettings(options = {}) {
+export default async function createSettings(options = {}) {
   // Validate configuration
   validateConfig(options);
 
@@ -473,7 +484,7 @@ export default function createSettings(options = {}) {
   } = options;
 
   // Ensure user directory exists
-  ensureDir(userDir);
+  await ensureDir(userDir);
 
   // Resolve core nodes directory
   let coreNodesDir;
@@ -584,16 +595,16 @@ export default function createSettings(options = {}) {
     debugUseColors: true,
 
     // Custom nodes — write to userDir so Node-RED can load from disk
-    nodesDir: writeCustomNodes(userDir, app),
+    nodesDir: await writeCustomNodes(userDir, app),
 
     // Extension modules directory — used by NodeRedManager to resolve
-    // the ext-modules path for hot-loading after boot.
+    // the node_modules path for hot-loading after boot.
     _extModulesDir: getExtModulesDir(userDir),
 
     // Palette settings
-    editorTheme: (() => {
+    editorTheme: await (async () => {
       // Write all client-side editor scripts to userDir
-      const scriptPaths = writeClientScripts(userDir);
+      const scriptPaths = await writeClientScripts(userDir);
 
       return merge({}, mergedEditorTheme, {
         page: {
@@ -645,9 +656,9 @@ export default function createSettings(options = {}) {
  * Optimized for production deployments with security hardening
  *
  * @param {object} options - Configuration options
- * @returns {object} Production settings
+ * @returns {Promise<object>} Production settings
  */
-export function createProductionSettings(options = {}) {
+export async function createProductionSettings(options = {}) {
   return createSettings({
     logLevel: 'warn', // Less verbose logging
     enableMetrics: false, // Disables performance metrics
@@ -677,9 +688,9 @@ export function createProductionSettings(options = {}) {
  * Optimized for local development with verbose logging
  *
  * @param {object} options - Configuration options
- * @returns {object} Development settings
+ * @returns {Promise<object>} Development settings
  */
-export function createDevelopmentSettings(options = {}) {
+export async function createDevelopmentSettings(options = {}) {
   return createSettings({
     logLevel: 'debug', // Verbose logging
     enableMetrics: false, // Performance insights disabled

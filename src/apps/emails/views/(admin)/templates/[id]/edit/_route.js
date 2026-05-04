@@ -21,7 +21,7 @@ export const middleware = requirePermission('emails:templates:update');
  */
 export async function getInitialProps({ i18n }) {
   return {
-    title: i18n.t('admin:emails.edit.title', 'Edit Email Template'),
+    title: i18n.t('emails:admin.edit.title', 'Edit Email Template'),
   };
 }
 
@@ -32,7 +32,7 @@ export function mount({ store, i18n, path }) {
   store.dispatch(
     addBreadcrumb(
       {
-        label: i18n.t('admin:emails.form.editTemplate', 'Edit'),
+        label: i18n.t('emails:admin.form.editTemplate', 'Edit'),
         url: path,
       },
       'admin',

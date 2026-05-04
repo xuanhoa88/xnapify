@@ -1136,9 +1136,22 @@ export class BaseExtensionManager {
     // Phase 1: Translations
     if (typeof def.translations === 'function') {
       try {
-        const translations = getTranslations(def.translations());
-        if (Object.keys(translations).length > 0) {
-          addNamespace(`extension:${def.id}`, translations);
+        const result = def.translations();
+        if (result) {
+          const [translationContext, customNs] = Array.isArray(result)
+            ? result
+            : [result];
+          if (translationContext) {
+            const translations = getTranslations(translationContext);
+            if (Object.keys(translations).length > 0) {
+              const namespace = customNs || `extension:${def.id}`;
+              addNamespace(namespace, translations);
+
+              // Track for teardown
+              const meta = this[EXTENSION_METADATA].get(def.id);
+              if (meta) meta.translationNamespace = namespace;
+            }
+          }
         }
       } catch (error) {
         console.error(
@@ -1302,7 +1315,10 @@ export class BaseExtensionManager {
 
       // ── Phase 2: Remove translations (all extensions) ──
       for (const def of active) {
-        removeNamespace(`extension:${def.id}`);
+        const meta = this[EXTENSION_METADATA].get(def.id);
+        removeNamespace(
+          (meta && meta.translationNamespace) || `extension:${def.id}`,
+        );
       }
 
       // ── Phase 3: Unregister + mark INACTIVE ──

@@ -80,7 +80,7 @@ function EditPermissionIdentityCard({ permission }) {
           </Text>
           <Text size='1' color='gray' align='center'>
             {t(
-              'admin:permissions.edit.generatedNameHint',
+              'permissions:admin.edit.generatedNameHint',
               'Auto-generated from resource & action',
             )}
           </Text>
@@ -91,7 +91,7 @@ function EditPermissionIdentityCard({ permission }) {
         <Flex direction='column' gap='3' className='w-full'>
           <Flex justify='between' align='center'>
             <Text size='2' color='gray'>
-              {t('admin:permissions.edit.resource', 'Resource')}
+              {t('permissions:admin.edit.resource', 'Resource')}
             </Text>
             <Badge color='indigo' variant='soft' radius='full' size='1'>
               {resource || '-'}
@@ -100,7 +100,7 @@ function EditPermissionIdentityCard({ permission }) {
 
           <Flex justify='between' align='center'>
             <Text size='2' color='gray'>
-              {t('admin:permissions.edit.action', 'Action')}
+              {t('permissions:admin.edit.action', 'Action')}
             </Text>
             <Badge color='indigo' variant='soft' radius='full' size='1'>
               {action || '-'}
@@ -109,7 +109,7 @@ function EditPermissionIdentityCard({ permission }) {
 
           <Flex justify='between' align='center'>
             <Text size='2' color='gray'>
-              {t('admin:permissions.edit.statusLabel', 'Status')}
+              {t('permissions:admin.edit.statusLabel', 'Status')}
             </Text>
             <Badge
               color={isActive ? 'green' : 'gray'}
@@ -118,8 +118,8 @@ function EditPermissionIdentityCard({ permission }) {
               size='1'
             >
               {isActive
-                ? t('admin:permissions.edit.active', 'Active')
-                : t('admin:permissions.edit.inactive', 'Inactive')}
+                ? t('permissions:admin.edit.active', 'Active')
+                : t('permissions:admin.edit.inactive', 'Inactive')}
             </Badge>
           </Flex>
         </Flex>
@@ -220,10 +220,10 @@ function EditPermission({ permissionId }) {
 
   const pageTitle =
     !fetchInitialized || fetchingPermission
-      ? t('admin:permissions.edit.titleLoading', 'Loading Permission...')
+      ? t('permissions:admin.edit.titleLoading', 'Loading Permission...')
       : permissionLoadError || !permission
-        ? t('admin:permissions.edit.titleError', 'Error Loading Permission')
-        : t('admin:permissions.edit.title', 'Edit Permission: {{name}}', {
+        ? t('permissions:admin.edit.titleError', 'Error Loading Permission')
+        : t('permissions:admin.edit.title', 'Edit Permission: {{name}}', {
             name: `${permission.resource}:${permission.action}`,
           });
 
@@ -246,7 +246,7 @@ function EditPermission({ permissionId }) {
             onClick={() => history.push('/admin/permissions')}
           >
             <ArrowLeftIcon />
-            {t('admin:permissions.edit.backToList', 'Back to Permissions')}
+            {t('permissions:admin.edit.backToList', 'Back to Permissions')}
           </Button>
         </PageHeader>
         <Modal.ConfirmBack
@@ -262,7 +262,7 @@ function EditPermission({ permissionId }) {
       <PageHeader
         title={pageTitle}
         subtitle={t(
-          'admin:permissions.edit.subtitle',
+          'permissions:admin.edit.subtitle',
           'Update permission details and status',
         )}
         icon={<LockOpen1Icon width={24} height={24} />}
@@ -273,7 +273,7 @@ function EditPermission({ permissionId }) {
           onClick={() => handleCancel(isDirtyRef.current)}
         >
           <ArrowLeftIcon />
-          {t('admin:permissions.edit.backToList', 'Back to Permissions')}
+          {t('permissions:admin.edit.backToList', 'Back to Permissions')}
         </Button>
       </PageHeader>
 
@@ -335,7 +335,7 @@ function EditPermissionFormFields({ onCancel, saving, isDirtyRef }) {
       >
         <Text size='2' weight='bold' color='gray'>
           {t(
-            'admin:permissions.edit.permissionInformation',
+            'permissions:admin.edit.permissionInformation',
             'Permission Information',
           )}
         </Text>
@@ -345,12 +345,12 @@ function EditPermissionFormFields({ onCancel, saving, isDirtyRef }) {
           <Box className='flex-1'>
             <Form.Field
               name='resource'
-              label={t('admin:permissions.edit.resource', 'Resource')}
+              label={t('permissions:admin.edit.resource', 'Resource')}
               required
             >
               <Form.Input
                 placeholder={t(
-                  'admin:permissions.edit.resourcePlaceholder',
+                  'permissions:admin.edit.resourcePlaceholder',
                   'e.g. users, posts, comments',
                 )}
               />
@@ -359,12 +359,12 @@ function EditPermissionFormFields({ onCancel, saving, isDirtyRef }) {
           <Box className='flex-1'>
             <Form.Field
               name='action'
-              label={t('admin:permissions.edit.action', 'Action')}
+              label={t('permissions:admin.edit.action', 'Action')}
               required
             >
               <Form.Input
                 placeholder={t(
-                  'admin:permissions.edit.actionPlaceholder',
+                  'permissions:admin.edit.actionPlaceholder',
                   'e.g. read, write, delete',
                 )}
               />
@@ -374,11 +374,11 @@ function EditPermissionFormFields({ onCancel, saving, isDirtyRef }) {
 
         <Form.Field
           name='description'
-          label={t('admin:permissions.edit.description', 'Description')}
+          label={t('permissions:admin.edit.description', 'Description')}
         >
           <Form.Textarea
             placeholder={t(
-              'admin:permissions.edit.descriptionPlaceholder',
+              'permissions:admin.edit.descriptionPlaceholder',
               'Describe what this permission allows...',
             )}
             rows={3}
@@ -393,16 +393,16 @@ function EditPermissionFormFields({ onCancel, saving, isDirtyRef }) {
         className='bg-[var(--gray-a2)] border-t border-[var(--gray-a4)] border-b border-[var(--gray-a4)]'
       >
         <Text size='2' weight='bold' color='gray'>
-          {t('admin:permissions.edit.status', 'Status')}
+          {t('permissions:admin.edit.status', 'Status')}
         </Text>
       </Box>
       <Box p='5'>
         <Form.Field name='is_active'>
-          <Form.Checkbox label={t('admin:permissions.edit.active', 'Active')} />
+          <Form.Checkbox label={t('permissions:admin.edit.active', 'Active')} />
         </Form.Field>
         <Text as='p' size='1' color='gray' mt='1'>
           {t(
-            'admin:permissions.edit.inactivePermission',
+            'permissions:admin.edit.inactivePermission',
             'Inactive permissions will not be enforced in authorization checks',
           )}
         </Text>

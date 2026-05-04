@@ -164,7 +164,7 @@ const GroupRolesModal = forwardRef(({ fetchRoles }, ref) => {
   return (
     <Modal isOpen={isOpen} onClose={handleClose} placement='right'>
       <Modal.Header onClose={handleClose}>
-        {t('admin:groups.manageRolesFor', 'Manage Roles for "{{groupName}}"', {
+        {t('groups:admin.manageRolesFor', 'Manage Roles for "{{groupName}}"', {
           groupName:
             (group && group.name) || t('admin:common.unknown', 'Unknown'),
         })}
@@ -172,7 +172,7 @@ const GroupRolesModal = forwardRef(({ fetchRoles }, ref) => {
       <Modal.Body error={error}>
         <Modal.Description className='mb-4 text-[var(--gray-11)]'>
           {t(
-            'admin:groups.manageRolesDescription',
+            'groups:admin.manageRolesDescription',
             'Select roles to assign to this group. All users of the group will inherit these roles.',
           )}
         </Modal.Description>
@@ -198,8 +198,8 @@ const GroupRolesModal = forwardRef(({ fetchRoles }, ref) => {
             <Flex justify='center' align='center' p='6'>
               <Text size='2' color='gray'>
                 {searchTerm
-                  ? t('admin:roles.noRolesMatch', 'No roles match your search')
-                  : t('admin:roles.noRolesAvailable', 'No roles available')}
+                  ? t('roles:admin.noRolesMatch', 'No roles match your search')
+                  : t('roles:admin.noRolesAvailable', 'No roles available')}
               </Text>
             </Flex>
           ) : (

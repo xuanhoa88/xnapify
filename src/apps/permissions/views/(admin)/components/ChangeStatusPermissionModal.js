@@ -76,7 +76,7 @@ const ChangeStatusPermissionModal = forwardRef(({ onSuccess }, ref) => {
       setError(
         err ||
           t(
-            'admin:permissions.statusChangeError',
+            'permissions:admin.statusChangeError',
             'Failed to change permission status',
           ),
       );
@@ -100,12 +100,12 @@ const ChangeStatusPermissionModal = forwardRef(({ onSuccess }, ref) => {
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
       <Modal.Header onClose={handleClose}>
-        {t('admin:permissions.changeStatusTitle', 'Change Permission Status')}
+        {t('permissions:admin.changeStatusTitle', 'Change Permission Status')}
       </Modal.Header>
       <Modal.Body error={error}>
         <Modal.Description>
           {t(
-            'admin:permissions.changeStatusConfirmation',
+            'permissions:admin.changeStatusConfirmation',
             'Are you sure you want to {{actionText}} {{count}} permission(s)?',
             { actionText, count },
           )}

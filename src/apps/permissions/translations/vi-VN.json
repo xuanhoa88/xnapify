@@ -1,5 +1,5 @@
 {
-  "permissions": {
+  "admin": {
     "title": "Quản lý quyền",
     "addPermission": "Thêm quyền",
     "searchPlaceholder": "Tìm kiếm quyền...",

@@ -23,10 +23,11 @@ Provides a state machine orchestrating Node-RED. Since `@node-red/runtime` behav
 1. **`.init(app, server, config)`**:
    - Dynamically imports `@node-red/util`, `@node-red/runtime`, and `@node-red/editor-api` to avoid polluting initial webpack builds.
    - Cleans up trailing `upgrade` server socket listeners lingering from previous HMR passes using `kNodeRedInstance` symbol tagging.
-   - Invokes `settings.js` generation.
+   - Awaits async `settings.js` generation (uses `fs.promises` throughout).
+   - Hooks into the ExtensionManager via `.on('extension:loaded')` / `.on('extension:unloaded')` for hot-loading. Old listeners are cleaned up on re-init to prevent HMR leaks.
    - Mounts generated Express routes onto `app`.
-2. **`.start()`**: Rapidly spins up `runtime.start()` and `editorApi.start()` wrapped in a `Promise.race` timeout guard.
-3. **`.shutdown()`**: Tears down modules (reverse initialization order) and executes `.cleanupUpgradeListener()` manually dropping the WebSocket hook.
+2. **`.start()`**: Rapidly spins up `runtime.start()` and `editorApi.start()` wrapped in a `Promise.race` timeout guard. After start, calls `_syncBootModules()` to populate `_extModuleMap` with modules written during boot — enabling correct unload on subsequent toggles.
+3. **`.shutdown()`**: Tears down modules (reverse initialization order), removes extension manager listeners, clears `_extModuleMap`/`_extOpQueue`, and executes `.cleanupUpgradeListener()` manually dropping the WebSocket hook.
 
 ## Configuration & Auto-Discovery (`settings.js`)
 
@@ -34,8 +35,8 @@ Constructs the Node-RED settings object:
 
 - Merges runtime defaults (like overriding `logLevel`, `projects`, `httpNodeRoot`).
 - **Global Context**: Pre-injects commonly used libraries (`lodash`, `dayjs`, `zod`, `uuid`) into the default namespace available within Function nodes.
-- **Extraction Magic**:
-  - `writeCustomNodes(userDir)`: Resolves `require.context('./nodes')`, extracting `getNodeJS()` and `getNodeHTML()`, and writing physical files to `<userDir>/nodes/xnapify/`.
+- **Extraction Magic** (all async via `fs.promises`):
+  - `writeCustomNodes(userDir)`: Resolves `require.context('./nodes')`, extracting `getNodeJS()` and `getNodeHTML()`, and writing physical files to `<userDir>/nodes/xnapify/`. Also scans active extensions' `api/nodes/` and writes them as `xnapify-nodered-<id>` modules to `<userDir>/node_modules/`.
   - `writeClientScripts(userDir)`: Similar logic for `./client-scripts/`, dropping files in `<userDir>/scripts/` and linking them directly to Node-RED's `editorTheme.page.scripts` UI injection.
 
 ## Authentication Synchronization (`auth.js`)
@@ -63,10 +64,10 @@ Extensions can provide custom Node-RED nodes via `api/nodes/` directories. These
 During settings creation (`writeCustomNodes`), all active extensions are scanned for `api/nodes/` directories. Each extension's node files are:
 
 1. Loaded via `moduleRequire` to extract `getNodeJS()` and `getNodeHTML()`
-2. Written to `<userDir>/ext-modules/xnapify-ext-<id>/` as plain `.js` and `.html` files
+2. Written to `<userDir>/node_modules/xnapify-nodered-<id>/` as plain `.js` and `.html` files
 3. Bundled with a `package.json` containing a `"node-red": { "nodes": {...} }` stanza
 
-Node-RED's `scanTreeForNodesModules` discovers these modules automatically since `ext-modules/` is included in the `nodesDir` array.
+Node-RED's `scanTreeForNodesModules` discovers these modules automatically from `<userDir>/node_modules/`.
 
 ### Runtime Hot-Loading
 

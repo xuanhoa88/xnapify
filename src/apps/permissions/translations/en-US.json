@@ -1,5 +1,5 @@
 {
-  "permissions": {
+  "admin": {
     "title": "Permission Management",
     "addPermission": "Add Permission",
     "searchPlaceholder": "Search permissions...",

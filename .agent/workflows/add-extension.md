@@ -1188,10 +1188,12 @@ export function getNodeHTML() {
 
 ### How It Works
 
-1. At boot, active extensions' `api/nodes/` directories are scanned and written to `<userDir>/node_modules/`
-2. After boot, toggling an extension triggers `registry.addModule()` / `registry.removeModule()` — the same API as Node-RED's Palette Manager
-3. Connected editors receive WebSocket notifications so the palette updates automatically
-4. Operations per extension are serialized to prevent race conditions during rapid toggles
+1. At boot, active extensions' `api/nodes/` directories are scanned and written to `<userDir>/node_modules/` as `xnapify-nodered-<id>` modules (all async via `fs.promises`)
+2. Boot-loaded modules are synced into `_extModuleMap` via `_syncBootModules()` so they can be correctly unloaded later
+3. After boot, toggling an extension triggers `registry.addModule()` / `registry.removeModule()` — the same API as Node-RED's Palette Manager
+4. Connected editors receive WebSocket notifications so the palette updates automatically
+5. Operations per extension are serialized via `_enqueueExtOp()` to prevent race conditions during rapid toggles
+6. Extension listeners are properly cleaned up during shutdown to prevent leaks across HMR cycles
 
 ### Key Rules
 
@@ -1201,6 +1203,7 @@ export function getNodeHTML() {
 - Use the `xnapify` category for consistency in the palette
 - Access the DI container via `node.context().global.get('container')`
 - Extensions that only provide Node-RED nodes do not need `"browser"` in `package.json`
+- Generated modules use the `xnapify-nodered-<extensionId>` naming convention (not `xnapify-ext-`)
 
 ### Example
 

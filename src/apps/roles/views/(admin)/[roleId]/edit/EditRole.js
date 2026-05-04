@@ -69,7 +69,7 @@ function EditRoleIdentityCard({ role }) {
 
         <Flex direction='column' align='center' gap='1' className='w-full'>
           <Text size='4' weight='bold' align='center' className='break-all'>
-            {name || t('admin:roles.edit.unnamedRole', 'Unnamed Role')}
+            {name || t('roles:admin.edit.unnamedRole', 'Unnamed Role')}
           </Text>
         </Flex>
 
@@ -78,7 +78,7 @@ function EditRoleIdentityCard({ role }) {
         <Flex direction='column' gap='3' className='w-full'>
           <Flex justify='between' align='center'>
             <Text size='2' color='gray'>
-              {t('admin:roles.edit.permissionsLabel', 'Permissions')}
+              {t('roles:admin.edit.permissionsLabel', 'Permissions')}
             </Text>
             <Badge color='indigo' variant='soft' radius='full' size='1'>
               {selectedPermissions.length}
@@ -87,10 +87,10 @@ function EditRoleIdentityCard({ role }) {
 
           <Flex justify='between' align='center'>
             <Text size='2' color='gray'>
-              {t('admin:roles.edit.statusLabel', 'Status')}
+              {t('roles:admin.edit.statusLabel', 'Status')}
             </Text>
             <Badge color='green' variant='soft' radius='full' size='1'>
-              {t('admin:roles.edit.active', 'Active')}
+              {t('roles:admin.edit.active', 'Active')}
             </Badge>
           </Flex>
         </Flex>
@@ -192,10 +192,10 @@ function EditRole({ roleId, context }) {
 
   const pageTitle =
     !fetchInitialized || fetchingRole
-      ? t('admin:roles.edit.titleLoading', 'Loading Role...')
+      ? t('roles:admin.edit.titleLoading', 'Loading Role...')
       : roleLoadError || !role
-        ? t('admin:roles.edit.titleError', 'Error Loading Role')
-        : t('admin:roles.edit.title', 'Edit Role: {{name}}', {
+        ? t('roles:admin.edit.titleError', 'Error Loading Role')
+        : t('roles:admin.edit.title', 'Edit Role: {{name}}', {
             name: role.name,
           });
 
@@ -212,7 +212,7 @@ function EditRole({ roleId, context }) {
             onClick={() => history.push('/admin/roles')}
           >
             <ArrowLeftIcon />
-            {t('admin:roles.edit.backToList', 'Back to Roles')}
+            {t('roles:admin.edit.backToList', 'Back to Roles')}
           </Button>
         </PageHeader>
         <Modal.ConfirmBack
@@ -228,7 +228,7 @@ function EditRole({ roleId, context }) {
       <PageHeader
         title={pageTitle}
         subtitle={t(
-          'admin:roles.edit.subtitle',
+          'roles:admin.edit.subtitle',
           'Update role details and permission assignments',
         )}
         icon={<LockClosedIcon width={24} height={24} />}
@@ -239,7 +239,7 @@ function EditRole({ roleId, context }) {
           onClick={() => handleCancel(isDirtyRef.current)}
         >
           <ArrowLeftIcon />
-          {t('admin:roles.edit.backToList', 'Back to Roles')}
+          {t('roles:admin.edit.backToList', 'Back to Roles')}
         </Button>
       </PageHeader>
 
@@ -362,18 +362,18 @@ function EditRoleFormFields({
         className='bg-[var(--gray-a2)] border-b border-[var(--gray-a4)]'
       >
         <Text size='2' weight='bold' color='gray'>
-          {t('admin:roles.edit.roleInformation', 'Role Information')}
+          {t('roles:admin.edit.roleInformation', 'Role Information')}
         </Text>
       </Box>
       <Box p='5'>
         <Form.Field
           name='name'
-          label={t('admin:roles.edit.roleName', 'Role Name')}
+          label={t('roles:admin.edit.roleName', 'Role Name')}
           required
         >
           <Form.Input
             placeholder={t(
-              'admin:roles.edit.roleNamePlaceholder',
+              'roles:admin.edit.roleNamePlaceholder',
               'e.g., editor, moderator, viewer',
             )}
           />
@@ -381,11 +381,11 @@ function EditRoleFormFields({
 
         <Form.Field
           name='description'
-          label={t('admin:roles.edit.description', 'Description')}
+          label={t('roles:admin.edit.description', 'Description')}
         >
           <Form.Textarea
             placeholder={t(
-              'admin:roles.edit.descriptionPlaceholder',
+              'roles:admin.edit.descriptionPlaceholder',
               'Describe what this role is for...',
             )}
             rows={3}
@@ -401,7 +401,7 @@ function EditRoleFormFields({
       >
         <Text size='2' weight='bold' color='gray'>
           {t(
-            'admin:roles.edit.permissionsCount',
+            'roles:admin.edit.permissionsCount',
             'Permissions ({{count}} selected)',
             {
               count: selectedPermissions.length,
@@ -422,16 +422,16 @@ function EditRoleFormFields({
             onLoadMore={handleLoadMorePermissions}
             searchable
             searchPlaceholder={t(
-              'admin:roles.edit.permissionsSearchPlaceholder',
+              'roles:admin.edit.permissionsSearchPlaceholder',
               'Search e.g. users, users:read, :create',
             )}
             onSearch={setPermissionSearch}
             emptyMessage={t(
-              'admin:roles.edit.permissionsEmptyMessage',
+              'roles:admin.edit.permissionsEmptyMessage',
               'No permissions found',
             )}
             loadingMessage={t(
-              'admin:roles.edit.permissionsLoadingMessage',
+              'roles:admin.edit.permissionsLoadingMessage',
               'Loading permissions...',
             )}
           />

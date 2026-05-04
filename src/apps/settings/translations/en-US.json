@@ -1,5 +1,5 @@
 {
-  "settings": {
+  "admin": {
     "title": "Global Settings",
     "subtitle": "Configure system-wide settings for all modules",
     "loading": "Loading settings...",

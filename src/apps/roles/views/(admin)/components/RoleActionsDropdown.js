@@ -44,21 +44,21 @@ function RoleActionsDropdown({
           icon={<PersonIcon width={16} height={16} />}
           permission='users:read'
         >
-          {t('admin:roles.viewUsers', 'View Users')}
+          {t('roles:admin.viewUsers', 'View Users')}
         </ContextMenu.Item>
         <ContextMenu.Item
           onClick={() => onViewGroups(role)}
           icon={<GroupIcon width={16} height={16} />}
           permission='groups:read'
         >
-          {t('admin:roles.viewGroups', 'View Groups')}
+          {t('roles:admin.viewGroups', 'View Groups')}
         </ContextMenu.Item>
         <ContextMenu.Item
           onClick={() => onViewPermissions(role)}
           icon={<LockOpen1Icon width={16} height={16} />}
           permission='permissions:read'
         >
-          {t('admin:roles.viewPermissions', 'View Permissions')}
+          {t('roles:admin.viewPermissions', 'View Permissions')}
         </ContextMenu.Item>
         <ContextMenu.Divider />
         <ContextMenu.Item
@@ -66,7 +66,7 @@ function RoleActionsDropdown({
           icon={<Pencil2Icon width={16} height={16} />}
           permission='roles:update'
         >
-          {t('admin:roles.editRole', 'Edit Role')}
+          {t('roles:admin.editRole', 'Edit Role')}
         </ContextMenu.Item>
         <ContextMenu.Item
           onClick={() => onDelete(role)}
@@ -74,7 +74,7 @@ function RoleActionsDropdown({
           variant='danger'
           permission='roles:delete'
         >
-          {t('admin:roles.deleteRole', 'Delete Role')}
+          {t('roles:admin.deleteRole', 'Delete Role')}
         </ContextMenu.Item>
       </ContextMenu.Menu>
     </ContextMenu>

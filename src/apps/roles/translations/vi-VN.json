@@ -1,5 +1,5 @@
 {
-  "roles": {
+  "admin": {
     "title": "Quản lý vai trò",
     "addRole": "Thêm vai trò",
     "searchPlaceholder": "Tìm kiếm vai trò...",

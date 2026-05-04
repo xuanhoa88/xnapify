@@ -140,7 +140,7 @@ function EmailTemplates() {
           error:
             err.message ||
             t(
-              'admin:emails.deleteModal.error',
+              'emails:admin.deleteModal.error',
               'Failed to delete template(s). Please try again.',
             ),
         };
@@ -155,7 +155,7 @@ function EmailTemplates() {
       if (data.items && data.items.length === 1) {
         return data.items[0].name;
       }
-      return t('admin:emails.deleteModal.bulkCount', '{{count}} templates', {
+      return t('emails:admin.deleteModal.bulkCount', '{{count}} templates', {
         count: data.ids.length,
       });
     },
@@ -193,7 +193,7 @@ function EmailTemplates() {
   const moreBulkActions = useMemo(
     () => [
       {
-        label: t('admin:emails.list.delete', 'Delete'),
+        label: t('emails:admin.list.delete', 'Delete'),
         icon: <TrashIcon width={16} height={16} />,
         variant: 'danger',
         onClick: handleBulkDelete,
@@ -208,14 +208,14 @@ function EmailTemplates() {
       {
         key: 'name',
         dataIndex: 'name',
-        title: t('admin:emails.list.name', 'Name'),
+        title: t('emails:admin.list.name', 'Name'),
         order: 10,
         render: value => <Text weight='bold'>{value}</Text>,
       },
       {
         key: 'slug',
         dataIndex: 'slug',
-        title: t('admin:emails.list.slug', 'Slug'),
+        title: t('emails:admin.list.slug', 'Slug'),
         order: 20,
         render: value => (
           <Text as='code' className={s.slugText}>
@@ -226,7 +226,7 @@ function EmailTemplates() {
       {
         key: 'subject',
         dataIndex: 'subject',
-        title: t('admin:emails.list.subject', 'Subject'),
+        title: t('emails:admin.list.subject', 'Subject'),
         order: 30,
         render: value => (
           <Text color='gray' className={s.subjectText}>
@@ -237,7 +237,7 @@ function EmailTemplates() {
       {
         key: 'status',
         dataIndex: 'is_active',
-        title: t('admin:emails.list.status', 'Status'),
+        title: t('emails:admin.list.status', 'Status'),
         order: 40,
         render: isActive => (
           <Badge
@@ -246,15 +246,15 @@ function EmailTemplates() {
             radius='full'
           >
             {isActive
-              ? t('admin:emails.list.active', 'Active')
-              : t('admin:emails.list.inactive', 'Inactive')}
+              ? t('emails:admin.list.active', 'Active')
+              : t('emails:admin.list.inactive', 'Inactive')}
           </Badge>
         ),
       },
       {
         key: 'updated',
         dataIndex: 'updated_at',
-        title: t('admin:emails.list.updated', 'Updated'),
+        title: t('emails:admin.list.updated', 'Updated'),
         order: 50,
         render: value => (
           <Text size='2' color='gray'>
@@ -272,7 +272,7 @@ function EmailTemplates() {
             <IconButton
               variant='ghost'
               size='2'
-              title={t('admin:emails.list.edit', 'Edit')}
+              title={t('emails:admin.list.edit', 'Edit')}
               onClick={() =>
                 history.push(`/admin/emails/templates/${record.id}/edit`)
               }
@@ -282,7 +282,7 @@ function EmailTemplates() {
             <IconButton
               variant='ghost'
               size='2'
-              title={t('admin:emails.list.delete', 'Delete')}
+              title={t('emails:admin.list.delete', 'Delete')}
               onClick={() => handleDelete(record)}
             >
               <TrashIcon width={16} height={16} />
@@ -315,9 +315,9 @@ function EmailTemplates() {
         onSelectionChange={setSelectedItems}
       >
         <DataTable.Header
-          title={t('admin:emails.list.title', 'Templates')}
+          title={t('emails:admin.list.title', 'Templates')}
           subtitle={t(
-            'admin:emails.list.subtitle',
+            'emails:admin.list.subtitle',
             'Manage email templates with LiquidJS',
           )}
           icon={<EnvelopeClosedIcon width={24} height={24} />}
@@ -328,7 +328,7 @@ function EmailTemplates() {
             onClick={() => history.push('/admin/emails/templates/create')}
           >
             <PlusIcon width={16} height={16} />
-            {t('admin:emails.list.addTemplate', 'New Template')}
+            {t('emails:admin.list.addTemplate', 'New Template')}
           </Button>
         </DataTable.Header>
 
@@ -337,7 +337,7 @@ function EmailTemplates() {
             value={search}
             onChange={handleSearchChange}
             placeholder={t(
-              'admin:emails.list.searchTemplates',
+              'emails:admin.list.searchTemplates',
               'Search templates...',
             )}
           />
@@ -352,11 +352,11 @@ function EmailTemplates() {
         <DataTable.Empty
           icon={<EnvelopeClosedIcon width={48} height={48} />}
           title={t(
-            'admin:emails.list.noTemplatesFound',
+            'emails:admin.list.noTemplatesFound',
             'No email templates found',
           )}
           description={t(
-            'admin:emails.list.noTemplatesDescription',
+            'emails:admin.list.noTemplatesDescription',
             'Create your first email template to get started.',
           )}
         />
@@ -376,7 +376,7 @@ function EmailTemplates() {
 
       <Modal.ConfirmDelete
         ref={confirmDeleteRef}
-        title={t('admin:emails.deleteModal.title', 'Delete Template')}
+        title={t('emails:admin.deleteModal.title', 'Delete Template')}
         getItemName={getDeleteItemName}
         onDelete={onConfirmDelete}
         onSuccess={handleRefreshList}
@@ -390,7 +390,7 @@ function EmailTemplates() {
         maxWidth={{ initial: '100%', md: '800px' }}
       >
         <Modal.Header onClose={handlePreviewClose}>
-          {t('admin:emails.list.previewTitle', 'Template Preview')}
+          {t('emails:admin.list.previewTitle', 'Template Preview')}
         </Modal.Header>
         <Modal.Body className={s.modalBody}>
           <TemplateEditor className={s.templateEditor} />

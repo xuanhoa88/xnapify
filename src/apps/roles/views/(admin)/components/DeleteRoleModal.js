@@ -70,7 +70,7 @@ const DeleteRoleModal = forwardRef(({ onSuccess }, ref) => {
       resetState();
       onSuccess && onSuccess(role);
     } catch (err) {
-      setError(err || t('admin:roles.deleteError', 'Failed to delete role'));
+      setError(err || t('roles:admin.deleteError', 'Failed to delete role'));
     } finally {
       setDeleting(false);
     }
@@ -79,12 +79,12 @@ const DeleteRoleModal = forwardRef(({ onSuccess }, ref) => {
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
       <Modal.Header onClose={handleClose}>
-        {t('admin:roles.deleteTitle', 'Delete Role')}
+        {t('roles:admin.deleteTitle', 'Delete Role')}
       </Modal.Header>
       <Modal.Body error={error}>
         <Modal.Description>
           {t(
-            'admin:roles.deleteConfirmation',
+            'roles:admin.deleteConfirmation',
             'Are you sure you want to delete the role "{{roleName}}"?',
             { roleName: role && role.name },
           )}

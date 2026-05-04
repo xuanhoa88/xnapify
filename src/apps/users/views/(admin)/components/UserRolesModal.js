@@ -84,7 +84,7 @@ const UserRolesModal = forwardRef(({ onSuccess, fetchRoles }, ref) => {
         }
       } catch (err) {
         setError(
-          err || t('admin:users.errors.loadRoles', 'Failed to load roles'),
+          err || t('users:admin.errors.loadRoles', 'Failed to load roles'),
         );
       } finally {
         setRolesLoading(false);
@@ -186,7 +186,7 @@ const UserRolesModal = forwardRef(({ onSuccess, fetchRoles }, ref) => {
       handleClose();
     } catch (err) {
       setError(
-        err || t('admin:users.errors.assignRoles', 'Failed to assign roles'),
+        err || t('users:admin.errors.assignRoles', 'Failed to assign roles'),
       );
     }
   }, [
@@ -202,11 +202,11 @@ const UserRolesModal = forwardRef(({ onSuccess, fetchRoles }, ref) => {
 
   const description = isBulk
     ? t(
-        'admin:users.roles.assignRolesBulkDesc',
+        'users:admin.roles.assignRolesBulkDesc',
         'Select roles to assign to the selected users.',
       )
     : t(
-        'admin:users.roles.assignRolesDesc',
+        'users:admin.roles.assignRolesDesc',
         "Select roles to assign to this user. The user's permissions will be based on these roles.",
       );
 
@@ -215,11 +215,11 @@ const UserRolesModal = forwardRef(({ onSuccess, fetchRoles }, ref) => {
       <Modal.Header onClose={handleClose}>
         {isBulk
           ? t(
-              'admin:users.roles.assignRolesBulk',
+              'users:admin.roles.assignRolesBulk',
               'Assign Roles to {{count}} Users',
               { count: bulkUserIds.length },
             )
-          : t('admin:users.roles.manageRoles', 'Manage Roles for "{{name}}"', {
+          : t('users:admin.roles.manageRoles', 'Manage Roles for "{{name}}"', {
               name:
                 user &&
                 ((user.profile && user.profile.display_name) || user.email),
@@ -235,7 +235,7 @@ const UserRolesModal = forwardRef(({ onSuccess, fetchRoles }, ref) => {
           <TableSearch
             value={searchTerm}
             onChange={handleSearchChange}
-            placeholder={t('admin:users.roles.searchRoles', 'Search roles...')}
+            placeholder={t('users:admin.roles.searchRoles', 'Search roles...')}
             debounce={300}
           />
         </Box>
@@ -244,7 +244,7 @@ const UserRolesModal = forwardRef(({ onSuccess, fetchRoles }, ref) => {
           {rolesLoading ? (
             <Flex align='center' justify='center' p='6'>
               <Text as='p' color='gray'>
-                {t('admin:users.roles.loadingRoles', 'Loading roles...')}
+                {t('users:admin.roles.loadingRoles', 'Loading roles...')}
               </Text>
             </Flex>
           ) : roles.length === 0 ? (
@@ -252,11 +252,11 @@ const UserRolesModal = forwardRef(({ onSuccess, fetchRoles }, ref) => {
               <Text as='p' color='gray'>
                 {searchTerm
                   ? t(
-                      'admin:users.roles.noRolesMatch',
+                      'users:admin.roles.noRolesMatch',
                       'No roles match your search',
                     )
                   : t(
-                      'admin:users.roles.noRolesAvailable',
+                      'users:admin.roles.noRolesAvailable',
                       'No roles available',
                     )}
               </Text>
@@ -325,7 +325,7 @@ const UserRolesModal = forwardRef(({ onSuccess, fetchRoles }, ref) => {
         <Modal.SelectionCount count={selections.length} />
         <Modal.Actions>
           <Modal.Button onClick={handleClose}>
-            {t('admin:users.roles.cancel', 'Cancel')}
+            {t('users:admin.roles.cancel', 'Cancel')}
           </Modal.Button>
           <Modal.Button
             variant='primary'
@@ -333,8 +333,8 @@ const UserRolesModal = forwardRef(({ onSuccess, fetchRoles }, ref) => {
             disabled={loading}
           >
             {loading
-              ? t('admin:users.roles.saving', 'Saving...')
-              : t('admin:users.roles.save', 'Save')}
+              ? t('users:admin.roles.saving', 'Saving...')
+              : t('users:admin.roles.save', 'Save')}
           </Modal.Button>
         </Modal.Actions>
       </Modal.Footer>

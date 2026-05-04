@@ -127,14 +127,14 @@ const RoleGroupsModal = forwardRef((props, ref) => {
   return (
     <Modal isOpen={isOpen} onClose={handleClose} placement='right'>
       <Modal.Header onClose={handleClose}>
-        {t('admin:roles.groupsWithRole', 'Groups with "{{roleName}}" Role', {
+        {t('roles:admin.groupsWithRole', 'Groups with "{{roleName}}" Role', {
           roleName: (role && role.name) || t('admin:common.unknown', 'Unknown'),
         })}
       </Modal.Header>
       <Modal.Body error={error}>
         <Modal.Description>
           {t(
-            'admin:roles.viewGroupsDescription',
+            'roles:admin.viewGroupsDescription',
             'View all groups that have this role assigned.',
           )}
         </Modal.Description>
@@ -166,9 +166,9 @@ const RoleGroupsModal = forwardRef((props, ref) => {
               className='text-[var(--gray-9)] italic bg-[var(--gray-2)] rounded-[var(--radius-3)]'
             >
               {search
-                ? t('admin:roles.noGroupsMatch', 'No groups match your search')
+                ? t('roles:admin.noGroupsMatch', 'No groups match your search')
                 : t(
-                    'admin:roles.noGroupsWithRole',
+                    'roles:admin.noGroupsWithRole',
                     'No groups found with this role',
                   )}
             </Flex>

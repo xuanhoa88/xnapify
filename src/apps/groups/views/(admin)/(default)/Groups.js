@@ -225,7 +225,7 @@ function Groups({ context }) {
     () => [
       {
         key: 'delete',
-        label: t('admin:groups.bulkDelete', 'Delete Selected'),
+        label: t('groups:admin.bulkDelete', 'Delete Selected'),
         icon: <TrashIcon width={16} height={16} />,
         onClick: handleBulkDelete,
         variant: 'danger',
@@ -252,13 +252,13 @@ function Groups({ context }) {
           >
             <Flex gap='2' className={s.badgesWrapper}>
               <Badge color='blue' radius='full' variant='soft'>
-                {t('admin:groups.usersCount', '{{count}} user', {
+                {t('groups:admin.usersCount', '{{count}} user', {
                   count: userCount,
                   defaultValue_other: '{{count}} users',
                 })}
               </Badge>
               <Badge color='gray' radius='full' variant='surface'>
-                {t('admin:groups.rolesCount', '{{count}} role', {
+                {t('groups:admin.rolesCount', '{{count}} role', {
                   count: roleCount,
                   defaultValue_other: '{{count}} roles',
                 })}
@@ -314,9 +314,9 @@ function Groups({ context }) {
         onSelectionChange={setSelectedGroups}
       >
         <DataTable.Header
-          title={t('admin:groups.title', 'Group Management')}
+          title={t('groups:admin.title', 'Group Management')}
           subtitle={t(
-            'admin:groups.subtitle',
+            'groups:admin.subtitle',
             'Organize users into groups for easier access control',
           )}
           icon={<GroupIcon width={24} height={24} />}
@@ -328,13 +328,13 @@ function Groups({ context }) {
             {...(!canCreate && {
               disabled: true,
               title: t(
-                'admin:groups.noPermissionToCreate',
+                'groups:admin.noPermissionToCreate',
                 'You do not have permission to create groups',
               ),
             })}
           >
             <PlusIcon width={16} height={16} />
-            {t('admin:groups.addGroup', 'Add Group')}
+            {t('groups:admin.addGroup', 'Add Group')}
           </Button>
         </DataTable.Header>
 
@@ -342,7 +342,7 @@ function Groups({ context }) {
           <DataTable.Search
             value={search}
             onChange={handleSearchChange}
-            placeholder={t('admin:groups.search', 'Search groups...')}
+            placeholder={t('groups:admin.search', 'Search groups...')}
           />
           <DataTable.Filter
             component={SearchableSelect}
@@ -355,8 +355,8 @@ function Groups({ context }) {
             hasMore={rolesHasMore}
             loading={rolesLoading}
             loadingMore={rolesLoadingMore}
-            placeholder={t('admin:groups.allRoles', 'All Roles')}
-            searchPlaceholder={t('admin:groups.searchRoles', 'Search roles...')}
+            placeholder={t('groups:admin.allRoles', 'All Roles')}
+            searchPlaceholder={t('groups:admin.searchRoles', 'Search roles...')}
           />
           <DataTable.ClearFilters
             visible={hasActiveFilters}
@@ -368,9 +368,9 @@ function Groups({ context }) {
 
         <DataTable.Empty
           icon={<GroupIcon width={48} height={48} />}
-          title={t('admin:groups.noGroupsFound', 'No groups found')}
+          title={t('groups:admin.noGroupsFound', 'No groups found')}
           description={t(
-            'admin:groups.noGroupsDescription',
+            'groups:admin.noGroupsDescription',
             'Create a new group to organize users and assign roles.',
           )}
         >
@@ -382,12 +382,12 @@ function Groups({ context }) {
             {...(!canCreate && {
               disabled: true,
               title: t(
-                'admin:groups.noPermissionToCreate',
+                'groups:admin.noPermissionToCreate',
                 'You do not have permission to create groups',
               ),
             })}
           >
-            {t('admin:groups.addGroup', 'Add Group')}
+            {t('groups:admin.addGroup', 'Add Group')}
           </Button>
         </DataTable.Empty>
         <DataTable.Error message={error} onRetry={refreshGroups} />
@@ -416,7 +416,7 @@ function Groups({ context }) {
       {/* Delete Confirmation Modal */}
       <Modal.ConfirmDelete
         ref={deleteModalRef}
-        title={t('admin:groups.deleteTitle', 'Delete Group')}
+        title={t('groups:admin.deleteTitle', 'Delete Group')}
         getItemName={getGroupName}
         onDelete={handleDeleteGroupAction}
         onSuccess={refreshGroups}

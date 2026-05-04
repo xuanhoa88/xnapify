@@ -5,9 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { getTranslations } from '@shared/i18n/loader';
-import { addNamespace } from '@shared/i18n/utils';
-
 import RoleTag from './(admin)/components/RoleTag';
 import reducer, { SLICE_NAME } from './(admin)/redux';
 import * as selectors from './(admin)/redux/selector';
@@ -34,10 +31,10 @@ const translationsContext = require.context(
 // =============================================================================
 
 export default {
+  translations() {
+    return [translationsContext];
+  },
   providers({ store, container }) {
-    // Merge module-specific translations into the shared 'admin' namespace
-    addNamespace('admin', getTranslations(translationsContext));
-
     store.injectReducer(SLICE_NAME, reducer);
     container.bind(
       'users:admin:state',

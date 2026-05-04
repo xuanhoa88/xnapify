@@ -126,7 +126,7 @@ const GroupUsersModal = forwardRef((props, ref) => {
   return (
     <Modal isOpen={isOpen} onClose={handleClose} placement='right'>
       <Modal.Header onClose={handleClose}>
-        {t('admin:groups.usersInGroup', 'Users in "{{groupName}}"', {
+        {t('groups:admin.usersInGroup', 'Users in "{{groupName}}"', {
           groupName:
             (group && group.name) || t('admin:common.unknown', 'Unknown'),
         })}
@@ -134,7 +134,7 @@ const GroupUsersModal = forwardRef((props, ref) => {
       <Modal.Body error={error}>
         <Modal.Description className='mb-4 text-[var(--gray-11)]'>
           {t(
-            'admin:groups.viewUsersDescription',
+            'groups:admin.viewUsersDescription',
             'View all users that belong to this group.',
           )}
         </Modal.Description>
@@ -159,7 +159,7 @@ const GroupUsersModal = forwardRef((props, ref) => {
             <Flex justify='center' align='center' p='8'>
               <Text size='2' color='gray'>
                 {t(
-                  'admin:groups.noUsersInGroup',
+                  'groups:admin.noUsersInGroup',
                   'No users found in this group',
                 )}
               </Text>

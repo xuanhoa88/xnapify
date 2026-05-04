@@ -82,7 +82,7 @@ const GroupPermissionsModal = forwardRef((props, ref) => {
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
       <Modal.Header onClose={handleClose}>
-        {t('admin:groups.permissionsFor', 'Permissions for "{{groupName}}"', {
+        {t('groups:admin.permissionsFor', 'Permissions for "{{groupName}}"', {
           groupName:
             (group && group.name) || t('admin:common.unknown', 'Unknown'),
         })}
@@ -90,7 +90,7 @@ const GroupPermissionsModal = forwardRef((props, ref) => {
       <Modal.Body>
         <Modal.Description className='mb-4 text-[var(--gray-11)]'>
           {t(
-            'admin:groups.permissionsDescription',
+            'groups:admin.permissionsDescription',
             "These permissions are inherited from the group's assigned roles.",
           )}
         </Modal.Description>
@@ -108,7 +108,7 @@ const GroupPermissionsModal = forwardRef((props, ref) => {
               <Box>
                 <Flex align='center' gap='2' mb='4'>
                   <Text as='h4' size='3' weight='bold'>
-                    {t('admin:groups.assignedRoles', 'Assigned Roles')}
+                    {t('groups:admin.assignedRoles', 'Assigned Roles')}
                   </Text>
                 </Flex>
                 <Card size='2' className='shadow-sm'>
@@ -126,7 +126,7 @@ const GroupPermissionsModal = forwardRef((props, ref) => {
                             highContrast
                           >
                             {t(
-                              'admin:roles.permissionCount',
+                              'roles:admin.permissionCount',
                               '{{count}} permission',
                               {
                                 count: role.permissions.length,
@@ -152,7 +152,7 @@ const GroupPermissionsModal = forwardRef((props, ref) => {
               <Flex align='center' gap='2' mb='4'>
                 <Text as='h4' size='3' weight='bold'>
                   {t(
-                    'admin:groups.effectivePermissions',
+                    'groups:admin.effectivePermissions',
                     'Effective Permissions',
                   )}
                 </Text>
@@ -185,7 +185,7 @@ const GroupPermissionsModal = forwardRef((props, ref) => {
                 >
                   <Text size='2' color='gray'>
                     {t(
-                      'admin:groups.noPermissionsAssigned',
+                      'groups:admin.noPermissionsAssigned',
                       'No permissions. Assign roles to grant permissions.',
                     )}
                   </Text>

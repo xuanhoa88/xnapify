@@ -67,7 +67,7 @@ const HANDLERS = Symbol('handlers');
 export default {
   [HANDLERS]: {},
   
-  translations: () => translationsContext,
+  translations: () => [translationsContext],
 
   // Fire when Extension loads
   async boot({ container, registry }) {
@@ -109,7 +109,7 @@ import MySpecialComponent from './components/MySpecialComponent'
 const translationsContext = require.context('../translations', false, /\.json$/i);
 
 export default {
-  translations: () => translationsContext,
+  translations: () => [translationsContext],
   
   // Evaluated globally before route layouts render
   providers({ container }) {

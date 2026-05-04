@@ -146,7 +146,7 @@ function EditEmailTemplate({ params }) {
             </Flex>
             <Flex direction='column'>
               <Heading size='6'>
-                {t('admin:emails.form.editTemplate', 'Edit Email Template')}
+                {t('emails:admin.form.editTemplate', 'Edit Email Template')}
               </Heading>
             </Flex>
           </Flex>
@@ -154,7 +154,7 @@ function EditEmailTemplate({ params }) {
         <Box className={s.loaderBox}>
           <Loader
             variant='spinner'
-            message={t('admin:emails.edit.loading', 'Loading template...')}
+            message={t('emails:admin.edit.loading', 'Loading template...')}
           />
         </Box>
       </Box>
@@ -179,7 +179,7 @@ function EditEmailTemplate({ params }) {
             </Flex>
             <Flex direction='column'>
               <Heading size='6'>
-                {t('admin:emails.form.editTemplate', 'Edit Email Template')}
+                {t('emails:admin.form.editTemplate', 'Edit Email Template')}
               </Heading>
             </Flex>
           </Flex>
@@ -188,7 +188,7 @@ function EditEmailTemplate({ params }) {
           {(typeof detailError === 'string'
             ? detailError
             : (detailError && detailError.message) || '') ||
-            t('admin:emails.edit.notFound', 'Template not found')}
+            t('emails:admin.edit.notFound', 'Template not found')}
         </Box>
         <Button
           variant='ghost'
@@ -196,7 +196,7 @@ function EditEmailTemplate({ params }) {
           onClick={() => history.push('/admin/emails/templates')}
         >
           <ArrowLeftIcon />
-          {t('admin:emails.edit.backToList', 'Back to Email Templates')}
+          {t('emails:admin.edit.backToList', 'Back to Email Templates')}
         </Button>
       </Box>
     );
@@ -219,7 +219,7 @@ function EditEmailTemplate({ params }) {
           </Flex>
           <Flex direction='column'>
             <Heading size='6'>
-              {t('admin:emails.form.editTemplate', 'Edit Email Template')}
+              {t('emails:admin.form.editTemplate', 'Edit Email Template')}
             </Heading>
           </Flex>
         </Flex>
@@ -229,7 +229,7 @@ function EditEmailTemplate({ params }) {
           onClick={() => handleCancel(isDirtyRef.current)}
         >
           <ArrowLeftIcon />
-          {t('admin:emails.edit.backToList', 'Back to Email Templates')}
+          {t('emails:admin.edit.backToList', 'Back to Email Templates')}
         </Button>
       </Flex>
 
@@ -304,19 +304,19 @@ function EditFormFields({ onCancel, loading, isDirtyRef }) {
       {/* Template Information */}
       <Box>
         <Heading as='h3' size='4' className={s.sectionHeading}>
-          {t('admin:emails.form.templateInfo', 'Template Information')}
+          {t('emails:admin.form.templateInfo', 'Template Information')}
         </Heading>
 
         <Flex gap='4' direction={{ initial: 'column', sm: 'row' }}>
           <Box className={s.flexOne}>
             <Form.Field
               name='name'
-              label={t('admin:emails.form.name', 'Template Name')}
+              label={t('emails:admin.form.name', 'Template Name')}
               required
             >
               <Form.Input
                 placeholder={t(
-                  'admin:emails.form.namePlaceholder',
+                  'emails:admin.form.namePlaceholder',
                   'e.g. Welcome Email',
                 )}
               />
@@ -326,14 +326,14 @@ function EditFormFields({ onCancel, loading, isDirtyRef }) {
           <Box className={s.flexOne}>
             <Form.Field
               name='slug'
-              label={t('admin:emails.form.slug', 'Slug')}
+              label={t('emails:admin.form.slug', 'Slug')}
               required
             >
               <Form.InputMask
                 mask={'s'.repeat(100)}
                 maskPlaceholder=''
                 placeholder={t(
-                  'admin:emails.form.slugPlaceholder',
+                  'emails:admin.form.slugPlaceholder',
                   'e.g. welcome-email',
                 )}
               />
@@ -342,7 +342,7 @@ function EditFormFields({ onCancel, loading, isDirtyRef }) {
         </Flex>
 
         <Form.Field name='is_active'>
-          <Form.Switch label={t('admin:emails.form.isActive', 'Active')} />
+          <Form.Switch label={t('emails:admin.form.isActive', 'Active')} />
         </Form.Field>
       </Box>
 
@@ -350,7 +350,7 @@ function EditFormFields({ onCancel, loading, isDirtyRef }) {
       <Box>
         <Flex align='center' justify='between' className={s.emailContentHeader}>
           <Heading as='h3' size='4' className={s.emailContentHeading}>
-            {t('admin:emails.form.emailContent', 'Email Content')}
+            {t('emails:admin.form.emailContent', 'Email Content')}
           </Heading>
           <Button
             type='button'
@@ -361,18 +361,18 @@ function EditFormFields({ onCancel, loading, isDirtyRef }) {
             disabled={isHtmlBodyEmpty}
           >
             <EyeOpenIcon width={16} height={16} />
-            {t('admin:emails.form.previewBtn', 'Preview')}
+            {t('emails:admin.form.previewBtn', 'Preview')}
           </Button>
         </Flex>
 
         <Form.Field
           name='subject'
-          label={t('admin:emails.form.emailSubject', 'Email Subject')}
+          label={t('emails:admin.form.emailSubject', 'Email Subject')}
           required
         >
           <Form.Input
             placeholder={t(
-              'admin:emails.form.emailSubjectPlaceholder',
+              'emails:admin.form.emailSubjectPlaceholder',
               'e.g. Welcome {{ name }}!',
             )}
           />
@@ -380,13 +380,13 @@ function EditFormFields({ onCancel, loading, isDirtyRef }) {
 
         <Form.Field
           name='html_body'
-          label={t('admin:emails.form.emailBody', 'Email Body')}
+          label={t('emails:admin.form.emailBody', 'Email Body')}
         >
           <Form.WYSIWYG
             markdown={false}
             toolbarAppend={editor => <EmailTemplateSelector editor={editor} />}
             placeholder={t(
-              'admin:emails.form.emailBodyPlaceholder',
+              'emails:admin.form.emailBodyPlaceholder',
               'Compose your email body here...',
             )}
           />
@@ -412,7 +412,7 @@ function EditFormFields({ onCancel, loading, isDirtyRef }) {
             dispatch(clearPreview());
           }}
         >
-          {t('admin:emails.form.preview', 'Preview')}
+          {t('emails:admin.form.preview', 'Preview')}
         </Modal.Header>
         <Modal.Body className={s.modalBody}>
           <TemplateEditor className={s.templateEditor} />
@@ -432,7 +432,7 @@ function EditFormFields({ onCancel, loading, isDirtyRef }) {
         <Button variant='solid' color='indigo' type='submit' loading={loading}>
           {loading
             ? t('admin:buttons.saving', 'Saving...')
-            : t('admin:emails.form.save', 'Save Changes')}
+            : t('emails:admin.form.save', 'Save Changes')}
         </Button>
       </Flex>
     </Flex>

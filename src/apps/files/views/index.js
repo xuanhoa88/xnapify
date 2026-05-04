@@ -24,5 +24,7 @@ const translationsContext = require.context(
 
 export default {
   routes: () => viewsContext,
-  translations: () => translationsContext,
+  translations() {
+    return [translationsContext];
+  },
 };

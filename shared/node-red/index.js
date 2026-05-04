@@ -6,6 +6,7 @@
  */
 
 /* eslint-disable no-underscore-dangle */
+import fs from 'fs';
 import path from 'path';
 
 import { getTokenFromCookie, getRefreshTokenFromCookie } from '@shared/cookies';
@@ -415,7 +416,7 @@ export class NodeRedManager {
 
         // Write node files as a proper NR module (with package.json).
         // Use `id` (the extension registry key) consistently for module naming.
-        const result = writeExtensionNodeModule(userDir, id, extNodesDir);
+        const result = await writeExtensionNodeModule(userDir, id, extNodesDir);
         if (!result) return; // No nodes in this extension
 
         const { moduleName } = result;
@@ -505,7 +506,7 @@ export class NodeRedManager {
         }
 
         // Remove files from disk — use `id` consistently
-        removeExtensionNodeModule(this._settings.userDir, id);
+        await removeExtensionNodeModule(this._settings.userDir, id);
 
         this._extModuleMap.delete(id);
       } catch (err) {
@@ -642,8 +643,8 @@ export class NodeRedManager {
 
       // Create settings with app instance for authentication
       this._settings = __DEV__
-        ? createDevelopmentSettings(mergedConfig)
-        : createProductionSettings(mergedConfig);
+        ? await createDevelopmentSettings(mergedConfig)
+        : await createProductionSettings(mergedConfig);
 
       // Dynamic import for util
       this._util = (await import('@node-red/util')).default;
@@ -665,10 +666,19 @@ export class NodeRedManager {
       // Hook into extension manager for hot-loading extension nodes.
       // Uses addModule/removeModule from @node-red/registry — same API
       // as the Palette Manager. No restart needed.
+      //
+      // Listeners are RE-CREATED on each init() cycle. Old listeners are
+      // removed during shutdown() to prevent leaks across HMR rebuilds.
       const extensionManager = container
         ? container.resolve('extension')
         : null;
-      if (extensionManager && !this._extLoadedHandler) {
+      if (extensionManager) {
+        // Remove stale listeners from a previous init() cycle (HMR)
+        if (this._extLoadedHandler) {
+          extensionManager.off('extension:loaded', this._extLoadedHandler);
+          extensionManager.off('extension:unloaded', this._extUnloadedHandler);
+        }
+
         this._extLoadedHandler = payload => this._onExtensionLoaded(payload);
         this._extUnloadedHandler = payload =>
           this._onExtensionUnloaded(payload);
@@ -913,6 +923,13 @@ export class NodeRedManager {
       // with "Cannot read properties of undefined (reading 'split')".
       await this._sanitizeRegistry();
 
+      // Sync _extModuleMap with boot-loaded extension modules.
+      // During boot, writeCustomNodes() writes extension modules to
+      // <userDir>/node_modules/ and Node-RED discovers them during its
+      // init scan. We must populate _extModuleMap so that subsequent
+      // unload events can find and removeModule() them correctly.
+      await this._syncBootModules();
+
       this._state = LifecycleState.RUNNING;
       this._readyForExtEvents = true;
       Logger.success('Ready');
@@ -935,10 +952,9 @@ export class NodeRedManager {
     // so we must sever this link now while we still have a reference to it.
     this._cleanupFlowSplitter(errors);
 
-    // NOTE: Extension manager listeners are NOT removed during shutdown.
-    // They are idempotent (gated by _readyForExtEvents) and must survive
-    // across restart() cycles. They are only created once in the constructor
-    // lifetime and cleaned up in destroy() if needed.
+    // Remove extension manager listeners to prevent leaks across HMR cycles.
+    // Each init() re-creates them, so they must be removed here.
+    this._cleanupExtensionListeners(errors);
 
     // Stop runtime and editor with proper sequencing
     try {
@@ -992,6 +1008,8 @@ export class NodeRedManager {
     this._util = null;
     this._runtime = null;
     this._editorApi = null;
+    this._extModuleMap.clear();
+    this._extOpQueue.clear();
     this._state = LifecycleState.UNINITIALIZED;
 
     if (errors.length > 0) {
@@ -1054,6 +1072,78 @@ export class NodeRedManager {
         Logger.error('Flow-splitter cleanup error:', err);
         errors.push(err);
       }
+    }
+  }
+
+  /**
+   * Remove extension manager event listeners.
+   * Must be called during shutdown so that init() can re-create them
+   * without duplicates leaking across HMR cycles.
+   * @private
+   */
+  _cleanupExtensionListeners(errors) {
+    if (this._extLoadedHandler && this._app) {
+      try {
+        const container =
+          typeof this._app.get === 'function'
+            ? this._app.get('container')
+            : null;
+        const extensionManager = container
+          ? container.resolve('extension')
+          : null;
+        if (extensionManager) {
+          extensionManager.off('extension:loaded', this._extLoadedHandler);
+          extensionManager.off('extension:unloaded', this._extUnloadedHandler);
+          Logger.debug('Extension manager listeners removed');
+        }
+      } catch (err) {
+        Logger.error('Extension listener cleanup error:', err);
+        errors.push(err);
+      }
+    }
+    this._extLoadedHandler = null;
+    this._extUnloadedHandler = null;
+  }
+
+  /**
+   * Populate _extModuleMap with extension modules that were written
+   * to <userDir>/node_modules/ during boot (by writeCustomNodes) and
+   * auto-discovered by Node-RED's registry scan.
+   *
+   * Without this, toggling off a boot-loaded extension would silently
+   * fail because _onExtensionUnloaded checks _extModuleMap first.
+   * @private
+   */
+  async _syncBootModules() {
+    try {
+      const extModDir = this._settings._extModulesDir;
+      try {
+        await fs.promises.access(extModDir);
+      } catch {
+        return;
+      }
+
+      const registry = (await import('@node-red/registry')).default;
+      const entries = await fs.promises.readdir(extModDir);
+
+      for (const entry of entries) {
+        if (!entry.startsWith('xnapify-nodered-')) continue;
+
+        const extId = entry.replace('xnapify-nodered-', '');
+        // Skip if already tracked (shouldn't happen at boot, but safety)
+        if (this._extModuleMap.has(extId)) continue;
+
+        const moduleInfo = registry.getModuleInfo(entry);
+        if (moduleInfo) {
+          this._extModuleMap.set(extId, {
+            moduleName: entry,
+            manifest: null, // not needed for unload
+          });
+          Logger.debug(`Boot-synced extension module "${entry}"`);
+        }
+      }
+    } catch (err) {
+      Logger.warn('Failed to sync boot modules:', err.message);
     }
   }
 

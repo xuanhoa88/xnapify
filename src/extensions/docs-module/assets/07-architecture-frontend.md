@@ -96,7 +96,7 @@ export default function SafeModal({ children }) {
 
 Domains simply export a Webpack string analyzer inside their core index definitions:
 ```javascript
-translations: () => require.context('./translations', true, /\.json$/)
+translations: () => [require.context('./translations', true, /\.json$/)]
 ```
 
 Inside your React structure, utilize the standard `useTranslation` hooks:

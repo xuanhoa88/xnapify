@@ -31,14 +31,14 @@ function TemplateActionsDropdown({ template, onPreview, onDuplicate }) {
           icon={<EyeOpenIcon width={16} height={16} />}
           permission='emails:read'
         >
-          {t('admin:emails.list.preview', 'Preview')}
+          {t('emails:admin.list.preview', 'Preview')}
         </ContextMenu.Item>
         <ContextMenu.Item
           onClick={() => onDuplicate(template)}
           icon={<CopyIcon width={16} height={16} />}
           permission='emails:create'
         >
-          {t('admin:emails.list.duplicate', 'Duplicate')}
+          {t('emails:admin.list.duplicate', 'Duplicate')}
         </ContextMenu.Item>
       </ContextMenu.Menu>
     </ContextMenu>

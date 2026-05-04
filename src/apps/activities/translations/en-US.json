@@ -1,5 +1,5 @@
 {
-  "activities": {
+  "admin": {
     "title": "Activity Logs",
     "noLogsFound": "No activity logs found",
     "filter": {

@@ -37,6 +37,7 @@ translations → models → providers → migrations → seeds → init → rout
 Each module exports lifecycle hooks in `api/index.js`:
 
 ```javascript
+export function translations() { return [require.context('../translations', ...)]; }
 export function models() { return require.context('./models', ...); }
 export async function providers(container) { container.instance('myService', service); }
 export async function migrations(container) { /* run migrations */ }

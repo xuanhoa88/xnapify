@@ -54,7 +54,7 @@ export default {
   },
   
   // Declaratively registers contexts for auto-discovery using `require.context()`
-  translations: () => require.context('./translations', true, /\.json$/),
+  translations: () => [require.context('./translations', true, /\.json$/)],
   migrations: () => require.context('./database/migrations', false, /\.js$/),
   models: () => require.context('./models', false, /\.js$/),
   seeds: () => require.context('./database/seeds', false, /\.js$/),
@@ -80,7 +80,7 @@ Similar to the backend, the `views/index.js` manages frontend initialization log
 ```javascript
 export default {
   // Registers frontend specific locale contexts
-  translations: () => require.context('./translations', true, /\.json$/),
+  translations: () => [require.context('./translations', true, /\.json$/)],
 
   // Binds cross-module frontend UI components to the frontend registry container
   providers({ container }) {

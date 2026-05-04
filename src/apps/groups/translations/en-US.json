@@ -1,5 +1,5 @@
 {
-  "groups": {
+  "admin": {
     "title": "Group Management",
     "deleteTitle": "Delete Group",
     "deleteError": "Failed to delete group",

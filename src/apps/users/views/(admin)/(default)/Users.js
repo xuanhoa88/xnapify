@@ -98,7 +98,7 @@ function Users({ context }) {
     dataKey: 'roles',
     mapOption: r => ({ value: r.name, label: r.name }),
     includeAllOption: true,
-    allOptionLabel: t('admin:users.list.allRoles', 'All Roles'),
+    allOptionLabel: t('users:admin.list.allRoles', 'All Roles'),
   });
 
   const {
@@ -113,7 +113,7 @@ function Users({ context }) {
     dataKey: 'groups',
     mapOption: g => ({ value: g.name, label: g.name }),
     includeAllOption: true,
-    allOptionLabel: t('admin:users.list.allGroups', 'All Groups'),
+    allOptionLabel: t('users:admin.list.allGroups', 'All Groups'),
   });
 
   // Filter state
@@ -285,7 +285,7 @@ function Users({ context }) {
       {
         key: 'user',
         dataIndex: 'email',
-        title: t('admin:users.list.user', 'User'),
+        title: t('users:admin.list.user', 'User'),
         order: 10,
         render: (_, record) => (
           <Flex align='center' gap='3'>
@@ -309,7 +309,7 @@ function Users({ context }) {
               </Text>
               {currentUser && currentUser.id === record.id && (
                 <Badge size='1' color='indigo' radius='full' variant='soft'>
-                  {t('admin:users.list.you', 'You')}
+                  {t('users:admin.list.you', 'You')}
                 </Badge>
               )}
             </Flex>
@@ -319,13 +319,13 @@ function Users({ context }) {
       {
         key: 'email',
         dataIndex: 'email',
-        title: t('admin:users.list.email', 'Email'),
+        title: t('users:admin.list.email', 'Email'),
         order: 20,
       },
       {
         key: 'roles',
         dataIndex: 'roles',
-        title: t('admin:users.list.roles', 'Roles'),
+        title: t('users:admin.list.roles', 'Roles'),
         order: 30,
         render: roles => (
           <Flex wrap='wrap' gap='1'>
@@ -340,7 +340,7 @@ function Users({ context }) {
       {
         key: 'groups',
         dataIndex: 'groups',
-        title: t('admin:users.list.groups', 'Groups'),
+        title: t('users:admin.list.groups', 'Groups'),
         order: 40,
         render: groups => (
           <Flex wrap='wrap' gap='1'>
@@ -354,7 +354,7 @@ function Users({ context }) {
       {
         key: 'status',
         dataIndex: 'is_active',
-        title: t('admin:users.list.status', 'Status'),
+        title: t('users:admin.list.status', 'Status'),
         order: 50,
         render: isActive => (
           <Badge
@@ -363,15 +363,15 @@ function Users({ context }) {
             radius='full'
           >
             {isActive
-              ? t('admin:users.list.statusActive', 'Active')
-              : t('admin:users.list.statusInactive', 'Inactive')}
+              ? t('users:admin.list.statusActive', 'Active')
+              : t('users:admin.list.statusInactive', 'Inactive')}
           </Badge>
         ),
       },
       {
         key: 'joined',
         dataIndex: 'created_at',
-        title: t('admin:users.list.joined', 'Joined'),
+        title: t('users:admin.list.joined', 'Joined'),
         order: 60,
         render: createdAt => (
           <Text size='2' color='gray'>
@@ -393,11 +393,11 @@ function Users({ context }) {
                 ? {
                     disabled: true,
                     title: t(
-                      'admin:users.list.cannotEditSelf',
+                      'users:admin.list.cannotEditSelf',
                       'Cannot edit your own account',
                     ),
                   }
-                : { title: t('admin:users.list.edit', 'Edit') })}
+                : { title: t('users:admin.list.edit', 'Edit') })}
               onClick={() => history.push(`/admin/users/${record.id}/edit`)}
             >
               <Pencil2Icon width={16} height={16} />
@@ -409,12 +409,12 @@ function Users({ context }) {
                 ? {
                     disabled: true,
                     title: t(
-                      'admin:users.list.cannotDeleteSelf',
+                      'users:admin.list.cannotDeleteSelf',
                       'Cannot delete your own account',
                     ),
                   }
                 : {
-                    title: t('admin:users.list.delete', 'Delete'),
+                    title: t('users:admin.list.delete', 'Delete'),
                   })}
               onClick={() => handleDelete(record)}
             >
@@ -455,15 +455,15 @@ function Users({ context }) {
     () => [
       {
         value: '',
-        label: t('admin:users.list.allStatus', 'All Status'),
+        label: t('users:admin.list.allStatus', 'All Status'),
       },
       {
         value: 'active',
-        label: t('admin:users.list.statusActive', 'Active'),
+        label: t('users:admin.list.statusActive', 'Active'),
       },
       {
         value: 'inactive',
-        label: t('admin:users.list.statusInactive', 'Inactive'),
+        label: t('users:admin.list.statusInactive', 'Inactive'),
       },
     ],
     [t],
@@ -473,11 +473,11 @@ function Users({ context }) {
   const bulkActions = useMemo(
     () => [
       {
-        label: t('admin:users.list.assignRoles', 'Assign Roles'),
+        label: t('users:admin.list.assignRoles', 'Assign Roles'),
         onClick: openBulkRolesModal,
       },
       {
-        label: t('admin:users.list.assignGroups', 'Assign Groups'),
+        label: t('users:admin.list.assignGroups', 'Assign Groups'),
         onClick: openBulkGroupsModal,
       },
     ],
@@ -487,19 +487,19 @@ function Users({ context }) {
   const moreBulkActions = useMemo(
     () => [
       {
-        label: t('admin:users.list.activate', 'Activate'),
+        label: t('users:admin.list.activate', 'Activate'),
         icon: <CheckIcon width={16} height={16} />,
         onClick: handleBulkActivate,
       },
       {
-        label: t('admin:users.list.deactivate', 'Deactivate'),
+        label: t('users:admin.list.deactivate', 'Deactivate'),
         icon: <Cross2Icon width={16} height={16} />,
         variant: 'warning',
         onClick: handleBulkDeactivate,
       },
       { type: 'divider' },
       {
-        label: t('admin:users.list.delete', 'Delete'),
+        label: t('users:admin.list.delete', 'Delete'),
         icon: <TrashIcon width={16} height={16} />,
         variant: 'danger',
         onClick: handleBulkDelete,
@@ -521,9 +521,9 @@ function Users({ context }) {
         onSelectionChange={setSelectedUsers}
       >
         <DataTable.Header
-          title={t('admin:users.list.title', 'User Management')}
+          title={t('users:admin.list.title', 'User Management')}
           subtitle={t(
-            'admin:users.list.subtitle',
+            'users:admin.list.subtitle',
             'Manage users, roles, and permissions',
           )}
           icon={<PersonIcon width={24} height={24} />}
@@ -535,13 +535,13 @@ function Users({ context }) {
             {...(!canCreate && {
               disabled: true,
               title: t(
-                'admin:users.noPermissionToCreate',
+                'users:admin.noPermissionToCreate',
                 'You do not have permission to create users',
               ),
             })}
           >
             <PlusIcon width={16} height={16} />
-            {t('admin:users.list.addUser', 'Add User')}
+            {t('users:admin.list.addUser', 'Add User')}
           </Button>
         </DataTable.Header>
 
@@ -549,7 +549,7 @@ function Users({ context }) {
           <DataTable.Search
             value={search}
             onChange={handleSearchChange}
-            placeholder={t('admin:users.list.searchUsers', 'Search users...')}
+            placeholder={t('users:admin.list.searchUsers', 'Search users...')}
           />
           <DataTable.Filter
             component={SearchableSelect}
@@ -562,9 +562,9 @@ function Users({ context }) {
             hasMore={rolesHasMore}
             loading={rolesLoading}
             loadingMore={rolesLoadingMore}
-            placeholder={t('admin:users.list.allRoles', 'All Roles')}
+            placeholder={t('users:admin.list.allRoles', 'All Roles')}
             searchPlaceholder={t(
-              'admin:users.list.searchRoles',
+              'users:admin.list.searchRoles',
               'Search roles...',
             )}
           />
@@ -579,9 +579,9 @@ function Users({ context }) {
             hasMore={groupsHasMore}
             loading={groupsLoading}
             loadingMore={groupsLoadingMore}
-            placeholder={t('admin:users.list.allGroups', 'All Groups')}
+            placeholder={t('users:admin.list.allGroups', 'All Groups')}
             searchPlaceholder={t(
-              'admin:users.list.searchGroups',
+              'users:admin.list.searchGroups',
               'Search groups...',
             )}
           />
@@ -591,7 +591,7 @@ function Users({ context }) {
             options={statusOptions}
             value={statusFilter}
             onChange={handleStatusFilterChange}
-            placeholder={t('admin:users.list.allStatus', 'All Status')}
+            placeholder={t('users:admin.list.allStatus', 'All Status')}
             showSearch={false}
           />
           <DataTable.ClearFilters
@@ -607,9 +607,9 @@ function Users({ context }) {
 
         <DataTable.Empty
           icon={<PersonIcon width={48} height={48} />}
-          title={t('admin:users.list.noUsersFound', 'No users found')}
+          title={t('users:admin.list.noUsersFound', 'No users found')}
           description={t(
-            'admin:users.list.noUsersFoundDescription',
+            'users:admin.list.noUsersFoundDescription',
             'Try adjusting your search or filter criteria, or add a new user to get started.',
           )}
         />

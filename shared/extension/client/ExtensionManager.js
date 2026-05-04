@@ -501,7 +501,10 @@ class ClientExtensionManager extends BaseExtensionManager {
       }
     }
 
-    removeNamespace(`extension:${loadedId}`);
+    const meta = this[EXTENSION_METADATA].get(loadedId);
+    removeNamespace(
+      (meta && meta.translationNamespace) || `extension:${loadedId}`,
+    );
     await this.unloadExtension(loadedId);
   }
 

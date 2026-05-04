@@ -126,11 +126,11 @@ function Hub() {
         weight='bold'
         className={s.heroTitle}
       >
-        {t('admin:hub.title', 'Extension Hub')}
+        {t('extensions:hub.title', 'Extension Hub')}
       </Text>
       <Text as='p' size={{ initial: '3', md: '4' }} className={s.heroSubtitle}>
         {t(
-          'admin:hub.subtitle',
+          'extensions:hub.subtitle',
           'Discover and install plugins and modules to extend your application.',
         )}
       </Text>
@@ -139,7 +139,7 @@ function Hub() {
           value={filters.search || ''}
           onChange={handleSearchChange}
           placeholder={t(
-            'admin:hub.searchPlaceholder',
+            'extensions:hub.searchPlaceholder',
             'Search extensions by name or tag...',
           )}
         />
@@ -155,7 +155,7 @@ function Hub() {
         <Box className={s.browseContentBox}>
           <Loader
             variant='skeleton'
-            message={t('admin:hub.loading', 'Loading extensions...')}
+            message={t('extensions:hub.loading', 'Loading extensions...')}
           />
         </Box>
       </Box>
@@ -184,7 +184,7 @@ function Hub() {
         <Box className={s.featuredBox}>
           <Flex align='center' gap='2' className={s.featuredHeaderFlex}>
             <Text as='h2' size='5' weight='bold' className={s.featuredHeading}>
-              {t('admin:hub.featured', 'Featured')}
+              {t('extensions:hub.featured', 'Featured')}
             </Text>
             <Badge
               color='amber'
@@ -193,7 +193,7 @@ function Hub() {
               className={s.featuredBadge}
             >
               <StarFilledIcon width={12} height={12} />
-              {t('admin:hub.curated', 'Curated')}
+              {t('extensions:hub.curated', 'Curated')}
             </Badge>
           </Flex>
           <Grid columns={{ initial: '1', sm: '2', lg: '4' }} gap='4'>
@@ -220,16 +220,16 @@ function Hub() {
           />
           <Flex align='center' justify='between' mt='3'>
             <Text as='span' size='2' color='gray' weight='medium'>
-              {t('admin:hub.results', '{{total}} results', { total })}
+              {t('extensions:hub.results', '{{total}} results', { total })}
             </Text>
             <Select.Root value={filters.sort} onValueChange={handleSortChange}>
               <Select.Trigger className={s.sortSelect} />
               <Select.Content>
                 <Select.Item value='name'>
-                  {t('admin:hub.sortName', 'Name')}
+                  {t('extensions:hub.sortName', 'Name')}
                 </Select.Item>
                 <Select.Item value='recent'>
-                  {t('admin:hub.sortRecent', 'Recently added')}
+                  {t('extensions:hub.sortRecent', 'Recently added')}
                 </Select.Item>
               </Select.Content>
             </Select.Root>
@@ -242,9 +242,9 @@ function Hub() {
         ) : listings.length === 0 ? (
           <DataTable.Empty
             icon={<MagnifyingGlassIcon width={48} height={48} />}
-            title={t('admin:hub.noResults', 'No extensions found')}
+            title={t('extensions:hub.noResults', 'No extensions found')}
             description={t(
-              'admin:hub.tryDifferentSearch',
+              'extensions:hub.tryDifferentSearch',
               'Try a different search term or category.',
             )}
           />

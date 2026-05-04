@@ -80,13 +80,13 @@ const RolePermissionsModal = forwardRef((props, ref) => {
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
       <Modal.Header onClose={handleClose}>
-        {t('admin:roles.permissionsFor', 'Permissions for')}&nbsp;&quot;
+        {t('roles:admin.permissionsFor', 'Permissions for')}&nbsp;&quot;
         {(role && role.name) || t('admin:common.unknown', 'Unknown')}&quot;
       </Modal.Header>
       <Modal.Body>
         <Modal.Description>
           {t(
-            'admin:roles.permissionsDescription',
+            'roles:admin.permissionsDescription',
             'These are the permissions assigned to this role.',
           )}
         </Modal.Description>
@@ -102,7 +102,7 @@ const RolePermissionsModal = forwardRef((props, ref) => {
             <Box>
               <Flex align='center' gap='2' mb='4'>
                 <Text as='h4' size='3' weight='bold'>
-                  {t('admin:roles.permissions', 'Permissions')}
+                  {t('roles:admin.permissions', 'Permissions')}
                 </Text>
                 <Badge variant='soft' color='indigo' size='1' radius='full'>
                   {permissions.length}
@@ -132,7 +132,7 @@ const RolePermissionsModal = forwardRef((props, ref) => {
                 >
                   <Text size='2' color='gray'>
                     {t(
-                      'admin:roles.noPermissionsAssigned',
+                      'roles:admin.noPermissionsAssigned',
                       'No permissions assigned to this role.',
                     )}
                   </Text>

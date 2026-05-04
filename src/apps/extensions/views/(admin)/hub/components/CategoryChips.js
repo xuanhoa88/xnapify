@@ -40,7 +40,7 @@ export default function CategoryChips({
   const renderChip = (id, labelKey, count, isAll = false) => {
     const isActive = activeCategory === id;
     const iconName = isAll ? ClipboardIcon : getCategoryIcon(labelKey);
-    const labelText = isAll ? t('admin:hub.categoryAll', 'All') : labelKey;
+    const labelText = isAll ? t('extensions:hub.categoryAll', 'All') : labelKey;
 
     return (
       <Button

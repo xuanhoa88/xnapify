@@ -98,8 +98,5 @@
     "inviteUser": "Invite User",
     "createRole": "Create Role",
     "addExtension": "Add Extension"
-  },
-  "files": {
-    "title": "File Management"
   }
 }

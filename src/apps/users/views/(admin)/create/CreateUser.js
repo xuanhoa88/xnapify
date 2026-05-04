@@ -72,7 +72,7 @@ function CreateUserIdentityCard() {
 
         <Flex direction='column' align='center' gap='1' className='w-full'>
           <Text size='4' weight='bold' align='center' className='break-all'>
-            {resolvedName || t('admin:users.create.newUser', 'New User')}
+            {resolvedName || t('users:admin.create.newUser', 'New User')}
           </Text>
           {email && resolvedName !== email && (
             <Text size='2' color='gray' align='center' className='break-all'>
@@ -86,7 +86,7 @@ function CreateUserIdentityCard() {
         <Flex direction='column' gap='3' className='w-full'>
           <Flex justify='between' align='center'>
             <Text size='2' color='gray'>
-              {t('admin:users.create.status', 'Status')}
+              {t('users:admin.create.status', 'Status')}
             </Text>
             <Badge
               color={isActive ? 'green' : 'gray'}
@@ -95,17 +95,17 @@ function CreateUserIdentityCard() {
               size='1'
             >
               {isActive
-                ? t('admin:users.create.active', 'Active')
-                : t('admin:users.create.inactive', 'Inactive')}
+                ? t('users:admin.create.active', 'Active')
+                : t('users:admin.create.inactive', 'Inactive')}
             </Badge>
           </Flex>
 
           <Flex justify='between' align='center'>
             <Text size='2' color='gray'>
-              {t('admin:users.create.type', 'Type')}
+              {t('users:admin.create.type', 'Type')}
             </Text>
             <Badge color='indigo' variant='soft' radius='full' size='1'>
-              {t('admin:users.create.newAccount', 'New Account')}
+              {t('users:admin.create.newAccount', 'New Account')}
             </Badge>
           </Flex>
         </Flex>
@@ -174,7 +174,7 @@ function CreateUser({ context }) {
         } else {
           const message =
             (typeof err === 'string' ? err : err && err.message) ||
-            t('admin:users.errors.createUser', 'Failed to create user');
+            t('users:admin.errors.createUser', 'Failed to create user');
           setError(message);
           dispatch(showErrorMessage({ message }));
         }
@@ -200,9 +200,9 @@ function CreateUser({ context }) {
   return (
     <Box className='p-6 max-w-[1400px] mx-auto'>
       <PageHeader
-        title={t('admin:users.create.title', 'Create New User')}
+        title={t('users:admin.create.title', 'Create New User')}
         subtitle={t(
-          'admin:users.create.subtitle',
+          'users:admin.create.subtitle',
           'Add a new user and configure their access permissions',
         )}
         icon={<PersonIcon width={24} height={24} />}
@@ -213,7 +213,7 @@ function CreateUser({ context }) {
           onClick={() => handleCancel(isDirtyRef.current)}
         >
           <ArrowLeftIcon />
-          {t('admin:users.create.backToList', 'Back to Users')}
+          {t('users:admin.create.backToList', 'Back to Users')}
         </Button>
       </PageHeader>
 
@@ -396,7 +396,7 @@ function CreateUserFormFields({
       dispatch(
         showSuccessMessage({
           message: t(
-            'admin:users.passwordGenerated',
+            'users:admin.passwordGenerated',
             'Password generated successfully!',
           ),
         }),
@@ -404,7 +404,7 @@ function CreateUserFormFields({
     } catch (err) {
       const message =
         (typeof err === 'string' ? err : err && err.message) ||
-        t('admin:users.errors.generatePassword', 'Failed to generate password');
+        t('users:admin.errors.generatePassword', 'Failed to generate password');
       setError(message);
       dispatch(showErrorMessage({ message }));
     } finally {
@@ -421,19 +421,19 @@ function CreateUserFormFields({
         className='bg-[var(--gray-a2)] border-b border-[var(--gray-a4)]'
       >
         <Text size='2' weight='bold' color='gray'>
-          {t('admin:users.create.accountInfo', 'Account Information')}
+          {t('users:admin.create.accountInfo', 'Account Information')}
         </Text>
       </Box>
       <Box p='5'>
         <Form.Field
           name='email'
-          label={t('admin:users.create.email', 'Email')}
+          label={t('users:admin.create.email', 'Email')}
           required
         >
           <Form.Input
             type='email'
             placeholder={t(
-              'admin:users.create.emailPlaceholder',
+              'users:admin.create.emailPlaceholder',
               'user@example.com',
             )}
           />
@@ -441,12 +441,12 @@ function CreateUserFormFields({
 
         <Form.Field
           name='password'
-          label={t('admin:users.create.password', 'Password')}
+          label={t('users:admin.create.password', 'Password')}
           required
         >
           <Form.Password
             placeholder={t(
-              'admin:users.create.passwordPlaceholder',
+              'users:admin.create.passwordPlaceholder',
               'Enter password',
             )}
           />
@@ -454,12 +454,12 @@ function CreateUserFormFields({
 
         <Form.Field
           name='confirm_password'
-          label={t('admin:users.create.confirmPassword', 'Confirm Password')}
+          label={t('users:admin.create.confirmPassword', 'Confirm Password')}
           required
         >
           <Form.Password
             placeholder={t(
-              'admin:users.create.confirmPasswordPlaceholder',
+              'users:admin.create.confirmPasswordPlaceholder',
               'Confirm password',
             )}
           />
@@ -477,9 +477,9 @@ function CreateUserFormFields({
           >
             <LockOpen1Icon width={13} height={13} />
             {generatingPassword
-              ? t('admin:users.generatingPassword', 'Generating...')
+              ? t('users:admin.generatingPassword', 'Generating...')
               : t(
-                  'admin:users.generateSecurePassword',
+                  'users:admin.generateSecurePassword',
                   'Generate Secure Password',
                 )}
           </Button>
@@ -493,39 +493,39 @@ function CreateUserFormFields({
         className='bg-[var(--gray-a2)] border-y border-[var(--gray-a4)]'
       >
         <Text size='2' weight='bold' color='gray'>
-          {t('admin:users.create.personalInfo', 'Personal Information')}
+          {t('users:admin.create.personalInfo', 'Personal Information')}
         </Text>
       </Box>
       <Box p='5'>
         <Grid columns={{ initial: '1', sm: '2' }} gap='4'>
           <Form.Field
             name='profile.first_name'
-            label={t('admin:users.create.firstName', 'First Name')}
+            label={t('users:admin.create.firstName', 'First Name')}
             className='mb-0'
           >
             <Form.Input
-              placeholder={t('admin:users.create.firstNamePlaceholder', 'John')}
+              placeholder={t('users:admin.create.firstNamePlaceholder', 'John')}
             />
           </Form.Field>
           <Form.Field
             name='profile.last_name'
-            label={t('admin:users.create.lastName', 'Last Name')}
+            label={t('users:admin.create.lastName', 'Last Name')}
             className='mb-0'
           >
             <Form.Input
-              placeholder={t('admin:users.create.lastNamePlaceholder', 'Doe')}
+              placeholder={t('users:admin.create.lastNamePlaceholder', 'Doe')}
             />
           </Form.Field>
         </Grid>
 
         <Form.Field
           name='profile.display_name'
-          label={t('admin:users.create.displayName', 'Display Name')}
+          label={t('users:admin.create.displayName', 'Display Name')}
           className='mt-4'
         >
           <Form.Input
             placeholder={t(
-              'admin:users.create.displayNamePlaceholder',
+              'users:admin.create.displayNamePlaceholder',
               'John Doe',
             )}
           />
@@ -539,14 +539,14 @@ function CreateUserFormFields({
         className='bg-[var(--gray-a2)] border-y border-[var(--gray-a4)]'
       >
         <Text size='2' weight='bold' color='gray'>
-          {t('admin:users.create.accessAndPermissions', 'Access & Permissions')}
+          {t('users:admin.create.accessAndPermissions', 'Access & Permissions')}
         </Text>
       </Box>
       <Box p='5'>
         <Form.Field
           name='roles'
           label={t(
-            'admin:users.create.rolesSelected',
+            'users:admin.create.rolesSelected',
             'Roles ({{count}} selected)',
             { count: selectedRoles.length },
           )}
@@ -561,18 +561,18 @@ function CreateUserFormFields({
             searchValue={roleSearch}
             onSearch={setRoleSearch}
             searchPlaceholder={t(
-              'admin:users.create.searchRoles',
+              'users:admin.create.searchRoles',
               'Search roles...',
             )}
             valueKey='name'
             labelKey='name'
             itemDescription='description'
             emptyMessage={t(
-              'admin:users.create.noRolesFound',
+              'users:admin.create.noRolesFound',
               'No roles found',
             )}
             loadingMessage={t(
-              'admin:users.create.loadingRoles',
+              'users:admin.create.loadingRoles',
               'Loading roles...',
             )}
           />
@@ -581,7 +581,7 @@ function CreateUserFormFields({
         <Form.Field
           name='groups'
           label={t(
-            'admin:users.create.groupsSelected',
+            'users:admin.create.groupsSelected',
             'Groups ({{count}} selected)',
             { count: selectedGroups.length },
           )}
@@ -596,18 +596,18 @@ function CreateUserFormFields({
             searchValue={groupSearch}
             onSearch={setGroupSearch}
             searchPlaceholder={t(
-              'admin:users.create.searchGroups',
+              'users:admin.create.searchGroups',
               'Search groups...',
             )}
             valueKey='id'
             labelKey='name'
             itemDescription='description'
             emptyMessage={t(
-              'admin:users.create.noGroupsFound',
+              'users:admin.create.noGroupsFound',
               'No groups found',
             )}
             loadingMessage={t(
-              'admin:users.create.loadingGroups',
+              'users:admin.create.loadingGroups',
               'Loading groups...',
             )}
           />
@@ -615,9 +615,9 @@ function CreateUserFormFields({
 
         <Form.Field
           name='is_active'
-          label={t('admin:users.create.accountStatus', 'Account Status')}
+          label={t('users:admin.create.accountStatus', 'Account Status')}
         >
-          <Form.Checkbox label={t('admin:users.create.active', 'Active')} />
+          <Form.Checkbox label={t('users:admin.create.active', 'Active')} />
         </Form.Field>
       </Box>
 
@@ -635,13 +635,13 @@ function CreateUserFormFields({
           type='button'
           onClick={handleCancel}
         >
-          {t('admin:users.create.cancel', 'Cancel')}
+          {t('users:admin.create.cancel', 'Cancel')}
         </Button>
         <Button variant='solid' color='indigo' type='submit' loading={loading}>
           <PlusIcon width={15} height={15} />
           {loading
-            ? t('admin:users.create.creating', 'Creating...')
-            : t('admin:users.create.submit', 'Create User')}
+            ? t('users:admin.create.creating', 'Creating...')
+            : t('users:admin.create.submit', 'Create User')}
         </Button>
       </Flex>
     </Card>

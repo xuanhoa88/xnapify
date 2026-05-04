@@ -72,7 +72,7 @@ const DeletePermissionModal = forwardRef(({ onSuccess }, ref) => {
     } catch (err) {
       setError(
         err ||
-          t('admin:permissions.deleteError', 'Failed to delete permission'),
+          t('permissions:admin.deleteError', 'Failed to delete permission'),
       );
     } finally {
       setDeleting(false);
@@ -82,12 +82,12 @@ const DeletePermissionModal = forwardRef(({ onSuccess }, ref) => {
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
       <Modal.Header onClose={handleClose}>
-        {t('admin:permissions.deleteTitle', 'Delete Permission')}
+        {t('permissions:admin.deleteTitle', 'Delete Permission')}
       </Modal.Header>
       <Modal.Body error={error}>
         <Modal.Description>
           {t(
-            'admin:permissions.deleteConfirmation',
+            'permissions:admin.deleteConfirmation',
             'Are you sure you want to delete the permission "{{permissionName}}"? This action cannot be undone.',
             {
               permissionName: permission

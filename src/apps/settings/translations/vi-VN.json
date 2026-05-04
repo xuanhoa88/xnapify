@@ -1,5 +1,5 @@
 {
-  "settings": {
+  "admin": {
     "title": "Cài đặt hệ thống",
     "subtitle": "Cấu hình cài đặt toàn hệ thống cho tất cả module",
     "loading": "Đang tải cài đặt...",

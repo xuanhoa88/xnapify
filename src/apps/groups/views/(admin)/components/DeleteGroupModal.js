@@ -70,7 +70,7 @@ const DeleteGroupModal = forwardRef(({ onSuccess }, ref) => {
       resetState();
       onSuccess && onSuccess(group);
     } catch (err) {
-      setError(err || t('admin:groups.deleteError', 'Failed to delete group'));
+      setError(err || t('groups:admin.deleteError', 'Failed to delete group'));
     } finally {
       setDeleting(false);
     }
@@ -79,12 +79,12 @@ const DeleteGroupModal = forwardRef(({ onSuccess }, ref) => {
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
       <Modal.Header onClose={handleClose}>
-        {t('admin:groups.deleteTitle', 'Delete Group')}
+        {t('groups:admin.deleteTitle', 'Delete Group')}
       </Modal.Header>
       <Modal.Body error={error}>
         <Modal.Description>
           {t(
-            'admin:groups.deleteConfirmation',
+            'groups:admin.deleteConfirmation',
             'Are you sure you want to delete the group "{{groupName}}"? This action cannot be undone.',
             { groupName: group && group.name },
           )}

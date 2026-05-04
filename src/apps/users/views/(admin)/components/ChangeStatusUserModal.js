@@ -77,7 +77,7 @@ const ChangeStatusUserModal = forwardRef(({ onSuccess }, ref) => {
     if (idsToUpdate.length === 0) {
       setError(
         t(
-          'admin:users.errors.cannotChangeSelfStatus',
+          'users:admin.errors.cannotChangeSelfStatus',
           'You cannot change your own account status.',
         ),
       );
@@ -104,24 +104,24 @@ const ChangeStatusUserModal = forwardRef(({ onSuccess }, ref) => {
 
   // Dynamic text based on action
   const actionText = isActive
-    ? t('admin:users.list.activateText', 'activate')
-    : t('admin:users.list.deactivateText', 'deactivate');
+    ? t('users:admin.list.activateText', 'activate')
+    : t('users:admin.list.deactivateText', 'deactivate');
   const buttonText = isActive
-    ? t('admin:users.list.activate', 'Activate')
-    : t('admin:users.list.deactivate', 'Deactivate');
+    ? t('users:admin.list.activate', 'Activate')
+    : t('users:admin.list.deactivate', 'Deactivate');
   const processingText = isActive
-    ? t('admin:users.list.activating', 'Activating...')
-    : t('admin:users.list.deactivating', 'Deactivating...');
+    ? t('users:admin.list.activating', 'Activating...')
+    : t('users:admin.list.deactivating', 'Deactivating...');
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
       <Modal.Header onClose={handleClose}>
-        {t('admin:users.list.changeStatusHeader', 'Change User Status')}
+        {t('users:admin.list.changeStatusHeader', 'Change User Status')}
       </Modal.Header>
       <Modal.Body error={error}>
         <Modal.Description>
           {t(
-            'admin:users.list.changeStatusConfirm',
+            'users:admin.list.changeStatusConfirm',
             'Are you sure you want to {{action}} {{count}} user(s)?',
             { action: actionText, count },
           )}
@@ -131,9 +131,9 @@ const ChangeStatusUserModal = forwardRef(({ onSuccess }, ref) => {
           data.ids &&
           data.ids.includes(currentUser.id) && (
             <Modal.Description>
-              <strong>{t('admin:users.list.note', 'Note:')}</strong>
+              <strong>{t('users:admin.list.note', 'Note:')}</strong>
               {t(
-                'admin:users.list.excludeSelfStatus',
+                'users:admin.list.excludeSelfStatus',
                 'Your own account will be excluded from this action.',
               )}
             </Modal.Description>
@@ -146,7 +146,7 @@ const ChangeStatusUserModal = forwardRef(({ onSuccess }, ref) => {
             onClick={handleClose}
             disabled={processing}
           >
-            {t('admin:users.list.cancel', 'Cancel')}
+            {t('users:admin.list.cancel', 'Cancel')}
           </Modal.Button>
           <Modal.Button
             variant='primary'

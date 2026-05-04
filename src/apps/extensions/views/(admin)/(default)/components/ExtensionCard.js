@@ -134,8 +134,8 @@ function ExtensionCard({
                     radius='full'
                   >
                     {isLocal
-                      ? t('admin:extensions.sourceLocal', 'LOCAL')
-                      : t('admin:extensions.sourceRemote', 'REMOTE')}
+                      ? t('extensions:admin.sourceLocal', 'LOCAL')
+                      : t('extensions:admin.sourceRemote', 'REMOTE')}
                   </Badge>
                 )}
                 {authorText && (
@@ -160,7 +160,7 @@ function ExtensionCard({
           <Text as='p' size='2' color='gray' className={s.descriptionText}>
             {extension.description ||
               t(
-                'admin:extensions.noDescriptionAvailable',
+                'extensions:admin.noDescriptionAvailable',
                 'No description available',
               )}
           </Text>

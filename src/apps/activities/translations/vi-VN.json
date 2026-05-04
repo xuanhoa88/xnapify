@@ -1,5 +1,5 @@
 {
-  "activities": {
+  "admin": {
     "title": "Nhật ký hoạt động",
     "noLogsFound": "Không tìm thấy nhật ký",
     "filter": {

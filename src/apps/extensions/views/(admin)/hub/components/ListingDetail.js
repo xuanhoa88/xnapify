@@ -148,7 +148,7 @@ export default function ListingDetail({ listing = null, onClose }) {
   const metaItems = [
     {
       icon: StarIcon,
-      label: t('admin:hub.version', 'Version'),
+      label: t('extensions:hub.version', 'Version'),
       value: listing && (
         <Text as='span' className={s.versionText}>
           v{listing.version}
@@ -157,25 +157,25 @@ export default function ListingDetail({ listing = null, onClose }) {
     },
     {
       icon: PersonIcon,
-      label: t('admin:hub.author', 'Author'),
+      label: t('extensions:hub.author', 'Author'),
       value: (listing && listing.author) || '—',
     },
     {
       icon: BoxIcon,
-      label: t('admin:hub.category', 'Category'),
+      label: t('extensions:hub.category', 'Category'),
       value: listing && listing.category,
     },
     listing && listing.compatibility
       ? {
           icon: CheckCircledIcon,
-          label: t('admin:hub.testedWith', 'Tested with'),
+          label: t('extensions:hub.testedWith', 'Tested with'),
           value: `xnapify ${listing.compatibility}`,
         }
       : null,
     listing && listing.repository
       ? {
           icon: GitHubLogoIcon,
-          label: t('admin:hub.repository', 'Repository'),
+          label: t('extensions:hub.repository', 'Repository'),
           value: (
             <Text
               as='a'
@@ -184,7 +184,7 @@ export default function ListingDetail({ listing = null, onClose }) {
               rel='noopener noreferrer'
               className={s.repoLink}
             >
-              {t('admin:hub.viewSource', 'View source')}
+              {t('extensions:hub.viewSource', 'View source')}
             </Text>
           ),
         }
@@ -195,7 +195,7 @@ export default function ListingDetail({ listing = null, onClose }) {
     <>
       <Modal isOpen={!!listing} onClose={onClose} placement='right'>
         <Modal.Header onClose={onClose}>
-          {t('admin:hub.extensionDetail', 'Extension Detail')}
+          {t('extensions:hub.extensionDetail', 'Extension Detail')}
         </Modal.Header>
         <Modal.Body>
           <Box className={s.bodyBox}>
@@ -237,7 +237,7 @@ export default function ListingDetail({ listing = null, onClose }) {
                         className={s.badgeIcon}
                       />
 
-                      {t('admin:hub.officialBadge', 'Official')}
+                      {t('extensions:hub.officialBadge', 'Official')}
                     </Badge>
                   )}
                   <Badge size='1' color='gray' radius='full' variant='surface'>
@@ -257,7 +257,7 @@ export default function ListingDetail({ listing = null, onClose }) {
 
                 {listing && listing.author && (
                   <Text as='p' size='2' color='gray' className={s.authorText}>
-                    {t('admin:hub.byAuthor', 'by {{author}}', {
+                    {t('extensions:hub.byAuthor', 'by {{author}}', {
                       author: listing.author,
                     })}
                   </Text>
@@ -276,7 +276,7 @@ export default function ListingDetail({ listing = null, onClose }) {
                       role='button'
                       tabIndex={0}
                       aria-label={t(
-                        'admin:hub.screenshotAlt',
+                        'extensions:hub.screenshotAlt',
                         'Screenshot {{number}}',
                         { number: idx + 1 },
                       )}
@@ -297,13 +297,13 @@ export default function ListingDetail({ listing = null, onClose }) {
             {/* ── Description ───────────────────────── */}
             <Box className={s.descBox}>
               <Text as='h3' size='4' weight='bold' className={s.descTitle}>
-                {t('admin:hub.overview', 'Overview')}
+                {t('extensions:hub.overview', 'Overview')}
               </Text>
               <Text as='p' size='3' className={s.descText}>
                 {listing &&
                   (listing.description ||
                     t(
-                      'admin:hub.noDescription',
+                      'extensions:hub.noDescription',
                       'No description available for this extension.',
                     ))}
               </Text>
@@ -347,7 +347,7 @@ export default function ListingDetail({ listing = null, onClose }) {
             {tags.length > 0 && (
               <Box>
                 <Text as='h3' size='3' weight='bold' className={s.tagsTitle}>
-                  {t('admin:hub.tags', 'Tags')}
+                  {t('extensions:hub.tags', 'Tags')}
                 </Text>
                 <Flex gap='2' wrap='wrap'>
                   {tags.map(tag => (
@@ -388,8 +388,8 @@ export default function ListingDetail({ listing = null, onClose }) {
                 )}
                 {!uninstalling && <TrashIcon width={16} height={16} />}
                 {uninstalling
-                  ? t('admin:hub.uninstalling', 'Removing...')
-                  : t('admin:hub.uninstall', 'Uninstall')}
+                  ? t('extensions:hub.uninstalling', 'Removing...')
+                  : t('extensions:hub.uninstall', 'Uninstall')}
               </Button>
             )}
 
@@ -398,11 +398,11 @@ export default function ListingDetail({ listing = null, onClose }) {
               <Button variant='solid' color='green' disabled>
                 <CheckIcon width={16} height={16} />
                 {actionSuccess === 'install' &&
-                  t('admin:hub.installed', 'Installed')}
+                  t('extensions:hub.installed', 'Installed')}
                 {actionSuccess === 'update' &&
-                  t('admin:hub.updated', 'Updated')}
+                  t('extensions:hub.updated', 'Updated')}
                 {actionSuccess === 'uninstall' &&
-                  t('admin:hub.uninstalled', 'Removed')}
+                  t('extensions:hub.uninstalled', 'Removed')}
               </Button>
             ) : hasUpdate ? (
               <Button
@@ -415,8 +415,8 @@ export default function ListingDetail({ listing = null, onClose }) {
                   <UpdateIcon width={16} height={16} className={s.spinIcon} />
                 )}
                 {updating
-                  ? t('admin:hub.updating', 'Updating...')
-                  : t('admin:hub.update', 'Update to v{{version}}', {
+                  ? t('extensions:hub.updating', 'Updating...')
+                  : t('extensions:hub.update', 'Update to v{{version}}', {
                       version: listing && listing.version,
                     })}
               </Button>
@@ -431,13 +431,13 @@ export default function ListingDetail({ listing = null, onClose }) {
                   <UpdateIcon width={16} height={16} className={s.spinIcon} />
                 )}
                 {installing
-                  ? t('admin:hub.installing', 'Installing...')
-                  : t('admin:hub.install', 'Install')}
+                  ? t('extensions:hub.installing', 'Installing...')
+                  : t('extensions:hub.install', 'Install')}
               </Button>
             ) : (
               <Button variant='solid' color='green' disabled>
                 <CheckIcon width={16} height={16} />
-                {t('admin:hub.upToDate', 'Up to date')}
+                {t('extensions:hub.upToDate', 'Up to date')}
               </Button>
             )}
           </Modal.Actions>
@@ -492,7 +492,7 @@ export default function ListingDetail({ listing = null, onClose }) {
 
               <img
                 src={screenshots[lightboxIdx]}
-                alt={t('admin:hub.screenshotAlt', 'Screenshot {{number}}', {
+                alt={t('extensions:hub.screenshotAlt', 'Screenshot {{number}}', {
                   number: lightboxIdx + 1,
                 })}
                 className={s.lightboxImage}
@@ -527,7 +527,7 @@ export default function ListingDetail({ listing = null, onClose }) {
                     )}
                     onClick={() => setLightboxIdx(i)}
                     aria-label={t(
-                      'admin:hub.screenshotAlt',
+                      'extensions:hub.screenshotAlt',
                       'Screenshot {{number}}',
                       { number: i + 1 },
                     )}

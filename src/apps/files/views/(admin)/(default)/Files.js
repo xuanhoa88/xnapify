@@ -193,9 +193,9 @@ function Files() {
       )}
 
       <PageHeader
-        title={t('admin:files.title', 'File Management')}
+        title={t('files:admin.title', 'File Management')}
         subtitle={t(
-          'admin:files.subtitle',
+          'files:admin.subtitle',
           'Manage digital assets, documents, and media',
         )}
         icon={<FileTextIcon width={24} height={24} />}

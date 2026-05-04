@@ -289,7 +289,7 @@ src/apps/[module_name]/
 
 | Hook                       | Phase | Returns                      | Notes                                                 |
 | -------------------------- | ----- | ---------------------------- | ----------------------------------------------------- |
-| `translations()`           | 1     | Webpack context              | i18n JSON files                                       |
+| `translations()`           | 1     | Webpack context (or `[context, ns]`) | i18n JSON files                                       |
 | `providers({ container })` | 2     | —                            | Bind DI services                                      |
 | `migrations()`             | 3     | Webpack context              | Auto-run, declarative                                 |
 | `models()`                 | 4     | Webpack context              | Auto-registered into ORM                              |
@@ -303,7 +303,7 @@ src/apps/[module_name]/
 
 | Hook                              | Phase | Notes                                                                |
 | --------------------------------- | ----- | -------------------------------------------------------------------- |
-| `translations()`                  | 1     | Returns webpack context                                              |
+| `translations()`                  | 1     | Returns webpack context (or `[context, ns]`)                         |
 | `providers({ container, store })` | 2     | Inject Redux reducers via `store.injectReducer(SLICE_NAME, reducer)` |
 | `boot({ container })`             | 3     | —                                                                    |
 | `routes()`                        | 4     | Webpack context **directly**                                         |
@@ -353,7 +353,7 @@ src/apps/[module_name]/
 | `models()`                          | Declarative | Auto-registered via `ModelRegistry.discover()`  |
 | `migrations()`                      | Declarative | Auto-run with `__EXTENSION_ID__` prefix         |
 | `seeds()`                           | Declarative | Auto-run with `__EXTENSION_ID__` prefix         |
-| `translations()`                    | Declarative | Auto-registered, auto-cleaned                   |
+| `translations()`                    | Declarative | Auto-registered (returns context or `[context, ns]`)            |
 | `install({ container })`            | One-time    | Runs once on install                            |
 | `boot({ container, registry })`     | Lifecycle   | Re-runs every server boot. Register IPC, hooks. |
 | `shutdown({ container, registry })` | Lifecycle   | **MUST** unsubscribe all hooks from `boot()`.   |
@@ -363,7 +363,7 @@ src/apps/[module_name]/
 
 | Hook                              | Notes                                                |
 | --------------------------------- | ---------------------------------------------------- |
-| `translations()`                  | Returns webpack context                              |
+| `translations()`                  | Returns webpack context (or `[context, ns]`)         |
 | `providers({ container, store })` | Redux injection — **NOT** in `boot()`                |
 | `boot(registry)`                  | Register slots, hooks, IPC handlers                  |
 | `shutdown(registry)`              | **MUST exactly inverse `boot()`** — count must match |

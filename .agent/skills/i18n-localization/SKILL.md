@@ -68,9 +68,11 @@ const translationsContext = require.context(
 
 /**
  * Translations hook — returns the webpack require.context for this module's translations.
+ * Can optionally return an array: [translationsContext, 'customNamespace'].
+ * If a custom namespace is omitted, it defaults to the module's folder name.
  */
 export function translations() {
-  return translationsContext;
+  return [translationsContext]; 
 }
 ```
 
@@ -81,7 +83,7 @@ import { useTranslation } from 'react-i18next';
 
 function Welcome() {
   const { t } = useTranslation();
-  return <h1>{t('namespace:welcome.title', 'Default Title')}</h1>;
+  return <h1>{t('users:admin.welcome.title', 'Default Title')}</h1>;
 }
 ```
 
@@ -92,7 +94,7 @@ During SSR, Route Definitions, or API middlewares, the `i18n` object is typicall
 ```javascript
 export async function getInitialProps({ i18n }) {
   return {
-    title: i18n.t('namespace:page.title', 'File Title'),
+    title: i18n.t('users:admin.page.title', 'File Title'),
   };
 }
 ```

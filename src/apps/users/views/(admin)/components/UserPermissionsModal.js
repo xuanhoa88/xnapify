@@ -117,7 +117,7 @@ const UserPermissionsModal = forwardRef((props, ref) => {
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
       <Modal.Header onClose={handleClose}>
-        {t('admin:users.permissions.title', 'Permissions for "{{name}}"', {
+        {t('users:admin.permissions.title', 'Permissions for "{{name}}"', {
           name:
             (user &&
               ((user.profile && user.profile.display_name) || user.email)) ||
@@ -127,7 +127,7 @@ const UserPermissionsModal = forwardRef((props, ref) => {
       <Modal.Body>
         <Modal.Description className='mb-4 text-[var(--gray-11)]'>
           {t(
-            'admin:users.permissions.description',
+            'users:admin.permissions.description',
             "These permissions are inherited from the user's assigned roles and groups.",
           )}
         </Modal.Description>
@@ -135,7 +135,7 @@ const UserPermissionsModal = forwardRef((props, ref) => {
         {loading ? (
           <Flex justify='center' align='center' py='8'>
             <Text size='2' color='gray'>
-              {t('admin:users.permissions.loading', 'Loading permissions...')}
+              {t('users:admin.permissions.loading', 'Loading permissions...')}
             </Text>
           </Flex>
         ) : (
@@ -147,7 +147,7 @@ const UserPermissionsModal = forwardRef((props, ref) => {
                   <Flex align='center' gap='2' mb='4'>
                     <Text as='h4' size='3' weight='bold'>
                       {t(
-                        'admin:users.permissions.inheritanceSources',
+                        'users:admin.permissions.inheritanceSources',
                         'Inherited From',
                       )}
                     </Text>
@@ -157,7 +157,7 @@ const UserPermissionsModal = forwardRef((props, ref) => {
                       {roleDetails.length > 0 && (
                         <Flex align='start' gap='3'>
                           <Text size='2' color='gray' className='w-20 mt-0.5'>
-                            {t('admin:users.permissions.rolesLabel', 'Roles:')}
+                            {t('users:admin.permissions.rolesLabel', 'Roles:')}
                           </Text>
                           <Flex wrap='wrap' gap='2' className='flex-1'>
                             {roleDetails.map(role => (
@@ -179,7 +179,7 @@ const UserPermissionsModal = forwardRef((props, ref) => {
                         <Flex align='start' gap='3'>
                           <Text size='2' color='gray' className='w-20 mt-0.5'>
                             {t(
-                              'admin:users.permissions.groupsLabel',
+                              'users:admin.permissions.groupsLabel',
                               'Groups:',
                             )}
                           </Text>
@@ -212,7 +212,7 @@ const UserPermissionsModal = forwardRef((props, ref) => {
                 <Flex align='center' gap='2' mb='4'>
                   <Text as='h4' size='3' weight='bold'>
                     {t(
-                      'admin:users.permissions.effectivePermissions',
+                      'users:admin.permissions.effectivePermissions',
                       'Effective Permissions',
                     )}
                   </Text>
@@ -244,7 +244,7 @@ const UserPermissionsModal = forwardRef((props, ref) => {
                   >
                     <Text size='2' color='gray'>
                       {t(
-                        'admin:users.permissions.noPermissions',
+                        'users:admin.permissions.noPermissions',
                         'No permissions. Assign roles to grant permissions.',
                       )}
                     </Text>
@@ -257,7 +257,7 @@ const UserPermissionsModal = forwardRef((props, ref) => {
       </Modal.Body>
       <Modal.Footer>
         <Modal.Button onClick={handleClose}>
-          {t('admin:users.permissions.close', 'Close')}
+          {t('users:admin.permissions.close', 'Close')}
         </Modal.Button>
       </Modal.Footer>
     </Modal>

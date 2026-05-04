@@ -143,12 +143,12 @@ function SettingRow({ setting, canWrite }) {
           </Badge>
           {setting.isPublic && (
             <Badge size='1' color='green' variant='soft'>
-              {t('admin:settings.badgePublic', 'public')}
+              {t('settings:admin.badgePublic', 'public')}
             </Badge>
           )}
           {setting.isDefault && (
             <Badge size='1' color='orange' variant='soft'>
-              {t('admin:settings.badgeDefault', 'env default')}
+              {t('settings:admin.badgeDefault', 'env default')}
             </Badge>
           )}
         </Flex>
@@ -164,7 +164,7 @@ function SettingRow({ setting, canWrite }) {
         )}
         {setting.defaultEnvVar && (
           <Text as='p' size='1' color='gray'>
-            {t('admin:settings.fallback', 'Fallback: ')}
+            {t('settings:admin.fallback', 'Fallback: ')}
             <Text as='code' className='font-mono'>
               {setting.defaultEnvVar}
             </Text>
@@ -212,7 +212,7 @@ function getNamespaceLabel(ns, t, labels, translationKeys) {
     if (extTranslated) return extTranslated;
   }
 
-  const coreKey = `admin:settings.namespaces.${ns}`;
+  const coreKey = `settings:admin.namespaces.${ns}`;
   return t(coreKey, { defaultValue: fallback });
 }
 
@@ -381,16 +381,16 @@ function SettingsPage({ context }) {
     return (
       <Box className='p-4 md:p-6 max-w-[1400px] mx-auto'>
         <PageHeader
-          title={t('admin:settings.title', 'Global Settings')}
+          title={t('settings:admin.title', 'Global Settings')}
           subtitle={t(
-            'admin:settings.subtitle',
+            'settings:admin.subtitle',
             'Configure system-wide settings',
           )}
           icon={<Icon name='GearIcon' size={24} />}
         />
         <Loader
           variant='spinner'
-          message={t('admin:settings.loading', 'Loading settings...')}
+          message={t('settings:admin.loading', 'Loading settings...')}
         />
       </Box>
     );
@@ -401,9 +401,9 @@ function SettingsPage({ context }) {
     return (
       <Box className='p-4 md:p-6 max-w-[1400px] mx-auto'>
         <PageHeader
-          title={t('admin:settings.title', 'Global Settings')}
+          title={t('settings:admin.title', 'Global Settings')}
           subtitle={t(
-            'admin:settings.subtitle',
+            'settings:admin.subtitle',
             'Configure system-wide settings',
           )}
           icon={<Icon name='GearIcon' size={24} />}
@@ -416,7 +416,7 @@ function SettingsPage({ context }) {
           className={clsx('rounded-md', s.errorContainer)}
         >
           <Text color='red' size='4' weight='bold' mb='2'>
-            {t('admin:settings.errorLoading', 'Error loading settings')}
+            {t('settings:admin.errorLoading', 'Error loading settings')}
           </Text>
           <Text color='red' size='2' mb='4'>
             {error}
@@ -437,9 +437,9 @@ function SettingsPage({ context }) {
   return (
     <Box className='p-4 md:p-6 max-w-[1400px] mx-auto'>
       <PageHeader
-        title={t('admin:settings.title', 'Global Settings')}
+        title={t('settings:admin.title', 'Global Settings')}
         subtitle={t(
-          'admin:settings.subtitle',
+          'settings:admin.subtitle',
           'Configure system-wide settings for all modules',
         )}
         icon={<Icon name='GearIcon' size={24} />}

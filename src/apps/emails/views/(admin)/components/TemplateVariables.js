@@ -70,12 +70,12 @@ export default function TemplateVariables() {
     <Flex align='center' wrap='wrap' gap='2' className={s.container}>
       <Flex align='center' gap='2' className={s.titleFlex}>
         <CodeIcon width={16} height={16} />
-        {t('admin:emails.form.detectedVariables', 'Detected Variables:')}
+        {t('emails:admin.form.detectedVariables', 'Detected Variables:')}
       </Flex>
       {variables.length === 0 ? (
         <Text size='2' color='gray' className={s.emptyText}>
           {t(
-            'admin:emails.form.noVariables',
+            'emails:admin.form.noVariables',
             'None found. Use {{ var }} to insert dynamic data.',
           )}
         </Text>
@@ -88,7 +88,7 @@ export default function TemplateVariables() {
             align='center'
             gap='1'
             onClick={() => handleCopy(v)}
-            title={t('admin:emails.form.clickToCopy', 'Click to copy')}
+            title={t('emails:admin.form.clickToCopy', 'Click to copy')}
             className={clsx(
               s.variableBtn,
               copiedVar === v ? s.variableBtnCopied : s.variableBtnNormal,

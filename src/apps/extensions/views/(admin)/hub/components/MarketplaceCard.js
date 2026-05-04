@@ -81,7 +81,7 @@ export default function MarketplaceCard({
             {listing.author && (
               <Flex align='center' gap='1'>
                 <Text as='span' size='1' color='gray'>
-                  {t('admin:hub.byAuthor', 'by {{author}}', {
+                  {t('extensions:hub.byAuthor', 'by {{author}}', {
                     author: listing.author,
                   })}
                 </Text>
@@ -94,7 +94,7 @@ export default function MarketplaceCard({
                     variant='soft'
                   >
                     <CheckIcon width={10} height={10} className={s.checkIcon} />
-                    {t('admin:hub.officialBadge', 'Official')}
+                    {t('extensions:hub.officialBadge', 'Official')}
                   </Badge>
                 )}
               </Flex>
@@ -123,12 +123,12 @@ export default function MarketplaceCard({
           <Flex gap='2' align='center'>
             {listing.updateAvailable && (
               <Badge size='1' color='amber' radius='full' variant='soft'>
-                {t('admin:hub.updateBadge', 'Update')}
+                {t('extensions:hub.updateBadge', 'Update')}
               </Badge>
             )}
             {listing.installed && !listing.updateAvailable && (
               <Badge size='1' color='green' radius='full' variant='soft'>
-                {t('admin:hub.installedBadge', 'Installed')}
+                {t('extensions:hub.installedBadge', 'Installed')}
               </Badge>
             )}
             <Text as='span' size='1' color='gray'>

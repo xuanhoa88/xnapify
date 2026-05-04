@@ -84,7 +84,7 @@ const DeleteUserModal = forwardRef(({ onSuccess }, ref) => {
     if (idsToDelete.length === 0) {
       setError(
         t(
-          'admin:users.errors.cannotDeleteSelf',
+          'users:admin.errors.cannotDeleteSelf',
           'You cannot delete your own account.',
         ),
       );
@@ -111,18 +111,18 @@ const DeleteUserModal = forwardRef(({ onSuccess }, ref) => {
       return `"${(user.profile && user.profile.display_name) || user.email}"`;
     }
     const count = data && data.ids ? data.ids.length : 0;
-    return t('admin:users.list.userCount', '{{count}} user(s)', { count });
+    return t('users:admin.list.userCount', '{{count}} user(s)', { count });
   }, [data, t]);
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
       <Modal.Header onClose={handleClose}>
-        {t('admin:users.list.deleteUserHeader', 'Delete User(s)')}
+        {t('users:admin.list.deleteUserHeader', 'Delete User(s)')}
       </Modal.Header>
       <Modal.Body error={error}>
         <Modal.Description>
           {t(
-            'admin:users.list.deleteUserConfirm',
+            'users:admin.list.deleteUserConfirm',
             'Are you sure you want to delete {{name}}? This action cannot be undone.',
             { name: displayName },
           )}
@@ -132,9 +132,9 @@ const DeleteUserModal = forwardRef(({ onSuccess }, ref) => {
           data.ids &&
           data.ids.includes(currentUser.id) && (
             <Modal.Description>
-              <strong>{t('admin:users.list.note', 'Note:')}</strong>
+              <strong>{t('users:admin.list.note', 'Note:')}</strong>
               {t(
-                'admin:users.list.excludeSelfDeletion',
+                'users:admin.list.excludeSelfDeletion',
                 'Your own account will be excluded from deletion.',
               )}
             </Modal.Description>
@@ -147,7 +147,7 @@ const DeleteUserModal = forwardRef(({ onSuccess }, ref) => {
             onClick={handleClose}
             disabled={deleting}
           >
-            {t('admin:users.list.cancel', 'Cancel')}
+            {t('users:admin.list.cancel', 'Cancel')}
           </Modal.Button>
           <Modal.Button
             variant='primary'
@@ -155,8 +155,8 @@ const DeleteUserModal = forwardRef(({ onSuccess }, ref) => {
             disabled={deleting}
           >
             {deleting
-              ? t('admin:users.list.deleting', 'Deleting...')
-              : t('admin:users.list.delete', 'Delete')}
+              ? t('users:admin.list.deleting', 'Deleting...')
+              : t('users:admin.list.delete', 'Delete')}
           </Modal.Button>
         </Modal.Actions>
       </Modal.Footer>

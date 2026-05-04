@@ -100,17 +100,17 @@ function EditUserIdentityCard({ user }) {
         <Flex direction='column' gap='3' className='w-full'>
           <Flex justify='between' align='center'>
             <Text size='2' color='gray'>
-              {t('admin:users.edit.status', 'Status')}
+              {t('users:admin.edit.status', 'Status')}
             </Text>
             {user.is_active ? (
               <Badge color='green' variant='soft' radius='full' size='1'>
                 <CheckCircledIcon width={12} height={12} />
-                {t('admin:users.edit.active', 'Active')}
+                {t('users:admin.edit.active', 'Active')}
               </Badge>
             ) : (
               <Badge color='gray' variant='soft' radius='full' size='1'>
                 <CrossCircledIcon width={12} height={12} />
-                {t('admin:users.edit.inactive', 'Inactive')}
+                {t('users:admin.edit.inactive', 'Inactive')}
               </Badge>
             )}
           </Flex>
@@ -118,7 +118,7 @@ function EditUserIdentityCard({ user }) {
           {user.roles && user.roles.length > 0 && (
             <Flex justify='between' align='start' gap='2'>
               <Text size='2' color='gray' className='shrink-0'>
-                {t('admin:users.edit.roles', 'Roles')}
+                {t('users:admin.edit.roles', 'Roles')}
               </Text>
               <Flex wrap='wrap' gap='1' justify='end'>
                 {user.roles.slice(0, 3).map(role => (
@@ -144,7 +144,7 @@ function EditUserIdentityCard({ user }) {
           {user.created_at && (
             <Flex justify='between' align='center'>
               <Text size='2' color='gray'>
-                {t('admin:users.edit.joined', 'Joined')}
+                {t('users:admin.edit.joined', 'Joined')}
               </Text>
               <Text size='2' color='gray'>
                 {format(new Date(user.created_at), 'MMM dd, yyyy')}
@@ -243,7 +243,7 @@ function EditUser({ userId, context }) {
         } else {
           const message =
             (typeof err === 'string' ? err : err && err.message) ||
-            t('admin:users.errors.updateUser', 'Failed to update user');
+            t('users:admin.errors.updateUser', 'Failed to update user');
           setError(message);
           dispatch(showErrorMessage({ message }));
         }
@@ -281,9 +281,9 @@ function EditUser({ userId, context }) {
     return (
       <Box className='p-6 max-w-[1400px] mx-auto'>
         <PageHeader
-          title={t('admin:users.edit.title', 'Edit User')}
+          title={t('users:admin.edit.title', 'Edit User')}
           subtitle={t(
-            'admin:users.edit.subtitle',
+            'users:admin.edit.subtitle',
             'Update user account and permissions',
           )}
           icon={<PersonIcon width={24} height={24} />}
@@ -301,9 +301,9 @@ function EditUser({ userId, context }) {
     return (
       <Box className='p-6 max-w-[1400px] mx-auto'>
         <PageHeader
-          title={t('admin:users.edit.title', 'Edit User')}
+          title={t('users:admin.edit.title', 'Edit User')}
           subtitle={t(
-            'admin:users.edit.subtitle',
+            'users:admin.edit.subtitle',
             'Update user account and permissions',
           )}
           icon={<PersonIcon width={24} height={24} />}
@@ -316,12 +316,12 @@ function EditUser({ userId, context }) {
           className='rounded-md border border-[var(--red-6)] bg-[var(--red-2)]'
         >
           <Text color='red' size='4' weight='bold' mb='2'>
-            {t('admin:users.edit.errorLoading', 'Error loading user')}
+            {t('users:admin.edit.errorLoading', 'Error loading user')}
           </Text>
           <Text color='red' size='2' mb='4'>
             {userLoadError ||
               t(
-                'admin:users.edit.errorLoadingDescription',
+                'users:admin.edit.errorLoadingDescription',
                 'The user could not be found or loaded.',
               )}
           </Text>
@@ -351,7 +351,7 @@ function EditUser({ userId, context }) {
           onClick={() => handleCancel(isDirtyRef.current)}
         >
           <ArrowLeftIcon />
-          {t('admin:users.edit.backToList', 'Back to Users')}
+          {t('users:admin.edit.backToList', 'Back to Users')}
         </Button>
       </PageHeader>
 
@@ -532,7 +532,7 @@ function EditUserFormFields({
       dispatch(
         showSuccessMessage({
           message: t(
-            'admin:users.passwordGenerated',
+            'users:admin.passwordGenerated',
             'Password generated successfully!',
           ),
         }),
@@ -540,7 +540,7 @@ function EditUserFormFields({
     } catch (err) {
       const message =
         (typeof err === 'string' ? err : err && err.message) ||
-        t('admin:users.errors.generatePassword', 'Failed to generate password');
+        t('users:admin.errors.generatePassword', 'Failed to generate password');
       setError(message);
       dispatch(showErrorMessage({ message }));
     } finally {
@@ -557,13 +557,13 @@ function EditUserFormFields({
         className='bg-[var(--gray-a2)] border-b border-[var(--gray-a4)]'
       >
         <Text size='2' weight='bold' color='gray'>
-          {t('admin:users.edit.accountInfo', 'Account Information')}
+          {t('users:admin.edit.accountInfo', 'Account Information')}
         </Text>
       </Box>
       <Box p='5'>
         <Form.Field
           name='email'
-          label={t('admin:users.edit.email', 'Email')}
+          label={t('users:admin.edit.email', 'Email')}
           className='mb-0'
         >
           <Form.Input type='email' disabled />
@@ -571,12 +571,12 @@ function EditUserFormFields({
 
         <Form.Field
           name='password'
-          label={t('admin:users.edit.newPassword', 'New Password (optional)')}
+          label={t('users:admin.edit.newPassword', 'New Password (optional)')}
           className='mt-4'
         >
           <Form.Password
             placeholder={t(
-              'admin:users.edit.newPasswordPlaceholder',
+              'users:admin.edit.newPasswordPlaceholder',
               'Leave empty to keep current password',
             )}
           />
@@ -585,13 +585,13 @@ function EditUserFormFields({
         <Form.Field
           name='password_confirmation'
           label={t(
-            'admin:users.edit.confirmNewPassword',
+            'users:admin.edit.confirmNewPassword',
             'Confirm New Password',
           )}
         >
           <Form.Password
             placeholder={t(
-              'admin:users.edit.confirmNewPasswordPlaceholder',
+              'users:admin.edit.confirmNewPasswordPlaceholder',
               'Confirm new password',
             )}
           />
@@ -609,8 +609,8 @@ function EditUserFormFields({
           >
             <LockOpen1Icon width={13} height={13} />
             {generatingPassword
-              ? t('admin:users.generatingPassword', 'Generating...')
-              : t('admin:users.generateNewPassword', 'Generate New Password')}
+              ? t('users:admin.generatingPassword', 'Generating...')
+              : t('users:admin.generateNewPassword', 'Generate New Password')}
           </Button>
         </Flex>
       </Box>
@@ -622,39 +622,39 @@ function EditUserFormFields({
         className='bg-[var(--gray-a2)] border-y border-[var(--gray-a4)]'
       >
         <Text size='2' weight='bold' color='gray'>
-          {t('admin:users.edit.personalInfo', 'Personal Information')}
+          {t('users:admin.edit.personalInfo', 'Personal Information')}
         </Text>
       </Box>
       <Box p='5'>
         <Grid columns={{ initial: '1', sm: '2' }} gap='4'>
           <Form.Field
             name='profile.first_name'
-            label={t('admin:users.edit.firstName', 'First Name')}
+            label={t('users:admin.edit.firstName', 'First Name')}
             className='mb-0'
           >
             <Form.Input
-              placeholder={t('admin:users.edit.firstNamePlaceholder', 'John')}
+              placeholder={t('users:admin.edit.firstNamePlaceholder', 'John')}
             />
           </Form.Field>
           <Form.Field
             name='profile.last_name'
-            label={t('admin:users.edit.lastName', 'Last Name')}
+            label={t('users:admin.edit.lastName', 'Last Name')}
             className='mb-0'
           >
             <Form.Input
-              placeholder={t('admin:users.edit.lastNamePlaceholder', 'Doe')}
+              placeholder={t('users:admin.edit.lastNamePlaceholder', 'Doe')}
             />
           </Form.Field>
         </Grid>
 
         <Form.Field
           name='profile.display_name'
-          label={t('admin:users.edit.displayName', 'Display Name')}
+          label={t('users:admin.edit.displayName', 'Display Name')}
           className='mt-4'
         >
           <Form.Input
             placeholder={t(
-              'admin:users.edit.displayNamePlaceholder',
+              'users:admin.edit.displayNamePlaceholder',
               'John Doe',
             )}
           />
@@ -668,14 +668,14 @@ function EditUserFormFields({
         className='bg-[var(--gray-a2)] border-y border-[var(--gray-a4)]'
       >
         <Text size='2' weight='bold' color='gray'>
-          {t('admin:users.edit.accessAndPermissions', 'Access & Permissions')}
+          {t('users:admin.edit.accessAndPermissions', 'Access & Permissions')}
         </Text>
       </Box>
       <Box p='5'>
         <Form.Field
           name='roles'
           label={t(
-            'admin:users.edit.rolesSelected',
+            'users:admin.edit.rolesSelected',
             'Roles ({{count}} selected)',
             { count: selectedRoles.length },
           )}
@@ -690,15 +690,15 @@ function EditUserFormFields({
             searchValue={roleSearch}
             onSearch={setRoleSearch}
             searchPlaceholder={t(
-              'admin:users.edit.searchRoles',
+              'users:admin.edit.searchRoles',
               'Search roles...',
             )}
             valueKey='name'
             labelKey='name'
             itemDescription='description'
-            emptyMessage={t('admin:users.edit.noRolesFound', 'No roles found')}
+            emptyMessage={t('users:admin.edit.noRolesFound', 'No roles found')}
             loadingMessage={t(
-              'admin:users.edit.loadingRoles',
+              'users:admin.edit.loadingRoles',
               'Loading roles...',
             )}
           />
@@ -707,7 +707,7 @@ function EditUserFormFields({
         <Form.Field
           name='groups'
           label={t(
-            'admin:users.edit.groupsSelected',
+            'users:admin.edit.groupsSelected',
             'Groups ({{count}} selected)',
             { count: selectedGroups.length },
           )}
@@ -722,18 +722,18 @@ function EditUserFormFields({
             searchValue={groupSearch}
             onSearch={setGroupSearch}
             searchPlaceholder={t(
-              'admin:users.edit.searchGroups',
+              'users:admin.edit.searchGroups',
               'Search groups...',
             )}
             valueKey='id'
             labelKey='name'
             itemDescription='description'
             emptyMessage={t(
-              'admin:users.edit.noGroupsFound',
+              'users:admin.edit.noGroupsFound',
               'No groups found',
             )}
             loadingMessage={t(
-              'admin:users.edit.loadingGroups',
+              'users:admin.edit.loadingGroups',
               'Loading groups...',
             )}
           />
@@ -741,9 +741,9 @@ function EditUserFormFields({
 
         <Form.Field
           name='is_active'
-          label={t('admin:users.edit.accountStatus', 'Account Status')}
+          label={t('users:admin.edit.accountStatus', 'Account Status')}
         >
-          <Form.Checkbox label={t('admin:users.edit.active', 'Active')} />
+          <Form.Checkbox label={t('users:admin.edit.active', 'Active')} />
         </Form.Field>
       </Box>
 
@@ -761,12 +761,12 @@ function EditUserFormFields({
           type='button'
           onClick={handleCancel}
         >
-          {t('admin:users.edit.cancel', 'Cancel')}
+          {t('users:admin.edit.cancel', 'Cancel')}
         </Button>
         <Button variant='solid' color='indigo' type='submit' loading={loading}>
           {loading
-            ? t('admin:users.edit.saving', 'Saving...')
-            : t('admin:users.edit.saveChanges', 'Save Changes')}
+            ? t('users:admin.edit.saving', 'Saving...')
+            : t('users:admin.edit.saveChanges', 'Save Changes')}
         </Button>
       </Flex>
     </Card>

@@ -1,75 +1,78 @@
 {
-  "sidebar": {
-    "my_drive": "My Drive",
-    "recent": "Recent",
-    "starred": "Starred",
-    "trash": "Trash",
-    "new": "New",
-    "shared_with_me": "Shared with me",
-    "storage": "{{used}} of {{total}} used"
-  },
-  "toolbar": {
-    "list_view": "List view",
-    "grid_view": "Grid view",
-    "search_placeholder": "Search files..."
-  },
-  "grid": {
-    "loading": "Loading files...",
-    "empty_title": "No files here",
-    "empty_desc": "Drop files here or use the \"New\" button.",
-    "name": "Name",
-    "owner": "Owner",
-    "owner_me": "Me",
-    "last_modified": "Last Modified",
-    "file_size": "File Size",
-    "rename": "Rename",
-    "invalid_name": "Invalid name",
-    "rename_failed": "Rename failed",
-    "share": "Share",
-    "download": "Download",
-    "copy_link": "Copy link",
-    "link_copied": "Link copied to clipboard!",
-    "add_star": "Add Star",
-    "remove_star": "Remove Star",
-    "delete_permanently": "Delete Permanently",
-    "move_to_trash": "Move to Trash"
-  },
-  "uploader": {
-    "untitled_folder": "Untitled folder",
-    "new_folder": "New folder",
-    "file_upload": "File upload",
-    "cancel": "Cancel",
-    "create": "Create",
-    "create_failed": "Failed to create folder",
-    "invalid_name": "Invalid folder name",
-    "drop_to_upload": "Drop files to upload",
-    "uploads_status": "Uploads ({{count}}/{{total}})",
-    "done": "Done",
-    "failed": "Failed"
-  },
-  "share": {
-    "title": "Share \"{{name}}\"",
-    "general_access": "General access",
-    "restricted": "Restricted",
-    "public_link": "Anyone with the link",
-    "specific_users": "Specific User or Group",
-    "restricted_desc": "Only people with access can open with the link",
-    "public_link_desc": "Anyone on the internet with this link can view",
-    "specific_users_desc": "Only specific users or groups you add below can access",
-    "copy_link": "Copy link",
-    "saving": "Saving...",
-    "done": "Done",
-    "close": "Close",
-    "link_copied": "Link copied to clipboard!",
-    "user": "User",
-    "group": "Group",
-    "owner": "Owner",
-    "permission_view": "Viewer",
-    "invalid_type": "Invalid share settings",
-    "save_failed": "Failed to save settings"
-  },
-  "page": {
-    "title": "Files",
-    "subtitle": "Manage your files and folders"
+  "admin": {
+    "title": "File Management",
+    "sidebar": {
+      "my_drive": "My Drive",
+      "recent": "Recent",
+      "starred": "Starred",
+      "trash": "Trash",
+      "new": "New",
+      "shared_with_me": "Shared with me",
+      "storage": "{{used}} of {{total}} used"
+    },
+    "toolbar": {
+      "list_view": "List view",
+      "grid_view": "Grid view",
+      "search_placeholder": "Search files..."
+    },
+    "grid": {
+      "loading": "Loading files...",
+      "empty_title": "No files here",
+      "empty_desc": "Drop files here or use the \"New\" button.",
+      "name": "Name",
+      "owner": "Owner",
+      "owner_me": "Me",
+      "last_modified": "Last Modified",
+      "file_size": "File Size",
+      "rename": "Rename",
+      "invalid_name": "Invalid name",
+      "rename_failed": "Rename failed",
+      "share": "Share",
+      "download": "Download",
+      "copy_link": "Copy link",
+      "link_copied": "Link copied to clipboard!",
+      "add_star": "Add Star",
+      "remove_star": "Remove Star",
+      "delete_permanently": "Delete Permanently",
+      "move_to_trash": "Move to Trash"
+    },
+    "uploader": {
+      "untitled_folder": "Untitled folder",
+      "new_folder": "New folder",
+      "file_upload": "File upload",
+      "cancel": "Cancel",
+      "create": "Create",
+      "create_failed": "Failed to create folder",
+      "invalid_name": "Invalid folder name",
+      "drop_to_upload": "Drop files to upload",
+      "uploads_status": "Uploads ({{count}}/{{total}})",
+      "done": "Done",
+      "failed": "Failed"
+    },
+    "share": {
+      "title": "Share \"{{name}}\"",
+      "general_access": "General access",
+      "restricted": "Restricted",
+      "public_link": "Anyone with the link",
+      "specific_users": "Specific User or Group",
+      "restricted_desc": "Only people with access can open with the link",
+      "public_link_desc": "Anyone on the internet with this link can view",
+      "specific_users_desc": "Only specific users or groups you add below can access",
+      "copy_link": "Copy link",
+      "saving": "Saving...",
+      "done": "Done",
+      "close": "Close",
+      "link_copied": "Link copied to clipboard!",
+      "user": "User",
+      "group": "Group",
+      "owner": "Owner",
+      "permission_view": "Viewer",
+      "invalid_type": "Invalid share settings",
+      "save_failed": "Failed to save settings"
+    },
+    "page": {
+      "title": "Files",
+      "subtitle": "Manage your files and folders"
+    }
   }
 }

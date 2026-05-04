@@ -57,7 +57,7 @@ function CreateRoleIdentityCard() {
 
         <Flex direction='column' align='center' gap='1' className='w-full'>
           <Text size='4' weight='bold' align='center' className='break-all'>
-            {name || t('admin:roles.create.newRole', 'New Role')}
+            {name || t('roles:admin.create.newRole', 'New Role')}
           </Text>
         </Flex>
 
@@ -66,7 +66,7 @@ function CreateRoleIdentityCard() {
         <Flex direction='column' gap='3' className='w-full'>
           <Flex justify='between' align='center'>
             <Text size='2' color='gray'>
-              {t('admin:roles.create.permissionsLabel', 'Permissions')}
+              {t('roles:admin.create.permissionsLabel', 'Permissions')}
             </Text>
             <Badge color='indigo' variant='soft' radius='full' size='1'>
               {selectedPermissions.length}
@@ -75,10 +75,10 @@ function CreateRoleIdentityCard() {
 
           <Flex justify='between' align='center'>
             <Text size='2' color='gray'>
-              {t('admin:roles.create.statusLabel', 'Status')}
+              {t('roles:admin.create.statusLabel', 'Status')}
             </Text>
             <Badge color='indigo' variant='soft' radius='full' size='1'>
-              {t('admin:roles.create.newRole', 'New Role')}
+              {t('roles:admin.create.newRole', 'New Role')}
             </Badge>
           </Flex>
         </Flex>
@@ -159,9 +159,9 @@ function CreateRole({ context }) {
   return (
     <Box className='p-6 max-w-[1400px] mx-auto'>
       <PageHeader
-        title={t('admin:roles.create.title', 'Create New Role')}
+        title={t('roles:admin.create.title', 'Create New Role')}
         subtitle={t(
-          'admin:roles.create.subtitle',
+          'roles:admin.create.subtitle',
           'Define a role and assign permissions to it',
         )}
         icon={<LockClosedIcon width={24} height={24} />}
@@ -172,7 +172,7 @@ function CreateRole({ context }) {
           onClick={() => handleCancel(isDirtyRef.current)}
         >
           <ArrowLeftIcon />
-          {t('admin:roles.create.backToList', 'Back to Roles')}
+          {t('roles:admin.create.backToList', 'Back to Roles')}
         </Button>
       </PageHeader>
 
@@ -295,18 +295,18 @@ function CreateRoleFormFields({
         className='bg-[var(--gray-a2)] border-b border-[var(--gray-a4)]'
       >
         <Text size='2' weight='bold' color='gray'>
-          {t('admin:roles.create.roleInformation', 'Role Information')}
+          {t('roles:admin.create.roleInformation', 'Role Information')}
         </Text>
       </Box>
       <Box p='5'>
         <Form.Field
           name='name'
-          label={t('admin:roles.create.roleName', 'Role Name')}
+          label={t('roles:admin.create.roleName', 'Role Name')}
           required
         >
           <Form.Input
             placeholder={t(
-              'admin:roles.create.roleNamePlaceholder',
+              'roles:admin.create.roleNamePlaceholder',
               'e.g., editor, moderator, viewer',
             )}
           />
@@ -314,11 +314,11 @@ function CreateRoleFormFields({
 
         <Form.Field
           name='description'
-          label={t('admin:roles.create.description', 'Description')}
+          label={t('roles:admin.create.description', 'Description')}
         >
           <Form.Textarea
             placeholder={t(
-              'admin:roles.create.descriptionPlaceholder',
+              'roles:admin.create.descriptionPlaceholder',
               'Describe what this role is for...',
             )}
             rows={3}
@@ -334,7 +334,7 @@ function CreateRoleFormFields({
       >
         <Text size='2' weight='bold' color='gray'>
           {t(
-            'admin:roles.create.permissionsCount',
+            'roles:admin.create.permissionsCount',
             'Permissions ({{count}} selected)',
             {
               count: selectedPermissions.length,
@@ -355,16 +355,16 @@ function CreateRoleFormFields({
             onLoadMore={handleLoadMorePermissions}
             searchable
             searchPlaceholder={t(
-              'admin:roles.create.searchPlaceholder',
+              'roles:admin.create.searchPlaceholder',
               'Search e.g. users, users:read, :create',
             )}
             onSearch={setPermissionSearch}
             emptyMessage={t(
-              'admin:roles.create.noPermissionsFound',
+              'roles:admin.create.noPermissionsFound',
               'No permissions found',
             )}
             loadingMessage={t(
-              'admin:roles.create.loadingPermissions',
+              'roles:admin.create.loadingPermissions',
               'Loading permissions...',
             )}
           />

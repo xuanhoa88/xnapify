@@ -78,13 +78,13 @@ export default function EmailTemplateSelector({ editor }) {
         icon={
           <ComponentInstanceIcon width={16} height={16} strokeWidth={2.5} />
         }
-        title={t('admin:emails.templates.insertTemplate', 'Insert Template')}
+        title={t('emails:admin.templates.insertTemplate', 'Insert Template')}
         disabled={!editor}
       />
 
       <ContextMenu.Menu>
         <ContextMenu.Header
-          title={t('admin:emails.templates.chooseBlock', 'Choose a Block...')}
+          title={t('emails:admin.templates.chooseBlock', 'Choose a Block...')}
         />
         {PREDEFINED_TEMPLATES.map(tmpl => (
           <ContextMenu.Item
@@ -92,7 +92,7 @@ export default function EmailTemplateSelector({ editor }) {
             icon={tmpl.icon}
             onClick={() => insertTemplate(tmpl.html)}
           >
-            {t('admin:emails.templates.blocks.' + tmpl.id, tmpl.label)}
+            {t('emails:admin.templates.blocks.' + tmpl.id, tmpl.label)}
           </ContextMenu.Item>
         ))}
         {/* Allow users/extensions to easily add more templates dynamically */}

@@ -126,14 +126,14 @@ const RoleUsersModal = forwardRef((props, ref) => {
   return (
     <Modal isOpen={isOpen} onClose={handleClose} placement='right'>
       <Modal.Header onClose={handleClose}>
-        {t('admin:roles.usersWithRole', 'Users with "{{roleName}}" Role', {
+        {t('roles:admin.usersWithRole', 'Users with "{{roleName}}" Role', {
           roleName: (role && role.name) || t('admin:common.unknown', 'Unknown'),
         })}
       </Modal.Header>
       <Modal.Body error={error}>
         <Modal.Description>
           {t(
-            'admin:roles.viewUsersDescription',
+            'roles:admin.viewUsersDescription',
             'View all users that have this role assigned.',
           )}
         </Modal.Description>
@@ -165,9 +165,9 @@ const RoleUsersModal = forwardRef((props, ref) => {
               className='text-[var(--gray-9)] italic bg-[var(--gray-2)] rounded-[var(--radius-3)]'
             >
               {search
-                ? t('admin:roles.noUsersMatch', 'No users match your search')
+                ? t('roles:admin.noUsersMatch', 'No users match your search')
                 : t(
-                    'admin:roles.noUsersWithRole',
+                    'roles:admin.noUsersWithRole',
                     'No users found with this role',
                   )}
             </Flex>

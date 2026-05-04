@@ -55,15 +55,15 @@ const ACTION_TIMEOUT_MS = 120_000;
  * Filter tab definitions
  */
 const FILTER_TABS = [
-  { key: 'all', labelKey: 'admin:extensions.filterAll', fallback: 'All' },
+  { key: 'all', labelKey: 'extensions:admin.filterAll', fallback: 'All' },
   {
     key: 'active',
-    labelKey: 'admin:extensions.filterActive',
+    labelKey: 'extensions:admin.filterActive',
     fallback: 'Active',
   },
   {
     key: 'inactive',
-    labelKey: 'admin:extensions.filterInactive',
+    labelKey: 'extensions:admin.filterInactive',
     fallback: 'Inactive',
   },
 ];
@@ -230,7 +230,7 @@ function Extensions() {
             dispatch(
               showSuccessMessage({
                 message: t(
-                  'admin:extensions.installSuccess',
+                  'extensions:admin.installSuccess',
                   'Extension installed successfully.',
                 ),
               }),
@@ -249,7 +249,7 @@ function Extensions() {
           dispatch(
             showSuccessMessage({
               message: t(
-                'admin:extensions.uninstallSuccess',
+                'extensions:admin.uninstallSuccess',
                 'Extension uninstalled successfully.',
               ),
             }),
@@ -264,7 +264,7 @@ function Extensions() {
           dispatch(
             showSuccessMessage({
               message: t(
-                'admin:extensions.activateSuccess',
+                'extensions:admin.activateSuccess',
                 'Extension activated successfully.',
               ),
             }),
@@ -279,7 +279,7 @@ function Extensions() {
           dispatch(
             showSuccessMessage({
               message: t(
-                'admin:extensions.deactivateSuccess',
+                'extensions:admin.deactivateSuccess',
                 'Extension deactivated successfully.',
               ),
             }),
@@ -301,7 +301,7 @@ function Extensions() {
           dispatch(
             showWarningMessage({
               message: t(
-                'admin:extensions.operationFailed',
+                'extensions:admin.operationFailed',
                 'Extension operation failed. Please check the server logs for details.',
               ),
             }),
@@ -313,7 +313,7 @@ function Extensions() {
           dispatch(
             showWarningMessage({
               message: t(
-                'admin:extensions.tampered',
+                'extensions:admin.tampered',
                 'An extension failed integrity verification and has been deactivated for security.',
               ),
             }),
@@ -495,7 +495,7 @@ function Extensions() {
       >
         <DataTable.Header
           title={t('admin:navigation.extensions', 'Extensions')}
-          subtitle={t('admin:extensions.subtitle', 'Manage system extensions')}
+          subtitle={t('extensions:admin.subtitle', 'Manage system extensions')}
           icon={<CubeIcon width={24} height={24} />}
         >
           <Box
@@ -515,8 +515,8 @@ function Extensions() {
           >
             <PlusIcon width={16} height={16} />
             {uploading
-              ? t('admin:extensions.uploading', 'Uploading...')
-              : t('admin:extensions.upload', 'Upload Extension')}
+              ? t('extensions:admin.uploading', 'Uploading...')
+              : t('extensions:admin.upload', 'Upload Extension')}
           </Button>
         </DataTable.Header>
 
@@ -545,7 +545,7 @@ function Extensions() {
           <DataTable.Search
             value={search}
             onChange={setSearch}
-            placeholder={t('admin:extensions.search', 'Search extensions...')}
+            placeholder={t('extensions:admin.search', 'Search extensions...')}
           />
         </DataTable.Toolbar>
 
@@ -554,22 +554,22 @@ function Extensions() {
           title={
             search
               ? t(
-                  'admin:extensions.noSearchResults',
+                  'extensions:admin.noSearchResults',
                   'No extensions match your search',
                 )
               : t(
-                  'admin:extensions.noExtensionsInFilter',
+                  'extensions:admin.noExtensionsInFilter',
                   'No extensions in this category',
                 )
           }
           description={
             search
               ? t(
-                  'admin:extensions.tryDifferentSearch',
+                  'extensions:admin.tryDifferentSearch',
                   'Try a different search term or clear the filter.',
                 )
               : t(
-                  'admin:extensions.tryDifferentFilter',
+                  'extensions:admin.tryDifferentFilter',
                   'Try selecting a different filter tab.',
                 )
           }
@@ -580,9 +580,9 @@ function Extensions() {
       {/* Uninstall confirmation */}
       <Modal.ConfirmDelete
         ref={deleteModalRef}
-        title={t('admin:extensions.uninstall', 'Uninstall Extension')}
+        title={t('extensions:admin.uninstall', 'Uninstall Extension')}
         message={t(
-          'admin:extensions.uninstall_message',
+          'extensions:admin.uninstall_message',
           'Are you sure you want to uninstall this extension? This will remove it from the database.',
         )}
         getItemName={p => p.name}
@@ -592,10 +592,10 @@ function Extensions() {
       {/* Activate confirmation */}
       <Modal.ConfirmAction
         ref={activateModalRef}
-        title={t('admin:extensions.activate', 'Activate Extension')}
+        title={t('extensions:admin.activate', 'Activate Extension')}
         getDescription={p =>
           t(
-            'admin:extensions.activateConfirm',
+            'extensions:admin.activateConfirm',
             'Are you sure you want to activate "{{name}}"? The extension will start running immediately.',
             { name: p.name },
           )
@@ -607,10 +607,10 @@ function Extensions() {
       {/* Deactivate confirmation */}
       <Modal.ConfirmAction
         ref={deactivateModalRef}
-        title={t('admin:extensions.deactivate', 'Deactivate Extension')}
+        title={t('extensions:admin.deactivate', 'Deactivate Extension')}
         getDescription={p =>
           t(
-            'admin:extensions.deactivateConfirm',
+            'extensions:admin.deactivateConfirm',
             'Are you sure you want to deactivate "{{name}}"? The extension will stop running.',
             { name: p.name },
           )
@@ -622,17 +622,17 @@ function Extensions() {
       {/* Install confirmation */}
       <Modal.ConfirmAction
         ref={installModalRef}
-        title={t('admin:extensions.install', 'Install Extension')}
+        title={t('extensions:admin.install', 'Install Extension')}
         getDescription={p =>
           t(
-            'admin:extensions.installConfirm',
+            'extensions:admin.installConfirm',
             'Are you sure you want to install "{{name}}"?',
             { name: p.name },
           )
         }
         onConfirm={handleInstallAction}
         onSuccess={handleInstallCancel}
-        confirmLabel={t('admin:extensions.installButton', 'Install')}
+        confirmLabel={t('extensions:admin.installButton', 'Install')}
       />
     </Box>
   );

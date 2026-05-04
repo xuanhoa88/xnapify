@@ -24,7 +24,7 @@ Extensions follow a well-defined phase-sequential lifecycle. Each phase runs for
 
 ### Boot-time Hooks (no DI context)
 
-- **`translations()`**: Declarative — returns a `require.context` for i18n JSON files. Auto-registered via `addNamespace()` before other hooks. Cleaned up via `removeNamespace()` on deactivation.
+- **`translations()`**: Declarative — returns a `require.context` for i18n JSON files, or `[context, customNamespace]`. Auto-registered via `addNamespace()` before other hooks (default namespace is `extension:${id}`). Cleaned up via `removeNamespace()` on deactivation.
 
 ### Post-bootstrap Hooks (full DI context: `{ container, store }`)
 
@@ -66,7 +66,7 @@ Extensions follow a well-defined phase-sequential lifecycle. Each phase runs for
    - **`models()`**: Returns a `require.context` for model factories. Models are auto-registered into the global `ModelRegistry` via `discover()`. No manual registration needed.
    - **`migrations()`**: Returns a `require.context` for migration files. Auto-run with `__EXTENSION_ID__` prefix (idempotent).
    - **`seeds()`**: Returns a `require.context` for seed files. Auto-run with `__EXTENSION_ID__` prefix (idempotent).
-   - **`translations()`**: Returns a `require.context` for i18n JSON files.
+   - **`translations()`**: Returns a `require.context` for i18n JSON files (or `[context, customNamespace]`).
 
    **Lifecycle Hooks:**
 
@@ -105,9 +105,11 @@ Extensions follow a well-defined phase-sequential lifecycle. Each phase runs for
    - Create files in `api/nodes/` that export `getNodeJS()` and `getNodeHTML()`
    - `getNodeJS()` must return a **CommonJS module string** (`module.exports = function(RED) { ... }`) — NOT a function
    - `getNodeHTML()` must return HTML with `<script data-template-name>` and `<script data-help-name>` sections
-   - At boot, active extensions' nodes are auto-discovered and written to `<userDir>/node_modules/`
+   - At boot, active extensions' nodes are written to `<userDir>/node_modules/` as `xnapify-nodered-<id>` modules (async via `fs.promises`)
+   - Boot-loaded modules are synced into `_extModuleMap` via `_syncBootModules()` for correct unload handling
    - After boot, toggling the extension triggers `registry.addModule()` / `registry.removeModule()` — same API as Node-RED's Palette Manager
    - Connected editors receive WebSocket notifications (`node/added`, `node/removed`) so palettes update automatically
+   - Extension listeners are cleaned up during shutdown to prevent leaks across HMR cycles
    - Access the xnapify DI container inside nodes via `node.context().global.get('container')`
    - Extensions that only provide Node-RED nodes do NOT need `"browser"` in `package.json`
    - Reference: `src/extensions/test-hello-plugin/` for a working example

@@ -1,5 +1,5 @@
 {
-  "roles": {
+  "admin": {
     "title": "Role Management",
     "addRole": "Add Role",
     "searchPlaceholder": "Search roles...",

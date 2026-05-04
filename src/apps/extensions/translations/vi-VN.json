@@ -1,4 +1,20 @@
 {
+  "admin": {
+    "subtitle": "Quản lý extension hệ thống",
+    "uploading": "Đang tải lên...",
+    "upload": "Tải Extension",
+    "search": "Tìm kiếm extension...",
+    "noExtensions": "Không tìm thấy extension",
+    "active": "Hoạt động",
+    "inactive": "Không hoạt động",
+    "activate": "Kích hoạt",
+    "deactivate": "Vô hiệu hóa",
+    "install": "Cài đặt",
+    "installButton": "Cài đặt",
+    "uninstall": "Gỡ cài đặt",
+    "sourceLocal": "Cục bộ",
+    "sourceRemote": "Từ xa"
+  },
   "hub": {
     "title": "Kho Extension",
     "subtitle": "Khám phá và cài đặt plugin và module để mở rộng ứng dụng.",
@@ -41,21 +57,5 @@
     "uninstalling": "Đang gỡ...",
     "uninstalled": "Đã gỡ",
     "upToDate": "Đã cập nhật"
-  },
-  "extensions": {
-    "subtitle": "Quản lý extension hệ thống",
-    "uploading": "Đang tải lên...",
-    "upload": "Tải Extension",
-    "search": "Tìm kiếm extension...",
-    "noExtensions": "Không tìm thấy extension",
-    "active": "Hoạt động",
-    "inactive": "Không hoạt động",
-    "activate": "Kích hoạt",
-    "deactivate": "Vô hiệu hóa",
-    "install": "Cài đặt",
-    "installButton": "Cài đặt",
-    "uninstall": "Gỡ cài đặt",
-    "sourceLocal": "Cục bộ",
-    "sourceRemote": "Từ xa"
   }
 }

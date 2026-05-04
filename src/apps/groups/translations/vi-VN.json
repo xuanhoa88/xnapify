@@ -1,5 +1,5 @@
 {
-  "groups": {
+  "admin": {
     "title": "Quản lý nhóm",
     "deleteTitle": "Xóa nhóm",
     "deleteError": "Lỗi khi xóa nhóm",

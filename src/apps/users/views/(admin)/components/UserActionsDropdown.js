@@ -51,7 +51,7 @@ function UserActionsDropdown({
   return (
     <ContextMenu>
       <ContextMenu.Trigger
-        title={t('admin:users.list.moreActions', 'More actions')}
+        title={t('users:admin.list.moreActions', 'More actions')}
         className='rt-IconButton'
       >
         <DotsVerticalIcon width={16} height={16} />
@@ -62,21 +62,21 @@ function UserActionsDropdown({
           icon={<TokensIcon width={16} height={16} />}
           permission='apiKeys:read'
         >
-          {t('admin:users.list.manageApiKeys', 'Manage API Keys')}
+          {t('users:admin.list.manageApiKeys', 'Manage API Keys')}
         </ContextMenu.Item>
         <ContextMenu.Item
           onClick={() => onManageGroups(user)}
           icon={<GroupIcon width={16} height={16} />}
           permission='groups:*'
         >
-          {t('admin:users.list.manageGroups', 'Manage Groups')}
+          {t('users:admin.list.manageGroups', 'Manage Groups')}
         </ContextMenu.Item>
         <ContextMenu.Item
           onClick={() => onManageRoles(user)}
           icon={<IdCardIcon width={16} height={16} />}
           permission='roles:*'
         >
-          {t('admin:users.list.manageRoles', 'Manage Roles')}
+          {t('users:admin.list.manageRoles', 'Manage Roles')}
         </ContextMenu.Item>
         <ContextMenu.Divider />
         <ContextMenu.Item
@@ -84,7 +84,7 @@ function UserActionsDropdown({
           icon={<LockOpen1Icon width={16} height={16} />}
           permission='permissions:read'
         >
-          {t('admin:users.list.viewPermissions', 'View Permissions')}
+          {t('users:admin.list.viewPermissions', 'View Permissions')}
         </ContextMenu.Item>
         {!isCurrentUser && (
           <ContextMenu.Item
@@ -92,7 +92,7 @@ function UserActionsDropdown({
             icon={<PersonIcon width={16} height={16} />}
             permission='users:impersonate'
           >
-            {t('admin:users.list.impersonate', 'Impersonate')}
+            {t('users:admin.list.impersonate', 'Impersonate')}
           </ContextMenu.Item>
         )}
         {!isCurrentUser && (
@@ -105,7 +105,7 @@ function UserActionsDropdown({
                 variant='danger'
                 permission={['users:update', 'users:delete']}
               >
-                {t('admin:users.list.deactivate', 'Deactivate')}
+                {t('users:admin.list.deactivate', 'Deactivate')}
               </ContextMenu.Item>
             ) : (
               <ContextMenu.Item
@@ -113,7 +113,7 @@ function UserActionsDropdown({
                 icon={<CheckIcon width={16} height={16} />}
                 permission={['users:update', 'users:delete']}
               >
-                {t('admin:users.list.activate', 'Activate')}
+                {t('users:admin.list.activate', 'Activate')}
               </ContextMenu.Item>
             )}
           </>

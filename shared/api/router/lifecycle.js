@@ -125,7 +125,9 @@ export function buildTranslationsLoader(
     // 1. Collect config translations first
     for (const config of translatableConfigs) {
       try {
-        const result = getTranslations(config.module.translations());
+        const hookResult = config.module.translations();
+        const ctx = Array.isArray(hookResult) ? hookResult[0] : hookResult;
+        const result = getTranslations(ctx);
         if (result && typeof result === 'object') {
           Object.entries(result).forEach(([locale, messages]) => {
             merged[locale] = merge({}, merged[locale], messages);
@@ -139,7 +141,9 @@ export function buildTranslationsLoader(
     // 2. Route translations override/merge on top
     if (typeof routeTranslations === 'function') {
       try {
-        const result = getTranslations(routeTranslations());
+        const hookResult = routeTranslations();
+        const ctx = Array.isArray(hookResult) ? hookResult[0] : hookResult;
+        const result = getTranslations(ctx);
         if (result && typeof result === 'object') {
           Object.entries(result).forEach(([locale, messages]) => {
             merged[locale] = merge({}, merged[locale], messages);

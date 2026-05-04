@@ -236,15 +236,15 @@ function Permissions() {
     () => [
       {
         value: '',
-        label: t('admin:permissions.statusFilterPlaceholder', 'All Status'),
+        label: t('permissions:admin.statusFilterPlaceholder', 'All Status'),
       },
       {
         value: 'active',
-        label: t('admin:permissions.statusActive', 'Active'),
+        label: t('permissions:admin.statusActive', 'Active'),
       },
       {
         value: 'inactive',
-        label: t('admin:permissions.statusInactive', 'Inactive'),
+        label: t('permissions:admin.statusInactive', 'Inactive'),
       },
     ],
     [t],
@@ -256,19 +256,19 @@ function Permissions() {
   const moreBulkActions = useMemo(
     () => [
       {
-        label: t('admin:permissions.activate', 'Activate'),
+        label: t('permissions:admin.activate', 'Activate'),
         icon: <CheckIcon width={16} height={16} />,
         onClick: handleBulkActivate,
       },
       {
-        label: t('admin:permissions.deactivate', 'Deactivate'),
+        label: t('permissions:admin.deactivate', 'Deactivate'),
         icon: <Cross2Icon width={16} height={16} />,
         variant: 'warning',
         onClick: handleBulkDeactivate,
       },
       { type: 'divider' },
       {
-        label: t('admin:permissions.delete', 'Delete'),
+        label: t('permissions:admin.delete', 'Delete'),
         icon: <TrashIcon width={16} height={16} />,
         variant: 'danger',
         onClick: handleBulkDelete,
@@ -283,7 +283,7 @@ function Permissions() {
       {
         key: 'resource',
         dataIndex: 'resourceName',
-        title: t('admin:permissions.resource', 'Resource'),
+        title: t('permissions:admin.resource', 'Resource'),
         order: 10,
         render: (value, record) =>
           record.groupIndex === 0 ? (
@@ -295,7 +295,7 @@ function Permissions() {
       {
         key: 'action',
         dataIndex: 'action',
-        title: t('admin:permissions.action', 'Action'),
+        title: t('permissions:admin.action', 'Action'),
         order: 20,
         render: value => (
           <Badge color='gray' radius='full' variant='surface'>
@@ -306,7 +306,7 @@ function Permissions() {
       {
         key: 'description',
         dataIndex: 'description',
-        title: t('admin:permissions.description', 'Description'),
+        title: t('permissions:admin.description', 'Description'),
         order: 30,
         render: value => (
           <Text size='2' color='gray'>
@@ -317,7 +317,7 @@ function Permissions() {
       {
         key: 'status',
         dataIndex: 'is_active',
-        title: t('admin:permissions.status', 'Status'),
+        title: t('permissions:admin.status', 'Status'),
         order: 40,
         render: isActive => (
           <Badge
@@ -326,8 +326,8 @@ function Permissions() {
             radius='full'
           >
             {isActive
-              ? t('admin:permissions.active', 'Active')
-              : t('admin:permissions.inactive', 'Inactive')}
+              ? t('permissions:admin.active', 'Active')
+              : t('permissions:admin.inactive', 'Inactive')}
           </Badge>
         ),
       },
@@ -341,7 +341,7 @@ function Permissions() {
             <IconButton
               variant='ghost'
               size='2'
-              title={t('admin:permissions.edit', 'Edit')}
+              title={t('permissions:admin.edit', 'Edit')}
               onClick={() => handleEdit(record.id)}
             >
               <Pencil2Icon width={16} height={16} />
@@ -349,7 +349,7 @@ function Permissions() {
             <IconButton
               variant='ghost'
               size='2'
-              title={t('admin:permissions.delete', 'Delete')}
+              title={t('permissions:admin.delete', 'Delete')}
               onClick={() => handleDelete(record)}
             >
               <TrashIcon width={16} height={16} />
@@ -379,9 +379,9 @@ function Permissions() {
         onSelectionChange={setSelectedPermissions}
       >
         <DataTable.Header
-          title={t('admin:permissions.title', 'Permission Management')}
+          title={t('permissions:admin.title', 'Permission Management')}
           subtitle={t(
-            'admin:permissions.subtitle',
+            'permissions:admin.subtitle',
             'Configure granular access controls',
           )}
           icon={<LockOpen1Icon width={24} height={24} />}
@@ -393,13 +393,13 @@ function Permissions() {
             {...(!canCreate && {
               disabled: true,
               title: t(
-                'admin:permissions.noPermissionToCreate',
+                'permissions:admin.noPermissionToCreate',
                 'You do not have permission to create permissions',
               ),
             })}
           >
             <PlusIcon width={16} height={16} />
-            {t('admin:permissions.addPermission', 'Add Permission')}
+            {t('permissions:admin.addPermission', 'Add Permission')}
           </Button>
         </DataTable.Header>
 
@@ -408,7 +408,7 @@ function Permissions() {
             value={search}
             onChange={handleSearchChange}
             placeholder={t(
-              'admin:permissions.searchPlaceholder',
+              'permissions:admin.searchPlaceholder',
               'Search e.g. users, users:read, :create',
             )}
             debounce={300}
@@ -420,7 +420,7 @@ function Permissions() {
             value={statusFilter}
             onChange={setStatusFilter}
             placeholder={t(
-              'admin:permissions.statusFilterPlaceholder',
+              'permissions:admin.statusFilterPlaceholder',
               'All Status',
             )}
             showSearch={false}
@@ -440,21 +440,21 @@ function Permissions() {
           icon={<LockOpen1Icon width={48} height={48} />}
           title={
             search
-              ? t('admin:permissions.noMatchesFound', 'No matches found')
+              ? t('permissions:admin.noMatchesFound', 'No matches found')
               : t(
-                  'admin:permissions.noPermissionsFound',
+                  'permissions:admin.noPermissionsFound',
                   'No permissions found',
                 )
           }
           description={
             search
               ? t(
-                  'admin:permissions.noMatchesFoundSearch',
+                  'permissions:admin.noMatchesFoundSearch',
                   'No permissions match "{search}". Try a different search.',
                   { search },
                 )
               : t(
-                  'admin:permissions.noPermissionsFoundDesc',
+                  'permissions:admin.noPermissionsFoundDesc',
                   'Create granular permissions to control access to resources.',
                 )
           }
@@ -475,7 +475,7 @@ function Permissions() {
 
       <Modal.ConfirmDelete
         ref={deleteModalRef}
-        title={t('admin:permissions.delete', 'Delete Permission(s)')}
+        title={t('permissions:admin.delete', 'Delete Permission(s)')}
         getItemName={getDeleteName}
         onDelete={handleDeleteConfirm}
         onSuccess={handleRefreshPermissions}

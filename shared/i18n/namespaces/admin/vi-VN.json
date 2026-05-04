@@ -98,8 +98,5 @@
     "inviteUser": "Mời người dùng",
     "createRole": "Tạo vai trò",
     "addExtension": "Thêm Extension"
-  },
-  "files": {
-    "title": "Quản lý tập tin"
   }
 }

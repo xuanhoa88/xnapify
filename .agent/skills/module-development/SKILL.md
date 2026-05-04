@@ -22,7 +22,7 @@ Modules interact with the core framework by exporting a **default object** with 
 2. **Setup Subdirectories:** Always create `controllers`, `services`, `routes`, `models`, and `database/migrations` + `database/seeds`.
 3. **The Index File (`api/index.js`):** Export a `default` object with the following lifecycle hooks:
 
-   - `translations()`: returns the Webpack context for locale JSON files.
+   - `translations()`: returns the Webpack context for locale JSON files, or an array `[context, customNamespace]` to explicitly define the namespace (defaults to the module's folder name).
    - `providers({ container })`: binds singletons/factories to the dependency injection `container`.
    - `migrations()`: returns the Webpack context for migrations (declarative — autoloader executes).
    - `models()`: returns the Webpack context for models (declarative — autoloader registers into ORM).
@@ -52,7 +52,7 @@ Modules interact with the core framework by exporting a **default object** with 
 1. **Setup Directory:** Create `src/apps/[module_name]/views/`.
 2. **The Index File (`views/index.js`):** Export a `default` object with the following hooks:
 
-   - `translations()`: returns the Webpack context for frontend locale JSON files.
+   - `translations()`: returns the Webpack context for frontend locale JSON files, or an array `[context, customNamespace]`.
    - `providers({ container })`: bind UI components or Redux selectors/thunks to the container for cross-module usage.
    - `routes()`: returns the Webpack context directly (e.g., `() => viewsContext`).
 

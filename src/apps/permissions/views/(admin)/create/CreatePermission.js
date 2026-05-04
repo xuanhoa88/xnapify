@@ -67,7 +67,7 @@ function CreatePermissionIdentityCard() {
           </Text>
           <Text size='1' color='gray' align='center'>
             {t(
-              'admin:permissions.create.generatedNameHint',
+              'permissions:admin.create.generatedNameHint',
               'Auto-generated from resource & action',
             )}
           </Text>
@@ -78,7 +78,7 @@ function CreatePermissionIdentityCard() {
         <Flex direction='column' gap='3' className='w-full'>
           <Flex justify='between' align='center'>
             <Text size='2' color='gray'>
-              {t('admin:permissions.create.resource', 'Resource')}
+              {t('permissions:admin.create.resource', 'Resource')}
             </Text>
             <Badge color='indigo' variant='soft' radius='full' size='1'>
               {resource || '-'}
@@ -87,7 +87,7 @@ function CreatePermissionIdentityCard() {
 
           <Flex justify='between' align='center'>
             <Text size='2' color='gray'>
-              {t('admin:permissions.create.action', 'Action')}
+              {t('permissions:admin.create.action', 'Action')}
             </Text>
             <Badge color='indigo' variant='soft' radius='full' size='1'>
               {action || '-'}
@@ -96,7 +96,7 @@ function CreatePermissionIdentityCard() {
 
           <Flex justify='between' align='center'>
             <Text size='2' color='gray'>
-              {t('admin:permissions.create.statusLabel', 'Status')}
+              {t('permissions:admin.create.statusLabel', 'Status')}
             </Text>
             <Badge
               color={isActive ? 'green' : 'gray'}
@@ -105,8 +105,8 @@ function CreatePermissionIdentityCard() {
               size='1'
             >
               {isActive
-                ? t('admin:permissions.create.active', 'Active')
-                : t('admin:permissions.create.inactive', 'Inactive')}
+                ? t('permissions:admin.create.active', 'Active')
+                : t('permissions:admin.create.inactive', 'Inactive')}
             </Badge>
           </Flex>
         </Flex>
@@ -178,9 +178,9 @@ export default function CreatePermission() {
   return (
     <Box className='p-6 max-w-[1400px] mx-auto'>
       <PageHeader
-        title={t('admin:permissions.create.title', 'Create New Permission')}
+        title={t('permissions:admin.create.title', 'Create New Permission')}
         subtitle={t(
-          'admin:permissions.create.subtitle',
+          'permissions:admin.create.subtitle',
           'Define a resource-action pair for access control',
         )}
         icon={<LockOpen1Icon width={24} height={24} />}
@@ -191,7 +191,7 @@ export default function CreatePermission() {
           onClick={() => handleCancel(isDirtyRef.current)}
         >
           <ArrowLeftIcon />
-          {t('admin:permissions.create.backToList', 'Back to Permissions')}
+          {t('permissions:admin.create.backToList', 'Back to Permissions')}
         </Button>
       </PageHeader>
 
@@ -249,7 +249,7 @@ function CreatePermissionFormFields({ onCancel, loading, isDirtyRef }) {
       >
         <Text size='2' weight='bold' color='gray'>
           {t(
-            'admin:permissions.create.permissionInformation',
+            'permissions:admin.create.permissionInformation',
             'Permission Information',
           )}
         </Text>
@@ -259,12 +259,12 @@ function CreatePermissionFormFields({ onCancel, loading, isDirtyRef }) {
           <Box className='flex-1'>
             <Form.Field
               name='resource'
-              label={t('admin:permissions.create.resource', 'Resource')}
+              label={t('permissions:admin.create.resource', 'Resource')}
               required
             >
               <Form.Input
                 placeholder={t(
-                  'admin:permissions.create.resourcePlaceholder',
+                  'permissions:admin.create.resourcePlaceholder',
                   'e.g. users, posts, comments',
                 )}
               />
@@ -273,12 +273,12 @@ function CreatePermissionFormFields({ onCancel, loading, isDirtyRef }) {
           <Box className='flex-1'>
             <Form.Field
               name='action'
-              label={t('admin:permissions.create.action', 'Action')}
+              label={t('permissions:admin.create.action', 'Action')}
               required
             >
               <Form.Input
                 placeholder={t(
-                  'admin:permissions.create.actionPlaceholder',
+                  'permissions:admin.create.actionPlaceholder',
                   'e.g. read, write, delete',
                 )}
               />
@@ -288,11 +288,11 @@ function CreatePermissionFormFields({ onCancel, loading, isDirtyRef }) {
 
         <Form.Field
           name='description'
-          label={t('admin:permissions.create.description', 'Description')}
+          label={t('permissions:admin.create.description', 'Description')}
         >
           <Form.Textarea
             placeholder={t(
-              'admin:permissions.create.descriptionPlaceholder',
+              'permissions:admin.create.descriptionPlaceholder',
               'Describe what this permission allows...',
             )}
             rows={3}
@@ -307,18 +307,18 @@ function CreatePermissionFormFields({ onCancel, loading, isDirtyRef }) {
         className='bg-[var(--gray-a2)] border-t border-[var(--gray-a4)] border-b border-[var(--gray-a4)]'
       >
         <Text size='2' weight='bold' color='gray'>
-          {t('admin:permissions.create.status', 'Status')}
+          {t('permissions:admin.create.status', 'Status')}
         </Text>
       </Box>
       <Box p='5'>
         <Form.Field name='is_active'>
           <Form.Checkbox
-            label={t('admin:permissions.create.isActive', 'Active')}
+            label={t('permissions:admin.create.isActive', 'Active')}
           />
         </Form.Field>
         <Text as='p' size='1' color='gray' mt='1'>
           {t(
-            'admin:permissions.create.isActiveHint',
+            'permissions:admin.create.isActiveHint',
             'Inactive permissions will not be enforced in authorization checks',
           )}
         </Text>
@@ -346,7 +346,7 @@ function CreatePermissionFormFields({ onCancel, loading, isDirtyRef }) {
           {loading
             ? t('admin:buttons.creating', 'Creating...')
             : t(
-                'admin:permissions.create.createPermission',
+                'permissions:admin.create.createPermission',
                 'Create Permission',
               )}
         </Button>

@@ -480,11 +480,21 @@ class ServerExtensionManager extends BaseExtensionManager {
 
       // 1. Translations — register i18n namespaces
       if (typeof extensionApi.translations === 'function') {
-        const translationContext = extensionApi.translations();
-        if (translationContext) {
-          const translations = getTranslations(translationContext);
-          if (translations && Object.keys(translations).length > 0) {
-            addNamespace(id, translations);
+        const result = extensionApi.translations();
+        if (result) {
+          const [translationContext, customNs] = Array.isArray(result)
+            ? result
+            : [result];
+          if (translationContext) {
+            const translations = getTranslations(translationContext);
+            if (translations && Object.keys(translations).length > 0) {
+              const namespace = customNs || `extension:${id}`;
+              addNamespace(namespace, translations);
+
+              // Track for teardown in _performDeactivate
+              const meta = this[EXTENSION_METADATA].get(id);
+              if (meta) meta.translationNamespace = namespace;
+            }
           }
         }
       }
@@ -595,7 +605,8 @@ class ServerExtensionManager extends BaseExtensionManager {
       }
 
       // Remove API-side translations
-      removeNamespace(id);
+      const meta = this[EXTENSION_METADATA].get(id);
+      removeNamespace((meta && meta.translationNamespace) || `extension:${id}`);
 
       // Clean up API entry point
       this[EXTENSION_API_ENTRY_POINTS].delete(id);

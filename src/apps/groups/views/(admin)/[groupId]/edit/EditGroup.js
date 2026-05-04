@@ -75,7 +75,7 @@ function EditGroupIdentityCard({ group }) {
         <Flex direction='column' gap='3' className='w-full'>
           <Flex justify='between' align='center'>
             <Text size='2' color='gray'>
-              {t('admin:groups.edit.categoryLabel', 'Category')}
+              {t('groups:admin.edit.categoryLabel', 'Category')}
             </Text>
             {group.category ? (
               <Badge color='blue' variant='soft' radius='full' size='1'>
@@ -90,7 +90,7 @@ function EditGroupIdentityCard({ group }) {
 
           <Flex justify='between' align='center'>
             <Text size='2' color='gray'>
-              {t('admin:groups.edit.typeLabel', 'Type')}
+              {t('groups:admin.edit.typeLabel', 'Type')}
             </Text>
             {group.type ? (
               <Badge color='gray' variant='surface' radius='full' size='1'>
@@ -105,7 +105,7 @@ function EditGroupIdentityCard({ group }) {
 
           <Flex justify='between' align='center'>
             <Text size='2' color='gray'>
-              {t('admin:groups.edit.usersCountLabel', 'Users')}
+              {t('groups:admin.edit.usersCountLabel', 'Users')}
             </Text>
             <Badge color='indigo' variant='soft' radius='full' size='1'>
               {group.userCount || 0}
@@ -114,7 +114,7 @@ function EditGroupIdentityCard({ group }) {
 
           <Flex justify='between' align='center'>
             <Text size='2' color='gray'>
-              {t('admin:groups.edit.rolesCountLabel', 'Roles')}
+              {t('groups:admin.edit.rolesCountLabel', 'Roles')}
             </Text>
             <Badge color='gray' variant='soft' radius='full' size='1'>
               {group.roleCount || (group.roles && group.roles.length) || 0}
@@ -237,8 +237,8 @@ function EditGroup({ groupId, context }) {
     return (
       <Box className='p-6 max-w-[1400px] mx-auto'>
         <PageHeader
-          title={t('admin:groups.edit.title', 'Edit Group')}
-          subtitle={t('admin:groups.edit.subtitle', 'Update group details')}
+          title={t('groups:admin.edit.title', 'Edit Group')}
+          subtitle={t('groups:admin.edit.subtitle', 'Update group details')}
           icon={<GroupIcon width={24} height={24} />}
         />
         <Grid columns={{ initial: '1', md: '280px 1fr' }} gap='6' align='start'>
@@ -254,8 +254,8 @@ function EditGroup({ groupId, context }) {
     return (
       <Box className='p-6 max-w-[1400px] mx-auto'>
         <PageHeader
-          title={t('admin:groups.edit.title', 'Edit Group')}
-          subtitle={t('admin:groups.edit.subtitle', 'Update group details')}
+          title={t('groups:admin.edit.title', 'Edit Group')}
+          subtitle={t('groups:admin.edit.subtitle', 'Update group details')}
           icon={<GroupIcon width={24} height={24} />}
         />
         <Flex
@@ -266,12 +266,12 @@ function EditGroup({ groupId, context }) {
           className='rounded-md border border-[var(--red-6)] bg-[var(--red-2)]'
         >
           <Text color='red' size='4' weight='bold' mb='2'>
-            {t('admin:groups.edit.errorLoading', 'Error loading group')}
+            {t('groups:admin.edit.errorLoading', 'Error loading group')}
           </Text>
           <Text color='red' size='2' mb='4'>
             {groupLoadError ||
               t(
-                'admin:groups.edit.errorLoadingDescription',
+                'groups:admin.edit.errorLoadingDescription',
                 'The group could not be found or loaded.',
               )}
           </Text>
@@ -294,7 +294,7 @@ function EditGroup({ groupId, context }) {
         title={group.name}
         subtitle={
           group.description ||
-          t('admin:groups.edit.manageGroup', 'Manage group settings')
+          t('groups:admin.edit.manageGroup', 'Manage group settings')
         }
         icon={<GroupIcon width={24} height={24} />}
       >
@@ -304,7 +304,7 @@ function EditGroup({ groupId, context }) {
           onClick={() => handleCancel(isDirtyRef.current)}
         >
           <ArrowLeftIcon />
-          {t('admin:groups.edit.backToList', 'Back to Groups')}
+          {t('groups:admin.edit.backToList', 'Back to Groups')}
         </Button>
       </PageHeader>
 
@@ -424,18 +424,18 @@ function EditGroupFormFields({ onCancel, loading, isDirtyRef, fetchRoles }) {
         className='bg-[var(--gray-a2)] border-b border-[var(--gray-a4)]'
       >
         <Text size='2' weight='bold' color='gray'>
-          {t('admin:groups.edit.groupInformation', 'Group Information')}
+          {t('groups:admin.edit.groupInformation', 'Group Information')}
         </Text>
       </Box>
       <Box p='5'>
         <Form.Field
           name='name'
-          label={t('admin:groups.edit.groupName', 'Group Name')}
+          label={t('groups:admin.edit.groupName', 'Group Name')}
           required
         >
           <Form.Input
             placeholder={t(
-              'admin:groups.edit.groupNamePlaceholder',
+              'groups:admin.edit.groupNamePlaceholder',
               'e.g., Engineering, Marketing, Support',
             )}
           />
@@ -443,11 +443,11 @@ function EditGroupFormFields({ onCancel, loading, isDirtyRef, fetchRoles }) {
 
         <Form.Field
           name='description'
-          label={t('admin:groups.edit.description', 'Description')}
+          label={t('groups:admin.edit.description', 'Description')}
         >
           <Form.Textarea
             placeholder={t(
-              'admin:groups.edit.descriptionPlaceholder',
+              'groups:admin.edit.descriptionPlaceholder',
               'Describe what this group is for...',
             )}
             rows={3}
@@ -457,24 +457,24 @@ function EditGroupFormFields({ onCancel, loading, isDirtyRef, fetchRoles }) {
         <Grid columns={{ initial: '1', sm: '2' }} gap='4'>
           <Form.Field
             name='category'
-            label={t('admin:groups.edit.category', 'Category')}
+            label={t('groups:admin.edit.category', 'Category')}
             className='mb-0'
           >
             <Form.Input
               placeholder={t(
-                'admin:groups.edit.categoryPlaceholder',
+                'groups:admin.edit.categoryPlaceholder',
                 'e.g., System, Organization, Department',
               )}
             />
           </Form.Field>
           <Form.Field
             name='type'
-            label={t('admin:groups.edit.type', 'Type')}
+            label={t('groups:admin.edit.type', 'Type')}
             className='mb-0'
           >
             <Form.Input
               placeholder={t(
-                'admin:groups.edit.typePlaceholder',
+                'groups:admin.edit.typePlaceholder',
                 'e.g., Security, Organizational, Functional',
               )}
             />
@@ -489,7 +489,7 @@ function EditGroupFormFields({ onCancel, loading, isDirtyRef, fetchRoles }) {
         className='bg-[var(--gray-a2)] border-y border-[var(--gray-a4)]'
       >
         <Text size='2' weight='bold' color='gray'>
-          {t('admin:groups.edit.rolesCount', 'Roles ({{count}} selected)', {
+          {t('groups:admin.edit.rolesCount', 'Roles ({{count}} selected)', {
             count: selectedRoles.length,
           })}
         </Text>
@@ -507,14 +507,14 @@ function EditGroupFormFields({ onCancel, loading, isDirtyRef, fetchRoles }) {
             onLoadMore={handleLoadMoreRoles}
             searchable
             searchPlaceholder={t(
-              'admin:groups.edit.searchRoles',
+              'groups:admin.edit.searchRoles',
               'Search roles...',
             )}
             searchValue={roleSearch}
             onSearch={setRoleSearch}
-            emptyMessage={t('admin:groups.edit.noRolesFound', 'No roles found')}
+            emptyMessage={t('groups:admin.edit.noRolesFound', 'No roles found')}
             loadingMessage={t(
-              'admin:groups.edit.loadingRoles',
+              'groups:admin.edit.loadingRoles',
               'Loading roles...',
             )}
           />
@@ -535,12 +535,12 @@ function EditGroupFormFields({ onCancel, loading, isDirtyRef, fetchRoles }) {
           type='button'
           onClick={handleCancel}
         >
-          {t('admin:groups.edit.cancel', 'Cancel')}
+          {t('groups:admin.edit.cancel', 'Cancel')}
         </Button>
         <Button variant='solid' color='indigo' type='submit' loading={loading}>
           {loading
-            ? t('admin:groups.edit.saving', 'Saving...')
-            : t('admin:groups.edit.saveChanges', 'Save Changes')}
+            ? t('groups:admin.edit.saving', 'Saving...')
+            : t('groups:admin.edit.saveChanges', 'Save Changes')}
         </Button>
       </Flex>
     </Card>

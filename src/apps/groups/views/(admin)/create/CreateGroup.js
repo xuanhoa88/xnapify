@@ -62,7 +62,7 @@ function CreateGroupIdentityCard() {
 
         <Flex direction='column' align='center' gap='1' className='w-full'>
           <Text size='4' weight='bold' align='center' className='break-all'>
-            {name || t('admin:groups.create.newGroup', 'New Group')}
+            {name || t('groups:admin.create.newGroup', 'New Group')}
           </Text>
         </Flex>
 
@@ -71,7 +71,7 @@ function CreateGroupIdentityCard() {
         <Flex direction='column' gap='3' className='w-full'>
           <Flex justify='between' align='center'>
             <Text size='2' color='gray'>
-              {t('admin:groups.create.categoryLabel', 'Category')}
+              {t('groups:admin.create.categoryLabel', 'Category')}
             </Text>
             {category ? (
               <Badge color='blue' variant='soft' radius='full' size='1'>
@@ -86,7 +86,7 @@ function CreateGroupIdentityCard() {
 
           <Flex justify='between' align='center'>
             <Text size='2' color='gray'>
-              {t('admin:groups.create.typeLabel', 'Type')}
+              {t('groups:admin.create.typeLabel', 'Type')}
             </Text>
             {type ? (
               <Badge color='gray' variant='surface' radius='full' size='1'>
@@ -101,10 +101,10 @@ function CreateGroupIdentityCard() {
 
           <Flex justify='between' align='center'>
             <Text size='2' color='gray'>
-              {t('admin:groups.create.statusLabel', 'Status')}
+              {t('groups:admin.create.statusLabel', 'Status')}
             </Text>
             <Badge color='indigo' variant='soft' radius='full' size='1'>
-              {t('admin:groups.create.newAccount', 'New Group')}
+              {t('groups:admin.create.newAccount', 'New Group')}
             </Badge>
           </Flex>
         </Flex>
@@ -189,9 +189,9 @@ function CreateGroup({ context }) {
   return (
     <Box className='p-6 max-w-[1400px] mx-auto'>
       <PageHeader
-        title={t('admin:groups.create.title', 'Create New Group')}
+        title={t('groups:admin.create.title', 'Create New Group')}
         subtitle={t(
-          'admin:groups.create.subtitle',
+          'groups:admin.create.subtitle',
           'Add a new group and configure its roles',
         )}
         icon={<GroupIcon width={24} height={24} />}
@@ -202,7 +202,7 @@ function CreateGroup({ context }) {
           onClick={() => handleCancel(isDirtyRef.current)}
         >
           <ArrowLeftIcon />
-          {t('admin:groups.create.backToList', 'Back to Groups')}
+          {t('groups:admin.create.backToList', 'Back to Groups')}
         </Button>
       </PageHeader>
 
@@ -322,18 +322,18 @@ function CreateGroupFormFields({ onCancel, loading, isDirtyRef, fetchRoles }) {
         className='bg-[var(--gray-a2)] border-b border-[var(--gray-a4)]'
       >
         <Text size='2' weight='bold' color='gray'>
-          {t('admin:groups.create.groupInformation', 'Group Information')}
+          {t('groups:admin.create.groupInformation', 'Group Information')}
         </Text>
       </Box>
       <Box p='5'>
         <Form.Field
           name='name'
-          label={t('admin:groups.create.name', 'Group Name')}
+          label={t('groups:admin.create.name', 'Group Name')}
           required
         >
           <Form.Input
             placeholder={t(
-              'admin:groups.create.namePlaceholder',
+              'groups:admin.create.namePlaceholder',
               'e.g., Engineering, Marketing, Support',
             )}
           />
@@ -341,11 +341,11 @@ function CreateGroupFormFields({ onCancel, loading, isDirtyRef, fetchRoles }) {
 
         <Form.Field
           name='description'
-          label={t('admin:groups.create.description', 'Description')}
+          label={t('groups:admin.create.description', 'Description')}
         >
           <Form.Textarea
             placeholder={t(
-              'admin:groups.create.descriptionPlaceholder',
+              'groups:admin.create.descriptionPlaceholder',
               'Describe what this group is for...',
             )}
             rows={3}
@@ -355,24 +355,24 @@ function CreateGroupFormFields({ onCancel, loading, isDirtyRef, fetchRoles }) {
         <Grid columns={{ initial: '1', sm: '2' }} gap='4'>
           <Form.Field
             name='category'
-            label={t('admin:groups.create.category', 'Category')}
+            label={t('groups:admin.create.category', 'Category')}
             className='mb-0'
           >
             <Form.Input
               placeholder={t(
-                'admin:groups.create.categoryPlaceholder',
+                'groups:admin.create.categoryPlaceholder',
                 'e.g., System, Organization, Department',
               )}
             />
           </Form.Field>
           <Form.Field
             name='type'
-            label={t('admin:groups.create.type', 'Type')}
+            label={t('groups:admin.create.type', 'Type')}
             className='mb-0'
           >
             <Form.Input
               placeholder={t(
-                'admin:groups.create.typePlaceholder',
+                'groups:admin.create.typePlaceholder',
                 'e.g., Security, Organizational, Functional',
               )}
             />
@@ -387,7 +387,7 @@ function CreateGroupFormFields({ onCancel, loading, isDirtyRef, fetchRoles }) {
         className='bg-[var(--gray-a2)] border-y border-[var(--gray-a4)]'
       >
         <Text size='2' weight='bold' color='gray'>
-          {t('admin:groups.create.rolesCount', 'Roles ({{count}} selected)', {
+          {t('groups:admin.create.rolesCount', 'Roles ({{count}} selected)', {
             count: selectedRoles.length,
           })}
         </Text>
@@ -405,14 +405,14 @@ function CreateGroupFormFields({ onCancel, loading, isDirtyRef, fetchRoles }) {
             onLoadMore={handleLoadMoreRoles}
             searchable
             searchPlaceholder={t(
-              'admin:groups.create.searchRoles',
+              'groups:admin.create.searchRoles',
               'Search roles...',
             )}
             searchValue={roleSearch}
             onSearch={setRoleSearch}
-            emptyMessage={t('admin:groups.create.emptyRoles', 'No roles found')}
+            emptyMessage={t('groups:admin.create.emptyRoles', 'No roles found')}
             loadingMessage={t(
-              'admin:groups.create.loadingRoles',
+              'groups:admin.create.loadingRoles',
               'Loading roles...',
             )}
           />
@@ -433,13 +433,13 @@ function CreateGroupFormFields({ onCancel, loading, isDirtyRef, fetchRoles }) {
           type='button'
           onClick={handleCancel}
         >
-          {t('admin:groups.create.cancel', 'Cancel')}
+          {t('groups:admin.create.cancel', 'Cancel')}
         </Button>
         <Button variant='solid' color='indigo' type='submit' loading={loading}>
           <PlusIcon width={15} height={15} />
           {loading
-            ? t('admin:groups.create.creating', 'Creating...')
-            : t('admin:groups.create.createGroup', 'Create Group')}
+            ? t('groups:admin.create.creating', 'Creating...')
+            : t('groups:admin.create.createGroup', 'Create Group')}
         </Button>
       </Flex>
     </Card>

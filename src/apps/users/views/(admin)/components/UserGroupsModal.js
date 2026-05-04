@@ -85,7 +85,7 @@ const UserGroupsModal = forwardRef(({ onSuccess, fetchGroups }, ref) => {
         }
       } catch (err) {
         setError(
-          err || t('admin:users.errors.loadGroups', 'Failed to load groups'),
+          err || t('users:admin.errors.loadGroups', 'Failed to load groups'),
         );
       } finally {
         setGroupsLoading(false);
@@ -185,7 +185,7 @@ const UserGroupsModal = forwardRef(({ onSuccess, fetchGroups }, ref) => {
       handleClose();
     } catch (err) {
       setError(
-        err || t('admin:users.errors.assignGroups', 'Failed to assign groups'),
+        err || t('users:admin.errors.assignGroups', 'Failed to assign groups'),
       );
     }
   }, [
@@ -201,11 +201,11 @@ const UserGroupsModal = forwardRef(({ onSuccess, fetchGroups }, ref) => {
 
   const description = isBulk
     ? t(
-        'admin:users.groups.assignGroupsBulkDesc',
+        'users:admin.groups.assignGroupsBulkDesc',
         'Select groups to assign to the selected users.',
       )
     : t(
-        'admin:users.groups.assignGroupsDesc',
+        'users:admin.groups.assignGroupsDesc',
         'Select groups for this user. The user will inherit roles from these groups.',
       );
 
@@ -214,12 +214,12 @@ const UserGroupsModal = forwardRef(({ onSuccess, fetchGroups }, ref) => {
       <Modal.Header onClose={handleClose}>
         {isBulk
           ? t(
-              'admin:users.groups.assignGroupsBulk',
+              'users:admin.groups.assignGroupsBulk',
               'Assign Groups to {{count}} Users',
               { count: bulkUserIds.length },
             )
           : t(
-              'admin:users.groups.manageGroups',
+              'users:admin.groups.manageGroups',
               'Manage Groups for "{{name}}"',
               {
                 name:
@@ -239,7 +239,7 @@ const UserGroupsModal = forwardRef(({ onSuccess, fetchGroups }, ref) => {
             value={searchTerm}
             onChange={handleSearchChange}
             placeholder={t(
-              'admin:users.groups.searchGroups',
+              'users:admin.groups.searchGroups',
               'Search groups...',
             )}
             debounce={300}
@@ -250,7 +250,7 @@ const UserGroupsModal = forwardRef(({ onSuccess, fetchGroups }, ref) => {
           {groupsLoading ? (
             <Flex align='center' justify='center' p='6'>
               <Text as='p' color='gray'>
-                {t('admin:users.groups.loadingGroups', 'Loading groups...')}
+                {t('users:admin.groups.loadingGroups', 'Loading groups...')}
               </Text>
             </Flex>
           ) : groups.length === 0 ? (
@@ -258,11 +258,11 @@ const UserGroupsModal = forwardRef(({ onSuccess, fetchGroups }, ref) => {
               <Text as='p' color='gray'>
                 {searchTerm
                   ? t(
-                      'admin:users.groups.noGroupsMatch',
+                      'users:admin.groups.noGroupsMatch',
                       'No groups match your search',
                     )
                   : t(
-                      'admin:users.groups.noGroupsAvailable',
+                      'users:admin.groups.noGroupsAvailable',
                       'No groups available',
                     )}
               </Text>
@@ -330,7 +330,7 @@ const UserGroupsModal = forwardRef(({ onSuccess, fetchGroups }, ref) => {
         <Modal.SelectionCount count={selections.length} />
         <Modal.Actions>
           <Modal.Button onClick={handleClose}>
-            {t('admin:users.groups.cancel', 'Cancel')}
+            {t('users:admin.groups.cancel', 'Cancel')}
           </Modal.Button>
           <Modal.Button
             variant='primary'
@@ -338,8 +338,8 @@ const UserGroupsModal = forwardRef(({ onSuccess, fetchGroups }, ref) => {
             disabled={loading}
           >
             {loading
-              ? t('admin:users.groups.saving', 'Saving...')
-              : t('admin:users.groups.save', 'Save')}
+              ? t('users:admin.groups.saving', 'Saving...')
+              : t('users:admin.groups.save', 'Save')}
           </Modal.Button>
         </Modal.Actions>
       </Modal.Footer>

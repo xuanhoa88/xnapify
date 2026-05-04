@@ -39,7 +39,7 @@ translations → providers → views
 ```
 
 ```javascript
-export function translations() { return require.context('../translations', ...); }
+export function translations() { return [require.context('../translations', ...)]; }
 export async function providers({ container }) { /* bind client DI */ }
 export function views() { return require.context('./routes', ...); }
 ```

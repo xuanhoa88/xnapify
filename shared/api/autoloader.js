@@ -258,11 +258,17 @@ export async function discoverModules(modulesContext, container) {
   // ─── Phase 1: translations ────────────────────────────────────────────────
   errors.push(
     ...(await runPhase('translations', lifecycles, (name, hook) => {
-      const translationContext = hook();
-      if (translationContext) {
-        const translations = getTranslations(translationContext);
-        if (translations && Object.keys(translations).length > 0) {
-          addNamespace(name, translations);
+      const result = hook();
+      if (result) {
+        const [translationContext, customNs] = Array.isArray(result)
+          ? result
+          : [result];
+        if (translationContext) {
+          const translations = getTranslations(translationContext);
+          if (translations && Object.keys(translations).length > 0) {
+            const namespace = customNs || name;
+            addNamespace(namespace, translations);
+          }
         }
       }
     })),

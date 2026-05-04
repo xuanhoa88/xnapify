@@ -5,9 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { getTranslations } from '@shared/i18n/loader';
-import { addNamespace } from '@shared/i18n/utils';
-
 // Auto-load contexts
 const viewsContext = require.context(
   '.',
@@ -26,11 +23,12 @@ const translationsContext = require.context(
 // =============================================================================
 
 export default {
+  translations() {
+    return [translationsContext, 'translation'];
+  },
   providers() {
-    // Merge module-specific translations into the default 'translation' namespace.
     // The (default) module owns keys like login.*, register.*, profile.*, navigation.*
     // that components access via bare useTranslation() calls.
-    addNamespace('translation', getTranslations(translationsContext));
   },
   routes: () => viewsContext,
 };

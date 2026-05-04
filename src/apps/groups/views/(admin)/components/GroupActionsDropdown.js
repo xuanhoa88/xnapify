@@ -44,21 +44,21 @@ function GroupActionsDropdown({
           icon={<PersonIcon width={16} height={16} />}
           permission='users:read'
         >
-          {t('admin:groups.viewUsers', 'View Users')}
+          {t('groups:admin.viewUsers', 'View Users')}
         </ContextMenu.Item>
         <ContextMenu.Item
           onClick={() => onManageRoles(group)}
           icon={<IdCardIcon width={16} height={16} />}
           permission='roles:*'
         >
-          {t('admin:groups.manageRoles', 'Manage Roles')}
+          {t('groups:admin.manageRoles', 'Manage Roles')}
         </ContextMenu.Item>
         <ContextMenu.Item
           onClick={() => onViewPermissions(group)}
           icon={<LockOpen1Icon width={16} height={16} />}
           permission='permissions:read'
         >
-          {t('admin:groups.viewPermissions', 'View Permissions')}
+          {t('groups:admin.viewPermissions', 'View Permissions')}
         </ContextMenu.Item>
         <ContextMenu.Divider />
         <ContextMenu.Item
@@ -66,7 +66,7 @@ function GroupActionsDropdown({
           icon={<Pencil2Icon width={16} height={16} />}
           permission='groups:update'
         >
-          {t('admin:groups.editGroup', 'Edit Group')}
+          {t('groups:admin.editGroup', 'Edit Group')}
         </ContextMenu.Item>
         <ContextMenu.Item
           onClick={() => onDelete(group)}
@@ -74,7 +74,7 @@ function GroupActionsDropdown({
           variant='danger'
           permission='groups:delete'
         >
-          {t('admin:groups.deleteGroup', 'Delete Group')}
+          {t('groups:admin.deleteGroup', 'Delete Group')}
         </ContextMenu.Item>
       </ContextMenu.Menu>
     </ContextMenu>

@@ -173,7 +173,7 @@ function Roles() {
     () => [
       {
         key: 'delete',
-        label: t('admin:roles.bulkDelete', 'Delete Selected'),
+        label: t('roles:admin.bulkDelete', 'Delete Selected'),
         icon: <RadixIcons.TrashIcon width={16} height={16} />,
         onClick: handleBulkDelete,
         variant: 'danger',
@@ -214,12 +214,12 @@ function Roles() {
         <Box className={s.cardBody}>
           <Text size='2' color='gray' className={s.cardDescription}>
             {role.description ||
-              t('admin:roles.noDescription', 'No description available')}
+              t('roles:admin.noDescription', 'No description available')}
           </Text>
           <Flex direction='column' gap='2' className={s.cardStatsFlex}>
             <Flex justify='between' align='center'>
               <Text size='2' className={s.statLabel}>
-                {t('admin:roles.users', 'Users')}:
+                {t('roles:admin.users', 'Users')}:
               </Text>
               <Text size='2' weight='medium' className={s.statValue}>
                 {role.usersCount || 0}
@@ -227,7 +227,7 @@ function Roles() {
             </Flex>
             <Flex justify='between' align='center'>
               <Text size='2' className={s.statLabel}>
-                {t('admin:roles.groups', 'Groups')}:
+                {t('roles:admin.groups', 'Groups')}:
               </Text>
               <Text size='2' weight='medium' className={s.statValue}>
                 {role.groupsCount || 0}
@@ -235,7 +235,7 @@ function Roles() {
             </Flex>
             <Flex justify='between' align='center'>
               <Text size='2' className={s.statLabel}>
-                {t('admin:roles.permissions', 'Permissions')}:
+                {t('roles:admin.permissions', 'Permissions')}:
               </Text>
               <Text size='2' weight='medium' className={s.statValue}>
                 {role.permissionsCount || 0}
@@ -270,9 +270,9 @@ function Roles() {
         onSelectionChange={setSelectedRoles}
       >
         <DataTable.Header
-          title={t('admin:roles.title', 'Role Management')}
+          title={t('roles:admin.title', 'Role Management')}
           subtitle={t(
-            'admin:roles.subtitle',
+            'roles:admin.subtitle',
             'Define access levels and permissions',
           )}
           icon={<RadixIcons.IdCardIcon width={24} height={24} />}
@@ -284,13 +284,13 @@ function Roles() {
             {...(!canCreate && {
               disabled: true,
               title: t(
-                'admin:roles.noPermissionToCreate',
+                'roles:admin.noPermissionToCreate',
                 'You do not have permission to create roles',
               ),
             })}
           >
             <RadixIcons.PlusIcon width={16} height={16} />
-            {t('admin:roles.addRole', 'Add Role')}
+            {t('roles:admin.addRole', 'Add Role')}
           </Button>
         </DataTable.Header>
 
@@ -298,7 +298,7 @@ function Roles() {
           <DataTable.Search
             value={search}
             onChange={handleSearchChange}
-            placeholder={t('admin:roles.searchPlaceholder', 'Search roles...')}
+            placeholder={t('roles:admin.searchPlaceholder', 'Search roles...')}
           />
           <DataTable.ClearFilters
             visible={!!search}
@@ -313,9 +313,9 @@ function Roles() {
 
         <DataTable.Empty
           icon={<RadixIcons.IdCardIcon width={48} height={48} />}
-          title={t('admin:roles.noRolesFound', 'No roles found')}
+          title={t('roles:admin.noRolesFound', 'No roles found')}
           description={t(
-            'admin:roles.noRolesDescription',
+            'roles:admin.noRolesDescription',
             'Create a new role to define access levels and permissions.',
           )}
         >
@@ -327,12 +327,12 @@ function Roles() {
             {...(!canCreate && {
               disabled: true,
               title: t(
-                'admin:roles.noPermissionToCreate',
+                'roles:admin.noPermissionToCreate',
                 'You do not have permission to create roles',
               ),
             })}
           >
-            {t('admin:roles.addRole', 'Add Role')}
+            {t('roles:admin.addRole', 'Add Role')}
           </Button>
         </DataTable.Empty>
         <DataTable.Error message={error} onRetry={refreshRoles} />

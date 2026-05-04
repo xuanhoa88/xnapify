@@ -44,13 +44,13 @@ function TemplateEditor({ className }) {
               {typeof previewError === 'string'
                 ? previewError
                 : previewError.details ||
-                  t('admin:emails.modal.previewError', 'Rendering error')}
+                  t('emails:admin.modal.previewError', 'Rendering error')}
             </Text>
           </Flex>
         ) : (
           <iframe
             ref={iframeRef}
-            title={t('admin:emails.modal.previewTitle', 'Preview Template')}
+            title={t('emails:admin.modal.previewTitle', 'Preview Template')}
             sandbox='allow-popups'
             srcDoc={injectedHtml || ''}
             className={s.previewIframe}
