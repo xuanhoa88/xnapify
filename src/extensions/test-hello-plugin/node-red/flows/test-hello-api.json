@@ -1,0 +1,56 @@
+[
+  {
+    "id": "tab-ext-test-hello",
+    "type": "tab",
+    "label": "Extension: Test Hello API",
+    "disabled": false,
+    "info": "Auto-deployed by test-hello-plugin extension"
+  },
+  {
+    "id": "ext-http-in-hello",
+    "type": "http in",
+    "z": "tab-ext-test-hello",
+    "name": "GET /api/test-hello",
+    "url": "/api/test-hello",
+    "method": "get",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 160,
+    "y": 100,
+    "wires": [["ext-node-test-hello"]]
+  },
+  {
+    "id": "ext-node-test-hello",
+    "type": "test-hello",
+    "z": "tab-ext-test-hello",
+    "name": "Test Hello",
+    "x": 400,
+    "y": 100,
+    "wires": [
+      ["ext-http-res-ok"],
+      ["ext-http-res-err"]
+    ]
+  },
+  {
+    "id": "ext-http-res-ok",
+    "type": "http response",
+    "z": "tab-ext-test-hello",
+    "name": "200 OK",
+    "statusCode": "200",
+    "headers": { "content-type": "application/json" },
+    "x": 640,
+    "y": 80,
+    "wires": []
+  },
+  {
+    "id": "ext-http-res-err",
+    "type": "http response",
+    "z": "tab-ext-test-hello",
+    "name": "500 Error",
+    "statusCode": "500",
+    "headers": { "content-type": "application/json" },
+    "x": 640,
+    "y": 160,
+    "wires": []
+  }
+]

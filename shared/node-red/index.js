@@ -19,6 +19,8 @@ import {
   createDevelopmentSettings,
   writeExtensionNodeModule,
   removeExtensionNodeModule,
+  writeExtensionFlows,
+  removeExtensionFlows,
 } from './settings';
 
 // Bundle all migration JSON files at build time
@@ -411,7 +413,16 @@ export class NodeRedManager {
         );
         if (!extDir) return;
 
-        const extNodesDir = path.join(extDir, 'api', 'nodes');
+        // Derive paths from manifest.nodered object { nodes, flows }
+        const noderedKey = manifest.nodered;
+        if (!noderedKey || typeof noderedKey !== 'object') return;
+
+        const nodesRel = noderedKey.nodes;
+        const flowsRel = noderedKey.flows;
+
+        if (!nodesRel) return;
+
+        const extNodesDir = path.join(extDir, nodesRel);
         const { userDir } = this._settings;
 
         // Write node files as a proper NR module (with package.json).
@@ -454,6 +465,27 @@ export class NodeRedManager {
 
         // Track for cleanup on unload
         this._extModuleMap.set(id, { moduleName, manifest });
+
+        // Write extension flows to <userDir>/src/tabs/
+        // and trigger a seamless flow redeploy so the flows appear immediately.
+        const extFlowsDir = flowsRel ? path.join(extDir, flowsRel) : null;
+        const flowFiles = extFlowsDir
+          ? await writeExtensionFlows(userDir, id, extFlowsDir)
+          : [];
+
+        if (flowFiles.length > 0 && this._runtime && this._runtime._) {
+          try {
+            await this._runtime._.nodes.loadFlows(true);
+            Logger.success(
+              `Injected ${flowFiles.length} flow(s) for extension "${id}"`,
+            );
+          } catch (flowErr) {
+            Logger.warn(
+              `Flow reload after extension load failed:`,
+              flowErr.message,
+            );
+          }
+        }
       } catch (err) {
         Logger.error(
           `Failed to hot-load extension "${id}" into Node-RED:`,
@@ -508,7 +540,28 @@ export class NodeRedManager {
         // Remove files from disk — use `id` consistently
         await removeExtensionNodeModule(this._settings.userDir, id);
 
+        // Remove extension flows and trigger redeploy
+        const flowsRemoved = await removeExtensionFlows(
+          this._settings.userDir,
+          id,
+        );
+
         this._extModuleMap.delete(id);
+
+        // If flows were removed, reload so the canvas updates
+        if (flowsRemoved > 0 && this._runtime && this._runtime._) {
+          try {
+            await this._runtime._.nodes.loadFlows(true);
+            Logger.success(
+              `Removed ${flowsRemoved} flow(s) for extension "${id}"`,
+            );
+          } catch (flowErr) {
+            Logger.warn(
+              `Flow reload after extension unload failed:`,
+              flowErr.message,
+            );
+          }
+        }
       } catch (err) {
         Logger.error(
           `Failed to hot-unload extension "${id}" from Node-RED:`,

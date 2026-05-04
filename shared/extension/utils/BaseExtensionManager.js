@@ -542,6 +542,10 @@ export class BaseExtensionManager {
         metadata.state = ExtensionState.LOADED;
         metadata.loadedAt = Date.now();
         metadata.manifest = { ...manifest };
+
+        // Even though there's no JS entry point, we must emit the loaded event
+        // so that non-JS assets like Node-RED nodes or flows can be hot-loaded
+        await this.emit('extension:loaded', { id, ext: null, manifest });
         return null;
       }
 
@@ -559,6 +563,7 @@ export class BaseExtensionManager {
         metadata.state = ExtensionState.LOADED;
         metadata.loadedAt = Date.now();
         metadata.manifest = { ...manifest };
+        await this.emit('extension:loaded', { id, ext: null, manifest });
         return null;
       }
 

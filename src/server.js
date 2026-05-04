@@ -913,13 +913,19 @@ async function listen(server, baseUrl, port, host) {
     });
   }
 
-  // Start Node-RED and sync extensions now that the server is reachable.
-  await Promise.all([
-    appState.nodeRed.start(),
-    extensionManager.sync().catch(err => {
-      console.warn('⚠️  Extension sync failed:', err.message);
-    }),
-  ]);
+  // Start Node-RED first so it's ready to receive extension:loaded events via WebSocket/hot-load
+  try {
+    await appState.nodeRed.start();
+  } catch (err) {
+    console.warn('⚠️  Node-RED start failed:', err.message);
+  }
+
+  // Sync extensions after Node-RED is running so custom nodes are dynamically injected
+  try {
+    await extensionManager.sync();
+  } catch (err) {
+    console.warn('⚠️  Extension sync failed:', err.message);
+  }
 
   // Print server information
   const separator = '='.repeat(60);

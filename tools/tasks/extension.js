@@ -45,6 +45,9 @@ const MANIFEST_FIELDS = [
   'screenshots',
   'slots',
   'autoload',
+  // Required at runtime by shared/node-red/{settings,index}.js to discover
+  // extension Node-RED nodes and flows. Do NOT remove without updating those.
+  'nodered',
 ];
 
 // ---------------------------------------------------------------------------
@@ -82,8 +85,13 @@ function discoverExtensions() {
         const hasBrowser =
           manifest.browser &&
           fs.existsSync(path.join(extensionPath, manifest.browser));
+        const hasNodered =
+          manifest.nodered &&
+          typeof manifest.nodered === 'object' &&
+          manifest.nodered.nodes &&
+          fs.existsSync(path.join(extensionPath, manifest.nodered.nodes));
 
-        if (!hasMain && !hasBrowser) return null;
+        if (!hasMain && !hasBrowser && !hasNodered) return null;
 
         return {
           manifest,
@@ -184,7 +192,7 @@ async function generateManifests(extensions) {
 // ---------------------------------------------------------------------------
 
 async function copyStaticAssets(extensions) {
-  for (const { name, dirName, path: extensionPath } of extensions) {
+  for (const { name, dirName, manifest, path: extensionPath } of extensions) {
     // 1. Copy public assets/
     const assetSource = path.join(extensionPath, 'assets');
     const assetTarget = path.join(EXTENSIONS_BUILD_DIR, dirName, 'assets');
@@ -194,18 +202,20 @@ async function copyStaticAssets(extensions) {
       logInfo(`📁 Copied static assets for ${name}`);
     }
 
-    // 2. Copy Node-RED custom nodes (api/nodes/)
-    const nodesSource = path.join(extensionPath, 'api', 'nodes');
-    const nodesTarget = path.join(
-      EXTENSIONS_BUILD_DIR,
-      dirName,
-      'api',
-      'nodes',
-    );
+    // 2. Node-RED custom nodes are handled by Webpack (extension.config.js)
 
-    if (await pathExists(nodesSource)) {
-      await copyDir(nodesSource, nodesTarget);
-      logInfo(`🔴 Copied Node-RED nodes for ${name}`);
+    // 3. Copy Node-RED flow definitions from manifest.nodered.flows
+    if (manifest.nodered && typeof manifest.nodered === 'object') {
+      const flowsRel = manifest.nodered.flows;
+      if (flowsRel) {
+        const flowsSource = path.join(extensionPath, flowsRel);
+        const flowsTarget = path.join(EXTENSIONS_BUILD_DIR, dirName, flowsRel);
+
+        if (await pathExists(flowsSource)) {
+          await copyDir(flowsSource, flowsTarget);
+          logInfo(`🔗 Copied Node-RED flows for ${name}`);
+        }
+      }
     }
   }
 }

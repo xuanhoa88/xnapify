@@ -100,9 +100,10 @@ Extensions follow a well-defined phase-sequential lifecycle. Each phase runs for
    - Backend: `registry.registerHook('ipc:${__EXTENSION_ID__}:action', registry.createPipeline(...middlewares, handler), __EXTENSION_ID__)`
    - Frontend: `context.fetch('/api/extensions/${__EXTENSION_ID__}/ipc', { method: 'POST', body: { action, data } })`
 
-5. **Node-RED Nodes (`api/nodes/`):**
+5. **Node-RED Nodes (`node-red/nodes/`):**
    Extensions can provide custom Node-RED palette nodes that are **hot-loaded without restarting** the runtime.
-   - Create files in `api/nodes/` that export `getNodeJS()` and `getNodeHTML()`
+   - Add `"nodered": { "nodes": "node-red/nodes", "flows": "node-red/flows" }` to the extension's `package.json` manifest
+   - Create files in `node-red/nodes/` that export `getNodeJS()` and `getNodeHTML()`
    - `getNodeJS()` must return a **CommonJS module string** (`module.exports = function(RED) { ... }`) — NOT a function
    - `getNodeHTML()` must return HTML with `<script data-template-name>` and `<script data-help-name>` sections
    - At boot, active extensions' nodes are written to `<userDir>/node_modules/` as `xnapify-nodered-<id>` modules (async via `fs.promises`)
@@ -111,7 +112,8 @@ Extensions follow a well-defined phase-sequential lifecycle. Each phase runs for
    - Connected editors receive WebSocket notifications (`node/added`, `node/removed`) so palettes update automatically
    - Extension listeners are cleaned up during shutdown to prevent leaks across HMR cycles
    - Access the xnapify DI container inside nodes via `node.context().global.get('container')`
-   - Extensions that only provide Node-RED nodes do NOT need `"browser"` in `package.json`
+   - Extensions that only provide Node-RED nodes do NOT need `"main"` or `"browser"` in `package.json` — the `"nodered"` key is a standalone valid entry point
+   - Optional: add predefined flows in `node-red/flows/*.json` (JSON arrays) — these are auto-injected into the Node-RED canvas
    - Reference: `src/extensions/test-hello-plugin/` for a working example
 ## Router Connection (Plug & Play)
 

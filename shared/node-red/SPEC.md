@@ -36,7 +36,7 @@ Constructs the Node-RED settings object:
 - Merges runtime defaults (like overriding `logLevel`, `projects`, `httpNodeRoot`).
 - **Global Context**: Pre-injects commonly used libraries (`lodash`, `dayjs`, `zod`, `uuid`) into the default namespace available within Function nodes.
 - **Extraction Magic** (all async via `fs.promises`):
-  - `writeCustomNodes(userDir)`: Resolves `require.context('./nodes')`, extracting `getNodeJS()` and `getNodeHTML()`, and writing physical files to `<userDir>/nodes/xnapify/`. Also scans active extensions' `api/nodes/` and writes them as `xnapify-nodered-<id>` modules to `<userDir>/node_modules/`.
+  - `writeCustomNodes(userDir)`: Resolves `require.context('./nodes')`, extracting `getNodeJS()` and `getNodeHTML()`, and writing physical files to `<userDir>/nodes/xnapify/`. Also scans active extensions' `manifest.nodered.nodes` paths and writes them as `xnapify-nodered-<id>` modules to `<userDir>/node_modules/`.
   - `writeClientScripts(userDir)`: Similar logic for `./client-scripts/`, dropping files in `<userDir>/scripts/` and linking them directly to Node-RED's `editorTheme.page.scripts` UI injection.
 
 ## Authentication Synchronization (`auth.js`)
@@ -57,11 +57,11 @@ Instead of storing configurations inside monolithic `flows.json`, this module pl
 
 ## Extension Hot-Loading
 
-Extensions can provide custom Node-RED nodes via `api/nodes/` directories. These nodes are dynamically injected into the running Node-RED runtime using the same registry APIs as the built-in Palette Manager — **zero restart, zero downtime**.
+Extensions can provide custom Node-RED nodes via the `"nodered"` manifest key (e.g. `"nodered": { "nodes": "node-red/nodes", "flows": "node-red/flows" }`). These nodes are dynamically injected into the running Node-RED runtime using the same registry APIs as the built-in Palette Manager — **zero restart, zero downtime**.
 
 ### Boot-Time Discovery
 
-During settings creation (`writeCustomNodes`), all active extensions are scanned for `api/nodes/` directories. Each extension's node files are:
+During settings creation (`writeCustomNodes`), all active extensions with a `manifest.nodered` object are scanned. Each extension's node files (from `manifest.nodered.nodes`) are:
 
 1. Loaded via `moduleRequire` to extract `getNodeJS()` and `getNodeHTML()`
 2. Written to `<userDir>/node_modules/xnapify-nodered-<id>/` as plain `.js` and `.html` files
@@ -86,10 +86,12 @@ Operations for the same extension are serialized via `_enqueueExtOp()` to preven
 
 Extensions providing Node-RED nodes must:
 
-1. Create `api/nodes/*.js` files in the extension directory
-2. Export `getNodeJS()` returning a **CommonJS module string**: `module.exports = function(RED) { ... }`
-3. Export `getNodeHTML()` returning HTML with `<script data-template-name="...">` and `<script data-help-name="...">` sections
-4. Register node types via `RED.nodes.registerType("type-name", Constructor)` in the JS string
+1. Add `"nodered": { "nodes": "node-red/nodes", "flows": "node-red/flows" }` to `package.json` (paths are relative to the extension root)
+2. Create `node-red/nodes/*.js` files that export `getNodeJS()` and `getNodeHTML()`
+3. `getNodeJS()` must return a **CommonJS module string** containing `module.exports = function(RED) { ... }`
+4. `getNodeHTML()` must return HTML with `<script data-template-name="...">` and `<script data-help-name="...">` sections
+5. Register node types via `RED.nodes.registerType("type-name", Constructor)` in the JS string
+6. Extensions that only provide Node-RED nodes do NOT need `"main"` or `"browser"` in `package.json`
 
 ### Dynamic Settings Integration
 

@@ -104,19 +104,34 @@ If you delete `flows.json` and start the server, the flow splitter will read the
 
 Extensions can provide custom Node-RED nodes that are **hot-loaded into the palette without restarting** the runtime. This uses the same mechanism as Node-RED's built-in Palette Manager (`registry.addModule` / `registry.removeModule`).
 
-To add Node-RED nodes to an extension, create files in `api/nodes/` that export `getNodeJS()` and `getNodeHTML()`:
+To add Node-RED nodes to an extension, add a `"nodered"` object to the extension's `package.json` with `nodes` and optional `flows` paths, then create node files that export `getNodeJS()` and `getNodeHTML()`:
 
 ```
 src/extensions/my-extension/
-├── package.json
-├── api/
-│   ├── index.js
-│   └── nodes/
-│       └── my-node.js      # Exports getNodeJS() + getNodeHTML()
+├── package.json              # "nodered": { "nodes": "node-red/nodes", "flows": "node-red/flows" }
+└── node-red/
+    ├── nodes/
+    │   └── my-node.js        # Exports getNodeJS() + getNodeHTML()
+    └── flows/
+        └── my-flow.json      # Optional predefined flows (JSON array)
 ```
 
+```json
+{
+  "name": "@xnapify-extension/my-extension",
+  "version": "1.0.0",
+  "nodered": {
+    "nodes": "node-red/nodes",
+    "flows": "node-red/flows"
+  },
+  "description": "My extension with Node-RED nodes"
+}
+```
+
+> **Note:** Extensions that only provide Node-RED nodes do NOT need `"main"` or `"browser"` in `package.json`. The `"nodered"` key is a standalone valid entry point.
+
 ```javascript
-// src/extensions/my-extension/api/nodes/my-node.js
+// src/extensions/my-extension/node-red/nodes/my-node.js
 
 export function getNodeJS() {
   // Must return a CommonJS module STRING (not a function)
@@ -161,7 +176,7 @@ export function getNodeHTML() {
 
 When the extension is enabled, the node appears in the Node-RED palette immediately. When disabled, it is removed — all without restarting the runtime. Connected editors receive live WebSocket notifications (`node/added`, `node/removed`) so the palette updates automatically.
 
-> **Important:** `getNodeJS()` must return a **string** (CommonJS module format), not a JavaScript function. The string is written to disk and loaded by Node-RED's native module loader.
+> **Important:** `getNodeJS()` must return a **string** (CommonJS module format with `module.exports`), not a JavaScript function. The string is written to disk and loaded by Node-RED's native module loader.
 
 ### Dynamic Settings
 

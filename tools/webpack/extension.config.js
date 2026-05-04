@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+const fs = require('fs');
 const path = require('path');
 
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
@@ -148,10 +149,21 @@ function validateExtension(extension) {
 
   if (
     !extension.manifest ||
-    (!extension.manifest.browser && !extension.manifest.main)
+    (!extension.manifest.browser &&
+      !extension.manifest.main &&
+      !extension.manifest.nodered)
   ) {
-    logWarn(`Extension "${extension.name}" missing UI or API entry point`);
+    logWarn(
+      `Extension "${extension.name}" missing UI, API, or Node-RED entry point`,
+    );
     return null;
+  }
+
+  // Extract manifest.nodered.nodes path for Webpack entry point
+  let noderedNodes = null;
+  const { nodered } = extension.manifest;
+  if (nodered && typeof nodered === 'object' && nodered.nodes) {
+    noderedNodes = nodered.nodes;
   }
 
   const { dirName } = extension;
@@ -170,6 +182,9 @@ function validateExtension(extension) {
       : null,
     apiPath: extension.manifest.main
       ? path.resolve(extension.path, extension.manifest.main)
+      : null,
+    noderedPath: noderedNodes
+      ? path.resolve(extension.path, noderedNodes)
       : null,
     libraryName: `extension_${extensionId}`,
   };
@@ -300,48 +315,101 @@ function createClientConfig(extensionData, extensionDefines, buildPath) {
  * Create API server config and worker configs (if extension has API entry)
  */
 function createApiConfig(extensionData, extensionDefines, buildPath) {
-  const { dirName, apiPath, extensionPath } = extensionData;
+  const { dirName, apiPath, extensionPath, noderedPath } = extensionData;
 
-  if (!apiPath) return [];
+  if (!apiPath && !noderedPath) return [];
 
   const extNodeModules = path.join(extensionPath, 'node_modules');
   const outputDir = path.join(buildPath, dirName);
+  const configs = [];
 
-  const apiConfig = createWebpackConfig('server', {
-    entry: apiPath,
-    experiments: { outputModule: false },
-    externals: [
-      nodeExternals({
-        additionalModuleDirs: [extNodeModules],
-        allowlist: [reStyle, reImage, reFont, reSvg, /^\.\.\?\//],
-      }),
-    ],
-    output: {
-      path: outputDir,
-      filename: 'api.[contenthash:8].js',
-    },
-    plugins: [
-      extensionDefines,
-      createEnvDefine(),
-      new BuildManifestPlugin({ logicalName: 'api.js' }),
-      createProgressPlugin(),
-    ].filter(Boolean),
-  });
+  // Main API server config
+  if (apiPath) {
+    const apiConfig = createWebpackConfig('server', {
+      entry: apiPath,
+      experiments: { outputModule: false },
+      externals: [
+        nodeExternals({
+          additionalModuleDirs: [extNodeModules],
+          allowlist: [reStyle, reImage, reFont, reSvg, /^\.\.\?\//],
+        }),
+      ],
+      output: {
+        path: outputDir,
+        filename: 'api.[contenthash:8].js',
+      },
+      plugins: [
+        extensionDefines,
+        createEnvDefine(),
+        new BuildManifestPlugin({ logicalName: 'api.js' }),
+        createProgressPlugin(),
+      ].filter(Boolean),
+    });
 
-  apiConfig.resolve.modules.unshift(extNodeModules);
+    apiConfig.resolve.modules.unshift(extNodeModules);
+    configs.push(apiConfig);
 
-  const configs = [apiConfig];
+    // Compile workers as standalone CJS modules
+    const workerCfg = createWorkerConfig({
+      workersDir: path.join(path.dirname(apiPath), 'workers'),
+      outputPath: outputDir,
+      name: `workers-${dirName}`,
+      additionalModuleDirs: [extNodeModules],
+      plugins: [extensionDefines, createProgressPlugin()],
+    });
+    if (workerCfg) {
+      configs.push(workerCfg);
+    }
+  }
 
-  // Compile workers as standalone CJS modules
-  const workerCfg = createWorkerConfig({
-    workersDir: path.join(path.dirname(apiPath), 'workers'),
-    outputPath: outputDir,
-    name: `workers-${dirName}`,
-    additionalModuleDirs: [extNodeModules],
-    plugins: [extensionDefines, createProgressPlugin()],
-  });
-  if (workerCfg) {
-    configs.push(workerCfg);
+  // Node-RED nodes: transpile each node file to standalone CJS
+  if (noderedPath) {
+    const nodeEntries = {};
+    try {
+      const files = fs.readdirSync(noderedPath, { withFileTypes: true });
+      for (const file of files) {
+        if (!file.isFile()) continue;
+        const match = file.name.match(/^(.+)\.[cm]?[jt]s$/i);
+        if (match) {
+          nodeEntries[`nodes/${match[1]}`] = {
+            import: path.join(noderedPath, file.name),
+            library: { type: 'commonjs2' },
+          };
+        }
+      }
+    } catch {
+      // Directory doesn't exist or can't be read — skip
+    }
+
+    if (Object.keys(nodeEntries).length > 0) {
+      // Output nodes relative to the extension build dir
+      // e.g. nodes are at "node-red/nodes" → output under "node-red/"
+      const relNodered = path.relative(extensionPath, noderedPath);
+      const noderedOutputDir = path.dirname(relNodered);
+
+      const nodesCfg = createWebpackConfig('server', {
+        target: 'node',
+        entry: nodeEntries,
+        output: {
+          path: path.join(outputDir, noderedOutputDir),
+          filename: '[name].js',
+        },
+        externals: [
+          nodeExternals({
+            additionalModuleDirs: [extNodeModules],
+            allowlist: [reStyle, reImage, reFont, reSvg, /^\.\.\?\//],
+          }),
+        ],
+        plugins: [
+          extensionDefines,
+          createEnvDefine(),
+          createProgressPlugin(),
+        ].filter(Boolean),
+      });
+
+      nodesCfg.resolve.modules.unshift(extNodeModules);
+      configs.push(nodesCfg);
+    }
   }
 
   return configs;
@@ -387,7 +455,7 @@ function createExtensionConfig(extensions = [], buildPath) {
       ...createClientConfig(extensionData, extensionDefines, buildPath),
     );
 
-    // Create API + worker builds
+    // Create API + worker + Node-RED node builds
     extConfigs.push(
       ...createApiConfig(extensionData, extensionDefines, buildPath),
     );

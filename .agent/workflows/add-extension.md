@@ -1123,19 +1123,34 @@ Extensions can provide custom Node-RED nodes that are **hot-loaded into the pale
 
 ```
 src/extensions/{extension-name}/
-├── package.json
-├── api/
-│   ├── index.js
-│   └── nodes/
-│       └── {node-type}.js   # Exports getNodeJS() + getNodeHTML()
+├── package.json              # "nodered": { "nodes": "node-red/nodes", "flows": "node-red/flows" }
+└── node-red/
+    ├── nodes/
+    │   └── {node-type}.js    # Exports getNodeJS() + getNodeHTML()
+    └── flows/
+        └── {flow-name}.json  # Optional predefined flows (JSON array)
 ```
+
+```json
+{
+  "name": "@xnapify-extension/{extension-name}",
+  "version": "1.0.0",
+  "nodered": {
+    "nodes": "node-red/nodes",
+    "flows": "node-red/flows"
+  },
+  "description": "Extension with Node-RED nodes"
+}
+```
+
+> **Note:** Extensions that only provide Node-RED nodes do NOT need `"main"` or `"browser"` in `package.json`. The `"nodered"` key is a standalone valid entry point.
 
 ### Node File Contract
 
-Each file in `api/nodes/` must export two functions:
+Each file in `node-red/nodes/` must export two functions:
 
 ```javascript
-// src/extensions/{extension-name}/api/nodes/{node-type}.js
+// src/extensions/{extension-name}/node-red/nodes/{node-type}.js
 
 export function getNodeJS() {
   // MUST return a CommonJS module STRING (not a function!)
@@ -1188,22 +1203,24 @@ export function getNodeHTML() {
 
 ### How It Works
 
-1. At boot, active extensions' `api/nodes/` directories are scanned and written to `<userDir>/node_modules/` as `xnapify-nodered-<id>` modules (all async via `fs.promises`)
-2. Boot-loaded modules are synced into `_extModuleMap` via `_syncBootModules()` so they can be correctly unloaded later
-3. After boot, toggling an extension triggers `registry.addModule()` / `registry.removeModule()` — the same API as Node-RED's Palette Manager
-4. Connected editors receive WebSocket notifications so the palette updates automatically
-5. Operations per extension are serialized via `_enqueueExtOp()` to prevent race conditions during rapid toggles
-6. Extension listeners are properly cleaned up during shutdown to prevent leaks across HMR cycles
+1. The `"nodered"` key in `package.json` tells the build system where to find node source files
+2. Webpack compiles each node file as a standalone CJS bundle (via `createApiConfig()`)
+3. At boot, active extensions' nodes are written to `<userDir>/node_modules/` as `xnapify-nodered-<id>` modules (all async via `fs.promises`)
+4. Boot-loaded modules are synced into `_extModuleMap` via `_syncBootModules()` so they can be correctly unloaded later
+5. After boot, toggling an extension triggers `registry.addModule()` / `registry.removeModule()` — the same API as Node-RED's Palette Manager
+6. Connected editors receive WebSocket notifications so the palette updates automatically
+7. Operations per extension are serialized via `_enqueueExtOp()` to prevent race conditions during rapid toggles
+8. Extension listeners are properly cleaned up during shutdown to prevent leaks across HMR cycles
 
 ### Key Rules
 
-- `getNodeJS()` must return a **string** (CommonJS format), NOT a function
+- `getNodeJS()` must return a **string** (CommonJS format with `module.exports`), NOT a function
 - `getNodeHTML()` must return an HTML string with `data-template-name` and `data-help-name` script tags
 - The `type` in `registerType()` must match the `data-template-name` and `data-help-name` values
 - Use the `xnapify` category for consistency in the palette
 - Access the DI container via `node.context().global.get('container')`
-- Extensions that only provide Node-RED nodes do not need `"browser"` in `package.json`
-- Generated modules use the `xnapify-nodered-<extensionId>` naming convention (not `xnapify-ext-`)
+- Generated modules use the `xnapify-nodered-<extensionId>` naming convention
+- Optional: add predefined flows in `node-red/flows/*.json` (JSON arrays) — these are auto-injected into the Node-RED canvas
 
 ### Example
 
