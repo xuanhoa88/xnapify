@@ -10,7 +10,6 @@ import fs from 'fs';
 import path from 'path';
 
 import { getTokenFromCookie, getRefreshTokenFromCookie } from '@shared/cookies';
-import { createWebpackContextAdapter } from '@shared/utils/contextAdapter';
 import { createNativeRequire } from '@shared/utils/createNativeRequire';
 
 import initFlowSplitter from './flowSplitter';
@@ -19,12 +18,7 @@ import {
   createDevelopmentSettings,
   writeExtensionNodeModule,
   removeExtensionNodeModule,
-  writeExtensionFlows,
-  removeExtensionFlows,
 } from './settings';
-
-// Bundle all migration JSON files at build time
-const migrationsContext = require.context('./migrations', true, /\.json$/i);
 
 // This prevents the instance from being lost during HMR
 const kNodeRedInstance = Symbol.for('__xnapify.nodeREDInstance__');
@@ -418,7 +412,6 @@ export class NodeRedManager {
         if (!noderedKey || typeof noderedKey !== 'object') return;
 
         const nodesRel = noderedKey.nodes;
-        const flowsRel = noderedKey.flows;
 
         if (!nodesRel) return;
 
@@ -465,27 +458,6 @@ export class NodeRedManager {
 
         // Track for cleanup on unload
         this._extModuleMap.set(id, { moduleName, manifest });
-
-        // Write extension flows to <userDir>/src/tabs/
-        // and trigger a seamless flow redeploy so the flows appear immediately.
-        const extFlowsDir = flowsRel ? path.join(extDir, flowsRel) : null;
-        const flowFiles = extFlowsDir
-          ? await writeExtensionFlows(userDir, id, extFlowsDir)
-          : [];
-
-        if (flowFiles.length > 0 && this._runtime && this._runtime._) {
-          try {
-            await this._runtime._.nodes.loadFlows(true);
-            Logger.success(
-              `Injected ${flowFiles.length} flow(s) for extension "${id}"`,
-            );
-          } catch (flowErr) {
-            Logger.warn(
-              `Flow reload after extension load failed:`,
-              flowErr.message,
-            );
-          }
-        }
       } catch (err) {
         Logger.error(
           `Failed to hot-load extension "${id}" into Node-RED:`,
@@ -540,28 +512,7 @@ export class NodeRedManager {
         // Remove files from disk — use `id` consistently
         await removeExtensionNodeModule(this._settings.userDir, id);
 
-        // Remove extension flows and trigger redeploy
-        const flowsRemoved = await removeExtensionFlows(
-          this._settings.userDir,
-          id,
-        );
-
         this._extModuleMap.delete(id);
-
-        // If flows were removed, reload so the canvas updates
-        if (flowsRemoved > 0 && this._runtime && this._runtime._) {
-          try {
-            await this._runtime._.nodes.loadFlows(true);
-            Logger.success(
-              `Removed ${flowsRemoved} flow(s) for extension "${id}"`,
-            );
-          } catch (flowErr) {
-            Logger.warn(
-              `Flow reload after extension unload failed:`,
-              flowErr.message,
-            );
-          }
-        }
       } catch (err) {
         Logger.error(
           `Failed to hot-unload extension "${id}" from Node-RED:`,
@@ -1363,7 +1314,6 @@ export class NodeRedManager {
         settings: {
           userDir: settings.userDir,
           flowFile: settings.flowFile || 'flows.json',
-          migrationsAdapter: createWebpackContextAdapter(migrationsContext),
         },
         nodes: internal.nodes,
       };

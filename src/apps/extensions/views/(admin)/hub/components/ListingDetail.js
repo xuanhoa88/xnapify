@@ -492,9 +492,13 @@ export default function ListingDetail({ listing = null, onClose }) {
 
               <img
                 src={screenshots[lightboxIdx]}
-                alt={t('extensions:hub.screenshotAlt', 'Screenshot {{number}}', {
-                  number: lightboxIdx + 1,
-                })}
+                alt={t(
+                  'extensions:hub.screenshotAlt',
+                  'Screenshot {{number}}',
+                  {
+                    number: lightboxIdx + 1,
+                  },
+                )}
                 className={s.lightboxImage}
               />
 
