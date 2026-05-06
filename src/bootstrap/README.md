@@ -34,6 +34,7 @@ Applied to every API route (before module routes):
 2. `optionalAuth()` — populates `req.user` if token present.
 
 Body parsing scoped to API only:
+
 - `express.json()` — limit: `XNAPIFY_JSON_BODY_LIMIT` (default `10mb`)
 - `express.urlencoded()` — limit: `XNAPIFY_URLENCODED_BODY_LIMIT` (default `1mb`)
 
@@ -57,22 +58,22 @@ const page = await router.resolve({ pathname, store });
 
 ## CORS Configuration
 
-| `XNAPIFY_CORS_ORIGIN` Value | Behavior |
-|---|---|
-| `'true'` | Allow all origins (dev only) |
-| `'false'` | Block all origins |
+| `XNAPIFY_CORS_ORIGIN` Value               | Behavior                        |
+| ----------------------------------------- | ------------------------------- |
+| `'true'`                                  | Allow all origins (dev only)    |
+| `'false'`                                 | Block all origins               |
 | `'https://example.com,https://*.app.com'` | Whitelist with wildcard support |
-| unset | Same-host only (secure default) |
+| unset                                     | Same-host only (secure default) |
 
 Requests without origin (mobile, curl) are always allowed. Credentials enabled, preflight cached 24h.
 
 ## Environment Variables
 
-| Var | Default | Description |
-|---|---|---|
-| `XNAPIFY_CORS_ORIGIN` | same-host | CORS origin whitelist |
-| `XNAPIFY_JSON_BODY_LIMIT` | `'10mb'` | JSON body size limit |
-| `XNAPIFY_URLENCODED_BODY_LIMIT` | `'1mb'` | URL-encoded body limit |
+| Var                             | Default   | Description            |
+| ------------------------------- | --------- | ---------------------- |
+| `XNAPIFY_CORS_ORIGIN`           | same-host | CORS origin whitelist  |
+| `XNAPIFY_JSON_BODY_LIMIT`       | `'10mb'`  | JSON body size limit   |
+| `XNAPIFY_URLENCODED_BODY_LIMIT` | `'1mb'`   | URL-encoded body limit |
 
 ## See Also
 

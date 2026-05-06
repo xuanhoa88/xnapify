@@ -25,6 +25,7 @@ import { resolveJestBin } from '../utils/jest.js';
 import { isSilent, logDebug, logInfo } from '../utils/logger.js';
 
 const require = createRequire(import.meta.url);
+const currentFilename = fileURLToPath(import.meta.url);
 
 async function main() {
   const silent = isSilent();
@@ -94,10 +95,9 @@ async function main() {
   });
 }
 
-const scriptPath = fileURLToPath(import.meta.url);
 if (
-  process.argv[1] === scriptPath ||
-  process.argv[1] === scriptPath.replace(/\.js$/, '')
+  process.argv[1] === currentFilename ||
+  process.argv[1] === currentFilename.replace(/\.js$/, '')
 ) {
   main().catch(error => {
     console.error(error.message);

@@ -28,8 +28,9 @@
   --alert-caution-border: var(--red-9);
 
   /* Typography */
-  --font-family: 'Inter', -apple-system, blinkmacsystemfont, 'Segoe UI', roboto,
-    helvetica, arial, sans-serif;
+  --font-family:
+    'Inter', -apple-system, blinkmacsystemfont, 'Segoe UI', roboto, helvetica,
+    arial, sans-serif;
   --font-mono: 'SFMono-Regular', consolas, 'Liberation Mono', menlo, monospace;
 
   max-width: 840px;

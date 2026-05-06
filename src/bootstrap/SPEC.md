@@ -91,7 +91,11 @@ Only applied if `container.resolve('jwt')` is available.
 ### Module Discovery
 
 ```javascript
-import.meta.webpackContext('../../apps', true, /^\.\/[^/]+\/api\/index\.[cm]?[jt]s$/i);
+import.meta.webpackContext(
+  '../../apps',
+  true,
+  /^\.\/[^/]+\/api\/index\.[cm]?[jt]s$/i,
+);
 ```
 
 Discovers `src/apps/*/api/index.js` files. Each module goes through the lifecycle: `translations → providers → migrations → models → seeds → boot → routes`.
@@ -100,15 +104,19 @@ Discovers `src/apps/*/api/index.js` files. Each module goes through the lifecycl
 
 ### `initializeRouter(options?) → Promise<AppRouter>`
 
-| Option      | Description                                |
-| ----------- | ------------------------------------------ |
+| Option      | Description                                   |
+| ----------- | --------------------------------------------- |
 | `extension` | Extension manager instance (client or server) |
-| `container` | DI container instance                      |
+| `container` | DI container instance                         |
 
 ### Module Discovery
 
 ```javascript
-import.meta.webpackContext('../apps', true, /^\.\/[^/]+\/views\/index\.[cm]?[jt]s$/i);
+import.meta.webpackContext(
+  '../apps',
+  true,
+  /^\.\/[^/]+\/views\/index\.[cm]?[jt]s$/i,
+);
 ```
 
 Discovers `src/apps/*/views/index.js` files. Each module goes through the lifecycle: `translations → providers → boot → routes`.
@@ -126,8 +134,8 @@ Overrides `resolve(context)` to handle metadata:
 | Feature          | Description                                                                |
 | ---------------- | -------------------------------------------------------------------------- |
 | `errorHandler`   | In `__DEV__`: throws non-403 errors. In prod: redirects to `/error` route. |
-| `onRouteInit`    | Loads extension namespace for the route (if not already loaded).              |
-| `onRouteDestroy` | Unloads extension namespace for the route.                                    |
+| `onRouteInit`    | Loads extension namespace for the route (if not already loaded).           |
+| `onRouteDestroy` | Unloads extension namespace for the route.                                 |
 | Catch-all        | `/*path` → redirects to `/not-found` route.                                |
 
 Extension namespace is derived from: `route.workspace` → `route.module.workspace` → `route.path`.
@@ -165,8 +173,8 @@ Morgan request logging:
 
 ## 6. Environment Variables
 
-| Var                         | Default   | Description            |
-| --------------------------- | --------- | ---------------------- |
+| Var                             | Default   | Description            |
+| ------------------------------- | --------- | ---------------------- |
 | `XNAPIFY_CORS_ORIGIN`           | same-host | CORS allowed origins   |
 | `XNAPIFY_JSON_BODY_LIMIT`       | `'10mb'`  | JSON body parser limit |
 | `XNAPIFY_URLENCODED_BODY_LIMIT` | `'1mb'`   | URL-encoded body limit |

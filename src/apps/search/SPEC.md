@@ -51,22 +51,23 @@ api/index.js
 
 Sequelize model defined in `models/SearchDocument.js`. Table: `search_documents`.
 
-| Column | Type | Nullable | Default | Description |
-|---|---|---|---|---|
-| `id` | INTEGER | No | Auto-increment | Primary key |
-| `entity_type` | STRING(255) | No | — | Entity type (e.g. 'user', 'group') |
-| `entity_id` | STRING(255) | No | — | Unique per entity_type |
-| `title` | TEXT | Yes | — | Searchable title |
-| `content` | TEXT | Yes | — | Searchable body content |
-| `tags` | TEXT | Yes | — | Searchable tags (space/comma separated) |
-| `url` | TEXT | Yes | — | Link to entity |
-| `priority` | INTEGER | No | 0 | Ranking weight (higher = first) |
-| `popularity` | INTEGER | No | 0 | Popularity metric |
-| `visibility` | STRING(50) | No | 'public' | Visibility state |
-| `created_at` | DATE | No | NOW | Created timestamp |
-| `updated_at` | DATE | No | NOW | Updated timestamp |
+| Column        | Type        | Nullable | Default        | Description                             |
+| ------------- | ----------- | -------- | -------------- | --------------------------------------- |
+| `id`          | INTEGER     | No       | Auto-increment | Primary key                             |
+| `entity_type` | STRING(255) | No       | —              | Entity type (e.g. 'user', 'group')      |
+| `entity_id`   | STRING(255) | No       | —              | Unique per entity_type                  |
+| `title`       | TEXT        | Yes      | —              | Searchable title                        |
+| `content`     | TEXT        | Yes      | —              | Searchable body content                 |
+| `tags`        | TEXT        | Yes      | —              | Searchable tags (space/comma separated) |
+| `url`         | TEXT        | Yes      | —              | Link to entity                          |
+| `priority`    | INTEGER     | No       | 0              | Ranking weight (higher = first)         |
+| `popularity`  | INTEGER     | No       | 0              | Popularity metric                       |
+| `visibility`  | STRING(50)  | No       | 'public'       | Visibility state                        |
+| `created_at`  | DATE        | No       | NOW            | Created timestamp                       |
+| `updated_at`  | DATE        | No       | NOW            | Updated timestamp                       |
 
 **Indexes:**
+
 - Unique composite: `(entity_type, entity_id)`
 - Secondary: `entity_type` (for namespace prefix queries)
 
@@ -74,13 +75,13 @@ Sequelize model defined in `models/SearchDocument.js`. Table: `search_documents`
 
 Custom adapters must implement:
 
-| Method | Signature | Description |
-|---|---|---|
-| `index(document)` | `(SearchDocument) → Promise<void>` | Add or update a document |
-| `search(query, options?)` | `(string, { limit?, offset?, entityType? }) → Promise<Array>` | Full-text search |
-| `remove(entityType, entityId)` | `(string, string\|number) → Promise<boolean>` | Remove from index |
-| `clear(prefix?)` | `(string?) → Promise<void>` | Clear all or prefixed documents |
-| `count(prefix?)` | `(string?) → Promise<number>` | Count all or prefixed documents |
+| Method                         | Signature                                                     | Description                     |
+| ------------------------------ | ------------------------------------------------------------- | ------------------------------- |
+| `index(document)`              | `(SearchDocument) → Promise<void>`                            | Add or update a document        |
+| `search(query, options?)`      | `(string, { limit?, offset?, entityType? }) → Promise<Array>` | Full-text search                |
+| `remove(entityType, entityId)` | `(string, string\|number) → Promise<boolean>`                 | Remove from index               |
+| `clear(prefix?)`               | `(string?) → Promise<void>`                                   | Clear all or prefixed documents |
+| `count(prefix?)`               | `(string?) → Promise<number>`                                 | Count all or prefixed documents |
 
 ## 3. Factory (`factory.js`)
 
@@ -110,6 +111,7 @@ Creates and returns a new adapter instance.
 Creates a wrapper that prefixes all `entityType` values with `namespace:`.
 
 **Behavior:**
+
 - `index(doc)` → prepends `namespace:` to `doc.entityType`.
 - `search(query, opts)` → prepends `namespace:` to `opts.entityType` if present.
 - `remove(entityType, entityId)` → prepends `namespace:` to entityType.
@@ -123,18 +125,18 @@ Native full-text search using the connected database engine's FTS capabilities.
 
 ### Configuration
 
-| Option | Description |
-|---|---|
+| Option  | Description                                                         |
+| ------- | ------------------------------------------------------------------- |
 | `model` | Sequelize SearchDocument model (required, auto-injected by factory) |
 
 ### Dialect-Specific Search Strategies
 
-| Dialect | Strategy | Ranking | Highlighting |
-|---|---|---|---|
-| **SQLite** | FTS5 virtual table (`search_fts`) + `MATCH` | `bm25()` | `snippet()` with `<b>` tags |
-| **PostgreSQL** | `tsvector` column + `GIN` index + `websearch_to_tsquery` | `ts_rank()` | `ts_headline()` with `<b>` tags |
-| **MySQL/MariaDB** | `FULLTEXT` index + `MATCH() AGAINST()` boolean mode | Relevance score | `SUBSTRING(content, 1, 100)` |
-| **Fallback** | `LIKE` / `iLike` on title, content, tags | `priority DESC, popularity DESC` | `content.substring(0, 100)` |
+| Dialect           | Strategy                                                 | Ranking                          | Highlighting                    |
+| ----------------- | -------------------------------------------------------- | -------------------------------- | ------------------------------- |
+| **SQLite**        | FTS5 virtual table (`search_fts`) + `MATCH`              | `bm25()`                         | `snippet()` with `<b>` tags     |
+| **PostgreSQL**    | `tsvector` column + `GIN` index + `websearch_to_tsquery` | `ts_rank()`                      | `ts_headline()` with `<b>` tags |
+| **MySQL/MariaDB** | `FULLTEXT` index + `MATCH() AGAINST()` boolean mode      | Relevance score                  | `SUBSTRING(content, 1, 100)`    |
+| **Fallback**      | `LIKE` / `iLike` on title, content, tags                 | `priority DESC, popularity DESC` | `content.substring(0, 100)`     |
 
 **Note:** All SQL queries use `:parameterized` replacements (not string interpolation) for safety.
 
@@ -155,13 +157,13 @@ Uses `findOrCreate` — upserts by `(entityType, entityId)` unique pair.
 
 ### Lifecycle Phases
 
-| Phase | Hook | Description |
-|---|---|---|
-| `migrations` | `() => migrationsContext` | Creates `search_documents` table |
-| `models` | `() => modelsContext` | Registers `SearchDocument` model |
-| `providers` | `providers({ container })` | Binds `'search'` (lazy factory) and `'search:registerAdapter'` |
-| `boot` | `boot()` | Logs initialization |
-| `routes` | `() => routesContext` | Mounts `GET /api/search` |
+| Phase        | Hook                       | Description                                                    |
+| ------------ | -------------------------- | -------------------------------------------------------------- |
+| `migrations` | `() => migrationsContext`  | Creates `search_documents` table                               |
+| `models`     | `() => modelsContext`      | Registers `SearchDocument` model                               |
+| `providers`  | `providers({ container })` | Binds `'search'` (lazy factory) and `'search:registerAdapter'` |
+| `boot`       | `boot()`                   | Logs initialization                                            |
+| `routes`     | `() => routesContext`      | Mounts `GET /api/search`                                       |
 
 ### Adapter Type Resolution (3-tier)
 
@@ -202,13 +204,13 @@ async providers({ container }) {
 
 ## 8. Error Handling
 
-| Error Name | Status | Thrown By | When |
-|---|---|---|---|
-| `Error` | — | `registerAdapter` | Invalid name or non-function class |
-| `InvalidSearchTypeError` | `400` | `createFactory` | Unknown adapter type |
-| `InvalidNamespaceError` | `400` | `withNamespace` | Invalid namespace |
-| `InvalidSearchError` | `400` | `withNamespace` | Missing base search adapter |
-| `Error` | — | `index()` | Missing `entityType` or `entityId` |
+| Error Name               | Status | Thrown By         | When                               |
+| ------------------------ | ------ | ----------------- | ---------------------------------- |
+| `Error`                  | —      | `registerAdapter` | Invalid name or non-function class |
+| `InvalidSearchTypeError` | `400`  | `createFactory`   | Unknown adapter type               |
+| `InvalidNamespaceError`  | `400`  | `withNamespace`   | Invalid namespace                  |
+| `InvalidSearchError`     | `400`  | `withNamespace`   | Missing base search adapter        |
+| `Error`                  | —      | `index()`         | Missing `entityType` or `entityId` |
 
 ## 9. Integration Points
 
@@ -218,4 +220,4 @@ async providers({ container }) {
 
 ---
 
-*Note: This spec reflects the CURRENT implementation of the database-backed search module.*
+_Note: This spec reflects the CURRENT implementation of the database-backed search module._

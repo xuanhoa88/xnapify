@@ -91,7 +91,10 @@ await ensureNamespaceLoaded('myFeature', async () => {
 ```javascript
 import { getTranslations } from '@shared/i18n';
 
-const ctx = import.meta.webpackContext('./translations', { recursive: false, regExp: /\.json$/i });
+const ctx = import.meta.webpackContext('./translations', {
+  recursive: false,
+  regExp: /\.json$/i,
+});
 const translationsMap = getTranslations(ctx);
 // -> { 'en-US': { ... }, 'vi-VN': { ... } }
 ```

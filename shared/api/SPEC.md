@@ -56,10 +56,10 @@ Discovers and boots API modules in deterministic lifecycle order.
 
 #### Lifecycle Phases (sequential)
 
-| #   | Phase          | Hook Signature                       | Purpose                                    |
-| --- | -------------- | ------------------------------------ | ------------------------------------------ |
+| #   | Phase          | Hook Signature                                  | Purpose                                    |
+| --- | -------------- | ----------------------------------------------- | ------------------------------------------ |
 | 1   | `translations` | `translations()` → `import.meta.webpackContext` | Register i18n namespaces                   |
-| 2   | `providers`    | `providers({ container })`           | Bind DI services via `container.bind()`    |
+| 2   | `providers`    | `providers({ container })`                      | Bind DI services via `container.bind()`    |
 | 3   | `migrations`   | `migrations()` → `import.meta.webpackContext`   | Create/alter database schema (declarative) |
 | 4   | `models`       | `models()` → `import.meta.webpackContext`       | Load Sequelize model factories             |
 | 5   | `seeds`        | `seeds()` → `import.meta.webpackContext`        | Populate initial data (declarative)        |

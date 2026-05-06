@@ -26,10 +26,7 @@
     "name": "Test Hello",
     "x": 400,
     "y": 100,
-    "wires": [
-      ["ext-http-res-ok"],
-      ["ext-http-res-err"]
-    ]
+    "wires": [["ext-http-res-ok"], ["ext-http-res-err"]]
   },
   {
     "id": "ext-http-res-ok",

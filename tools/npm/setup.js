@@ -16,6 +16,8 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+const currentFilename = fileURLToPath(import.meta.url);
+
 // ─── Paths ───────────────────────────────────────────────────────────────────
 
 const ROOT = process.cwd();
@@ -196,10 +198,9 @@ function main() {
 }
 
 // Execute if called directly (as child process)
-const scriptPath = fileURLToPath(import.meta.url);
 if (
-  process.argv[1] === scriptPath ||
-  process.argv[1] === scriptPath.replace(/\.js$/, '')
+  process.argv[1] === currentFilename ||
+  process.argv[1] === currentFilename.replace(/\.js$/, '')
 ) {
   main();
 }

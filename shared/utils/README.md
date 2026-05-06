@@ -48,7 +48,10 @@ Creates an adapter over Rspack's `import.meta.webpackContext` to provide a stand
 import { createRspackContextAdapter } from '@shared/utils/contextAdapter';
 
 // Retrieve all scripts matching the regex in the folder
-const context = import.meta.webpackContext('./scripts', { recursive: false, regExp: /\.js$/ });
+const context = import.meta.webpackContext('./scripts', {
+  recursive: false,
+  regExp: /\.js$/,
+});
 const adapter = createRspackContextAdapter(context);
 
 adapter.files().forEach(filePath => {

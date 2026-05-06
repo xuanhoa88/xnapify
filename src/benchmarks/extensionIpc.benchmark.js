@@ -5,16 +5,12 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-
 // Stress benchmark for extension IPC via the ExtensionRegistry
 // Registers many handlers and issues many concurrent executeHook calls
 
-const { performance } = require('perf_hooks');
+import { performance } from 'perf_hooks';
 
-const ExtensionRegistry =
-  require('@shared/extension/utils/Registry.js').default;
+import ExtensionRegistry from '@shared/extension/utils/Registry.js';
 
 describe('extension IPC stress', () => {
   let registry;

@@ -75,7 +75,7 @@ function logDetailedError(error, context = {}) {
  *
  * Handles SIGINT, SIGTERM, SIGQUIT, uncaughtException, and unhandledRejection.
  * Safe to call multiple times (e.g. during HMR reloads) — previous handlers
- * are automatically removed via a reference stored on `global[SHUTDOWN_SYMBOL]`.
+ * are automatically removed via a reference stored on `globalThis[SHUTDOWN_SYMBOL]`.
  *
  * @param {Function} cleanupFn - Async cleanup callback. Receives one argument:
  *   - A signal string: 'SIGINT' | 'SIGTERM' | 'SIGQUIT' | 'MANUAL'
@@ -152,7 +152,7 @@ function setupGracefulShutdown(cleanupFn) {
 
       // Remove listeners before exiting so no further events are processed.
       removeListeners();
-      delete global[SHUTDOWN_SYMBOL];
+      delete globalThis[SHUTDOWN_SYMBOL];
 
       process.exit(exitCode);
     }
@@ -179,7 +179,7 @@ function setupGracefulShutdown(cleanupFn) {
   // --- HMR-safe deduplication ---
 
   // Remove handlers registered by a previous call to this function.
-  const previous = global[SHUTDOWN_SYMBOL];
+  const previous = globalThis[SHUTDOWN_SYMBOL];
   if (previous) {
     const { prevSignal, prevUncaughtException, prevUnhandledRejection } =
       previous;
@@ -198,7 +198,7 @@ function setupGracefulShutdown(cleanupFn) {
   process.on('unhandledRejection', handleUnhandledRejection);
 
   // Persist references for the next HMR cycle (or manual teardown).
-  global[SHUTDOWN_SYMBOL] = {
+  globalThis[SHUTDOWN_SYMBOL] = {
     prevSignal: handleSignal,
     prevUncaughtException: handleUncaughtException,
     prevUnhandledRejection: handleUnhandledRejection,

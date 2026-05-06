@@ -26,15 +26,15 @@ graph TD
 ### Core Render Sequence
 
 1. **Routing Match**: Matches the user URL against `routes()` imported recursively by auto-discovery across `src/apps/*/views/index.js` and active extensions.
-2. **Setup Phase (`setup` / `middleware`)**: 
+2. **Setup Phase (`setup` / `middleware`)**:
    - Express runs the exported `middleware` checks array configured within `_route.js` (e.g., verifying user Authentication `requirePermission('admin:access')`).
    - `init({ store })` evaluates allowing components to securely inject Redux `slices`.
    - `setup({ store })` evaluates establishing the side-bar navigation states.
-3. **Pre-fetching Phase (`getInitialProps`)**: 
+3. **Pre-fetching Phase (`getInitialProps`)**:
    - Instead of empty loading screens, xnapify awaits the `getInitialProps` async exporter. Data returned is placed on `context.initialProps` and passed to Page and Layout components as a read-only prop.
-4. **Server Side Render**: 
+4. **Server Side Render**:
    - React translates the virtual DOM string injecting the Redux serialization payload directly onto the `<head>`.
-5. **Client Hydration**: 
+5. **Client Hydration**:
    - Upon arriving in the browser, `hydrateRoot` wraps the existing DOM minimizing cumulative layout shifts drastically.
    - `mount` lifecycle kicks off generating client-only behaviors.
 
@@ -42,7 +42,7 @@ graph TD
 
 ## 2. Redux Slice Injection
 
-To remain modular, reducers are injected lazily instead of bundling everything into one monolithic store initially. 
+To remain modular, reducers are injected lazily instead of bundling everything into one monolithic store initially.
 
 ### Best Practices
 
@@ -51,14 +51,14 @@ To remain modular, reducers are injected lazily instead of bundling everything i
 
 ```javascript
 /* src/apps/marketing/views/_route.js */
-import marketingSlice from './slices/marketingSlice'
-import PageLayout from './components/Page'
+import marketingSlice from './slices/marketingSlice';
+import PageLayout from './components/Page';
 
 export function init({ store }) {
-    store.injectReducer('marketing', marketingSlice)    
+  store.injectReducer('marketing', marketingSlice);
 }
 
-export default PageLayout
+export default PageLayout;
 ```
 
 ---
@@ -70,20 +70,20 @@ Using `client-side` mechanisms immediately triggers server hydration mismatches 
 ### SSR-Safe Portal Paradigm
 
 ```javascript
-import React, { useState, useEffect } from 'react'
-import { createPortal } from 'react-dom'
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 export default function SafeModal({ children }) {
-    const [mounted, setMounted] = useState(false)
-    
-    useEffect(() => {
-        setMounted(true)
-    }, [])
-    
-    // Server simply ignores this preventing React 18 hydration crashes
-    if (!mounted) return null;
-    
-    return createPortal(children, document.body)
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Server simply ignores this preventing React 18 hydration crashes
+  if (!mounted) return null;
+
+  return createPortal(children, document.body);
 }
 ```
 
@@ -95,18 +95,24 @@ export default function SafeModal({ children }) {
 > Under NO circumstances does xnapify allow hardcoded interface strings. It integrates tightly with `i18next` localized statically and passed gracefully through Webpack context analysis.
 
 Domains simply export a Webpack string analyzer inside their core index definitions:
+
 ```javascript
-translations: () => [import.meta.webpackContext('./translations', { recursive: true, regExp: /\.json$/ })]
+translations: () => [
+  import.meta.webpackContext('./translations', {
+    recursive: true,
+    regExp: /\.json$/,
+  }),
+];
 ```
 
 Inside your React structure, utilize the standard `useTranslation` hooks:
 
 ```javascript
-import { useTranslation } from 'react-i18next'
+import { useTranslation } from 'react-i18next';
 
 export default function MyButton() {
-   const { t } = useTranslation() // automatically assumes standard route namespace
-   return <button>{t('dashboard.submit')}</button>
+  const { t } = useTranslation(); // automatically assumes standard route namespace
+  return <button>{t('dashboard.submit')}</button>;
 }
 ```
 

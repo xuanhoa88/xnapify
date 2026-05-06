@@ -15,11 +15,11 @@ Extend the user profile page with additional fields (nickname, mobile, birthdate
 
 ### Backend Hook Subscriptions (registered in `boot()`)
 
-| Hook | Event | Handler | Purpose |
-|------|-------|---------|---------|
+| Hook      | Event               | Handler            | Purpose                                                                      |
+| --------- | ------------------- | ------------------ | ---------------------------------------------------------------------------- |
 | `profile` | `validation:update` | `updateValidation` | Extends the profile Zod schema with `nickname`, `mobile`, `birthdate` fields |
-| `profile` | `updating` | `updating` | Logs persisted EAV row data (nickname is auto-persisted as native EAV) |
-| `profile` | `retrieved` | `formatResponse` | Reads nickname/birthdate/mobile from EAV and injects into API response |
+| `profile` | `updating`          | `updating`         | Logs persisted EAV row data (nickname is auto-persisted as native EAV)       |
+| `profile` | `retrieved`         | `formatResponse`   | Reads nickname/birthdate/mobile from EAV and injects into API response       |
 
 ### Shutdown Cleanup
 
@@ -37,10 +37,10 @@ IPC handlers are registered on the `registry` in `boot()` and accessible via `PO
 
 > **Identity note:** IPC hook IDs and URLs use `__EXTENSION_ID__` (sqids-based, generated at build time), which is URL-safe.
 
-| Action | Hook ID | Purpose |
-|--------|----------|---------|
-| `hello` | ``ipc:${__EXTENSION_ID__}:hello`` | Returns greeting with extension name and timestamp |
-| `checkNickname` | ``ipc:${__EXTENSION_ID__}:checkNickname`` | Checks if a nickname is already taken via `UserProfile.findOne()` |
+| Action          | Hook ID                                 | Purpose                                                           |
+| --------------- | --------------------------------------- | ----------------------------------------------------------------- |
+| `hello`         | `ipc:${__EXTENSION_ID__}:hello`         | Returns greeting with extension name and timestamp                |
+| `checkNickname` | `ipc:${__EXTENSION_ID__}:checkNickname` | Checks if a nickname is already taken via `UserProfile.findOne()` |
 
 **Middleware pipeline pattern:** IPC handlers use `registry.createPipeline(mw1, mw2, handler)` — a composable middleware chain where each function calls `next()` to proceed.
 
@@ -48,17 +48,17 @@ IPC handlers are registered on the `registry` in `boot()` and accessible via `PO
 
 ### Slot Registrations (registered in `boot()`)
 
-| Slot Name | Component | Order | Purpose |
-|-----------|-----------|-------|---------|
-| `profile.personal_info.fields` | `ExtensionField` | 10 | Renders nickname, mobile, and birthdate input fields |
+| Slot Name                      | Component        | Order | Purpose                                              |
+| ------------------------------ | ---------------- | ----- | ---------------------------------------------------- |
+| `profile.personal_info.fields` | `ExtensionField` | 10    | Renders nickname, mobile, and birthdate input fields |
 
 ### Hook Registrations (registered in `boot()`)
 
-| Hook Name | Handler | Purpose |
-|-----------|---------|---------|
-| `profile.personal_info.validator` | `extendProfileValidator` | Extends the profile form Zod schema with extension fields |
-| `profile.personal_info.submit` | Pipeline (logging + nickname guard + handler) | Runs on profile form submission |
-| `profile.personal_info.formData` | `handleProfileDefaults` | Provides default values for the extension fields |
+| Hook Name                         | Handler                                       | Purpose                                                   |
+| --------------------------------- | --------------------------------------------- | --------------------------------------------------------- |
+| `profile.personal_info.validator` | `extendProfileValidator`                      | Extends the profile form Zod schema with extension fields |
+| `profile.personal_info.submit`    | Pipeline (logging + nickname guard + handler) | Runs on profile form submission                           |
+| `profile.personal_info.formData`  | `handleProfileDefaults`                       | Provides default values for the extension fields          |
 
 ### Shutdown Cleanup
 
@@ -72,6 +72,7 @@ All slots and hooks are explicitly unregistered in `shutdown()` via `registry.un
   - `birthdate`: `z.string()` (optional, date format)
 
 ## 5. Localization (`translations/`)
+
 - **Locales:** `en-US.json`, `vi-VN.json`
 - **Keys:** Extension-specific labels for the nickname, mobile, and birthdate fields.
 - **Registration:** The `translations()` lifecycle hook returns a Webpack context for auto-registration into the global i18next instance.
@@ -98,4 +99,5 @@ src/extensions/profile-plugin/
 ```
 
 ---
-*Note: This spec reflects the CURRENT implementation of the reference profile-plugin extension.*
+
+_Note: This spec reflects the CURRENT implementation of the reference profile-plugin extension._

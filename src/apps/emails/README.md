@@ -5,7 +5,9 @@ This folder (`src/apps/emails/`) is a **Core Module**.
 **INHERITANCE NOTICE**: All global AI rules from `.agent/rules.md` and the architecture from `AGENT.md` strictly apply here.
 
 ## Local Module Constraints
+
 Unlike Extensions, Core Modules are fully woven into the backend architecture.
+
 1. **Direct Imports Allowed**: You may import functions from other core modules if necessary, though using `@shared/` dependencies is still preferred.
 2. **Schema Control**: You are allowed to create and export original Sequelize models in `api/models/`. You do not need to use Extension Hooks to alter the DB.
 3. **Native Routing**: You must expose your API endpoints directly via `api/index.js` or `api/routes.js` using standard Express Routers. Do not use Slots or Hooks.
@@ -15,8 +17,8 @@ Unlike Extensions, Core Modules are fully woven into the backend architecture.
 
 This module registers the following container bindings in `providers()`:
 
-| Key | Type | Description |
-|---|---|---|
+| Key           | Type       | Description                                                                     |
+| ------------- | ---------- | ------------------------------------------------------------------------------- |
 | `emails:send` | `Function` | Global templated email service. Any module or extension can resolve and use it. |
 
 ### Usage from other modules
@@ -26,9 +28,9 @@ This module registers the following container bindings in `providers()`:
 const sendTemplatedEmail = container.resolve('emails:send');
 
 await sendTemplatedEmail(
-  'welcome-email',                          // DB template slug
+  'welcome-email', // DB template slug
   { to: email, subject: 'Welcome', html: '<p>Hi {{ name }}</p>' },
-  { name: displayName },                    // Template variables
+  { name: displayName }, // Template variables
 );
 ```
 

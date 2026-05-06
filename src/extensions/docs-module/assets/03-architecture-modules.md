@@ -52,25 +52,46 @@ export default {
   providers({ container }) {
     // ...
   },
-  
+
   // Declaratively registers contexts for auto-discovery using `import.meta.webpackContext()`
-  translations: () => [import.meta.webpackContext('./translations', { recursive: true, regExp: /\.json$/ })],
-  migrations: () => import.meta.webpackContext('./database/migrations', { recursive: false, regExp: /\.js$/ }),
-  models: () => import.meta.webpackContext('./models', { recursive: false, regExp: /\.js$/ }),
-  seeds: () => import.meta.webpackContext('./database/seeds', { recursive: false, regExp: /\.js$/ }),
-  
+  translations: () => [
+    import.meta.webpackContext('./translations', {
+      recursive: true,
+      regExp: /\.json$/,
+    }),
+  ],
+  migrations: () =>
+    import.meta.webpackContext('./database/migrations', {
+      recursive: false,
+      regExp: /\.js$/,
+    }),
+  models: () =>
+    import.meta.webpackContext('./models', {
+      recursive: false,
+      regExp: /\.js$/,
+    }),
+  seeds: () =>
+    import.meta.webpackContext('./database/seeds', {
+      recursive: false,
+      regExp: /\.js$/,
+    }),
+
   // Registers HTTP endpoints
-  routes: () => import.meta.webpackContext('./routes', { recursive: true, regExp: /_route\.js$/ }),
+  routes: () =>
+    import.meta.webpackContext('./routes', {
+      recursive: true,
+      regExp: /_route\.js$/,
+    }),
 
   // Evaluated after models and providers have been setup.
   // Ideal for booting workers, cron tasks, websocket channels, or event queues.
   async boot({ container }) {
-     const hook = container.resolve('hook');
-     const schedule = container.resolve('schedule');
-     
-     // Perform startup routines
-  }
-}
+    const hook = container.resolve('hook');
+    const schedule = container.resolve('schedule');
+
+    // Perform startup routines
+  },
+};
 ```
 
 ### Frontend Entry Point (`views/index.js`)
@@ -80,21 +101,27 @@ Similar to the backend, the `views/index.js` manages frontend initialization log
 ```javascript
 export default {
   // Registers frontend specific locale contexts
-  translations: () => [import.meta.webpackContext('./translations', { recursive: true, regExp: /\.json$/ })],
+  translations: () => [
+    import.meta.webpackContext('./translations', {
+      recursive: true,
+      regExp: /\.json$/,
+    }),
+  ],
 
   // Binds cross-module frontend UI components to the frontend registry container
   providers({ container }) {
-      // e.g. container.register('component:UserProfile', UserProfileComponent)
+    // e.g. container.register('component:UserProfile', UserProfileComponent)
   },
-  
+
   // Evaluated during react hydration and rendering startup
   async boot({ container }) {
-      // Register custom hooks or UI startup mechanics here
+    // Register custom hooks or UI startup mechanics here
   },
 
   // Declaratively identifies page routes
-  routes: () => import.meta.webpackContext('.', { recursive: true, regExp: /_route\.js$/ }),
-}
+  routes: () =>
+    import.meta.webpackContext('.', { recursive: true, regExp: /_route\.js$/ }),
+};
 ```
 
 ---
@@ -127,16 +154,16 @@ sequenceDiagram
 
 In xnapify, Frontend URLs are inferred directly from the file path where a `_route.js` file lives. Within this file, you can export explicit lifecycle hooks that handle Server Side Rendering (SSR), UI mounting, and authentication state.
 
-| Export Hook | Execution Timing | Purpose |
-| --- | --- | --- |
-| `export const middleware` | Before Route Entry | Defines required permission guards (`requirePermission('read:users')`) or role guards. |
-| `export function init({ store })` | Application Bootstrap | Dynamically injects the Redux Reducer into the global store tree. |
-| `export function setup({ store, i18n })` | Route Evaluation | Registers sidebar links or dynamic global navigational menu items. |
-| `export function teardown({ store })` | Route Cleanup | Unregisters layout-level items or cleans memory. |
-| `export function mount({ store, i18n, path })` | Component Mount execution | Responsible for firing side-effects like generating breadcrumbs paths for the layout. |
-| `export function unmount({ store })` | Component Unmount execution | Route exit behaviors. |
-| `export async function getInitialProps({ fetch, i18n })` | SSR Resolution Pipeline | Resolves page data prior to hydration. Data is placed on `context.initialProps` and passed to the Page and Layout components as a read-only prop. Runs server-side on first load, and client-side on subsequent navigations. |
-| `export default Component` | Rendering | The actual React view rendered corresponding to the route path. |
+| Export Hook                                              | Execution Timing            | Purpose                                                                                                                                                                                                                      |
+| -------------------------------------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `export const middleware`                                | Before Route Entry          | Defines required permission guards (`requirePermission('read:users')`) or role guards.                                                                                                                                       |
+| `export function init({ store })`                        | Application Bootstrap       | Dynamically injects the Redux Reducer into the global store tree.                                                                                                                                                            |
+| `export function setup({ store, i18n })`                 | Route Evaluation            | Registers sidebar links or dynamic global navigational menu items.                                                                                                                                                           |
+| `export function teardown({ store })`                    | Route Cleanup               | Unregisters layout-level items or cleans memory.                                                                                                                                                                             |
+| `export function mount({ store, i18n, path })`           | Component Mount execution   | Responsible for firing side-effects like generating breadcrumbs paths for the layout.                                                                                                                                        |
+| `export function unmount({ store })`                     | Component Unmount execution | Route exit behaviors.                                                                                                                                                                                                        |
+| `export async function getInitialProps({ fetch, i18n })` | SSR Resolution Pipeline     | Resolves page data prior to hydration. Data is placed on `context.initialProps` and passed to the Page and Layout components as a read-only prop. Runs server-side on first load, and client-side on subsequent navigations. |
+| `export default Component`                               | Rendering                   | The actual React view rendered corresponding to the route path.                                                                                                                                                              |
 
 ---
 

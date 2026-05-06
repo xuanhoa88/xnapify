@@ -7,9 +7,11 @@
 ---
 
 ## Objective
+
 Provide a robust system for managing transactional email templates with real-time preview, dynamic content injection, and a hook-based API for extensions.
 
 ## 1. Database Modifications (`api/models`)
+
 - **Model:** `EmailTemplate`
 - **Columns:**
   - `id`: UUID (Primary Key)
@@ -25,8 +27,8 @@ Provide a robust system for managing transactional email templates with real-tim
 
 The email module registers a global service on the DI container:
 
-| Service Key | Type | Description |
-|---|---|---|
+| Service Key   | Type       | Description                                              |
+| ------------- | ---------- | -------------------------------------------------------- |
 | `emails:send` | `Function` | `sendTemplatedEmail(slug, defaultPayload, templateData)` |
 
 ### `emails:send` — Global Templated Email Service
@@ -37,29 +39,32 @@ Registered in `providers()` lifecycle. Any module or extension can resolve it:
 const sendTemplatedEmail = container.resolve('emails:send');
 
 await sendTemplatedEmail(
-  'order-confirmation',                    // DB template slug
-  {                                         // Fallback content
+  'order-confirmation', // DB template slug
+  {
+    // Fallback content
     to: 'customer@example.com',
     subject: 'Order #{{ orderId }}',
     html: '<p>Hi {{ name }}, your order is confirmed.</p>',
   },
-  { name: 'John', orderId: 42 },           // Template variables
+  { name: 'John', orderId: 42 }, // Template variables
 );
 ```
 
 #### Base Variables (auto-injected)
+
 Every email automatically receives these variables via `baseVars()`:
 
-| Variable | Source | Example |
-|---|---|---|
-| `appName` | `XNAPIFY_PUBLIC_APP_NAME` | `"xnapify"` |
-| `loginUrl` | `XNAPIFY_PUBLIC_APP_URL + /login` | `"https://app.example.com/login"` |
-| `resetUrl` | `XNAPIFY_PUBLIC_APP_URL + /auth/reset` | `"https://app.example.com/auth/reset"` |
-| `supportUrl` | `XNAPIFY_PUBLIC_APP_URL + /support` | `"https://app.example.com/support"` |
-| `now` | `new Date().toISOString()` | `"2026-01-15T10:30:00.000Z"` |
-| `year` | `new Date().getFullYear()` | `2026` |
+| Variable     | Source                                 | Example                                |
+| ------------ | -------------------------------------- | -------------------------------------- |
+| `appName`    | `XNAPIFY_PUBLIC_APP_NAME`              | `"xnapify"`                            |
+| `loginUrl`   | `XNAPIFY_PUBLIC_APP_URL + /login`      | `"https://app.example.com/login"`      |
+| `resetUrl`   | `XNAPIFY_PUBLIC_APP_URL + /auth/reset` | `"https://app.example.com/auth/reset"` |
+| `supportUrl` | `XNAPIFY_PUBLIC_APP_URL + /support`    | `"https://app.example.com/support"`    |
+| `now`        | `new Date().toISOString()`             | `"2026-01-15T10:30:00.000Z"`           |
+| `year`       | `new Date().getFullYear()`             | `2026`                                 |
 
 #### Flow
+
 1. Looks up `EmailTemplate` by slug (DB-managed template).
 2. Falls back to `defaultPayload.subject / html` if no template found.
 3. Passes `text_body` from DB template as plain-text fallback.
@@ -74,42 +79,44 @@ Extensions can send emails by emitting the `emails:send` hook:
 const hook = container.resolve('hook');
 
 await hook('emails').emit('send', {
-  slug: 'order-confirmation',          // DB template slug (optional)
-  to: 'customer@example.com',          // required — valid email
-  subject: 'Order Confirmed',          // fallback subject (string)
-  html: '<p>Hi {{ name }}</p>',        // fallback HTML body (string)
+  slug: 'order-confirmation', // DB template slug (optional)
+  to: 'customer@example.com', // required — valid email
+  subject: 'Order Confirmed', // fallback subject (string)
+  html: '<p>Hi {{ name }}</p>', // fallback HTML body (string)
   data: { name: 'John', orderId: 42 }, // template variables (object)
 });
 ```
 
 #### Validation Rules
-| Field | Rule |
-|---|---|
-| `payload` | Must be a non-null object |
-| `to` | Required, valid email format |
-| `slug` | Optional, lowercase alphanumeric + hyphens (e.g. `order-confirmation`) |
-| `subject` | Optional, must be string |
-| `html` | Optional, must be string |
-| `data` | Optional, must be plain object |
-| content | Must have either `html` or `slug` |
+
+| Field     | Rule                                                                   |
+| --------- | ---------------------------------------------------------------------- |
+| `payload` | Must be a non-null object                                              |
+| `to`      | Required, valid email format                                           |
+| `slug`    | Optional, lowercase alphanumeric + hyphens (e.g. `order-confirmation`) |
+| `subject` | Optional, must be string                                               |
+| `html`    | Optional, must be string                                               |
+| `data`    | Optional, must be plain object                                         |
+| content   | Must have either `html` or `slug`                                      |
 
 ## 4. Transactional Email Hooks
 
 Built-in hooks registered in `boot()`:
 
-| Hook | Event | Trigger |
-|---|---|---|
-| `auth` | `registered` | User self-registers |
-| `auth` | `password_reset_requested` | User requests password reset |
-| `admin:users` | `created` | Admin creates a user |
-| `admin:users` | `password_reset` | Admin resets user password |
-| `admin:users` | `status_updated` | Admin activates/deactivates user |
-| `admin:users` | `deleted` | Admin deletes user |
-| `profile` | `password_changed` | User changes own password |
-| `profile` | `account_deleted` | User deletes own account |
-| `files` | `shared` | File shared with another user |
+| Hook          | Event                      | Trigger                          |
+| ------------- | -------------------------- | -------------------------------- |
+| `auth`        | `registered`               | User self-registers              |
+| `auth`        | `password_reset_requested` | User requests password reset     |
+| `admin:users` | `created`                  | Admin creates a user             |
+| `admin:users` | `password_reset`           | Admin resets user password       |
+| `admin:users` | `status_updated`           | Admin activates/deactivates user |
+| `admin:users` | `deleted`                  | Admin deletes user               |
+| `profile`     | `password_changed`         | User changes own password        |
+| `profile`     | `account_deleted`          | User deletes own account         |
+| `files`       | `shared`                   | File shared with another user    |
 
 ## 5. API Routes & Controllers (`api/`)
+
 - **Method & Path:** `GET /api/admin/emails/templates` — List all templates
 - **Method & Path:** `POST /api/admin/emails/templates` — Create template
 - **Method & Path:** `GET /api/admin/emails/templates/[id]` — Get template
@@ -120,12 +127,14 @@ Built-in hooks registered in `boot()`:
 - **Method & Path:** `POST /api/admin/emails/templates/preview` — Preview raw template
 
 ## 6. Frontend SSR Rendering (`views/`)
+
 - **Admin View:** `/admin/emails/templates` — List with search and status filtering
 - **Admin View:** `/admin/emails/templates/create` — Create new template
 - **Admin View:** `/admin/emails/templates/[id]/edit` — Edit with TemplateEditor (CodeMirror + LiquidJS syntax)
 - **State Management:** Redux slice in `views/(admin)/redux/slice.js`
 
 ## 7. File Structure
+
 ```
 src/apps/emails/
 ├── api/
@@ -154,4 +163,5 @@ src/apps/emails/
 ```
 
 ---
-*Note: This spec reflects the CURRENT implementation of the email template engine.*
+
+_Note: This spec reflects the CURRENT implementation of the email template engine._

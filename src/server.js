@@ -16,8 +16,10 @@ import expressRequestLanguage from 'express-request-language';
 import { createMemoryHistory } from 'history';
 import isLocalhostIp from 'is-localhost-ip';
 import set from 'lodash/set';
+import { PassThrough } from 'stream';
+
 import { LRUCache } from 'lru-cache';
-import { renderToString, renderToStaticMarkup } from 'react-dom/server';
+import { renderToPipeableStream } from 'react-dom/server';
 import Youch from 'youch';
 
 import { Container } from '@shared/container/index.js';
@@ -524,28 +526,116 @@ function safeExtUrls(key) {
   }
 }
 
-async function renderToHtml({ context, component, metadata = {}, nonce }) {
-  const { scriptLinks, styleLinks, App, Html } = await getSsrResources();
+async function renderToStream({
+  context,
+  component,
+  metadata = {},
+  nonce,
+  res,
+  cacheKey,
+  renderStartTime,
+  status = 200,
+  abortController,
+}) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const { scriptLinks, styleLinks, App, Html } = await getSsrResources();
 
-  const children = renderToString(<App context={context}>{component}</App>);
+      const htmlData = {
+        ...metadata,
+        styleLinks: [...styleLinks, ...safeExtUrls('cssUrls')],
+        scriptLinks: [...scriptLinks, ...safeExtUrls('scriptUrls')],
+        locale: context.locale,
+        appState: {
+          redux: context.store.getState(),
+          extensions: extensionManager
+            .getAllExtensionMetadata()
+            .map(m => m.manifest),
+        },
+        nonce,
+      };
 
-  const htmlData = {
-    ...metadata,
-    children,
-    styleLinks: [...styleLinks, ...safeExtUrls('cssUrls')],
-    scriptLinks: [...scriptLinks, ...safeExtUrls('scriptUrls')],
-    locale: context.locale,
-    appState: {
-      redux: context.store.getState(),
-      extensions: extensionManager
-        .getAllExtensionMetadata()
-        .map(m => m.manifest),
-    },
-    nonce,
-  };
+      let didError = false;
+      let shellReady = false;
+      const htmlChunks = [];
+      const passThrough = new PassThrough();
 
-  const html = renderToStaticMarkup(<Html {...htmlData} />);
-  return `<!doctype html>${html}`;
+      // Accumulate chunks for cache
+      if (cacheKey) {
+        passThrough.on('data', chunk => {
+          htmlChunks.push(chunk);
+        });
+        passThrough.on('end', () => {
+          if (!didError && status === 200) {
+            const html = Buffer.concat(htmlChunks).toString('utf8');
+            storeSsrCache(cacheKey, {
+              html,
+              status,
+              renderTime: Date.now() - renderStartTime,
+              timestamp: Date.now(),
+            });
+          }
+        });
+      }
+
+      const { pipe, abort } = renderToPipeableStream(
+        <Html {...htmlData}>
+          <App context={context}>{component}</App>
+        </Html>,
+        {
+          nonce,
+          onShellReady() {
+            shellReady = true;
+            if (res.headersSent) return;
+
+            res.status(didError ? 500 : status);
+            res.setHeader('Content-Type', 'text/html; charset=utf-8');
+
+            // Only expose internal timing/locale headers in development
+            if (__DEV__) {
+              res.setHeader(
+                'X-Render-Time',
+                `${Date.now() - renderStartTime}ms`,
+              );
+              res.setHeader('X-SSR-Locale', context.locale);
+            }
+
+            res.write('<!doctype html>');
+
+            if (cacheKey) {
+              pipe(passThrough);
+              passThrough.pipe(res);
+            } else {
+              pipe(res);
+            }
+
+            resolve(); // Resolve the promise so the outer deadline clears
+          },
+          onShellError(error) {
+            reject(error); // Let makeSsrMiddleware handle it (fallback to error middleware)
+          },
+          onError(error) {
+            didError = true;
+            console.error('SSR React Error:', error);
+          },
+        },
+      );
+
+      // Handle client disconnect during stream
+      const onAbort = () => {
+        if (!shellReady) {
+          abort();
+        }
+      };
+
+      abortController.signal.addEventListener('abort', onAbort);
+      res.on('finish', () => {
+        abortController.signal.removeEventListener('abort', onAbort);
+      });
+    } catch (err) {
+      reject(err);
+    }
+  });
 }
 
 function makeSsrMiddleware(baseUrl) {
@@ -692,38 +782,25 @@ function makeSsrMiddleware(baseUrl) {
         res.setHeader('Content-Security-Policy', buildCspHeader(nonce));
       }
 
-      const html = await promiseWithDeadline(
-        renderToHtml({
+      const status = page.status || 200;
+
+      await promiseWithDeadline(
+        renderToStream({
           nonce,
           context,
           component: page.component,
           metadata: await extractPageMetadata(page, req),
+          res,
+          cacheKey,
+          renderStartTime: startTime,
+          status,
+          abortController,
         }),
         SERVER_TIMEOUTS.RENDER,
         'SSR render',
       );
 
       const renderTime = Date.now() - startTime;
-      const status = page.status || 200;
-
-      // Only expose internal timing/locale headers in development
-      if (__DEV__) {
-        res.setHeader('X-Render-Time', `${renderTime}ms`);
-        res.setHeader('X-SSR-Locale', context.locale);
-      }
-
-      if (status === 200 && cacheKey) {
-        storeSsrCache(cacheKey, {
-          html,
-          status,
-          renderTime,
-          timestamp: Date.now(),
-        });
-      }
-
-      if (res.headersSent) return;
-      res.status(status).send(html);
-
       if (__DEV__ && renderTime > 1000) {
         console.warn(`⚠️  Slow SSR: ${req.path} took ${renderTime}ms`);
       }
@@ -1155,7 +1232,7 @@ export async function bootstrapApp(app, server, options = {}) {
   await appState.nodeRed.setupApiProxy(app, '/api');
 
   // SSR catch-all
-  app.get('/*path', makeSsrMiddleware(baseUrl));
+  app.get('{/*path}', makeSsrMiddleware(baseUrl));
 
   // Error handler (must be last)
   app.use(makeErrorMiddleware());
@@ -1256,13 +1333,15 @@ export async function destroyServer(server) {
 // HMR & Startup
 // ---------------------------------------------------------------------------
 
-if (module.hot) {
-  module.hot.accept(() => {
+const hotAPI = (import.meta && import.meta.webpackHot) || (typeof module !== 'undefined' && module.hot);
+
+if (hotAPI) {
+  hotAPI.accept(() => {
     invalidateCaches();
     console.log('🔄 HMR: SSR dependencies updated, caches cleared');
   });
 
-  exports.hot = module.hot;
+  exports.hot = hotAPI;
 } else {
   (async () => {
     try {

@@ -57,8 +57,8 @@ function registerHmrIpcListener(container) {
   // Since require.cache is cleared during full reloads, a module-scoped
   // variable would reset to null, causing a memory leak of detached listeners.
   // We use a global symbol to ensure the old listener is found and removed.
-  if (global[IPC_LISTENER_KEY]) {
-    process.removeListener('message', global[IPC_LISTENER_KEY]);
+  if (globalThis[IPC_LISTENER_KEY]) {
+    process.removeListener('message', globalThis[IPC_LISTENER_KEY]);
   }
   let isRefreshing = false;
   const activeIpcListener = async msg => {
@@ -85,6 +85,6 @@ function registerHmrIpcListener(container) {
       }
     }
   };
-  global[IPC_LISTENER_KEY] = activeIpcListener;
+  globalThis[IPC_LISTENER_KEY] = activeIpcListener;
   process.on('message', activeIpcListener);
 }

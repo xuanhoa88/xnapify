@@ -41,14 +41,6 @@ appveyor.yml
 .docker/
 .dockerignore
 
-# Testing
-__tests__/
-__mocks__/
-*.test.js
-*.spec.js
-*.test.jsx
-*.spec.jsx
-
 # Documentation
 *.md
 !README.md

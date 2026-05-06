@@ -4,8 +4,6 @@
   "browser": "views/index.js",
   "main": "api/index.js",
   "description": "Quick login with demo user accounts",
-  "slots": [
-    "/login"
-  ],
+  "slots": ["/login"],
   "icon": "key"
 }

@@ -55,35 +55,6 @@ export function setup({ store, i18n }) {
       }),
     );
   };
-
-  // Register initially without badge
-  registerHubMenu(0);
-
-  // Client-side only
-  if (typeof window !== 'undefined') {
-    // 1. Fetch initial badge count
-    fetch('/api/admin/extensions/hub/updates/count')
-      .then(r => r.json())
-      .then(res => {
-        const count = (res.data && res.data.count) || 0;
-        if (count > 0) registerHubMenu(count);
-      })
-      .catch(() => {}); // Ignore network errors
-
-    // 2. Subscribe to WebSocket updates
-    // Use a slight timeout to ensure WS client is initialized
-    setTimeout(() => {
-      const ws = useWebSocket();
-      if (ws) {
-        // Assume 'admin' channel is subscribed globally by the layout
-        ws.on('extension:updates_available', data => {
-          if (data && data.type === 'UPDATES_AVAILABLE_COUNT') {
-            registerHubMenu(data.count || 0);
-          }
-        });
-      }
-    }, 2000);
-  }
 }
 
 /**
@@ -116,7 +87,7 @@ export async function getInitialProps({ i18n }) {
 /**
  * Mount function - dispatch breadcrumb to Redux
  */
-export function mount({ store, i18n, path }) {
+export function mount({ store, i18n, path, fetch }) {
   store.dispatch(
     addBreadcrumb(
       {
@@ -126,6 +97,34 @@ export function mount({ store, i18n, path }) {
       'admin',
     ),
   );
+
+  // Register initially without badge
+  registerHubMenu(0);
+
+  // Client-side only
+  if (typeof window !== 'undefined') {
+    // 1. Fetch initial badge count
+    fetch('/api/admin/extensions/hub/updates/count')
+      .then(res => {
+        const count = (res.data && res.data.count) || 0;
+        if (count > 0) registerHubMenu(count);
+      })
+      .catch(() => { }); // Ignore network errors
+
+    // 2. Subscribe to WebSocket updates
+    // Use a slight timeout to ensure WS client is initialized
+    setTimeout(() => {
+      const ws = useWebSocket();
+      if (ws) {
+        // Assume 'admin' channel is subscribed globally by the layout
+        ws.on('extension:updates_available', data => {
+          if (data && data.type === 'UPDATES_AVAILABLE_COUNT') {
+            registerHubMenu(data.count || 0);
+          }
+        });
+      }
+    }, 2000);
+  }
 }
 
 /**

@@ -14,12 +14,12 @@ The **xnapify** development environment consists of extensive Node-based automat
 
 All standard lifecycle interactions route through a centralized script loader `tools/run.js`. Do not run Webpack or Jest explicitly from the command line — utilize the provided Node wrappers.
 
-| Command | Purpose | Explanation |
-| --- | --- | --- |
+| Command         | Purpose               | Explanation                                                                                                                                                |
+| --------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `npm run setup` | Install & Scaffolding | Installs dependencies safely using `tools/npm/setup.js`. This is critical over standard `npm i` since xnapify requires resolving multi-level dependencies. |
-| `npm run dev` | Local Dev Server | Triggers the `preboot.js` daemon analysis, followed by spinning up the Express server and Webpack compilers with Hot-Module-Replacement enabled. |
-| `npm run build` | Compile Production | Bakes React into static assets and bundles the Express server removing all Dev tooling dependencies. |
-| `npm run clean` | Artifact Wiping | Recursively deletes `.cache`, `build`, and residual Webpack generation files. Useful for resolving obscure state caching errors natively. |
+| `npm run dev`   | Local Dev Server      | Triggers the `preboot.js` daemon analysis, followed by spinning up the Express server and Webpack compilers with Hot-Module-Replacement enabled.           |
+| `npm run build` | Compile Production    | Bakes React into static assets and bundles the Express server removing all Dev tooling dependencies.                                                       |
+| `npm run clean` | Artifact Wiping       | Recursively deletes `.cache`, `build`, and residual Webpack generation files. Useful for resolving obscure state caching errors natively.                  |
 
 ---
 
@@ -53,11 +53,13 @@ Before executing `npm run dev`, xnapify runs `tools/npm/preboot.js`. This daemon
 If your `.env` requests a MySQL or Postgres database via `XNAPIFY_DB_URL`, but the server fails to detect a listening port on `localhost`, the preboot engine does **not** crash.
 
 Instead, the `preboot.js` engine will:
+
 1. Attempt to download a portable embedded database binary matching your host architecture natively.
 2. Spin up the Database into an OS background daemon explicitly linked to the xnapify working directory.
 3. Establish the missing relational databases and necessary credential mappings automatically.
 
 You can manage these embedded databases explicitly utilizing the command line arguments:
+
 ```bash
 # Start embedded databases defined within .env manually
 node tools/npm/preboot.js --start
@@ -73,7 +75,7 @@ node tools/npm/preboot.js --status
 
 ## 4. Build Configuration Registry
 
-In modern monorepo and plugin-based architectures, standardizing how modules define and alter structural building tools (like PostCSS, Webpack, and ESLint) is critical. 
+In modern monorepo and plugin-based architectures, standardizing how modules define and alter structural building tools (like PostCSS, Webpack, and ESLint) is critical.
 
 The `xnapify` build pipeline centralizes this process using a **Barrel Registry Mechanism** (`tools/registry.factory.js`). This negates intensive synchronous filesystem lookups and prevents the global injection of isolated dependencies.
 
@@ -89,7 +91,7 @@ Supported configurations include:
 
 ### The `.factory.js` Naming Paradigm
 
-Within the structural `tools/` directory, files managing specific runtime environments carry a `.factory.js` suffix (e.g., `eslint.factory.js`, `postcss.factory.js`). Using generic `.config.js` names internally risks aggressive **Search Collisions** (e.g. `CMD+P` yielding the tools file *and* the root file simultaneously).
+Within the structural `tools/` directory, files managing specific runtime environments carry a `.factory.js` suffix (e.g., `eslint.factory.js`, `postcss.factory.js`). Using generic `.config.js` names internally risks aggressive **Search Collisions** (e.g. `CMD+P` yielding the tools file _and_ the root file simultaneously).
 
 Instead, "zero-config" development compatibility (like the VS Code ESLint parser finding configs immediately) is satisfied using lightweight **Proxy Exports** natively situated at the project's system root boundary:
 

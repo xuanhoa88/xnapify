@@ -16,15 +16,16 @@ Routes are inferred entirely from file paths. There is no central route configur
 
 ### Path Mapping Rules
 
-| File Path | URL Pattern | Notes |
-|---|---|---|
-| `views/(default)/_route.js` | `/` | `(default)` groups become root |
-| `views/about/_route.js` | `/about` | Static segment |
-| `views/users/[id]/_route.js` | `/users/:id` | Dynamic parameter |
-| `views/docs/[...slug]/_route.js` | `/docs/:slug*` | Catch-all wildcard |
+| File Path                           | URL Pattern        | Notes                           |
+| ----------------------------------- | ------------------ | ------------------------------- |
+| `views/(default)/_route.js`         | `/`                | `(default)` groups become root  |
+| `views/about/_route.js`             | `/about`           | Static segment                  |
+| `views/users/[id]/_route.js`        | `/users/:id`       | Dynamic parameter               |
+| `views/docs/[...slug]/_route.js`    | `/docs/:slug*`     | Catch-all wildcard              |
 | `views/(admin)/dashboard/_route.js` | `/admin/dashboard` | Route groups unwrap parentheses |
 
 For non-default modules (e.g., a module named `users`), the module name is auto-prefixed:
+
 - `views/(admin)/[id]/edit/_route.js` → `/admin/users/:id/edit`
 - `views/(default)/_route.js` → `/users`
 
@@ -56,16 +57,16 @@ sequenceDiagram
 
 Every page and layout component receives a single `context` prop containing:
 
-| Property | Type | Description |
-|---|---|---|
-| `initialProps` | `Object` | Data returned by `getInitialProps` (read-only) |
-| `params` | `Object` | URL parameters (e.g., `{ id: '42' }`) |
-| `pathname` | `string` | Current URL path |
-| `query` | `Object` | Query string parameters |
-| `store` | `Object` | Redux store instance |
-| `history` | `Object` | Navigation history (push, replace, go) |
-| `locale` | `string` | Current i18n locale |
-| `fetch` | `Function` | Isomorphic fetch scoped to the app's API |
+| Property       | Type       | Description                                    |
+| -------------- | ---------- | ---------------------------------------------- |
+| `initialProps` | `Object`   | Data returned by `getInitialProps` (read-only) |
+| `params`       | `Object`   | URL parameters (e.g., `{ id: '42' }`)          |
+| `pathname`     | `string`   | Current URL path                               |
+| `query`        | `Object`   | Query string parameters                        |
+| `store`        | `Object`   | Redux store instance                           |
+| `history`      | `Object`   | Navigation history (push, replace, go)         |
+| `locale`       | `string`   | Current i18n locale                            |
+| `fetch`        | `Function` | Isomorphic fetch scoped to the app's API       |
 
 ### Accessing Data in Components
 
@@ -126,7 +127,7 @@ Theme Layout → Colocated Layout → Page Component
 export default function DocsLayout({ children, context: { initialProps } }) {
   const tree = initialProps?.tree || [];
   return (
-    <div className="layout">
+    <div className='layout'>
       <Sidebar items={tree} />
       <main>{children}</main>
     </div>
@@ -140,7 +141,9 @@ A route can skip layouts entirely by exporting `layout = false`:
 
 ```javascript
 export const layout = false;
-export default function BarePageComponent() { /* ... */ }
+export default function BarePageComponent() {
+  /* ... */
+}
 ```
 
 ---
@@ -171,13 +174,13 @@ Middleware can short-circuit the render pipeline by returning `{ redirect: '/pat
 
 When the router resolves a URL, it returns an object with:
 
-| Property | Type | Description |
-|---|---|---|
-| `component` | `ReactElement` | The fully composed component tree (Page + Layouts) |
-| `title` | `string` | Page title from `getInitialProps` (for `<title>` tag) |
-| `redirect` | `string` | If present, client navigates here instead of rendering |
-| `status` | `number` | HTTP status code (for SSR) |
-| *...rest* | `any` | All other properties from `getInitialProps` are spread onto the result |
+| Property    | Type           | Description                                                            |
+| ----------- | -------------- | ---------------------------------------------------------------------- |
+| `component` | `ReactElement` | The fully composed component tree (Page + Layouts)                     |
+| `title`     | `string`       | Page title from `getInitialProps` (for `<title>` tag)                  |
+| `redirect`  | `string`       | If present, client navigates here instead of rendering                 |
+| `status`    | `number`       | HTTP status code (for SSR)                                             |
+| _...rest_   | `any`          | All other properties from `getInitialProps` are spread onto the result |
 
 > [!NOTE]
 > Properties like `title` from `getInitialProps` are available both on `context.initialProps.title` (inside the component) and on the resolve result (for the renderer's `<title>` side-effect). This dual availability is intentional — components read from `context`, the shell reads from the result.
@@ -189,7 +192,7 @@ When the router resolves a URL, it returns an object with:
 > [!TIP]
 > **Keep `getInitialProps` fast.** It blocks rendering. Use `Promise.all` for parallel fetches and leverage the `cache` engine for repeated lookups.
 
-> [!WARNING] 
+> [!WARNING]
 > **Always provide defaults.** Destructure with fallbacks (`const { title } = initialProps || {}`) to prevent crashes when `getInitialProps` throws or returns partial data.
 
 > [!CAUTION]

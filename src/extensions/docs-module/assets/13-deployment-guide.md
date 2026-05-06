@@ -47,8 +47,8 @@ npm start
 
 ### Environment Variables
 
-Environment variables (prefixed with `XNAPIFY_`) are baked into the client bundle during the `npm run build` step via Webpack's `DefinePlugin`. 
-Copy `.env.xnapify` to `.env` and configure your settings *before* running the build process.
+Environment variables (prefixed with `XNAPIFY_`) are baked into the client bundle during the `npm run build` step via Webpack's `DefinePlugin`.
+Copy `.env.xnapify` to `.env` and configure your settings _before_ running the build process.
 
 ---
 
@@ -82,7 +82,8 @@ docker compose -f .docker/docker-compose.dev.yml up --build
 # Start dev server with HMR using Podman (equivalent)
 podman compose -f .docker/docker-compose.dev.yml up --build
 ```
-*Note: The `docker-compose.dev.yml` configuration bind-mounts your local source code so that edits instantly trigger Webpack HMR inside the container.*
+
+_Note: The `docker-compose.dev.yml` configuration bind-mounts your local source code so that edits instantly trigger Webpack HMR inside the container._
 
 ### Important: Webpack DefinePlugin
 
@@ -125,6 +126,7 @@ XNAPIFY_DB_TYPE=postgres npm start
 ## 4. Troubleshooting
 
 > [!NOTE]
+>
 > - **Locally building errors:** Try `npm run clean && npm run build`. Ensure your node dependencies are fully instated using `npm run setup`. If necessary, run with `LOG_LEVEL=verbose` for granular details.
 > - **Docker/Podman startup errors:** Make sure you aren't encountering file permission issues. You can verify the container status `docker compose -f .docker/docker-compose.yml ps`.
 > - **Database issues:** Check if your dialect driver successfully installed inside the Docker image or the output directory dependencies.

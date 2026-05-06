@@ -89,7 +89,9 @@
   font-size: var(--font-size-3);
   font-weight: 600;
   border-radius: var(--radius-3);
-  transition: transform 0.2s, opacity 0.2s;
+  transition:
+    transform 0.2s,
+    opacity 0.2s;
   width: 100%;
 }
 
@@ -104,7 +106,9 @@
   padding: var(--space-6);
   border-radius: var(--radius-4);
   border: 1px solid var(--gray-4);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
 .infoCard:hover {
@@ -130,7 +134,9 @@
   background-color: var(--indigo-3);
   color: var(--indigo-11);
   flex-shrink: 0;
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s ease;
+  transition:
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 0.3s ease;
 }
 
 .infoCard:hover .iconWrapper {
@@ -165,7 +171,10 @@
   border-radius: var(--radius-3);
   background-color: var(--gray-3);
   color: var(--gray-11);
-  transition: background-color 0.2s, color 0.2s, transform 0.2s;
+  transition:
+    background-color 0.2s,
+    color 0.2s,
+    transform 0.2s;
 }
 
 .socialIconWrapper:hover {

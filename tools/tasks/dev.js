@@ -9,8 +9,8 @@
 
 import { execSync } from 'child_process';
 import http from 'http';
-import { createRequire } from 'module';
 import path from 'path';
+import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
 
 import { rspack } from '@rspack/core';
@@ -40,7 +40,10 @@ import { isSilent, isVerbose, logError, logInfo } from '../utils/logger.js';
 import clean from './clean.js';
 import buildExtensions from './extension.js';
 
+import { ensureDir, writeFile } from '../utils/fs.js';
+
 const require = createRequire(import.meta.url);
+const currentFilename = fileURLToPath(import.meta.url);
 
 // Unique symbol to mark rspack middlewares
 const kRspackMiddleware = Symbol('__xnapify.rspack.middleware__');
@@ -205,8 +208,7 @@ function configureRspackForDev(cfg, isClient = true) {
   else {
     // Configure hot update file paths for server bundle
     cfg.output.hotUpdateMainFilename = 'updates/[fullhash].hot-update.json';
-    cfg.output.hotUpdateChunkFilename =
-      'updates/[id].[fullhash].hot-update.cjs';
+    cfg.output.hotUpdateChunkFilename = 'updates/[id].[fullhash].hot-update.js';
   }
 
   return cfg;
@@ -219,11 +221,11 @@ function configureRspackForDev(cfg, isClient = true) {
  * @returns {Object} Server module with initialization methods
  */
 
-async function loadServerBundle() {
+function loadServerBundle() {
   try {
     // Get the absolute path to the server bundle
     const serverBundlePath = require.resolve(
-      path.join(config.BUILD_DIR, 'server.cjs'),
+      path.join(config.BUILD_DIR, 'server.js'),
     );
 
     // Clear require.cache for ALL files in the build directory.
@@ -238,8 +240,9 @@ async function loadServerBundle() {
       }
     });
 
-    // Load the server bundle
-    const moduleNamespace = await import(serverBundlePath);
+    // Load the server bundle using require to respect require.cache clearing
+    // ESM import() maintains a separate cache that ignores require.cache deletions
+    const moduleNamespace = require(serverBundlePath);
     const exportsObj = moduleNamespace.default || moduleNamespace;
     const { hot, invalidateCaches, ...bundle } = exportsObj;
 
@@ -516,7 +519,7 @@ async function checkForUpdate(currentHash) {
     createServer,
     bootstrapApp,
     disposeApp: dispose,
-  } = await loadServerBundle());
+  } = loadServerBundle());
 
   // Recreate the Express app with the new bundle
   await prepareDevServer({ createServer, bootstrapApp }, server);
@@ -672,6 +675,15 @@ async function main() {
   // Clean and generate JWT in parallel (JWT only touches .env, independent of build dir)
   await Promise.all([clean(), generateJWT(config.CWD)]);
 
+  // Inject a localized CommonJS scope into the dev cache directory
+  // to ensure server.js (compiled by rspack as CJS) is correctly executed
+  // despite the root package.json having "type": "module".
+  await ensureDir(config.BUILD_DIR);
+  await writeFile(
+    path.join(config.BUILD_DIR, 'package.json'),
+    JSON.stringify({ type: 'commonjs' }),
+  );
+
   try {
     // Setup rspack compilers
     const { clientCompiler, serverCompiler, workerCompilers } =
@@ -719,7 +731,7 @@ async function main() {
       createServer,
       bootstrapApp,
       disposeApp: dispose,
-    } = await loadServerBundle());
+    } = loadServerBundle());
     loadedServerHash = serverStats.hash;
 
     // Start server
@@ -765,10 +777,9 @@ async function main() {
 }
 
 // Execute if called directly (as child process)
-const scriptPath = fileURLToPath(import.meta.url);
 if (
-  process.argv[1] === scriptPath ||
-  process.argv[1] === scriptPath.replace(/\.js$/, '')
+  process.argv[1] === currentFilename ||
+  process.argv[1] === currentFilename.replace(/\.js$/, '')
 ) {
   // Start the server and keep the process alive
   main().catch(error => {

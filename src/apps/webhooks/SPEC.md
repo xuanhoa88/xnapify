@@ -36,20 +36,20 @@ src/apps/webhooks/
 
 ### Core Methods
 
-| Method | Signature | Description |
-|---|---|---|
-| `withContext(container)` | `(DI container) → this` | Binds to DI, creates hook channel |
-| `handler(provider, config)` | `(string, { secret, signatureHeader?, handler, priority? }) → this` | Register provider handler |
-| `removeHandler(provider)` | `(string) → this` | Remove a provider |
-| `hasHandler(provider)` | `(string) → boolean` | Check if provider exists |
-| `getProviderConfig(provider)` | `(string) → { secret, signatureHeader } \| null` | Get provider config |
-| `getProviders()` | `() → string[]` | List all provider names |
-| `dispatch(provider, payload, context)` | `(string, *, { headers, query, ip }) → Promise<void>` | Dispatch to handlers |
-| `on(event, handler, priority?)` | `(string, Function, number?) → this` | Register lifecycle hook |
-| `off(event, handler?)` | `(string, Function?) → this` | Remove lifecycle hook |
-| `cleanup()` | `() → void` | Clear all handlers + providers |
-| `parseSignatureHeader(header)` | `(string) → { algorithm, signature }` | Parse signature header |
-| `verifySignature(payload, sig, secret, algo?)` | `(...) → boolean` | HMAC verification |
+| Method                                         | Signature                                                           | Description                       |
+| ---------------------------------------------- | ------------------------------------------------------------------- | --------------------------------- |
+| `withContext(container)`                       | `(DI container) → this`                                             | Binds to DI, creates hook channel |
+| `handler(provider, config)`                    | `(string, { secret, signatureHeader?, handler, priority? }) → this` | Register provider handler         |
+| `removeHandler(provider)`                      | `(string) → this`                                                   | Remove a provider                 |
+| `hasHandler(provider)`                         | `(string) → boolean`                                                | Check if provider exists          |
+| `getProviderConfig(provider)`                  | `(string) → { secret, signatureHeader } \| null`                    | Get provider config               |
+| `getProviders()`                               | `() → string[]`                                                     | List all provider names           |
+| `dispatch(provider, payload, context)`         | `(string, *, { headers, query, ip }) → Promise<void>`               | Dispatch to handlers              |
+| `on(event, handler, priority?)`                | `(string, Function, number?) → this`                                | Register lifecycle hook           |
+| `off(event, handler?)`                         | `(string, Function?) → this`                                        | Remove lifecycle hook             |
+| `cleanup()`                                    | `() → void`                                                         | Clear all handlers + providers    |
+| `parseSignatureHeader(header)`                 | `(string) → { algorithm, signature }`                               | Parse signature header            |
+| `verifySignature(payload, sig, secret, algo?)` | `(...) → boolean`                                                   | HMAC verification                 |
 
 ### Dispatch Flow
 
@@ -68,25 +68,27 @@ Supported algorithms: `sha256`, `sha512`.
 
 ## 4. Error Classes (`errors.js`)
 
-| Error | Status | When |
-|---|---|---|
-| `WebhookError` | 500 | Base error class |
-| `WebhookValidationError` | 400 | Invalid provider config, missing secret/handler |
+| Error                    | Status | When                                            |
+| ------------------------ | ------ | ----------------------------------------------- |
+| `WebhookError`           | 500    | Base error class                                |
+| `WebhookValidationError` | 400    | Invalid provider config, missing secret/handler |
 
 ## 5. Module Lifecycle (`api/index.js`)
 
-| Phase | Hook | Description |
-|---|---|---|
+| Phase       | Hook                       | Description                                                        |
+| ----------- | -------------------------- | ------------------------------------------------------------------ |
 | `providers` | `providers({ container })` | Binds `'webhook'` via lazy `container.bind()` with `withContext()` |
-| `boot` | `boot({ container })` | Forces `resolve('webhook')` to initialize before extensions |
-| `routes` | `() => routesContext` | Mounts admin and inbound routes |
+| `boot`      | `boot({ container })`      | Forces `resolve('webhook')` to initialize before extensions        |
+| `routes`    | `() => routesContext`      | Mounts admin and inbound routes                                    |
 
 ## 6. API Routes
 
 ### Admin Route
+
 - **`GET /api/admin/webhooks`** — Lists registered providers. Requires `webhooks:read` permission.
 
 ### Inbound Webhook Route
+
 - **`POST /api/webhooks/:provider`** — Inbound handler. `middleware = false` (uses HMAC instead of auth).
   1. Check provider registered → 404
   2. Read signature header → 401 if missing
@@ -112,4 +114,4 @@ async boot({ container }) {
 
 ---
 
-*Note: This spec reflects the CURRENT implementation of the webhooks module.*
+_Note: This spec reflects the CURRENT implementation of the webhooks module._

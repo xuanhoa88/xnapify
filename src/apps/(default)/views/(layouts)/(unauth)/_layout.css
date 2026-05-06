@@ -6,20 +6,12 @@
  */
 
 .meshGradient1 {
-  background: radial-gradient(
-    circle,
-    var(--indigo-9) 0%,
-    transparent 70%
-  );
+  background: radial-gradient(circle, var(--indigo-9) 0%, transparent 70%);
   animation-duration: 8s;
 }
 
 .meshGradient2 {
-  background: radial-gradient(
-    circle,
-    var(--blue-9) 0%,
-    transparent 70%
-  );
+  background: radial-gradient(circle, var(--blue-9) 0%, transparent 70%);
   animation-duration: 12s;
   animation-delay: 1s;
 }

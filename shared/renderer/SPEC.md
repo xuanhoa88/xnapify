@@ -75,10 +75,10 @@ Discovers and boots view modules. Mirrors the API autoloader pattern.
 
 #### Lifecycle Phases (sequential)
 
-| #   | Phase          | Hook Signature                       | Purpose                      |
-| --- | -------------- | ------------------------------------ | ---------------------------- |
+| #   | Phase          | Hook Signature                                  | Purpose                      |
+| --- | -------------- | ----------------------------------------------- | ---------------------------- |
 | 1   | `translations` | `translations()` → `import.meta.webpackContext` | Register i18n namespaces     |
-| 2   | `providers`    | `providers({ container })`           | Bind client-side DI services |
+| 2   | `providers`    | `providers({ container })`                      | Bind client-side DI services |
 | 3   | `views`        | `views()` → `import.meta.webpackContext`        | Collect view route contexts  |
 
 #### Adapter Merging

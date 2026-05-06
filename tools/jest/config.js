@@ -35,17 +35,21 @@ export default {
    * information should be collected.
    */
   collectCoverageFrom: [
-    `${appDir}/**/*.{js,jsx}`,
-    `${sharedDir}/**/*.{js,jsx}`,
+    `${appDir}/**/*.{js,jsx,ts,tsx}`,
+    `${sharedDir}/**/*.{js,jsx,ts,tsx}`,
     // Exclude common non-testable files
-    `!${appDir}/**/*.test.{js,jsx}`,
-    `!${appDir}/**/*.spec.{js,jsx}`,
+    `!${appDir}/**/*.test.{js,jsx,ts,tsx}`,
+    `!${appDir}/**/*.spec.{js,jsx,ts,tsx}`,
+    `!${appDir}/**/*.benchmark.{js,jsx,ts,tsx}`,
     `!${appDir}/**/__tests__/**`,
     `!${appDir}/**/__mocks__/**`,
-    `!${sharedDir}/**/*.test.{js,jsx}`,
-    `!${sharedDir}/**/*.spec.{js,jsx}`,
+    `!${appDir}/**/__benchmarks__/**`,
+    `!${sharedDir}/**/*.test.{js,jsx,ts,tsx}`,
+    `!${sharedDir}/**/*.spec.{js,jsx,ts,tsx}`,
+    `!${sharedDir}/**/*.benchmark.{js,jsx,ts,tsx}`,
     `!${sharedDir}/**/__tests__/**`,
     `!${sharedDir}/**/__mocks__/**`,
+    `!${sharedDir}/**/__benchmarks__/**`,
     '!**/node_modules/**',
     '!**/tools/**',
     '!**/vendor/**',
@@ -135,9 +139,6 @@ export default {
    * with a single module (e.g., images, styles).
    */
   moduleNameMapper: {
-    // Resolve 'node:' prefixed built-in modules for Jest < 27 compatibility
-    '^node:(.*)$': '$1',
-
     // Resolve @shared alias to the shared directory
     // This ensures jest.mock('@shared/...') resolves the same way
     // as rspack's resolve.alias does for import statements
@@ -346,11 +347,6 @@ export default {
    * Automatically clear mock calls and instances before every test.
    */
   automock: false,
-
-  /**
-   * Respect Browserify's "browser" field in package.json when resolving modules.
-   */
-  browser: false,
 
   /**
    * Disable caching for Jest.

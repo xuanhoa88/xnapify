@@ -5,21 +5,14 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
+import fs from 'fs';
+import path from 'path';
+import { performance } from 'perf_hooks';
 
-// Production-grade extension IPC stress benchmark
-// - Creates a lightweight Express server exposing POST /api/extensions/:id/ipc
-// - Registers many handlers on the registry (simulating extensions)
-// - Fires many concurrent HTTP requests to measure routing, serialization, and registry execution costs
+import bodyParser from 'body-parser';
+import express from 'express';
 
-const { performance } = require('perf_hooks');
-
-const bodyParser = require('body-parser');
-const express = require('express');
-
-const ExtensionRegistryClass =
-  require('@shared/extension/utils/Registry.js').default;
+import ExtensionRegistryClass from '@shared/extension/utils/Registry.js';
 
 // Configurable via environment variables (with sensible defaults)
 const HANDLERS = parseInt(process.env.BENCH_HANDLERS || '50', 10);
@@ -144,8 +137,6 @@ describe('extensionIpcProd', () => {
 
     if (RECORD_PATH) {
       try {
-        const fs = require('fs');
-        const path = require('path');
         const outDir = path.dirname(RECORD_PATH);
         if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
         const res = {

@@ -6,9 +6,9 @@ sidebar_position: 11
 
 # Publishing to the Hub
 
-Once your extension is complete, you can publish it to the **xnapify Extension Hub** so that other instances can install it globally via their Admin Dashboards. 
+Once your extension is complete, you can publish it to the **xnapify Extension Hub** so that other instances can install it globally via their Admin Dashboards.
 
-The Hub is essentially a statically generated JSON registry hosted inside the main repository's `hub/` directory. It does *not* host your code, only metadata linking to your release `.zip`.
+The Hub is essentially a statically generated JSON registry hosted inside the main repository's `hub/` directory. It does _not_ host your code, only metadata linking to your release `.zip`.
 
 ## Publishing Workflow
 

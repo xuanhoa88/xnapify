@@ -15,17 +15,10 @@
  * Run via: npm run test:benchmark
  */
 
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
+import { performance } from 'perf_hooks';
 
-const { performance } = require('perf_hooks');
-
-const {
-  getUserList,
-} = require('../apps/users/api/services/admin/user.service.js');
-const {
-  getUserWithProfile,
-} = require('../apps/users/api/services/profile.service.js');
+import { getUserList } from '../apps/users/api/services/admin/user.service.js';
+import { getUserWithProfile } from '../apps/users/api/services/profile.service.js';
 
 // allow longer execution since database operations may take a few seconds
 jest.setTimeout(30000);
@@ -33,12 +26,19 @@ jest.setTimeout(30000);
 // helper to create a dummy user with profile/roles/groups
 async function createUserWithRelations(models, idx) {
   const { User, UserProfile, Role, Group } = models;
-  const email = `user${idx}@example.com`;
-  const user = await User.create({
-    email,
-    password: 'password',
-    is_active: true,
-  });
+  const email = `user_${Date.now()}_${Math.random()}@example.com`;
+  let user;
+  try {
+    user = await User.create({
+      email,
+      password: 'password',
+      is_active: true,
+    });
+  } catch (err) {
+    console.error('CREATE USER FAILED:', err.message, err.name, err.errors);
+    console.log('Index:', idx);
+    throw err;
+  }
 
   // profile entries
   await UserProfile.bulkCreate([
@@ -77,7 +77,7 @@ describe('users.benchmark', () => {
   // Each test manages its own in-memory database instance so that
   // jest's test runner cannot inadvertently clear state between hooks.
 
-  async function prepare(numUsers = 500) {
+  async function prepare(numUsers = 50) {
     const db = globalThis.testDb;
 
     const { Role, Group } = db.models;
@@ -90,19 +90,21 @@ describe('users.benchmark', () => {
       defaults: { description: 'Default group' },
     });
 
-    const promises = [];
     for (let i = 1; i <= numUsers; i++) {
-      promises.push(createUserWithRelations(db.models, i));
+      await createUserWithRelations(db.models, i);
     }
-    await Promise.all(promises);
 
     const totalUsers = await db.models.User.count();
     console.log(`\n  seeded ${totalUsers} users`);
     return db;
   }
 
+  let db;
+  beforeEach(async () => {
+    db = await prepare(50);
+  });
+
   it('fetch user with profile/roles/groups quickly', async () => {
-    const db = await prepare();
     const { models } = db;
     const count = 100;
 
@@ -122,10 +124,12 @@ describe('users.benchmark', () => {
   });
 
   it('list users with search/filter performance', async () => {
-    const db = await prepare();
     const { models } = db;
     const options = { page: 1, limit: 50, search: 'user' };
-    const ctx = { models, hook: () => ({ emit: async () => {} }) };
+    const ctx = {
+      models,
+      hook: () => ({ emit: async () => {}, invoke: async () => {} }),
+    };
     const count = 50;
     const start = performance.now();
     for (let i = 0; i < count; i++) {

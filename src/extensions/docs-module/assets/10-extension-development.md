@@ -40,6 +40,7 @@ src/extensions/my_extension/
 ```
 
 **`package.json` boilerplate:**
+
 ```json
 {
   "name": "@xnapify-extension/my_extension",
@@ -54,19 +55,25 @@ src/extensions/my_extension/
 
 ## 2. Setting Up Backend Logic (`api/index.js`)
 
-The Backend API index file registers Webpack Context loaders and binds logic to the Node server lifecycle. The extension relies on `boot` to start, and `shutdown` to rigorously de-allocate memory to prevent leaks. 
+The Backend API index file registers Webpack Context loaders and binds logic to the Node server lifecycle. The extension relies on `boot` to start, and `shutdown` to rigorously de-allocate memory to prevent leaks.
 
 ```javascript
 /* src/extensions/my_extension/api/index.js */
 
-// Pre-calculate Webpack contexts mapping your directories 
-const migrationsContext = import.meta.webpackContext('./database/migrations', { recursive: false, regExp: /\.[cm]?[jt]s$/i });
-const translationsContext = import.meta.webpackContext('../translations', { recursive: false, regExp: /\.json$/i });
+// Pre-calculate Webpack contexts mapping your directories
+const migrationsContext = import.meta.webpackContext('./database/migrations', {
+  recursive: false,
+  regExp: /\.[cm]?[jt]s$/i,
+});
+const translationsContext = import.meta.webpackContext('../translations', {
+  recursive: false,
+  regExp: /\.json$/i,
+});
 const HANDLERS = Symbol('handlers');
 
 export default {
   [HANDLERS]: {},
-  
+
   translations: () => [translationsContext],
 
   // Fire when Extension loads
@@ -75,25 +82,29 @@ export default {
 
     const db = container.resolve('db');
     if (db) {
-       // Setup database dynamically
-       await db.connection.runMigrations([{ context: migrationsContext, prefix: __EXTENSION_ID__ }]);
+      // Setup database dynamically
+      await db.connection.runMigrations([
+        { context: migrationsContext, prefix: __EXTENSION_ID__ },
+      ]);
     }
 
     const hook = container.resolve('hook');
-    
+
     // Bind logic listening to the explicit App Module's events
-    this[HANDLERS].onUserSignup = (user) => { /* logic */ }
+    this[HANDLERS].onUserSignup = user => {
+      /* logic */
+    };
     hook('users').on('created', this[HANDLERS].onUserSignup);
   },
 
   // MUST cleanly destroy memory states
   async shutdown({ container, registry }) {
-      const hook = container.resolve('hook');
-      
-      // Critical cleanup or Application Hot-Module-Reloading will break!
-      hook('users').off('created', this[HANDLERS].onUserSignup);
-  }
-}
+    const hook = container.resolve('hook');
+
+    // Critical cleanup or Application Hot-Module-Reloading will break!
+    hook('users').off('created', this[HANDLERS].onUserSignup);
+  },
+};
 ```
 
 ---
@@ -104,30 +115,35 @@ Frontend configuration is conceptually similar but executes on the Application D
 
 ```javascript
 /* src/extensions/my_extension/views/index.js */
-import MySpecialComponent from './components/MySpecialComponent'
+import MySpecialComponent from './components/MySpecialComponent';
 
-const translationsContext = import.meta.webpackContext('../translations', { recursive: false, regExp: /\.json$/i });
+const translationsContext = import.meta.webpackContext('../translations', {
+  recursive: false,
+  regExp: /\.json$/i,
+});
 
 export default {
   translations: () => [translationsContext],
-  
+
   // Evaluated globally before route layouts render
   providers({ container }) {
-      // Useful for injecting explicit Redux slices dynamically
-      // container.register('component:MyWidget', MyWidgetComponent)
+    // Useful for injecting explicit Redux slices dynamically
+    // container.register('component:MyWidget', MyWidgetComponent)
   },
 
   boot({ registry }) {
-      // Insert "MySpecialComponent" wherever the App defines:
-      // <ExtensionSlot name="user.profile.details" />
-      registry.registerSlot('user.profile.details', MySpecialComponent, { order: 10 });
+    // Insert "MySpecialComponent" wherever the App defines:
+    // <ExtensionSlot name="user.profile.details" />
+    registry.registerSlot('user.profile.details', MySpecialComponent, {
+      order: 10,
+    });
   },
 
   shutdown({ registry }) {
-      // Clean Memory explicitly!
-      registry.unregisterSlot('user.profile.details', MySpecialComponent);
-  }
-}
+    // Clean Memory explicitly!
+    registry.unregisterSlot('user.profile.details', MySpecialComponent);
+  },
+};
 ```
 
 ---
@@ -137,6 +153,7 @@ export default {
 Webpack statically injects a universal constant called `__EXTENSION_ID__` inside all extension scripts at compile-time. Its value is derived from the extension's **directory name** (e.g., `docs-module` for `src/extensions/docs-module/`), optionally overridden by the `id` field in the extension's database record.
 
 It's conventionally used to safely prefix:
+
 - Database Tables / Migrations (`table: ${__EXTENSION_ID__}_logs`)
 - IPC Communication Channels (`registry.registerHook("ipc:${__EXTENSION_ID__}:compute")`)
 - Translation Scopes (`t("extension:${__EXTENSION_ID__}:labels.submit")`)

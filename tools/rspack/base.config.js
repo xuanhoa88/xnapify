@@ -599,7 +599,7 @@ const createSVGRule = () => ({
       resourceQuery: { not: [/url/i] },
       use: [
         {
-          loader: '@svgr/rspack',
+          loader: '@svgr-rs/svgrs-plugin/webpack',
           options: {
             svgo: true,
             svgoConfig: {
@@ -924,7 +924,7 @@ function createWorkerConfig({
     additionalModuleDirs,
     output: {
       path: outputPath,
-      filename: '[name].cjs',
+      filename: '[name].js',
     },
     plugins: [createEnvDefine(), ...plugins].filter(Boolean),
   });
@@ -950,6 +950,8 @@ function getHmrWatchIgnored() {
     '**/__tests__/**',
     '**/*.test.*',
     '**/*.spec.*',
+    '**/__benchmarks__/**',
+    '**/*.benchmark.*',
     `${buildDirGlob}/**`,
   ];
 }

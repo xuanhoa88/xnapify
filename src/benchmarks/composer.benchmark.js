@@ -5,16 +5,13 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-
 // Benchmark for composeMiddleware utility
 // This test measures execution time of composing and running many
 // small middleware functions to ensure it stays performant as stacks grow.
 
-const { performance } = require('perf_hooks');
+import { performance } from 'perf_hooks';
 
-const { composeMiddleware } = require('@shared/utils/middleware.js');
+import { composeMiddleware } from '@shared/utils/middleware.js';
 
 // Create a bunch of dummy middleware that just calls next()
 function createNoopMiddleware(count) {

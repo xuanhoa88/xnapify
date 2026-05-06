@@ -24,6 +24,8 @@ import {
   isSilent,
 } from '../utils/logger.js';
 
+const currentFilename = fileURLToPath(import.meta.url);
+
 // Relative path to app directory
 const appDir = path.relative(config.CWD, config.APP_DIR);
 const sharedDir = path.relative(config.CWD, path.resolve(config.CWD, 'shared'));
@@ -175,10 +177,9 @@ async function main() {
 }
 
 // Execute if called directly (as child process)
-const scriptPath = fileURLToPath(import.meta.url);
 if (
-  process.argv[1] === scriptPath ||
-  process.argv[1] === scriptPath.replace(/\.js$/, '')
+  process.argv[1] === currentFilename ||
+  process.argv[1] === currentFilename.replace(/\.js$/, '')
 ) {
   main().catch(error => {
     console.error(error.message);

@@ -11,21 +11,11 @@
  * Measures JWT verification with and without caching.
  * Run via: npm run test:benchmark
  */
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
+import { performance } from 'perf_hooks';
 
-const { performance } = require('perf_hooks');
+import { requireAuth } from '@shared/api/engines/auth/middlewares/index.js';
 
 describe('auth.benchmark', () => {
-  let requireAuth;
-
-  beforeAll(() => {
-    // Load via Jest transpilation (avoids ES module issues)
-    const authMiddleModule = require('@shared/api/engines/auth/middlewares/index.js');
-
-    requireAuth = authMiddleModule.requireAuth;
-  });
-
   const jwtMock = {
     decodeToken: () => ({ payload: { type: 'access' } }),
     verifyTypedToken: () => ({ id: 123, type: 'access' }),

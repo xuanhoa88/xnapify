@@ -201,7 +201,12 @@ config.overrides = [
     },
   },
   {
-    files: ['**/*.test.js', '**/*.spec.js'],
+    files: [
+      '**/*.test.js',
+      '**/*.spec.js',
+      '**/*.benchmark.js',
+      '**/*.benchmark.ts',
+    ],
     rules: {
       'no-redeclare': 'off',
     },

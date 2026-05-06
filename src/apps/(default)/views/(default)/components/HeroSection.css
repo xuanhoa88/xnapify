@@ -33,7 +33,7 @@
 }
 
 .heroSectionModern::before {
-  content: "";
+  content: '';
   position: absolute;
   top: -30%;
   left: 20%;
@@ -41,7 +41,12 @@
   height: 60vw;
   max-width: 800px;
   max-height: 800px;
-  background: radial-gradient(circle, var(--indigo-a4) 0%, var(--plum-a3) 40%, transparent 70%);
+  background: radial-gradient(
+    circle,
+    var(--indigo-a4) 0%,
+    var(--plum-a3) 40%,
+    transparent 70%
+  );
   border-radius: 50%;
   z-index: 0;
   pointer-events: none;

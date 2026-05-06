@@ -15,7 +15,7 @@ import { fileURLToPath } from 'url';
  * ESM-safe reference to the current file's absolute path.
  * Replaces the CJS `__filename` global which is undefined under native ESM.
  */
-const SELF_FILENAME = fileURLToPath(import.meta.url);
+const currentFilename = fileURLToPath(import.meta.url);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -48,7 +48,7 @@ function resolveCallerFilename() {
 
     const filename = frame.getFileName();
     if (!filename) continue;
-    if (filename === SELF_FILENAME) continue;
+    if (filename === currentFilename) continue;
     if (filename.includes('/node_modules/')) continue;
 
     return filename;

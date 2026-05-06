@@ -5,27 +5,24 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-
 // Benchmarks for renderer-related utilities such as store configuration and
 // simple server-side rendering. These help ensure the bootstrap cost of the
 // client/server entrypoints stays reasonable.
 
-const { performance } = require('perf_hooks');
+import { performance } from 'perf_hooks';
 
-const React = require('react');
+import React from 'react';
 
-const ReactDOMServer = require('react-dom/server');
+import ReactDOMServer from 'react-dom/server';
 
-const App = require('@shared/renderer/App.js').default;
-const { configureStore } = require('@shared/renderer/redux/index.js');
+import App from '@shared/renderer/App.js';
+import { configureStore } from '@shared/renderer/redux/index.js';
 
 // simple dummy context that mimics what the real application provides
 function createDummyContext() {
   const store = configureStore();
   return {
-    container: {},
+    container: { has: () => false, resolve: () => ({}) },
     fetch: () => Promise.resolve(),
     store,
     history: { listen: () => {} },
@@ -46,7 +43,8 @@ function makeTree(levels, breadth) {
   if (levels === 0) return React.createElement('span', null, 'leaf');
   const children = [];
   for (let i = 0; i < breadth; i++) {
-    children.push(makeTree(levels - 1, breadth));
+    const child = makeTree(levels - 1, breadth);
+    children.push(React.cloneElement(child, { key: i }));
   }
   return React.createElement('div', null, children);
 }

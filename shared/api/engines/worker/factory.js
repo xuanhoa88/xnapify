@@ -18,8 +18,10 @@ import { register } from '../../shutdown.js';
 import { WorkerError } from './errors.js';
 
 const require = createRequire(import.meta.url);
-// eslint-disable-next-line no-underscore-dangle
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+const currentFilename = fileURLToPath(import.meta.url);
+
+const currentDir = path.dirname(currentFilename);
 
 // ---------------------------------------------------------------------------
 // Defaults
@@ -155,7 +157,7 @@ export class WorkerPoolManager {
       const fullPath = path.join(dir, entry.name);
       if (entry.isDirectory()) {
         results.push(...this.scanDir(fullPath, baseDir));
-      } else if (/\.worker\.cjs$/i.test(entry.name)) {
+      } else if (/\.worker\.js$/i.test(entry.name)) {
         // Verify WORKER_POOL marker in compiled output.
         // BUILD_DIR files are rspack-compiled CJS — safe to require().
         // This ensures only Tier 2 (thread-safe, pure-data) workers are
@@ -171,12 +173,12 @@ export class WorkerPoolManager {
           continue;
         }
 
-        const shortName = path.basename(entry.name, '.worker.cjs');
+        const shortName = path.basename(entry.name, '.worker.js');
         const relPath = path.relative(baseDir, fullPath);
-        // Strip `.worker.cjs`, normalize separators, and remove structural
+        // Strip `.worker.js`, normalize separators, and remove structural
         // `workers/` segments (convention folder, not a meaningful namespace).
         const nsKey = relPath
-          .replace(/\.worker\.cjs$/i, '')
+          .replace(/\.worker\.js$/i, '')
           .replace(/\\/g, '/')
           .replace(/(^|\/)workers\//g, '$1');
         results.push([nsKey, fullPath, shortName]);
@@ -425,8 +427,7 @@ export function createFactory(config) {
 
   // Auto-discover workers from BUILD_DIR.
   // At runtime, __dirname = BUILD_DIR (server.js output directory).
-  // Workers are compiled as *.worker.js files in subdirectories.
-  const buildDir = process.env.BUILD_DIR || __dirname;
+  const buildDir = process.env.BUILD_DIR || currentDir;
   engine.discoverWorkers(buildDir);
 
   // Register with centralized shutdown coordinator

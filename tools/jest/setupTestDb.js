@@ -132,7 +132,7 @@ export async function setupTestDb() {
 
   try {
     // Create fresh Sequelize instance for test isolation
-    sequelizeInstance = new Sequelize('sqlite::memory:', SEQUELIZE_CONFIG);
+    sequelizeInstance = new Sequelize('sqlite://', SEQUELIZE_CONFIG);
 
     const context = {
       ...SequelizeModule,
@@ -159,26 +159,31 @@ export async function setupTestDb() {
       return origDefine.call(this, modelName, attributes, options);
     };
 
+    const generateFallbackUUIDs = instance => {
+      if (!instance.isNewRecord) return;
+      const pks = Object.keys(instance.rawAttributes).filter(
+        key =>
+          instance.rawAttributes[key].primaryKey &&
+          instance.rawAttributes[key].type.key === 'STRING',
+      );
+      pks.forEach(pk => {
+        if (
+          !instance.dataValues[pk] ||
+          instance.dataValues[pk] === 'sqlite-mock-uuid-fallback'
+        ) {
+          const newId = crypto.randomUUID();
+          instance.dataValues[pk] = newId;
+          instance.set(pk, newId);
+        }
+      });
+    };
+
     // Now securely assign dynamic unique JavaScript strings automatically.
     // Because the defaultValue is a static placeholder, Sequelize safely transports this overridden property
     // natively into the bind parameter array and returns it identically on model instantiation.
-    sequelizeInstance.addHook('beforeValidate', instance => {
-      if (instance.isNewRecord) {
-        const pks = Object.keys(instance.rawAttributes).filter(
-          key =>
-            instance.rawAttributes[key].primaryKey &&
-            instance.rawAttributes[key].type.key === 'STRING',
-        );
-        pks.forEach(pk => {
-          // If it's missing or equals our generic fallback, uniquely generate it natively.
-          if (
-            !instance.dataValues[pk] ||
-            instance.dataValues[pk] === 'sqlite-mock-uuid-fallback'
-          ) {
-            instance.set(pk, crypto.randomUUID());
-          }
-        });
-      }
+    sequelizeInstance.addHook('beforeValidate', generateFallbackUUIDs);
+    sequelizeInstance.addHook('beforeBulkCreate', instances => {
+      instances.forEach(generateFallbackUUIDs);
     });
 
     // Load and initialize all models

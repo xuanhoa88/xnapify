@@ -8,11 +8,11 @@ sidebar_position: 6
 
 The **xnapify** framework implements a **Centralized Shutdown Registry** (`shared/api/shutdown.js`) to coordinate the cleanup and teardown phases of all backend engines, database connections, and background tasks.
 
-Instead of each module or engine blindly hooking into `process.once('SIGTERM')`, they register their cleanup logic into this central coordinator. 
+Instead of each module or engine blindly hooking into `process.once('SIGTERM')`, they register their cleanup logic into this central coordinator.
 
 ## Why a Central Registry?
 
-1. **Hot Module Replacement (HMR) Stability**: During development, Webpack HMR re-evaluates the server bundle frequently. If each factory registered its own signal handler, every hot-reload would stack a *new* listener closure. After N reloads, the process exit would fire N+1 cleanup routines per engine. The Central Registry uses idempotent registration (`Map.set`), so re-imports gracefully overwrite the exact same key without memory leaks.
+1. **Hot Module Replacement (HMR) Stability**: During development, Webpack HMR re-evaluates the server bundle frequently. If each factory registered its own signal handler, every hot-reload would stack a _new_ listener closure. After N reloads, the process exit would fire N+1 cleanup routines per engine. The Central Registry uses idempotent registration (`Map.set`), so re-imports gracefully overwrite the exact same key without memory leaks.
 2. **Predictable Ordering**: In a complex application, teardown order is critical. You cannot close the database connection while a background queue is still flushing its jobs. The registry introduces **position-based execution**.
 3. **Global Timeout Safety**: The shutdown process is wrapped in a hard timeout (`DEFAULT_TIMEOUT = 30,000ms`). If a cleanup handler hangs or deadlocks, the registry ensures the Node.js process will still eventually exit.
 
@@ -38,7 +38,7 @@ Position  0 ─ cache, db   (safely close low-level persistent resources last)
 
 ## Example: The Schedule Engine
 
-A prime example of this architecture is the internal **Schedule Engine**. 
+A prime example of this architecture is the internal **Schedule Engine**.
 
 When you register a cron task via the Schedule Engine, you do **not** need to manually stop the cron or abort the logic during app shutdown. The engine factory natively registers itself with the shutdown coordinator at priority `10`:
 
@@ -57,8 +57,9 @@ export function createFactory(config = {}) {
 ### How the Schedule Cleanup Works
 
 When the central registry calls `schedule.cleanup()`, the engine:
+
 1. Iterates through every registered cron task and calls `.stop()` to prevent future ticks.
-2. Identifies any task that is *currently executing*.
+2. Identifies any task that is _currently executing_.
 3. Fires the internal `AbortController` (which your handler should capture via the `{ signal }` parameter) to natively abort long-running ORM queries or fetch requests.
 4. Gives the active Promises up to `5000ms` to gracefully settle before forcefully purging them from memory.
 
@@ -73,12 +74,12 @@ import { register } from '@shared/api/shutdown';
 
 export function createMyCustomEngine() {
   const engine = new MyCustomEngine();
-  
+
   // Register idempotent cleanup logic
   register(
-    'myCustomEngine',        // Unique key (overwrites on HMR)
+    'myCustomEngine', // Unique key (overwrites on HMR)
     () => engine.teardown(), // Async-safe function
-    15                       // Position (runs before priority 10, after 20)
+    15, // Position (runs before priority 10, after 20)
   );
 
   return engine;

@@ -226,7 +226,7 @@ export default function Html({
       </head>
       <body>
         {/* React app root */}
-        <div id='app' dangerouslySetInnerHTML={{ __html: children }} />
+        <div id='app'>{children}</div>
 
         {/* JavaScript bundles */}
         {scriptLinks.map(entry => {
@@ -283,6 +283,6 @@ Html.propTypes = {
   }).isRequired,
   /** CSP nonce for inline scripts */
   nonce: PropTypes.string,
-  /** Rendered React app HTML string */
-  children: PropTypes.string.isRequired,
+  /** Rendered React app components */
+  children: PropTypes.node.isRequired,
 };

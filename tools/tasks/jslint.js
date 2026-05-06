@@ -21,6 +21,8 @@ import {
   isSilent,
 } from '../utils/logger.js';
 
+const currentFilename = fileURLToPath(import.meta.url);
+
 // Cache silent check for use throughout the task
 const silent = isSilent();
 
@@ -129,10 +131,9 @@ async function main() {
 }
 
 // Execute if called directly (as child process)
-const scriptPath = fileURLToPath(import.meta.url);
 const isMain =
-  process.argv[1] === scriptPath ||
-  process.argv[1] === scriptPath.replace(/\.js$/, '');
+  process.argv[1] === currentFilename ||
+  process.argv[1] === currentFilename.replace(/\.js$/, '');
 if (isMain) {
   main().catch(error => {
     console.error(error.message);

@@ -7,6 +7,7 @@
 
 import { createBrowserHistory } from 'history';
 import merge from 'lodash/merge';
+import { startTransition } from 'react';
 
 import { Container } from '@shared/container/index.js';
 import extensionManager from '@shared/extension/client/index.js';
@@ -22,6 +23,8 @@ import {
   setWebSocketClient,
 } from '@shared/ws/client/index.js';
 
+const hotAPI = (import.meta && import.meta.webpackHot) || (typeof module !== 'undefined' && module.hot);
+
 // =============================================================================
 // CONSTANTS & CONFIGURATION
 // =============================================================================
@@ -36,8 +39,8 @@ const WS_MAX_FAILURES = 5;
 // =============================================================================
 
 let preloadedState;
-if (module.hot && module.hot.data && module.hot.data.reduxState) {
-  preloadedState = { redux: module.hot.data.reduxState };
+if (hotAPI && hotAPI.data && hotAPI.data.reduxState) {
+  preloadedState = { redux: hotAPI.data.reduxState };
 } else {
   // eslint-disable-next-line no-underscore-dangle
   preloadedState = merge({}, window.__PRELOADED_STATE__);
@@ -271,7 +274,8 @@ function buildWebSocketUrl(path = '/ws') {
 async function initReactDOMClient() {
   if (ReactDOMClient != null) return ReactDOMClient;
   try {
-    ReactDOMClient = await import('react-dom/client');
+    const rawModule = await import('react-dom/client');
+    ReactDOMClient = rawModule.default || rawModule;
     if (
       !ReactDOMClient ||
       typeof ReactDOMClient.createRoot !== 'function' ||
@@ -295,7 +299,9 @@ async function initReactDOMClient() {
 function renderApp(appElement, container, isInitial) {
   if (root) {
     // Subsequent render — just update the existing root.
-    root.render(appElement);
+    startTransition(() => {
+      root.render(appElement);
+    });
     return;
   }
 
@@ -616,7 +622,9 @@ async function initializeApp() {
 
   // Subscribe to history AFTER initial render to avoid duplicate triggers
   unlistenHistory = history.listen(({ location: loc, action: act }) =>
-    onLocationChange(loc, act),
+    startTransition(() => {
+      onLocationChange(loc, act);
+    }),
   );
 
   // Session restoration on tab visibility change:
@@ -691,8 +699,8 @@ if (isDOMReady) {
 // HMR
 // =============================================================================
 
-if (module.hot) {
-  module.hot.accept(() => {
+if (hotAPI) {
+  hotAPI.accept(() => {
     cachedViews = null;
     const loc = { ...currentLocation };
     const schedule = window.requestIdleCallback || setTimeout;
@@ -724,34 +732,45 @@ if (module.hot) {
     hmrUnsubscribers.push(
       hmrApi.subscribe(data => {
         if (data && data.type === 'extensions-refreshed') {
-          log('🔌 Extension(s) rebuilt, reload required');
+          log('🔌 Extension(s) rebuilt, hot reloading...');
 
-          // Show only one confirm at a time and debounce
-          if (window[RELOAD_PENDING]) return;
-          window[RELOAD_PENDING] = true;
+          // Resolve internal extension IDs from manifest names
+          const internalIds = (data.extensions || [])
+            // eslint-disable-next-line no-underscore-dangle
+            .map(name => extensionManager._resolveLoadedId(name))
+            .filter(Boolean);
 
-          setTimeout(() => {
-            // Ask user if they want to reload now
+          if (internalIds.length > 0) {
+            // eslint-disable-next-line no-underscore-dangle
+            extensionManager._refreshExtensions(internalIds).catch(err => {
+              log(`⚠️ Extension HMR failed: ${err.message}`, 'error');
+            });
+          } else {
+            // Fallback: reload if we can't resolve the IDs (e.g. new extension added)
+            // Show only one confirm at a time and debounce
+            if (window[RELOAD_PENDING]) return;
+            window[RELOAD_PENDING] = true;
 
-            if (
-              window.confirm(
-                'Extension(s) updated. Reload now to apply changes?',
-              )
-            ) {
-              window.location.reload();
-            } else {
-              // Cooldown to prevent spamming if canceled
-              setTimeout(() => {
-                window[RELOAD_PENDING] = false;
-              }, 3000);
-            }
-          }, 100);
+            setTimeout(() => {
+              if (
+                window.confirm(
+                  'New extension(s) detected. Reload now to apply changes?',
+                )
+              ) {
+                window.location.reload();
+              } else {
+                setTimeout(() => {
+                  window[RELOAD_PENDING] = false;
+                }, 3000);
+              }
+            }, 100);
+          }
         }
       }),
     );
   }
 
-  module.hot.dispose(data => {
+  hotAPI.dispose(data => {
     log('🔥 HMR dispose', 'info');
     if (store) {
       data.reduxState = store.getState();

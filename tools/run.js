@@ -239,7 +239,7 @@ function executeTask(taskName) {
   // Guarantee SQLite in-memory for testing — set AFTER dotenv-flow so it
   // unconditionally overrides any XNAPIFY_DB_URL loaded from env files.
   if (nodeEnv === 'test') {
-    process.env.XNAPIFY_DB_URL = 'sqlite::memory:';
+    process.env.XNAPIFY_DB_URL = 'sqlite://';
   }
 
   // Build child process environment
@@ -318,10 +318,9 @@ function handleCLIError(error) {
 }
 
 // CLI handling
-const scriptPath = fileURLToPath(import.meta.url);
 const isMain =
-  process.argv[1] === scriptPath ||
-  process.argv[1] === scriptPath.replace(/\.js$/, '');
+  process.argv[1] === __filename ||
+  process.argv[1] === __filename.replace(/\.js$/, '');
 if (isMain) {
   const taskName = process.argv[2];
 

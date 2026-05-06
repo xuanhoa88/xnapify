@@ -1,21 +1,24 @@
 # Groups Module AI Specification
 
-> **Instructions for the AI:** 
+> **Instructions for the AI:**
 > Read this document to understand the group management logic inside `src/apps/groups`.
 > Groups are used to organize users into logical units (e.g., Engineering, Marketing) and assign collective roles.
 
 ---
 
 ## Objective
+
 Provide a system for organizing users into groups, allowing for hierarchical roles and consolidated permission management.
 
 ## 1. Database Modifications (`api/models`)
+
 - **Model:** `Group`
   - **Properties:** `id` (UUID), `name` (Unique), `description`.
 - **Model:** `GroupRole`
   - **Properties:** Junction table linking `Group` to `Role`.
 
 ## 2. API Routes & Controllers (`api/`)
+
 - **Method & Path:** `GET /api/groups`
   - **Security:** Requires `groups:read` permission.
   - **Logic:** Returns list of all groups with user counts and role summaries.
@@ -33,6 +36,7 @@ Provide a system for organizing users into groups, allowing for hierarchical rol
   - `DELETE /api/groups/[id]/roles/[role_id]`: Remove a role from the group.
 
 ## 3. Frontend SSR Rendering (`views/`)
+
 - **Admin View:** `/admin/groups`
   - **Component:** `GroupList.js` or `Groups.js`.
 - **Admin View:** `/admin/groups/[id]`
@@ -40,7 +44,9 @@ Provide a system for organizing users into groups, allowing for hierarchical rol
   - **Logic:** Manage group members, roles, and view effective permissions.
 
 ## 4. Localization (`translations/`)
+
 - **Keys:** `groups.list.no_members`, `groups.actions.add_user`, `groups.validation.duplicate_name`.
 
 ---
-*Note: This spec reflects the CURRENT implementation of the group management system.*
+
+_Note: This spec reflects the CURRENT implementation of the group management system._

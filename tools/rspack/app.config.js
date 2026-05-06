@@ -168,6 +168,12 @@ const clientConfig = createRspackConfig('client', {
     chunkFilename: isDev
       ? 'assets/[name].chunk.js'
       : 'assets-[fullhash:8]/[name].[chunkhash:8].chunk.js',
+    hotUpdateMainFilename: isDev
+      ? 'assets/[runtime].[fullhash].hot-update.json'
+      : undefined,
+    hotUpdateChunkFilename: isDev
+      ? 'assets/[id].[fullhash].hot-update.js'
+      : undefined,
   },
   optimization: {
     splitChunks: {
@@ -222,7 +228,7 @@ const serverConfig = createRspackConfig('server', {
   },
   output: {
     path: config.BUILD_DIR,
-    filename: '[name].cjs',
+    filename: '[name].js',
   },
   module: {
     rules: [createCSSRule({ exportOnlyLocals: true })],
@@ -232,12 +238,12 @@ const serverConfig = createRspackConfig('server', {
     ...createHostProvidedCSSPlugins(),
     ...(isDev
       ? [
-          new rspack.BannerPlugin({
-            banner: 'require("source-map-support").install();',
-            raw: true,
-            entryOnly: false,
-          }),
-        ]
+        new rspack.BannerPlugin({
+          banner: 'require("source-map-support").install();',
+          raw: true,
+          entryOnly: false,
+        }),
+      ]
       : []),
   ],
 });

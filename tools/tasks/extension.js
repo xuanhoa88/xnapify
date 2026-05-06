@@ -22,6 +22,8 @@ import { computeChecksum, generateExtensionId } from '../utils/extension.js';
 import { copyDir, pathExists } from '../utils/fs.js';
 import { logInfo, logError, formatDuration } from '../utils/logger.js';
 
+const currentFilename = fileURLToPath(import.meta.url);
+
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
@@ -46,9 +48,6 @@ const MANIFEST_FIELDS = [
   'screenshots',
   'slots',
   'autoload',
-  // Required at runtime by shared/node-red/{settings,index}.js to discover
-  // extension Node-RED nodes and flows. Do NOT remove without updating those.
-  'nodered',
 ];
 
 // ---------------------------------------------------------------------------
@@ -174,6 +173,9 @@ async function generateManifests(extensions) {
       }),
       ...(manifest.browser && {
         browser: `./${buildManifest['browser.js'] || 'browser.js'}`,
+      }),
+      ...(manifest.nodered && {
+        nodered: manifest.nodered,
       }),
       // Build metadata
       id: generateExtensionId(name),
@@ -473,10 +475,9 @@ async function buildExtensions(options = {}) {
 }
 
 // CLI entry point
-const scriptPath = fileURLToPath(import.meta.url);
 if (
-  process.argv[1] === scriptPath ||
-  process.argv[1] === scriptPath.replace(/\.js$/, '')
+  process.argv[1] === currentFilename ||
+  process.argv[1] === currentFilename.replace(/\.js$/, '')
 ) {
   buildExtensions().catch(err => {
     console.error(err);

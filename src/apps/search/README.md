@@ -18,6 +18,7 @@ This module provides the search engine for the entire application. Unlike other 
 ## Local Module Constraints
 
 Unlike Extensions, Core Modules are fully woven into the backend architecture.
+
 1. **Direct Imports Allowed**: You may import functions from other core modules if necessary, though using `@shared/` dependencies is still preferred.
 2. **Schema Control**: You are allowed to create and export original Sequelize models in `api/models/`. You do not need to use Extension Hooks to alter the DB.
 3. **Native Routing**: You must expose your API endpoints directly via `api/index.js` or `api/routes.js` using standard Express Routers. Do not use Slots or Hooks.

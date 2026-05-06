@@ -5,9 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-
 // Mock node-cron to avoid Jest compatibility issues with the renamed file
 jest.mock('node-cron', () => require('./__mocks__/nodeCron.js'));
 
@@ -348,7 +345,7 @@ describe('ScheduleManager', () => {
       const handler = jest.fn().mockImplementation(() => new Promise(() => {})); // pending forever
       manager.register('frozen', '* * * * *', handler);
 
-      const clearTimeoutSpy = jest.spyOn(global, 'clearTimeout');
+      const clearTimeoutSpy = jest.spyOn(globalThis, 'clearTimeout');
 
       // Trigger execution to mock it "running"
       const registeredCall =

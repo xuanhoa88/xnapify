@@ -70,7 +70,7 @@ function getDefaultOptions() {
     // Logging — disabled in production even if XNAPIFY_DB_LOG is set
     logging:
       process.env.XNAPIFY_DB_LOG === 'true' &&
-      process.env.NODE_ENV !== 'production'
+        process.env.NODE_ENV !== 'production'
         ? console.log
         : false,
     define: {
@@ -234,6 +234,7 @@ export function createConnection(url, options) {
 export async function closeConnection() {
   if (connection && typeof connection.close === 'function') {
     await connection.close();
+    console.log('[DB] Connection closed successfully.');
   }
 }
 

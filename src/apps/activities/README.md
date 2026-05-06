@@ -57,6 +57,7 @@ src/apps/activities/
 ## Modifying This Module
 
 When adding new logging events:
+
 1. Ensure the source module emits an event through the central Hook channel.
 2. Add a listener to `src/apps/activities/api/hooks.js` to catch the new event and dispatch it via `logActivity()`.
 3. Update the `eventOptions` filter inside `src/apps/activities/views/(admin)/(default)/ActivityList.js` to allow admins to filter by the new event type in the UI.

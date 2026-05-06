@@ -5,14 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-
 // Simple benchmark example
 // Run using `npm run test:benchmark` (or `node tools/run benchmark`)
 // Benchmarks are plain Jest tests that log timing information.
 
-const { performance } = require('perf_hooks');
+import { performance } from 'perf_hooks';
 
 // A toy function to measure
 function fibonacci(n) {

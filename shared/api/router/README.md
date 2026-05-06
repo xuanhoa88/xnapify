@@ -184,7 +184,10 @@ Each module's `api/index.js` should export a `routes()` function that returns th
 
 ```javascript
 // @apps/users/api/index.js
-const routesContext = import.meta.webpackContext('./routes', { recursive: true, regExp: /\.[cm]?[jt]s$/i });
+const routesContext = import.meta.webpackContext('./routes', {
+  recursive: true,
+  regExp: /\.[cm]?[jt]s$/i,
+});
 
 export function routes() {
   return routesContext;

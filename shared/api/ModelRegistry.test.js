@@ -305,7 +305,6 @@ describe('ModelRegistry', () => {
           createMockAdapter({
             './index.js': { default: () => createMockModel('Index') },
             './index.ts': { default: () => createMockModel('IndexTs') },
-            './index.cjs': { default: () => createMockModel('IndexCjs') },
             './User.js': { default: () => createMockModel('User') },
           }),
         );

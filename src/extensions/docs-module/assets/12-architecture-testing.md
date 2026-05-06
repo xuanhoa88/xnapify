@@ -12,9 +12,10 @@ The **xnapify** platform is tested natively utilizing **Jest** for Automated Uni
 
 ## Unit and Integration Tests
 
-For granular logic verification against isolated components (Sequelize database logic, Helper utilities, Backend Services), the framework utilizes **Jest**. 
+For granular logic verification against isolated components (Sequelize database logic, Helper utilities, Backend Services), the framework utilizes **Jest**.
 
-### Test Hierarchy 
+### Test Hierarchy
+
 Jest tests frequently live directly alongside their implemented code counterpart ending with `.test.js`:
 
 ```text

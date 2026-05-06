@@ -12,9 +12,9 @@ Unlike Modules which construct the rigid core and fundamental database models of
 
 ## The Two Extension Archetypes
 
-1. **Plugin-kind (No isolated View-routes)** 
+1. **Plugin-kind (No isolated View-routes)**
    These do not export an exclusive `routes()` hook. Their entire frontend execution is dependent on hooking into existing module's UI slots or global Redux states.
-2. **Module-kind (Contains isolated View-routes)** 
+2. **Module-kind (Contains isolated View-routes)**
    Functions identically to Plugins but includes its own `routes()` exporter, thus registering isolated, fully addressable page layouts under a unique route prefix.
 
 ---
@@ -30,38 +30,49 @@ Extensions also export index objects, but they use hooks designed for transient 
 ```javascript
 /* src/extensions/my_extension/api/index.js */
 export default {
-    /* 
+  /* 
       Declarative Auto-Hooks
       Webpack statically builds these folders into module caches. 
       The system executes schemas/migrations on Extension installation automatically.
     */
-    models: () => import.meta.webpackContext('./models', { recursive: false, regExp: /\.js$/ }),
-    migrations: () => import.meta.webpackContext('./database/migrations', { recursive: false, regExp: /\.js$/ }),
-    
-    // Boot runs on Server Boot or Server toggling the extension ON
-    boot({ container, registry }) {
-        const hook = container.resolve('hook');
-        
-        // Listen to an application event
-        hook('users').on('deleted', handleUserStatsCorrection);
-        
-        // Establish safe IPC bridge for the frontend extension UI
-        registry.registerHook(
-          `ipc:${__EXTENSION_ID__}:compute_score`, 
-          registry.createPipeline(myComputationService), 
-          __EXTENSION_ID__
-        );
-    },
-    
-    // Shutdown runs when the Server turns the extension OFF
-    shutdown({ container, registry }) {
-        const hook = container.resolve('hook');
-        
-        // CRITICAL DE-REGISTRATION
-        hook('users').off('deleted', handleUserStatsCorrection);
-        registry.unregisterHook(`ipc:${__EXTENSION_ID__}:compute_score`, __EXTENSION_ID__);
-    }
-}
+  models: () =>
+    import.meta.webpackContext('./models', {
+      recursive: false,
+      regExp: /\.js$/,
+    }),
+  migrations: () =>
+    import.meta.webpackContext('./database/migrations', {
+      recursive: false,
+      regExp: /\.js$/,
+    }),
+
+  // Boot runs on Server Boot or Server toggling the extension ON
+  boot({ container, registry }) {
+    const hook = container.resolve('hook');
+
+    // Listen to an application event
+    hook('users').on('deleted', handleUserStatsCorrection);
+
+    // Establish safe IPC bridge for the frontend extension UI
+    registry.registerHook(
+      `ipc:${__EXTENSION_ID__}:compute_score`,
+      registry.createPipeline(myComputationService),
+      __EXTENSION_ID__,
+    );
+  },
+
+  // Shutdown runs when the Server turns the extension OFF
+  shutdown({ container, registry }) {
+    const hook = container.resolve('hook');
+
+    // CRITICAL DE-REGISTRATION
+    hook('users').off('deleted', handleUserStatsCorrection);
+    registry.unregisterHook(
+      `ipc:${__EXTENSION_ID__}:compute_score`,
+      __EXTENSION_ID__,
+    );
+  },
+};
 ```
 
 > [!NOTE]
@@ -97,43 +108,45 @@ In the frontend React environment, an extension usually registers Visual Compone
 import SettingsTab from './components/SettingsTab';
 
 export default {
-    boot({ registry }) {
-         // This component will render precisely wherever the module 
-         // declared `<ExtensionSlot name="user.profile.header" />`
-         registry.registerSlot('user.profile.header', SpecializedRibbonComponent)
-         
-         // Injects meta-data for the admin dashboard settings tab
-         registry.registerHook('settings.tabs.config', () => ({
-             my_extension: {
-                 label: "My Settings",
-                 fieldOrder: ['API_KEY']
-             }
-         }))
-    },
-    
-    shutdown({ registry }) {
-         registry.unregisterSlot('user.profile.header', SpecializedRibbonComponent)
-         registry.unregisterHook('settings.tabs.config')
-    }
-}
+  boot({ registry }) {
+    // This component will render precisely wherever the module
+    // declared `<ExtensionSlot name="user.profile.header" />`
+    registry.registerSlot('user.profile.header', SpecializedRibbonComponent);
+
+    // Injects meta-data for the admin dashboard settings tab
+    registry.registerHook('settings.tabs.config', () => ({
+      my_extension: {
+        label: 'My Settings',
+        fieldOrder: ['API_KEY'],
+      },
+    }));
+  },
+
+  shutdown({ registry }) {
+    registry.unregisterSlot('user.profile.header', SpecializedRibbonComponent);
+    registry.unregisterHook('settings.tabs.config');
+  },
+};
 ```
 
 ### What is an Extension Slot?
 
 In the core `xnapify` Modules (e.g. `src/apps/users/views/components/Layout.js`), the module author can place empty extension anchors:
+
 ```javascript
-import { ExtensionSlot } from '@shared/extension/ExtensionSlot'
+import { ExtensionSlot } from '@shared/extension/ExtensionSlot';
 
 export default function UserLayout({ user }) {
-   return (
-       <div>
-           <h1>{user.name}</h1>
-           {/* Extensions dynamically populate here */}
-           <ExtensionSlot name="user.profile.header" props={{ user_id: user.id }} /> 
-       </div>
-   )
+  return (
+    <div>
+      <h1>{user.name}</h1>
+      {/* Extensions dynamically populate here */}
+      <ExtensionSlot name='user.profile.header' props={{ user_id: user.id }} />
+    </div>
+  );
 }
 ```
+
 This paradigm ensures the `users` domain isn't crowded with static `import` commands from optional analytical or aesthetic extensions.
 
 ---

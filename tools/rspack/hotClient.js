@@ -41,12 +41,13 @@ if (!window[HMR_API_KEY]) {
       return;
     }
 
-    if (!module.hot || typeof module.hot.status !== 'function') return;
+    const hotAPI = (import.meta && import.meta.webpackHot) || (typeof module !== 'undefined' && module.hot);
+    if (!hotAPI || typeof hotAPI.status !== 'function') return;
 
-    const status = module.hot.status();
+    const status = hotAPI.status();
     if (status !== 'idle') return;
 
-    module.hot
+    hotAPI
       .check(/* autoApply */ true)
       .then(updatedModules => {
         if (!updatedModules || updatedModules.length === 0) {
@@ -57,7 +58,7 @@ if (!window[HMR_API_KEY]) {
         console.log(`[HMR] Updated ${updatedModules.length} module(s)`);
       })
       .catch(err => {
-        const hmrStatus = module.hot.status();
+        const hmrStatus = hotAPI.status();
         if (hmrStatus === 'abort' || hmrStatus === 'fail') {
           console.warn('[HMR] Cannot apply update, full reload required');
           window.location.reload();

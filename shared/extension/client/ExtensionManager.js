@@ -184,8 +184,13 @@ class ClientExtensionManager extends BaseExtensionManager {
       return;
     }
 
-    // Verify shared scope is available
+    // Ensure the shared scope is initialized (required for Rspack/Webpack MF in eager setups)
+    if (typeof __webpack_init_sharing__ !== 'undefined') {
+      // eslint-disable-next-line no-undef
+      await __webpack_init_sharing__('default');
+    }
 
+    // Verify shared scope is available
     if (
       typeof __webpack_share_scopes__ === 'undefined' ||
       // eslint-disable-next-line no-undef

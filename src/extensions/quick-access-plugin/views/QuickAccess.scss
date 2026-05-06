@@ -50,7 +50,9 @@
   border-radius: var(--radius-3);
   background: transparent;
   cursor: pointer;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
   text-align: left;
   width: 100%;
   font-family: inherit;

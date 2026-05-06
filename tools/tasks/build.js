@@ -5,7 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import fsP from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -27,6 +26,7 @@ import {
   copyDir,
   copyFile,
   pathExists,
+  readDir,
   readFile,
   writeFile,
 } from '../utils/fs.js';
@@ -44,6 +44,8 @@ import { withBuildRetry } from '../utils/retry.js';
 
 import clean from './clean.js';
 import createBundledExtensions from './extension.js';
+
+const currentFilename = fileURLToPath(import.meta.url);
 
 // Build configuration
 const BUILD_TIMESTAMP = Date.now();
@@ -121,6 +123,7 @@ async function copyFiles() {
       JSON.stringify(
         {
           private: true,
+          type: 'commonjs',
           name: pkg.name || `xnapify-${BUILD_TIMESTAMP}`,
           version: pkg.version || `0.0.1-${BUILD_TIMESTAMP}`,
           engines: pkg.engines,
@@ -154,7 +157,7 @@ async function buildNpmScripts() {
 
   // Auto-discover all .js files in tools/npm/
   const npmDir = path.join(config.CWD, 'tools/npm');
-  const files = await fsP.readdir(npmDir);
+  const files = await readDir(npmDir);
   const entry = Object.fromEntries(
     files
       .filter(f => f.endsWith('.js'))
@@ -568,10 +571,9 @@ async function main() {
 }
 
 // Execute if called directly (as child process)
-const scriptPath = fileURLToPath(import.meta.url);
 if (
-  process.argv[1] === scriptPath ||
-  process.argv[1] === scriptPath.replace(/\.js$/, '')
+  process.argv[1] === currentFilename ||
+  process.argv[1] === currentFilename.replace(/\.js$/, '')
 ) {
   main().catch(error => {
     console.error(error);
