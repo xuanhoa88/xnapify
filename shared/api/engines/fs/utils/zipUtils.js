@@ -16,8 +16,8 @@ import path from 'path';
 import archiver from 'archiver';
 import unzipper from 'unzipper';
 
-import { ERROR_CODES, DEFAULT_CONFIG } from './constants';
-import { FilesystemError } from './errors';
+import { ERROR_CODES, DEFAULT_CONFIG } from './constants.js';
+import { FilesystemError } from './errors.js';
 
 /**
  * Create ZIP archive from file information (streaming)

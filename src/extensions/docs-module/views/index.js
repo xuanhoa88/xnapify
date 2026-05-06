@@ -5,16 +5,14 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-const viewsContext = require.context(
-  '.',
-  true,
-  /(?:\/_route|\/_layout)\.[cm]?[jt]sx?$/i,
-);
-const translationsContext = require.context(
-  '../translations',
-  false,
-  /\.json$/i,
-);
+const viewsContext = import.meta.webpackContext('.', {
+  recursive: true,
+  regExp: /(?:\/_route|\/_layout)\.[cm]?[jt]sx?$/i
+});
+const translationsContext = import.meta.webpackContext('../translations', {
+  recursive: false,
+  regExp: /\.json$/i
+});
 
 // =============================================================================
 // LIFECYCLE HOOKS
@@ -26,21 +24,29 @@ export default {
   translations() {
     return translationsContext;
   },
-
   /**
    * Lifecycle: providers — bind DI services if needed.
    */
-  providers({ container }) {}, // eslint-disable-line no-unused-vars
+  providers({
+    container
+  }) {},
+  // eslint-disable-line no-unused-vars
 
   /**
    * Lifecycle: boot — register slots, hooks, IPC handlers.
    */
-  boot({ registry }) {}, // eslint-disable-line no-unused-vars
+  boot({
+    registry
+  }) {},
+  // eslint-disable-line no-unused-vars
 
   /**
    * Lifecycle: shutdown — MUST exactly inverse boot().
    */
-  shutdown({ registry }) {}, // eslint-disable-line no-unused-vars
+  shutdown({
+    registry
+  }) {},
+  // eslint-disable-line no-unused-vars
 
   /**
    * Module-type hook: provides view routes for dynamic injection.
@@ -48,5 +54,5 @@ export default {
    */
   routes() {
     return ['docs', viewsContext];
-  },
+  }
 };

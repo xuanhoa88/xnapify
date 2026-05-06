@@ -5,9 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-const path = require('path');
+import path from 'path';
 
-const config = require('../config');
+import config from '../config.js';
 
 // Environment-based configuration
 const isCI = config.env('CI') === 'true';
@@ -22,7 +22,7 @@ const maxWorkers = config.env('JEST_MAX_WORKERS', isCI ? '2' : '50%');
 const appDir = path.relative(config.CWD, config.APP_DIR);
 const sharedDir = path.relative(config.CWD, path.resolve(config.CWD, 'shared'));
 
-module.exports = {
+export default {
   /**
    * Indicates whether the coverage information should be collected while executing the test.
    * Enable via COVERAGE=true environment variable or --coverage flag.
@@ -139,11 +139,11 @@ module.exports = {
 
     // Resolve @shared alias to the shared directory
     // This ensures jest.mock('@shared/...') resolves the same way
-    // as webpack's resolve.alias does for import statements
+    // as rspack's resolve.alias does for import statements
     '^@shared/(.*)$': '<rootDir>/shared/$1',
 
     // Style files
-    '\\.(css|less|styl|scss|sass|sss)$': 'identity-obj-proxy',
+    '\\.(css|scss|sass)$': 'identity-obj-proxy',
 
     // Image and font files - return the filename as a string
     '\\.(jpg|jpeg|png|gif|svg|webp|ico)$': 'jest-transform-stub',
@@ -193,24 +193,8 @@ module.exports = {
    * Transformers are modules that provide a synchronous function for transforming source files.
    */
   transform: {
-    // JavaScript and JSX files — use SWC for fast transpilation
-    '^.+\\.(t|j)sx?$': [
-      '@swc/jest',
-      {
-        jsc: {
-          parser: {
-            syntax: 'ecmascript',
-            jsx: true,
-            dynamicImport: true,
-          },
-          transform: {
-            react: { runtime: 'automatic' },
-          },
-          loose: true,
-        },
-        module: { type: 'commonjs' },
-      },
-    ],
+    // JavaScript and JSX files — use custom SWC wrapper to polyfill import.meta.webpackContext
+    '^.+\\.(t|j)sx?$': '<rootDir>/tools/jest/swcTransform.js',
   },
 
   /**

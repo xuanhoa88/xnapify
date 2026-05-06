@@ -5,10 +5,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { register } from '../../shutdown';
+import { register } from '../../shutdown.js';
 
-import { HookChannel } from './channel';
-import { InvalidChannelNameError } from './errors';
+import { HookChannel } from './channel.js';
+import { InvalidChannelNameError } from './errors.js';
 
 // Private symbols for internal state
 const HOOK_CHANNELS = Symbol('__xnapify.hook.channels__');

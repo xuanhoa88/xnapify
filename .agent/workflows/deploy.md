@@ -48,9 +48,9 @@ Key differences from production:
 - `CHOKIDAR_USEPOLLING=true` enables filesystem polling inside the container
 - Runs `npm run dev` instead of `npm run build` + `npm start`
 
-## Important: Webpack DefinePlugin
+## Important: Rspack DefinePlugin
 
-> **All `XNAPIFY_*` env vars are baked into the server bundle at build time** via Webpack's
+> **All `XNAPIFY_*` env vars are baked into the server bundle at build time** via Rspack's
 > `DefinePlugin`. Runtime `environment:` overrides in `docker-compose.yml` have **no effect**
 > on values already replaced during `npm run build`.
 

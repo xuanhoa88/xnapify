@@ -5,19 +5,19 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import { createRequire } from 'module';
+import path from 'path';
 
-const MiniCssExtractPlugin = require('mini-css-extract-plugin');
-const webpack = require('webpack');
-const { merge } = require('webpack-merge');
-const nodeExternals = require('webpack-node-externals');
+import { rspack } from '@rspack/core';
+import merge from 'rspack-merge';
 
-const { logWarn } = require('../utils/logger');
+import { rspackConfigs } from '../registry.factory.js';
+import { logWarn } from '../utils/logger.js';
 
-const {
+import {
   createCacheGroups,
-  createWebpackConfig,
+  createRspackConfig,
   createWorkerConfig,
   createCSSRule,
   createDefinePlugin,
@@ -26,18 +26,16 @@ const {
   createProgressPlugin,
   createSharedDependencies,
   getHmrWatchIgnored,
-  reStyle,
-  reImage,
-  reFont,
-  reSvg,
   pkg,
   isDev,
   verbose,
-} = require('./base.config');
-const StatsManifestPlugin = require('./StatsManifestPlugin');
+} from './base.config.js';
+import StatsManifestPlugin from './StatsManifestPlugin.js';
+
+const require = createRequire(import.meta.url);
 
 /**
- * Webpack plugin to strip :root CSS rules from final CSS assets
+ * Rspack plugin to strip :root CSS rules from final CSS assets
  */
 class StripRootCSSPlugin {
   apply(compiler) {
@@ -45,7 +43,7 @@ class StripRootCSSPlugin {
       compilation.hooks.processAssets.tap(
         {
           name: 'StripRootCSSPlugin',
-          stage: webpack.Compilation.PROCESS_ASSETS_STAGE_OPTIMIZE,
+          stage: rspack.Compilation.PROCESS_ASSETS_STAGE_OPTIMIZE,
         },
         assets => {
           Object.entries(assets).forEach(([name, asset]) => {
@@ -57,7 +55,7 @@ class StripRootCSSPlugin {
             if (source.length !== stripped.length) {
               compilation.updateAsset(
                 name,
-                new webpack.sources.RawSource(stripped),
+                new rspack.sources.RawSource(stripped),
               );
               if (verbose) {
                 console.log(`[StripRootCSSPlugin] Removed :root from ${name}`);
@@ -71,7 +69,7 @@ class StripRootCSSPlugin {
 }
 
 /**
- * Webpack plugin that writes a stats.json after each compilation.
+ * Rspack plugin that writes a stats.json after each compilation.
  * Maps logical filenames (e.g. 'api.js') to their content-hashed physical
  * filenames (e.g. 'api.a1b2c3d4.js'). This enables runtime resolution of
  * extension bundles without hardcoded filenames, solving browser and Node.js
@@ -159,7 +157,7 @@ function validateExtension(extension) {
     return null;
   }
 
-  // Extract manifest.nodered.nodes path for Webpack entry point
+  // Extract manifest.nodered.nodes path for rspack entry point
   let noderedNodes = null;
   const { nodered } = extension.manifest;
   if (nodered && typeof nodered === 'object' && nodered.nodes) {
@@ -218,7 +216,7 @@ function createClientConfig(extensionData, extensionDefines, buildPath) {
   const outputPath = path.join(buildPath, dirName);
   const localIdentName = getExtensionLocalIdentName(extensionData.extensionId);
 
-  const clientConfig = createWebpackConfig('client', {
+  const clientConfig = createRspackConfig('client', {
     entry: clientPath,
     experiments: { outputModule: false },
     output: {
@@ -245,13 +243,13 @@ function createClientConfig(extensionData, extensionDefines, buildPath) {
       ],
     },
     plugins: [
-      new webpack.ProvidePlugin({
+      new rspack.ProvidePlugin({
         process: require.resolve('process/browser'),
       }),
       ...createHostProvidedCSSPlugins(),
       extensionDefines,
       createEnvDefine(),
-      new webpack.container.ModuleFederationPlugin({
+      new rspack.container.ModuleFederationPlugin({
         name: libraryName,
         filename: 'remote.[contenthash:8].js',
         exposes: {
@@ -274,7 +272,7 @@ function createClientConfig(extensionData, extensionDefines, buildPath) {
   );
 
   // Server build (CommonJS + CSS extraction)
-  const serverConfig = createWebpackConfig('server', {
+  const serverConfig = createRspackConfig('server', {
     entry: clientPath,
     experiments: { outputModule: false },
     output: {
@@ -284,7 +282,7 @@ function createClientConfig(extensionData, extensionDefines, buildPath) {
     module: {
       rules: [
         createCSSRule({
-          extractLoader: MiniCssExtractPlugin.loader,
+          extractLoader: rspack.CssExtractRspackPlugin.loader,
           localIdentName,
         }),
       ],
@@ -293,7 +291,7 @@ function createClientConfig(extensionData, extensionDefines, buildPath) {
       ...createHostProvidedCSSPlugins(),
       extensionDefines,
       createEnvDefine(),
-      new MiniCssExtractPlugin({
+      new rspack.CssExtractRspackPlugin({
         filename: 'extension.[contenthash:8].css',
         ignoreOrder: isDev,
       }),
@@ -325,15 +323,10 @@ function createApiConfig(extensionData, extensionDefines, buildPath) {
 
   // Main API server config
   if (apiPath) {
-    const apiConfig = createWebpackConfig('server', {
+    const apiConfig = createRspackConfig('server', {
       entry: apiPath,
       experiments: { outputModule: false },
-      externals: [
-        nodeExternals({
-          additionalModuleDirs: [extNodeModules],
-          allowlist: [reStyle, reImage, reFont, reSvg, /^\.\.\?\//],
-        }),
-      ],
+      additionalModuleDirs: [extNodeModules],
       output: {
         path: outputDir,
         filename: 'api.[contenthash:8].js',
@@ -373,7 +366,7 @@ function createApiConfig(extensionData, extensionDefines, buildPath) {
         if (match) {
           nodeEntries[`nodes/${match[1]}`] = {
             import: path.join(noderedPath, file.name),
-            library: { type: 'commonjs2' },
+            library: { type: 'commonjs' },
           };
         }
       }
@@ -387,19 +380,14 @@ function createApiConfig(extensionData, extensionDefines, buildPath) {
       const relNodered = path.relative(extensionPath, noderedPath);
       const noderedOutputDir = path.dirname(relNodered);
 
-      const nodesCfg = createWebpackConfig('server', {
+      const nodesCfg = createRspackConfig('server', {
         target: 'node',
         entry: nodeEntries,
+        additionalModuleDirs: [extNodeModules],
         output: {
           path: path.join(outputDir, noderedOutputDir),
           filename: '[name].js',
         },
-        externals: [
-          nodeExternals({
-            additionalModuleDirs: [extNodeModules],
-            allowlist: [reStyle, reImage, reFont, reSvg, /^\.\.\?\//],
-          }),
-        ],
         plugins: [
           extensionDefines,
           createEnvDefine(),
@@ -420,10 +408,10 @@ function createApiConfig(extensionData, extensionDefines, buildPath) {
 // =============================================================================
 
 /**
- * Create webpack configuration for extensions
+ * Create rspack configuration for extensions
  * @param {Array} extensions - Extension objects to build
  * @param {string} buildPath - Output directory
- * @returns {Array} Array of webpack configurations
+ * @returns {Array} Array of rspack configurations
  */
 function createExtensionConfig(extensions = [], buildPath) {
   if (!Array.isArray(extensions)) {
@@ -460,15 +448,14 @@ function createExtensionConfig(extensions = [], buildPath) {
       ...createApiConfig(extensionData, extensionDefines, buildPath),
     );
 
-    // Escape hatch: Load module-specific webpack configuration from registry
-    const { webpackConfigs } = require('../registry.factory');
-    const customWebpack = (
-      Array.isArray(webpackConfigs) ? webpackConfigs : []
+    // use imported rspackConfigs
+    const customRspack = (
+      Array.isArray(rspackConfigs) ? rspackConfigs : []
     ).find(cfg => cfg.moduleDir === extensionData.extensionPath);
 
-    if (customWebpack) {
+    if (customRspack) {
       try {
-        const extensionCustomizer = require(customWebpack.path);
+        const extensionCustomizer = require(customRspack.path);
         if (typeof extensionCustomizer === 'function') {
           extConfigs = extConfigs.map(
             config => extensionCustomizer(config, merge) || config,
@@ -481,7 +468,7 @@ function createExtensionConfig(extensions = [], buildPath) {
         }
       } catch (err) {
         logWarn(
-          `Skipping invalid webpack config in ${extensionData.extensionId}:`,
+          `Skipping invalid rspack config in ${extensionData.extensionId}:`,
           err,
         );
       }
@@ -493,4 +480,4 @@ function createExtensionConfig(extensions = [], buildPath) {
   return [...new Set(configs)];
 }
 
-module.exports = { createExtensionConfig, getHmrWatchIgnored };
+export { createExtensionConfig, getHmrWatchIgnored };

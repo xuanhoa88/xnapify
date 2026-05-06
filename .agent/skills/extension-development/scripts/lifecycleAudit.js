@@ -19,9 +19,15 @@
 
 const fs = require('fs');
 const path = require('path');
-const { SKIP_DIRS, JS_EXTENSIONS, walkFiles } = require('../../scripts/constants');
 
-const EXTENSIONS_DIR = process.argv[2] || path.join(process.cwd(), 'src/extensions');
+const {
+  SKIP_DIRS,
+  JS_EXTENSIONS,
+  walkFiles,
+} = require('../../scripts/constants');
+
+const EXTENSIONS_DIR =
+  process.argv[2] || path.join(process.cwd(), 'src/extensions');
 
 // Patterns to count
 const REGISTER_PATTERNS = [
@@ -38,14 +44,9 @@ const UNREGISTER_PATTERNS = [
   /unregisterHandler\(/g,
 ];
 
-const WORKER_PATTERNS = [
-  /createWorkerPool\(/g,
-];
+const WORKER_PATTERNS = [/createWorkerPool\(/g];
 
-const CLEANUP_PATTERNS = [
-  /\.cleanup\(\)/g,
-  /\.destroy\(\)/g,
-];
+const CLEANUP_PATTERNS = [/\.cleanup\(\)/g, /\.destroy\(\)/g];
 
 function countMatches(content, patterns) {
   let total = 0;
@@ -64,8 +65,14 @@ function extractFunctionBody(content, funcName) {
   // Simple extraction — finds function/method body
   const patterns = [
     new RegExp(`(?:async\\s+)?${funcName}\\s*\\([^)]*\\)\\s*\\{`, 'g'),
-    new RegExp(`${funcName}\\s*:\\s*(?:async\\s+)?function\\s*\\([^)]*\\)\\s*\\{`, 'g'),
-    new RegExp(`${funcName}\\s*:\\s*(?:async\\s+)?\\([^)]*\\)\\s*=>\\s*\\{`, 'g'),
+    new RegExp(
+      `${funcName}\\s*:\\s*(?:async\\s+)?function\\s*\\([^)]*\\)\\s*\\{`,
+      'g',
+    ),
+    new RegExp(
+      `${funcName}\\s*:\\s*(?:async\\s+)?\\([^)]*\\)\\s*=>\\s*\\{`,
+      'g',
+    ),
   ];
 
   for (const pattern of patterns) {
@@ -93,7 +100,8 @@ console.log('══════════════════════�
 let totalIssues = 0;
 
 try {
-  const extensions = fs.readdirSync(EXTENSIONS_DIR, { withFileTypes: true })
+  const extensions = fs
+    .readdirSync(EXTENSIONS_DIR, { withFileTypes: true })
     .filter(d => d.isDirectory());
 
   for (const ext of extensions) {
@@ -106,28 +114,48 @@ try {
     const shutdownBody = extractFunctionBody(allContent, 'shutdown');
 
     const bootRegistrations = countMatches(bootBody, REGISTER_PATTERNS);
-    const shutdownUnregistrations = countMatches(shutdownBody, UNREGISTER_PATTERNS);
+    const shutdownUnregistrations = countMatches(
+      shutdownBody,
+      UNREGISTER_PATTERNS,
+    );
     const workerCreations = countMatches(allContent, WORKER_PATTERNS);
     const workerCleanups = countMatches(shutdownBody, CLEANUP_PATTERNS);
 
     const issues = [];
 
-    if (bootRegistrations > 0 && shutdownUnregistrations === 0 && shutdownBody.length === 0) {
-      issues.push(`🔴 boot() has ${bootRegistrations} registration(s) but no shutdown() found`);
+    if (
+      bootRegistrations > 0 &&
+      shutdownUnregistrations === 0 &&
+      shutdownBody.length === 0
+    ) {
+      issues.push(
+        `🔴 boot() has ${bootRegistrations} registration(s) but no shutdown() found`,
+      );
     } else if (bootRegistrations > shutdownUnregistrations) {
-      issues.push(`🟡 boot() has ${bootRegistrations} registration(s) but shutdown() only has ${shutdownUnregistrations} unregistration(s)`);
+      issues.push(
+        `🟡 boot() has ${bootRegistrations} registration(s) but shutdown() only has ${shutdownUnregistrations} unregistration(s)`,
+      );
     }
 
     if (workerCreations > 0 && workerCleanups === 0) {
-      issues.push(`🔴 createWorkerPool() called but no cleanup()/destroy() in shutdown()`);
+      issues.push(
+        `🔴 createWorkerPool() called but no cleanup()/destroy() in shutdown()`,
+      );
     }
 
     // Report
     const status = issues.length === 0 ? '✅' : '❌';
     console.log(`${status} ${ext.name}`);
-    if (bootBody) console.log(`   boot():     ${bootRegistrations} registration(s)`);
-    if (shutdownBody) console.log(`   shutdown(): ${shutdownUnregistrations} unregistration(s)`);
-    if (workerCreations > 0) console.log(`   workers:    ${workerCreations} pool(s), ${workerCleanups} cleanup(s)`);
+    if (bootBody)
+      console.log(`   boot():     ${bootRegistrations} registration(s)`);
+    if (shutdownBody)
+      console.log(
+        `   shutdown(): ${shutdownUnregistrations} unregistration(s)`,
+      );
+    if (workerCreations > 0)
+      console.log(
+        `   workers:    ${workerCreations} pool(s), ${workerCleanups} cleanup(s)`,
+      );
 
     for (const issue of issues) {
       console.log(`   ${issue}`);

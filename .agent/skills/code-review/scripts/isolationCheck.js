@@ -19,6 +19,7 @@
 
 const fs = require('fs');
 const path = require('path');
+
 const { JS_EXTENSIONS, walkFiles } = require('../../scripts/constants');
 
 const APPS_DIR = process.argv[2] || path.join(process.cwd(), 'src/apps');
@@ -34,7 +35,8 @@ console.log('══════════════════════�
 let totalViolations = 0;
 
 try {
-  const modules = fs.readdirSync(APPS_DIR, { withFileTypes: true })
+  const modules = fs
+    .readdirSync(APPS_DIR, { withFileTypes: true })
     .filter(d => d.isDirectory());
 
   for (const mod of modules) {
@@ -50,7 +52,9 @@ try {
         const line = lines[i];
 
         // Check for imports from other @apps/ modules
-        const importMatch = line.match(/(?:from|require\()\s*['"]@apps\/([^/'"]+)/);
+        const importMatch = line.match(
+          /(?:from|require\()\s*['"]@apps\/([^/'"]+)/,
+        );
         if (importMatch) {
           const importedModule = importMatch[1];
           if (importedModule !== mod.name) {
@@ -64,7 +68,9 @@ try {
         }
 
         // Check for relative imports that escape the module directory
-        const relMatch = line.match(/(?:from|require\()\s*['"](\.\.[^'"]*apps\/([^/'"]+))/);
+        const relMatch = line.match(
+          /(?:from|require\()\s*['"](\.\.[^'"]*apps\/([^/'"]+))/,
+        );
         if (relMatch) {
           const importedModule = relMatch[2];
           if (importedModule !== mod.name) {
@@ -80,7 +86,9 @@ try {
     }
 
     if (violations.length > 0) {
-      console.log(`❌ ${mod.name} — ${violations.length} cross-domain import(s)`);
+      console.log(
+        `❌ ${mod.name} — ${violations.length} cross-domain import(s)`,
+      );
       for (const v of violations) {
         console.log(`   ${v.file}:${v.line}`);
         console.log(`   → imports from @apps/${v.importedModule}`);

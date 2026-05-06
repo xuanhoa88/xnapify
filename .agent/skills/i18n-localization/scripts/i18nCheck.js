@@ -15,7 +15,12 @@
 
 const fs = require('fs');
 const path = require('path');
-const { SKIP_DIRS, VIEW_EXTENSIONS, walkFiles } = require('../../scripts/constants');
+
+const {
+  SKIP_DIRS,
+  VIEW_EXTENSIONS,
+  walkFiles,
+} = require('../../scripts/constants');
 
 // Patterns that indicate hardcoded strings (should be translated)
 const HARDCODED_PATTERNS = [

@@ -12,9 +12,9 @@
 import crypto from 'crypto';
 import path from 'path';
 
-import { SIZE_LIMITS, DEFAULT_CONFIG } from './constants';
-import { FILE_TYPES } from './fileTypes';
-import { UPLOAD_PRESETS } from './uploadPresets';
+import { SIZE_LIMITS, DEFAULT_CONFIG } from './constants.js';
+import { FILE_TYPES } from './fileTypes.js';
+import { UPLOAD_PRESETS } from './uploadPresets.js';
 
 /**
  * Sanitize filename to remove dangerous characters

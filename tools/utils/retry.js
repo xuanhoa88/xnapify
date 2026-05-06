@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-const { isVerbose, logInfo, logWarn } = require('./logger');
+import { isVerbose, logInfo, logWarn } from './logger.js';
 
 /**
  * Sleep utility for retry delays
@@ -95,8 +95,4 @@ function withBuildRetry(operation, context = {}) {
   });
 }
 
-module.exports = {
-  withRetry,
-  withRetryFileSystem,
-  withBuildRetry,
-};
+export { withRetry, withRetryFileSystem, withBuildRetry };

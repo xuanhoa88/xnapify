@@ -15,7 +15,7 @@ import {
   useFormField,
   useMergeRefs,
   composeEventHandlers,
-} from '../FormContext';
+} from '../FormContext.js';
 
 /**
  * FormTextarea - Simple textarea element to be used inside Form.Field backed by Radix Themes

@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-module.exports = {
+export default {
   // Line wrapping
   printWidth: 80,
   tabWidth: 2,
@@ -26,4 +26,3 @@ module.exports = {
   // Line endings
   endOfLine: 'lf',
 };
-

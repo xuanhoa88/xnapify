@@ -14,8 +14,8 @@ import {
   ROUTE_MOUNT_KEY,
   ROUTE_UNMOUNT_KEY,
   ROUTE_TRANSLATIONS_KEY,
-} from './constants';
-import { log } from './utils';
+} from './constants.js';
+import { log } from './utils.js';
 
 // =============================================================================
 // HELPERS

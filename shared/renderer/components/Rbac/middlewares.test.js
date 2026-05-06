@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { checkPermission, hasRole, hasGroup, isOwner } from './middlewares';
+import { checkPermission, hasRole, hasGroup, isOwner } from './middlewares.js';
 
 describe('RBAC Utilities', () => {
   // Shared admin user fixture

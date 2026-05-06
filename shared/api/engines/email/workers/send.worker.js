@@ -9,11 +9,11 @@
  * Send Email Worker - Handles email sending operations
  */
 
-import { EMAIL_VALIDATED } from '../utils/constants';
-import { EmailError } from '../utils/errors';
-import { processEmails } from '../utils/processing';
-import { createProviderByName } from '../utils/providers';
-import { validateEmails } from '../utils/validation';
+import { EMAIL_VALIDATED } from '../utils/constants.js';
+import { EmailError } from '../utils/errors.js';
+import { processEmails } from '../utils/processing.js';
+import { createProviderByName } from '../utils/providers.js';
+import { validateEmails } from '../utils/validation.js';
 
 /**
  * Provider cache for same-process workers

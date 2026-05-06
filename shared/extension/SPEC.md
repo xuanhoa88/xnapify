@@ -25,39 +25,38 @@ Lifecycle phase constants are defined in `shared/utils/lifecycle.js` — the sin
 
 ## Extension Identity
 
-Each extension has a single compile-time identifier injected by Webpack:
+Each extension has a single compile-time identifier injected by Rspack:
 
-| Constant | Source | Example |
-|---|---|---|
+| Constant           | Source                                                      | Example              |
+| ------------------ | ----------------------------------------------------------- | -------------------- |
 | `__EXTENSION_ID__` | `sqids(charCodes(manifest.name))` — generated at build time | `4ayO6ElAvIRLrgn...` |
 
 This is URL-safe (alphanumeric only) and used consistently for IPC hook IDs, URL paths, route params, i18n namespaces, migration prefixes, and logging.
 
 The build pipeline generates `id` via `generateExtensionId(name)` (sqids) and writes it into the output `package.json`. The server-side `readManifest()` reads `manifest.id` directly.
 
-
 ## Lifecycle Phases
 
 ### API Extensions (Server)
 
-| # | Phase | Description |
-|---|-------|-------------|
-| 1 | `translations` | Register i18n namespaces |
-| 2 | `providers` | Bind DI services via `container.bind()` |
-| 3 | `migrations` | Create/alter tables (declarative context return) |
-| 4 | `models` | Register ORM definitions |
-| 5 | `seeds` | Populate data (declarative context return) |
-| 6 | `boot` | Hook registration, schedulers |
-| 7 | `routes` | Mount API routes |
+| #   | Phase          | Description                                      |
+| --- | -------------- | ------------------------------------------------ |
+| 1   | `translations` | Register i18n namespaces                         |
+| 2   | `providers`    | Bind DI services via `container.bind()`          |
+| 3   | `migrations`   | Create/alter tables (declarative context return) |
+| 4   | `models`       | Register ORM definitions                         |
+| 5   | `seeds`        | Populate data (declarative context return)       |
+| 6   | `boot`         | Hook registration, schedulers                    |
+| 7   | `routes`       | Mount API routes                                 |
 
 ### View Extensions (Server SSR + Client)
 
-| # | Phase | Description |
-|---|-------|-------------|
-| 1 | `translations` | Register i18n namespaces |
-| 2 | `providers` | Bind DI services |
-| 3 | `boot` | Module-level initialization |
-| 4 | `routes` | Inject view routes |
+| #   | Phase          | Description                 |
+| --- | -------------- | --------------------------- |
+| 1   | `translations` | Register i18n namespaces    |
+| 2   | `providers`    | Bind DI services            |
+| 3   | `boot`         | Module-level initialization |
+| 4   | `routes`       | Inject view routes          |
 
 ## `Registry` (`utils/Registry.js`)
 
@@ -69,14 +68,16 @@ Crucially, **every registration tracks its ownership**. When a extension calls `
 
 A custom implementation of the Observer pattern explicitly designed for extensions.
 It supports two primary execution strategies:
+
 1. `execute(hookId, ...args)`: Sequential execution via `for...of`. Waits for each asynchronous hook to resolve before proceeding to the next — critical for state-mutation hooks.
 2. `executeParallel(hookId, ...args)`: Concurrent execution utilizing `Promise.all()`. High performance, used for broad notifications.
 
 ## Client Extension Manager (`client/ExtensionManager.js`)
 
-Extends `BaseExtensionManager`. It operates strictly within the browser context and handles Webpack 5 Module Federation natively.
+Extends `BaseExtensionManager`. It operates strictly within the browser context and handles Rspack 5 Module Federation natively.
 
 ### Execution Flow:
+
 1. Validates the existence of `__webpack_share_scopes__`.
 2. Locates the extension's `manifest` determining if `hasClientScript` exists.
 3. Dynamically injects `<script src=".../remote.js">` into the DOM.
@@ -87,9 +88,10 @@ Extends `BaseExtensionManager`. It operates strictly within the browser context 
 
 ## Server Extension Manager (`server/ExtensionManager.js`)
 
-Operates in Node.js and relies on standard `fs` resolution and non-webpack `require()`.
+Operates in Node.js and relies on standard `fs` resolution and non-rspack `require()`.
 
 ### Execution Flow:
+
 1. Exposes logic to resolve the exact physical directory of a extension, supporting dev-mode overrides (checking `XNAPIFY_EXTENSION_LOCAL_PATH` first, then standard paths).
 2. Deletes the `require` cache entry for the targeted module ensuring fresh code is loaded on HMR.
 3. Loads the module cleanly utilizing `__non_webpack_require__`.

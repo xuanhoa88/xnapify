@@ -6,14 +6,20 @@
  */
 
 import fs from 'fs';
+import { createRequire } from 'module';
 import os from 'os';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
 import Piscina from 'piscina';
 
-import { register } from '../../shutdown';
+import { register } from '../../shutdown.js';
 
-import { WorkerError } from './errors';
+import { WorkerError } from './errors.js';
+
+const require = createRequire(import.meta.url);
+// eslint-disable-next-line no-underscore-dangle
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ---------------------------------------------------------------------------
 // Defaults
@@ -149,15 +155,15 @@ export class WorkerPoolManager {
       const fullPath = path.join(dir, entry.name);
       if (entry.isDirectory()) {
         results.push(...this.scanDir(fullPath, baseDir));
-      } else if (/\.worker\.js$/i.test(entry.name)) {
+      } else if (/\.worker\.cjs$/i.test(entry.name)) {
         // Verify WORKER_POOL marker in compiled output.
-        // BUILD_DIR files are webpack-compiled CJS — safe to require().
+        // BUILD_DIR files are rspack-compiled CJS — safe to require().
         // This ensures only Tier 2 (thread-safe, pure-data) workers are
         // registered, even if a non-pool worker ends up in BUILD_DIR.
         try {
           // Clear cache to ensure fresh read after recompilation
           delete require.cache[require.resolve(fullPath)];
-          // eslint-disable-next-line import/no-dynamic-require, global-require
+
           const mod = require(fullPath);
           if (!mod.WORKER_POOL) continue;
         } catch {
@@ -165,12 +171,12 @@ export class WorkerPoolManager {
           continue;
         }
 
-        const shortName = path.basename(entry.name, '.worker.js');
+        const shortName = path.basename(entry.name, '.worker.cjs');
         const relPath = path.relative(baseDir, fullPath);
-        // Strip `.worker.js`, normalize separators, and remove structural
+        // Strip `.worker.cjs`, normalize separators, and remove structural
         // `workers/` segments (convention folder, not a meaningful namespace).
         const nsKey = relPath
-          .replace(/\.worker\.js$/i, '')
+          .replace(/\.worker\.cjs$/i, '')
           .replace(/\\/g, '/')
           .replace(/(^|\/)workers\//g, '$1');
         results.push([nsKey, fullPath, shortName]);

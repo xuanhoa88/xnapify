@@ -9,8 +9,8 @@
  * Rename Service - Worker-enabled wrapper for rename operation
  */
 
-import { rename as renameOperation } from '../operations/rename';
-import { processRename } from '../workers';
+import { rename as renameOperation } from '../operations/rename.js';
+import { processRename } from '../workers/index.js';
 
 /**
  * Thresholds for auto-detection of worker usage

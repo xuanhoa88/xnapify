@@ -60,7 +60,7 @@ function getSchemaShape(schema, path) {
     if (!currentSchema) return null;
 
     // Unwrap effects/refinements/optionals/nullables to get to the underlying shape
-    // eslint-disable-next-line no-constant-condition
+
     while (true) {
       if (currentSchema._def && currentSchema._def.schema) {
         // Effects, refinements, nullable, optional wrapped
@@ -140,7 +140,6 @@ export function useMergeRefs(...refs) {
         if (typeof ref === 'function') {
           ref(element);
         } else {
-          // eslint-disable-next-line no-param-reassign
           ref.current = element;
         }
       });
@@ -185,7 +184,6 @@ export function useComposedHandler(externalHandler, internalHandler) {
   externalRef.current = externalHandler;
   internalRef.current = internalHandler;
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   return useCallback(function stableHandler(...args) {
     if (typeof internalRef.current === 'function') {
       internalRef.current(...args);

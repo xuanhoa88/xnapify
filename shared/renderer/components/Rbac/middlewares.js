@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { DEFAULT_ACTIONS, DEFAULT_RESOURCES } from './constants';
+import { DEFAULT_ACTIONS, DEFAULT_RESOURCES } from './constants.js';
 
 /**
  * Check if user has a specific permission (with wildcard support)

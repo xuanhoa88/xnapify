@@ -9,7 +9,7 @@ import { useCallback, useMemo, forwardRef } from 'react';
 
 import PropTypes from 'prop-types';
 
-import { useHistory, buildUrl } from './hooks';
+import { useHistory, buildUrl } from './hooks.js';
 
 /**
  * Checks if a URL points to an external resource or uses a non-navigable protocol.

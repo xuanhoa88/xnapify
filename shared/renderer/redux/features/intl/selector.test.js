@@ -16,7 +16,7 @@ import {
   isLocaleAvailable,
   getLocaleDisplayName,
   getCurrentLocaleDisplayName,
-} from './selector';
+} from './selector.js';
 
 describe('[intl] selector.js', () => {
   describe('getLocale', () => {

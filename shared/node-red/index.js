@@ -12,13 +12,13 @@ import path from 'path';
 import { getTokenFromCookie, getRefreshTokenFromCookie } from '@shared/cookies';
 import { createNativeRequire } from '@shared/utils/createNativeRequire';
 
-import initFlowSplitter from './flowSplitter';
+import initFlowSplitter from './flowSplitter.js';
 import {
   createProductionSettings,
   createDevelopmentSettings,
   writeExtensionNodeModule,
   removeExtensionNodeModule,
-} from './settings';
+} from './settings.js';
 
 // This prevents the instance from being lost during HMR
 const kNodeRedInstance = Symbol.for('__xnapify.nodeREDInstance__');
@@ -583,7 +583,7 @@ export class NodeRedManager {
       this._validateInitArgs(app, server, config);
 
       // Clear the native Node.js require cache for Node-RED modules to force a fresh instance.
-      // We must use the native require because Webpack's require.cache only
+      // We must use the native require because Rspack's require.cache only
       // holds module wrappers for external dependencies, not the actual loaded singletons.
       if (__DEV__) {
         const nativeRequire = createNativeRequire(__filename);
@@ -605,7 +605,7 @@ export class NodeRedManager {
 
           // 2. Remove from the children arrays of all surviving modules.
           // In Node.js, `module.children` holds strong references to required modules.
-          // If we don't sever these links, the parent module (like the Webpack entry chunk)
+          // If we don't sever these links, the parent module (like the Rspack entry chunk)
           // will hold the entire old @node-red tree in memory indefinitely across HMR reloads.
           Object.values(nativeCache).forEach(mod => {
             if (mod && Array.isArray(mod.children)) {

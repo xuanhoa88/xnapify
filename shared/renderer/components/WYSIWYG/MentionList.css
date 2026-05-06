@@ -15,7 +15,11 @@
 :global(.tippy-box[data-theme~='mention']) {
   background: var(--color-panel-solid, #fff);
   border-radius: 8px;
-  box-shadow: var(--shadow-3, 0 1px 3px 0 rgb(0 0 0 / 10%), 0 4px 12px rgb(0 0 0 / 15%));
+  box-shadow: var(
+    --shadow-3,
+    0 1px 3px 0 rgb(0 0 0 / 10%),
+    0 4px 12px rgb(0 0 0 / 15%)
+  );
   border: 1px solid var(--gray-a6, #e4e4e7);
   overflow: hidden;
   padding: 0;

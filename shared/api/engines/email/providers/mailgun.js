@@ -6,9 +6,8 @@
  */
 
 import FormData from 'form-data';
-import fetch from 'node-fetch';
 
-import { EmailError } from '../utils/errors';
+import { EmailError } from '../utils/errors.js';
 
 /**
  * Mailgun Email Provider
@@ -164,7 +163,7 @@ export class MailgunEmailProvider {
       const formData = this.buildFormData(email);
       const url = `${this.baseUrl}/${this.domain}/messages`;
 
-      const response = await fetch(url, {
+      const response = await globalThis.fetch(url, {
         method: 'POST',
         headers: this.getHeaders(),
         body: formData,
@@ -271,7 +270,7 @@ export class MailgunEmailProvider {
 
     try {
       const url = `${this.baseUrl}/domains/${this.domain}`;
-      const response = await fetch(url, {
+      const response = await globalThis.fetch(url, {
         method: 'GET',
         headers: this.getHeaders(),
       });

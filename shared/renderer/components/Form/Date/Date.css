@@ -19,7 +19,9 @@
   font-family: inherit;
   opacity: 1;
   cursor: text;
-  transition: border-color 0.15s, outline 0.15s;
+  transition:
+    border-color 0.15s,
+    outline 0.15s;
 }
 
 .dateInputError {

@@ -1,5 +1,5 @@
 # ESLint ignore patterns
-# https://eslint.org/docs/user-guide/configuring/ignoring-code
+# Auto-generated based on .prettierignore and eslint.config.js
 
 # Dependencies
 node_modules/
@@ -17,15 +17,31 @@ coverage/
 
 # Generated files
 *.min.js
+*.min.css
 *.bundle.js
-
-# Service workers
+*.chunk.js
 sw.js
 workbox-*.js
+
+# Lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Logs
+*.log
+
+# Environment files
+.env
+.env.*
+!.env.xnapify
 
 # Temporary files
 *.tmp
 *.temp
+
+# Agent and auxiliary
+.agent/
 
 # OS files
 .DS_Store
@@ -38,18 +54,5 @@ Thumbs.db
 # Docker
 .docker/
 
-# Logs
-*.log
-
-# Environment files
-.env
-.env.*
-!.env.xnapify
-
-# Lock files
-package-lock.json
-yarn.lock
-pnpm-lock.yaml
-
-# JSON files (not JavaScript)
+# Data files
 *.json

@@ -9,8 +9,8 @@
  * Upload Service - Worker-enabled wrapper for upload operation
  */
 
-import { upload as uploadOperation } from '../operations/upload';
-import { processUpload } from '../workers';
+import { upload as uploadOperation } from '../operations/upload.js';
+import { processUpload } from '../workers/index.js';
 
 /**
  * Thresholds for auto-detection of worker usage

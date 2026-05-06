@@ -9,7 +9,7 @@
  * Sync Operations
  */
 
-import { FilesystemError, createOperationResult } from '../utils';
+import { FilesystemError, createOperationResult } from '../utils/index.js';
 
 /**
  * Sync file(s) between providers

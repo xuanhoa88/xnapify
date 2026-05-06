@@ -12,12 +12,12 @@ import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useFormContext, useController } from 'react-hook-form';
 
-import SearchableSelect from '../../SearchableSelect/SearchableSelect';
+import SearchableSelect from '../../SearchableSelect/SearchableSelect.js';
 import {
   useFormField,
   useMergeRefs,
   composeEventHandlers,
-} from '../FormContext';
+} from '../FormContext.js';
 
 import s from './FormSearchableSelect.css';
 

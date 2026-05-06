@@ -47,11 +47,14 @@ const user = await $fetch('/users', {
 
 ```javascript
 const myFetch = createFetch(globalThis.fetch, {
-  defaults: { /* global default options */ }
+  defaults: {
+    /* global default options */
+  },
 });
 ```
 
 The returned `$fetch` instance has additional properties:
+
 - `$fetch.raw(input, options)`: Returns the complete `Response` object instead of just the data payload.
 - `$fetch.native(input, options)`: Bypasses to the original native `fetch`.
 - `$fetch.create(defaults)`: Creates a new cloned instance extending the current configuration.
@@ -59,15 +62,15 @@ The returned `$fetch` instance has additional properties:
 
 ### Options
 
-| Option | Type | Description |
-|---|---|---|
-| `baseUrl` | `string` | Base path prepended to all string requests |
-| `query` / `params` | `Object` | Key-value pairs appended as a query string |
-| `body` | `*` | Request payload. Objects/Arrays are auto-JSON serialized. |
-| `timeout` | `number` | Abort timeout in milliseconds |
-| `retry` | `number` \| `false` | Number of retry attempts. Defaults to `1` for GET/HEAD, `0` for payload methods. |
-| `retryDelay` | `number` \| `Function` | Delay between retries in milliseconds |
-| `responseType` | `string` | Force response parsing type (`json`, `text`, `blob`, `stream`) |
+| Option             | Type                   | Description                                                                      |
+| ------------------ | ---------------------- | -------------------------------------------------------------------------------- |
+| `baseUrl`          | `string`               | Base path prepended to all string requests                                       |
+| `query` / `params` | `Object`               | Key-value pairs appended as a query string                                       |
+| `body`             | `*`                    | Request payload. Objects/Arrays are auto-JSON serialized.                        |
+| `timeout`          | `number`               | Abort timeout in milliseconds                                                    |
+| `retry`            | `number` \| `false`    | Number of retry attempts. Defaults to `1` for GET/HEAD, `0` for payload methods. |
+| `retryDelay`       | `number` \| `Function` | Delay between retries in milliseconds                                            |
+| `responseType`     | `string`               | Force response parsing type (`json`, `text`, `blob`, `stream`)                   |
 
 ### Hooks
 
@@ -84,8 +87,8 @@ const $fetch = createFetch(fetch, {
     },
     onResponseError({ request, response, error }) {
       console.error(`[Fetch Error] ${error.message}`);
-    }
-  }
+    },
+  },
 });
 ```
 
@@ -117,10 +120,10 @@ for await (const event of stream) {
 
 #### Stream Options
 
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `maxRetries` | `number` | `3` | Max reconnection attempts on mid-stream disconnect |
-| `retryInterval` | `number` | `1000` | Default reconnect delay in ms (overridden by SSE `retry` field) |
+| Option          | Type     | Default | Description                                                     |
+| --------------- | -------- | ------- | --------------------------------------------------------------- |
+| `maxRetries`    | `number` | `3`     | Max reconnection attempts on mid-stream disconnect              |
+| `retryInterval` | `number` | `1000`  | Default reconnect delay in ms (overridden by SSE `retry` field) |
 
 All standard fetch options (`timeout`, `signal`, `headers`, hooks, etc.) are also supported.
 
@@ -128,7 +131,9 @@ All standard fetch options (`timeout`, `signal`, `headers`, hooks, etc.) are als
 
 ```javascript
 const abort = new AbortController();
-setTimeout(function () { abort.abort(); }, 30000);
+setTimeout(function () {
+  abort.abort();
+}, 30000);
 
 const stream = $fetch.stream('/events', {
   signal: abort.signal,

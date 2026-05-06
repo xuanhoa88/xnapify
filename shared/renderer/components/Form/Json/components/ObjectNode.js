@@ -10,12 +10,12 @@ import { useState, useCallback, useMemo } from 'react';
 import { Box, Text } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 
-import Icon from '../../../Icon';
-import { toType } from '../utils';
+import Icon from '../../../Icon/index.js';
+import { toType } from '../utils.js';
 
-import AddKeyModal from './AddKeyModal';
-import CopyToClipboard from './CopyToClipboard';
-import VariableEditor from './VariableEditor';
+import AddKeyModal from './AddKeyModal.js';
+import CopyToClipboard from './CopyToClipboard.js';
+import VariableEditor from './VariableEditor.js';
 
 import s from './ObjectNode.css';
 
@@ -110,7 +110,6 @@ export default function ObjectNode({
   return (
     <Box
       className={isRoot ? s.jsvRoot : s.objectKeyVal}
-      // eslint-disable-next-line react/forbid-dom-props
       style={{ paddingLeft }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -245,7 +244,6 @@ export default function ObjectNode({
         <Text
           as='span'
           className={s.brace}
-          // eslint-disable-next-line react/forbid-dom-props
           style={{ paddingLeft: expanded ? '3px' : '0px' }}
         >
           {isArray ? ']' : '}'}

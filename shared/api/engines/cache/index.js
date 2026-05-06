@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { createFactory, withNamespace } from './factory';
+import { createFactory, withNamespace } from './factory.js';
 
 /**
  * Cache Engine
@@ -55,12 +55,12 @@ export {
   InvalidCacheError,
   InvalidCacheTypeError,
   InvalidNamespaceError,
-} from './errors';
+} from './errors.js';
 
 // Export adapter classes
-export { default as MemoryCache } from './adapters/memory';
-export { default as FileCache } from './adapters/file';
-export { default as NoOpCache } from './adapters/noop';
+export { default as MemoryCache } from './adapters/memory.js';
+export { default as FileCache } from './adapters/file.js';
+export { default as NoOpCache } from './adapters/noop.js';
 
 /**
  * Singleton instance of Cache Engine

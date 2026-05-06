@@ -21,6 +21,7 @@
 
 const fs = require('fs');
 const path = require('path');
+
 const { JS_EXTENSIONS, walkFiles } = require('../../scripts/constants');
 
 const SRC_DIR = process.argv[2] || path.join(process.cwd(), 'src');
@@ -66,7 +67,12 @@ for (const file of files) {
 
     // Skip comment lines
     const trimmed = line.trim();
-    if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) continue;
+    if (
+      trimmed.startsWith('//') ||
+      trimmed.startsWith('*') ||
+      trimmed.startsWith('/*')
+    )
+      continue;
 
     // Skip lines that are entirely strings
     if (/^\s*['"`].*['"`]\s*[,;]?\s*$/.test(line)) continue;

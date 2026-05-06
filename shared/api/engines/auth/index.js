@@ -6,7 +6,7 @@
  */
 
 // Authentication middleware
-export * as middlewares from './middlewares';
+export * as middlewares from './middlewares/index.js';
 
 // Constants
-export * from './constants';
+export * from './constants.js';

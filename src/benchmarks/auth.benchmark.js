@@ -11,6 +11,9 @@
  * Measures JWT verification with and without caching.
  * Run via: npm run test:benchmark
  */
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+
 const { performance } = require('perf_hooks');
 
 describe('auth.benchmark', () => {

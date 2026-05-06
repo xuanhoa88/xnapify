@@ -12,18 +12,22 @@ import { registerSearchHooks } from './workers';
 const OWNER_KEY = Symbol('__xnapify.module.groups.api__');
 
 // Auto-load contexts
-const migrationsContext = require.context(
-  './database/migrations',
-  false,
-  /\.[cm]?[jt]s$/i,
-);
-const seedsContext = require.context(
-  './database/seeds',
-  false,
-  /\.[cm]?[jt]s$/i,
-);
-const modelsContext = require.context('./models', false, /\.[cm]?[jt]s$/i);
-const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
+const migrationsContext = import.meta.webpackContext('./database/migrations', {
+  recursive: false,
+  regExp: /\.[cm]?[jt]s$/i
+});
+const seedsContext = import.meta.webpackContext('./database/seeds', {
+  recursive: false,
+  regExp: /\.[cm]?[jt]s$/i
+});
+const modelsContext = import.meta.webpackContext('./models', {
+  recursive: false,
+  regExp: /\.[cm]?[jt]s$/i
+});
+const routesContext = import.meta.webpackContext('./routes', {
+  recursive: true,
+  regExp: /\.[cm]?[jt]s$/i
+});
 
 // =============================================================================
 // LIFECYCLE HOOKS
@@ -34,10 +38,10 @@ export default {
   seeds: () => seedsContext,
   models: () => modelsContext,
   routes: () => routesContext,
-
-  async providers({ container }) {
+  async providers({
+    container
+  }) {
     container.bind('groups:seed_constants', () => SEED_GROUPS, OWNER_KEY);
-
     registerSearchHooks(container);
-  },
+  }
 };

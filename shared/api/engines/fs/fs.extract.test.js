@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import * as extractService from './services/extract';
+import * as extractService from './services/extract.js';
 
 import fs from '.';
 

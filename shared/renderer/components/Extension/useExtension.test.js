@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-/* eslint-env jest */
+/* global jest */
 
 import { useMemo } from 'react';
 
@@ -13,14 +13,14 @@ import renderer, { act } from 'react-test-renderer';
 
 import { registry } from '@shared/extension/client/Registry';
 
-import { ExtensionProvider } from '../../Providers/Extension';
+import { ExtensionProvider } from '../../Providers/Extension.js';
 
 import {
   useExtensionHooks,
   useExtensionValidator,
   useExtensionFormData,
   useExtensionRegistry,
-} from './useExtension';
+} from './useExtension.js';
 
 // Mock Registry
 jest.mock('@shared/extension/client/Registry', () => ({

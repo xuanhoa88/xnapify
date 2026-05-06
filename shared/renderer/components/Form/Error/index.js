@@ -11,7 +11,7 @@ import { Text } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
-import { FormFieldContext } from '../FormContext';
+import { FormFieldContext } from '../FormContext.js';
 
 // Max recursion depth to prevent stack overflow on circular or deeply nested objects
 const MAX_DEPTH = 5;

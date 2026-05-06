@@ -5,11 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-const crypto = require('crypto');
-const path = require('path');
+import crypto from 'crypto';
+import path from 'path';
 
-const { pathExists, readFile, writeFile } = require('./fs');
-const { logInfo, logWarn, logDebug } = require('./logger');
+import { pathExists, readFile, writeFile } from './fs.js';
+import { logInfo, logWarn, logDebug } from './logger.js';
 
 /**
  * Minimum acceptable secret length (characters)
@@ -230,4 +230,4 @@ async function generateJWT(cwd, buildDir) {
   }
 }
 
-module.exports = { generateJWT };
+export { generateJWT };

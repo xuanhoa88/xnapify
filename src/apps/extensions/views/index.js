@@ -8,17 +8,14 @@
 import hubReducer, { SLICE_NAME as HUB_SLICE } from './(admin)/hub/redux';
 
 // Auto-load contexts
-const viewsContext = require.context(
-  '.',
-  true,
-  /(?:\/_route|\/_layout|\(routes\)\/\([^)]+\)|\(layouts\)\/\([^)]+\)\/_layout)\.[cm]?[jt]sx?$/i,
-);
-
-const translationsContext = require.context(
-  '../translations',
-  false,
-  /\.json$/i,
-);
+const viewsContext = import.meta.webpackContext('.', {
+  recursive: true,
+  regExp: /(?:\/_route|\/_layout|\(routes\)\/\([^)]+\)|\(layouts\)\/\([^)]+\)\/_layout)\.[cm]?[jt]sx?$/i
+});
+const translationsContext = import.meta.webpackContext('../translations', {
+  recursive: false,
+  regExp: /\.json$/i
+});
 
 // =============================================================================
 // LIFECYCLE HOOKS
@@ -28,8 +25,10 @@ export default {
   translations() {
     return [translationsContext];
   },
-  providers({ store }) {
+  providers({
+    store
+  }) {
     store.injectReducer(HUB_SLICE, hubReducer);
   },
-  routes: () => viewsContext,
+  routes: () => viewsContext
 };

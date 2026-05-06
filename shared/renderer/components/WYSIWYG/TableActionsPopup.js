@@ -15,9 +15,9 @@ import {
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
-import ContextMenu from '../ContextMenu';
+import ContextMenu from '../ContextMenu/index.js';
 
-import ToolbarButton from './ToolbarButton';
+import ToolbarButton from './ToolbarButton.js';
 
 /**
  * TableActionsPopup — A toolbar button that opens a popover with table

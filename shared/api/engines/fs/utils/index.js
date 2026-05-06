@@ -13,19 +13,19 @@
  */
 
 // Constants and Configuration
-export * from './constants';
+export * from './constants.js';
 
 // File Types and MIME Types
-export * from './fileTypes';
+export * from './fileTypes.js';
 
 // File Utilities
-export * from './fileUtils';
+export * from './fileUtils.js';
 
 // Upload Presets
-export * from './uploadPresets';
+export * from './uploadPresets.js';
 
 // Error Handling
-export * from './errors';
+export * from './errors.js';
 
 // ZIP Utilities
-export * from './zipUtils';
+export * from './zipUtils.js';

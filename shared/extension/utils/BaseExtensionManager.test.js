@@ -5,14 +5,14 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-/* eslint-env jest */
+/* global jest */
 
 import {
   BaseExtensionManager,
   ExtensionState,
   ACTIVE_EXTENSIONS,
   EXTENSION_METADATA,
-} from './BaseExtensionManager';
+} from './BaseExtensionManager.js';
 
 // Mock i18n utilities used by translations phase
 jest.mock('@shared/i18n/utils', () => ({

@@ -5,5 +5,5 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-export { default as SearchableSelect } from './SearchableSelect';
-export { default as useSearchableSelect } from './useSearchableSelect';
+export { default as SearchableSelect } from './SearchableSelect.js';
+export { default as useSearchableSelect } from './useSearchableSelect.js';

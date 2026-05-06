@@ -5,8 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import 'url-polyfill';
-import 'whatwg-fetch';
 import { createBrowserHistory } from 'history';
 import merge from 'lodash/merge';
 
@@ -32,7 +30,6 @@ const MAX_SCROLL_HISTORY = 50;
 const LOADING_DELAY_MS = 150;
 const READY_STATES = new Set(['interactive', 'complete']);
 const WS_MAX_FAILURES = 5;
-const REACT_DOM_UNAVAILABLE = false;
 
 // =============================================================================
 // INITIALIZATION
@@ -50,23 +47,8 @@ if (module.hot && module.hot.data && module.hot.data.reduxState) {
 
 const { redux: preloadedReduxState = {} } = preloadedState;
 
-// Create browser history with configurable basename
-let parsedBasename = '';
-try {
-  const appUrl =
-    (preloadedReduxState.runtime && preloadedReduxState.runtime.appUrl) ||
-    process.env.XNAPIFY_PUBLIC_APP_URL ||
-    '';
-  if (appUrl.startsWith('http')) {
-    parsedBasename = new URL(appUrl).pathname;
-    if (parsedBasename === '/') parsedBasename = '';
-  } else {
-    parsedBasename = appUrl;
-  }
-} catch {
-  parsedBasename = '';
-}
-const history = createBrowserHistory({ basename: parsedBasename });
+// Create browser history (history v5 removed basename option)
+const history = createBrowserHistory();
 
 // Abort controller for request cancellation
 let fetchAbortController = new AbortController();
@@ -257,7 +239,7 @@ function restoreScrollPosition(location) {
 
 async function initializeViews() {
   if (!cachedViews) {
-    cachedViews = import('./bootstrap/views')
+    cachedViews = import('./bootstrap/views.js')
       .then(m => {
         const views = m.default(context, extensionManager);
         log('✅ Views initialized');
@@ -287,7 +269,7 @@ function buildWebSocketUrl(path = '/ws') {
 // =============================================================================
 
 async function initReactDOMClient() {
-  if (ReactDOMClient != null) return ReactDOMClient; // includes REACT_DOM_UNAVAILABLE
+  if (ReactDOMClient != null) return ReactDOMClient;
   try {
     ReactDOMClient = await import('react-dom/client');
     if (
@@ -303,46 +285,14 @@ async function initReactDOMClient() {
     // Expose ReactDOMClient for extensions (Global Vendors Pattern)
     // Extensions dependent on 'react-dom/client' will use this global
     window.ReactDOMClient = ReactDOMClient;
-  } catch {
-    ReactDOMClient = REACT_DOM_UNAVAILABLE;
+  } catch (err) {
+    log(`❌ Failed to load react-dom/client: ${err.message}`, 'error');
+    throw err;
   }
   return ReactDOMClient;
 }
 
-async function renderLegacy(appElement, container, isInitial) {
-  let ReactDOM;
-
-  try {
-    ReactDOM = await import('react-dom');
-  } catch (err) {
-    log(`❌ Failed to load react-dom: ${err.message}`, 'error');
-    if (__DEV__) {
-      throw err;
-    }
-    return;
-  }
-
-  if (isInitial && !hasHydrated) {
-    try {
-      // eslint-disable-next-line react/no-deprecated
-      ReactDOM.hydrate(appElement, container);
-      hasHydrated = true;
-      log('✅ Hydrated (React 16/17)');
-    } catch (err) {
-      log(
-        `❌ Legacy hydration failed, falling back to render: ${err.message}`,
-        'error',
-      );
-      // eslint-disable-next-line react/no-deprecated
-      ReactDOM.render(appElement, container);
-    }
-  } else {
-    // eslint-disable-next-line react/no-deprecated
-    ReactDOM.render(appElement, container);
-  }
-}
-
-function renderReact18(appElement, container, isInitial) {
+function renderApp(appElement, container, isInitial) {
   if (root) {
     // Subsequent render — just update the existing root.
     root.render(appElement);
@@ -482,11 +432,7 @@ async function onLocationChange(location, action) {
     }
 
     const appElement = <App context={transitionContext}>{page.component}</App>;
-    if (ReactDOMClient) {
-      renderReact18(appElement, appContainer, isInitial);
-    } else {
-      await renderLegacy(appElement, appContainer, isInitial);
-    }
+    renderApp(appElement, appContainer, isInitial);
 
     if (page.title || page.description) {
       updateMetadata({
@@ -669,7 +615,9 @@ async function initializeApp() {
   await onLocationChange(currentLocation);
 
   // Subscribe to history AFTER initial render to avoid duplicate triggers
-  unlistenHistory = history.listen(onLocationChange);
+  unlistenHistory = history.listen(({ location: loc, action: act }) =>
+    onLocationChange(loc, act),
+  );
 
   // Session restoration on tab visibility change:
   // When user returns to tab, check if session is still valid
@@ -744,7 +692,7 @@ if (isDOMReady) {
 // =============================================================================
 
 if (module.hot) {
-  module.hot.accept('./bootstrap/views', () => {
+  module.hot.accept(() => {
     cachedViews = null;
     const loc = { ...currentLocation };
     const schedule = window.requestIdleCallback || setTimeout;
@@ -758,87 +706,58 @@ if (module.hot) {
     );
   });
 
-  // Listen for extension rebuild events from dev server via hot middleware
+  // Listen for extension rebuild events from dev server via hot middleware.
+  // Uses the singleton HMR API exposed by hotClient.js to avoid duplicate
+  // EventSource connections.
   const RELOAD_PENDING = Symbol.for('__xnapify.hmrExtensionReloadPending__');
-  let hmrEventSource = null;
-  let isHmrInitialized = false;
+  const hmrUnsubscribers = [];
 
-  // Initialize HMR
-  (() => {
-    if (isHmrInitialized) return;
-    isHmrInitialized = true;
-
-    if (
-      // eslint-disable-next-line no-underscore-dangle
-      window.__webpack_hot_middleware_reporter__ &&
-      typeof EventSource !== 'undefined'
-    ) {
-      hmrEventSource = new EventSource('/~/__webpack_hmr');
-
-      hmrEventSource.onerror = () => {
+  // eslint-disable-next-line no-underscore-dangle
+  const hmrApi = window.__xnapify_hmr_api__;
+  if (hmrApi) {
+    hmrUnsubscribers.push(
+      hmrApi.onError(() => {
         log('⚠️ HMR EventSource connection error', 'warn');
-      };
+      }),
+    );
 
-      const handleMessage = event => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data && data.type === 'extensions-refreshed') {
-            log('🔌 Extension(s) rebuilt, reload required');
+    hmrUnsubscribers.push(
+      hmrApi.subscribe(data => {
+        if (data && data.type === 'extensions-refreshed') {
+          log('🔌 Extension(s) rebuilt, reload required');
 
-            // Show only one confirm at a time and debounce
-            if (window[RELOAD_PENDING]) return;
-            window[RELOAD_PENDING] = true;
+          // Show only one confirm at a time and debounce
+          if (window[RELOAD_PENDING]) return;
+          window[RELOAD_PENDING] = true;
 
-            setTimeout(() => {
-              // Ask user if they want to reload now
-              // eslint-disable-next-line no-alert
-              if (
-                window.confirm(
-                  'Extension(s) updated. Reload now to apply changes?',
-                )
-              ) {
-                window.location.reload();
-              } else {
-                // Cooldown to prevent spamming if canceled
-                setTimeout(() => {
-                  window[RELOAD_PENDING] = false;
-                }, 3000);
-              }
-            }, 100);
-          }
-        } catch (e) {
-          // Ignore non-JSON
+          setTimeout(() => {
+            // Ask user if they want to reload now
+
+            if (
+              window.confirm(
+                'Extension(s) updated. Reload now to apply changes?',
+              )
+            ) {
+              window.location.reload();
+            } else {
+              // Cooldown to prevent spamming if canceled
+              setTimeout(() => {
+                window[RELOAD_PENDING] = false;
+              }, 3000);
+            }
+          }, 100);
         }
-      };
-
-      hmrEventSource.addEventListener('message', handleMessage);
-    }
-  })();
-
-  // Handle HMR status updates
-  module.hot.addStatusHandler(status => {
-    if (
-      status === 'idle' &&
-      // eslint-disable-next-line no-underscore-dangle
-      window.__webpack_hot_middleware_reporter__ &&
-      // eslint-disable-next-line no-underscore-dangle
-      typeof window.__webpack_hot_middleware_reporter__.success === 'function'
-    ) {
-      // eslint-disable-next-line no-underscore-dangle
-      window.__webpack_hot_middleware_reporter__.success();
-    }
-  });
+      }),
+    );
+  }
 
   module.hot.dispose(data => {
     log('🔥 HMR dispose', 'info');
     if (store) {
       data.reduxState = store.getState();
     }
-    if (hmrEventSource) {
-      hmrEventSource.close();
-      hmrEventSource = null;
-    }
-    isHmrInitialized = false;
+    // Unsubscribe all HMR listeners to prevent handler leaks across reloads
+    hmrUnsubscribers.forEach(unsub => unsub());
     cleanup();
   });
 }

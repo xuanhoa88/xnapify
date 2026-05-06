@@ -1,6 +1,6 @@
 # Shared Extension
 
-The core extension architecture for xnapify. It provides a universal Extension Registry for cross-extension communication, dependency injection, UI slots, and backend extension points (hooks), along with server-side API loading and client-side advanced Webpack Module Federation (MF).
+The core extension architecture for xnapify. It provides a universal Extension Registry for cross-extension communication, dependency injection, UI slots, and backend extension points (hooks), along with server-side API loading and client-side advanced Rspack Module Federation (MF).
 
 ## Quick Start
 
@@ -46,16 +46,15 @@ The extension system contains universal utilities, client-specific managers, and
 
 - **Registry (`utils/Registry.js`)**: Universal. Manages `slots`, `hooks`, and `definitions`. Tracks registrations per extension ID allowing for clean uninstalls and reloads without memory leaks.
 - **Hook (`utils/Hook.js`)**: Universal. Executes registered callbacks sequentially (`execute`) or concurrently (`executeParallel`).
-- **ClientExtensionManager (`client/manager.js`)**: Discovers extension manifests from the server, injects `extension.css` and `remote.js` tags into the DOM, and orchestrates Webpack Module Federation (`container.init` and `container.get('./extension')`) to load React code at runtime.
+- **ClientExtensionManager (`client/manager.js`)**: Discovers extension manifests from the server, injects `extension.css` and `remote.js` tags into the DOM, and orchestrates Rspack Module Federation (`container.init` and `container.get('./extension')`) to load React code at runtime.
 - **ServerExtensionManager (`server/manager.js`)**: Exposes physical filesystem resolving (`resolveExtensionDir`), reads package.json manifests natively, and loads backend extension code (`api.js`) to trigger lifecycle events (`install`, `uninstall`, `init`, `destroy`).
 - **ExtensionSlot (`client/ExtensionSlot.js`)**: A React component that listens to `Registry` changes and dynamically renders arrays of components injected by extensions.
 
 ## Extension Identity
 
-Each extension has a single compile-time identifier injected by Webpack:
+Each extension has a single compile-time identifier injected by Rspack:
 
 - **`__EXTENSION_ID__`** — Generated at build time via `sqids(charCodes(manifest.name))` (e.g. `4ayO6ElAvIRLrgn...`). URL-safe, alphanumeric. Used for all purposes: IPC hook IDs, URL paths, i18n namespaces, logging, and migration prefixes.
-
 
 ## Creating a Extension
 

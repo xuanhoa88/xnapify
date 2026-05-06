@@ -5,4 +5,4 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-export { default as sendEmail } from './send.worker';
+export { default as sendEmail } from './send.worker.js';

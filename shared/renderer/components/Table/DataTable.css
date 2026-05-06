@@ -55,7 +55,7 @@
   width: 140px;
 }
 
-@media (max-width: 768px) {
+@media (width <= 768px) {
   .toolbarSearch {
     flex-basis: 100%;
     max-width: none;
@@ -189,7 +189,7 @@
   grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
-@media (max-width: 1200px) {
+@media (width <= 1200px) {
   .gridCols4 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -203,7 +203,7 @@
   }
 }
 
-@media (max-width: 768px) {
+@media (width <= 768px) {
   .gridContainer {
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     gap: var(--space-3);
@@ -218,7 +218,7 @@
   }
 }
 
-@media (max-width: 480px) {
+@media (width <= 480px) {
   .gridCols2,
   .gridCols4,
   .gridCols5,

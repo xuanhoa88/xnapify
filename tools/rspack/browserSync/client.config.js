@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-const { logInfo, logWarn, logError, logDebug } = require('../../utils/logger');
+import { logInfo, logWarn, logError, logDebug } from '../../utils/logger.js';
 
 // Configuration
 const CONFIG = Object.freeze({
@@ -13,7 +13,7 @@ const CONFIG = Object.freeze({
   REDIRECT_DELAY: 500,
   BODY_CHECK_INTERVAL: 50,
   MESSAGE_PREFIX: 'browser_sync_',
-  HEARTBEAT_TIMEOUT: 10_000,
+  HEARTBEAT_TIMEOUT: 25_000,
   RECONNECT_WAIT: 8_000,
   INIT_RETRY_INTERVAL: 100,
   INIT_MAX_RETRIES: 50,
@@ -373,7 +373,7 @@ function waitForReconnect() {
     // returns 200 text/event-stream when the dev middleware is up,
     // unlike the app URL which may return 500 on a broken build.
     const xhr = new XMLHttpRequest();
-    xhr.open('HEAD', '/~/__webpack_hmr');
+    xhr.open('HEAD', '/~/__hmr');
     xhr.setRequestHeader('Cache-Control', 'no-store');
 
     xhr.onload = () => {

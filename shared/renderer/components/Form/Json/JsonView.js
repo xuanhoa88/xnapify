@@ -20,9 +20,9 @@ import { Box, Text } from '@radix-ui/themes';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 
-import ObjectNode from './components/ObjectNode';
-import ValidationFailure from './components/ValidationFailure';
-import { toType, deepCopy } from './utils';
+import ObjectNode from './components/ObjectNode.js';
+import ValidationFailure from './components/ValidationFailure.js';
+import { toType, deepCopy } from './utils.js';
 
 import s from './JsonView.css';
 
@@ -152,7 +152,7 @@ const JsonView = forwardRef(function JsonView$(
         setValidationFailure(true);
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
     [src, onEdit, onDelete, onAdd, onChange],
   );
 

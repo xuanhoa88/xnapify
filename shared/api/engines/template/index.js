@@ -20,7 +20,7 @@
  * const html2 = await template.renderStrict('{{ missing_var }}', {});
  */
 
-import { createFactory } from './factory';
+import { createFactory } from './factory.js';
 
 // Export the class and factory for external use
 export { createFactory };

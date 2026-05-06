@@ -131,6 +131,6 @@ When `markdown={true}` (default), the component auto-converts between HTML and m
 | `FontSizeExtension.js`     | Custom font size extension                         |
 | `MediaExtensions.js`       | Video and Audio node extensions                    |
 | `MentionList.js`           | `@mention` suggestion dropdown                     |
-| `markdownUtils.js`         | HTML ↔ Markdown conversion utilities              |
+| `markdownUtils.js`         | HTML ↔ Markdown conversion utilities               |
 | `suggestion.js`            | Mention suggestion extension configuration         |
 | `constants.js`             | Emoji dictionary and common emoji list             |

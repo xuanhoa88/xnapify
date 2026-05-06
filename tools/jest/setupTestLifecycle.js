@@ -17,8 +17,8 @@
 // render without errors) and to wire up an in‑memory database that can
 // be reused across tests.
 
-const { setupTestDb, closeTestDb } = require('./setupTestDb');
-const { initI18nForTesting } = require('./setupTestI18n');
+import { setupTestDb, closeTestDb } from './setupTestDb.js';
+import { initI18nForTesting } from './setupTestI18n.js';
 
 // -----------------------------------------------------------------------------
 // i18n initialization for tests (delegated)

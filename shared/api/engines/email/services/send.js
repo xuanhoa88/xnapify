@@ -14,11 +14,11 @@
  * - Presence of attachments
  */
 
-import { EMAIL_VALIDATED } from '../utils/constants';
-import { EmailError, createOperationResult } from '../utils/errors';
-import { processEmails } from '../utils/processing';
-import { validateEmails } from '../utils/validation';
-import { sendEmail } from '../workers';
+import { EMAIL_VALIDATED } from '../utils/constants.js';
+import { EmailError, createOperationResult } from '../utils/errors.js';
+import { processEmails } from '../utils/processing.js';
+import { validateEmails } from '../utils/validation.js';
+import { sendEmail } from '../workers/index.js';
 
 /**
  * Thresholds for auto-detection of worker usage

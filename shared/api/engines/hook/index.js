@@ -53,20 +53,20 @@
  * const customChannel = customHook('custom');
  */
 
-import { createFactory } from './factory';
+import { createFactory } from './factory.js';
 
 // Export factory creator for isolated instances
 export { createFactory };
 
 // Export channel class for direct use
-export { HookChannel } from './channel';
+export { HookChannel } from './channel.js';
 
 // Export error classes
 export {
   InvalidChannelNameError,
   HookAbortError,
   createAggregateError,
-} from './errors';
+} from './errors.js';
 
 /**
  * Singleton factory instance

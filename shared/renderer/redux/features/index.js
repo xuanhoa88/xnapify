@@ -9,17 +9,17 @@
  * Redux Features - Public API
  *
  * Centralized export point for all Redux features.
- * Automatically discovers and loads features via Webpack context.
+ * Automatically discovers and loads features via Rspack context.
  */
 
-import { createWebpackContextAdapter } from '@shared/utils/contextAdapter';
-
-const featuresContext = require.context('.', true, /^\.\/[^/]+\/index\.js$/);
-const adapter = createWebpackContextAdapter(featuresContext);
-
+import { createRspackContextAdapter } from '@shared/utils/contextAdapter';
+const featuresContext = import.meta.webpackContext('.', {
+  recursive: true,
+  regExp: /^\.\/[^/]+\/index\.js$/
+});
+const adapter = createRspackContextAdapter(featuresContext);
 const reducers = {};
 const features = {};
-
 adapter.files().forEach(file => {
   const featureName = file.split('/')[1];
   const featureModule = adapter.load(file);

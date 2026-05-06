@@ -10,7 +10,7 @@ import {
   getAppDescription,
   getInitialNow,
   getRuntimeVariable,
-} from './selector';
+} from './selector.js';
 
 describe('[runtime] selector.js', () => {
   describe('getAppName', () => {

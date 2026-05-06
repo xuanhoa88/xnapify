@@ -5,12 +5,12 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { register } from '../../shutdown';
+import { register } from '../../shutdown.js';
 
-import * as constants from './constants';
-import * as errors from './errors';
-import * as request from './request';
-import * as response from './response';
+import * as constants from './constants.js';
+import * as errors from './errors.js';
+import * as request from './request.js';
+import * as response from './response.js';
 
 const DEFAULT_CONFIG = {};
 

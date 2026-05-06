@@ -27,8 +27,12 @@
 
 const fs = require('fs');
 const path = require('path');
-const { SKIP_DIRS, UI_EXTENSIONS, walkFiles } = require('../../scripts/constants');
 
+const {
+  SKIP_DIRS,
+  UI_EXTENSIONS,
+  walkFiles,
+} = require('../../scripts/constants');
 
 class UXAuditor {
   constructor() {

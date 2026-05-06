@@ -10,16 +10,16 @@
  *
  * Discovers and loads view modules from the apps directory.
  * Each module exports independent lifecycle hooks:
- *   - translations() — returns a webpack require.context for locale JSON files
+ *   - translations() — returns a rspack require.context for locale JSON files
  *   - providers()    — share client-side services/state across modules (DI bindings)
- *   - views()        — returns a webpack require.context for view routes
+ *   - views()        — returns a rspack require.context for view routes
  *
  * Mirrors the API autoloader pattern (shared/api/autoloader.js).
  */
 
 import { getTranslations } from '@shared/i18n/loader';
 import { addNamespace } from '@shared/i18n/utils';
-import { createWebpackContextAdapter } from '@shared/utils/contextAdapter';
+import { createRspackContextAdapter } from '@shared/utils/contextAdapter';
 import { VIEW_LIFECYCLE_PHASES } from '@shared/utils/lifecycle';
 
 // =============================================================================
@@ -73,7 +73,7 @@ function createLoadError(moduleName, filePath, error) {
 /**
  * Load all lifecycle hook objects from discovered paths.
  *
- * @param {object} adapter  - Webpack context adapter
+ * @param {object} adapter  - Rspack context adapter
  * @param {string[]} paths  - Sorted lifecycle file paths
  * @returns {{ lifecycles: Map<string, object>, errors: object[] }}
  */
@@ -199,13 +199,13 @@ export function mergeAdapters(adapters) {
 /**
  * Discover and boot all view modules in lifecycle order.
  *
- * @param {object} modulesContext - Webpack require.context or compatible
+ * @param {object} modulesContext - Rspack require.context or compatible
  * @param {object} context - DI context
  * @returns {Promise<{ viewAdapters: Map, mergedAdapter: object|null, errors: object[] }>}
  */
 export async function discoverModules(modulesContext, context) {
   const startTime = Date.now();
-  const adapter = createWebpackContextAdapter(modulesContext);
+  const adapter = createRspackContextAdapter(modulesContext);
 
   // Filter lifecycle paths
   const lifecyclePaths = adapter
@@ -263,7 +263,7 @@ export async function discoverModules(modulesContext, context) {
     ...(await runPhase('routes', lifecycles, (name, hook) => {
       const viewContext = hook();
       if (viewContext) {
-        const rawAdapter = createWebpackContextAdapter(viewContext);
+        const rawAdapter = createRspackContextAdapter(viewContext);
         const prefix = `./${name}/views`;
         viewAdapters.set(name, {
           files: () => rawAdapter.files().map(p => p.replace(/^\./, prefix)),

@@ -15,7 +15,7 @@ export function getNodeJS() {
   // -----------------------------------------------------------------------
   // IMPORTANT: This string is written to <userDir>/nodes/xnapify
   // and loaded by Node-RED at runtime via native require().
-  // It must be plain CommonJS — no ES imports, no webpack features.
+  // It must be plain CommonJS — no ES imports, no rspack features.
   // -----------------------------------------------------------------------
   return `
 'use strict';

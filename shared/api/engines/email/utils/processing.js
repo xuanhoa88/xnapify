@@ -10,9 +10,9 @@
  * Used by both send.js (main process) and send.worker.js (worker process)
  */
 
-import template from '../../template';
+import template from '../../template/index.js';
 
-import { createOperationResult, EmailError } from './errors';
+import { createOperationResult, EmailError } from './errors.js';
 
 /**
  * Render template using the shared template engine (LiquidJS).

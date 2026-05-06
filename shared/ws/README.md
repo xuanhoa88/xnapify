@@ -16,7 +16,7 @@ const wss = new WebSocketServer({
     // Validate JWT and return a user object containing at least `{ id }`
     const user = await verifyToken(token);
     return user;
-  }
+  },
 });
 
 // 2. Start server and bind to HTTP server
@@ -27,7 +27,7 @@ wss.createPublicChannel({ description: 'Global chat' });
 wss.createProtectedChannel({ description: 'Authenticated users only' });
 
 // 4. Hook into events
-wss.on('connection', (ws) => console.log('New connection:', ws.id));
+wss.on('connection', ws => console.log('New connection:', ws.id));
 wss.on('authenticated', (ws, user) => console.log('User joined:', user.id));
 
 // 5. Broadcast
@@ -55,7 +55,7 @@ ws.on('connected', () => {
 });
 
 // 5. Listen to auth success and subscribe to channels
-ws.on('authenticated', (user) => {
+ws.on('authenticated', user => {
   ws.subscribe('public');
   ws.subscribe('protected');
 });
@@ -79,4 +79,5 @@ ws.send('chat:send', { text: 'Hello!' });
 - **Heartbeat Management**: Configurable bi-directional ping/pong to drop phantom connections.
 
 ## See Also
+
 - [SPEC.md](./SPEC.md) — Technical specification

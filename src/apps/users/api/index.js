@@ -15,14 +15,18 @@ import { registerSearchHooks } from './workers';
 const OWNER_KEY = Symbol('__xnapify.module.users.api__');
 
 // Auto-load contexts
-const migrationsContext = require.context(
-  './database/migrations',
-  false,
-  /\.[cm]?[jt]s$/i,
-);
-
-const modelsContext = require.context('./models', false, /\.[cm]?[jt]s$/i);
-const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
+const migrationsContext = import.meta.webpackContext('./database/migrations', {
+  recursive: false,
+  regExp: /\.[cm]?[jt]s$/i
+});
+const modelsContext = import.meta.webpackContext('./models', {
+  recursive: false,
+  regExp: /\.[cm]?[jt]s$/i
+});
+const routesContext = import.meta.webpackContext('./routes', {
+  recursive: true,
+  regExp: /\.[cm]?[jt]s$/i
+});
 
 // =============================================================================
 // LOGGING
@@ -35,7 +39,6 @@ const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
  */
 async function registerAuthHooks(container) {
   const hook = container.resolve('hook');
-
   hook('auth.strategy.api_key').on('authenticate', handleApiKeyStrategy);
   hook('auth.permissions').on('resolve', getUserRbacData);
   hook('auth.roles').on('resolve', getUserRbacData);
@@ -51,19 +54,14 @@ export default {
   migrations: () => migrationsContext,
   models: () => modelsContext,
   routes: () => routesContext,
-
-  async providers({ container }) {
-    container.bind(
-      'users:controllers',
-      () => ({
-        profile: profileController,
-        auth: authController,
-      }),
-      OWNER_KEY,
-    );
-
+  async providers({
+    container
+  }) {
+    container.bind('users:controllers', () => ({
+      profile: profileController,
+      auth: authController
+    }), OWNER_KEY);
     await registerAuthHooks(container);
-
     registerSearchHooks(container);
-  },
+  }
 };

@@ -5,9 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import fetch from 'node-fetch';
-
-import { EmailError } from '../utils/errors';
+import { EmailError } from '../utils/errors.js';
 
 /**
  * Resend Email Provider
@@ -131,7 +129,7 @@ export class ResendEmailProvider {
     try {
       const payload = this.buildPayload(email);
 
-      const response = await fetch(this.apiUrl, {
+      const response = await globalThis.fetch(this.apiUrl, {
         method: 'POST',
         headers: this.getHeaders(),
         body: JSON.stringify(payload),
@@ -222,10 +220,13 @@ export class ResendEmailProvider {
     try {
       // Just test an empty emails fetch or similar to verify auth.
       // The Resend API has /api-keys to get API keys, which serves as a good check.
-      const response = await fetch('https://api.resend.com/api-keys', {
-        method: 'GET',
-        headers: this.getHeaders(),
-      });
+      const response = await globalThis.fetch(
+        'https://api.resend.com/api-keys',
+        {
+          method: 'GET',
+          headers: this.getHeaders(),
+        },
+      );
 
       if (!response.ok) {
         throw new EmailError(

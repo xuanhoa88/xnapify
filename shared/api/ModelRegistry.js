@@ -25,7 +25,7 @@
  * const { User, Post } = registry;
  */
 
-import { createWebpackContextAdapter } from '@shared/utils/contextAdapter';
+import { createRspackContextAdapter } from '@shared/utils/contextAdapter';
 
 const TAG = 'ModelRegistry';
 
@@ -183,12 +183,12 @@ class ModelRegistry {
   // ===========================================================================
 
   /**
-   * Discover and register models from a webpack `require.context`.
+   * Discover and register models from a rspack `require.context`.
    *
    * Factory calls run in parallel via `Promise.allSettled` for performance.
    * Registration is sequential to correctly detect duplicates.
    *
-   * @param {Object} context - Webpack require.context
+   * @param {Object} context - Rspack require.context
    * @param {string} [source='unknown'] - Source name for logging
    * @returns {Promise<{ registered: string[], errors: Object[] }>}
    */
@@ -203,7 +203,7 @@ class ModelRegistry {
 
     const registered = [];
     const errors = [];
-    const adapter = createWebpackContextAdapter(context);
+    const adapter = createRspackContextAdapter(context);
 
     // Filter valid keys
     const keys = adapter.files().filter(key => {

@@ -11,8 +11,8 @@ import { Button, Flex, Text, Box } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
-import ContextMenu from '../ContextMenu';
-import Icon from '../Icon';
+import ContextMenu from '../ContextMenu/index.js';
+import Icon from '../Icon/index.js';
 
 import s from './TableBulkActions.css';
 

@@ -78,8 +78,8 @@ const result = await router.resolve('/dashboard');
 Dynamic route management:
 
 ```javascript
-router.add(extensionAdapter);     // Merge extension routes
-router.remove(extensionAdapter);  // Remove by adapter reference
+router.add(extensionAdapter); // Merge extension routes
+router.remove(extensionAdapter); // Remove by adapter reference
 ```
 
 ## Redux
@@ -93,12 +93,12 @@ const store = configureStore(initialState);
 
 ### Features (Ducks Pattern)
 
-| Feature | Description |
-|---|---|
-| `runtime` | Locale, theme, env flags |
-| `intl` | i18n locale and messages |
-| `user` | Auth state, profile, tokens |
-| `ui` | Modals, sidebars, toasts, loading |
+| Feature   | Description                       |
+| --------- | --------------------------------- |
+| `runtime` | Locale, theme, env flags          |
+| `intl`    | i18n locale and messages          |
+| `user`    | Auth state, profile, tokens       |
+| `ui`      | Modals, sidebars, toasts, loading |
 
 ```javascript
 import { features } from '@shared/renderer/redux';
@@ -113,22 +113,22 @@ const locale = selectLocale(getState());
 
 14 shared application components extending Radix UI design primitives:
 
-| Component | Description |
-|---|---|
-| `ContextMenu` | Dropdown / right-click menu |
-| `Extension` | Extension slots and hooks |
-| `Form` | Form primitives (Input, Select, etc.) |
-| `History` | Link and routing hooks |
-| `Icon` | Icon sprite component |
-| `InfiniteScroll` | Scroll-based pagination |
-| `Loader` | Spinner / skeleton |
-| `Modal` | Dialog system and confirmation modals |
-| `Portal` | React portal wrapper |
-| `Rbac` | Role-based access control |
-| `SearchableSelect` | Searchable dropdown |
-| `Table` | Data table with sorting and pagination |
-| `Toast` | Notifications |
-| `WYSIWYG` | Rich text editor (Tiptap) |
+| Component          | Description                            |
+| ------------------ | -------------------------------------- |
+| `ContextMenu`      | Dropdown / right-click menu            |
+| `Extension`        | Extension slots and hooks              |
+| `Form`             | Form primitives (Input, Select, etc.)  |
+| `History`          | Link and routing hooks                 |
+| `Icon`             | Icon sprite component                  |
+| `InfiniteScroll`   | Scroll-based pagination                |
+| `Loader`           | Spinner / skeleton                     |
+| `Modal`            | Dialog system and confirmation modals  |
+| `Portal`           | React portal wrapper                   |
+| `Rbac`             | Role-based access control              |
+| `SearchableSelect` | Searchable dropdown                    |
+| `Table`            | Data table with sorting and pagination |
+| `Toast`            | Notifications                          |
+| `WYSIWYG`          | Rich text editor (Tiptap)              |
 
 > **Note:** Basic design primitives (`Avatar`, `Box`, `Button`, `Card`, `Tabs`, `Tag`, etc.) are imported directly from `@radix-ui/themes`.
 

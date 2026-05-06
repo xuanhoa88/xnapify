@@ -52,7 +52,7 @@
  * myContainer.bind('foo', () => 'bar');
  */
 
-import Container from './Container';
+import Container from './Container.js';
 
 // Export Container class for direct use / type checking
 export { Container };

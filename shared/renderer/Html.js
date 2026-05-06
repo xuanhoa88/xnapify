@@ -192,7 +192,6 @@ export default function Html({
              from the Redux state shape. Must appear before __PRELOADED_STATE__. */}
         <script
           nonce={nonce}
-          // eslint-disable-next-line react/no-danger
           dangerouslySetInnerHTML={{
             __html: `window.__XNAPIFY_LOCALE__=${serialize(locale || 'en-US')}`,
           }}

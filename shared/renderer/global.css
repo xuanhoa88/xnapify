@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-@import '@radix-ui/themes/styles.css';
+@import url('@radix-ui/themes/styles.css');
 
 @tailwind base;
 @tailwind components;

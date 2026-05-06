@@ -51,67 +51,67 @@ requireOwnership → constants.js (ADMIN_ROLE), container.resolve('hook')
 
 ### Cookie Types
 
-| Type | Cookie Name | Max Age | Description |
-|---|---|---|---|
-| `jwt` | `id_token` | 7 days | Access token |
+| Type      | Cookie Name     | Max Age | Description   |
+| --------- | --------------- | ------- | ------------- |
+| `jwt`     | `id_token`      | 7 days  | Access token  |
 | `refresh` | `refresh_token` | 30 days | Refresh token |
 
 ### Internal Functions
 
-| Function | Signature | Description |
-|---|---|---|
-| `setSecureCookie` | `(res, name, value, options?)` | Set httpOnly/secure/sameSite cookie |
-| `clearSecureCookie` | `(res, name, options?)` | Clear cookie by name |
-| `getCookieValue` | `(req, name) → string\|null` | Read cookie value |
-| `hasCookie` | `(req, name) → boolean` | Check cookie exists with value |
-| `manageCookie` | `(action, type, context, value?, options?)` | Unified dispatcher (set/get/clear/has) |
+| Function            | Signature                                   | Description                            |
+| ------------------- | ------------------------------------------- | -------------------------------------- |
+| `setSecureCookie`   | `(res, name, value, options?)`              | Set httpOnly/secure/sameSite cookie    |
+| `clearSecureCookie` | `(res, name, options?)`                     | Clear cookie by name                   |
+| `getCookieValue`    | `(req, name) → string\|null`                | Read cookie value                      |
+| `hasCookie`         | `(req, name) → boolean`                     | Check cookie exists with value         |
+| `manageCookie`      | `(action, type, context, value?, options?)` | Unified dispatcher (set/get/clear/has) |
 
 `manageCookie` validates all params, throws named errors: `InvalidParameterError`, `MissingResponseError`, `MissingRequestError`, `MissingCookieValueError`, `UnknownCookieActionError`.
 
 ### Exported Functions
 
-| Function | Description |
-|---|---|
-| `setTokenCookie(res, token, options?)` | Set `id_token` cookie (7 days) |
-| `getTokenFromCookie(req, options?)` | Read JWT from `id_token` cookie |
-| `hasTokenCookie(req, options?)` | Check if `id_token` exists |
-| `clearTokenCookie(res, options?)` | Clear `id_token` cookie |
-| `setRefreshTokenCookie(res, token, options?)` | Set `refresh_token` cookie (30 days) |
-| `getRefreshTokenFromCookie(req, options?)` | Read refresh token |
-| `hasRefreshTokenCookie(req, options?)` | Check if refresh token exists |
-| `clearRefreshTokenCookie(res, options?)` | Clear refresh token |
-| `clearAllAuthCookies(res, options?)` | Clear all auth cookies (default: both) |
-| `extractToken(req, options?)` | Extract token from multiple sources |
+| Function                                      | Description                            |
+| --------------------------------------------- | -------------------------------------- |
+| `setTokenCookie(res, token, options?)`        | Set `id_token` cookie (7 days)         |
+| `getTokenFromCookie(req, options?)`           | Read JWT from `id_token` cookie        |
+| `hasTokenCookie(req, options?)`               | Check if `id_token` exists             |
+| `clearTokenCookie(res, options?)`             | Clear `id_token` cookie                |
+| `setRefreshTokenCookie(res, token, options?)` | Set `refresh_token` cookie (30 days)   |
+| `getRefreshTokenFromCookie(req, options?)`    | Read refresh token                     |
+| `hasRefreshTokenCookie(req, options?)`        | Check if refresh token exists          |
+| `clearRefreshTokenCookie(res, options?)`      | Clear refresh token                    |
+| `clearAllAuthCookies(res, options?)`          | Clear all auth cookies (default: both) |
+| `extractToken(req, options?)`                 | Extract token from multiple sources    |
 
 ### Token Extraction (`extractToken`)
 
 Searches sources in order. First non-null wins.
 
-| Option | Default | Description |
-|---|---|---|
-| `sources` | `['cookie', 'header', 'query']` | Ordered sources |
-| `headerName` | `'authorization'` | Header name |
-| `headerPrefix` | `'Bearer '` | Prefix to strip |
-| `queryParam` | `'token'` | Query param name |
+| Option         | Default                         | Description      |
+| -------------- | ------------------------------- | ---------------- |
+| `sources`      | `['cookie', 'header', 'query']` | Ordered sources  |
+| `headerName`   | `'authorization'`               | Header name      |
+| `headerPrefix` | `'Bearer '`                     | Prefix to strip  |
+| `queryParam`   | `'token'`                       | Query param name |
 
 ## 3. RBAC Constants (`constants.js`)
 
 ### Roles
 
-| Constant | Value | Description |
-|---|---|---|
-| `DEFAULT_ROLE` | `'user'` | Assigned to new users |
-| `ADMIN_ROLE` | `'admin'` | Full system access |
-| `MODERATOR_ROLE` | `'mod'` | Content moderation |
-| `SYSTEM_ROLES` | `['user', 'admin', 'mod']` | Cannot be deleted |
+| Constant         | Value                      | Description           |
+| ---------------- | -------------------------- | --------------------- |
+| `DEFAULT_ROLE`   | `'user'`                   | Assigned to new users |
+| `ADMIN_ROLE`     | `'admin'`                  | Full system access    |
+| `MODERATOR_ROLE` | `'mod'`                    | Content moderation    |
+| `SYSTEM_ROLES`   | `['user', 'admin', 'mod']` | Cannot be deleted     |
 
 ### Groups
 
-| Constant | Value | Description |
-|---|---|---|
-| `DEFAULT_GROUP` | `'users'` | Default user group |
-| `ADMIN_GROUP` | `'administrators'` | System admins |
-| `SYSTEM_GROUPS` | `['users', 'administrators']` | Cannot be deleted |
+| Constant        | Value                         | Description        |
+| --------------- | ----------------------------- | ------------------ |
+| `DEFAULT_GROUP` | `'users'`                     | Default user group |
+| `ADMIN_GROUP`   | `'administrators'`            | System admins      |
+| `SYSTEM_GROUPS` | `['users', 'administrators']` | Cannot be deleted  |
 
 ### Actions (`DEFAULT_ACTIONS`)
 
@@ -129,12 +129,12 @@ Format: `{ resource, action, description }`. Covers: super admin (`*:*`), users 
 
 **Authentication — validates JWT token and populates user.**
 
-| Option | Default | Description |
-|---|---|---|
-| `tokenType` | `'access'` | Expected token type |
-| `sources` | `['cookie', 'header']` | Token extraction sources |
-| `includeUser` | `true` | Decode and attach user |
-| `onError` | — | Custom error handler `(error, req, res, next)` |
+| Option        | Default                | Description                                    |
+| ------------- | ---------------------- | ---------------------------------------------- |
+| `tokenType`   | `'access'`             | Expected token type                            |
+| `sources`     | `['cookie', 'header']` | Token extraction sources                       |
+| `includeUser` | `true`                 | Decode and attach user                         |
+| `onError`     | —                      | Custom error handler `(error, req, res, next)` |
 
 ### Flow
 
@@ -148,16 +148,17 @@ Format: `{ resource, action, description }`. Covers: super admin (`*:*`), users 
 
 ### Error Codes
 
-| Error Name | Code | Status |
-|---|---|---|
-| `TokenRequiredError` | `TOKEN_REQUIRED` | 401 |
-| `InvalidTokenFormatError` | `TOKEN_INVALID` | 401 |
-| `TokenExpiredError` | `TOKEN_EXPIRED` | 401 |
-| other | `TOKEN_INVALID` | 401 |
+| Error Name                | Code             | Status |
+| ------------------------- | ---------------- | ------ |
+| `TokenRequiredError`      | `TOKEN_REQUIRED` | 401    |
+| `InvalidTokenFormatError` | `TOKEN_INVALID`  | 401    |
+| `TokenExpiredError`       | `TOKEN_EXPIRED`  | 401    |
+| other                     | `TOKEN_INVALID`  | 401    |
 
 ## 5. Middleware: `optionalAuth(options?)`
 
 Same flow as `requireAuth`. Differences:
+
 - No token → calls `next()` without error.
 - **All** errors caught silently → sets `req.authenticated = false`, calls `next()`.
 - When `includeUser = false`, still verifies token signature (rejects forged/expired).
@@ -166,11 +167,11 @@ Same flow as `requireAuth`. Differences:
 
 **Non-blocking** — auto-refreshes tokens, never fails the request.
 
-| Option | Default | Description |
-|---|---|---|
-| `refreshThreshold` | `300` (5 min) | Seconds before expiry to trigger refresh |
-| `autoRefresh` | `true` | Auto-refresh expired tokens |
-| `onRefresh` | — | Callback `(req, res, newTokens)` on successful refresh |
+| Option             | Default       | Description                                            |
+| ------------------ | ------------- | ------------------------------------------------------ |
+| `refreshThreshold` | `300` (5 min) | Seconds before expiry to trigger refresh               |
+| `autoRefresh`      | `true`        | Auto-refresh expired tokens                            |
+| `onRefresh`        | —             | Callback `(req, res, newTokens)` on successful refresh |
 
 ### Flow
 
@@ -195,17 +196,17 @@ Same flow as `requireAuth`. Differences:
 
 **Use after `requireAuth`.** Checks resolved permissions.
 
-| Middleware | Logic | Admin Bypass Default |
-|---|---|---|
-| `requirePermission(...perms)` | User must have **ALL** | `true` |
-| `requireAnyPermission(...perms)` | User must have **ANY** | `true` |
+| Middleware                       | Logic                  | Admin Bypass Default |
+| -------------------------------- | ---------------------- | -------------------- |
+| `requirePermission(...perms)`    | User must have **ALL** | `true`               |
+| `requireAnyPermission(...perms)` | User must have **ANY** | `true`               |
 
 ### API Variants
 
 ```javascript
-requirePermission('users:read');                                    // string args
-requirePermission('users:read', 'users:write');                     // multiple
-requirePermission({ permissions: ['a:b'], adminBypass: false });    // object config
+requirePermission('users:read'); // string args
+requirePermission('users:read', 'users:write'); // multiple
+requirePermission({ permissions: ['a:b'], adminBypass: false }); // object config
 ```
 
 ### Wildcard Matching (`hasPermission`)
@@ -227,12 +228,12 @@ Error: `ForbiddenError` (403, code: `PERMISSION_DENIED`).
 
 **Use after `requireAuth`.** Checks resolved roles.
 
-| Middleware | Logic | Admin Bypass Default |
-|---|---|---|
-| `requireRole(...roles)` | User must have **ALL** | `false` |
-| `requireAnyRole(...roles)` | User must have **ANY** | `false` |
-| `requireRoleLevel(min, hierarchy, options?)` | User has role ≥ `min` in hierarchy | `false` |
-| `requireDynamicRole(options)` | Runtime-resolved roles | — |
+| Middleware                                   | Logic                              | Admin Bypass Default |
+| -------------------------------------------- | ---------------------------------- | -------------------- |
+| `requireRole(...roles)`                      | User must have **ALL**             | `false`              |
+| `requireAnyRole(...roles)`                   | User must have **ANY**             | `false`              |
+| `requireRoleLevel(min, hierarchy, options?)` | User has role ≥ `min` in hierarchy | `false`              |
+| `requireDynamicRole(options)`                | Runtime-resolved roles             | —                    |
 
 ### `requireRoleLevel`
 
@@ -243,11 +244,11 @@ requireRoleLevel('moderator', hierarchy); // user must have 'moderator' or 'admi
 
 ### `requireDynamicRole`
 
-| Option | Description |
-|---|---|
-| `resolver` | `async (req) → string\|string[]` — returns required roles |
+| Option         | Description                                                   |
+| -------------- | ------------------------------------------------------------- |
+| `resolver`     | `async (req) → string\|string[]` — returns required roles     |
 | `resourceType` | Uses `auth.dynamic_roles` hook to resolve `req.requiredRoles` |
-| `matchAll` | `false` — if `true`, user must have ALL resolved roles |
+| `matchAll`     | `false` — if `true`, user must have ALL resolved roles        |
 
 ### Resolution Flow
 
@@ -261,10 +262,10 @@ Error: `ForbiddenError` (403, codes: `ROLE_REQUIRED`, `ROLE_LEVEL_REQUIRED`, `DY
 
 **Use after `requireAuth`.** Same pattern as roles. Admin bypass default **ON**.
 
-| Middleware | Logic |
-|---|---|
-| `requireGroup(...groups)` | User must belong to **ALL** |
-| `requireAnyGroup(...groups)` | User must belong to **ANY** |
+| Middleware                          | Logic                              |
+| ----------------------------------- | ---------------------------------- |
+| `requireGroup(...groups)`           | User must belong to **ALL**        |
+| `requireAnyGroup(...groups)`        | User must belong to **ANY**        |
 | `requireGroupLevel(min, hierarchy)` | User in group ≥ `min` in hierarchy |
 
 Error: `ForbiddenError` (403, codes: `GROUP_REQUIRED`, `GROUP_LEVEL_REQUIRED`).
@@ -275,12 +276,12 @@ Error: `ForbiddenError` (403, codes: `GROUP_REQUIRED`, `GROUP_LEVEL_REQUIRED`).
 
 ### `requireOwnership(options?)`
 
-| Option | Default | Description |
-|---|---|---|
-| `param` | `'userId'` | Route param containing owner ID |
-| `userIdField` | `'id'` | Field on `req.user` |
-| `adminBypass` | `true` | Admin skips check |
-| `resourceType` | — | Triggers hook-based resolution |
+| Option         | Default    | Description                     |
+| -------------- | ---------- | ------------------------------- |
+| `param`        | `'userId'` | Route param containing owner ID |
+| `userIdField`  | `'id'`     | Field on `req.user`             |
+| `adminBypass`  | `true`     | Admin skips check               |
+| `resourceType` | —          | Triggers hook-based resolution  |
 
 **Resolution:** Hook-based (`auth.ownership` → sets `req.isOwner`) first, then param-based fallback.
 
@@ -302,31 +303,31 @@ Hook: `auth.time_based_ownership` → module sets `req.isOwner` and `req.ownersh
 
 ## 11. Hook Channels Summary
 
-| Channel | Event | Purpose | Populated Field |
-|---|---|---|---|
-| `auth.permissions` | `resolve` | Resolve user permissions | `req.user.permissions` |
-| `auth.roles` | `resolve` | Resolve user roles | `req.user.roles` |
-| `auth.groups` | `resolve` | Resolve user groups | `req.user.groups` |
-| `auth.ownership` | `resolve` | Resolve resource ownership | `req.isOwner` |
-| `auth.shared_ownership` | `resolve` | Resolve shared owners | `req.sharedOwners` |
-| `auth.hierarchical_ownership` | `resolve` | Resolve ownership chain | `req.ownerChain` |
-| `auth.time_based_ownership` | `resolve` | Resolve timed ownership | `req.isOwner`, `req.ownershipExpiresAt` |
-| `auth.dynamic_roles` | `resolve` | Resolve dynamic roles | `req.requiredRoles` |
-| `auth.strategy.{type}` | `authenticate` | Pluggable auth strategies | `req.user` |
+| Channel                       | Event          | Purpose                    | Populated Field                         |
+| ----------------------------- | -------------- | -------------------------- | --------------------------------------- |
+| `auth.permissions`            | `resolve`      | Resolve user permissions   | `req.user.permissions`                  |
+| `auth.roles`                  | `resolve`      | Resolve user roles         | `req.user.roles`                        |
+| `auth.groups`                 | `resolve`      | Resolve user groups        | `req.user.groups`                       |
+| `auth.ownership`              | `resolve`      | Resolve resource ownership | `req.isOwner`                           |
+| `auth.shared_ownership`       | `resolve`      | Resolve shared owners      | `req.sharedOwners`                      |
+| `auth.hierarchical_ownership` | `resolve`      | Resolve ownership chain    | `req.ownerChain`                        |
+| `auth.time_based_ownership`   | `resolve`      | Resolve timed ownership    | `req.isOwner`, `req.ownershipExpiresAt` |
+| `auth.dynamic_roles`          | `resolve`      | Resolve dynamic roles      | `req.requiredRoles`                     |
+| `auth.strategy.{type}`        | `authenticate` | Pluggable auth strategies  | `req.user`                              |
 
 ## 12. Error Responses
 
 All RBAC middleware call `next(error)` with named errors:
 
-| Error Name | Status | Code |
-|---|---|---|
-| `AuthenticationRequiredError` | 401 | `AUTH_REQUIRED` |
-| `TokenRequiredError` | 401 | `TOKEN_REQUIRED` |
-| `ForbiddenError` | 403 | varies per middleware |
-| `ConfigurationError` | 500 | `INVALID_ROLE_CONFIG` / `INVALID_GROUP_CONFIG` |
+| Error Name                    | Status | Code                                           |
+| ----------------------------- | ------ | ---------------------------------------------- |
+| `AuthenticationRequiredError` | 401    | `AUTH_REQUIRED`                                |
+| `TokenRequiredError`          | 401    | `TOKEN_REQUIRED`                               |
+| `ForbiddenError`              | 403    | varies per middleware                          |
+| `ConfigurationError`          | 500    | `INVALID_ROLE_CONFIG` / `INVALID_GROUP_CONFIG` |
 
 `requireAuth` responds directly with JSON `{ success, error, code }` (does not call `next(error)`), unless `onError` is provided.
 
 ---
 
-*Note: This spec reflects the CURRENT implementation of the auth engine.*
+_Note: This spec reflects the CURRENT implementation of the auth engine._

@@ -54,7 +54,6 @@ export default function useAsyncValidator(
   const { isSubmitSuccessful, submitCount } = formState;
   useEffect(() => {
     setValidationStatus(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSubmitSuccessful, submitCount]);
 
   const runValidation = useCallback(

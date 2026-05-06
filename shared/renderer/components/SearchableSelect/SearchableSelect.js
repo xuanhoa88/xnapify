@@ -20,8 +20,8 @@ import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
-import Icon from '../Icon';
-import Portal from '../Portal';
+import Icon from '../Icon/index.js';
+import Portal from '../Portal/index.js';
 
 import s from './SearchableSelect.css';
 

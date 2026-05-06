@@ -13,8 +13,8 @@ import reducer, {
   clearLocaleFallback,
   updateAvailableLocales,
   resetIntlState,
-} from './slice';
-import { normalizeState } from './utils';
+} from './slice.js';
+import { normalizeState } from './utils.js';
 
 describe('[intl] slice.js', () => {
   describe('normalizeState', () => {

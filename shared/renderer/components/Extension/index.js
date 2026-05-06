@@ -5,5 +5,5 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-export { default as ExtensionSlot } from './ExtensionSlot';
-export * from './useExtension';
+export { default as ExtensionSlot } from './ExtensionSlot.js';
+export * from './useExtension.js';

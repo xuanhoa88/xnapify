@@ -5,21 +5,22 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const pick = require('lodash/pick');
-const semver = require('semver');
-const webpack = require('webpack');
+import { rspack } from '@rspack/core';
+import pick from 'lodash/pick.js';
+import semver from 'semver';
 
-const config = require('../config');
-const { computeChecksum, generateExtensionId } = require('../utils/extension');
-const { copyDir, pathExists } = require('../utils/fs');
-const { logInfo, logError, formatDuration } = require('../utils/logger');
-const {
+import config from '../config.js';
+import {
   createExtensionConfig,
   getHmrWatchIgnored,
-} = require('../webpack/extension.config');
+} from '../rspack/extension.config.js';
+import { computeChecksum, generateExtensionId } from '../utils/extension.js';
+import { copyDir, pathExists } from '../utils/fs.js';
+import { logInfo, logError, formatDuration } from '../utils/logger.js';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -202,7 +203,7 @@ async function copyStaticAssets(extensions) {
       logInfo(`📁 Copied static assets for ${name}`);
     }
 
-    // 2. Node-RED custom nodes are handled by Webpack (extension.config.js)
+    // 2. Node-RED custom nodes are handled by rspack (extension.config.js)
 
     // 3. Copy Node-RED flow definitions from manifest.nodered.flows
     if (manifest.nodered && typeof manifest.nodered === 'object') {
@@ -227,7 +228,7 @@ async function copyStaticAssets(extensions) {
 /**
  * Symlink each extension's source `node_modules` into the build output.
  *
- * Webpack's `nodeExternals` marks extension-local dependencies as externals
+ * Rspack's `nodeExternals` marks extension-local dependencies as externals
  * (e.g. `passport-google-oauth20`). At runtime the built bundle `require()`s
  * them, but Node resolves from the *output* directory — which has no
  * `node_modules`. A symlink bridges the gap without duplicating files.
@@ -255,12 +256,12 @@ async function linkExtensionNodeModules(extensions) {
 }
 
 // ---------------------------------------------------------------------------
-// Webpack Helpers
+// rspack Helpers
 // ---------------------------------------------------------------------------
 
 function handleBuildResult(err, stats, isWatch) {
   if (err) {
-    logError('Webpack configuration error');
+    logError('Rspack configuration error');
     console.error(err.stack || err);
     if (err.details) console.error(err.details);
     return err;
@@ -269,13 +270,13 @@ function handleBuildResult(err, stats, isWatch) {
   const info = stats.toJson();
 
   if (stats.hasErrors()) {
-    logError('Webpack compilation errors');
+    logError('Rspack compilation errors');
     info.errors.forEach(e => console.error(e));
-    return new Error('Webpack compilation errors');
+    return new Error('Rspack compilation errors');
   }
 
   if (stats.hasWarnings() && !isWatch) {
-    console.warn('Webpack warnings:');
+    console.warn('Rspack warnings:');
     info.warnings.forEach(w => console.warn(w));
   }
 
@@ -318,7 +319,7 @@ function watchForNewExtensions(options) {
 
   const placeholderFile = path.join(EXTENSIONS_DIR, '.placeholder.js');
   if (!fs.existsSync(placeholderFile)) {
-    fs.writeFileSync(placeholderFile, '// Placeholder for webpack watch\n');
+    fs.writeFileSync(placeholderFile, '// Placeholder for rspack watch\n');
   }
 
   const watchConfig = {
@@ -342,7 +343,7 @@ function watchForNewExtensions(options) {
     ],
   };
 
-  const watcher = webpack(watchConfig);
+  const watcher = rspack(watchConfig);
   return new Promise(resolve => {
     watcher.watch(
       { ignored: getHmrWatchIgnored(), aggregateTimeout: 300 },
@@ -417,7 +418,7 @@ async function buildExtensions(options = {}) {
     logError(`Failed to clean stale build directories: ${cleanupErr.message}`);
   }
 
-  const compiler = webpack(
+  const compiler = rspack(
     createExtensionConfig(extensions, EXTENSIONS_BUILD_DIR),
   );
 
@@ -472,11 +473,15 @@ async function buildExtensions(options = {}) {
 }
 
 // CLI entry point
-if (require.main === module) {
+const scriptPath = fileURLToPath(import.meta.url);
+if (
+  process.argv[1] === scriptPath ||
+  process.argv[1] === scriptPath.replace(/\.js$/, '')
+) {
   buildExtensions().catch(err => {
     console.error(err);
     process.exit(1);
   });
 }
 
-module.exports = buildExtensions;
+export default buildExtensions;

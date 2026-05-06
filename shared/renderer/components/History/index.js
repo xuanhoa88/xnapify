@@ -35,7 +35,7 @@
  */
 
 // Hooks
-export * from './hooks';
+export * from './hooks.js';
 
 // Components
-export * from './Link';
+export * from './Link.js';

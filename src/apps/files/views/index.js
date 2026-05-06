@@ -6,17 +6,14 @@
  */
 
 // Auto-load contexts
-const viewsContext = require.context(
-  '.',
-  true,
-  /(?:\/_route|\/_layout|\(routes\)\/\([^)]+\)|\(layouts\)\/\([^)]+\)\/_layout)\.[cm]?[jt]sx?$/i,
-);
-
-const translationsContext = require.context(
-  '../translations',
-  false,
-  /\.json$/i,
-);
+const viewsContext = import.meta.webpackContext('.', {
+  recursive: true,
+  regExp: /(?:\/_route|\/_layout|\(routes\)\/\([^)]+\)|\(layouts\)\/\([^)]+\)\/_layout)\.[cm]?[jt]sx?$/i
+});
+const translationsContext = import.meta.webpackContext('../translations', {
+  recursive: false,
+  regExp: /\.json$/i
+});
 
 // =============================================================================
 // LIFECYCLE HOOKS
@@ -26,5 +23,5 @@ export default {
   routes: () => viewsContext,
   translations() {
     return [translationsContext];
-  },
+  }
 };

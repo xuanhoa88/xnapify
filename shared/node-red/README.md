@@ -182,11 +182,11 @@ When the extension is enabled, the node appears in the Node-RED palette immediat
 
 Node-RED settings (`HOME`, `LOG_LEVEL`, `PROJECTS`) are resolved from the database-backed settings service at initialization, with environment variable fallbacks:
 
-| Setting Key | Env Variable | Default |
-|---|---|---|
-| `nodered.HOME` | `XNAPIFY_NODERED_HOME` | `<cwd>/.xnapify/node-red` |
-| `nodered.LOG_LEVEL` | `XNAPIFY_NODERED_LOG_LEVEL` | `info` |
-| `nodered.PROJECTS` | `XNAPIFY_NODERED_PROJECTS` | `false` |
+| Setting Key         | Env Variable                | Default                   |
+| ------------------- | --------------------------- | ------------------------- |
+| `nodered.HOME`      | `XNAPIFY_NODERED_HOME`      | `<cwd>/.xnapify/node-red` |
+| `nodered.LOG_LEVEL` | `XNAPIFY_NODERED_LOG_LEVEL` | `info`                    |
+| `nodered.PROJECTS`  | `XNAPIFY_NODERED_PROJECTS`  | `false`                   |
 
 ## See Also
 

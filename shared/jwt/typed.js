@@ -5,8 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { JWT_TOKEN_TYPES } from './constants';
-import { generateToken, verifyToken } from './core';
+import { JWT_TOKEN_TYPES } from './constants.js';
+import { generateToken, verifyToken } from './core.js';
 
 /**
  * Generate a typed JWT token (access, refresh, etc.)

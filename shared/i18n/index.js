@@ -5,22 +5,21 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import i18nInstance from './getInstance';
-import { getTranslations } from './loader';
-import { addNamespace } from './utils';
+import i18nInstance from './getInstance.js';
+import { getTranslations } from './loader.js';
+import { addNamespace } from './utils.js';
 
 // Export utilities
 export { getTranslations, addNamespace };
 
 // Export constants
-export * from './constants';
+export * from './constants.js';
 
 // Get all translations from the translations directory
-const translationsContext = require.context(
-  './translations',
-  false,
-  /\.json$/i,
-);
+const translationsContext = import.meta.webpackContext('./translations', {
+  recursive: false,
+  regExp: /\.json$/i
+});
 
 /**
  * Get display name for a locale using native Intl.DisplayNames API
@@ -33,9 +32,10 @@ function getLanguageName(locale) {
     const [language] = locale.split('-');
 
     // Use Intl.DisplayNames to get the native name of the language
-    const displayNames = new Intl.DisplayNames([locale], { type: 'language' });
+    const displayNames = new Intl.DisplayNames([locale], {
+      type: 'language'
+    });
     const name = displayNames.of(language);
-
     return name || locale;
   } catch (error) {
     // Fallback to the locale code if Intl.DisplayNames fails
@@ -52,20 +52,10 @@ function getLanguageName(locale) {
  */
 function getLocalesConfig() {
   const translationsMap = getTranslations(translationsContext);
-  const resources = Object.fromEntries(
-    Object.entries(translationsMap).map(([locale, translation]) => [
-      locale,
-      { translation },
-    ]),
-  );
-  const locales = Object.freeze(
-    Object.fromEntries(
-      Object.keys(translationsMap).map(locale => [
-        locale,
-        getLanguageName(locale),
-      ]),
-    ),
-  );
+  const resources = Object.fromEntries(Object.entries(translationsMap).map(([locale, translation]) => [locale, {
+    translation
+  }]));
+  const locales = Object.freeze(Object.fromEntries(Object.keys(translationsMap).map(locale => [locale, getLanguageName(locale)])));
   return [resources, locales];
 }
 
@@ -78,13 +68,7 @@ export { DEFAULT_RESOURCES, AVAILABLE_LOCALES };
  * We iterate through the loaded resources and add them to the already initialized instance
  */
 Object.entries(DEFAULT_RESOURCES).forEach(([locale, resource]) => {
-  i18nInstance.addResourceBundle(
-    locale,
-    'translation',
-    resource.translation,
-    true,
-    true,
-  );
+  i18nInstance.addResourceBundle(locale, 'translation', resource.translation, true, true);
 });
 
 // =============================================================================
@@ -93,21 +77,26 @@ Object.entries(DEFAULT_RESOURCES).forEach(([locale, resource]) => {
 
 // Register the 'shared' namespace — translations for shared renderer components
 // (Modal, Table, WYSIWYG, Form, SearchableSelect, etc.)
-const sharedContext = require.context(
-  '../renderer/translations',
-  false,
-  /\.json$/i,
-);
+const sharedContext = import.meta.webpackContext('../renderer/translations', {
+  recursive: false,
+  regExp: /\.json$/i
+});
 addNamespace('shared', getTranslations(sharedContext));
 
 // Register the 'common' namespace — cross-cutting UI labels
 // (retry, cancel, delete, save, etc.)
-const commonContext = require.context('./namespaces/common', false, /\.json$/i);
+const commonContext = import.meta.webpackContext('./namespaces/common', {
+  recursive: false,
+  regExp: /\.json$/i
+});
 addNamespace('common', getTranslations(commonContext));
 
 // Register the 'admin' namespace — shared admin panel labels
 // (navigation, common admin UI, buttons, error messages)
-const adminContext = require.context('./namespaces/admin', false, /\.json$/i);
+const adminContext = import.meta.webpackContext('./namespaces/admin', {
+  recursive: false,
+  regExp: /\.json$/i
+});
 addNamespace('admin', getTranslations(adminContext));
 
 // =============================================================================

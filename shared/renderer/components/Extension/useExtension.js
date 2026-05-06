@@ -14,7 +14,7 @@ import {
   useContext,
 } from 'react';
 
-import { ExtensionContext } from '../../Providers/Extension';
+import { ExtensionContext } from '../../Providers/Extension.js';
 
 /**
  * Hook to get extension registry

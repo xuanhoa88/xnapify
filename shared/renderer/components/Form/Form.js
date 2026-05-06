@@ -15,7 +15,7 @@ import { useTranslation } from 'react-i18next';
 
 import { z } from '@shared/validator';
 
-import { FormValidationContext } from './FormContext';
+import { FormValidationContext } from './FormContext.js';
 
 import s from './Form.css';
 

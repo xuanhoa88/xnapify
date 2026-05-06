@@ -10,18 +10,22 @@ import * as extensionService from './services/extension.service';
 import { registerExtensionWorkers } from './services/extension.workers';
 
 // Auto-load contexts
-const migrationsContext = require.context(
-  './database/migrations',
-  false,
-  /\.[cm]?[jt]s$/i,
-);
-const seedsContext = require.context(
-  './database/seeds',
-  false,
-  /\.[cm]?[jt]s$/i,
-);
-const modelsContext = require.context('./models', false, /\.[cm]?[jt]s$/i);
-const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
+const migrationsContext = import.meta.webpackContext('./database/migrations', {
+  recursive: false,
+  regExp: /\.[cm]?[jt]s$/i
+});
+const seedsContext = import.meta.webpackContext('./database/seeds', {
+  recursive: false,
+  regExp: /\.[cm]?[jt]s$/i
+});
+const modelsContext = import.meta.webpackContext('./models', {
+  recursive: false,
+  regExp: /\.[cm]?[jt]s$/i
+});
+const routesContext = import.meta.webpackContext('./routes', {
+  recursive: true,
+  regExp: /\.[cm]?[jt]s$/i
+});
 
 // =============================================================================
 // LIFECYCLE HOOKS
@@ -32,15 +36,15 @@ export default {
   seeds: () => seedsContext,
   models: () => modelsContext,
   routes: () => routesContext,
-
-  async boot({ container }) {
+  async boot({
+    container
+  }) {
     registerExtensionWorkers(container);
     registerSchedules(container);
-
     if (process.env.NODE_ENV !== 'production') {
       registerHmrIpcListener(container);
     }
-  },
+  }
 };
 
 /**
@@ -50,7 +54,6 @@ export default {
  * manifests and invalidate API caches.
  */
 const IPC_LISTENER_KEY = Symbol.for('__xnapify.extension.hmr.ipcListener__');
-
 function registerHmrIpcListener(container) {
   // Clean up any existing listener from a previous HMR hot-reload
   // Since require.cache is cleared during full reloads, a module-scoped
@@ -59,28 +62,20 @@ function registerHmrIpcListener(container) {
   if (global[IPC_LISTENER_KEY]) {
     process.removeListener('message', global[IPC_LISTENER_KEY]);
   }
-
   let isRefreshing = false;
-
   const activeIpcListener = async msg => {
     if (msg && msg.type === 'extensions-refreshed') {
       if (isRefreshing) return;
-
       isRefreshing = true;
       const start = Date.now();
       console.log('🔌 Refreshing all extensions...');
-
       try {
-        const extensionIds = Array.isArray(msg.extensions)
-          ? msg.extensions
-          : [];
-
+        const extensionIds = Array.isArray(msg.extensions) ? msg.extensions : [];
         await extensionService.refreshExtensions(extensionIds, {
           extensionManager: container.resolve('extension'),
           cache: container.resolve('cache'),
-          models: container.resolve('models'),
+          models: container.resolve('models')
         });
-
         const duration = Date.now() - start;
         console.log(`✅ Extensions refreshed in ${duration}ms`);
       } catch (err) {
@@ -90,7 +85,6 @@ function registerHmrIpcListener(container) {
       }
     }
   };
-
   global[IPC_LISTENER_KEY] = activeIpcListener;
   process.on('message', activeIpcListener);
 }

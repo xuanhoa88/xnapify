@@ -5,9 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import fetch from 'node-fetch';
-
-import { EmailError } from '../utils/errors';
+import { EmailError } from '../utils/errors.js';
 
 /**
  * SendGrid Email Provider
@@ -144,7 +142,7 @@ export class SendGridEmailProvider {
     try {
       const payload = this.buildPayload(email);
 
-      const response = await fetch(this.apiUrl, {
+      const response = await globalThis.fetch(this.apiUrl, {
         method: 'POST',
         headers: this.getHeaders(),
         body: JSON.stringify(payload),
@@ -252,10 +250,13 @@ export class SendGridEmailProvider {
 
     try {
       // Use a simple API call to verify the key
-      const response = await fetch('https://api.sendgrid.com/v3/user/profile', {
-        method: 'GET',
-        headers: this.getHeaders(),
-      });
+      const response = await globalThis.fetch(
+        'https://api.sendgrid.com/v3/user/profile',
+        {
+          method: 'GET',
+          headers: this.getHeaders(),
+        },
+      );
 
       if (!response.ok) {
         throw new EmailError(

@@ -5,22 +5,22 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { jwtCache, cacheToken } from './cache';
-import { validateJwtConfig, getJwtConfig } from './config';
-import { DEFAULT_JWT_CONFIG } from './constants';
-import { generateToken, verifyToken, decodeToken } from './core';
+import { jwtCache, cacheToken } from './cache.js';
+import { validateJwtConfig, getJwtConfig } from './config.js';
+import { DEFAULT_JWT_CONFIG } from './constants.js';
+import { generateToken, verifyToken, decodeToken } from './core.js';
 import {
   generateTypedToken,
   verifyTypedToken,
   generateTokenPair,
   refreshTokenPair,
-} from './typed';
+} from './typed.js';
 import {
   isTokenExpired,
   getTokenExpiration,
   getTokenTimeLeft,
   createTokenBlacklistEntry,
-} from './utils';
+} from './utils.js';
 
 /**
  * Create a configured JWT instance

@@ -180,7 +180,7 @@ app.use((err, req, res, next) => {
 
 The API router is typically integrated via the `bootstrap/api/index.js` during the application startup. It uses `discoverModules` to find `api/index.js` files in your apps.
 
-Each module's `api/index.js` should export a `routes()` function that returns the webpack `require.context` for its routes:
+Each module's `api/index.js` should export a `routes()` function that returns the rspack `require.context` for its routes:
 
 ```javascript
 // @apps/users/api/index.js
@@ -208,9 +208,9 @@ for (const [name, adapter] of apiRoutes) {
 If your app supports loading external extension modules on the fly, you can dynamically attach or detach them.
 
 ```javascript
-import { createWebpackContextAdapter } from '@shared/utils/contextAdapter';
+import { createRspackContextAdapter } from '@shared/utils/contextAdapter';
 
-const extensionAdapter = createWebpackContextAdapter(
+const extensionAdapter = createRspackContextAdapter(
   require.context('/path/to/my-module/api/routes'),
 );
 

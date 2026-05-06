@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-const path = require('path');
+import path from 'path';
 
 // Get environment variable with default fallback
 const env = (key, defaultValue) => {
@@ -32,7 +32,7 @@ const getDirFromEnv = (envVar, defaultPath) => {
   return path.isAbsolute(envValue) ? envValue : resolvePath(envValue);
 };
 
-module.exports = {
+export default {
   // Helpers
   env,
 
@@ -55,6 +55,6 @@ module.exports = {
   },
 
   get bundleMaxAssetSize() {
-    return env('WEBPACK_MAX_ASSET_SIZE', 250_000); // 250KB
+    return env('RSPACK_MAX_ASSET_SIZE', 250_000); // 250KB
   },
 };

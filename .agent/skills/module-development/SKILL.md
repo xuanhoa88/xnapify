@@ -5,7 +5,7 @@ description: Build API and View modules with correct auto-discovery, lifecycle h
 
 # Module Developer Skill
 
-This skill equips you to build new modules for the `xnapify` application. Modules are automatically discovered and loaded via Webpack `require.context`.
+This skill equips you to build new modules for the `xnapify` application. Modules are automatically discovered and loaded via Rspack `require.context`.
 
 ## Core Concepts
 
@@ -22,13 +22,13 @@ Modules interact with the core framework by exporting a **default object** with 
 2. **Setup Subdirectories:** Always create `controllers`, `services`, `routes`, `models`, and `database/migrations` + `database/seeds`.
 3. **The Index File (`api/index.js`):** Export a `default` object with the following lifecycle hooks:
 
-   - `translations()`: returns the Webpack context for locale JSON files, or an array `[context, customNamespace]` to explicitly define the namespace (defaults to the module's folder name).
+   - `translations()`: returns the Rspack context for locale JSON files, or an array `[context, customNamespace]` to explicitly define the namespace (defaults to the module's folder name).
    - `providers({ container })`: binds singletons/factories to the dependency injection `container`.
-   - `migrations()`: returns the Webpack context for migrations (declarative — autoloader executes).
-   - `models()`: returns the Webpack context for models (declarative — autoloader registers into ORM).
-   - `seeds()`: returns the Webpack context for seeds (declarative — autoloader executes).
+   - `migrations()`: returns the Rspack context for migrations (declarative — autoloader executes).
+   - `models()`: returns the Rspack context for models (declarative — autoloader registers into ORM).
+   - `seeds()`: returns the Rspack context for seeds (declarative — autoloader executes).
    - `boot({ container })`: registers hooks, schedules, queue-based workers, or background worker functions. Runs after all models are loaded.
-   - `routes()`: returns the Webpack context directly (e.g., `() => routesContext`).
+   - `routes()`: returns the Rspack context directly (e.g., `() => routesContext`).
 
    _Phase order: `translations → providers → migrations → models → seeds → boot → routes` (defined in `shared/utils/lifecycle.js`)_
 
@@ -45,16 +45,16 @@ Modules interact with the core framework by exporting a **default object** with 
    - `export const useRateLimit = { max: 200, windowMs: 60_000 }` — custom per-route limiter (merged with app defaults)
    - `export const translations = () => context` — route-specific translations
 
-**Key distinction:** Modules return the Webpack context **directly** from `routes()` (e.g., `() => routesContext`). Extensions return a `[name, context]` tuple instead (e.g., `() => ['posts', routesContext]`).
+**Key distinction:** Modules return the Rspack context **directly** from `routes()` (e.g., `() => routesContext`). Extensions return a `[name, context]` tuple instead (e.g., `() => ['posts', routesContext]`).
 
 ## Procedure: Creating a Frontend View Module
 
 1. **Setup Directory:** Create `src/apps/[module_name]/views/`.
 2. **The Index File (`views/index.js`):** Export a `default` object with the following hooks:
 
-   - `translations()`: returns the Webpack context for frontend locale JSON files, or an array `[context, customNamespace]`.
+   - `translations()`: returns the Rspack context for frontend locale JSON files, or an array `[context, customNamespace]`.
    - `providers({ container })`: bind UI components or Redux selectors/thunks to the container for cross-module usage.
-   - `routes()`: returns the Webpack context directly (e.g., `() => viewsContext`).
+   - `routes()`: returns the Rspack context directly (e.g., `() => viewsContext`).
 
    _Phase order: `translations → providers → boot → routes` (defined in `shared/utils/lifecycle.js`)_
 
@@ -267,7 +267,7 @@ async boot({ container }) {
 
 - **Do not use static imports** between independent `apps/` domains. Use the DI `container.resolve()` or `hook` system to share logic.
 - Follow the exact `_route.js` format for the frontend router.
-- Always use `const ContextName = require.context(...)` inside the `index.js` files precisely as described, because Webpack statically analyzes these strings.
+- Always use `const ContextName = require.context(...)` inside the `index.js` files precisely as described, because Rspack statically analyzes these strings.
 - **Redux injection** should happen in `_route.js` `init()` hooks, not in `views/index.js` `providers()`.
 - Guard optional services with `container.has()` before `container.make()` to avoid crashes when an engine is not loaded.
 - **i18n & Localization:** Extracted strings and `translations/en-US.json` MUST be used across all components and API responses. Do not hardcode user-facing strings.

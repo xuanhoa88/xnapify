@@ -76,7 +76,7 @@ boot({ container }) {
 
 - [ ] Called via `worker.run('workerName', 'fnName', data)` from barrel
 - [ ] Worker engine resolved from DI: `container.resolve('worker')`
-- [ ] Worker file compiled by webpack as standalone CJS
+- [ ] Worker file compiled by rspack as standalone CJS
 - [ ] Worker file outputs to `BUILD_DIR` as `*.worker.js` (auto-discovered at startup)
 
 ## Testing

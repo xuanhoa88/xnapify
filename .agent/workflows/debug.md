@@ -10,7 +10,7 @@ Debug common build and runtime issues in development mode.
 # Clean rebuild (fixes most issues)
 npm run clean && rm -rf node_modules package-lock.json && npm run setup
 
-# Clear webpack cache only
+# Clear rspack cache only
 rm -rf node_modules/.cache
 
 # Kill port 1337 if in use
@@ -54,9 +54,9 @@ function Component() {
 
 ---
 
-# Part 2: Webpack Output
+# Part 2: Rspack Output
 
-`BUILD_DIR` env var controls where Webpack writes compiled bundles (defined in `tools/config.js`):
+`BUILD_DIR` env var controls where Rspack writes compiled bundles (defined in `tools/config.js`):
 
 | Environment | `BUILD_DIR`  | Source                       |
 | ----------- | ------------ | ---------------------------- |
@@ -92,7 +92,7 @@ function Component() {
 | Client assets      | `BUILD_DIR/public/assets/`                 | `clientConfig.output`      |
 | Stats manifest     | `BUILD_DIR/stats.json`                     | `StatsWriterPlugin`        |
 | Extension builds   | `BUILD_DIR/<XNAPIFY_EXTENSION_LOCAL_PATH>` | `tools/tasks/extension.js` |
-| Server HMR updates | `BUILD_DIR/updates/`                       | `configureWebpackForDev()` |
+| Server HMR updates | `BUILD_DIR/updates/`                       | `configureRspackForDev()` |
 
 ### Inspect build output
 
@@ -127,7 +127,7 @@ The project ships with pre-configured launch configurations.
 3. Select **Debug: Select and Start Debugging**
 4. Choose **xnapify: Start Dev Server**
 5. Set breakpoints in server-side code (`src/server.js`, controllers, routes, etc.)
-6. The debugger auto-attaches to the child process that runs the Webpack dev task
+6. The debugger auto-attaches to the child process that runs the Rspack dev task
 
 > **Note:** `autoAttachChildProcesses: true` is already set in `.vscode/launch.json`, so breakpoints work in the spawned `node tools/tasks/dev.js` process.
 
@@ -165,7 +165,7 @@ Then open `chrome://inspect` in Chrome and click **inspect** on the remote targe
 # Part 5: Verbose Logging
 
 ```bash
-# Verbose build logging (Webpack stats, HMR details)
+# Verbose build logging (Rspack stats, HMR details)
 // turbo
 npm run dev -- --verbose
 
@@ -204,8 +204,8 @@ LOG_LEVEL=debug npm run dev -- --verbose
 ### HMR Status
 
 - Check browser console for `[HMR] connected` — confirms Hot Module Replacement is active
-- If HMR disconnects, check terminal for Webpack compilation errors
-- HMR endpoint: `/~/__webpack_hmr`
+- If HMR disconnects, check terminal for Rspack compilation errors
+- HMR endpoint: `/~/__hmr`
 
 ---
 
@@ -293,7 +293,7 @@ await db.connection.revertMigrations(); // Rollback last
 | Port 1337 already in use                              | Previous process still running     | `npx kill-port -p 1337`                                                |
 | `Cannot find module`                                  | Stale require cache or missing dep | `npm run setup` or restart                                             |
 | Breakpoints not hit                                   | Source maps misconfigured          | Ensure `sourceMaps: true` in launch.json                               |
-| HMR says "connected" but no reload                    | Server compilation error           | Check terminal for Webpack errors                                      |
+| HMR says "connected" but no reload                    | Server compilation error           | Check terminal for Rspack errors                                      |
 | Slow recompilation                                    | Large watched file tree            | Check `ignored` patterns in dev.js                                     |
 | API returns HTML instead of JSON                      | SSR middleware intercepting `/api` | Ensure API routes mounted before SSR                                   |
 | SSR hydration mismatch                                | Browser-only code in render        | Use `useEffect` for browser-only logic                                 |

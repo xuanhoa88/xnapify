@@ -41,7 +41,7 @@ shared/api/engines/email/
 ```
 index.js
 └── factory.js
-    ├── providers/* (nodemailer, node-fetch)
+    ├── providers/* (nodemailer, native fetch)
     └── services/send.js
         ├── utils/validation.js (@shared/validator → zod)
         ├── utils/processing.js (@shared/api/engines/template)
@@ -219,7 +219,7 @@ Uses Nodemailer with lazy transporter creation. `close()` closes the connection 
 ### Resend Provider
 
 Config: `apiKey`, `apiUrl` (default: `https://api.resend.com/emails`), `defaultFrom`, `defaultFromName`.
-HTTP API via `node-fetch`. `verify()` tests against `/api-keys` endpoint.
+HTTP API via native `fetch`. `verify()` tests against `/api-keys` endpoint.
 
 ### SendGrid / Mailgun Providers
 

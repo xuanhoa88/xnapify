@@ -5,12 +5,13 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-const path = require('path');
+import crypto from 'crypto';
+import path from 'path';
 
-const glob = require('glob');
-const SequelizeModule = require('sequelize');
+import glob from 'glob';
+import SequelizeModule from 'sequelize';
 
-const config = require('../config');
+import config from '../config.js';
 
 // -----------------------------------------------------------------------------
 // Test database helpers
@@ -57,7 +58,7 @@ async function loadModels(context) {
 
     try {
       // Import model file
-      const { default: initModel } = require(file);
+      const { default: initModel } = await import(file);
 
       // Validate that the export is a function
       if (typeof initModel !== 'function') {
@@ -161,7 +162,6 @@ async function setupTestDb() {
     // natively into the bind parameter array and returns it identically on model instantiation.
     sequelizeInstance.addHook('beforeValidate', instance => {
       if (instance.isNewRecord) {
-        const crypto = require('crypto');
         const pks = Object.keys(instance.rawAttributes).filter(
           key =>
             instance.rawAttributes[key].primaryKey &&
@@ -230,4 +230,4 @@ async function closeTestDb(sequelizeInstance) {
   }
 }
 
-module.exports = { setupTestDb, closeTestDb };
+export { setupTestDb, closeTestDb };

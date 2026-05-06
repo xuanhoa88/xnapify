@@ -11,8 +11,8 @@
 
 import path from 'path';
 
-import { SIZE_LIMITS, DEFAULT_CONFIG } from './constants';
-import { getMimeTypesForCategories } from './fileTypes';
+import { SIZE_LIMITS, DEFAULT_CONFIG } from './constants.js';
+import { getMimeTypesForCategories } from './fileTypes.js';
 
 export const UPLOAD_PRESETS = Object.freeze({
   avatar: {

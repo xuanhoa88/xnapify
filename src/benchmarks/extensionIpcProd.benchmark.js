@@ -5,6 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+
 // Production-grade extension IPC stress benchmark
 // - Creates a lightweight Express server exposing POST /api/extensions/:id/ipc
 // - Registers many handlers on the registry (simulating extensions)
@@ -14,7 +17,6 @@ const { performance } = require('perf_hooks');
 
 const bodyParser = require('body-parser');
 const express = require('express');
-const fetch = require('node-fetch');
 
 const ExtensionRegistryClass =
   require('@shared/extension/utils/Registry').default;

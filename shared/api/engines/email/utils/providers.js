@@ -5,13 +5,13 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { MailgunEmailProvider } from '../providers/mailgun';
-import { MemoryEmailProvider } from '../providers/memory';
-import { ResendEmailProvider } from '../providers/resend';
-import { SendGridEmailProvider } from '../providers/sendgrid';
-import { SmtpEmailProvider } from '../providers/smtp';
+import { MailgunEmailProvider } from '../providers/mailgun.js';
+import { MemoryEmailProvider } from '../providers/memory.js';
+import { ResendEmailProvider } from '../providers/resend.js';
+import { SendGridEmailProvider } from '../providers/sendgrid.js';
+import { SmtpEmailProvider } from '../providers/smtp.js';
 
-import { EmailError } from './errors';
+import { EmailError } from './errors.js';
 
 /**
  * Common logic to instantiate a provider based on its name and options.

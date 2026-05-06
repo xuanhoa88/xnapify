@@ -10,12 +10,12 @@ import { forwardRef } from 'react';
 import PropTypes from 'prop-types';
 import { useController } from 'react-hook-form';
 
-import { WYSIWYG } from '../../WYSIWYG';
+import { WYSIWYG } from '../../WYSIWYG/index.js';
 import {
   useFormField,
   useMergeRefs,
   composeEventHandlers,
-} from '../FormContext';
+} from '../FormContext.js';
 
 /**
  * FormWYSIWYG — A rich-text editor field powered by Tiptap.

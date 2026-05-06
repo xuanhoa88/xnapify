@@ -8,7 +8,7 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
-import { DEFAULT_LOCALE } from './constants';
+import { DEFAULT_LOCALE } from './constants.js';
 
 // Create i18n instance
 const defaultI18nInstance = i18n.createInstance();

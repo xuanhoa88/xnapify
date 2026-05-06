@@ -15,7 +15,7 @@ import reducer, {
   clearDeleteError,
   clearPreferencesError,
   resetUserState,
-} from './slice';
+} from './slice.js';
 import {
   login,
   register,
@@ -31,8 +31,8 @@ import {
   deleteUser,
   getUserPreferences,
   updateUserPreferences,
-} from './thunks';
-import { normalizeState } from './utils';
+} from './thunks.js';
+import { normalizeState } from './utils.js';
 
 describe('[user] slice.js', () => {
   describe('normalizeState', () => {

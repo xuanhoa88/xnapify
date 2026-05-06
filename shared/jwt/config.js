@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { DEFAULT_JWT_CONFIG, JWT_TOKEN_TYPES } from './constants';
+import { DEFAULT_JWT_CONFIG, JWT_TOKEN_TYPES } from './constants.js';
 
 /**
  * Validate JWT configuration

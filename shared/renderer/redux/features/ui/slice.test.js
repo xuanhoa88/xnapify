@@ -17,8 +17,8 @@ import reducer, {
   addBreadcrumb,
   clearBreadcrumbs,
   resetUiState,
-} from './slice';
-import { normalizeState } from './utils';
+} from './slice.js';
+import { normalizeState } from './utils.js';
 
 describe('[ui] slice.js', () => {
   describe('normalizeState', () => {

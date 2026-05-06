@@ -5,5 +5,5 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-export { default } from './PageHeader';
-export { default as PageHeader } from './PageHeader';
+export { default } from './PageHeader.js';
+export { default as PageHeader } from './PageHeader.js';

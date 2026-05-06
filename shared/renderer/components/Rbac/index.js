@@ -5,6 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-export * from './middlewares';
-export * from './useRbac';
-export { default } from './Rbac';
+export * from './middlewares.js';
+export * from './useRbac.js';
+export { default } from './Rbac.js';

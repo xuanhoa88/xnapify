@@ -5,14 +5,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-const crypto = require('crypto');
+import crypto from 'crypto';
 
-const { hashElement } = require('folder-hash');
-// Sqids v0.3.0 uses Blob for multibyte validation. Node 16 ships Blob
-// inside the `buffer` module rather than as a global, so polyfill it.
-if (typeof globalThis.Blob === 'undefined')
-  globalThis.Blob = require('buffer').Blob; // eslint-disable-line global-require
-const Sqids = require('sqids').default;
+import { hashElement } from 'folder-hash';
+import Hashids from 'hashids';
 
 const DEFAULT_OPTIONS = Object.freeze({
   algo: 'sha256',
@@ -94,7 +90,7 @@ async function computeChecksum(dir, options) {
 // Extension ID Generation
 // ========================================================================
 
-/** Default sqids alphabet. */
+/** Default hashids alphabet. */
 const DEFAULT_ALPHABET =
   'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 
@@ -110,7 +106,7 @@ const MIN_LENGTH = 5;
  * @returns {string} Shuffled alphabet
  */
 function deriveAlphabet(key) {
-  const seed = crypto.createHmac('sha256', key).update('sqids').digest();
+  const seed = crypto.createHmac('sha256', key).update('hashids').digest();
   const chars = DEFAULT_ALPHABET.split('');
   for (let i = chars.length - 1; i > 0; i -= 1) {
     const j = seed[i % seed.length] % (i + 1);
@@ -123,36 +119,31 @@ function deriveAlphabet(key) {
 
 const alphabet = process.env.XNAPIFY_KEY
   ? deriveAlphabet(process.env.XNAPIFY_KEY)
-  : undefined;
+  : DEFAULT_ALPHABET;
 
-const sqids = new Sqids({
-  minLength: MIN_LENGTH,
-  ...(alphabet ? { alphabet } : {}),
-});
+const salt = process.env.XNAPIFY_KEY || '';
+const hashids = new Hashids(salt, MIN_LENGTH, alphabet);
 
 /**
  * Generate a deterministic, short, URL-safe extension ID from a manifest name.
  *
  * Strategy: SHA-256 hash the name into a fixed 32-byte digest, then extract
- * two 32-bit unsigned integers from the first 8 bytes. Sqids encodes these
- * two numbers into a compact ~13-character string (similar to YouTube IDs).
+ * two 32-bit unsigned integers from the first 8 bytes. Hashids encodes these
+ * two numbers into a compact string (similar to YouTube IDs).
  *
  * This gives a 2^64 collision space (~18 quintillion) — more than sufficient
  * for extension identity while keeping IDs short and filesystem-friendly.
  *
- * Previous approach encoded every character code of the name, producing
- * ~90-character IDs for a typical scoped package name.
- *
- * When `XNAPIFY_KEY` is set, the sqids alphabet is derived from the key
- * via HMAC-SHA256, making IDs unique per deployment.
+ * When `XNAPIFY_KEY` is set, both the salt and the alphabet are derived
+ * from the key, making IDs unique per deployment.
  *
  * @param {string} name - Extension manifest name (e.g. '@xnapify-extension/profile')
- * @returns {string|null} Compact encoded extension ID (~13 chars) or null if name is invalid
+ * @returns {string|null} Compact encoded extension ID or null if name is invalid
  */
 function generateExtensionId(name) {
   if (!name || typeof name !== 'string') return null;
   const hash = crypto.createHash('sha256').update(name).digest();
-  return sqids.encode([hash.readUInt32BE(0), hash.readUInt32BE(4)]);
+  return hashids.encode(hash.readUInt32BE(0), hash.readUInt32BE(4));
 }
 
-module.exports = { computeChecksum, generateExtensionId };
+export { computeChecksum, generateExtensionId };

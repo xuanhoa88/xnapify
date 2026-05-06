@@ -5,8 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { ROUTE_PATH_ROOT, ROUTE_SEPARATOR } from './constants';
-import { normalizePath } from './utils';
+import { ROUTE_PATH_ROOT, ROUTE_SEPARATOR } from './constants.js';
+import { normalizePath } from './utils.js';
 
 // ============================================================================
 // Route Matching Engine (Radix Tree backed, generator interface)

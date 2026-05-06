@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { HookAbortError, createAggregateError } from './errors';
+import { HookAbortError, createAggregateError } from './errors.js';
 
 // Private symbols for internal state
 const HOOK_NAME = Symbol('__xnapify.hook.name__');

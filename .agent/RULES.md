@@ -19,7 +19,7 @@ Whenever you provide assistance to a Developer on this codebase, you MUST adhere
 - **Stop at Domain Boundaries**: Never write deeply coupled code between two isolated applications (`@apps/billing` should not `import` from `@apps/invoices`). Always utilize the DI container, hook system, or standard HTTP APIs for cross-domain communication.
 - **No Raw SQL**: Unless debugging a confirmed performance bottleneck, strictly utilize Sequelize ORM methods (`findAll`, `create`). Access models via `container.resolve('db').models` or `container.resolve('models')`.
 - **Mandatory License Headers**: Every new source file you create MUST begin with the standard `xnapify` MIT License header.
-  - For `.js`, `.jsx`, `.ts`, `.tsx`, `.css`, `.scss`, `.sass`, `.less`, `.styl`, `.sss` files, use the `/** ... */` block comment style.
+  - For `.js`, `.jsx`, `.ts`, `.tsx`, `.css`, `.scss`, `.sass` files, use the `/** ... */` block comment style.
   - For `.yml`, `.sh`, and `Dockerfile` files, use the `#` comment style.
   - The exact text is:
     `xnapify (https://github.com/xuanhoa88/xnapify/)`
@@ -80,7 +80,7 @@ Whenever you provide assistance to a Developer on this codebase, you MUST adhere
   `translations → providers → migrations → models → seeds → boot → routes`
 - **View modules** (`views/index.js`) must use `export default { ... }` with:
   `translations → providers → boot → routes`
-- **Declarative hooks** (`migrations`, `models`, `seeds`, `routes`) return Webpack `require.context` directly — the autoloader handles execution.
+- **Declarative hooks** (`migrations`, `models`, `seeds`, `routes`) return Rspack `require.context` directly — the autoloader handles execution.
 - **Imperative hooks** (`providers`, `boot`) contain your initialization logic and receive `{ container }`.
 - **Route hooks** (`_route.js`) may export: `middleware`, `init`, `setup`, `teardown`, `mount`, `unmount`, `getInitialProps`, `namespace`.
 

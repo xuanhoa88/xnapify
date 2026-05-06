@@ -12,19 +12,20 @@ A highly opinionated, accessible, and robust form system for xnapify, powered by
 ## Library Support
 
 Exported directly from `Form`:
-* `Input` - Standard text, email, URL inputs
-* `Password` - Hidden togglable inputs
-* `Number` - Numeric enforcement
-* `Textarea` - Multi-line strings
-* `Checkbox` / `CheckboxList` - Boolean & Array sets
-* `Radio` - Singular option selectors
-* `Select` / `SearchableSelect` - Dropdowns mapped to collections
-* `Switch` - Minimalist booleans
-* `Date` / `DateRange` - Calendar integrations
-* `FileUpload` - Drag-and-drop integrated uploader
-* `WYSIWYG` - Rich content editor
-* `Json` - Collapsible, natively interactive schema builder
-* `InputMask` - Formatted masking (e.g. `+1 (___) - ___`)
+
+- `Input` - Standard text, email, URL inputs
+- `Password` - Hidden togglable inputs
+- `Number` - Numeric enforcement
+- `Textarea` - Multi-line strings
+- `Checkbox` / `CheckboxList` - Boolean & Array sets
+- `Radio` - Singular option selectors
+- `Select` / `SearchableSelect` - Dropdowns mapped to collections
+- `Switch` - Minimalist booleans
+- `Date` / `DateRange` - Calendar integrations
+- `FileUpload` - Drag-and-drop integrated uploader
+- `WYSIWYG` - Rich content editor
+- `Json` - Collapsible, natively interactive schema builder
+- `InputMask` - Formatted masking (e.g. `+1 (___) - ___`)
 
 ## Quick Start
 
@@ -33,15 +34,16 @@ import { Form } from '@shared/components/Form';
 import { z } from '@shared/validator';
 
 // 1. Define your Zod validator (the system auto-extracts translation rules here)
-const schema = ({ z, i18n }) => z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
-  rememberMe: z.boolean().default(false)
-});
+const schema = ({ z, i18n }) =>
+  z.object({
+    email: z.string().email(),
+    password: z.string().min(8),
+    rememberMe: z.boolean().default(false),
+  });
 
 export default function LoginView() {
   const handleSubmit = async (data, hookFormMethods) => {
-    console.log("Passed Validation!", data.email);
+    console.log('Passed Validation!', data.email);
   };
 
   return (
@@ -50,25 +52,25 @@ export default function LoginView() {
         Form.Field automatically pairs the <label> with the input ID 
         and extracts required/error styling natively from the schema.
       */}
-      <Form.Field name="email" label="Email Address">
-        <Form.Input type="email" placeholder="john@example.com" />
+      <Form.Field name='email' label='Email Address'>
+        <Form.Input type='email' placeholder='john@example.com' />
       </Form.Field>
 
-      <Form.Field name="password" label="Password">
+      <Form.Field name='password' label='Password'>
         <Form.Password />
       </Form.Field>
 
-      <Form.Field name="rememberMe">
-        <Form.Checkbox label="Keep me logged in" />
+      <Form.Field name='rememberMe'>
+        <Form.Checkbox label='Keep me logged in' />
       </Form.Field>
 
-      <button type="submit">Deploy</button>
+      <button type='submit'>Deploy</button>
     </Form>
   );
 }
 ```
 
-## Creating Custom Fields 
+## Creating Custom Fields
 
 If you are expanding the `Form` components, all custom inputs **must** be nested under `<Form.Field>` when rendered, and should leverage `useFormField` to guarantee cohesive layout matching.
 
@@ -83,12 +85,12 @@ export default function MyCustomSlider({ name }) {
     <Controller
       name={name}
       render={({ field }) => (
-        <input 
+        <input
           id={htmlId}
-          type="range"
+          type='range'
           disabled={error}
           required={required}
-          onChange={field.onChange} 
+          onChange={field.onChange}
         />
       )}
     />

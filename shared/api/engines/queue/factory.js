@@ -5,11 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { register } from '../../shutdown';
+import { register } from '../../shutdown.js';
 
-import FileQueue from './adapters/file';
-import MemoryQueue from './adapters/memory';
-import { Channel } from './channel';
+import FileQueue from './adapters/file.js';
+import MemoryQueue from './adapters/memory.js';
+import { Channel } from './channel.js';
 
 // Default options
 const DEFAULT_OPTIONS = Object.freeze({

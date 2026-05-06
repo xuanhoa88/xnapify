@@ -5,13 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-'use strict';
+import Module from 'module';
 
-const Module = require('module');
+import NodeEnvironment from 'jest-environment-node';
 
-const NodeEnvironment = require('jest-environment-node');
-
-const requireContext = require('./requireContextPolyfill');
+import requireContext from './requireContextPolyfill.js';
 
 // ─── Outer-context prototype patches ──────────────────────────────────────────
 // Jest creates per-module `require` functions in the OUTER Node.js context
@@ -55,49 +53,80 @@ const WEB_STREAM_GLOBALS = [
 
 /**
  * Custom Jest node environment that forwards modern Node.js globals
- * (AbortController, AbortSignal, Web Streams, TextEncoder/Decoder, etc.)
- * into the test VM sandbox — these are absent from Jest 24's built-in
- * jest-environment-node, which predates Node 16+.
+ * (fetch, crypto, Web Streams, TextEncoder/Decoder, etc.)
+ * into the test VM sandbox — these are absent from Jest's built-in
+ * jest-environment-node due to its strict VM context isolation.
  */
 class XnapifyNodeEnvironment extends NodeEnvironment {
   async setup() {
     await super.setup();
 
-    // eslint-disable-next-line no-underscore-dangle
-    this._forwardGlobals();
-    // eslint-disable-next-line no-underscore-dangle
-    this._forwardWebStreams();
-    // eslint-disable-next-line no-underscore-dangle
-    this._forwardTextCodecs();
-    // eslint-disable-next-line no-underscore-dangle
-    this._injectRequireContext();
+    this.#forwardGlobals();
+    await this.#forwardWebStreams();
+    await this.#forwardTextCodecs();
+    this.#injectRequireContext();
   }
 
-  /** Forward Node 16+ globals missing from Jest 24's VM context. */
-  _forwardGlobals() {
-    for (const name of ['AbortController', 'AbortSignal']) {
+  /** Forward Node 16+/18+ globals missing from Jest's VM context. */
+  #forwardGlobals() {
+    const globalsToForward = [
+      'AbortController',
+      'AbortSignal',
+      'fetch',
+      'Headers',
+      'Request',
+      'Response',
+      'FormData',
+      'crypto',
+      'structuredClone',
+      'EventTarget',
+      'Event',
+      'MessageChannel',
+      'MessagePort',
+      'BroadcastChannel',
+      'performance',
+      'PerformanceObserver',
+    ];
+
+    for (const name of globalsToForward) {
       if (typeof globalThis[name] !== 'undefined') {
         this.global[name] = globalThis[name];
       }
     }
   }
 
-  /** Forward Web Streams API (Node 16+ via stream/web). */
-  _forwardWebStreams() {
-    try {
-      const webStreams = require('stream/web');
-      for (const name of WEB_STREAM_GLOBALS) {
-        if (webStreams[name]) this.global[name] = webStreams[name];
+  /** Forward Web Streams API. */
+  async #forwardWebStreams() {
+    for (const name of WEB_STREAM_GLOBALS) {
+      // First try to grab from globalThis (Node 18+)
+      if (typeof globalThis[name] !== 'undefined') {
+        this.global[name] = globalThis[name];
       }
-    } catch (_e) {
-      // stream/web not available — skip
+    }
+
+    // Fallback to stream/web for older Node or missing streams
+    if (!this.global.ReadableStream) {
+      try {
+        const webStreams = await import('stream/web');
+        for (const name of WEB_STREAM_GLOBALS) {
+          if (webStreams[name]) this.global[name] = webStreams[name];
+        }
+      } catch (_e) {
+        // stream/web not available — skip
+      }
     }
   }
 
-  /** Forward TextEncoder / TextDecoder (Node 12+ via util). */
-  _forwardTextCodecs() {
+  /** Forward TextEncoder / TextDecoder. */
+  async #forwardTextCodecs() {
+    if (typeof globalThis.TextEncoder !== 'undefined') {
+      this.global.TextEncoder = globalThis.TextEncoder;
+      this.global.TextDecoder = globalThis.TextDecoder;
+      return;
+    }
+
     try {
-      const util = require('util');
+      const util = await import('util');
       if (util.TextEncoder) this.global.TextEncoder = util.TextEncoder;
       if (util.TextDecoder) this.global.TextDecoder = util.TextDecoder;
     } catch (_e) {
@@ -110,10 +139,10 @@ class XnapifyNodeEnvironment extends NodeEnvironment {
    * This covers code that accesses require.context via the global object
    * rather than the module-local require function.
    */
-  _injectRequireContext() {
+  #injectRequireContext() {
     this.global.require = this.global.require || {};
     this.global.require.context = requireContext;
   }
 }
 
-module.exports = XnapifyNodeEnvironment;
+export default XnapifyNodeEnvironment;

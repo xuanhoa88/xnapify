@@ -5,6 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-export * from './factory';
-export * from './error';
-export { parseSSEStream, createSSEStream } from './stream';
+export * from './factory.js';
+export * from './error.js';
+export { parseSSEStream, createSSEStream } from './stream.js';

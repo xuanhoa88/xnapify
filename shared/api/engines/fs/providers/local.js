@@ -10,7 +10,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { pipeline } from 'stream/promises';
 
-import { FilesystemError, DEFAULT_CONFIG } from '../utils';
+import { FilesystemError, DEFAULT_CONFIG } from '../utils/index.js';
 
 /**
  * Local Filesystem Provider

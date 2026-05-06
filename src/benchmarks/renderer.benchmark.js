@@ -5,6 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+
 // Benchmarks for renderer-related utilities such as store configuration and
 // simple server-side rendering. These help ensure the bootstrap cost of the
 // client/server entrypoints stays reasonable.

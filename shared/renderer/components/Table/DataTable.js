@@ -34,13 +34,13 @@ import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
-import Loader from '../Loader';
-import { PageHeader } from '../PageHeader';
+import Loader from '../Loader/index.js';
+import { PageHeader } from '../PageHeader/index.js';
 
-import TableBulkActions from './TableBulkActions';
-import TablePagination from './TablePagination';
-import TableSearch from './TableSearch';
-import { useMasonryLayout } from './useMasonryLayout';
+import TableBulkActions from './TableBulkActions.js';
+import TablePagination from './TablePagination.js';
+import TableSearch from './TableSearch.js';
+import { useMasonryLayout } from './useMasonryLayout.js';
 
 import s from './DataTable.css';
 

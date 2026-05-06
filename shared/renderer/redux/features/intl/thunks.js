@@ -15,7 +15,7 @@ import {
   setLocaleError,
   setLocaleFallback,
   updateAvailableLocales,
-} from './slice';
+} from './slice.js';
 
 // =============================================================================
 // THUNKS
@@ -93,7 +93,6 @@ export function setLocale(locale) {
       if (!availableLocales.includes(locale)) {
         const prefixMatch = availableLocales.find(k => k.startsWith(locale));
         if (prefixMatch) {
-          // eslint-disable-next-line no-param-reassign
           locale = prefixMatch;
         }
       }
@@ -112,7 +111,7 @@ export function setLocale(locale) {
         dispatch(setLocaleFallback({ requestedLocale, fallbackLocale }));
 
         // Use fallback locale
-        // eslint-disable-next-line no-param-reassign
+
         locale = fallbackLocale;
       }
 

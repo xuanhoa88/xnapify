@@ -5,14 +5,14 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
 
-const config = require('./config');
+import config from './config.js';
 
 // Eagerly scan apps and extensions for overriding tool configurations
 // Using synchronous discovery to ensure config is available at startup
-// before Webpack/ESLint initialization blocks
+// before rspack/ESLint initialization blocks
 
 const discoveryRoots = [
   path.join(config.APP_DIR, 'apps'),
@@ -20,17 +20,24 @@ const discoveryRoots = [
 ];
 
 const registry = {
-  webpackConfigs: [],
+  rspackConfigs: [],
   postcssConfigs: [],
   eslintConfigs: [],
+  stylelintConfigs: [],
 };
 
 // Customizer file names, checked in priority order (first match wins).
 // Hoisted to module scope to avoid re-allocation per module.
 const CUSTOMIZERS = {
-  webpack: ['module.webpack.js', 'extension.webpack.js'],
+  rspack: ['module.rspack.js', 'extension.rspack.js'],
   postcss: ['module.postcss.js', 'postcss.config.js'],
   eslint: ['module.eslint.js', '.eslintrc.js', '.eslintrc.json', '.eslintrc'],
+  stylelint: [
+    'module.stylelint.js',
+    '.stylelintrc.js',
+    '.stylelintrc.json',
+    '.stylelintrc',
+  ],
 };
 
 /**
@@ -71,7 +78,7 @@ function scanRoot(rootDir) {
       let subDirs;
       try {
         subDirs = fs.readdirSync(targetPath, { withFileTypes: true });
-      } catch (err) {
+      } catch (_err) {
         continue;
       }
       for (const subDirent of subDirs) {
@@ -93,7 +100,7 @@ function checkAndRegister(moduleDir) {
   let files;
   try {
     files = new Set(fs.readdirSync(moduleDir));
-  } catch (err) {
+  } catch (_err) {
     return;
   }
 
@@ -102,10 +109,10 @@ function checkAndRegister(moduleDir) {
     return;
   }
 
-  // Webpack: search for module.webpack.js or extension.webpack.js
-  for (const name of CUSTOMIZERS.webpack) {
+  // rspack: search for module.rspack.js or extension.rspack.js
+  for (const name of CUSTOMIZERS.rspack) {
     if (files.has(name)) {
-      registry.webpackConfigs.push({
+      registry.rspackConfigs.push({
         moduleDir,
         path: path.join(moduleDir, name),
       });
@@ -134,9 +141,23 @@ function checkAndRegister(moduleDir) {
       break;
     }
   }
+
+  // Stylelint: module.stylelint.js, .stylelintrc.js, .stylelintrc.json, .stylelintrc
+  for (const name of CUSTOMIZERS.stylelint) {
+    if (files.has(name)) {
+      registry.stylelintConfigs.push({
+        moduleDir,
+        path: path.join(moduleDir, name),
+      });
+      break;
+    }
+  }
 }
 
 // Perform scan at boot time
 discoveryRoots.forEach(scanRoot);
 
-module.exports = registry;
+export const { rspackConfigs } = registry;
+export const { postcssConfigs } = registry;
+export const { eslintConfigs } = registry;
+export const { stylelintConfigs } = registry;

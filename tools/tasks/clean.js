@@ -7,12 +7,13 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-const path = require('path');
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const config = require('../config');
-const { BuildError, logDetailedError } = require('../utils/error');
-const { cleanDir, getFileInfo, readDir } = require('../utils/fs');
-const {
+import config from '../config.js';
+import { BuildError, logDetailedError } from '../utils/error.js';
+import { cleanDir, getFileInfo, readDir } from '../utils/fs.js';
+import {
   formatBytes,
   formatDuration,
   isVerbose,
@@ -20,8 +21,8 @@ const {
   logInfo,
   logVerbose,
   logWarn,
-} = require('../utils/logger');
-const { withRetryFileSystem } = require('../utils/retry');
+} from '../utils/logger.js';
+import { withRetryFileSystem } from '../utils/retry.js';
 
 // Enhanced state management
 const state = {
@@ -155,7 +156,7 @@ async function enhancedCleanDir(targetPath, options = {}) {
     });
     if (preserveCheck.preserve) {
       state.preservedPaths.add(targetPath);
-      // eslint-disable-next-line no-plusplus
+
       state.stats.preservedItems++;
       logDebug(`Preserved ${targetPath}: ${preserveCheck.reason}`);
       return { preserved: true, reason: preserveCheck.reason };
@@ -171,7 +172,7 @@ async function enhancedCleanDir(targetPath, options = {}) {
       state.stats.totalFiles += sizeInfo.fileCount;
     } else if (verbose) {
       sizeInfo.totalSize = pathInfo.size;
-      // eslint-disable-next-line no-plusplus
+
       state.stats.totalFiles++;
     }
 
@@ -195,10 +196,8 @@ async function enhancedCleanDir(targetPath, options = {}) {
 
     // Update stats based on what was cleaned
     if (pathInfo.isDirectory) {
-      // eslint-disable-next-line no-plusplus
       state.stats.deletedDirectories++;
     } else if (pathInfo.isFile) {
-      // eslint-disable-next-line no-plusplus
       state.stats.deletedFiles++;
     }
 
@@ -215,7 +214,6 @@ async function enhancedCleanDir(targetPath, options = {}) {
       ...sizeInfo,
     };
   } catch (error) {
-    // eslint-disable-next-line no-plusplus
     state.stats.errors++;
 
     const cleanError = new BuildError(
@@ -336,7 +334,6 @@ async function main() {
       try {
         logDebug(`Starting: ${target.name} (${target.path})`);
 
-        // eslint-disable-next-line no-await-in-loop
         const result = await withRetryFileSystem(
           () =>
             enhancedCleanDir(target.path, {
@@ -387,7 +384,7 @@ async function main() {
         );
 
         logDetailedError(targetError, { operation: 'clean-target' });
-        // eslint-disable-next-line no-plusplus
+
         state.stats.errors++;
 
         results.push({
@@ -469,7 +466,7 @@ async function main() {
     };
   } catch (error) {
     state.stats.endTime = new Date();
-    // eslint-disable-next-line no-plusplus
+
     state.stats.errors++;
 
     const cleanError =
@@ -486,11 +483,15 @@ async function main() {
 }
 
 // Execute if called directly (as child process)
-if (require.main === module) {
+const scriptPath = fileURLToPath(import.meta.url);
+if (
+  process.argv[1] === scriptPath ||
+  process.argv[1] === scriptPath.replace(/\.js$/, '')
+) {
   main().catch(error => {
     console.error(error);
     process.exit(1);
   });
 }
 
-module.exports = main;
+export default main;

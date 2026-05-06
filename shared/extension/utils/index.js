@@ -5,6 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-export { default as Hook } from './Hook';
-export { default as ExtensionRegistry } from './Registry';
-export * from './BaseExtensionManager';
+export { default as Hook } from './Hook.js';
+export { default as ExtensionRegistry } from './Registry.js';
+export * from './BaseExtensionManager.js';

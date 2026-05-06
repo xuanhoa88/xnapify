@@ -12,17 +12,17 @@
  * associations, unregistration, Proxy-based access, and edge cases.
  */
 
-import ModelRegistry from './ModelRegistry';
+import { createRspackContextAdapter } from '@shared/utils/contextAdapter';
+
+import ModelRegistry from './ModelRegistry.js';
 
 // ---------------------------------------------------------------------------
 // Mocks
 // ---------------------------------------------------------------------------
 
 jest.mock('@shared/utils/contextAdapter', () => ({
-  createWebpackContextAdapter: jest.fn(),
+  createRspackContextAdapter: jest.fn(),
 }));
-
-const { createWebpackContextAdapter } = require('@shared/utils/contextAdapter');
 
 // Helpers
 function createMockDb() {
@@ -173,7 +173,7 @@ describe('ModelRegistry', () => {
 
     describe('source-based removal', () => {
       it('should remove all models from a discovered source', async () => {
-        createWebpackContextAdapter.mockReturnValue(
+        createRspackContextAdapter.mockReturnValue(
           createMockAdapter({
             './Post.js': { default: () => createMockModel('Post') },
             './Comment.js': { default: () => createMockModel('Comment') },
@@ -195,7 +195,7 @@ describe('ModelRegistry', () => {
       });
 
       it('should allow re-discovery of an unregistered source', async () => {
-        createWebpackContextAdapter.mockReturnValue(
+        createRspackContextAdapter.mockReturnValue(
           createMockAdapter({
             './Post.js': { default: () => createMockModel('Post') },
           }),
@@ -208,7 +208,7 @@ describe('ModelRegistry', () => {
         expect(registry.size).toBe(0);
 
         // Re-discover the same source after unregister
-        createWebpackContextAdapter.mockReturnValue(
+        createRspackContextAdapter.mockReturnValue(
           createMockAdapter({
             './Post.js': { default: () => createMockModel('Post') },
           }),
@@ -226,8 +226,8 @@ describe('ModelRegistry', () => {
   // =========================================================================
 
   describe('discover()', () => {
-    it('should discover models from a webpack context', async () => {
-      createWebpackContextAdapter.mockReturnValue(
+    it('should discover models from a rspack context', async () => {
+      createRspackContextAdapter.mockReturnValue(
         createMockAdapter({
           './User.js': { default: () => createMockModel('User') },
           './Role.js': { default: () => createMockModel('Role') },
@@ -264,7 +264,7 @@ describe('ModelRegistry', () => {
 
     describe('idempotency', () => {
       it('should skip re-discovery of an already-processed source', async () => {
-        createWebpackContextAdapter.mockReturnValue(
+        createRspackContextAdapter.mockReturnValue(
           createMockAdapter({
             './User.js': { default: () => createMockModel('User') },
           }),
@@ -278,12 +278,12 @@ describe('ModelRegistry', () => {
         expect(second.registered).toEqual([]);
         expect(second.errors).toEqual([]);
 
-        // createWebpackContextAdapter should only have been called once
-        expect(createWebpackContextAdapter).toHaveBeenCalledTimes(1);
+        // createRspackContextAdapter should only have been called once
+        expect(createRspackContextAdapter).toHaveBeenCalledTimes(1);
       });
 
       it('should track empty sources for idempotency', async () => {
-        createWebpackContextAdapter.mockReturnValue(
+        createRspackContextAdapter.mockReturnValue(
           createMockAdapter({
             './index.js': { default: () => null }, // filtered out
           }),
@@ -295,13 +295,13 @@ describe('ModelRegistry', () => {
         // Second call should be short-circuited
         const second = await registry.discover({}, 'empty-source');
         expect(second.registered).toEqual([]);
-        expect(createWebpackContextAdapter).toHaveBeenCalledTimes(1);
+        expect(createRspackContextAdapter).toHaveBeenCalledTimes(1);
       });
     });
 
     describe('file filtering', () => {
       it('should skip index files', async () => {
-        createWebpackContextAdapter.mockReturnValue(
+        createRspackContextAdapter.mockReturnValue(
           createMockAdapter({
             './index.js': { default: () => createMockModel('Index') },
             './index.ts': { default: () => createMockModel('IndexTs') },
@@ -315,7 +315,7 @@ describe('ModelRegistry', () => {
       });
 
       it('should skip test/spec files', async () => {
-        createWebpackContextAdapter.mockReturnValue(
+        createRspackContextAdapter.mockReturnValue(
           createMockAdapter({
             './User.test.js': { default: () => createMockModel('UserTest') },
             './Role.spec.ts': { default: () => createMockModel('RoleSpec') },
@@ -333,7 +333,7 @@ describe('ModelRegistry', () => {
     describe('factory handling', () => {
       it('should use default export when available', async () => {
         const model = createMockModel('User');
-        createWebpackContextAdapter.mockReturnValue(
+        createRspackContextAdapter.mockReturnValue(
           createMockAdapter({
             './User.js': { default: () => model },
           }),
@@ -345,7 +345,7 @@ describe('ModelRegistry', () => {
 
       it('should fall back to module itself when no default export', async () => {
         const factory = () => createMockModel('User');
-        createWebpackContextAdapter.mockReturnValue(
+        createRspackContextAdapter.mockReturnValue(
           createMockAdapter({
             './User.js': factory,
           }),
@@ -356,7 +356,7 @@ describe('ModelRegistry', () => {
       });
 
       it('should handle async factories', async () => {
-        createWebpackContextAdapter.mockReturnValue(
+        createRspackContextAdapter.mockReturnValue(
           createMockAdapter({
             './User.js': {
               default: async () => createMockModel('User'),
@@ -371,7 +371,7 @@ describe('ModelRegistry', () => {
       it('should warn and skip non-function exports', async () => {
         const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
 
-        createWebpackContextAdapter.mockReturnValue(
+        createRspackContextAdapter.mockReturnValue(
           createMockAdapter({
             './Bad.js': { default: 'not a function' },
           }),
@@ -389,7 +389,7 @@ describe('ModelRegistry', () => {
       it('should warn and skip factories that return null', async () => {
         const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
 
-        createWebpackContextAdapter.mockReturnValue(
+        createRspackContextAdapter.mockReturnValue(
           createMockAdapter({
             './Null.js': { default: () => null },
           }),
@@ -407,7 +407,7 @@ describe('ModelRegistry', () => {
       it('should warn and skip models without a name property', async () => {
         const warnSpy = jest.spyOn(console, 'warn').mockImplementation();
 
-        createWebpackContextAdapter.mockReturnValue(
+        createRspackContextAdapter.mockReturnValue(
           createMockAdapter({
             './NoName.js': { default: () => ({ tableName: 'no_name' }) },
           }),
@@ -427,7 +427,7 @@ describe('ModelRegistry', () => {
       it('should capture factory errors without stopping discovery', async () => {
         const errorSpy = jest.spyOn(console, 'error').mockImplementation();
 
-        createWebpackContextAdapter.mockReturnValue(
+        createRspackContextAdapter.mockReturnValue(
           createMockAdapter({
             './Broken.js': {
               default: () => {
@@ -452,7 +452,7 @@ describe('ModelRegistry', () => {
       it('should capture async factory rejections', async () => {
         const errorSpy = jest.spyOn(console, 'error').mockImplementation();
 
-        createWebpackContextAdapter.mockReturnValue(
+        createRspackContextAdapter.mockReturnValue(
           createMockAdapter({
             './Async.js': {
               default: () => Promise.reject(new Error('Async fail')),
@@ -471,7 +471,7 @@ describe('ModelRegistry', () => {
     describe('duplicate handling', () => {
       it('should silently skip models already registered by another source', async () => {
         // First source registers User
-        createWebpackContextAdapter.mockReturnValue(
+        createRspackContextAdapter.mockReturnValue(
           createMockAdapter({
             './User.js': { default: () => createMockModel('User') },
           }),
@@ -479,7 +479,7 @@ describe('ModelRegistry', () => {
         await registry.discover({}, 'source-a');
 
         // Second source also has User — should be skipped
-        createWebpackContextAdapter.mockReturnValue(
+        createRspackContextAdapter.mockReturnValue(
           createMockAdapter({
             './User.js': {
               default: () => createMockModel('User', { version: 2 }),

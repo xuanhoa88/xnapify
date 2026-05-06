@@ -12,7 +12,7 @@ Quick-reference checklist for reviewing `src/extensions/[extension-name]` code.
 ## Architecture
 
 - [ ] `api/index.js` uses `export default { ... }` with correct hooks
-- [ ] Declarative hooks return Webpack contexts: `models()`, `migrations()`, `seeds()`, `translations()`
+- [ ] Declarative hooks return Rspack contexts: `models()`, `migrations()`, `seeds()`, `translations()`
 - [ ] License header present in first 6 lines of every file
 
 ## Backend Lifecycle

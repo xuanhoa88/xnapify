@@ -7,7 +7,7 @@
 
 import { composeMiddleware } from '@shared/utils/middleware';
 
-import Hook from './Hook';
+import Hook from './Hook.js';
 
 // Symbols — private (internal to registry)
 const EXTENSIONS = Symbol('__xnapify.ext.list__');

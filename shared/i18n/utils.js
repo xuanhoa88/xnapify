@@ -5,10 +5,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  *
  * NOTE: This module assumes `__DEV__` is defined as a global boolean by your
- * bundler (e.g. Webpack DefinePlugin or Vite's `define` config).
+ * bundler (e.g. Rspack DefinePlugin or Vite's `define` config).
  */
 
-import { resolveInstance, getStoreLocales } from './getInstance';
+import { resolveInstance, getStoreLocales } from './getInstance.js';
 
 // ---------------------------------------------------------------------------
 // Internal helpers

@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { createFactory } from './factory';
+import { createFactory } from './factory.js';
 
 describe('Hook binding', () => {
   test('handlers run with provided context as `this`', async () => {

@@ -5,7 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import 'url-polyfill';
 import 'dotenv-flow/config';
 import crypto from 'crypto';
 import fs from 'fs/promises';
@@ -18,25 +17,28 @@ import { createMemoryHistory } from 'history';
 import isLocalhostIp from 'is-localhost-ip';
 import set from 'lodash/set';
 import { LRUCache } from 'lru-cache';
-import nodeFetch from 'node-fetch';
-import ReactDOM from 'react-dom/server';
+import { renderToString, renderToStaticMarkup } from 'react-dom/server';
 import Youch from 'youch';
 
-import { Container } from '@shared/container';
-import { setTokenCookie, setRefreshTokenCookie } from '@shared/cookies';
-import extensionManager from '@shared/extension/server';
-import { createFetch } from '@shared/fetch';
+import { Container } from '@shared/container/index.js';
+import {
+  setTokenCookie,
+  setRefreshTokenCookie,
+} from '@shared/cookies/index.js';
+import extensionManager from '@shared/extension/server/index.js';
+import { createFetch } from '@shared/fetch/index.js';
 import i18n, {
   DEFAULT_LOCALE,
   LOCALE_COOKIE_MAX_AGE,
   LOCALE_COOKIE_NAME,
   AVAILABLE_LOCALES,
-} from '@shared/i18n';
-import { configureJwt } from '@shared/jwt';
-import { NodeRedManager } from '@shared/node-red';
-import { configureStore, features } from '@shared/renderer/redux';
+} from '@shared/i18n/index.js';
+import { configureJwt } from '@shared/jwt/index.js';
+import { NodeRedManager } from '@shared/node-red/index.js';
+import { configureStore, features } from '@shared/renderer/redux/index.js';
+import { createWebSocketServer } from '@shared/ws/server/index.js';
+
 const { setRuntimeVariable, setLocale, me } = features;
-import { createWebSocketServer } from '@shared/ws/server';
 
 // ---------------------------------------------------------------------------
 // Constants & Configuration
@@ -114,7 +116,7 @@ function validatePort(port, defaultPort = 1337) {
 async function sanitizeHost(host) {
   if (!(await isLocalhostIp(host))) return host;
 
-  // 'localhost' → '127.0.0.1': node-fetch resolves 'localhost' to IPv4
+  // 'localhost' → '127.0.0.1': native fetch resolves 'localhost' to IPv4
   // but Node.js server.listen('localhost') binds to IPv6 (::1).
   // Force IPv4 to avoid ECONNREFUSED during SSR self-fetch.
   if (host === 'localhost') return '127.0.0.1';
@@ -403,7 +405,7 @@ const localeMiddleware = expressRequestLanguage({
 // ---------------------------------------------------------------------------
 
 async function initializeViews(context) {
-  const m = await import('./bootstrap/views');
+  const m = await import('./bootstrap/views.js');
   const views = await m.default(context, extensionManager);
   if (__DEV__) console.log('✅ Views initialized');
   return views;
@@ -525,9 +527,7 @@ function safeExtUrls(key) {
 async function renderToHtml({ context, component, metadata = {}, nonce }) {
   const { scriptLinks, styleLinks, App, Html } = await getSsrResources();
 
-  const children = ReactDOM.renderToString(
-    <App context={context}>{component}</App>,
-  );
+  const children = renderToString(<App context={context}>{component}</App>);
 
   const htmlData = {
     ...metadata,
@@ -544,7 +544,7 @@ async function renderToHtml({ context, component, metadata = {}, nonce }) {
     nonce,
   };
 
-  const html = ReactDOM.renderToStaticMarkup(<Html {...htmlData} />);
+  const html = renderToStaticMarkup(<Html {...htmlData} />);
   return `<!doctype html>${html}`;
 }
 
@@ -552,9 +552,6 @@ function makeSsrMiddleware(baseUrl) {
   return async (req, res, next) => {
     // Skip if response is already sent
     if (res.headersSent) return;
-
-    // Skip API routes and non-GET requests
-    if (req.path.startsWith('/api/') || req.method !== 'GET') return next();
 
     // Start timer for render time
     const startTime = Date.now();
@@ -622,7 +619,7 @@ function makeSsrMiddleware(baseUrl) {
       );
 
       // Create fetch with abort controller
-      context.fetch = createFetch(nodeFetch, {
+      context.fetch = createFetch(globalThis.fetch, {
         signal: abortController.signal,
         defaults: {
           baseUrl,
@@ -980,7 +977,7 @@ export async function bootstrapApp(app, server, options = {}) {
 
   // Ensure an absolute XNAPIFY_PUBLIC_APP_URL exists (used by OAuth callbacks, Passport, etc.)
   // If undefined or invalid, default to the local port/host used by the server
-  // Access via bracket notation to prevent Webpack DefinePlugin from replacing it with a build-time string
+  // Access via bracket notation to prevent Rspack DefinePlugin from replacing it with a build-time string
   if (!/^(http|https):\/\/.+$/.test(APP_METADATA.url)) {
     set(process.env, 'XNAPIFY_PUBLIC_APP_URL', baseUrl);
   }
@@ -1000,7 +997,7 @@ export async function bootstrapApp(app, server, options = {}) {
 
   // Extension manager boot-time setup (singleton — set once, not per-request)
   extensionManager.setDevExtensionsDir(SERVER_CONFIG.cwd);
-  extensionManager.fetch = createFetch(nodeFetch, {
+  extensionManager.fetch = createFetch(globalThis.fetch, {
     defaults: {
       baseUrl,
       headers: { 'User-Agent': 'xnapify' },
@@ -1133,7 +1130,7 @@ export async function bootstrapApp(app, server, options = {}) {
   });
 
   // API routes
-  const api = await import('./bootstrap/api');
+  const api = await import('./bootstrap/api/index.js');
   const apiRouter = await api.default(app, extensionManager);
   app.use('/api', apiRouter);
   appState.apiDrain = api.drain;
@@ -1146,7 +1143,7 @@ export async function bootstrapApp(app, server, options = {}) {
     functionGlobalContext: {
       container: () => apiContainer,
       fetch: () =>
-        createFetch(nodeFetch, {
+        createFetch(globalThis.fetch, {
           defaults: {
             headers: { 'User-Agent': 'xnapify-NodeRED' },
           },
@@ -1158,7 +1155,7 @@ export async function bootstrapApp(app, server, options = {}) {
   await appState.nodeRed.setupApiProxy(app, '/api');
 
   // SSR catch-all
-  app.get('*', makeSsrMiddleware(baseUrl));
+  app.get('/*path', makeSsrMiddleware(baseUrl));
 
   // Error handler (must be last)
   app.use(makeErrorMiddleware());
@@ -1260,13 +1257,10 @@ export async function destroyServer(server) {
 // ---------------------------------------------------------------------------
 
 if (module.hot) {
-  module.hot.accept(
-    ['./bootstrap/views', '@shared/renderer/App', '@shared/renderer/Html'],
-    () => {
-      invalidateCaches();
-      console.log('🔄 HMR: SSR dependencies updated, caches cleared');
-    },
-  );
+  module.hot.accept(() => {
+    invalidateCaches();
+    console.log('🔄 HMR: SSR dependencies updated, caches cleared');
+  });
 
   exports.hot = module.hot;
 } else {

@@ -14,7 +14,7 @@ import {
   createOperationResult,
   createZip,
   DEFAULT_CONFIG,
-} from '../utils';
+} from '../utils/index.js';
 
 /**
  * Download file(s)

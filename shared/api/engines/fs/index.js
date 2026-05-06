@@ -104,7 +104,7 @@
  * });
  */
 
-import { createFactory } from './factory';
+import { createFactory } from './factory.js';
 
 export { createFactory };
 

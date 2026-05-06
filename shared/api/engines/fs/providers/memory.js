@@ -7,7 +7,7 @@
 
 import { Readable } from 'stream';
 
-import { FilesystemError } from '../utils';
+import { FilesystemError } from '../utils/index.js';
 
 /**
  * Memory Filesystem Provider

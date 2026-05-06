@@ -6,19 +6,19 @@
  */
 
 // Constants
-export * from './constants';
+export * from './constants.js';
 
 // Core JWT operations
-export * from './core';
+export * from './core.js';
 
 // Typed token operations
-export * from './typed';
+export * from './typed.js';
 
 // Token utilities
-export * from './utils';
+export * from './utils.js';
 
 // Configuration
-export * from './config';
+export * from './config.js';
 
 // Factory functions
-export * from './factory';
+export * from './factory.js';

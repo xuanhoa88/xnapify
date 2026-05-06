@@ -22,52 +22,57 @@
  *     spawnSync("soffice", [...], { env });
  */
 
+const { execSync, spawnSync } = require('child_process');
+const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const fs = require('fs');
-const { execSync, spawnSync } = require('child_process');
 
 function getSofficeBin() {
-    const system = os.platform();
-    let paths = [];
-    if (system === "win32") {
-        paths = [
-            "soffice.exe",
-            "C:\\Program Files\\LibreOffice\\program\\soffice.exe",
-            "C:\\Program Files (x86)\\LibreOffice\\program\\soffice.exe"
-        ];
-    } else if (system === "darwin") {
-        paths = ["soffice", "/Applications/LibreOffice.app/Contents/MacOS/soffice"];
-    } else {
-        paths = ["soffice"];
-    }
+  const system = os.platform();
+  let paths = [];
+  if (system === 'win32') {
+    paths = [
+      'soffice.exe',
+      'C:\\Program Files\\LibreOffice\\program\\soffice.exe',
+      'C:\\Program Files (x86)\\LibreOffice\\program\\soffice.exe',
+    ];
+  } else if (system === 'darwin') {
+    paths = ['soffice', '/Applications/LibreOffice.app/Contents/MacOS/soffice'];
+  } else {
+    paths = ['soffice'];
+  }
 
-    const whichCmd = system === 'win32' ? 'where' : 'which';
+  const whichCmd = system === 'win32' ? 'where' : 'which';
 
-    for (const p of paths) {
+  for (const p of paths) {
+    try {
+      const out = execSync(`${whichCmd} "${p}"`, { stdio: 'pipe' })
+        .toString()
+        .trim();
+      if (out) return out.split('\n')[0].trim();
+    } catch (e) {
+      if (path.isAbsolute(p) && fs.existsSync(p)) {
         try {
-            const out = execSync(`${whichCmd} "${p}"`, { stdio: 'pipe' }).toString().trim();
-            if (out) return out.split('\n')[0].trim();
-        } catch (e) {
-            if (path.isAbsolute(p) && fs.existsSync(p)) {
-                try {
-                    fs.accessSync(p, fs.constants.X_OK);
-                    return p;
-                } catch (err) {}
-            }
-        }
+          fs.accessSync(p, fs.constants.X_OK);
+          return p;
+        } catch (err) {}
+      }
     }
-    return "soffice";
+  }
+  return 'soffice';
 }
 
-const SHIM_SO = path.join(os.tmpdir(), "lo_socket_shim.so");
+const SHIM_SO = path.join(os.tmpdir(), 'lo_socket_shim.so');
 
 function _needsShim() {
-    if (os.platform() === "win32") return false;
-    
-    const testPath = path.join(os.tmpdir(), `_lo_test_${Date.now()}_${Math.floor(Math.random()*1000)}.sock`);
-    try {
-        const code = `
+  if (os.platform() === 'win32') return false;
+
+  const testPath = path.join(
+    os.tmpdir(),
+    `_lo_test_${Date.now()}_${Math.floor(Math.random() * 1000)}.sock`,
+  );
+  try {
+    const code = `
             const net = require('net');
             const s = net.createServer();
             s.on('error', () => process.exit(1));
@@ -76,12 +81,14 @@ function _needsShim() {
                 process.exit(0);
             });
         `;
-        const result = spawnSync(process.execPath, ['-e', code, testPath], { stdio: 'pipe' });
-        if (fs.existsSync(testPath)) fs.unlinkSync(testPath);
-        return result.status !== 0;
-    } catch (e) {
-        return true;
-    }
+    const result = spawnSync(process.execPath, ['-e', code, testPath], {
+      stdio: 'pipe',
+    });
+    if (fs.existsSync(testPath)) fs.unlinkSync(testPath);
+    return result.status !== 0;
+  } catch (e) {
+    return true;
+  }
 }
 
 const _SHIM_SOURCE = `
@@ -193,54 +200,56 @@ int close(int fd) {
 `;
 
 function _ensureShim() {
-    if (fs.existsSync(SHIM_SO)) return SHIM_SO;
+  if (fs.existsSync(SHIM_SO)) return SHIM_SO;
 
-    const src = path.join(os.tmpdir(), "lo_socket_shim.c");
-    fs.writeFileSync(src, _SHIM_SOURCE);
-    try {
-        // gcc requires shell/command-line parsing, but we control the string and variables here.
-        execSync(`gcc -shared -fPIC -o "${SHIM_SO}" "${src}" -ldl`, { stdio: 'pipe' });
-    } catch (e) {
-        console.error("Failed to compile shim logic.", e.message);
-    } finally {
-        if (fs.existsSync(src)) {
-            fs.unlinkSync(src);
-        }
+  const src = path.join(os.tmpdir(), 'lo_socket_shim.c');
+  fs.writeFileSync(src, _SHIM_SOURCE);
+  try {
+    // gcc requires shell/command-line parsing, but we control the string and variables here.
+    execSync(`gcc -shared -fPIC -o "${SHIM_SO}" "${src}" -ldl`, {
+      stdio: 'pipe',
+    });
+  } catch (e) {
+    console.error('Failed to compile shim logic.', e.message);
+  } finally {
+    if (fs.existsSync(src)) {
+      fs.unlinkSync(src);
     }
-    return fs.existsSync(SHIM_SO) ? SHIM_SO : '';
+  }
+  return fs.existsSync(SHIM_SO) ? SHIM_SO : '';
 }
 
 function getSofficeEnv() {
-    const env = Object.assign({}, process.env);
-    env["SAL_USE_VCLPLUGIN"] = "svp";
+  const env = Object.assign({}, process.env);
+  env['SAL_USE_VCLPLUGIN'] = 'svp';
 
-    if (_needsShim()) {
-        const shim = _ensureShim();
-        if (shim) {
-            env["LD_PRELOAD"] = shim;
-        }
+  if (_needsShim()) {
+    const shim = _ensureShim();
+    if (shim) {
+      env['LD_PRELOAD'] = shim;
     }
-    return env;
+  }
+  return env;
 }
 
 function runSoffice(args, kwargs = {}) {
-    const env = getSofficeEnv();
-    const bin = getSofficeBin();
-    return spawnSync(bin, args, { env, stdio: 'inherit', ...kwargs });
+  const env = getSofficeEnv();
+  const bin = getSofficeBin();
+  return spawnSync(bin, args, { env, stdio: 'inherit', ...kwargs });
 }
 
 module.exports = {
-    getSofficeEnv,
-    getSofficeBin,
-    runSoffice
+  getSofficeEnv,
+  getSofficeBin,
+  runSoffice,
 };
 
 if (require.main === module) {
-    const args = process.argv.slice(2);
-    const result = runSoffice(args);
-    if (result.error) {
-        console.error(result.error);
-        process.exit(1);
-    }
-    process.exit(result.status || 0);
+  const args = process.argv.slice(2);
+  const result = runSoffice(args);
+  if (result.error) {
+    console.error(result.error);
+    process.exit(1);
+  }
+  process.exit(result.status || 0);
 }

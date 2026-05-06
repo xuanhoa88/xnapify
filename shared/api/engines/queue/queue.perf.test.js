@@ -16,7 +16,10 @@
  */
 
 import fs from 'fs';
+import { createRequire } from 'module';
 import path from 'path';
+
+const require = createRequire(import.meta.url);
 
 // Mock uuid before any imports that might use it
 jest.mock('uuid', () => ({

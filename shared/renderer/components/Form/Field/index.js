@@ -12,10 +12,10 @@ import get from 'lodash/get';
 import PropTypes from 'prop-types';
 import { useFormContext } from 'react-hook-form';
 
-import FormError from '../Error';
-import { FormFieldContext } from '../FormContext';
-import FormLabel from '../Label';
-import useAsyncValidator from '../useAsyncValidator';
+import FormError from '../Error/index.js';
+import { FormFieldContext } from '../FormContext.js';
+import FormLabel from '../Label/index.js';
+import useAsyncValidator from '../useAsyncValidator.js';
 
 /**
  * FormField - Wrapper for form field with optional label and error message backed by Radix Themes

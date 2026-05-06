@@ -9,18 +9,18 @@
 // STORE CONFIGURATION
 // =============================================================================
 
-export { default as configureStore } from './configureStore';
+export { default as configureStore } from './configureStore.js';
 
 // =============================================================================
 // FEATURES (Actions, Constants, Selectors, Reducers)
 // =============================================================================
 
 // Export the single features object (dynamic imports)
-export { default as features } from './features';
+export { default as features } from './features/index.js';
 
 // =============================================================================
 // ROOT REDUCER
 // =============================================================================
 
 // Root reducer (for advanced use cases)
-export { default as rootReducer } from './rootReducer';
+export { default as rootReducer } from './rootReducer.js';

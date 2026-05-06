@@ -5,12 +5,12 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { createWebpackContextAdapter } from '@shared/utils/contextAdapter';
+import { createRspackContextAdapter } from '@shared/utils/contextAdapter';
 
 const VALID_TYPES = new Set(['api', 'views']);
 
 /**
- * Creates a route adapter from a module name and webpack require.context.
+ * Creates a route adapter from a module name and rspack require.context.
  *
  * Extensions can return `[moduleName, requireContext]` from their `routes()`
  * or `views()` hooks instead of manually building the prefix wrapper.
@@ -21,7 +21,7 @@ const VALID_TYPES = new Set(['api', 'views']);
  *   - View: `./MODULE/views/(admin)/_route.js`
  *
  * @param {string} moduleName - Extension module name (e.g. 'posts')
- * @param {Object} context - Webpack require.context
+ * @param {Object} context - Rspack require.context
  * @param {'api'|'views'} type - Route type
  * @returns {{ files: Function, load: Function, resolve?: Function }}
  */
@@ -37,7 +37,7 @@ function createRouteAdapter(moduleName, context, type) {
     );
   }
 
-  const base = createWebpackContextAdapter(context);
+  const base = createRspackContextAdapter(context);
   const prefix =
     type === 'api' ? `./${moduleName}/api/routes` : `./${moduleName}/views`;
 

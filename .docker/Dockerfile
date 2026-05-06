@@ -6,7 +6,7 @@
 # =============================================================================
 # Build Stage
 # =============================================================================
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 
 # Build tools for native modules (sqlite3 requires node-gyp → python3/make/g++)
 RUN apk add --no-cache python3 py3-setuptools make g++
@@ -48,7 +48,7 @@ RUN NODE_OPTIONS="--max-old-space-size=4096" XNAPIFY_MAX_WORKERS=2 XNAPIFY_HOST=
 # =============================================================================
 # Production Stage
 # =============================================================================
-FROM node:18-alpine
+FROM node:20-alpine
 
 # Runtime dependencies for privilege dropping and embedded database engines.
 # - su-exec: drop root privileges in entrypoint

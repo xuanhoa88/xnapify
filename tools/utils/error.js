@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-const { isVerbose, logError, logInfo } = require('./logger');
+import { isVerbose, logError, logInfo } from './logger.js';
 
 // Store registered handlers for cleanup on the global object so they survive
 // module reloads (e.g. HMR). This prevents accumulating process listeners.
@@ -210,8 +210,4 @@ function setupGracefulShutdown(cleanupFn) {
   return () => handleShutdown('MANUAL', false);
 }
 
-module.exports = {
-  BuildError,
-  logDetailedError,
-  setupGracefulShutdown,
-};
+export { BuildError, logDetailedError, setupGracefulShutdown };

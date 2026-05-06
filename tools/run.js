@@ -5,19 +5,28 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-const { spawn } = require('child_process');
-const { existsSync } = require('fs');
-const { resolve } = require('path');
+import { spawn } from 'child_process';
+import { existsSync } from 'fs';
+import path, { resolve } from 'path';
+import { fileURLToPath } from 'url';
 
-const { BuildError } = require('./utils/error');
-const {
+import dotenvFlow from 'dotenv-flow';
+
+import config from './config.js';
+import { BuildError } from './utils/error.js';
+import {
   formatDuration,
   isSilent,
   isVerbose,
   logDebug,
   logError,
   logInfo,
-} = require('./utils/logger');
+} from './utils/logger.js';
+
+// eslint-disable-next-line no-underscore-dangle
+const __filename = fileURLToPath(import.meta.url);
+// eslint-disable-next-line no-underscore-dangle
+const __dirname = path.dirname(__filename);
 
 // Cache verbose and silent checks
 const verbose = isVerbose();
@@ -161,6 +170,10 @@ const AVAILABLE_TASKS = [
     name: 'stylelint',
     description: 'Lint CSS files with Stylelint',
   },
+  {
+    name: 'jslint',
+    description: 'Lint JavaScript files with ESLint',
+  },
 ];
 
 /**
@@ -221,7 +234,7 @@ function executeTask(taskName) {
   process.env.NODE_ENV = nodeEnv;
 
   // Load environment-specific .env files (.env, .env.local, .env.{NODE_ENV}, etc.)
-  require('dotenv-flow').config({ silent: true, default_node_env: nodeEnv });
+  dotenvFlow.config({ silent: true, default_node_env: nodeEnv });
 
   // Guarantee SQLite in-memory for testing — set AFTER dotenv-flow so it
   // unconditionally overrides any XNAPIFY_DB_URL loaded from env files.
@@ -242,7 +255,7 @@ function executeTask(taskName) {
     const taskProcess = spawn('node', [...process.execArgv, ...taskArgs], {
       stdio: 'inherit',
       env: taskEnv,
-      cwd: require('./config').CWD,
+      cwd: config.CWD,
     });
 
     // Use `once` to prevent double-firing edge cases
@@ -305,7 +318,11 @@ function handleCLIError(error) {
 }
 
 // CLI handling
-if (require.main === module) {
+const scriptPath = fileURLToPath(import.meta.url);
+const isMain =
+  process.argv[1] === scriptPath ||
+  process.argv[1] === scriptPath.replace(/\.js$/, '');
+if (isMain) {
   const taskName = process.argv[2];
 
   // No task provided
@@ -325,4 +342,4 @@ if (require.main === module) {
   executeTask(taskName).catch(handleCLIError);
 }
 
-module.exports = main;
+export default main;

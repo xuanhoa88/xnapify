@@ -9,7 +9,7 @@ import crypto from 'crypto';
 
 import jwt from 'jsonwebtoken';
 
-import { DEFAULT_JWT_CONFIG } from './constants';
+import { DEFAULT_JWT_CONFIG } from './constants.js';
 
 /**
  * Generate a JWT token

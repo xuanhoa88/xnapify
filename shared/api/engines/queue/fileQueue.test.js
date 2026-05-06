@@ -6,9 +6,12 @@
  */
 
 import fs from 'fs';
+import { createRequire } from 'module';
 import path from 'path';
 
-import { JOB_STATUS } from './utils/constants';
+const require = createRequire(import.meta.url);
+
+import { JOB_STATUS } from './utils/constants.js';
 
 const waitFor = async (conditionFn, timeout = 3000) => {
   const start = Date.now();

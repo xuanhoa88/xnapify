@@ -13,7 +13,7 @@ import {
   getRootSegment,
   createError,
   isDescendant,
-} from './utils';
+} from './utils.js';
 
 import Router from '.';
 
@@ -92,6 +92,7 @@ describe('Router Engine', () => {
     };
 
     const res = {
+      setHeader: jest.fn(),
       json: jest.fn(),
     };
 
@@ -114,6 +115,7 @@ describe('Router Engine', () => {
     };
 
     const res = {
+      setHeader: jest.fn(),
       json: jest.fn(),
     };
     const next = jest.fn();
@@ -138,6 +140,7 @@ describe('Router Engine', () => {
     };
 
     const res = {
+      setHeader: jest.fn(),
       json: jest.fn(),
     };
     const next = jest.fn();
@@ -161,6 +164,7 @@ describe('Router Engine', () => {
     };
 
     const res = {
+      setHeader: jest.fn(),
       json: jest.fn(),
     };
 
@@ -222,7 +226,10 @@ describe('Router.add() — Dynamic Extension Injection', () => {
     expect(added.length).toBeGreaterThan(0);
 
     const req = { method: 'GET', path: '/stats', params: {} };
-    const res = { json: jest.fn() };
+    const res = {
+      setHeader: jest.fn(),
+      json: jest.fn(),
+    };
     const next = jest.fn();
 
     await router.resolve(req, res, next);
@@ -245,7 +252,10 @@ describe('Router.add() — Dynamic Extension Injection', () => {
     expect(rootRoute).toBeDefined();
 
     const req = { method: 'GET', path: '/extra', params: {} };
-    const res = { json: jest.fn() };
+    const res = {
+      setHeader: jest.fn(),
+      json: jest.fn(),
+    };
     const next = jest.fn();
 
     await router.resolve(req, res, next);
@@ -280,7 +290,7 @@ describe('Router.remove() — Extension Route Removal', () => {
 
     // Verify it was added
     let req = { method: 'GET', path: '/removable', params: {} };
-    let res = { json: jest.fn() };
+    let res = { json: jest.fn(), setHeader: jest.fn() };
     let next = jest.fn();
     await router.resolve(req, res, next);
     expect(res.json).toHaveBeenCalledWith({ removable: true });
@@ -291,7 +301,7 @@ describe('Router.remove() — Extension Route Removal', () => {
 
     // Verify it's gone
     req = { method: 'GET', path: '/removable', params: {} };
-    res = { json: jest.fn() };
+    res = { json: jest.fn(), setHeader: jest.fn() };
     next = jest.fn();
     await router.resolve(req, res, next);
     expect(res.json).not.toHaveBeenCalled();
@@ -348,7 +358,10 @@ describe('Middleware opt-out (middleware = false)', () => {
 
     // Public route should NOT run the middleware
     const req = { method: 'GET', path: '/public', params: {} };
-    const res = { json: jest.fn() };
+    const res = {
+      setHeader: jest.fn(),
+      json: jest.fn(),
+    };
     const next = jest.fn();
 
     await router.resolve(req, res, next);
@@ -380,14 +393,14 @@ describe('Method-specific middleware arrays', () => {
 
     // GET should NOT have auth middleware
     let req = { method: 'GET', path: '/items', params: {} };
-    let res = { json: jest.fn() };
+    let res = { json: jest.fn(), setHeader: jest.fn() };
     let next = jest.fn();
     await router.resolve(req, res, next);
     expect(res.json).toHaveBeenCalledWith({ method: 'get', auth: false });
 
     // POST should have auth middleware
     req = { method: 'POST', path: '/items', params: {} };
-    res = { json: jest.fn() };
+    res = { json: jest.fn(), setHeader: jest.fn() };
     next = jest.fn();
     await router.resolve(req, res, next);
     expect(res.json).toHaveBeenCalledWith({ method: 'post', auth: true });
@@ -410,7 +423,10 @@ describe('Wildcard catch-all routes', () => {
       path: '/files/docs/readme/intro',
       params: {},
     };
-    const res = { json: jest.fn() };
+    const res = {
+      setHeader: jest.fn(),
+      json: jest.fn(),
+    };
     const next = jest.fn();
 
     await router.resolve(req, res, next);
@@ -435,7 +451,10 @@ describe('Lifecycle hooks', () => {
     const router = new Router(adapter, { onRouteInit, onRouteMount });
 
     const req = { method: 'GET', path: '/', params: {}, app: {} };
-    const res = { json: jest.fn() };
+    const res = {
+      setHeader: jest.fn(),
+      json: jest.fn(),
+    };
     const next = jest.fn();
 
     await router.resolve(req, res, next);
@@ -468,21 +487,21 @@ describe('Instance-level cache isolation', () => {
 
     // Router1 should match /
     let req = { method: 'GET', path: '/', params: {} };
-    let res = { json: jest.fn() };
+    let res = { json: jest.fn(), setHeader: jest.fn() };
     let next = jest.fn();
     await router1.resolve(req, res, next);
     expect(res.json).toHaveBeenCalledWith({ router: 1 });
 
     // Router2 should match /other, not /
     req = { method: 'GET', path: '/other', params: {} };
-    res = { json: jest.fn() };
+    res = { json: jest.fn(), setHeader: jest.fn() };
     next = jest.fn();
     await router2.resolve(req, res, next);
     expect(res.json).toHaveBeenCalledWith({ router: 2 });
 
     // Router2 should NOT match / (it should have its own cache)
     req = { method: 'GET', path: '/', params: {} };
-    res = { json: jest.fn() };
+    res = { json: jest.fn(), setHeader: jest.fn() };
     next = jest.fn();
     await router2.resolve(req, res, next);
     expect(res.json).not.toHaveBeenCalled();
@@ -542,7 +561,9 @@ describe('Action handler fallback and promises', () => {
     };
     const router = new Router(adapter);
     const req = { method: 'GET', path: '/async', params: {} };
-    const res = {};
+    const res = {
+      setHeader: jest.fn(),
+    };
     const next = jest.fn();
 
     await router.resolve(req, res, next);
@@ -560,7 +581,10 @@ describe('Action handler fallback and promises', () => {
     };
     const router = new Router(adapter);
     const req = { method: 'GET', path: '/nomethod', params: {} };
-    const res = { json: jest.fn() };
+    const res = {
+      setHeader: jest.fn(),
+      json: jest.fn(),
+    };
     const next = jest.fn();
 
     await router.resolve(req, res, next);
@@ -576,7 +600,10 @@ describe('Action handler fallback and promises', () => {
     };
     const router = new Router(adapter);
     const req = { method: 'GET', path: '/direct', params: {} };
-    const res = { json: jest.fn() };
+    const res = {
+      setHeader: jest.fn(),
+      json: jest.fn(),
+    };
     const next = jest.fn();
 
     await router.resolve(req, res, next);
@@ -604,14 +631,14 @@ describe('Radix Tree Priority', () => {
 
     // Call /items/new
     let req = { method: 'GET', path: '/items/new', params: {} };
-    let res = { json: jest.fn() };
+    let res = { json: jest.fn(), setHeader: jest.fn() };
     let next = jest.fn();
     await router.resolve(req, res, next);
     expect(res.json).toHaveBeenCalledWith({ type: 'static_new' });
 
     // Call /items/42
     req = { method: 'GET', path: '/items/42', params: {} };
-    res = { json: jest.fn() };
+    res = { json: jest.fn(), setHeader: jest.fn() };
     next = jest.fn();
     await router.resolve(req, res, next);
     expect(res.json).toHaveBeenCalledWith({ type: 'dynamic', id: '42' });

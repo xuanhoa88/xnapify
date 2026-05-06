@@ -9,8 +9,8 @@
  * Preview Service - Worker-enabled wrapper for preview operation
  */
 
-import { preview as previewOperation } from '../operations/preview';
-import { processPreview } from '../workers';
+import { preview as previewOperation } from '../operations/preview.js';
+import { processPreview } from '../workers/index.js';
 
 /**
  * Preview file with optional worker processing

@@ -5,5 +5,5 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-export { default } from './slice';
-export { fetchPublicSettings, selectSetting } from './slice';
+export { default } from './slice.js';
+export { fetchPublicSettings, selectSetting } from './slice.js';

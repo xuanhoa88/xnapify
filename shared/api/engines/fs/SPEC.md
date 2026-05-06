@@ -46,7 +46,7 @@ index.js
     ├── services/* → operations/* + workers/index.js
     ├── providers/local.js (fs, stream/promises)
     ├── providers/memory.js (stream)
-    ├── providers/selfhost.js (node-fetch)
+    ├── providers/selfhost.js (native fetch)
     └── utils/* (crypto, os, path)
 
 workers/index.js
@@ -58,7 +58,7 @@ workers/index.js
 ### Constructor
 
 ```javascript
-new FilesystemManager({ provider, local, memory, selfhost })
+new FilesystemManager({ provider, local, memory, selfhost });
 ```
 
 - `provider` — default provider name (default: `'local'`).
@@ -69,38 +69,38 @@ new FilesystemManager({ provider, local, memory, selfhost })
 
 ### Provider Management
 
-| Method | Returns | Description |
-|---|---|---|
-| `addProvider(name, provider)` | `boolean` | Register custom provider. **Refuses overrides** (logs warning). |
-| `getProvider(name?)` | provider | Get by name or default. Throws `FilesystemError` (`PROVIDER_NOT_FOUND`, 404). |
-| `getProviderNames()` | `string[]` | List registered providers. |
-| `hasProvider(name)` | `boolean` | Check existence. |
-| `getAllStats()` | `object` | Stats from all providers (calls `provider.getStats()` if available). |
-| `cleanup()` | `Promise<void>` | Calls `provider.close()` on all providers, then clears the map. |
+| Method                        | Returns         | Description                                                                   |
+| ----------------------------- | --------------- | ----------------------------------------------------------------------------- |
+| `addProvider(name, provider)` | `boolean`       | Register custom provider. **Refuses overrides** (logs warning).               |
+| `getProvider(name?)`          | provider        | Get by name or default. Throws `FilesystemError` (`PROVIDER_NOT_FOUND`, 404). |
+| `getProviderNames()`          | `string[]`      | List registered providers.                                                    |
+| `hasProvider(name)`           | `boolean`       | Check existence.                                                              |
+| `getAllStats()`               | `object`        | Stats from all providers (calls `provider.getStats()` if available).          |
+| `cleanup()`                   | `Promise<void>` | Calls `provider.close()` on all providers, then clears the map.               |
 
 ### Operations (delegated to services)
 
 All operations accept an optional `options` param. The service layer decides worker vs direct execution.
 
-| Method | Signature | Description |
-|---|---|---|
-| `upload(files, options?)` | single or array | Upload file(s) |
-| `download(fileNames, options?)` | single or array | Download file (returns stream) |
-| `remove(fileNames, options?)` | single or array | Delete file(s) |
-| `copy(ops, options?)` | `{ source, target }` | Copy file(s) |
-| `rename(ops, options?)` | `{ oldName, newName }` | Rename/move file(s) |
-| `info(fileName, options?)` | string | Get file metadata |
-| `preview(fileName, options?)` | string | Get file preview |
-| `sync(ops, options?)` | operations array | Sync operations |
-| `extract(zipSource, extractPath, options?)` | strings | Extract ZIP archive |
+| Method                                      | Signature              | Description                    |
+| ------------------------------------------- | ---------------------- | ------------------------------ |
+| `upload(files, options?)`                   | single or array        | Upload file(s)                 |
+| `download(fileNames, options?)`             | single or array        | Download file (returns stream) |
+| `remove(fileNames, options?)`               | single or array        | Delete file(s)                 |
+| `copy(ops, options?)`                       | `{ source, target }`   | Copy file(s)                   |
+| `rename(ops, options?)`                     | `{ oldName, newName }` | Rename/move file(s)            |
+| `info(fileName, options?)`                  | string                 | Get file metadata              |
+| `preview(fileName, options?)`               | string                 | Get file preview               |
+| `sync(ops, options?)`                       | operations array       | Sync operations                |
+| `extract(zipSource, extractPath, options?)` | strings                | Extract ZIP archive            |
 
 ### Low-Level Provider Methods
 
-| Method | Signature | Description |
-|---|---|---|
-| `exists(fileName, options?)` | string | Check if file exists |
-| `getMetadata(fileName, options?)` | string | Get file metadata |
-| `list(directory?, options?)` | string | List directory contents |
+| Method                            | Signature | Description             |
+| --------------------------------- | --------- | ----------------------- |
+| `exists(fileName, options?)`      | string    | Check if file exists    |
+| `getMetadata(fileName, options?)` | string    | Get file metadata       |
+| `list(directory?, options?)`      | string    | List directory contents |
 
 ### Middleware
 
@@ -118,8 +118,8 @@ Services wrap operations with automatic worker offloading.
 
 ```javascript
 const AUTO_WORKER_THRESHOLDS = {
-  fileCount: 3,           // Use worker for 3+ files
-  fileSize: 5 * 1024 * 1024,  // Use worker for 5MB+ total
+  fileCount: 3, // Use worker for 3+ files
+  fileSize: 5 * 1024 * 1024, // Use worker for 5MB+ total
   maxWorkerFileSize: 50 * 1024 * 1024, // Bypass worker for 50MB+ (avoid IPC overhead)
 };
 ```
@@ -133,22 +133,25 @@ const AUTO_WORKER_THRESHOLDS = {
 ### `MIDDLEWARES` Constants
 
 ```javascript
-{ UPLOAD: Symbol('__xnapify.fsUpload__') }
+{
+  UPLOAD: Symbol('__xnapify.fsUpload__');
+}
 ```
 
 Results attached to `req[MIDDLEWARES.UPLOAD]`.
 
 ### `createUploadMiddleware(provider, options) → Express middleware`
 
-| Option | Default | Description |
-|---|---|---|
-| `fieldName` | `'file'` | Form field name |
-| `maxFiles` | `1` | Max files per request |
-| `maxFileSize` | `10MB` | Max file size in bytes |
-| `allowedMimeTypes` | `null` (all) | Array of allowed MIME types |
-| `useWorker` | `false` | Enable worker post-processing |
+| Option             | Default      | Description                   |
+| ------------------ | ------------ | ----------------------------- |
+| `fieldName`        | `'file'`     | Form field name               |
+| `maxFiles`         | `1`          | Max files per request         |
+| `maxFileSize`      | `10MB`       | Max file size in bytes        |
+| `allowedMimeTypes` | `null` (all) | Array of allowed MIME types   |
+| `useWorker`        | `false`      | Enable worker post-processing |
 
 **Behavior:**
+
 - Creates custom Multer storage engine that streams files directly to the provider via `provider.store()`.
 - Generates unique filenames: `<timestamp>_<uuid-8-chars>.<ext>`.
 - Auto-selects `upload.single()` or `upload.array()` based on `maxFiles`.
@@ -164,14 +167,15 @@ All providers implement: `store`, `retrieve`, `delete`, `exists`, `getMetadata`,
 
 ### Local Provider (`providers/local.js`)
 
-| Config | Default | Description |
-|---|---|---|
-| `basePath` | `~/.xnapify/uploads` | Base directory |
-| `createDirectories` | `true` | Auto-create dirs |
-| `maxFileSize` | `10MB` | Max file size |
-| `allowedExtensions` | `null` (all) | Extension whitelist |
+| Config              | Default              | Description         |
+| ------------------- | -------------------- | ------------------- |
+| `basePath`          | `~/.xnapify/uploads` | Base directory      |
+| `createDirectories` | `true`               | Auto-create dirs    |
+| `maxFileSize`       | `10MB`               | Max file size       |
+| `allowedExtensions` | `null` (all)         | Extension whitelist |
 
 **Key behaviors:**
+
 - **Dual mode `store()`**: Detects streams vs buffers. Streams pipe directly to disk (zero buffering) via `pipeline()`. Buffers handle IPC deserialization (reconstructs `{ type: 'Buffer', data: [...] }` format).
 - **Streaming download**: Returns `createReadStream()`.
 - **Recursive listing**: `list()` supports `{ recursive: true, filesOnly, directoriesOnly }`.
@@ -179,13 +183,14 @@ All providers implement: `store`, `retrieve`, `delete`, `exists`, `getMetadata`,
 
 ### Memory Provider (`providers/memory.js`)
 
-| Config | Default | Description |
-|---|---|---|
-| `maxFileSize` | `10MB` | Max file size |
-| `maxFiles` | `1000` | Max entries |
+| Config              | Default      | Description         |
+| ------------------- | ------------ | ------------------- |
+| `maxFileSize`       | `10MB`       | Max file size       |
+| `maxFiles`          | `1000`       | Max entries         |
 | `allowedExtensions` | `null` (all) | Extension whitelist |
 
 **Key behaviors:**
+
 - Stores files in `Map<fileName, { buffer, metadata }>`.
 - Streams collected into buffer (inherent limitation).
 - `clear()` method for testing.
@@ -193,16 +198,17 @@ All providers implement: `store`, `retrieve`, `delete`, `exists`, `getMetadata`,
 
 ### Self-Host Provider (`providers/selfhost.js`)
 
-| Config | Required | Default | Description |
-|---|---|---|---|
-| `baseUrl` | ✅ | — | Server URL |
-| `apiKey` | — | `null` | Bearer token for `Authorization` header |
-| `timeout` | — | `30s` | Request timeout (AbortController) |
-| `maxFileSize` | — | `10MB` | Max file size |
-| `routes` | — | defaults | Configurable REST route definitions |
+| Config        | Required | Default  | Description                             |
+| ------------- | -------- | -------- | --------------------------------------- |
+| `baseUrl`     | ✅       | —        | Server URL                              |
+| `apiKey`      | —        | `null`   | Bearer token for `Authorization` header |
+| `timeout`     | —        | `30s`    | Request timeout (AbortController)       |
+| `maxFileSize` | —        | `10MB`   | Max file size                           |
+| `routes`      | —        | defaults | Configurable REST route definitions     |
 
 **Key behaviors:**
-- All HTTP requests via `node-fetch` with `AbortController` timeout.
+
+- All HTTP requests via native `fetch` with `AbortController` timeout.
 - Fully configurable routes via functions: `({ fileName }) => ({ path, method, query?, body? })`.
 - Default routes: `POST /files`, `GET /files`, `DELETE /files`, `HEAD /files` (with query params).
 - Streams collected to buffer for HTTP `Content-Length`.
@@ -214,27 +220,27 @@ Worker functions are defined directly in `workers/index.js`. Each function calls
 
 ### High-Level Utility Functions
 
-| Function | FS Method Called | Auto-Detects |
-|---|---|---|
-| `processUpload(filesData, options)` | `fs.upload()` | Single vs Batch |
-| `processDownload(fileNames, options)` | `fs.download()` | Single vs Batch |
-| `processDelete(fileNames, options)` | `fs.remove()` | — |
-| `processRename(operations, options)` | `fs.rename()` | Single vs Batch |
-| `processCopy(operations, options)` | `fs.copy()` | Single vs Batch |
-| `processSync(operations, options)` | `fs.sync()` | Single vs Batch |
-| `processInfo(fileName, options)` | `fs.info()` | — |
-| `processPreview(fileName, options)` | `fs.preview()` | — |
-| `createZipFile(fileInfos, outputPath, options)` | `createZip()` | — |
-| `extractZip(zipSource, extractPath, options)` | `extractZip()` | — |
+| Function                                        | FS Method Called | Auto-Detects    |
+| ----------------------------------------------- | ---------------- | --------------- |
+| `processUpload(filesData, options)`             | `fs.upload()`    | Single vs Batch |
+| `processDownload(fileNames, options)`           | `fs.download()`  | Single vs Batch |
+| `processDelete(fileNames, options)`             | `fs.remove()`    | —               |
+| `processRename(operations, options)`            | `fs.rename()`    | Single vs Batch |
+| `processCopy(operations, options)`              | `fs.copy()`      | Single vs Batch |
+| `processSync(operations, options)`              | `fs.sync()`      | Single vs Batch |
+| `processInfo(fileName, options)`                | `fs.info()`      | —               |
+| `processPreview(fileName, options)`             | `fs.preview()`   | —               |
+| `createZipFile(fileInfos, outputPath, options)` | `createZip()`    | —               |
+| `extractZip(zipSource, extractPath, options)`   | `extractZip()`   | —               |
 
 All functions auto-detect `SINGLE` vs `BATCH` based on array length.
 
 ## 7. Error Classes (`utils/errors.js`)
 
-| Class | Extends | Code Default | Status | Extra Props |
-|---|---|---|---|---|
-| `FilesystemError` | `Error` | `'PROVIDER_ERROR'` | `500` | `timestamp` |
-| `FilesystemWorkerError` | `Error` | `'WORKER_ERROR'` | `500` | `timestamp` |
+| Class                   | Extends | Code Default       | Status | Extra Props |
+| ----------------------- | ------- | ------------------ | ------ | ----------- |
+| `FilesystemError`       | `Error` | `'PROVIDER_ERROR'` | `500`  | `timestamp` |
+| `FilesystemWorkerError` | `Error` | `'WORKER_ERROR'`   | `500`  | `timestamp` |
 
 ### `createOperationResult(success, data?, message?, error?)`
 
@@ -244,19 +250,28 @@ Standardized result object: `{ success, data, message, timestamp, error? }`. Inc
 
 ### Environment Variables
 
-| Env Var | Default | Description |
-|---|---|---|
-| `XNAPIFY_UPLOAD_FILE_SIZE` | `50MB` | Max upload file size |
-| `XNAPIFY_UPLOAD_FILE_LENGTH` | `255` | Max filename length |
-| `XNAPIFY_UPLOAD_DIR` | `~/.xnapify/uploads` | Upload directory |
-| `XNAPIFY_UPLOAD_FILE_EXT` | `null` (all) | Comma-separated allowed extensions |
+| Env Var                      | Default              | Description                        |
+| ---------------------------- | -------------------- | ---------------------------------- |
+| `XNAPIFY_UPLOAD_FILE_SIZE`   | `50MB`               | Max upload file size               |
+| `XNAPIFY_UPLOAD_FILE_LENGTH` | `255`                | Max filename length                |
+| `XNAPIFY_UPLOAD_DIR`         | `~/.xnapify/uploads` | Upload directory                   |
+| `XNAPIFY_UPLOAD_FILE_EXT`    | `null` (all)         | Comma-separated allowed extensions |
 
 ### `ERROR_CODES`
 
 ```javascript
-FILE_NOT_FOUND, INVALID_FILE_TYPE, FILE_TOO_LARGE, UPLOAD_FAILED,
-DOWNLOAD_FAILED, DELETE_FAILED, COPY_FAILED, MOVE_FAILED,
-INVALID_INPUT, PROVIDER_ERROR, PERMISSION_DENIED, STORAGE_FULL
+(FILE_NOT_FOUND,
+  INVALID_FILE_TYPE,
+  FILE_TOO_LARGE,
+  UPLOAD_FAILED,
+  DOWNLOAD_FAILED,
+  DELETE_FAILED,
+  COPY_FAILED,
+  MOVE_FAILED,
+  INVALID_INPUT,
+  PROVIDER_ERROR,
+  PERMISSION_DENIED,
+  STORAGE_FULL);
 ```
 
 ### `SIZE_LIMITS`
@@ -286,4 +301,4 @@ export default fs;
 
 ---
 
-*Note: This spec reflects the CURRENT implementation of the fs engine.*
+_Note: This spec reflects the CURRENT implementation of the fs engine._

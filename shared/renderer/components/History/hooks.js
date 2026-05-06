@@ -14,7 +14,7 @@ import {
   useRef,
 } from 'react';
 
-import { HistoryContext } from '../../Providers/History';
+import { HistoryContext } from '../../Providers/History.js';
 
 /** @type {{ matched: false, params: {} }} Reusable no-match sentinel */
 const NO_MATCH = Object.freeze({ matched: false, params: {} });
@@ -228,7 +228,10 @@ export function useMatch(pattern) {
 export function useLocationChange(callback) {
   const history = useHistory();
 
-  useEffect(() => history.listen(callback), [history, callback]);
+  useEffect(
+    () => history.listen(({ location, action }) => callback(location, action)),
+    [history, callback],
+  );
 }
 
 /**

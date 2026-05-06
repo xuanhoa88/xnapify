@@ -17,7 +17,7 @@ import {
   getFileExtension,
   formatFileSize,
   isImageFile,
-} from '../utils';
+} from '../utils/index.js';
 
 /**
  * Preview a file

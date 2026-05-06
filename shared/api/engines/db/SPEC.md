@@ -57,7 +57,7 @@ When the connection URL starts with `sqlite:`, Sequelize's `afterConnect` hook a
 - `runSeeds(seeds, sequelize, options)` — executes pending seeds.
 - `revertMigrations` / `undoSeeds` — undo last migration/seed.
 - `getMigrationStatus` / `getSeedStatus` — returns `{ executed, pending }`.
-- Migration sources come exclusively from modules via Webpack `require.context` passed by the module autoloader.
+- Migration sources come exclusively from modules via Rspack `require.context` passed by the module autoloader.
 - **Validation:** Throws `InvalidMigrationError` if a migration file does not export a valid `up` function.
 
 ## 4. Module Integration

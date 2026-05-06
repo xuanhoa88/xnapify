@@ -13,23 +13,26 @@
  */
 
 // Auto-load contexts
-const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
-const migrationsContext = require.context(
-  './database/migrations',
-  false,
-  /\.[cm]?[jt]s$/i,
-);
-const seedsContext = require.context(
-  './database/seeds',
-  false,
-  /\.[cm]?[jt]s$/i,
-);
-const modelsContext = require.context('./models', false, /\.[cm]?[jt]s$/i);
-const translationsContext = require.context(
-  '../translations',
-  false,
-  /\.json$/i,
-);
+const routesContext = import.meta.webpackContext('./routes', {
+  recursive: true,
+  regExp: /\.[cm]?[jt]s$/i
+});
+const migrationsContext = import.meta.webpackContext('./database/migrations', {
+  recursive: false,
+  regExp: /\.[cm]?[jt]s$/i
+});
+const seedsContext = import.meta.webpackContext('./database/seeds', {
+  recursive: false,
+  regExp: /\.[cm]?[jt]s$/i
+});
+const modelsContext = import.meta.webpackContext('./models', {
+  recursive: false,
+  regExp: /\.[cm]?[jt]s$/i
+});
+const translationsContext = import.meta.webpackContext('../translations', {
+  recursive: false,
+  regExp: /\.json$/i
+});
 
 // =============================================================================
 // LIFECYCLE HOOKS
@@ -42,21 +45,29 @@ export default {
   migrations: () => migrationsContext,
   seeds: () => seedsContext,
   translations: () => translationsContext,
-
   /**
    * Lifecycle: providers — bind DI services shared with other modules.
    */
-  async providers({ container }) {}, // eslint-disable-line no-unused-vars
+  async providers({
+    container
+  }) {},
+  // eslint-disable-line no-unused-vars
 
   /**
    * Lifecycle: boot — called on every load after models/migrations/seeds.
    */
-  async boot({ container }) {}, // eslint-disable-line no-unused-vars
+  async boot({
+    container
+  }) {},
+  // eslint-disable-line no-unused-vars
 
   /**
    * Lifecycle: shutdown — teardown on extension unload.
    */
-  async shutdown({ container }) {}, // eslint-disable-line no-unused-vars
+  async shutdown({
+    container
+  }) {},
+  // eslint-disable-line no-unused-vars
 
   /**
    * Lifecycle: uninstall — custom teardown (if any).
@@ -64,12 +75,11 @@ export default {
    * the declarative migrations() and seeds() contexts above.
    */
   async uninstall() {},
-
   /**
    * Module-type hook: provides API routes for dynamic injection.
    * Returns [moduleName, context] — the framework auto-builds the adapter.
    */
   routes() {
     return ['posts', routesContext];
-  },
+  }
 };

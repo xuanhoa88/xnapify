@@ -7,7 +7,7 @@
 
 import { createSelector } from '@reduxjs/toolkit';
 
-import { normalizeState } from './utils';
+import { normalizeState } from './utils.js';
 
 // =============================================================================
 // HELPER FUNCTIONS

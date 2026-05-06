@@ -5,15 +5,13 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-/* eslint-env jest */
-
 import renderer, { act } from 'react-test-renderer';
 
 import { registry } from '@shared/extension/client/Registry';
 
-import { ExtensionProvider } from '../../Providers/Extension';
+import { ExtensionProvider } from '../../Providers/Extension.js';
 
-import ExtensionSlot from './ExtensionSlot';
+import ExtensionSlot from './ExtensionSlot.js';
 
 describe('ExtensionSlot', () => {
   let comp;

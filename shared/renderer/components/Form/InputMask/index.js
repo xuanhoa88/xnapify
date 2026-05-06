@@ -15,9 +15,9 @@ import {
   useFormField,
   useMergeRefs,
   composeEventHandlers,
-} from '../FormContext';
+} from '../FormContext.js';
 
-import useMask from './useMask';
+import useMask from './useMask.js';
 
 /**
  * FormInputMask - Masked input element to be used inside Form.Field baked by Radix Themes

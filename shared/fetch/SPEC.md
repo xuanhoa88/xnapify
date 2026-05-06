@@ -21,15 +21,17 @@ When a request is initiated via `$fetch` (or `$factory` internally):
 
 1. **Context Initialization**: A mutable `context` object is created:
    ```javascript
-   { request, options, response, error }
+   {
+     (request, options, response, error);
+   }
    ```
 2. **Options Resolution**: `resolveFetchOptions()` merges input options with instance `defaults`. Headers are normalized into plain lowercase objects.
 3. **`onRequest` Hook**: Called immediately after context resolution.
-4. **URL Normalization**: 
+4. **URL Normalization**:
    - `withBase(request, baseUrl)` is applied.
    - `withQuery(request, query)` appends parameters to the URL search string.
-5. **Body Serialization**: 
-   - Non-string `body` in payload methods (POST, PUT, PATCH, DELETE) is checked via `isJSONSerializable()`. 
+5. **Body Serialization**:
+   - Non-string `body` in payload methods (POST, PUT, PATCH, DELETE) is checked via `isJSONSerializable()`.
    - `Content-Type: application/json` and stringification are applied automatically. Form-encoded requests are transformed via `URLSearchParams`.
    - Streams inject `duplex: 'half'` for compatibility.
 6. **AbortSignal & Timeout**: Applies polyfilled `createTimeoutSignal(ms)` merged with user-provided `AbortSignal`.
@@ -112,6 +114,7 @@ If a network exception occurs or a `status >= 400` happens (without `ignoreRespo
 Extends `Error` and attaches request context properties.
 
 **Instance Shape:**
+
 - `message`: Contextual message (preferring backend JSON bodies, fallback to HTTP Status text).
 - `status`: HTTP Status code.
 - `statusText`: HTTP Status textual description.
@@ -124,5 +127,5 @@ Extends `Error` and attaches request context properties.
 
 - **`isJSONSerializable(value)`**: Safely checks JavaScript primitives, Arrays, and plain Objects while strictly forbidding `FormData`, `Blob`, `Buffer`, and Streams.
 - **`withQuery(url, queryParams)`**: Robustly composes `URLSearchParams` allowing duplicate keys (via Arrays) and rejecting `undefined` values.
-- **`withBase(url, base)`**: Safe path joining avoiding double slashes. 
+- **`withBase(url, base)`**: Safe path joining avoiding double slashes.
 - **`detectResponseType(contentType)`**: Predicts the best `Response.*()` parser (JSON, text, or stream) based on MIME pattern.

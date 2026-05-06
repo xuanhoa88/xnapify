@@ -5,9 +5,12 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { createRequire } from 'module';
 import path from 'path';
 
-import { createFactory, WorkerPoolManager, WorkerError } from './index';
+const require = createRequire(import.meta.url);
+
+import { createFactory, WorkerPoolManager, WorkerError } from './index.js';
 
 // ---------------------------------------------------------------------------
 // Test fixtures

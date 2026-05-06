@@ -18,8 +18,8 @@ import { Text, TextField } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
-import { ExtensionSlot } from '../Extension';
-import Modal from '../Modal';
+import { ExtensionSlot } from '../Extension/index.js';
+import Modal from '../Modal/index.js';
 
 import s from './ToolbarPromptModal.css';
 

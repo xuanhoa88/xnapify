@@ -7,21 +7,22 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-const path = require('path');
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const stylelint = require('stylelint');
+import stylelint from 'stylelint';
 
-const stylelintConfig = require('../../.stylelintrc');
-const config = require('../config');
-const { BuildError } = require('../utils/error');
-const {
+import config from '../config.js';
+import stylelintConfig from '../stylelint.factory.js';
+import { BuildError } from '../utils/error.js';
+import {
   formatDuration,
   logVerbose,
   logError,
   logInfo,
   logWarn,
   isSilent,
-} = require('../utils/logger');
+} from '../utils/logger.js';
 
 // Relative path to app directory
 const appDir = path.relative(config.CWD, config.APP_DIR);
@@ -60,7 +61,10 @@ async function main() {
     const filesToLint =
       patterns.length > 0
         ? patterns
-        : [`${appDir}/**/*.css`, `${sharedDir}/**/*.css`];
+        : [
+            `${appDir}/**/*.{css,scss,sass}`,
+            `${sharedDir}/**/*.{css,scss,sass}`,
+          ];
 
     logVerbose(`📂 Linting patterns: ${filesToLint.join(', ')}`);
     if (shouldFix) {
@@ -171,11 +175,15 @@ async function main() {
 }
 
 // Execute if called directly (as child process)
-if (require.main === module) {
+const scriptPath = fileURLToPath(import.meta.url);
+if (
+  process.argv[1] === scriptPath ||
+  process.argv[1] === scriptPath.replace(/\.js$/, '')
+) {
   main().catch(error => {
     console.error(error.message);
     process.exit(1);
   });
 }
 
-module.exports = main;
+export default main;

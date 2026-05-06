@@ -30,7 +30,9 @@
   width: 34px;
   height: 34px;
   border-radius: var(--radius-3);
-  transition: background-color 0.2s, transform 0.2s;
+  transition:
+    background-color 0.2s,
+    transform 0.2s;
   background: transparent;
   border: none;
   padding: 0;

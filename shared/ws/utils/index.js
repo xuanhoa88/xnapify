@@ -6,13 +6,13 @@
  */
 
 // Export shared constants
-export * from './constants';
+export * from './constants.js';
 
 // Export shared messages
-export * from './messages';
+export * from './messages.js';
 
 // Export shared logger
-export * from './logger';
+export * from './logger.js';
 
 // Export shared errors
-export * from './errors';
+export * from './errors.js';

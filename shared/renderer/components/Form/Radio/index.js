@@ -11,7 +11,11 @@ import { Flex, RadioGroup, Text } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useController, useFormContext } from 'react-hook-form';
 
-import { useFormField, useMergeRefs, useComposedHandler } from '../FormContext';
+import {
+  useFormField,
+  useMergeRefs,
+  useComposedHandler,
+} from '../FormContext.js';
 
 /**
  * FormRadio - Radio group element to be used inside Form.Field baked by Radix Themes

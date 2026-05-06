@@ -10,7 +10,7 @@ The `shared/i18n/` library provides internationalization capabilities powered by
 shared/i18n/
 ├── index.js          # Main entrypoint, default locale loader
 ├── getInstance.js    # Synchronous i18n instance creation & configuration
-├── loader.js         # Webpack/Vite context parsing for JSON files
+├── loader.js         # Rspack/Vite context parsing for JSON files
 └── utils.js          # Dynamic namespace injection/removal logic
 ```
 
@@ -24,6 +24,7 @@ shared/i18n/
 ## Built-in Locales (`index.js`)
 
 On initialization, `index.js` traverses `shared/i18n/translations/*.json` via `require.context`:
+
 - It builds `DEFAULT_RESOURCES` mapping locales to dictionary objects.
 - It builds `AVAILABLE_LOCALES` mapping keys to highly readable native language names using standard `Intl.DisplayNames()`.
 - It injects all loaded dictionaries into the foundational `translation` namespace via `i18n.addResourceBundle`.
@@ -33,26 +34,34 @@ On initialization, `index.js` traverses `shared/i18n/translations/*.json` via `r
 Because the application modularity splits functionalities into different folders, loading all translations globally upfront creates gigantic bundles. The `utils.js` provides runtime augmentation logic.
 
 ### `addNamespace(namespace, translations, [i18nInstance])`
-Accepts a structure like `{'en-US': { key: 'val' }, ...}`. 
+
+Accepts a structure like `{'en-US': { key: 'val' }, ...}`.
+
 1. Pushes the string to `i18n.options.ns` array.
 2. Loops over every locale key provided and executes `i18n.addResourceBundle(locale, namespace, data, true, true)`.
 
 ### `removeNamespace(namespace, [i18nInstance])`
-Tears down a dynamically added namespace from memory. 
+
+Tears down a dynamically added namespace from memory.
+
 - Filters the `i18n.options.ns` array.
 - Uses `getStoreLocales()` (which inspects actual runtime `store.data` rather than initial configuration) to iterate active languages and invoke `i18n.removeResourceBundle()`.
 
 ### `hasNamespace(namespace, [i18nInstance])`
+
 Verifies if a namespace is actively loaded. It checks two conditions:
+
 1. Is it included in `i18n.options.ns`?
-2. Does it exist in the store under *any* active locale? (`i18n.store.data[loc][ns]`)
+2. Does it exist in the store under _any_ active locale? (`i18n.store.data[loc][ns]`)
 
 ### `ensureNamespaceLoaded(namespace, loader, [i18nInstance])`
+
 An async wrapper. If `hasNamespace()` returns `false`, it executes the `loader()` promise, receives the translation dictionary mapping, and then calls `addNamespace()`.
 
 ## Loader Extraction (`loader.js`)
 
 `getTranslations(adapter)` abstracts the iteration of `require.context` constructs.
+
 1. Utilizes `@shared/utils/contextAdapter` to handle both pure `require.context` or already-adapted modules.
 2. Applies regex `([^/]+)\.json$/i` to extract the exact locale name from the filename.
 3. Consolidates into an object of translations mapped by Locale Code.

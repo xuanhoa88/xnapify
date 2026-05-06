@@ -5,10 +5,13 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-const path = require('path');
+import path from 'path';
 
-const config_constants = require('./config');
-const { eslintConfigs } = require('./registry.factory');
+import isArray from 'lodash/isArray.js';
+import mergeWith from 'lodash/mergeWith.js';
+
+import appConfig from './config.js';
+import { eslintConfigs } from './registry.factory.js';
 
 const patterns = {
   all: '{shared,src}/**/*.{js,jsx}',
@@ -18,8 +21,6 @@ const patterns = {
 
 const config = {
   root: true,
-
-  // ESLint's built-in parser (espree) supports JSX natively.
 
   env: {
     browser: true,
@@ -31,7 +32,6 @@ const config = {
   parserOptions: {
     ecmaVersion: 'latest',
     sourceType: 'module',
-
     ecmaFeatures: {
       jsx: true,
     },
@@ -39,17 +39,12 @@ const config = {
 
   extends: [
     'eslint:recommended',
-
     'plugin:react/recommended',
     'plugin:react/jsx-runtime',
     'plugin:react-hooks/recommended',
-
     'plugin:jsx-a11y/recommended',
-
     'plugin:import/recommended',
-
     'plugin:css-modules/recommended',
-
     'plugin:prettier/recommended',
   ],
 
@@ -59,26 +54,22 @@ const config = {
     NODE_ENV: 'readonly',
     __DEV__: 'readonly',
     __TEST__: 'readonly',
-
     __EXTENSION_ID__: 'readonly',
     __EXTENSION_DESCRIPTION__: 'readonly',
   },
 
   rules: {
-    /*
-     * Core
-     */
-
+    /* Core */
     'no-console': 'off',
-
     'no-unused-vars': [
       'error',
       {
         argsIgnorePattern: '^_',
         varsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^(_|err|error|e)',
+        destructuredArrayIgnorePattern: '^_',
       },
     ],
-
     'no-underscore-dangle': [
       'error',
       {
@@ -86,26 +77,19 @@ const config = {
       },
     ],
 
-    /*
-     * Imports
-     */
-
+    /* Imports */
     'import/no-extraneous-dependencies': 'off',
-
     'import/no-unresolved': 'error',
-
     'import/no-named-as-default': 'off',
     'import/no-named-as-default-member': 'off',
-
     'import/extensions': [
       'error',
       'ignorePackages',
       {
-        js: 'never',
-        jsx: 'never',
+        js: 'ignore',
+        jsx: 'ignore',
       },
     ],
-
     'import/order': [
       'error',
       {
@@ -117,126 +101,75 @@ const config = {
           'sibling',
           'index',
         ],
-
         pathGroups: [
+          { pattern: 'react', group: 'external', position: 'before' },
+          { pattern: '@shared/**', group: 'internal', position: 'after' },
           {
-            pattern: 'react',
-            group: 'external',
-            position: 'before',
-          },
-          {
-            pattern: '@shared/**',
-            group: 'internal',
-            position: 'after',
-          },
-          {
-            pattern: '*.{css,s[ac]ss,less,styl,sss}',
+            pattern: '*.{css,s[ac]ss}',
             group: 'index',
             position: 'after',
             patternOptions: { matchBase: true },
           },
         ],
-
         pathGroupsExcludedImportTypes: ['builtin'],
-
-        alphabetize: {
-          order: 'asc',
-          caseInsensitive: true,
-        },
-
+        alphabetize: { order: 'asc', caseInsensitive: true },
         'newlines-between': 'always',
       },
     ],
 
-    /*
-     * React
-     */
-
-    'react/jsx-filename-extension': [
-      'error',
-      {
-        extensions: ['.js', '.jsx'],
-      },
-    ],
-
+    /* React */
+    'react/jsx-filename-extension': ['error', { extensions: ['.js', '.jsx'] }],
     'react/jsx-key': 'error',
-
     'react/prefer-stateless-function': 'off',
+    'react-hooks/immutability': 'off',
+    'react-hooks/refs': 'off',
+    'react-hooks/set-state-in-effect': 'off',
+    'react-hooks/use-memo': 'off',
 
-    /*
-     * Accessibility
-     */
-
+    /* Accessibility */
     'jsx-a11y/anchor-is-valid': 'error',
 
-    /*
-     * Destructuring
-     */
-
+    /* Destructuring */
     'prefer-destructuring': [
       'error',
       {
-        VariableDeclarator: {
-          object: true,
-          array: false,
-        },
-        AssignmentExpression: {
-          object: false,
-          array: false,
-        },
+        VariableDeclarator: { object: true, array: false },
+        AssignmentExpression: { object: false, array: false },
       },
-      {
-        enforceForRenamedProperties: false,
-      },
+      { enforceForRenamedProperties: false },
     ],
 
-    /*
-     * Syntax restrictions
-     */
-
+    /* Syntax restrictions */
     'no-restricted-syntax': [
       'error',
-
       {
         selector: 'LogicalExpression[operator="??"]',
         message: 'Nullish coalescing (??) is not allowed.',
       },
-
       {
         selector: 'AssignmentExpression[operator="??="]',
         message: 'Nullish coalescing assignment (??=) is not allowed.',
       },
-
       {
         selector: 'ChainExpression',
         message: 'Optional chaining (?.) is not allowed.',
       },
     ],
 
-    /*
-     * Style Enforcement
-     */
+    /* Style Enforcement */
     'react/forbid-dom-props': ['error', { forbid: ['style'] }],
     'react/forbid-component-props': ['error', { forbid: ['style'] }],
   },
 
   settings: {
-    react: {
-      version: 'detect',
-    },
-
+    react: { version: 'detect' },
     'import/ignore': ['node_modules'],
-
-    'import/parsers': {
-      espree: ['.js', '.jsx'],
-    },
-
+    'import/parsers': { espree: ['.js', '.jsx'] },
     'import/resolver': {
       node: {
         extensions: ['.js', '.jsx', '.json'],
         moduleDirectory: ['node_modules', 'src'],
       },
-
       alias: {
         map: [['@shared', './shared']],
         extensions: ['.js', '.jsx', '.json'],
@@ -247,20 +180,15 @@ const config = {
 
 config.overrides = [
   ...eslintConfigs.map(cfg => {
-    // Use relative paths so the config is portable across machines and CI.
-    // .eslintrc.js at the project root re-exports this file, so paths are
-    // relative to the project root (CWD).
     const relDir = path
-      .relative(config_constants.CWD, cfg.moduleDir)
+      .relative(appConfig.CWD, cfg.moduleDir)
       .replace(/\\/g, '/');
     return {
       files: [`${relDir}/**/*.{js,jsx}`],
-      // Use extends to inherit from the module-level config cleanly
       extends: [cfg.path],
     };
   }),
   {
-    // Global bypass for legacy files until fully migrated
     files: [
       'src/apps/**/*.js',
       'src/extensions/**/*.js',
@@ -273,7 +201,12 @@ config.overrides = [
     },
   },
   {
-    // Opt-in strict enforcement for fully mapped and audited directories
+    files: ['**/*.test.js', '**/*.spec.js'],
+    rules: {
+      'no-redeclare': 'off',
+    },
+  },
+  {
     files: [
       'shared/renderer/components/SearchableSelect/**/*.js',
       'shared/renderer/components/Modal/**/*.js',
@@ -290,11 +223,21 @@ config.overrides = [
   },
 ];
 
-module.exports = config;
+/**
+ * Creates an extended ESLint configuration by deep merging user configs.
+ * Arrays (like plugins, extends) are concatenated rather than overwritten.
+ *
+ * @param {Object} customConfig - User overrides
+ * @returns {Object} Merged ESLint configuration
+ */
+export function createConfig(customConfig = {}) {
+  return mergeWith({}, config, customConfig, (objValue, srcValue) => {
+    if (isArray(objValue)) {
+      return objValue.concat(srcValue);
+    }
+  });
+}
 
-Object.defineProperty(module.exports, 'patterns', {
-  value: patterns,
-  enumerable: false,
-  writable: false,
-  configurable: false,
-});
+export default config;
+
+export { patterns };

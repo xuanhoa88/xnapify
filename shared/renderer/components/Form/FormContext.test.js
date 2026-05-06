@@ -7,7 +7,7 @@
 
 import { z } from '@shared/validator';
 
-import { isFieldRequired, composeEventHandlers } from './FormContext';
+import { isFieldRequired, composeEventHandlers } from './FormContext.js';
 
 describe('FormContext', () => {
   describe('isFieldRequired', () => {

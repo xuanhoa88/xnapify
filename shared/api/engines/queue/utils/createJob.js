@@ -7,7 +7,7 @@
 
 import { v4 as uuidv4 } from 'uuid';
 
-import { JOB_STATUS } from './constants';
+import { JOB_STATUS } from './constants.js';
 
 /**
  * Create a standardized job object.

@@ -11,22 +11,22 @@ import {
   validateAdapter,
 } from '@shared/utils/BaseRouter';
 
-import { buildRoutes, validateConfig, linkParents } from './builder';
-import { collect } from './collector';
+import { buildRoutes, validateConfig, linkParents } from './builder.js';
+import { collect } from './collector.js';
 import {
   ROUTE_MOUNT_KEY,
   ROUTE_UNMOUNT_KEY,
   ROUTE_PREV_KEY,
   ROUTE_PREV_CTX,
-} from './constants';
+} from './constants.js';
 import {
   loadRouteTranslations,
   runInit,
   runMount,
   runUnmount,
-} from './lifecycle';
-import { createMatcher } from './matcher';
-import { createError, decodeUrl, isDescendant, log } from './utils';
+} from './lifecycle.js';
+import { createMatcher } from './matcher.js';
+import { createError, decodeUrl, isDescendant, log } from './utils.js';
 
 // ============================================================================
 // Helpers
@@ -317,7 +317,7 @@ export class Router extends BaseRouter {
     validateAdapter(adapter);
 
     // Build new routes — merge core layouts with extension-provided layouts
-    // eslint-disable-next-line no-underscore-dangle
+
     const extLayouts = collect(adapter, 'layouts');
     const mergedLayouts = new Map([
       // eslint-disable-next-line no-underscore-dangle
@@ -337,7 +337,7 @@ export class Router extends BaseRouter {
     const insertedRoutes = this._addRoutes(newRoutes, adapter, sourceId);
 
     // Track genuinely inserted routes for deferred register() lifecycle
-    // eslint-disable-next-line no-underscore-dangle
+
     if (insertedRoutes.length > 0) {
       // eslint-disable-next-line no-underscore-dangle
       this._pendingRoutes.push(...insertedRoutes);
@@ -531,15 +531,14 @@ export class Router extends BaseRouter {
       },
     };
 
-    // eslint-disable-next-line no-param-reassign
     const next = async (resume = false, parent = null, prevResult = null) => {
       // Iterative loop replaces recursive next() calls.
       // O(1) memory regardless of match count.
       let __iterations = 0; // eslint-disable-line no-underscore-dangle
-      // eslint-disable-next-line no-constant-condition
+
       while (true) {
         // Dev-only: catch infinite loops with a clear error
-        // eslint-disable-next-line no-underscore-dangle, no-plusplus
+
         if (__DEV__ && ++__iterations > 100) {
           throw createError(`Possible infinite loop: ${ctx.pathname}`, 500, {
             pathname: ctx.pathname,

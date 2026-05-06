@@ -7,7 +7,9 @@ LiquidJS-based template rendering for dynamic content. Used by the email engine 
 ```javascript
 const template = container.resolve('template');
 
-const html = await template.render('<p>Hello {{ name }}</p>', { name: 'World' });
+const html = await template.render('<p>Hello {{ name }}</p>', {
+  name: 'World',
+});
 // => '<p>Hello World</p>'
 ```
 

@@ -33,13 +33,13 @@ export async function init(container) {
 
 Register a cron task. Validates inputs, then delegates to `node-cron`. The handler is wrapped in a try/catch that logs errors via `console.error` but never propagates them to `node-cron`.
 
-| Param | Type | Default | Description |
-|---|---|---|---|
-| `name` | `string` | *required* | Unique task identifier (convention: `module:action`) |
-| `cronExpression` | `string` | *required* | Standard cron expression (5 or 6 fields) |
-| `handler` | `Function` | *required* | Async function to execute on each tick |
-| `options.scheduled` | `boolean` | `autoStart` | Whether to start immediately. Falls back to the manager's `autoStart` flag |
-| `options.timezone` | `string` | `'UTC'` | IANA timezone for execution |
+| Param               | Type       | Default     | Description                                                                |
+| ------------------- | ---------- | ----------- | -------------------------------------------------------------------------- |
+| `name`              | `string`   | _required_  | Unique task identifier (convention: `module:action`)                       |
+| `cronExpression`    | `string`   | _required_  | Standard cron expression (5 or 6 fields)                                   |
+| `handler`           | `Function` | _required_  | Async function to execute on each tick                                     |
+| `options.scheduled` | `boolean`  | `autoStart` | Whether to start immediately. Falls back to the manager's `autoStart` flag |
+| `options.timezone`  | `string`   | `'UTC'`     | IANA timezone for execution                                                |
 
 **Validation:** Throws `ScheduleError` with codes `INVALID_TASK_NAME`, `INVALID_CRON_EXPRESSION`, or `INVALID_HANDLER`. Expression is validated both as a non-empty string and via `cron.validate()`.
 
@@ -104,14 +104,14 @@ import { ScheduleError } from '@shared/api/engines/schedule';
 
 ## Common Cron Expressions
 
-| Expression | Schedule |
-|---|---|
-| `* * * * *` | Every minute |
-| `*/5 * * * *` | Every 5 minutes |
-| `0 * * * *` | Every hour |
-| `0 0 * * *` | Daily at midnight |
-| `0 9 * * 1` | Monday at 9 AM |
-| `0 0 1 * *` | First of each month |
+| Expression    | Schedule            |
+| ------------- | ------------------- |
+| `* * * * *`   | Every minute        |
+| `*/5 * * * *` | Every 5 minutes     |
+| `0 * * * *`   | Every hour          |
+| `0 0 * * *`   | Daily at midnight   |
+| `0 9 * * 1`   | Monday at 9 AM      |
+| `0 0 1 * *`   | First of each month |
 
 ## Worker Integration
 

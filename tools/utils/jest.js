@@ -5,10 +5,13 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import { createRequire } from 'module';
+import path from 'path';
 
-const { BuildError } = require('./error');
+import { BuildError } from './error.js';
+
+const require = createRequire(import.meta.url);
 
 /**
  * Resolve Jest binary path
@@ -47,6 +50,4 @@ function resolveJestBin(cwd) {
   return jestBin;
 }
 
-module.exports = {
-  resolveJestBin,
-};
+export { resolveJestBin };

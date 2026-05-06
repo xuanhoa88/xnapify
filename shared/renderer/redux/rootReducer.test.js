@@ -7,7 +7,7 @@
 
 import { combineReducers } from '@reduxjs/toolkit';
 
-import rootReducer from './rootReducer';
+import rootReducer from './rootReducer.js';
 
 describe('[rootReducer] rootReducer.js', () => {
   it('should export an object of reducers for dynamic injection', () => {

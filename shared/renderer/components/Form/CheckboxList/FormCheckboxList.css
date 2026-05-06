@@ -314,7 +314,7 @@
    RESPONSIVE DESIGN - MOBILE
    ============================================================================= */
 
-@media (max-width: 768px) {
+@media (width <= 768px) {
   .searchInput {
     height: 36px;
     font-size: var(--font-size-xs);

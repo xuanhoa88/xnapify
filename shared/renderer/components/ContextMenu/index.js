@@ -11,8 +11,8 @@ import { DropdownMenu, Flex, Text } from '@radix-ui/themes';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 
-import Icon from '../Icon';
-import { useRbac } from '../Rbac/useRbac';
+import Icon from '../Icon/index.js';
+import { useRbac } from '../Rbac/useRbac.js';
 
 import s from './ContextMenu.css';
 

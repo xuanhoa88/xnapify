@@ -108,9 +108,12 @@
 
 /* ── Mobile Responsiveness ──────────────────────────────────────────── */
 
-@media (max-width: 768px) {
+@media (width <= 768px) {
   .bulkBarContainer {
-    width: calc(100vw - 32px); /* Fallback for browsers not supporting dynamic viewport units */
+    width: calc(
+      100vw - 32px
+    ); /* Fallback for browsers not supporting dynamic viewport units */
+
     max-width: 100%;
     padding: 8px 12px;
     gap: var(--space-2);
@@ -145,18 +148,17 @@
   }
 }
 
-@media (max-width: 480px) {
+@media (width <= 480px) {
   .bulkBarContainer {
     width: calc(100vw - 24px);
     bottom: var(--space-4);
   }
-  
+
   .actionLabel {
     display: none;
   }
-  
+
   .bulkActionButton {
     padding: 0 8px !important;
   }
 }
-

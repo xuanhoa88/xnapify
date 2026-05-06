@@ -6,7 +6,7 @@ A collection of small, universal utility functions used across the xnapify.
 
 ### `middleware.js` (`composeMiddleware`)
 
-Composes an array of Express-style middleware functions (`(req, res, next) => void` or `(context, next) => void`) into a single executable function. 
+Composes an array of Express-style middleware functions (`(req, res, next) => void` or `(context, next) => void`) into a single executable function.
 
 - Flattens nested arrays automatically.
 - Executes middlewares sequentially.
@@ -14,6 +14,7 @@ Composes an array of Express-style middleware functions (`(req, res, next) => vo
 - Maintains standard error propagation via `next(err)`.
 
 **Example:**
+
 ```javascript
 import { composeMiddleware } from '@shared/utils/middleware';
 
@@ -33,27 +34,29 @@ await pipeline(context);
 console.log(context.val); // 2
 ```
 
-### `contextAdapter.js` (`createWebpackContextAdapter`)
+### `contextAdapter.js` (`createRspackContextAdapter`)
 
-Creates an adapter over Webpack's `require.context` to provide a standardized, predictable interface for dynamically loading modules (e.g., auto-discovering extensions or Node-RED nodes).
+Creates an adapter over Rspack's `require.context` to provide a standardized, predictable interface for dynamically loading modules (e.g., auto-discovering extensions or Node-RED nodes).
 
 - `files()`: Returns an array of matched file paths.
 - `load(path)`: Requires and returns the specific module.
 - `resolve(path)`: Returns the absolute resolved path.
 
 **Example:**
+
 ```javascript
-import { createWebpackContextAdapter } from '@shared/utils/contextAdapter';
+import { createRspackContextAdapter } from '@shared/utils/contextAdapter';
 
 // Retrieve all scripts matching the regex in the folder
 const context = require.context('./scripts', false, /\.js$/);
-const adapter = createWebpackContextAdapter(context);
+const adapter = createRspackContextAdapter(context);
 
 adapter.files().forEach(filePath => {
-    const mod = adapter.load(filePath);
-    console.log("Loaded:", filePath, mod);
+  const mod = adapter.load(filePath);
+  console.log('Loaded:', filePath, mod);
 });
 ```
 
 ## See Also
+
 - [SPEC.md](./SPEC.md) — Technical specification

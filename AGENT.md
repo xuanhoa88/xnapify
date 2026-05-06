@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-**xnapify** is a production-ready, full-stack React application with server-side rendering (SSR), built on React 18, Express 4, and Webpack 5. This is a **single-repository** application with comprehensive tooling, RBAC, WebSocket support, and Node-RED integration for modern web development.
+**xnapify** is a production-ready, full-stack React application with server-side rendering (SSR), built on React 18, Express 4, and Rspack. This is a **single-repository** application with comprehensive tooling, RBAC, WebSocket support, and Node-RED integration for modern web development.
 
 ## Project Structure
 
@@ -46,7 +46,7 @@ xnapify/
 │   ├── tasks/                    # Build tasks (build, dev, clean, test, etc.)
 │   ├── utils/                    # Build utilities (fs, logger, etc.)
 │   ├── jest/                     # Jest configuration
-│   ├── webpack/                  # Webpack configurations
+│   ├── rspack/                   # Rspack configurations
 │   └── run.js                    # Task runner
 ├── build/                        # Production build output
 ├── public/                       # Static assets
@@ -64,8 +64,8 @@ xnapify/
 
 ### Core
 
-- **Runtime:** Node.js >= 16.14.0
-- **Package Manager:** npm >= 8.0.0
+- **Runtime:** Node.js >= 20.19.0
+- **Package Manager:** npm >= 10.8.0
 - **Language:** JavaScript (ES2015+) with JSX. **Strict Constraint:** DO NOT use optional chaining (`?.`), nullish coalescing (`??`), or assignment (`??=`) since they break our raw Node loader environment. Use traditional boolean guards (`if (x && x.y)`).
 
 ### Frontend
@@ -89,10 +89,10 @@ xnapify/
 
 ### Build Tools
 
-- **Bundler:** Webpack 5.96.0 with code splitting and tree shaking
+- **Bundler:** Rspack with code splitting and tree shaking
 - **Transpiler:** SWC (via swc-loader) with core-js polyfill injection
 - **CSS Processing:** PostCSS with autoprefixer and CSS Modules
-- **HMR:** React Refresh + webpack-hot-middleware
+- **HMR:** React Refresh + custom hot middleware
 
 ### Code Quality
 
@@ -634,7 +634,7 @@ export default ActivityList;
 ```javascript
 // src/apps/{module-name}/api/index.js
 
-// Declarative context loaders (Webpack statically analyses these)
+// Declarative context loaders (Rspack statically analyses these)
 const migrationsContext = require.context(
   './database/migrations',
   false,
@@ -669,7 +669,7 @@ export default {
 };
 ```
 
-> **Key distinction:** Modules return the Webpack context directly from `routes()` (e.g., `() => routesContext`). Extensions return a `[name, context]` tuple instead (e.g., `() => ['posts', routesContext]`).
+> **Key distinction:** Modules return the Rspack context directly from `routes()` (e.g., `() => routesContext`). Extensions return a `[name, context]` tuple instead (e.g., `() => ['posts', routesContext]`).
 
 ### 6. Form Validation with React Hook Form + Zod
 
@@ -771,8 +771,8 @@ XNAPIFY_KEY=                # Auto-generated on first run
 XNAPIFY_JWT_EXPIRY=7d
 
 # Build Configuration (Optional)
-WEBPACK_ANALYZE=false
-WEBPACK_PROFILE=false
+RSPACK_ANALYZE=false
+RSPACK_PROFILE=false
 ```
 
 **Important:** Environment variables are baked into the bundle at build time. Changing them requires rebuilding.

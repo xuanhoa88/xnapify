@@ -6,7 +6,7 @@
 # =============================================================================
 # Development Stage — HMR-enabled dev server
 # =============================================================================
-FROM node:18-alpine
+FROM node:20-alpine
 
 # Runtime dependencies for embedded database engines (same as production).
 # gcompat: glibc shim for PG/MySQL binaries; curl+xz: MySQL download/extract;

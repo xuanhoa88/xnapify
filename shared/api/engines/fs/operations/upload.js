@@ -9,7 +9,7 @@
  * Upload Operations
  */
 
-import { FilesystemError, createOperationResult } from '../utils';
+import { FilesystemError, createOperationResult } from '../utils/index.js';
 
 /**
  * Upload file(s)

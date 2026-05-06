@@ -20,10 +20,10 @@ import {
   STORED_ADAPTERS,
   CONNECTED_ROUTERS,
   SEQUENTIAL_SYNC,
-} from '../utils/BaseExtensionManager';
-import { normalizeRouteAdapter } from '../utils/routeAdapter';
+} from '../utils/BaseExtensionManager.js';
+import { normalizeRouteAdapter } from '../utils/routeAdapter.js';
 
-import { registry } from './Registry';
+import { registry } from './Registry.js';
 
 // Use native require to load extension modules
 const nativeRequire = createNativeRequire(__filename);
@@ -174,7 +174,7 @@ class ServerExtensionManager extends BaseExtensionManager {
   // ---------------------------------------------------------------------------
 
   /**
-   * Load a module using non-webpack require
+   * Load a module using non-bundled require
    * @param {string} bundlePath - Absolute path to the bundle
    * @returns {Object} Module exports
    */
@@ -738,7 +738,6 @@ class ServerExtensionManager extends BaseExtensionManager {
     // Reload sequentially — prevents concurrent SQLite writes
     for (const id of resolvedIds) {
       try {
-        // eslint-disable-next-line no-await-in-loop
         await this.loadExtension(id);
       } catch (err) {
         console.warn(

@@ -11,12 +11,14 @@
  * Recalculates all formulas in an Excel file using LibreOffice
  */
 
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
 const { spawnSync } = require('child_process');
-const { getSofficeEnv, getSofficeBin } = require('./office/soffice');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+
 const XLSX = require('xlsx');
+
+const { getSofficeEnv, getSofficeBin } = require('./office/soffice');
 
 const MACRO_DIR_MACOS =
   '~/Library/Application Support/LibreOffice/4/user/basic/Standard';

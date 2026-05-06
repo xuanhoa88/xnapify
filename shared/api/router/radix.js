@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { ROUTE_SEPARATOR } from './constants';
+import { ROUTE_SEPARATOR } from './constants.js';
 
 /**
  * @typedef {Object} RadixMatchResult

@@ -128,10 +128,10 @@
  * });
  */
 
-import { createFactory } from './factory';
+import { createFactory } from './factory.js';
 
 // Export services
-export * as services from './services';
+export * as services from './services/index.js';
 
 // Export the class and factory for external use
 export { createFactory };

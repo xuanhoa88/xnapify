@@ -8,7 +8,7 @@
 
 ## Objective
 
-The Worker engine provides an elastic thread pool for executing CPU-bound worker functions in isolated `worker_threads`. Built on top of [piscina](https://github.com/piscinajs/piscina), it bridges webpack-compiled `*.worker.js` files (standalone CJS modules) with Node.js `worker_threads` at runtime, preventing CPU-intensive tasks from blocking the main event loop.
+The Worker engine provides an elastic thread pool for executing CPU-bound worker functions in isolated `worker_threads`. Built on top of [piscina](https://github.com/piscinajs/piscina), it bridges rspack-compiled `*.worker.js` files (standalone CJS modules) with Node.js `worker_threads` at runtime, preventing CPU-intensive tasks from blocking the main event loop.
 
 ## Two-Tier Worker System
 

@@ -5,27 +5,33 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-const fsP = require('fs/promises');
-const path = require('path');
+import fsP from 'fs/promises';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const TerserPlugin = require('terser-webpack-plugin');
-const webpack = require('webpack');
+import { rspack } from '@rspack/core';
 
-const config = require('../config');
-const {
+import config from '../config.js';
+import {
+  clientConfig as rspackClientConfig,
+  serverConfig as rspackServerConfig,
+  workerConfig as rspackWorkerConfig,
+} from '../rspack/app.config.js';
+import { createRspackConfig } from '../rspack/base.config.js';
+import {
   BuildError,
   logDetailedError,
   setupGracefulShutdown,
-} = require('../utils/error');
-const {
+} from '../utils/error.js';
+import {
   copyDir,
   copyFile,
   pathExists,
   readFile,
   writeFile,
-} = require('../utils/fs');
-const { generateJWT } = require('../utils/jwt');
-const {
+} from '../utils/fs.js';
+import { generateJWT } from '../utils/jwt.js';
+import {
   formatBytes,
   formatDuration,
   isSilent,
@@ -33,17 +39,11 @@ const {
   logDebug,
   logInfo,
   logWarn,
-} = require('../utils/logger');
-const { withBuildRetry } = require('../utils/retry');
-const {
-  clientConfig: webpackClientConfig,
-  serverConfig: webpackServerConfig,
-  workerConfig: webpackWorkerConfig,
-} = require('../webpack/app.config');
-const { createWebpackConfig } = require('../webpack/base.config');
+} from '../utils/logger.js';
+import { withBuildRetry } from '../utils/retry.js';
 
-const clean = require('./clean');
-const createBundledExtensions = require('./extension');
+import clean from './clean.js';
+import createBundledExtensions from './extension.js';
 
 // Build configuration
 const BUILD_TIMESTAMP = Date.now();
@@ -146,7 +146,7 @@ async function copyFiles() {
 
 /**
  * Bundle tools/npm scripts into standalone files in the build directory.
- * Reuses the shared server webpack config for consistency (node target,
+ * Reuses the shared server rspack config for consistency (node target,
  * externals, resolve, etc.) with lightweight overrides for npm scripts.
  */
 async function buildNpmScripts() {
@@ -161,7 +161,7 @@ async function buildNpmScripts() {
       .map(f => [path.basename(f, '.js'), path.join(npmDir, f)]),
   );
 
-  const npmConfig = createWebpackConfig('server', {
+  const npmConfig = createRspackConfig('server', {
     entry,
     output: {
       path: path.join(config.BUILD_DIR, 'npm'),
@@ -186,12 +186,8 @@ async function buildNpmScripts() {
     optimization: {
       minimize: true,
       minimizer: [
-        new TerserPlugin({
-          terserOptions: {
-            compress: { drop_console: false, passes: 2 },
-            mangle: { toplevel: false },
-            output: { comments: false },
-          },
+        new rspack.SwcJsMinimizerRspackPlugin({
+          compress: { drop_console: false },
         }),
       ],
     },
@@ -208,7 +204,7 @@ async function buildNpmScripts() {
     ],
   });
 
-  const compiler = webpack(npmConfig);
+  const compiler = rspack(npmConfig);
 
   return new Promise((resolve, reject) => {
     compiler.run((err, stats) => {
@@ -237,11 +233,11 @@ async function buildNpmScripts() {
 }
 
 /**
- * Analyze webpack compilation stats
- * Uses webpack's built-in stats.toJson() for comprehensive data
+ * Analyze rspack compilation stats
+ * Uses rspack's built-in stats.toJson() for comprehensive data
  */
 function analyzeStats(stats) {
-  // Get webpack's JSON stats (includes all compilations)
+  // Get rspack's JSON stats (includes all compilations)
   const jsonStats = stats.toJson({
     all: false,
     assets: true,
@@ -281,7 +277,7 @@ function analyzeStats(stats) {
       asset => asset.size > config.bundleMaxAssetSize,
     ),
     largestAssets: allAssets.slice(0, 5),
-    webpackStats: jsonStats, // Include full webpack stats for report
+    rspackStats: jsonStats, // Include full rspack stats for report
   };
 }
 
@@ -335,19 +331,19 @@ function logBundleResults(analysis, duration) {
 }
 
 /**
- * Create webpack bundle
+ * Create rspack bundle
  * Simplified to focus on core bundling logic
  */
 function createBundledApp() {
   return new Promise((resolve, reject) => {
     const startTime = Date.now();
 
-    logInfo(`🔨 Compiling webpack bundles...`);
+    logInfo(`🔨 Compiling rspack bundles...`);
 
-    const compiler = webpack([
-      webpackClientConfig,
-      webpackServerConfig,
-      ...webpackWorkerConfig,
+    const compiler = rspack([
+      rspackClientConfig,
+      rspackServerConfig,
+      ...rspackWorkerConfig,
     ]);
 
     compiler.run(async (err, stats) => {
@@ -357,7 +353,7 @@ function createBundledApp() {
       if (err) {
         compiler.close(() => {
           reject(
-            new BuildError(`Webpack compilation failed: ${err.message}`, {
+            new BuildError(`Rspack compilation failed: ${err.message}`, {
               originalError: err.message,
               stack: err.stack,
             }),
@@ -370,7 +366,7 @@ function createBundledApp() {
         const info = stats.toJson('errors-only');
         compiler.close(() => {
           reject(
-            new BuildError('Webpack compilation errors', {
+            new BuildError('Rspack compilation errors', {
               errors: info.errors.map(e => e.message || e),
               stats: stats.toString('errors-only'),
             }),
@@ -494,7 +490,6 @@ async function main() {
 
     // Execute build steps sequentially
     for (const [index, step] of buildSteps.entries()) {
-      // eslint-disable-next-line no-await-in-loop
       await executeStep(step, index, buildSteps.length, silent);
     }
 
@@ -573,11 +568,15 @@ async function main() {
 }
 
 // Execute if called directly (as child process)
-if (require.main === module) {
+const scriptPath = fileURLToPath(import.meta.url);
+if (
+  process.argv[1] === scriptPath ||
+  process.argv[1] === scriptPath.replace(/\.js$/, '')
+) {
   main().catch(error => {
     console.error(error);
     process.exit(1);
   });
 }
 
-module.exports = main;
+export default main;

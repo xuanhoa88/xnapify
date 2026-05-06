@@ -11,9 +11,13 @@ const hook = container.resolve('hook');
 const userHooks = hook('users');
 
 // Register handlers (lower priority runs first)
-userHooks.on('created', async (user) => {
-  await sendWelcomeEmail(user);
-}, 10);
+userHooks.on(
+  'created',
+  async user => {
+    await sendWelcomeEmail(user);
+  },
+  10,
+);
 
 // Emit event — handlers run sequentially
 await userHooks.emit('created', { id: 1, name: 'John' });
@@ -23,35 +27,35 @@ await userHooks.emit('created', { id: 1, name: 'John' });
 
 ### Factory (callable as function)
 
-| Method | Description |
-|---|---|
-| `hook('name')` | Get or create a channel (callable shorthand) |
-| `hook.channel('name')` | Same as above |
-| `hook.has('name')` | Check if channel exists |
-| `hook.getChannelNames()` | List all channel names |
-| `hook.remove('name')` | Remove channel and clear its handlers |
-| `hook.cleanup()` | Clear all channels |
-| `hook.withContext(ctx)` | Create bound factory where handlers receive `ctx` as `this` |
+| Method                   | Description                                                 |
+| ------------------------ | ----------------------------------------------------------- |
+| `hook('name')`           | Get or create a channel (callable shorthand)                |
+| `hook.channel('name')`   | Same as above                                               |
+| `hook.has('name')`       | Check if channel exists                                     |
+| `hook.getChannelNames()` | List all channel names                                      |
+| `hook.remove('name')`    | Remove channel and clear its handlers                       |
+| `hook.cleanup()`         | Clear all channels                                          |
+| `hook.withContext(ctx)`  | Create bound factory where handlers receive `ctx` as `this` |
 
 ### Channel
 
-| Method | Returns | Description |
-|---|---|---|
-| `on(event, handler, priority?)` | `this` | Register handler (lower priority runs first, default `10`) |
-| `emit(event, ...args)` | `Promise<void>` | Execute handlers sequentially (Multicast, aggregates errors) |
-| `invoke(event, ...args)`| `Promise<void>` | Execute handlers sequentially (Pipeline, fails fast on error) |
-| `off()` | — | Remove ALL handlers on ALL events |
-| `off(event)` | — | Remove all handlers for one event |
-| `off(event, handler)` | — | Remove specific handler (by reference) |
-| `.name` | `string` | Channel name |
-| `.events` | `string[]` | Registered event names |
+| Method                          | Returns         | Description                                                   |
+| ------------------------------- | --------------- | ------------------------------------------------------------- |
+| `on(event, handler, priority?)` | `this`          | Register handler (lower priority runs first, default `10`)    |
+| `emit(event, ...args)`          | `Promise<void>` | Execute handlers sequentially (Multicast, aggregates errors)  |
+| `invoke(event, ...args)`        | `Promise<void>` | Execute handlers sequentially (Pipeline, fails fast on error) |
+| `off()`                         | —               | Remove ALL handlers on ALL events                             |
+| `off(event)`                    | —               | Remove all handlers for one event                             |
+| `off(event, handler)`           | —               | Remove specific handler (by reference)                        |
+| `.name`                         | `string`        | Channel name                                                  |
+| `.events`                       | `string[]`      | Registered event names                                        |
 
 ### Priority Control
 
 ```javascript
-userHooks.on('save', validateUser, 1);   // Runs first
+userHooks.on('save', validateUser, 1); // Runs first
 userHooks.on('save', normalizeData, 10); // Runs second
-userHooks.on('save', logActivity, 100);  // Runs last
+userHooks.on('save', logActivity, 100); // Runs last
 ```
 
 ### Mutable Arguments
@@ -59,8 +63,8 @@ userHooks.on('save', logActivity, 100);  // Runs last
 Handlers receive arguments by reference — mutations are visible to subsequent handlers:
 
 ```javascript
-hook('transform').on('process', async (data) => {
-  data.value *= 2;  // Mutates the original object
+hook('transform').on('process', async data => {
+  data.value *= 2; // Mutates the original object
 });
 
 const data = { value: 5 };
@@ -109,7 +113,7 @@ await hook('users').invoke('process', user, req.signal);
 
 - **Non-function handler:** `on()` throws `TypeError('Handler must be a function')`
 - **Invalid channel name:** `channel()` throws `Error` with `name: 'InvalidChannelNameError'`
-- **Handler errors:** 
+- **Handler errors:**
   - `invoke()`: **Fails fast**. The first error thrown by a handler immediately propagates to the caller.
   - `emit()`: **Aggregates errors**. Catches all handler errors, ensures all hooks still run, and throws an `AggregateError` at the end.
 

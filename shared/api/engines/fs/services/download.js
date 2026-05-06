@@ -9,8 +9,8 @@
  * Download Service - Worker-enabled wrapper for download operation
  */
 
-import { download as downloadOperation } from '../operations/download';
-import { processDownload } from '../workers';
+import { download as downloadOperation } from '../operations/download.js';
+import { processDownload } from '../workers/index.js';
 
 /**
  * Thresholds for auto-detection of worker usage

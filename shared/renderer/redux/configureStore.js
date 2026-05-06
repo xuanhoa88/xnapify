@@ -10,7 +10,7 @@ import {
   combineReducers,
 } from '@reduxjs/toolkit';
 
-import rootReducer from './rootReducer';
+import rootReducer from './rootReducer.js';
 
 /**
  * Symbol to mark identity reducers created for SSR state preservation

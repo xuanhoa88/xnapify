@@ -11,7 +11,11 @@ import { Checkbox, Flex, Text } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useController, useFormContext } from 'react-hook-form';
 
-import { useFormField, useMergeRefs, useComposedHandler } from '../FormContext';
+import {
+  useFormField,
+  useMergeRefs,
+  useComposedHandler,
+} from '../FormContext.js';
 
 /**
  * FormCheckbox - Checkbox element to be used inside Form.Field baked by Radix Themes

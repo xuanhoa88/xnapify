@@ -22,7 +22,7 @@ import {
   requireGroup,
   requireAnyGroup,
   requireGroupLevel,
-} from './middlewares';
+} from './middlewares/index.js';
 
 describe('requireAuth', () => {
   let req, res, next;

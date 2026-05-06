@@ -15,7 +15,7 @@ import {
   useFormField,
   useMergeRefs,
   composeEventHandlers,
-} from '../FormContext';
+} from '../FormContext.js';
 
 import s from './Index.css';
 

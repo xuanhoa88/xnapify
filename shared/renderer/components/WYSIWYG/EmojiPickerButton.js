@@ -9,10 +9,10 @@ import { FaceIcon } from '@radix-ui/react-icons';
 import { ScrollArea } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 
-import ContextMenu from '../ContextMenu';
+import ContextMenu from '../ContextMenu/index.js';
 
-import { COMMON_EMOJIS } from './constants';
-import ToolbarButton from './ToolbarButton';
+import { COMMON_EMOJIS } from './constants.js';
+import ToolbarButton from './ToolbarButton.js';
 
 import s from './EmojiPickerButton.css';
 

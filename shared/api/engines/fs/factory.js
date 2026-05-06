@@ -5,10 +5,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { createUploadMiddleware, MIDDLEWARES } from './middlewares';
-import { LocalFilesystemProvider } from './providers/local';
-import { MemoryFilesystemProvider } from './providers/memory';
-import { SelfHostFilesystemProvider } from './providers/selfhost';
+import { createUploadMiddleware, MIDDLEWARES } from './middlewares.js';
+import { LocalFilesystemProvider } from './providers/local.js';
+import { MemoryFilesystemProvider } from './providers/memory.js';
+import { SelfHostFilesystemProvider } from './providers/selfhost.js';
 import {
   upload as uploadService,
   download as downloadService,
@@ -19,8 +19,8 @@ import {
   preview as previewService,
   sync as syncService,
   extract as extractService,
-} from './services';
-import { FilesystemError } from './utils';
+} from './services/index.js';
+import { FilesystemError } from './utils/index.js';
 
 /**
  * Filesystem Manager

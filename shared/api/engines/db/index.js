@@ -9,7 +9,7 @@
 export * from 'sequelize';
 
 // Export database connection
-export * from './connection';
+export * from './connection.js';
 
 // Export database migrator
-export * from './migrator';
+export * from './migrator.js';

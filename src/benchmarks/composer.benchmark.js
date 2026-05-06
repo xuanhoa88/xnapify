@@ -5,6 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+
 // Benchmark for composeMiddleware utility
 // This test measures execution time of composing and running many
 // small middleware functions to ensure it stays performant as stacks grow.
@@ -19,7 +22,7 @@ function createNoopMiddleware(count) {
   for (let i = 0; i < count; i++) {
     list.push((req, res, next) => {
       // simulate a tiny amount of work
-      // eslint-disable-next-line no-param-reassign, no-underscore-dangle
+      // eslint-disable-next-line no-underscore-dangle
       req._counter = (req._counter || 0) + 1;
       return next();
     });

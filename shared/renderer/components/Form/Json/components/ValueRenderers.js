@@ -10,7 +10,7 @@ import { useState } from 'react';
 import { Box, Text } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 
-import { DataTypeLabel } from './DataTypeLabel';
+import { DataTypeLabel } from './DataTypeLabel.js';
 
 import s from './ValueRenderers.css';
 

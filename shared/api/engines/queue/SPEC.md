@@ -57,12 +57,12 @@ index.js
 
 Four error classes forming an inheritance hierarchy:
 
-| Class | Code | Status | Extra Props | Description |
-|---|---|---|---|---|
-| `QueueError` | `'QUEUE_ERROR'` | `500` | — | Base error |
-| `JobNotFoundError` | `'JOB_NOT_FOUND'` | `404` | `jobId` | `getJob()` with unknown ID |
-| `JobProcessingError` | `'JOB_PROCESSING_ERROR'` | `500` | `jobId`, `originalError` | Handler failed |
-| `QueueConnectionError` | `'QUEUE_CONNECTION_ERROR'` | `503` | — | Adapter connection failure |
+| Class                  | Code                       | Status | Extra Props              | Description                |
+| ---------------------- | -------------------------- | ------ | ------------------------ | -------------------------- |
+| `QueueError`           | `'QUEUE_ERROR'`            | `500`  | —                        | Base error                 |
+| `JobNotFoundError`     | `'JOB_NOT_FOUND'`          | `404`  | `jobId`                  | `getJob()` with unknown ID |
+| `JobProcessingError`   | `'JOB_PROCESSING_ERROR'`   | `500`  | `jobId`, `originalError` | Handler failed             |
+| `QueueConnectionError` | `'QUEUE_CONNECTION_ERROR'` | `503`  | —                        | Adapter connection failure |
 
 All error classes include `statusCode`, `code`, `timestamp`, and `Error.captureStackTrace`.
 
@@ -71,7 +71,9 @@ All error classes include `statusCode`, `code`, `timestamp`, and `Error.captureS
 **File:** `utils/constants.js`
 
 ```javascript
-{ PENDING, ACTIVE, COMPLETED, FAILED, DELAYED }
+{
+  (PENDING, ACTIVE, COMPLETED, FAILED, DELAYED);
+}
 ```
 
 Frozen enum. Exported by `index.js` as a named export.
@@ -89,20 +91,21 @@ Private function that constructs a callable factory function with the following 
 
 ### Methods on the factory function
 
-| Method | Signature | Behavior |
-|---|---|---|
-| `factory(name, options?)` | `(string, object?) → Channel\|null` | Create or get channel. Merges `baseOptions` with `options`. |
-| `factory.channel(name)` | `(string) → Channel\|null` | Get existing channel only. Returns `null` if not found. |
-| `factory.has(name)` | `(string) → boolean` | Check if channel exists. |
-| `factory.getChannelNames()` | `() → string[]` | All channel names. |
-| `factory.getStats()` | `() → object` | Calls `channel.getStats()` for each channel. Catches errors per-channel. |
-| `factory.remove(name)` | `(string) → Promise<boolean>` | Calls `channel.close()`, deletes from map. Ignores close errors. |
-| `factory.cleanup()` | `() → Promise<void>` | Closes all channels, clears map. Ignores per-channel close errors. |
-| `factory.registerAdapter(type, Adapter)` | `(string, Function) → boolean` | Register custom adapter. Won't override existing adapter types. |
+| Method                                   | Signature                           | Behavior                                                                 |
+| ---------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------ |
+| `factory(name, options?)`                | `(string, object?) → Channel\|null` | Create or get channel. Merges `baseOptions` with `options`.              |
+| `factory.channel(name)`                  | `(string) → Channel\|null`          | Get existing channel only. Returns `null` if not found.                  |
+| `factory.has(name)`                      | `(string) → boolean`                | Check if channel exists.                                                 |
+| `factory.getChannelNames()`              | `() → string[]`                     | All channel names.                                                       |
+| `factory.getStats()`                     | `() → object`                       | Calls `channel.getStats()` for each channel. Catches errors per-channel. |
+| `factory.remove(name)`                   | `(string) → Promise<boolean>`       | Calls `channel.close()`, deletes from map. Ignores close errors.         |
+| `factory.cleanup()`                      | `() → Promise<void>`                | Closes all channels, clears map. Ignores per-channel close errors.       |
+| `factory.registerAdapter(type, Adapter)` | `(string, Function) → boolean`      | Register custom adapter. Won't override existing adapter types.          |
 
 ### `createFactory(options?)`
 
 Public export. Calls `buildFactory` with:
+
 - Fresh `Map` for channels
 - Fresh `Map` with `'memory' → MemoryQueue` pre-registered
 - Merged `DEFAULT_OPTIONS` (`{ type: 'memory', concurrency: 1 }`) with caller options
@@ -126,20 +129,21 @@ Pub/sub wrapper around a queue adapter.
 
 ### Methods
 
-| Method | Signature | Returns | Behavior |
-|---|---|---|---|
-| `on(event, handler)` | `(string, Function)` | `this` (chainable) | Validates inputs (logs error on failure, returns `this`). Stores handler. Calls `startProcessing()` on first `on()` call. |
-| `off(event)` | `(string)` | `this` (chainable) | Removes handler by event name. |
-| `emit(event, data?, options?)` | `(string, object?, object?)` | `Job\|null` | Delegates to `queue.add(event, data, options)`. Returns `null` on failure. |
-| `emitBulk(events)` | `(Array<{event, data, options}>)` | `Job[]` | Maps over events calling `emit()`. Filters out nulls. |
-| `hasHandler(event)` | `(string)` | `boolean` | Check if handler registered. |
-| `getHandlerCount()` | `()` | `number` | `handlers.size`. |
-| `getStats()` | `()` | `object` | Returns `{ name, handlers, handlerCount, isProcessing, queue }`. |
-| `close()` | `()` | `Promise<void>` | Clears handlers, sets `isProcessing = false`, calls `queue.close()`. |
+| Method                         | Signature                         | Returns            | Behavior                                                                                                                  |
+| ------------------------------ | --------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| `on(event, handler)`           | `(string, Function)`              | `this` (chainable) | Validates inputs (logs error on failure, returns `this`). Stores handler. Calls `startProcessing()` on first `on()` call. |
+| `off(event)`                   | `(string)`                        | `this` (chainable) | Removes handler by event name.                                                                                            |
+| `emit(event, data?, options?)` | `(string, object?, object?)`      | `Job\|null`        | Delegates to `queue.add(event, data, options)`. Returns `null` on failure.                                                |
+| `emitBulk(events)`             | `(Array<{event, data, options}>)` | `Job[]`            | Maps over events calling `emit()`. Filters out nulls.                                                                     |
+| `hasHandler(event)`            | `(string)`                        | `boolean`          | Check if handler registered.                                                                                              |
+| `getHandlerCount()`            | `()`                              | `number`           | `handlers.size`.                                                                                                          |
+| `getStats()`                   | `()`                              | `object`           | Returns `{ name, handlers, handlerCount, isProcessing, queue }`.                                                          |
+| `close()`                      | `()`                              | `Promise<void>`    | Clears handlers, sets `isProcessing = false`, calls `queue.close()`.                                                      |
 
 ### `startProcessing()` (private)
 
 Called automatically on the first `on()` registration. Registers a **wildcard processor** with the adapter via `queue.process(async job => ...)`:
+
 - Looks up handler by `job.name` from `this.handlers`.
 - If no handler found → returns `{ skipped: true }`.
 - If handler throws → logs error and **re-throws** (allowing adapter retry logic to trigger).
@@ -150,16 +154,16 @@ In-memory job queue for development and single-instance deployments. Jobs are lo
 
 ### Constructor Options
 
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `name` | `string` | `'default'` | Queue name |
-| `concurrency` | `number` | `1` | Max parallel jobs |
-| `defaultJobOptions.attempts` | `number` | `3` | Max retry attempts |
-| `defaultJobOptions.backoff` | `number` | `1000` | Base backoff in ms |
-| `defaultJobOptions.delay` | `number` | `0` | Delay before processing |
-| `defaultJobOptions.priority` | `number` | `0` | Higher = processed first |
-| `defaultJobOptions.removeOnComplete` | `boolean` | `true` | Auto-remove completed jobs |
-| `defaultJobOptions.removeOnFail` | `boolean` | `false` | Auto-remove failed jobs |
+| Option                               | Type      | Default     | Description                |
+| ------------------------------------ | --------- | ----------- | -------------------------- |
+| `name`                               | `string`  | `'default'` | Queue name                 |
+| `concurrency`                        | `number`  | `1`         | Max parallel jobs          |
+| `defaultJobOptions.attempts`         | `number`  | `3`         | Max retry attempts         |
+| `defaultJobOptions.backoff`          | `number`  | `1000`      | Base backoff in ms         |
+| `defaultJobOptions.delay`            | `number`  | `0`         | Delay before processing    |
+| `defaultJobOptions.priority`         | `number`  | `0`         | Higher = processed first   |
+| `defaultJobOptions.removeOnComplete` | `boolean` | `true`      | Auto-remove completed jobs |
+| `defaultJobOptions.removeOnFail`     | `boolean` | `false`     | Auto-remove failed jobs    |
 
 ### Job Object Structure
 
@@ -212,33 +216,33 @@ All `setTimeout` timer IDs are tracked in `this.timers` (a `Set`) and cleared on
 
 ### Adapter Methods
 
-| Method | Description |
-|---|---|
-| `add(name, data, options)` | Create and enqueue a job |
-| `addBulk(jobs)` | Batch add |
-| `process(name, processor)` or `process(processor)` | Register processor (named or wildcard `'*'`) |
-| `getJob(jobId)` | Get job by ID (throws `JobNotFoundError`) |
-| `getJobsByStatus(status)` | Filter jobs by status |
-| `getJobs()` | All jobs |
-| `removeJob(jobId)` | Remove by ID |
-| `retryJob(jobId)` | Retry a failed job (resets attempts, throws `JobProcessingError` if not failed) |
-| `pause()` / `resume()` | Pause/resume processing |
-| `isPausedState()` | Check pause state |
-| `empty()` | Remove all pending jobs |
-| `clean(status?, grace?)` | Remove completed/failed jobs older than grace period |
-| `close()` | Pause, clear processors and jobs |
-| `getStats()` | Returns `{ name, concurrency, isPaused, activeJobs, counts: {...}, stats: {...} }` |
-| `on(event, handler)` / `off(event, handler)` | Lifecycle event listeners |
+| Method                                             | Description                                                                        |
+| -------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `add(name, data, options)`                         | Create and enqueue a job                                                           |
+| `addBulk(jobs)`                                    | Batch add                                                                          |
+| `process(name, processor)` or `process(processor)` | Register processor (named or wildcard `'*'`)                                       |
+| `getJob(jobId)`                                    | Get job by ID (throws `JobNotFoundError`)                                          |
+| `getJobsByStatus(status)`                          | Filter jobs by status                                                              |
+| `getJobs()`                                        | All jobs                                                                           |
+| `removeJob(jobId)`                                 | Remove by ID                                                                       |
+| `retryJob(jobId)`                                  | Retry a failed job (resets attempts, throws `JobProcessingError` if not failed)    |
+| `pause()` / `resume()`                             | Pause/resume processing                                                            |
+| `isPausedState()`                                  | Check pause state                                                                  |
+| `empty()`                                          | Remove all pending jobs                                                            |
+| `clean(status?, grace?)`                           | Remove completed/failed jobs older than grace period                               |
+| `close()`                                          | Pause, clear processors and jobs                                                   |
+| `getStats()`                                       | Returns `{ name, concurrency, isPaused, activeJobs, counts: {...}, stats: {...} }` |
+| `on(event, handler)` / `off(event, handler)`       | Lifecycle event listeners                                                          |
 
 ### Adapter Events
 
-| Event | Args | When |
-|---|---|---|
-| `active` | `(job)` | Job starts processing |
-| `completed` | `(job, result)` | Job completed successfully |
-| `failed` | `(job, error)` | Job exhausted all retries |
-| `progress` | `(job, progress)` | `job.updateProgress(n)` called |
-| `stalled` | — | Registered but never emitted by memory adapter |
+| Event       | Args              | When                                           |
+| ----------- | ----------------- | ---------------------------------------------- |
+| `active`    | `(job)`           | Job starts processing                          |
+| `completed` | `(job, result)`   | Job completed successfully                     |
+| `failed`    | `(job, error)`    | Job exhausted all retries                      |
+| `progress`  | `(job, progress)` | `job.updateProgress(n)` called                 |
+| `stalled`   | —                 | Registered but never emitted by memory adapter |
 
 ## 7. Adapter Interface Contract
 
@@ -246,11 +250,11 @@ Custom adapters must implement:
 
 ```javascript
 class CustomAdapter {
-  constructor(options) {}          // { name, concurrency, ... }
+  constructor(options) {} // { name, concurrency, ... }
   add(eventName, data, options) {} // → Job object
-  process(handler) {}             // handler = async (job) => result
-  close() {}                      // → Promise<void>
-  getStats() {}                   // → object (optional, used by Channel.getStats)
+  process(handler) {} // handler = async (job) => result
+  close() {} // → Promise<void>
+  getStats() {} // → object (optional, used by Channel.getStats)
 }
 ```
 
@@ -259,10 +263,12 @@ class CustomAdapter {
 **File:** `index.js`
 
 ### Named Exports
+
 - `JOB_STATUS` — job status enum
 - `createFactory` — factory function for custom instances
 
 ### Default Export
+
 ```javascript
 const queue = createFactory();
 export default queue;
@@ -279,6 +285,7 @@ Uses `__mocks__/uuid.js` (sequential `mock-uuid-N`). Creates a fresh `createFact
 ### Test Coverage (2 describe blocks)
 
 **Factory:**
+
 - Channel creation and singleton return
 - Channel name validation (empty, `null`, non-string, whitespace-only)
 - `channel()` lookup for existing and non-existing
@@ -290,6 +297,7 @@ Uses `__mocks__/uuid.js` (sequential `mock-uuid-N`). Creates a fresh `createFact
 - `registerAdapter()` custom adapter and no-override behavior
 
 **Channel:**
+
 - `on()` registration, validation (event name, handler type), chaining
 - `off()` removal and no-throw for non-existing
 - `hasHandler()` / `getHandlerCount()`
@@ -303,8 +311,8 @@ Uses `__mocks__/uuid.js` (sequential `mock-uuid-N`). Creates a fresh `createFact
 - **Module `boot({ container })`**: Access via `container.resolve('queue')`. Create channels for domain-specific job processing.
 - **Worker Functions**: Queue handlers can call worker functions directly for processing subtasks.
 - **Schedule Engine**: Cron handlers can emit jobs to queue channels for rate-limited processing.
-- **Extension lifecycle: Extensions use queue channels for background install/toggle operations.
+- \*\*Extension lifecycle: Extensions use queue channels for background install/toggle operations.
 
 ---
 
-*Note: This spec reflects the CURRENT implementation of the queue engine.*
+_Note: This spec reflects the CURRENT implementation of the queue engine._

@@ -10,9 +10,9 @@ import { useState, useRef, useEffect } from 'react';
 import { Box, TextField, Select, Text } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 
-import Icon from '../../../Icon';
+import Icon from '../../../Icon/index.js';
 
-import { getInitialType } from './DataTypeLabel';
+import { getInitialType } from './DataTypeLabel.js';
 
 import s from './AddKeyModal.css';
 

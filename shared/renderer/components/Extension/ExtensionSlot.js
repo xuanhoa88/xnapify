@@ -9,7 +9,7 @@ import { Component, useState, useEffect, useCallback, memo } from 'react';
 
 import PropTypes from 'prop-types';
 
-import { useExtensionRegistry } from './useExtension';
+import { useExtensionRegistry } from './useExtension.js';
 
 /**
  * Error boundary that catches render errors from extension components.

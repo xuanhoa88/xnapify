@@ -5,13 +5,16 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+
 // Mock node-cron to avoid Jest compatibility issues with the renamed file
 jest.mock('node-cron', () => require('./__mocks__/nodeCron'));
 
 import cron from 'node-cron';
 
-import { ScheduleError } from './errors';
-import { ScheduleManager, createFactory } from './factory';
+import { ScheduleError } from './errors.js';
+import { ScheduleManager, createFactory } from './factory.js';
 
 beforeEach(() => {
   cron.validate.mockImplementation(expression => {

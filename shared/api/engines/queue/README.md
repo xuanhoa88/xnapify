@@ -9,7 +9,7 @@ const queue = container.resolve('queue');
 
 // Create a channel and register handler (consumer)
 const notifications = queue('notifications', { concurrency: 5 });
-notifications.on('email', async (job) => {
+notifications.on('email', async job => {
   await sendEmail(job.data);
 });
 
@@ -26,53 +26,53 @@ queue.channel('notifications').emit('email', {
 
 The factory is **callable** — `queue('name')` creates or returns a channel. `queue.channel('name')` is lookup-only.
 
-| Method | Returns | Description |
-|---|---|---|
-| `queue('name', options?)` | `Channel\|null` | Create or get a channel |
-| `queue.channel('name')` | `Channel\|null` | Get existing channel only (returns `null` if not found) |
-| `queue.has('name')` | `boolean` | Check if channel exists |
-| `queue.getChannelNames()` | `string[]` | List all channel names |
-| `queue.getStats()` | `object` | Stats for all channels |
-| `queue.remove('name')` | `Promise<boolean>` | Close and remove a channel |
-| `queue.cleanup()` | `Promise<void>` | Close all channels (auto on process exit) |
-| `queue.registerAdapter('type', Adapter)` | `boolean` | Register custom adapter (won't override existing) |
+| Method                                   | Returns            | Description                                             |
+| ---------------------------------------- | ------------------ | ------------------------------------------------------- |
+| `queue('name', options?)`                | `Channel\|null`    | Create or get a channel                                 |
+| `queue.channel('name')`                  | `Channel\|null`    | Get existing channel only (returns `null` if not found) |
+| `queue.has('name')`                      | `boolean`          | Check if channel exists                                 |
+| `queue.getChannelNames()`                | `string[]`         | List all channel names                                  |
+| `queue.getStats()`                       | `object`           | Stats for all channels                                  |
+| `queue.remove('name')`                   | `Promise<boolean>` | Close and remove a channel                              |
+| `queue.cleanup()`                        | `Promise<void>`    | Close all channels (auto on process exit)               |
+| `queue.registerAdapter('type', Adapter)` | `boolean`          | Register custom adapter (won't override existing)       |
 
 ### Channel
 
-| Method | Returns | Description |
-|---|---|---|
-| `on(event, handler)` | `this` | Register job handler (chainable) |
-| `off(event)` | `this` | Remove handler (chainable) |
-| `emit(event, data?, options?)` | `Job\|null` | Publish a job |
-| `emitBulk(events)` | `Job[]` | Publish multiple jobs |
-| `hasHandler(event)` | `boolean` | Check if handler exists |
-| `getHandlerCount()` | `number` | Number of registered handlers |
-| `getStats()` | `object` | Channel statistics |
-| `close()` | `Promise<void>` | Close channel and release resources |
+| Method                         | Returns         | Description                         |
+| ------------------------------ | --------------- | ----------------------------------- |
+| `on(event, handler)`           | `this`          | Register job handler (chainable)    |
+| `off(event)`                   | `this`          | Remove handler (chainable)          |
+| `emit(event, data?, options?)` | `Job\|null`     | Publish a job                       |
+| `emitBulk(events)`             | `Job[]`         | Publish multiple jobs               |
+| `hasHandler(event)`            | `boolean`       | Check if handler exists             |
+| `getHandlerCount()`            | `number`        | Number of registered handlers       |
+| `getStats()`                   | `object`        | Channel statistics                  |
+| `close()`                      | `Promise<void>` | Close channel and release resources |
 
 ### Job Options
 
 Options passed to `emit(event, data, options)`:
 
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `priority` | `number` | `0` | Higher = processed first |
-| `delay` | `number` | `0` | Delay in ms before processing |
-| `attempts` | `number` | `3` | Max retry attempts |
-| `backoff` | `number` | `1000` | Base backoff in ms (exponential) |
-| `removeOnComplete` | `boolean` | `true` | Auto-remove on success |
-| `removeOnFail` | `boolean` | `false` | Auto-remove on final failure |
+| Option             | Type      | Default | Description                      |
+| ------------------ | --------- | ------- | -------------------------------- |
+| `priority`         | `number`  | `0`     | Higher = processed first         |
+| `delay`            | `number`  | `0`     | Delay in ms before processing    |
+| `attempts`         | `number`  | `3`     | Max retry attempts               |
+| `backoff`          | `number`  | `1000`  | Base backoff in ms (exponential) |
+| `removeOnComplete` | `boolean` | `true`  | Auto-remove on success           |
+| `removeOnFail`     | `boolean` | `false` | Auto-remove on final failure     |
 
 ### Job Object
 
 The handler receives a job context with:
 
 ```javascript
-notifications.on('email', async (job) => {
-  job.id;          // UUID
-  job.name;        // Event name
-  job.data;        // Your payload
-  job.attempts;    // Current attempt number
+notifications.on('email', async job => {
+  job.id; // UUID
+  job.name; // Event name
+  job.data; // Your payload
+  job.attempts; // Current attempt number
 
   // Report progress (0-100)
   job.updateProgress(50);
@@ -89,8 +89,12 @@ import { JOB_STATUS } from '@shared/api/engines/queue';
 ### Error Classes
 
 ```javascript
-import { QueueError, JobNotFoundError, JobProcessingError, QueueConnectionError }
-  from '@shared/api/engines/queue/errors';
+import {
+  QueueError,
+  JobNotFoundError,
+  JobProcessingError,
+  QueueConnectionError,
+} from '@shared/api/engines/queue/errors';
 ```
 
 ## Retry Behavior
@@ -107,11 +111,21 @@ Attempt 3 fails → FAILED (max attempts reached)
 
 ```javascript
 class RedisQueue {
-  constructor(options) { /* { name, concurrency, ... } */ }
-  add(event, data, options) { /* → Job */ }
-  process(handler) { /* handler = async (job) => result */ }
-  close() { /* → Promise */ }
-  getStats() { /* → object */ }
+  constructor(options) {
+    /* { name, concurrency, ... } */
+  }
+  add(event, data, options) {
+    /* → Job */
+  }
+  process(handler) {
+    /* handler = async (job) => result */
+  }
+  close() {
+    /* → Promise */
+  }
+  getStats() {
+    /* → object */
+  }
 }
 
 queue.registerAdapter('redis', RedisQueue);
@@ -127,14 +141,16 @@ import { createFactory } from '@shared/api/engines/queue';
 
 const testQueue = createFactory({ type: 'memory', concurrency: 2 });
 const channel = testQueue('test-channel');
-channel.on('event', async (job) => { /* ... */ });
+channel.on('event', async job => {
+  /* ... */
+});
 ```
 
 ## Integration with Schedule Engine
 
 ```javascript
 const notifications = queue('notifications', { concurrency: 10 });
-notifications.on('email', async (job) => {
+notifications.on('email', async job => {
   await sendEmail(job.data);
 });
 

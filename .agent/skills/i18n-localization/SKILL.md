@@ -59,7 +59,7 @@ Translations are dynamically discovered by the global `AppRouter`.
 Any App or Extension that provides `.json` translation files must explicitly export a `translations()` hook inside its respective index loop (e.g. `src/apps/[module]/views/index.js` or `src/apps/[module]/views/(default)/_route.js`):
 
 ```javascript
-// Load translations using Webpack context
+// Load translations using Rspack context
 const translationsContext = require.context(
   '../../../translations',
   false,
@@ -67,7 +67,7 @@ const translationsContext = require.context(
 );
 
 /**
- * Translations hook — returns the webpack require.context for this module's translations.
+ * Translations hook — returns the rspack require.context for this module's translations.
  * Can optionally return an array: [translationsContext, 'customNamespace'].
  * If a custom namespace is omitted, it defaults to the module's folder name.
  */

@@ -74,7 +74,7 @@ export function optionalAuth(options = {}) {
       req.authenticated = true;
 
       next();
-    } catch (error) {
+    } catch (_error) {
       req.authenticated = false;
       next();
     }

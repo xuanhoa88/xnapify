@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { HTTP_STATUS } from './constants';
+import { HTTP_STATUS } from './constants.js';
 
 /**
  * Base HTTP Error class

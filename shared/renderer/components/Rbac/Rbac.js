@@ -7,7 +7,7 @@
 
 import PropTypes from 'prop-types';
 
-import { useRbac } from './useRbac';
+import { useRbac } from './useRbac.js';
 
 // ========================================================================
 // COMPONENT: Rbac

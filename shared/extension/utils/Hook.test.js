@@ -5,9 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-/* eslint-env jest */
+/* global jest */
 
-import Hook from './Hook';
+import Hook from './Hook.js';
 
 describe('Hook', () => {
   let hooks;

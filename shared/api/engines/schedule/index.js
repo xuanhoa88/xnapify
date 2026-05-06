@@ -71,16 +71,16 @@
  * schedule.cleanup();
  */
 
-import { createFactory } from './factory';
+import { createFactory } from './factory.js';
 
 // Export factory creator
 export { createFactory };
 
 // Export Manager class for type referencing and extension if needed
-export { ScheduleManager } from './factory';
+export { ScheduleManager } from './factory.js';
 
 // Export error class
-export { ScheduleError } from './errors';
+export { ScheduleError } from './errors.js';
 
 /**
  * Default singleton instance of ScheduleManager

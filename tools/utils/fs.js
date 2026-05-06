@@ -5,11 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-const fs = require('fs/promises');
-const path = require('path');
+import fs from 'fs/promises';
+import path from 'path';
 
-const { logDebug } = require('./logger');
-const { withRetryFileSystem } = require('./retry');
+import { logDebug } from './logger.js';
+import { withRetryFileSystem } from './retry.js';
 
 /**
  * Validate path for safety
@@ -22,9 +22,9 @@ function validatePath(filePath) {
     });
   }
 
-  // Check for path traversal attempts
+  // Check for path traversal attempts as explicit path segments
   const normalized = path.normalize(filePath);
-  if (normalized.includes('..')) {
+  if (/(?:^|[\\/])\.\.(?:[\\/]|$)/.test(normalized)) {
     throw new Error('Path traversal detected', {
       path: filePath,
       normalized,
@@ -233,7 +233,7 @@ async function cleanDir(dirPath, options = {}) {
   );
 }
 
-module.exports = {
+export {
   pathExists,
   ensureDir,
   readFile,

@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { decodeToken } from './core';
+import { decodeToken } from './core.js';
 
 /**
  * Check if JWT token is expired

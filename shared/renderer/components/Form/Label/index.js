@@ -16,7 +16,7 @@ import {
   useFormField,
   useFormValidation,
   isFieldRequired,
-} from '../FormContext';
+} from '../FormContext.js';
 
 import s from './Index.css';
 

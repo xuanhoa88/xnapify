@@ -6,13 +6,13 @@
  */
 
 // Public API - Selectors
-export * from './selector';
+export * from './selector.js';
 
 // Public API - Async Thunks
-export * from './thunks';
+export * from './thunks.js';
 
 // Public API - Actions (from slice)
-export * from './slice';
+export * from './slice.js';
 
 // Public API - Reducer
-export { default } from './slice';
+export { default } from './slice.js';

@@ -7,11 +7,11 @@
  * @jest-environment jsdom
  */
 
-/* eslint-env jest */
+/* global jest */
 
-import { ACTIVE_EXTENSIONS } from '../utils/BaseExtensionManager';
+import { ACTIVE_EXTENSIONS } from '../utils/BaseExtensionManager.js';
 
-import clientManager from './ExtensionManager';
+import clientManager from './ExtensionManager.js';
 
 describe('ClientExtensionManager', () => {
   let mockContext;

@@ -11,8 +11,8 @@ import { Text } from '@radix-ui/themes';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 
-import Icon from '../../../Icon';
-import { toType } from '../utils';
+import Icon from '../../../Icon/index.js';
+import { toType } from '../utils.js';
 
 import s from './CopyToClipboard.css';
 
@@ -42,7 +42,6 @@ export default function CopyToClipboard({ src, enableClipboard }) {
       enableClipboard({ src, namespace: [] });
     }
     setTimeout(() => setCopied(false), 1500);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [src, enableClipboard]);
 
   if (!enableClipboard) return null;

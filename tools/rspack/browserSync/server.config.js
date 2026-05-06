@@ -5,10 +5,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-const open = require('open');
+import open from 'open';
 
-const config = require('../../config');
-const { logInfo, logWarn, logError } = require('../../utils/logger');
+import config from '../../config.js';
+import { logInfo, logWarn, logError } from '../../utils/logger.js';
 
 // Configuration
 const CONFIG = Object.freeze({
@@ -189,7 +189,7 @@ const closeBrowser = () => {
 
 /**
  * Initialize BrowserSync with HMR middleware
- * @param {object} middleware - Webpack HMR middleware
+ * @param {object} middleware - HMR middleware
  * @returns {boolean}
  */
 const initialize = middleware => {
@@ -296,7 +296,7 @@ const onClientConnected = () => {
  * Start dev mode: initialize and schedule browser open
  * Browser opens after timeout unless a client reconnects first
  * @param {object} server - Express server instance
- * @param {object} middleware - Webpack HMR middleware
+ * @param {object} middleware - HMR middleware
  * @returns {Promise<boolean>}
  */
 const start = async (server, middleware) => {
@@ -351,7 +351,7 @@ const start = async (server, middleware) => {
 /**
  * Handle server restart flow
  * @param {object} server - Express server instance
- * @param {object} middleware - Webpack HMR middleware (optional)
+ * @param {object} middleware - HMR middleware (optional)
  * @returns {Promise<boolean>}
  */
 const restart = async (server, middleware) => {
@@ -440,7 +440,7 @@ const getState = () => ({
   browserPid: (browserProcess && browserProcess.pid) || null,
 });
 
-module.exports = {
+export {
   notifyRestart,
   notifyReady,
   reloadClients,

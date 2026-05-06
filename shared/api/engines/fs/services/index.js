@@ -13,12 +13,12 @@
  * to use worker based on thresholds or explicit useWorker option.
  */
 
-export { upload } from './upload';
-export { download } from './download';
-export { remove } from './remove';
-export { copy } from './copy';
-export { rename } from './rename';
-export { info } from './info';
-export { preview } from './preview';
-export { sync } from './sync';
-export { extract } from './extract';
+export { upload } from './upload.js';
+export { download } from './download.js';
+export { remove } from './remove.js';
+export { copy } from './copy.js';
+export { rename } from './rename.js';
+export { info } from './info.js';
+export { preview } from './preview.js';
+export { sync } from './sync.js';
+export { extract } from './extract.js';

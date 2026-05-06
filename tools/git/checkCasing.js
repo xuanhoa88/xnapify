@@ -6,9 +6,10 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
  */
-const { execSync } = require('child_process');
-const fs = require('fs');
-const path = require('path');
+
+import { execSync } from 'child_process';
+import fs from 'fs';
+import path from 'path';
 
 /**
  * MAC & WINDOWS CASE SENSITIVITY FIXER
@@ -28,7 +29,7 @@ function checkAndFixCasing() {
       .trim()
       .split('\n')
       .filter(Boolean);
-  } catch (error) {
+  } catch (_error) {
     console.error('❌ Failed to get git files');
     process.exit(1);
   }
@@ -66,7 +67,7 @@ function checkAndFixCasing() {
         execSync(`git mv -f "${file}" "${correctDiskPath}"`);
         console.log(`   ✅ Fixed! Git now matches disk casing.`);
       }
-    } catch (e) {
+    } catch (_e) {
       // Ignore access errors
     }
   }

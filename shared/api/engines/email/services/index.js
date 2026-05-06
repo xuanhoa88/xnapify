@@ -13,4 +13,4 @@
  * to use worker based on thresholds or explicit useWorker option.
  */
 
-export { send } from './send';
+export { send } from './send.js';

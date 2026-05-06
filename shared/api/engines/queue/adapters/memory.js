@@ -5,11 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { JobNotFoundError, JobProcessingError } from '../errors';
-import { JOB_STATUS } from '../utils/constants';
-import { createJob } from '../utils/createJob';
-import { applyEventMixin } from '../utils/eventMixin';
-import { findProcessor } from '../utils/findProcessor';
+import { JobNotFoundError, JobProcessingError } from '../errors.js';
+import { JOB_STATUS } from '../utils/constants.js';
+import { createJob } from '../utils/createJob.js';
+import { applyEventMixin } from '../utils/eventMixin.js';
+import { findProcessor } from '../utils/findProcessor.js';
 
 /**
  * Memory Queue Adapter

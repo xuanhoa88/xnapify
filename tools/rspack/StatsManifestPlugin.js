@@ -5,12 +5,12 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
 
 /**
- * A generalized, reusable Webpack plugin for generating custom stats/manifest files.
- * Provides hooks to extract and transform Webpack build telemetry into custom JSON
+ * A generalized, reusable rspack plugin for generating custom stats/manifest files.
+ * Provides hooks to extract and transform rspack build telemetry into custom JSON
  * shapes (like SSR asset lists or Module Federation dynamic resolving maps), while
  * managing file system merging and overwrites natively.
  */
@@ -77,4 +77,4 @@ class StatsManifestPlugin {
   }
 }
 
-module.exports = StatsManifestPlugin;
+export default StatsManifestPlugin;

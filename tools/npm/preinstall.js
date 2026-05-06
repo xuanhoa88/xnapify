@@ -9,101 +9,19 @@
 
 /**
  * Preinstall guard — blocks bare `npm install` (use `npm run setup` instead).
- * Allows `npm install <package>` through automatically.
+ * Allows `npm ci` and `npm install <package>` through automatically.
  *
- * Cross-platform: macOS, Linux, Windows.
+ * Note: Since npm v7+, the preinstall hook is NO LONGER executed when
+ * adding specific packages (e.g., `npm install lodash`). It is only executed
+ * on bare `npm install` and `npm ci`. Therefore, complex OS-specific process
+ * tree walking (using ps / wmic) is completely obsolete and has been removed!
  */
 
-'use strict';
-
-// Authorized by setup.js via `npm install --xnapify-setup`.
-// npm converts CLI flags to npm_config_* env vars — scoped to the process.
+// Authorized by setup.js via `npm install --xnapify-setup`
 if (process.env.npm_config_xnapify_setup) process.exit(0);
 
-// ─── Detect if npm was invoked with package arguments ────────────────────────
-
-/**
- * Check npm_config_argv (npm v6-v8) for positional package arguments.
- * @returns {boolean|null} true = adding package, false = bare install, null = not available
- */
-function checkNpmArgv() {
-  try {
-    const argv = JSON.parse(process.env.npm_config_argv || '');
-    const remain = argv.remain || [];
-    return remain.length > 0;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Walk up the process tree to find the original npm command.
- * Uses platform-specific commands with graceful fallback.
- * @returns {boolean}
- */
-function checkProcessTree() {
-  const { execSync } = require('child_process');
-  const isWin = process.platform === 'win32';
-
-  try {
-    let pid = process.ppid;
-    for (let depth = 0; depth < 5; depth++) {
-      let cmd = '';
-
-      if (isWin) {
-        // Windows: use wmic (available on all Windows versions)
-        cmd = execSync(
-          'wmic process where "ProcessId=' + pid + '" get CommandLine /value',
-          { encoding: 'utf8', timeout: 2000, windowsHide: true },
-        ).trim();
-      } else {
-        // macOS / Linux
-        cmd = execSync('ps -p ' + pid + ' -o args=', {
-          encoding: 'utf8',
-          timeout: 1000,
-        }).trim();
-      }
-
-      if (/\bnpm\b/i.test(cmd)) {
-        // `npm install foo` or `npm i -D bar` — has args after install/i/add
-        return /npm\s+(install|i|add)\s+\S/i.test(cmd);
-      }
-
-      // Walk up to parent
-      if (isWin) {
-        const match = execSync(
-          'wmic process where "ProcessId=' +
-            pid +
-            '" get ParentProcessId /value',
-          { encoding: 'utf8', timeout: 2000, windowsHide: true },
-        ).match(/ParentProcessId=(\d+)/);
-        pid = match ? parseInt(match[1], 10) : 0;
-      } else {
-        const ppid = execSync('ps -p ' + pid + ' -o ppid=', {
-          encoding: 'utf8',
-          timeout: 1000,
-        }).trim();
-        pid = parseInt(ppid, 10);
-      }
-
-      if (!pid || pid <= 1) break;
-    }
-  } catch {
-    // Command not available — fall through to block
-  }
-  return false;
-}
-
-function isAddingPackage() {
-  // 1. Check npm_config_argv (fastest, cross-platform, npm v6-v8)
-  const result = checkNpmArgv();
-  if (result !== null) return result;
-
-  // 2. Walk process tree (platform-specific fallback)
-  return checkProcessTree();
-}
-
-if (isAddingPackage()) process.exit(0);
+// Allow `npm ci` for clean CI/CD pipelines
+if (process.env.npm_command === 'ci') process.exit(0);
 
 // ─── Block bare `npm install` ────────────────────────────────────────────────
 

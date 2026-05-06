@@ -13,7 +13,7 @@ import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useFormContext, useWatch } from 'react-hook-form';
 
-import { useFormField, useMergeRefs } from '../FormContext';
+import { useFormField, useMergeRefs } from '../FormContext.js';
 
 import s from './FileUpload.css';
 

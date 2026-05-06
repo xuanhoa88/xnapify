@@ -9,7 +9,7 @@
  * Remove (Delete) Operations
  */
 
-import { FilesystemError, createOperationResult } from '../utils';
+import { FilesystemError, createOperationResult } from '../utils/index.js';
 
 /**
  * Delete file(s)

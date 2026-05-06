@@ -19,6 +19,7 @@
 
 const fs = require('fs');
 const path = require('path');
+
 const { SKIP_DIRS } = require('../../scripts/constants');
 
 const APPS_DIR = process.argv[2] || path.join(process.cwd(), 'src/apps');
@@ -56,7 +57,9 @@ try {
     const content = fs.readFileSync(file, 'utf8');
     const relPath = path.relative(process.cwd(), file);
 
-    const hasMiddlewareExport = /export\s+(const|let|var)\s+middleware\b/.test(content);
+    const hasMiddlewareExport = /export\s+(const|let|var)\s+middleware\b/.test(
+      content,
+    );
     const hasRequirePermission = /requirePermission\s*\(/.test(content);
     const hasMiddlewareFalse = /middleware\s*=\s*false/.test(content);
     const hasMiddlewareArray = /middleware\s*=\s*\[/.test(content);
@@ -71,7 +74,9 @@ try {
       console.log(`🔴 ${relPath} — NO middleware export`);
       unprotected++;
     } else {
-      console.log(`🟡 ${relPath} — middleware exported but no requirePermission()`);
+      console.log(
+        `🟡 ${relPath} — middleware exported but no requirePermission()`,
+      );
       unprotected++;
     }
   }

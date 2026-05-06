@@ -15,9 +15,9 @@ import {
   ROUTE_INIT_KEY,
   ROUTE_MOUNT_KEY,
   ROUTE_TRANSLATIONS_KEY,
-} from './constants';
-import { resolveRateLimiter } from './rateLimit';
-import { log, normalizeError } from './utils';
+} from './constants.js';
+import { resolveRateLimiter } from './rateLimit.js';
+import { log, normalizeError } from './utils.js';
 
 /**
  * Creates init function for config and route initialization

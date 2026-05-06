@@ -5,10 +5,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { register } from '../../shutdown';
+import { register } from '../../shutdown.js';
 
-import { send } from './services';
-import { createProviderByName } from './utils/providers';
+import { send } from './services/index.js';
+import { createProviderByName } from './utils/providers.js';
 
 /**
  * Email Manager

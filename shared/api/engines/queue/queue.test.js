@@ -5,6 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+
 jest.mock('uuid', () => ({
   v4: () =>
     'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
@@ -14,8 +17,8 @@ jest.mock('uuid', () => ({
     }),
 }));
 
-import { Channel } from './channel';
-import { createFactory } from './factory';
+import { Channel } from './channel.js';
+import { createFactory } from './factory.js';
 
 describe('Queue Engine', () => {
   let queue;

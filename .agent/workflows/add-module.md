@@ -140,7 +140,7 @@ export default {
   routes: () => routesContext,
 
   // -----------------------------------------------------------------------
-  // Translations hook — return webpack require.context for i18n files.
+  // Translations hook — return rspack require.context for i18n files.
   // -----------------------------------------------------------------------
   translations() {
     return require.context('../translations', false, /\.json$/i);
@@ -822,21 +822,21 @@ Modules are auto-discovered during application bootstrap:
 
 | Hook                       | Purpose                                | Called When        | Async |
 | -------------------------- | -------------------------------------- | ------------------ | ----- |
-| `translations()`           | Provide webpack context for i18n files | Module loaded      | No    |
+| `translations()`           | Provide rspack context for i18n files | Module loaded      | No    |
 | `providers({ container })` | Bind services, register listener hooks | After translations | Yes   |
-| `migrations()`             | Return migrations webpack context      | After providers    | No    |
-| `models()`                 | Return models webpack context          | After migrations   | No    |
-| `seeds()`                  | Return seeds webpack context           | After models       | No    |
+| `migrations()`             | Return migrations rspack context      | After providers    | No    |
+| `models()`                 | Return models rspack context          | After migrations   | No    |
+| `seeds()`                  | Return seeds rspack context           | After models       | No    |
 | `boot({ container })`      | Initialize module (schedules, etc.)    | After seeds        | Yes   |
-| `routes()`                 | Return routes webpack context          | After boot         | No    |
+| `routes()`                 | Return routes rspack context          | After boot         | No    |
 
 ### Frontend (Views)
 
 | Hook                       | Purpose                                | Called When        | Async |
 | -------------------------- | -------------------------------------- | ------------------ | ----- |
-| `translations()`           | Provide webpack context for i18n files | Module loaded      | No    |
+| `translations()`           | Provide rspack context for i18n files | Module loaded      | No    |
 | `providers({ container })` | Bind client services                   | After translations | No    |
-| `routes()`                 | Return views webpack context           | After providers    | No    |
+| `routes()`                 | Return views rspack context           | After providers    | No    |
 
 ## API File-Based Routing
 
@@ -873,7 +873,7 @@ Routes are discovered from `views/` using special files:
 5. **Migrations:** Use versioned filenames (1.initial.js, 2.add_field.js)
 6. **Error Handling:** Use try-catch in controllers, pass to Express error handler
 7. **Container:** Bind reusable services to container in providers hook
-8. **Webpack Context:** Use `require.context()` for auto-loading files
+8. **Rspack Context:** Use `require.context()` for auto-loading files
 9. **Translations:** Prefix i18n keys with module name (e.g., `{module-name}:label.key`)
 10. **Testing:** Create test files adjacent to code (\*.test.js)
 
@@ -883,7 +883,7 @@ Routes are discovered from `views/` using special files:
 
 - Check `src/apps/{module-name}/api/index.js` exists with exports
 - Check `src/apps/{module-name}/views/index.js` exists with exports
-- Verify webpack contexts use correct patterns
+- Verify rspack contexts use correct patterns
 - Check browser/server console for errors
 
 ### Routes Not Discovered

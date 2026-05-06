@@ -6,30 +6,35 @@
  */
 
 import fs from 'fs';
+import { createRequire } from 'module';
 import os from 'os';
 import path from 'path';
 
 import merge from 'lodash/merge';
 
-import { createWebpackContextAdapter } from '@shared/utils/contextAdapter';
+import { createRspackContextAdapter } from '@shared/utils/contextAdapter';
 import { createNativeRequire } from '@shared/utils/createNativeRequire';
 
-import { createNodeRedAuth, createNodeRedLogoutConfig } from './auth';
+import { createNodeRedAuth, createNodeRedLogoutConfig } from './auth.js';
+
+const require = createRequire(import.meta.url);
 
 // Use native require to load Node-RED packages and optional modules
-const moduleRequire = createNativeRequire(__filename);
+const moduleRequire = createNativeRequire(import.meta.url);
 
 // Auto-discover all custom Node-RED node modules in ./nodes/
 // Each module must export: getNodeJS() and getNodeHTML()
-const nodesContexts = require.context('./nodes', false, /\.[cm]?[jt]s$/i);
+const nodesContexts = import.meta.webpackContext('./nodes', {
+  recursive: false,
+  regExp: /\.[cm]?[jt]s$/i
+});
 
 // Auto-discover all client-side editor scripts in ./client-scripts/
 // Each module must export: getScript() => string
-const clientScriptsContexts = require.context(
-  './client-scripts',
-  false,
-  /\.[cm]?[jt]s$/i,
-);
+const clientScriptsContexts = import.meta.webpackContext('./client-scripts', {
+  recursive: false,
+  regExp: /\.[cm]?[jt]s$/i
+});
 
 /**
  * Safely require a module, returning null if not available
@@ -232,9 +237,9 @@ export async function removeExtensionNodeModule(userDir, moduleId) {
 
 /**
  * Write custom Node-RED nodes to userDir so they can be loaded from disk.
- * Node-RED requires real files on the filesystem (it cannot load from a webpack bundle).
+ * Node-RED requires real files on the filesystem (it cannot load from a rspack bundle).
  *
- * Handles ONLY core xnapify nodes (from ./nodes/ webpack context).
+ * Handles ONLY core xnapify nodes (from ./nodes/ rspack context).
  * Extension nodes are handled separately via writeExtensionNodeModule()
  * and hot-loaded at runtime using the registry's addModule() API.
  *
@@ -253,7 +258,7 @@ async function writeCustomNodes(userDir, app) {
   await fs.promises.mkdir(xnapifyDir, { recursive: true });
 
   // Create adapter for nodes context
-  const nodesAdapter = createWebpackContextAdapter(nodesContexts);
+  const nodesAdapter = createRspackContextAdapter(nodesContexts);
 
   const modulePaths = nodesAdapter.files();
   const seen = new Set();
@@ -353,7 +358,7 @@ async function writeClientScripts(userDir) {
   await ensureDir(scriptsDir);
 
   // Create adapter for client scripts context
-  const clientScriptsAdapter = createWebpackContextAdapter(
+  const clientScriptsAdapter = createRspackContextAdapter(
     clientScriptsContexts,
   );
 

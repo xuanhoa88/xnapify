@@ -7,22 +7,23 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const { format: prettierFormatter } = require('prettier');
+import { format as prettierFormatter } from 'prettier';
 
-const prettierConfig = require('../../.prettierrc');
-const config = require('../config');
-const { readDir, writeFile } = require('../utils/fs');
-const {
+import prettierConfig from '../../.prettierrc.js';
+import config from '../config.js';
+import { readDir, writeFile } from '../utils/fs.js';
+import {
   formatDuration,
   isSilent,
   isVerbose,
   logDebug,
   logInfo,
   logWarn,
-} = require('../utils/logger');
+} from '../utils/logger.js';
 
 // File extensions to format
 const FORMATTABLE_EXTENSIONS = [
@@ -41,31 +42,47 @@ const EXCLUDED_DIRS = ['node_modules', 'build', 'coverage', '.git', '.cache'];
 
 /**
  * Recursively find files to format
- * @param {string} dir - Directory to scan
+ * @param {string} targetPath - Directory or file to scan
  * @returns {Promise<string[]>} - Array of file paths
  */
-async function findFiles(dir) {
-  const files = [];
-  const entries = await readDir(dir, { withFileTypes: true });
-
-  for (const entry of entries) {
-    const fullPath = `${dir}/${entry.name}`;
-
-    if (entry.isDirectory()) {
-      if (!EXCLUDED_DIRS.includes(entry.name)) {
-        // eslint-disable-next-line no-await-in-loop
-        const subFiles = await findFiles(fullPath);
-        files.push(...subFiles);
-      }
-    } else if (entry.isFile()) {
-      const ext = entry.name.substring(entry.name.lastIndexOf('.'));
+async function findFiles(targetPath) {
+  try {
+    const stats = fs.statSync(targetPath);
+    
+    if (stats.isFile()) {
+      const ext = targetPath.substring(targetPath.lastIndexOf('.'));
       if (FORMATTABLE_EXTENSIONS.includes(ext)) {
-        files.push(fullPath);
+        return [targetPath];
       }
+      return [];
     }
-  }
+    
+    if (stats.isDirectory()) {
+      const files = [];
+      const entries = await readDir(targetPath, { withFileTypes: true });
 
-  return files;
+      for (const entry of entries) {
+        const fullPath = `${targetPath}/${entry.name}`;
+
+        if (entry.isDirectory()) {
+          if (!EXCLUDED_DIRS.includes(entry.name)) {
+            const subFiles = await findFiles(fullPath);
+            files.push(...subFiles);
+          }
+        } else if (entry.isFile()) {
+          const ext = entry.name.substring(entry.name.lastIndexOf('.'));
+          if (FORMATTABLE_EXTENSIONS.includes(ext)) {
+            files.push(fullPath);
+          }
+        }
+      }
+      return files;
+    }
+  } catch (err) {
+    // Ignore non-existent files
+    return [];
+  }
+  return [];
 }
 
 /**
@@ -130,10 +147,10 @@ async function main() {
   }
 
   try {
-    // Get target directory or pattern from args
-    const targetArg = process.argv[2];
-    const targetDirs = targetArg
-      ? [targetArg]
+    // Get target directories or files from args
+    const args = process.argv.slice(2).filter(arg => !arg.startsWith('-'));
+    const targetDirs = args.length > 0
+      ? args
       : [config.APP_DIR, path.resolve(config.CWD, 'shared')];
 
     // Check if it's a --check mode (no modifications)
@@ -163,7 +180,6 @@ async function main() {
           const ext = filePath.substring(filePath.lastIndexOf('.'));
           const parser = getParser(ext);
 
-          // eslint-disable-next-line no-await-in-loop
           const formatted = await prettierFormatter(content, {
             ...prettierConfig,
             parser,
@@ -187,7 +203,6 @@ async function main() {
           });
         }
       } else {
-        // eslint-disable-next-line no-await-in-loop
         const result = await formatFile(filePath, prettierConfig);
         results.push(result);
       }
@@ -257,11 +272,15 @@ async function main() {
 }
 
 // Execute if called directly (as child process)
-if (require.main === module) {
+const scriptPath = fileURLToPath(import.meta.url);
+if (
+  process.argv[1] === scriptPath ||
+  process.argv[1] === scriptPath.replace(/\.js$/, '')
+) {
   main().catch(error => {
     console.error(error);
     process.exit(1);
   });
 }
 
-module.exports = main;
+export default main;

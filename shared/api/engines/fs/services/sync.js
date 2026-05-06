@@ -9,8 +9,8 @@
  * Sync Service - Worker-enabled wrapper for sync operation
  */
 
-import { sync as syncOperation } from '../operations/sync';
-import { processSync } from '../workers';
+import { sync as syncOperation } from '../operations/sync.js';
+import { processSync } from '../workers/index.js';
 
 /**
  * Thresholds for auto-detection of worker usage

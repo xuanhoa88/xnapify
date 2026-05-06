@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import ExtensionRegistry from '../utils/Registry';
+import ExtensionRegistry from '../utils/Registry.js';
 
 /**
  * Client-side extension registry singleton.

@@ -5,19 +5,19 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { createFactory } from './factory';
+import { createFactory } from './factory.js';
 
 // Constants
-export * from './constants';
+export * from './constants.js';
 
 // Response utilities
-export * from './response';
+export * from './response.js';
 
 // Request utilities
-export * from './request';
+export * from './request.js';
 
 // Error handling utilities
-export * from './errors';
+export * from './errors.js';
 
 // Export factory for creating instances
 export { createFactory };

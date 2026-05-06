@@ -5,16 +5,16 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { register } from '../../shutdown';
+import { register } from '../../shutdown.js';
 
-import FileCache from './adapters/file';
-import MemoryCache from './adapters/memory';
-import NoOpCache from './adapters/noop';
+import FileCache from './adapters/file.js';
+import MemoryCache from './adapters/memory.js';
+import NoOpCache from './adapters/noop.js';
 import {
   InvalidCacheError,
   InvalidCacheTypeError,
   InvalidNamespaceError,
-} from './errors';
+} from './errors.js';
 
 /**
  * Supported cache adapter types

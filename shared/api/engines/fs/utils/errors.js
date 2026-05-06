@@ -9,7 +9,7 @@
  * Error Handling and Response Utilities
  */
 
-import { ERROR_CODES } from './constants';
+import { ERROR_CODES } from './constants.js';
 
 /**
  * Custom filesystem error class

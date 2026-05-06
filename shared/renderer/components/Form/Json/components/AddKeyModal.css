@@ -25,7 +25,11 @@
   padding: 16px;
   border-radius: var(--radius-md, 6px);
   position: relative;
-  box-shadow: var(--shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 10%), 0 4px 6px -4px rgb(0 0 0 / 10%));
+  box-shadow: var(
+    --shadow-lg,
+    0 10px 15px -3px rgb(0 0 0 / 10%),
+    0 4px 6px -4px rgb(0 0 0 / 10%)
+  );
   border: 1px solid var(--color-border, #e2e8f0);
 }
 

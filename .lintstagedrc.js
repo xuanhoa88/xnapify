@@ -7,13 +7,13 @@
 
 // lint-staged configuration
 // https://github.com/okonet/lint-staged
-module.exports = {
+export default {
   // JavaScript, JSX, and TypeScript files
-  '*.{js,jsx,ts,tsx}': ['eslint --fix', 'prettier --write'],
+  '*.{js,jsx,ts,tsx}': ['npm run fix:js', 'npm run format'],
 
-  // CSS, SCSS, LESS files
-  '*.{css,scss,sass,less,styl,sss}': ['stylelint --fix', 'prettier --write'],
+  // CSS, SCSS files
+  '*.{css,scss,sass}': ['npm run fix:css', 'npm run format'],
 
   // Markdown, JSON, YAML files
-  '*.{md,mdx,json,yml,yaml}': ['prettier --write'],
+  '*.{md,mdx,json,yml,yaml}': ['npm run format'],
 };

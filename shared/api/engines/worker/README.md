@@ -118,7 +118,7 @@ export function processTask(data) {
 The worker wasn't discovered. Check:
 
 - Does the worker file `export const WORKER_POOL = true`?
-- Was the `*.worker.js` file compiled by webpack?
+- Was the `*.worker.js` file compiled by rspack?
 - Is the file in `BUILD_DIR` or a subdirectory?
 - Does the filename end with `.worker.js`?
 

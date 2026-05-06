@@ -10,22 +10,22 @@
  *
  * Discovers and loads API modules from the apps directory.
  * Each module exports independent lifecycle hooks:
- *   - models()     — returns a webpack require.context for models
+ *   - models()     — returns a rspack require.context for models
  *   - providers()     — share services/constants across modules (DI bindings)
  *   - migrations() — run database migrations (all tables created first)
  *   - seeds()      — run database seeds (after all tables exist)
  *   - boot()        — initialisation logic (auth hooks, etc.)
- *   - routes()     — returns a webpack require.context for routes
+ *   - routes()     — returns a rspack require.context for routes
  *
  * Core modules (like 'users') are loaded first to ensure proper dependency order.
  */
 
 import { getTranslations } from '@shared/i18n/loader';
 import { addNamespace } from '@shared/i18n/utils';
-import { createWebpackContextAdapter } from '@shared/utils/contextAdapter';
+import { createRspackContextAdapter } from '@shared/utils/contextAdapter';
 import { API_LIFECYCLE_PHASES } from '@shared/utils/lifecycle';
 
-import ModelRegistry from './ModelRegistry';
+import ModelRegistry from './ModelRegistry.js';
 
 // =============================================================================
 // CONSTANTS
@@ -233,13 +233,13 @@ async function runPhase(phase, lifecycles, handler) {
 /**
  * Discover and boot all API modules in lifecycle order.
  *
- * @param {object} modulesContext - Webpack require.context or compatible
+ * @param {object} modulesContext - Rspack require.context or compatible
  * @param {object} container     - DI container instance
  * @returns {Promise<{apiModels: object, apiRoutes: Map, errors: object[]}>}
  */
 export async function discoverModules(modulesContext, container) {
   const startTime = Date.now();
-  const adapter = createWebpackContextAdapter(modulesContext);
+  const adapter = createRspackContextAdapter(modulesContext);
 
   // Filter → validate → sort  (one pass over files)
   const lifecyclePaths = adapter
@@ -342,7 +342,7 @@ export async function discoverModules(modulesContext, container) {
     ...(await runPhase('routes', lifecycles, (name, hook) => {
       const routeContext = hook();
       if (routeContext) {
-        const rawAdapter = createWebpackContextAdapter(routeContext);
+        const rawAdapter = createRspackContextAdapter(routeContext);
         const prefix = `./${name}/api/routes`;
         const wrappedAdapter = {
           files: () => rawAdapter.files().map(p => p.replace(/^\./, prefix)),

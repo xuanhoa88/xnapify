@@ -10,11 +10,11 @@ import { useState, useCallback } from 'react';
 import { Box, Text, TextArea } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 
-import Icon from '../../../Icon';
-import { toType, parseInput, stringifyVariable } from '../utils';
+import Icon from '../../../Icon/index.js';
+import { toType, parseInput, stringifyVariable } from '../utils.js';
 
-import CopyToClipboard from './CopyToClipboard';
-import ValueRenderer from './ValueRenderers';
+import CopyToClipboard from './CopyToClipboard.js';
+import ValueRenderer from './ValueRenderers.js';
 
 import s from './VariableEditor.css';
 
@@ -92,7 +92,6 @@ export default function VariableEditor({
   return (
     <Box
       className={s.variableRow}
-      // eslint-disable-next-line react/forbid-dom-props
       style={{ paddingLeft }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}

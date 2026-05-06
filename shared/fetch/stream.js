@@ -10,21 +10,8 @@
 // ========================================================================
 
 /* eslint-disable no-underscore-dangle */
-let _TransformStream = globalThis.TransformStream;
-let _TextDecoderStream = globalThis.TextDecoderStream;
-
-// Node 16 does not expose Web Streams as globals.
-// Use dynamic require to avoid webpack bundling stream/web for the client.
-if (!_TransformStream || !_TextDecoderStream) {
-  try {
-    // eslint-disable-next-line global-require, no-eval
-    const webStreams = eval("require('stream/web')");
-    if (!_TransformStream) _TransformStream = webStreams.TransformStream;
-    if (!_TextDecoderStream) _TextDecoderStream = webStreams.TextDecoderStream;
-  } catch (_e) {
-    // Browser environment — globals must already exist
-  }
-}
+const _TransformStream = globalThis.TransformStream;
+const _TextDecoderStream = globalThis.TextDecoderStream;
 /* eslint-enable no-underscore-dangle */
 
 // ========================================================================

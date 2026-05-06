@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-const { logInfo, logWarn } = require('../utils/logger');
+import { logInfo, logWarn } from '../utils/logger.js';
 
 /**
  * Load XNAPIFY_ environment variables for client-side bundles.
@@ -20,7 +20,7 @@ const { logInfo, logWarn } = require('../utils/logger');
  *
  * @param {Object} options - Plugin options
  * @param {boolean} options.verbose - Enable verbose logging (default: false)
- * @returns {Object} Webpack DefinePlugin definitions
+ * @returns {Object} Rspack DefinePlugin definitions
  */
 function loadDotenv(options = {}) {
   const { verbose = false } = options;
@@ -51,4 +51,4 @@ function loadDotenv(options = {}) {
   return envVars;
 }
 
-module.exports = loadDotenv;
+export default loadDotenv;

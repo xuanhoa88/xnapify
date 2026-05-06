@@ -5,8 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { createFetchError } from './error';
-import { createSSEStream } from './stream';
+import { createFetchError } from './error.js';
+import { createSSEStream } from './stream.js';
 import {
   isPayloadMethod,
   isJSONSerializable,
@@ -15,7 +15,7 @@ import {
   callHooks,
   withBase,
   withQuery,
-} from './utils';
+} from './utils.js';
 
 // https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
 const retryStatusCodes = new Set([

@@ -6,10 +6,10 @@
  */
 
 // Public API - Selectors
-export * from './selector';
+export * from './selector.js';
 
 // Public API - Actions (from slice)
-export * from './slice';
+export * from './slice.js';
 
 // Public API - Reducer
-export { default } from './slice';
+export { default } from './slice.js';

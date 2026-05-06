@@ -23,8 +23,8 @@ max_line_length = 80
 [*.json]
 indent_size = 2
 
-# CSS, SCSS, LESS
-[*.{css,scss,less}]
+# CSS, SCSS
+[*.{css,scss}]
 indent_size = 2
 
 # HTML files

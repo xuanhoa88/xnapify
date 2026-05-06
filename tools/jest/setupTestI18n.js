@@ -9,8 +9,8 @@
 // allows other scripts (for instance, individual test helper files)
 // to import and reuse the same setup if necessary.
 
-const i18n = require('i18next');
-const { initReactI18next } = require('react-i18next');
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
 
 function initI18nForTesting() {
   i18n.use(initReactI18next).init({
@@ -34,7 +34,4 @@ function initI18nForTesting() {
   });
 }
 
-module.exports = {
-  initI18nForTesting,
-  i18n,
-};
+export { initI18nForTesting, i18n };

@@ -8,7 +8,7 @@
 import { createSlice } from '@reduxjs/toolkit';
 import sortBy from 'lodash/sortBy';
 
-import { initialState } from './utils';
+import { initialState } from './utils.js';
 
 /**
  * Shared Logic Utilities

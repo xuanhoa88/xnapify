@@ -14,7 +14,7 @@
  * ## Why this exists
  *
  * Engine singletons are created at module-evaluation time via `createFactory()`.
- * During Webpack HMR the server bundle is re-evaluated, which re-imports every
+ * During Rspack HMR the server bundle is re-evaluated, which re-imports every
  * engine `index.js`. If each factory registered its own `process.once('SIGTERM')`
  * handler, every hot-reload would stack a *new* listener (the closure reference
  * is unique each time). After N reloads the process exit would fire N+1 cleanup
@@ -44,7 +44,7 @@
  *
  * ```js
  * // In engine factory
- * import { register } from '../shutdown';
+ * import { register } from '../shutdown.js';
  *
  * export function createFactory(config) {
  *   const engine = new Engine(config);

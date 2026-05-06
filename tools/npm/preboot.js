@@ -7,7 +7,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-'use strict';
+/* eslint-disable import/no-unresolved, no-underscore-dangle */
 
 /**
  * Database Preboot — ensures .env exists and the correct DB driver is ready.
@@ -26,11 +26,11 @@
  *
  * Cross-platform: macOS, Linux, Windows (x64 + arm64)
  */
-const { execSync } = require('child_process');
-const fs = require('fs');
-const net = require('net');
-const os = require('os');
-const path = require('path');
+import { execSync } from 'child_process';
+import fs from 'fs';
+import net from 'net';
+import os from 'os';
+import path from 'path';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -47,7 +47,7 @@ const PG_DEFAULT_PORT = 5432;
 /** @constant {number} Standard system MySQL port */
 const MYSQL_DEFAULT_PORT = 3306;
 
-// Bypass Webpack's static analyzer which automatically stubs `require.resolve`
+// Bypass rspack's static analyzer which automatically stubs `require.resolve`
 // for dynamically discovered native database addons it cannot trace at build-time.
 function nativeResolve(moduleName) {
   const req =
@@ -144,16 +144,16 @@ const DIALECT_DEPS = (() => {
   const embeddedPkg = `@embedded-postgres/${platKey}-${archKey}`;
 
   return {
-    // Pin sqlite3@5 — v6+ requires Node >= 20
-    sqlite: [{ name: 'sqlite3', spec: 'sqlite3@^5.1.7' }],
+    // Use sqlite3 v6 (Node >= 20 fully supported)
+    sqlite: [{ name: 'sqlite3', spec: 'sqlite3@6.0.1' }],
     // pg + pg-hstore are always needed
     postgres: [
-      { name: 'pg', spec: 'pg@^8.20.0' },
-      { name: 'pg-hstore', spec: 'pg-hstore@^2.3.4' },
+      { name: 'pg', spec: 'pg@8.20.0' },
+      { name: 'pg-hstore', spec: 'pg-hstore@2.3.4' },
     ],
     // Platform-specific PG binaries (initdb, pg_ctl, postgres)
-    _embedded: [{ name: embeddedPkg, spec: `${embeddedPkg}@^18.3.0-beta.16` }],
-    mysql: [{ name: 'mysql2', spec: 'mysql2@^3.20.0' }],
+    _embedded: [{ name: embeddedPkg, spec: `${embeddedPkg}@18.3.0-beta.16` }],
+    mysql: [{ name: 'mysql2', spec: 'mysql2@3.20.0' }],
   };
 })();
 
@@ -196,7 +196,7 @@ function safePath(p) {
   // Reject paths containing shell metacharacters or quotes that could enable
   // injection when interpolated into shell commands via execSync.
   // Allow: alphanumeric, slashes, dots, dashes, underscores, spaces, colons (Windows)
-  // eslint-disable-next-line no-useless-escape
+
   if (/[;|&$`(){}[\]!<>\n\r'"\\]/.test(p)) {
     throw new Error(
       `Unsafe characters in path: ${p}\n` +
@@ -228,9 +228,9 @@ function maskUrl(url) {
  * .env.local, .env.{NODE_ENV}, etc.). Falls back to manual .env
  * parsing if dotenv-flow is not installed yet.
  */
-function loadEnv() {
+async function loadEnv() {
   try {
-    require('dotenv-flow').config({ silent: true });
+    (await import('dotenv-flow')).default.config({ silent: true });
   } catch {
     // dotenv-flow not installed — parse .env manually
     if (!fs.existsSync(ENV_PATH)) return;
@@ -488,7 +488,7 @@ async function ensureDeps(dialect) {
       const installStdio = buildFromSource ? 'inherit' : 'pipe';
 
       execSync(
-        `npm install --no-save --prefix "${driverDir}" ${[...specs, ...buildOpts].join(' ')}`,
+        `npm install --no-save --no-fund --no-audit --prefix "${driverDir}" ${[...specs, ...buildOpts].join(' ')}`,
         {
           env,
           cwd: driverDir,
@@ -542,8 +542,9 @@ async function ensureDeps(dialect) {
   }
   // Bust Node's module resolution cache so require() finds the new packages
   // within this same process (avoids stale _pathCache from prior resolve())
-  // eslint-disable-next-line no-underscore-dangle
-  const pathCache = require('module')._pathCache;
+
+  const { Module } = await import('module');
+  const pathCache = Module ? Module._pathCache : null;
   if (pathCache) {
     for (const key of Object.keys(pathCache)) {
       for (const dep of missing) {
@@ -794,7 +795,7 @@ function resolvePgBin(binName) {
 async function terminateConnections(port) {
   try {
     await ensureDeps('postgres');
-    const { Client } = require('pg');
+    const { Client } = (await import('pg')).default || (await import('pg'));
     const client = new Client({
       host: DB_DEFAULT_HOST,
       port,
@@ -830,7 +831,7 @@ async function terminateConnections(port) {
  */
 async function stopPostgres() {
   // Resolve actual port from env URL, falling back to embedded default
-  loadEnv();
+  await loadEnv();
   const envUrl = process.env.XNAPIFY_DB_URL || '';
   const envCfg = /^postgres(ql)?:\/\//i.test(envUrl)
     ? parsePostgresUrl(envUrl)
@@ -1512,7 +1513,7 @@ async function startMysql(cfg = MYSQL_DEFAULTS) {
  */
 async function stopMysql() {
   // Resolve actual port from env URL, falling back to embedded default
-  loadEnv();
+  await loadEnv();
   const envUrl = process.env.XNAPIFY_DB_URL || '';
   const envCfg = /^mysql:\/\//i.test(envUrl) ? parseMysqlUrl(envUrl) : null;
   const embeddedPort = (envCfg && envCfg.port) || MYSQL_DEFAULTS.port;
@@ -1602,7 +1603,7 @@ async function stopMysql() {
  */
 async function autoMode() {
   ensureEnvFile();
-  loadEnv();
+  await loadEnv();
 
   // Force SQLite for tests — fast, in-process, no server required.
   // npm sets npm_lifecycle_event=pretest when running the pretest hook.
@@ -1642,7 +1643,7 @@ async function ensurePostgresDatabase(cfg) {
   const dbName = cfg.database || PG_DEFAULTS.database;
   const user = cfg.user || PG_DEFAULTS.user;
   try {
-    const { Client } = require('pg');
+    const { Client } = (await import('pg')).default || (await import('pg'));
     const client = new Client({
       host: cfg.host || DB_DEFAULT_HOST,
       port: cfg.port || PG_DEFAULTS.port,
@@ -1845,7 +1846,9 @@ async function mysqlFallbackChain() {
       port: MYSQL_DEFAULT_PORT,
     });
     try {
-      const mysql2 = require('mysql2/promise');
+      const mysql2 =
+        (await import('mysql2/promise')).default ||
+        (await import('mysql2/promise'));
       const conn = await mysql2.createConnection({
         host: DB_DEFAULT_HOST,
         port: MYSQL_DEFAULT_PORT,
@@ -1879,7 +1882,7 @@ async function mysqlFallbackChain() {
  */
 async function showStatus(dialectOverride) {
   ensureEnvFile();
-  loadEnv();
+  await loadEnv();
 
   const url = process.env.XNAPIFY_DB_URL || 'sqlite';
   const dialect = dialectOverride || detectDialect(url);
@@ -1999,10 +2002,10 @@ Examples:
  * @param {string|null} dbOverride - Value of --db flag, or null
  * @returns {string} 'sqlite' | 'postgres' | 'mysql'
  */
-function resolveDialect(dbOverride) {
+async function resolveDialect(dbOverride) {
   if (dbOverride) return dbOverride;
   ensureEnvFile();
-  loadEnv();
+  await loadEnv();
   return detectDialect(process.env.XNAPIFY_DB_URL || '');
 }
 
@@ -2029,12 +2032,12 @@ const flag = args.find(
 
 const COMMANDS = {
   '--install': async () => {
-    const dialect = resolveDialect(dbOverride);
+    const dialect = await resolveDialect(dbOverride);
     await ensureDeps(dialect);
     console.log(`✅ ${dialect} driver ready`);
   },
   '--start': async () => {
-    const dialect = resolveDialect(dbOverride);
+    const dialect = await resolveDialect(dbOverride);
     if (dialect === 'sqlite') {
       console.log('💡 SQLite is in-process — no daemon needed');
       return;
@@ -2051,7 +2054,7 @@ const COMMANDS = {
     console.warn(`⚠️  Unknown dialect: ${dialect}`);
   },
   '--stop': async () => {
-    const dialect = resolveDialect(dbOverride);
+    const dialect = await resolveDialect(dbOverride);
     if (dialect === 'sqlite') {
       console.log('💡 SQLite is in-process — no daemon needed');
       return;
@@ -2063,7 +2066,7 @@ const COMMANDS = {
     console.warn(`⚠️  Unknown dialect: ${dialect}`);
   },
   '--status': async () => {
-    const dialect = resolveDialect(dbOverride);
+    const dialect = await resolveDialect(dbOverride);
     return showStatus(dialect);
   },
   '--help': async () => showHelp(),

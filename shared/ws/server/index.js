@@ -20,7 +20,7 @@ import {
   createMessage,
   parseMessage,
   createLogger,
-} from '../utils';
+} from '../utils/index.js';
 
 /**
  * Server-specific event types

@@ -5,4 +5,4 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-export { default as WYSIWYG } from './WYSIWYG';
+export { default as WYSIWYG } from './WYSIWYG.js';

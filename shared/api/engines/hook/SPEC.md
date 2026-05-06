@@ -41,16 +41,17 @@ No external dependencies.
 ### Private State
 
 Internal state is stored via Symbols to prevent external access:
+
 - `Symbol('__xnapify.hookName__')` → channel name string
 - `Symbol('__xnapify.hookHandlers__')` → `Map<event, Array<{ handler, priority }>>`
 
 ### Getters
 
-| Getter | Returns | Description |
-|---|---|---|
-| `name` | `string` | Channel name |
-| `handlers` | `Map` | Raw handlers map |
-| `events` | `string[]` | Registered event names (`Array.from(handlers.keys())`) |
+| Getter     | Returns    | Description                                            |
+| ---------- | ---------- | ------------------------------------------------------ |
+| `name`     | `string`   | Channel name                                           |
+| `handlers` | `Map`      | Raw handlers map                                       |
+| `events`   | `string[]` | Registered event names (`Array.from(handlers.keys())`) |
 
 ### Methods
 
@@ -93,6 +94,7 @@ Three-mode removal:
 Returns a proxy-like object where handlers registered via `on()` are invoked with `handler.call(context, ...args)`.
 
 **Wrapper shape:**
+
 ```javascript
 {
   on(event, handler, priority?) → this,  // wraps handler with ORIGINAL_HANDLER tracking
@@ -117,13 +119,13 @@ Returns a proxy-like object where handlers registered via `on()` are invoked wit
 
 ### Methods
 
-| Method | Behavior |
-|---|---|
-| `channel(name)` | Lazy-creates `HookChannel` on first access. Trims name. Throws `Error` with `name: 'InvalidChannelNameError'` and `status: 400` if name is falsy or not a string. |
-| `has(name)` | Checks map. Trims name. Returns `false` for invalid input. |
-| `remove(name)` | Calls `channel.off()` (clear all handlers), deletes from map. Returns `false` if not found. |
-| `getChannelNames()` | `Array.from(channels.keys())` |
-| `cleanup()` | Calls `channel.off()` on every channel, then clears the map. |
+| Method              | Behavior                                                                                                                                                          |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `channel(name)`     | Lazy-creates `HookChannel` on first access. Trims name. Throws `Error` with `name: 'InvalidChannelNameError'` and `status: 400` if name is falsy or not a string. |
+| `has(name)`         | Checks map. Trims name. Returns `false` for invalid input.                                                                                                        |
+| `remove(name)`      | Calls `channel.off()` (clear all handlers), deletes from map. Returns `false` if not found.                                                                       |
+| `getChannelNames()` | `Array.from(channels.keys())`                                                                                                                                     |
+| `cleanup()`         | Calls `channel.off()` on every channel, then clears the map.                                                                                                      |
 
 ## 4. Factory Function: `createFactory()`
 
@@ -141,8 +143,8 @@ Returns a **new callable factory** where every channel access returns a bound wr
 
 ```javascript
 const boundFactory = factory.withContext(ctx);
-boundFactory('users')  // → channel.withContext(ctx)
-boundFactory.channel('users')  // → same
+boundFactory('users'); // → channel.withContext(ctx)
+boundFactory.channel('users'); // → same
 ```
 
 The bound factory has all the same methods (`has`, `remove`, `getChannelNames`, `cleanup`), which delegate to the **same underlying manager**. The bound factory supports chaining: `boundFactory.withContext(newContext)` creates a new factory bound to the new context.
@@ -150,6 +152,7 @@ The bound factory has all the same methods (`has`, `remove`, `getChannelNames`, 
 ### Shutdown Registration
 
 `createFactory()` registers cleanup with the centralized shutdown registry (`shared/api/shutdown.js`):
+
 ```javascript
 register('hook', () => manager.cleanup());
 ```
@@ -161,10 +164,12 @@ This ensures all hook channels are cleaned up during coordinated process shutdow
 **File:** `index.js`
 
 ### Named Exports
+
 - `createFactory` — factory function for isolated instances
 - `HookChannel` — class for type referencing
 
 ### Default Export
+
 ```javascript
 const hook = createFactory();
 export default hook;
@@ -176,11 +181,11 @@ The singleton is registered on the DI container as `container.resolve('hook')` d
 
 **File:** `errors.js`
 
-| Error Class | `name` | `code` | `statusCode` | Thrown By | When |
-|---|---|---|---|---|---|
-| `InvalidChannelNameError` | `'InvalidChannelNameError'` | `'ERR_INVALID_CHANNEL_NAME'` | `400` | `HookFactory.channel()` | Falsy or non-string name |
-| `HookAbortError` | `'AbortError'` | `'ERR_HOOK_ABORTED'` | `499` | `emit()`, `invoke()` | AbortSignal detected as aborted |
-| `TypeError` (built-in) | `'TypeError'` | — | — | `HookChannel.on()`, bound `on()` | Non-function handler |
+| Error Class               | `name`                      | `code`                       | `statusCode` | Thrown By                        | When                            |
+| ------------------------- | --------------------------- | ---------------------------- | ------------ | -------------------------------- | ------------------------------- |
+| `InvalidChannelNameError` | `'InvalidChannelNameError'` | `'ERR_INVALID_CHANNEL_NAME'` | `400`        | `HookFactory.channel()`          | Falsy or non-string name        |
+| `HookAbortError`          | `'AbortError'`              | `'ERR_HOOK_ABORTED'`         | `499`        | `emit()`, `invoke()`             | AbortSignal detected as aborted |
+| `TypeError` (built-in)    | `'TypeError'`               | —                            | —            | `HookChannel.on()`, bound `on()` | Non-function handler            |
 
 ### `createAggregateError(errors, message)`
 
@@ -191,6 +196,7 @@ Factory function that returns a native `AggregateError` on Node 17+, or a plain 
 ### `hook.test.js` (4 describe blocks, 31 tests)
 
 **HookChannel (18 tests):**
+
 - Priority-ordered execution (lower priority first)
 - Mutable data by reference
 - Method chaining
@@ -210,6 +216,7 @@ Factory function that returns a native `AggregateError` on Node 17+, or a plain 
 - Safe `off()` on non-existent event/handler
 
 **Factory (8 tests):**
+
 - Channel creation via callable factory
 - Singleton instance return
 - Channel tracking (`has`, `getChannelNames`)
@@ -220,9 +227,11 @@ Factory function that returns a native `AggregateError` on Node 17+, or a plain 
 - Centralized shutdown registry registration
 
 **Default Export (1 test):**
+
 - Callable factory returning `HookChannel` instance
 
 **Error Classes (3 tests):**
+
 - `InvalidChannelNameError` properties and custom message
 - `HookAbortError` properties
 
@@ -241,7 +250,7 @@ The hook engine is the **most widely used engine** across the codebase, with 50+
 - **Auth middleware**: `auth.permissions`, `auth.roles`, `auth.groups`, `auth.ownership`, `auth.strategy.{type}` — pluggable auth resolution.
 - **User module**: Login, registration, profile updates, password changes — emit hooks for cross-module reactions.
 - **Admin controllers**: User, role, permission, group CRUD — emit hooks for activity logging and cache invalidation.
-- **Extension lifecycle: Extension install/uninstall/toggle — emit hooks for system-wide notification.
+- \*\*Extension lifecycle: Extension install/uninstall/toggle — emit hooks for system-wide notification.
 - **Search module**: Listens for user/group hooks to update search indexes.
 - **Email module**: Listens for user hooks to send transactional emails.
 - **Activity module**: Listens for admin hooks to log audit trail entries.
@@ -258,12 +267,16 @@ await hook('users').emit('created', { user, context });
 ```javascript
 export default function registerHooks(container) {
   const hook = container.resolve('hook');
-  hook('users').on('created', async (data) => {
-    await sendWelcomeEmail(data.user);
-  }, 10);
+  hook('users').on(
+    'created',
+    async data => {
+      await sendWelcomeEmail(data.user);
+    },
+    10,
+  );
 }
 ```
 
 ---
 
-*Note: This spec reflects the CURRENT implementation of the hook engine.*
+_Note: This spec reflects the CURRENT implementation of the hook engine._

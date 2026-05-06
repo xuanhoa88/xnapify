@@ -7,42 +7,46 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-const { execSync } = require('child_process');
-const http = require('http');
-const path = require('path');
+import { execSync } from 'child_process';
+import http from 'http';
+import { createRequire } from 'module';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
-const express = require('express');
-const webpack = require('webpack');
-const webpackDevMiddleware = require('webpack-dev-middleware');
-const webpackHotMiddleware = require('webpack-hot-middleware');
+import { rspack } from '@rspack/core';
+import { devMiddleware as rspackDevMiddleware } from '@rspack/dev-middleware';
+import { ReactRefreshRspackPlugin } from '@rspack/plugin-react-refresh';
+import express from 'express';
 
-const config = require('../config');
-const { BuildError, setupGracefulShutdown } = require('../utils/error');
-const { generateJWT } = require('../utils/jwt');
-const { isSilent, isVerbose, logError, logInfo } = require('../utils/logger');
-const {
-  clientConfig: webpackClientConfig,
-  serverConfig: webpackServerConfig,
-  workerConfig: webpackWorkerConfig,
+import config from '../config.js';
+import {
+  clientConfig as rspackClientConfig,
+  serverConfig as rspackServerConfig,
+  workerConfig as rspackWorkerConfig,
   getHmrWatchIgnored,
-} = require('../webpack/app.config');
-const {
-  start: startBrowserSync,
-  shutdown: shutdownBrowserSync,
-  notifyRestart: notifyBrowserSyncRestart,
-  notifyReady: notifyBrowserSyncReady,
-  onClientConnected: onBrowserSyncClientConnected,
-} = require('../webpack/browserSync/server.config');
+} from '../rspack/app.config.js';
+import {
+  start as startBrowserSync,
+  shutdown as shutdownBrowserSync,
+  notifyRestart as notifyBrowserSyncRestart,
+  notifyReady as notifyBrowserSyncReady,
+  onClientConnected as onBrowserSyncClientConnected,
+} from '../rspack/browserSync/server.config.js';
+import createHmrMiddleware from '../rspack/hotMiddleware.js';
+import { BuildError, setupGracefulShutdown } from '../utils/error.js';
+import { generateJWT } from '../utils/jwt.js';
+import { isSilent, isVerbose, logError, logInfo } from '../utils/logger.js';
 
-const clean = require('./clean');
-const buildExtensions = require('./extension');
+import clean from './clean.js';
+import buildExtensions from './extension.js';
 
-// Unique symbol to mark webpack middlewares
-const kWebpackMiddleware = Symbol('__xnapify.webpack.middleware__');
+const require = createRequire(import.meta.url);
 
-// Webpack HMR plugin
-const { HotModuleReplacementPlugin } = webpack;
+// Unique symbol to mark rspack middlewares
+const kRspackMiddleware = Symbol('__xnapify.rspack.middleware__');
+
+// rspack HMR plugin
+const { HotModuleReplacementPlugin } = rspack;
 
 // Cache silent check for use throughout the task
 const silent = isSilent();
@@ -60,8 +64,8 @@ const host = config.env('XNAPIFY_HOST', '127.0.0.1');
 // - dispose: Dispose server bundle (Node-RED, etc.)
 // - invalidateServerCaches: Lightweight SSR cache invalidation (no service shutdown)
 // - hmr: Tracks Hot Module Replacement state and configuration
-// - hotMiddleware: Webpack hot middleware instance
-// - devMiddleware: Webpack dev middleware instance
+// - hotMiddleware: rspack hot middleware instance
+// - devMiddleware: rspack dev middleware instance
 let app,
   server,
   dispose,
@@ -97,7 +101,7 @@ function flushPendingHmrPublishes() {
 }
 
 /**
- * Create compilation promise for webpack compiler
+ * Create compilation promise for rspack compiler
  */
 function createCompilationPromise(name, compiler) {
   return new Promise((resolve, reject) => {
@@ -133,13 +137,13 @@ function createCompilationPromise(name, compiler) {
 }
 
 /**
- * Configure webpack config for development with HMR
+ * Configure rspack config for development with HMR
  *
- * @param {Object} cfg - Webpack configuration object
+ * @param {Object} cfg - Rspack configuration object
  * @param {boolean} isClient - True for client bundle, false for server bundle
- * @returns {Object} Modified webpack config
+ * @returns {Object} Modified rspack config
  */
-function configureWebpackForDev(cfg, isClient = true) {
+function configureRspackForDev(cfg, isClient = true) {
   // Replace chunkhash with hash for HMR compatibility
   // HMR requires deterministic hashes, chunkhash changes on every build
   if (cfg.output.filename) {
@@ -160,16 +164,10 @@ function configureWebpackForDev(cfg, isClient = true) {
 
   // Client-specific HMR configuration
   if (isClient) {
-    // Add React Refresh Webpack Plugin with overlay configuration
+    // Add React Refresh rspack Plugin with overlay configuration
     cfg.plugins.push(
-      new ReactRefreshWebpackPlugin({
-        overlay: {
-          sockIntegration: 'whm',
-          sockHost: host,
-          sockPort: port,
-          sockPath: '/~/__webpack_hmr',
-          sockProtocol: 'ws',
-        },
+      new ReactRefreshRspackPlugin({
+        overlay: false,
       }),
     );
 
@@ -184,7 +182,7 @@ function configureWebpackForDev(cfg, isClient = true) {
       loaders.forEach(loaderConfig => {
         if (
           typeof loaderConfig === 'object' &&
-          loaderConfig.loader === 'swc-loader' &&
+          loaderConfig.loader === 'builtin:swc-loader' &&
           loaderConfig.options &&
           loaderConfig.options.jsc &&
           loaderConfig.options.jsc.transform &&
@@ -196,7 +194,7 @@ function configureWebpackForDev(cfg, isClient = true) {
     });
 
     // Use shared HMR client to ensure singleton connection
-    const whm = require.resolve('../webpack/hotClient');
+    const whm = require.resolve('../rspack/hotClient');
     Object.keys(cfg.entry).forEach(name => {
       if (Array.isArray(cfg.entry[name])) {
         cfg.entry[name] = [whm, ...cfg.entry[name]];
@@ -207,7 +205,7 @@ function configureWebpackForDev(cfg, isClient = true) {
   else {
     // Configure hot update file paths for server bundle
     cfg.output.hotUpdateMainFilename = 'updates/[fullhash].hot-update.json';
-    cfg.output.hotUpdateChunkFilename = 'updates/[id].[fullhash].hot-update.js';
+    cfg.output.hotUpdateChunkFilename = 'updates/[id].[fullhash].hot-update.cjs';
   }
 
   return cfg;
@@ -220,15 +218,15 @@ function configureWebpackForDev(cfg, isClient = true) {
  * @returns {Object} Server module with initialization methods
  */
 
-function loadServerBundle() {
+async function loadServerBundle() {
   try {
     // Get the absolute path to the server bundle
     const serverBundlePath = require.resolve(
-      path.join(config.BUILD_DIR, 'server'),
+      path.join(config.BUILD_DIR, 'server.cjs'),
     );
 
     // Clear require.cache for ALL files in the build directory.
-    // Webpack code-splits server modules into separate chunk files
+    // rspack code-splits server modules into separate chunk files
     // (e.g. src_bootstrap_views_js.js). These chunks are loaded via
     // Node's require() and cached independently. Clearing only the
     // main entry leaves stale chunk code in memory after recompilation.
@@ -240,7 +238,9 @@ function loadServerBundle() {
     });
 
     // Load the server bundle
-    const { hot, invalidateCaches, ...bundle } = require(serverBundlePath);
+    const moduleNamespace = await import(serverBundlePath);
+    const exportsObj = moduleNamespace.default || moduleNamespace;
+    const { hot, invalidateCaches, ...bundle } = exportsObj;
 
     // Expose lightweight cache invalidation for extension HMR
     invalidateServerCaches = invalidateCaches;
@@ -276,8 +276,8 @@ async function prepareDevServer(
   // Reuse existing server if available
   const activeServer = existingServer || createdServer;
 
-  // Attach webpack middlewares to the new app
-  attachWebpackMiddlewares(newApp);
+  // Attach rspack middlewares to the new app
+  attachRspackMiddlewares(newApp);
 
   // Bootstrap/initialize the app (routes, database, etc.)
   const { listen: startServer } = await bootstrapApp(newApp, activeServer, {
@@ -317,20 +317,20 @@ async function prepareDevServer(
 }
 
 /**
- * Setup webpack compilers and middleware
+ * Setup rspack compilers and middleware
  */
-function setupWebpackCompilers() {
-  // Configure webpack for development with HMR
-  configureWebpackForDev(webpackClientConfig, true);
-  configureWebpackForDev(webpackServerConfig, false);
+function setupRspackCompilers() {
+  // Configure rspack for development with HMR
+  configureRspackForDev(rspackClientConfig, true);
+  configureRspackForDev(rspackServerConfig, false);
 
-  // Create webpack compilers
+  // Create rspack compilers
   // Worker configs have unique names (workers-<appName>) to avoid
   // collisions with the main 'server' compiler.
-  const multiCompiler = webpack([
-    webpackClientConfig,
-    webpackServerConfig,
-    ...webpackWorkerConfig,
+  const multiCompiler = rspack([
+    rspackClientConfig,
+    rspackServerConfig,
+    ...rspackWorkerConfig,
   ]);
   const clientCompiler = multiCompiler.compilers.find(c => c.name === 'client');
   const serverCompiler = multiCompiler.compilers.find(c => c.name === 'server');
@@ -339,21 +339,21 @@ function setupWebpackCompilers() {
   );
 
   if (!clientCompiler || !serverCompiler) {
-    throw new BuildError('Failed to create webpack compilers');
+    throw new BuildError('Failed to create rspack compilers');
   }
 
   return { clientCompiler, serverCompiler, workerCompilers };
 }
 
 /**
- * Setup Express middleware for webpack
+ * Setup Express middleware for rspack
  */
-function createWebpackMiddlewares(clientCompiler) {
+function createRspackMiddlewares(clientCompiler) {
   // ---------------------------
-  // Webpack Dev Middleware
+  // rspack Dev Middleware
   // ---------------------------
-  const devMiddleware = webpackDevMiddleware(clientCompiler, {
-    publicPath: webpackClientConfig.output.publicPath, // Serve assets from correct URL
+  const devMiddleware = rspackDevMiddleware(clientCompiler, {
+    publicPath: rspackClientConfig.output.publicPath, // Serve assets from correct URL
     stats: {
       colors: true, // Colored console output
       chunks: false, // Hide chunk details to reduce noise
@@ -362,25 +362,23 @@ function createWebpackMiddlewares(clientCompiler) {
     // Only write stats.json and CSS to disk (needed for SSR template).
     // JS chunks are served from memory by dev middleware — faster I/O.
     writeToDisk: filePath => /\.(json|css)$/.test(filePath),
-    serverSideRender: true, // Enable SSR access to webpack stats
+    serverSideRender: true, // Enable SSR access to rspack stats
   });
 
   // ---------------------------
-  // Webpack Hot Middleware (HMR)
+  // rspack Hot Middleware (HMR)
   // ---------------------------
-  const hotMiddlewareInstance = webpackHotMiddleware(clientCompiler, {
-    log: verbose ? console.log : false, // Verbose logging
-    path: '/~/__webpack_hmr', // WebSocket path for HMR
-    heartbeat: 10_000, // Heartbeat interval in ms
+  const hotMiddlewareInstance = createHmrMiddleware(clientCompiler, {
+    log: verbose ? console.log : false,
+    path: '/~/__hmr',
+    heartbeat: 10_000,
   });
 
   // Intercept publish() to synchronize client HMR with server readiness.
   // When the server compiler is still recompiling, 'built' events are
   // buffered so React Fast Refresh won't fire ahead of the server bundle.
   // Heartbeats and other control messages pass through immediately.
-  originalHmrPublish = hotMiddlewareInstance.publish.bind(
-    hotMiddlewareInstance,
-  );
+  originalHmrPublish = hotMiddlewareInstance.publish;
   hotMiddlewareInstance.publish = payload => {
     if (serverCompiling && payload && payload.action === 'built') {
       pendingHmrPublishes.push(payload);
@@ -396,20 +394,20 @@ function createWebpackMiddlewares(clientCompiler) {
 }
 
 /**
- * Attaches webpack middlewares to an Express app instance
+ * Attaches rspack middlewares to an Express app instance
  */
-function attachWebpackMiddlewares(expressApp) {
+function attachRspackMiddlewares(expressApp) {
   // Helper to wrap and tag a middleware
-  const wrapWebpackMiddleware = fn => {
+  const wrapRspackMiddleware = fn => {
     const wrapper = (req, res, next) => fn(req, res, next);
-    wrapper[kWebpackMiddleware] = true;
+    wrapper[kRspackMiddleware] = true;
     return wrapper;
   };
 
-  expressApp.use(wrapWebpackMiddleware(devMiddleware));
-  expressApp.use(wrapWebpackMiddleware(hotMiddleware));
+  expressApp.use(wrapRspackMiddleware(devMiddleware));
+  expressApp.use(wrapRspackMiddleware(hotMiddleware));
   expressApp.use(
-    wrapWebpackMiddleware((req, res, next) => {
+    wrapRspackMiddleware((req, res, next) => {
       if (req.method === 'POST' && req.path === '/~/__bs_connected') {
         onBrowserSyncClientConnected();
         return res.status(204).end();
@@ -513,7 +511,11 @@ async function checkForUpdate(currentHash) {
   // a fresh `hmr` (module.hot) from the new bundle, and returns
   // the new { createServer, bootstrapApp } surface.
   let createServer, bootstrapApp;
-  ({ createServer, bootstrapApp, disposeApp: dispose } = loadServerBundle());
+  ({
+    createServer,
+    bootstrapApp,
+    disposeApp: dispose,
+  } = await loadServerBundle());
 
   // Recreate the Express app with the new bundle
   await prepareDevServer({ createServer, bootstrapApp }, server);
@@ -670,9 +672,9 @@ async function main() {
   await Promise.all([clean(), generateJWT(config.CWD)]);
 
   try {
-    // Setup webpack compilers
+    // Setup rspack compilers
     const { clientCompiler, serverCompiler, workerCompilers } =
-      setupWebpackCompilers();
+      setupRspackCompilers();
 
     // Watch for server bundle changes to enable HMR for server code
     // This allows server-side code to be updated without restarting the dev server
@@ -698,9 +700,9 @@ async function main() {
     const clientPromise = createCompilationPromise('client', clientCompiler);
     const serverPromise = createCompilationPromise('server', serverCompiler);
 
-    // Create webpack middlewares (triggering client compilation in parallel with server)
+    // Create rspack middlewares (triggering client compilation in parallel with server)
     ({ devMiddleware, hotMiddleware } =
-      createWebpackMiddlewares(clientCompiler));
+      createRspackMiddlewares(clientCompiler));
 
     // Wait for both server and client bundle compilations to finish (they run in parallel)
     const [, serverStats] = await Promise.all([
@@ -712,7 +714,11 @@ async function main() {
     // Load server bundle and record its hash so checkForUpdate()
     // can skip redundant reloads when the watcher fires.
     let createServer, bootstrapApp;
-    ({ createServer, bootstrapApp, disposeApp: dispose } = loadServerBundle());
+    ({
+      createServer,
+      bootstrapApp,
+      disposeApp: dispose,
+    } = await loadServerBundle());
     loadedServerHash = serverStats.hash;
 
     // Start server
@@ -735,6 +741,9 @@ async function main() {
 
     return app;
   } catch (error) {
+    if (error.stack) {
+      console.error(error.stack);
+    }
     const devError =
       error instanceof BuildError
         ? error
@@ -755,7 +764,11 @@ async function main() {
 }
 
 // Execute if called directly (as child process)
-if (require.main === module) {
+const scriptPath = fileURLToPath(import.meta.url);
+if (
+  process.argv[1] === scriptPath ||
+  process.argv[1] === scriptPath.replace(/\.js$/, '')
+) {
   // Start the server and keep the process alive
   main().catch(error => {
     logError('Failed to start development server:', error);
@@ -763,4 +776,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = main;
+export default main;

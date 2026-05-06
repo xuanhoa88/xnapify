@@ -23,6 +23,7 @@
 
 const fs = require('fs');
 const path = require('path');
+
 const { VIEW_EXTENSIONS, walkFiles } = require('../../scripts/constants');
 
 function findHtmlFiles(projectPath, limit = 50) {

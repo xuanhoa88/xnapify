@@ -16,7 +16,7 @@ import {
   getFileCategory,
   getFileExtension,
   formatFileSize,
-} from '../utils';
+} from '../utils/index.js';
 
 /**
  * Get file info/metadata

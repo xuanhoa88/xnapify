@@ -9,11 +9,11 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
-import { JobNotFoundError, JobProcessingError, QueueError } from '../errors';
-import { JOB_STATUS } from '../utils/constants';
-import { createJob } from '../utils/createJob';
-import { applyEventMixin } from '../utils/eventMixin';
-import { findProcessor } from '../utils/findProcessor';
+import { JobNotFoundError, JobProcessingError, QueueError } from '../errors.js';
+import { JOB_STATUS } from '../utils/constants.js';
+import { createJob } from '../utils/createJob.js';
+import { applyEventMixin } from '../utils/eventMixin.js';
+import { findProcessor } from '../utils/findProcessor.js';
 
 // ======================================================================
 // Constants

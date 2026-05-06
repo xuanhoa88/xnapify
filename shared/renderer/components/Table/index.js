@@ -5,9 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-export { default as DataTable } from './DataTable';
-export { default as TableBulkActions } from './TableBulkActions';
-export { default as TablePagination } from './TablePagination';
-export { default as TableSearch } from './TableSearch';
-export { useTableColumns } from './useTableColumns';
-export { useMasonryLayout } from './useMasonryLayout';
+export { default as DataTable } from './DataTable.js';
+export { default as TableBulkActions } from './TableBulkActions.js';
+export { default as TablePagination } from './TablePagination.js';
+export { default as TableSearch } from './TableSearch.js';
+export { useTableColumns } from './useTableColumns.js';
+export { useMasonryLayout } from './useMasonryLayout.js';

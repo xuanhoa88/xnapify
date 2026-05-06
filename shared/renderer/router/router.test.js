@@ -5,8 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { runUnmount } from './lifecycle';
-import { createMatcher } from './matcher';
+import { runUnmount } from './lifecycle.js';
+import { createMatcher } from './matcher.js';
 import {
   normalizePath,
   decodeUrl,
@@ -14,7 +14,7 @@ import {
   createError,
   isDescendant,
   RouterError,
-} from './utils';
+} from './utils.js';
 
 import { Router } from '.';
 

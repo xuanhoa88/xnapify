@@ -16,12 +16,12 @@ shared/node-red/
 
 ## `NodeRedManager` (`index.js`)
 
-Provides a state machine orchestrating Node-RED. Since `@node-red/runtime` behaves like a persistent singleton even during Webpack HMR, this class cleanly wraps its teardown and startup sequences.
+Provides a state machine orchestrating Node-RED. Since `@node-red/runtime` behaves like a persistent singleton even during Rspack HMR, this class cleanly wraps its teardown and startup sequences.
 
 ### Lifecycle Method Sequencing
 
 1. **`.init(app, server, config)`**:
-   - Dynamically imports `@node-red/util`, `@node-red/runtime`, and `@node-red/editor-api` to avoid polluting initial webpack builds.
+   - Dynamically imports `@node-red/util`, `@node-red/runtime`, and `@node-red/editor-api` to avoid polluting initial rspack builds.
    - Cleans up trailing `upgrade` server socket listeners lingering from previous HMR passes using `kNodeRedInstance` symbol tagging.
    - Awaits async `settings.js` generation (uses `fs.promises` throughout).
    - Hooks into the ExtensionManager via `.on('extension:loaded')` / `.on('extension:unloaded')` for hot-loading. Old listeners are cleaned up on re-init to prevent HMR leaks.
@@ -96,8 +96,8 @@ Extensions providing Node-RED nodes must:
 
 Node-RED settings are resolved from the database-backed settings service (`nodered` namespace) at initialization, with environment variable fallbacks:
 
-| DB Key | Env Variable | Maps To |
-|---|---|---|
-| `HOME` | `XNAPIFY_NODERED_HOME` | `userDir` |
-| `LOG_LEVEL` | `XNAPIFY_NODERED_LOG_LEVEL` | `logLevel` |
-| `PROJECTS` | `XNAPIFY_NODERED_PROJECTS` | `enableProjects` |
+| DB Key      | Env Variable                | Maps To          |
+| ----------- | --------------------------- | ---------------- |
+| `HOME`      | `XNAPIFY_NODERED_HOME`      | `userDir`        |
+| `LOG_LEVEL` | `XNAPIFY_NODERED_LOG_LEVEL` | `logLevel`       |
+| `PROJECTS`  | `XNAPIFY_NODERED_PROJECTS`  | `enableProjects` |

@@ -182,7 +182,7 @@ await sendTemplatedEmail(
 
 ## Extension Identity
 
-Webpack injects a single compile-time constant for each extension:
+Rspack injects a single compile-time constant for each extension:
 
 | Constant           | Value                                                         | Use For                                                                           |
 | ------------------ | ------------------------------------------------------------- | --------------------------------------------------------------------------------- |

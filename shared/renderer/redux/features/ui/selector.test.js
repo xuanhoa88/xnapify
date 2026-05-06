@@ -13,7 +13,7 @@ import {
   getFlashMessageText,
   getAllBreadcrumbs,
   getBreadcrumbs,
-} from './selector';
+} from './selector.js';
 
 describe('[ui] selector.js', () => {
   describe('Drawer Selectors', () => {

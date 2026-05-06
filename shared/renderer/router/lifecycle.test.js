@@ -5,10 +5,13 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+
 import { addNamespace } from '@shared/i18n/utils';
 
-import { ROUTE_TRANSLATIONS_KEY } from './constants';
-import { buildTranslationsLoader, loadRouteTranslations } from './lifecycle';
+import { ROUTE_TRANSLATIONS_KEY } from './constants.js';
+import { buildTranslationsLoader, loadRouteTranslations } from './lifecycle.js';
 
 jest.mock('@shared/i18n/utils', () => ({
   addNamespace: jest.fn(),

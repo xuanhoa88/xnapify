@@ -7,7 +7,7 @@
 
 import nodemailer from 'nodemailer';
 
-import { EmailError } from '../utils/errors';
+import { EmailError } from '../utils/errors.js';
 
 /**
  * SMTP Email Provider

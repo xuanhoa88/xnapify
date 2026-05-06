@@ -194,7 +194,7 @@ export class BaseExtensionManager {
    * @returns {string|null} Entry point filename
    * @protected
    */
-  // eslint-disable-next-line class-methods-use-this, no-unused-vars
+
   _resolveEntryPoint(_manifest) {
     return null;
   }
@@ -254,7 +254,7 @@ export class BaseExtensionManager {
    * @param {string} _type - Type of routes (view or api)
    * @protected
    */
-  // eslint-disable-next-line class-methods-use-this, no-unused-vars
+
   _injectRoutes(_id, _hookResult, _type) {
     // Override in subclasses
   }
@@ -317,7 +317,6 @@ export class BaseExtensionManager {
           const manifest =
             typeof item === 'object' && item !== null ? item : null;
           try {
-            // eslint-disable-next-line no-await-in-loop
             await this.loadExtension(id, manifest);
 
             // loadExtension catches internal errors
@@ -497,7 +496,7 @@ export class BaseExtensionManager {
       }
 
       // Derive MF container name from manifest.id (written at build time).
-      // Format: extension_<id>, matching webpack MF library name.
+      // Format: extension_<id>, matching rspack MF library name.
       let containerName =
         manifest && manifest.id ? `extension_${manifest.id}` : null;
 
@@ -845,7 +844,7 @@ export class BaseExtensionManager {
    * @returns {Promise<boolean>}
    * @protected
    */
-  // eslint-disable-next-line no-unused-vars
+
   async _performInstall(id, _manifest) {
     return this.registry.runInstallHook(id);
   }
@@ -913,7 +912,7 @@ export class BaseExtensionManager {
    * @returns {Promise<boolean>}
    * @protected
    */
-  // eslint-disable-next-line no-unused-vars
+
   async _performUninstall(id, _manifest) {
     return this.registry.runUninstallHook(id);
   }
@@ -977,7 +976,7 @@ export class BaseExtensionManager {
    * @returns {Promise<boolean>}
    * @protected
    */
-  // eslint-disable-next-line no-unused-vars
+
   async _performActivate(_id, _manifest) {
     return true;
   }
@@ -1033,7 +1032,7 @@ export class BaseExtensionManager {
    * @returns {Promise<boolean>}
    * @protected
    */
-  // eslint-disable-next-line no-unused-vars
+
   async _performDeactivate(_id, _manifest) {
     return true;
   }
@@ -1169,7 +1168,6 @@ export class BaseExtensionManager {
     // Phase 2: Providers
     if (typeof def.providers === 'function') {
       try {
-        // eslint-disable-next-line no-underscore-dangle
         await def.providers({
           ...context,
           // eslint-disable-next-line no-underscore-dangle
@@ -1186,7 +1184,6 @@ export class BaseExtensionManager {
     // Phase 3: Boot
     if (typeof def.boot === 'function') {
       try {
-        // eslint-disable-next-line no-underscore-dangle
         await def.boot({
           ...context,
           // eslint-disable-next-line no-underscore-dangle
@@ -1301,14 +1298,13 @@ export class BaseExtensionManager {
       for (const def of active) {
         if (typeof def.shutdown === 'function') {
           try {
-            // eslint-disable-next-line no-await-in-loop
             await def.shutdown({ ...context, registry: this.registry });
           } catch (error) {
             console.error(
               `[ExtensionManager] Failed to shutdown extension ${def.id}:`,
               error,
             );
-            // eslint-disable-next-line no-await-in-loop
+
             await this.emit('extension:shutdown-error', {
               id: def.id,
               error,
@@ -1515,7 +1511,7 @@ export class BaseExtensionManager {
    * @param {string[]} _extensionIds - Extension IDs to refresh
    * @protected
    */
-  // eslint-disable-next-line no-unused-vars
+
   async _refreshExtensions(_extensionIds) {
     throw new Error(
       '_refreshExtensions must be overridden for targeted refresh',

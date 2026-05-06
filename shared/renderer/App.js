@@ -14,8 +14,8 @@ import PropTypes from 'prop-types';
 import { I18nextProvider } from 'react-i18next';
 import { Provider as ReduxProvider } from 'react-redux';
 
-import { ExtensionProvider } from './Providers/Extension';
-import { HistoryProvider } from './Providers/History';
+import { ExtensionProvider } from './Providers/Extension.js';
+import { HistoryProvider } from './Providers/History.js';
 
 // =============================================================================
 // PROP TYPES

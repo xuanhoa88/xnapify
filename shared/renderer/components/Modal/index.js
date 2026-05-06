@@ -11,10 +11,10 @@ import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
-import ConfirmAction from './ConfirmAction';
-import ConfirmBack from './ConfirmBack';
-import ConfirmDelete from './ConfirmDelete';
-import ConfirmPrompt from './ConfirmPrompt';
+import ConfirmAction from './ConfirmAction.js';
+import ConfirmBack from './ConfirmBack.js';
+import ConfirmDelete from './ConfirmDelete.js';
+import ConfirmPrompt from './ConfirmPrompt.js';
 
 import s from './Modal.css';
 /**

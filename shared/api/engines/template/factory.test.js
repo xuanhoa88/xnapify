@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { createFactory, TemplateManager } from './factory';
+import { createFactory, TemplateManager } from './factory.js';
 
 describe('Template Engine', () => {
   let template;

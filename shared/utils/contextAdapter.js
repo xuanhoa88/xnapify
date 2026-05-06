@@ -6,48 +6,76 @@
  */
 
 /**
- * Creates an adapter for webpack's require.context to provide a standardized interface.
+ * Creates an adapter for rspack's require.context / import.meta.webpackContext
+ * to provide a standardized, test-friendly interface.
  *
- * @param {__WebpackModuleApi.RequireContext} ctx - Webpack require.context object
+ * Both Rspack context APIs (CJS `require.context` and ESM `import.meta.webpackContext`)
+ * produce the same opaque callable object with `.keys()` and `.resolve()` methods.
+ * This adapter normalizes that object into a clean `{ files, load, resolve }` interface
+ * that is trivially mockable in Jest tests.
+ *
+ * @param {__RspackModuleApi.RequireContext} ctx - Rspack require.context object
  * @returns {{ files: () => string[], load: (path: string) => any, resolve: (path: string) => string }}
  *
  * @example
- * const modulesContext = require.context('../apps', true, /pattern/);
- * const adapter = createWebpackContextAdapter(modulesContext);
+ * // Rspack ESM API (src/ modules)
+ * const ctx = import.meta.webpackContext('./routes', { recursive: true, regExp: /\.js$/ });
+ * const adapter = createRspackContextAdapter(ctx);
  *
- * const paths = adapter.files();
- * const mod = adapter.load('./path/to/module.js');
- * const abs = adapter.resolve('./path/to/module.js');
+ * @example
+ * // Rspack CJS API (shared/ modules)
+ * const ctx = require.context('./engines', true, /index\.js$/);
+ * const adapter = createRspackContextAdapter(ctx);
+ *
+ * @example
+ * // Usage
+ * adapter.files();           // ['./foo.js', './bar.js']
+ * adapter.load('./foo.js');   // { default: FooModule }
+ * adapter.resolve('./foo.js'); // '/abs/path/to/foo.js'
  */
-export function createWebpackContextAdapter(ctx) {
+export function createRspackContextAdapter(ctx) {
   if (!ctx || typeof ctx !== 'function') {
     throw new TypeError(
-      'createWebpackContextAdapter requires a valid webpack require.context',
+      'createRspackContextAdapter requires a valid rspack require.context or import.meta.webpackContext',
     );
   }
 
+  // Cache keys() result — the context is static after bundling,
+  // so there is no need to recompute on every .files() call.
+  let cachedKeys;
+
   return {
     /**
-     * Get all file paths from the context
-     * @returns {string[]} Array of file paths
+     * Get all file paths from the context.
+     * Results are cached after the first call.
+     * @returns {string[]} Array of relative file paths
      */
-    files: () => ctx.keys(),
+    files() {
+      if (!cachedKeys) {
+        cachedKeys = ctx.keys();
+      }
+      return cachedKeys;
+    },
 
     /**
      * Load a module by path
-     * @param {string} path - Module path
-     * @returns {*} Loaded module
+     * @param {string} modulePath - Module path (relative key from .files())
+     * @returns {*} Loaded module (default export or namespace)
      */
-    load: path => ctx(path),
+    load(modulePath) {
+      return ctx(modulePath);
+    },
 
     /**
      * Resolve absolute path for a module
-     * @param {string} path - Module path
-     * @returns {string} Absolute path
+     * @param {string} modulePath - Module path (relative key from .files())
+     * @returns {string} Resolved absolute path or module ID
      */
-    resolve: path => ctx.resolve(path),
+    resolve(modulePath) {
+      return ctx.resolve(modulePath);
+    },
   };
 }
 
 // Export default for backward compatibility
-export default createWebpackContextAdapter;
+export default createRspackContextAdapter;

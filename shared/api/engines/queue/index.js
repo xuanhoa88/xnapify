@@ -89,10 +89,10 @@
  * });
  */
 
-import { createFactory } from './factory';
+import { createFactory } from './factory.js';
 
 // Constants
-export { JOB_STATUS } from './utils/constants';
+export { JOB_STATUS } from './utils/constants.js';
 
 // Error classes
 export {
@@ -100,14 +100,14 @@ export {
   JobNotFoundError,
   JobProcessingError,
   QueueConnectionError,
-} from './errors';
+} from './errors.js';
 
 // Channel class
-export { Channel } from './channel';
+export { Channel } from './channel.js';
 
 // Adapter classes
-export { default as MemoryQueue } from './adapters/memory';
-export { default as FileQueue } from './adapters/file';
+export { default as MemoryQueue } from './adapters/memory.js';
+export { default as FileQueue } from './adapters/file.js';
 
 // Export factory for creating instances
 export { createFactory };

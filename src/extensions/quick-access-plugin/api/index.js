@@ -18,11 +18,10 @@ import { SEED_USERS } from './constants';
 const OWNER_KEY = Symbol('__xnapify.ext.quickAccess.api__');
 
 // Auto-load contexts
-const seedsContext = require.context(
-  './database/seeds',
-  false,
-  /\.[cm]?[jt]s$/i,
-);
+const seedsContext = import.meta.webpackContext('./database/seeds', {
+  recursive: false,
+  regExp: /\.[cm]?[jt]s$/i
+});
 
 // =============================================================================
 // LIFECYCLE HOOKS
@@ -32,18 +31,20 @@ export default {
    * Declarative hooks — auto-processed by ServerExtensionManager.
    */
   seeds: () => seedsContext,
-
   /**
    * Lifecycle: providers — bind seed constants for cross-module use.
    */
-  async providers({ container }) {
+  async providers({
+    container
+  }) {
     container.bind('users:seed_constants', () => SEED_USERS, OWNER_KEY);
   },
-
   /**
    * Lifecycle: shutdown — clean up persistent bindings on extension deactivate.
    */
-  async shutdown({ container }) {
+  async shutdown({
+    container
+  }) {
     container.reset('users:seed_constants', OWNER_KEY);
-  },
+  }
 };

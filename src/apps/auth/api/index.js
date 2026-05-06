@@ -6,7 +6,10 @@
  */
 
 // Auto-load routes via require.context
-const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
+const routesContext = import.meta.webpackContext('./routes', {
+  recursive: true,
+  regExp: /\.[cm]?[jt]s$/i
+});
 
 // =============================================================================
 // LIFECYCLE HOOKS
@@ -14,8 +17,7 @@ const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
 
 export default {
   routes: () => routesContext,
-
   boot() {
     console.info('[Auth] ✅ Initialized');
-  },
+  }
 };

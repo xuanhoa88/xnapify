@@ -143,7 +143,7 @@ Sets `this.autoStart = false`, calls `task.stop()` on all entries. **Side effect
 #### `cleanup() → Promise<void>`
 
 Stops all tasks via `task.stop()`. Then aborts any active execution controllers.
-Awaits all `activePromise` entries using `Promise.allSettled()` up to a racing `this.cleanupTimeout` limit before forcefully wiping the tasks map. 
+Awaits all `activePromise` entries using `Promise.allSettled()` up to a racing `this.cleanupTimeout` limit before forcefully wiping the tasks map.
 Called automatically on process termination signals.
 
 ## 4. Factory Function: `createFactory(config?)`

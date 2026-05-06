@@ -9,7 +9,7 @@
  * Copy Operations
  */
 
-import { FilesystemError, createOperationResult } from '../utils';
+import { FilesystemError, createOperationResult } from '../utils/index.js';
 
 /**
  * Copy file(s)

@@ -71,7 +71,7 @@ If you are using different AI tools across your team, be aware of how they inter
 
 ### Modifying the AI Architecture
 
-If you change how models are defined, or how Webpack compiles CSS:
+If you change how models are defined, or how Rspack compiles CSS:
 
 1. Open the relevant file in `.agent/workflows/` or `.agent/skills/`.
 2. Update the definition.

@@ -14,10 +14,10 @@ import {
   BUFFERED_ROUTES,
   STORED_ADAPTERS,
   CONNECTED_ROUTERS,
-} from '../utils/BaseExtensionManager';
-import { normalizeRouteAdapter } from '../utils/routeAdapter';
+} from '../utils/BaseExtensionManager.js';
+import { normalizeRouteAdapter } from '../utils/routeAdapter.js';
 
-import { registry } from './Registry';
+import { registry } from './Registry.js';
 
 class ClientExtensionManager extends BaseExtensionManager {
   // ---------------------------------------------------------------------------
@@ -106,7 +106,7 @@ class ClientExtensionManager extends BaseExtensionManager {
    * @returns {string|null} Entry point filename or null to skip
    */
   _resolveEntryPoint(manifest) {
-    // If the build produced a remote.js, load it as the Webpack MF container
+    // If the build produced a remote.js, load it as the Rspack MF container
     // Resolve the hashed filename from buildManifest
     if (manifest && manifest.hasClientScript) {
       const bm = manifest.buildManifest;
@@ -127,7 +127,7 @@ class ClientExtensionManager extends BaseExtensionManager {
    * @returns {Promise<void>}
    * @private
    */
-  // eslint-disable-next-line class-methods-use-this
+
   _loadScript(url, extensionId) {
     return new Promise((resolve, reject) => {
       // Find by data-extension-id (handles SSR scripts with different ?v= params)
@@ -185,7 +185,7 @@ class ClientExtensionManager extends BaseExtensionManager {
     }
 
     // Verify shared scope is available
-    // eslint-disable-next-line no-undef
+
     if (
       typeof __webpack_share_scopes__ === 'undefined' ||
       // eslint-disable-next-line no-undef
@@ -453,7 +453,7 @@ class ClientExtensionManager extends BaseExtensionManager {
   /**
    * Resolve the internal loaded ID for an extension.
    * Handles mismatch between WS event IDs (manifest.name) and internal
-   * map keys (manifest.id = build-time sqids ID).
+   * map keys (manifest.id = build-time hashids ID).
    *
    * @param {string} id - Extension identifier (DB key or manifest.name)
    * @returns {string|null}

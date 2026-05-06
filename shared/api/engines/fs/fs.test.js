@@ -13,8 +13,8 @@ jest.mock('./utils/zipUtils', () => ({
 
 import { Readable } from 'stream';
 
-import { MIDDLEWARES } from './middlewares';
-import { MemoryFilesystemProvider } from './providers/memory';
+import { MIDDLEWARES } from './middlewares.js';
+import { MemoryFilesystemProvider } from './providers/memory.js';
 import {
   formatFileSize,
   parseFileSize,
@@ -23,7 +23,7 @@ import {
   isArchiveFile,
   getFileCategory,
   generateSecureFileName,
-} from './utils/fileUtils';
+} from './utils/fileUtils.js';
 
 import fs, { createFactory } from '.';
 

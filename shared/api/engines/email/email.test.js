@@ -5,8 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { MemoryEmailProvider } from './providers/memory';
-import { validateEmails, EMAIL_LIMITS } from './utils/validation';
+import { MemoryEmailProvider } from './providers/memory.js';
+import { validateEmails, EMAIL_LIMITS } from './utils/validation.js';
 
 import email, { createFactory } from '.';
 

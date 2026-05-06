@@ -5,9 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-/* eslint-env jest */
+/* global jest */
 
-import ExtensionRegistry from './Registry';
+import ExtensionRegistry from './Registry.js';
 
 describe('ExtensionRegistry', () => {
   let registry;

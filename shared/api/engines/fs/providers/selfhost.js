@@ -7,9 +7,7 @@
 
 import { Readable } from 'stream';
 
-import fetch from 'node-fetch';
-
-import { FilesystemError } from '../utils';
+import { FilesystemError } from '../utils/index.js';
 
 /**
  * Self-Host Filesystem Provider
@@ -182,7 +180,7 @@ export class SelfHostFilesystemProvider {
     const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
     try {
-      const response = await fetch(url, {
+      const response = await globalThis.fetch(url, {
         ...options,
         signal: controller.signal,
         headers: this.getHeaders(options.headers),

@@ -5,10 +5,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-export * from './requireAuth';
-export * from './optionalAuth';
-export * from './refreshToken';
-export * from './requirePermission';
-export * from './requireRole';
-export * from './requireOwnership';
-export * from './requireGroup';
+export * from './requireAuth.js';
+export * from './optionalAuth.js';
+export * from './refreshToken.js';
+export * from './requirePermission.js';
+export * from './requireRole.js';
+export * from './requireOwnership.js';
+export * from './requireGroup.js';

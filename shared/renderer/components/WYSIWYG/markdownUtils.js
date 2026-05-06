@@ -11,7 +11,7 @@ import TurndownService from 'turndown';
 // ---------------------------------------------------------------------------
 // marked configuration (Markdown → HTML)
 // ---------------------------------------------------------------------------
-marked.setOptions({
+marked.use({
   breaks: true, // Convert \n to <br>
   gfm: true, // GitHub Flavored Markdown
 });

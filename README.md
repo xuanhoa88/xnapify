@@ -5,10 +5,10 @@
 **Your API, SSR-ready in a Snap**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE.txt)
-[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D16.14-green.svg)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D20.19-green.svg)](https://nodejs.org/)
 [![React](https://img.shields.io/badge/React-18.3-61DAFB.svg)](https://reactjs.org/)
 [![Express](https://img.shields.io/badge/Express-4.21-000000.svg)](https://expressjs.com/)
-[![Webpack](https://img.shields.io/badge/Webpack-5.96-8DD6F9.svg)](https://webpack.js.org/)
+[![Rspack](https://img.shields.io/badge/Rspack-2.0-EA5E5E.svg)](https://rspack.dev/)
 
 </div>
 
@@ -31,8 +31,8 @@
 
 | Tool    | Version   |
 | ------- | --------- |
-| Node.js | ≥ 16.14.0 |
-| npm     | ≥ 8.0.0   |
+| Node.js | ≥ 20.19.0 |
+| npm     | ≥ 10.8.0  |
 
 ## 🚀 Quick Start
 
@@ -99,7 +99,7 @@ xnapify/
 │   ├── node-red/               # Node-RED integration & migrations
 │   └── utils/                  # Common utilities
 ├── tools/                      # Build tooling
-│   ├── webpack/                # Webpack configs (client, server)
+│   ├── rspack/                 # Rspack configs (client, server)
 │   ├── jest/                   # Jest configuration
 │   └── tasks/                  # Build tasks (dev, build, test, etc.)
 ├── public/                     # Static assets
@@ -139,7 +139,7 @@ xnapify/
 
 | Technology                    | Purpose                       |
 | ----------------------------- | ----------------------------- |
-| Webpack 5                     | Bundling, code splitting, HMR |
+| Rspack                        | Blazing fast bundling, code splitting, HMR |
 | SWC                           | ES2015+ transpilation         |
 | Jest                          | Testing & benchmarks          |
 | ESLint + Prettier + Stylelint | Code quality & formatting     |

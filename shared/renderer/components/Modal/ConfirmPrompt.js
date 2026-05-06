@@ -18,7 +18,7 @@ import { TextField, Box } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
-import Modal from './index';
+import Modal from './index.js';
 
 import s from './ConfirmPrompt.css';
 

@@ -5,14 +5,17 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-/* eslint-env jest */
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+
+/* global jest */
 
 import {
   ACTIVE_EXTENSIONS,
   EXTENSION_METADATA,
-} from '../utils/BaseExtensionManager';
+} from '../utils/BaseExtensionManager.js';
 
-import serverManager from './ExtensionManager';
+import serverManager from './ExtensionManager.js';
 
 // Mock Registry
 jest.mock('./Registry', () => ({

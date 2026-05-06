@@ -7,7 +7,7 @@
 
 import { Extension, textInputRule } from '@tiptap/core';
 
-import { EMOJI_DICTIONARY } from './constants';
+import { EMOJI_DICTIONARY } from './constants.js';
 
 function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string

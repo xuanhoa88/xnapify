@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { reducers } from './features';
+import { reducers } from './features/index.js';
 
 // Note: admin reducers are dynamically injected by page modules
 // via store.injectReducer() in their views/index.js providers() hook

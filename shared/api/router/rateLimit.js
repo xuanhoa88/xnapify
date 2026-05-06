@@ -5,7 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { createRequire } from 'module';
+
 import isLocalhostIp from 'is-localhost-ip';
+
+const require = createRequire(import.meta.url);
 
 /** Rate limiter cache — never evict (losing a limiter resets its counters) */
 const cache = new Map();
@@ -19,7 +23,6 @@ let rateLimitMod;
 function getRateLimit() {
   if (rateLimitMod === undefined) {
     try {
-      // eslint-disable-next-line global-require
       const mod = require('express-rate-limit');
       rateLimitMod = mod.default || mod;
     } catch {

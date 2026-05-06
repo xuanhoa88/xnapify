@@ -24,7 +24,6 @@ function Loader({
     return (
       <Flex direction='column' gap='4' py='4' className={className}>
         {Array.from({ length: skeletonCount }).map((_, i) => (
-          // eslint-disable-next-line react/no-array-index-key
           <Flex key={i} align='center' gap='4' p='3'>
             <Skeleton width='40px' height='40px' className='rounded-full' />
             <Flex direction='column' gap='2' flexGrow='1'>
@@ -42,7 +41,6 @@ function Loader({
     return (
       <Flex gap='4' p='4' wrap='wrap' className={className}>
         {Array.from({ length: 4 }).map((_, i) => (
-          // eslint-disable-next-line react/no-array-index-key
           <Flex
             key={i}
             direction='column'

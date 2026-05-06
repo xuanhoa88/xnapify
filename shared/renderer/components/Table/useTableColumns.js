@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 
-import { useExtensionRegistry } from '../Extension/useExtension';
+import { useExtensionRegistry } from '../Extension/useExtension.js';
 
 /**
  * Default order for base columns when none is specified.

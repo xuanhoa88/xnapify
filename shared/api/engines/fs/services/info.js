@@ -9,8 +9,8 @@
  * Info Service - Worker-enabled wrapper for info operation
  */
 
-import { info as infoOperation } from '../operations/info';
-import { processInfo } from '../workers';
+import { info as infoOperation } from '../operations/info.js';
+import { processInfo } from '../workers/index.js';
 
 /**
  * Get file info with optional worker processing

@@ -6,20 +6,17 @@
  */
 
 import express from 'express';
-
 import { discoverModules, engines, drain } from '@shared/api';
 import { Router as DynamicRouter } from '@shared/api/router';
-
 import { createCorsMiddleware } from './middlewares/cors';
 import { createLoggingMiddleware } from './middlewares/logging';
 import { configurePassport } from './passport';
 
 // Discover lifecycle modules from apps directory
-const apisContext = require.context(
-  '../../apps',
-  true,
-  /^\.\/[^/]+\/api\/index\.[cm]?[jt]s$/i,
-);
+const apisContext = import.meta.webpackContext('../../apps', {
+  recursive: true,
+  regExp: /^\.\/[^/]+\/api\/index\.[cm]?[jt]s$/i
+});
 
 // Export all engines as providers
 export const APP_PROVIDERS = Object.keys(engines);
@@ -82,7 +79,6 @@ function registerEngines(container) {
       container.instance(name, engine);
     }
   });
-
   log('Engines registered');
 }
 
@@ -94,7 +90,6 @@ function registerEngines(container) {
 function setupGlobalMiddleware(app) {
   app.use(createLoggingMiddleware());
   app.use(createCorsMiddleware());
-
   log('Global middleware applied');
 }
 
@@ -106,7 +101,6 @@ function setupGlobalMiddleware(app) {
  */
 function createApiMiddlewareStack(app) {
   const container = app.get('container');
-
   const middlewares = [];
   const jwt = container.resolve('jwt');
   const oauth = container.resolve('oauth');
@@ -115,14 +109,9 @@ function createApiMiddlewareStack(app) {
   if (oauth && oauth.passport) {
     middlewares.push(oauth.passport.initialize());
   }
-
   if (jwt) {
-    middlewares.push(
-      engines.auth.middlewares.refreshToken(),
-      engines.auth.middlewares.optionalAuth(),
-    );
+    middlewares.push(engines.auth.middlewares.refreshToken(), engines.auth.middlewares.optionalAuth());
   }
-
   return middlewares;
 }
 
@@ -141,21 +130,18 @@ async function buildApiRouter(app, extension) {
   const router = express.Router();
 
   // Body parsing scoped to API routes only
-  router.use(
-    express.json({ limit: process.env.XNAPIFY_JSON_BODY_LIMIT || '10mb' }),
-  );
-  router.use(
-    express.urlencoded({
-      extended: true,
-      limit: process.env.XNAPIFY_URLENCODED_BODY_LIMIT || '1mb',
-    }),
-  );
+  router.use(express.json({
+    limit: process.env.XNAPIFY_JSON_BODY_LIMIT || '10mb'
+  }));
+  router.use(express.urlencoded({
+    extended: true,
+    limit: process.env.XNAPIFY_URLENCODED_BODY_LIMIT || '1mb'
+  }));
 
   // Discover and run module lifecycles (container-only DI)
-  const { apiRoutes } = await discoverModules(
-    apisContext,
-    app.get('container'),
-  );
+  const {
+    apiRoutes
+  } = await discoverModules(apisContext, app.get('container'));
 
   // Mount module API routes
   for (const [name, adapter] of apiRoutes) {
@@ -168,13 +154,14 @@ async function buildApiRouter(app, extension) {
 
   // Connect extension API router (flushes buffered routes + stores ref for runtime installs)
   if (extension) {
-    const extRouter = new DynamicRouter({ files: () => [], load: () => ({}) });
+    const extRouter = new DynamicRouter({
+      files: () => [],
+      load: () => ({})
+    });
     router.use(...apiMiddlewares, extRouter.resolve);
     extension.connectApiRouter(extRouter);
   }
-
   log(`Dynamic router built (${apiRoutes.size} module(s))`);
-
   return router;
 }
 
@@ -205,7 +192,9 @@ export default async function bootstrap(app, extension) {
     registerEngines(container);
 
     // Setup passport & OAuth registry (framework-level, before modules)
-    const { oauth } = configurePassport();
+    const {
+      oauth
+    } = configurePassport();
     container.instance('oauth', oauth);
 
     // Setup global middleware
@@ -213,9 +202,7 @@ export default async function bootstrap(app, extension) {
 
     // Discover modules and setup API routes
     const apiRouter = await buildApiRouter(app, extension);
-
     log('Bootstrap completed');
-
     return apiRouter;
   } catch (error) {
     log(`Bootstrap failed: ${error.message}`, 'error');
@@ -224,7 +211,6 @@ export default async function bootstrap(app, extension) {
     if (error.stack) {
       console.error('Stack trace:', error.stack);
     }
-
     throw error;
   }
 }

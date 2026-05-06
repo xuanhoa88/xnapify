@@ -8,7 +8,7 @@
 import * as Sequelize from 'sequelize';
 import { Umzug, SequelizeStorage } from 'umzug';
 
-import { createWebpackContextAdapter } from '@shared/utils/contextAdapter';
+import { createRspackContextAdapter } from '@shared/utils/contextAdapter';
 
 // ======================================================================
 // Internal helpers
@@ -17,7 +17,7 @@ import { createWebpackContextAdapter } from '@shared/utils/contextAdapter';
 /**
  * Extract filename from require.context key: './filename.js' -> 'filename'
  *
- * @param {string} key - Webpack context key (e.g. './2026.01.12T00.00.00.create-users.js')
+ * @param {string} key - Rspack context key (e.g. './2026.01.12T00.00.00.create-users.js')
  * @returns {string} Filename without extension
  */
 function extractFileName(key) {
@@ -129,7 +129,7 @@ function mergeMigrations(migrationSources, options = {}) {
 
     if (!source.context || typeof source.context !== 'function') {
       const error = new Error(
-        'Each migration source must have a valid context (webpack require.context function)',
+        'Each migration source must have a valid context (rspack require.context function)',
       );
       error.name = 'InvalidMigrationSourceContextError';
       error.status = 400;
@@ -149,7 +149,7 @@ function mergeMigrations(migrationSources, options = {}) {
     }
 
     // Wrap raw context with adapter
-    const adapter = createWebpackContextAdapter(source.context);
+    const adapter = createRspackContextAdapter(source.context);
     const migrations = adapterToMigrations(adapter, source.prefix, options);
 
     migrations.forEach(migration => {

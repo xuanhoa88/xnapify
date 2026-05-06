@@ -28,4 +28,3 @@ Notes
 - The HTTP benchmark starts a small Express server bound to an ephemeral port and posts JSON requests to `/api/extensions/:id/ipc`.
 - Adjust environment variables to simulate different load profiles.
 - Keep thresholds in tests generous for CI variance. For deeper profiling, capture `process.hrtime` or use external profilers.
-

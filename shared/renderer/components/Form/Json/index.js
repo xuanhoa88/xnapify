@@ -22,9 +22,9 @@ import {
   useFormField,
   useMergeRefs,
   composeEventHandlers,
-} from '../FormContext';
+} from '../FormContext.js';
 
-import JsonView from './JsonView';
+import JsonView from './JsonView.js';
 
 const FormJson = forwardRef(function FormJson$(
   {

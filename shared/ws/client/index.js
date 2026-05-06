@@ -13,7 +13,7 @@ import {
   EventType as SharedEventType,
   parseMessage,
   createLogger,
-} from '../utils';
+} from '../utils/index.js';
 
 /**
  * Global WebSocket client instance

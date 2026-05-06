@@ -13,7 +13,7 @@ console.log(i18n.t('hello'));
 // Dynamically add a namespace from a module
 addNamespace('users', {
   'en-US': { title: 'Users' },
-  'vi-VN': { title: 'Người dùng' }
+  'vi-VN': { title: 'Người dùng' },
 });
 ```
 
@@ -24,7 +24,7 @@ addNamespace('users', {
 - **Locale Resolution**: Computes native locale display names automatically using `Intl.DisplayNames`.
 - **Dynamic Namespaces**: Add and remove namespace bundles on the fly across all active locales.
 - **Lazy Loading Helper**: Built-in function to conditionally load translation dictionaries.
-- **Webpack & Vite Support**: Includes a compatible context loader for `require.context` / `import.meta.glob`.
+- **Rspack & Vite Support**: Includes a compatible context loader for `require.context` / `import.meta.glob`.
 
 ## Usage Guide
 

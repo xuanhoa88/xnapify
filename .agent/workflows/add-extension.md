@@ -1084,7 +1084,7 @@ See `src/extensions/posts-module/` for a complete working module-type extension 
 - Extensions are eagerly activated via `ensureViewNamespaceActive()` during loading — check console for `[ExtensionManager] Activating namespace:` logs
 - Ensure both `api/index.js` and `views/index.js` export default extension definitions
 - Check browser console for any initialization errors
-- Verify the extension was built by Webpack (check `.cache/dev/extensions/` for build output)
+- Verify the extension was built by Rspack (check `.cache/dev/extensions/` for build output)
 
 ### IPC Returns `Cannot POST`
 
@@ -1204,7 +1204,7 @@ export function getNodeHTML() {
 ### How It Works
 
 1. The `"nodered"` key in `package.json` tells the build system where to find node source files
-2. Webpack compiles each node file as a standalone CJS bundle (via `createApiConfig()`)
+2. Rspack compiles each node file as a standalone CJS bundle (via `createApiConfig()`)
 3. At boot, active extensions' nodes are written to `<userDir>/node_modules/` as `xnapify-nodered-<id>` modules (all async via `fs.promises`)
 4. Boot-loaded modules are synced into `_extModuleMap` via `_syncBootModules()` so they can be correctly unloaded later
 5. After boot, toggling an extension triggers `registry.addModule()` / `registry.removeModule()` — the same API as Node-RED's Palette Manager

@@ -24,8 +24,8 @@ import {
   updateUserPreferences,
   impersonateUser,
   stopImpersonating,
-} from './thunks';
-import { initialState, normalizeState, createOperationState } from './utils';
+} from './thunks.js';
+import { initialState, normalizeState, createOperationState } from './utils.js';
 
 /**
  * User Slice

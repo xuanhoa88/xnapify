@@ -11,11 +11,10 @@
  *   npm run setup
  */
 
-'use strict';
-
-const { execSync } = require('child_process');
-const fs = require('fs');
-const path = require('path');
+import { fileURLToPath } from 'url';
+import { execSync } from 'child_process';
+import fs from 'fs';
+import path from 'path';
 
 // ─── Paths ───────────────────────────────────────────────────────────────────
 
@@ -95,15 +94,18 @@ function npmInstall(cwd, label) {
   const start = Date.now();
 
   try {
+    const env = {
+      ...process.env,
+      CI: 'true',
+      npm_config_engine_strict: 'false',
+    };
+    delete env.NODE_OPTIONS;
+
     execSync('npm install --xnapify-setup --no-fund --no-audit', {
       cwd,
       stdio: 'inherit',
       shell: true,
-      env: {
-        ...process.env,
-        CI: 'true',
-        npm_config_engine_strict: 'false',
-      },
+      env,
     });
     log(`   ✅ ${label} (${elapsed(start)})`);
     return true;
@@ -193,4 +195,13 @@ function main() {
   log(`✅ All dependencies installed (${elapsed(start)})`);
 }
 
-main();
+// Execute if called directly (as child process)
+const scriptPath = fileURLToPath(import.meta.url);
+if (
+  process.argv[1] === scriptPath ||
+  process.argv[1] === scriptPath.replace(/\.js$/, '')
+) {
+  main();
+}
+
+export default main;

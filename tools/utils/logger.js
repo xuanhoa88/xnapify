@@ -134,7 +134,7 @@ function formatDuration(ms) {
   return `${minutes}m ${seconds}s`;
 }
 
-module.exports = {
+export {
   isSilent,
   isVerbose,
   logError,

@@ -9,8 +9,8 @@
  * Extract Service - Worker-enabled wrapper for extract operation
  */
 
-import { extract as extractOperation } from '../operations/extract';
-import { extractZip } from '../workers';
+import { extract as extractOperation } from '../operations/extract.js';
+import { extractZip } from '../workers/index.js';
 
 /**
  * Extract ZIP archive with optional worker processing

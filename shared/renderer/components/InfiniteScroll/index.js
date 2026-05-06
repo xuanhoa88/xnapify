@@ -5,4 +5,4 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-export { useInfiniteScroll, useDebounce, useStableCallback } from './hooks';
+export { useInfiniteScroll, useDebounce, useStableCallback } from './hooks.js';

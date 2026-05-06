@@ -34,4 +34,4 @@ shared/api/engines/template/
 
 ---
 
-*Note: This spec reflects the CURRENT implementation of the template engine.*
+_Note: This spec reflects the CURRENT implementation of the template engine._

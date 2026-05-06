@@ -33,15 +33,15 @@ import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
-import { ExtensionSlot } from '../Extension';
+import { ExtensionSlot } from '../Extension/index.js';
 
-import CodeBlockActionsPopup from './CodeBlockActionsPopup';
-import ColorPickerPopup from './ColorPickerPopup';
-import EmojiPickerButton from './EmojiPickerButton';
-import MediaActionsPopup from './MediaActionsPopup';
-import TableActionsPopup from './TableActionsPopup';
-import ToolbarButton from './ToolbarButton';
-import { useToolbarPrompt } from './ToolbarPromptModal';
+import CodeBlockActionsPopup from './CodeBlockActionsPopup.js';
+import ColorPickerPopup from './ColorPickerPopup.js';
+import EmojiPickerButton from './EmojiPickerButton.js';
+import MediaActionsPopup from './MediaActionsPopup.js';
+import TableActionsPopup from './TableActionsPopup.js';
+import ToolbarButton from './ToolbarButton.js';
+import { useToolbarPrompt } from './ToolbarPromptModal.js';
 
 import s from './Toolbar.css';
 

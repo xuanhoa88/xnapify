@@ -5,15 +5,16 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { createWebpackContextAdapter } from '@shared/utils/contextAdapter';
+import { createRspackContextAdapter } from '@shared/utils/contextAdapter';
 
 // Drain for graceful shutdown
-export { drain } from './shutdown';
+export { drain } from './shutdown.js';
 
 // Auto-load engines via require.context
-const enginesAdapter = createWebpackContextAdapter(
-  require.context('./engines', true, /^\.\/[^/]+\/index\.[cm]?[jt]s$/i),
-);
+const enginesAdapter = createRspackContextAdapter(import.meta.webpackContext('./engines', {
+  recursive: true,
+  regExp: /^\.\/[^/]+\/index\.[cm]?[jt]s$/i
+}));
 
 /**
  * Extracts engine name from module path
@@ -34,9 +35,7 @@ function extractEngineName(modulePath) {
  * @returns {boolean} True if value can have properties assigned
  */
 function isObjectLike(value) {
-  return (
-    value !== null && (typeof value === 'object' || typeof value === 'function')
-  );
+  return value !== null && (typeof value === 'object' || typeof value === 'function');
 }
 
 /**
@@ -48,28 +47,26 @@ function isObjectLike(value) {
  */
 function processEngineModule(moduleExports, engineName) {
   if (!moduleExports || typeof moduleExports !== 'object') {
-    throw new TypeError(
-      `Engine "${engineName}" must export an object, got ${typeof moduleExports}`,
-    );
+    throw new TypeError(`Engine "${engineName}" must export an object, got ${typeof moduleExports}`);
   }
-
-  const { default: defaultExport, ...namedExports } = moduleExports;
+  const {
+    default: defaultExport,
+    ...namedExports
+  } = moduleExports;
   const hasNamedExports = Object.keys(namedExports).length > 0;
 
   // No default export - return named exports
   if (!defaultExport) {
     if (!hasNamedExports) {
-      console.warn(
-        `[Engines] Engine "${engineName}" has no exports (default or named)`,
-      );
+      console.warn(`[Engines] Engine "${engineName}" has no exports (default or named)`);
     }
     return namedExports;
   }
 
   // Default export exists - use it as base
-  const base = isObjectLike(defaultExport)
-    ? defaultExport
-    : { default: defaultExport };
+  const base = isObjectLike(defaultExport) ? defaultExport : {
+    default: defaultExport
+  };
 
   // Merge non-conflicting named exports
   if (hasNamedExports) {
@@ -79,7 +76,6 @@ function processEngineModule(moduleExports, engineName) {
       }
     });
   }
-
   return base;
 }
 
@@ -90,24 +86,19 @@ function processEngineModule(moduleExports, engineName) {
  */
 function loadEngine(modulePath) {
   const engineName = extractEngineName(modulePath);
-
   if (!engineName) {
     console.warn(`[Engines] Skipping invalid module path: ${modulePath}`);
     return null;
   }
-
   try {
     const moduleExports = enginesAdapter.load(modulePath);
     return {
       name: engineName,
-      interface: processEngineModule(moduleExports, engineName),
+      interface: processEngineModule(moduleExports, engineName)
     };
   } catch (error) {
     const errorMessage = error && error.message ? error.message : error;
-    console.error(
-      `[Engines] Failed to load engine "${engineName}" from "${modulePath}":`,
-      errorMessage,
-    );
+    console.error(`[Engines] Failed to load engine "${engineName}" from "${modulePath}":`, errorMessage);
     return null;
   }
 }
@@ -118,21 +109,17 @@ function loadEngine(modulePath) {
  */
 const engines = enginesAdapter.files().reduce((engineMap, modulePath) => {
   const result = loadEngine(modulePath);
-
   if (!result) {
     return engineMap;
   }
-
-  const { name } = result;
+  const {
+    name
+  } = result;
   const engineInterface = result.interface;
-
   if (engineMap[name]) {
-    console.warn(
-      `[Engines] Duplicate engine "${name}" found at ${modulePath}. Using first occurrence.`,
-    );
+    console.warn(`[Engines] Duplicate engine "${name}" found at ${modulePath}. Using first occurrence.`);
     return engineMap;
   }
-
   engineMap[name] = engineInterface;
   return engineMap;
 }, {});
@@ -142,14 +129,14 @@ Object.freeze(engines);
 
 /**
  * Create named exports for each discovered engine
- * Allows: import { db, auth } from './engines'
+ * Allows: import { db, auth } from './engines/index.js'
  */
 Object.entries(engines).forEach(([engineName, engineInterface]) => {
   Object.defineProperty(exports, engineName, {
     enumerable: true,
     configurable: false,
     writable: false,
-    value: engineInterface,
+    value: engineInterface
   });
 });
 
@@ -157,4 +144,4 @@ Object.entries(engines).forEach(([engineName, engineInterface]) => {
 export { engines };
 
 // Export autoloader utilities
-export * from './autoloader';
+export * from './autoloader.js';

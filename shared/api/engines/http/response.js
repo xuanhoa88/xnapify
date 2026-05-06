@@ -8,7 +8,7 @@
 import { randomUUID } from 'crypto';
 import { pipeline } from 'stream/promises';
 
-import { HTTP_STATUS } from './constants';
+import { HTTP_STATUS } from './constants.js';
 
 /**
  * Safe keys allowed in public error responses

@@ -7,11 +7,11 @@
 
 import { BaseRouter, validateAdapter } from '@shared/utils/BaseRouter';
 
-import { buildRoutes, validateConfig, linkParents } from './builder';
-import { collect } from './collector';
-import { ROUTE_MOUNT_KEY } from './constants';
-import { loadRouteTranslations, runInit, runMount } from './lifecycle';
-import { createMatchCache, clearMatchCache, findRoute } from './matcher';
+import { buildRoutes, validateConfig, linkParents } from './builder.js';
+import { collect } from './collector.js';
+import { ROUTE_MOUNT_KEY } from './constants.js';
+import { loadRouteTranslations, runInit, runMount } from './lifecycle.js';
+import { createMatchCache, clearMatchCache, findRoute } from './matcher.js';
 
 /** @type {symbol} Per-instance radix tree cache */
 const ROUTE_CACHE_KEY = Symbol('__xnapify.route.cache__');

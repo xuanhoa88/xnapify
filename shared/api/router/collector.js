@@ -5,8 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { ROUTE_SEPARATOR, ROUTE_PATH_DEFAULT } from './constants';
-import { log } from './utils';
+import { ROUTE_SEPARATOR, ROUTE_PATH_DEFAULT } from './constants.js';
+import { log } from './utils.js';
 
 /**
  * @typedef {Object} CollectorConfig

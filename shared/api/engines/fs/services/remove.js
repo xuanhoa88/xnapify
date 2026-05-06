@@ -9,8 +9,8 @@
  * Remove Service - Worker-enabled wrapper for remove operation
  */
 
-import { remove as removeOperation } from '../operations/remove';
-import { processDelete } from '../workers';
+import { remove as removeOperation } from '../operations/remove.js';
+import { processDelete } from '../workers/index.js';
 
 /**
  * Thresholds for auto-detection of worker usage

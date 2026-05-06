@@ -12,7 +12,7 @@ import {
   hasRole as checkRole,
   hasGroup as checkGroup,
   isOwner as checkOwner,
-} from './middlewares';
+} from './middlewares.js';
 
 // ========================================================================
 // HOOK: useRbac

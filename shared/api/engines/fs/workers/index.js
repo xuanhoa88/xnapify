@@ -12,8 +12,8 @@
  * and delegate to the FS factory for actual I/O.
  */
 
-import { createFactory } from '../factory';
-import { createZip, extractZip as extractZipUtil } from '../utils';
+import { createFactory } from '../factory.js';
+import { createZip, extractZip as extractZipUtil } from '../utils/index.js';
 
 // ==========================================================================
 // ZIP OPERATIONS

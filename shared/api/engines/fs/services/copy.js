@@ -9,8 +9,8 @@
  * Copy Service - Worker-enabled wrapper for copy operation
  */
 
-import { copy as copyOperation } from '../operations/copy';
-import { processCopy } from '../workers';
+import { copy as copyOperation } from '../operations/copy.js';
+import { processCopy } from '../workers/index.js';
 
 /**
  * Thresholds for auto-detection of worker usage

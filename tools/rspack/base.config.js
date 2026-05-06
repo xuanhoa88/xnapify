@@ -5,18 +5,27 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import { createRequire } from 'module';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const TerserPlugin = require('terser-webpack-plugin');
-const webpack = require('webpack');
-const { default: merge } = require('webpack-merge');
-const nodeExternals = require('webpack-node-externals');
+import { rspack } from '@rspack/core';
+import merge from 'rspack-merge';
+import nodeExternals from 'webpack-node-externals';
 
-const config = require('../config');
-const { isVerbose } = require('../utils/logger');
+import config from '../config.js';
+import globalPostcssConfigFn from '../postcss.factory.js';
+import { postcssConfigs } from '../registry.factory.js';
+import { isVerbose } from '../utils/logger.js';
 
-const loadDotenv = require('./loadDotenv');
+import loadDotenv from './loadDotenv.js';
+
+const require = createRequire(import.meta.url);
+// eslint-disable-next-line no-underscore-dangle
+const __filename = fileURLToPath(import.meta.url);
+// eslint-disable-next-line no-underscore-dangle
+const __dirname = path.dirname(__filename);
 
 // =============================================================================
 // CONSTANTS
@@ -27,12 +36,11 @@ const pkg = JSON.parse(
   fs.readFileSync(path.resolve(config.CWD, 'package.json'), 'utf8'),
 );
 
-// Base webpack configuration
+// Base rspack configuration
 const nodeEnv = config.env('NODE_ENV', 'development');
 const isDev = nodeEnv !== 'production';
 const isProfile =
-  process.argv.includes('--profile') ||
-  config.env('WEBPACK_PROFILE') === 'true';
+  process.argv.includes('--profile') || config.env('RSPACK_PROFILE') === 'true';
 const verbose = isVerbose();
 
 // =============================================================================
@@ -43,7 +51,7 @@ const verbose = isVerbose();
 const reScript = /\.[cm]?[jt]sx?$/i;
 
 // Styles
-const reStyle = /\.(?:css|s[ac]ss|less|styl|sss)(?:\?.*)?$/i;
+const reStyle = /\.(?:css|s[ac]ss)(?:\?.*)?$/i;
 
 // Images
 const reImage = /\.(?:ico|gif|png|jpe?g|webp|bmp|avif)(?:\?.*)?$/i;
@@ -63,6 +71,32 @@ const reMarkdown = /\.(?:md|markdown)(?:\?.*)?$/i;
 // Text
 const reText = /\.txt(?:\?.*)?$/i;
 
+/**
+ * Create a pre-configured nodeExternals instance.
+ * Centralises the shared allowlist so every server / worker / extension
+ * build uses the same set of bundled asset patterns.
+ *
+ * @param {Object} [opts] - Extra options forwarded to webpack-node-externals
+ * @param {string[]} [opts.additionalModuleDirs] - Extra node_modules dirs
+ * @param {Array} [opts.allowlist] - Extra patterns to bundle (merged with defaults)
+ * @returns {Function} nodeExternals instance
+ */
+function createNodeExternals(opts = {}) {
+  const { allowlist: extra = [], ...rest } = opts;
+  return nodeExternals({
+    allowlist: [
+      /^@shared/,
+      reStyle,
+      reImage,
+      reFont,
+      reSvg,
+      /^\.\.\?\//,
+      ...extra,
+    ],
+    ...rest,
+  });
+}
+
 // =============================================================================
 // HOST-PROVIDED ASSETS
 // =============================================================================
@@ -72,14 +106,14 @@ const reText = /\.txt(?:\?.*)?$/i;
  *
  * Used as a build-time replacement for CSS modules whose assets (fonts, images)
  * are already bundled by the host app's client build (build/public/).
- * Replacing them with this no-op prevents webpack from emitting duplicate
+ * Replacing them with this no-op prevents rspack from emitting duplicate
  * asset files into server and extension output directories.
  */
 const NOOP_MODULE = path.resolve(__dirname, 'noop.css');
 
 /**
  * CSS modules that ship heavy font/image assets and are already bundled by the
- * host app's client webpack compilation.
+ * host app's client rspack compilation.
  *
  * Server and extension builds do NOT need their own copy of these assets
  * because:
@@ -101,16 +135,16 @@ const HOST_PROVIDED_CSS = [
  * Create NormalModuleReplacementPlugin instances that replace host-provided CSS
  * modules with a no-op.
  *
- * Use in every webpack compilation EXCEPT the host's client build:
+ * Use in every rspack compilation EXCEPT the host's client build:
  *   - App server config   (build/)           → fonts not needed
  *   - Extension client     (build/extensions/) → host serves fonts at runtime
  *   - Extension server     (build/extensions/) → SSR doesn't serve static assets
  *
- * @returns {import('webpack').WebpackPluginInstance[]}
+ * @returns {import('@rspack/core').RspackPluginInstance[]}
  */
 function createHostProvidedCSSPlugins() {
   return HOST_PROVIDED_CSS.map(
-    pattern => new webpack.NormalModuleReplacementPlugin(pattern, NOOP_MODULE),
+    pattern => new rspack.NormalModuleReplacementPlugin(pattern, NOOP_MODULE),
   );
 }
 
@@ -127,15 +161,15 @@ const getFileNamePattern = (hashType = 'contenthash') =>
   isDev ? '[path][name][ext]' : `[${hashType}:8][ext]`;
 
 /**
- * Create CSS loader configuration for webpack
- * Supports CSS, SCSS, SASS, and LESS with CSS Modules
+ * Create CSS loader configuration for rspack
+ * Supports CSS, SCSS, and SASS with CSS Modules
  *
  * @param {Object} options - Configuration options
  * @param {boolean} options.exportOnlyLocals - True for client bundle, false for server
  * @param {any} options.extractLoader - MiniCssExtractPlugin.loader for client (optional)
  * @param {string} options.localIdentName - Custom local identifier name
  * @param {Object} options.postcssOptions - PostCSS loader options
- * @returns {Object} Webpack rule configuration
+ * @returns {Object} Rspack rule configuration
  */
 const createCSSRule = ({
   exportOnlyLocals,
@@ -167,14 +201,8 @@ const createCSSRule = ({
   const postcssLoaderOptions = {
     sourceMap: isDev,
     postcssOptions: ctx => {
-      // Get global postcss config path
-      const cssConfigPath = path.resolve(__dirname, '..', 'postcss.factory');
-
-      // Production builds skip cache-busting — global config is static.
-
       // Get global postcss config
-      const globalConfigFn = require(cssConfigPath);
-      const globalConfig = globalConfigFn({
+      const globalConfig = globalPostcssConfigFn({
         options: postcssOptions,
         cwd: config.CWD,
       });
@@ -182,7 +210,7 @@ const createCSSRule = ({
       // Look up local postcss config from the registry
       let localPlugins = [];
       if (ctx && ctx.resourcePath) {
-        const { postcssConfigs } = require('../registry.factory');
+        // use imported postcssConfigs
         // Sort by path length descending so the most specific
         // (deepest) module directory wins when paths are nested.
         const matchedConfig = (
@@ -192,7 +220,9 @@ const createCSSRule = ({
           .find(cfg => ctx.resourcePath.startsWith(cfg.moduleDir));
         if (matchedConfig) {
           delete require.cache[matchedConfig.path];
-          const localConfigFn = require(matchedConfig.path);
+          delete require.cache[matchedConfig.path];
+          const localConfigRaw = require(matchedConfig.path);
+          const localConfigFn = localConfigRaw.default || localConfigRaw;
           const localCfg =
             typeof localConfigFn === 'function'
               ? localConfigFn({ options: postcssOptions })
@@ -211,10 +241,6 @@ const createCSSRule = ({
       return {
         ...globalConfig,
         plugins: mergedPlugins,
-        parser:
-          ctx && ctx.resourcePath && /\.sss$/i.test(ctx.resourcePath)
-            ? 'sugarss'
-            : undefined,
       };
     },
   };
@@ -260,20 +286,6 @@ const createCSSRule = ({
         }),
       },
       {
-        test: /\.less$/i,
-        use: buildLoaders({
-          loader: 'less-loader',
-          options: { sourceMap: isDev },
-        }),
-      },
-      {
-        test: /\.styl$/i,
-        use: buildLoaders({
-          loader: 'stylus-loader',
-          options: { sourceMap: isDev },
-        }),
-      },
-      {
         use: buildLoaders(),
       },
     ],
@@ -281,23 +293,23 @@ const createCSSRule = ({
 };
 
 /**
- * Create webpack.DefinePlugin instance
+ * Create rspack.DefinePlugin instance
  * @param {Object} extraDefinitions - Additional definitions to merge
- * @returns {webpack.DefinePlugin} DefinePlugin instance
+ * @returns {rspack.DefinePlugin} DefinePlugin instance
  */
 const createDefinePlugin = extraDefinitions =>
-  new webpack.DefinePlugin({
+  new rspack.DefinePlugin({
     __DEV__: !!isDev,
     ...extraDefinitions,
   });
 
 /**
  * Create ProgressPlugin for verbose builds
- * @returns {webpack.ProgressPlugin|null} ProgressPlugin or null
+ * @returns {rspack.ProgressPlugin|null} ProgressPlugin or null
  */
 const createProgressPlugin = () =>
   verbose
-    ? new webpack.ProgressPlugin({
+    ? new rspack.ProgressPlugin({
         activeModules: true,
         entries: true,
         modules: true,
@@ -311,7 +323,7 @@ const createProgressPlugin = () =>
 
 /**
  * Create environment DefinePlugin (client — only XNAPIFY_PUBLIC_* vars)
- * @returns {webpack.DefinePlugin} DefinePlugin instance
+ * @returns {rspack.DefinePlugin} DefinePlugin instance
  */
 const createEnvDefine = () =>
   createDefinePlugin({ ...loadDotenv({ verbose }) });
@@ -382,7 +394,7 @@ function createCacheGroups(
       type: 'css/mini-extract',
       chunks: 'all',
       enforce: true,
-      priority: 100, // was +Infinity — large int is safer with Webpack internals
+      priority: 100, // was +Infinity — large int is safer with rspack internals
     },
 
     // --- High-priority named groups ---
@@ -423,7 +435,7 @@ function createCacheGroups(
     },
 
     // --- Mid-tier: group related libs together ---
-    // enforce: true added so Webpack doesn't skip small packages due to minSize defaults
+    // enforce: true added so rspack doesn't skip small packages due to minSize defaults
 
     forms: {
       test: /[\\/]node_modules[\\/](react-hook-form|@hookform[\\/]resolvers|zod|cleave\.js)[\\/]/,
@@ -442,7 +454,7 @@ function createCacheGroups(
     },
 
     polyfills: {
-      test: /[\\/]node_modules[\\/](whatwg-fetch|url-polyfill|events|process)[\\/]/,
+      test: /[\\/]node_modules[\\/](events|process)[\\/]/,
       name: 'vendor.polyfills',
       chunks,
       priority: 20,
@@ -489,15 +501,23 @@ function createCacheGroups(
 /**
  * Create script rule for JS/JSX/TS files
  * @param {boolean} isServer - True for server bundle, false for client bundle
- * @returns {Object} Webpack rule
+ * @returns {Object} Rspack rule
  */
 const createScriptRule = (isServer = false) => ({
   test: reScript,
   include: [config.APP_DIR, path.resolve(config.CWD, 'shared')],
   exclude: [/node_modules/],
+  type: 'javascript/auto',
+  resolve: { fullySpecified: false },
+  parser: {
+    javascript: {
+      requireContext: true,
+      commonjsMagicComments: true,
+    },
+  },
   use: [
     {
-      loader: 'swc-loader',
+      loader: 'builtin:swc-loader',
       options: {
         jsc: {
           parser: {
@@ -510,7 +530,7 @@ const createScriptRule = (isServer = false) => ({
               runtime: 'automatic',
               development: isDev,
               // React Fast Refresh is enabled per-compiler in
-              // configureWebpackForDev (dev.js) — default off here
+              // configurerspackForDev (dev.js) — default off here
               // so the server bundle is not affected.
               refresh: false,
             },
@@ -518,6 +538,7 @@ const createScriptRule = (isServer = false) => ({
           // Disable loose mode to ensure iterables (Set, Map, etc) spread correctly
           loose: false,
         },
+        module: { type: 'es6' },
         // Production: inject core-js polyfills for browser compatibility
         // (polyfill injection based on browser targets + core-js usage).
         // Development and Server: skip polyfills. Server doesn't need browser
@@ -578,7 +599,7 @@ const createSVGRule = () => ({
       resourceQuery: { not: [/url/i] },
       use: [
         {
-          loader: '@svgr/webpack',
+          loader: '@svgr/rspack',
           options: {
             svgo: true,
             svgoConfig: {
@@ -666,15 +687,18 @@ const createFallbackRule = () => ({
 // =============================================================================
 
 /**
- * Create base webpack configuration
+ * Create base rspack configuration
  * Common configuration for both client-side and server-side bundles
  *
  * @param {string} name - Configuration name ('client' or 'server')
  * @param {Object} options - Additional options to merge
- * @returns {Object} Merged webpack configuration
+ * @returns {Object} Merged rspack configuration
  */
-function createWebpackConfig(name, options = {}) {
+function createRspackConfig(name, options = {}) {
   const isServer = name === 'server';
+
+  // Extract additionalModuleDirs before forwarding to merge
+  const { additionalModuleDirs, ...mergeOptions } = options;
 
   return merge(
     {
@@ -683,9 +707,9 @@ function createWebpackConfig(name, options = {}) {
       // Server: exclude node_modules
       ...(isServer && {
         externals: [
-          nodeExternals({
-            allowlist: [reStyle, reImage, reFont, reSvg, /^\.\.\?\//],
-          }),
+          createNodeExternals(
+            additionalModuleDirs ? { additionalModuleDirs } : {},
+          ),
           'sqlite3',
           'mysql2',
           'pg',
@@ -729,22 +753,8 @@ function createWebpackConfig(name, options = {}) {
 
         minimizer: !isDev
           ? [
-              new TerserPlugin({
-                parallel: process.env.XNAPIFY_MAX_WORKERS
-                  ? parseInt(process.env.XNAPIFY_MAX_WORKERS, 10)
-                  : true,
-                terserOptions: {
-                  compress: {
-                    drop_console: !isServer,
-                    comparisons: false,
-                    inline: 2,
-                    passes: 2, // ✅ second pass catches more dead code
-                    pure_getters: true,
-                    unsafe_math: false,
-                  },
-                  mangle: { safari10: true },
-                  output: { comments: false, ascii_only: true },
-                },
+              new rspack.SwcJsMinimizerRspackPlugin({
+                compress: { drop_console: !isServer },
               }),
             ]
           : [],
@@ -752,7 +762,9 @@ function createWebpackConfig(name, options = {}) {
 
       output: {
         publicPath: '/',
-        libraryTarget: isServer ? 'commonjs2' : 'umd',
+        ...(isServer && {
+          library: { type: 'commonjs2' },
+        }),
       },
 
       resolve: {
@@ -783,13 +795,13 @@ function createWebpackConfig(name, options = {}) {
       // Stop compilation on first error
       bail: !isDev,
 
-      // Disable webpack 5 filesystem cache
+      // Disable rspack 5 filesystem cache
       cache: false,
 
       // Enable source maps for debugging
       // Server uses eval-source-map (fast + accurate) instead of full source-map
       devtool: config.env(
-        'WEBPACK_DEVTOOL',
+        'RSPACK_DEVTOOL',
         isDev
           ? isServer
             ? 'eval-source-map'
@@ -797,7 +809,7 @@ function createWebpackConfig(name, options = {}) {
           : false,
       ),
 
-      plugins: [new webpack.EnvironmentPlugin({ NODE_ENV: nodeEnv })],
+      plugins: [new rspack.EnvironmentPlugin({ NODE_ENV: nodeEnv })],
 
       node: {
         __dirname: false,
@@ -805,7 +817,7 @@ function createWebpackConfig(name, options = {}) {
         global: false,
       },
     },
-    options,
+    mergeOptions,
     {
       output: {
         clean: false,
@@ -819,13 +831,13 @@ function createWebpackConfig(name, options = {}) {
 // =============================================================================
 
 /**
- * Discover `*.worker.js` files recursively in a directory and return webpack
- * entry descriptors. Each entry gets `library: { type: 'commonjs2' }` so the
+ * Discover `*.worker.js` files recursively in a directory and return rspack
+ * entry descriptors. Each entry gets `library: { type: 'commonjs' }` so the
  * output is a standalone CJS file for worker function isolation.
  *
  * @param {string} workersDir - Absolute path to the workers directory
  * @param {string} [prefix='workers'] - Output subdirectory prefix
- * @returns {Object} Webpack entry map (entryName → entry descriptor)
+ * @returns {Object} Rspack entry map (entryName → entry descriptor)
  */
 function discoverWorkerEntries(workersDir, prefix = 'workers') {
   const entries = {};
@@ -861,7 +873,7 @@ function discoverWorkerEntries(workersDir, prefix = 'workers') {
           : `${prefix}/${match[1]}`;
         entries[entryName] = {
           import: filePath,
-          library: { type: 'commonjs2' },
+          library: { type: 'commonjs' },
         };
       }
     }
@@ -873,7 +885,7 @@ function discoverWorkerEntries(workersDir, prefix = 'workers') {
 }
 
 /**
- * Create a webpack configuration that compiles `*.worker.js` files as
+ * Create an rspack configuration that compiles `*.worker.js` files as
  * standalone CJS modules for isolated worker function execution.
  *
  * Reusable by both core apps (`app.config.js`) and extensions
@@ -887,10 +899,10 @@ function discoverWorkerEntries(workersDir, prefix = 'workers') {
  * @param {string} options.workersDir - Absolute path to the workers source directory
  * @param {string} options.outputPath - Absolute path for the output directory
  * @param {string} [options.prefix='workers'] - Subdirectory prefix for output filenames
- * @param {string} [options.name='server'] - Webpack compiler name (must be unique per multi-compiler)
+ * @param {string} [options.name='server'] - Rspack compiler name (must be unique per multi-compiler)
  * @param {string[]} [options.additionalModuleDirs=[]] - Extra node_modules directories (e.g. extension-local)
- * @param {import('webpack').WebpackPluginInstance[]} [options.plugins=[]] - Additional plugins
- * @returns {Object|null} Webpack config or null if no workers found
+ * @param {import('@rspack/core').RspackPluginInstance[]} [options.plugins=[]] - Additional plugins
+ * @returns {Object|null} Rspack config or null if no workers found
  */
 function createWorkerConfig({
   workersDir,
@@ -905,20 +917,15 @@ function createWorkerConfig({
   // Skip if no workers found
   if (Object.keys(entries).length === 0) return null;
 
-  const cfg = createWebpackConfig(name, {
+  const cfg = createRspackConfig(name, {
     // Workers always run in Node — override target in case name !== 'server'
     target: 'node',
     entry: entries,
+    additionalModuleDirs,
     output: {
       path: outputPath,
-      filename: '[name].js',
+      filename: '[name].cjs',
     },
-    externals: [
-      nodeExternals({
-        additionalModuleDirs,
-        allowlist: [reStyle, reImage, reFont, reSvg, /^\.\.\?\//],
-      }),
-    ],
     plugins: [createEnvDefine(), ...plugins].filter(Boolean),
   });
 
@@ -951,12 +958,14 @@ function getHmrWatchIgnored() {
 // EXPORTS
 // =============================================================================
 
-module.exports = {
+const frozenPkg = Object.freeze(pkg);
+
+export {
   // Constants
   isDev,
   verbose,
   isProfile,
-  pkg: Object.freeze(pkg),
+  frozenPkg as pkg,
 
   // File patterns
   reScript,
@@ -976,7 +985,7 @@ module.exports = {
   createHostProvidedCSSPlugins,
   createProgressPlugin,
   createSharedDependencies,
-  createWebpackConfig,
+  createRspackConfig,
   createWorkerConfig,
   getHmrWatchIgnored,
 };

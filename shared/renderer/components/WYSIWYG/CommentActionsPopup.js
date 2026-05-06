@@ -9,7 +9,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 
 import { TrashIcon } from '@radix-ui/react-icons';
 import { Button, TextArea, Flex } from '@radix-ui/themes';
-import formatDistanceToNow from 'date-fns/formatDistanceToNow';
+import { formatDistanceToNow } from 'date-fns/formatDistanceToNow';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 

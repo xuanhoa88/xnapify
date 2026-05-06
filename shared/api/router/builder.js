@@ -5,14 +5,14 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { ROUTE_SEPARATOR, ROUTE_PATH_DEFAULT } from './constants';
+import { ROUTE_SEPARATOR, ROUTE_PATH_DEFAULT } from './constants.js';
 import {
   createInit,
   createMount,
   buildTranslationsLoader,
   createAction,
-} from './lifecycle';
-import { getRootSegment } from './utils';
+} from './lifecycle.js';
+import { getRootSegment } from './utils.js';
 
 /**
  * Finds config modules for a given route based on root segment.

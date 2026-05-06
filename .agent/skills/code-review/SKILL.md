@@ -95,7 +95,7 @@ Structure your final review using the [Response Format](#response-format) at the
 | **Off-by-one**                   | Array indexing, pagination, loop boundaries                                                              |
 | **Type coercion**                | `==` vs `===`, implicit falsy checks on `0` or empty strings                                             |
 | **Unhandled promise rejections** | Fire-and-forget promises without `.catch()`                                                              |
-| **`require.context` at runtime** | All `require.context()` calls must use **static string literals** — Webpack cannot analyze dynamic paths |
+| **`require.context` at runtime** | All `require.context()` calls must use **static string literals** — Rspack cannot analyze dynamic paths |
 | **AbortController missing**      | Long-lived effects (WS listeners, fetch) without abort/cleanup on unmount                                |
 | **Stale closure**                | `useCallback`/`useEffect` missing dependencies that change over time                                     |
 
@@ -289,24 +289,24 @@ src/apps/[module_name]/
 
 | Hook                       | Phase | Returns                      | Notes                                                 |
 | -------------------------- | ----- | ---------------------------- | ----------------------------------------------------- |
-| `translations()`           | 1     | Webpack context (or `[context, ns]`) | i18n JSON files                                       |
+| `translations()`           | 1     | Rspack context (or `[context, ns]`) | i18n JSON files                                       |
 | `providers({ container })` | 2     | —                            | Bind DI services                                      |
-| `migrations()`             | 3     | Webpack context              | Auto-run, declarative                                 |
-| `models()`                 | 4     | Webpack context              | Auto-registered into ORM                              |
-| `seeds()`                  | 5     | Webpack context              | Auto-run, declarative                                 |
+| `migrations()`             | 3     | Rspack context              | Auto-run, declarative                                 |
+| `models()`                 | 4     | Rspack context              | Auto-registered into ORM                              |
+| `seeds()`                  | 5     | Rspack context              | Auto-run, declarative                                 |
 | `boot({ container })`      | 6     | —                            | Register workers, hooks, schedules. Models available. |
-| `routes()`                 | 7     | Webpack context **directly** | `() => routesContext` (**not** a tuple)               |
+| `routes()`                 | 7     | Rspack context **directly** | `() => routesContext` (**not** a tuple)               |
 
-> ⚠️ **Key distinction:** Modules return Webpack context **directly** from `routes()`. Extensions return `[name, context]` tuple.
+> ⚠️ **Key distinction:** Modules return Rspack context **directly** from `routes()`. Extensions return `[name, context]` tuple.
 
 ### 6.3 Frontend Hooks (`views/index.js`)
 
 | Hook                              | Phase | Notes                                                                |
 | --------------------------------- | ----- | -------------------------------------------------------------------- |
-| `translations()`                  | 1     | Returns webpack context (or `[context, ns]`)                         |
+| `translations()`                  | 1     | Returns rspack context (or `[context, ns]`)                         |
 | `providers({ container, store })` | 2     | Inject Redux reducers via `store.injectReducer(SLICE_NAME, reducer)` |
 | `boot({ container })`             | 3     | —                                                                    |
-| `routes()`                        | 4     | Webpack context **directly**                                         |
+| `routes()`                        | 4     | Rspack context **directly**                                         |
 
 ### 6.4 Route Files (`_route.js`)
 
@@ -330,7 +330,7 @@ src/apps/[module_name]/
 | --------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------ |
 | **No cross-domain imports** | `import X from '@apps/other-module/...'`        | `container.resolve()` or hook system                                     |
 | **DI for auth**             | `import auth from '@shared/auth'`               | `req.app.get('container').resolve('auth')`                               |
-| **Static Webpack paths**    | `require.context(\`${dir}\`)`                   | Static string literal only                                               |
+| **Static Rspack paths**    | `require.context(\`${dir}\`)`                   | Static string literal only                                               |
 | **Redux in providers**      | `store.injectReducer()` in `_route.js` `init()` | Move to `views/index.js` `providers()`                                   |
 | **No direct email**         | `import sendEmail from '...'`                   | `container.resolve('emails:send')` or `hook('emails').emit('send', ...)` |
 | **Response format**         | `res.json({ data })`                            | `http.sendSuccess(res, { data })`                                        |
@@ -363,7 +363,7 @@ src/apps/[module_name]/
 
 | Hook                              | Notes                                                |
 | --------------------------------- | ---------------------------------------------------- |
-| `translations()`                  | Returns webpack context (or `[context, ns]`)         |
+| `translations()`                  | Returns rspack context (or `[context, ns]`)         |
 | `providers({ container, store })` | Redux injection — **NOT** in `boot()`                |
 | `boot(registry)`                  | Register slots, hooks, IPC handlers                  |
 | `shutdown(registry)`              | **MUST exactly inverse `boot()`** — count must match |
@@ -466,7 +466,7 @@ src/apps/[module_name]/
 | **Serializable I/O**    | All inputs and outputs are JSON-serializable (no functions, classes, Buffers) |
 | **Pure functions**      | No side effects on shared state                                               |
 | **Called via engine**   | `worker.run('name', 'fn', data)` from barrel, not direct import               |
-| **Manifest registered** | Worker compiled by webpack and appears in `worker-manifest.json`              |
+| **Manifest registered** | Worker compiled by rspack and appears in `worker-manifest.json`              |
 
 ---
 

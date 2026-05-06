@@ -5,13 +5,13 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { createWebpackContextAdapter } from '@shared/utils/contextAdapter';
+import { createRspackContextAdapter } from '@shared/utils/contextAdapter';
 
 /**
  * Get translations from a require.context object (wrapped in adapter)
  * This is a utility function that can be reused across the application
  *
- * @param {Object} translationAdapter - Webpack require.context or Context Adapter
+ * @param {Object} translationAdapter - Rspack require.context or Context Adapter
  * @returns {Object} Object mapping locale codes to translation objects
  */
 export function getTranslations(translationAdapter) {
@@ -20,7 +20,7 @@ export function getTranslations(translationAdapter) {
   // Ensure we have an adapter interface
   const adapter = translationAdapter.files
     ? translationAdapter
-    : createWebpackContextAdapter(translationAdapter);
+    : createRspackContextAdapter(translationAdapter);
 
   adapter.files().forEach(filename => {
     // Extract locale from filename (e.g., 'en-US' from './en-US.json' or any path)

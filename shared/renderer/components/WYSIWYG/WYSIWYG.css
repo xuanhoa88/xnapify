@@ -17,7 +17,9 @@
   border-radius: var(--radius-2);
   background-color: var(--color-surface);
   overflow: hidden;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .wysiwygWrapper:focus-within {
@@ -110,7 +112,9 @@
   border-radius: var(--radius-1);
   color: var(--gray-a8);
   cursor: grab;
-  transition: color 0.15s ease, background-color 0.15s ease;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease;
 }
 
 .dragHandle:hover {

@@ -5,8 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-/* eslint-env jest */
-/* eslint-disable react/prop-types */
+/* global jest */
 
 import { useSelector } from 'react-redux';
 import renderer from 'react-test-renderer';

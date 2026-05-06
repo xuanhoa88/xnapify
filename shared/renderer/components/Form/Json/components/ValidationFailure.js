@@ -8,7 +8,7 @@
 import { Box, Text } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 
-import Icon from '../../../Icon';
+import Icon from '../../../Icon/index.js';
 
 import s from './ValidationFailure.css';
 

@@ -7,7 +7,7 @@
 
 import { createSlice } from '@reduxjs/toolkit';
 
-import { initialState } from './utils';
+import { initialState } from './utils.js';
 
 /**
  * Runtime Slice

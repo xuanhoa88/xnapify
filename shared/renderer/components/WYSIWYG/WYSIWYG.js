@@ -37,26 +37,26 @@ import Underline from '@tiptap/extension-underline';
 import { Youtube } from '@tiptap/extension-youtube';
 import { Selection } from '@tiptap/extensions';
 import { useEditor, EditorContent, ReactNodeViewRenderer } from '@tiptap/react';
-import { BubbleMenu } from '@tiptap/react/menus'; // eslint-disable-line import/no-unresolved
+import { BubbleMenu } from '@tiptap/react/menus';
 import StarterKit from '@tiptap/starter-kit';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
-import { ExtensionSlot } from '../Extension';
+import { ExtensionSlot } from '../Extension/index.js';
 
-import CodeBlockView from './CodeBlockView';
-import CommentActionsPopup from './CommentActionsPopup';
-import { CommentExtension } from './CommentExtension';
-import { DetailsExtension } from './DetailsExtension';
-import { Emoji } from './EmojiExtension';
-import { FontSize } from './FontSizeExtension';
-import { htmlToMarkdown, markdownToHtml } from './markdownUtils';
-import { Video, Audio } from './MediaExtensions';
-import createSuggestion from './suggestion';
-import Toolbar from './Toolbar';
-import ToolbarButton from './ToolbarButton';
-import { ToolbarPromptProvider } from './ToolbarPromptModal';
+import CodeBlockView from './CodeBlockView.js';
+import CommentActionsPopup from './CommentActionsPopup.js';
+import { CommentExtension } from './CommentExtension.js';
+import { DetailsExtension } from './DetailsExtension.js';
+import { Emoji } from './EmojiExtension.js';
+import { FontSize } from './FontSizeExtension.js';
+import { htmlToMarkdown, markdownToHtml } from './markdownUtils.js';
+import { Video, Audio } from './MediaExtensions.js';
+import createSuggestion from './suggestion.js';
+import Toolbar from './Toolbar.js';
+import ToolbarButton from './ToolbarButton.js';
+import { ToolbarPromptProvider } from './ToolbarPromptModal.js';
 
 import s from './WYSIWYG.css';
 

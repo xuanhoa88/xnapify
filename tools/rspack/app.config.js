@@ -5,20 +5,21 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import { createRequire } from 'module';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const MiniCssExtractPlugin = require('mini-css-extract-plugin');
-const webpack = require('webpack');
-const { default: merge } = require('webpack-merge');
+import { rspack } from '@rspack/core';
+import merge from 'rspack-merge';
 
-const config = require('../config');
-const { webpackConfigs } = require('../registry.factory');
-const { isVerbose, logInfo, logWarn } = require('../utils/logger');
+import config from '../config.js';
+import { rspackConfigs } from '../registry.factory.js';
+import { isVerbose, logInfo, logWarn } from '../utils/logger.js';
 
-const {
+import {
   createCacheGroups,
-  createWebpackConfig,
+  createRspackConfig,
   createWorkerConfig,
   createCSSRule,
   createEnvDefine,
@@ -28,8 +29,14 @@ const {
   getHmrWatchIgnored,
   isDev,
   pkg,
-} = require('./base.config');
-const StatsManifestPlugin = require('./StatsManifestPlugin');
+} from './base.config.js';
+import StatsManifestPlugin from './StatsManifestPlugin.js';
+
+const require = createRequire(import.meta.url);
+// eslint-disable-next-line no-underscore-dangle
+const __filename = fileURLToPath(import.meta.url);
+// eslint-disable-next-line no-underscore-dangle
+const __dirname = path.dirname(__filename);
 
 // =============================================================================
 // HELPER FUNCTIONS
@@ -48,7 +55,7 @@ const StatsManifestPlugin = require('./StatsManifestPlugin');
  * Output shape:
  *   { "scripts": ["main.abc123.js"], "stylesheets": ["main.abc123.css"] }
  *
- * @returns {import('webpack').WebpackPluginInstance}
+ * @returns {import('@rspack/core').RspackPluginInstance}
  */
 function createStatsWriterPlugin() {
   return new StatsManifestPlugin({
@@ -144,7 +151,7 @@ function createStatsWriterPlugin() {
  * a Module Federation async boundary — shared modules like i18next
  * and react-i18next are fully initialized before the app code runs.
  */
-const clientConfig = createWebpackConfig('client', {
+const clientConfig = createRspackConfig('client', {
   entry: {
     client: [
       ...(isDev
@@ -170,16 +177,16 @@ const clientConfig = createWebpackConfig('client', {
   module: {
     rules: [
       createCSSRule({
-        extractLoader: MiniCssExtractPlugin.loader,
+        extractLoader: rspack.CssExtractRspackPlugin.loader,
       }),
     ],
   },
   plugins: [
-    new webpack.ProvidePlugin({
+    new rspack.ProvidePlugin({
       process: require.resolve('process/browser'),
     }),
     createEnvDefine(),
-    new webpack.container.ModuleFederationPlugin({
+    new rspack.container.ModuleFederationPlugin({
       name: 'host',
       shared: createSharedDependencies(pkg.dependencies || {}, {
         eager: true,
@@ -187,7 +194,7 @@ const clientConfig = createWebpackConfig('client', {
         strictVersion: false,
       }),
     }),
-    new MiniCssExtractPlugin({
+    new rspack.CssExtractRspackPlugin({
       filename: isDev
         ? 'assets/[name].css'
         : 'assets-[fullhash:8]/[name].[contenthash:8].css',
@@ -209,13 +216,13 @@ const clientConfig = createWebpackConfig('client', {
  * Configuration for the server-side bundle (server.js)
  * Targets Node.js environment with CommonJS output
  */
-const serverConfig = createWebpackConfig('server', {
+const serverConfig = createRspackConfig('server', {
   entry: {
     server: [path.join(config.APP_DIR, 'server.js')],
   },
   output: {
     path: config.BUILD_DIR,
-    filename: '[name].js',
+    filename: '[name].cjs',
   },
   module: {
     rules: [createCSSRule({ exportOnlyLocals: true })],
@@ -225,7 +232,7 @@ const serverConfig = createWebpackConfig('server', {
     ...createHostProvidedCSSPlugins(),
     ...(isDev
       ? [
-          new webpack.BannerPlugin({
+          new rspack.BannerPlugin({
             banner: 'require("source-map-support").install();',
             raw: true,
             entryOnly: false,
@@ -241,7 +248,7 @@ const serverConfig = createWebpackConfig('server', {
 
 /**
  * Discover and compile worker files from all core app modules.
- * Each app gets a unique webpack compiler name (`workers-<appName>`) so the
+ * Each app gets a unique rspack compiler name (`workers-<appName>`) so the
  * dev server can watch them independently.
  *
  * Scans `src/apps/<appName>/api/workers/` directories.
@@ -290,20 +297,22 @@ const workerConfig = (() => {
 })();
 
 // =============================================================================
-// APPLY REGISTRY WEBPACK CONFIGURATIONS (CORE APPS)
+// APPLY REGISTRY rspack CONFIGURATIONS (CORE APPS)
 // =============================================================================
 
 let finalClientConfig = clientConfig;
 let finalServerConfig = serverConfig;
 
 // Filter for customizers belonging specifically to core apps
-const coreAppWebpacks = (
-  Array.isArray(webpackConfigs) ? webpackConfigs : []
+const coreAppRspackConfigs = (
+  Array.isArray(rspackConfigs) ? rspackConfigs : []
 ).filter(cfg => cfg.moduleDir.startsWith(path.join(config.APP_DIR, 'apps')));
 
-for (const customWebpack of coreAppWebpacks) {
+for (const customRspack of coreAppRspackConfigs) {
   try {
-    const appCustomizer = require(customWebpack.path);
+    const appCustomizer =
+      (await import(customRspack.path)).default ||
+      (await import(customRspack.path));
     if (typeof appCustomizer === 'function') {
       finalClientConfig =
         appCustomizer(finalClientConfig, merge) || finalClientConfig;
@@ -315,7 +324,7 @@ for (const customWebpack of coreAppWebpacks) {
     }
   } catch (err) {
     logWarn(
-      `Skipping invalid webpack config in core app ${path.basename(customWebpack.moduleDir)}:`,
+      `Skipping invalid rspack config in core app ${path.basename(customRspack.moduleDir)}:`,
       err,
     );
   }
@@ -325,9 +334,9 @@ for (const customWebpack of coreAppWebpacks) {
 // EXPORTS
 // =============================================================================
 
-module.exports = {
-  clientConfig: finalClientConfig,
-  serverConfig: finalServerConfig,
+export {
+  finalClientConfig as clientConfig,
+  finalServerConfig as serverConfig,
   workerConfig,
   getHmrWatchIgnored,
 };

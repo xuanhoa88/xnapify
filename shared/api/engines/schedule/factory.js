@@ -7,9 +7,9 @@
 
 import cron from 'node-cron';
 
-import { register } from '../../shutdown';
+import { register } from '../../shutdown.js';
 
-import { ScheduleError } from './errors';
+import { ScheduleError } from './errors.js';
 
 /**
  * Schedule Manager

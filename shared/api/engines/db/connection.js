@@ -12,7 +12,7 @@ import path from 'path';
 import merge from 'lodash/merge';
 import Sequelize from 'sequelize';
 
-import { register } from '../../shutdown';
+import { register } from '../../shutdown.js';
 
 import {
   runMigrations,
@@ -21,7 +21,7 @@ import {
   undoSeeds,
   getMigrationStatus,
   getSeedStatus,
-} from './migrator';
+} from './migrator.js';
 
 // ======================================================================
 // Constants

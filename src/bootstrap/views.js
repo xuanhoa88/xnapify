@@ -8,15 +8,16 @@
 import { discoverModules } from '@shared/renderer/autoloader';
 import { features } from '@shared/renderer/redux';
 import Router from '@shared/renderer/router';
-
-const { getAppName, getAppDescription } = features;
+const {
+  getAppName,
+  getAppDescription
+} = features;
 
 // Discover view lifecycle modules from apps directory
-const viewsContext = require.context(
-  '../apps',
-  true,
-  /^\.\/[^/]+\/views\/index\.[cm]?[jt]s$/i,
-);
+const viewsContext = import.meta.webpackContext('../apps', {
+  recursive: true,
+  regExp: /^\.\/[^/]+\/views\/index\.[cm]?[jt]s$/i
+});
 
 // =============================================================================
 // LOGGING
@@ -60,7 +61,6 @@ class AppRouter extends Router {
   async resolve(context) {
     const page = await super.resolve(context);
     if (!page) return page;
-
     const state = context.store.getState();
 
     // 1. Handle Metadata Fallback (Description)
@@ -72,17 +72,12 @@ class AppRouter extends Router {
     const appName = getAppName(state);
     if (page.title) {
       const title = String(page.title).trim();
-
       if (!title) {
         // Fallback if the title was only whitespace
         page.title = appName;
       } else if (title !== appName) {
         // Guard against multiple common separators to avoid duplication
-        const hasSuffix =
-          title.endsWith(` - ${appName}`) ||
-          title.endsWith(` | ${appName}`) ||
-          title.endsWith(` · ${appName}`);
-
+        const hasSuffix = title.endsWith(` - ${appName}`) || title.endsWith(` | ${appName}`) || title.endsWith(` · ${appName}`);
         page.title = hasSuffix ? title : `${title} - ${appName}`;
       } else {
         // Title exactly matches app name
@@ -91,7 +86,6 @@ class AppRouter extends Router {
     } else {
       page.title = appName;
     }
-
     return page;
   }
 }
@@ -114,28 +108,34 @@ export default async function initializeRouter(context, extension) {
   context.container.instance('extension', extension);
 
   // Discover modules and run lifecycle phases (translations → providers → views)
-  const { mergedAdapter } = await discoverModules(viewsContext, context);
-
+  const {
+    mergedAdapter
+  } = await discoverModules(viewsContext, context);
   if (!mergedAdapter) {
     const err = new Error('No view modules found — cannot initialize router');
     err.name = 'NoViewModulesError';
     err.status = 500;
     throw err;
   }
-
   const router = new AppRouter(mergedAdapter, {
     errorHandler(error, ctx) {
       if (__DEV__ && error.status !== 403) {
         console.error('Router Error:', error);
         throw error;
       }
-
-      const { _instance, ...context } = ctx;
-      return _instance.resolve({ ...context, error, pathname: '/error' });
+      const {
+        _instance,
+        ...context
+      } = ctx;
+      return _instance.resolve({
+        ...context,
+        error,
+        pathname: '/error'
+      });
     },
     async onRouteInit(route) {
       try {
-        const ns = (route.module && route.module.namespace) || route.path;
+        const ns = route.module && route.module.namespace || route.path;
         if (ns) {
           if (__DEV__) {
             console.log(`[Router] Loading extension namespace: ${ns}`);
@@ -148,7 +148,7 @@ export default async function initializeRouter(context, extension) {
     },
     async onRouteDestroy(route) {
       try {
-        const ns = (route.module && route.module.namespace) || route.path;
+        const ns = route.module && route.module.namespace || route.path;
         if (ns) {
           if (__DEV__) {
             console.log(`[Router] Unloading extension namespace: ${ns}`);
@@ -158,7 +158,7 @@ export default async function initializeRouter(context, extension) {
       } catch (err) {
         log('Failed to unload extension namespace: ' + err, 'error');
       }
-    },
+    }
   });
 
   // Connect the extension extension's view router so buffered routes are injected
@@ -173,9 +173,11 @@ export default async function initializeRouter(context, extension) {
   // Append catch-all route for 404s
   router.routes.push({
     path: '/:path*',
-    action: context => router.resolve({ ...context, pathname: '/not-found' }),
+    action: context => router.resolve({
+      ...context,
+      pathname: '/not-found'
+    })
   });
-
   log('Router initialized');
   return router;
 }

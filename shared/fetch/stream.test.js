@@ -5,9 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-/* eslint-env jest */
+/* global jest */
 
-import { parseSSEStream, createSSEStream } from './stream';
+import { parseSSEStream, createSSEStream } from './stream.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -194,7 +194,6 @@ describe('[shared/fetch] stream.js', () => {
 
     it('uses _data from response when available', async () => {
       const mockFetchFn = jest.fn().mockResolvedValue({
-        // eslint-disable-next-line no-underscore-dangle
         _data: createByteStream('data: from_data\n\n'),
         body: createByteStream('data: from_body\n\n'),
       });

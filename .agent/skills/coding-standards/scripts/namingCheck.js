@@ -19,14 +19,18 @@
 
 const fs = require('fs');
 const path = require('path');
+
 const { JS_EXTENSIONS, walkFiles } = require('../../scripts/constants');
 
-const targetDirs = process.argv.length > 2 
-    ? process.argv.slice(2) 
-    : ['src', 'shared', 'tools', '.agent'].map(d => path.join(process.cwd(), d));
+const targetDirs =
+  process.argv.length > 2
+    ? process.argv.slice(2)
+    : ['src', 'shared', 'tools', '.agent'].map(d =>
+        path.join(process.cwd(), d),
+      );
 
 function findJSFiles(dir) {
-    return walkFiles(dir, JS_EXTENSIONS);
+  return walkFiles(dir, JS_EXTENSIONS);
 }
 
 console.log('═══════════════════════════════════════════════════');
@@ -37,25 +41,27 @@ let totalViolations = 0;
 let filesScannedCount = 0;
 
 for (const dir of targetDirs) {
-    if (!fs.existsSync(dir)) continue;
-    
-    const files = findJSFiles(dir);
-    filesScannedCount += files.length;
-    
-    for (const file of files) {
-        const basename = path.basename(file);
-        
-        // Match kebab-case files like "my-component.js" or "engine-file.js"
-        // Also ensure not matching something like .env-test.js or auto-generated index-react.js 
-        // We look specifically for '-' 
-        if (basename.includes('-') && !basename.startsWith('.')) {
-            const relPath = path.relative(process.cwd(), file);
-            console.log(`❌ Invalid File Name Format: ${relPath}`);
-            console.log(`   Found kebab-case nomenclature ("-") in the filename.`);
-            console.log(`   Fix: Rename file to standard camelCase format (e.g., camelCaseFormat.js)\n`);
-            totalViolations++;
-        }
+  if (!fs.existsSync(dir)) continue;
+
+  const files = findJSFiles(dir);
+  filesScannedCount += files.length;
+
+  for (const file of files) {
+    const basename = path.basename(file);
+
+    // Match kebab-case files like "my-component.js" or "engine-file.js"
+    // Also ensure not matching something like .env-test.js or auto-generated index-react.js
+    // We look specifically for '-'
+    if (basename.includes('-') && !basename.startsWith('.')) {
+      const relPath = path.relative(process.cwd(), file);
+      console.log(`❌ Invalid File Name Format: ${relPath}`);
+      console.log(`   Found kebab-case nomenclature ("-") in the filename.`);
+      console.log(
+        `   Fix: Rename file to standard camelCase format (e.g., camelCaseFormat.js)\n`,
+      );
+      totalViolations++;
     }
+  }
 }
 
 console.log('═══════════════════════════════════════════════════');

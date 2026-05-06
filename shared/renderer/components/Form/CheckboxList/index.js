@@ -29,9 +29,9 @@ import PropTypes from 'prop-types';
 import { useFormContext } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import Icon from '../../Icon';
-import { useInfiniteScroll } from '../../InfiniteScroll';
-import { useFormField, useMergeRefs } from '../FormContext';
+import Icon from '../../Icon/index.js';
+import { useInfiniteScroll } from '../../InfiniteScroll/index.js';
+import { useFormField, useMergeRefs } from '../FormContext.js';
 
 import s from './CheckboxList.css';
 
@@ -529,7 +529,6 @@ const FormCheckboxList = forwardRef(function FormCheckboxList$(
             { [s.listContainerError]: error },
             groupBy ? s.listContainerNoPadding : s.listContainerPadding,
           )}
-          // eslint-disable-next-line react/forbid-dom-props
           style={dynamicSizing}
           role='group'
           aria-labelledby={`${id}-label`}

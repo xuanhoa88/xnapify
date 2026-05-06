@@ -12,17 +12,14 @@ import * as thunks from './(admin)/redux/thunks';
 const OWNER_KEY = Symbol('__xnapify.module.emails.views__');
 
 // Auto-load contexts
-const viewsContext = require.context(
-  '.',
-  true,
-  /(?:\/_route|\/_layout|\(routes\)\/\([^)]+\)|\(layouts\)\/\([^)]+\)\/_layout)\.[cm]?[jt]sx?$/i,
-);
-
-const translationsContext = require.context(
-  '../translations',
-  false,
-  /\.json$/i,
-);
+const viewsContext = import.meta.webpackContext('.', {
+  recursive: true,
+  regExp: /(?:\/_route|\/_layout|\(routes\)\/\([^)]+\)|\(layouts\)\/\([^)]+\)\/_layout)\.[cm]?[jt]sx?$/i
+});
+const translationsContext = import.meta.webpackContext('../translations', {
+  recursive: false,
+  regExp: /\.json$/i
+});
 
 // =============================================================================
 // LIFECYCLE HOOKS
@@ -32,13 +29,13 @@ export default {
   translations() {
     return [translationsContext];
   },
-  providers({ container }) {
-    container.bind(
-      'emails:admin:state',
-      () => ({ selectors, thunks }),
-      OWNER_KEY,
-    );
+  providers({
+    container
+  }) {
+    container.bind('emails:admin:state', () => ({
+      selectors,
+      thunks
+    }), OWNER_KEY);
   },
-
-  routes: () => viewsContext,
+  routes: () => viewsContext
 };

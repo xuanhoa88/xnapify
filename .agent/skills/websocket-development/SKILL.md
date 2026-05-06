@@ -241,7 +241,7 @@ ws.connections.forEach((conn, id) => {
 ```javascript
 // Browser console
 // Check HMR WS endpoint
-// HMR uses /~/__webpack_hmr (separate from app WS)
+// HMR uses /~/__hmr (separate from app WS)
 ```
 
 ---

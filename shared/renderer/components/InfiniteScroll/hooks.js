@@ -246,7 +246,6 @@ export function useStableCallback(callback) {
     callbackRef.current = callback;
   }, [callback]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   return useCallback(function (...args) {
     if (callbackRef.current) {
       return callbackRef.current.apply(undefined, args);

@@ -7,12 +7,16 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-const { spawn } = require('child_process');
+import { spawn } from 'child_process';
+import { createRequire } from 'module';
+import { fileURLToPath } from 'url';
 
-const config = require('../config');
-const { BuildError } = require('../utils/error');
-const { resolveJestBin } = require('../utils/jest');
-const { isSilent, isVerbose, logDebug, logInfo } = require('../utils/logger');
+import config from '../config.js';
+import { BuildError } from '../utils/error.js';
+import { resolveJestBin } from '../utils/jest.js';
+import { isSilent, isVerbose, logDebug, logInfo } from '../utils/logger.js';
+
+const require = createRequire(import.meta.url);
 
 /**
  * Run Jest tests
@@ -104,11 +108,15 @@ async function main() {
 }
 
 // Execute if called directly (as child process)
-if (require.main === module) {
+const scriptPath = fileURLToPath(import.meta.url);
+if (
+  process.argv[1] === scriptPath ||
+  process.argv[1] === scriptPath.replace(/\.js$/, '')
+) {
   main().catch(error => {
     console.error(error.message);
     process.exit(1);
   });
 }
 
-module.exports = main;
+export default main;

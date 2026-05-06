@@ -79,7 +79,7 @@ const UI_EXTENSIONS = new Set([
   '.svelte',
   '.css',
   '.scss',
-  '.less',
+  '.sass',
 ]);
 
 // ── Shared file-walk utility ────────────────────────────────────────
