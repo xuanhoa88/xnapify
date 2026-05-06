@@ -364,8 +364,8 @@ function createRspackMiddlewares(clientCompiler) {
       modules: false, // Hide module details
     },
     // Only write stats.json and CSS to disk (needed for SSR template).
-    // JS chunks are served from memory by dev middleware — faster I/O.
-    writeToDisk: filePath => /\.(json|css)$/.test(filePath),
+    // JS chunks and hot updates are served from memory by dev middleware.
+    writeToDisk: filePath => /stats\.json$|\.css$/.test(filePath),
     serverSideRender: true, // Enable SSR access to rspack stats
   });
 

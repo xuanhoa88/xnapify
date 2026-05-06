@@ -34,7 +34,7 @@ const DEFAULT_OPTIONS = Object.freeze({
  * @throws {TypeError} If dir is not a non-empty string
  * @throws {Error} If hashing fails or returns no hash
  */
-async function computeChecksum(dir, options) {
+export async function computeChecksum(dir, options) {
   if (options == null) {
     options = {};
   }
@@ -140,10 +140,9 @@ const hashids = new Hashids(salt, MIN_LENGTH, alphabet);
  * @param {string} name - Extension manifest name (e.g. '@xnapify-extension/profile')
  * @returns {string|null} Compact encoded extension ID or null if name is invalid
  */
-function generateExtensionId(name) {
+export function generateExtensionId(name) {
   if (!name || typeof name !== 'string') return null;
   const hash = crypto.createHash('sha256').update(name).digest();
   return hashids.encode(hash.readUInt32BE(0), hash.readUInt32BE(4));
 }
 
-export { computeChecksum, generateExtensionId };

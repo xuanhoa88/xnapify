@@ -14,7 +14,7 @@ import path from 'path';
  * shapes (like SSR asset lists or Module Federation dynamic resolving maps), while
  * managing file system merging and overwrites natively.
  */
-class StatsManifestPlugin {
+export default class StatsManifestPlugin {
   /**
    * @param {Object} options
    * @param {string} options.filename - The output filename (can be absolute or relative to output.path)
@@ -76,5 +76,3 @@ class StatsManifestPlugin {
     });
   }
 }
-
-export default StatsManifestPlugin;

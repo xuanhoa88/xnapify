@@ -14,7 +14,7 @@ import { rspack } from '@rspack/core';
 import merge from 'rspack-merge';
 
 import config from '../config.js';
-import { rspackConfigs } from '../registry.factory.js';
+import { rspackConfigs } from '../factories/registry.factory.js';
 import { isVerbose, logInfo, logWarn } from '../utils/logger.js';
 
 import {

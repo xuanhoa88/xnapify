@@ -7,9 +7,7 @@
 
 @import url('@radix-ui/themes/styles.css');
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
 
 /*
  * Enterprise-grade fluid typography scale for Radix UI Themes

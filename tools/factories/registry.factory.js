@@ -8,7 +8,7 @@
 import fs from 'fs';
 import path from 'path';
 
-import config from './config.js';
+import config from '../config.js';
 
 // Eagerly scan apps and extensions for overriding tool configurations
 // Using synchronous discovery to ensure config is available at startup

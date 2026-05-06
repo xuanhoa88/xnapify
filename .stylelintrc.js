@@ -5,6 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { createConfig } from './tools/stylelint.factory.js';
+import { createConfig } from './tools/factories/stylelint.factory.js';
 
 export default createConfig();

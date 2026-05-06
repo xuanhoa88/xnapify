@@ -12,7 +12,7 @@ import path from 'path';
 import { rspack } from '@rspack/core';
 import merge from 'rspack-merge';
 
-import { rspackConfigs } from '../registry.factory.js';
+import { rspackConfigs } from '../factories/registry.factory.js';
 import { logWarn } from '../utils/logger.js';
 
 import {
@@ -31,42 +31,9 @@ import {
   verbose,
 } from './base.config.js';
 import StatsManifestPlugin from './StatsManifestPlugin.js';
+import StripRootCSSPlugin from './StripRootCSSPlugin.js';
 
 const require = createRequire(import.meta.url);
-
-/**
- * Rspack plugin to strip :root CSS rules from final CSS assets
- */
-class StripRootCSSPlugin {
-  apply(compiler) {
-    compiler.hooks.compilation.tap('StripRootCSSPlugin', compilation => {
-      compilation.hooks.processAssets.tap(
-        {
-          name: 'StripRootCSSPlugin',
-          stage: rspack.Compilation.PROCESS_ASSETS_STAGE_OPTIMIZE,
-        },
-        assets => {
-          Object.entries(assets).forEach(([name, asset]) => {
-            if (!name.endsWith('.css')) return;
-
-            const source = asset.source();
-            const stripped = source.replace(/:root\s*\{[^}]*\}/g, '');
-
-            if (source.length !== stripped.length) {
-              compilation.updateAsset(
-                name,
-                new rspack.sources.RawSource(stripped),
-              );
-              if (verbose) {
-                console.log(`[StripRootCSSPlugin] Removed :root from ${name}`);
-              }
-            }
-          });
-        },
-      );
-    });
-  }
-}
 
 /**
  * Rspack plugin that writes a stats.json after each compilation.

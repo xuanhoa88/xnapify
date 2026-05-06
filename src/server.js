@@ -1158,10 +1158,15 @@ export async function bootstrapApp(app, server, options = {}) {
         ? `c:${cookieLocale}`
         : `a:${req.get('accept-language') || DEFAULT_LOCALE}`;
 
-    const cachedLang = appState.localeCache.get(cacheKey);
-    if (cachedLang) {
-      req.language = cachedLang;
-      return next();
+    const isLangRoute = req.path.startsWith(`/${LOCALE_COOKIE_NAME}/`);
+
+    // Skip cache for explicit language change URLs so the middleware can redirect
+    if (!isLangRoute) {
+      const cachedLang = appState.localeCache.get(cacheKey);
+      if (cachedLang) {
+        req.language = cachedLang;
+        return next();
+      }
     }
 
     localeMiddleware(req, res, err => {

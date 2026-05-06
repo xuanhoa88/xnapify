@@ -15,8 +15,8 @@ import merge from 'rspack-merge';
 import nodeExternals from 'webpack-node-externals';
 
 import config from '../config.js';
-import globalPostcssConfigFn from '../postcss.factory.js';
-import { postcssConfigs } from '../registry.factory.js';
+import globalPostcssConfigFn from '../factories/postcss.factory.js';
+import { postcssConfigs } from '../factories/registry.factory.js';
 import { isVerbose } from '../utils/logger.js';
 
 import loadDotenv from './loadDotenv.js';

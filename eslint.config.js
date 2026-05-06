@@ -12,7 +12,7 @@ import { fileURLToPath } from 'url';
 import { FlatCompat } from '@eslint/eslintrc';
 import js from '@eslint/js';
 
-import { createConfig } from './tools/eslint.factory.js';
+import { createConfig } from './tools/factories/eslint.factory.js';
 
 // eslint-disable-next-line no-underscore-dangle
 const __filename = fileURLToPath(import.meta.url);

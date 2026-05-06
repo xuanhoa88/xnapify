@@ -151,10 +151,7 @@ async function main() {
   try {
     // Get target directories or files from args
     const args = process.argv.slice(2).filter(arg => !arg.startsWith('-'));
-    const targetDirs =
-      args.length > 0
-        ? args
-        : [config.APP_DIR, path.resolve(config.CWD, 'shared')];
+    const targetDirs = args.length > 0 ? args : [config.CWD];
 
     // Check if it's a --check mode (no modifications)
     const checkOnly = process.argv.includes('--check');

@@ -1,35 +1,36 @@
 {
-  // Editor settings
-  "editor.codeActionsOnSave": {
-    "source.fixAll.eslint": "explicit",
-    "source.fixAll.stylelint": "explicit"
-  },
+  // Editor core settings
   "editor.detectIndentation": false,
   "editor.tabSize": 2,
   "editor.formatOnSave": true,
   "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit",
+    "source.fixAll.stylelint": "explicit"
+  },
+
   // Auto-save configuration
   "files.autoSave": "off",
   "files.autoSaveDelay": 1000,
-  // ESLint validation
-  "eslint.validate": [
-    "javascript",
-    "javascriptreact"
-  ],
+
   // File type associations
   "files.associations": {
     ".eslintignore": "ignore",
+    ".lintignore": "ignore",
+    ".prettierignore": "ignore",
     ".eslintrc": "jsonc",
-    ".prettierrc": "jsonc"
+    ".prettierrc": "jsonc",
+    "*.env*": "env"
   },
+
+  // File explorer visibility
   "files.exclude": {
     "**/.DS_Store": true,
     "**/Thumbs.db": true,
     "**/node_modules": false
   },
-  // Prettier integration
-  "prettier.requireConfig": true,
-  // Search exclusions
+
+  // Global search exclusions
   "search.exclude": {
     ".eslintcache": true,
     ".git": true,
@@ -41,12 +42,34 @@
     "**/build": true,
     "**/release": true
   },
-  // Language-specific settings
+
+  // ESLint
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact"
+  ],
+
+  // Stylelint
+  "stylelint.enable": true,
+  "stylelint.validate": [
+    "css",
+    "scss"
+  ],
+  "css.validate": false,
+
+  // Prettier
+  "prettier.requireConfig": true,
+
+  // Module specifier preferences (ESM compatibility)
+  "javascript.preferences.importModuleSpecifierEnding": "js",
+  "typescript.preferences.importModuleSpecifierEnding": "js",
+
+  // Language-specific formatting overrides
   "[css]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
   "[javascript]": {
-    "editor.defaultFormatter": "vscode.typescript-language-features"
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
   "[javascriptreact]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
@@ -54,15 +77,19 @@
   "[json]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
+  "[jsonc]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[html]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[scss]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[sass]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
   "[markdown]": {
     "editor.formatOnSave": false
-  },
-  "javascript.preferences.importModuleSpecifierEnding": "js",
-  "typescript.preferences.importModuleSpecifierEnding": "js",
-  // Stylelint configuration
-  "stylelint.enable": true,
-  "stylelint.validate": [
-    "css"
-  ],
-  "css.validate": false
+  }
 }

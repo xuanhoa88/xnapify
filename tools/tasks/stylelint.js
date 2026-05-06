@@ -13,7 +13,7 @@ import { fileURLToPath } from 'url';
 import stylelint from 'stylelint';
 
 import config from '../config.js';
-import stylelintConfig from '../stylelint.factory.js';
+import stylelintConfig from '../factories/stylelint.factory.js';
 import { BuildError } from '../utils/error.js';
 import {
   formatDuration,
@@ -61,12 +61,7 @@ async function main() {
 
     // Use provided patterns or defaults
     const filesToLint =
-      patterns.length > 0
-        ? patterns
-        : [
-            `${appDir}/**/*.{css,scss,sass}`,
-            `${sharedDir}/**/*.{css,scss,sass}`,
-          ];
+      patterns.length > 0 ? patterns : ['**/*.{css,scss,sass}'];
 
     logVerbose(`📂 Linting patterns: ${filesToLint.join(', ')}`);
     if (shouldFix) {

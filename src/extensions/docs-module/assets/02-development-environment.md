@@ -77,7 +77,7 @@ node tools/npm/preboot.js --status
 
 In modern monorepo and plugin-based architectures, standardizing how modules define and alter structural building tools (like PostCSS, Webpack, and ESLint) is critical.
 
-The `xnapify` build pipeline centralizes this process using a **Barrel Registry Mechanism** (`tools/registry.factory.js`). This negates intensive synchronous filesystem lookups and prevents the global injection of isolated dependencies.
+The `xnapify` build pipeline centralizes this process using a **Barrel Registry Mechanism** (`tools/factories/registry.factory.js`). This negates intensive synchronous filesystem lookups and prevents the global injection of isolated dependencies.
 
 ### Module-Level Escape Hatches
 
@@ -91,11 +91,11 @@ Supported configurations include:
 
 ### The `.factory.js` Naming Paradigm
 
-Within the structural `tools/` directory, files managing specific runtime environments carry a `.factory.js` suffix (e.g., `eslint.factory.js`, `postcss.factory.js`). Using generic `.config.js` names internally risks aggressive **Search Collisions** (e.g. `CMD+P` yielding the tools file _and_ the root file simultaneously).
+Within the structural `tools/factories/` directory, files managing specific runtime environments carry a `.factory.js` suffix (e.g., `eslint.factory.js`, `postcss.factory.js`). Using generic `.config.js` names internally risks aggressive **Search Collisions** (e.g. `CMD+P` yielding the tools file _and_ the root file simultaneously).
 
 Instead, "zero-config" development compatibility (like the VS Code ESLint parser finding configs immediately) is satisfied using lightweight **Proxy Exports** natively situated at the project's system root boundary:
 
 ```javascript
 // .eslintrc.js (Root Level)
-module.exports = require('./tools/eslint.factory.js');
+module.exports = require('./tools/factories/eslint.factory.js');
 ```
