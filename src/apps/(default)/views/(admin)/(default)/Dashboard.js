@@ -7,11 +7,11 @@
 
 import { Box, Grid, Flex } from '@radix-ui/themes';
 
-import ActivityWidget from './components/ActivityWidget';
-import AtAGlanceWidget from './components/AtAGlanceWidget';
-import QuickActionsWidget from './components/QuickActionsWidget';
-import SiteHealthWidget from './components/SiteHealthWidget';
-import SystemNewsWidget from './components/SystemNewsWidget';
+import ActivityWidget from './components/ActivityWidget.js';
+import AtAGlanceWidget from './components/AtAGlanceWidget.js';
+import QuickActionsWidget from './components/QuickActionsWidget.js';
+import SiteHealthWidget from './components/SiteHealthWidget.js';
+import SystemNewsWidget from './components/SystemNewsWidget.js';
 
 import s from './Dashboard.css';
 

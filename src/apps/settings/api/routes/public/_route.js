@@ -12,7 +12,7 @@
  * No auth required — exposes only settings marked is_public: true.
  */
 
-import * as controller from '../../controllers/settings.controller';
+import * as controller from '../../controllers/settings.controller.js';
 
 // GET /api/settings/public (no auth)
 export const get = controller.getPublic;

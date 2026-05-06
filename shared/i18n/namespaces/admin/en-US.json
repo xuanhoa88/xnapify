@@ -71,32 +71,5 @@
     "updateGroup": "Failed to update group",
     "updateRole": "Failed to update role",
     "assignRoles": "An error occurred"
-  },
-  "dashboard": {
-    "activity": "Activity",
-    "recentActivity": "Recent Activity",
-    "noActivity": "No recent activity.",
-    "viewAllActivity": "View All Activity",
-    "usersCount_one": "{{count}} User",
-    "usersCount_other": "{{count}} Users",
-    "rolesCount_one": "{{count}} Role",
-    "rolesCount_other": "{{count}} Roles",
-    "groupsCount_one": "{{count}} Group",
-    "groupsCount_other": "{{count}} Groups",
-    "atAGlance": "At a Glance",
-    "versionInfo": "xnapify 1.0.0 running ",
-    "defaultTheme": "Default Theme",
-    "systemNews": "System News & Updates",
-    "browseHub": "Browse the Extension Hub",
-    "documentation": "Documentation",
-    "community": "Community",
-    "releaseNotes": "Release Notes",
-    "systemStatus": "System Status",
-    "dbConnected": "Database Connected",
-    "settingsScreen": "Settings",
-    "quickActions": "Quick Actions",
-    "inviteUser": "Invite User",
-    "createRole": "Create Role",
-    "addExtension": "Add Extension"
   }
 }

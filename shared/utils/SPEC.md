@@ -17,7 +17,7 @@ An asynchronous middleware composer mirroring Koa's `koa-compose` logic but adap
 
 ## `contextAdapter.js` (`createRspackContextAdapter`)
 
-A wrapper function designed to decouple domain logic (like the `node-red` settings generator or `extension` loader) from Rspack's non-standard `require.context` API.
+A wrapper function designed to decouple domain logic (like the `node-red` settings generator or `extension` loader) from Rspack's non-standard `import.meta.webpackContext` API.
 
 ### Interface Mapping
 
@@ -25,4 +25,4 @@ A wrapper function designed to decouple domain logic (like the `node-red` settin
 - `adapter.load(path)` strictly maps to `ctx(path)`.
 - `adapter.resolve(path)` strictly maps to `ctx.resolve(path)`.
 
-This decoupling allows testing environments (like Jest) that mock `require.context` to operate cleanly under a standardized interface without needing to replicate internal Rspack hidden properties.
+This decoupling allows testing environments (like Jest) that mock `import.meta.webpackContext` to operate cleanly under a standardized interface without needing to replicate internal Rspack hidden properties.

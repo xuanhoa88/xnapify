@@ -14,7 +14,7 @@ const require = createRequire(import.meta.url);
 
 const { performance } = require('perf_hooks');
 
-const { composeMiddleware } = require('@shared/utils/middleware');
+const { composeMiddleware } = require('@shared/utils/middleware.js');
 
 // Create a bunch of dummy middleware that just calls next()
 function createNoopMiddleware(count) {

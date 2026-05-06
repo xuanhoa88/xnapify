@@ -16,7 +16,7 @@ To counter this, `validateForm(schemaFactory, data)` expects `schemaFactory` to 
 
 ### The Interceptor (`index.js`)
 
-1. Registers `zod` as a new namespace within the i18n memory pool fetching JSON files automatically via Rspack's `require.context('./translations')`.
+1. Registers `zod` as a new namespace within the i18n memory pool fetching JSON files automatically via Rspack's `import.meta.webpackContext('./translations')`.
 2. Registers a global `z.setErrorMap((issue, ctx) => {...})` interceptor.
 3. Performs deep AST inspection of the raw Zod `issue` determining the root `ZodIssueCode`.
 4. Maps rules into specific flattened translation paths. Examples:

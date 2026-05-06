@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import * as newsService from '../services/news.service';
+import * as newsService from '../services/news.service.js';
 
 // ========================================================================
 // NEWS CONTROLLERS

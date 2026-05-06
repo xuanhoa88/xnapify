@@ -5,8 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { userFullIncludes } from '../utils/includes';
-import { verifyPassword } from '../utils/password';
+import { userFullIncludes } from '../utils/includes.js';
+import { verifyPassword } from '../utils/password.js';
 
 // ========================================================================
 // PROFILE MANAGEMENT SERVICES

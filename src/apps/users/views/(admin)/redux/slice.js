@@ -20,7 +20,7 @@ import {
   fetchApiKeys,
   createApiKey,
   revokeApiKey,
-} from './thunks';
+} from './thunks.js';
 
 /**
  * Admin Users Slice

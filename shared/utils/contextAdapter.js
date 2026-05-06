@@ -24,7 +24,7 @@
  *
  * @example
  * // Rspack CJS API (shared/ modules)
- * const ctx = require.context('./engines', true, /index\.js$/);
+ * const ctx = import.meta.webpackContext('./engines', { recursive: true, regExp: /index\.js$/ });
  * const adapter = createRspackContextAdapter(ctx);
  *
  * @example

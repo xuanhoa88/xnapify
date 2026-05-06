@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import * as groupController from '../../../../controllers/admin/group.controller';
+import * as groupController from '../../../../controllers/admin/group.controller.js';
 
 function requirePermission(permission) {
   return (req, res, next) => {

@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import * as templateController from '../../../../controllers/template.controller';
+import * as templateController from '../../../../controllers/template.controller.js';
 
 function requirePermission(permission) {
   return (req, res, next) => {

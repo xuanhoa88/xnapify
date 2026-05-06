@@ -7,7 +7,8 @@
 
 import pick from 'lodash/pick';
 import snakeCase from 'lodash/snakeCase';
-import { profileSchema } from '../validator';
+
+import { profileSchema } from '../validator/index.js';
 
 // Private symbol for handlers storage
 const HANDLERS = Symbol('__xnapify.ext.profileApiHandlers__');
@@ -15,19 +16,19 @@ const HANDLERS = Symbol('__xnapify.ext.profileApiHandlers__');
 // Private symbol for translations context
 const translationsContext = import.meta.webpackContext('../translations', {
   recursive: false,
-  regExp: /\.json$/i
+  regExp: /\.json$/i,
 });
 
 // Private symbol for migrations context
 const migrationsContext = import.meta.webpackContext('./database/migrations', {
   recursive: false,
-  regExp: /\.[cm]?[jt]s$/i
+  regExp: /\.[cm]?[jt]s$/i,
 });
 
 // Private symbol for seeds context
 const seedsContext = import.meta.webpackContext('./database/seeds', {
   recursive: false,
-  regExp: /\.[cm]?[jt]s$/i
+  regExp: /\.[cm]?[jt]s$/i,
 });
 
 // Extension definition for backend
@@ -39,28 +40,36 @@ export default {
     return translationsContext;
   },
   // Lifecycle: install (called once when the user clicks 'Install Extension')
-  async install({
-    container
-  }) {
+  async install({ container }) {
     console.log('[Test Extension] Installing...', __EXTENSION_ID__);
     const db = container.resolve('db');
     if (db) {
       try {
-        console.log('[Test Extension] Migration keys:', migrationsContext.keys());
-        await db.connection.runMigrations([{
-          context: migrationsContext,
-          prefix: __EXTENSION_ID__
-        }]);
+        console.log(
+          '[Test Extension] Migration keys:',
+          migrationsContext.keys(),
+        );
+        await db.connection.runMigrations([
+          {
+            context: migrationsContext,
+            prefix: __EXTENSION_ID__,
+          },
+        ]);
         console.log('[Test Extension] Database migrations executed');
       } catch (error) {
-        console.error('[Test Extension] Database migration failed:', error.message);
+        console.error(
+          '[Test Extension] Database migration failed:',
+          error.message,
+        );
       }
       try {
         console.log('[Test Extension] Seed keys:', seedsContext.keys());
-        await db.connection.runSeeds([{
-          context: seedsContext,
-          prefix: __EXTENSION_ID__
-        }]);
+        await db.connection.runSeeds([
+          {
+            context: seedsContext,
+            prefix: __EXTENSION_ID__,
+          },
+        ]);
         console.log('[Test Extension] Database seeds executed');
       } catch (error) {
         console.error('[Test Extension] Database seed failed:', error.message);
@@ -68,11 +77,10 @@ export default {
     }
   },
   // Lifecycle: boot (called when extension is booted on server)
-  async boot({
-    container,
-    registry
-  }) {
-    console.log('[Test Extension] Backend logic initialized for ' + __EXTENSION_ID__);
+  async boot({ container, registry }) {
+    console.log(
+      '[Test Extension] Backend logic initialized for ' + __EXTENSION_ID__,
+    );
 
     // Get hook engine
     const hook = container.resolve('hook');
@@ -85,9 +93,11 @@ export default {
         const baseProfile = context.schema.shape.profile;
         const extProfile = extension.shape.profile;
         // Unwrap .optional() wrapper if present, merge, then re-wrap
-        const inner = baseProfile.unwrap ? baseProfile.unwrap().merge(extProfile) : baseProfile.merge(extProfile);
+        const inner = baseProfile.unwrap
+          ? baseProfile.unwrap().merge(extProfile)
+          : baseProfile.merge(extProfile);
         context.schema = context.schema.extend({
-          profile: inner.optional()
+          profile: inner.optional(),
         });
         console.log('[Test Extension] Extended profile schema via hook');
       }
@@ -98,7 +108,10 @@ export default {
     // formData.nickname and formData.birthdate are automatically persisted
     // as native EAV rows by the core profile service.
     this[HANDLERS].updating = function (profileData) {
-      console.log('[Test Extension] Persisting nickname as native EAV row:', pick(profileData, ['nickname', 'mobile', 'birthdate']));
+      console.log(
+        '[Test Extension] Persisting nickname as native EAV row:',
+        pick(profileData, ['nickname', 'mobile', 'birthdate']),
+      );
     };
     hook('profile').on('updating', this[HANDLERS].updating);
 
@@ -111,7 +124,9 @@ export default {
       let nickname = user.profile.nickname || null;
       if (!nickname && user.email) {
         nickname = snakeCase(user.email.split('@')[0]);
-        console.log('[Test Extension] Generated nickname from email: ' + nickname);
+        console.log(
+          '[Test Extension] Generated nickname from email: ' + nickname,
+        );
       }
       user.profile.nickname = nickname || null;
 
@@ -120,7 +135,9 @@ export default {
 
       // Read mobile from native profile EAV row
       user.profile.mobile = user.profile.mobile || null;
-      console.log('[Test Extension] Added nickname to response: ' + user.profile.nickname);
+      console.log(
+        '[Test Extension] Added nickname to response: ' + user.profile.nickname,
+      );
     };
 
     // Register hook for user response formatting
@@ -136,7 +153,9 @@ export default {
       const start = Date.now();
       const result = await next(); // Proceed to the next middleware or handler
 
-      console.log(`[Test Extension] IPC Middleware -> Request ended in ${Date.now() - start}ms`);
+      console.log(
+        `[Test Extension] IPC Middleware -> Request ended in ${Date.now() - start}ms`,
+      );
       return result;
     };
 
@@ -144,72 +163,81 @@ export default {
     const validationMiddleware = async (data, ctx, next) => {
       if (!data) {
         return {
-          error: 'Data payload is required'
+          error: 'Data payload is required',
         };
       }
       return next();
     };
 
     // Example: Register an IPC handler for the 'hello' action using createPipeline
-    this[HANDLERS].ipcHello = registry.createPipeline(loggingMiddleware, async data => {
-      console.log('[Test Extension] IPC hello called with:', data);
-      return {
-        message: `Hello from ${__EXTENSION_ID__}!`,
-        received: data,
-        timestamp: new Date().toISOString()
-      };
-    });
-    registry.registerHook(`ipc:${__EXTENSION_ID__}:hello`, this[HANDLERS].ipcHello, __EXTENSION_ID__);
+    this[HANDLERS].ipcHello = registry.createPipeline(
+      loggingMiddleware,
+      async data => {
+        console.log('[Test Extension] IPC hello called with:', data);
+        return {
+          message: `Hello from ${__EXTENSION_ID__}!`,
+          received: data,
+          timestamp: new Date().toISOString(),
+        };
+      },
+    );
+    registry.registerHook(
+      `ipc:${__EXTENSION_ID__}:hello`,
+      this[HANDLERS].ipcHello,
+      __EXTENSION_ID__,
+    );
 
     // IPC handler to check if a nickname exists using createPipeline
-    this[HANDLERS].ipcCheckNickname = registry.createPipeline(loggingMiddleware, validationMiddleware, async (data, {
-      req
-    }) => {
-      const {
-        nickname
-      } = data || {};
-      if (!nickname) {
-        return {
-          exists: false
-        };
-      }
-      try {
-        const models = container.resolve('models');
-        const {
-          UserProfile
-        } = models;
-        const existing = await UserProfile.findOne({
-          where: {
-            attribute_key: 'nickname',
-            attribute_value: nickname
-          },
-          attributes: ['user_id']
-        });
-
-        // If the checking user is logged in, exclude their own profile
-        if (existing && req && req.user && req.user.id === existing.user_id) {
+    this[HANDLERS].ipcCheckNickname = registry.createPipeline(
+      loggingMiddleware,
+      validationMiddleware,
+      async (data, { req }) => {
+        const { nickname } = data || {};
+        if (!nickname) {
           return {
-            exists: false
+            exists: false,
           };
         }
-        return {
-          exists: !!existing
-        };
-      } catch (err) {
-        console.error('[Test Extension] Error checking nickname:', err);
-        return {
-          exists: false,
-          error: err.message
-        };
-      }
-    });
-    registry.registerHook(`ipc:${__EXTENSION_ID__}:checkNickname`, this[HANDLERS].ipcCheckNickname, __EXTENSION_ID__);
+        try {
+          const models = container.resolve('models');
+          const { UserProfile } = models;
+          const existing = await UserProfile.findOne({
+            where: {
+              attribute_key: 'nickname',
+              attribute_value: nickname,
+            },
+            attributes: ['user_id'],
+          });
+
+          // If the checking user is logged in, exclude their own profile
+          if (existing && req && req.user && req.user.id === existing.user_id) {
+            return {
+              exists: false,
+            };
+          }
+          return {
+            exists: !!existing,
+          };
+        } catch (err) {
+          console.error('[Test Extension] Error checking nickname:', err);
+          return {
+            exists: false,
+            error: err.message,
+          };
+        }
+      },
+    );
+    registry.registerHook(
+      `ipc:${__EXTENSION_ID__}:checkNickname`,
+      this[HANDLERS].ipcCheckNickname,
+      __EXTENSION_ID__,
+    );
   },
   // Lifecycle: shutdown (called when extension is disabled)
-  async shutdown({
-    container
-  }) {
-    console.log('[Test Extension] Backend logic destroyed for ' + __EXTENSION_ID__);
+  async shutdown({ container }) {
+    console.log(
+      '[Test Extension] Backend logic destroyed for ' + __EXTENSION_ID__,
+    );
 
     // Unsubscribe from hooks
     const hook = container.resolve('hook');
@@ -227,31 +255,36 @@ export default {
     this[HANDLERS] = {};
   },
   // Lifecycle: uninstall (called once when the user deletes the extension)
-  async uninstall({
-    container
-  }) {
+  async uninstall({ container }) {
     console.log('[Test Extension] Uninstalling...', __EXTENSION_ID__);
     const db = container.resolve('db');
     if (db) {
       try {
-        await db.connection.undoSeeds([{
-          context: seedsContext,
-          prefix: __EXTENSION_ID__
-        }]);
+        await db.connection.undoSeeds([
+          {
+            context: seedsContext,
+            prefix: __EXTENSION_ID__,
+          },
+        ]);
         console.log('[Test Extension] Database seeds destroyed');
       } catch (error) {
         console.error('[Test Extension] Database seed failed:', error.message);
       }
       try {
         console.log('[Test Extension] Database migrations/seeds destroyed');
-        await db.connection.revertMigrations([{
-          context: migrationsContext,
-          prefix: __EXTENSION_ID__
-        }]);
+        await db.connection.revertMigrations([
+          {
+            context: migrationsContext,
+            prefix: __EXTENSION_ID__,
+          },
+        ]);
         console.log('[Test Extension] Database migrations destroyed');
       } catch (error) {
-        console.error('[Test Extension] Database migration failed:', error.message);
+        console.error(
+          '[Test Extension] Database migration failed:',
+          error.message,
+        );
       }
     }
-  }
+  },
 };

@@ -7,7 +7,7 @@
 
 import { useFormContext, Controller } from 'react-hook-form';
 
-import '@shared/validator';
+import '@shared/validator/index.js';
 import FormCheckbox from './Checkbox/index.js';
 import FormCheckboxList from './CheckboxList/index.js';
 import FormDate from './Date/index.js';

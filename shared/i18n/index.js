@@ -18,7 +18,7 @@ export * from './constants.js';
 // Get all translations from the translations directory
 const translationsContext = import.meta.webpackContext('./translations', {
   recursive: false,
-  regExp: /\.json$/i
+  regExp: /\.json$/i,
 });
 
 /**
@@ -33,7 +33,7 @@ function getLanguageName(locale) {
 
     // Use Intl.DisplayNames to get the native name of the language
     const displayNames = new Intl.DisplayNames([locale], {
-      type: 'language'
+      type: 'language',
     });
     const name = displayNames.of(language);
     return name || locale;
@@ -52,10 +52,22 @@ function getLanguageName(locale) {
  */
 function getLocalesConfig() {
   const translationsMap = getTranslations(translationsContext);
-  const resources = Object.fromEntries(Object.entries(translationsMap).map(([locale, translation]) => [locale, {
-    translation
-  }]));
-  const locales = Object.freeze(Object.fromEntries(Object.keys(translationsMap).map(locale => [locale, getLanguageName(locale)])));
+  const resources = Object.fromEntries(
+    Object.entries(translationsMap).map(([locale, translation]) => [
+      locale,
+      {
+        translation,
+      },
+    ]),
+  );
+  const locales = Object.freeze(
+    Object.fromEntries(
+      Object.keys(translationsMap).map(locale => [
+        locale,
+        getLanguageName(locale),
+      ]),
+    ),
+  );
   return [resources, locales];
 }
 
@@ -68,26 +80,24 @@ export { DEFAULT_RESOURCES, AVAILABLE_LOCALES };
  * We iterate through the loaded resources and add them to the already initialized instance
  */
 Object.entries(DEFAULT_RESOURCES).forEach(([locale, resource]) => {
-  i18nInstance.addResourceBundle(locale, 'translation', resource.translation, true, true);
+  i18nInstance.addResourceBundle(
+    locale,
+    'translation',
+    resource.translation,
+    true,
+    true,
+  );
 });
 
 // =============================================================================
 // BUILT-IN NAMESPACES
 // =============================================================================
 
-// Register the 'shared' namespace — translations for shared renderer components
-// (Modal, Table, WYSIWYG, Form, SearchableSelect, etc.)
-const sharedContext = import.meta.webpackContext('../renderer/translations', {
-  recursive: false,
-  regExp: /\.json$/i
-});
-addNamespace('shared', getTranslations(sharedContext));
-
 // Register the 'common' namespace — cross-cutting UI labels
 // (retry, cancel, delete, save, etc.)
 const commonContext = import.meta.webpackContext('./namespaces/common', {
   recursive: false,
-  regExp: /\.json$/i
+  regExp: /\.json$/i,
 });
 addNamespace('common', getTranslations(commonContext));
 
@@ -95,7 +105,7 @@ addNamespace('common', getTranslations(commonContext));
 // (navigation, common admin UI, buttons, error messages)
 const adminContext = import.meta.webpackContext('./namespaces/admin', {
   recursive: false,
-  regExp: /\.json$/i
+  regExp: /\.json$/i,
 });
 addNamespace('admin', getTranslations(adminContext));
 

@@ -22,10 +22,10 @@ const { performance } = require('perf_hooks');
 
 const {
   getUserList,
-} = require('../apps/users/api/services/admin/user.service');
+} = require('../apps/users/api/services/admin/user.service.js');
 const {
   getUserWithProfile,
-} = require('../apps/users/api/services/profile.service');
+} = require('../apps/users/api/services/profile.service.js');
 
 // allow longer execution since database operations may take a few seconds
 jest.setTimeout(30000);

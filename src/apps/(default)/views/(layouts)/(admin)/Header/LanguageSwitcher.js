@@ -11,9 +11,9 @@ import { Text } from '@radix-ui/themes';
 import clsx from 'clsx';
 import { useDispatch, useSelector } from 'react-redux';
 
-import ContextMenu from '@shared/renderer/components/ContextMenu';
-import Icon from '@shared/renderer/components/Icon';
-import { features } from '@shared/renderer/redux';
+import ContextMenu from '@shared/renderer/components/ContextMenu/index.js';
+import Icon from '@shared/renderer/components/Icon/index.js';
+import { features } from '@shared/renderer/redux/index.js';
 
 const { getLocale, setLocale, getAvailableLocales } = features;
 

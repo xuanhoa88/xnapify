@@ -5,13 +5,13 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { validateForm } from '@shared/validator';
+import { validateForm } from '@shared/validator/index.js';
 
 import {
   createRoleFormSchema,
   updateRoleFormSchema,
-} from '../../../validator/admin';
-import * as roleService from '../../services/admin/role.service';
+} from '../../../validator/admin/index.js';
+import * as roleService from '../../services/admin/role.service.js';
 
 // ========================================================================
 // ROLE MANAGEMENT CONTROLLERS

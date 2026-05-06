@@ -9,9 +9,9 @@
  * Activity Module Views Entry Point
  */
 
-import reducer, { SLICE_NAME } from './(admin)/redux';
-import * as selectors from './(admin)/redux/selector';
-import * as thunks from './(admin)/redux/thunks';
+import reducer, { SLICE_NAME } from './(admin)/redux/index.js';
+import * as selectors from './(admin)/redux/selector.js';
+import * as thunks from './(admin)/redux/thunks.js';
 
 /** @type {Symbol} Ownership key for this module's persistent bindings */
 const OWNER_KEY = Symbol('__xnapify.module.activities.views__');
@@ -19,11 +19,12 @@ const OWNER_KEY = Symbol('__xnapify.module.activities.views__');
 // Auto-load contexts
 const viewsContext = import.meta.webpackContext('.', {
   recursive: true,
-  regExp: /(?:\/_route|\/_layout|\(routes\)\/\([^)]+\)|\(layouts\)\/\([^)]+\)\/_layout)\.[cm]?[jt]sx?$/i
+  regExp:
+    /(?:\/_route|\/_layout|\(routes\)\/\([^)]+\)|\(layouts\)\/\([^)]+\)\/_layout)\.[cm]?[jt]sx?$/i,
 });
 const translationsContext = import.meta.webpackContext('../translations', {
   recursive: false,
-  regExp: /\.json$/i
+  regExp: /\.json$/i,
 });
 
 // =============================================================================
@@ -34,15 +35,16 @@ export default {
   translations() {
     return [translationsContext];
   },
-  providers({
-    store,
-    container
-  }) {
+  providers({ store, container }) {
     store.injectReducer(SLICE_NAME, reducer);
-    container.bind('activities:admin:state', () => ({
-      selectors,
-      thunks
-    }), OWNER_KEY);
+    container.bind(
+      'activities:admin:state',
+      () => ({
+        selectors,
+        thunks,
+      }),
+      OWNER_KEY,
+    );
   },
-  routes: () => viewsContext
+  routes: () => viewsContext,
 };

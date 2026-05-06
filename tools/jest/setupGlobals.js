@@ -12,12 +12,13 @@
  * The `globals` key in jest.config only works reliably with the default
  * test environment; per-file @jest-environment overrides can lose them.
  * Defining them here guarantees availability in every test suite.
- *
- * NOTE: require.context prototype patches live in environment.js because
- * Jest creates per-module `require` functions in the OUTER Node.js context.
- * Patches applied here (inside the sandbox) cannot reach those cross-realm
- * require functions.
  */
+
+import requireContextPolyfill from './requireContextPolyfill.js';
+
+// Inject context polyfill for the SWC transformer to consume
+// eslint-disable-next-line no-underscore-dangle
+globalThis.__webpack_require_context__ = requireContextPolyfill;
 
 // eslint-disable-next-line no-underscore-dangle
 globalThis.__DEV__ = false;

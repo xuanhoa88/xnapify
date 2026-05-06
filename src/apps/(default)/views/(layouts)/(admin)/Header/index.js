@@ -5,5 +5,5 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-export { default } from './Header';
+export { default } from './Header.js';
 // cache bust

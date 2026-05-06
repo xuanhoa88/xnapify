@@ -18,10 +18,10 @@ import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { v4 as uuidv4 } from 'uuid';
 
-import Modal from '@shared/renderer/components/Modal';
-import { validateForm } from '@shared/validator';
+import Modal from '@shared/renderer/components/Modal/index.js';
+import { validateForm } from '@shared/validator/index.js';
 
-import { createFolderFormSchema } from '../../../validator/admin/file';
+import { createFolderFormSchema } from '../../../validator/admin/file.js';
 import {
   setUploadModalOpen,
   addUploadItem,
@@ -34,7 +34,7 @@ import {
   selectCurrentFolderId,
   selectCurrentView,
   selectActiveUploads,
-} from '../redux';
+} from '../redux/index.js';
 
 import s from './FileUploader.css';
 

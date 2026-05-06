@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import ErrorPage from './ErrorPage';
+import ErrorPage from './ErrorPage.js';
 
 /**
  * Page metadata

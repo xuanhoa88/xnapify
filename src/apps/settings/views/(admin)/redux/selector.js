@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { SLICE_NAME } from './slice';
+import { SLICE_NAME } from './slice.js';
 
 /**
  * Select the full settings slice state.

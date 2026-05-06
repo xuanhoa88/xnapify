@@ -7,9 +7,9 @@
 
 import { performance } from 'perf_hooks';
 
-import * as cache from './cache';
-import * as collector from './collector';
-import { fetchUserRbacData } from './fetcher';
+import * as cache from './cache.js';
+import * as collector from './collector.js';
+import { fetchUserRbacData } from './fetcher.js';
 
 // Mock collector to produce deterministic RBAC data
 jest.mock('./collector', () => ({
@@ -98,7 +98,7 @@ describe('RBAC Fetcher Stress Test', () => {
     const warmMs = t3 - t2;
 
     // Log basic metrics for observation
-    // eslint-disable-next-line no-console
+
     console.log(
       `fetcher stress: cold=${Math.round(coldMs)}ms warm=${Math.round(warmMs)}ms`,
     );

@@ -11,7 +11,7 @@ const HANDLERS = Symbol('handlers');
 // Load seeds context
 const seedsContext = import.meta.webpackContext('./database/seeds', {
   recursive: false,
-  regExp: /\.[cm]?[jt]s$/i
+  regExp: /\.[cm]?[jt]s$/i,
 });
 export default {
   // Store handlers for cleanup
@@ -26,5 +26,5 @@ export default {
     // Clear handlers
     this[HANDLERS] = {};
     console.log(`[Extension] Destroyed backend for ${__EXTENSION_ID__}`);
-  }
+  },
 };

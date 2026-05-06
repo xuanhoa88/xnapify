@@ -9,7 +9,7 @@
  * Activity Admin Route
  */
 
-import * as controller from '../../../controllers/admin/activities.controller';
+import * as controller from '../../../controllers/admin/activities.controller.js';
 
 /**
  * Permission guard middleware

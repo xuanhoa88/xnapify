@@ -72,7 +72,7 @@
   align-items: center;
 }
 
-@media (min-width: 768px) {
+@media (width >= 768px) {
   .headerContent {
     flex-direction: row;
     align-items: flex-start;
@@ -90,7 +90,7 @@
   margin-top: -48px; /* Pull up to overlap the banner */
 }
 
-@media (min-width: 768px) {
+@media (width >= 768px) {
   .avatarSection {
     margin-top: -80px; /* Pull up to overlap the banner */
   }
@@ -132,7 +132,7 @@
     0 0 0 3px var(--indigo-7);
 }
 
-@media (min-width: 768px) {
+@media (width >= 768px) {
   .avatarBox {
     width: 120px;
     height: 120px;
@@ -181,7 +181,7 @@
   text-align: center;
 }
 
-@media (min-width: 768px) {
+@media (width >= 768px) {
   .infoSection {
     text-align: left;
   }
@@ -204,7 +204,7 @@
   margin-top: var(--space-4);
 }
 
-@media (min-width: 768px) {
+@media (width >= 768px) {
   .statsRow {
     justify-content: flex-start;
   }
@@ -221,7 +221,7 @@
   min-width: 72px;
 }
 
-@media (min-width: 768px) {
+@media (width >= 768px) {
   .statBadge {
     align-items: flex-start;
   }

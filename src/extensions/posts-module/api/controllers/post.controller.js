@@ -16,12 +16,12 @@ import kebabCase from 'lodash/kebabCase';
 import pick from 'lodash/pick';
 import pickBy from 'lodash/pickBy';
 
-import { validateForm } from '@shared/validator';
+import { validateForm } from '@shared/validator/index.js';
 
 import {
   createPostFormSchema,
   updatePostFormSchema,
-} from '../../validator/post';
+} from '../../validator/post.js';
 
 /**
  * List posts with pagination and optional status filter

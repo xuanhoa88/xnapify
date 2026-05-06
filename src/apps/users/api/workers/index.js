@@ -11,7 +11,10 @@
  * Provides search indexing and real-time hook registration for users.
  */
 
-import { indexUser as _indexOne, removeUser as _remove } from './search.worker';
+import {
+  indexUser as _indexOne,
+  removeUser as _remove,
+} from './search.worker.js';
 
 /**
  * Register hooks to keep the users search index in sync with mutations.

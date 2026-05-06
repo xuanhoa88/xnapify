@@ -19,13 +19,15 @@ import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Form, { useFormContext } from '@shared/renderer/components/Form';
-import Modal from '@shared/renderer/components/Modal';
+import Form, {
+  useFormContext,
+} from '@shared/renderer/components/Form/index.js';
+import Modal from '@shared/renderer/components/Modal/index.js';
 
 import {
   createPostFormSchema,
   updatePostFormSchema,
-} from '../../../validator/post';
+} from '../../../validator/post.js';
 import {
   createPost,
   updatePost,
@@ -35,7 +37,7 @@ import {
   getPostUpdateError,
   clearPostCreateError,
   clearPostUpdateError,
-} from '../redux';
+} from '../redux/index.js';
 
 import s from './PostForm.css';
 
@@ -73,6 +75,7 @@ function PostFormFields({ isEdit, saving }) {
           placeholder={t('posts:form.slugPlaceholder', 'url-friendly-slug')}
           onChange={handleSlugChange}
         />
+
         <Text as='div' className={s.slugHint}>
           {t(
             'posts:form.slugHint',

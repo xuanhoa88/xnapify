@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import logActivity from './workers/activities.worker';
+import logActivity from './workers/activities.worker.js';
 
 /**
  * Activity Hooks - Observes system events and dispatches log tasks

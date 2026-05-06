@@ -154,10 +154,10 @@ export function ToolbarPromptProvider({ editor, children }) {
         <Modal.Footer>
           <Modal.Actions>
             <Modal.Button variant='secondary' onClick={handleClose}>
-              {t('shared:components.toolbarPrompt.cancel', 'Cancel')}
+              {t('common:components.toolbarPrompt.cancel', 'Cancel')}
             </Modal.Button>
             <Modal.Button variant='primary' onClick={handleConfirm}>
-              {t('shared:components.toolbarPrompt.confirm', 'OK')}
+              {t('common:components.toolbarPrompt.confirm', 'OK')}
             </Modal.Button>
           </Modal.Actions>
         </Modal.Footer>

@@ -5,13 +5,13 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { validateForm } from '@shared/validator';
+import { validateForm } from '@shared/validator/index.js';
 
 import {
   createGroupFormSchema,
   updateGroupFormSchema,
-} from '../../../validator/admin';
-import * as groupService from '../../services/admin/group.service';
+} from '../../../validator/admin/index.js';
+import * as groupService from '../../services/admin/group.service.js';
 
 // ========================================================================
 // GROUP MANAGEMENT CONTROLLERS

@@ -102,7 +102,7 @@ describe('MemoryQueue Performance', () => {
 
   beforeAll(async () => {
     resetUuidCounter();
-    MemoryQueue = require('./adapters/memory').default;
+    MemoryQueue = require('./adapters/memory.js').default;
   });
 
   beforeEach(() => {
@@ -296,7 +296,7 @@ describe('FileQueue Performance', () => {
   beforeAll(() => {
     jest.resetModules();
     resetUuidCounter();
-    FileQueue = require('./adapters/file').default;
+    FileQueue = require('./adapters/file.js').default;
   });
 
   beforeEach(() => {
@@ -512,8 +512,8 @@ describe('Adapter Comparison', () => {
     jest.resetModules();
     resetUuidCounter();
 
-    MemoryQueue = require('./adapters/memory').default;
-    FileQueue = require('./adapters/file').default;
+    MemoryQueue = require('./adapters/memory.js').default;
+    FileQueue = require('./adapters/file.js').default;
   });
 
   afterAll(() => {

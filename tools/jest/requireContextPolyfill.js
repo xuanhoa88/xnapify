@@ -133,8 +133,15 @@ function requireContext(
   let actualRegExp = /^\.\/.*$/;
 
   // Handle import.meta.webpackContext signature: require.context(dir, { recursive: true, regExp: /.../ })
-  if (typeof useSubdirectoriesOrOptions === 'object' && useSubdirectoriesOrOptions !== null && !(useSubdirectoriesOrOptions instanceof RegExp)) {
-    useSubdirectories = useSubdirectoriesOrOptions.recursive !== undefined ? useSubdirectoriesOrOptions.recursive : true;
+  if (
+    typeof useSubdirectoriesOrOptions === 'object' &&
+    useSubdirectoriesOrOptions !== null &&
+    !(useSubdirectoriesOrOptions instanceof RegExp)
+  ) {
+    useSubdirectories =
+      useSubdirectoriesOrOptions.recursive !== undefined
+        ? useSubdirectoriesOrOptions.recursive
+        : true;
     if (useSubdirectoriesOrOptions.regExp !== undefined) {
       actualRegExp = useSubdirectoriesOrOptions.regExp;
     }
@@ -145,7 +152,12 @@ function requireContext(
   }
 
   const absoluteBase = resolveContextDirectory(directory);
-  const files = scanDir(absoluteBase, absoluteBase, actualRegExp, useSubdirectories);
+  const files = scanDir(
+    absoluteBase,
+    absoluteBase,
+    actualRegExp,
+    useSubdirectories,
+  );
 
   // Pre-compute relative keys once (avoids recomputing on every .keys() call)
   const relativeKeys = files.map(f => toRelativeKey(absoluteBase, f));

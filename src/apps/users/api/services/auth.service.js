@@ -5,14 +5,14 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { formatUserResponse } from '../utils/formatter';
-import { userFullIncludes } from '../utils/includes';
+import { formatUserResponse } from '../utils/formatter.js';
+import { userFullIncludes } from '../utils/includes.js';
 import {
   hashToken,
   verifyPassword,
   createTimedResetToken,
   validateResetToken,
-} from '../utils/password';
+} from '../utils/password.js';
 
 // ========================================================================
 // AUTHENTICATION SERVICES

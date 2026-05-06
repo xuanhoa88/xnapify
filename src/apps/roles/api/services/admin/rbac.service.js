@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import * as rbacCache from '../../../../users/api/utils/rbac/cache';
+import * as rbacCache from '../../../../users/api/utils/rbac/cache.js';
 
 /**
  * Create default groups

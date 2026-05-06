@@ -20,7 +20,7 @@ import {
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
-import Form from '@shared/renderer/components/Form';
+import Form from '@shared/renderer/components/Form/index.js';
 
 import s from './Contact.css';
 
@@ -177,13 +177,12 @@ function Contact({ title }) {
 
     try {
       // TODO: Implement form submission logic
-      // eslint-disable-next-line no-console
+
       console.log('Form submitted:', data);
 
       // Reset form on success
       // Form will handle reset via defaultValues
     } catch (error) {
-      // eslint-disable-next-line no-console
       console.error('Form submission error:', error);
     } finally {
       setIsSubmitting(false);

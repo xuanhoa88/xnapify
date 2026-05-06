@@ -63,9 +63,9 @@ function TablePagination({
     (totalItems != null && pageSize ? Math.ceil(totalItems / pageSize) : 1);
 
   const displayPrevLabel =
-    prevLabel || t('shared:components.table.pagination.prev', 'Prev');
+    prevLabel || t('common:components.table.pagination.prev', 'Prev');
   const displayNextLabel =
-    nextLabel || t('shared:components.table.pagination.next', 'Next');
+    nextLabel || t('common:components.table.pagination.next', 'Next');
 
   // Generate page numbers with ellipsis
   const pageNumbers = useMemo(() => {
@@ -141,7 +141,7 @@ function TablePagination({
         {showInfo && totalItems != null && (
           <Text size='2' className={s.paginationInfo}>
             {t(
-              'shared:components.table.pagination.info',
+              'common:components.table.pagination.info',
               '{{total}} total · Page {{current}} of {{pages}}',
               {
                 total: totalItems,
@@ -166,7 +166,7 @@ function TablePagination({
               <button type='button' className={s.pageSizeTrigger}>
                 <span>
                   {t(
-                    'shared:components.table.pagination.pageSize',
+                    'common:components.table.pagination.pageSize',
                     '{{pageSize}} / page',
                     { pageSize },
                   )}
@@ -201,7 +201,7 @@ function TablePagination({
                       className={clsx(pageSize === size && 'text-white')}
                     >
                       {t(
-                        'shared:components.table.pagination.page',
+                        'common:components.table.pagination.page',
                         '{{size}} / page',
                         { size },
                       )}

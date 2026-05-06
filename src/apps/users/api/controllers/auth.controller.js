@@ -10,8 +10,8 @@ import {
   setRefreshTokenCookie,
   clearAllAuthCookies,
   getRefreshTokenFromCookie,
-} from '@shared/cookies';
-import { validateForm } from '@shared/validator';
+} from '@shared/cookies/index.js';
+import { validateForm } from '@shared/validator/index.js';
 
 import {
   loginFormSchema,
@@ -19,10 +19,10 @@ import {
   emailVerificationFormSchema,
   passwordResetRequestFormSchema,
   passwordResetConfirmFormSchema,
-} from '../../validator/auth';
-import * as authService from '../services/auth.service';
-import * as profileService from '../services/profile.service';
-import { generatePassword } from '../utils/password';
+} from '../../validator/auth/index.js';
+import * as authService from '../services/auth.service.js';
+import * as profileService from '../services/profile.service.js';
+import { generatePassword } from '../utils/password.js';
 
 // ========================================================================
 // AUTHENTICATION CONTROLLERS

@@ -5,11 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { createFactory as createEmailFactory } from '@shared/api/engines/email/factory';
-import { createFactory as createHookFactory } from '@shared/api/engines/hook/factory';
+import { createFactory as createEmailFactory } from '@shared/api/engines/email/factory.js';
+import { createFactory as createHookFactory } from '@shared/api/engines/hook/factory.js';
 
-import { registerEmailHooks } from './hooks';
-import { createSendTemplatedEmail } from './services/send.service';
+import { registerEmailHooks } from './hooks.js';
+import { createSendTemplatedEmail } from './services/send.service.js';
 
 describe('Email Hooks', () => {
   let container;

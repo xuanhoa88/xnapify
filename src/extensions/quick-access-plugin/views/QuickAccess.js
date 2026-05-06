@@ -10,7 +10,7 @@ import { useCallback, useEffect } from 'react';
 import { Box, Flex, Text, Heading } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
-import { useFormContext } from '@shared/renderer/components/Form';
+import { useFormContext } from '@shared/renderer/components/Form/index.js';
 
 import s from './QuickAccess.scss';
 

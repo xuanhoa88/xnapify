@@ -95,7 +95,7 @@ Structure your final review using the [Response Format](#response-format) at the
 | **Off-by-one**                   | Array indexing, pagination, loop boundaries                                                              |
 | **Type coercion**                | `==` vs `===`, implicit falsy checks on `0` or empty strings                                             |
 | **Unhandled promise rejections** | Fire-and-forget promises without `.catch()`                                                              |
-| **`require.context` at runtime** | All `require.context()` calls must use **static string literals** — Rspack cannot analyze dynamic paths |
+| **`import.meta.webpackContext` at runtime** | All `import.meta.webpackContext()` calls must use **static string literals** — Rspack cannot analyze dynamic paths |
 | **AbortController missing**      | Long-lived effects (WS listeners, fetch) without abort/cleanup on unmount                                |
 | **Stale closure**                | `useCallback`/`useEffect` missing dependencies that change over time                                     |
 
@@ -330,7 +330,7 @@ src/apps/[module_name]/
 | --------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------ |
 | **No cross-domain imports** | `import X from '@apps/other-module/...'`        | `container.resolve()` or hook system                                     |
 | **DI for auth**             | `import auth from '@shared/auth'`               | `req.app.get('container').resolve('auth')`                               |
-| **Static Rspack paths**    | `require.context(\`${dir}\`)`                   | Static string literal only                                               |
+| **Static Rspack paths**    | `import.meta.webpackContext(\`${dir}\`)`                   | Static string literal only                                               |
 | **Redux in providers**      | `store.injectReducer()` in `_route.js` `init()` | Move to `views/index.js` `providers()`                                   |
 | **No direct email**         | `import sendEmail from '...'`                   | `container.resolve('emails:send')` or `hook('emails').emit('send', ...)` |
 | **Response format**         | `res.json({ data })`                            | `http.sendSuccess(res, { data })`                                        |

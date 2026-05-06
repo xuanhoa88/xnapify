@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import * as newsController from '../../controllers/news.controller';
+import * as newsController from '../../controllers/news.controller.js';
 
 /**
  * @route GET /api/news

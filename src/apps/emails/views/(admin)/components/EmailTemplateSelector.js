@@ -15,9 +15,9 @@ import {
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
-import ContextMenu from '@shared/renderer/components/ContextMenu';
-import { ExtensionSlot } from '@shared/renderer/components/Extension';
-import ToolbarButton from '@shared/renderer/components/WYSIWYG/ToolbarButton';
+import ContextMenu from '@shared/renderer/components/ContextMenu/index.js';
+import { ExtensionSlot } from '@shared/renderer/components/Extension/index.js';
+import ToolbarButton from '@shared/renderer/components/WYSIWYG/ToolbarButton.js';
 
 const PREDEFINED_TEMPLATES = [
   {

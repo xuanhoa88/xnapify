@@ -17,11 +17,11 @@ import { Flex, Text, Box } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 
-import ContextMenu from '@shared/renderer/components/ContextMenu';
-import { Link, useHistory } from '@shared/renderer/components/History';
-import { checkPermission } from '@shared/renderer/components/Rbac';
-import { features } from '@shared/renderer/redux';
-import { useWebSocket } from '@shared/ws/client';
+import ContextMenu from '@shared/renderer/components/ContextMenu/index.js';
+import { Link, useHistory } from '@shared/renderer/components/History/index.js';
+import { checkPermission } from '@shared/renderer/components/Rbac/index.js';
+import { features } from '@shared/renderer/redux/index.js';
+import { useWebSocket } from '@shared/ws/client/index.js';
 
 const {
   getUserDisplayName,

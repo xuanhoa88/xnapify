@@ -10,8 +10,8 @@ import { Flex, Text, Button } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import { useHistory } from '@shared/renderer/components/History';
-import { features } from '@shared/renderer/redux';
+import { useHistory } from '@shared/renderer/components/History/index.js';
+import { features } from '@shared/renderer/redux/index.js';
 
 import s from './ImpersonationBanner.css';
 

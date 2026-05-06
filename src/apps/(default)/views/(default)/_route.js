@@ -7,8 +7,8 @@
 
 import PropTypes from 'prop-types';
 
-import Home from './components/Home';
-import { featuresData } from './data';
+import Home from './components/Home.js';
+import { featuresData } from './data.js';
 
 /**
  * Load news data from API

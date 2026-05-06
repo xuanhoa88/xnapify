@@ -416,9 +416,9 @@ Models, migrations, and seeds are registered declaratively in the module's `api/
 
 ```javascript
 // @apps/{module}/api/index.js
-const modelsContext = require.context('./models', false, /\.[cm]?[jt]s$/i);
-const migrationsContext = require.context('./database/migrations', false, /\.[cm]?[jt]s$/i);
-const seedsContext = require.context('./database/seeds', false, /\.[cm]?[jt]s$/i);
+const modelsContext = import.meta.webpackContext('./models', { recursive: false, regExp: /\.[cm]?[jt]s$/i });
+const migrationsContext = import.meta.webpackContext('./database/migrations', { recursive: false, regExp: /\.[cm]?[jt]s$/i });
+const seedsContext = import.meta.webpackContext('./database/seeds', { recursive: false, regExp: /\.[cm]?[jt]s$/i });
 
 export default {
   models: () => modelsContext,

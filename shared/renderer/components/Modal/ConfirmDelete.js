@@ -65,7 +65,7 @@ const ConfirmDeleteModal = forwardRef(
         <Modal.Body>
           <Modal.Description>
             {t(
-              'shared:components.confirmModal.delete.description',
+              'common:components.confirmModal.delete.description',
               'Are you sure you want to delete "{{name}}"? This action cannot be undone.',
               { name: itemName },
             )}
@@ -74,10 +74,10 @@ const ConfirmDeleteModal = forwardRef(
         <Modal.Footer>
           <Modal.Actions>
             <Modal.Button variant='secondary' onClick={resetState}>
-              {t('shared:components.confirmModal.delete.cancel', 'Cancel')}
+              {t('common:components.confirmModal.delete.cancel', 'Cancel')}
             </Modal.Button>
             <Modal.Button variant='primary' onClick={handleConfirm}>
-              {t('shared:components.confirmModal.delete.delete', 'Delete')}
+              {t('common:components.confirmModal.delete.delete', 'Delete')}
             </Modal.Button>
           </Modal.Actions>
         </Modal.Footer>

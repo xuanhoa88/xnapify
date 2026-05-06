@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { removeNamespace } from '@shared/i18n/utils';
+import { removeNamespace } from '@shared/i18n/utils.js';
 
 import {
   BaseExtensionManager,
@@ -94,7 +94,7 @@ class ClientExtensionManager extends BaseExtensionManager {
    * Resolve view context for lifecycle hooks.
    * Returns the view container (React app context).
    *
-   * @returns {import('@shared/container').Container}
+   * @returns {import('@shared/container/index.js').Container}
    */
   _hookContext() {
     return this.viewContainer;

@@ -10,13 +10,13 @@ import fs from 'fs';
 import {
   computeChecksum,
   verifyExtensionChecksum,
-} from '../utils/checksum.util';
+} from '../utils/checksum.util.js';
 
 import {
   installExtensionDependencies,
   notifyExtensionChange,
   resolveExtension,
-} from './extension.helpers';
+} from './extension.helpers.js';
 
 // ========================================================================
 // Individual Worker Handlers

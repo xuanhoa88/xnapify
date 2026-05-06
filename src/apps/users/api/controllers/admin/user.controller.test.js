@@ -5,11 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { validateForm } from '@shared/validator';
+import { validateForm } from '@shared/validator/index.js';
 
-import * as userAdminService from '../../services/admin/user.service';
+import * as userAdminService from '../../services/admin/user.service.js';
 
-import * as userController from './user.controller';
+import * as userController from './user.controller.js';
 
 jest.mock('@shared/validator', () => ({
   validateForm: jest.fn(),

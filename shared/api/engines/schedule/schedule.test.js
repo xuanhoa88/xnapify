@@ -9,7 +9,7 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 
 // Mock node-cron to avoid Jest compatibility issues with the renamed file
-jest.mock('node-cron', () => require('./__mocks__/nodeCron'));
+jest.mock('node-cron', () => require('./__mocks__/nodeCron.js'));
 
 import cron from 'node-cron';
 

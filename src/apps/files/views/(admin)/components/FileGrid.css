@@ -102,13 +102,13 @@
   opacity: 1;
 }
 
-@media (hover: none) and (pointer: coarse), (max-width: 768px) {
+@media (hover: none) and (pointer: coarse), (width <= 768px) {
   .cardActions {
     opacity: 1;
   }
 }
 
-@media (max-width: 768px) {
+@media (width <= 768px) {
   .previewArea {
     height: 100px;
   }
@@ -146,7 +146,8 @@
 .hiddenSm {
   display: none;
 }
-@media (min-width: 768px) {
+
+@media (width >= 768px) {
   .hiddenSm {
     display: table-cell;
   }
@@ -155,7 +156,8 @@
 .hiddenXs {
   display: none;
 }
-@media (min-width: 640px) {
+
+@media (width >= 640px) {
   .hiddenXs {
     display: table-cell;
   }
@@ -164,7 +166,8 @@
 .hiddenMd {
   display: none;
 }
-@media (min-width: 1024px) {
+
+@media (width >= 1024px) {
   .hiddenMd {
     display: table-cell;
   }

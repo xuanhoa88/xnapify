@@ -86,8 +86,8 @@ const config = {
       'error',
       'ignorePackages',
       {
-        js: 'ignore',
-        jsx: 'ignore',
+        js: 'always',
+        jsx: 'always',
       },
     ],
     'import/order': [

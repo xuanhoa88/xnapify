@@ -8,12 +8,12 @@
 import { Flex, Box } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 
-import ImpersonationBanner from '../components/ImpersonationBanner';
+import ImpersonationBanner from '../components/ImpersonationBanner.js';
 
-import Drawer from './Drawer';
-import FlashMessage from './FlashMessage';
-import Footer from './Footer';
-import Header from './Header';
+import Drawer from './Drawer/index.js';
+import FlashMessage from './FlashMessage.js';
+import Footer from './Footer/index.js';
+import Header from './Header/index.js';
 
 import s from './_layout.css';
 

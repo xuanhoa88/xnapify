@@ -9,7 +9,7 @@ import {
   BaseRouter,
   tagRoutes,
   validateAdapter,
-} from '@shared/utils/BaseRouter';
+} from '@shared/utils/BaseRouter.js';
 
 import { buildRoutes, validateConfig, linkParents } from './builder.js';
 import { collect } from './collector.js';

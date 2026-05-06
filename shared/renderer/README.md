@@ -39,9 +39,9 @@ translations → providers → views
 ```
 
 ```javascript
-export function translations() { return [require.context('../translations', ...)]; }
+export function translations() { return [import.meta.webpackContext('../translations', ...)]; }
 export async function providers({ container }) { /* bind client DI */ }
-export function views() { return require.context('./routes', ...); }
+export function views() { return import.meta.webpackContext('./routes', ...); }
 ```
 
 All module view adapters are merged into a single adapter so layouts are globally shared.

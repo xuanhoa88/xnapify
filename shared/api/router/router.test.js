@@ -15,7 +15,7 @@ import {
   isDescendant,
 } from './utils.js';
 
-import Router from '.';
+import Router from './index.js';
 
 const mockModuleLoader = {
   files: () => [

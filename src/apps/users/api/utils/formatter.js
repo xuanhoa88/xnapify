@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { collectUserRbacData } from './rbac/collector';
+import { collectUserRbacData } from './rbac/collector.js';
 
 /**
  * Check if a user object is an admin (RBAC compatible)

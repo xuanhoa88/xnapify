@@ -5,6 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-export { default, SLICE_NAME } from './slice';
-export * from './thunks';
-export * from './selector';
+export { default, SLICE_NAME } from './slice.js';
+export * from './thunks.js';
+export * from './selector.js';

@@ -7,9 +7,9 @@
 
 import merge from 'lodash/merge';
 
-import { getTranslations } from '@shared/i18n/loader';
-import { addNamespace } from '@shared/i18n/utils';
-import { composeMiddleware } from '@shared/utils/middleware';
+import { getTranslations } from '@shared/i18n/loader.js';
+import { addNamespace } from '@shared/i18n/utils.js';
+import { composeMiddleware } from '@shared/utils/middleware.js';
 
 import {
   ROUTE_INIT_KEY,

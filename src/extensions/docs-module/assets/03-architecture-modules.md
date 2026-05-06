@@ -53,14 +53,14 @@ export default {
     // ...
   },
   
-  // Declaratively registers contexts for auto-discovery using `require.context()`
-  translations: () => [require.context('./translations', true, /\.json$/)],
-  migrations: () => require.context('./database/migrations', false, /\.js$/),
-  models: () => require.context('./models', false, /\.js$/),
-  seeds: () => require.context('./database/seeds', false, /\.js$/),
+  // Declaratively registers contexts for auto-discovery using `import.meta.webpackContext()`
+  translations: () => [import.meta.webpackContext('./translations', { recursive: true, regExp: /\.json$/ })],
+  migrations: () => import.meta.webpackContext('./database/migrations', { recursive: false, regExp: /\.js$/ }),
+  models: () => import.meta.webpackContext('./models', { recursive: false, regExp: /\.js$/ }),
+  seeds: () => import.meta.webpackContext('./database/seeds', { recursive: false, regExp: /\.js$/ }),
   
   // Registers HTTP endpoints
-  routes: () => require.context('./routes', true, /_route\.js$/),
+  routes: () => import.meta.webpackContext('./routes', { recursive: true, regExp: /_route\.js$/ }),
 
   // Evaluated after models and providers have been setup.
   // Ideal for booting workers, cron tasks, websocket channels, or event queues.
@@ -80,7 +80,7 @@ Similar to the backend, the `views/index.js` manages frontend initialization log
 ```javascript
 export default {
   // Registers frontend specific locale contexts
-  translations: () => [require.context('./translations', true, /\.json$/)],
+  translations: () => [import.meta.webpackContext('./translations', { recursive: true, regExp: /\.json$/ })],
 
   // Binds cross-module frontend UI components to the frontend registry container
   providers({ container }) {
@@ -93,7 +93,7 @@ export default {
   },
 
   // Declaratively identifies page routes
-  routes: () => require.context('.', true, /_route\.js$/),
+  routes: () => import.meta.webpackContext('.', { recursive: true, regExp: /_route\.js$/ }),
 }
 ```
 
@@ -146,7 +146,7 @@ In xnapify, Frontend URLs are inferred directly from the file path where a `_rou
 > **Strict Isolation:** Avoid deep static `import/export` mapping across independent `apps/` domains. Rely instead on the **Dependency Injection (DI)** container `container.resolve()` capabilities or broadcasted hook events (`container.resolve('hook')('event-name')`).
 
 > [!IMPORTANT]
-> **WebPack Requirements:** Hooks such as `routes()`, `models()`, and `migrations()` MUST exactly return a `require.context` evaluation; Webpack requires this literal compilation string to statically analyze files before bundling.
+> **WebPack Requirements:** Hooks such as `routes()`, `models()`, and `migrations()` MUST exactly return a `import.meta.webpackContext` evaluation; Webpack requires this literal compilation string to statically analyze files before bundling.
 
 > [!NOTE]
 > **Data Hydration:** Utilize `getInitialProps` on the frontend correctly to avoid cumulative layout impacts on screen load. By injecting states beforehand, React SSR will provide the finalized view HTML avoiding hydration mismatches.

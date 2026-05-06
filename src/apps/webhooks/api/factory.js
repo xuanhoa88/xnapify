@@ -5,9 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { WebhookValidationError } from './errors';
-import { WEBHOOK_EVENTS } from './utils/constants';
-import { parseSignatureHeader, verifySignature } from './utils/signature';
+import { WebhookValidationError } from './errors.js';
+import { WEBHOOK_EVENTS } from './utils/constants.js';
+import { parseSignatureHeader, verifySignature } from './utils/signature.js';
 
 // Private symbols
 const HOOK = Symbol('__xnapify.webhook.channel__');

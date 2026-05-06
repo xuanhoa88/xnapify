@@ -5,18 +5,15 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { discoverModules } from '@shared/renderer/autoloader';
-import { features } from '@shared/renderer/redux';
-import Router from '@shared/renderer/router';
-const {
-  getAppName,
-  getAppDescription
-} = features;
+import { discoverModules } from '@shared/renderer/autoloader.js';
+import { features } from '@shared/renderer/redux/index.js';
+import Router from '@shared/renderer/router/index.js';
+const { getAppName, getAppDescription } = features;
 
 // Discover view lifecycle modules from apps directory
 const viewsContext = import.meta.webpackContext('../apps', {
   recursive: true,
-  regExp: /^\.\/[^/]+\/views\/index\.[cm]?[jt]s$/i
+  regExp: /^\.\/[^/]+\/views\/index\.[cm]?[jt]s$/i,
 });
 
 // =============================================================================
@@ -77,7 +74,10 @@ class AppRouter extends Router {
         page.title = appName;
       } else if (title !== appName) {
         // Guard against multiple common separators to avoid duplication
-        const hasSuffix = title.endsWith(` - ${appName}`) || title.endsWith(` | ${appName}`) || title.endsWith(` · ${appName}`);
+        const hasSuffix =
+          title.endsWith(` - ${appName}`) ||
+          title.endsWith(` | ${appName}`) ||
+          title.endsWith(` · ${appName}`);
         page.title = hasSuffix ? title : `${title} - ${appName}`;
       } else {
         // Title exactly matches app name
@@ -108,9 +108,7 @@ export default async function initializeRouter(context, extension) {
   context.container.instance('extension', extension);
 
   // Discover modules and run lifecycle phases (translations → providers → views)
-  const {
-    mergedAdapter
-  } = await discoverModules(viewsContext, context);
+  const { mergedAdapter } = await discoverModules(viewsContext, context);
   if (!mergedAdapter) {
     const err = new Error('No view modules found — cannot initialize router');
     err.name = 'NoViewModulesError';
@@ -123,19 +121,16 @@ export default async function initializeRouter(context, extension) {
         console.error('Router Error:', error);
         throw error;
       }
-      const {
-        _instance,
-        ...context
-      } = ctx;
+      const { _instance, ...context } = ctx;
       return _instance.resolve({
         ...context,
         error,
-        pathname: '/error'
+        pathname: '/error',
       });
     },
     async onRouteInit(route) {
       try {
-        const ns = route.module && route.module.namespace || route.path;
+        const ns = (route.module && route.module.namespace) || route.path;
         if (ns) {
           if (__DEV__) {
             console.log(`[Router] Loading extension namespace: ${ns}`);
@@ -148,7 +143,7 @@ export default async function initializeRouter(context, extension) {
     },
     async onRouteDestroy(route) {
       try {
-        const ns = route.module && route.module.namespace || route.path;
+        const ns = (route.module && route.module.namespace) || route.path;
         if (ns) {
           if (__DEV__) {
             console.log(`[Router] Unloading extension namespace: ${ns}`);
@@ -158,7 +153,7 @@ export default async function initializeRouter(context, extension) {
       } catch (err) {
         log('Failed to unload extension namespace: ' + err, 'error');
       }
-    }
+    },
   });
 
   // Connect the extension extension's view router so buffered routes are injected
@@ -173,10 +168,11 @@ export default async function initializeRouter(context, extension) {
   // Append catch-all route for 404s
   router.routes.push({
     path: '/:path*',
-    action: context => router.resolve({
-      ...context,
-      pathname: '/not-found'
-    })
+    action: context =>
+      router.resolve({
+        ...context,
+        pathname: '/not-found',
+      }),
   });
   log('Router initialized');
   return router;

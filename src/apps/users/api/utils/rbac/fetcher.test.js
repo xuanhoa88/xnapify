@@ -5,8 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import * as collector from './collector';
-import { getUserRbacData } from './fetcher';
+import * as collector from './collector.js';
+import { getUserRbacData } from './fetcher.js';
 
 // Mock dependencies
 jest.mock('./cache', () => ({

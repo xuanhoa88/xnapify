@@ -12,11 +12,13 @@ import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Form, { useFormContext } from '@shared/renderer/components/Form';
-import Loader from '@shared/renderer/components/Loader';
-import { features } from '@shared/renderer/redux';
+import Form, {
+  useFormContext,
+} from '@shared/renderer/components/Form/index.js';
+import Loader from '@shared/renderer/components/Loader/index.js';
+import { features } from '@shared/renderer/redux/index.js';
 
-import { updatePreferencesFormSchema } from '../../../../users/validator/auth';
+import { updatePreferencesFormSchema } from '../../../../users/validator/auth/index.js';
 
 import s from './PreferencesCard.css';
 

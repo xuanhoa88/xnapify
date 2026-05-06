@@ -14,7 +14,7 @@
  * - Properly cleaning up on shutdown
  */
 
-import { createDemoWorkers } from './workers';
+import { createDemoWorkers } from './workers/index.js';
 
 // Private symbol for handler storage (cleanup symmetry)
 const HANDLERS = Symbol('handlers');

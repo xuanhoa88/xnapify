@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { hashPassword } from '../utils/password';
+import { hashPassword } from '../utils/password.js';
 
 // =========================================================================
 // afterFind hook: auto-flatten EAV profile rows into a plain object

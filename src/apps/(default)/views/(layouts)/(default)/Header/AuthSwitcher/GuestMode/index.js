@@ -8,7 +8,7 @@
 import { Flex, Button } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
-import { useHistory } from '@shared/renderer/components/History';
+import { useHistory } from '@shared/renderer/components/History/index.js';
 
 /**
  * GuestMode Component

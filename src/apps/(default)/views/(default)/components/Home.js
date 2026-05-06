@@ -8,10 +8,10 @@
 import { Box } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 
-import FeaturesPreview from './FeaturesPreview';
-import Feedback from './Feedback';
-import HeroSection from './HeroSection';
-import NewsSection from './NewsSection';
+import FeaturesPreview from './FeaturesPreview.js';
+import Feedback from './Feedback.js';
+import HeroSection from './HeroSection.js';
+import NewsSection from './NewsSection.js';
 
 import s from './Home.css';
 

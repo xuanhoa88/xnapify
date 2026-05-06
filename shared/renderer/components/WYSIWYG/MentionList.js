@@ -86,7 +86,7 @@ const MentionList = forwardRef(function MentionList$({ items, command }, ref) {
     return (
       <div className={s.mentionList}>
         <div className={s.mentionEmpty}>
-          {t('shared:form.wysiwyg.noMentionResults', 'No results')}
+          {t('common:form.wysiwyg.noMentionResults', 'No results')}
         </div>
       </div>
     );

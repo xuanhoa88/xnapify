@@ -12,7 +12,7 @@
  * associations, unregistration, Proxy-based access, and edge cases.
  */
 
-import { createRspackContextAdapter } from '@shared/utils/contextAdapter';
+import { createRspackContextAdapter } from '@shared/utils/contextAdapter.js';
 
 import ModelRegistry from './ModelRegistry.js';
 

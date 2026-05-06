@@ -62,10 +62,10 @@ function SearchableSelect({
 
   const displayPlaceholder =
     placeholder ||
-    t('shared:components.searchableSelect.placeholder', 'Select...');
+    t('common:components.searchableSelect.placeholder', 'Select...');
   const displaySearchPlaceholder =
     searchPlaceholder ||
-    t('shared:components.searchableSelect.searchPlaceholder', 'Search...');
+    t('common:components.searchableSelect.searchPlaceholder', 'Search...');
 
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -128,11 +128,11 @@ function SearchableSelect({
         const opt = options.find(o => o.value === selectedValues[0]);
         return (
           (opt && opt.label) ||
-          t('shared:components.searchableSelect.oneSelected', '1 selected')
+          t('common:components.searchableSelect.oneSelected', '1 selected')
         );
       }
       return t(
-        'shared:components.searchableSelect.multipleSelected',
+        'common:components.searchableSelect.multipleSelected',
         '{{count}} selected',
         { count: selectedValues.length },
       );
@@ -298,7 +298,7 @@ function SearchableSelect({
               size='1'
               onClick={handleClear}
               title={t(
-                'shared:components.searchableSelect.clearSelection',
+                'common:components.searchableSelect.clearSelection',
                 'Clear selection',
               )}
               className={s.clearButton}
@@ -364,7 +364,7 @@ function SearchableSelect({
                     <Box p='3' className={s.messageBox}>
                       <Text size={size}>
                         {t(
-                          'shared:components.searchableSelect.loading',
+                          'common:components.searchableSelect.loading',
                           'Loading...',
                         )}
                       </Text>
@@ -420,7 +420,7 @@ function SearchableSelect({
                         <Box p='2' className={s.messageBox}>
                           <Text size='1'>
                             {t(
-                              'shared:components.searchableSelect.loadingMore',
+                              'common:components.searchableSelect.loadingMore',
                               'Loading more...',
                             )}
                           </Text>
@@ -430,7 +430,7 @@ function SearchableSelect({
                         <Box p='2' className={s.messageBox}>
                           <Text size='1'>
                             {t(
-                              'shared:components.searchableSelect.scrollForMore',
+                              'common:components.searchableSelect.scrollForMore',
                               'Scroll for more',
                             )}
                           </Text>
@@ -442,7 +442,7 @@ function SearchableSelect({
                       <Text size={size}>
                         {emptyMessage ||
                           t(
-                            'shared:components.searchableSelect.noOptions',
+                            'common:components.searchableSelect.noOptions',
                             'No options found',
                           )}
                       </Text>

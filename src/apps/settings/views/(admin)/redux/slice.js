@@ -7,7 +7,7 @@
 
 import { createSlice } from '@reduxjs/toolkit';
 
-import { fetchSettings, saveNamespaceSettings } from './thunks';
+import { fetchSettings, saveNamespaceSettings } from './thunks.js';
 
 export const SLICE_NAME = '@settings/admin';
 

@@ -71,32 +71,5 @@
     "updateGroup": "Lỗi khi cập nhật nhóm",
     "updateRole": "Lỗi khi cập nhật vai trò",
     "assignRoles": "Đã xảy ra lỗi"
-  },
-  "dashboard": {
-    "activity": "Hoạt động",
-    "recentActivity": "Hoạt động gần đây",
-    "noActivity": "Không có hoạt động gần đây.",
-    "viewAllActivity": "Xem tất cả hoạt động",
-    "usersCount_one": "{{count}} Người dùng",
-    "usersCount_other": "{{count}} Người dùng",
-    "rolesCount_one": "{{count}} Vai trò",
-    "rolesCount_other": "{{count}} Vai trò",
-    "groupsCount_one": "{{count}} Nhóm",
-    "groupsCount_other": "{{count}} Nhóm",
-    "atAGlance": "Tổng quan",
-    "versionInfo": "xnapify 1.0.0 đang chạy ",
-    "defaultTheme": "Giao diện mặc định",
-    "systemNews": "Tin tức & Cập nhật hệ thống",
-    "browseHub": "Duyệt Extension Hub",
-    "documentation": "Tài liệu",
-    "community": "Cộng đồng",
-    "releaseNotes": "Ghi chú phát hành",
-    "systemStatus": "Trạng thái hệ thống",
-    "dbConnected": "Đã kết nối cơ sở dữ liệu",
-    "settingsScreen": "Cài đặt",
-    "quickActions": "Hành động nhanh",
-    "inviteUser": "Mời người dùng",
-    "createRole": "Tạo vai trò",
-    "addExtension": "Thêm Extension"
   }
 }

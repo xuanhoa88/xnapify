@@ -9,8 +9,8 @@ import { useEffect, useRef } from 'react';
 
 import { useDispatch, useSelector } from 'react-redux';
 
-import Toast from '@shared/renderer/components/Toast';
-import { features } from '@shared/renderer/redux';
+import Toast from '@shared/renderer/components/Toast/index.js';
+import { features } from '@shared/renderer/redux/index.js';
 
 const { getFlashMessage, clearFlashMessage } = features;
 

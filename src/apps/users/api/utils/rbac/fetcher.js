@@ -5,8 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import * as rbacCache from './cache';
-import { collectUserRbacData } from './collector';
+import * as rbacCache from './cache.js';
+import { collectUserRbacData } from './collector.js';
 
 // Track in-flight promises to prevent cache stampedes (thundering herd)
 const activeFetches = new Map();

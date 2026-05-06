@@ -12,8 +12,8 @@ import path from 'path';
 
 import merge from 'lodash/merge';
 
-import { createRspackContextAdapter } from '@shared/utils/contextAdapter';
-import { createNativeRequire } from '@shared/utils/createNativeRequire';
+import { createRspackContextAdapter } from '@shared/utils/contextAdapter.js';
+import { createNativeRequire } from '@shared/utils/createNativeRequire.js';
 
 import { createNodeRedAuth, createNodeRedLogoutConfig } from './auth.js';
 
@@ -26,14 +26,14 @@ const moduleRequire = createNativeRequire(import.meta.url);
 // Each module must export: getNodeJS() and getNodeHTML()
 const nodesContexts = import.meta.webpackContext('./nodes', {
   recursive: false,
-  regExp: /\.[cm]?[jt]s$/i
+  regExp: /\.[cm]?[jt]s$/i,
 });
 
 // Auto-discover all client-side editor scripts in ./client-scripts/
 // Each module must export: getScript() => string
 const clientScriptsContexts = import.meta.webpackContext('./client-scripts', {
   recursive: false,
-  regExp: /\.[cm]?[jt]s$/i
+  regExp: /\.[cm]?[jt]s$/i,
 });
 
 /**

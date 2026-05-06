@@ -18,11 +18,11 @@ import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Modal from '@shared/renderer/components/Modal';
-import { DataTable } from '@shared/renderer/components/Table';
-import { validateForm } from '@shared/validator';
+import Modal from '@shared/renderer/components/Modal/index.js';
+import { DataTable } from '@shared/renderer/components/Table/index.js';
+import { validateForm } from '@shared/validator/index.js';
 
-import { renameFileFormSchema } from '../../../validator/admin/file';
+import { renameFileFormSchema } from '../../../validator/admin/file.js';
 import {
   setSelection,
   clearSelection,
@@ -47,9 +47,9 @@ import {
   selectSearch,
   setPage,
   setPageSize,
-} from '../redux';
+} from '../redux/index.js';
 
-import FileActionsDropdown from './FileActionsDropdown';
+import FileActionsDropdown from './FileActionsDropdown.js';
 
 import s from './FileGrid.css';
 
@@ -321,6 +321,7 @@ export default function FileGrid({ onShare }) {
         ),
       },
     ],
+
     [
       t,
       currentView,
@@ -394,6 +395,7 @@ export default function FileGrid({ onShare }) {
         </Box>
       </Card>
     ),
+
     [
       currentView,
       handleOpen,
@@ -437,6 +439,7 @@ export default function FileGrid({ onShare }) {
             'Drop files here or use the "New" button.',
           )}
         />
+
         <DataTable.BulkActions
           count={selectedIds.length}
           onClear={() => dispatch(clearSelection())}
@@ -449,9 +452,11 @@ export default function FileGrid({ onShare }) {
             },
           ]}
         />
+
         <DataTable.Loader
           variant={viewMode === 'masonry' ? 'cards' : 'skeleton'}
         />
+
         <DataTable.Pagination
           current={page}
           totalPages={totalPages || 1}

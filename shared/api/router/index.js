@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { BaseRouter, validateAdapter } from '@shared/utils/BaseRouter';
+import { BaseRouter, validateAdapter } from '@shared/utils/BaseRouter.js';
 
 import { buildRoutes, validateConfig, linkParents } from './builder.js';
 import { collect } from './collector.js';
@@ -45,7 +45,7 @@ export class Router extends BaseRouter {
     /** @type {RouterOptions} */
     this.options = options || {};
 
-    /** @type {import('./matcher').MatchCache} */
+    /** @type {import('./matcher.js').MatchCache} */
     this[ROUTE_CACHE_KEY] = createMatchCache();
 
     clearMatchCache(this[ROUTE_CACHE_KEY]);

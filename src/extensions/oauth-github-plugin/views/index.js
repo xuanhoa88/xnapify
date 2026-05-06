@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import GitHubButton from './GitHubButton';
+import GitHubButton from './GitHubButton.js';
 
 export default {
   boot({ registry }) {

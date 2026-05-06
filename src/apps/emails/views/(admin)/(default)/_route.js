@@ -5,10 +5,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { features } from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux/index.js';
 const { addBreadcrumb } = features;
 
-import reducer, { SLICE_NAME } from '../redux';
+import reducer, { SLICE_NAME } from '../redux/index.js';
 
 /**
  * Admin index route - redirects to dashboard

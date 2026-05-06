@@ -12,7 +12,7 @@ The **xnapify** router manages the complete lifecycle of navigating between page
 
 ## 1. File-System Route Discovery
 
-Routes are inferred entirely from file paths. There is no central route configuration file. The router scans `views/` directories using Webpack's `require.context` and maps file paths to URL patterns.
+Routes are inferred entirely from file paths. There is no central route configuration file. The router scans `views/` directories using Webpack's `import.meta.webpackContext` and maps file paths to URL patterns.
 
 ### Path Mapping Rules
 

@@ -10,7 +10,7 @@ import { useState, useCallback, useImperativeHandle, forwardRef } from 'react';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
-import Modal from '@shared/renderer/components/Modal';
+import Modal from '@shared/renderer/components/Modal/index.js';
 
 /**
  * ConfirmImpersonateModal - Confirmation modal for impersonating a user
@@ -73,7 +73,7 @@ const ConfirmImpersonateModal = forwardRef(({ onConfirm, onSuccess }, ref) => {
       setError(
         err.message ||
           t(
-            'shared:components.confirmModal.impersonate.error.occurred',
+            'common:components.confirmModal.impersonate.error.occurred',
             'An error occurred',
           ),
       );
@@ -87,14 +87,14 @@ const ConfirmImpersonateModal = forwardRef(({ onConfirm, onSuccess }, ref) => {
     <Modal isOpen={isOpen} onClose={handleClose}>
       <Modal.Header onClose={handleClose}>
         {t(
-          'shared:components.confirmModal.impersonate.title',
+          'common:components.confirmModal.impersonate.title',
           'Confirm Impersonation',
         )}
       </Modal.Header>
       <Modal.Body error={error}>
         <Modal.Description>
           {t(
-            'shared:components.confirmModal.impersonate.description',
+            'common:components.confirmModal.impersonate.description',
             'You are about to impersonate "{{name}}". You will be logged in as this user and can perform actions on their behalf. Click "Impersonate" to proceed.',
             { name: displayName },
           )}
@@ -107,7 +107,7 @@ const ConfirmImpersonateModal = forwardRef(({ onConfirm, onSuccess }, ref) => {
             onClick={handleClose}
             disabled={submitting}
           >
-            {t('shared:components.confirmModal.impersonate.cancel', 'Cancel')}
+            {t('common:components.confirmModal.impersonate.cancel', 'Cancel')}
           </Modal.Button>
           <Modal.Button
             variant='primary'
@@ -116,11 +116,11 @@ const ConfirmImpersonateModal = forwardRef(({ onConfirm, onSuccess }, ref) => {
           >
             {submitting
               ? t(
-                  'shared:components.confirmModal.impersonate.submitting',
+                  'common:components.confirmModal.impersonate.submitting',
                   'Switching...',
                 )
               : t(
-                  'shared:components.confirmModal.impersonate.confirm',
+                  'common:components.confirmModal.impersonate.confirm',
                   'Impersonate',
                 )}
           </Modal.Button>

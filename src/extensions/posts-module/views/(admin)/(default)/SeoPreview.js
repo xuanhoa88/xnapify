@@ -16,7 +16,7 @@ import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import SerpPreview from 'react-serp-preview';
 
-import Modal from '@shared/renderer/components/Modal';
+import Modal from '@shared/renderer/components/Modal/index.js';
 
 import s from './SeoPreview.css';
 

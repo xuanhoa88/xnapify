@@ -23,7 +23,7 @@ shared/i18n/
 
 ## Built-in Locales (`index.js`)
 
-On initialization, `index.js` traverses `shared/i18n/translations/*.json` via `require.context`:
+On initialization, `index.js` traverses `shared/i18n/translations/*.json` via `import.meta.webpackContext`:
 
 - It builds `DEFAULT_RESOURCES` mapping locales to dictionary objects.
 - It builds `AVAILABLE_LOCALES` mapping keys to highly readable native language names using standard `Intl.DisplayNames()`.
@@ -60,8 +60,8 @@ An async wrapper. If `hasNamespace()` returns `false`, it executes the `loader()
 
 ## Loader Extraction (`loader.js`)
 
-`getTranslations(adapter)` abstracts the iteration of `require.context` constructs.
+`getTranslations(adapter)` abstracts the iteration of `import.meta.webpackContext` constructs.
 
-1. Utilizes `@shared/utils/contextAdapter` to handle both pure `require.context` or already-adapted modules.
+1. Utilizes `@shared/utils/contextAdapter` to handle both pure `import.meta.webpackContext` or already-adapted modules.
 2. Applies regex `([^/]+)\.json$/i` to extract the exact locale name from the filename.
 3. Consolidates into an object of translations mapped by Locale Code.

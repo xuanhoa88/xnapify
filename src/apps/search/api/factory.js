@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import DatabaseSearch from './adapters/database';
+import DatabaseSearch from './adapters/database.js';
 
 /**
  * Adapter Registry

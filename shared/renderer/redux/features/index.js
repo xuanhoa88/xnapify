@@ -12,10 +12,10 @@
  * Automatically discovers and loads features via Rspack context.
  */
 
-import { createRspackContextAdapter } from '@shared/utils/contextAdapter';
+import { createRspackContextAdapter } from '@shared/utils/contextAdapter.js';
 const featuresContext = import.meta.webpackContext('.', {
   recursive: true,
-  regExp: /^\.\/[^/]+\/index\.js$/
+  regExp: /^\.\/[^/]+\/index\.js$/,
 });
 const adapter = createRspackContextAdapter(featuresContext);
 const reducers = {};

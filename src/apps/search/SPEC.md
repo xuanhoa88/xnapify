@@ -40,9 +40,9 @@ src/apps/search/
 api/index.js
 ├── factory.js
 │   └── adapters/database.js (sequelize model)
-├── models/ (require.context → autoloader)
-├── database/migrations/ (require.context → autoloader)
-└── routes/ (require.context → autoloader)
+├── models/ (import.meta.webpackContext → autoloader)
+├── database/migrations/ (import.meta.webpackContext → autoloader)
+└── routes/ (import.meta.webpackContext → autoloader)
 ```
 
 ## 2. Data Types

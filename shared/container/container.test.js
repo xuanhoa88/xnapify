@@ -14,7 +14,7 @@ describe('Container Engine', () => {
 
   beforeEach(() => {
     jest.resetModules();
-    ({ Container, createFactory } = require('./index'));
+    ({ Container, createFactory } = require('./index.js'));
   });
 
   // ===========================================================================
@@ -44,7 +44,7 @@ describe('Container Engine', () => {
 
   describe('Default export', () => {
     it('should be a Container instance', () => {
-      const container = require('./index').default;
+      const container = require('./index.js').default;
       expect(container).toBeInstanceOf(Container);
     });
   });

@@ -19,13 +19,16 @@ import { Box, Flex, Text, Button, Badge, IconButton } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import { useHistory } from '@shared/renderer/components/History';
-import Modal from '@shared/renderer/components/Modal';
-import { useRbac } from '@shared/renderer/components/Rbac';
-import { SearchableSelect } from '@shared/renderer/components/SearchableSelect';
-import { DataTable, useTableColumns } from '@shared/renderer/components/Table';
+import { useHistory } from '@shared/renderer/components/History/index.js';
+import Modal from '@shared/renderer/components/Modal/index.js';
+import { useRbac } from '@shared/renderer/components/Rbac/index.js';
+import { SearchableSelect } from '@shared/renderer/components/SearchableSelect/index.js';
+import {
+  DataTable,
+  useTableColumns,
+} from '@shared/renderer/components/Table/index.js';
 
-import ChangeStatusPermissionModal from '../components/ChangeStatusPermissionModal';
+import ChangeStatusPermissionModal from '../components/ChangeStatusPermissionModal.js';
 import {
   fetchPermissions,
   getPermissions,
@@ -34,7 +37,7 @@ import {
   getPermissionsListError,
   bulkDeletePermissions,
   getPermissionsPagination,
-} from '../redux';
+} from '../redux/index.js';
 
 function Permissions() {
   const { t } = useTranslation();
@@ -247,6 +250,7 @@ function Permissions() {
         label: t('permissions:admin.statusInactive', 'Inactive'),
       },
     ],
+
     [t],
   );
 
@@ -274,6 +278,7 @@ function Permissions() {
         onClick: handleBulkDelete,
       },
     ],
+
     [t, handleBulkActivate, handleBulkDeactivate, handleBulkDelete],
   );
 
@@ -358,6 +363,7 @@ function Permissions() {
         ),
       },
     ],
+
     [t, handleEdit, handleDelete],
   );
 
@@ -413,6 +419,7 @@ function Permissions() {
             )}
             debounce={300}
           />
+
           <DataTable.Filter
             component={SearchableSelect}
             width='sm'
@@ -425,6 +432,7 @@ function Permissions() {
             )}
             showSearch={false}
           />
+
           <DataTable.ClearFilters
             visible={!!hasActiveFilters}
             onClick={handleClearFilters}
@@ -459,6 +467,7 @@ function Permissions() {
                 )
           }
         />
+
         <DataTable.Error message={error} onRetry={refreshPermissions} />
         <DataTable.Loader />
 

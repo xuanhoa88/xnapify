@@ -7,7 +7,7 @@ Quick-reference checklist for reviewing `src/apps/[module_name]` code.
 - [ ] `api/index.js` uses `export default { ... }` with lifecycle hooks
 - [ ] Phase order: `translations → providers → migrations → models → seeds → boot → routes`
 - [ ] `routes()` returns Rspack context **directly** (not a tuple)
-- [ ] `require.context()` calls use **static string literals** only
+- [ ] `import.meta.webpackContext()` calls use **static string literals** only
 - [ ] License header present in first 6 lines of every file
 
 ## Backend

@@ -14,11 +14,11 @@
 
 const viewsContext = import.meta.webpackContext('.', {
   recursive: true,
-  regExp: /(?:\/_route|\/_layout)\.[cm]?[jt]sx?$/i
+  regExp: /(?:\/_route|\/_layout)\.[cm]?[jt]sx?$/i,
 });
 const translationsContext = import.meta.webpackContext('../translations', {
   recursive: false,
-  regExp: /\.json$/i
+  regExp: /\.json$/i,
 });
 
 // =============================================================================
@@ -29,10 +29,7 @@ export default {
   /**
    * Lifecycle: providers — bind DI services shared with other modules.
    */
-  providers({
-    container
-  }) {},
-  // eslint-disable-line no-unused-vars
+  providers() {},
 
   /**
    * Declarative translations — auto-registered by extension manager.
@@ -46,5 +43,5 @@ export default {
    */
   routes() {
     return ['posts', viewsContext];
-  }
+  },
 };

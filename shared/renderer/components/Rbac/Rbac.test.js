@@ -10,7 +10,7 @@
 import { useSelector } from 'react-redux';
 import renderer from 'react-test-renderer';
 
-import Rbac from '.';
+import Rbac from './index.js';
 
 // Mock react-redux
 jest.mock('react-redux', () => ({

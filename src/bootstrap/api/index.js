@@ -6,16 +6,18 @@
  */
 
 import express from 'express';
-import { discoverModules, engines, drain } from '@shared/api';
-import { Router as DynamicRouter } from '@shared/api/router';
-import { createCorsMiddleware } from './middlewares/cors';
-import { createLoggingMiddleware } from './middlewares/logging';
-import { configurePassport } from './passport';
+
+import { discoverModules, engines, drain } from '@shared/api/index.js';
+import { Router as DynamicRouter } from '@shared/api/router/index.js';
+
+import { createCorsMiddleware } from './middlewares/cors.js';
+import { createLoggingMiddleware } from './middlewares/logging.js';
+import { configurePassport } from './passport.js';
 
 // Discover lifecycle modules from apps directory
 const apisContext = import.meta.webpackContext('../../apps', {
   recursive: true,
-  regExp: /^\.\/[^/]+\/api\/index\.[cm]?[jt]s$/i
+  regExp: /^\.\/[^/]+\/api\/index\.[cm]?[jt]s$/i,
 });
 
 // Export all engines as providers
@@ -110,7 +112,10 @@ function createApiMiddlewareStack(app) {
     middlewares.push(oauth.passport.initialize());
   }
   if (jwt) {
-    middlewares.push(engines.auth.middlewares.refreshToken(), engines.auth.middlewares.optionalAuth());
+    middlewares.push(
+      engines.auth.middlewares.refreshToken(),
+      engines.auth.middlewares.optionalAuth(),
+    );
   }
   return middlewares;
 }
@@ -130,18 +135,23 @@ async function buildApiRouter(app, extension) {
   const router = express.Router();
 
   // Body parsing scoped to API routes only
-  router.use(express.json({
-    limit: process.env.XNAPIFY_JSON_BODY_LIMIT || '10mb'
-  }));
-  router.use(express.urlencoded({
-    extended: true,
-    limit: process.env.XNAPIFY_URLENCODED_BODY_LIMIT || '1mb'
-  }));
+  router.use(
+    express.json({
+      limit: process.env.XNAPIFY_JSON_BODY_LIMIT || '10mb',
+    }),
+  );
+  router.use(
+    express.urlencoded({
+      extended: true,
+      limit: process.env.XNAPIFY_URLENCODED_BODY_LIMIT || '1mb',
+    }),
+  );
 
   // Discover and run module lifecycles (container-only DI)
-  const {
-    apiRoutes
-  } = await discoverModules(apisContext, app.get('container'));
+  const { apiRoutes } = await discoverModules(
+    apisContext,
+    app.get('container'),
+  );
 
   // Mount module API routes
   for (const [name, adapter] of apiRoutes) {
@@ -156,7 +166,7 @@ async function buildApiRouter(app, extension) {
   if (extension) {
     const extRouter = new DynamicRouter({
       files: () => [],
-      load: () => ({})
+      load: () => ({}),
     });
     router.use(...apiMiddlewares, extRouter.resolve);
     extension.connectApiRouter(extRouter);
@@ -192,9 +202,7 @@ export default async function bootstrap(app, extension) {
     registerEngines(container);
 
     // Setup passport & OAuth registry (framework-level, before modules)
-    const {
-      oauth
-    } = configurePassport();
+    const { oauth } = configurePassport();
     container.instance('oauth', oauth);
 
     // Setup global middleware

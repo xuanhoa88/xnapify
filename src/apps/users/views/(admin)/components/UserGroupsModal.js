@@ -18,13 +18,16 @@ import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Modal from '@shared/renderer/components/Modal';
+import Modal from '@shared/renderer/components/Modal/index.js';
 import {
   TablePagination,
   TableSearch,
-} from '@shared/renderer/components/Table';
+} from '@shared/renderer/components/Table/index.js';
 
-import { assignGroupsToUser, isUserAssignGroupsLoading } from '../redux';
+import {
+  assignGroupsToUser,
+  isUserAssignGroupsLoading,
+} from '../redux/index.js';
 
 /**
  * UserGroupsModal - Self-contained modal for managing user groups

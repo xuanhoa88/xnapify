@@ -5,5 +5,5 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-export * from './role';
-export { assignRolesToGroupFormSchema } from '../../../groups/validator/admin';
+export * from './role.js';
+export { assignRolesToGroupFormSchema } from '../../../groups/validator/admin/index.js';

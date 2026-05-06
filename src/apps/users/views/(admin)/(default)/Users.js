@@ -29,24 +29,27 @@ import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import { useHistory } from '@shared/renderer/components/History';
-import { useRbac } from '@shared/renderer/components/Rbac';
+import { useHistory } from '@shared/renderer/components/History/index.js';
+import { useRbac } from '@shared/renderer/components/Rbac/index.js';
 import {
   SearchableSelect,
   useSearchableSelect,
-} from '@shared/renderer/components/SearchableSelect';
-import { DataTable, useTableColumns } from '@shared/renderer/components/Table';
-import { features } from '@shared/renderer/redux';
+} from '@shared/renderer/components/SearchableSelect/index.js';
+import {
+  DataTable,
+  useTableColumns,
+} from '@shared/renderer/components/Table/index.js';
+import { features } from '@shared/renderer/redux/index.js';
 
-import ChangeStatusUserModal from '../components/ChangeStatusUserModal';
-import ConfirmImpersonateModal from '../components/ConfirmImpersonateModal';
-import DeleteUserModal from '../components/DeleteUserModal';
-import GroupTag from '../components/GroupTag';
-import RoleTag from '../components/RoleTag';
-import UserActionsDropdown from '../components/UserActionsDropdown';
-import UserGroupsModal from '../components/UserGroupsModal';
-import UserPermissionsModal from '../components/UserPermissionsModal';
-import UserRolesModal from '../components/UserRolesModal';
+import ChangeStatusUserModal from '../components/ChangeStatusUserModal.js';
+import ConfirmImpersonateModal from '../components/ConfirmImpersonateModal.js';
+import DeleteUserModal from '../components/DeleteUserModal.js';
+import GroupTag from '../components/GroupTag.js';
+import RoleTag from '../components/RoleTag.js';
+import UserActionsDropdown from '../components/UserActionsDropdown.js';
+import UserGroupsModal from '../components/UserGroupsModal.js';
+import UserPermissionsModal from '../components/UserPermissionsModal.js';
+import UserRolesModal from '../components/UserRolesModal.js';
 import {
   fetchUsers,
   getUsers,
@@ -54,7 +57,7 @@ import {
   isUsersListLoading,
   isUsersListInitialized,
   getUsersListError,
-} from '../redux';
+} from '../redux/index.js';
 
 const { getUserProfile, impersonateUser } = features;
 
@@ -302,6 +305,7 @@ function Users({ context }) {
                 .charAt(0)
                 .toUpperCase()}
             />
+
             <Flex align='center' gap='2'>
               <Text as='span' weight='medium' color='gray' highContrast>
                 {(record.profile && record.profile.display_name) ||
@@ -433,6 +437,7 @@ function Users({ context }) {
         ),
       },
     ],
+
     [
       t,
       currentUser,
@@ -466,6 +471,7 @@ function Users({ context }) {
         label: t('users:admin.list.statusInactive', 'Inactive'),
       },
     ],
+
     [t],
   );
 
@@ -481,6 +487,7 @@ function Users({ context }) {
         onClick: openBulkGroupsModal,
       },
     ],
+
     [t, openBulkRolesModal, openBulkGroupsModal],
   );
 
@@ -505,6 +512,7 @@ function Users({ context }) {
         onClick: handleBulkDelete,
       },
     ],
+
     [t, handleBulkActivate, handleBulkDeactivate, handleBulkDelete],
   );
 
@@ -551,6 +559,7 @@ function Users({ context }) {
             onChange={handleSearchChange}
             placeholder={t('users:admin.list.searchUsers', 'Search users...')}
           />
+
           <DataTable.Filter
             component={SearchableSelect}
             width='lg'
@@ -568,6 +577,7 @@ function Users({ context }) {
               'Search roles...',
             )}
           />
+
           <DataTable.Filter
             component={SearchableSelect}
             width='lg'
@@ -585,6 +595,7 @@ function Users({ context }) {
               'Search groups...',
             )}
           />
+
           <DataTable.Filter
             component={SearchableSelect}
             width='sm'
@@ -594,6 +605,7 @@ function Users({ context }) {
             placeholder={t('users:admin.list.allStatus', 'All Status')}
             showSearch={false}
           />
+
           <DataTable.ClearFilters
             visible={!!hasActiveFilters}
             onClick={handleClearAllFilters}
@@ -613,6 +625,7 @@ function Users({ context }) {
             'Try adjusting your search or filter criteria, or add a new user to get started.',
           )}
         />
+
         <DataTable.Error message={error} onRetry={refreshUsers} />
         <DataTable.Loader />
 
@@ -633,17 +646,20 @@ function Users({ context }) {
         onSuccess={handleRefreshUsers}
         fetchRoles={fetchRoles}
       />
+
       <UserGroupsModal
         ref={groupsModalRef}
         onSuccess={handleRefreshUsers}
         fetchGroups={fetchGroups}
       />
+
       <UserPermissionsModal ref={permissionsModalRef} />
       <DeleteUserModal ref={deleteModalRef} onSuccess={handleRefreshUsers} />
       <ChangeStatusUserModal
         ref={changeStatusModalRef}
         onSuccess={handleRefreshUsers}
       />
+
       <ConfirmImpersonateModal
         ref={impersonateModalRef}
         onConfirm={handleConfirmImpersonate}

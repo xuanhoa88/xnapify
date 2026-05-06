@@ -109,21 +109,21 @@ import { profileSchema } from '../validator';
 const HANDLERS = Symbol('handlers');
 
 // Load migrations context
-const migrationsContext = require.context(
+const migrationsContext = import.meta.webpackContext(
   './database/migrations',
   false,
   /\.[cm]?[jt]s$/i,
 );
 
 // Load seeds context
-const seedsContext = require.context(
+const seedsContext = import.meta.webpackContext(
   './database/seeds',
   false,
   /\.[cm]?[jt]s$/i,
 );
 
 // Load translations context
-const translationsContext = require.context(
+const translationsContext = import.meta.webpackContext(
   '../translations',
   false,
   /\.json$/i,
@@ -279,7 +279,7 @@ import ExtensionField from './ExtensionField';
 const HANDLERS = Symbol('handlers');
 
 // Load translations context
-const translationsContext = require.context(
+const translationsContext = import.meta.webpackContext(
   '../translations',
   false,
   /\.json$/i,
@@ -671,7 +671,7 @@ import CommentForm from './CommentForm';
 // Private symbol for handlers
 const HANDLERS = Symbol('handlers');
 
-const translationsContext = require.context(
+const translationsContext = import.meta.webpackContext(
   '../translations',
   false,
   /\.json$/i,
@@ -720,13 +720,13 @@ export default {
 
 const HANDLERS = Symbol('handlers');
 
-const migrationsContext = require.context(
+const migrationsContext = import.meta.webpackContext(
   './database/migrations',
   false,
   /\.[cm]?[jt]s$/i,
 );
 
-const translationsContext = require.context(
+const translationsContext = import.meta.webpackContext(
   '../translations',
   false,
   /\.json$/i,
@@ -980,11 +980,11 @@ src/extensions/{extension-name}/
 
 ```javascript
 // src/extensions/{extension-name}/api/index.js
-const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
-const migrationsContext = require.context('./database/migrations', false, /\.[cm]?[jt]s$/i);
-const seedsContext = require.context('./database/seeds', false, /\.[cm]?[jt]s$/i);
-const modelsContext = require.context('./models', false, /\.[cm]?[jt]s$/i);
-const translationsContext = require.context('../translations', false, /\.json$/i);
+const routesContext = import.meta.webpackContext('./routes', { recursive: true, regExp: /\.[cm]?[jt]s$/i });
+const migrationsContext = import.meta.webpackContext('./database/migrations', { recursive: false, regExp: /\.[cm]?[jt]s$/i });
+const seedsContext = import.meta.webpackContext('./database/seeds', { recursive: false, regExp: /\.[cm]?[jt]s$/i });
+const modelsContext = import.meta.webpackContext('./models', { recursive: false, regExp: /\.[cm]?[jt]s$/i });
+const translationsContext = import.meta.webpackContext('../translations', { recursive: false, regExp: /\.json$/i });
 
 export default {
   // Declarative hooks — auto-processed by ServerExtensionManager
@@ -1013,8 +1013,8 @@ export default {
 
 ```javascript
 // src/extensions/{extension-name}/views/index.js
-const viewsContext = require.context('.', true, /(?:\/_route|\/_layout)\.[cm]?[jt]sx?$/i);
-const translationsContext = require.context('../translations', false, /\.json$/i);
+const viewsContext = import.meta.webpackContext('.', true, /(?:\/_route|\/_layout)\.[cm]?[jt]sx?$/i);
+const translationsContext = import.meta.webpackContext('../translations', { recursive: false, regExp: /\.json$/i });
 
 export default {
   providers({ container }) {},

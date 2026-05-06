@@ -9,7 +9,7 @@ import {
   getPost,
   updatePost,
   deletePost,
-} from '../../../controllers/post.controller';
+} from '../../../controllers/post.controller.js';
 
 function requirePermission(permission) {
   return (req, res, next) => {

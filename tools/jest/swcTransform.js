@@ -24,23 +24,35 @@ const swcTransformer = swcJest.createTransformer({
 
 export default {
   canInstrument: true,
-  
+
   process(src, filename, options) {
     if (src.includes('import.meta.webpackContext')) {
-      src = src.replace(/import\.meta\.webpackContext/g, 'globalThis.__webpack_require_context__');
+      src = src.replace(
+        /import\.meta\.webpackContext/g,
+        'globalThis.__webpack_require_context__',
+      );
     }
     if (src.includes('require.context')) {
-      src = src.replace(/require\.context/g, 'globalThis.__webpack_require_context__');
+      src = src.replace(
+        /require\.context/g,
+        'globalThis.__webpack_require_context__',
+      );
     }
     return swcTransformer.process(src, filename, options);
   },
 
   async processAsync(src, filename, options) {
     if (src.includes('import.meta.webpackContext')) {
-      src = src.replace(/import\.meta\.webpackContext/g, 'globalThis.__webpack_require_context__');
+      src = src.replace(
+        /import\.meta\.webpackContext/g,
+        'globalThis.__webpack_require_context__',
+      );
     }
     if (src.includes('require.context')) {
-      src = src.replace(/require\.context/g, 'globalThis.__webpack_require_context__');
+      src = src.replace(
+        /require\.context/g,
+        'globalThis.__webpack_require_context__',
+      );
     }
     return swcTransformer.processAsync(src, filename, options);
   },

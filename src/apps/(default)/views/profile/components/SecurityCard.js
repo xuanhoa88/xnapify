@@ -13,10 +13,12 @@ import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Form, { useFormContext } from '@shared/renderer/components/Form';
-import { features } from '@shared/renderer/redux';
+import Form, {
+  useFormContext,
+} from '@shared/renderer/components/Form/index.js';
+import { features } from '@shared/renderer/redux/index.js';
 
-import { changePasswordFormSchema } from '../../../../users/validator/auth';
+import { changePasswordFormSchema } from '../../../../users/validator/auth/index.js';
 
 import s from './SecurityCard.css';
 

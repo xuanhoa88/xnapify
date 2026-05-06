@@ -13,16 +13,16 @@ import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import ContextMenu from '@shared/renderer/components/ContextMenu';
+import ContextMenu from '@shared/renderer/components/ContextMenu/index.js';
 
 import {
   setView,
   setUploadModalOpen,
   selectCurrentView,
   fetchStorageUsage,
-} from '../redux';
+} from '../redux/index.js';
 
-import FileUploader from './FileUploader';
+import FileUploader from './FileUploader.js';
 
 import s from './FileSidebar.css';
 
@@ -81,6 +81,7 @@ export default function FileSidebar() {
                 height={20}
                 className={s.plusIcon}
               />
+
               {t('files:sidebar.new', 'New')}
             </Button>
           </ContextMenu.Trigger>

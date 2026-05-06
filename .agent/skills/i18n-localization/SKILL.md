@@ -60,14 +60,14 @@ Any App or Extension that provides `.json` translation files must explicitly exp
 
 ```javascript
 // Load translations using Rspack context
-const translationsContext = require.context(
+const translationsContext = import.meta.webpackContext(
   '../../../translations',
   false,
   /\.json$/i,
 );
 
 /**
- * Translations hook — returns the rspack require.context for this module's translations.
+ * Translations hook — returns the rspack import.meta.webpackContext for this module's translations.
  * Can optionally return an array: [translationsContext, 'customNamespace'].
  * If a custom namespace is omitted, it defaults to the module's folder name.
  */

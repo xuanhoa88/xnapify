@@ -37,7 +37,7 @@ describe('FileQueue Adapter', () => {
 
   beforeEach(() => {
     jest.resetModules();
-    FileQueue = require('./adapters/file').default;
+    FileQueue = require('./adapters/file.js').default;
 
     queue = new FileQueue({
       name: 'test-queue',

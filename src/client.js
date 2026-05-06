@@ -8,19 +8,19 @@
 import { createBrowserHistory } from 'history';
 import merge from 'lodash/merge';
 
-import { Container } from '@shared/container';
-import extensionManager from '@shared/extension/client';
-import { createFetch } from '@shared/fetch';
-import i18n, { DEFAULT_LOCALE } from '@shared/i18n';
-import App from '@shared/renderer/App';
-import { configureStore, features } from '@shared/renderer/redux';
+import { Container } from '@shared/container/index.js';
+import extensionManager from '@shared/extension/client/index.js';
+import { createFetch } from '@shared/fetch/index.js';
+import i18n, { DEFAULT_LOCALE } from '@shared/i18n/index.js';
+import App from '@shared/renderer/App.js';
+import { configureStore, features } from '@shared/renderer/redux/index.js';
 const { refreshToken, logout, isAuthenticated } = features;
 import {
   createWebSocketClient,
   EventType,
   MessageType,
   setWebSocketClient,
-} from '@shared/ws/client';
+} from '@shared/ws/client/index.js';
 
 // =============================================================================
 // CONSTANTS & CONFIGURATION

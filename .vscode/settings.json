@@ -57,6 +57,8 @@
   "[markdown]": {
     "editor.formatOnSave": false
   },
+  "javascript.preferences.importModuleSpecifierEnding": "js",
+  "typescript.preferences.importModuleSpecifierEnding": "js",
   // Stylelint configuration
   "stylelint.enable": true,
   "stylelint.validate": [

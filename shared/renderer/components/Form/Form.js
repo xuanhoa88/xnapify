@@ -13,7 +13,7 @@ import PropTypes from 'prop-types';
 import { useForm, FormProvider } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { z } from '@shared/validator';
+import { z } from '@shared/validator/index.js';
 
 import { FormValidationContext } from './FormContext.js';
 

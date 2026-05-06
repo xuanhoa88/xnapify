@@ -12,15 +12,15 @@ import { Flex, Box, Text, Button, Card } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import { useHistory } from '@shared/renderer/components/History';
-import Modal from '@shared/renderer/components/Modal';
-import { useRbac } from '@shared/renderer/components/Rbac';
-import { DataTable } from '@shared/renderer/components/Table';
+import { useHistory } from '@shared/renderer/components/History/index.js';
+import Modal from '@shared/renderer/components/Modal/index.js';
+import { useRbac } from '@shared/renderer/components/Rbac/index.js';
+import { DataTable } from '@shared/renderer/components/Table/index.js';
 
-import RoleActionsDropdown from '../components/RoleActionsDropdown';
-import RoleGroupsModal from '../components/RoleGroupsModal';
-import RolePermissionsModal from '../components/RolePermissionsModal';
-import RoleUsersModal from '../components/RoleUsersModal';
+import RoleActionsDropdown from '../components/RoleActionsDropdown.js';
+import RoleGroupsModal from '../components/RoleGroupsModal.js';
+import RolePermissionsModal from '../components/RolePermissionsModal.js';
+import RoleUsersModal from '../components/RoleUsersModal.js';
 import {
   fetchRoles,
   getRoles,
@@ -30,7 +30,7 @@ import {
   getRolesListError,
   deleteRole,
   bulkDeleteRoles,
-} from '../redux';
+} from '../redux/index.js';
 
 import s from './Roles.css';
 
@@ -180,6 +180,7 @@ function Roles() {
         permission: 'roles:delete',
       },
     ],
+
     [t, handleBulkDelete],
   );
 
@@ -245,6 +246,7 @@ function Roles() {
         </Box>
       </Card>
     ),
+
     [
       t,
       handleViewUsers,
@@ -300,6 +302,7 @@ function Roles() {
             onChange={handleSearchChange}
             placeholder={t('roles:admin.searchPlaceholder', 'Search roles...')}
           />
+
           <DataTable.ClearFilters
             visible={!!search}
             onClick={() => {

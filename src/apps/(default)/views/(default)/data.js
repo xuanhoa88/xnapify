@@ -11,9 +11,9 @@ export const featuresData = [
     name: 'Modular Architecture',
     icon: 'ComponentInstanceIcon',
     description:
-      'Domain-driven modules auto-discovered via Webpack require.context. Each module owns its API routes, controllers, services, models, migrations, seeds, and views — fully self-contained.',
+      'Domain-driven modules auto-discovered via Webpack import.meta.webpackContext. Each module owns its API routes, controllers, services, models, migrations, seeds, and views — fully self-contained.',
     details:
-      'Every business domain lives under src/apps/ as an independent module. Modules declare lifecycle hooks (translations, providers, migrations, models, seeds, boot, routes) that the framework orchestrates automatically. Webpack require.context scans and registers modules at build time, eliminating manual wiring. Core modules include auth, users, roles, permissions, groups, activities, emails, extensions, files, search, and webhooks — all following the same pattern.',
+      'Every business domain lives under src/apps/ as an independent module. Modules declare lifecycle hooks (translations, providers, migrations, models, seeds, boot, routes) that the framework orchestrates automatically. Webpack import.meta.webpackContext scans and registers modules at build time, eliminating manual wiring. Core modules include auth, users, roles, permissions, groups, activities, emails, extensions, files, search, and webhooks — all following the same pattern.',
     tags: ['Auto-Discovery', 'Lifecycle Hooks', 'Domain-Driven', 'Webpack'],
   },
   {

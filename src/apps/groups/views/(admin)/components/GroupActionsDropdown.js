@@ -16,7 +16,7 @@ import {
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
-import ContextMenu from '@shared/renderer/components/ContextMenu';
+import ContextMenu from '@shared/renderer/components/ContextMenu/index.js';
 /**
  * GroupActionsDropdown - Dropdown menu for group actions
  */

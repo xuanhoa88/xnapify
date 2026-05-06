@@ -15,7 +15,7 @@
 /**
  * Create the worker demo API object with convenience methods.
  *
- * @param {import('@shared/api/engines/worker').WorkerPoolManager} worker
+ * @param {import('@shared/api/engines/worker/index.js').WorkerPoolManager} worker
  * @returns {Object} Worker demo API
  */
 export function createDemoWorkers(worker) {

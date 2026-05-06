@@ -5,9 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { features } from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux/index.js';
 
-import Profile from './Profile';
+import Profile from './Profile.js';
 
 const { isAuthenticated } = features;
 

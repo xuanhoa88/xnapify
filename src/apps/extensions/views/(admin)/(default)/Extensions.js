@@ -21,14 +21,14 @@ import toLower from 'lodash/toLower';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import { useDebounce } from '@shared/renderer/components/InfiniteScroll';
-import Modal from '@shared/renderer/components/Modal';
-import { useRbac } from '@shared/renderer/components/Rbac';
-import { DataTable } from '@shared/renderer/components/Table';
-import { features } from '@shared/renderer/redux';
-import { useWebSocket } from '@shared/ws/client';
+import { useDebounce } from '@shared/renderer/components/InfiniteScroll/index.js';
+import Modal from '@shared/renderer/components/Modal/index.js';
+import { useRbac } from '@shared/renderer/components/Rbac/index.js';
+import { DataTable } from '@shared/renderer/components/Table/index.js';
+import { features } from '@shared/renderer/redux/index.js';
+import { useWebSocket } from '@shared/ws/client/index.js';
 
-import ExtensionCard from './components/ExtensionCard';
+import ExtensionCard from './components/ExtensionCard.js';
 import {
   fetchExtensions,
   uploadExtension,
@@ -38,7 +38,7 @@ import {
   isExtensionsListLoading,
   isExtensionUploading,
   isExtensionsInitialized,
-} from './redux';
+} from './redux/index.js';
 
 import s from './Extensions.css';
 
@@ -574,6 +574,7 @@ function Extensions() {
                 )
           }
         />
+
         <DataTable.Loader variant='cards' />
       </DataTable>
 

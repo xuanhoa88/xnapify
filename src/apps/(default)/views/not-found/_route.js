@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import NotFound from './NotFound';
+import NotFound from './NotFound.js';
 
 /**
  * Page metadata

@@ -8,4 +8,4 @@
 export {
   createEmailTemplateFormSchema,
   updateEmailTemplateFormSchema,
-} from './template';
+} from './template.js';

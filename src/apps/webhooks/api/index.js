@@ -18,7 +18,7 @@
  * 3. **routes()** — Exposes admin and inbound webhook routes
  */
 
-import { createFactory } from './factory';
+import { createFactory } from './factory.js';
 
 /** @type {Symbol} Ownership key for this module's persistent bindings */
 const OWNER_KEY = Symbol('__xnapify.module.webhooks.api__');
@@ -26,7 +26,7 @@ const OWNER_KEY = Symbol('__xnapify.module.webhooks.api__');
 // Auto-load contexts
 const routesContext = import.meta.webpackContext('./routes', {
   recursive: true,
-  regExp: /\.[cm]?[jt]s$/i
+  regExp: /\.[cm]?[jt]s$/i,
 });
 
 // =============================================================================
@@ -35,21 +35,21 @@ const routesContext = import.meta.webpackContext('./routes', {
 
 export default {
   routes: () => routesContext,
-  async providers({
-    container
-  }) {
+  async providers({ container }) {
     // Lazy binding — webhook manager needs hook engine which is available at resolve time
-    container.bind('webhook', c => {
-      const manager = createFactory();
-      manager.withContext(c);
-      return manager;
-    }, OWNER_KEY);
+    container.bind(
+      'webhook',
+      c => {
+        const manager = createFactory();
+        manager.withContext(c);
+        return manager;
+      },
+      OWNER_KEY,
+    );
   },
-  async boot({
-    container
-  }) {
+  async boot({ container }) {
     // Force initialization so webhook is ready for extensions
     container.resolve('webhook');
     console.info('[Webhooks] ✅ Initialized');
-  }
+  },
 };

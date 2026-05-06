@@ -5,8 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-export * from './login';
-export * from './registration';
-export * from './emailVerification';
-export * from './passwordReset';
-export * from './profile';
+export * from './login.js';
+export * from './registration.js';
+export * from './emailVerification.js';
+export * from './passwordReset.js';
+export * from './profile.js';

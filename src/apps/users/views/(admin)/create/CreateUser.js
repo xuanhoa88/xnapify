@@ -28,15 +28,17 @@ import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Form, { useFormContext } from '@shared/renderer/components/Form';
-import { useHistory } from '@shared/renderer/components/History';
-import { useDebounce } from '@shared/renderer/components/InfiniteScroll';
-import Modal from '@shared/renderer/components/Modal';
-import { PageHeader } from '@shared/renderer/components/PageHeader';
-import { features } from '@shared/renderer/redux';
+import Form, {
+  useFormContext,
+} from '@shared/renderer/components/Form/index.js';
+import { useHistory } from '@shared/renderer/components/History/index.js';
+import { useDebounce } from '@shared/renderer/components/InfiniteScroll/index.js';
+import Modal from '@shared/renderer/components/Modal/index.js';
+import { PageHeader } from '@shared/renderer/components/PageHeader/index.js';
+import { features } from '@shared/renderer/redux/index.js';
 
-import { createUserFormSchema } from '../../../validator/admin';
-import { createUser, isUserCreateLoading } from '../redux';
+import { createUserFormSchema } from '../../../validator/admin/index.js';
+import { createUser, isUserCreateLoading } from '../redux/index.js';
 
 const { generatePassword, showSuccessMessage, showErrorMessage } = features;
 

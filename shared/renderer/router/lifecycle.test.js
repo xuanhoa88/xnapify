@@ -8,7 +8,7 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 
-import { addNamespace } from '@shared/i18n/utils';
+import { addNamespace } from '@shared/i18n/utils.js';
 
 import { ROUTE_TRANSLATIONS_KEY } from './constants.js';
 import { buildTranslationsLoader, loadRouteTranslations } from './lifecycle.js';
@@ -26,7 +26,7 @@ describe('Translations Inheritance', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     // Re-establish mock implementation after clearAllMocks resets it
-    const { getTranslations } = require('@shared/i18n/loader');
+    const { getTranslations } = require('@shared/i18n/loader.js');
     getTranslations.mockImplementation(val => val);
   });
 

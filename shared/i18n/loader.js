@@ -5,13 +5,13 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { createRspackContextAdapter } from '@shared/utils/contextAdapter';
+import { createRspackContextAdapter } from '@shared/utils/contextAdapter.js';
 
 /**
- * Get translations from a require.context object (wrapped in adapter)
+ * Get translations from a import.meta.webpackContext object (wrapped in adapter)
  * This is a utility function that can be reused across the application
  *
- * @param {Object} translationAdapter - Rspack require.context or Context Adapter
+ * @param {Object} translationAdapter - Rspack import.meta.webpackContext or Context Adapter
  * @returns {Object} Object mapping locale codes to translation objects
  */
 export function getTranslations(translationAdapter) {

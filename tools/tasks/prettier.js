@@ -48,7 +48,7 @@ const EXCLUDED_DIRS = ['node_modules', 'build', 'coverage', '.git', '.cache'];
 async function findFiles(targetPath) {
   try {
     const stats = fs.statSync(targetPath);
-    
+
     if (stats.isFile()) {
       const ext = targetPath.substring(targetPath.lastIndexOf('.'));
       if (FORMATTABLE_EXTENSIONS.includes(ext)) {
@@ -56,7 +56,7 @@ async function findFiles(targetPath) {
       }
       return [];
     }
-    
+
     if (stats.isDirectory()) {
       const files = [];
       const entries = await readDir(targetPath, { withFileTypes: true });
@@ -149,9 +149,10 @@ async function main() {
   try {
     // Get target directories or files from args
     const args = process.argv.slice(2).filter(arg => !arg.startsWith('-'));
-    const targetDirs = args.length > 0
-      ? args
-      : [config.APP_DIR, path.resolve(config.CWD, 'shared')];
+    const targetDirs =
+      args.length > 0
+        ? args
+        : [config.APP_DIR, path.resolve(config.CWD, 'shared')];
 
     // Check if it's a --check mode (no modifications)
     const checkOnly = process.argv.includes('--check');

@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { SEED_PERMISSIONS } from './constants';
+import { SEED_PERMISSIONS } from './constants.js';
 
 /** @type {Symbol} Ownership key for this module's persistent bindings */
 const OWNER_KEY = Symbol('__xnapify.module.files.api__');
@@ -13,19 +13,19 @@ const OWNER_KEY = Symbol('__xnapify.module.files.api__');
 // Auto-load contexts
 const migrationsContext = import.meta.webpackContext('./database/migrations', {
   recursive: false,
-  regExp: /\.[cm]?[jt]s$/i
+  regExp: /\.[cm]?[jt]s$/i,
 });
 const seedsContext = import.meta.webpackContext('./database/seeds', {
   recursive: false,
-  regExp: /\.[cm]?[jt]s$/i
+  regExp: /\.[cm]?[jt]s$/i,
 });
 const modelsContext = import.meta.webpackContext('./models', {
   recursive: false,
-  regExp: /\.[cm]?[jt]s$/i
+  regExp: /\.[cm]?[jt]s$/i,
 });
 const routesContext = import.meta.webpackContext('./routes', {
   recursive: true,
-  regExp: /\.[cm]?[jt]s$/i
+  regExp: /\.[cm]?[jt]s$/i,
 });
 
 // =============================================================================
@@ -37,9 +37,7 @@ export default {
   seeds: () => seedsContext,
   models: () => modelsContext,
   routes: () => routesContext,
-  async providers({
-    container
-  }) {
+  async providers({ container }) {
     container.bind('files:seed_constants', () => SEED_PERMISSIONS, OWNER_KEY);
-  }
+  },
 };

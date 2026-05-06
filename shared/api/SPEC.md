@@ -36,7 +36,7 @@ shared/api/
 
 ### 1. Engine Auto-Discovery (`index.js`)
 
-Scans `./engines/*/index.js` via rspack `require.context` and builds a frozen object of engine interfaces.
+Scans `./engines/*/index.js` via rspack `import.meta.webpackContext` and builds a frozen object of engine interfaces.
 
 | Export        | Type     | Description                                             |
 | ------------- | -------- | ------------------------------------------------------- |
@@ -58,15 +58,15 @@ Discovers and boots API modules in deterministic lifecycle order.
 
 | #   | Phase          | Hook Signature                       | Purpose                                    |
 | --- | -------------- | ------------------------------------ | ------------------------------------------ |
-| 1   | `translations` | `translations()` → `require.context` | Register i18n namespaces                   |
+| 1   | `translations` | `translations()` → `import.meta.webpackContext` | Register i18n namespaces                   |
 | 2   | `providers`    | `providers({ container })`           | Bind DI services via `container.bind()`    |
-| 3   | `migrations`   | `migrations()` → `require.context`   | Create/alter database schema (declarative) |
-| 4   | `models`       | `models()` → `require.context`       | Load Sequelize model factories             |
-| 5   | `seeds`        | `seeds()` → `require.context`        | Populate initial data (declarative)        |
+| 3   | `migrations`   | `migrations()` → `import.meta.webpackContext`   | Create/alter database schema (declarative) |
+| 4   | `models`       | `models()` → `import.meta.webpackContext`       | Load Sequelize model factories             |
+| 5   | `seeds`        | `seeds()` → `import.meta.webpackContext`        | Populate initial data (declarative)        |
 
 > **Dynamic Model Injection**: During Phase 4, the core model factories are passed the DI `container`. They emit a `[PascalCaseModelName]:define` hook (e.g. `hook('models').invoke('User:define', { attributes, container })`) right before executing `connection.define`. This allows extensions (binding early in Phase 2 `providers`) to safely slip new attributes into the schema before it seals. Furthermore, they emit a `[PascalCaseModelName]:associate` hook at the end of their `associate` definitions, allowing dynamic relational binding (e.g., `User.hasMany(...)`).
 > | 6 | `boot` | `boot({ container })` | Hook registration, workers, schedulers |
-> | 7 | `routes` | `routes()` → `require.context` | Expose file-based API routes |
+> | 7 | `routes` | `routes()` → `import.meta.webpackContext` | Expose file-based API routes |
 
 #### Module Loading Order
 

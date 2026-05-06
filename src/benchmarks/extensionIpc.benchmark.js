@@ -13,7 +13,8 @@ const require = createRequire(import.meta.url);
 
 const { performance } = require('perf_hooks');
 
-const ExtensionRegistry = require('@shared/extension/utils/Registry').default;
+const ExtensionRegistry =
+  require('@shared/extension/utils/Registry.js').default;
 
 describe('extension IPC stress', () => {
   let registry;

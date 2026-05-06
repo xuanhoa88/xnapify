@@ -10,9 +10,9 @@ import { Flex, Box, Text, Heading, Container } from '@radix-ui/themes';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 
-import { Link } from '@shared/renderer/components/History';
+import { Link } from '@shared/renderer/components/History/index.js';
 
-import { featuresData } from '../data';
+import { featuresData } from '../data.js';
 
 import s from './Features.css';
 

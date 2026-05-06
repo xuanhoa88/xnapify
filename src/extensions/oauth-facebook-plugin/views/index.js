@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import FacebookButton from './FacebookButton';
+import FacebookButton from './FacebookButton.js';
 
 export default {
   boot({ registry }) {

@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { extractVariables, createPlaceholderData } from './template';
+import { extractVariables, createPlaceholderData } from './template.js';
 
 describe('extractVariables', () => {
   test('extracts simple variables', () => {

@@ -60,8 +60,8 @@ The Backend API index file registers Webpack Context loaders and binds logic to 
 /* src/extensions/my_extension/api/index.js */
 
 // Pre-calculate Webpack contexts mapping your directories 
-const migrationsContext = require.context('./database/migrations', false, /\.[cm]?[jt]s$/i);
-const translationsContext = require.context('../translations', false, /\.json$/i);
+const migrationsContext = import.meta.webpackContext('./database/migrations', { recursive: false, regExp: /\.[cm]?[jt]s$/i });
+const translationsContext = import.meta.webpackContext('../translations', { recursive: false, regExp: /\.json$/i });
 const HANDLERS = Symbol('handlers');
 
 export default {
@@ -106,7 +106,7 @@ Frontend configuration is conceptually similar but executes on the Application D
 /* src/extensions/my_extension/views/index.js */
 import MySpecialComponent from './components/MySpecialComponent'
 
-const translationsContext = require.context('../translations', false, /\.json$/i);
+const translationsContext = import.meta.webpackContext('../translations', { recursive: false, regExp: /\.json$/i });
 
 export default {
   translations: () => [translationsContext],

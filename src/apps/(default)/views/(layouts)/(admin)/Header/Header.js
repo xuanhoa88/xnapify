@@ -11,13 +11,13 @@ import { Flex, Box } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 
-import Icon from '@shared/renderer/components/Icon';
-import { features } from '@shared/renderer/redux';
+import Icon from '@shared/renderer/components/Icon/index.js';
+import { features } from '@shared/renderer/redux/index.js';
 
-import Breadcrumbs from './Breadcrumbs';
-import LanguageSwitcher from './LanguageSwitcher';
-import Notifications from './Notifications';
-import ProfileDropdown from './ProfileDropdown';
+import Breadcrumbs from './Breadcrumbs.js';
+import LanguageSwitcher from './LanguageSwitcher.js';
+import Notifications from './Notifications.js';
+import ProfileDropdown from './ProfileDropdown.js';
 
 const { isAuthenticated, toggleDrawer } = features;
 

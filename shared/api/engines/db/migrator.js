@@ -8,14 +8,14 @@
 import * as Sequelize from 'sequelize';
 import { Umzug, SequelizeStorage } from 'umzug';
 
-import { createRspackContextAdapter } from '@shared/utils/contextAdapter';
+import { createRspackContextAdapter } from '@shared/utils/contextAdapter.js';
 
 // ======================================================================
 // Internal helpers
 // ======================================================================
 
 /**
- * Extract filename from require.context key: './filename.js' -> 'filename'
+ * Extract filename from import.meta.webpackContext key: './filename.js' -> 'filename'
  *
  * @param {string} key - Rspack context key (e.g. './2026.01.12T00.00.00.create-users.js')
  * @returns {string} Filename without extension
@@ -129,7 +129,7 @@ function mergeMigrations(migrationSources, options = {}) {
 
     if (!source.context || typeof source.context !== 'function') {
       const error = new Error(
-        'Each migration source must have a valid context (rspack require.context function)',
+        'Each migration source must have a valid context (rspack import.meta.webpackContext function)',
       );
       error.name = 'InvalidMigrationSourceContextError';
       error.status = 400;

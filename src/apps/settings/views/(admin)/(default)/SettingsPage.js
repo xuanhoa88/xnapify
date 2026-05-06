@@ -14,13 +14,15 @@ import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Form, { useFormContext } from '@shared/renderer/components/Form';
-import Icon from '@shared/renderer/components/Icon';
-import Loader from '@shared/renderer/components/Loader';
-import { PageHeader } from '@shared/renderer/components/PageHeader';
-import { useRbac } from '@shared/renderer/components/Rbac';
+import Form, {
+  useFormContext,
+} from '@shared/renderer/components/Form/index.js';
+import Icon from '@shared/renderer/components/Icon/index.js';
+import Loader from '@shared/renderer/components/Loader/index.js';
+import { PageHeader } from '@shared/renderer/components/PageHeader/index.js';
+import { useRbac } from '@shared/renderer/components/Rbac/index.js';
 
-import { useSettingsTabConfig } from '../hooks/useSettingsTabConfig';
+import { useSettingsTabConfig } from '../hooks/useSettingsTabConfig.js';
 import {
   fetchSettings,
   saveNamespaceSettings,
@@ -28,7 +30,7 @@ import {
   selectLoading,
   selectError,
   selectInitialized,
-} from '../redux';
+} from '../redux/index.js';
 
 import s from './SettingsPage.css';
 
@@ -79,6 +81,7 @@ function SettingRow({ setting, canWrite }) {
             enableClipboard
           />
         );
+
       default: {
         // Intelligent heuristic for textareas based on setting key naming convention
         const upperKey = setting.key.toUpperCase();
@@ -388,6 +391,7 @@ function SettingsPage({ context }) {
           )}
           icon={<Icon name='GearIcon' size={24} />}
         />
+
         <Loader
           variant='spinner'
           message={t('settings:admin.loading', 'Loading settings...')}
@@ -408,6 +412,7 @@ function SettingsPage({ context }) {
           )}
           icon={<Icon name='GearIcon' size={24} />}
         />
+
         <Flex
           direction='column'
           align='center'
@@ -474,6 +479,7 @@ function SettingsPage({ context }) {
                 size={16}
                 className='shrink-0'
               />
+
               <Text
                 as='span'
                 size='2'

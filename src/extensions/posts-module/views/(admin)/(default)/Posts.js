@@ -31,14 +31,14 @@ import format from 'date-fns/format';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Loader from '@shared/renderer/components/Loader';
-import Modal from '@shared/renderer/components/Modal';
-import { useRbac } from '@shared/renderer/components/Rbac';
-import { SearchableSelect } from '@shared/renderer/components/SearchableSelect';
+import Loader from '@shared/renderer/components/Loader/index.js';
+import Modal from '@shared/renderer/components/Modal/index.js';
+import { useRbac } from '@shared/renderer/components/Rbac/index.js';
+import { SearchableSelect } from '@shared/renderer/components/SearchableSelect/index.js';
 import {
   TablePagination,
   TableSearch,
-} from '@shared/renderer/components/Table';
+} from '@shared/renderer/components/Table/index.js';
 
 import {
   fetchPosts,
@@ -49,10 +49,10 @@ import {
   isPostsListInitialized,
   getPostsListError,
   isPostDeleteLoading,
-} from '../redux';
+} from '../redux/index.js';
 
-import PostForm from './PostForm';
-import SeoPreview from './SeoPreview';
+import PostForm from './PostForm.js';
+import SeoPreview from './SeoPreview.js';
 
 import s from './Posts.css';
 
@@ -102,34 +102,43 @@ function Posts() {
   }, [dispatch, currentPage, search, statusFilter]);
 
   // Filter handlers
-  const handleSearchChange = useCallback(value => {
-    setSearch(value);
-    setCurrentPage(1);
-  }, []);
+  const handleSearchChange = useCallback(
+    value => {
+      setSearch(value);
+      setCurrentPage(1);
+    },
+    [setCurrentPage, setSearch],
+  );
 
-  const handleStatusFilterChange = useCallback(value => {
-    setStatusFilter(value);
-    setCurrentPage(1);
-  }, []);
+  const handleStatusFilterChange = useCallback(
+    value => {
+      setStatusFilter(value);
+      setCurrentPage(1);
+    },
+    [setCurrentPage, setStatusFilter],
+  );
 
   const handleClearAllFilters = useCallback(() => {
     setSearch('');
     setStatusFilter('');
     setCurrentPage(1);
-  }, []);
+  }, [setCurrentPage, setSearch, setStatusFilter]);
 
   const hasActiveFilters = search || statusFilter;
 
-  const handleDelete = useCallback(post => {
-    setDeleteTarget(post);
-  }, []);
+  const handleDelete = useCallback(
+    post => {
+      setDeleteTarget(post);
+    },
+    [setDeleteTarget],
+  );
 
   const handleConfirmDelete = useCallback(async () => {
     if (!deleteTarget) return;
     await dispatch(deletePost(deleteTarget.id)).unwrap();
     setDeleteTarget(null);
     refreshPosts();
-  }, [dispatch, deleteTarget, refreshPosts]);
+  }, [dispatch, deleteTarget, refreshPosts, setDeleteTarget]);
 
   // Loading state — first fetch or loading with no data
   if (!initialized || (loading && posts.length === 0)) {

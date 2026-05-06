@@ -5,8 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { setTokenCookie, setRefreshTokenCookie } from '@shared/cookies';
-import { validateForm } from '@shared/validator';
+import {
+  setTokenCookie,
+  setRefreshTokenCookie,
+} from '@shared/cookies/index.js';
+import { validateForm } from '@shared/validator/index.js';
 
 import {
   updateUserFormSchema,
@@ -14,8 +17,8 @@ import {
   bulkUpdateUserStatusFormSchema,
   bulkDeleteUserFormSchema,
   createApiKeyFormSchema,
-} from '../../../validator/admin';
-import * as userAdminService from '../../services/admin/user.service';
+} from '../../../validator/admin/index.js';
+import * as userAdminService from '../../services/admin/user.service.js';
 
 // ========================================================================
 // USER ADMINISTRATION CONTROLLERS (Admin Only)

@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { emailRule, passwordRule } from './common';
+import { emailRule, passwordRule } from './common.js';
 
 /**
  * Login schema - callable factory function

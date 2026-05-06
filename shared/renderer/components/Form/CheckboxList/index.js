@@ -228,12 +228,12 @@ const FormCheckboxList = forwardRef(function FormCheckboxList$(
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const showLoading = loading || (!hasLoadedOnce && items.length === 0);
   const displayEmptyMessage =
-    emptyMessage || t('shared:components.checkboxList.empty', 'No items found');
+    emptyMessage || t('common:components.checkboxList.empty', 'No items found');
   const displayLoadingMessage =
-    loadingMessage || t('shared:components.checkboxList.loading', 'Loading...');
+    loadingMessage || t('common:components.checkboxList.loading', 'Loading...');
   const displaySearchPlaceholder =
     searchPlaceholder ||
-    t('shared:components.checkboxList.searchPlaceholder', 'Search...');
+    t('common:components.checkboxList.searchPlaceholder', 'Search...');
 
   const { id, name, error } = useFormField();
   const { watch, setValue, getValues } = useFormContext();
@@ -491,7 +491,7 @@ const FormCheckboxList = forwardRef(function FormCheckboxList$(
                 size='1'
                 onClick={handleClearSearch}
                 title={t(
-                  'shared:components.checkboxList.clearSearch',
+                  'common:components.checkboxList.clearSearch',
                   'Clear search',
                 )}
                 disabled={disabled}
@@ -574,7 +574,7 @@ const FormCheckboxList = forwardRef(function FormCheckboxList$(
                 <Box p='3' className={s.centerItalic}>
                   <Text size='2' color='gray' className={s.centerItalic}>
                     {t(
-                      'shared:components.checkboxList.loadingMore',
+                      'common:components.checkboxList.loadingMore',
                       'Loading more...',
                     )}
                   </Text>

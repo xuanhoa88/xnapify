@@ -13,7 +13,7 @@ import {
   installExtensionFromPackage,
   deleteExtension,
   toggleExtensionStatus,
-} from './extension.service';
+} from './extension.service.js';
 
 // ========================================================================
 // Hub Service — GitHub Registry-backed Browse API
@@ -410,7 +410,6 @@ export async function installFromHub(extensionName, context) {
     } catch (err) {
       // Ignore background badge recalculation errors
     }
-
     return result;
   } finally {
     // Cleanup temp file (best-effort)
@@ -496,7 +495,6 @@ export async function updateFromHub(extensionName, context) {
     } catch (err) {
       // Ignore background badge recalculation errors
     }
-
     return result;
   } finally {
     fs.promises.unlink(tmpPath).catch(() => {});
@@ -548,7 +546,6 @@ export async function uninstallFromHub(extensionName, context) {
   } catch (err) {
     // Ignore background badge recalculation errors
   }
-
   return true;
 }
 

@@ -76,7 +76,7 @@ const CommentActionsPopup = ({
                   className={s.removeButton}
                   onClick={() => onRemoveComment(comment.id)}
                   title={t(
-                    'shared:form.wysiwyg.delete_comment',
+                    'common:form.wysiwyg.delete_comment',
                     'Delete Comment',
                   )}
                   aria-label='Delete Comment'
@@ -97,7 +97,7 @@ const CommentActionsPopup = ({
           onChange={e => setNewCommentText(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={t(
-            'shared:form.wysiwyg.type_a_comment',
+            'common:form.wysiwyg.type_a_comment',
             'Type a comment... (Enter to submit)',
           )}
           rows={2}
@@ -105,10 +105,10 @@ const CommentActionsPopup = ({
         />
         <Flex gap='3' justify='end' className={s.commentActions}>
           <Button variant='ghost' type='button' color='gray' onClick={onClose}>
-            {t('shared:form.wysiwyg.cancel', 'Cancel')}
+            {t('common:form.wysiwyg.cancel', 'Cancel')}
           </Button>
           <Button type='submit' disabled={!newCommentText.trim()}>
-            {t('shared:form.wysiwyg.comment', 'Comment')}
+            {t('common:form.wysiwyg.comment', 'Comment')}
           </Button>
         </Flex>
       </form>

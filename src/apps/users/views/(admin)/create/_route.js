@@ -5,10 +5,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { requirePermission } from '@shared/renderer/components/Rbac';
-import { features } from '@shared/renderer/redux';
+import { requirePermission } from '@shared/renderer/components/Rbac/index.js';
+import { features } from '@shared/renderer/redux/index.js';
 
-import CreateUser from './CreateUser';
+import CreateUser from './CreateUser.js';
 
 const { addBreadcrumb } = features;
 

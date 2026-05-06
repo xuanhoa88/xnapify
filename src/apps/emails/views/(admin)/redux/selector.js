@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { SLICE_NAME, normalizeState } from './slice';
+import { SLICE_NAME, normalizeState } from './slice.js';
 
 /**
  * Base selector — get the normalized slice state

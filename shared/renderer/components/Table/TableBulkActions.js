@@ -43,7 +43,7 @@ function TableBulkActions({
         <Box className={s.bulkCountBadge}>{count}</Box>
         <Text size='2' weight='medium' className={s.bulkItemCountText}>
           {itemCountLabel ||
-            t('shared:components.bulkActions.itemsSelected', 'items selected')}
+            t('common:components.bulkActions.itemsSelected', 'items selected')}
         </Text>
       </Flex>
 
@@ -74,7 +74,7 @@ function TableBulkActions({
           >
             <ContextMenu.Trigger
               title={t(
-                'shared:components.bulkActions.moreActions',
+                'common:components.bulkActions.moreActions',
                 'More actions',
               )}
               className='rt-IconButton'
@@ -115,7 +115,7 @@ function TableBulkActions({
       >
         <Icon name='Cross1Icon' size={14} />
         <span className={s.clearText}>
-          {t('shared:components.bulkActions.clear', 'Clear')}
+          {t('common:components.bulkActions.clear', 'Clear')}
         </span>
       </Button>
     </Flex>

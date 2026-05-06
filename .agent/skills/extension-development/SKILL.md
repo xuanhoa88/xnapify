@@ -24,7 +24,7 @@ Extensions follow a well-defined phase-sequential lifecycle. Each phase runs for
 
 ### Boot-time Hooks (no DI context)
 
-- **`translations()`**: Declarative — returns a `require.context` for i18n JSON files, or `[context, customNamespace]`. Auto-registered via `addNamespace()` before other hooks (default namespace is `extension:${id}`). Cleaned up via `removeNamespace()` on deactivation.
+- **`translations()`**: Declarative — returns a `import.meta.webpackContext` for i18n JSON files, or `[context, customNamespace]`. Auto-registered via `addNamespace()` before other hooks (default namespace is `extension:${id}`). Cleaned up via `removeNamespace()` on deactivation.
 
 ### Post-bootstrap Hooks (full DI context: `{ container, store }`)
 
@@ -63,10 +63,10 @@ Extensions follow a well-defined phase-sequential lifecycle. Each phase runs for
 
    **Declarative Hooks (auto-processed by the framework):**
 
-   - **`models()`**: Returns a `require.context` for model factories. Models are auto-registered into the global `ModelRegistry` via `discover()`. No manual registration needed.
-   - **`migrations()`**: Returns a `require.context` for migration files. Auto-run with `__EXTENSION_ID__` prefix (idempotent).
-   - **`seeds()`**: Returns a `require.context` for seed files. Auto-run with `__EXTENSION_ID__` prefix (idempotent).
-   - **`translations()`**: Returns a `require.context` for i18n JSON files (or `[context, customNamespace]`).
+   - **`models()`**: Returns a `import.meta.webpackContext` for model factories. Models are auto-registered into the global `ModelRegistry` via `discover()`. No manual registration needed.
+   - **`migrations()`**: Returns a `import.meta.webpackContext` for migration files. Auto-run with `__EXTENSION_ID__` prefix (idempotent).
+   - **`seeds()`**: Returns a `import.meta.webpackContext` for seed files. Auto-run with `__EXTENSION_ID__` prefix (idempotent).
+   - **`translations()`**: Returns a `import.meta.webpackContext` for i18n JSON files (or `[context, customNamespace]`).
 
    **Lifecycle Hooks:**
 
@@ -244,7 +244,7 @@ Extensions that add global configurations to the `Setting` table automatically r
 // views/index.js
 export default {
   translations() {
-    return require.context('../translations', false, /\.json$/i);
+    return import.meta.webpackContext('../translations', { recursive: false, regExp: /\.json$/i });
   },
 
   boot({ registry }) {

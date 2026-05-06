@@ -9,10 +9,10 @@
  * Activity Admin Route
  */
 
-import { requirePermission } from '@shared/renderer/components/Rbac';
-import { features } from '@shared/renderer/redux';
+import { requirePermission } from '@shared/renderer/components/Rbac/index.js';
+import { features } from '@shared/renderer/redux/index.js';
 
-import ActivityList from './ActivityList';
+import ActivityList from './ActivityList.js';
 
 const { addBreadcrumb, registerMenu, unregisterMenu } = features;
 

@@ -11,7 +11,7 @@
 
 import { createSlice } from '@reduxjs/toolkit';
 
-import { fetchActivities } from './thunks';
+import { fetchActivities } from './thunks.js';
 
 export const SLICE_NAME = 'activities';
 

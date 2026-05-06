@@ -31,10 +31,10 @@ import { fetchUsers } from 'apps/users/views/(admin)/redux/thunks';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 
-import { Link } from '@shared/renderer/components/History';
-import Loader from '@shared/renderer/components/Loader';
+import { Link } from '@shared/renderer/components/History/index.js';
+import Loader from '@shared/renderer/components/Loader/index.js';
 
-import WidgetCard from './WidgetCard';
+import WidgetCard from './WidgetCard.js';
 
 import s from './AtAGlanceWidget.css';
 
@@ -64,7 +64,7 @@ export default function AtAGlanceWidget() {
         icon: PersonIcon,
         color: 'var(--blue-9)',
         path: '/admin/users',
-        label: t('admin:dashboard.usersCount', '{{count}} Users', {
+        label: t('default:dashboard.usersCount', '{{count}} Users', {
           count: isUsersReady && usersPagination ? usersPagination.total : 0,
         }),
       },
@@ -72,7 +72,7 @@ export default function AtAGlanceWidget() {
         icon: FileTextIcon,
         color: 'var(--blue-9)',
         path: '/admin/roles',
-        label: t('admin:dashboard.rolesCount', '{{count}} Roles', {
+        label: t('default:dashboard.rolesCount', '{{count}} Roles', {
           count: isRolesReady && rolesPagination ? rolesPagination.total : 0,
         }),
       },
@@ -80,7 +80,7 @@ export default function AtAGlanceWidget() {
         icon: ChatBubbleIcon,
         color: 'var(--blue-9)',
         path: '/admin/groups',
-        label: t('admin:dashboard.groupsCount', '{{count}} Groups', {
+        label: t('default:dashboard.groupsCount', '{{count}} Groups', {
           count: isGroupsReady && groupsPagination ? groupsPagination.total : 0,
         }),
       },
@@ -97,7 +97,7 @@ export default function AtAGlanceWidget() {
   );
 
   return (
-    <WidgetCard title={t('admin:dashboard.atAGlance', 'At a Glance')}>
+    <WidgetCard title={t('default:dashboard.atAGlance', 'At a Glance')}>
       {!isInitialized ? (
         <Loader variant='skeleton' skeletonCount={3} />
       ) : (
@@ -115,9 +115,9 @@ export default function AtAGlanceWidget() {
 
       <Box mt='4'>
         <Text size='2' color='gray'>
-          {t('admin:dashboard.versionInfo', 'xnapify 1.0.0 running ')}
+          {t('default:dashboard.versionInfo', 'xnapify 1.0.0 running ')}
           <Link to='/admin/settings' className={s.interactiveLink}>
-            {t('admin:dashboard.defaultTheme', 'Default Theme')}
+            {t('default:dashboard.defaultTheme', 'Default Theme')}
           </Link>
           .
         </Text>

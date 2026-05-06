@@ -5,16 +5,16 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { validateForm } from '@shared/validator';
+import { validateForm } from '@shared/validator/index.js';
 
 import {
   assignRolesToUserFormSchema,
   assignGroupsToUserFormSchema,
   assignRolesToGroupFormSchema,
   manageRolePermissionsFormSchema,
-} from '../../../validator/admin';
-import * as rbacService from '../../services/admin/rbac.service';
-import * as roleService from '../../services/admin/role.service';
+} from '../../../validator/admin/index.js';
+import * as rbacService from '../../services/admin/rbac.service.js';
+import * as roleService from '../../services/admin/role.service.js';
 
 // ========================================================================
 // RBAC CONTROLLERS

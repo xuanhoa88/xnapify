@@ -12,16 +12,18 @@ import PropTypes from 'prop-types';
 import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Form, { useFormContext } from '@shared/renderer/components/Form';
+import Form, {
+  useFormContext,
+} from '@shared/renderer/components/Form/index.js';
 import {
   Link,
   useHistory,
   useQuery,
-} from '@shared/renderer/components/History';
-import { features } from '@shared/renderer/redux';
-import { useWebSocket } from '@shared/ws/client';
+} from '@shared/renderer/components/History/index.js';
+import { features } from '@shared/renderer/redux/index.js';
+import { useWebSocket } from '@shared/ws/client/index.js';
 
-import { registerFormSchema } from '../../../users/validator/auth';
+import { registerFormSchema } from '../../../users/validator/auth/index.js';
 
 const { register, isAuthLoading, getAuthError, clearAuthError } = features;
 
@@ -108,7 +110,6 @@ function Register() {
           <Trans
             t={t}
             i18nKey='register.alreadyHaveAccount'
-            // eslint-disable-next-line jsx-a11y/anchor-has-content
             components={[
               <Link
                 key='login'

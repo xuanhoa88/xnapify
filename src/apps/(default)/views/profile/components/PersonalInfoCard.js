@@ -18,13 +18,15 @@ import {
   useExtensionHooks,
   useExtensionValidator,
   useExtensionFormData,
-} from '@shared/renderer/components/Extension';
-import Form, { useFormContext } from '@shared/renderer/components/Form';
-import Loader from '@shared/renderer/components/Loader';
-import { features } from '@shared/renderer/redux';
-import { z } from '@shared/validator';
+} from '@shared/renderer/components/Extension/index.js';
+import Form, {
+  useFormContext,
+} from '@shared/renderer/components/Form/index.js';
+import Loader from '@shared/renderer/components/Loader/index.js';
+import { features } from '@shared/renderer/redux/index.js';
+import { z } from '@shared/validator/index.js';
 
-import { updateProfileFormSchema } from '../../../../users/validator/auth';
+import { updateProfileFormSchema } from '../../../../users/validator/auth/index.js';
 
 import s from './PersonalInfoCard.css';
 

@@ -7,7 +7,7 @@
 
 import { marked } from 'marked';
 
-import MarkdownViewer from '../components/preview/MarkdownViewer';
+import MarkdownViewer from '../components/preview/MarkdownViewer.js';
 
 // Configure marked with custom renderers here to avoid client/server mismatch
 const renderer = new marked.Renderer();

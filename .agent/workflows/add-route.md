@@ -119,7 +119,7 @@ export const {resourceSchema} = ({ z }) => {
 
 ### 5. Verify Route Discovery
 
-The route is auto-discovered via `require.context('./routes', true, /\.[cm]?[jt]s$/i)` in the module's `api/index.js`. No manual registration needed.
+The route is auto-discovered via `import.meta.webpackContext('./routes', { recursive: true, regExp: /\.[cm]?[jt]s$/i })` in the module's `api/index.js`. No manual registration needed.
 
 // turbo
 ```bash

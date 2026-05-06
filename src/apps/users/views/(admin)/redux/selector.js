@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { normalizeState, SLICE_NAME } from './slice';
+import { normalizeState, SLICE_NAME } from './slice.js';
 
 // =============================================================================
 // HELPER FUNCTIONS

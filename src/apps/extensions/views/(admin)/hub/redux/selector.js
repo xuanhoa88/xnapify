@@ -7,7 +7,7 @@
 
 import { createSelector } from '@reduxjs/toolkit';
 
-import { normalizeState, SLICE_NAME } from './slice';
+import { normalizeState, SLICE_NAME } from './slice.js';
 
 const selectRawSlice = state => state && state[SLICE_NAME];
 

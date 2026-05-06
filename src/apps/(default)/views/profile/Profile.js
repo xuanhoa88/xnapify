@@ -14,11 +14,11 @@ import {
 import { Box, Tabs } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
-import DeleteAccountCard from './components/DeleteAccountCard';
-import PersonalInfoCard from './components/PersonalInfoCard';
-import PreferencesCard from './components/PreferencesCard';
-import ProfileHeader from './components/ProfileHeader';
-import SecurityCard from './components/SecurityCard';
+import DeleteAccountCard from './components/DeleteAccountCard.js';
+import PersonalInfoCard from './components/PersonalInfoCard.js';
+import PreferencesCard from './components/PreferencesCard.js';
+import ProfileHeader from './components/ProfileHeader.js';
+import SecurityCard from './components/SecurityCard.js';
 
 /**
  * Profile layout component natively migrating from pure CSS to absolute Box and Flex parameters.

@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import * as rbacController from '../../../../../../../../roles/api/controllers/admin/rbac.controller';
+import * as rbacController from '../../../../../../../../roles/api/controllers/admin/rbac.controller.js';
 
 function requirePermission(permission) {
   return (req, res, next) => {

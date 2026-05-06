@@ -11,13 +11,13 @@ import { Flex, Box } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Toast from '@shared/renderer/components/Toast';
-import { features } from '@shared/renderer/redux';
+import Toast from '@shared/renderer/components/Toast/index.js';
+import { features } from '@shared/renderer/redux/index.js';
 
-import ImpersonationBanner from '../components/ImpersonationBanner';
+import ImpersonationBanner from '../components/ImpersonationBanner.js';
 
-import Footer from './Footer';
-import Header from './Header';
+import Footer from './Footer/index.js';
+import Header from './Header/index.js';
 
 const { getFlashMessage, clearFlashMessage } = features;
 

@@ -5,14 +5,14 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { validateForm } from '@shared/validator';
+import { validateForm } from '@shared/validator/index.js';
 
 import {
   createFolderFormSchema,
   renameFileFormSchema,
   shareFileFormSchema,
-} from '../../validator/admin/file';
-import * as fileService from '../services/file.service';
+} from '../../validator/admin/file.js';
+import * as fileService from '../services/file.service.js';
 
 // ========================================================================
 // FILE CONTROLLERS

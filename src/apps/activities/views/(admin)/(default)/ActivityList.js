@@ -13,10 +13,13 @@ import format from 'date-fns/format';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import { SearchableSelect } from '@shared/renderer/components/SearchableSelect';
-import { DataTable, useTableColumns } from '@shared/renderer/components/Table';
+import { SearchableSelect } from '@shared/renderer/components/SearchableSelect/index.js';
+import {
+  DataTable,
+  useTableColumns,
+} from '@shared/renderer/components/Table/index.js';
 
-import { selectors, thunks } from '../redux';
+import { selectors, thunks } from '../redux/index.js';
 
 const ActivityList = () => {
   const { t } = useTranslation();

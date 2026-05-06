@@ -5,8 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { registerEmailHooks } from './hooks';
-import { createSendTemplatedEmail } from './services/send.service';
+import { registerEmailHooks } from './hooks.js';
+import { createSendTemplatedEmail } from './services/send.service.js';
 
 /** @type {Symbol} Ownership key for this module's persistent bindings */
 const OWNER_KEY = Symbol('__xnapify.module.emails.api__');
@@ -14,19 +14,19 @@ const OWNER_KEY = Symbol('__xnapify.module.emails.api__');
 // Auto-load contexts
 const migrationsContext = import.meta.webpackContext('./database/migrations', {
   recursive: false,
-  regExp: /\.[cm]?[jt]s$/i
+  regExp: /\.[cm]?[jt]s$/i,
 });
 const seedsContext = import.meta.webpackContext('./database/seeds', {
   recursive: false,
-  regExp: /\.[cm]?[jt]s$/i
+  regExp: /\.[cm]?[jt]s$/i,
 });
 const modelsContext = import.meta.webpackContext('./models', {
   recursive: false,
-  regExp: /\.[cm]?[jt]s$/i
+  regExp: /\.[cm]?[jt]s$/i,
 });
 const routesContext = import.meta.webpackContext('./routes', {
   recursive: true,
-  regExp: /\.[cm]?[jt]s$/i
+  regExp: /\.[cm]?[jt]s$/i,
 });
 
 // =============================================================================
@@ -38,14 +38,14 @@ export default {
   seeds: () => seedsContext,
   models: () => modelsContext,
   routes: () => routesContext,
-  async providers({
-    container
-  }) {
-    container.bind('emails:send', () => createSendTemplatedEmail(container), OWNER_KEY);
+  async providers({ container }) {
+    container.bind(
+      'emails:send',
+      () => createSendTemplatedEmail(container),
+      OWNER_KEY,
+    );
   },
-  async boot({
-    container
-  }) {
+  async boot({ container }) {
     registerEmailHooks(container);
-  }
+  },
 };

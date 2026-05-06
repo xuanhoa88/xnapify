@@ -5,17 +5,17 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { clearAllAuthCookies } from '@shared/cookies';
-import { validateForm, z } from '@shared/validator';
+import { clearAllAuthCookies } from '@shared/cookies/index.js';
+import { validateForm, z } from '@shared/validator/index.js';
 
 import {
   updateProfileFormSchema,
   changePasswordFormSchema,
   deleteAccountFormSchema,
   updatePreferencesFormSchema,
-} from '../../validator/auth';
-import * as profileService from '../services/profile.service';
-import { formatUserResponse } from '../utils/formatter';
+} from '../../validator/auth/index.js';
+import * as profileService from '../services/profile.service.js';
+import { formatUserResponse } from '../utils/formatter.js';
 
 // ========================================================================
 // PROFILE MANAGEMENT CONTROLLERS

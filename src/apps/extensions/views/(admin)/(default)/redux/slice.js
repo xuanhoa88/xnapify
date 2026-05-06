@@ -12,7 +12,7 @@ import {
   uploadExtension,
   toggleExtensionStatus,
   uninstallExtension,
-} from './thunks';
+} from './thunks.js';
 
 /**
  * Extensions Slice

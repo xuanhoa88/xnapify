@@ -11,7 +11,7 @@
 
 import { createSelector } from '@reduxjs/toolkit';
 
-import { SLICE_NAME } from './slice';
+import { SLICE_NAME } from './slice.js';
 
 const selectBase = state => state[SLICE_NAME];
 

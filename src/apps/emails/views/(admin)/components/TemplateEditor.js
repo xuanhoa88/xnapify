@@ -14,7 +14,7 @@ import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
 
-import { getPreviewHtml, getPreviewError } from '../redux';
+import { getPreviewHtml, getPreviewError } from '../redux/index.js';
 
 import s from './TemplateEditor.css';
 

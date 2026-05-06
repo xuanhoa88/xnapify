@@ -7,7 +7,7 @@
 
 import { createPath } from 'history';
 
-import { DEFAULT_LOCALE, LOCALE_COOKIE_NAME } from '@shared/i18n';
+import { DEFAULT_LOCALE, LOCALE_COOKIE_NAME } from '@shared/i18n/index.js';
 
 import {
   setLocaleStart,

@@ -16,7 +16,7 @@ import {
   bulkDeleteGroups,
   assignRolesToGroup,
   fetchGroupPermissions,
-} from './thunks';
+} from './thunks.js';
 
 /**
  * Groups Slice

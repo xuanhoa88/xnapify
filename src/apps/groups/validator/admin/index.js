@@ -5,4 +5,4 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-export * from './group';
+export * from './group.js';

@@ -205,7 +205,8 @@ function configureRspackForDev(cfg, isClient = true) {
   else {
     // Configure hot update file paths for server bundle
     cfg.output.hotUpdateMainFilename = 'updates/[fullhash].hot-update.json';
-    cfg.output.hotUpdateChunkFilename = 'updates/[id].[fullhash].hot-update.cjs';
+    cfg.output.hotUpdateChunkFilename =
+      'updates/[id].[fullhash].hot-update.cjs';
   }
 
   return cfg;

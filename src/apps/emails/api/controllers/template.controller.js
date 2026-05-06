@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import * as templateService from '../services/template.service';
+import * as templateService from '../services/template.service.js';
 
 /**
  * List email templates

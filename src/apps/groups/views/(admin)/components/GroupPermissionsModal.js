@@ -18,12 +18,12 @@ import { Flex, Box, Text, Badge, Separator, Card } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Modal from '@shared/renderer/components/Modal';
+import Modal from '@shared/renderer/components/Modal/index.js';
 
 import {
   fetchGroupPermissions,
   isGroupFetchPermissionsLoading,
-} from '../redux';
+} from '../redux/index.js';
 
 const GroupPermissionsModal = forwardRef((props, ref) => {
   const { t } = useTranslation();

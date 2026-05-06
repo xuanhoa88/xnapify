@@ -31,7 +31,7 @@ describe('shared/api/autoloader', () => {
 
   describe('validateCoreModules', () => {
     it('should not throw if all core modules are present', () => {
-      const { validateCoreModules } = require('./autoloader');
+      const { validateCoreModules } = require('./autoloader.js');
       const paths = [
         'users',
         'roles',
@@ -52,7 +52,7 @@ describe('shared/api/autoloader', () => {
     });
 
     it('should throw if a core module is missing', () => {
-      const { validateCoreModules } = require('./autoloader');
+      const { validateCoreModules } = require('./autoloader.js');
       const paths = ['other'].map(p => `./${p}/api/index.js`);
       // 'users' is always required
       expect(() => validateCoreModules(paths)).toThrow(
@@ -62,7 +62,7 @@ describe('shared/api/autoloader', () => {
 
     it('should respect custom core modules from env', () => {
       process.env.XNAPIFY_MODULE_DEFAULTS = 'custom';
-      const { validateCoreModules } = require('./autoloader');
+      const { validateCoreModules } = require('./autoloader.js');
 
       const paths = ['other'].map(p => `./${p}/api/index.js`);
       expect(() => validateCoreModules(paths)).toThrow(
@@ -90,7 +90,7 @@ describe('shared/api/autoloader', () => {
 
   describe('sortModules', () => {
     it('should place core modules first', () => {
-      const { sortModules } = require('./autoloader');
+      const { sortModules } = require('./autoloader.js');
       const paths = ['z_module', 'users', 'a_module'].map(
         p => `./${p}/api/index.js`,
       );
@@ -100,7 +100,7 @@ describe('shared/api/autoloader', () => {
     });
 
     it('should sort lifecycle files correctly', () => {
-      const { sortModules } = require('./autoloader');
+      const { sortModules } = require('./autoloader.js');
       const paths = ['./z_module/api/index.js', './users/api/index.js'];
       const sorted = sortModules(paths);
       expect(sorted[0]).toContain('users'); // users is core
@@ -109,7 +109,7 @@ describe('shared/api/autoloader', () => {
 
     it('should sort based on custom core modules', () => {
       process.env.XNAPIFY_MODULE_DEFAULTS = 'z_module';
-      const { sortModules } = require('./autoloader');
+      const { sortModules } = require('./autoloader.js');
       const paths = ['users', 'z_module', 'a_module'].map(
         p => `./${p}/api/index.js`,
       );
@@ -146,9 +146,9 @@ describe('shared/api/autoloader', () => {
     });
 
     it('should load translations via hooks.translations()', async () => {
-      const { discoverModules } = require('./autoloader');
-      const { getTranslations } = require('@shared/i18n/loader');
-      const { addNamespace } = require('@shared/i18n/utils');
+      const { discoverModules } = require('./autoloader.js');
+      const { getTranslations } = require('@shared/i18n/loader.js');
+      const { addNamespace } = require('@shared/i18n/utils.js');
 
       // Setup translations mocks
       getTranslations.mockReturnValue({ 'en-US': { hello: 'world' } });
@@ -195,7 +195,7 @@ describe('shared/api/autoloader', () => {
     });
 
     it('should load models via hooks.models() and call boot', async () => {
-      const { discoverModules } = require('./autoloader');
+      const { discoverModules } = require('./autoloader.js');
 
       // Mock context — only lifecycle files now (no model paths)
       const mockContext = jest.fn();
@@ -293,7 +293,7 @@ describe('shared/api/autoloader', () => {
     });
 
     it('should skip modules without models hook', async () => {
-      const { discoverModules } = require('./autoloader');
+      const { discoverModules } = require('./autoloader.js');
 
       const mockContext = jest.fn();
       mockContext.keys = jest

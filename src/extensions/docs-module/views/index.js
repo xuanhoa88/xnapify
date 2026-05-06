@@ -7,11 +7,11 @@
 
 const viewsContext = import.meta.webpackContext('.', {
   recursive: true,
-  regExp: /(?:\/_route|\/_layout)\.[cm]?[jt]sx?$/i
+  regExp: /(?:\/_route|\/_layout)\.[cm]?[jt]sx?$/i,
 });
 const translationsContext = import.meta.webpackContext('../translations', {
   recursive: false,
-  regExp: /\.json$/i
+  regExp: /\.json$/i,
 });
 
 // =============================================================================
@@ -27,26 +27,17 @@ export default {
   /**
    * Lifecycle: providers — bind DI services if needed.
    */
-  providers({
-    container
-  }) {},
-  // eslint-disable-line no-unused-vars
+  providers() {},
 
   /**
    * Lifecycle: boot — register slots, hooks, IPC handlers.
    */
-  boot({
-    registry
-  }) {},
-  // eslint-disable-line no-unused-vars
+  boot() {},
 
   /**
    * Lifecycle: shutdown — MUST exactly inverse boot().
    */
-  shutdown({
-    registry
-  }) {},
-  // eslint-disable-line no-unused-vars
+  shutdown() {},
 
   /**
    * Module-type hook: provides view routes for dynamic injection.
@@ -54,5 +45,5 @@ export default {
    */
   routes() {
     return ['docs', viewsContext];
-  }
+  },
 };

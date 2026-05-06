@@ -7,7 +7,7 @@
 
 import { createSlice } from '@reduxjs/toolkit';
 
-import * as thunks from './thunks';
+import * as thunks from './thunks.js';
 
 export const SLICE_NAME = 'files';
 

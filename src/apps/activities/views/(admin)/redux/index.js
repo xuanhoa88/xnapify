@@ -9,9 +9,9 @@
  * Activity Redux Entry Point
  */
 
-import * as selectors from './selector';
-import reducer, { SLICE_NAME } from './slice';
-import * as thunks from './thunks';
+import * as selectors from './selector.js';
+import reducer, { SLICE_NAME } from './slice.js';
+import * as thunks from './thunks.js';
 
 export { SLICE_NAME, selectors, thunks };
 export default reducer;

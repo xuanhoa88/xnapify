@@ -222,10 +222,10 @@ function DataTableClearFilters({ visible, onClick }) {
         size='2'
         onClick={onClick}
         type='button'
-        title={t('shared:components.dataTable.clearFilters', 'Clear Filters')}
+        title={t('common:components.dataTable.clearFilters', 'Clear Filters')}
       >
         <Cross2Icon width={12} height={12} />
-        {t('shared:components.dataTable.clear', 'Clear Filters')}
+        {t('common:components.dataTable.clear', 'Clear Filters')}
       </Button>
     </Box>
   );
@@ -256,7 +256,7 @@ function DataTableViewToggle({ as, onChange, enableMasonry }) {
         color={as === 'table' ? 'indigo' : 'gray'}
         size='1'
         onClick={() => onChange('table')}
-        title={t('shared:components.dataTable.viewTable', 'Table view')}
+        title={t('common:components.dataTable.viewTable', 'Table view')}
       >
         <TableIcon width={14} height={14} />
       </IconButton>
@@ -265,7 +265,7 @@ function DataTableViewToggle({ as, onChange, enableMasonry }) {
         color={as === 'grid' ? 'indigo' : 'gray'}
         size='1'
         onClick={() => onChange('grid')}
-        title={t('shared:components.dataTable.viewGrid', 'Grid view')}
+        title={t('common:components.dataTable.viewGrid', 'Grid view')}
       >
         <DashboardIcon width={14} height={14} />
       </IconButton>
@@ -275,7 +275,7 @@ function DataTableViewToggle({ as, onChange, enableMasonry }) {
           color={as === 'masonry' ? 'indigo' : 'gray'}
           size='1'
           onClick={() => onChange('masonry')}
-          title={t('shared:components.dataTable.viewMasonry', 'Masonry view')}
+          title={t('common:components.dataTable.viewMasonry', 'Masonry view')}
         >
           <ColumnsIcon width={14} height={14} />
         </IconButton>
@@ -340,7 +340,7 @@ function DataTableEmpty({ icon, title, description, children }) {
     >
       {icon && <Box className={s.emptyIcon}>{icon}</Box>}
       <Text size='3' weight='bold' mb='1' align='center'>
-        {title || t('shared:components.dataTable.noData', 'No data found')}
+        {title || t('common:components.dataTable.noData', 'No data found')}
       </Text>
       {description && (
         <Text size='2' color='gray' align='center'>
@@ -382,7 +382,7 @@ function DataTableError({ message, onRetry }) {
     >
       <ExclamationTriangleIcon width={32} height={32} color='var(--red-9)' />
       <Text color='red' size='4' weight='bold' mb='2' mt='3' align='center'>
-        {t('shared:components.dataTable.error', 'Error loading data')}
+        {t('common:components.dataTable.error', 'Error loading data')}
       </Text>
       <Text color='red' size='2' mb='4' align='center'>
         {message}
@@ -666,7 +666,7 @@ function DataTable({
               variant={(loaderSlot && loaderSlot.props.variant) || 'skeleton'}
               message={
                 (loaderSlot && loaderSlot.props.message) ||
-                t('shared:components.dataTable.loading', 'Loading...')
+                t('common:components.dataTable.loading', 'Loading...')
               }
               className={s.fillHeight}
             />
@@ -785,7 +785,7 @@ function DataTable({
                     (emptySlot || (
                       <DataTableEmpty
                         title={t(
-                          'shared:components.dataTable.noData',
+                          'common:components.dataTable.noData',
                           'No data found',
                         )}
                       />
@@ -874,7 +874,7 @@ function DataTable({
                     emptySlot || (
                       <DataTableEmpty
                         title={t(
-                          'shared:components.dataTable.noData',
+                          'common:components.dataTable.noData',
                           'No data found',
                         )}
                       />
@@ -939,7 +939,7 @@ function DataTable({
                     emptySlot || (
                       <DataTableEmpty
                         title={t(
-                          'shared:components.dataTable.noData',
+                          'common:components.dataTable.noData',
                           'No data found',
                         )}
                       />

@@ -35,8 +35,8 @@ export default {
       Webpack statically builds these folders into module caches. 
       The system executes schemas/migrations on Extension installation automatically.
     */
-    models: () => require.context('./models', false, /\.js$/),
-    migrations: () => require.context('./database/migrations', false, /\.js$/),
+    models: () => import.meta.webpackContext('./models', { recursive: false, regExp: /\.js$/ }),
+    migrations: () => import.meta.webpackContext('./database/migrations', { recursive: false, regExp: /\.js$/ }),
     
     // Boot runs on Server Boot or Server toggling the extension ON
     boot({ container, registry }) {

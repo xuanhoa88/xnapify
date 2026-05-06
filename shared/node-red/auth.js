@@ -7,7 +7,7 @@
 
 import { Strategy } from 'passport-strategy';
 
-import { getTokenFromCookie } from '@shared/cookies';
+import { getTokenFromCookie } from '@shared/cookies/index.js';
 
 /**
  * Custom Passport Strategy for xnapify Authentication

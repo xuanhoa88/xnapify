@@ -70,7 +70,7 @@
   order: 3;
 }
 
-@media (max-width: 768px) {
+@media (width <= 768px) {
   .searchBox {
     order: 1;
     flex-basis: 100%;

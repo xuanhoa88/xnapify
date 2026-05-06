@@ -17,10 +17,10 @@ import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Modal from '@shared/renderer/components/Modal';
-import { features } from '@shared/renderer/redux';
+import Modal from '@shared/renderer/components/Modal/index.js';
+import { features } from '@shared/renderer/redux/index.js';
 
-import { bulkDeleteUsers } from '../redux';
+import { bulkDeleteUsers } from '../redux/index.js';
 
 const { getUserProfile } = features;
 

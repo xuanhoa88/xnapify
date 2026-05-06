@@ -21,19 +21,19 @@ import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import { useHistory } from '@shared/renderer/components/History';
-import Modal from '@shared/renderer/components/Modal';
-import { useRbac } from '@shared/renderer/components/Rbac';
+import { useHistory } from '@shared/renderer/components/History/index.js';
+import Modal from '@shared/renderer/components/Modal/index.js';
+import { useRbac } from '@shared/renderer/components/Rbac/index.js';
 import {
   SearchableSelect,
   useSearchableSelect,
-} from '@shared/renderer/components/SearchableSelect';
-import { DataTable } from '@shared/renderer/components/Table';
+} from '@shared/renderer/components/SearchableSelect/index.js';
+import { DataTable } from '@shared/renderer/components/Table/index.js';
 
-import GroupActionsDropdown from '../components/GroupActionsDropdown';
-import GroupPermissionsModal from '../components/GroupPermissionsModal';
-import GroupRolesModal from '../components/GroupRolesModal';
-import GroupUsersModal from '../components/GroupUsersModal';
+import GroupActionsDropdown from '../components/GroupActionsDropdown.js';
+import GroupPermissionsModal from '../components/GroupPermissionsModal.js';
+import GroupRolesModal from '../components/GroupRolesModal.js';
+import GroupUsersModal from '../components/GroupUsersModal.js';
 import {
   fetchGroups,
   getGroups,
@@ -43,7 +43,7 @@ import {
   getGroupsPagination,
   deleteGroup,
   bulkDeleteGroups,
-} from '../redux';
+} from '../redux/index.js';
 
 import s from './Groups.css';
 
@@ -232,6 +232,7 @@ function Groups({ context }) {
         permission: 'groups:delete',
       },
     ],
+
     [t, handleBulkDelete],
   );
 
@@ -344,6 +345,7 @@ function Groups({ context }) {
             onChange={handleSearchChange}
             placeholder={t('groups:admin.search', 'Search groups...')}
           />
+
           <DataTable.Filter
             component={SearchableSelect}
             width='lg'
@@ -358,6 +360,7 @@ function Groups({ context }) {
             placeholder={t('groups:admin.allRoles', 'All Roles')}
             searchPlaceholder={t('groups:admin.searchRoles', 'Search roles...')}
           />
+
           <DataTable.ClearFilters
             visible={hasActiveFilters}
             onClick={handleClearFilters}

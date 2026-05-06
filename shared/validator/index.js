@@ -6,16 +6,23 @@
  */
 
 import { z } from 'zod';
-import i18n from '@shared/i18n/getInstance';
-import { getTranslations } from '@shared/i18n/loader';
-import { addNamespace } from '@shared/i18n/utils';
+
+import i18n from '@shared/i18n/getInstance.js';
+import { getTranslations } from '@shared/i18n/loader.js';
+import { addNamespace } from '@shared/i18n/utils.js';
+
 import { formatZodErrorToObject } from './formatter.js';
 
-// Auto-load validator translations via require.context
-addNamespace('zod', getTranslations(import.meta.webpackContext('./translations', {
-  recursive: false,
-  regExp: /\.json$/i
-})));
+// Auto-load validator translations via import.meta.webpackContext
+addNamespace(
+  'zod',
+  getTranslations(
+    import.meta.webpackContext('./translations', {
+      recursive: false,
+      regExp: /\.json$/i,
+    }),
+  ),
+);
 
 /**
  * Helper function to translate a value with optional prefix
@@ -25,15 +32,13 @@ addNamespace('zod', getTranslations(import.meta.webpackContext('./translations',
  * @returns {string} Translated value or original value if translation not found
  */
 function translateLabel(value, options = {}) {
-  const {
-    prefix
-  } = options;
+  const { prefix } = options;
   if (!prefix) {
     return value;
   }
   const key = `zod:${prefix}.${value}`;
   const translated = i18n.t(key, {
-    defaultValue: value
+    defaultValue: value,
   });
 
   // Return original value if translation key wasn't found
@@ -51,23 +56,23 @@ function handleInvalidString(issue, translateLabel) {
       return {
         key: 'zod:errors.invalid_string.startsWith',
         options: {
-          startsWith: issue.validation.startsWith
-        }
+          startsWith: issue.validation.startsWith,
+        },
       };
     }
     if ('endsWith' in issue.validation) {
       return {
         key: 'zod:errors.invalid_string.endsWith',
         options: {
-          endsWith: issue.validation.endsWith
-        }
+          endsWith: issue.validation.endsWith,
+        },
       };
     }
 
     // Unknown object validation
     return {
       key: 'zod:errors.custom',
-      options: {}
+      options: {},
     };
   }
 
@@ -76,9 +81,9 @@ function handleInvalidString(issue, translateLabel) {
     key: `zod:errors.invalid_string.${issue.validation}`,
     options: {
       validation: translateLabel(issue.validation, {
-        prefix: 'validations'
-      })
-    }
+        prefix: 'validations',
+      }),
+    },
   };
 }
 
@@ -88,13 +93,17 @@ function handleInvalidString(issue, translateLabel) {
  */
 function handleTooSmall(issue) {
   const type = issue.type || 'string';
-  const variant = issue.exact ? 'exact' : issue.inclusive ? 'inclusive' : 'not_inclusive';
+  const variant = issue.exact
+    ? 'exact'
+    : issue.inclusive
+      ? 'inclusive'
+      : 'not_inclusive';
   return {
     key: `zod:errors.too_small.${type}.${variant}`,
     options: {
       minimum: issue.minimum,
-      count: issue.minimum
-    }
+      count: issue.minimum,
+    },
   };
 }
 
@@ -104,13 +113,17 @@ function handleTooSmall(issue) {
  */
 function handleTooBig(issue) {
   const type = issue.type || 'string';
-  const variant = issue.exact ? 'exact' : issue.inclusive ? 'inclusive' : 'not_inclusive';
+  const variant = issue.exact
+    ? 'exact'
+    : issue.inclusive
+      ? 'inclusive'
+      : 'not_inclusive';
   return {
     key: `zod:errors.too_big.${type}.${variant}`,
     options: {
       maximum: issue.maximum,
-      count: issue.maximum
-    }
+      count: issue.maximum,
+    },
   };
 }
 
@@ -123,18 +136,16 @@ function handleCustom(issue) {
   if (!issue.params || !issue.params.i18n) {
     return {
       key: 'zod:errors.custom',
-      options: {}
+      options: {},
     };
   }
-  const {
-    i18n: i18nParam
-  } = issue.params;
+  const { i18n: i18nParam } = issue.params;
 
   // String format: params.i18n = "custom.error.key"
   if (typeof i18nParam === 'string') {
     return {
       key: i18nParam,
-      options: {}
+      options: {},
     };
   }
 
@@ -142,14 +153,14 @@ function handleCustom(issue) {
   if (typeof i18nParam === 'object' && i18nParam.key) {
     return {
       key: i18nParam.key,
-      options: i18nParam.options || {}
+      options: i18nParam.options || {},
     };
   }
 
   // Invalid format, fallback to default
   return {
     key: 'zod:errors.custom',
-    options: {}
+    options: {},
   };
 }
 
@@ -171,25 +182,25 @@ function getMessageKeyAndOptions(issue) {
         messageKey = 'zod:errors.invalid_type';
         options = {
           expected: translateLabel(issue.expected, {
-            prefix: 'types'
+            prefix: 'types',
           }),
           received: translateLabel(issue.received, {
-            prefix: 'types'
-          })
+            prefix: 'types',
+          }),
         };
       }
       break;
     case z.ZodIssueCode.invalid_literal:
       messageKey = 'zod:errors.invalid_literal';
       options = {
-        expected: JSON.stringify(issue.expected)
+        expected: JSON.stringify(issue.expected),
       };
       break;
     case z.ZodIssueCode.unrecognized_keys:
       messageKey = 'zod:errors.unrecognized_keys';
       options = {
         keys: issue.keys.join(', '),
-        count: issue.keys.length
+        count: issue.keys.length,
       };
       break;
     case z.ZodIssueCode.invalid_union:
@@ -199,14 +210,14 @@ function getMessageKeyAndOptions(issue) {
       messageKey = 'zod:errors.invalid_union_discriminator';
       options = {
         options: issue.options.join(', '),
-        count: issue.options.length
+        count: issue.options.length,
       };
       break;
     case z.ZodIssueCode.invalid_enum_value:
       messageKey = 'zod:errors.invalid_enum_value';
       options = {
         options: issue.options.join(', '),
-        received: issue.received
+        received: issue.received,
       };
       break;
     case z.ZodIssueCode.invalid_arguments:
@@ -218,41 +229,37 @@ function getMessageKeyAndOptions(issue) {
     case z.ZodIssueCode.invalid_date:
       messageKey = 'zod:errors.invalid_date';
       break;
-    case z.ZodIssueCode.invalid_string:
-      {
-        const result = handleInvalidString(issue, translateLabel);
-        messageKey = result.key;
-        options = result.options;
-        break;
-      }
-    case z.ZodIssueCode.too_small:
-      {
-        const result = handleTooSmall(issue);
-        messageKey = result.key;
-        options = result.options;
-        break;
-      }
-    case z.ZodIssueCode.too_big:
-      {
-        const result = handleTooBig(issue);
-        messageKey = result.key;
-        options = result.options;
-        break;
-      }
-    case z.ZodIssueCode.custom:
-      {
-        const result = handleCustom(issue);
-        messageKey = result.key;
-        options = result.options;
-        break;
-      }
+    case z.ZodIssueCode.invalid_string: {
+      const result = handleInvalidString(issue, translateLabel);
+      messageKey = result.key;
+      options = result.options;
+      break;
+    }
+    case z.ZodIssueCode.too_small: {
+      const result = handleTooSmall(issue);
+      messageKey = result.key;
+      options = result.options;
+      break;
+    }
+    case z.ZodIssueCode.too_big: {
+      const result = handleTooBig(issue);
+      messageKey = result.key;
+      options = result.options;
+      break;
+    }
+    case z.ZodIssueCode.custom: {
+      const result = handleCustom(issue);
+      messageKey = result.key;
+      options = result.options;
+      break;
+    }
     case z.ZodIssueCode.invalid_intersection_types:
       messageKey = 'zod:errors.invalid_intersection_types';
       break;
     case z.ZodIssueCode.not_multiple_of:
       messageKey = 'zod:errors.not_multiple_of';
       options = {
-        multipleOf: issue.multipleOf
+        multipleOf: issue.multipleOf,
       };
       break;
     case z.ZodIssueCode.not_finite:
@@ -264,7 +271,7 @@ function getMessageKeyAndOptions(issue) {
   }
   return {
     messageKey,
-    options
+    options,
   };
 }
 
@@ -284,16 +291,14 @@ z.config({
     if (!result) {
       return;
     }
-    const {
-      messageKey,
-      options
-    } = result;
+    const { messageKey, options } = result;
 
     // Add path context for field-specific messages (supports WithPath pattern)
-    const path = issue.path && issue.path.length > 0 ? issue.path.join('.') : '';
+    const path =
+      issue.path && issue.path.length > 0 ? issue.path.join('.') : '';
     const optionsWithPath = {
       ...options,
-      path
+      path,
     };
 
     // Try to get message with path suffix first (e.g., invalidTypeWithPath)
@@ -301,14 +306,14 @@ z.config({
       const withPathKey = `${messageKey}WithPath`;
       if (i18n.exists(withPathKey)) {
         return {
-          message: i18n.t(withPathKey, optionsWithPath)
+          message: i18n.t(withPathKey, optionsWithPath),
         };
       }
     }
     return {
-      message: i18n.t(messageKey, optionsWithPath)
+      message: i18n.t(messageKey, optionsWithPath),
     };
-  }
+  },
 });
 
 /**
@@ -331,9 +336,14 @@ z.config({
 export function validateForm(schema, data) {
   // Validate inputs
   if (typeof schema !== 'function') {
-    return [false, {
-      _schema: ['Invalid schema: expected a function that returns a Zod schema']
-    }];
+    return [
+      false,
+      {
+        _schema: [
+          'Invalid schema: expected a function that returns a Zod schema',
+        ],
+      },
+    ];
   }
   let zodSchema;
 
@@ -341,21 +351,30 @@ export function validateForm(schema, data) {
   try {
     zodSchema = schema({
       i18n,
-      z
+      z,
     });
   } catch (error) {
     // Schema factory threw an error - return in same format as validation errors
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    return [false, {
-      _schema: [`Schema initialization failed: ${errorMessage}`]
-    }];
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error occurred';
+    return [
+      false,
+      {
+        _schema: [`Schema initialization failed: ${errorMessage}`],
+      },
+    ];
   }
 
   // Validate that we got a valid Zod schema with safeParse method
   if (!zodSchema || typeof zodSchema.safeParse !== 'function') {
-    return [false, {
-      _schema: ['Invalid schema: schema factory must return a Zod schema object with safeParse method']
-    }];
+    return [
+      false,
+      {
+        _schema: [
+          'Invalid schema: schema factory must return a Zod schema object with safeParse method',
+        ],
+      },
+    ];
   }
 
   // Validate data using safeParse (never throws)
@@ -365,9 +384,12 @@ export function validateForm(schema, data) {
   }
 
   // Return error messages as arrays (same format as schema errors above)
-  return [false, formatZodErrorToObject(result.error, {
-    combineMessages: false
-  })];
+  return [
+    false,
+    formatZodErrorToObject(result.error, {
+      combineMessages: false,
+    }),
+  ];
 }
 
 // Export all formatter utilities

@@ -371,7 +371,7 @@ describe('MemoryQueue Adapter', () => {
   let queue;
 
   beforeAll(async () => {
-    const mod = await import('./adapters/memory');
+    const mod = await import('./adapters/memory.js');
     MemoryQueue = mod.default;
   });
 
@@ -681,7 +681,7 @@ describe('MemoryQueue Adapter', () => {
     });
 
     it('should throw JobNotFoundError for unknown ID', async () => {
-      const { JobNotFoundError } = require('./errors');
+      const { JobNotFoundError } = require('./errors.js');
 
       await expect(queue.getJob('nonexistent')).rejects.toThrow(
         JobNotFoundError,
@@ -752,7 +752,7 @@ describe('MemoryQueue Adapter', () => {
     });
 
     it('should throw JobProcessingError for non-failed job', async () => {
-      const { JobProcessingError } = require('./errors');
+      const { JobProcessingError } = require('./errors.js');
       const job = await queue.add('not-failed', {});
 
       await expect(queue.retryJob(job.id)).rejects.toThrow(JobProcessingError);
@@ -930,7 +930,7 @@ describe('Queue Error Classes', () => {
   let errors;
 
   beforeAll(async () => {
-    errors = await import('./errors');
+    errors = await import('./errors.js');
   });
 
   describe('QueueError', () => {

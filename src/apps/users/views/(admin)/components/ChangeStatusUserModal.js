@@ -11,10 +11,10 @@ import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Modal from '@shared/renderer/components/Modal';
-import { features } from '@shared/renderer/redux';
+import Modal from '@shared/renderer/components/Modal/index.js';
+import { features } from '@shared/renderer/redux/index.js';
 
-import { bulkUpdateUserStatus } from '../redux';
+import { bulkUpdateUserStatus } from '../redux/index.js';
 
 const { getUserProfile } = features;
 

@@ -40,7 +40,7 @@ export default function MediaActionsPopup({
       <ContextMenu.Trigger asChild>
         <ToolbarButton
           icon={<VideoIcon width={16} height={16} />}
-          title={t('shared:form.wysiwyg.mediaActions', 'Media')}
+          title={t('common:form.wysiwyg.mediaActions', 'Media')}
           disabled={disabled}
         />
       </ContextMenu.Trigger>
@@ -51,9 +51,9 @@ export default function MediaActionsPopup({
             icon={<VideoIcon width={16} height={16} />}
             onClick={() => {
               openPrompt({
-                title: t('shared:form.wysiwyg.video', 'Video'),
+                title: t('common:form.wysiwyg.video', 'Video'),
                 label: t(
-                  'shared:form.wysiwyg.videoUrl',
+                  'common:form.wysiwyg.videoUrl',
                   'Video URL (MP4, WebM, etc.)',
                 ),
                 slotName: 'wysiwyg.prompt.video',
@@ -63,7 +63,7 @@ export default function MediaActionsPopup({
               });
             }}
           >
-            {t('shared:form.wysiwyg.video', 'Video')}
+            {t('common:form.wysiwyg.video', 'Video')}
           </ContextMenu.Item>
         )}
         {hasAudio && (
@@ -71,9 +71,9 @@ export default function MediaActionsPopup({
             icon={<SpeakerLoudIcon width={16} height={16} />}
             onClick={() => {
               openPrompt({
-                title: t('shared:form.wysiwyg.audio', 'Audio'),
+                title: t('common:form.wysiwyg.audio', 'Audio'),
                 label: t(
-                  'shared:form.wysiwyg.audioUrl',
+                  'common:form.wysiwyg.audioUrl',
                   'Audio URL (MP3, WAV, etc.)',
                 ),
                 slotName: 'wysiwyg.prompt.audio',
@@ -83,7 +83,7 @@ export default function MediaActionsPopup({
               });
             }}
           >
-            {t('shared:form.wysiwyg.audio', 'Audio')}
+            {t('common:form.wysiwyg.audio', 'Audio')}
           </ContextMenu.Item>
         )}
         {hasYoutube && (
@@ -91,8 +91,8 @@ export default function MediaActionsPopup({
             icon={<VideoIcon width={16} height={16} />}
             onClick={() => {
               openPrompt({
-                title: t('shared:form.wysiwyg.youtube', 'YouTube'),
-                label: t('shared:form.wysiwyg.youtubeUrl', 'YouTube Video URL'),
+                title: t('common:form.wysiwyg.youtube', 'YouTube'),
+                label: t('common:form.wysiwyg.youtubeUrl', 'YouTube Video URL'),
                 slotName: 'wysiwyg.prompt.youtube',
                 onSubmit: url => {
                   if (url)
@@ -101,7 +101,7 @@ export default function MediaActionsPopup({
               });
             }}
           >
-            {t('shared:form.wysiwyg.youtube', 'YouTube')}
+            {t('common:form.wysiwyg.youtube', 'YouTube')}
           </ContextMenu.Item>
         )}
       </ContextMenu.Menu>

@@ -10,7 +10,7 @@
  * File: (admin)/(default)/_route.js = /api/admin/settings
  */
 
-import * as controller from '../../../controllers/settings.controller';
+import * as controller from '../../../controllers/settings.controller.js';
 
 function requireAuth() {
   return (req, res, next) => {

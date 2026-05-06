@@ -6,4 +6,4 @@
  * and IDE test runners pick up the same settings as `npm test`.
  */
 
-export { default } from './tools/jest/config';
+export { default } from './tools/jest/config.js';

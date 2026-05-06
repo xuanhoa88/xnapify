@@ -5,13 +5,13 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import * as cookies from '@shared/cookies';
-import { validateForm } from '@shared/validator';
+import * as cookies from '@shared/cookies/index.js';
+import { validateForm } from '@shared/validator/index.js';
 
-import * as profileService from '../services/profile.service';
-import { formatUserResponse } from '../utils/formatter';
+import * as profileService from '../services/profile.service.js';
+import { formatUserResponse } from '../utils/formatter.js';
 
-import * as profileController from './profile.controller';
+import * as profileController from './profile.controller.js';
 
 jest.mock('@shared/cookies', () => ({
   clearAllAuthCookies: jest.fn(),

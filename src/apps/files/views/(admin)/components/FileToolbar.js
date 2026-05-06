@@ -17,7 +17,7 @@ import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import { TableSearch } from '@shared/renderer/components/Table';
+import { TableSearch } from '@shared/renderer/components/Table/index.js';
 
 import {
   setView,
@@ -27,7 +27,7 @@ import {
   selectViewMode,
   selectSearch,
   setSearch,
-} from '../redux';
+} from '../redux/index.js';
 
 import s from './FileToolbar.css';
 

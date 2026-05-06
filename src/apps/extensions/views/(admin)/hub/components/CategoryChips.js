@@ -13,7 +13,7 @@ import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
-import getCategoryIcon from './getCategoryIcon';
+import getCategoryIcon from './getCategoryIcon.js';
 
 import s from './CategoryChips.css';
 

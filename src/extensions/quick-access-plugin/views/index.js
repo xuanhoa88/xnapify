@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import QuickAccess from './QuickAccess';
+import QuickAccess from './QuickAccess.js';
 
 export default {
   boot({ registry }) {

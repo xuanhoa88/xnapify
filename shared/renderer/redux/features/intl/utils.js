@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { AVAILABLE_LOCALES, DEFAULT_LOCALE } from '@shared/i18n';
+import { AVAILABLE_LOCALES, DEFAULT_LOCALE } from '@shared/i18n/index.js';
 
 /**
  * Create a fresh state object with default values.

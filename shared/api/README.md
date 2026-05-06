@@ -37,13 +37,13 @@ translations → models → providers → migrations → seeds → init → rout
 Each module exports lifecycle hooks in `api/index.js`:
 
 ```javascript
-export function translations() { return [require.context('../translations', ...)]; }
-export function models() { return require.context('./models', ...); }
+export function translations() { return [import.meta.webpackContext('../translations', ...)]; }
+export function models() { return import.meta.webpackContext('./models', ...); }
 export async function providers(container) { container.instance('myService', service); }
 export async function migrations(container) { /* run migrations */ }
 export async function seeds(container) { /* seed data */ }
 export async function init(container) { /* register hooks, workers */ }
-export function routes() { return require.context('./routes', ...); }
+export function routes() { return import.meta.webpackContext('./routes', ...); }
 ```
 
 ## Dynamic Model Modification

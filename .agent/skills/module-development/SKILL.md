@@ -5,7 +5,7 @@ description: Build API and View modules with correct auto-discovery, lifecycle h
 
 # Module Developer Skill
 
-This skill equips you to build new modules for the `xnapify` application. Modules are automatically discovered and loaded via Rspack `require.context`.
+This skill equips you to build new modules for the `xnapify` application. Modules are automatically discovered and loaded via Rspack `import.meta.webpackContext`.
 
 ## Core Concepts
 
@@ -267,7 +267,7 @@ async boot({ container }) {
 
 - **Do not use static imports** between independent `apps/` domains. Use the DI `container.resolve()` or `hook` system to share logic.
 - Follow the exact `_route.js` format for the frontend router.
-- Always use `const ContextName = require.context(...)` inside the `index.js` files precisely as described, because Rspack statically analyzes these strings.
+- Always use `const ContextName = import.meta.webpackContext(...)` inside the `index.js` files precisely as described, because Rspack statically analyzes these strings.
 - **Redux injection** should happen in `_route.js` `init()` hooks, not in `views/index.js` `providers()`.
 - Guard optional services with `container.has()` before `container.make()` to avoid crashes when an engine is not loaded.
 - **i18n & Localization:** Extracted strings and `translations/en-US.json` MUST be used across all components and API responses. Do not hardcode user-facing strings.

@@ -11,7 +11,7 @@ import {
   setTokenCookie,
   setRefreshTokenCookie,
   extractToken,
-} from '@shared/cookies';
+} from '@shared/cookies/index.js';
 
 /**
  * Token refresh middleware

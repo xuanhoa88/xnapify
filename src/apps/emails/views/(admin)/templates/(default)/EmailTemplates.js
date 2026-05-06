@@ -19,12 +19,15 @@ import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import { useHistory } from '@shared/renderer/components/History';
-import Modal from '@shared/renderer/components/Modal';
-import { DataTable, useTableColumns } from '@shared/renderer/components/Table';
+import { useHistory } from '@shared/renderer/components/History/index.js';
+import Modal from '@shared/renderer/components/Modal/index.js';
+import {
+  DataTable,
+  useTableColumns,
+} from '@shared/renderer/components/Table/index.js';
 
-import TemplateActionsDropdown from '../../components/TemplateActionsDropdown';
-import TemplateEditor from '../../components/TemplateEditor';
+import TemplateActionsDropdown from '../../components/TemplateActionsDropdown.js';
+import TemplateEditor from '../../components/TemplateEditor.js';
 import {
   fetchTemplates,
   getTemplates,
@@ -37,7 +40,7 @@ import {
   bulkDeleteTemplates,
   previewTemplate,
   clearPreview,
-} from '../../redux';
+} from '../../redux/index.js';
 
 import s from './EmailTemplates.css';
 
@@ -199,6 +202,7 @@ function EmailTemplates() {
         onClick: handleBulkDelete,
       },
     ],
+
     [t, handleBulkDelete],
   );
 
@@ -296,6 +300,7 @@ function EmailTemplates() {
         ),
       },
     ],
+
     [t, history, handlePreview, handleDuplicate, handleDelete],
   );
 
@@ -341,6 +346,7 @@ function EmailTemplates() {
               'Search templates...',
             )}
           />
+
           <DataTable.ClearFilters
             visible={!!hasActiveFilters}
             onClick={handleClearAllFilters}
@@ -360,6 +366,7 @@ function EmailTemplates() {
             'Create your first email template to get started.',
           )}
         />
+
         <DataTable.Error message={error} onRetry={handleRefreshList} />
         <DataTable.Loader />
 

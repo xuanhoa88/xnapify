@@ -8,13 +8,13 @@
 import dayjs from 'dayjs';
 import { v4 as uuidv4 } from 'uuid';
 
-import { formatUserResponse } from '../../utils/formatter';
+import { formatUserResponse } from '../../utils/formatter.js';
 import {
   userFullIncludes,
   formatAdminUserResponse,
-} from '../../utils/includes';
-import * as rbacCache from '../../utils/rbac/cache';
-import { fetchUserRbacData } from '../../utils/rbac/fetcher';
+} from '../../utils/includes.js';
+import * as rbacCache from '../../utils/rbac/cache.js';
+import { fetchUserRbacData } from '../../utils/rbac/fetcher.js';
 
 /**
  * Create a new user
@@ -247,6 +247,7 @@ export async function getUserList(options, ctx) {
           ],
         },
       ],
+
       distinct: true,
       col: 'id',
       limit: parseInt(limit),

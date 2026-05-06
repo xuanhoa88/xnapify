@@ -15,23 +15,23 @@
 // Auto-load contexts
 const routesContext = import.meta.webpackContext('./routes', {
   recursive: true,
-  regExp: /\.[cm]?[jt]s$/i
+  regExp: /\.[cm]?[jt]s$/i,
 });
 const migrationsContext = import.meta.webpackContext('./database/migrations', {
   recursive: false,
-  regExp: /\.[cm]?[jt]s$/i
+  regExp: /\.[cm]?[jt]s$/i,
 });
 const seedsContext = import.meta.webpackContext('./database/seeds', {
   recursive: false,
-  regExp: /\.[cm]?[jt]s$/i
+  regExp: /\.[cm]?[jt]s$/i,
 });
 const modelsContext = import.meta.webpackContext('./models', {
   recursive: false,
-  regExp: /\.[cm]?[jt]s$/i
+  regExp: /\.[cm]?[jt]s$/i,
 });
 const translationsContext = import.meta.webpackContext('../translations', {
   recursive: false,
-  regExp: /\.json$/i
+  regExp: /\.json$/i,
 });
 
 // =============================================================================
@@ -48,26 +48,17 @@ export default {
   /**
    * Lifecycle: providers — bind DI services shared with other modules.
    */
-  async providers({
-    container
-  }) {},
-  // eslint-disable-line no-unused-vars
+  async providers() {},
 
   /**
    * Lifecycle: boot — called on every load after models/migrations/seeds.
    */
-  async boot({
-    container
-  }) {},
-  // eslint-disable-line no-unused-vars
+  async boot() {},
 
   /**
    * Lifecycle: shutdown — teardown on extension unload.
    */
-  async shutdown({
-    container
-  }) {},
-  // eslint-disable-line no-unused-vars
+  async shutdown() {},
 
   /**
    * Lifecycle: uninstall — custom teardown (if any).
@@ -81,5 +72,5 @@ export default {
    */
   routes() {
     return ['posts', routesContext];
-  }
+  },
 };

@@ -6,9 +6,8 @@
  */
 
 import crypto from 'crypto';
-import path from 'path';
 
-import glob from 'glob';
+import { globSync } from 'glob';
 import SequelizeModule from 'sequelize';
 
 import config from '../config.js';
@@ -32,8 +31,11 @@ const SEQUELIZE_CONFIG = {
   },
 };
 
-// Get all model files
-const modelFiles = glob.sync(path.join(config.CWD, MODEL_GLOB_PATTERN));
+// Get all model files (use absolute option to ensure Windows backslash safety in glob v10+)
+const modelFiles = globSync(MODEL_GLOB_PATTERN, {
+  cwd: config.CWD,
+  absolute: true,
+});
 
 /**
  * Loads all model definition files and initializes them.
@@ -124,7 +126,7 @@ function setupAssociations(models) {
  * // ... run tests
  * await closeTestDb();
  */
-async function setupTestDb() {
+export async function setupTestDb() {
   let sequelizeInstance;
   let models;
 
@@ -217,7 +219,7 @@ async function setupTestDb() {
  * // ... run tests
  * await closeTestDb(db.sequelize);
  */
-async function closeTestDb(sequelizeInstance) {
+export async function closeTestDb(sequelizeInstance) {
   if (!sequelizeInstance) {
     return;
   }
@@ -229,5 +231,3 @@ async function closeTestDb(sequelizeInstance) {
     // Don't throw - we want cleanup to be forgiving
   }
 }
-
-export { setupTestDb, closeTestDb };

@@ -9,9 +9,9 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
-import { getTranslations } from '@shared/i18n/loader';
-import { addNamespace, removeNamespace } from '@shared/i18n/utils';
-import { createNativeRequire } from '@shared/utils/createNativeRequire';
+import { getTranslations } from '@shared/i18n/loader.js';
+import { addNamespace, removeNamespace } from '@shared/i18n/utils.js';
+import { createNativeRequire } from '@shared/utils/createNativeRequire.js';
 
 import {
   BaseExtensionManager,
@@ -78,7 +78,7 @@ class ServerExtensionManager extends BaseExtensionManager {
    * Resolve view context for lifecycle hooks.
    * Returns the API DI container.
    *
-   * @returns {import('@shared/container').Container}
+   * @returns {import('@shared/container/index.js').Container}
    */
   _hookContext() {
     return this.apiContainer;

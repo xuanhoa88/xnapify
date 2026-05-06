@@ -15,9 +15,9 @@ import {
 import { Flex, Text, Box, Grid, Heading, Container } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
-import { Link } from '@shared/renderer/components/History';
+import { Link } from '@shared/renderer/components/History/index.js';
 
-import ScrollToTop from './ScrollToTop';
+import ScrollToTop from './ScrollToTop/index.js';
 
 const FOOTER_COLUMNS = [
   {

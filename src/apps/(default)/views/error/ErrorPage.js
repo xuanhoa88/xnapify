@@ -9,7 +9,7 @@ import { Flex, Box, Text, Heading, Button } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
-import { Link } from '@shared/renderer/components/History';
+import { Link } from '@shared/renderer/components/History/index.js';
 
 import s from './ErrorPage.css';
 

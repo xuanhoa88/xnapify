@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { strongPasswordRule } from '../auth/common';
+import { strongPasswordRule } from '../auth/common.js';
 
 /**
  * Update user schema - callable factory function

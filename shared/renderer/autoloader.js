@@ -10,17 +10,17 @@
  *
  * Discovers and loads view modules from the apps directory.
  * Each module exports independent lifecycle hooks:
- *   - translations() — returns a rspack require.context for locale JSON files
+ *   - translations() — returns a rspack import.meta.webpackContext for locale JSON files
  *   - providers()    — share client-side services/state across modules (DI bindings)
- *   - views()        — returns a rspack require.context for view routes
+ *   - views()        — returns a rspack import.meta.webpackContext for view routes
  *
  * Mirrors the API autoloader pattern (shared/api/autoloader.js).
  */
 
-import { getTranslations } from '@shared/i18n/loader';
-import { addNamespace } from '@shared/i18n/utils';
-import { createRspackContextAdapter } from '@shared/utils/contextAdapter';
-import { VIEW_LIFECYCLE_PHASES } from '@shared/utils/lifecycle';
+import { getTranslations } from '@shared/i18n/loader.js';
+import { addNamespace } from '@shared/i18n/utils.js';
+import { createRspackContextAdapter } from '@shared/utils/contextAdapter.js';
+import { VIEW_LIFECYCLE_PHASES } from '@shared/utils/lifecycle.js';
 
 // =============================================================================
 // CONSTANTS
@@ -199,7 +199,7 @@ export function mergeAdapters(adapters) {
 /**
  * Discover and boot all view modules in lifecycle order.
  *
- * @param {object} modulesContext - Rspack require.context or compatible
+ * @param {object} modulesContext - Rspack import.meta.webpackContext or compatible
  * @param {object} context - DI context
  * @returns {Promise<{ viewAdapters: Map, mergedAdapter: object|null, errors: object[] }>}
  */

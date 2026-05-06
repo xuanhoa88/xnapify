@@ -21,14 +21,14 @@ import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Form from '@shared/renderer/components/Form';
-import { useHistory } from '@shared/renderer/components/History';
-import Modal from '@shared/renderer/components/Modal';
-import { useRbac } from '@shared/renderer/components/Rbac';
-import { DataTable } from '@shared/renderer/components/Table';
-import { features } from '@shared/renderer/redux';
+import Form from '@shared/renderer/components/Form/index.js';
+import { useHistory } from '@shared/renderer/components/History/index.js';
+import Modal from '@shared/renderer/components/Modal/index.js';
+import { useRbac } from '@shared/renderer/components/Rbac/index.js';
+import { DataTable } from '@shared/renderer/components/Table/index.js';
+import { features } from '@shared/renderer/redux/index.js';
 
-import { createApiKeyFormSchema } from '../../../../validator/admin';
+import { createApiKeyFormSchema } from '../../../../validator/admin/index.js';
 import {
   fetchUserById,
   getFetchedUser,
@@ -48,7 +48,7 @@ import {
   fetchUserPermissions,
   getUserPermissions,
   isUserPermissionsOperationLoading,
-} from '../../redux';
+} from '../../redux/index.js';
 
 import s from './UserApiKeys.css';
 const { showSuccessMessage } = features;
@@ -253,6 +253,7 @@ export default function UserApiKeys({ userId }) {
         ),
       },
     ],
+
     [t, handleRevoke],
   );
 
@@ -428,6 +429,7 @@ export default function UserApiKeys({ userId }) {
           icon={<TokensIcon width={48} height={48} />}
           title={t('users:admin.apiKeys.emptyState', 'No API keys yet')}
         />
+
         <DataTable.Loader />
       </DataTable>
 

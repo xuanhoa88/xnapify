@@ -5,15 +5,15 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { validateForm } from '@shared/validator';
+import { validateForm } from '@shared/validator/index.js';
 
 import {
   createPermissionFormSchema,
   updatePermissionFormSchema,
   bulkUpdatePermissionStatusFormSchema,
   bulkDeletePermissionFormSchema,
-} from '../../../validator/admin';
-import * as permissionService from '../../services/admin/permission.service';
+} from '../../../validator/admin/index.js';
+import * as permissionService from '../../services/admin/permission.service.js';
 
 // ========================================================================
 // PERMISSION MANAGEMENT CONTROLLERS

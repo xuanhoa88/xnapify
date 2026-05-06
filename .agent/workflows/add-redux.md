@@ -528,7 +528,7 @@ import reducer, { SLICE_NAME } from './(admin)/posts/redux';
 import * as selectors from './(admin)/posts/redux/selector';
 import * as thunks from './(admin)/posts/redux/thunks';
 
-const viewsContext = require.context(
+const viewsContext = import.meta.webpackContext(
   '.',
   true,
   /(?:\/_route|\/_layout|\(routes\)\/\([^)]+\)|\(layouts\)\/\([^)]+\)\/_layout)\.[cm]?[jt]sx?$/i,

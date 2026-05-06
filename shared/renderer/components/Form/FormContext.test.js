@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { z } from '@shared/validator';
+import { z } from '@shared/validator/index.js';
 
 import { isFieldRequired, composeEventHandlers } from './FormContext.js';
 

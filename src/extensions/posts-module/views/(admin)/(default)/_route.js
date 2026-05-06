@@ -9,12 +9,12 @@
  * Posts admin page — route definition
  */
 
-import { requirePermission } from '@shared/renderer/components/Rbac';
-import { features } from '@shared/renderer/redux';
+import { requirePermission } from '@shared/renderer/components/Rbac/index.js';
+import { features } from '@shared/renderer/redux/index.js';
 
-import reducer, { SLICE_NAME } from '../redux';
+import reducer, { SLICE_NAME } from '../redux/index.js';
 
-import Posts from './Posts';
+import Posts from './Posts.js';
 
 const { addBreadcrumb, registerMenu, unregisterMenu } = features;
 

@@ -60,7 +60,7 @@ export default function CodeBlockActionsPopup({
       <ContextMenu.Trigger asChild>
         <ToolbarButton
           icon={<CodeIcon width={16} height={16} />}
-          title={t('shared:form.wysiwyg.codeBlock', 'Code Block')}
+          title={t('common:form.wysiwyg.codeBlock', 'Code Block')}
           isActive={isActive}
           disabled={disabled}
         />
@@ -72,8 +72,8 @@ export default function CodeBlockActionsPopup({
           onClick={() => editor.chain().focus().toggleCodeBlock().run()}
         >
           {isActive
-            ? t('shared:form.wysiwyg.removeCodeBlock', 'Remove Code Block')
-            : t('shared:form.wysiwyg.insertCodeBlock', 'Insert Code Block')}
+            ? t('common:form.wysiwyg.removeCodeBlock', 'Remove Code Block')
+            : t('common:form.wysiwyg.insertCodeBlock', 'Insert Code Block')}
         </ContextMenu.Item>
 
         {isActive && (
@@ -86,7 +86,7 @@ export default function CodeBlockActionsPopup({
                 ref={inputRef}
                 className={s.searchInput}
                 placeholder={t(
-                  'shared:form.wysiwyg.searchLanguage',
+                  'common:form.wysiwyg.searchLanguage',
                   'Search language…',
                 )}
                 value={search}
@@ -108,7 +108,7 @@ export default function CodeBlockActionsPopup({
                 }
               >
                 {t(
-                  'shared:form.wysiwyg.autoLanguageLabel',
+                  'common:form.wysiwyg.autoLanguageLabel',
                   'Auto (Auto-detect)',
                 )}
                 {activeLanguage === 'auto' ? ' ✓' : ''}
@@ -132,7 +132,7 @@ export default function CodeBlockActionsPopup({
 
               {filteredLanguages.length === 0 && (
                 <div className={s.noResults}>
-                  {t('shared:form.wysiwyg.noLanguageMatch', 'No match')}
+                  {t('common:form.wysiwyg.noLanguageMatch', 'No match')}
                 </div>
               )}
             </div>

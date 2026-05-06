@@ -17,13 +17,13 @@ import { Flex, Box, Text, Avatar, Badge, Card } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 
-import Modal from '@shared/renderer/components/Modal';
+import Modal from '@shared/renderer/components/Modal/index.js';
 import {
   TablePagination,
   TableSearch,
-} from '@shared/renderer/components/Table';
+} from '@shared/renderer/components/Table/index.js';
 
-import { fetchRoleUsers } from '../redux';
+import { fetchRoleUsers } from '../redux/index.js';
 
 /**
  * RoleUsersModal mapping custom implicit models easily flexibly.

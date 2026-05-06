@@ -14,10 +14,10 @@ import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import { useHistory, Link } from '@shared/renderer/components/History';
-import { checkPermission } from '@shared/renderer/components/Rbac';
-import { features } from '@shared/renderer/redux';
-import { useWebSocket } from '@shared/ws/client';
+import { useHistory, Link } from '@shared/renderer/components/History/index.js';
+import { checkPermission } from '@shared/renderer/components/Rbac/index.js';
+import { features } from '@shared/renderer/redux/index.js';
+import { useWebSocket } from '@shared/ws/client/index.js';
 
 import s from './Drawer.css';
 

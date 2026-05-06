@@ -12,17 +12,17 @@ import PropTypes from 'prop-types';
 import { Trans, useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import { ExtensionSlot } from '@shared/renderer/components/Extension';
-import Form from '@shared/renderer/components/Form';
+import { ExtensionSlot } from '@shared/renderer/components/Extension/index.js';
+import Form from '@shared/renderer/components/Form/index.js';
 import {
   Link,
   useHistory,
   useQuery,
-} from '@shared/renderer/components/History';
-import { features } from '@shared/renderer/redux';
-import { useWebSocket } from '@shared/ws/client';
+} from '@shared/renderer/components/History/index.js';
+import { features } from '@shared/renderer/redux/index.js';
+import { useWebSocket } from '@shared/ws/client/index.js';
 
-import { loginFormSchema } from '../../../users/validator/auth';
+import { loginFormSchema } from '../../../users/validator/auth/index.js';
 
 import s from './Login.css';
 
@@ -89,7 +89,6 @@ function Login() {
         } catch {
           // Ignore preferences fetch error
         }
-
         history.replace(returnTo);
       } catch {
         // Error is handled by Redux state
@@ -158,7 +157,6 @@ function Login() {
             <Trans
               t={t}
               i18nKey='login.dontHaveAccount'
-              // eslint-disable-next-line jsx-a11y/anchor-has-content
               components={[
                 <Link
                   key='register'

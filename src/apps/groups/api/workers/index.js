@@ -14,7 +14,7 @@
 import {
   indexGroup as _indexOne,
   removeGroup as _remove,
-} from './search.worker';
+} from './search.worker.js';
 
 /**
  * Register hooks to keep the groups search index in sync with mutations.

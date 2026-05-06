@@ -5,12 +5,12 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { requirePermission } from '@shared/renderer/components/Rbac';
-import { features } from '@shared/renderer/redux';
-import { useWebSocket } from '@shared/ws/client';
+import { requirePermission } from '@shared/renderer/components/Rbac/index.js';
+import { features } from '@shared/renderer/redux/index.js';
+import { useWebSocket } from '@shared/ws/client/index.js';
 
-import Extensions from './Extensions';
-import reducer, { SLICE_NAME } from './redux';
+import Extensions from './Extensions.js';
+import reducer, { SLICE_NAME } from './redux/index.js';
 
 const { addBreadcrumb, registerMenu, unregisterMenu } = features;
 

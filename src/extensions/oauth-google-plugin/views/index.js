@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import GoogleButton from './GoogleButton';
+import GoogleButton from './GoogleButton.js';
 
 export default {
   boot({ registry }) {

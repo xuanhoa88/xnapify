@@ -7,11 +7,11 @@
 
 import PropTypes from 'prop-types';
 
-import { requirePermission } from '@shared/renderer/components/Rbac';
-import { features } from '@shared/renderer/redux';
+import { requirePermission } from '@shared/renderer/components/Rbac/index.js';
+import { features } from '@shared/renderer/redux/index.js';
 const { addBreadcrumb } = features;
 
-import EditPermission from './EditPermission';
+import EditPermission from './EditPermission.js';
 
 export const middleware = requirePermission('permissions:update');
 

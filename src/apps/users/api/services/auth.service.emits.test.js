@@ -5,15 +5,15 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { createFactory } from '@shared/api/engines/hook/factory';
+import { createFactory } from '@shared/api/engines/hook/factory.js';
 
 import {
   createTimedResetToken,
   validateResetToken,
   verifyPassword,
-} from '../utils/password';
+} from '../utils/password.js';
 
-import * as authService from './auth.service';
+import * as authService from './auth.service.js';
 
 // Mock password utilities where needed
 jest.mock('../utils/password', () => ({

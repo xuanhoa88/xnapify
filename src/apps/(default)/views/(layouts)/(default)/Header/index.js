@@ -8,10 +8,10 @@
 import { Flex, Box, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
-import { Link } from '@shared/renderer/components/History';
+import { Link } from '@shared/renderer/components/History/index.js';
 
-import AuthSwitcher from './AuthSwitcher';
-import LanguageSwitcher from './LanguageSwitcher';
+import AuthSwitcher from './AuthSwitcher/index.js';
+import LanguageSwitcher from './LanguageSwitcher/index.js';
 
 /**
  * Header Component

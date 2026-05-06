@@ -7,10 +7,10 @@
 
 import PropTypes from 'prop-types';
 
-import { requirePermission } from '@shared/renderer/components/Rbac';
-import { features } from '@shared/renderer/redux';
+import { requirePermission } from '@shared/renderer/components/Rbac/index.js';
+import { features } from '@shared/renderer/redux/index.js';
 
-import UserApiKeys from './UserApiKeys';
+import UserApiKeys from './UserApiKeys.js';
 
 const { addBreadcrumb } = features;
 

@@ -5,9 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { createFactory } from '@shared/api/engines/hook/factory';
+import { createFactory } from '@shared/api/engines/hook/factory.js';
 
-import { logoutUser } from './auth.service';
+import { logoutUser } from './auth.service.js';
 
 describe('auth.service hook emits', () => {
   test('logoutUser emits logout on auth channel and handler receives bound context', async () => {

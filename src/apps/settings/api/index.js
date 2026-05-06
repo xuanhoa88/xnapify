@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { createSettingsService } from './services/settings.service';
+import { createSettingsService } from './services/settings.service.js';
 
 /** @type {Symbol} Ownership key for this module's persistent bindings */
 const OWNER_KEY = Symbol('__xnapify.module.settings.api__');
@@ -13,19 +13,19 @@ const OWNER_KEY = Symbol('__xnapify.module.settings.api__');
 // Auto-load contexts
 const migrationsContext = import.meta.webpackContext('./database/migrations', {
   recursive: false,
-  regExp: /\.[cm]?[jt]s$/i
+  regExp: /\.[cm]?[jt]s$/i,
 });
 const seedsContext = import.meta.webpackContext('./database/seeds', {
   recursive: false,
-  regExp: /\.[cm]?[jt]s$/i
+  regExp: /\.[cm]?[jt]s$/i,
 });
 const modelsContext = import.meta.webpackContext('./models', {
   recursive: false,
-  regExp: /\.[cm]?[jt]s$/i
+  regExp: /\.[cm]?[jt]s$/i,
 });
 const routesContext = import.meta.webpackContext('./routes', {
   recursive: true,
-  regExp: /\.[cm]?[jt]s$/i
+  regExp: /\.[cm]?[jt]s$/i,
 });
 
 // =============================================================================
@@ -37,16 +37,16 @@ export default {
   seeds: () => seedsContext,
   models: () => modelsContext,
   routes: () => routesContext,
-  async providers({
-    container
-  }) {
+  async providers({ container }) {
     // Register settings service on the DI container as a persistent singleton.
     // Available to all modules loaded after this one (e.g. in their boot() hooks).
-    container.singleton('settings', () => createSettingsService(container), OWNER_KEY);
+    container.singleton(
+      'settings',
+      () => createSettingsService(container),
+      OWNER_KEY,
+    );
   },
-  async boot({
-    container
-  }) {
+  async boot({ container }) {
     const settings = container.resolve('settings');
     const hook = container.resolve('hook');
 
@@ -56,7 +56,10 @@ export default {
 
     // Register inter-module hooks securely
     hook('auth').on('before_register', async () => {
-      const allowRegistration = await settings.get('auth', 'ALLOW_REGISTRATION');
+      const allowRegistration = await settings.get(
+        'auth',
+        'ALLOW_REGISTRATION',
+      );
       if (allowRegistration === false) {
         const error = new Error('Registration is currently disabled.');
         error.name = 'RegistrationDisabledError';
@@ -64,5 +67,5 @@ export default {
         throw error;
       }
     });
-  }
+  },
 };

@@ -7,7 +7,7 @@
 
 import renderer, { act } from 'react-test-renderer';
 
-import { registry } from '@shared/extension/client/Registry';
+import { registry } from '@shared/extension/client/Registry.js';
 
 import { ExtensionProvider } from '../../Providers/Extension.js';
 

@@ -36,7 +36,7 @@ console.log(context.val); // 2
 
 ### `contextAdapter.js` (`createRspackContextAdapter`)
 
-Creates an adapter over Rspack's `require.context` to provide a standardized, predictable interface for dynamically loading modules (e.g., auto-discovering extensions or Node-RED nodes).
+Creates an adapter over Rspack's `import.meta.webpackContext` to provide a standardized, predictable interface for dynamically loading modules (e.g., auto-discovering extensions or Node-RED nodes).
 
 - `files()`: Returns an array of matched file paths.
 - `load(path)`: Requires and returns the specific module.
@@ -48,7 +48,7 @@ Creates an adapter over Rspack's `require.context` to provide a standardized, pr
 import { createRspackContextAdapter } from '@shared/utils/contextAdapter';
 
 // Retrieve all scripts matching the regex in the folder
-const context = require.context('./scripts', false, /\.js$/);
+const context = import.meta.webpackContext('./scripts', { recursive: false, regExp: /\.js$/ });
 const adapter = createRspackContextAdapter(context);
 
 adapter.files().forEach(filePath => {

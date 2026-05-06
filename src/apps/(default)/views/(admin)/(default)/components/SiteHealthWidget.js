@@ -8,9 +8,9 @@
 import { Flex, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
-import { Link } from '@shared/renderer/components/History';
+import { Link } from '@shared/renderer/components/History/index.js';
 
-import WidgetCard from './WidgetCard';
+import WidgetCard from './WidgetCard.js';
 
 import s from './SiteHealthWidget.css';
 
@@ -18,21 +18,21 @@ export default function SiteHealthWidget() {
   const { t } = useTranslation();
 
   return (
-    <WidgetCard title={t('admin:dashboard.systemStatus', 'System Status')}>
+    <WidgetCard title={t('default:dashboard.systemStatus', 'System Status')}>
       <Flex align='center' gap='4' py='2'>
         <Text size='2' color='gray' className={s.flex1}>
           <Text color='green' weight='bold'>
             ✓{' '}
           </Text>
-          {t('admin:dashboard.dbConnected', 'Database Connected')}
+          {t('default:dashboard.dbConnected', 'Database Connected')}
         </Text>
         <Text size='2' color='gray' className={s.flex1}>
           {t(
-            'admin:dashboard.systemRunning',
+            'default:dashboard.systemRunning',
             'All systems are running smoothly. You can monitor system details or modify variables in the ',
           )}
           <Link to='/admin/settings' className={s.interactiveLink}>
-            {t('admin:dashboard.settingsScreen', 'Settings')}
+            {t('default:dashboard.settingsScreen', 'Settings')}
           </Link>
           .
         </Text>

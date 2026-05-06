@@ -8,11 +8,12 @@
 // Auto-load contexts
 const viewsContext = import.meta.webpackContext('.', {
   recursive: true,
-  regExp: /(?:\/_route|\/_layout|\(routes\)\/\([^)]+\)|\(layouts\)\/\([^)]+\)\/_layout)\.[cm]?[jt]sx?$/i
+  regExp:
+    /(?:\/_route|\/_layout|\(routes\)\/\([^)]+\)|\(layouts\)\/\([^)]+\)\/_layout)\.[cm]?[jt]sx?$/i,
 });
 const translationsContext = import.meta.webpackContext('../translations', {
   recursive: false,
-  regExp: /\.json$/i
+  regExp: /\.json$/i,
 });
 
 // =============================================================================
@@ -23,5 +24,5 @@ export default {
   routes: () => viewsContext,
   translations() {
     return [translationsContext];
-  }
+  },
 };

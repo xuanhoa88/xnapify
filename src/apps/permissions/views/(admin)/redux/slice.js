@@ -14,7 +14,7 @@ import {
   updatePermission,
   bulkUpdatePermissionStatus,
   bulkDeletePermissions,
-} from './thunks';
+} from './thunks.js';
 
 /**
  * Permissions Slice

@@ -485,8 +485,8 @@ async function loadSsrResources$() {
   }
 
   const [{ default: App }, { default: Html }] = await Promise.all([
-    import('@shared/renderer/App'),
-    import('@shared/renderer/Html'),
+    import('@shared/renderer/App.js'),
+    import('@shared/renderer/Html.js'),
   ]);
 
   return {

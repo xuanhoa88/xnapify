@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { listPosts, createPost } from '../../../controllers/post.controller';
+import { listPosts, createPost } from '../../../controllers/post.controller.js';
 
 function requirePermission(permission) {
   return (req, res, next) => {

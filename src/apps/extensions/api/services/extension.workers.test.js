@@ -41,14 +41,14 @@ jest.mock('fs', () => {
 import {
   computeChecksum,
   verifyExtensionChecksum,
-} from '../utils/checksum.util';
+} from '../utils/checksum.util.js';
 
 import {
   installExtensionDependencies,
   notifyExtensionChange,
   resolveExtension,
-} from './extension.helpers';
-import { registerExtensionWorkers } from './extension.workers';
+} from './extension.helpers.js';
+import { registerExtensionWorkers } from './extension.workers.js';
 
 // ── Helpers ──────────────────────────────────────────────
 

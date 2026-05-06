@@ -7,7 +7,7 @@
 
 import crypto from 'crypto';
 
-import { SIGNATURE_ALGORITHMS } from './constants';
+import { SIGNATURE_ALGORITHMS } from './constants.js';
 
 /**
  * Parse a signature header value with algorithm prefix.

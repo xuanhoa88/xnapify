@@ -14,12 +14,12 @@ import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { v4 as uuidv4 } from 'uuid';
 
-import { PageHeader } from '@shared/renderer/components/PageHeader';
+import { PageHeader } from '@shared/renderer/components/PageHeader/index.js';
 
-import FileGrid from '../components/FileGrid';
-import FileSidebar from '../components/FileSidebar';
-import FileToolbar from '../components/FileToolbar';
-import ShareModal from '../components/ShareModal';
+import FileGrid from '../components/FileGrid.js';
+import FileSidebar from '../components/FileSidebar.js';
+import FileToolbar from '../components/FileToolbar.js';
+import ShareModal from '../components/ShareModal.js';
 import {
   fetchFiles,
   uploadFile,
@@ -31,7 +31,7 @@ import {
   selectPage,
   selectPageSize,
   selectViewMode,
-} from '../redux';
+} from '../redux/index.js';
 
 import s from './Files.css';
 

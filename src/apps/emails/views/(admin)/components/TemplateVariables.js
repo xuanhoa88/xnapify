@@ -12,9 +12,9 @@ import { Flex, Text } from '@radix-ui/themes';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 
-import { useFormContext } from '@shared/renderer/components/Form';
+import { useFormContext } from '@shared/renderer/components/Form/index.js';
 
-import { extractVariables } from '../../../utils/template';
+import { extractVariables } from '../../../utils/template.js';
 
 import s from './TemplateVariables.css';
 

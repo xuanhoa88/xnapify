@@ -13,7 +13,7 @@
 
 import { createAsyncThunk } from '@reduxjs/toolkit';
 
-import { SLICE_NAME } from './slice';
+import { SLICE_NAME } from './slice.js';
 
 /**
  * Fetch posts with pagination and optional status filter

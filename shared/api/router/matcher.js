@@ -16,7 +16,7 @@ import { buildRadixTree } from './radix.js';
 
 /**
  * @typedef {Object} MatchCache
- * @property {import('./radix').RadixTree|null} tree - Cached radix tree
+ * @property {import('./radix.js').RadixTree|null} tree - Cached radix tree
  */
 
 /**
@@ -41,7 +41,7 @@ export function clearMatchCache(cache) {
  * Builds (or returns cached) radix tree from a route array.
  * @param {Object[]} routes - Top-level route objects
  * @param {MatchCache} cache - The cache to read/write
- * @returns {import('./radix').RadixTree}
+ * @returns {import('./radix.js').RadixTree}
  */
 export function getRadixTree(routes, cache) {
   if (!cache.tree) {

@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { extractToken } from '@shared/cookies';
+import { extractToken } from '@shared/cookies/index.js';
 
 /**
  * Basic JWT authentication middleware

@@ -11,7 +11,7 @@
 
 import { createSelector } from '@reduxjs/toolkit';
 
-import { SLICE_NAME } from './slice';
+import { SLICE_NAME } from './slice.js';
 
 // =============================================================================
 // STABLE DEFAULTS (referentially stable to prevent re-renders)

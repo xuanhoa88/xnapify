@@ -15,24 +15,26 @@ import { useDispatch, useSelector } from 'react-redux';
 
 // import { Flex, Heading, Text, Box } , Button } from '@radix-ui/themes';
 // import { Button } , Button } from '@radix-ui/themes';
-import Form, { useFormContext } from '@shared/renderer/components/Form';
-import { useHistory } from '@shared/renderer/components/History';
-import Modal from '@shared/renderer/components/Modal';
+import Form, {
+  useFormContext,
+} from '@shared/renderer/components/Form/index.js';
+import { useHistory } from '@shared/renderer/components/History/index.js';
+import Modal from '@shared/renderer/components/Modal/index.js';
 
 import {
   extractVariables,
   createPlaceholderData,
-} from '../../../../utils/template';
-import { createEmailTemplateFormSchema } from '../../../../validator/admin';
-import EmailTemplateSelector from '../../components/EmailTemplateSelector';
-import TemplateEditor from '../../components/TemplateEditor';
-import TemplateVariables from '../../components/TemplateVariables';
+} from '../../../../utils/template.js';
+import { createEmailTemplateFormSchema } from '../../../../validator/admin/index.js';
+import EmailTemplateSelector from '../../components/EmailTemplateSelector.js';
+import TemplateEditor from '../../components/TemplateEditor.js';
+import TemplateVariables from '../../components/TemplateVariables.js';
 import {
   createTemplate,
   previewRawTemplate,
   isCreateLoading,
   clearPreview,
-} from '../../redux';
+} from '../../redux/index.js';
 
 import s from './CreateEmailTemplate.css';
 

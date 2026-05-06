@@ -93,7 +93,7 @@ const ConfirmPromptModal = forwardRef(({ onSubmit, onSuccess }, ref) => {
         setError(
           result.error ||
             t(
-              'shared:components.confirmModal.prompt.error.failed',
+              'common:components.confirmModal.prompt.error.failed',
               'Failed to submit',
             ),
         );
@@ -107,7 +107,7 @@ const ConfirmPromptModal = forwardRef(({ onSubmit, onSuccess }, ref) => {
       setError(
         err.message ||
           t(
-            'shared:components.confirmModal.prompt.error.occurred',
+            'common:components.confirmModal.prompt.error.occurred',
             'An error occurred',
           ),
       );
@@ -145,14 +145,14 @@ const ConfirmPromptModal = forwardRef(({ onSubmit, onSuccess }, ref) => {
             onClick={handleClose}
             disabled={submitting}
           >
-            {t('shared:components.confirmModal.prompt.cancel', 'Cancel')}
+            {t('common:components.confirmModal.prompt.cancel', 'Cancel')}
           </Modal.Button>
           <Modal.Button
             variant='primary'
             onClick={handleConfirm}
             disabled={submitting}
           >
-            {t('shared:components.confirmModal.prompt.submit', 'Create')}
+            {t('common:components.confirmModal.prompt.submit', 'Create')}
           </Modal.Button>
         </Modal.Actions>
       </Modal.Footer>

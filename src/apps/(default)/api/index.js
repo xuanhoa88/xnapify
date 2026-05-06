@@ -5,10 +5,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-// Auto-load routes via require.context
+// Auto-load routes via import.meta.webpackContext
 const routesContext = import.meta.webpackContext('./routes', {
   recursive: true,
-  regExp: /\.[cm]?[jt]s$/i
+  regExp: /\.[cm]?[jt]s$/i,
 });
 
 // =============================================================================
@@ -19,5 +19,5 @@ export default {
   routes: () => routesContext,
   boot() {
     console.info('[Default] ✅ Initialized');
-  }
+  },
 };

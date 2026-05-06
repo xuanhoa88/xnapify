@@ -9,7 +9,7 @@ import { DotsVerticalIcon, EyeOpenIcon, CopyIcon } from '@radix-ui/react-icons';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
-import ContextMenu from '@shared/renderer/components/ContextMenu';
+import ContextMenu from '@shared/renderer/components/ContextMenu/index.js';
 
 /**
  * TemplateActionsDropdown - Standardized dropdown menu for email template actions

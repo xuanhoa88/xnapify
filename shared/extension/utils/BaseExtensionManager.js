@@ -11,9 +11,9 @@
  * Shared logic for both server and client.
  */
 
-import { getTranslations } from '@shared/i18n/loader';
-import { addNamespace, removeNamespace } from '@shared/i18n/utils';
-import { LIFECYCLE_HOOKS } from '@shared/utils/lifecycle';
+import { getTranslations } from '@shared/i18n/loader.js';
+import { addNamespace, removeNamespace } from '@shared/i18n/utils.js';
+import { LIFECYCLE_HOOKS } from '@shared/utils/lifecycle.js';
 
 // Symbols — exported (used by subclass managers and tests)
 export const ACTIVE_EXTENSIONS = Symbol('__xnapify.ext.active__');

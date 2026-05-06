@@ -12,16 +12,16 @@ import { Box, Flex, Text, Grid, Badge, Select } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Loader from '@shared/renderer/components/Loader';
+import Loader from '@shared/renderer/components/Loader/index.js';
 import {
   TablePagination,
   TableSearch,
   DataTable,
-} from '@shared/renderer/components/Table';
+} from '@shared/renderer/components/Table/index.js';
 
-import CategoryChips from './components/CategoryChips';
-import ListingDetail from './components/ListingDetail';
-import MarketplaceCard from './components/MarketplaceCard';
+import CategoryChips from './components/CategoryChips.js';
+import ListingDetail from './components/ListingDetail.js';
+import MarketplaceCard from './components/MarketplaceCard.js';
 import {
   fetchHubListings,
   fetchFeaturedListings,
@@ -40,7 +40,7 @@ import {
   getHubBrowseError,
   setFilter,
   clearSelectedListing,
-} from './redux';
+} from './redux/index.js';
 
 import s from './Hub.css';
 
@@ -218,6 +218,7 @@ function Hub() {
             activeCategory={filters.category}
             onSelect={handleCategorySelect}
           />
+
           <Flex align='center' justify='between' mt='3'>
             <Text as='span' size='2' color='gray' weight='medium'>
               {t('extensions:hub.results', '{{total}} results', { total })}

@@ -5,10 +5,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { requirePermission } from '@shared/renderer/components/Rbac';
-import { features } from '@shared/renderer/redux';
+import { requirePermission } from '@shared/renderer/components/Rbac/index.js';
+import { features } from '@shared/renderer/redux/index.js';
 
-import CreateEmailTemplate from './CreateEmailTemplate';
+import CreateEmailTemplate from './CreateEmailTemplate.js';
 
 const { addBreadcrumb } = features;
 

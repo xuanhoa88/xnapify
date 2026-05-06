@@ -12,7 +12,7 @@
  * quick-access login widget.
  */
 
-import { SEED_USERS } from './constants';
+import { SEED_USERS } from './constants.js';
 
 /** @type {Symbol} Ownership key for this extension's persistent bindings */
 const OWNER_KEY = Symbol('__xnapify.ext.quickAccess.api__');
@@ -20,7 +20,7 @@ const OWNER_KEY = Symbol('__xnapify.ext.quickAccess.api__');
 // Auto-load contexts
 const seedsContext = import.meta.webpackContext('./database/seeds', {
   recursive: false,
-  regExp: /\.[cm]?[jt]s$/i
+  regExp: /\.[cm]?[jt]s$/i,
 });
 
 // =============================================================================
@@ -34,17 +34,13 @@ export default {
   /**
    * Lifecycle: providers — bind seed constants for cross-module use.
    */
-  async providers({
-    container
-  }) {
+  async providers({ container }) {
     container.bind('users:seed_constants', () => SEED_USERS, OWNER_KEY);
   },
   /**
    * Lifecycle: shutdown — clean up persistent bindings on extension deactivate.
    */
-  async shutdown({
-    container
-  }) {
+  async shutdown({ container }) {
     container.reset('users:seed_constants', OWNER_KEY);
-  }
+  },
 };

@@ -6,10 +6,10 @@
  */
 
 // Public API - Async Thunks
-export * from './thunks';
+export * from './thunks.js';
 
 // Public API - Selectors
-export * from './selector';
+export * from './selector.js';
 
 // Public API - Actions (from slice)
 export {
@@ -21,7 +21,7 @@ export {
   clearGroupsBulkDeleteError,
   resetGroupsState,
   SLICE_NAME,
-} from './slice';
+} from './slice.js';
 
 // Public API - Reducer
-export { default } from './slice';
+export { default } from './slice.js';

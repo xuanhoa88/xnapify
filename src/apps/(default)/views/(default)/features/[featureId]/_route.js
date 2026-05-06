@@ -7,9 +7,9 @@
 
 import PropTypes from 'prop-types';
 
-import { featuresData } from '../../data';
+import { featuresData } from '../../data.js';
 
-import FeatureDetails from './FeatureDetails';
+import FeatureDetails from './FeatureDetails.js';
 
 /**
  * Load function to get feature data

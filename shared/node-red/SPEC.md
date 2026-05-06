@@ -36,7 +36,7 @@ Constructs the Node-RED settings object:
 - Merges runtime defaults (like overriding `logLevel`, `projects`, `httpNodeRoot`).
 - **Global Context**: Pre-injects commonly used libraries (`lodash`, `dayjs`, `zod`, `uuid`) into the default namespace available within Function nodes.
 - **Extraction Magic** (all async via `fs.promises`):
-  - `writeCustomNodes(userDir)`: Resolves `require.context('./nodes')`, extracting `getNodeJS()` and `getNodeHTML()`, and writing physical files to `<userDir>/nodes/xnapify/`. Also scans active extensions' `manifest.nodered.nodes` paths and writes them as `xnapify-nodered-<id>` modules to `<userDir>/node_modules/`.
+  - `writeCustomNodes(userDir)`: Resolves `import.meta.webpackContext('./nodes')`, extracting `getNodeJS()` and `getNodeHTML()`, and writing physical files to `<userDir>/nodes/xnapify/`. Also scans active extensions' `manifest.nodered.nodes` paths and writes them as `xnapify-nodered-<id>` modules to `<userDir>/node_modules/`.
   - `writeClientScripts(userDir)`: Similar logic for `./client-scripts/`, dropping files in `<userDir>/scripts/` and linking them directly to Node-RED's `editorTheme.page.scripts` UI injection.
 
 ## Authentication Synchronization (`auth.js`)

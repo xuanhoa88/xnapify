@@ -71,7 +71,7 @@ const ConfirmActionModal = forwardRef(
 
     const description = item && getDescription ? getDescription(item) : '';
     const defaultConfirmLabel = t(
-      'shared:components.confirmModal.action.confirm',
+      'common:components.confirmModal.action.confirm',
       'Confirm',
     );
 
@@ -84,7 +84,7 @@ const ConfirmActionModal = forwardRef(
         <Modal.Footer>
           <Modal.Actions>
             <Modal.Button variant='secondary' onClick={resetState}>
-              {t('shared:components.confirmModal.action.cancel', 'Cancel')}
+              {t('common:components.confirmModal.action.cancel', 'Cancel')}
             </Modal.Button>
             <Modal.Button variant={variant} onClick={handleConfirm}>
               {confirmLabel || defaultConfirmLabel}

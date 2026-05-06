@@ -13,7 +13,7 @@
  * is enforced inside the controller to support per-namespace permissions.
  */
 
-import * as controller from '../../../controllers/settings.controller';
+import * as controller from '../../../controllers/settings.controller.js';
 
 function requireAuth() {
   return (req, res, next) => {

@@ -5,16 +5,19 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import hubReducer, { SLICE_NAME as HUB_SLICE } from './(admin)/hub/redux';
+import hubReducer, {
+  SLICE_NAME as HUB_SLICE,
+} from './(admin)/hub/redux/index.js';
 
 // Auto-load contexts
 const viewsContext = import.meta.webpackContext('.', {
   recursive: true,
-  regExp: /(?:\/_route|\/_layout|\(routes\)\/\([^)]+\)|\(layouts\)\/\([^)]+\)\/_layout)\.[cm]?[jt]sx?$/i
+  regExp:
+    /(?:\/_route|\/_layout|\(routes\)\/\([^)]+\)|\(layouts\)\/\([^)]+\)\/_layout)\.[cm]?[jt]sx?$/i,
 });
 const translationsContext = import.meta.webpackContext('../translations', {
   recursive: false,
-  regExp: /\.json$/i
+  regExp: /\.json$/i,
 });
 
 // =============================================================================
@@ -25,10 +28,8 @@ export default {
   translations() {
     return [translationsContext];
   },
-  providers({
-    store
-  }) {
+  providers({ store }) {
     store.injectReducer(HUB_SLICE, hubReducer);
   },
-  routes: () => viewsContext
+  routes: () => viewsContext,
 };

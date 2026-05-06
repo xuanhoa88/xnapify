@@ -10,20 +10,20 @@
  *
  * Discovers and loads API modules from the apps directory.
  * Each module exports independent lifecycle hooks:
- *   - models()     — returns a rspack require.context for models
+ *   - models()     — returns a rspack import.meta.webpackContext for models
  *   - providers()     — share services/constants across modules (DI bindings)
  *   - migrations() — run database migrations (all tables created first)
  *   - seeds()      — run database seeds (after all tables exist)
  *   - boot()        — initialisation logic (auth hooks, etc.)
- *   - routes()     — returns a rspack require.context for routes
+ *   - routes()     — returns a rspack import.meta.webpackContext for routes
  *
  * Core modules (like 'users') are loaded first to ensure proper dependency order.
  */
 
-import { getTranslations } from '@shared/i18n/loader';
-import { addNamespace } from '@shared/i18n/utils';
-import { createRspackContextAdapter } from '@shared/utils/contextAdapter';
-import { API_LIFECYCLE_PHASES } from '@shared/utils/lifecycle';
+import { getTranslations } from '@shared/i18n/loader.js';
+import { addNamespace } from '@shared/i18n/utils.js';
+import { createRspackContextAdapter } from '@shared/utils/contextAdapter.js';
+import { API_LIFECYCLE_PHASES } from '@shared/utils/lifecycle.js';
 
 import ModelRegistry from './ModelRegistry.js';
 
@@ -233,7 +233,7 @@ async function runPhase(phase, lifecycles, handler) {
 /**
  * Discover and boot all API modules in lifecycle order.
  *
- * @param {object} modulesContext - Rspack require.context or compatible
+ * @param {object} modulesContext - Rspack import.meta.webpackContext or compatible
  * @param {object} container     - DI container instance
  * @returns {Promise<{apiModels: object, apiRoutes: Map, errors: object[]}>}
  */

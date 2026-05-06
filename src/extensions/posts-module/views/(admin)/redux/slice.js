@@ -29,7 +29,7 @@
 
 import { createSlice } from '@reduxjs/toolkit';
 
-import { fetchPosts, createPost, updatePost, deletePost } from './thunks';
+import { fetchPosts, createPost, updatePost, deletePost } from './thunks.js';
 
 const createOperationState = () => ({ loading: false, error: null });
 

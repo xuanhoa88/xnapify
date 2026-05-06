@@ -91,7 +91,7 @@ Only applied if `container.resolve('jwt')` is available.
 ### Module Discovery
 
 ```javascript
-require.context('../../apps', true, /^\.\/[^/]+\/api\/index\.[cm]?[jt]s$/i);
+import.meta.webpackContext('../../apps', true, /^\.\/[^/]+\/api\/index\.[cm]?[jt]s$/i);
 ```
 
 Discovers `src/apps/*/api/index.js` files. Each module goes through the lifecycle: `translations → providers → migrations → models → seeds → boot → routes`.
@@ -108,7 +108,7 @@ Discovers `src/apps/*/api/index.js` files. Each module goes through the lifecycl
 ### Module Discovery
 
 ```javascript
-require.context('../apps', true, /^\.\/[^/]+\/views\/index\.[cm]?[jt]s$/i);
+import.meta.webpackContext('../apps', true, /^\.\/[^/]+\/views\/index\.[cm]?[jt]s$/i);
 ```
 
 Discovers `src/apps/*/views/index.js` files. Each module goes through the lifecycle: `translations → providers → boot → routes`.

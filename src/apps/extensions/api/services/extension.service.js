@@ -9,7 +9,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
-import { computeChecksum } from '../utils/checksum.util';
+import { computeChecksum } from '../utils/checksum.util.js';
 
 import {
   CACHE_TTL,
@@ -17,7 +17,7 @@ import {
   resolveExtension,
   validateManifest,
   invalidateCaches,
-} from './extension.helpers';
+} from './extension.helpers.js';
 
 // Cache for disk-only extensions
 const diskExtensionCache = new Map();
@@ -110,6 +110,7 @@ async function getDiskExtensionById(extensionManager, cwd, id) {
             extensionManager,
           ),
         ];
+
         if (
           localExtensionsDir &&
           localExtensionsDir !== installedExtensionsDir
@@ -192,6 +193,7 @@ export async function manageExtensions({
   const scanTasks = [
     scanDirectory(installedExtensionsDir, 'remote', metadata, extensionManager),
   ];
+
   if (localExtensionsDir && localExtensionsDir !== installedExtensionsDir) {
     scanTasks.push(
       scanDirectory(localExtensionsDir, 'local', metadata, extensionManager),

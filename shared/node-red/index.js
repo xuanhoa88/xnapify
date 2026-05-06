@@ -9,8 +9,11 @@
 import fs from 'fs';
 import path from 'path';
 
-import { getTokenFromCookie, getRefreshTokenFromCookie } from '@shared/cookies';
-import { createNativeRequire } from '@shared/utils/createNativeRequire';
+import {
+  getTokenFromCookie,
+  getRefreshTokenFromCookie,
+} from '@shared/cookies/index.js';
+import { createNativeRequire } from '@shared/utils/createNativeRequire.js';
 
 import initFlowSplitter from './flowSplitter.js';
 import {

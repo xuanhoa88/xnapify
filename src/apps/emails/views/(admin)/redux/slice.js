@@ -17,7 +17,7 @@ import {
   previewTemplate,
   previewRawTemplate,
   duplicateTemplate,
-} from './thunks';
+} from './thunks.js';
 
 /**
  * Admin Email Templates Slice

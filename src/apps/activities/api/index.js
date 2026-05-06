@@ -9,24 +9,24 @@
  * Activity Module Entry Point
  */
 
-import { registerActivityHooks } from './hooks';
+import { registerActivityHooks } from './hooks.js';
 
 // Auto-load contexts
 const migrationsContext = import.meta.webpackContext('./database/migrations', {
   recursive: false,
-  regExp: /\.[cm]?[jt]s$/i
+  regExp: /\.[cm]?[jt]s$/i,
 });
 const seedsContext = import.meta.webpackContext('./database/seeds', {
   recursive: false,
-  regExp: /\.[cm]?[jt]s$/i
+  regExp: /\.[cm]?[jt]s$/i,
 });
 const modelsContext = import.meta.webpackContext('./models', {
   recursive: false,
-  regExp: /\.[cm]?[jt]s$/i
+  regExp: /\.[cm]?[jt]s$/i,
 });
 const routesContext = import.meta.webpackContext('./routes', {
   recursive: true,
-  regExp: /\.[cm]?[jt]s$/i
+  regExp: /\.[cm]?[jt]s$/i,
 });
 
 // =============================================================================
@@ -38,10 +38,8 @@ export default {
   seeds: () => seedsContext,
   models: () => modelsContext,
   routes: () => routesContext,
-  async boot({
-    container
-  }) {
+  async boot({ container }) {
     registerActivityHooks(container);
     console.info('[Activity] ✅ Initialized');
-  }
+  },
 };

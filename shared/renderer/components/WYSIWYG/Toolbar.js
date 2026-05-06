@@ -141,14 +141,14 @@ export default function Toolbar({
         {btn(
           FontBoldIcon,
           'bold',
-          t('shared:form.wysiwyg.bold', 'Bold'),
+          t('common:form.wysiwyg.bold', 'Bold'),
           () => editor.chain().focus().toggleBold().run(),
           'bold',
         )}
         {btn(
           FontItalicIcon,
           'italic',
-          t('shared:form.wysiwyg.italic', 'Italic'),
+          t('common:form.wysiwyg.italic', 'Italic'),
           () => editor.chain().focus().toggleItalic().run(),
           'italic',
         )}
@@ -156,14 +156,14 @@ export default function Toolbar({
           btn(
             UnderlineIcon,
             'underline',
-            t('shared:form.wysiwyg.underline', 'Underline'),
+            t('common:form.wysiwyg.underline', 'Underline'),
             () => editor.chain().focus().toggleUnderline().run(),
             'underline',
           )}
         {btn(
           StrikethroughIcon,
           'strikethrough',
-          t('shared:form.wysiwyg.strikethrough', 'Strikethrough'),
+          t('common:form.wysiwyg.strikethrough', 'Strikethrough'),
           () => editor.chain().focus().toggleStrike().run(),
           'strike',
         )}
@@ -176,14 +176,14 @@ export default function Toolbar({
         {btn(
           ListBulletIcon,
           'bulletList',
-          t('shared:form.wysiwyg.bulletList', 'Bullet list'),
+          t('common:form.wysiwyg.bulletList', 'Bullet list'),
           () => editor.chain().focus().toggleBulletList().run(),
           'bulletList',
         )}
         {btn(
           ListBulletIcon,
           'orderedList',
-          t('shared:form.wysiwyg.orderedList', 'Numbered list'),
+          t('common:form.wysiwyg.orderedList', 'Numbered list'),
           () => editor.chain().focus().toggleOrderedList().run(),
           'orderedList',
         )}
@@ -191,14 +191,14 @@ export default function Toolbar({
           btn(
             CheckboxIcon,
             'taskList',
-            t('shared:form.wysiwyg.taskList', 'Task list'),
+            t('common:form.wysiwyg.taskList', 'Task list'),
             () => editor.chain().focus().toggleTaskList().run(),
             'taskList',
           )}
         {btn(
           QuoteIcon,
           'blockquote',
-          t('shared:form.wysiwyg.blockquote', 'Blockquote'),
+          t('common:form.wysiwyg.blockquote', 'Blockquote'),
           () => editor.chain().focus().toggleBlockquote().run(),
           'blockquote',
         )}
@@ -206,7 +206,7 @@ export default function Toolbar({
           btn(
             TriangleRightIcon,
             'details',
-            t('shared:form.wysiwyg.details', 'Collapsible Details'),
+            t('common:form.wysiwyg.details', 'Collapsible Details'),
             () => editor.chain().focus().setDetails().run(),
             'details',
           )}
@@ -231,20 +231,20 @@ export default function Toolbar({
         {has('color') && (
           <ColorPickerPopup
             icon={<TextIcon width={16} height={16} />}
-            title={t('shared:form.wysiwyg.textColor', 'Text Color')}
+            title={t('common:form.wysiwyg.textColor', 'Text Color')}
             value={editor.getAttributes('textStyle').color}
             defaultValue='#000000'
             isActive={!!editor.getAttributes('textStyle').color}
             onChange={color => editor.chain().focus().setColor(color).run()}
             onReset={() => editor.chain().focus().unsetColor().run()}
-            resetLabel={t('shared:form.wysiwyg.resetTextColor', 'Reset')}
+            resetLabel={t('common:form.wysiwyg.resetTextColor', 'Reset')}
             disabled={!editor.can().chain().focus().run()}
           />
         )}
         {has('highlight') && (
           <ColorPickerPopup
             icon={<OpacityIcon width={16} height={16} />}
-            title={t('shared:form.wysiwyg.highlight', 'Background Color')}
+            title={t('common:form.wysiwyg.highlight', 'Background Color')}
             value={editor.getAttributes('highlight').color}
             defaultValue='#ffffff'
             isActive={editor.isActive('highlight')}
@@ -252,14 +252,14 @@ export default function Toolbar({
               editor.chain().focus().toggleHighlight({ color }).run()
             }
             onReset={() => editor.chain().focus().unsetHighlight().run()}
-            resetLabel={t('shared:form.wysiwyg.resetHighlight', 'Reset')}
+            resetLabel={t('common:form.wysiwyg.resetHighlight', 'Reset')}
             disabled={!editor.can().chain().focus().run()}
           />
         )}
         {has('fontSize') && (
           <div
             className={s.fontSizeWrapper}
-            data-tooltip={t('shared:form.wysiwyg.fontSize', 'Font Size (px)')}
+            data-tooltip={t('common:form.wysiwyg.fontSize', 'Font Size (px)')}
           >
             <TextField.Root
               ref={fontSizeRef}
@@ -290,11 +290,11 @@ export default function Toolbar({
             {btn(
               Link2Icon,
               'link',
-              t('shared:form.wysiwyg.link', 'Add Link'),
+              t('common:form.wysiwyg.link', 'Add Link'),
               () => {
                 const previousUrl = editor.getAttributes('link').href;
                 openPrompt({
-                  title: t('shared:form.wysiwyg.link', 'Add Link'),
+                  title: t('common:form.wysiwyg.link', 'Add Link'),
                   label: 'URL',
                   defaultValue: previousUrl || '',
                   slotName: 'wysiwyg.prompt.link',
@@ -323,7 +323,7 @@ export default function Toolbar({
               btn(
                 LinkBreak2Icon,
                 'unlink',
-                t('shared:form.wysiwyg.unlink', 'Remove Link'),
+                t('common:form.wysiwyg.unlink', 'Remove Link'),
                 () => editor.chain().focus().unsetLink().run(),
               )}
           </>
@@ -333,11 +333,11 @@ export default function Toolbar({
           btn(
             ImageIcon,
             'image',
-            t('shared:form.wysiwyg.image', 'Image'),
+            t('common:form.wysiwyg.image', 'Image'),
             () => {
               openPrompt({
-                title: t('shared:form.wysiwyg.image', 'Image'),
-                label: t('shared:form.wysiwyg.imageUrl', 'Image URL'),
+                title: t('common:form.wysiwyg.image', 'Image'),
+                label: t('common:form.wysiwyg.imageUrl', 'Image URL'),
                 slotName: 'wysiwyg.prompt.image',
                 onSubmit: url => {
                   if (url) editor.chain().focus().setImage({ src: url }).run();
@@ -357,7 +357,7 @@ export default function Toolbar({
         )}
         {has('emoji') && (
           <EmojiPickerButton
-            title={t('shared:form.wysiwyg.emoji', 'Emoji')}
+            title={t('common:form.wysiwyg.emoji', 'Emoji')}
             onSelect={emoji =>
               editor.chain().focus().insertContent(emoji).run()
             }
@@ -381,12 +381,12 @@ export default function Toolbar({
           btn(
             SymbolIcon,
             'inlineMath',
-            t('shared:form.wysiwyg.math', 'Math'),
+            t('common:form.wysiwyg.math', 'Math'),
             () => {
               openPrompt({
-                title: t('shared:form.wysiwyg.math', 'Math'),
+                title: t('common:form.wysiwyg.math', 'Math'),
                 label: t(
-                  'shared:form.wysiwyg.enterLatex',
+                  'common:form.wysiwyg.enterLatex',
                   'Enter LaTeX expression',
                 ),
                 slotName: 'wysiwyg.prompt.math',
@@ -408,7 +408,7 @@ export default function Toolbar({
         {btn(
           DividerHorizontalIcon,
           'horizontalRule',
-          t('shared:form.wysiwyg.horizontalRule', 'Horizontal rule'),
+          t('common:form.wysiwyg.horizontalRule', 'Horizontal rule'),
           () => editor.chain().focus().setHorizontalRule().run(),
         )}
       </div>
@@ -419,13 +419,13 @@ export default function Toolbar({
       <div className={s.toolbarGroup}>
         <ToolbarButton
           icon={<ResetIcon width={16} height={16} />}
-          title={t('shared:form.wysiwyg.undo', 'Undo')}
+          title={t('common:form.wysiwyg.undo', 'Undo')}
           onClick={() => editor.chain().focus().undo().run()}
           disabled={!editor.can().undo()}
         />
         <ToolbarButton
           icon={<ReloadIcon width={16} height={16} />}
-          title={t('shared:form.wysiwyg.redo', 'Redo')}
+          title={t('common:form.wysiwyg.redo', 'Redo')}
           onClick={() => editor.chain().focus().redo().run()}
           disabled={!editor.can().redo()}
         />
@@ -453,8 +453,8 @@ export default function Toolbar({
           }
           title={
             isFullScreen
-              ? t('shared:form.wysiwyg.exitFullScreen', 'Exit full screen')
-              : t('shared:form.wysiwyg.fullScreen', 'Full screen')
+              ? t('common:form.wysiwyg.exitFullScreen', 'Exit full screen')
+              : t('common:form.wysiwyg.fullScreen', 'Full screen')
           }
           onClick={onToggleFullScreen}
           isActive={isFullScreen}

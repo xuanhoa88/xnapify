@@ -58,7 +58,7 @@ import {
   manageExtensions,
   getActiveExtensions,
   toggleExtensionStatus,
-} from './extension.service';
+} from './extension.service.js';
 
 const mockCache = {
   get: jest.fn(),

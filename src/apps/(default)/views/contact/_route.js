@@ -7,7 +7,7 @@
 
 import PropTypes from 'prop-types';
 
-import Contact from './Contact';
+import Contact from './Contact.js';
 
 /**
  * Page metadata

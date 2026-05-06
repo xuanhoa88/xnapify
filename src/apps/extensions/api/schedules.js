@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { recalculateUpdateCount } from './services/hub.service';
+import { recalculateUpdateCount } from './services/hub.service.js';
 
 /**
  * Registers background scheduled tasks for the Extensions module.

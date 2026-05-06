@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import * as searchController from '../../controllers/search.controller';
+import * as searchController from '../../controllers/search.controller.js';
 
 /**
  * GET /api/search?q=...&entityType=...&namespace=...

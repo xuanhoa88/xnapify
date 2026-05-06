@@ -99,12 +99,13 @@ export default {
 
   /**
    * The test environment that will be used for testing.
-   * jsdom simulates a browser environment for React component testing.
+   * Jest 30 + Node 20 natively injects all modern globals (fetch, crypto,
+   * Web Streams, structuredClone, etc.) — no custom environment needed.
    */
-  testEnvironment: '<rootDir>/tools/jest/environment.js',
+  testEnvironment: 'node',
 
   /**
-   * Test environment options for jsdom.
+   * Test environment options.
    */
   testEnvironmentOptions: {
     url: 'http://localhost',
@@ -377,7 +378,7 @@ export default {
   /**
    * This option allows the use of a custom resolver.
    */
-  resolver: '<rootDir>/tools/jest/nodeModuleResolver.js',
+  // resolver: undefined,
 
   /**
    * Allows you to use a custom runner instead of Jest's default test runner.

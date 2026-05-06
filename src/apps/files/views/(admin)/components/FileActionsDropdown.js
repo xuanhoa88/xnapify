@@ -18,10 +18,10 @@ import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
 
-import ContextMenu from '@shared/renderer/components/ContextMenu';
-import { features } from '@shared/renderer/redux';
+import ContextMenu from '@shared/renderer/components/ContextMenu/index.js';
+import { features } from '@shared/renderer/redux/index.js';
 
-import { selectCurrentView } from '../redux';
+import { selectCurrentView } from '../redux/index.js';
 
 const { getUserId } = features;
 

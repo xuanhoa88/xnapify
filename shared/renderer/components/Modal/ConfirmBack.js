@@ -46,12 +46,12 @@ const ConfirmBackModal = forwardRef(({ onConfirm }, ref) => {
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
       <Modal.Header onClose={handleClose}>
-        {t('shared:components.confirmModal.back.title', 'Unsaved Changes')}
+        {t('common:components.confirmModal.back.title', 'Unsaved Changes')}
       </Modal.Header>
       <Modal.Body>
         <Modal.Description>
           {t(
-            'shared:components.confirmModal.back.description',
+            'common:components.confirmModal.back.description',
             'You have unsaved changes. Are you sure you want to leave? Your changes will be lost.',
           )}
         </Modal.Description>
@@ -59,10 +59,10 @@ const ConfirmBackModal = forwardRef(({ onConfirm }, ref) => {
       <Modal.Footer>
         <Modal.Actions>
           <Modal.Button variant='secondary' onClick={handleClose}>
-            {t('shared:components.confirmModal.back.stay', 'Stay')}
+            {t('common:components.confirmModal.back.stay', 'Stay')}
           </Modal.Button>
           <Modal.Button variant='primary' onClick={handleConfirm}>
-            {t('shared:components.confirmModal.back.leave', 'Leave')}
+            {t('common:components.confirmModal.back.leave', 'Leave')}
           </Modal.Button>
         </Modal.Actions>
       </Modal.Footer>

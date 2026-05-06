@@ -13,9 +13,9 @@ import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import { Link } from '@shared/renderer/components/History';
-import Toast from '@shared/renderer/components/Toast';
-import { features } from '@shared/renderer/redux';
+import { Link } from '@shared/renderer/components/History/index.js';
+import Toast from '@shared/renderer/components/Toast/index.js';
+import { features } from '@shared/renderer/redux/index.js';
 
 import s from './_layout.css';
 

@@ -5,44 +5,44 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-// eslint-disable-next-line import/no-unresolved
 import { Strategy as GitHubStrategy } from 'passport-github2';
 const TAG = '[OAuth GitHub]';
 const seedsContext = import.meta.webpackContext('./database/seeds', {
   recursive: false,
-  regExp: /\.[cm]?[jt]s$/i
+  regExp: /\.[cm]?[jt]s$/i,
 });
 export default {
   seeds: () => seedsContext,
-  async boot({
-    container
-  }) {
+  async boot({ container }) {
     const clientID = process.env.XNAPIFY_GITHUB_CLIENT_ID;
     const clientSecret = process.env.XNAPIFY_GITHUB_CLIENT_KEY;
     if (!clientID || !clientSecret) {
-      console.warn(`${TAG} ⚠️ XNAPIFY_GITHUB_CLIENT_ID / XNAPIFY_GITHUB_CLIENT_KEY not set — skipping`);
+      console.warn(
+        `${TAG} ⚠️ XNAPIFY_GITHUB_CLIENT_ID / XNAPIFY_GITHUB_CLIENT_KEY not set — skipping`,
+      );
       return;
     }
     const oauth = container.resolve('oauth');
     oauth.registerProvider('github', {
-      strategy: new GitHubStrategy({
-        clientID,
-        clientSecret,
-        callbackURL: `${process.env.XNAPIFY_PUBLIC_APP_URL}/api/auth/oauth/github/callback`,
-        scope: ['user:email'],
-        passReqToCallback: false
-      }, (accessToken, refreshToken, profile, done) => done(null, profile)),
-      scope: ['user:email']
+      strategy: new GitHubStrategy(
+        {
+          clientID,
+          clientSecret,
+          callbackURL: `${process.env.XNAPIFY_PUBLIC_APP_URL}/api/auth/oauth/github/callback`,
+          scope: ['user:email'],
+          passReqToCallback: false,
+        },
+        (accessToken, refreshToken, profile, done) => done(null, profile),
+      ),
+      scope: ['user:email'],
     });
     console.info(`${TAG} ✅ Initialized`);
   },
-  async shutdown({
-    container
-  }) {
+  async shutdown({ container }) {
     const oauth = container.resolve('oauth');
     if (oauth && oauth.hasProvider('github')) {
       oauth.unregisterProvider('github');
     }
     console.info(`${TAG} 🗑️ Destroyed`);
-  }
+  },
 };

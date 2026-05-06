@@ -5,8 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import * as selectors from './(admin)/redux/selector';
-import * as thunks from './(admin)/redux/thunks';
+import * as selectors from './(admin)/redux/selector.js';
+import * as thunks from './(admin)/redux/thunks.js';
 
 /** @type {Symbol} Ownership key for this module's persistent bindings */
 const OWNER_KEY = Symbol('__xnapify.module.permissions.views__');
@@ -14,11 +14,12 @@ const OWNER_KEY = Symbol('__xnapify.module.permissions.views__');
 // Auto-load contexts
 const viewsContext = import.meta.webpackContext('.', {
   recursive: true,
-  regExp: /(?:\/_route|\/_layout|\(routes\)\/\([^)]+\)|\(layouts\)\/\([^)]+\)\/_layout)\.[cm]?[jt]sx?$/i
+  regExp:
+    /(?:\/_route|\/_layout|\(routes\)\/\([^)]+\)|\(layouts\)\/\([^)]+\)\/_layout)\.[cm]?[jt]sx?$/i,
 });
 const translationsContext = import.meta.webpackContext('../translations', {
   recursive: false,
-  regExp: /\.json$/i
+  regExp: /\.json$/i,
 });
 
 // =============================================================================
@@ -29,13 +30,15 @@ export default {
   translations() {
     return [translationsContext];
   },
-  providers({
-    container
-  }) {
-    container.bind('permissions:admin:state', () => ({
-      selectors,
-      thunks
-    }), OWNER_KEY);
+  providers({ container }) {
+    container.bind(
+      'permissions:admin:state',
+      () => ({
+        selectors,
+        thunks,
+      }),
+      OWNER_KEY,
+    );
   },
-  routes: () => viewsContext
+  routes: () => viewsContext,
 };

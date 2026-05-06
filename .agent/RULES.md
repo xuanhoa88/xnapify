@@ -80,7 +80,7 @@ Whenever you provide assistance to a Developer on this codebase, you MUST adhere
   `translations → providers → migrations → models → seeds → boot → routes`
 - **View modules** (`views/index.js`) must use `export default { ... }` with:
   `translations → providers → boot → routes`
-- **Declarative hooks** (`migrations`, `models`, `seeds`, `routes`) return Rspack `require.context` directly — the autoloader handles execution.
+- **Declarative hooks** (`migrations`, `models`, `seeds`, `routes`) return Rspack `import.meta.webpackContext` directly — the autoloader handles execution.
 - **Imperative hooks** (`providers`, `boot`) contain your initialization logic and receive `{ container }`.
 - **Route hooks** (`_route.js`) may export: `middleware`, `init`, `setup`, `teardown`, `mount`, `unmount`, `getInitialProps`, `namespace`.
 

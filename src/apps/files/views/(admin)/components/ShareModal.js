@@ -29,13 +29,17 @@ import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Modal from '@shared/renderer/components/Modal';
-import { SearchableSelect } from '@shared/renderer/components/SearchableSelect';
-import { features } from '@shared/renderer/redux';
-import { validateForm } from '@shared/validator';
+import Modal from '@shared/renderer/components/Modal/index.js';
+import { SearchableSelect } from '@shared/renderer/components/SearchableSelect/index.js';
+import { features } from '@shared/renderer/redux/index.js';
+import { validateForm } from '@shared/validator/index.js';
 
-import { shareFileFormSchema } from '../../../validator/admin/file';
-import { updateSharing, fetchFileShares, searchUsersAndGroups } from '../redux';
+import { shareFileFormSchema } from '../../../validator/admin/file.js';
+import {
+  updateSharing,
+  fetchFileShares,
+  searchUsersAndGroups,
+} from '../redux/index.js';
 
 const { getUserId } = features;
 

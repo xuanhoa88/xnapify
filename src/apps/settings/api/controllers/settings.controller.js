@@ -12,7 +12,7 @@
  * Accessed via req.app.get('container').resolve('settings').
  */
 
-import { namespaceUpdateSchema } from '../../validator';
+import { namespaceUpdateSchema } from '../../validator/index.js';
 
 /**
  * GET /api/admin/settings — list all settings grouped by namespace (admin)

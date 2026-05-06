@@ -10,7 +10,7 @@ import hook, {
   HookChannel,
   InvalidChannelNameError,
   HookAbortError,
-} from '.';
+} from './index.js';
 
 describe('Hook Engine', () => {
   describe('HookChannel', () => {

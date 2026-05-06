@@ -10,7 +10,7 @@ import { Flex, Box, Text, Heading, Button, Section } from '@radix-ui/themes';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 
-import { Link } from '@shared/renderer/components/History';
+import { Link } from '@shared/renderer/components/History/index.js';
 
 import s from './HeroSection.css';
 

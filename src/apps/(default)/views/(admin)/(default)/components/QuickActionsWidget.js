@@ -9,9 +9,9 @@ import { PlusIcon } from '@radix-ui/react-icons';
 import { Flex, Button } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
-import { Link } from '@shared/renderer/components/History';
+import { Link } from '@shared/renderer/components/History/index.js';
 
-import WidgetCard from './WidgetCard';
+import WidgetCard from './WidgetCard.js';
 
 import s from './QuickActionsWidget.css';
 
@@ -19,24 +19,24 @@ export default function QuickActionsWidget() {
   const { t } = useTranslation();
 
   return (
-    <WidgetCard title={t('admin:dashboard.quickActions', 'Quick Actions')}>
+    <WidgetCard title={t('default:dashboard.quickActions', 'Quick Actions')}>
       <Flex direction='column' gap='3'>
         <Button variant='soft' color='blue' justify='start' asChild>
           <Link to='/admin/users/create' className={s.interactiveLink}>
             <PlusIcon width='16' height='16' />
-            {t('admin:dashboard.inviteUser', 'Invite User')}
+            {t('default:dashboard.inviteUser', 'Invite User')}
           </Link>
         </Button>
         <Button variant='soft' color='indigo' justify='start' asChild>
           <Link to='/admin/roles/create' className={s.interactiveLink}>
             <PlusIcon width='16' height='16' />
-            {t('admin:dashboard.createRole', 'Create Role')}
+            {t('default:dashboard.createRole', 'Create Role')}
           </Link>
         </Button>
         <Button variant='soft' color='gray' justify='start' asChild>
           <Link to='/admin/extensions' className={s.interactiveLink}>
             <PlusIcon width='16' height='16' />
-            {t('admin:dashboard.addExtension', 'Add Extension')}
+            {t('default:dashboard.addExtension', 'Add Extension')}
           </Link>
         </Button>
       </Flex>

@@ -32,23 +32,24 @@ initI18nForTesting();
 // repeatedly will force-sync the schema (clearing data).  We expose the
 // returned object on `globalThis.testDb` for convenience in tests.
 
-async function resetTestDb() {
-  globalThis.testDb = await setupTestDb();
-}
-
 beforeAll(async () => {
-  // create the database once before all tests
-  await resetTestDb();
+  // Create the database and load all Sequelize models ONCE per test file
+  globalThis.testDb = await setupTestDb();
 });
 
 beforeEach(async () => {
-  // clear the database before each test by re-initializing
-  await resetTestDb();
+  // Truncate all tables before each test by force-syncing the schema.
+  // This achieves perfect test isolation without the massive overhead
+  // of reloading models and destroying/rebuilding the connection.
+  if (globalThis.testDb) {
+    await globalThis.testDb.sequelize.sync({ force: true });
+  }
 });
 
 afterAll(async () => {
   if (globalThis.testDb) {
-    await closeTestDb();
+    // Correctly pass the sequelize instance to prevent connection leaks!
+    await closeTestDb(globalThis.testDb.sequelize);
     delete globalThis.testDb;
   }
 });

@@ -15,7 +15,7 @@ import {
   installFromHub,
   updateFromHub,
   uninstallFromHub,
-} from './thunks';
+} from './thunks.js';
 
 export const SLICE_NAME = '@admin/hub';
 

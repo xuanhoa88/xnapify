@@ -11,7 +11,7 @@ import { Flex, Text, Box, Button, Popover } from '@radix-ui/themes';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 
-import Icon from '@shared/renderer/components/Icon';
+import Icon from '@shared/renderer/components/Icon/index.js';
 
 // Mock notification data
 const mockNotifications = [

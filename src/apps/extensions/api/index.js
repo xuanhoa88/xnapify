@@ -5,26 +5,26 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { registerSchedules } from './schedules';
-import * as extensionService from './services/extension.service';
-import { registerExtensionWorkers } from './services/extension.workers';
+import { registerSchedules } from './schedules.js';
+import * as extensionService from './services/extension.service.js';
+import { registerExtensionWorkers } from './services/extension.workers.js';
 
 // Auto-load contexts
 const migrationsContext = import.meta.webpackContext('./database/migrations', {
   recursive: false,
-  regExp: /\.[cm]?[jt]s$/i
+  regExp: /\.[cm]?[jt]s$/i,
 });
 const seedsContext = import.meta.webpackContext('./database/seeds', {
   recursive: false,
-  regExp: /\.[cm]?[jt]s$/i
+  regExp: /\.[cm]?[jt]s$/i,
 });
 const modelsContext = import.meta.webpackContext('./models', {
   recursive: false,
-  regExp: /\.[cm]?[jt]s$/i
+  regExp: /\.[cm]?[jt]s$/i,
 });
 const routesContext = import.meta.webpackContext('./routes', {
   recursive: true,
-  regExp: /\.[cm]?[jt]s$/i
+  regExp: /\.[cm]?[jt]s$/i,
 });
 
 // =============================================================================
@@ -36,15 +36,13 @@ export default {
   seeds: () => seedsContext,
   models: () => modelsContext,
   routes: () => routesContext,
-  async boot({
-    container
-  }) {
+  async boot({ container }) {
     registerExtensionWorkers(container);
     registerSchedules(container);
     if (process.env.NODE_ENV !== 'production') {
       registerHmrIpcListener(container);
     }
-  }
+  },
 };
 
 /**
@@ -70,11 +68,13 @@ function registerHmrIpcListener(container) {
       const start = Date.now();
       console.log('🔌 Refreshing all extensions...');
       try {
-        const extensionIds = Array.isArray(msg.extensions) ? msg.extensions : [];
+        const extensionIds = Array.isArray(msg.extensions)
+          ? msg.extensions
+          : [];
         await extensionService.refreshExtensions(extensionIds, {
           extensionManager: container.resolve('extension'),
           cache: container.resolve('cache'),
-          models: container.resolve('models')
+          models: container.resolve('models'),
         });
         const duration = Date.now() - start;
         console.log(`✅ Extensions refreshed in ${duration}ms`);

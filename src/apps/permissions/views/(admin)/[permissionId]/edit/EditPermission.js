@@ -26,12 +26,14 @@ import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Form, { useFormContext } from '@shared/renderer/components/Form';
-import { useHistory } from '@shared/renderer/components/History';
-import Modal from '@shared/renderer/components/Modal';
-import { PageHeader } from '@shared/renderer/components/PageHeader';
+import Form, {
+  useFormContext,
+} from '@shared/renderer/components/Form/index.js';
+import { useHistory } from '@shared/renderer/components/History/index.js';
+import Modal from '@shared/renderer/components/Modal/index.js';
+import { PageHeader } from '@shared/renderer/components/PageHeader/index.js';
 
-import { updatePermissionFormSchema } from '../../../../validator/admin';
+import { updatePermissionFormSchema } from '../../../../validator/admin/index.js';
 import {
   fetchPermissionById,
   updatePermission,
@@ -40,7 +42,7 @@ import {
   isPermissionFetchInitialized,
   getPermissionFetchError,
   getFetchedPermission,
-} from '../../redux';
+} from '../../redux/index.js';
 
 // =============================================================================
 // Identity sidebar card — reflects live form values

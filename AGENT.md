@@ -635,13 +635,9 @@ export default ActivityList;
 // src/apps/{module-name}/api/index.js
 
 // Declarative context loaders (Rspack statically analyses these)
-const migrationsContext = require.context(
-  './database/migrations',
-  false,
-  /\.[cm]?[jt]s$/i,
-);
-const modelsContext = require.context('./models', false, /\.[cm]?[jt]s$/i);
-const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
+const migrationsContext = import.meta.webpackContext('./database/migrations', { recursive: false, regExp: /\.[cm]?[jt]s$/i });
+const modelsContext = import.meta.webpackContext('./models', { recursive: false, regExp: /\.[cm]?[jt]s$/i });
+const routesContext = import.meta.webpackContext('./routes', { recursive: true, regExp: /\.[cm]?[jt]s$/i });
 
 export default {
   // Declarative hooks — autoloader handles execution

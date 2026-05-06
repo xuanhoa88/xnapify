@@ -17,7 +17,7 @@ import cache, {
   MemoryCache,
   NoOpCache,
   withNamespace,
-} from '.';
+} from './index.js';
 
 // ======================================================================
 // Helpers

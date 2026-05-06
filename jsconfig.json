@@ -6,8 +6,9 @@
       "*": ["src/*", "*"]
     },
     "jsx": "react-jsx",
-    "moduleResolution": "node",
-    "target": "esnext"
+    "moduleResolution": "NodeNext",
+    "module": "NodeNext",
+    "target": "ESNext"
   },
   "include": ["src/**/*", "shared/**/*", "tools/**/*"],
   "exclude": [

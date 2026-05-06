@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { passwordRule, strongPasswordRule } from './common';
+import { passwordRule, strongPasswordRule } from './common.js';
 
 /**
  * Change password schema - callable factory function

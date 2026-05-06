@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import * as roleController from '../../../../controllers/admin/role.controller';
+import * as roleController from '../../../../controllers/admin/role.controller.js';
 
 function requirePermission(permission) {
   return (req, res, next) => {

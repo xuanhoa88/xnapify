@@ -13,7 +13,7 @@ import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 
-import { features } from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux/index.js';
 
 import s from './ProfileHeader.css';
 

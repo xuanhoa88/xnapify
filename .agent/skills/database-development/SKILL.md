@@ -9,7 +9,7 @@ This skill covers database development patterns for `xnapify` using Sequelize OR
 
 ## Core Concepts
 
-Database operations in xnapify are managed through the `db` engine (`shared/api/engines/db/`). Models, migrations, and seeds are auto-discovered from module/extension directories via Rspack `require.context`.
+Database operations in xnapify are managed through the `db` engine (`shared/api/engines/db/`). Models, migrations, and seeds are auto-discovered from module/extension directories via Rspack `import.meta.webpackContext`.
 
 ### Database Engine
 

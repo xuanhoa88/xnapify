@@ -5,7 +5,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-const { updateUserProfile, getUserWithProfile } = require('./profile.service');
+const {
+  updateUserProfile,
+  getUserWithProfile,
+} = require('./profile.service.js');
 
 // Simple unique ID generator for tests
 let testIdCounter = 0;

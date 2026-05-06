@@ -5,9 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import * as rbacCache from '../../../../users/api/utils/rbac/cache';
+import * as rbacCache from '../../../../users/api/utils/rbac/cache.js';
 
-import { manageRolePermissions } from './rbac.service';
+import { manageRolePermissions } from './rbac.service.js';
 
 // ========================================================================
 // ROLE MANAGEMENT SERVICES

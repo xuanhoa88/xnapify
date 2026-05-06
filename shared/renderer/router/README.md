@@ -109,7 +109,7 @@ The Router supports adding and removing routes dynamically at runtime without re
 import { createRspackContextAdapter } from '@shared/utils/contextAdapter';
 
 const extensionAdapter = createRspackContextAdapter(
-  require.context('/path/to/my-module/views'),
+  import.meta.webpackContext('/path/to/my-module/views'),
 );
 
 // Add dynamic routes seamlessly into the existing active app tree

@@ -8,7 +8,7 @@
 import { MemoryEmailProvider } from './providers/memory.js';
 import { validateEmails, EMAIL_LIMITS } from './utils/validation.js';
 
-import email, { createFactory } from '.';
+import email, { createFactory } from './index.js';
 
 describe('Email Engine', () => {
   describe('Default Instance', () => {

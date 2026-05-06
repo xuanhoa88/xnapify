@@ -11,8 +11,8 @@ import { ChevronRightIcon } from '@radix-ui/react-icons';
 import { Flex, Text, Box } from '@radix-ui/themes';
 import { useSelector } from 'react-redux';
 
-import { Link } from '@shared/renderer/components/History';
-import { features } from '@shared/renderer/redux';
+import { Link } from '@shared/renderer/components/History/index.js';
+import { features } from '@shared/renderer/redux/index.js';
 
 const { getBreadcrumbs } = features;
 

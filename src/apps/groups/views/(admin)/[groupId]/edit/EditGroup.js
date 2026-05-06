@@ -23,15 +23,17 @@ import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Form, { useFormContext } from '@shared/renderer/components/Form';
-import { useHistory } from '@shared/renderer/components/History';
-import { useDebounce } from '@shared/renderer/components/InfiniteScroll';
-import Loader from '@shared/renderer/components/Loader';
-import Modal from '@shared/renderer/components/Modal';
-import { PageHeader } from '@shared/renderer/components/PageHeader';
-import { features } from '@shared/renderer/redux';
+import Form, {
+  useFormContext,
+} from '@shared/renderer/components/Form/index.js';
+import { useHistory } from '@shared/renderer/components/History/index.js';
+import { useDebounce } from '@shared/renderer/components/InfiniteScroll/index.js';
+import Loader from '@shared/renderer/components/Loader/index.js';
+import Modal from '@shared/renderer/components/Modal/index.js';
+import { PageHeader } from '@shared/renderer/components/PageHeader/index.js';
+import { features } from '@shared/renderer/redux/index.js';
 
-import { updateGroupFormSchema } from '../../../../validator/admin';
+import { updateGroupFormSchema } from '../../../../validator/admin/index.js';
 import {
   updateGroup,
   fetchGroupById,
@@ -40,7 +42,7 @@ import {
   isGroupFetchInitialized,
   getFetchedGroup,
   getGroupFetchError,
-} from '../../redux';
+} from '../../redux/index.js';
 
 const { showErrorMessage } = features;
 
@@ -241,6 +243,7 @@ function EditGroup({ groupId, context }) {
           subtitle={t('groups:admin.edit.subtitle', 'Update group details')}
           icon={<GroupIcon width={24} height={24} />}
         />
+
         <Grid columns={{ initial: '1', md: '280px 1fr' }} gap='6' align='start'>
           <Loader variant='skeleton' skeletonCount={3} />
           <Loader variant='skeleton' skeletonCount={6} />
@@ -258,6 +261,7 @@ function EditGroup({ groupId, context }) {
           subtitle={t('groups:admin.edit.subtitle', 'Update group details')}
           icon={<GroupIcon width={24} height={24} />}
         />
+
         <Flex
           direction='column'
           align='center'

@@ -231,7 +231,7 @@ export const listItems = async (req, res) => {
 | `import X from '@apps/other-module'` | `container.resolve()` or hook system                             |
 | `res.json({ data })`                 | `http.sendSuccess(res, { data })`                                |
 | `process.env.MY_VAR`                 | `process.env.XNAPIFY_MY_VAR`                                    |
-| `require.context(\`${dynamic}\`)`    | Static string literal only                                       |
+| `import.meta.webpackContext(\`${dynamic}\`)`    | Static string literal only                                       |
 | Boolean trap: `fn(true, false)`      | Options object: `fn({ isActive: true })`                         |
 | Callback-based code                  | Promisify: `const fn = promisify(cb)`                            |
 | Repeated `if (x !== undefined)` for partial updates | `pickBy(pick(data, fields), v => v !== undefined)` |

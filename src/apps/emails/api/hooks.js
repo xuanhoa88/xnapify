@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { displayNameOf } from './services/send.service';
+import { displayNameOf } from './services/send.service.js';
 
 /**
  * Register email hooks for transactional emails.

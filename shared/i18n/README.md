@@ -24,7 +24,7 @@ addNamespace('users', {
 - **Locale Resolution**: Computes native locale display names automatically using `Intl.DisplayNames`.
 - **Dynamic Namespaces**: Add and remove namespace bundles on the fly across all active locales.
 - **Lazy Loading Helper**: Built-in function to conditionally load translation dictionaries.
-- **Rspack & Vite Support**: Includes a compatible context loader for `require.context` / `import.meta.glob`.
+- **Rspack & Vite Support**: Includes a compatible context loader for `import.meta.webpackContext` / `import.meta.glob`.
 
 ## Usage Guide
 
@@ -91,7 +91,7 @@ await ensureNamespaceLoaded('myFeature', async () => {
 ```javascript
 import { getTranslations } from '@shared/i18n';
 
-const ctx = require.context('./translations', false, /\.json$/i);
+const ctx = import.meta.webpackContext('./translations', { recursive: false, regExp: /\.json$/i });
 const translationsMap = getTranslations(ctx);
 // -> { 'en-US': { ... }, 'vi-VN': { ... } }
 ```

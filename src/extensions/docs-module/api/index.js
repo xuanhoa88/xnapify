@@ -7,11 +7,11 @@
 
 const routesContext = import.meta.webpackContext('./routes', {
   recursive: true,
-  regExp: /_route\.[cm]?[jt]sx?$/i
+  regExp: /_route\.[cm]?[jt]sx?$/i,
 });
 const translationsContext = import.meta.webpackContext('../translations', {
   recursive: false,
-  regExp: /\.json$/i
+  regExp: /\.json$/i,
 });
 
 // =============================================================================
@@ -27,20 +27,12 @@ export default {
   /**
    * Lifecycle: boot — called on every server boot.
    */
-  async boot({
-    container,
-    registry
-  }) {},
-  // eslint-disable-line no-unused-vars
+  async boot() {},
 
   /**
    * Lifecycle: shutdown — teardown on extension unload.
    */
-  async shutdown({
-    container,
-    registry
-  }) {},
-  // eslint-disable-line no-unused-vars
+  async shutdown() {},
 
   /**
    * Lifecycle: uninstall — custom teardown (if any).
@@ -52,5 +44,5 @@ export default {
    */
   routes() {
     return ['docs', routesContext];
-  }
+  },
 };

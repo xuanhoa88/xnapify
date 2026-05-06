@@ -22,7 +22,7 @@ const NEWS_ITEMS = [
     title: 'Modular Auto-Discovery Architecture',
     link: '/features/modular-architecture',
     contentSnippet:
-      'Domain modules under src/apps/ are automatically discovered via Webpack require.context. Each module declares lifecycle hooks (providers, migrations, models, seeds, boot, routes) — no manual registration required.',
+      'Domain modules under src/apps/ are automatically discovered via Webpack import.meta.webpackContext. Each module declares lifecycle hooks (providers, migrations, models, seeds, boot, routes) — no manual registration required.',
   },
   {
     id: 3,

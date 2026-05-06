@@ -18,13 +18,13 @@ import { Flex, Box, Text, Card, Badge } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 
-import Modal from '@shared/renderer/components/Modal';
+import Modal from '@shared/renderer/components/Modal/index.js';
 import {
   TablePagination,
   TableSearch,
-} from '@shared/renderer/components/Table';
+} from '@shared/renderer/components/Table/index.js';
 
-import { fetchRoleGroups } from '../redux';
+import { fetchRoleGroups } from '../redux/index.js';
 
 /**
  * RoleGroupsModal abandoning arbitrary inline layout overrides simply dynamically cleanly perfectly smoothly statically optimally effortlessly securely gracefully matching consistently functionally securely elegantly correctly nicely thoroughly dependably dependably purely natively smartly perfectly solidly fluently optimally logically explicitly exactly carefully beautifully neatly.

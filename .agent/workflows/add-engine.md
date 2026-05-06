@@ -95,7 +95,7 @@ Once `index.js` exists, the engine is automatically available:
 import { {engineName} } from '@shared/api';
 ```
 
-No manual registration needed — the rspack `require.context` in `shared/api/index.js` handles it.
+No manual registration needed — the rspack `import.meta.webpackContext` in `shared/api/index.js` handles it.
 
 ### 4. Write Tests
 

@@ -5,9 +5,19 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { features } from '@shared/renderer/redux';
+import { features } from '@shared/renderer/redux/index.js';
 
-import Dashboard from './Dashboard';
+import Dashboard from './Dashboard.js';
+
+// Load dashboard translations
+const translationsContext = import.meta.webpackContext('./translations', {
+  recursive: false,
+  regExp: /\.json$/i,
+});
+
+export function translations() {
+  return translationsContext;
+}
 
 const { registerMenu, unregisterMenu } = features;
 

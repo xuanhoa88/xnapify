@@ -15,7 +15,7 @@ import {
   deleteRole,
   bulkDeleteRoles,
   fetchRolePermissions,
-} from './thunks';
+} from './thunks.js';
 
 /**
  * Roles Slice

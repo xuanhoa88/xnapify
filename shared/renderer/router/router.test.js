@@ -16,7 +16,7 @@ import {
   RouterError,
 } from './utils.js';
 
-import { Router } from '.';
+import { Router } from './index.js';
 
 // =============================================================================
 // Test Fixtures

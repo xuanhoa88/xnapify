@@ -25,7 +25,7 @@ import {
   generateSecureFileName,
 } from './utils/fileUtils.js';
 
-import fs, { createFactory } from '.';
+import fs, { createFactory } from './index.js';
 
 describe('Filesystem Engine', () => {
   describe('Default Instance', () => {

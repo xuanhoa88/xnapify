@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import * as hubService from '../services/hub.service';
+import * as hubService from '../services/hub.service.js';
 
 // ========================================================================
 // HUB CONTROLLERS — Admin-only browse + install from hub

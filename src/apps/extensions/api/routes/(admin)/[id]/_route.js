@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import * as extensionController from '../../../controllers/extension.controller';
+import * as extensionController from '../../../controllers/extension.controller.js';
 
 export const useRateLimit = false;
 

@@ -108,24 +108,24 @@ mkdir -p src/apps/{module-name}/{api,views}/{(admin),(default)}
  */
 
 // Auto-load migrations
-const migrationsContext = require.context(
+const migrationsContext = import.meta.webpackContext(
   './database/migrations',
   false,
   /\.[cm]?[jt]s$/i,
 );
 
 // Auto-load seeds
-const seedsContext = require.context(
+const seedsContext = import.meta.webpackContext(
   './database/seeds',
   false,
   /\.[cm]?[jt]s$/i,
 );
 
 // Auto-load models
-const modelsContext = require.context('./models', false, /\.[cm]?[jt]s$/i);
+const modelsContext = import.meta.webpackContext('./models', { recursive: false, regExp: /\.[cm]?[jt]s$/i });
 
 // Auto-load routes (file-based dynamic routing)
-const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
+const routesContext = import.meta.webpackContext('./routes', { recursive: true, regExp: /\.[cm]?[jt]s$/i });
 
 // =============================================================================
 // LIFECYCLE HOOKS
@@ -140,10 +140,10 @@ export default {
   routes: () => routesContext,
 
   // -----------------------------------------------------------------------
-  // Translations hook — return rspack require.context for i18n files.
+  // Translations hook — return rspack import.meta.webpackContext for i18n files.
   // -----------------------------------------------------------------------
   translations() {
-    return require.context('../translations', false, /\.json$/i);
+    return import.meta.webpackContext('../translations', { recursive: false, regExp: /\.json$/i });
   },
 
   // -----------------------------------------------------------------------
@@ -479,14 +479,14 @@ import * as thunks from './(admin)/redux/thunks';
 const OWNER_KEY = Symbol('{module-name}:views');
 
 // Auto-load contexts
-const viewsContext = require.context(
+const viewsContext = import.meta.webpackContext(
   '.',
   true,
   /(?:\/_route|\/_layout|\(routes\)\/\([^)]+\)|\(layouts\)\/\([^)]+\)\/_layout)\.[cm]?[jt]sx?$/i,
 );
 
 // Auto-load translations
-const translationsContext = require.context(
+const translationsContext = import.meta.webpackContext(
   '../translations',
   false,
   /\.json$/i,
@@ -873,7 +873,7 @@ Routes are discovered from `views/` using special files:
 5. **Migrations:** Use versioned filenames (1.initial.js, 2.add_field.js)
 6. **Error Handling:** Use try-catch in controllers, pass to Express error handler
 7. **Container:** Bind reusable services to container in providers hook
-8. **Rspack Context:** Use `require.context()` for auto-loading files
+8. **Rspack Context:** Use `import.meta.webpackContext()` for auto-loading files
 9. **Translations:** Prefix i18n keys with module name (e.g., `{module-name}:label.key`)
 10. **Testing:** Create test files adjacent to code (\*.test.js)
 

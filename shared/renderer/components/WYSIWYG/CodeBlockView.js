@@ -70,8 +70,8 @@ export default function CodeBlockView({ node }) {
           onClick={handleCopy}
           title={
             copied
-              ? t('shared:form.wysiwyg.copied', 'Copied!')
-              : t('shared:form.wysiwyg.copyCode', 'Copy code')
+              ? t('common:form.wysiwyg.copied', 'Copied!')
+              : t('common:form.wysiwyg.copyCode', 'Copy code')
           }
         >
           <span className={s.copyIcon}>
@@ -82,8 +82,8 @@ export default function CodeBlockView({ node }) {
             )}
           </span>
           {copied
-            ? t('shared:form.wysiwyg.copied', 'Copied!')
-            : t('shared:form.wysiwyg.copy', 'Copy')}
+            ? t('common:form.wysiwyg.copied', 'Copied!')
+            : t('common:form.wysiwyg.copy', 'Copy')}
         </Button>
       </div>
 

@@ -7,10 +7,10 @@
 
 import express from 'express';
 
-import { validateForm, z } from '@shared/validator';
+import { validateForm, z } from '@shared/validator/index.js';
 
-import { extensionStatusSchema } from '../../validator/extension';
-import * as extensionService from '../services/extension.service';
+import { extensionStatusSchema } from '../../validator/extension.js';
+import * as extensionService from '../services/extension.service.js';
 
 // Cache for static middleware
 const staticMiddlewareCache = new Map();

@@ -17,9 +17,12 @@ import { Flex, Box, Text, Badge } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import Modal from '@shared/renderer/components/Modal';
+import Modal from '@shared/renderer/components/Modal/index.js';
 
-import { fetchRolePermissions, isRoleFetchPermissionsLoading } from '../redux';
+import {
+  fetchRolePermissions,
+  isRoleFetchPermissionsLoading,
+} from '../redux/index.js';
 
 /**
  * RolePermissionsModal dynamically overriding absolute configurations exclusively formatting robustly smoothly intelligently gracefully correctly natively easily optimally intelligently smoothly automatically dynamically accurately cleanly robustly securely elegantly nicely perfectly precisely reliably functionally elegantly structurally logically cleanly exclusively safely correctly strictly simply fluently gracefully flawlessly optimally optimally automatically automatically neatly automatically matching.

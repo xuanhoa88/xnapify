@@ -36,7 +36,7 @@ export default function TableActionsPopup({ editor, disabled }) {
       <ContextMenu.Trigger asChild>
         <ToolbarButton
           icon={<TableIcon width={16} height={16} />}
-          title={t('shared:form.wysiwyg.tableActions', 'Table Actions')}
+          title={t('common:form.wysiwyg.tableActions', 'Table Actions')}
           isActive={editor.isActive('table')}
           disabled={disabled}
         />
@@ -54,7 +54,7 @@ export default function TableActionsPopup({ editor, disabled }) {
               .run()
           }
         >
-          {t('shared:form.wysiwyg.tableInsert', 'Insert Table')}
+          {t('common:form.wysiwyg.tableInsert', 'Insert Table')}
         </ContextMenu.Item>
 
         {editor.isActive('table') && (
@@ -66,20 +66,20 @@ export default function TableActionsPopup({ editor, disabled }) {
               icon={<RowsIcon width={16} height={16} />}
               onClick={() => editor.chain().focus().addRowBefore().run()}
             >
-              {t('shared:form.wysiwyg.tableRowBefore', 'Add Row Before')}
+              {t('common:form.wysiwyg.tableRowBefore', 'Add Row Before')}
             </ContextMenu.Item>
             <ContextMenu.Item
               icon={<RowsIcon width={16} height={16} />}
               onClick={() => editor.chain().focus().addRowAfter().run()}
             >
-              {t('shared:form.wysiwyg.tableRowAfter', 'Add Row After')}
+              {t('common:form.wysiwyg.tableRowAfter', 'Add Row After')}
             </ContextMenu.Item>
             <ContextMenu.Item
               icon={<RowsIcon width={16} height={16} />}
               onClick={() => editor.chain().focus().deleteRow().run()}
               variant='danger'
             >
-              {t('shared:form.wysiwyg.tableDeleteRow', 'Delete Row')}
+              {t('common:form.wysiwyg.tableDeleteRow', 'Delete Row')}
             </ContextMenu.Item>
 
             <ContextMenu.Divider />
@@ -89,20 +89,20 @@ export default function TableActionsPopup({ editor, disabled }) {
               icon={<ColumnsIcon width={16} height={16} />}
               onClick={() => editor.chain().focus().addColumnBefore().run()}
             >
-              {t('shared:form.wysiwyg.tableColBefore', 'Add Column Before')}
+              {t('common:form.wysiwyg.tableColBefore', 'Add Column Before')}
             </ContextMenu.Item>
             <ContextMenu.Item
               icon={<ColumnsIcon width={16} height={16} />}
               onClick={() => editor.chain().focus().addColumnAfter().run()}
             >
-              {t('shared:form.wysiwyg.tableColAfter', 'Add Column After')}
+              {t('common:form.wysiwyg.tableColAfter', 'Add Column After')}
             </ContextMenu.Item>
             <ContextMenu.Item
               icon={<ColumnsIcon width={16} height={16} />}
               onClick={() => editor.chain().focus().deleteColumn().run()}
               variant='danger'
             >
-              {t('shared:form.wysiwyg.tableDeleteCol', 'Delete Column')}
+              {t('common:form.wysiwyg.tableDeleteCol', 'Delete Column')}
             </ContextMenu.Item>
 
             <ContextMenu.Divider />
@@ -112,14 +112,14 @@ export default function TableActionsPopup({ editor, disabled }) {
               icon={<ViewGridIcon width={16} height={16} />}
               onClick={() => editor.chain().focus().mergeOrSplit().run()}
             >
-              {t('shared:form.wysiwyg.tableMergeOrSplit', 'Merge/Split Cells')}
+              {t('common:form.wysiwyg.tableMergeOrSplit', 'Merge/Split Cells')}
             </ContextMenu.Item>
             <ContextMenu.Item
               icon={<RowsIcon width={16} height={16} />}
               onClick={() => editor.chain().focus().toggleHeaderRow().run()}
             >
               {t(
-                'shared:form.wysiwyg.tableToggleHeaderRow',
+                'common:form.wysiwyg.tableToggleHeaderRow',
                 'Toggle Header Row',
               )}
             </ContextMenu.Item>
@@ -128,7 +128,7 @@ export default function TableActionsPopup({ editor, disabled }) {
               onClick={() => editor.chain().focus().toggleHeaderColumn().run()}
             >
               {t(
-                'shared:form.wysiwyg.tableToggleHeaderCol',
+                'common:form.wysiwyg.tableToggleHeaderCol',
                 'Toggle Header Column',
               )}
             </ContextMenu.Item>
@@ -141,7 +141,7 @@ export default function TableActionsPopup({ editor, disabled }) {
               onClick={() => editor.chain().focus().deleteTable().run()}
               variant='danger'
             >
-              {t('shared:form.wysiwyg.tableDelete', 'Delete Table')}
+              {t('common:form.wysiwyg.tableDelete', 'Delete Table')}
             </ContextMenu.Item>
           </>
         )}

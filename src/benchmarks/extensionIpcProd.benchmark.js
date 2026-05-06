@@ -19,7 +19,7 @@ const bodyParser = require('body-parser');
 const express = require('express');
 
 const ExtensionRegistryClass =
-  require('@shared/extension/utils/Registry').default;
+  require('@shared/extension/utils/Registry.js').default;
 
 // Configurable via environment variables (with sensible defaults)
 const HANDLERS = parseInt(process.env.BENCH_HANDLERS || '50', 10);
