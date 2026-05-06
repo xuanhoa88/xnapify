@@ -41,7 +41,7 @@ if (!window[HMR_API_KEY]) {
       return;
     }
 
-    const hotAPI = (import.meta && import.meta.webpackHot) || (typeof module !== 'undefined' && module.hot);
+    const hotAPI = import.meta.webpackHot || (typeof module !== 'undefined' && module.hot);
     if (!hotAPI || typeof hotAPI.status !== 'function') return;
 
     const status = hotAPI.status();

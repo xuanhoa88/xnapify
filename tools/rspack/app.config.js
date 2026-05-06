@@ -33,10 +33,8 @@ import {
 import StatsManifestPlugin from './StatsManifestPlugin.js';
 
 const require = createRequire(import.meta.url);
-// eslint-disable-next-line no-underscore-dangle
-const __filename = fileURLToPath(import.meta.url);
-// eslint-disable-next-line no-underscore-dangle
-const __dirname = path.dirname(__filename);
+const currentFilename = fileURLToPath(import.meta.url);
+const currentDir = path.dirname(currentFilename);
 
 // =============================================================================
 // HELPER FUNCTIONS
@@ -155,7 +153,7 @@ const clientConfig = createRspackConfig('client', {
   entry: {
     client: [
       ...(isDev
-        ? [path.join(__dirname, 'browserSync', 'client.config.js')]
+        ? [path.join(currentDir, 'browserSync', 'client.config.js')]
         : []),
       path.join(config.APP_DIR, 'client.js'),
     ],

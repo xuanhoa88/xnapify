@@ -23,10 +23,8 @@ import {
   logInfo,
 } from './utils/logger.js';
 
-// eslint-disable-next-line no-underscore-dangle
-const __filename = fileURLToPath(import.meta.url);
-// eslint-disable-next-line no-underscore-dangle
-const __dirname = path.dirname(__filename);
+const currentFilename = fileURLToPath(import.meta.url);
+const currentDir = path.dirname(currentFilename);
 
 // Cache verbose and silent checks
 const verbose = isVerbose();
@@ -205,7 +203,7 @@ function validateTask(taskName) {
   }
 
   // Check if task file exists
-  const taskPath = resolve(__dirname, 'tasks', `${taskName}.js`);
+  const taskPath = resolve(currentDir, 'tasks', `${taskName}.js`);
   if (!existsSync(taskPath)) {
     throw new BuildError(`Task file not found: ${taskPath}`, {
       task: taskName,
@@ -319,8 +317,8 @@ function handleCLIError(error) {
 
 // CLI handling
 const isMain =
-  process.argv[1] === __filename ||
-  process.argv[1] === __filename.replace(/\.js$/, '');
+  process.argv[1] === currentFilename ||
+  process.argv[1] === currentFilename.replace(/\.js$/, '');
 if (isMain) {
   const taskName = process.argv[2];
 

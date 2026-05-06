@@ -199,8 +199,11 @@ function main() {
 
 // Execute if called directly (as child process)
 if (
-  process.argv[1] === currentFilename ||
-  process.argv[1] === currentFilename.replace(/\.js$/, '')
+  process.argv[1] && (
+    process.argv[1] === currentFilename ||
+    process.argv[1] === currentFilename.replace(/\.js$/, '') ||
+    process.argv[1].endsWith('setup.js')
+  )
 ) {
   main();
 }

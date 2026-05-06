@@ -26,7 +26,7 @@ import { normalizeRouteAdapter } from '../utils/routeAdapter.js';
 import { registry } from './Registry.js';
 
 // Use native require to load extension modules
-const nativeRequire = createNativeRequire(__filename);
+const nativeRequire = createNativeRequire(import.meta.url);
 
 // Symbols — private (internal to server manager)
 const EXTENSION_API_ENTRY_POINTS = Symbol('__xnapify.ext.apiEntryPoints__');

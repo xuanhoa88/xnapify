@@ -17,7 +17,7 @@ import { createNativeRequire } from '@shared/utils/createNativeRequire.js';
 import { createNodeRedAuth, createNodeRedLogoutConfig } from './auth.js';
 
 // Use native require to load Node-RED packages and optional modules
-const moduleRequire = createNativeRequire(import.meta.url);
+const nativeRequire = createNativeRequire(import.meta.url);
 
 // Auto-discover all custom Node-RED node modules in ./nodes/
 // Each module must export: getNodeJS() and getNodeHTML()
@@ -40,7 +40,7 @@ const clientScriptsContexts = import.meta.webpackContext('./client-scripts', {
  */
 function safeRequire(moduleName) {
   try {
-    return moduleRequire(moduleName);
+    return nativeRequire(moduleName);
   } catch (error) {
     console.warn(
       `⚠️  [Node-RED Settings] Optional module '${moduleName}' not available:`,
@@ -135,7 +135,7 @@ export async function writeExtensionNodeModule(userDir, moduleId, extNodesDir) {
 
   const nodeEntries = {};
   const nodeNames = [];
-  const nativeReq = moduleRequire;
+  const nativeReq = nativeRequire;
 
   for (const file of files) {
     const baseName = path.basename(file).replace(/\.[cm]?[jt]s$/i, '');
@@ -491,7 +491,7 @@ export default async function createSettings(options = {}) {
   // Resolve core nodes directory
   let coreNodesDir;
   try {
-    coreNodesDir = path.dirname(moduleRequire.resolve('@node-red/nodes'));
+    coreNodesDir = path.dirname(nativeRequire.resolve('@node-red/nodes'));
   } catch (error) {
     const err = new Error(
       `Failed to resolve @node-red/nodes: ${error.message}. Ensure Node-RED is installed.`,
@@ -504,9 +504,9 @@ export default async function createSettings(options = {}) {
   // Build default global context with safe requires
   const defaultGlobalContext = {
     // Core Node.js modules (always available)
-    os: moduleRequire('os'),
-    path: moduleRequire('path'),
-    fs: moduleRequire('fs'),
+    os: safeRequire('os'),
+    path: safeRequire('path'),
+    fs: safeRequire('fs'),
 
     // Common utility libraries (safe require)
     lodash: safeRequire('lodash'),

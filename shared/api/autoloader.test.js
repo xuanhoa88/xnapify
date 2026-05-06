@@ -6,6 +6,7 @@
  */
 
 import { createRequire } from 'module';
+
 const require = createRequire(import.meta.url);
 
 jest.mock('@shared/i18n/loader', () => ({

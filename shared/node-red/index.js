@@ -589,7 +589,7 @@ export class NodeRedManager {
       // We must use the native require because Rspack's require.cache only
       // holds module wrappers for external dependencies, not the actual loaded singletons.
       if (__DEV__) {
-        const nativeRequire = createNativeRequire(__filename);
+        const nativeRequire = createNativeRequire(import.meta.url);
         const nativeCache = nativeRequire.cache;
 
         const keysToDelete = Object.keys(nativeCache).filter(key =>

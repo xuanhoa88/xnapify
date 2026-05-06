@@ -6,22 +6,18 @@
  */
 
 import fs from 'fs';
-import { createRequire } from 'module';
 import os from 'os';
 import path from 'path';
-import { fileURLToPath } from 'url';
 
 import Piscina from 'piscina';
+
+import { createNativeRequire } from '@shared/utils/createNativeRequire.js';
 
 import { register } from '../../shutdown.js';
 
 import { WorkerError } from './errors.js';
 
-const require = createRequire(import.meta.url);
-
-const currentFilename = fileURLToPath(import.meta.url);
-
-const currentDir = path.dirname(currentFilename);
+const require = createNativeRequire(import.meta.url);
 
 // ---------------------------------------------------------------------------
 // Defaults
@@ -427,7 +423,7 @@ export function createFactory(config) {
 
   // Auto-discover workers from BUILD_DIR.
   // At runtime, __dirname = BUILD_DIR (server.js output directory).
-  const buildDir = process.env.BUILD_DIR || currentDir;
+  const buildDir = process.env.BUILD_DIR || __dirname;
   engine.discoverWorkers(buildDir);
 
   // Register with centralized shutdown coordinator

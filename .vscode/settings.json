@@ -44,6 +44,7 @@
   },
 
   // ESLint
+  "eslint.useFlatConfig": true,
   "eslint.validate": [
     "javascript",
     "javascriptreact"

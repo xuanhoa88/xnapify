@@ -22,10 +22,8 @@ import { isVerbose } from '../utils/logger.js';
 import loadDotenv from './loadDotenv.js';
 
 const require = createRequire(import.meta.url);
-// eslint-disable-next-line no-underscore-dangle
-const __filename = fileURLToPath(import.meta.url);
-// eslint-disable-next-line no-underscore-dangle
-const __dirname = path.dirname(__filename);
+const currentFilename = fileURLToPath(import.meta.url);
+const currentDir = path.dirname(currentFilename);
 
 // =============================================================================
 // CONSTANTS
@@ -109,7 +107,7 @@ function createNodeExternals(opts = {}) {
  * Replacing them with this no-op prevents rspack from emitting duplicate
  * asset files into server and extension output directories.
  */
-const NOOP_MODULE = path.resolve(__dirname, 'noop.css');
+const NOOP_MODULE = path.resolve(currentDir, 'noop.css');
 
 /**
  * CSS modules that ship heavy font/image assets and are already bundled by the
@@ -219,8 +217,11 @@ const createCSSRule = ({
           .sort((a, b) => b.moduleDir.length - a.moduleDir.length)
           .find(cfg => ctx.resourcePath.startsWith(cfg.moduleDir));
         if (matchedConfig) {
-          delete require.cache[matchedConfig.path];
-          delete require.cache[matchedConfig.path];
+          try {
+            delete require.cache[require.resolve(matchedConfig.path)];
+          } catch {
+            // Config file may not be cached yet — ignore
+          }
           const localConfigRaw = require(matchedConfig.path);
           const localConfigFn = localConfigRaw.default || localConfigRaw;
           const localCfg =

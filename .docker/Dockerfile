@@ -80,6 +80,7 @@ RUN npm run setup && npm cache clean --force
 # Recreate driver symlinks (preboot.js ensureDeps creates these, but symlinks
 # don't survive COPY --from across Docker stages)
 RUN chmod -R 755 /app/build/.xnapify \
+ && mkdir -p node_modules \
  && ln -sf /app/build/.xnapify/sequelize-drivers/sqlite/node_modules/sqlite3 node_modules/sqlite3 \
  && ln -sf /app/build/.xnapify/sequelize-drivers/postgres/node_modules/pg node_modules/pg \
  && ln -sf /app/build/.xnapify/sequelize-drivers/postgres/node_modules/pg-hstore node_modules/pg-hstore \
@@ -94,6 +95,7 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Set environment
 ENV NODE_ENV=production
+ENV XNAPIFY_HOST=0.0.0.0
 
 # Expose port
 EXPOSE 1337

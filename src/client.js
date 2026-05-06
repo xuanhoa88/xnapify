@@ -23,7 +23,7 @@ import {
   setWebSocketClient,
 } from '@shared/ws/client/index.js';
 
-const hotAPI = (import.meta && import.meta.webpackHot) || (typeof module !== 'undefined' && module.hot);
+const hotAPI = import.meta.webpackHot || (typeof module !== 'undefined' && module.hot);
 
 // =============================================================================
 // CONSTANTS & CONFIGURATION
