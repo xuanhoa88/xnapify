@@ -5,31 +5,20 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { createRequire } from 'module';
-
 import isLocalhostIp from 'is-localhost-ip';
-
-const require = createRequire(import.meta.url);
 
 /** Rate limiter cache — never evict (losing a limiter resets its counters) */
 const cache = new Map();
 const DEFAULT_KEY = '__default__';
 
-/**
- * Lazily require express-rate-limit.
- * Wrapped in try/catch because it depends on node:net (unavailable in Jest).
- */
-let rateLimitMod;
-function getRateLimit() {
-  if (rateLimitMod === undefined) {
-    try {
-      const mod = require('express-rate-limit');
-      rateLimitMod = mod.default || mod;
-    } catch {
-      rateLimitMod = null;
-    }
+let rateLimitPromise;
+async function getRateLimit() {
+  if (rateLimitPromise === undefined) {
+    rateLimitPromise = import('express-rate-limit')
+      .then(mod => mod.default || mod)
+      .catch(() => null);
   }
-  return rateLimitMod;
+  return rateLimitPromise;
 }
 
 // ---------------------------------------------------------------------------
@@ -82,8 +71,8 @@ function getDefaultConfig() {
 /**
  * Create (or retrieve cached) rate limiter middleware.
  */
-export function createRateLimiter(config, key) {
-  const fn = getRateLimit();
+export async function createRateLimiter(config, key) {
+  const fn = await getRateLimit();
   if (!fn) return null;
 
   // Default key: JSON.stringify works for plain objects but drops functions.
@@ -102,7 +91,7 @@ export function createRateLimiter(config, key) {
  *   { max, windowMs} → custom (merged with defaults)
  *   undefined        → app default
  */
-export function resolveRateLimiter(routeRateLimit) {
+export async function resolveRateLimiter(routeRateLimit) {
   if (routeRateLimit === false) return null;
 
   if (process.env.XNAPIFY_RATE_LIMIT === 'false') return null;

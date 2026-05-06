@@ -6,8 +6,8 @@
       "*": ["src/*", "*"]
     },
     "jsx": "react-jsx",
-    "moduleResolution": "NodeNext",
-    "module": "NodeNext",
+    "moduleResolution": "bundler",
+    "module": "ESNext",
     "target": "ESNext"
   },
   "include": ["src/**/*", "shared/**/*", "tools/**/*"],

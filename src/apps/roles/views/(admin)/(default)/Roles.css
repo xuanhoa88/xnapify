@@ -27,7 +27,7 @@
 
 .cardTitle {
   color: var(--gray-12);
-  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .cardBody {

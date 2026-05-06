@@ -244,7 +244,7 @@ export function createAction(pageInfo, configs = [], middlewares = []) {
   // `undefined` = not yet resolved, `null` = resolved but no limiter.
   let cachedRateLimiter;
 
-  return function (req, res, next) {
+  return async function (req, res, next) {
     // Determine the active method
     const method = req.method.toLowerCase(); // 'get', 'post', 'put', 'patch', 'delete'
 
@@ -291,8 +291,13 @@ export function createAction(pageInfo, configs = [], middlewares = []) {
       if (module.useRateLimit === false) {
         cachedRateLimiter = null;
       } else {
-        const rl = resolveRateLimiter(module.useRateLimit);
-        cachedRateLimiter = typeof rl === 'function' ? rl : null;
+        try {
+          const rl = await resolveRateLimiter(module.useRateLimit);
+          cachedRateLimiter = typeof rl === 'function' ? rl : null;
+        } catch (e) {
+          log(`Failed to load rate limiter: ${e.message}`, 'error');
+          cachedRateLimiter = null;
+        }
       }
     }
 

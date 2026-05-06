@@ -6,7 +6,6 @@
  */
 
 import fs from 'fs';
-import { createRequire } from 'module';
 import os from 'os';
 import path from 'path';
 
@@ -16,8 +15,6 @@ import { createRspackContextAdapter } from '@shared/utils/contextAdapter.js';
 import { createNativeRequire } from '@shared/utils/createNativeRequire.js';
 
 import { createNodeRedAuth, createNodeRedLogoutConfig } from './auth.js';
-
-const require = createRequire(import.meta.url);
 
 // Use native require to load Node-RED packages and optional modules
 const moduleRequire = createNativeRequire(import.meta.url);
@@ -516,7 +513,7 @@ export default async function createSettings(options = {}) {
     uuid: safeRequire('uuid'),
     dayjs: safeRequire('dayjs'),
     zod: safeRequire('zod'),
-    liquidjs: require('liquidjs'),
+    liquidjs: safeRequire('liquidjs'),
   };
 
   // Merge with user-provided global context

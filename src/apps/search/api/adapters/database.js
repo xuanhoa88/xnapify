@@ -226,7 +226,7 @@ export default class DatabaseSearch {
    * @private
    */
   async _searchFallback(query, limit, offset, entityType) {
-    const { Op } = require('sequelize');
+    const { Op } = this.connection.Sequelize;
     const likeOp = this.dialect === 'postgres' ? Op.iLike : Op.like;
     const likeValue = `%${query}%`;
 
