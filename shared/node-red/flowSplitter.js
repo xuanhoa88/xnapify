@@ -55,10 +55,12 @@ function compareById(a, b) {
  * Ensure directories exist
  * @param  {...string} dirs - Directory paths
  */
-function ensureDirs(...dirs) {
+async function ensureDirs(...dirs) {
   for (const dir of dirs) {
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+    try {
+      await fs.promises.access(dir);
+    } catch {
+      await fs.promises.mkdir(dir, { recursive: true });
     }
   }
 }
@@ -151,7 +153,7 @@ function getUniqueFilename(usedNames, baseName, id) {
  * @param {string} rootPath - Root project/user directory
  * @param {object} RED - Node-RED runtime (for logging)
  */
-function splitFlows(flowsArray, config, rootPath, RED) {
+async function splitFlows(flowsArray, config, rootPath, RED) {
   const { tabs, subflows, configNodes } = parseFlows(flowsArray);
   const destBase = path.join(rootPath, config.destinationFolder);
 
@@ -159,7 +161,7 @@ function splitFlows(flowsArray, config, rootPath, RED) {
   const subflowsDir = path.join(destBase, 'subflows');
   const configNodesDir = path.join(destBase, 'config-nodes');
 
-  ensureDirs(tabsDir, subflowsDir, configNodesDir);
+  await ensureDirs(tabsDir, subflowsDir, configNodesDir);
 
   const usedNames = new Set();
   const ext = config.fileFormat;
@@ -168,7 +170,7 @@ function splitFlows(flowsArray, config, rootPath, RED) {
   for (const tab of tabs) {
     const filename = `${getUniqueFilename(usedNames, tab.label, tab.id)}.${ext}`;
     const filePath = path.join(tabsDir, filename);
-    fs.writeFileSync(filePath, JSON.stringify(tab.nodes, null, 2));
+    await fs.promises.writeFile(filePath, JSON.stringify(tab.nodes, null, 2));
     RED.log.info(
       `${EXTENSION_LOG_PREFIX} Saved tab: ${tab.label} → ${filename}`,
     );
@@ -178,7 +180,7 @@ function splitFlows(flowsArray, config, rootPath, RED) {
   for (const sf of subflows) {
     const filename = `${getUniqueFilename(usedNames, sf.label, sf.id)}.${ext}`;
     const filePath = path.join(subflowsDir, filename);
-    fs.writeFileSync(filePath, JSON.stringify(sf.nodes, null, 2));
+    await fs.promises.writeFile(filePath, JSON.stringify(sf.nodes, null, 2));
     RED.log.info(
       `${EXTENSION_LOG_PREFIX} Saved subflow: ${sf.label} → ${filename}`,
     );
@@ -189,7 +191,7 @@ function splitFlows(flowsArray, config, rootPath, RED) {
     // Group individual config nodes by type+name, or write all in one file
     const filename = `_global.${ext}`;
     const filePath = path.join(configNodesDir, filename);
-    fs.writeFileSync(filePath, JSON.stringify(configNodes, null, 2));
+    await fs.promises.writeFile(filePath, JSON.stringify(configNodes, null, 2));
     RED.log.info(
       `${EXTENSION_LOG_PREFIX} Saved ${configNodes.length} config node(s) → ${filename}`,
     );
@@ -204,12 +206,14 @@ function splitFlows(flowsArray, config, rootPath, RED) {
  * @param {object} config - Splitter config
  * @param {string} rootPath - Root project/user directory
  * @param {object} RED - Node-RED runtime (for logging)
- * @returns {Array|null} Reconstructed flows array, or null if no files found
+ * @returns {Promise<Array|null>} Reconstructed flows array, or null if no files found
  */
-function rebuildFlows(config, rootPath, RED) {
+async function rebuildFlows(config, rootPath, RED) {
   const destBase = path.join(rootPath, config.destinationFolder);
 
-  if (!fs.existsSync(destBase)) {
+  try {
+    await fs.promises.access(destBase);
+  } catch {
     RED.log.info(
       `${EXTENSION_LOG_PREFIX} No source directory found, skipping rebuild`,
     );
@@ -221,16 +225,20 @@ function rebuildFlows(config, rootPath, RED) {
   // Read from tabs, subflows, config-nodes in order
   for (const subdir of ['tabs', 'subflows', 'config-nodes']) {
     const dir = path.join(destBase, subdir);
-    if (!fs.existsSync(dir)) continue;
+    try {
+      await fs.promises.access(dir);
+    } catch {
+      continue;
+    }
 
-    const files = fs
-      .readdirSync(dir)
-      .filter(f => f.endsWith(`.${config.fileFormat}`));
+    const files = (await fs.promises.readdir(dir)).filter(f =>
+      f.endsWith(`.${config.fileFormat}`),
+    );
 
     for (const file of files) {
       const filePath = path.join(dir, file);
       try {
-        const content = fs.readFileSync(filePath, 'utf8');
+        const content = await fs.promises.readFile(filePath, 'utf8');
         const nodes = JSON.parse(content);
         if (Array.isArray(nodes)) {
           allNodes = allNodes.concat(nodes);
@@ -271,19 +279,16 @@ function rebuildFlows(config, rootPath, RED) {
 /**
  * Read or create the splitter config
  * @param {string} rootPath - Root directory
- * @returns {object} config
+ * @returns {Promise<object>} config
  */
-function readConfig(rootPath) {
+async function readConfig(rootPath) {
   const cfgPath = path.join(rootPath, SPLIT_CONFIG_FILE);
-  if (fs.existsSync(cfgPath)) {
-    try {
-      const raw = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
-      return { ...DEFAULT_CONFIG, ...raw };
-    } catch {
-      return { ...DEFAULT_CONFIG };
-    }
+  try {
+    const raw = JSON.parse(await fs.promises.readFile(cfgPath, 'utf8'));
+    return { ...DEFAULT_CONFIG, ...raw };
+  } catch {
+    return { ...DEFAULT_CONFIG };
   }
-  return { ...DEFAULT_CONFIG };
 }
 
 /**
@@ -291,10 +296,10 @@ function readConfig(rootPath) {
  * @param {object} config - Config to write
  * @param {string} rootPath - Root directory
  */
-function writeConfig(config, rootPath) {
+async function writeConfig(config, rootPath) {
   const cfgPath = path.join(rootPath, SPLIT_CONFIG_FILE);
   const toWrite = { ...config };
-  fs.writeFileSync(cfgPath, JSON.stringify(toWrite, null, 2));
+  await fs.promises.writeFile(cfgPath, JSON.stringify(toWrite, null, 2));
 }
 
 /**
@@ -324,7 +329,7 @@ function handleFlowsStarted(RED) {
       }
 
       const rootPath = userDir;
-      const config = readConfig(rootPath);
+      const config = await readConfig(rootPath);
       config.monolithFilename = RED.settings.flowFile || 'flows.json';
 
       const flowsFromEvent =
@@ -337,7 +342,7 @@ function handleFlowsStarted(RED) {
           `${EXTENSION_LOG_PREFIX} No flows in runtime, attempting rebuild from split files`,
         );
 
-        const rebuilt = rebuildFlows(config, rootPath, RED);
+        const rebuilt = await rebuildFlows(config, rootPath, RED);
         if (!rebuilt) {
           RED.log.info(
             `${EXTENSION_LOG_PREFIX} No split files found, nothing to do`,
@@ -347,7 +352,10 @@ function handleFlowsStarted(RED) {
 
         // Write the rebuilt flows.json
         const monolithPath = path.join(rootPath, config.monolithFilename);
-        fs.writeFileSync(monolithPath, JSON.stringify(rebuilt, null, 4));
+        await fs.promises.writeFile(
+          monolithPath,
+          JSON.stringify(rebuilt, null, 4),
+        );
         RED.log.info(
           `${EXTENSION_LOG_PREFIX} Rebuilt ${config.monolithFilename} with ${rebuilt.length} node(s)`,
         );
@@ -370,24 +378,24 @@ function handleFlowsStarted(RED) {
         `${EXTENSION_LOG_PREFIX} Splitting ${flowsFromEvent.length} node(s) into individual files`,
       );
 
-      splitFlows(flowsFromEvent, config, rootPath, RED);
-      writeConfig(config, rootPath);
+      await splitFlows(flowsFromEvent, config, rootPath, RED);
+      await writeConfig(config, rootPath);
 
       // Delete the monolith file after splitting
       const monolithPath = path.join(rootPath, config.monolithFilename);
       try {
         // Small delay to ensure Node-RED has finished writing
         await new Promise(resolve => setTimeout(resolve, 200));
-        if (fs.existsSync(monolithPath)) {
-          fs.unlinkSync(monolithPath);
-          RED.log.info(
-            `${EXTENSION_LOG_PREFIX} Deleted ${config.monolithFilename} (split files are the source of truth)`,
+        await fs.promises.unlink(monolithPath);
+        RED.log.info(
+          `${EXTENSION_LOG_PREFIX} Deleted ${config.monolithFilename} (split files are the source of truth)`,
+        );
+      } catch (err) {
+        if (err.code !== 'ENOENT') {
+          RED.log.warn(
+            `${EXTENSION_LOG_PREFIX} Could not delete ${config.monolithFilename}: ${err.message}`,
           );
         }
-      } catch (err) {
-        RED.log.warn(
-          `${EXTENSION_LOG_PREFIX} Could not delete ${config.monolithFilename}: ${err.message}`,
-        );
       }
 
       RED.log.info(`${EXTENSION_LOG_PREFIX} Split complete ✅`);

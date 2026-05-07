@@ -362,9 +362,9 @@ function createRspackMiddlewares(clientCompiler) {
       chunks: false, // Hide chunk details to reduce noise
       modules: false, // Hide module details
     },
-    // Only write stats.json and CSS to disk (needed for SSR template).
-    // JS chunks and hot updates are served from memory by dev middleware.
-    writeToDisk: filePath => /stats\.json$|\.css$/.test(filePath),
+    // Only write stats.json to disk (needed for SSR template).
+    // JS chunks, CSS, and hot updates are served from memory by dev middleware.
+    writeToDisk: filePath => /stats\.json$/.test(filePath),
     serverSideRender: true, // Enable SSR access to rspack stats
   });
 
@@ -409,6 +409,17 @@ function attachRspackMiddlewares(expressApp) {
 
   expressApp.use(wrapRspackMiddleware(devMiddleware));
   expressApp.use(wrapRspackMiddleware(hotMiddleware));
+  expressApp.use(
+    wrapRspackMiddleware((req, res, next) => {
+      // Short-circuit missing HMR updates. If devMiddleware didn't intercept
+      // them, they are stale/missing. Returning 404 immediately prevents
+      // them from falling through to the expensive SSR catch-all router.
+      if (req.method === 'GET' && req.path.match(/\.hot-update\.(json|js)$/i)) {
+        return res.status(404).send('Not found');
+      }
+      next();
+    }),
+  );
   expressApp.use(
     wrapRspackMiddleware((req, res, next) => {
       if (req.method === 'POST' && req.path === '/~/__bs_connected') {
@@ -685,7 +696,11 @@ async function main() {
       setupRspackCompilers();
 
     // Ensure client compiler updates invalidate the SSR cache so dynamic chunks are picked up
-    clientCompiler.hooks.done.tap('InvalidateSSROnClientBuild', () => {
+    clientCompiler.hooks.done.tap('InvalidateSSROnClientBuild', stats => {
+      console.log(
+        'Client emitted files:',
+        Object.keys(stats.compilation.assets),
+      );
       if (typeof invalidateServerCaches === 'function') {
         invalidateServerCaches();
       }

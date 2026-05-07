@@ -782,3 +782,14 @@ if (hotAPI) {
     cleanup();
   });
 }
+
+ 
+
+console.log("update");
+
+console.log("update2");
+
+console.log("update3");
+ 
+console.log('test');
+console.log('test2');
