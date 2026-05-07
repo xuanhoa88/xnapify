@@ -10,11 +10,7 @@
       "description": "Serve public/documents files explicitly as a Docusaurus-like viewer.",
       "short_description": "Serve public/documents files explicitly as a Docusaurus-like viewer.",
       "category": "content",
-      "tags": [
-        "docs",
-        "documentation",
-        "viewer"
-      ],
+      "tags": ["docs", "documentation", "viewer"],
       "icon": "📚",
       "author": "xuanhoa88",
       "repository": "https://github.com/xuanhoa88/xnapify/tree/main/src/extensions/docs-module",

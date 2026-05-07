@@ -94,22 +94,35 @@ export default function create{ModelName}Model({ connection, DataTypes }) {
 const types = DataTypes || connection.constructor.DataTypes;
 
 // Primary Keys
-types.UUID;              types.UUIDV1;           types.UUIDV4;
+types.UUID;
+types.UUIDV1;
+types.UUIDV4;
 types.INTEGER;
 
 // Strings
-types.STRING;            types.STRING(100);       types.TEXT;
-types.TEXT('tiny');       types.TEXT('medium');     types.TEXT('long');
+types.STRING;
+types.STRING(100);
+types.TEXT;
+types.TEXT('tiny');
+types.TEXT('medium');
+types.TEXT('long');
 
 // Numbers
-types.INTEGER;           types.BIGINT;            types.FLOAT;
-types.DOUBLE;            types.DECIMAL(10, 2);
+types.INTEGER;
+types.BIGINT;
+types.FLOAT;
+types.DOUBLE;
+types.DECIMAL(10, 2);
 
 // Dates
-types.DATE;              types.DATEONLY;           types.TIME;
+types.DATE;
+types.DATEONLY;
+types.TIME;
 
 // Others
-types.BOOLEAN;           types.JSON;              types.JSONB;
+types.BOOLEAN;
+types.JSON;
+types.JSONB;
 types.ENUM('val1', 'val2', 'val3');
 ```
 
@@ -153,7 +166,11 @@ Defined in the model's `associate` static method:
 ```javascript
 // One-to-Many
 User.associate = function (models) {
-  User.hasMany(models.Post, { foreignKey: 'user_id', as: 'posts', onDelete: 'CASCADE' });
+  User.hasMany(models.Post, {
+    foreignKey: 'user_id',
+    as: 'posts',
+    onDelete: 'CASCADE',
+  });
 };
 Post.associate = function (models) {
   Post.belongsTo(models.User, { foreignKey: 'user_id', as: 'author' });
@@ -162,13 +179,20 @@ Post.associate = function (models) {
 // Many-to-Many
 Post.associate = function (models) {
   Post.belongsToMany(models.Tag, {
-    through: models.PostTag, foreignKey: 'post_id', otherKey: 'tag_id', as: 'tags',
+    through: models.PostTag,
+    foreignKey: 'post_id',
+    otherKey: 'tag_id',
+    as: 'tags',
   });
 };
 
 // One-to-One
 User.associate = function (models) {
-  User.hasOne(models.UserProfile, { foreignKey: 'user_id', as: 'profile', onDelete: 'CASCADE' });
+  User.hasOne(models.UserProfile, {
+    foreignKey: 'user_id',
+    as: 'profile',
+    onDelete: 'CASCADE',
+  });
 };
 ```
 
@@ -178,13 +202,28 @@ User.associate = function (models) {
 // @apps/{module}/api/models/PostTag.js
 export default function createPostTagModel({ connection, DataTypes }) {
   const types = DataTypes || connection.constructor.DataTypes;
-  return connection.define('PostTag', {
-    post_id: { type: types.UUID, primaryKey: true, references: { model: 'posts', key: 'id' } },
-    tag_id: { type: types.UUID, primaryKey: true, references: { model: 'tags', key: 'id' } },
-  }, {
-    tableName: 'post_tags', underscored: true, timestamps: true,
-    createdAt: 'created_at', updatedAt: 'updated_at',
-  });
+  return connection.define(
+    'PostTag',
+    {
+      post_id: {
+        type: types.UUID,
+        primaryKey: true,
+        references: { model: 'posts', key: 'id' },
+      },
+      tag_id: {
+        type: types.UUID,
+        primaryKey: true,
+        references: { model: 'tags', key: 'id' },
+      },
+    },
+    {
+      tableName: 'post_tags',
+      underscored: true,
+      timestamps: true,
+      createdAt: 'created_at',
+      updatedAt: 'updated_at',
+    },
+  );
 }
 ```
 
@@ -279,22 +318,40 @@ export async function up({ context, Sequelize }) {
   const { DataTypes } = Sequelize;
 
   await queryInterface.createTable('user_roles', {
-    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV1, primaryKey: true },
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV1,
+      primaryKey: true,
+    },
     user_id: {
-      type: DataTypes.UUID, allowNull: false,
+      type: DataTypes.UUID,
+      allowNull: false,
       references: { model: 'users', key: 'id' },
-      onUpdate: 'CASCADE', onDelete: 'CASCADE',
+      onUpdate: 'CASCADE',
+      onDelete: 'CASCADE',
     },
     role_id: {
-      type: DataTypes.UUID, allowNull: false,
+      type: DataTypes.UUID,
+      allowNull: false,
       references: { model: 'roles', key: 'id' },
-      onUpdate: 'CASCADE', onDelete: 'CASCADE',
+      onUpdate: 'CASCADE',
+      onDelete: 'CASCADE',
     },
-    created_at: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
-    updated_at: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
+    created_at: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+    updated_at: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
   });
 
-  await queryInterface.addIndex('user_roles', ['user_id', 'role_id'], { unique: true });
+  await queryInterface.addIndex('user_roles', ['user_id', 'role_id'], {
+    unique: true,
+  });
 }
 
 export async function down({ context }) {
@@ -305,19 +362,19 @@ export async function down({ context }) {
 
 ## 2.5 Common Operations Quick Reference
 
-| Operation | Method |
-|-----------|--------|
-| Create table | `queryInterface.createTable(name, columns)` |
-| Drop table | `queryInterface.dropTable(name)` |
-| Add column | `queryInterface.addColumn(table, column, def)` |
-| Remove column | `queryInterface.removeColumn(table, column)` |
-| Change column | `queryInterface.changeColumn(table, column, def)` |
-| Rename column | `queryInterface.renameColumn(table, old, new)` |
-| Rename table | `queryInterface.renameTable(old, new)` |
-| Add index | `queryInterface.addIndex(table, columns, opts)` |
-| Remove index | `queryInterface.removeIndex(table, columns)` |
-| Add constraint | `queryInterface.addConstraint(table, opts)` |
-| Remove constraint | `queryInterface.removeConstraint(table, name)` |
+| Operation         | Method                                            |
+| ----------------- | ------------------------------------------------- |
+| Create table      | `queryInterface.createTable(name, columns)`       |
+| Drop table        | `queryInterface.dropTable(name)`                  |
+| Add column        | `queryInterface.addColumn(table, column, def)`    |
+| Remove column     | `queryInterface.removeColumn(table, column)`      |
+| Change column     | `queryInterface.changeColumn(table, column, def)` |
+| Rename column     | `queryInterface.renameColumn(table, old, new)`    |
+| Rename table      | `queryInterface.renameTable(old, new)`            |
+| Add index         | `queryInterface.addIndex(table, columns, opts)`   |
+| Remove index      | `queryInterface.removeIndex(table, columns)`      |
+| Add constraint    | `queryInterface.addConstraint(table, opts)`       |
+| Remove constraint | `queryInterface.removeConstraint(table, name)`    |
 
 ---
 
@@ -344,14 +401,28 @@ export async function up({ context }) {
   const now = new Date();
 
   await queryInterface.bulkInsert('{table_name}', [
-    { id: demoItemIds.item1, name: 'Item One', is_active: true, created_at: now, updated_at: now },
-    { id: demoItemIds.item2, name: 'Item Two', is_active: true, created_at: now, updated_at: now },
+    {
+      id: demoItemIds.item1,
+      name: 'Item One',
+      is_active: true,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: demoItemIds.item2,
+      name: 'Item Two',
+      is_active: true,
+      created_at: now,
+      updated_at: now,
+    },
   ]);
 }
 
 export async function down({ context }) {
   const { queryInterface } = context;
-  await queryInterface.bulkDelete('{table_name}', { name: ['Item One', 'Item Two'] });
+  await queryInterface.bulkDelete('{table_name}', {
+    name: ['Item One', 'Item Two'],
+  });
 }
 ```
 
@@ -366,14 +437,27 @@ export const demoUserIds = { admin: uuidv4(), john: uuidv4() };
 export async function up({ context }) {
   const User = createUserModel({ connection: context });
   await User.bulkCreate([
-    { id: demoUserIds.admin, email: 'admin@example.com', password: 'admin123', is_active: true },
-    { id: demoUserIds.john, email: 'john@example.com', password: 'password123', is_active: true },
+    {
+      id: demoUserIds.admin,
+      email: 'admin@example.com',
+      password: 'admin123',
+      is_active: true,
+    },
+    {
+      id: demoUserIds.john,
+      email: 'john@example.com',
+      password: 'password123',
+      is_active: true,
+    },
   ]);
 }
 
 export async function down({ context }) {
   const User = createUserModel({ connection: context });
-  await User.destroy({ where: { email: ['admin@example.com', 'john@example.com'] }, force: true });
+  await User.destroy({
+    where: { email: ['admin@example.com', 'john@example.com'] },
+    force: true,
+  });
 }
 ```
 
@@ -388,25 +472,33 @@ export async function up({ context }) {
   const { queryInterface } = context;
   const now = new Date();
   await queryInterface.bulkInsert('user_roles', [
-    { id: uuidv4(), user_id: demoUserIds.admin, role_id: demoRoleIds.admin, created_at: now, updated_at: now },
+    {
+      id: uuidv4(),
+      user_id: demoUserIds.admin,
+      role_id: demoRoleIds.admin,
+      created_at: now,
+      updated_at: now,
+    },
   ]);
 }
 
 export async function down({ context }) {
   const { queryInterface } = context;
-  await queryInterface.bulkDelete('user_roles', { user_id: Object.values(demoUserIds) });
+  await queryInterface.bulkDelete('user_roles', {
+    user_id: Object.values(demoUserIds),
+  });
 }
 ```
 
 ## 3.5 QueryInterface Methods
 
-| Method | Use Case |
-|--------|----------|
-| `queryInterface.bulkInsert` | Simple inserts, no hooks |
-| `queryInterface.bulkDelete` | Remove seeded data |
-| `queryInterface.bulkUpdate` | Update existing records |
-| `Model.bulkCreate` | Need model hooks |
-| `Model.destroy({ force })` | Remove with model (paranoid) |
+| Method                      | Use Case                     |
+| --------------------------- | ---------------------------- |
+| `queryInterface.bulkInsert` | Simple inserts, no hooks     |
+| `queryInterface.bulkDelete` | Remove seeded data           |
+| `queryInterface.bulkUpdate` | Update existing records      |
+| `Model.bulkCreate`          | Need model hooks             |
+| `Model.destroy({ force })`  | Remove with model (paranoid) |
 
 ---
 
@@ -416,9 +508,18 @@ Models, migrations, and seeds are registered declaratively in the module's `api/
 
 ```javascript
 // @apps/{module}/api/index.js
-const modelsContext = import.meta.webpackContext('./models', { recursive: false, regExp: /\.[cm]?[jt]s$/i });
-const migrationsContext = import.meta.webpackContext('./database/migrations', { recursive: false, regExp: /\.[cm]?[jt]s$/i });
-const seedsContext = import.meta.webpackContext('./database/seeds', { recursive: false, regExp: /\.[cm]?[jt]s$/i });
+const modelsContext = import.meta.webpackContext('./models', {
+  recursive: false,
+  regExp: /\.[cm]?[jt]s$/i,
+});
+const migrationsContext = import.meta.webpackContext('./database/migrations', {
+  recursive: false,
+  regExp: /\.[cm]?[jt]s$/i,
+});
+const seedsContext = import.meta.webpackContext('./database/seeds', {
+  recursive: false,
+  regExp: /\.[cm]?[jt]s$/i,
+});
 
 export default {
   models: () => modelsContext,
@@ -466,7 +567,7 @@ export async function up(_, { container }) {
 
 ## Best Practices
 
-1. **Factory Pattern**: Always use `create{ModelName}Model({ connection, DataTypes })` 
+1. **Factory Pattern**: Always use `create{ModelName}Model({ connection, DataTypes })`
 2. **UUID Primary Keys**: Prefer UUID over auto-increment
 3. **Soft Deletes**: Use `paranoid: true` with `deleted_at`
 4. **Relationships**: Define in `associate` static method
@@ -481,34 +582,34 @@ export async function up(_, { container }) {
 
 ## SQLite
 
-| Concern | Details |
-|---------|---------|
-| **ENUM type** | SQLite does not support `ENUM`. Sequelize emulates it with `CHECK` constraints. Use `DataTypes.STRING` with validation if you need portability. |
-| **SQLITE_BUSY** | Concurrent writes cause `SQLITE_BUSY`. Enable WAL mode and set `busy_timeout` in connection config. See `/debug` Part 11. |
-| **Concurrent migrations** | Extension migrations run in parallel during boot → serialize with `for...of` instead of `Promise.allSettled`. |
-| **ALTER TABLE limits** | SQLite has limited `ALTER TABLE` support. Changing column types or dropping columns requires table recreation. Use `queryInterface.changeColumn()` carefully — Sequelize handles the workaround. |
-| **Boolean storage** | SQLite stores booleans as `0`/`1` integers. Sequelize normalizes this, but raw queries must use `0`/`1`. |
-| **WAL mode** | Enable WAL for concurrent read/write: `PRAGMA journal_mode=WAL`. See `shared/api/engines/db/connection.js`. |
+| Concern                   | Details                                                                                                                                                                                          |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **ENUM type**             | SQLite does not support `ENUM`. Sequelize emulates it with `CHECK` constraints. Use `DataTypes.STRING` with validation if you need portability.                                                  |
+| **SQLITE_BUSY**           | Concurrent writes cause `SQLITE_BUSY`. Enable WAL mode and set `busy_timeout` in connection config. See `/debug` Part 11.                                                                        |
+| **Concurrent migrations** | Extension migrations run in parallel during boot → serialize with `for...of` instead of `Promise.allSettled`.                                                                                    |
+| **ALTER TABLE limits**    | SQLite has limited `ALTER TABLE` support. Changing column types or dropping columns requires table recreation. Use `queryInterface.changeColumn()` carefully — Sequelize handles the workaround. |
+| **Boolean storage**       | SQLite stores booleans as `0`/`1` integers. Sequelize normalizes this, but raw queries must use `0`/`1`.                                                                                         |
+| **WAL mode**              | Enable WAL for concurrent read/write: `PRAGMA journal_mode=WAL`. See `shared/api/engines/db/connection.js`.                                                                                      |
 
 ## PostgreSQL
 
-| Concern | Details |
-|---------|---------|
-| **ENUM handling** | PostgreSQL `ENUM` types are persistent. Dropping an enum value requires: `ALTER TYPE ... RENAME`, create new type, migrate data, drop old type. Prefer `DataTypes.STRING` with Zod validation for flexibility. |
-| **Connection pooling** | Default pool `max: 5`. Increase for high-concurrency. Monitor with `SELECT * FROM pg_stat_activity`. |
-| **Case sensitivity** | PostgreSQL identifiers are case-sensitive when quoted. Sequelize quotes all column names → ensure `underscored: true` matches actual column casing. |
-| **UUID generation** | Use `DataTypes.UUIDV4` or install `uuid-ossp` extension for `gen_random_uuid()`. |
-| **JSONB** | Prefer `DataTypes.JSONB` over `DataTypes.JSON` — supports indexing and operators. |
+| Concern                | Details                                                                                                                                                                                                        |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **ENUM handling**      | PostgreSQL `ENUM` types are persistent. Dropping an enum value requires: `ALTER TYPE ... RENAME`, create new type, migrate data, drop old type. Prefer `DataTypes.STRING` with Zod validation for flexibility. |
+| **Connection pooling** | Default pool `max: 5`. Increase for high-concurrency. Monitor with `SELECT * FROM pg_stat_activity`.                                                                                                           |
+| **Case sensitivity**   | PostgreSQL identifiers are case-sensitive when quoted. Sequelize quotes all column names → ensure `underscored: true` matches actual column casing.                                                            |
+| **UUID generation**    | Use `DataTypes.UUIDV4` or install `uuid-ossp` extension for `gen_random_uuid()`.                                                                                                                               |
+| **JSONB**              | Prefer `DataTypes.JSONB` over `DataTypes.JSON` — supports indexing and operators.                                                                                                                              |
 
 ## MySQL
 
-| Concern | Details |
-|---------|---------|
-| **Timezone** | MySQL requires timezone tables populated. If you see `Unknown time zone: 'UTC'`, reset the data directory (see `/debug` Part 8). |
-| **Charset/Collation** | Default to `utf8mb4` / `utf8mb4_unicode_ci` for full Unicode support (emojis, CJK). Set via Sequelize `dialectOptions`. |
-| **ENUM handling** | MySQL supports native `ENUM` but adding values requires `ALTER TABLE`. Backward-compatible: always add to the end of the enum list. |
-| **Row size limits** | InnoDB has a ~8KB row size limit. `TEXT`/`BLOB` columns store pointers, but many `VARCHAR(255)` columns can exceed the limit. |
-| **Connection refused** | MySQL daemon may not be running. Use `node tools/npm/preboot.js --db mysql --start`. |
+| Concern                | Details                                                                                                                             |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| **Timezone**           | MySQL requires timezone tables populated. If you see `Unknown time zone: 'UTC'`, reset the data directory (see `/debug` Part 8).    |
+| **Charset/Collation**  | Default to `utf8mb4` / `utf8mb4_unicode_ci` for full Unicode support (emojis, CJK). Set via Sequelize `dialectOptions`.             |
+| **ENUM handling**      | MySQL supports native `ENUM` but adding values requires `ALTER TABLE`. Backward-compatible: always add to the end of the enum list. |
+| **Row size limits**    | InnoDB has a ~8KB row size limit. `TEXT`/`BLOB` columns store pointers, but many `VARCHAR(255)` columns can exceed the limit.       |
+| **Connection refused** | MySQL daemon may not be running. Use `node tools/npm/preboot.js --db mysql --start`.                                                |
 
 ## Cross-Dialect Tips
 

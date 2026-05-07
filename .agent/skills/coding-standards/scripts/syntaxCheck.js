@@ -10,10 +10,7 @@
 /**
  * Banned Syntax Check
  *
- * Greps source files for ESLint-banned syntax:
- * - ?? (nullish coalescing)
- * - ??= (nullish assignment)
- * - ?. (optional chaining)
+ * Greps source files for manually-banned syntax.
  *
  * Usage: node .agent/skills/coding-standards/scripts/syntaxCheck.js [srcDir]
  * Default: src/
@@ -31,24 +28,7 @@ function findJSFiles(dir) {
 }
 
 // Patterns with context-aware matching (avoid false positives in strings/comments)
-const BANNED_PATTERNS = [
-  {
-    name: '?? (nullish coalescing)',
-    // Match ?? but not inside strings or comments
-    regex: /(?<!=)\?\?(?!=)/g,
-    fix: 'x != null ? x : fallback',
-  },
-  {
-    name: '??= (nullish assignment)',
-    regex: /\?\?=/g,
-    fix: 'if (x == null) x = value',
-  },
-  {
-    name: '?. (optional chaining)',
-    regex: /\?\./g,
-    fix: 'x && x.prop (or guard clause)',
-  },
-];
+const BANNED_PATTERNS = [];
 
 console.log('═══════════════════════════════════════════════════');
 console.log('  Banned Syntax Check');

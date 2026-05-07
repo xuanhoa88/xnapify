@@ -7,20 +7,17 @@
 
 import tailwindcssPostcss from '@tailwindcss/postcss';
 import postcssFlexbugsFixes from 'postcss-flexbugs-fixes';
-import postcssImport from 'postcss-import';
 import postcssNested from 'postcss-nested';
 import postcssPresetEnv from 'postcss-preset-env';
 
-export default () => ({
+export default ({ cwd } = {}) => ({
   plugins: [
-    // Transfer @import rule by inlining content, e.g. @import 'normalize.css'
-    // Must run before other plugins so imported content gets processed.
-    // https://github.com/postcss/postcss-import
-    postcssImport(),
-
-    // Tailwind CSS
+    // Tailwind CSS v4 — CSS-first configuration
+    // `base` sets the root directory for automatic content detection.
+    // Without it, Tailwind scans from each CSS file's parent directory,
+    // which would miss src/ when the entry CSS is in shared/renderer/.
     // https://tailwindcss.com/docs/installation
-    tailwindcssPostcss(),
+    tailwindcssPostcss({ base: cwd }),
 
     // postcss-preset-env bundles modern PostCSS plugins and automatically
     // determines which CSS polyfills are needed based on the browserslist

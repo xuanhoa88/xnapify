@@ -28,6 +28,7 @@
  */
 import { execSync } from 'child_process';
 import fs from 'fs';
+import { createRequire } from 'module';
 import net from 'net';
 import os from 'os';
 import path from 'path';
@@ -47,16 +48,11 @@ const PG_DEFAULT_PORT = 5432;
 /** @constant {number} Standard system MySQL port */
 const MYSQL_DEFAULT_PORT = 3306;
 
-// Bypass rspack's static analyzer which automatically stubs `require.resolve`
-// for dynamically discovered native database addons it cannot trace at build-time.
-function nativeResolve(moduleName) {
-  const req =
-    typeof __non_webpack_require__ !== 'undefined'
-      ? // eslint-disable-next-line no-undef
-        __non_webpack_require__
-      : require;
-  return req.resolve(moduleName);
-}
+// Use native require to load extension modules
+const nativeRequire =
+  typeof __non_webpack_require__ !== 'undefined'
+    ? __non_webpack_require__
+    : createRequire(import.meta.url);
 
 /**
  * When true, DB URL writes go to .env.local (session override)
@@ -394,7 +390,9 @@ async function ensureDeps(dialect) {
   // Check by module name, install by spec (with version pin)
   const missing = deps.filter(dep => {
     try {
-      nativeResolve(dep.name);
+      const resolved = nativeRequire.resolve(dep.name);
+      // Actually load it to ensure native bindings match current Node ABI
+      nativeRequire(resolved);
       return false;
     } catch {
       return true;
@@ -403,8 +401,40 @@ async function ensureDeps(dialect) {
 
   if (missing.length === 0) return;
 
-  const names = missing.map(d => d.name);
-  const specs = missing.map(d => d.spec);
+  const driverDir = getDriverIsolationDir(dialect);
+
+  // Fast path: attempt to recover broken symlinks from an existing sandbox build.
+  // This saves significant compilation time if node_modules was wiped but .xnapify wasn't.
+  const stillMissing = missing.filter(dep => {
+    const srcPath = path.join(driverDir, 'node_modules', dep.name);
+    const destPath = path.join(ROOT, 'node_modules', dep.name);
+
+    if (fs.existsSync(path.join(srcPath, 'package.json'))) {
+      try {
+        const parentDir = path.dirname(destPath);
+        fs.mkdirSync(parentDir, { recursive: true });
+        fs.rmSync(destPath, { recursive: true, force: true });
+        fs.symlinkSync(srcPath, destPath, 'junction');
+
+        const resolved = nativeRequire.resolve(dep.name);
+        nativeRequire(resolved);
+
+        return false; // Successfully recovered
+      } catch {
+        // Failed to load (e.g. Node ABI changed), needs reinstall
+        return true;
+      }
+    }
+    return true; // Not present in sandbox
+  });
+
+  if (stillMissing.length === 0) {
+    console.log(`✅ ${dialect} dependencies recovered from sandbox`);
+    return;
+  }
+
+  const names = stillMissing.map(d => d.name);
+  const specs = stillMissing.map(d => d.spec);
 
   console.log(`📦 Installing ${dialect} dependencies: ${names.join(', ')}...`);
 
@@ -456,7 +486,6 @@ async function ensureDeps(dialect) {
       // --- ISOLATED SANDBOX ARCHITECTURE ---
       // Execute the database backend install locked cleanly inside a .xnapify sandbox
       // to guarantee NPM v9+ never traverses into the project root and drops packages
-      const driverDir = getDriverIsolationDir(dialect);
       if (!fs.existsSync(driverDir))
         fs.mkdirSync(driverDir, { recursive: true });
 
@@ -547,7 +576,7 @@ async function ensureDeps(dialect) {
   const pathCache = Module ? Module._pathCache : null;
   if (pathCache) {
     for (const key of Object.keys(pathCache)) {
-      for (const dep of missing) {
+      for (const dep of stillMissing) {
         if (key.includes(dep.name)) {
           delete pathCache[key];
         }
@@ -670,7 +699,7 @@ async function startPostgres(cfg = PG_DEFAULTS) {
   if (isRoot) {
     try {
       execSync(`chown -R node:node "${PG_DATA_DIR}"`);
-    } catch (err) {
+    } catch {
       // ignore
     }
   }
@@ -760,7 +789,9 @@ function resolvePgBin(binName) {
   const pkgName = `@embedded-postgres/${platKey}-${archKey}`;
 
   try {
-    const pkgDir = path.dirname(nativeResolve(`${pkgName}/package.json`));
+    const pkgDir = path.dirname(
+      nativeRequire.resolve(`${pkgName}/package.json`),
+    );
     const bin = path.join(pkgDir, 'native', 'bin', fileName);
     if (fs.existsSync(bin)) return bin;
   } catch {
@@ -1730,8 +1761,7 @@ async function pgFallbackChain() {
  *
  * Ensures the data directory exists and resolves the SQLite URL to use
  * XNAPIFY_SQLITE_DATA_DIR when:
- *   - An explicit override is active (--db sqlite / XNAPIFY_DB_TYPE=sqlite)
- *   - The URL is a bare shorthand ('sqlite' or 'sqlite://' or 'sqlite:database.sqlite')
+ *   - The URL is a bare shorthand ('sqlite' or 'sqlite:' or 'sqlite:database.sqlite')
  *
  * When a custom path is already specified (e.g. sqlite:/my/path/db.sqlite),
  * it is preserved as-is.
@@ -1742,7 +1772,7 @@ async function resolveSqlite(url) {
   // Determine the file path from the URL
   const normalizedUrl = url.trim().toLowerCase();
   const isShorthand =
-    /^sqlite(:\/\/)?$/.test(normalizedUrl) ||
+    /^sqlite(:)?$/.test(normalizedUrl) ||
     normalizedUrl === 'sqlite:database.sqlite';
 
   // A "custom path" is when the URL is NOT a shorthand AND was NOT explicitly
@@ -1892,19 +1922,32 @@ async function showStatus(dialectOverride) {
   const deps = DIALECT_DEPS[dialect] || [];
   const installed = deps.filter(d => {
     try {
-      nativeResolve(d.name);
+      nativeRequire.resolve(d.name);
       return true;
     } catch {
       return false;
     }
   });
-  const depsLine =
-    installed.length === deps.length
-      ? `✅ All installed (${deps.map(d => d.name).join(', ')})`
-      : `⚠️  Missing: ${deps
-          .filter(d => !installed.includes(d))
-          .map(d => d.name)
-          .join(', ')} (auto-installed on next boot)`;
+
+  const inSandbox = deps.filter(d => {
+    if (installed.includes(d)) return false;
+    const driverDir = getDriverIsolationDir(dialect);
+    return fs.existsSync(
+      path.join(driverDir, 'node_modules', d.name, 'package.json'),
+    );
+  });
+
+  let depsLine;
+  if (installed.length === deps.length) {
+    depsLine = `✅ All installed (${deps.map(d => d.name).join(', ')})`;
+  } else if (installed.length + inSandbox.length === deps.length) {
+    depsLine = `✅ Built in sandbox (${inSandbox.map(d => d.name).join(', ')}) - auto-linked on boot`;
+  } else {
+    const missingDeps = deps.filter(
+      d => !installed.includes(d) && !inSandbox.includes(d),
+    );
+    depsLine = `⚠️  Missing: ${missingDeps.map(d => d.name).join(', ')} (auto-installed on next boot)`;
+  }
 
   console.log(separator);
 

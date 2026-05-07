@@ -122,10 +122,16 @@ const seedsContext = import.meta.webpackContext(
 );
 
 // Auto-load models
-const modelsContext = import.meta.webpackContext('./models', { recursive: false, regExp: /\.[cm]?[jt]s$/i });
+const modelsContext = import.meta.webpackContext('./models', {
+  recursive: false,
+  regExp: /\.[cm]?[jt]s$/i,
+});
 
 // Auto-load routes (file-based dynamic routing)
-const routesContext = import.meta.webpackContext('./routes', { recursive: true, regExp: /\.[cm]?[jt]s$/i });
+const routesContext = import.meta.webpackContext('./routes', {
+  recursive: true,
+  regExp: /\.[cm]?[jt]s$/i,
+});
 
 // =============================================================================
 // LIFECYCLE HOOKS
@@ -143,7 +149,10 @@ export default {
   // Translations hook — return rspack import.meta.webpackContext for i18n files.
   // -----------------------------------------------------------------------
   translations() {
-    return import.meta.webpackContext('../translations', { recursive: false, regExp: /\.json$/i });
+    return import.meta.webpackContext('../translations', {
+      recursive: false,
+      regExp: /\.json$/i,
+    });
   },
 
   // -----------------------------------------------------------------------
@@ -673,7 +682,9 @@ function ModuleList({ items }) {
               <td>{item.name}</td>
               <td>{item.status}</td>
               <td>
-                <a href={`/admin/{module-name}/${item.id}`}>{t('edit', 'Edit')}</a>
+                <a href={`/admin/{module-name}/${item.id}`}>
+                  {t('edit', 'Edit')}
+                </a>
               </td>
             </tr>
           ))}
@@ -822,20 +833,20 @@ Modules are auto-discovered during application bootstrap:
 
 | Hook                       | Purpose                                | Called When        | Async |
 | -------------------------- | -------------------------------------- | ------------------ | ----- |
-| `translations()`           | Provide rspack context for i18n files | Module loaded      | No    |
+| `translations()`           | Provide rspack context for i18n files  | Module loaded      | No    |
 | `providers({ container })` | Bind services, register listener hooks | After translations | Yes   |
-| `migrations()`             | Return migrations rspack context      | After providers    | No    |
-| `models()`                 | Return models rspack context          | After migrations   | No    |
-| `seeds()`                  | Return seeds rspack context           | After models       | No    |
+| `migrations()`             | Return migrations rspack context       | After providers    | No    |
+| `models()`                 | Return models rspack context           | After migrations   | No    |
+| `seeds()`                  | Return seeds rspack context            | After models       | No    |
 | `boot({ container })`      | Initialize module (schedules, etc.)    | After seeds        | Yes   |
-| `routes()`                 | Return routes rspack context          | After boot         | No    |
+| `routes()`                 | Return routes rspack context           | After boot         | No    |
 
 ### Frontend (Views)
 
-| Hook                       | Purpose                                | Called When        | Async |
-| -------------------------- | -------------------------------------- | ------------------ | ----- |
+| Hook                       | Purpose                               | Called When        | Async |
+| -------------------------- | ------------------------------------- | ------------------ | ----- |
 | `translations()`           | Provide rspack context for i18n files | Module loaded      | No    |
-| `providers({ container })` | Bind client services                   | After translations | No    |
+| `providers({ container })` | Bind client services                  | After translations | No    |
 | `routes()`                 | Return views rspack context           | After providers    | No    |
 
 ## API File-Based Routing

@@ -9,6 +9,7 @@ import 'dotenv-flow/config';
 import crypto from 'crypto';
 import fs from 'fs/promises';
 import path from 'path';
+import { PassThrough } from 'stream';
 
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
@@ -16,8 +17,6 @@ import expressRequestLanguage from 'express-request-language';
 import { createMemoryHistory } from 'history';
 import isLocalhostIp from 'is-localhost-ip';
 import set from 'lodash/set';
-import { PassThrough } from 'stream';
-
 import { LRUCache } from 'lru-cache';
 import { renderToPipeableStream } from 'react-dom/server';
 import Youch from 'youch';
@@ -444,34 +443,47 @@ async function createReduxStore({ fetch, history, locale }, options = {}) {
   return store;
 }
 
-async function loadSsrResources$() {
-  const formatUrlPath = urlPath =>
-    ('/' + urlPath).replace(/\/+/g, '/').replace(/\/$/, '');
+// ---------------------------------------------------------------------------
+// SSR Rendering
+// ---------------------------------------------------------------------------
 
-  const normaliseEntry = entry => {
-    if (typeof entry === 'string') return formatUrlPath(entry);
-    if (entry && typeof entry === 'object') {
-      if (entry.href) return { ...entry, href: formatUrlPath(entry.href) };
-      if (entry.src) return { ...entry, src: formatUrlPath(entry.src) };
-    }
-    if (__DEV__)
-      console.warn('⚠️ Unrecognised resource entry shape, skipping:', entry);
-    return null;
-  };
+const getExtensionUrls = key => {
+  try {
+    return extensionManager[key] || [];
+  } catch (err) {
+    if (__DEV__) console.error(`❌ Failed to read extension ${key}:`, err);
+    return [];
+  }
+};
 
-  const dedupEntries = entries => {
-    const seen = new Set();
-    return entries.filter(entry => {
-      if (entry == null) return false;
-      const url =
-        typeof entry === 'string' ? entry : entry.href || entry.src || '';
-      const key = String(url);
-      if (!key || seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-  };
+const formatUrlPath = urlPath =>
+  ('/' + urlPath).replace(/\/+/g, '/').replace(/\/$/, '');
 
+const normalizeEntry = entry => {
+  if (typeof entry === 'string') return formatUrlPath(entry);
+  if (entry && typeof entry === 'object') {
+    if (entry.href) return { ...entry, href: formatUrlPath(entry.href) };
+    if (entry.src) return { ...entry, src: formatUrlPath(entry.src) };
+  }
+  if (__DEV__)
+    console.warn('⚠️ Unrecognised resource entry shape, skipping:', entry);
+  return null;
+};
+
+const deduplicateEntries = entries => {
+  const seen = new Set();
+  return entries.filter(entry => {
+    if (entry == null) return false;
+    const url =
+      typeof entry === 'string' ? entry : entry.href || entry.src || '';
+    const key = String(url);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
+const loadSsrResources = async () => {
   const rawScripts = [];
   const rawStyles = [];
 
@@ -492,17 +504,17 @@ async function loadSsrResources$() {
   ]);
 
   return {
-    scriptLinks: dedupEntries(rawScripts.map(normaliseEntry)),
-    styleLinks: dedupEntries(rawStyles.map(normaliseEntry)),
     App,
     Html,
+    scripts: deduplicateEntries(rawScripts.map(normalizeEntry)),
+    stylesheets: deduplicateEntries(rawStyles.map(normalizeEntry)),
   };
-}
+};
 
-function getSsrResources() {
+const getSsrResources = () => {
   if (!appState.ssrResourcesPromise) {
     appState.ssrRetryCount = (appState.ssrRetryCount || 0) + 1;
-    appState.ssrResourcesPromise = loadSsrResources$().catch(err => {
+    appState.ssrResourcesPromise = loadSsrResources().catch(err => {
       // Allow retry up to 3 times; after that, cache the rejection
       if (appState.ssrRetryCount < 3) {
         appState.ssrResourcesPromise = null;
@@ -511,40 +523,29 @@ function getSsrResources() {
     });
   }
   return appState.ssrResourcesPromise;
-}
+};
 
-// ---------------------------------------------------------------------------
-// SSR Rendering
-// ---------------------------------------------------------------------------
-
-function safeExtUrls(key) {
-  try {
-    return extensionManager[key] || [];
-  } catch (err) {
-    if (__DEV__) console.error(`❌ Failed to read extension ${key}:`, err);
-    return [];
-  }
-}
-
-async function renderToStream({
-  context,
-  component,
-  metadata = {},
-  nonce,
+async function streamReactResponse(
   res,
-  cacheKey,
-  renderStartTime,
-  status = 200,
-  abortController,
-}) {
-  return new Promise(async (resolve, reject) => {
+  {
+    context,
+    component,
+    nonce,
+    cacheKey,
+    startTime,
+    abortController,
+    metadata = {},
+    status = 200,
+  },
+) {
+  const executeStreamingRender = async (resolve, reject) => {
     try {
-      const { scriptLinks, styleLinks, App, Html } = await getSsrResources();
+      const { scripts, stylesheets, App, Html } = await getSsrResources();
 
       const htmlData = {
         ...metadata,
-        styleLinks: [...styleLinks, ...safeExtUrls('cssUrls')],
-        scriptLinks: [...scriptLinks, ...safeExtUrls('scriptUrls')],
+        stylesheets: [...stylesheets, ...getExtensionUrls('cssUrls')],
+        scripts: [...scripts, ...getExtensionUrls('scriptUrls')],
         locale: context.locale,
         appState: {
           redux: context.store.getState(),
@@ -571,7 +572,7 @@ async function renderToStream({
             storeSsrCache(cacheKey, {
               html,
               status,
-              renderTime: Date.now() - renderStartTime,
+              renderTime: Date.now() - startTime,
               timestamp: Date.now(),
             });
           }
@@ -593,10 +594,7 @@ async function renderToStream({
 
             // Only expose internal timing/locale headers in development
             if (__DEV__) {
-              res.setHeader(
-                'X-Render-Time',
-                `${Date.now() - renderStartTime}ms`,
-              );
+              res.setHeader('X-Render-Time', `${Date.now() - startTime}ms`);
               res.setHeader('X-SSR-Locale', context.locale);
             }
 
@@ -635,7 +633,9 @@ async function renderToStream({
     } catch (err) {
       reject(err);
     }
-  });
+  };
+
+  return new Promise(executeStreamingRender);
 }
 
 function makeSsrMiddleware(baseUrl) {
@@ -785,16 +785,15 @@ function makeSsrMiddleware(baseUrl) {
       const status = page.status || 200;
 
       await promiseWithDeadline(
-        renderToStream({
+        streamReactResponse(res, {
           nonce,
           context,
-          component: page.component,
-          metadata: await extractPageMetadata(page, req),
-          res,
           cacheKey,
-          renderStartTime: startTime,
           status,
           abortController,
+          startTime,
+          metadata: await extractPageMetadata(page, req),
+          component: page.component,
         }),
         SERVER_TIMEOUTS.RENDER,
         'SSR render',
@@ -1338,7 +1337,9 @@ export async function destroyServer(server) {
 // HMR & Startup
 // ---------------------------------------------------------------------------
 
-const hotAPI = (import.meta && import.meta.webpackHot) || (typeof module !== 'undefined' && module.hot);
+const hotAPI =
+  (import.meta && import.meta.webpackHot) ||
+  (typeof module !== 'undefined' && module.hot);
 
 if (hotAPI) {
   hotAPI.accept(() => {

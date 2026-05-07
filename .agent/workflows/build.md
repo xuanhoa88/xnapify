@@ -3,6 +3,7 @@ description: Intelligent implementation workflow with auto-routing based on inte
 ---
 
 ## Context
+
 When executing the `/build` workflow, you are acting as an intelligent orchestrator to implement features based on the provided instructions. You must consistently respect user control by stopping and asking for their approval before making any definitive file changes.
 
 ## Process

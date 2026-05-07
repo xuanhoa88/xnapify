@@ -37,11 +37,13 @@ When a user clicks **Install**, the app downloads the `.zip` directly from the e
 1. **Fork** this repository.
 
 2. **Create a branch** named after your extension:
+
    ```bash
    git checkout -b add/my-awesome-extension
    ```
 
 3. **Create a metadata file** in the `extensions/` directory:
+
    ```bash
    # For scoped extensions (recommended):
    extensions/@xnapify-extension/my-awesome-extension.json
@@ -101,45 +103,45 @@ Each extension is described by a single JSON file with the following fields:
 
 ### Required Fields
 
-| Field | Description |
-|-------|-------------|
-| `name` | Full package name (e.g., `@xnapify-extension/my-ext`) |
-| `key` | Unique extension key — must match `manifest.id` in your extension's `package.json` |
-| `version` | SemVer version string |
-| `author` | Your GitHub username or display name |
-| `category` | One of the [allowed categories](#categories) |
-| `downloadUrl` | Direct URL to the `.zip` archive |
-| `checksum` | SHA-256 hex hash of the extension directory (see below) |
+| Field         | Description                                                                        |
+| ------------- | ---------------------------------------------------------------------------------- |
+| `name`        | Full package name (e.g., `@xnapify-extension/my-ext`)                              |
+| `key`         | Unique extension key — must match `manifest.id` in your extension's `package.json` |
+| `version`     | SemVer version string                                                              |
+| `author`      | Your GitHub username or display name                                               |
+| `category`    | One of the [allowed categories](#categories)                                       |
+| `downloadUrl` | Direct URL to the `.zip` archive                                                   |
+| `checksum`    | SHA-256 hex hash of the extension directory (see below)                            |
 
 ### Optional Fields
 
-| Field | Description |
-|-------|-------------|
-| `description` | Full description (supports markdown) |
-| `short_description` | One-liner for card display (max 160 chars) |
-| `tags` | Array of searchable tags |
-| `icon` | Emoji or icon URL |
-| `repository` | URL to the extension's source code |
-| `compatibility` | xnapify version requirement (SemVer range) |
-| `type` | `plugin` (default) or `module` |
-| `featured` | `true` to feature in the marketplace (maintainer-only) |
-| `deprecated` | `true` to flag as deprecated — hidden from new installs |
-| `screenshots` | Array of screenshot URLs |
+| Field               | Description                                             |
+| ------------------- | ------------------------------------------------------- |
+| `description`       | Full description (supports markdown)                    |
+| `short_description` | One-liner for card display (max 160 chars)              |
+| `tags`              | Array of searchable tags                                |
+| `icon`              | Emoji or icon URL                                       |
+| `repository`        | URL to the extension's source code                      |
+| `compatibility`     | xnapify version requirement (SemVer range)              |
+| `type`              | `plugin` (default) or `module`                          |
+| `featured`          | `true` to feature in the marketplace (maintainer-only)  |
+| `deprecated`        | `true` to flag as deprecated — hidden from new installs |
+| `screenshots`       | Array of screenshot URLs                                |
 
 ### Categories
 
-| Key | Label |
-|-----|-------|
-| `authentication` | Authentication |
-| `communication` | Communication |
-| `analytics` | Analytics |
-| `productivity` | Productivity |
+| Key               | Label           |
+| ----------------- | --------------- |
+| `authentication`  | Authentication  |
+| `communication`   | Communication   |
+| `analytics`       | Analytics       |
+| `productivity`    | Productivity    |
 | `developer-tools` | Developer Tools |
-| `content` | Content |
-| `social` | Social |
-| `security` | Security |
-| `integration` | Integration |
-| `other` | Other |
+| `content`         | Content         |
+| `social`          | Social          |
+| `security`        | Security        |
+| `integration`     | Integration     |
+| `other`           | Other           |
 
 ---
 
@@ -148,6 +150,7 @@ Each extension is described by a single JSON file with the following fields:
 The checksum is a SHA-256 hash of your **built** extension directory, computed using [`folder-hash`](https://www.npmjs.com/package/folder-hash).
 
 The following files/directories are **excluded** from the hash:
+
 - `node_modules/`, `.git/`, `__tests__/`, `__mocks__/`
 - `package.json`, `package-lock.json`, `.DS_Store`, `npm-debug.log`
 
@@ -169,7 +172,14 @@ const result = await hashElement('./my-extension', {
   algo: 'sha256',
   encoding: 'hex',
   folders: { exclude: ['node_modules', '.git', '__tests__', '__mocks__'] },
-  files: { exclude: ['package.json', 'package-lock.json', '.DS_Store', 'npm-debug.log'] },
+  files: {
+    exclude: [
+      'package.json',
+      'package-lock.json',
+      '.DS_Store',
+      'npm-debug.log',
+    ],
+  },
 });
 
 console.log(result.hash);

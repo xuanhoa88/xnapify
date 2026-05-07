@@ -253,11 +253,11 @@ register('engineName', () => engine.cleanup(), position);
 
 **Position values** (higher runs first):
 
-| Position | Use case | Examples |
-|---|---|---|
-| `20` | Stop accepting traffic | `http` |
-| `10` | Drain in-flight work | `queue`, `hook`, `schedule`, `worker` |
-| `0` | Close resource handles | `email`, `cache`, `db` |
+| Position | Use case               | Examples                              |
+| -------- | ---------------------- | ------------------------------------- |
+| `20`     | Stop accepting traffic | `http`                                |
+| `10`     | Drain in-flight work   | `queue`, `hook`, `schedule`, `worker` |
+| `0`      | Close resource handles | `email`, `cache`, `db`                |
 
 Same-position handlers run **in parallel** (`Promise.allSettled`). Position batches run **sequentially** (high → low).
 
@@ -366,7 +366,11 @@ describe('[engine] EngineName', () => {
     it('should register with shutdown registry', () => {
       const { register } = require('../../registry');
       createFactory();
-      expect(register).toHaveBeenCalledWith('engineName', expect.any(Function), expect.any(Number));
+      expect(register).toHaveBeenCalledWith(
+        'engineName',
+        expect.any(Function),
+        expect.any(Number),
+      );
     });
   });
 });

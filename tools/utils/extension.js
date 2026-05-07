@@ -145,4 +145,3 @@ export function generateExtensionId(name) {
   const hash = crypto.createHash('sha256').update(name).digest();
   return hashids.encode(hash.readUInt32BE(0), hash.readUInt32BE(4));
 }
-

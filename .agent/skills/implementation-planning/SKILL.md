@@ -16,6 +16,7 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 **Context:** This should be run in a dedicated worktree (created by design-thinking skill).
 
 **Save plans to:** `<module>/plans/YYYY-MM-DD-<feature-name>.md` (colocated with the module)
+
 - For modules: `src/apps/<module>/plans/`
 - For extensions: `src/extensions/<ext>/plans/`
 - For engines: `shared/api/engines/<engine>/plans/`
@@ -39,6 +40,7 @@ This structure informs the task decomposition. Each task should produce self-con
 ## Bite-Sized Task Granularity
 
 **Each step is one action (2-5 minutes):**
+
 - "Write the failing test" - step
 - "Run it to make sure it fails" - step
 - "Implement the minimal code to make the test pass" - step
@@ -69,6 +71,7 @@ This structure informs the task decomposition. Each task should produce self-con
 ### Task N: [Component Name]
 
 **Files:**
+
 - Create: `exact/path/to/file.py`
 - Modify: `exact/path/to/existing.py:123-145`
 - Test: `tests/exact/path/to/test.py`
@@ -113,6 +116,7 @@ Every implementation plan **MUST** end with a final task dedicated to updating e
 ### Task N: Workspace & Documentation Sync
 
 **Files:**
+
 - Modify: `.agent/workflows/xyz.md`
 - Modify: `README.md`
 
@@ -122,6 +126,7 @@ Every implementation plan **MUST** end with a final task dedicated to updating e
 ## No Placeholders
 
 Every step must contain the actual content an engineer needs. These are **plan failures** — never write them:
+
 - "TBD", "TODO", "implement later", "fill in details"
 - "Add appropriate error handling" / "add validation" / "handle edge cases"
 - "Write tests for the above" (without actual test code)
@@ -130,6 +135,7 @@ Every step must contain the actual content an engineer needs. These are **plan f
 - References to types, functions, or methods not defined in any task
 
 ## Remember
+
 - Exact file paths always
 - Complete code in every step — if a step changes code, show the code
 - Exact commands with expected output
@@ -156,6 +162,7 @@ After saving the plan, offer execution choice:
 **"Plan complete and saved to `<module>/plans/<filename>.md`. Ready to begin implementation?"**
 
 Proceed with task-by-task execution:
+
 - Use `workspace-isolation` skill for workspace isolation
 - Follow `requirement-traceability` skill to ensure every task traces to a spec requirement
 - Follow `test-driven-development` skill for each task's coding

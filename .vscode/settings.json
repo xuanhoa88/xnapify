@@ -18,8 +18,6 @@
     ".eslintignore": "ignore",
     ".lintignore": "ignore",
     ".prettierignore": "ignore",
-    ".eslintrc": "jsonc",
-    ".prettierrc": "jsonc",
     "*.env*": "env"
   },
 
@@ -45,17 +43,11 @@
 
   // ESLint
   "eslint.useFlatConfig": true,
-  "eslint.validate": [
-    "javascript",
-    "javascriptreact"
-  ],
+  "eslint.validate": ["javascript", "javascriptreact"],
 
   // Stylelint
   "stylelint.enable": true,
-  "stylelint.validate": [
-    "css",
-    "scss"
-  ],
+  "stylelint.validate": ["css", "scss"],
   "css.validate": false,
 
   // Prettier

@@ -132,7 +132,7 @@ export async function setupTestDb() {
 
   try {
     // Create fresh Sequelize instance for test isolation
-    sequelizeInstance = new Sequelize('sqlite://', SEQUELIZE_CONFIG);
+    sequelizeInstance = new Sequelize('sqlite:', SEQUELIZE_CONFIG);
 
     const context = {
       ...SequelizeModule,

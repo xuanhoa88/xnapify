@@ -5,8 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useId } from 'react';
-
 import { Flex } from '@radix-ui/themes';
 import get from 'lodash/get';
 import PropTypes from 'prop-types';
@@ -48,10 +46,9 @@ function FormField({
   debounceMs = 300,
   asyncMessages,
 }) {
-  // useId generates a stable ID that matches between SSR and client hydration,
-  // avoiding the htmlFor mismatch warning caused by lodash/uniqueId's global counter.
-  const reactId = useId();
-  const id = `field-${name}-${reactId}`;
+  // Use a deterministic ID based on the field name to avoid React 18 hydration
+  // mismatches which can cause layout snaps or FOUC when the tree remounts.
+  const id = `field-${name}`;
   const {
     formState: { errors },
   } = useFormContext();

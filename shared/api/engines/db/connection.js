@@ -70,7 +70,7 @@ function getDefaultOptions() {
     // Logging — disabled in production even if XNAPIFY_DB_LOG is set
     logging:
       process.env.XNAPIFY_DB_LOG === 'true' &&
-        process.env.NODE_ENV !== 'production'
+      process.env.NODE_ENV !== 'production'
         ? console.log
         : false,
     define: {

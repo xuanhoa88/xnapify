@@ -41,7 +41,6 @@ Quick-reference checklist for reviewing `src/apps/[module_name]` code.
 ## Conventions
 
 - [ ] Import order follows ESLint groups: builtin → external → @shared → parent → sibling → CSS
-- [ ] No `??`, `?.`, `??=` — banned by ESLint
 - [ ] File naming follows convention: `resource.controller.js`, `resource.service.js`, `PascalCase.js`
 - [ ] Constants use SCREAMING_SNAKE_CASE — no magic numbers inline
 

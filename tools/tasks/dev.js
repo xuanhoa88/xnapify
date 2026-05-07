@@ -9,8 +9,8 @@
 
 import { execSync } from 'child_process';
 import http from 'http';
-import path from 'path';
 import { createRequire } from 'module';
+import path from 'path';
 import { fileURLToPath } from 'url';
 
 import { rspack } from '@rspack/core';
@@ -34,13 +34,12 @@ import {
 } from '../rspack/browserSync/server.config.js';
 import createHmrMiddleware from '../rspack/hotMiddleware.js';
 import { BuildError, setupGracefulShutdown } from '../utils/error.js';
+import { ensureDir, writeFile } from '../utils/fs.js';
 import { generateJWT } from '../utils/jwt.js';
 import { isSilent, isVerbose, logError, logInfo } from '../utils/logger.js';
 
 import clean from './clean.js';
 import buildExtensions from './extension.js';
-
-import { ensureDir, writeFile } from '../utils/fs.js';
 
 const require = createRequire(import.meta.url);
 const currentFilename = fileURLToPath(import.meta.url);
@@ -515,11 +514,7 @@ async function checkForUpdate(currentHash) {
   // a fresh `hmr` (module.hot) from the new bundle, and returns
   // the new { createServer, bootstrapApp } surface.
   let createServer, bootstrapApp;
-  ({
-    createServer,
-    bootstrapApp,
-    disposeApp: dispose,
-  } = loadServerBundle());
+  ({ createServer, bootstrapApp, disposeApp: dispose } = loadServerBundle());
 
   // Recreate the Express app with the new bundle
   await prepareDevServer({ createServer, bootstrapApp }, server);
@@ -689,6 +684,13 @@ async function main() {
     const { clientCompiler, serverCompiler, workerCompilers } =
       setupRspackCompilers();
 
+    // Ensure client compiler updates invalidate the SSR cache so dynamic chunks are picked up
+    clientCompiler.hooks.done.tap('InvalidateSSROnClientBuild', () => {
+      if (typeof invalidateServerCaches === 'function') {
+        invalidateServerCaches();
+      }
+    });
+
     // Watch for server bundle changes to enable HMR for server code
     // This allows server-side code to be updated without restarting the dev server
     setupServerBundleWatcher(serverCompiler);
@@ -727,11 +729,7 @@ async function main() {
     // Load server bundle and record its hash so checkForUpdate()
     // can skip redundant reloads when the watcher fires.
     let createServer, bootstrapApp;
-    ({
-      createServer,
-      bootstrapApp,
-      disposeApp: dispose,
-    } = loadServerBundle());
+    ({ createServer, bootstrapApp, disposeApp: dispose } = loadServerBundle());
     loadedServerHash = serverStats.hash;
 
     // Start server

@@ -8,9 +8,9 @@ version: 3.0
 # Browser Testing & Automation Skill
 
 This skill enables comprehensive testing and debugging of the local `xnapify` web application. It supports two distinct operational modes:
+
 1. **Programmatic Automation (Puppeteer)**: For writing repeatable custom test scripts, validating complex UI flows, programmatically capturing screenshots, or debugging application issues via Node.js scripts.
 2. **Interactive AI Automation**: For exploratory testing, visual verification, and manually executing natural-language test cases via the AI agent's built-in browser automation tool.
-
 
 ---
 
@@ -21,20 +21,20 @@ This skill enables comprehensive testing and debugging of the local `xnapify` we
 
 **Resolution order:**
 
-| Priority | Source | How |
-|----------|--------|-----|
-| 1 | User context | Check running terminal outputs for `localhost:XXXX` — this is always the **actual** running port |
-| 2 | `.env` files | `grep XNAPIFY_PORT .env .env.* 2>/dev/null` — use the **last** match (env-specific files override base) |
-| 3 | Default fallback | `1337` |
+| Priority | Source           | How                                                                                                     |
+| -------- | ---------------- | ------------------------------------------------------------------------------------------------------- |
+| 1        | User context     | Check running terminal outputs for `localhost:XXXX` — this is always the **actual** running port        |
+| 2        | `.env` files     | `grep XNAPIFY_PORT .env .env.* 2>/dev/null` — use the **last** match (env-specific files override base) |
+| 3        | Default fallback | `1337`                                                                                                  |
 
 > 🔴 **NEVER guess or assume port 3000.** Always resolve from user context or `.env` files first.
-33: 
-34: **Reachability Check (MANDATORY)**
-35: 
-36: Before launching browser automation, verify the app is actually responding at the resolved URL:
-37: 1. Use `http.get` (in scripts) or navigation (in interactive mode).
-38: 2. If the app is not reachable, ensure the development server is running (`npm run dev`).
-39: 3. Wait for the app to fully boot (shimmer/loading states) before interacting.
+> 33:
+> 34: **Reachability Check (MANDATORY)**
+> 35:
+> 36: Before launching browser automation, verify the app is actually responding at the resolved URL:
+> 37: 1. Use `http.get` (in scripts) or navigation (in interactive mode).
+> 38: 2. If the app is not reachable, ensure the development server is running (`npm run dev`).
+> 39: 3. Wait for the app to fully boot (shimmer/loading states) before interacting.
 
 ---
 
@@ -54,11 +54,13 @@ If a page redirects to login (whether in Puppeteer or interactive mode):
 Use this approach when you need to write and execute custom Node.js scripts to verify UI behavior, debug app issues programmatically, check responsive design, or scrape data.
 
 ### Core Capabilities
+
 - **Browser Automation**: `goto` URLs, `click` buttons/links, `fill` form fields, select dropdowns, handle dialogs/alerts.
 - **Verification**: Assert element presence, verify text content, check element visibility, validate URLs.
 - **Debugging**: Capture screenshots (`page.screenshot`), view console logs, inspect network requests, debug failed automated interactions.
 
 ### Guidelines for Puppeteer Scripts
+
 1. **Verify the app is running**: Ensure the local server is accessible at the resolved port before launching tests.
 2. **Use explicit waits**: Wait for elements or navigation to complete (`waitForSelector`, `waitForNavigation`) before interacting.
 3. **Capture screenshots on failure**: In catch blocks, take screenshots to help debug issues.
@@ -69,8 +71,8 @@ Use this approach when you need to write and execute custom Node.js scripts to v
 
 ### Common Patterns & Usage Examples
 
-
 **Pattern: Navigation & Verification**
+
 ```javascript
 const browser = await puppeteer.launch();
 const page = await browser.newPage();
@@ -81,6 +83,7 @@ await browser.close();
 ```
 
 **Pattern: Locator Form Interaction (Preferred for new scripts)**
+
 ```javascript
 await page.locator('input[name="email"]').fill('admin@example.com');
 await page.locator('input[name="password"]').fill('password123');
@@ -90,11 +93,12 @@ await page.waitForNavigation({ waitUntil: 'networkidle0' });
 ```
 
 **Pattern: Wait for Element & Graceful Error Handling**
+
 ```javascript
 try {
   // Locators automatically wait, but if you need explicit visibility checks:
   await page.locator('.success-toast').wait();
-  const exists = await page.locator('.success-toast').count() > 0;
+  const exists = (await page.locator('.success-toast').count()) > 0;
 } catch (error) {
   await page.screenshot({ path: 'error-debug.png', fullPage: true });
   throw error;
@@ -102,11 +106,12 @@ try {
 ```
 
 **Pattern: Get Console Logs**
+
 ```javascript
 page.on('console', msg => console.log('Browser log:', msg.text()));
 ```
 
-*Limits: Native mobile apps are not supported. For React Native, use React Native Testing Library instead.*
+_Limits: Native mobile apps are not supported. For React Native, use React Native Testing Library instead._
 
 ---
 
@@ -117,6 +122,7 @@ Use your IDE's browser automation capability (e.g., `browser_subagent`, MCP brow
 ### Interactive Task Template
 
 When using your agent browser tools, format your tasks carefully:
+
 - **URL**: Full URL with the correct port, e.g. `http://localhost:1337/admin/extensions`.
 - **Steps**: Numbered, specific actions.
 - **Return condition**: What precisely to report back (e.g. text content, pass/fail status).
@@ -137,30 +143,30 @@ Return: Describe what you observed. Did [expected behavior] occur?
 ### Common Interactive Scenarios
 
 **1. Visual Verification (CSS / Animation)**
-*Flow:* Navigate -> Wait for data to load -> Click action -> IMMEDIATELY observe visual change (e.g., shimmer animation or loading spinner) -> Wait -> Verify final state.
-*Return:* Report the specific styling or animated state observed.
+_Flow:_ Navigate -> Wait for data to load -> Click action -> IMMEDIATELY observe visual change (e.g., shimmer animation or loading spinner) -> Wait -> Verify final state.
+_Return:_ Report the specific styling or animated state observed.
 
 **2. Form Submission Validation**
-*Flow:* Wait for form -> Fill fields -> Click submit -> Observe loading state -> Wait for success/error network response or UI indication.
-*Return:* Submit result status (success/error message or redirect URL).
+_Flow:_ Wait for form -> Fill fields -> Click submit -> Observe loading state -> Wait for success/error network response or UI indication.
+_Return:_ Submit result status (success/error message or redirect URL).
 
 ### Interactive Rules & Anti-Patterns
 
-| Category | ❌ Don't | ✅ Do |
-|----------|----------|--------|
-| **Setup** | Hardcode port `3000` | Read port from `XNAPIFY_PORT` or user context |
-| **Auth** | Ignore auth redirects | Identify login walls and authenticate first |
-| **Pacing** | Run multiple test flows at once | Test exactly ONE cohesive user flow per call |
-| **Timing** | Skip waiting for page loads | Step 1 is ALWAYS waiting for exact load state |
-| **Selectors** | Use vague generic descriptions | Use exact labels, text, or accessibility roles |
+| Category      | ❌ Don't                        | ✅ Do                                          |
+| ------------- | ------------------------------- | ---------------------------------------------- |
+| **Setup**     | Hardcode port `3000`            | Read port from `XNAPIFY_PORT` or user context  |
+| **Auth**      | Ignore auth redirects           | Identify login walls and authenticate first    |
+| **Pacing**    | Run multiple test flows at once | Test exactly ONE cohesive user flow per call   |
+| **Timing**    | Skip waiting for page loads     | Step 1 is ALWAYS waiting for exact load state  |
+| **Selectors** | Use vague generic descriptions  | Use exact labels, text, or accessibility roles |
 
 ---
 
 ## Related Skills & Workflows
 
-| Need | Skill / Workflow |
-|------|-----------------|
-| Backend/Unit integration testing | `test-driven-development` skill |
-| Adding test templates to modules | `/add-test` workflow |
-| Debugging runtime or build issues | `/debug` workflow |
-| Testing WebSockets interfaces | `websocket-development` skill |
+| Need                              | Skill / Workflow                |
+| --------------------------------- | ------------------------------- |
+| Backend/Unit integration testing  | `test-driven-development` skill |
+| Adding test templates to modules  | `/add-test` workflow            |
+| Debugging runtime or build issues | `/debug` workflow               |
+| Testing WebSockets interfaces     | `websocket-development` skill   |

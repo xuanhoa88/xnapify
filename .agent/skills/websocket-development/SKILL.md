@@ -29,11 +29,11 @@ shared/ws/
 
 ## Channel Types
 
-| Type | Constant | Access | Auto-subscribe |
-|------|----------|--------|----------------|
-| `public` | `ChannelType.PUBLIC` | Everyone | ✅ On connect |
+| Type        | Constant                | Access             | Auto-subscribe     |
+| ----------- | ----------------------- | ------------------ | ------------------ |
+| `public`    | `ChannelType.PUBLIC`    | Everyone           | ✅ On connect      |
 | `protected` | `ChannelType.PROTECTED` | Authenticated only | ✅ On auth success |
-| `private` | `ChannelType.PRIVATE` | Specific user only | ✅ `user:<userId>` |
+| `private`   | `ChannelType.PRIVATE`   | Specific user only | ✅ `user:<userId>` |
 
 ---
 
@@ -55,7 +55,7 @@ ws.sendToChannel(`user:${userId}`, 'notification', { text: 'New message' });
 
 // Broadcast to all connections (with optional filter)
 ws.broadcast('system:maintenance', { scheduledAt: '...' });
-ws.broadcast('update', { data }, (conn) => conn.authenticated);
+ws.broadcast('update', { data }, conn => conn.authenticated);
 ```
 
 ### Registering Custom Handlers
@@ -112,12 +112,12 @@ function LiveNotifications() {
       url: `ws://${window.location.host}/ws`,
     });
 
-    ws.on('notification', (data) => {
+    ws.on('notification', data => {
       // Handle incoming notification
       console.log('Notification:', data);
     });
 
-    ws.on('chat:message', (data) => {
+    ws.on('chat:message', data => {
       // Handle chat message
     });
 
@@ -137,14 +137,14 @@ function LiveNotifications() {
 
 ### Key Client Methods
 
-| Method | Description |
-|--------|-------------|
-| `ws.connect()` | Open connection |
-| `ws.disconnect()` | Close connection |
-| `ws.send(type, data)` | Send message |
-| `ws.on(type, handler)` | Listen for message type |
-| `ws.off(type, handler)` | Remove listener |
-| `ws.subscribe(channel)` | Subscribe to channel |
+| Method                    | Description              |
+| ------------------------- | ------------------------ |
+| `ws.connect()`            | Open connection          |
+| `ws.disconnect()`         | Close connection         |
+| `ws.send(type, data)`     | Send message             |
+| `ws.on(type, handler)`    | Listen for message type  |
+| `ws.off(type, handler)`   | Remove listener          |
+| `ws.subscribe(channel)`   | Subscribe to channel     |
 | `ws.unsubscribe(channel)` | Unsubscribe from channel |
 
 ---
@@ -164,10 +164,10 @@ function LiveNotifications() {
 
 ```javascript
 ws.send('auth:login', { token: jwtToken });
-ws.on('auth:success', (data) => {
+ws.on('auth:success', data => {
   console.log('Authenticated as:', data.user);
 });
-ws.on('auth:failed', (data) => {
+ws.on('auth:failed', data => {
   console.error('Auth failed:', data.message);
 });
 ```
@@ -204,20 +204,20 @@ shutdown({ container, registry }) {
 
 ## Message Types (Built-in)
 
-| Message Type | Direction | Purpose |
-|-------------|-----------|---------|
-| `welcome` | Server → Client | Connection established |
-| `ping` | Client → Server | Keep-alive request |
-| `pong` | Server → Client | Keep-alive response |
-| `auth:login` | Client → Server | Authenticate with JWT |
-| `auth:success` | Server → Client | Auth succeeded |
-| `auth:failed` | Server → Client | Auth failed |
-| `auth:logout` | Client → Server | Logout |
-| `channel:subscribe` | Client → Server | Join channel |
-| `channel:subscribed` | Server → Client | Subscription confirmed |
-| `channel:unsubscribe` | Client → Server | Leave channel |
+| Message Type           | Direction       | Purpose                  |
+| ---------------------- | --------------- | ------------------------ |
+| `welcome`              | Server → Client | Connection established   |
+| `ping`                 | Client → Server | Keep-alive request       |
+| `pong`                 | Server → Client | Keep-alive response      |
+| `auth:login`           | Client → Server | Authenticate with JWT    |
+| `auth:success`         | Server → Client | Auth succeeded           |
+| `auth:failed`          | Server → Client | Auth failed              |
+| `auth:logout`          | Client → Server | Logout                   |
+| `channel:subscribe`    | Client → Server | Join channel             |
+| `channel:subscribed`   | Server → Client | Subscription confirmed   |
+| `channel:unsubscribe`  | Client → Server | Leave channel            |
 | `channel:unsubscribed` | Server → Client | Unsubscription confirmed |
-| `error` | Server → Client | Error message |
+| `error`                | Server → Client | Error message            |
 
 Custom message types (e.g., `chat:message`, `notification`) are handled via `registerHandler()`.
 
@@ -248,22 +248,22 @@ ws.connections.forEach((conn, id) => {
 
 ## Security Rules
 
-| Rule | Implementation |
-|------|---------------|
-| **Auth on connect** | Auto-authenticate via httpOnly cookie |
-| **Validate payloads** | `parseMessage()` rejects invalid JSON |
+| Rule                       | Implementation                                               |
+| -------------------------- | ------------------------------------------------------------ |
+| **Auth on connect**        | Auto-authenticate via httpOnly cookie                        |
+| **Validate payloads**      | `parseMessage()` rejects invalid JSON                        |
 | **Channel access control** | Protected channels require auth, private requires user match |
-| **Rate limiting** | Heartbeat interval detects dead connections |
-| **No secrets in messages** | Never send tokens or passwords over WS |
+| **Rate limiting**          | Heartbeat interval detects dead connections                  |
+| **No secrets in messages** | Never send tokens or passwords over WS                       |
 
 ---
 
 ## Related Skills & Workflows
 
-| Need | Skill / Workflow |
-|------|-----------------|
-| Module integration | `module-development` skill |
+| Need                  | Skill / Workflow              |
+| --------------------- | ----------------------------- |
+| Module integration    | `module-development` skill    |
 | Extension integration | `extension-development` skill |
-| Security audit | `security-compliance` skill |
-| Frontend design | `frontend-design` skill |
-| Debugging | `/debug` workflow |
+| Security audit        | `security-compliance` skill   |
+| Frontend design       | `frontend-design` skill       |
+| Debugging             | `/debug` workflow             |

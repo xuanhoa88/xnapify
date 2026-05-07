@@ -10,7 +10,8 @@ import path from 'path';
 import isArray from 'lodash/isArray.js';
 import mergeWith from 'lodash/mergeWith.js';
 
-import appConfig from './config.js';
+import appConfig from '../config.js';
+
 import { eslintConfigs } from './registry.factory.js';
 
 const patterns = {
@@ -56,6 +57,7 @@ const config = {
     __TEST__: 'readonly',
     __EXTENSION_ID__: 'readonly',
     __EXTENSION_DESCRIPTION__: 'readonly',
+    __non_webpack_require__: 'readonly',
   },
 
   rules: {
@@ -137,23 +139,6 @@ const config = {
         AssignmentExpression: { object: false, array: false },
       },
       { enforceForRenamedProperties: false },
-    ],
-
-    /* Syntax restrictions */
-    'no-restricted-syntax': [
-      'error',
-      {
-        selector: 'LogicalExpression[operator="??"]',
-        message: 'Nullish coalescing (??) is not allowed.',
-      },
-      {
-        selector: 'AssignmentExpression[operator="??="]',
-        message: 'Nullish coalescing assignment (??=) is not allowed.',
-      },
-      {
-        selector: 'ChainExpression',
-        message: 'Optional chaining (?.) is not allowed.',
-      },
     ],
 
     /* Style Enforcement */

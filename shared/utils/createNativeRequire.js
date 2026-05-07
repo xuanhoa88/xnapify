@@ -35,11 +35,21 @@ import { createRequire as nodeCreateRequire } from 'module';
  * @returns {string} Normalized specifier safe for `createRequire`
  */
 function resolveSpecifier(specifier) {
-  // Explicit specifier provided — use as-is (both paths and URLs work)
-  if (specifier) return specifier;
+  // Bundled environment: __filename is defined by Rspack/Webpack and is reliable
+  // at runtime (set to false mock in base.config.js).
+  // We prioritize it over the caller's `import.meta.url` specifier because Rspack
+  // statically replaces import.meta.url with the build-time path (e.g., /build/...)
+  // which causes module resolution failures in production containers.
+  if (
+    typeof __non_webpack_require__ !== 'undefined' &&
+    typeof __filename !== 'undefined' &&
+    __filename
+  ) {
+    return __filename;
+  }
 
-  // Bundled environment: __filename is defined by Rspack/Webpack
-  if (typeof __filename !== 'undefined' && __filename) return __filename;
+  // Explicit specifier provided — use as-is (both paths and URLs work in native ESM)
+  if (specifier) return specifier;
 
   // Fallback: derive from cwd (tests, scripts)
   return `${process.cwd()}/`;

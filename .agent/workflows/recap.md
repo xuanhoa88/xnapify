@@ -3,11 +3,13 @@ description: Review recent changes and wrap up the work
 ---
 
 ## Context
-When executing the `/recap` workflow, your role is to summarize what was recently done. 
+
+When executing the `/recap` workflow, your role is to summarize what was recently done.
 
 **IMPORTANT**: **Do not** start implementing any new features.
 
 ## Process
+
 1. **Analyze:** Check the current `git diff`, staging area, and most recent commits. Review the modified files using `/scout` patterns if necessary.
 2. **Cross-reference:** Map the changes back against the existing implementation plan if one exists. Validate if all targets were hit.
 3. **Generate Digest:** Provide a crisp formatting of changes:

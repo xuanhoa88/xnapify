@@ -43,7 +43,7 @@ RUN node tools/npm/preboot.js --db sqlite --install \
 # XNAPIFY_HOST must be 0.0.0.0 inside Docker so the server binds to all interfaces
 # (Webpack DefinePlugin bakes XNAPIFY_* env vars into the bundle at build time)
 # Limit Node memory to 4GB and Webpack/Terser parallelism to prevent OOM errors inside VMs/Containers
-RUN NODE_OPTIONS="--max-old-space-size=4096" XNAPIFY_MAX_WORKERS=2 XNAPIFY_HOST=0.0.0.0 npm run build
+RUN NODE_OPTIONS="--max-old-space-size=1024" XNAPIFY_MAX_WORKERS=1 XNAPIFY_HOST=0.0.0.0 npm run build
 
 # =============================================================================
 # Production Stage

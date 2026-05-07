@@ -58,25 +58,23 @@ Extensions follow a well-defined phase-sequential lifecycle. Each phase runs for
 1. **Directory Structure:** Create `src/extensions/[extension-name]/`. Subdirectories include `api/`, `views/`, and `translations/`.
 
 2. **Backend Entry (`api/index.js`):**
-
    - Export an object containing lifecycle hooks and declarative hooks.
 
    **Declarative Hooks (auto-processed by the framework):**
-
    - **`models()`**: Returns a `import.meta.webpackContext` for model factories. Models are auto-registered into the global `ModelRegistry` via `discover()`. No manual registration needed.
    - **`migrations()`**: Returns a `import.meta.webpackContext` for migration files. Auto-run with `__EXTENSION_ID__` prefix (idempotent).
    - **`seeds()`**: Returns a `import.meta.webpackContext` for seed files. Auto-run with `__EXTENSION_ID__` prefix (idempotent).
    - **`translations()`**: Returns a `import.meta.webpackContext` for i18n JSON files (or `[context, customNamespace]`).
 
    **Lifecycle Hooks:**
-
    - **`install({ container })`**: Runs ONCE when installed. Currently a no-op since migrations/seeds are now declarative.
    - **`boot({ container, registry })`**: Re-runs on every server boot. Register IPC handlers and subscribe to Backend Hooks. Models, migrations, and seeds are already processed before this runs.
    - **`uninstall({ container })`**: Runs ONCE when deleted. Undo migrations/seeds via `db.connection.revertSeeds()`/`revertMigrations()`.
    - **`shutdown({ container, registry })`**: Called on deactivation. MUST unsubscribe from all hooks (`.off()`). Extension models are auto-unregistered from the `ModelRegistry`. Translations are auto-cleaned via `removeNamespace()`.
 
    **Modifying Core DB Models (Dynamic Model Injection):**
-   Extensions can inject columns into core models (like `User` or `Setting`) securely *before* the models are constructed by subscribing to their `define` hook during the `providers()` phase:
+   Extensions can inject columns into core models (like `User` or `Setting`) securely _before_ the models are constructed by subscribing to their `define` hook during the `providers()` phase:
+
    ```javascript
    export async function providers({ container }) {
      const hook = container.resolve('hook');
@@ -86,10 +84,10 @@ Extensions follow a well-defined phase-sequential lifecycle. Each phase runs for
      });
    }
    ```
-   *Note: Ensure your extension's migrations actually alter the core database table to support your new field!*
+
+   _Note: Ensure your extension's migrations actually alter the core database table to support your new field!_
 
 3. **Frontend Entry (`views/index.js`):**
-
    - Export an object containing `translations`, `providers`, `boot`, and `shutdown`.
    - **`providers({ container })`**: Use `store.injectReducer(name, reducer)` to inject Redux state. Called once per bootstrap (before routes render).
    - **`boot(registry)`**: Use `registry.registerSlot('extension.point', Component)` to inject UI. Use `registry.registerHook` to inject validation schema extenders or data middleware.
@@ -115,6 +113,7 @@ Extensions follow a well-defined phase-sequential lifecycle. Each phase runs for
    - Extensions that only provide Node-RED nodes do NOT need `"main"` or `"browser"` in `package.json` — the `"nodered"` key is a standalone valid entry point
    - Optional: add predefined flows in `node-red/flows/*.json` (JSON arrays) — these are auto-injected into the Node-RED canvas
    - Reference: `src/extensions/test-hello-plugin/` for a working example
+
 ## Router Connection (Plug & Play)
 
 Extension API and view routes are connected symmetrically:
@@ -244,7 +243,10 @@ Extensions that add global configurations to the `Setting` table automatically r
 // views/index.js
 export default {
   translations() {
-    return import.meta.webpackContext('../translations', { recursive: false, regExp: /\.json$/i });
+    return import.meta.webpackContext('../translations', {
+      recursive: false,
+      regExp: /\.json$/i,
+    });
   },
 
   boot({ registry }) {

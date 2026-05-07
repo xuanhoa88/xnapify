@@ -17,15 +17,15 @@ This skill guides creation of distinctive, production-grade frontend interfaces 
 
 **Read REQUIRED files always, OPTIONAL only when needed:**
 
-| File | Status | When to Read |
-|------|--------|--------------|
-| [ux-psychology.md](ux-psychology.md) | 🔴 **REQUIRED** | Always read first! |
-| [color-system.md](color-system.md) | ⚪ Optional | Color/palette decisions |
-| [typography-system.md](typography-system.md) | ⚪ Optional | Font selection/pairing |
-| [visual-effects.md](visual-effects.md) | ⚪ Optional | Glassmorphism, shadows, gradients |
-| [animation-guide.md](animation-guide.md) | ⚪ Optional | Animation needed |
-| [motion-graphics.md](motion-graphics.md) | ⚪ Optional | Lottie, GSAP, 3D |
-| [decision-trees.md](decision-trees.md) | ⚪ Optional | Context templates |
+| File                                         | Status          | When to Read                      |
+| -------------------------------------------- | --------------- | --------------------------------- |
+| [ux-psychology.md](ux-psychology.md)         | 🔴 **REQUIRED** | Always read first!                |
+| [color-system.md](color-system.md)           | ⚪ Optional     | Color/palette decisions           |
+| [typography-system.md](typography-system.md) | ⚪ Optional     | Font selection/pairing            |
+| [visual-effects.md](visual-effects.md)       | ⚪ Optional     | Glassmorphism, shadows, gradients |
+| [animation-guide.md](animation-guide.md)     | ⚪ Optional     | Animation needed                  |
+| [motion-graphics.md](motion-graphics.md)     | ⚪ Optional     | Lottie, GSAP, 3D                  |
+| [decision-trees.md](decision-trees.md)       | ⚪ Optional     | Context templates                 |
 
 > 🔴 **ux-psychology.md = ALWAYS READ. Others = only if relevant.**
 
@@ -35,8 +35,8 @@ This skill guides creation of distinctive, production-grade frontend interfaces 
 
 **Execute these for audits (don't read, just run):**
 
-| Script | Purpose | Usage |
-|--------|---------|-------|
+| Script               | Purpose                             | Usage                                    |
+| -------------------- | ----------------------------------- | ---------------------------------------- |
 | `scripts/uxAudit.js` | UX Psychology & Accessibility Audit | `node scripts/uxAudit.js <project_path>` |
 
 ---
@@ -48,26 +48,29 @@ This skill guides creation of distinctive, production-grade frontend interfaces 
 ### When User Prompt is Vague, ASK:
 
 **Color not specified?** Ask:
+
 > "What color palette do you prefer? (blue/green/orange/neutral/other?)"
 
-**Style not specified?** Ask: 
+**Style not specified?** Ask:
+
 > "What style are you going for? (minimal/bold/retro/futuristic/organic?)"
 
 **Layout not specified?** Ask:
+
 > "Do you have a layout preference? (single column/grid/asymmetric/full-width?)"
 
 ### ⛔ DEFAULT TENDENCIES TO AVOID (ANTI-SAFE HARBOR):
 
-| AI Default Tendency | Why It's Bad | Think Instead |
-|---------------------|--------------|---------------|
-| **Bento Grids (Modern Cliché)** | Used in every AI design | Why does this content NEED a grid? |
-| **Hero Split (Left/Right)** | Predictable & Boring | How about Massive Typography or Vertical Narrative? |
-| **Mesh/Aurora Gradients** | The "new" lazy background | What's a radical color pairing? |
-| **Glassmorphism** | AI's idea of "premium" | How about solid, high-contrast flat? |
-| **Deep Cyan / Fintech Blue** | Safe harbor from purple ban | Why not Red, Black, or Neon Green? |
-| **"Orchestrate / Empower"** | AI-generated copywriting | How would a human say this? |
-| Dark background + neon glow | Overused, "AI look" | What does the BRAND actually need? |
-| **Rounded everything** | Generic/Safe | Where can I use sharp, brutalist edges? |
+| AI Default Tendency             | Why It's Bad                | Think Instead                                       |
+| ------------------------------- | --------------------------- | --------------------------------------------------- |
+| **Bento Grids (Modern Cliché)** | Used in every AI design     | Why does this content NEED a grid?                  |
+| **Hero Split (Left/Right)**     | Predictable & Boring        | How about Massive Typography or Vertical Narrative? |
+| **Mesh/Aurora Gradients**       | The "new" lazy background   | What's a radical color pairing?                     |
+| **Glassmorphism**               | AI's idea of "premium"      | How about solid, high-contrast flat?                |
+| **Deep Cyan / Fintech Blue**    | Safe harbor from purple ban | Why not Red, Black, or Neon Green?                  |
+| **"Orchestrate / Empower"**     | AI-generated copywriting    | How would a human say this?                         |
+| Dark background + neon glow     | Overused, "AI look"         | What does the BRAND actually need?                  |
+| **Rounded everything**          | Generic/Safe                | Where can I use sharp, brutalist edges?             |
 
 > 🔴 **"Every 'safe' structure you choose brings you one step closer to a generic template. TAKE RISKS."**
 
@@ -77,27 +80,27 @@ This skill guides creation of distinctive, production-grade frontend interfaces 
 
 Before coding, understand the context and commit to a BOLD aesthetic direction:
 
-| Constraint | Question | Why It Matters |
-|------------|----------|----------------|
-| **Purpose** | What problem does this solve? | Drives feature prioritization |
-| **Tone** | What's the aesthetic extreme? | Brutally minimal, maximalist chaos, retro-futuristic, elegant luxury? |
-| **Content** | Ready or placeholder? | Affects layout flexibility |
-| **Brand** | Existing guidelines? | May dictate colors/fonts |
-| **Tech** | What stack? | Affects capabilities |
-| **Differentiation** | What makes it UNFORGETTABLE? | What's the one thing someone will remember? |
+| Constraint          | Question                      | Why It Matters                                                        |
+| ------------------- | ----------------------------- | --------------------------------------------------------------------- |
+| **Purpose**         | What problem does this solve? | Drives feature prioritization                                         |
+| **Tone**            | What's the aesthetic extreme? | Brutally minimal, maximalist chaos, retro-futuristic, elegant luxury? |
+| **Content**         | Ready or placeholder?         | Affects layout flexibility                                            |
+| **Brand**           | Existing guidelines?          | May dictate colors/fonts                                              |
+| **Tech**            | What stack?                   | Affects capabilities                                                  |
+| **Differentiation** | What makes it UNFORGETTABLE?  | What's the one thing someone will remember?                           |
 
 **CRITICAL**: Choose a clear conceptual direction and execute it with precision. Bold maximalism and refined minimalism both work - the key is intentionality, not intensity.
 
 ### Audience → Design Approach
 
-| Audience | Think About |
-|----------|-------------|
-| **Gen Z** | Bold, fast, mobile-first, authentic |
-| **Millennials** | Clean, minimal, value-driven |
-| **Gen X** | Familiar, trustworthy, clear |
-| **Boomers** | Readable, high contrast, simple |
-| **B2B** | Professional, data-focused, trust |
-| **Luxury** | Restrained elegance, whitespace |
+| Audience        | Think About                         |
+| --------------- | ----------------------------------- |
+| **Gen Z**       | Bold, fast, mobile-first, authentic |
+| **Millennials** | Clean, minimal, value-driven        |
+| **Gen X**       | Familiar, trustworthy, clear        |
+| **Boomers**     | Readable, high contrast, simple     |
+| **B2B**         | Professional, data-focused, trust   |
+| **Luxury**      | Restrained elegance, whitespace     |
 
 ---
 
@@ -105,13 +108,13 @@ Before coding, understand the context and commit to a BOLD aesthetic direction:
 
 ### Core Laws (Internalize These)
 
-| Law | Principle | Application |
-|-----|-----------|-------------|
-| **Hick's Law** | More choices = slower decisions | Limit options, use progressive disclosure |
-| **Fitts' Law** | Bigger + closer = easier to click | Size CTAs appropriately |
-| **Miller's Law** | ~7 items in working memory | Chunk content into groups |
-| **Von Restorff** | Different = memorable | Make CTAs visually distinct |
-| **Serial Position** | First/last remembered most | Key info at start/end |
+| Law                 | Principle                         | Application                               |
+| ------------------- | --------------------------------- | ----------------------------------------- |
+| **Hick's Law**      | More choices = slower decisions   | Limit options, use progressive disclosure |
+| **Fitts' Law**      | Bigger + closer = easier to click | Size CTAs appropriately                   |
+| **Miller's Law**    | ~7 items in working memory        | Chunk content into groups                 |
+| **Von Restorff**    | Different = memorable             | Make CTAs visually distinct               |
+| **Serial Position** | First/last remembered most        | Key info at start/end                     |
 
 ### Emotional Design Levels
 
@@ -179,11 +182,11 @@ Choose fonts that are beautiful, unique, and interesting. Avoid generic fonts li
 
 ### Scale Selection
 
-| Content Type | Scale Ratio | Feel |
-|--------------|-------------|------|
-| General web | 1.25 | Balanced (most common) |
-| Editorial | 1.333 | Readable, spacious |
-| Hero/display | 1.5-1.618 | Dramatic impact |
+| Content Type | Scale Ratio | Feel                   |
+| ------------ | ----------- | ---------------------- |
+| General web  | 1.25        | Balanced (most common) |
+| Editorial    | 1.333       | Readable, spacious     |
+| Hero/display | 1.5-1.618   | Dramatic impact        |
 
 ### Readability Rules
 
@@ -218,7 +221,7 @@ Elevation concept:
 
 ## 7. Animation Principles & Motion
 
-Use animations for effects and micro-interactions. Prioritize CSS-only solutions for HTML, or motion libraries when available. 
+Use animations for effects and micro-interactions. Prioritize CSS-only solutions for HTML, or motion libraries when available.
 Focus on high-impact moments: one well-orchestrated page load with staggered reveals (animation-delay) creates more delight than scattered micro-interactions. Use scroll-triggering and hover states that surprise.
 
 ### Timing Concept
@@ -232,16 +235,17 @@ Duration based on:
 
 ### Easing Selection
 
-| Action | Easing | Why |
-|--------|--------|-----|
+| Action   | Easing   | Why                   |
+| -------- | -------- | --------------------- |
 | Entering | Ease-out | Decelerate, settle in |
-| Leaving | Ease-in | Accelerate, exit |
+| Leaving  | Ease-in  | Accelerate, exit      |
 
 ---
 
 ## 8. "Wow Factor" Checklist
 
 ### Premium Indicators
+
 - [ ] Generous whitespace OR clearly intentional maximalist density
 - [ ] Distinctive, non-default typography choices
 - [ ] Smooth, purposeful high-impact animations
@@ -250,6 +254,7 @@ Duration based on:
 - [ ] Atmospheric backgrounds with textures or intentional shadows
 
 ### Trust Builders
+
 - [ ] Clear value proposition
 - [ ] Professional aesthetics
 - [ ] Consistent design language
@@ -260,6 +265,7 @@ Duration based on:
 ## 9. Anti-Patterns (What NOT to Do)
 
 ### ❌ Generic AI Slop Aesthetics (AVOID!)
+
 - Overusing **Inter, Roboto, Arial, Space Grotesk, or system fonts**.
 - **Purple gradients on white backgrounds.**
 - Cookie-cutter design that lacks context-specific character.
@@ -268,6 +274,7 @@ Duration based on:
 - Dark + neon default for everything.
 
 ### ❌ Lazy Design Indicators
+
 - Default system fonts without consideration.
 - Stock imagery that doesn't match the vibe.
 - Inconsistent spacing.
@@ -326,12 +333,12 @@ For deeper guidance on specific areas:
 
 ## Related Skills & Workflows
 
-| Need | Skill / Workflow |
-|------|-----------------|
-| CSS Modules (class naming) | `coding-standards` skill |
-| i18n for user-facing text | `i18n-localization` skill |
-| React component patterns | `module-development` skill |
-| Extension UI injection (slots) | `extension-development` skill |
-| Accessibility validation | `scripts/a11yCheck.js` (this skill) |
-| Code review (CSS section) | `code-review` skill (§8) |
-| Adding a page route | `/add-view` workflow |
+| Need                           | Skill / Workflow                    |
+| ------------------------------ | ----------------------------------- |
+| CSS Modules (class naming)     | `coding-standards` skill            |
+| i18n for user-facing text      | `i18n-localization` skill           |
+| React component patterns       | `module-development` skill          |
+| Extension UI injection (slots) | `extension-development` skill       |
+| Accessibility validation       | `scripts/a11yCheck.js` (this skill) |
+| Code review (CSS section)      | `code-review` skill (§8)            |
+| Adding a page route            | `/add-view` workflow                |

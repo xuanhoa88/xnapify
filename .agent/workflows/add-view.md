@@ -116,15 +116,18 @@ import Form, { useFormContext } from '@shared/renderer/components/Form';
 import Button from '@shared/renderer/components/Button';
 
 // 1. (Optional) Zod Schema Definition
-const schema = ({ z, i18n }) => z.object({
-  email: z.string().email(i18n.t('error.email', 'Invalid email')),
-});
+const schema = ({ z, i18n }) =>
+  z.object({
+    email: z.string().email(i18n.t('error.email', 'Invalid email')),
+  });
 
 // 2. Context-Aware Submit Button
 function SaveButton() {
-  const { formState: { isDirty, isSubmitting } } = useFormContext();
+  const {
+    formState: { isDirty, isSubmitting },
+  } = useFormContext();
   return (
-    <Button type="submit" variant="primary" disabled={!isDirty || isSubmitting}>
+    <Button type='submit' variant='primary' disabled={!isDirty || isSubmitting}>
       {isSubmitting ? 'Saving...' : 'Save Changes'}
     </Button>
   );
@@ -140,10 +143,10 @@ function ProfileForm({ initialData }) {
 
   return (
     <Form defaultValues={initialData} schema={schema} onSubmit={handleSave}>
-      <Form.Input name="email" label="Email Address" />
-      <Form.Password name="password" label="New Password" />
-      <Form.Switch name="notifications" label="Enable Notifications" />
-      <Form.Textarea name="bio" rows={4} />
+      <Form.Input name='email' label='Email Address' />
+      <Form.Password name='password' label='New Password' />
+      <Form.Switch name='notifications' label='Enable Notifications' />
+      <Form.Textarea name='bio' rows={4} />
       <SaveButton />
     </Form>
   );
@@ -357,20 +360,20 @@ export default {ComponentName};
 
 ### PropTypes Quick Reference
 
-| Type | Usage |
-|------|-------|
-| `PropTypes.string` | String value |
-| `PropTypes.number` | Number value |
-| `PropTypes.bool` | Boolean value |
-| `PropTypes.func` | Function/callback |
-| `PropTypes.node` | Renderable content |
-| `PropTypes.element` | React element |
-| `PropTypes.object` | Object (prefer `shape`) |
-| `PropTypes.array` | Array (prefer `arrayOf`) |
-| `PropTypes.shape({...})` | Object with specific shape |
-| `PropTypes.arrayOf(Type)` | Array of specific type |
-| `PropTypes.oneOf([...])` | Enum values |
-| `PropTypes.oneOfType([...])` | Union types |
+| Type                         | Usage                      |
+| ---------------------------- | -------------------------- |
+| `PropTypes.string`           | String value               |
+| `PropTypes.number`           | Number value               |
+| `PropTypes.bool`             | Boolean value              |
+| `PropTypes.func`             | Function/callback          |
+| `PropTypes.node`             | Renderable content         |
+| `PropTypes.element`          | React element              |
+| `PropTypes.object`           | Object (prefer `shape`)    |
+| `PropTypes.array`            | Array (prefer `arrayOf`)   |
+| `PropTypes.shape({...})`     | Object with specific shape |
+| `PropTypes.arrayOf(Type)`    | Array of specific type     |
+| `PropTypes.oneOf([...])`     | Enum values                |
+| `PropTypes.oneOfType([...])` | Union types                |
 
 Append `.isRequired` to make any prop mandatory.
 

@@ -23,11 +23,9 @@ export function init({ store }) {
   store.injectReducer(SLICE_NAME, reducer);
 }
 
-/**
- * Register menu item for this route
- */
-export function setup({ store, i18n }) {
-  const registerHubMenu = (badgeCount = 0) => {
+const createRegisterHubMenu =
+  (store, i18n) =>
+  (badgeCount = 0) => {
     store.dispatch(
       registerMenu({
         ns: 'admin',
@@ -55,6 +53,12 @@ export function setup({ store, i18n }) {
       }),
     );
   };
+
+/**
+ * Register menu item for this route
+ */
+export function setup({ store, i18n }) {
+  createRegisterHubMenu(store, i18n)(0);
 }
 
 /**
@@ -98,6 +102,8 @@ export function mount({ store, i18n, path, fetch }) {
     ),
   );
 
+  const registerHubMenu = createRegisterHubMenu(store, i18n);
+
   // Register initially without badge
   registerHubMenu(0);
 
@@ -109,7 +115,7 @@ export function mount({ store, i18n, path, fetch }) {
         const count = (res.data && res.data.count) || 0;
         if (count > 0) registerHubMenu(count);
       })
-      .catch(() => { }); // Ignore network errors
+      .catch(() => {}); // Ignore network errors
 
     // 2. Subscribe to WebSocket updates
     // Use a slight timeout to ensure WS client is initialized

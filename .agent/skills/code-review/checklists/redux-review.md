@@ -49,7 +49,7 @@ export const fetchItems = createAsyncThunk(
 
 ```javascript
 // Correct pattern:
-export const getItems = (state) => {
+export const getItems = state => {
   const slice = state[SLICE_NAME];
   return slice && slice.data ? slice.data.items : [];
 };

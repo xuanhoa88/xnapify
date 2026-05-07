@@ -55,7 +55,7 @@ src/extensions/[extension-name]/
 
 ### 2. Registering Translations
 
-Translations are dynamically discovered by the global `AppRouter`. 
+Translations are dynamically discovered by the global `AppRouter`.
 Any App or Extension that provides `.json` translation files must explicitly export a `translations()` hook inside its respective index loop (e.g. `src/apps/[module]/views/index.js` or `src/apps/[module]/views/(default)/_route.js`):
 
 ```javascript
@@ -72,7 +72,7 @@ const translationsContext = import.meta.webpackContext(
  * If a custom namespace is omitted, it defaults to the module's folder name.
  */
 export function translations() {
-  return [translationsContext]; 
+  return [translationsContext];
 }
 ```
 
@@ -165,18 +165,18 @@ Before shipping:
 
 ## Script
 
-| Script                    | Purpose                                         | Command                                         |
-| ------------------------- | ----------------------------------------------- | ----------------------------------------------- |
+| Script                 | Purpose                                         | Command                                    |
+| ---------------------- | ----------------------------------------------- | ------------------------------------------ |
 | `scripts/i18nCheck.js` | Detect hardcoded strings & missing translations | `node scripts/i18nCheck.js <project_path>` |
 
 ---
 
 ## Related Skills & Workflows
 
-| Need | Skill / Workflow |
-|------|-----------------|
-| Module translation hooks | `module-development` skill |
-| Extension translations | `extension-development` skill |
-| Code review i18n checks | `code-review` skill (§12) |
-| Frontend design (text, fonts) | `frontend-design` skill |
-| Clean code (no hardcoded strings) | `coding-standards` skill |
+| Need                              | Skill / Workflow              |
+| --------------------------------- | ----------------------------- |
+| Module translation hooks          | `module-development` skill    |
+| Extension translations            | `extension-development` skill |
+| Code review i18n checks           | `code-review` skill (§12)     |
+| Frontend design (text, fonts)     | `frontend-design` skill       |
+| Clean code (no hardcoded strings) | `coding-standards` skill      |

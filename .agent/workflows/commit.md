@@ -9,11 +9,13 @@ When asked to commit, save progress, or push changes, follow this workflow.
 Before committing, verify the code is clean:
 
 // turbo
+
 ```bash
 npm test
 ```
 
 // turbo
+
 ```bash
 npm run lint
 ```
@@ -39,6 +41,7 @@ The pre-commit hook automatically runs `tools/git/secretScanner.js` on all stage
 **Manual scan (full repo):**
 
 // turbo
+
 ```bash
 node tools/git/secretScanner.js --all --fix
 ```
@@ -46,11 +49,13 @@ node tools/git/secretScanner.js --all --fix
 ## 3. Review Changes
 
 // turbo
+
 ```bash
 git status
 ```
 
 // turbo
+
 ```bash
 git diff --stat
 ```
@@ -71,7 +76,8 @@ git add <file1> <file2> ...
 
 > [!WARNING]
 > **File Renaming & Case Sensitivity**
-> If you are renaming a file where *only* the capitalization changes (e.g., `file.md` to `FILE.md` or vice versa), macOS and Windows filesystems will trick Git into ignoring the change. You **MUST** force Git to register the casing change via terminal:
+> If you are renaming a file where _only_ the capitalization changes (e.g., `file.md` to `FILE.md` or vice versa), macOS and Windows filesystems will trick Git into ignoring the change. You **MUST** force Git to register the casing change via terminal:
+>
 > ```bash
 > git mv -f <old_name> <new_name>
 > ```
@@ -79,6 +85,7 @@ git add <file1> <file2> ...
 **Run the auto-fixer to detect and correct case mismatches implicitly:**
 
 // turbo
+
 ```bash
 node tools/git/checkCasing.js
 ```
@@ -93,16 +100,16 @@ Use [Conventional Commits](https://www.conventionalcommits.org/) format:
 
 **Types:**
 
-| Type | Use When |
-|---|---|
-| `feat` | Adding new functionality |
-| `fix` | Fixing a bug |
-| `docs` | Documentation only |
-| `refactor` | Code change without behavior change |
-| `test` | Adding or updating tests |
-| `chore` | Dependencies, configs, tooling |
-| `style` | Formatting, whitespace (no logic change) |
-| `perf` | Performance improvement |
+| Type       | Use When                                 |
+| ---------- | ---------------------------------------- |
+| `feat`     | Adding new functionality                 |
+| `fix`      | Fixing a bug                             |
+| `docs`     | Documentation only                       |
+| `refactor` | Code change without behavior change      |
+| `test`     | Adding or updating tests                 |
+| `chore`    | Dependencies, configs, tooling           |
+| `style`    | Formatting, whitespace (no logic change) |
+| `perf`     | Performance improvement                  |
 
 **Scope** = module or area affected (optional but recommended):
 
@@ -117,6 +124,7 @@ git commit -m "chore: upgrade sequelize to 6.38"
 ```
 
 **Rules:**
+
 - Subject line ≤ 72 characters
 - Imperative mood ("add" not "added", "fix" not "fixed")
 - No period at end
@@ -125,6 +133,7 @@ git commit -m "chore: upgrade sequelize to 6.38"
 ## 6. Create Branch (if on main)
 
 // turbo
+
 ```bash
 git branch --show-current
 ```
@@ -136,6 +145,7 @@ git checkout -b <type>/<short-description>
 ```
 
 **Branch naming:**
+
 - `feat/password-reset`
 - `fix/session-cookie-domain`
 - `refactor/webhooks-module`

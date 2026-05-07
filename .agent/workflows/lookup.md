@@ -3,11 +3,13 @@ description: Search library or framework documentation externally
 ---
 
 ## Context
+
 When executing the `/lookup` workflow, you are required to fetch the most up-to-date documentation on a provided framework or library before making coding assumptions.
 
 ## Process
+
 1. **Parse Request:** Understand which library or framework the user needs context for.
-2. **Locate Documents:** 
+2. **Locate Documents:**
    - Search the web for the official docs.
    - Whenever possible, try to prioritize reading the `llms.txt` or `llms-full.txt` (common pattern on modern frameworks like context7/llms implementation) to get a clean, LLM-optimized view of the library specifications.
 3. **Synthesize Findings:**

@@ -3,9 +3,11 @@ description: Fast codebase scouting using parallel agents
 ---
 
 ## Context
+
 When executing the `/scout` workflow, your role is to perform fast, token-efficient codebase investigation to find files related to a specific feature or keyword before making architectural changes.
 
 ## When to Use
+
 - Beginning work on a feature spanning multiple directories.
 - Needing to locate specific functionality or understand how a feature is wired up.
 - Starting a debugging session needing file relationship understanding.

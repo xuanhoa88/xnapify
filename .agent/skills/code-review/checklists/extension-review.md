@@ -33,12 +33,12 @@ Quick-reference checklist for reviewing `src/extensions/[extension-name]` code.
 
 Count and match:
 
-| `boot()` Registration | `shutdown()` Cleanup |
-|------------------------|---------------------|
+| `boot()` Registration        | `shutdown()` Cleanup           |
+| ---------------------------- | ------------------------------ |
 | `registry.registerSlot(...)` | `registry.unregisterSlot(...)` |
 | `registry.registerHook(...)` | `registry.unregisterHook(...)` |
-| `hook('ns').on(...)` | `hook('ns').off(...)` |
-| `emitter.on(...)` | `emitter.off(...)` |
+| `hook('ns').on(...)`         | `hook('ns').off(...)`          |
+| `emitter.on(...)`            | `emitter.off(...)`             |
 
 **Every registration MUST have a corresponding cleanup. Count them.**
 
@@ -54,7 +54,6 @@ Count and match:
 ## Conventions
 
 - [ ] Responses use `http.sendSuccess()` etc. — never raw `res.json()`
-- [ ] No `??`, `?.`, `??=` (ESLint-banned)
 - [ ] Import order follows ESLint groups
 - [ ] File naming matches convention
 - [ ] Constants use SCREAMING_SNAKE_CASE

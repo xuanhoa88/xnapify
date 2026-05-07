@@ -16,11 +16,13 @@ The spec is the source of truth. Every line of code you write must trace back to
 ## When to Use
 
 **Always when:**
+
 - Modifying an existing module or engine that has a colocated `SPEC.md`
 - Executing tasks from an implementation plan (created by `implementation-planning` skill)
 - Building a new feature from a design spec (created by `design-thinking` skill)
 
 **Exceptions (ask your human partner):**
+
 - Hotfixes with no spec (write a retroactive spec after)
 - Trivial config changes
 
@@ -40,14 +42,14 @@ digraph rt_pipeline {
 }
 ```
 
-| Skill | Governs |
-|-------|---------|
-| **design-thinking** | What to build, why, and how (design) |
-| **implementation-planning** | How to break it into bite-sized tasks |
+| Skill                        | Governs                                                                |
+| ---------------------------- | ---------------------------------------------------------------------- |
+| **design-thinking**          | What to build, why, and how (design)                                   |
+| **implementation-planning**  | How to break it into bite-sized tasks                                  |
 | **requirement-traceability** | That each task traces to the spec, nothing is missed, nothing is added |
-| **TDD** | That each piece of code has a failing test first |
+| **TDD**                      | That each piece of code has a failing test first                       |
 
-**Requirement traceability wraps TDD.** When traceability says "implement this task," you use TDD to write it. Traceability ensures you implemented the *right* task from the *right* spec.
+**Requirement traceability wraps TDD.** When traceability says "implement this task," you use TDD to write it. Traceability ensures you implemented the _right_ task from the _right_ spec.
 
 ---
 
@@ -69,18 +71,19 @@ xnapify has two types of specification documents. The traceability process appli
 
 Every module, engine, shared library, and extension has a `SPEC.md` colocated in its root directory. These describe **current implementation** — what the code does today.
 
-| Pattern | Example |
-|---------|---------|
-| `src/apps/<module>/SPEC.md` | `src/apps/auth/SPEC.md` |
-| `shared/api/engines/<engine>/SPEC.md` | `shared/api/engines/db/SPEC.md` |
-| `shared/<library>/SPEC.md` | `shared/container/SPEC.md` |
-| `src/extensions/<ext>/SPEC.md` | `src/extensions/profile-plugin/SPEC.md` |
-| `src/bootstrap/SPEC.md` | Bootstrap architecture |
-| `src/SPEC.md` | Root application architecture |
+| Pattern                               | Example                                 |
+| ------------------------------------- | --------------------------------------- |
+| `src/apps/<module>/SPEC.md`           | `src/apps/auth/SPEC.md`                 |
+| `shared/api/engines/<engine>/SPEC.md` | `shared/api/engines/db/SPEC.md`         |
+| `shared/<library>/SPEC.md`            | `shared/container/SPEC.md`              |
+| `src/extensions/<ext>/SPEC.md`        | `src/extensions/profile-plugin/SPEC.md` |
+| `src/bootstrap/SPEC.md`               | Bootstrap architecture                  |
+| `src/SPEC.md`                         | Root application architecture           |
 
 **Template:** `.agent/templates/SPEC.template.md`
 
 **Standard sections:**
+
 1. Objective
 2. Database Modifications (`api/models`)
 3. API Routes & Controllers (`api/`)
@@ -110,11 +113,11 @@ src/apps/<module>/
 
 ### Which tier applies?
 
-| Situation | Spec Source | Where |
-|-----------|------------|-------|
-| Modifying `src/apps/auth/` | Colocated SPEC.md | `src/apps/auth/SPEC.md` |
-| Adding a feature to `shared/api/engines/db/` | Colocated SPEC.md | `shared/api/engines/db/SPEC.md` |
-| Building a brand-new module from design-thinking | Design spec | `src/apps/<module>/specs/YYYY-MM-DD-*.md` |
+| Situation                                          | Spec Source        | Where                                     |
+| -------------------------------------------------- | ------------------ | ----------------------------------------- |
+| Modifying `src/apps/auth/`                         | Colocated SPEC.md  | `src/apps/auth/SPEC.md`                   |
+| Adding a feature to `shared/api/engines/db/`       | Colocated SPEC.md  | `shared/api/engines/db/SPEC.md`           |
+| Building a brand-new module from design-thinking   | Design spec        | `src/apps/<module>/specs/YYYY-MM-DD-*.md` |
 | Implementing a plan from `implementation-planning` | Plan + design spec | `src/apps/<module>/plans/YYYY-MM-DD-*.md` |
 
 ---
@@ -150,18 +153,18 @@ Create a mental (or written) map connecting spec sections → code files:
 
 **Tier 1 example (colocated SPEC.md):**
 
-| SPEC.md Section | Code Files | Status |
-|----------------|------------|--------|
-| §2 API Routes: `POST /api/auth/login` | `api/controllers/auth.controller.js`, `api/routes/(default)/_route.js` | ☐ |
-| §2 API Routes: `POST /api/auth/register` | `api/controllers/auth.controller.js` | ☐ |
-| §1 Database: `User`, `UserLogin` | `api/models/User.js`, `api/models/UserLogin.js` | ☐ |
+| SPEC.md Section                          | Code Files                                                             | Status |
+| ---------------------------------------- | ---------------------------------------------------------------------- | ------ |
+| §2 API Routes: `POST /api/auth/login`    | `api/controllers/auth.controller.js`, `api/routes/(default)/_route.js` | ☐      |
+| §2 API Routes: `POST /api/auth/register` | `api/controllers/auth.controller.js`                                   | ☐      |
+| §1 Database: `User`, `UserLogin`         | `api/models/User.js`, `api/models/UserLogin.js`                        | ☐      |
 
 **Tier 2 example (design spec):**
 
-| Design Spec Requirement | Plan Task | Files | Status |
-|------------------------|-----------|-------|--------|
-| "Users can upload avatars" | Task 3 | `api/controllers/avatar.controller.js` | ☐ |
-| "Avatars resize to 200×200" | Task 4 | `api/workers/avatar.worker.js` | ☐ |
+| Design Spec Requirement     | Plan Task | Files                                  | Status |
+| --------------------------- | --------- | -------------------------------------- | ------ |
+| "Users can upload avatars"  | Task 3    | `api/controllers/avatar.controller.js` | ☐      |
+| "Avatars resize to 200×200" | Task 4    | `api/workers/avatar.worker.js`         | ☐      |
 
 For large specs, write this to a `task.md` artifact and track it as you go. See `tracking-template.md` in this skill folder for a reusable template.
 
@@ -169,12 +172,12 @@ For large specs, write this to a `task.md` artifact and track it as you go. See 
 
 Before writing any code:
 
-| Check | Question |
-|-------|----------|
-| **Coverage** | Does every spec section/requirement have corresponding code? |
-| **Orphan code** | Does every code file trace to a spec section? |
-| **Missing sections** | Are there coded features not documented in the spec? |
-| **Scope creep** | Are there plan tasks that go beyond the spec? |
+| Check                | Question                                                     |
+| -------------------- | ------------------------------------------------------------ |
+| **Coverage**         | Does every spec section/requirement have corresponding code? |
+| **Orphan code**      | Does every code file trace to a spec section?                |
+| **Missing sections** | Are there coded features not documented in the spec?         |
+| **Scope creep**      | Are there plan tasks that go beyond the spec?                |
 
 Found gaps? Fix the spec (or propose an amendment) before starting.
 
@@ -221,12 +224,12 @@ For colocated specs, point to the exact section number (e.g., "§2 API Routes: `
 
 From the spec section, determine:
 
-| Boundary | Question |
-|----------|----------|
-| **Inputs** | What data does this feature receive? |
-| **Outputs** | What does it produce or change? |
-| **Constraints** | What limitations does the spec define? |
-| **Edge cases** | What error/boundary conditions does the spec mention? |
+| Boundary         | Question                                                  |
+| ---------------- | --------------------------------------------------------- |
+| **Inputs**       | What data does this feature receive?                      |
+| **Outputs**      | What does it produce or change?                           |
+| **Constraints**  | What limitations does the spec define?                    |
+| **Edge cases**   | What error/boundary conditions does the spec mention?     |
 | **Not in scope** | What related things does the spec explicitly NOT include? |
 
 > 🔴 **If the spec is silent on an edge case, do not invent behavior.** Ask your human partner or propose a spec amendment.
@@ -261,12 +264,12 @@ Vague, doesn't prove spec compliance
 
 After implementation, check:
 
-| Check | Question |
-|-------|----------|
-| **Exact match** | Does the code behave exactly as the spec describes? |
-| **No extras** | Did you add behavior the spec doesn't mention? |
+| Check            | Question                                                |
+| ---------------- | ------------------------------------------------------- |
+| **Exact match**  | Does the code behave exactly as the spec describes?     |
+| **No extras**    | Did you add behavior the spec doesn't mention?          |
 | **No shortcuts** | Did you skip any constraint or edge case from the spec? |
-| **Naming** | Do code names match spec terminology? |
+| **Naming**       | Do code names match spec terminology?                   |
 
 ### 5. RECORD — Update Traceability
 
@@ -280,13 +283,13 @@ Mark the task complete in your traceability map. Update `task.md`.
 
 ### Common Causes
 
-| Cause | Example | Response |
-|-------|---------|----------|
-| **Discovery** | "The spec says X, but that won't work because Y" | Propose amendment |
-| **Gold-plating** | "While I'm here, let me also add Z" | Delete Z. It's not in the spec. |
-| **Assumption** | "The spec doesn't mention error handling, so I'll decide" | Ask, don't assume |
-| **Convenience** | "It's easier to implement it slightly differently" | Implement as spec says, or amend |
-| **Stale spec** | "SPEC.md says column X, but code already uses column Y" | Update SPEC.md to match reality, then proceed |
+| Cause            | Example                                                   | Response                                      |
+| ---------------- | --------------------------------------------------------- | --------------------------------------------- |
+| **Discovery**    | "The spec says X, but that won't work because Y"          | Propose amendment                             |
+| **Gold-plating** | "While I'm here, let me also add Z"                       | Delete Z. It's not in the spec.               |
+| **Assumption**   | "The spec doesn't mention error handling, so I'll decide" | Ask, don't assume                             |
+| **Convenience**  | "It's easier to implement it slightly differently"        | Implement as spec says, or amend              |
+| **Stale spec**   | "SPEC.md says column X, but code already uses column Y"   | Update SPEC.md to match reality, then proceed |
 
 ### The Amendment Process
 
@@ -321,15 +324,15 @@ Colocated `SPEC.md` files describe **current implementation**. This means they m
 
 ### When to Update SPEC.md
 
-| Action | Update Needed |
-|--------|--------------|
+| Action                             | Update Needed                      |
+| ---------------------------------- | ---------------------------------- |
 | Adding a new API route to a module | Add to §2 of that module's SPEC.md |
-| Adding a new model column | Add to §1 of that module's SPEC.md |
-| Adding a new worker | Add to §6 of that module's SPEC.md |
-| Changing controller behavior | Update §2 description |
-| Adding a new frontend view | Update §3 |
-| Adding translation keys | Update §4 |
-| Major refactor | Full SPEC.md review |
+| Adding a new model column          | Add to §1 of that module's SPEC.md |
+| Adding a new worker                | Add to §6 of that module's SPEC.md |
+| Changing controller behavior       | Update §2 description              |
+| Adding a new frontend view         | Update §3                          |
+| Adding translation keys            | Update §4                          |
+| Major refactor                     | Full SPEC.md review                |
 
 ### How to Update
 
@@ -373,15 +376,15 @@ Can't check all boxes? You have drift. Fix it.
 
 ## Common Rationalizations
 
-| Excuse | Reality |
-|--------|---------|
-| "The spec didn't cover this edge case" | Ask or amend. Don't invent behavior. |
-| "I improved the spec's approach" | Propose amendment. Don't silently diverge. |
-| "It's just a small addition" | Small unauthorized additions compound into unmaintainable code. |
-| "The SPEC.md is outdated" | Update the SPEC.md first, then update the code. |
-| "Nobody reads the SPEC.md anyway" | The SPEC.md is the contract. AI agents read it every time. |
+| Excuse                                     | Reality                                                                             |
+| ------------------------------------------ | ----------------------------------------------------------------------------------- |
+| "The spec didn't cover this edge case"     | Ask or amend. Don't invent behavior.                                                |
+| "I improved the spec's approach"           | Propose amendment. Don't silently diverge.                                          |
+| "It's just a small addition"               | Small unauthorized additions compound into unmaintainable code.                     |
+| "The SPEC.md is outdated"                  | Update the SPEC.md first, then update the code.                                     |
+| "Nobody reads the SPEC.md anyway"          | The SPEC.md is the contract. AI agents read it every time.                          |
 | "TDD is enough, I don't need traceability" | TDD ensures code works. Requirement traceability ensures you built the right thing. |
-| "I'll update the SPEC.md later" | Later never comes. Update now. |
+| "I'll update the SPEC.md later"            | Later never comes. Update now.                                                      |
 
 ---
 
@@ -423,6 +426,7 @@ Sometimes code exists without a SPEC.md (new modules, hotfixes, legacy code).
 **TRACE:** Read `src/apps/auth/SPEC.md` → §2 API Routes. The spec mentions `POST /api/auth/refresh-token` but does NOT mention a password reset endpoint. This is a **new requirement**.
 
 **AMEND:**
+
 ```markdown
 ## Spec Amendment: Password Reset
 
@@ -432,6 +436,7 @@ Sometimes code exists without a SPEC.md (new modules, hotfixes, legacy code).
 ```
 
 **After approval, update `src/apps/auth/SPEC.md` §2:**
+
 ```markdown
 - **Method & Path:** `POST /api/auth/forgot-password`
   - **Logic:** Generates a time-limited reset token and sends reset email.
@@ -440,6 +445,7 @@ Sometimes code exists without a SPEC.md (new modules, hotfixes, legacy code).
 ```
 
 **IMPLEMENT (via TDD):**
+
 ```javascript
 // SPEC.md §2: "Generates a time-limited reset token and sends reset email"
 test('forgot-password generates token and sends email', async () => {
@@ -448,7 +454,7 @@ test('forgot-password generates token and sends email', async () => {
     .send({ email: 'user@test.com' });
   expect(res.status).toBe(200);
   expect(emailMock).toHaveBeenCalledWith(
-    expect.objectContaining({ to: 'user@test.com' })
+    expect.objectContaining({ to: 'user@test.com' }),
   );
 });
 ```
@@ -461,16 +467,16 @@ test('forgot-password generates token and sends email', async () => {
 
 ## Related Skills & Workflows
 
-| Need | Skill / Workflow |
-|------|-----------------|
-| Design and requirements exploration | `design-thinking` skill |
+| Need                                    | Skill / Workflow                |
+| --------------------------------------- | ------------------------------- |
+| Design and requirements exploration     | `design-thinking` skill         |
 | Breaking spec into implementation tasks | `implementation-planning` skill |
-| Coding discipline (test-first) | `test-driven-development` skill |
-| Code quality review | `code-review` skill |
-| Coding standards | `coding-standards` skill |
-| Modify existing spec-driven code | `/modify` workflow |
-| Git workflow for commits | `/commit` workflow |
-| Workspace isolation | `workspace-isolation` skill |
+| Coding discipline (test-first)          | `test-driven-development` skill |
+| Code quality review                     | `code-review` skill             |
+| Coding standards                        | `coding-standards` skill        |
+| Modify existing spec-driven code        | `/modify` workflow              |
+| Git workflow for commits                | `/commit` workflow              |
+| Workspace isolation                     | `workspace-isolation` skill     |
 
 ## xnapify-Specific Notes
 

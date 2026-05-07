@@ -707,7 +707,9 @@ function PostsList() {
         onClick={() => handleCreate({ title: 'New Post' })}
         disabled={creating}
       >
-        {creating ? t('creating', 'Creating...') : t('create_post', 'Create Post')}
+        {creating
+          ? t('creating', 'Creating...')
+          : t('create_post', 'Create Post')}
       </button>
 
       {posts.map(post => (
@@ -721,9 +723,9 @@ function PostsList() {
 
       {pagination && (
         <div>
-          {t('pagination_info', 'Page {{page}} of {{total}}', { 
-            page: pagination.page, 
-            total: Math.ceil(pagination.total / pagination.limit) 
+          {t('pagination_info', 'Page {{page}} of {{total}}', {
+            page: pagination.page,
+            total: Math.ceil(pagination.total / pagination.limit),
           })}
           <button
             onClick={() => handlePageChange(pagination.page + 1)}
@@ -744,14 +746,14 @@ export default PostsList;
 
 ## Route Lifecycle Hooks
 
-| Hook              | Purpose                                | Called When          |
-| ----------------- | -------------------------------------- | -------------------- |
-| `setup`           | Register menus, global state           | Route discovered     |
-| `teardown`        | Cleanup menus, global state            | Route unloaded       |
-| `init`            | Inject reducers (idempotent)           | First navigation     |
-| `mount`           | Dispatch breadcrumbs, track navigation | Route mounted        |
-| `middleware`      | Permission checks, redirects           | Before rendering     |
-| `getInitialProps` | Data fetching, page metadata           | Before rendering     |
+| Hook              | Purpose                                | Called When      |
+| ----------------- | -------------------------------------- | ---------------- |
+| `setup`           | Register menus, global state           | Route discovered |
+| `teardown`        | Cleanup menus, global state            | Route unloaded   |
+| `init`            | Inject reducers (idempotent)           | First navigation |
+| `mount`           | Dispatch breadcrumbs, track navigation | Route mounted    |
+| `middleware`      | Permission checks, redirects           | Before rendering |
+| `getInitialProps` | Data fetching, page metadata           | Before rendering |
 
 > **Note:** Redux reducer injection (`store.injectReducer`) is handled in `views/index.js` `providers()`, not in `_route.js`.
 

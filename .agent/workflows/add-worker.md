@@ -229,10 +229,10 @@ export async function computeAnalytics(container, input) {
 
 ### Choosing Between Direct and Thread Pool
 
-| Worker needs... | Use |
-|-----------------|-----|
-| `models`, `search`, `db`, `container` | Direct function call (Tier 1) |
-| Only serializable data, CPU-heavy | Thread pool via `worker.run()` (Tier 2) |
+| Worker needs...                       | Use                                     |
+| ------------------------------------- | --------------------------------------- |
+| `models`, `search`, `db`, `container` | Direct function call (Tier 1)           |
+| Only serializable data, CPU-heavy     | Thread pool via `worker.run()` (Tier 2) |
 
 ## Common Patterns
 
@@ -259,12 +259,12 @@ When your worker needs `app` access with lifecycle awareness (e.g., extension ac
 
 ### When to Use Which Pattern
 
-| Need | Pattern |
-|------|---------|
-| Database/FS operations | Direct worker function call |
-| Search indexing hooks | Worker barrel with `registerSearchHooks()` |
-| Needs lifecycle events (activate, deactivate) | Queue-based handler |
-| Complex multi-step workflow | Queue handler calling worker functions |
+| Need                                          | Pattern                                    |
+| --------------------------------------------- | ------------------------------------------ |
+| Database/FS operations                        | Direct worker function call                |
+| Search indexing hooks                         | Worker barrel with `registerSearchHooks()` |
+| Needs lifecycle events (activate, deactivate) | Queue-based handler                        |
+| Complex multi-step workflow                   | Queue handler calling worker functions     |
 
 ### Queue-Based Handler Example
 

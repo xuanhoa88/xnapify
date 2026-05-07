@@ -237,7 +237,7 @@ function executeTask(taskName) {
   // Guarantee SQLite in-memory for testing — set AFTER dotenv-flow so it
   // unconditionally overrides any XNAPIFY_DB_URL loaded from env files.
   if (nodeEnv === 'test') {
-    process.env.XNAPIFY_DB_URL = 'sqlite://';
+    process.env.XNAPIFY_DB_URL = 'sqlite:';
   }
 
   // Build child process environment

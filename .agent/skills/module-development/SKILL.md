@@ -21,7 +21,6 @@ Modules interact with the core framework by exporting a **default object** with 
 1. **Setup Directory:** Choose a domain name `[module_name]`. Create `src/apps/[module_name]/api/`.
 2. **Setup Subdirectories:** Always create `controllers`, `services`, `routes`, `models`, and `database/migrations` + `database/seeds`.
 3. **The Index File (`api/index.js`):** Export a `default` object with the following lifecycle hooks:
-
    - `translations()`: returns the Rspack context for locale JSON files, or an array `[context, customNamespace]` to explicitly define the namespace (defaults to the module's folder name).
    - `providers({ container })`: binds singletons/factories to the dependency injection `container`.
    - `migrations()`: returns the Rspack context for migrations (declarative — autoloader executes).
@@ -38,7 +37,6 @@ Modules interact with the core framework by exporting a **default object** with 
 5. **Routes:** Create files like `routes/(admin)/(default)/_route.js` exporting HTTP verb functions or middleware arrays.
 
    Route-level config exports (optional):
-
    - `export const middleware = false` — skip inherited middleware chain
    - `export const middleware = [mw1, mw2]` — inject route-specific middlewares
    - `export const useRateLimit = false` — skip rate limiting (e.g. static assets)
@@ -51,7 +49,6 @@ Modules interact with the core framework by exporting a **default object** with 
 
 1. **Setup Directory:** Create `src/apps/[module_name]/views/`.
 2. **The Index File (`views/index.js`):** Export a `default` object with the following hooks:
-
    - `translations()`: returns the Rspack context for frontend locale JSON files, or an array `[context, customNamespace]`.
    - `providers({ container })`: bind UI components or Redux selectors/thunks to the container for cross-module usage.
    - `routes()`: returns the Rspack context directly (e.g., `() => viewsContext`).

@@ -10,7 +10,8 @@ import path from 'path';
 import isArray from 'lodash/isArray.js';
 import mergeWith from 'lodash/mergeWith.js';
 
-import appConfig from './config.js';
+import appConfig from '../config.js';
+
 import { stylelintConfigs } from './registry.factory.js';
 
 const filePatterns = {

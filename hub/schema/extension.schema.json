@@ -4,7 +4,15 @@
   "title": "xnapify Extension Hub Metadata",
   "description": "Schema for extension metadata files in the xnapify Extension Hub registry.",
   "type": "object",
-  "required": ["name", "key", "version", "author", "category", "downloadUrl", "checksum"],
+  "required": [
+    "name",
+    "key",
+    "version",
+    "author",
+    "category",
+    "downloadUrl",
+    "checksum"
+  ],
   "properties": {
     "name": {
       "type": "string",

@@ -8,12 +8,11 @@
  */
 
 import fs from 'fs';
-import path from 'path';
 import { fileURLToPath } from 'url';
 
 import { format as prettierFormatter } from 'prettier';
 
-import prettierConfig from '../../.prettierrc.js';
+import prettierConfig from '../../prettier.config.js';
 import config from '../config.js';
 import { readDir, writeFile } from '../utils/fs.js';
 import {

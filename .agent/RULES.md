@@ -7,15 +7,17 @@ Whenever you provide assistance to a Developer on this codebase, you MUST adhere
 ---
 
 ## 1. Response Rules
+
 - **No Conversational Filler**: Be concise. Provide exactly the code requested. Do not say "I can help with that." or "Here is the code." Just output the code.
 - **Absolute Paths**: When referencing files or generating new files, provide the exact path from the root of the repository (e.g., `src/apps/billing/api/index.js`).
-- **Explain Only When Asked**: If a developer asks for a refactor, provide the refactored code block. Do not write a multi-paragraph explanation of *why* you refactored it unless they explicitly ask for an explanation.
+- **Explain Only When Asked**: If a developer asks for a refactor, provide the refactored code block. Do not write a multi-paragraph explanation of _why_ you refactored it unless they explicitly ask for an explanation.
 
 ---
 
 ## 2. Hard Coding Boundaries
-- **Strict Node 14/16 Syntax Constraints**: DO NOT use optional chaining (`?.`), nullish coalescing (`??`), or nullish assignment (`??=`) under ANY circumstances. The underlying compilation target DOES NOT support these. Always use traditional boolean fallback evaluations (e.g. `const x = obj && obj.prop ? obj.prop : null;`).
-- **Use the Single Source of Truth**: The `AGENT.md` file defines the overarching architecture (React 18 SSR, Express 4, Sequelize, Redux Toolkit). **Never deviate** from these technologies without explicit developer permission.
+
+- **Follow ECMAScript Standards**: The project targets Node 20+. Modern ES features like optional chaining (`?.`), nullish coalescing (`??`), and logical assignments (`??=`) are fully supported and encouraged for clean code.
+- **Use the Single Source of Truth**: The `AGENT.md` file defines the overarching architecture (React 18 SSR, Express 5, Sequelize 6, Redux Toolkit). **Never deviate** from these technologies without explicit developer permission.
 - **Stop at Domain Boundaries**: Never write deeply coupled code between two isolated applications (`@apps/billing` should not `import` from `@apps/invoices`). Always utilize the DI container, hook system, or standard HTTP APIs for cross-domain communication.
 - **No Raw SQL**: Unless debugging a confirmed performance bottleneck, strictly utilize Sequelize ORM methods (`findAll`, `create`). Access models via `container.resolve('db').models` or `container.resolve('models')`.
 - **Mandatory License Headers**: Every new source file you create MUST begin with the standard `xnapify` MIT License header.
@@ -28,6 +30,7 @@ Whenever you provide assistance to a Developer on this codebase, you MUST adhere
 ---
 
 ## 3. Security Constraints
+
 - **Validation**: Every single `req.body`, `req.query`, or `req.params` entering an API controller MUST be validated using the custom Zod wrapper imported from `@shared/validator`. Never trust raw input.
 - **Permissions**: Every new route must include an RBAC permission check. Resolve auth middlewares via the DI container:
   ```javascript
@@ -45,13 +48,14 @@ Whenever you provide assistance to a Developer on this codebase, you MUST adhere
 ---
 
 ## 4. Frontend Rigidity
+
 - **React Components**: Strictly Functional Components with hooks. Refuse any request to build a Class component.
 - **i18n Requirement**: All user-facing strings in JSX must be wrapped in `i18n.t()`. No hardcoded strings are allowed in any UI file.
 - **Data Hooking**: You must honor the SSR lifecycle. Use `getInitialProps` on routing files (`_route.js`) for initial rendering. Do not fetch essential initial data on `useEffect` mounts.
 - **Styling**: Primary styling must use **Tailwind CSS** utility classes and **Radix UI primitives** (`@radix-ui/themes`).
   - ✅ **DO** use Tailwind utility classes (e.g., `className="mt-4 bg-red-500"`).
   - ❌ **DO NOT** use inline styles under ANY circumstances (e.g., `style={{ marginTop: '16px' }}` is strictly forbidden).
-  - ⚠️ Use CSS Modules (`.css` extension) ONLY for complex edge cases that Tailwind cannot solve.
+  - ⚠️ All `.css` files are treated as **CSS Modules** by default (hashed class names). To define global styles (unhashed), you MUST name the file with the `.global.css` extension (e.g., `app.global.css`).
 - **clsx Utility**: When applying custom CSS modules or combining conditional class names, ALWAYS use `clsx`. You must strictly follow these rules to prevent performance overhead during re-renders:
   - ✅ **DO** use for dynamic combinations: `className={clsx(s.base, condition ? s.active : s.inactive)}`
   - ✅ **DO** use multiple arguments for multiple conditions: `clsx(s.base, condA && s.a, condB && s.b)`
@@ -64,6 +68,7 @@ Whenever you provide assistance to a Developer on this codebase, you MUST adhere
 ---
 
 ## 5. Cross-Module Communication
+
 - **No direct imports** between `@apps/*` modules. If `@apps/billing` needs data from `@apps/users`, use one of:
   - **Hook Engine (Pub/Sub)**: `hook('users').emit('created', data)` for asynchronous multicasting (errors don't halt execution)
   - **Hook Engine (Middleware)**: `hook('users').invoke('pre-delete', data)` for fail-fast pipeline checking (errors halt execution)
@@ -76,6 +81,7 @@ Whenever you provide assistance to a Developer on this codebase, you MUST adhere
 ---
 
 ## 6. Module Lifecycle Hooks
+
 - **API modules** (`api/index.js`) must use `export default { ... }` with lifecycle hooks in this order:
   `translations → providers → migrations → models → seeds → boot → routes`
 - **View modules** (`views/index.js`) must use `export default { ... }` with:
@@ -87,6 +93,7 @@ Whenever you provide assistance to a Developer on this codebase, you MUST adhere
 ---
 
 ## 7. Test Co-Location
+
 - **Place test files next to source**: `service.js` → `service.test.js` (same directory)
 - **Use `__tests__/` only** for integration tests that span multiple files
 - **Naming**: `*.test.js` for unit tests, `*.stress.test.js` for stress tests, `*.benchmark.js` for benchmarks
@@ -94,6 +101,7 @@ Whenever you provide assistance to a Developer on this codebase, you MUST adhere
 ---
 
 ## 8. Hook Naming Convention
+
 - **Format**: `{entity}.{action}` — e.g., `user.created`, `order.updated`, `file.deleted`
 - **Channel names**: Use module name — e.g., `hook('users')`, `hook('billing')`
 - **Full path**: Channel + event = `users → created`, `billing → invoice.paid`
@@ -111,6 +119,7 @@ Whenever you provide assistance to a Developer on this codebase, you MUST adhere
 ---
 
 ## 10. Browser Verification Policy
+
 - **Never auto-launch** a browser agent to verify UI changes unless the developer explicitly requests visual verification.
 - When browser verification IS requested, the agent MUST follow the `browser-testing` skill — especially the **Port Discovery** section.
 - The dev server port is `XNAPIFY_PORT` (default `1337`), **not** 3000. Always resolve from user context or `.env` files first.
@@ -122,4 +131,4 @@ Whenever you provide assistance to a Developer on this codebase, you MUST adhere
 
 If you are a Developer reading this, you can append these rules to your AI prompts natively using the context commands depending on your IDE (e.g. `@RULES.md` in Cursor, adding this file to Claude Projects).
 
-*If utilizing the unified .agent system defined in `AGENT.md`, these conventions are automatically absorbed!*
+_If utilizing the unified .agent system defined in `AGENT.md`, these conventions are automatically absorbed!_

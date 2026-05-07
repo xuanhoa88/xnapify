@@ -23,76 +23,17 @@ import {
   createDefinePlugin,
   createEnvDefine,
   createHostProvidedCSSPlugins,
+  HOST_PROVIDED_CSS_MODULES,
   createProgressPlugin,
   createSharedDependencies,
   getHmrWatchIgnored,
   pkg,
   isDev,
-  verbose,
 } from './base.config.js';
-import StatsManifestPlugin from './StatsManifestPlugin.js';
+import BuildManifestPlugin from './BuildManifestPlugin.js';
 import StripRootCSSPlugin from './StripRootCSSPlugin.js';
 
 const require = createRequire(import.meta.url);
-
-/**
- * Rspack plugin that writes a stats.json after each compilation.
- * Maps logical filenames (e.g. 'api.js') to their content-hashed physical
- * filenames (e.g. 'api.a1b2c3d4.js'). This enables runtime resolution of
- * extension bundles without hardcoded filenames, solving browser and Node.js
- * caching issues.
- *
- * Each compilation config should specify `logicalName` in the plugin
- * constructor to define which logical name this build's output maps to.
- */
-class BuildManifestPlugin extends StatsManifestPlugin {
-  /**
-   * @param {Object} options
-   * @param {string} options.logicalName - Logical filename key (e.g. 'api.js')
-   */
-  constructor({ logicalName }) {
-    super({
-      filename: 'stats.json',
-      incremental: true,
-      ignoreErrors: false,
-      statsOptions: { all: false, assets: true },
-      transform: (statsData, manifest) => {
-        // Find the emitted asset matching this logical name's base
-        // e.g. logicalName='api.js' matches 'api.a1b2c3d4.js'
-        const logicalBase = logicalName.replace(/\.[^.]+$/, ''); // 'api'
-        const logicalExt = path.extname(logicalName); // '.js'
-
-        const assets = (statsData.assets || [])
-          .map(a => (typeof a === 'string' ? a : a && a.name))
-          .filter(Boolean);
-
-        // Match pattern: <logicalBase>.<hash><logicalExt>
-        const hashPattern = new RegExp(
-          `^${logicalBase}\\.[a-f0-9]{8}\\${logicalExt}$`,
-        );
-        const matched = assets.find(name => hashPattern.test(name));
-
-        if (matched) {
-          manifest[logicalName] = matched;
-        } else {
-          // Fallback: exact match (for non-hashed builds)
-          const exact = assets.find(name => name === logicalName);
-          if (exact) manifest[logicalName] = exact;
-        }
-
-        manifest.builtAt = Date.now();
-
-        if (verbose) {
-          console.log(
-            `[BuildManifestPlugin] ${logicalName} → ${manifest[logicalName] || '(not found)'}`,
-          );
-        }
-
-        return manifest;
-      },
-    });
-  }
-}
 
 /**
  * Validate extension and extract metadata
@@ -228,8 +169,8 @@ function createClientConfig(extensionData, extensionDefines, buildPath) {
           strictVersion: false,
         }),
       }),
-      new BuildManifestPlugin({ logicalName: 'remote.js' }),
-      new BuildManifestPlugin({ logicalName: 'browser.js' }),
+      new BuildManifestPlugin('remote.js'),
+      new BuildManifestPlugin('browser.js'),
       createProgressPlugin(),
     ].filter(Boolean),
   });
@@ -248,9 +189,18 @@ function createClientConfig(extensionData, extensionDefines, buildPath) {
     },
     module: {
       rules: [
+        // 1. Host-provided CSS: only export CSS module locals (class names).
+        // Does NOT extract the CSS content, preventing extension CSS bloat.
+        createCSSRule({
+          exportOnlyLocals: true,
+          localIdentName,
+          include: HOST_PROVIDED_CSS_MODULES,
+        }),
+        // 2. Extension CSS: extract content to a standalone CSS file.
         createCSSRule({
           extractLoader: rspack.CssExtractRspackPlugin.loader,
           localIdentName,
+          exclude: HOST_PROVIDED_CSS_MODULES,
         }),
       ],
     },
@@ -263,8 +213,8 @@ function createClientConfig(extensionData, extensionDefines, buildPath) {
         ignoreOrder: isDev,
       }),
       new StripRootCSSPlugin(),
-      new BuildManifestPlugin({ logicalName: 'server.js' }),
-      new BuildManifestPlugin({ logicalName: 'extension.css' }),
+      new BuildManifestPlugin('server.js'),
+      new BuildManifestPlugin('extension.css'),
       createProgressPlugin(),
     ].filter(Boolean),
   });
@@ -301,7 +251,7 @@ function createApiConfig(extensionData, extensionDefines, buildPath) {
       plugins: [
         extensionDefines,
         createEnvDefine(),
-        new BuildManifestPlugin({ logicalName: 'api.js' }),
+        new BuildManifestPlugin('api.js'),
         createProgressPlugin(),
       ].filter(Boolean),
     });

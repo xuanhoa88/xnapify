@@ -1,6 +1,6 @@
 ---
 name: architecture-planning
-description: "Plan implementations, design architectures, create technical roadmaps with detailed phases. Use for feature planning, system design, solution architecture, implementation strategy, phase documentation."
+description: 'Plan implementations, design architectures, create technical roadmaps with detailed phases. Use for feature planning, system design, solution architecture, implementation strategy, phase documentation.'
 ---
 
 # Planning Skill
@@ -28,9 +28,9 @@ Detect and mark blocking relationships between plans:
 
 ```yaml
 ---
-status: draft                            # draft, in-progress, blocked, ready, completed
-blockedBy: [260301-1200-auth-system]     # This plan waits on these plans
-blocks: [260228-0900-user-dashboard]     # This plan blocks these plans
+status: draft # draft, in-progress, blocked, ready, completed
+blockedBy: [260301-1200-auth-system] # This plan waits on these plans
+blocks: [260228-0900-user-dashboard] # This plan blocks these plans
 ---
 ```
 
@@ -70,15 +70,20 @@ flowchart TD
 ## Detailed Steps
 
 ### 1. Scope Challenge
+
 Before designing, structurally challenge the scope. Does this feature make sense? Is it missing critical requirements? Are there simpler alternatives that achieve the business goal? Focus heavily on YAGNI (You Aren't Gonna Need It) and KISS (Keep It Simple, Stupid) principles.
 
 ### 2. Research & Codebase Analysis
+
 Investigate the existing architecture.
+
 - Identify which engines, modules, and extensions will be affected.
 - Review existing documentation, `SPEC.md` if applicable, and similar features in the codebase.
 
 ### 3. Solution Design
+
 Draft the technical architecture:
+
 - Database schema changes (Sequelize models/migrations).
 - API routes, controllers, services, and DTO validations.
 - Event hooks, background workers, or websockets needed.
@@ -87,13 +92,16 @@ Draft the technical architecture:
 - **Documentation & Tooling Sync:** Identify which `.agent/workflows`, `.agent/skills`, or `README.md` files must be updated to reflect the new architectural standards or conventions.
 
 ### 4. Red Team Review (Adversarial Review)
+
 If the feature is complex (Hard mode), deliberately attack your own design:
+
 - "What happens if external dependencies or caches go down?"
 - "How does this logic handle concurrent requests?"
 - "Is this vulnerable to IDOR or race conditions?"
 - Revise the plan to proactively address discovered flaws.
 
 ### 5. Task Handoff & Organization
+
 Once the high-level roadmap and system design are finalized and approved, save the plan file persistently.
 
 Then, prompt the user: **"Architecture plan saved. Would you like me to use the `implementation-planning` skill to break this roadmap down into executable, test-driven bite-sized tasks?"**

@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-**xnapify** is a production-ready, full-stack React application with server-side rendering (SSR), built on React 18, Express 4, and Rspack. This is a **single-repository** application with comprehensive tooling, RBAC, WebSocket support, and Node-RED integration for modern web development.
+**xnapify** is a production-ready, full-stack React application with server-side rendering (SSR), built on React 18, Express 5, and Rspack. This is a **single-repository** application with comprehensive tooling, RBAC, WebSocket support, and Node-RED integration for modern web development.
 
 ## Project Structure
 
@@ -66,40 +66,40 @@ xnapify/
 
 - **Runtime:** Node.js >= 20.19.0
 - **Package Manager:** npm >= 10.8.0
-- **Language:** JavaScript (ES2015+) with JSX. **Strict Constraint:** DO NOT use optional chaining (`?.`), nullish coalescing (`??`), or assignment (`??=`) since they break our raw Node loader environment. Use traditional boolean guards (`if (x && x.y)`).
+- **Language:** JavaScript (ES2022+) with JSX. Modern ECMAScript features like optional chaining (`?.`), nullish coalescing (`??`), and logical assignments (`??=`) are fully supported.
 
 ### Frontend
 
-- **React:** 18.3.1 with SSR and hydration
-- **State Management:** Redux 5.0.1 + Redux Toolkit 2.11.1
+- **React:** 18 with SSR and hydration
+- **State Management:** Redux + Redux Toolkit
 - **Routing:** Custom page auto-discovery with dynamic imports
-- **Styling:** Tailwind CSS + Radix UI Primitives (with CSS Modules + PostCSS for custom scoping)
-- **Forms:** React Hook Form 7.51.5 + Zod 3.23.8 validation
-- **i18n:** i18next 23.15.2 + react-i18next 14.1.3
+- **Styling:** Tailwind CSS + Radix UI Primitives (with Lightning CSS + CSS Modules for custom scoping)
+- **Forms:** React Hook Form + Zod
+- **i18n:** i18next + react-i18next
 
 ### Backend
 
-- **Server:** Express 4.21.2
-- **Authentication:** JWT (jsonwebtoken 9.0.2 + express-jwt 8.4.1)
-- **Database:** Sequelize 6.37.7 ORM (PostgreSQL, MySQL, SQLite)
-- **WebSocket:** ws 8.18.3
-- **Email:** Nodemailer 7.0.12
-- **Scheduling:** node-cron 4.2.1
+- **Server:** Express 5
+- **Authentication:** JWT
+- **Database:** Sequelize 6 ORM (PostgreSQL, MySQL, SQLite)
+- **WebSocket:** ws
+- **Email:** Nodemailer
+- **Scheduling:** node-cron
 - **Middleware:** compression, cookie-parser, cors, express-rate-limit
 
 ### Build Tools
 
 - **Bundler:** Rspack with code splitting and tree shaking
 - **Transpiler:** SWC (via swc-loader) with core-js polyfill injection
-- **CSS Processing:** PostCSS with autoprefixer and CSS Modules
+- **CSS Processing:** Rspack native CSS support (Lightning CSS) with CSS Modules and Tailwind CSS v4
 - **HMR:** React Refresh + custom hot middleware
 
 ### Code Quality
 
-- **Linting:** ESLint 8.57.0 with espree (built-in parser)
-- **CSS Linting:** Stylelint 14.16.1
-- **Formatting:** Prettier 3.3.3
-- **Testing:** Jest 24.9.0 with React Testing Library
+- **Linting:** ESLint with espree
+- **CSS Linting:** Stylelint
+- **Formatting:** Prettier
+- **Testing:** Jest with React Testing Library
 
 ### DevOps
 
@@ -515,12 +515,14 @@ export const fetchPosts = createAsyncThunk(
 We use **Tailwind CSS** for utility-first styling and **Radix UI** (`@radix-ui/themes`) for accessible design primitives. CSS Modules are reserved for specific edge cases or legacy components.
 
 **Styling Rules:**
+
 - ✅ **DO** use Tailwind utility classes (e.g., `className="mt-4 bg-red-500"`).
 - ❌ **DO NOT** use inline styles under ANY circumstances (e.g., `style={{ marginTop: '16px' }}` is strictly forbidden).
-- ⚠️ Use CSS Modules (`.css` extension) ONLY for complex edge cases that Tailwind cannot solve.
+- ⚠️ All `.css` files are automatically scoped as **CSS Modules**. To define unhashed global styles, you MUST use the `.global.css` extension (e.g., `app.global.css`).
 
 **clsx Utility Rules:**
 When applying custom CSS modules or combining conditional class names, ALWAYS use `clsx`. You must strictly follow these rules to prevent performance overhead during re-renders:
+
 - ✅ **DO** use for dynamic combinations: `className={clsx(s.base, condition ? s.active : s.inactive)}`
 - ✅ **DO** use multiple arguments for multiple conditions: `clsx(s.base, condA && s.a, condB && s.b)`
 - ❌ **DO NOT** use template literals or raw concatenation: ``className={`${s.base} ${s.active}`}`` -> use `clsx(s.base, s.active)`
@@ -538,9 +540,13 @@ import clsx from 'clsx';
 
 function MyComponent() {
   return (
-    <Box className={clsx("p-4 bg-gray-50 rounded-md", s.customClass)}>
-      <Text size="3" className="mb-2 block">Content</Text>
-      <Button variant="solid" color="blue">Action</Button>
+    <Box className={clsx('p-4 bg-gray-50 rounded-md', s.customClass)}>
+      <Text size='3' className='mb-2 block'>
+        Content
+      </Text>
+      <Button variant='solid' color='blue'>
+        Action
+      </Button>
     </Box>
   );
 }
@@ -635,9 +641,18 @@ export default ActivityList;
 // src/apps/{module-name}/api/index.js
 
 // Declarative context loaders (Rspack statically analyses these)
-const migrationsContext = import.meta.webpackContext('./database/migrations', { recursive: false, regExp: /\.[cm]?[jt]s$/i });
-const modelsContext = import.meta.webpackContext('./models', { recursive: false, regExp: /\.[cm]?[jt]s$/i });
-const routesContext = import.meta.webpackContext('./routes', { recursive: true, regExp: /\.[cm]?[jt]s$/i });
+const migrationsContext = import.meta.webpackContext('./database/migrations', {
+  recursive: false,
+  regExp: /\.[cm]?[jt]s$/i,
+});
+const modelsContext = import.meta.webpackContext('./models', {
+  recursive: false,
+  regExp: /\.[cm]?[jt]s$/i,
+});
+const routesContext = import.meta.webpackContext('./routes', {
+  recursive: true,
+  regExp: /\.[cm]?[jt]s$/i,
+});
 
 export default {
   // Declarative hooks — autoloader handles execution

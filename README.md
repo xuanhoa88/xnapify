@@ -19,6 +19,7 @@
 - **Server-Side Rendering** — Fast initial loads with SEO-friendly HTML, then seamless SPA hydration
 - **Module Auto-Discovery** — Drop-in modules under `src/apps/` are automatically loaded (API + views)
 - **RBAC** — Built-in users, roles, groups, and granular permissions with middleware guards
+- **Tailwind v4 & Lightning CSS** — Native, blazing-fast CSS processing pipeline without PostCSS bottlenecks
 - **Extension System** — Extend functionality through UI Slots and logic Hooks without touching core code
 - **Node-RED Integration** — Embedded visual workflow automation with versioned flow migrations
 - **Background Workers** — Direct function calls for processing tasks (search indexing, checksum, file ops)
@@ -112,21 +113,21 @@ xnapify/
 
 ### Frontend
 
-| Technology            | Purpose                    |
-| --------------------- | -------------------------- |
-| React 18              | UI with SSR and hydration  |
-| Redux Toolkit         | Global state management    |
-| React Hook Form + Zod | Form handling & validation |
-| Tiptap 3              | Rich text editor (WYSIWYG) |
-| Radix UI + Tailwind   | Design system & styling    |
-| CSS Modules + PostCSS | Scoped custom styling      |
-| i18next               | Internationalization       |
+| Technology              | Purpose                    |
+| ----------------------- | -------------------------- |
+| React 18                | UI with SSR and hydration  |
+| Redux Toolkit           | Global state management    |
+| React Hook Form + Zod   | Form handling & validation |
+| Tiptap 3                | Rich text editor (WYSIWYG) |
+| Radix UI + Tailwind v4  | Design system & styling    |
+| Lightning CSS + Modules | Native fast CSS scoping    |
+| i18next                 | Internationalization       |
 
 ### Backend
 
 | Technology      | Purpose                                     |
 | --------------- | ------------------------------------------- |
-| Express 4       | HTTP server                                 |
+| Express 5       | HTTP server                                 |
 | Sequelize 6     | ORM (PostgreSQL, MySQL, SQLite)             |
 | JSON Web Tokens | Authentication                              |
 | Passport.js     | OAuth (Google, Facebook, GitHub, Microsoft) |
@@ -137,12 +138,12 @@ xnapify/
 
 ### Tooling
 
-| Technology                    | Purpose                       |
-| ----------------------------- | ----------------------------- |
-| Rspack                        | Blazing fast bundling, code splitting, HMR |
-| SWC                           | ES2015+ transpilation         |
-| Jest                          | Testing & benchmarks          |
-| ESLint + Prettier + Stylelint | Code quality & formatting     |
+| Technology                    | Purpose                                              |
+| ----------------------------- | ---------------------------------------------------- |
+| Rspack                        | Blazing fast bundling, code splitting, Lightning CSS |
+| SWC                           | ES2015+ transpilation                                |
+| Jest                          | Testing & benchmarks                                 |
+| ESLint + Prettier + Stylelint | Code quality & formatting                            |
 
 ## 📜 Available Scripts
 

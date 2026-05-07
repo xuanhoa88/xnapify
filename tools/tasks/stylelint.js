@@ -7,12 +7,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import path from 'path';
 import { fileURLToPath } from 'url';
 
 import stylelint from 'stylelint';
 
-import config from '../config.js';
 import stylelintConfig from '../factories/stylelint.factory.js';
 import { BuildError } from '../utils/error.js';
 import {
@@ -25,10 +23,6 @@ import {
 } from '../utils/logger.js';
 
 const currentFilename = fileURLToPath(import.meta.url);
-
-// Relative path to app directory
-const appDir = path.relative(config.CWD, config.APP_DIR);
-const sharedDir = path.relative(config.CWD, path.resolve(config.CWD, 'shared'));
 
 // Cache silent check for use throughout the task
 const silent = isSilent();

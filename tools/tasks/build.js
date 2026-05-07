@@ -252,9 +252,10 @@ function analyzeStats(stats) {
   // Collect all assets (exclude source maps)
   const allAssets = [];
 
-  // Handle multi-compiler stats (client + server)
+  // Handle multi-compiler stats (client + server + workers)
   const children = jsonStats.children || [jsonStats];
 
+  // Collect ALL assets for summary (exclude source maps)
   children.forEach(childStats => {
     (childStats.assets || []).forEach(asset => {
       const name = typeof asset.name === 'string' ? asset.name : null;
@@ -267,6 +268,15 @@ function analyzeStats(stats) {
     });
   });
 
+  // Client-only assets for size warnings — server bundles load from disk,
+  // their size doesn't affect page load performance.
+  const clientAssets = (children[0]?.assets || [])
+    .filter(asset => {
+      const name = typeof asset.name === 'string' ? asset.name : null;
+      return name && !name.endsWith('.map');
+    })
+    .map(asset => ({ name: asset.name, size: asset.size }));
+
   // Sort by size and calculate totals
   allAssets.sort((a, b) => b.size - a.size);
   const totalSize = allAssets.reduce((sum, asset) => sum + asset.size, 0);
@@ -276,7 +286,7 @@ function analyzeStats(stats) {
     assetCount: allAssets.length,
     warnings: (jsonStats.warnings || []).length,
     errors: (jsonStats.errors || []).length,
-    oversizedAssets: allAssets.filter(
+    oversizedAssets: clientAssets.filter(
       asset => asset.size > config.bundleMaxAssetSize,
     ),
     largestAssets: allAssets.slice(0, 5),
@@ -341,7 +351,7 @@ function createBundledApp() {
   return new Promise((resolve, reject) => {
     const startTime = Date.now();
 
-    logInfo(`🔨 Compiling rspack bundles...`);
+    logInfo(`🔨 Compiling application bundles...`);
 
     const compiler = rspack([
       rspackClientConfig,

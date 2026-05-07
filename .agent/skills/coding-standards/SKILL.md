@@ -7,10 +7,6 @@ priority: CRITICAL
 
 # Clean Code — Pragmatic Standards
 
-> **CRITICAL SKILL** — Be **concise, direct, and solution-focused**. The user wants working code, not a programming lesson.
-
-> 🔴 **ABSOLUTE BAN:** You MUST NOT EVER generate code using optional chaining (`?.`), nullish coalescing (`??`), or nullish assignment (`??=`). The repository runs in an environment where these throw FATAL compilation/parsing errors. Use explicit logic (e.g., `x && x.y`). Under no circumstances is modern ES syntax permitted for guard clauses.
-
 ---
 
 ## Core Principles
@@ -60,20 +56,17 @@ priority: CRITICAL
 
 These are enforced by ESLint and **will fail lint**. Never use them:
 
-| ❌ Banned                  | Why                            | ✅ Use Instead                                                             |
-| -------------------------- | ------------------------------ | -------------------------------------------------------------------------- |
-| `??` (nullish coalescing)  | Explicit ESLint config ban     | `x != null ? x : fallback` or `x \|\| fallback`                            |
-| `??=` (nullish assignment) | Explicit ESLint config ban     | `if (x == null) x = value`                                                 |
-| `?.` (optional chaining)   | Explicit ESLint config ban     | `x && x.prop` or guard clause                                              |
-| `x === null \|\| x === undefined` | Redundant dual check    | `x == null` (loose equality catches both)                                  |
-| `x !== null && x !== undefined`   | Redundant dual check    | `x != null` (loose inequality catches both)                                |
-| `__dangle` property access | ESLint `no-underscore-dangle`  | Rename, or add `// eslint-disable-line no-underscore-dangle` in tests only |
-| `node:` import prefix      | Fix compatibility for Node 16+ | Direct import (e.g. `import fs from 'fs'`)                                 |
-| Global `fetch()` (backend) | Missing natively in Node 16    | Use `node-fetch`, `axios`, or injected `extra.fetch`                       |
-| `structuredClone()`        | Missing natively in Node 16    | Use `lodash/cloneDeep`                                                     |
-| `Array.prototype.at()`     | Added mid-lifecycle in v16.6   | Bracket notation: `arr[arr.length - 1]`                                    |
-| `Object.hasOwn()`          | Added mid-lifecycle in v16.9   | `Object.prototype.hasOwnProperty.call(obj, prop)`                          |
-| `node:test` runner imports | Missing natively in Node 16    | Use `jest` testing framework                                               |
+| ❌ Banned                         | Why                            | ✅ Use Instead                                                             |
+| --------------------------------- | ------------------------------ | -------------------------------------------------------------------------- |
+| `x === null \|\| x === undefined` | Redundant dual check           | `x == null` (loose equality catches both)                                  |
+| `x !== null && x !== undefined`   | Redundant dual check           | `x != null` (loose inequality catches both)                                |
+| `__dangle` property access        | ESLint `no-underscore-dangle`  | Rename, or add `// eslint-disable-line no-underscore-dangle` in tests only |
+| `node:` import prefix             | Fix compatibility for Node 16+ | Direct import (e.g. `import fs from 'fs'`)                                 |
+| Global `fetch()` (backend)        | Missing natively in Node 16    | Use `node-fetch`, `axios`, or injected `extra.fetch`                       |
+| `structuredClone()`               | Missing natively in Node 16    | Use `lodash/cloneDeep`                                                     |
+| `Array.prototype.at()`            | Added mid-lifecycle in v16.6   | Bracket notation: `arr[arr.length - 1]`                                    |
+| `Object.hasOwn()`                 | Added mid-lifecycle in v16.9   | `Object.prototype.hasOwnProperty.call(obj, prop)`                          |
+| `node:test` runner imports        | Missing natively in Node 16    | Use `jest` testing framework                                               |
 
 ---
 
@@ -189,19 +182,19 @@ export const listItems = async (req, res) => {
 
 ## React Component Rules
 
-| Rule                   | Guideline                                                                   |
-| ---------------------- | --------------------------------------------------------------------------- |
-| **CSS Modules**        | `import s from './Component.css'` — classes via `s.className`               |
+| Rule                   | Guideline                                                                                                                                                                                                    |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **CSS Modules**        | `import s from './Component.css'` — classes via `s.className`                                                                                                                                                |
 | **No inline styles**   | 🔴 ABSOLUTE BAN on `style={{...}}`. Use Radix props (`p`, `width`) or standard `.css` modules. Only valid exception: `style={{ display: 'none' }}` for hidden inputs or programmatic conditional animations. |
-| **clsx performance**   | Use conditional/ternary: `clsx(s.base, isActive ? s.active : s.inactive)`. 🔴 BAN on object properties: `clsx(s.base, { [s.active]: isActive })` to avoid instantiation overhead. |
-| **useCallback**        | Wrap event handlers passed as props                                         |
-| **useMemo**            | Expensive derived data (filtering, counting)                                |
-| **useRef for timers**  | Store timeout/interval IDs in refs, clean up in `useEffect` return          |
-| **Cleanup on unmount** | Clear timers, abort controllers, unsubscribe listeners                      |
-| **i18n**               | `t('namespace:key', 'Default fallback')` — always include a fallback        |
-| **Forms**              | Always use `@shared/renderer/components/Form` tightly coupled to `react-hook-form` instead of raw `<input>` elements |
-| **Permissions**        | `const { hasPermission } = useRbac()` — guard UI actions                    |
-| **WebSocket**          | `useWebSocket()` hook — `ws.on('channel', handler)` with cleanup `ws.off()` |
+| **clsx performance**   | Use conditional/ternary: `clsx(s.base, isActive ? s.active : s.inactive)`. 🔴 BAN on object properties: `clsx(s.base, { [s.active]: isActive })` to avoid instantiation overhead.                            |
+| **useCallback**        | Wrap event handlers passed as props                                                                                                                                                                          |
+| **useMemo**            | Expensive derived data (filtering, counting)                                                                                                                                                                 |
+| **useRef for timers**  | Store timeout/interval IDs in refs, clean up in `useEffect` return                                                                                                                                           |
+| **Cleanup on unmount** | Clear timers, abort controllers, unsubscribe listeners                                                                                                                                                       |
+| **i18n**               | `t('namespace:key', 'Default fallback')` — always include a fallback                                                                                                                                         |
+| **Forms**              | Always use `@shared/renderer/components/Form` tightly coupled to `react-hook-form` instead of raw `<input>` elements                                                                                         |
+| **Permissions**        | `const { hasPermission } = useRbac()` — guard UI actions                                                                                                                                                     |
+| **WebSocket**          | `useWebSocket()` hook — `ws.on('channel', handler)` with cleanup `ws.off()`                                                                                                                                  |
 
 ---
 
@@ -220,20 +213,20 @@ export const listItems = async (req, res) => {
 
 ## Anti-Patterns
 
-| ❌ Pattern                           | ✅ Fix                                      |
-| ------------------------------------ | ------------------------------------------- |
-| Helper for a one-liner               | Inline the code                                                  |
-| Factory for 2 objects                | Direct instantiation                                             |
-| `utils.js` with 1 function           | Put code where it's used                                         |
-| Deep nesting (3+ levels)             | Guard clauses + extract function                                 |
-| Magic numbers                        | Named constants: `const CACHE_TTL = 60_000`                      |
-| God functions (50+ lines)            | Split by responsibility                                          |
-| `import X from '@apps/other-module'` | `container.resolve()` or hook system                             |
-| `res.json({ data })`                 | `http.sendSuccess(res, { data })`                                |
-| `process.env.MY_VAR`                 | `process.env.XNAPIFY_MY_VAR`                                    |
-| `import.meta.webpackContext(\`${dynamic}\`)`    | Static string literal only                                       |
-| Boolean trap: `fn(true, false)`      | Options object: `fn({ isActive: true })`                         |
-| Callback-based code                  | Promisify: `const fn = promisify(cb)`                            |
+| ❌ Pattern                                          | ✅ Fix                                             |
+| --------------------------------------------------- | -------------------------------------------------- |
+| Helper for a one-liner                              | Inline the code                                    |
+| Factory for 2 objects                               | Direct instantiation                               |
+| `utils.js` with 1 function                          | Put code where it's used                           |
+| Deep nesting (3+ levels)                            | Guard clauses + extract function                   |
+| Magic numbers                                       | Named constants: `const CACHE_TTL = 60_000`        |
+| God functions (50+ lines)                           | Split by responsibility                            |
+| `import X from '@apps/other-module'`                | `container.resolve()` or hook system               |
+| `res.json({ data })`                                | `http.sendSuccess(res, { data })`                  |
+| `process.env.MY_VAR`                                | `process.env.XNAPIFY_MY_VAR`                       |
+| `import.meta.webpackContext(\`${dynamic}\`)`        | Static string literal only                         |
+| Boolean trap: `fn(true, false)`                     | Options object: `fn({ isActive: true })`           |
+| Callback-based code                                 | Promisify: `const fn = promisify(cb)`              |
 | Repeated `if (x !== undefined)` for partial updates | `pickBy(pick(data, fields), v => v !== undefined)` |
 
 ---
@@ -259,7 +252,6 @@ export const listItems = async (req, res) => {
 | ✅ **Goal met?**                | Did I do exactly what user asked?                              |
 | ✅ **Files edited?**            | Did I modify all necessary files (imports, tests, dependents)? |
 | ✅ **Code works?**              | Did I test or verify the change?                               |
-| ✅ **No syntax restrictions?**  | No `??`, `?.`, `??=` in code?                                  |
 | ✅ **No cross-domain imports?** | No `@apps/other-module` imports?                               |
 | ✅ **DI used correctly?**       | Services resolved from container, not imported?                |
 | ✅ **Nothing forgotten?**       | Any edge cases or null guards missed?                          |

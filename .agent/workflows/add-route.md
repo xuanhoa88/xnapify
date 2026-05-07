@@ -31,13 +31,13 @@ For creating a **new module from scratch**, use `/add-module` instead.
 
 Create the `_route.js` file at the correct path based on the desired URL:
 
-| Desired URL | File Path |
-|-------------|-----------|
-| `GET /api/{module}` | `routes/(admin)/(default)/_route.js` |
-| `GET /api/{module}/:id` | `routes/(admin)/[id]/_route.js` |
-| `GET /api/{module}/stats` | `routes/(admin)/stats/_route.js` |
+| Desired URL                      | File Path                                |
+| -------------------------------- | ---------------------------------------- |
+| `GET /api/{module}`              | `routes/(admin)/(default)/_route.js`     |
+| `GET /api/{module}/:id`          | `routes/(admin)/[id]/_route.js`          |
+| `GET /api/{module}/stats`        | `routes/(admin)/stats/_route.js`         |
 | `GET /api/{module}/:id/comments` | `routes/(admin)/[id]/comments/_route.js` |
-| `GET /api/{module}/public` | `routes/public/_route.js` |
+| `GET /api/{module}/public`       | `routes/public/_route.js`                |
 
 ```bash
 mkdir -p src/apps/{module}/api/routes/{path}
@@ -109,7 +109,9 @@ export async function create(req, res, next) {
 ```javascript
 // src/apps/{module}/validator/{resource}.js
 
-export const {resourceSchema} = ({ z }) => {
+export const {
+  resourceSchema,
+} = ({ z }) => {
   return z.object({
     name: z.string().min(1).max(255),
     // Add fields...
@@ -122,6 +124,7 @@ export const {resourceSchema} = ({ z }) => {
 The route is auto-discovered via `import.meta.webpackContext('./routes', { recursive: true, regExp: /\.[cm]?[jt]s$/i })` in the module's `api/index.js`. No manual registration needed.
 
 // turbo
+
 ```bash
 # Verify the route file exists in the expected location
 find src/apps/{module}/api/routes -name "_route.js" | sort
@@ -130,33 +133,35 @@ find src/apps/{module}/api/routes -name "_route.js" | sort
 ### 6. Run Tests
 
 // turbo
+
 ```bash
 npm test -- --testPathPattern="{module}"
 ```
 
 // turbo
+
 ```bash
 npm run lint
 ```
 
 ## Route Method Reference
 
-| Export | HTTP Method |
-|--------|------------|
-| `get` | GET |
-| `post` | POST |
-| `put` | PUT |
-| `patch` | PATCH |
-| `del` / `delete` | DELETE |
-| `head` | HEAD |
-| `options` | OPTIONS |
+| Export           | HTTP Method |
+| ---------------- | ----------- |
+| `get`            | GET         |
+| `post`           | POST        |
+| `put`            | PUT         |
+| `patch`          | PATCH       |
+| `del` / `delete` | DELETE      |
+| `head`           | HEAD        |
+| `options`        | OPTIONS     |
 
 ## Route Decorator Exports
 
-| Export | Type | Purpose |
-|--------|------|---------|
-| `middleware` | `false \| Function` | RBAC guard or explicit opt-out |
-| `useRateLimit` | `false \| { max, windowMs }` | Rate limit override |
+| Export         | Type                         | Purpose                        |
+| -------------- | ---------------------------- | ------------------------------ |
+| `middleware`   | `false \| Function`          | RBAC guard or explicit opt-out |
+| `useRateLimit` | `false \| { max, windowMs }` | Rate limit override            |
 
 ## Checklist
 

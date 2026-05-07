@@ -236,12 +236,12 @@ const serverConfig = createRspackConfig('server', {
     ...createHostProvidedCSSPlugins(),
     ...(isDev
       ? [
-        new rspack.BannerPlugin({
-          banner: 'require("source-map-support").install();',
-          raw: true,
-          entryOnly: false,
-        }),
-      ]
+          new rspack.BannerPlugin({
+            banner: 'require("source-map-support").install();',
+            raw: true,
+            entryOnly: false,
+          }),
+        ]
       : []),
   ],
 });

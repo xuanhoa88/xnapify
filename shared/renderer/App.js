@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import './global.css';
+import './app.global.css';
 
 import React, { useMemo } from 'react';
 

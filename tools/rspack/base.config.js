@@ -146,6 +146,13 @@ function createHostProvidedCSSPlugins() {
   );
 }
 
+/**
+ * Directories and files containing CSS Modules that are already bundled by the
+ * host app. Extensions should load their class name mappings but NOT extract
+ * their CSS content into the extension's CSS bundle.
+ */
+const HOST_PROVIDED_CSS_MODULES = [path.resolve(config.CWD, 'shared/renderer')];
+
 // =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
@@ -174,6 +181,8 @@ const createCSSRule = ({
   extractLoader,
   localIdentName,
   postcssOptions = {},
+  include,
+  exclude,
 }) => {
   // Common CSS loader options
   const cssLoaderOptions = {
@@ -182,11 +191,12 @@ const createCSSRule = ({
     esModule: false,
     modules: {
       auto: resourcePath => {
-        if (resourcePath.endsWith('global.css')) return false;
-        return (
-          resourcePath.includes(config.APP_DIR) ||
-          resourcePath.includes(path.resolve(config.CWD, 'shared'))
-        );
+        if (/\.global\.css$/.test(resourcePath)) return false;
+        // Blacklist approach: Treat all internal CSS files as CSS Modules
+        // automatically (src, shared, hub/extensions, etc) while explicitly
+        // excluding third-party stylesheets.
+        if (resourcePath.includes(`node_modules`)) return false;
+        return true;
       },
       exportOnlyLocals,
       localIdentName:
@@ -247,20 +257,30 @@ const createCSSRule = ({
   };
 
   // Helper to build loader chain (executed right-to-left)
-  const buildLoaders = (preprocessor = null) => {
+  const buildLoaders = (preprocessor = null, skipPostcss = false) => {
     const loaders = [
       {
         loader: 'css-loader',
         options: {
           ...cssLoaderOptions,
-          importLoaders: preprocessor ? 2 : 1,
+          // Adjust importLoaders based on whether we have postcss and/or a preprocessor
+          importLoaders: skipPostcss
+            ? preprocessor
+              ? 1
+              : 0
+            : preprocessor
+              ? 2
+              : 1,
         },
       },
-      {
+    ];
+
+    if (!skipPostcss) {
+      loaders.push({
         loader: 'postcss-loader',
         options: postcssLoaderOptions,
-      },
-    ];
+      });
+    }
 
     if (preprocessor) {
       loaders.push(preprocessor);
@@ -275,19 +295,35 @@ const createCSSRule = ({
 
   return {
     test: reStyle,
+    type: 'javascript/auto',
+    ...(include && { include }),
+    ...(exclude && { exclude }),
     oneOf: [
       {
         test: /\.s[ac]ss$/i,
-        use: buildLoaders({
-          loader: 'sass-loader',
-          options: {
-            api: 'modern', // Use modern Sass API (fixes deprecation warning)
-            sourceMap: isDev,
+        use: buildLoaders(
+          {
+            loader: 'sass-loader',
+            options: {
+              api: 'modern', // Use modern Sass API (fixes deprecation warning)
+              sourceMap: isDev,
+            },
           },
-        }),
+          false,
+        ), // SCSS usually needs PostCSS (autoprefixer) after compilation
       },
       {
-        use: buildLoaders(),
+        // PERFORMANCE OPTIMIZATION:
+        // Skip PostCSS entirely for node_modules. Third-party CSS (like Radix UI)
+        // is already compiled, prefixed, and doesn't contain Tailwind utilities.
+        // Skipping the PostCSS AST parsing for huge library CSS files drastically
+        // speeds up both `npm run dev` and `npm run build`.
+        test: /[\\/]node_modules[\\/]/,
+        use: buildLoaders(null, true),
+      },
+      {
+        // Standard application CSS (gets PostCSS + Tailwind)
+        use: buildLoaders(null, false),
       },
     ],
   };
@@ -389,16 +425,16 @@ function createCacheGroups(
   minChunkSize = DEFAULT_MIN_CHUNK_SIZE,
 ) {
   return {
-    // --- CSS: consolidate all extracted CSS so load order is preserved ---
-    styles: {
-      name: 'styles',
-      type: 'css/mini-extract',
-      chunks: 'all',
-      enforce: true,
-      priority: 100, // was +Infinity — large int is safer with rspack internals
-    },
-
     // --- High-priority named groups ---
+
+    // Radix UI primitives + their positioning/floating deps
+    radix: {
+      test: /[\\/]node_modules[\\/](@radix-ui[\\/]|@floating-ui[\\/]|@popperjs[\\/])/,
+      name: 'vendor.radix',
+      chunks,
+      priority: 45,
+      enforce: true,
+    },
 
     // history is a React Router peer dep; if you ever use it standalone, move it out
     react: {
@@ -757,6 +793,7 @@ function createRspackConfig(name, options = {}) {
               new rspack.SwcJsMinimizerRspackPlugin({
                 compress: { drop_console: !isServer },
               }),
+              new rspack.LightningCssMinimizerRspackPlugin(),
             ]
           : [],
       },
@@ -986,6 +1023,7 @@ export {
   createDefinePlugin,
   createEnvDefine,
   createHostProvidedCSSPlugins,
+  HOST_PROVIDED_CSS_MODULES,
   createProgressPlugin,
   createSharedDependencies,
   createRspackConfig,

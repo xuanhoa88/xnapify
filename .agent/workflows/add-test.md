@@ -484,6 +484,7 @@ describe('[api] cache', () => {
 ## Mocking
 
 > **⚠️ Anti-Pattern Warning:** Before adding mocks, read `test-driven-development/anti-patterns.md` to avoid common pitfalls:
+>
 > - Never assert on mock elements (`*-mock` test IDs) — test real behavior
 > - Never add test-only methods to production classes — use test utilities
 > - Never mock without understanding dependencies — run real code first, then mock minimally

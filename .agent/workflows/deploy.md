@@ -73,6 +73,7 @@ environment:
 ```
 
 Data directories control where each database stores files:
+
 - `XNAPIFY_SQLITE_DATA_DIR` — SQLite database file (default: `/app/data/sqlite` in Docker)
 - `XNAPIFY_PG_DATA_DIR` — PostgreSQL data (default: `/app/data/postgres` in Docker)
 - `XNAPIFY_MYSQL_DATA_DIR` — MySQL data (default: `/app/data/mysql` in Docker)

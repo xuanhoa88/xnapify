@@ -22,8 +22,8 @@
  *     title="My App"
  *     description="A React application"
  *     locale="en-US"
- *     scriptLinks={['/client.js']}
- *     styleLinks={['/styles.css']}
+ *     scripts={['/client.js']}
+ *     stylesheets={['/styles.css']}
  *     appState={{ redux: store.getState() }}
  *   >
  *     {appHtml}
@@ -102,8 +102,8 @@ SocialMetaTags.propTypes = {
  * @param {string} [props.url] - Canonical URL
  * @param {string} [props.locale='en-US'] - Document locale
  * @param {string} [props.type='website'] - Open Graph type
- * @param {Array} [props.styleLinks=[]] - CSS file URLs
- * @param {Array} [props.scriptLinks=[]] - JavaScript file URLs
+ * @param {Array} [props.stylesheets=[]] - CSS file URLs
+ * @param {Array} [props.scripts=[]] - JavaScript file URLs
  * @param {Object} props.appState - Application state (contains Redux state)
  * @param {string} props.children - Rendered React app HTML
  * @returns {React.ReactElement} Complete HTML document
@@ -115,8 +115,8 @@ export default function Html({
   url = null,
   type = 'website',
   locale = 'en-US',
-  styleLinks = [],
-  scriptLinks = [],
+  stylesheets = [],
+  scripts = [],
   appState,
   children,
   nonce,
@@ -172,8 +172,23 @@ export default function Html({
         {/* Canonical URL for SEO */}
         {url && <link rel='canonical' href={url} />}
 
+        {/* CSS Layer Order Declaration
+            Must appear BEFORE any external stylesheets that use @layer.
+            vendor.radix.css loads before client.css, so without this inline
+            declaration the browser would encounter @layer radix-ui from the
+            vendor file first and assign it implicit ordering.  This inline
+            block establishes the correct cascade: radix-ui < Tailwind layers,
+            eliminating the FOUC caused by layer misordering. */}
+        <style
+          nonce={nonce}
+          dangerouslySetInnerHTML={{
+            __html:
+              '@layer properties, theme, base, radix-ui, components, utilities;',
+          }}
+        />
+
         {/* CSS stylesheets */}
-        {styleLinks.map(entry => {
+        {stylesheets.map(entry => {
           const href = typeof entry === 'string' ? entry : entry.href;
           const id = typeof entry === 'object' ? entry.id : undefined;
           return (
@@ -205,20 +220,25 @@ export default function Html({
           }}
         />
 
-        {/* Preload JavaScript bundles for faster loading */}
-        {scriptLinks.map(entry => {
-          const src = typeof entry === 'string' ? entry : entry.src;
-          const id = typeof entry === 'object' ? entry.id : undefined;
-          return (
-            <link
-              key={`preload-${src}`}
-              rel='preload'
-              href={src}
-              as='script'
-              {...(id ? { 'data-extension-id': id } : {})}
-            />
-          );
-        })}
+        {/* Preload critical JavaScript bundles for faster loading */}
+        {scripts
+          .filter(entry => {
+            const src = typeof entry === 'string' ? entry : entry.src;
+            return src.includes('runtime.') || src.includes('client.');
+          })
+          .map(entry => {
+            const src = typeof entry === 'string' ? entry : entry.src;
+            const id = typeof entry === 'object' ? entry.id : undefined;
+            return (
+              <link
+                key={`preload-${src}`}
+                rel='preload'
+                href={src}
+                as='script'
+                {...(id ? { 'data-extension-id': id } : {})}
+              />
+            );
+          })}
 
         {/* PWA manifest and icons */}
         <link rel='manifest' href='/site.webmanifest' />
@@ -229,7 +249,7 @@ export default function Html({
         <div id='app'>{children}</div>
 
         {/* JavaScript bundles */}
-        {scriptLinks.map(entry => {
+        {scripts.map(entry => {
           const src = typeof entry === 'string' ? entry : entry.src;
           const id = typeof entry === 'object' ? entry.id : undefined;
           return (
@@ -263,14 +283,14 @@ Html.propTypes = {
   /** Document locale (e.g., 'en-US', 'fr-FR') */
   locale: PropTypes.string,
   /** CSS entries: URLs (string) or { href, id } objects */
-  styleLinks: PropTypes.arrayOf(
+  stylesheets: PropTypes.arrayOf(
     PropTypes.oneOfType([
       PropTypes.string,
       PropTypes.shape({ href: PropTypes.string, id: PropTypes.string }),
     ]),
   ),
   /** JS entries: URLs (string) or { src, id } objects */
-  scriptLinks: PropTypes.arrayOf(
+  scripts: PropTypes.arrayOf(
     PropTypes.oneOfType([
       PropTypes.string,
       PropTypes.shape({ src: PropTypes.string, id: PropTypes.string }),

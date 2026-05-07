@@ -80,24 +80,23 @@ Structure your final review using the [Response Format](#response-format) at the
 > - Naming Conventions (Variables, Functions, Booleans)
 > - Function Design (Size, Arguments, Guard Clauses)
 > - Clean Code Principles (DRY, Licenses, Comments)
-> - Syntax Restrictions (Banned syntax like `??`, `?.`, `??=` due to Xnapify ESLint config, and missing Node 16 APIs)
 
 ---
 
 ## 2. Bug Detection
 
-| Check                            | Description                                                                                              |
-| -------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| **Unhandled nulls**              | `container.resolve('x')` may return `undefined` — guard before calling methods                           |
-| **Missing `await`**              | Async functions called without `await` cause silent failures                                             |
-| **Race conditions**              | Concurrent state mutations without locks, especially in queue handlers and boot hooks                    |
-| **Error swallowing**             | Empty `catch {}` blocks hide failures — must at minimum log                                              |
-| **Off-by-one**                   | Array indexing, pagination, loop boundaries                                                              |
-| **Type coercion**                | `==` vs `===`, implicit falsy checks on `0` or empty strings                                             |
-| **Unhandled promise rejections** | Fire-and-forget promises without `.catch()`                                                              |
+| Check                                       | Description                                                                                                        |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| **Unhandled nulls**                         | `container.resolve('x')` may return `undefined` — guard before calling methods                                     |
+| **Missing `await`**                         | Async functions called without `await` cause silent failures                                                       |
+| **Race conditions**                         | Concurrent state mutations without locks, especially in queue handlers and boot hooks                              |
+| **Error swallowing**                        | Empty `catch {}` blocks hide failures — must at minimum log                                                        |
+| **Off-by-one**                              | Array indexing, pagination, loop boundaries                                                                        |
+| **Type coercion**                           | `==` vs `===`, implicit falsy checks on `0` or empty strings                                                       |
+| **Unhandled promise rejections**            | Fire-and-forget promises without `.catch()`                                                                        |
 | **`import.meta.webpackContext` at runtime** | All `import.meta.webpackContext()` calls must use **static string literals** — Rspack cannot analyze dynamic paths |
-| **AbortController missing**      | Long-lived effects (WS listeners, fetch) without abort/cleanup on unmount                                |
-| **Stale closure**                | `useCallback`/`useEffect` missing dependencies that change over time                                     |
+| **AbortController missing**                 | Long-lived effects (WS listeners, fetch) without abort/cleanup on unmount                                          |
+| **Stale closure**                           | `useCallback`/`useEffect` missing dependencies that change over time                                               |
 
 ---
 
@@ -287,15 +286,15 @@ src/apps/[module_name]/
 
 **MUST** use `export default { ... }` with phase-sequential lifecycle hooks.
 
-| Hook                       | Phase | Returns                      | Notes                                                 |
-| -------------------------- | ----- | ---------------------------- | ----------------------------------------------------- |
+| Hook                       | Phase | Returns                             | Notes                                                 |
+| -------------------------- | ----- | ----------------------------------- | ----------------------------------------------------- |
 | `translations()`           | 1     | Rspack context (or `[context, ns]`) | i18n JSON files                                       |
-| `providers({ container })` | 2     | —                            | Bind DI services                                      |
-| `migrations()`             | 3     | Rspack context              | Auto-run, declarative                                 |
-| `models()`                 | 4     | Rspack context              | Auto-registered into ORM                              |
-| `seeds()`                  | 5     | Rspack context              | Auto-run, declarative                                 |
-| `boot({ container })`      | 6     | —                            | Register workers, hooks, schedules. Models available. |
-| `routes()`                 | 7     | Rspack context **directly** | `() => routesContext` (**not** a tuple)               |
+| `providers({ container })` | 2     | —                                   | Bind DI services                                      |
+| `migrations()`             | 3     | Rspack context                      | Auto-run, declarative                                 |
+| `models()`                 | 4     | Rspack context                      | Auto-registered into ORM                              |
+| `seeds()`                  | 5     | Rspack context                      | Auto-run, declarative                                 |
+| `boot({ container })`      | 6     | —                                   | Register workers, hooks, schedules. Models available. |
+| `routes()`                 | 7     | Rspack context **directly**         | `() => routesContext` (**not** a tuple)               |
 
 > ⚠️ **Key distinction:** Modules return Rspack context **directly** from `routes()`. Extensions return `[name, context]` tuple.
 
@@ -303,10 +302,10 @@ src/apps/[module_name]/
 
 | Hook                              | Phase | Notes                                                                |
 | --------------------------------- | ----- | -------------------------------------------------------------------- |
-| `translations()`                  | 1     | Returns rspack context (or `[context, ns]`)                         |
+| `translations()`                  | 1     | Returns rspack context (or `[context, ns]`)                          |
 | `providers({ container, store })` | 2     | Inject Redux reducers via `store.injectReducer(SLICE_NAME, reducer)` |
 | `boot({ container })`             | 3     | —                                                                    |
-| `routes()`                        | 4     | Rspack context **directly**                                         |
+| `routes()`                        | 4     | Rspack context **directly**                                          |
 
 ### 6.4 Route Files (`_route.js`)
 
@@ -330,7 +329,7 @@ src/apps/[module_name]/
 | --------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------ |
 | **No cross-domain imports** | `import X from '@apps/other-module/...'`        | `container.resolve()` or hook system                                     |
 | **DI for auth**             | `import auth from '@shared/auth'`               | `req.app.get('container').resolve('auth')`                               |
-| **Static Rspack paths**    | `import.meta.webpackContext(\`${dir}\`)`                   | Static string literal only                                               |
+| **Static Rspack paths**     | `import.meta.webpackContext(\`${dir}\`)`        | Static string literal only                                               |
 | **Redux in providers**      | `store.injectReducer()` in `_route.js` `init()` | Move to `views/index.js` `providers()`                                   |
 | **No direct email**         | `import sendEmail from '...'`                   | `container.resolve('emails:send')` or `hook('emails').emit('send', ...)` |
 | **Response format**         | `res.json({ data })`                            | `http.sendSuccess(res, { data })`                                        |
@@ -348,22 +347,22 @@ src/apps/[module_name]/
 
 ### 7.2 Backend Hooks (`api/index.js`)
 
-| Hook                                | Category    | Notes                                           |
-| ----------------------------------- | ----------- | ----------------------------------------------- |
-| `models()`                          | Declarative | Auto-registered via `ModelRegistry.discover()`  |
-| `migrations()`                      | Declarative | Auto-run with `__EXTENSION_ID__` prefix         |
-| `seeds()`                           | Declarative | Auto-run with `__EXTENSION_ID__` prefix         |
-| `translations()`                    | Declarative | Auto-registered (returns context or `[context, ns]`)            |
-| `install({ container })`            | One-time    | Runs once on install                            |
-| `boot({ container, registry })`     | Lifecycle   | Re-runs every server boot. Register IPC, hooks. |
-| `shutdown({ container, registry })` | Lifecycle   | **MUST** unsubscribe all hooks from `boot()`.   |
-| `uninstall({ container })`          | One-time    | Runs once on delete. `try/catch` all DB ops.    |
+| Hook                                | Category    | Notes                                                |
+| ----------------------------------- | ----------- | ---------------------------------------------------- |
+| `models()`                          | Declarative | Auto-registered via `ModelRegistry.discover()`       |
+| `migrations()`                      | Declarative | Auto-run with `__EXTENSION_ID__` prefix              |
+| `seeds()`                           | Declarative | Auto-run with `__EXTENSION_ID__` prefix              |
+| `translations()`                    | Declarative | Auto-registered (returns context or `[context, ns]`) |
+| `install({ container })`            | One-time    | Runs once on install                                 |
+| `boot({ container, registry })`     | Lifecycle   | Re-runs every server boot. Register IPC, hooks.      |
+| `shutdown({ container, registry })` | Lifecycle   | **MUST** unsubscribe all hooks from `boot()`.        |
+| `uninstall({ container })`          | One-time    | Runs once on delete. `try/catch` all DB ops.         |
 
 ### 7.3 Frontend Hooks (`views/index.js`)
 
 | Hook                              | Notes                                                |
 | --------------------------------- | ---------------------------------------------------- |
-| `translations()`                  | Returns rspack context (or `[context, ns]`)         |
+| `translations()`                  | Returns rspack context (or `[context, ns]`)          |
 | `providers({ container, store })` | Redux injection — **NOT** in `boot()`                |
 | `boot(registry)`                  | Register slots, hooks, IPC handlers                  |
 | `shutdown(registry)`              | **MUST exactly inverse `boot()`** — count must match |
@@ -384,14 +383,14 @@ src/apps/[module_name]/
 
 ## 8. CSS Modules
 
-| Rule              | ✅ Correct                                          | ❌ Incorrect                                                                |
-| ----------------- | --------------------------------------------------- | --------------------------------------------------------------------------- |
-| Import style      | `import s from './Component.css'`                   | `import './Component.css'`                                                  |
-| Class usage       | `className={s.container}`                           | `className="container"`                                                     |
+| Rule              | ✅ Correct                                                  | ❌ Incorrect                                                                |
+| ----------------- | ----------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Import style      | `import s from './Component.css'`                           | `import './Component.css'`                                                  |
+| Class usage       | `className={s.container}`                                   | `className="container"`                                                     |
 | Dynamic classes   | `className={clsx(s.tab, isActive ? s.active : s.inactive)}` | `className={clsx(s.tab, { [s.active]: isActive })}`                         |
-| Composition       | CSS Modules `composes`                              | Duplicate CSS across files                                                  |
-| No inline styles  | —                                                   | `style={{ color: 'red' }}` (except `{ display: 'none' }` for hidden inputs) |
-| No global classes | —                                                   | Global `.container {}` overriding module scope                              |
+| Composition       | CSS Modules `composes`                                      | Duplicate CSS across files                                                  |
+| No inline styles  | —                                                           | `style={{ color: 'red' }}` (except `{ display: 'none' }` for hidden inputs) |
+| No global classes | —                                                           | Global `.container {}` overriding module scope                              |
 
 ---
 
@@ -466,7 +465,7 @@ src/apps/[module_name]/
 | **Serializable I/O**    | All inputs and outputs are JSON-serializable (no functions, classes, Buffers) |
 | **Pure functions**      | No side effects on shared state                                               |
 | **Called via engine**   | `worker.run('name', 'fn', data)` from barrel, not direct import               |
-| **Manifest registered** | Worker compiled by rspack and appears in `worker-manifest.json`              |
+| **Manifest registered** | Worker compiled by rspack and appears in `worker-manifest.json`               |
 
 ---
 
@@ -498,15 +497,15 @@ src/apps/[module_name]/
 
 The code-review checks that other skills' output is correct:
 
-| Skill                        | What to Verify                                                                      |
-| ---------------------------- | ----------------------------------------------------------------------------------- |
-| **module-development**       | Lifecycle hooks match phase order, route format correct, DI used properly           |
-| **extension-development**    | `boot`/`shutdown` symmetry, IPC uses `__EXTENSION_ID__`, no `src/apps/` imports     |
-| **security-compliance**      | Zod validation present, RBAC guards, env var prefix, no raw SQL, CSP compliance     |
-| **coding-standards**         | SRP, DRY, naming, syntax restrictions (`??`, `?.`, `??=`), functions under 20 lines |
-| **requirement-traceability** | Code traces to spec requirements, no unauthorized additions, amendments documented  |
-| **i18n-localization**        | No hardcoded strings, translation hook exists, fallback strings provided            |
-| **frontend-design**          | CSS Modules used, no inline styles, responsive considerations                       |
+| Skill                        | What to Verify                                                                     |
+| ---------------------------- | ---------------------------------------------------------------------------------- |
+| **module-development**       | Lifecycle hooks match phase order, route format correct, DI used properly          |
+| **extension-development**    | `boot`/`shutdown` symmetry, IPC uses `__EXTENSION_ID__`, no `src/apps/` imports    |
+| **security-compliance**      | Zod validation present, RBAC guards, env var prefix, no raw SQL, CSP compliance    |
+| **coding-standards**         | SRP, DRY, naming, functions under 20 lines                                         |
+| **requirement-traceability** | Code traces to spec requirements, no unauthorized additions, amendments documented |
+| **i18n-localization**        | No hardcoded strings, translation hook exists, fallback strings provided           |
+| **frontend-design**          | CSS Modules used, no inline styles, responsive considerations                      |
 
 ---
 

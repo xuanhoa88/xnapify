@@ -7,8 +7,6 @@
   "dependencies": {
     "passport-github2": "^0.1.12"
   },
-  "slots": [
-    "/login"
-  ],
+  "slots": ["/login"],
   "icon": "github"
 }

@@ -5,7 +5,7 @@ This flowchart illustrates the core routing, governance, and operational hierarc
 ```mermaid
 flowchart TD
     User(["User Request"])
-    
+
     subgraph UILayer [User Interface]
         IDE["VS Code / IDE Extension"]
         Commands[".agent/workflows/ (Slash Commands)"]
@@ -42,13 +42,13 @@ flowchart TD
         Constants["constants.js (walkFiles, SKIP_DIRS)"]
     end
 
-    
+
     Output(["Final Implementation & Output"])
 
     %% Linkages
     User --> IDE
     IDE --> Commands
-    
+
     Commands -.->|"Provides Context"| AgentMD
     Commands -.->|"Enforces Constraints"| RulesMD
 
@@ -56,27 +56,27 @@ flowchart TD
     Commands --> Plan
     Commands --> Fix
     Commands --> MoreWFS
-    
+
     Build --> Frontend
     Build --> Sec
     Build --> MoreSkills
-    
+
     Plan --> Arch
     Plan --> Sec
-    
+
     Fix --> Frontend
     Fix --> Arch
-    
+
     Frontend --> UX
     Frontend --> A11y
     Sec --> AuthCheck
     MoreSkills --> TS
-    
+
     TS -.->|"Imports from"| Constants
     A11y -.->|"Imports from"| Constants
     UX -.->|"Imports from"| Constants
     AuthCheck -.->|"Imports from"| Constants
-    
+
     UX --> Output
     A11y --> Output
     AuthCheck --> Output

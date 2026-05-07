@@ -5,9 +5,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { startTransition } from 'react';
+
 import { createBrowserHistory } from 'history';
 import merge from 'lodash/merge';
-import { startTransition } from 'react';
 
 import { Container } from '@shared/container/index.js';
 import extensionManager from '@shared/extension/client/index.js';
@@ -23,7 +24,8 @@ import {
   setWebSocketClient,
 } from '@shared/ws/client/index.js';
 
-const hotAPI = import.meta.webpackHot || (typeof module !== 'undefined' && module.hot);
+const hotAPI =
+  import.meta.webpackHot || (typeof module !== 'undefined' && module.hot);
 
 // =============================================================================
 // CONSTANTS & CONFIGURATION

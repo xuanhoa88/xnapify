@@ -15,6 +15,7 @@ Behavioral guidelines to reduce common LLM coding mistakes, derived from [Andrej
 **Don't assume. Don't hide confusion. Surface tradeoffs.**
 
 Before implementing:
+
 - State your assumptions explicitly. If uncertain, ask.
 - If multiple interpretations exist, present them - don't pick silently.
 - If a simpler approach exists, say so. Push back when warranted.
@@ -37,12 +38,14 @@ Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, sim
 **Touch only what you must. Clean up only your own mess.**
 
 When editing existing code:
+
 - Don't "improve" adjacent code, comments, or formatting.
 - Don't refactor things that aren't broken.
 - Match existing style, even if you'd do it differently.
 - If you notice unrelated dead code, mention it - don't delete it.
 
 When your changes create orphans:
+
 - **Mandatory sweeps**: Remove imports, variables, functions, and **CSS classes/selectors** that YOUR changes made unused.
 - Do not leave unused `className` definitions in `.css` files after removing them from the markup.
 - Don't remove pre-existing dead code unless asked, but always clean up the orphans YOU just created during a refactor.
@@ -54,11 +57,13 @@ The test: Every changed line should trace directly to the user's request.
 **Define success criteria. Loop until verified.**
 
 Transform tasks into verifiable goals:
+
 - "Add validation" → "Write tests for invalid inputs, then make them pass"
 - "Fix the bug" → "Write a test that reproduces it, then make it pass"
 - "Refactor X" → "Ensure tests pass before and after"
 
 For multi-step tasks, state a brief plan:
+
 ```
 1. [Step] → verify: [check]
 2. [Step] → verify: [check]
@@ -69,9 +74,6 @@ For multi-step tasks, state a brief plan:
 
 **Never write blindly. Always verify syntax against project standards.**
 
-When writing or editing code, ALWAYS apply the `coding-standards` lint rules:
-- **No Optional Chaining (`?.`) or Nullish Coalescing (`??`)**: They are explicitly banned via `no-restricted-syntax` ESLint rules. Use fallback conditionals (`if (x && x.y)`).
-- **Mental Syntax Audit**: Ensure you natively self-check for unused variables, missing imports, and restricted syntax *before* presenting the final work. Because terminal `npm` constraints may periodically block you from running `npm run lint` automatically, you must rely on rigorous manual review.
-- Do not assume modern ES2020+ sugar is permitted. Always check the coding guidelines.
+- **Mental Syntax Audit**: Ensure you natively self-check for unused variables, missing imports, and restricted syntax _before_ presenting the final work. Because terminal `npm` constraints may periodically block you from running `npm run lint` automatically, you must rely on rigorous manual review.
 
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.

@@ -25,7 +25,7 @@ export default class StripRootCSSPlugin {
    * Safely removes all :root blocks from the CSS source by counting balanced braces.
    * This is more robust than Regex, as it correctly handles nested blocks if they exist.
    */
-  _stripRootBlocks(source) {
+  stripRootBlocks(source) {
     let result = source;
     const regex = /:root[\s\w="'-]*?\{/g;
     let match;
@@ -78,7 +78,7 @@ export default class StripRootCSSPlugin {
             if (!this.options.test.test(name)) return;
 
             const source = asset.source().toString();
-            const stripped = this._stripRootBlocks(source);
+            const stripped = this.stripRootBlocks(source);
 
             if (source.length !== stripped.length) {
               compilation.updateAsset(

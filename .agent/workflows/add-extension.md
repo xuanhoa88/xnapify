@@ -7,6 +7,7 @@ Add a new extension with API endpoints, UI components, validation, and database 
 > **Prerequisites:** Before starting, consider using the `design-thinking` skill for design exploration and the `implementation-planning` skill for implementation planning. Use the `test-driven-development` skill during implementation.
 
 Extensions come in two types:
+
 - **Plugin-type** — Extends existing modules via slots, hooks, and IPC (e.g., `profile-plugin`)
 - **Module-type** — Provides own routes, views, and controllers like an `@apps/` module but installable/uninstallable (e.g., `posts-module`)
 
@@ -810,10 +811,10 @@ const hook = container.resolve('hook');
 
 // Option A: Use a DB-managed template (by slug)
 await hook('emails').emit('send', {
-  slug: 'order-confirmation',          // Looks up EmailTemplate by slug
-  to: 'customer@example.com',          // Required — valid email
-  subject: 'Order Confirmed',          // Fallback if DB template not found
-  html: '<p>Fallback content</p>',     // Fallback HTML
+  slug: 'order-confirmation', // Looks up EmailTemplate by slug
+  to: 'customer@example.com', // Required — valid email
+  subject: 'Order Confirmed', // Fallback if DB template not found
+  html: '<p>Fallback content</p>', // Fallback HTML
   data: { orderId: 42, name: 'John' }, // Template variables (plain object)
 });
 
@@ -980,11 +981,26 @@ src/extensions/{extension-name}/
 
 ```javascript
 // src/extensions/{extension-name}/api/index.js
-const routesContext = import.meta.webpackContext('./routes', { recursive: true, regExp: /\.[cm]?[jt]s$/i });
-const migrationsContext = import.meta.webpackContext('./database/migrations', { recursive: false, regExp: /\.[cm]?[jt]s$/i });
-const seedsContext = import.meta.webpackContext('./database/seeds', { recursive: false, regExp: /\.[cm]?[jt]s$/i });
-const modelsContext = import.meta.webpackContext('./models', { recursive: false, regExp: /\.[cm]?[jt]s$/i });
-const translationsContext = import.meta.webpackContext('../translations', { recursive: false, regExp: /\.json$/i });
+const routesContext = import.meta.webpackContext('./routes', {
+  recursive: true,
+  regExp: /\.[cm]?[jt]s$/i,
+});
+const migrationsContext = import.meta.webpackContext('./database/migrations', {
+  recursive: false,
+  regExp: /\.[cm]?[jt]s$/i,
+});
+const seedsContext = import.meta.webpackContext('./database/seeds', {
+  recursive: false,
+  regExp: /\.[cm]?[jt]s$/i,
+});
+const modelsContext = import.meta.webpackContext('./models', {
+  recursive: false,
+  regExp: /\.[cm]?[jt]s$/i,
+});
+const translationsContext = import.meta.webpackContext('../translations', {
+  recursive: false,
+  regExp: /\.json$/i,
+});
 
 export default {
   // Declarative hooks — auto-processed by ServerExtensionManager
@@ -1013,8 +1029,15 @@ export default {
 
 ```javascript
 // src/extensions/{extension-name}/views/index.js
-const viewsContext = import.meta.webpackContext('.', true, /(?:\/_route|\/_layout)\.[cm]?[jt]sx?$/i);
-const translationsContext = import.meta.webpackContext('../translations', { recursive: false, regExp: /\.json$/i });
+const viewsContext = import.meta.webpackContext(
+  '.',
+  true,
+  /(?:\/_route|\/_layout)\.[cm]?[jt]sx?$/i,
+);
+const translationsContext = import.meta.webpackContext('../translations', {
+  recursive: false,
+  regExp: /\.json$/i,
+});
 
 export default {
   providers({ container }) {},
@@ -1035,14 +1058,14 @@ export default {
 
 ## Key Differences from Plugin-Type
 
-| Feature | Plugin-Type | Module-Type |
-|---------|-------------|-------------|
-| Routes | IPC only (`/api/extensions/:id/ipc`) | Full routes via `routes()` hook |
-| Views | Inject into existing via slots/hooks | Own page routes with `_route.js` |
-| URL paths | None (hooks into existing pages) | `/api/{module-name}/*`, `/{module-name}/*` |
-| Navigation | N/A | Own admin sidebar, breadcrumbs |
-| `routes()` hook | Not used | **Required** — returns `[name, context]` |
-| Namespace | N/A | Auto-derived from `routes()` return |
+| Feature         | Plugin-Type                          | Module-Type                                |
+| --------------- | ------------------------------------ | ------------------------------------------ |
+| Routes          | IPC only (`/api/extensions/:id/ipc`) | Full routes via `routes()` hook            |
+| Views           | Inject into existing via slots/hooks | Own page routes with `_route.js`           |
+| URL paths       | None (hooks into existing pages)     | `/api/{module-name}/*`, `/{module-name}/*` |
+| Navigation      | N/A                                  | Own admin sidebar, breadcrumbs             |
+| `routes()` hook | Not used                             | **Required** — returns `[name, context]`   |
+| Namespace       | N/A                                  | Auto-derived from `routes()` return        |
 
 ## Module-Type Route Files
 
@@ -1069,6 +1092,7 @@ export const get = [requirePermission('{module}:read'), list];
 ## Example: `posts-module`
 
 See `src/extensions/posts-module/` for a complete working module-type extension with:
+
 - Full CRUD API routes with permission guards
 - Admin and public views with Redux state
 - Database models, migrations, and seeds

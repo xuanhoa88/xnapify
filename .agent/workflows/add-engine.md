@@ -100,6 +100,7 @@ No manual registration needed — the rspack `import.meta.webpackContext` in `sh
 ### 4. Write Tests
 
 // turbo
+
 ```bash
 npm run test -- {engine-name}
 ```
@@ -123,25 +124,26 @@ describe('{EngineName} Engine', () => {
 ### 5. Run Full Suite
 
 // turbo
+
 ```bash
 npm test
 ```
 
 ## Existing Engines Reference
 
-| Engine | Purpose |
-|---|---|
-| `auth` | Authentication middlewares & cookies |
-| `cache` | LRU caching |
-| `db` | Sequelize ORM & migrations |
-| `email` | Nodemailer service |
-| `fs` | Filesystem operations |
-| `hook` | Channel-based event system |
-| `http` | HTTP client utilities |
-| `queue` | Job queue |
-| `schedule` | Cron scheduling |
-| `template` | LiquidJS template engine |
-| `worker` | Elastic thread pool for CPU-bound `worker_threads` |
+| Engine     | Purpose                                            |
+| ---------- | -------------------------------------------------- |
+| `auth`     | Authentication middlewares & cookies               |
+| `cache`    | LRU caching                                        |
+| `db`       | Sequelize ORM & migrations                         |
+| `email`    | Nodemailer service                                 |
+| `fs`       | Filesystem operations                              |
+| `hook`     | Channel-based event system                         |
+| `http`     | HTTP client utilities                              |
+| `queue`    | Job queue                                          |
+| `schedule` | Cron scheduling                                    |
+| `template` | LiquidJS template engine                           |
+| `worker`   | Elastic thread pool for CPU-bound `worker_threads` |
 
 ---
 

@@ -92,7 +92,7 @@ function Component() {
 | Client assets      | `BUILD_DIR/public/assets/`                 | `clientConfig.output`      |
 | Stats manifest     | `BUILD_DIR/stats.json`                     | `StatsWriterPlugin`        |
 | Extension builds   | `BUILD_DIR/<XNAPIFY_EXTENSION_LOCAL_PATH>` | `tools/tasks/extension.js` |
-| Server HMR updates | `BUILD_DIR/updates/`                       | `configureRspackForDev()` |
+| Server HMR updates | `BUILD_DIR/updates/`                       | `configureRspackForDev()`  |
 
 ### Inspect build output
 
@@ -293,7 +293,7 @@ await db.connection.revertMigrations(); // Rollback last
 | Port 1337 already in use                              | Previous process still running     | `npx kill-port -p 1337`                                                |
 | `Cannot find module`                                  | Stale require cache or missing dep | `npm run setup` or restart                                             |
 | Breakpoints not hit                                   | Source maps misconfigured          | Ensure `sourceMaps: true` in launch.json                               |
-| HMR says "connected" but no reload                    | Server compilation error           | Check terminal for Rspack errors                                      |
+| HMR says "connected" but no reload                    | Server compilation error           | Check terminal for Rspack errors                                       |
 | Slow recompilation                                    | Large watched file tree            | Check `ignored` patterns in dev.js                                     |
 | API returns HTML instead of JSON                      | SSR middleware intercepting `/api` | Ensure API routes mounted before SSR                                   |
 | SSR hydration mismatch                                | Browser-only code in render        | Use `useEffect` for browser-only logic                                 |

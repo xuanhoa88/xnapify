@@ -3,6 +3,7 @@ description: Analyze and fix issues with intelligent routing
 ---
 
 ## Context
+
 When executing the `/fix` workflow, you are responsible for acting as an intelligent diagnostic router.
 
 ## Process

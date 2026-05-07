@@ -129,14 +129,16 @@ export async function down({ context: queryInterface }) {
 ```
 
 ### Augmenting Core Database Tables (Extensions)
+
 When an extension needs to add a column to a core table (e.g. `users` or `settings`), it must:
+
 1. Run a database migration similar to the one above (`queryInterface.addColumn`).
 2. Subscribe to the core model's `define` event hook during its `providers` phase so Sequelize knows about the new column structure:
 
 ```javascript
 export async function providers({ container }) {
   const hook = container.resolve('hook');
-  
+
   hook('models').on('User:define', ({ attributes, DataTypes }) => {
     attributes.my_new_column = { type: DataTypes.STRING, allowNull: true };
   });

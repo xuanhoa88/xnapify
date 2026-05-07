@@ -4,6 +4,7 @@ You are operating within an enterprise-grade AI architecture.
 
 **[IF YOU HAVE FILE READING CAPABILITIES (Agentic AIs)]**
 Before executing any task, you MUST dynamically load and read:
+
 1. `AGENT.md` (for global project structure and context)
 2. `.agent/RULES.md` (for hard coding constraints)
 
