@@ -591,8 +591,14 @@ function setupServerBundleWatcher(serverCompiler) {
 
       // Reload the server with the new bundle, THEN flush client HMR
       // so both sides have the new code before React Fast Refresh fires.
-      await checkForUpdate(stats.hash);
-      flushPendingHmrPublishes();
+      try {
+        await checkForUpdate(stats.hash);
+      } catch (err) {
+        logError('❌ Failed to reload server bundle: ' + err.message);
+        if (err.stack) logError(err.stack);
+      } finally {
+        flushPendingHmrPublishes();
+      }
     },
   );
 }

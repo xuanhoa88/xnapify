@@ -11,10 +11,6 @@
   cursor: pointer !important;
 }
 
-.header {
-  border-bottom: 1px solid var(--gray-a4);
-}
-
 .item {
   cursor: pointer !important;
 }
