@@ -1343,13 +1343,13 @@ const hotAPI =
   (import.meta && import.meta.webpackHot) ||
   (typeof module !== 'undefined' && module.hot);
 
+export const hot = hotAPI;
+
 if (hotAPI) {
   hotAPI.accept(() => {
     invalidateCaches();
     console.log('🔄 HMR: SSR dependencies updated, caches cleared');
   });
-
-  exports.hot = hotAPI;
 } else {
   (async () => {
     try {
