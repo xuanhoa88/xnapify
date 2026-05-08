@@ -83,6 +83,47 @@ const STATIC_SECURITY_HEADERS = Object.entries({
   'Referrer-Policy': 'strict-origin-when-cross-origin',
 });
 
+// File extensions that must NEVER trigger the SSR catch-all.
+// Hoisted as a frozen Set for O(1) lookup on every request.
+const STATIC_FILE_EXTENSIONS = Object.freeze(
+  new Set([
+    // Images
+    '.png',
+    '.jpg',
+    '.jpeg',
+    '.gif',
+    '.svg',
+    '.ico',
+    '.webp',
+    '.avif',
+    // Scripts & styles
+    '.js',
+    '.mjs',
+    '.css',
+    // Data / config
+    '.json',
+    '.webmanifest',
+    '.map',
+    '.txt',
+    '.xml',
+    // Fonts
+    '.woff',
+    '.woff2',
+    '.ttf',
+    '.eot',
+    '.otf',
+    // Media
+    '.mp4',
+    '.webm',
+    '.mp3',
+    '.ogg',
+    '.wav',
+    // Archives / misc
+    '.pdf',
+    '.zip',
+  ]),
+);
+
 const APP_METADATA = {
   get title() {
     return process.env.XNAPIFY_PUBLIC_APP_NAME || 'xnapify';
@@ -154,7 +195,7 @@ function promiseWithDeadline(promise, timeoutMs, operationName) {
   ]);
 }
 
-async function extractPageMetadata(page, req) {
+async function extractPageMetadata(page, req, isLocalHost) {
   const metadata = {
     title: (page && page.title) || APP_METADATA.title,
     description: (page && page.description) || APP_METADATA.description,
@@ -163,10 +204,8 @@ async function extractPageMetadata(page, req) {
   };
 
   try {
-    const rawHost = req.get('host');
-    const normalizedHost = rawHost.split(':')[0];
-
-    if (!(await isLocalhostIp(normalizedHost))) {
+    if (!isLocalHost) {
+      const rawHost = req.get('host');
       const baseUrl = req.protocol + '://' + rawHost;
       const fullUrl = new URL(req.originalUrl || req.path, baseUrl);
 
@@ -619,17 +658,23 @@ async function streamReactResponse(
         },
       );
 
-      // Handle client disconnect during stream
+      // Handle client disconnect during stream.
+      // Use { once: true } so the listener self-removes after firing,
+      // preventing leaks when `finish` never fires (e.g. client disconnect).
       const onAbort = () => {
         if (!shellReady) {
           abort();
         }
       };
 
-      abortController.signal.addEventListener('abort', onAbort);
-      res.on('finish', () => {
+      abortController.signal.addEventListener('abort', onAbort, { once: true });
+
+      // Belt-and-suspenders: also clean up on normal completion
+      const removeAbortListener = () => {
         abortController.signal.removeEventListener('abort', onAbort);
-      });
+      };
+      res.on('finish', removeAbortListener);
+      res.on('close', removeAbortListener);
     } catch (err) {
       reject(err);
     }
@@ -638,7 +683,7 @@ async function streamReactResponse(
   return new Promise(executeStreamingRender);
 }
 
-function makeSsrMiddleware(baseUrl) {
+function makeSsrMiddleware(baseUrl, { isLocalHost = false } = {}) {
   return async (req, res, next) => {
     // Skip if response is already sent
     if (res.headersSent) return;
@@ -686,6 +731,51 @@ function makeSsrMiddleware(baseUrl) {
         return res.status(cached.status).send(cached.html);
       }
       if (__DEV__) res.setHeader('X-Cache', 'MISS');
+
+      // ── 103 Early Hints ──
+      // Send resource hints to the browser BEFORE starting expensive React work.
+      // The browser can begin downloading CSS/JS while the server runs:
+      //   Redux store init (~5-20ms) → Views load (~10-30ms) →
+      //   Page resolve (~5-15ms) → React render (~50-200ms)
+      // getSsrResources() is cached after the first call, so this adds ~0ms overhead.
+      if (typeof res.writeEarlyHints === 'function') {
+        try {
+          const { scripts, stylesheets } = await getSsrResources();
+          const extCss = getExtensionUrls('cssUrls');
+          const extJs = getExtensionUrls('scriptUrls');
+
+          const linkHints = [];
+
+          // Critical CSS — highest priority (render-blocking)
+          for (const entry of stylesheets) {
+            const href = typeof entry === 'string' ? entry : entry.href;
+            if (href) linkHints.push(`<${href}>; rel=preload; as=style`);
+          }
+          for (const entry of extCss) {
+            const href = typeof entry === 'string' ? entry : entry.href;
+            if (href) linkHints.push(`<${href}>; rel=preload; as=style`);
+          }
+
+          // JS bundles — defer-loaded, but preload starts the download early
+          for (const entry of scripts) {
+            const src = typeof entry === 'string' ? entry : entry.src;
+            if (src) linkHints.push(`<${src}>; rel=preload; as=script`);
+          }
+          for (const entry of extJs) {
+            const src = typeof entry === 'string' ? entry : entry.src;
+            if (src) linkHints.push(`<${src}>; rel=preload; as=script`);
+          }
+
+          if (linkHints.length > 0) {
+            res.writeEarlyHints({ link: linkHints });
+          }
+        } catch (errEarlyHints) {
+          // Non-fatal — graceful degradation if resources aren't cached yet
+          if (__DEV__) {
+            console.warn('⚠️ Early Hints skipped:', errEarlyHints.message);
+          }
+        }
+      }
 
       // ── Cache miss: build full view context ──
       context = {
@@ -792,7 +882,7 @@ function makeSsrMiddleware(baseUrl) {
           status,
           abortController,
           startTime,
-          metadata: await extractPageMetadata(page, req),
+          metadata: await extractPageMetadata(page, req, isLocalHost),
           component: page.component,
         }),
         SERVER_TIMEOUTS.RENDER,
@@ -1146,6 +1236,18 @@ export async function bootstrapApp(app, server, options = {}) {
   // Static assets (moved UP to avoid unnecessary body parsing, rate limiting, and locale processing)
   app.use(staticMiddleware());
 
+  // Short-circuit for static file extensions that express.static didn't serve.
+  // If express.static above didn't match, the file doesn't exist. Return 404
+  // immediately to prevent missing images/fonts/manifests from traversing
+  // cookieParser → locale → maintenance → timeout → API → Node-RED → SSR.
+  app.use((req, res, next) => {
+    const ext = path.extname(req.path).toLowerCase();
+    if (ext && STATIC_FILE_EXTENSIONS.has(ext)) {
+      return res.status(404).send('Not found');
+    }
+    next();
+  });
+
   // Locale detection with caching
   app.use(cookieParser());
   app.use((req, res, next) => {
@@ -1238,7 +1340,9 @@ export async function bootstrapApp(app, server, options = {}) {
   await appState.nodeRed.setupApiProxy(app, '/api');
 
   // SSR catch-all
-  app.get('{/*path}', makeSsrMiddleware(baseUrl));
+  // Pre-compute localhost check once at boot — avoids async DNS lookup per request
+  const isLocalHost = await isLocalhostIp(resolvedHost.replace(/[[\]]/g, ''));
+  app.get('{/*path}', makeSsrMiddleware(baseUrl, { isLocalHost }));
 
   // Error handler (must be last)
   app.use(makeErrorMiddleware());

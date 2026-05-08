@@ -7,7 +7,7 @@
 
 import './app.global.css';
 
-import React, { useMemo } from 'react';
+import React, { Suspense } from 'react';
 
 import { Theme } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
@@ -56,28 +56,25 @@ const contextPropTypes = PropTypes.shape({
  * @returns {React.ReactElement} Composed provider tree
  */
 export default function App({ context, children }) {
-  // Memoize the provider composition to prevent unnecessary re-renders
-  const providers = useMemo(() => {
-    const { registry } = context.container.has('extension')
-      ? context.container.resolve('extension')
-      : {};
+  const { registry } = context.container.has('extension')
+    ? context.container.resolve('extension')
+    : {};
 
-    return (
-      <Theme>
-        <ReduxProvider store={context.store}>
-          <I18nextProvider i18n={context.i18n}>
-            <HistoryProvider history={context.history}>
-              <ExtensionProvider registry={registry}>
+  return (
+    <Theme>
+      <ReduxProvider store={context.store}>
+        <I18nextProvider i18n={context.i18n}>
+          <HistoryProvider history={context.history}>
+            <ExtensionProvider registry={registry}>
+              <Suspense fallback={null}>
                 {React.Children.only(children)}
-              </ExtensionProvider>
-            </HistoryProvider>
-          </I18nextProvider>
-        </ReduxProvider>
-      </Theme>
-    );
-  }, [context, children]);
-
-  return providers;
+              </Suspense>
+            </ExtensionProvider>
+          </HistoryProvider>
+        </I18nextProvider>
+      </ReduxProvider>
+    </Theme>
+  );
 }
 
 // =============================================================================

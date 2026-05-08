@@ -406,17 +406,7 @@ function attachRspackMiddlewares(expressApp) {
 
   expressApp.use(wrapRspackMiddleware(devMiddleware));
   expressApp.use(wrapRspackMiddleware(hotMiddleware));
-  expressApp.use(
-    wrapRspackMiddleware((req, res, next) => {
-      // Short-circuit missing HMR updates. If devMiddleware didn't intercept
-      // them, they are stale/missing. Returning 404 immediately prevents
-      // them from falling through to the expensive SSR catch-all router.
-      if (req.method === 'GET' && req.path.match(/\.hot-update\.(json|js)$/i)) {
-        return res.status(404).send('Not found');
-      }
-      next();
-    }),
-  );
+
   expressApp.use(
     wrapRspackMiddleware((req, res, next) => {
       if (req.method === 'POST' && req.path === '/~/__bs_connected') {

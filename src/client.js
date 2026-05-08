@@ -8,7 +8,6 @@
 import { startTransition } from 'react';
 
 import { createBrowserHistory } from 'history';
-import merge from 'lodash/merge';
 
 import { Container } from '@shared/container/index.js';
 import extensionManager from '@shared/extension/client/index.js';
@@ -45,7 +44,7 @@ if (hotAPI && hotAPI.data && hotAPI.data.reduxState) {
   preloadedState = { redux: hotAPI.data.reduxState };
 } else {
   // eslint-disable-next-line no-underscore-dangle
-  preloadedState = merge({}, window.__PRELOADED_STATE__);
+  preloadedState = window.__PRELOADED_STATE__ || {};
   // eslint-disable-next-line no-underscore-dangle
   delete window.__PRELOADED_STATE__; // avoid memory leaks / exposure
 }
@@ -92,6 +91,7 @@ if (context.locale && i18n.language !== context.locale) {
 let currentLocation = history.location;
 let unlistenHistory = null;
 let cachedViews = null;
+let cachedViewsPreload = null; // Pre-warmed views.js chunk promise (consumed by initializeViews)
 let wsClient = null;
 let isTransitioning = false;
 let transitionAbortController = null;
@@ -104,6 +104,7 @@ let isDOMReady = READY_STATES.has(document.readyState) && !!document.body;
 let hasStarted = false;
 let isRefreshingToken = false;
 let wsConnectionFailures = 0;
+let backgroundInitHandle = null;
 
 // HMR State
 let isExtensionReloadPending =
@@ -116,7 +117,7 @@ const scrollPositionsHistory = new Map();
 // =============================================================================
 function log(message, level = 'log') {
   if (__DEV__) {
-    console[level](`[Client] ${message}`);
+    (console[level] || console.log).call(console, `[Client] ${message}`);
   }
 }
 
@@ -204,8 +205,8 @@ function saveScrollPosition() {
   // Delete first so re-insertion moves the key to the end (most recent)
   scrollPositionsHistory.delete(currentLocation.key);
   scrollPositionsHistory.set(currentLocation.key, {
-    x: window.pageXOffset,
-    y: window.pageYOffset,
+    x: window.scrollX,
+    y: window.scrollY,
   });
 
   // Evict oldest entries (Map iterates in insertion order)
@@ -248,7 +249,7 @@ function restoreScrollPosition(location) {
 
 async function initializeViews() {
   if (!cachedViews) {
-    cachedViews = import('./bootstrap/views.js')
+    cachedViews = (cachedViewsPreload || import('./bootstrap/views.js'))
       .then(m => {
         const views = m.default(context, extensionManager);
         log('✅ Views initialized');
@@ -312,22 +313,19 @@ function renderApp(appElement, container, isInitial) {
   }
 
   if (isInitial && !hasHydrated) {
-    try {
-      root = ReactDOMClient.hydrateRoot(container, appElement, {
-        onRecoverableError: err =>
-          log(`❌ Hydration error: ${err.message}`, 'error'),
-      });
-      hasHydrated = true;
-      log('✅ Hydrated (React 18)');
-    } catch (err) {
-      log(
-        `❌ Hydration failed, falling back to client render: ${err.message}`,
-        'error',
-      );
-      root = ReactDOMClient.createRoot(container);
-      root.render(appElement);
-      // hasHydrated intentionally left false — SSR content was not reused.
-    }
+    // React 18's hydrateRoot does NOT throw on mismatches — it recovers
+    // internally and reports via onRecoverableError. A try/catch here would
+    // only catch truly catastrophic failures (e.g. null container).
+    root = ReactDOMClient.hydrateRoot(container, appElement, {
+      onRecoverableError(err, errorInfo) {
+        log(`⚠️ Hydration mismatch: ${err.message}`, 'warn');
+        if (__DEV__) {
+          console.error('Hydration error details:', errorInfo);
+        }
+      },
+    });
+    hasHydrated = true;
+    log('✅ Hydrated (React 18)');
   } else {
     root = ReactDOMClient.createRoot(container);
     root.render(appElement);
@@ -480,6 +478,14 @@ const safeCleanup = (name, fn) => {
 };
 
 function cleanup() {
+  safeCleanup('Cancel background init', () => {
+    if (backgroundInitHandle !== null) {
+      const cancel = window.cancelIdleCallback || clearTimeout;
+      cancel(backgroundInitHandle);
+      backgroundInitHandle = null;
+    }
+  });
+
   // Save scroll position before cleanup
   safeCleanup('Save scroll position', saveScrollPosition);
 
@@ -552,8 +558,8 @@ function cleanup() {
 }
 
 async function initializeApp() {
-  // Initialize React DOM client
-  await initReactDOMClient();
+  // Note: ReactDOMClient is already loaded by attemptStartup() before
+  // this function is called. No need to await it again here.
 
   currentLocation = history.location;
 
@@ -563,67 +569,7 @@ async function initializeApp() {
   scrollHandler = createScrollHandler();
   window.addEventListener('scroll', scrollHandler, { passive: true });
 
-  // WebSocket
-  try {
-    const wsUrl = buildWebSocketUrl();
-    if (wsUrl) {
-      wsClient = createWebSocketClient({ url: wsUrl, autoReconnect: true });
-
-      // Listen for connection events
-      wsClient.on(MessageType.WELCOME, data => {
-        wsConnectionFailures = 0; // Reset on successful connection
-        log(`✅ WebSocket connected: ${data && data.connectionId}`);
-      });
-
-      wsClient.on(EventType.AUTHENTICATED, user => {
-        log(`✅ WebSocket authenticated as: ${user && user.id}`);
-      });
-
-      wsClient.on(EventType.DISCONNECTED, info => {
-        wsConnectionFailures++;
-        log(
-          `🔌 WebSocket disconnected (${wsConnectionFailures}/${WS_MAX_FAILURES}): ${info}`,
-          'warn',
-        );
-
-        if (wsConnectionFailures >= WS_MAX_FAILURES) {
-          store.dispatch({
-            type: 'WS_UNAVAILABLE',
-            payload: { retries: wsConnectionFailures },
-          });
-          log('⚠️ WebSocket unavailable after multiple attempts', 'error');
-        }
-      });
-
-      wsClient.on(EventType.RECONNECTING, attempt => {
-        log(`🔄 WebSocket reconnecting (attempt ${attempt})`, 'warn');
-      });
-
-      wsClient.on('error', error => {
-        log(`⚠️ WebSocket error: ${error}`, 'error');
-      });
-
-      // Sequential queue — process events in order, never drop any
-      let extensionEventQueue = Promise.resolve();
-      wsClient.on('extension:updated', event => {
-        extensionEventQueue = extensionEventQueue.then(async () => {
-          try {
-            await extensionManager.processLifecycleEvent(event);
-          } catch (err) {
-            log(`⚠️ Extension event failed: ${err.message}`, 'error');
-          }
-        });
-      });
-
-      wsClient.connect();
-    }
-  } catch (error) {
-    log(`❌ WebSocket init failed: ${error}`, 'error');
-  }
-
-  log('🚀 App initialized');
-
-  // Handle initial page load first
+  // Handle initial page load first to prioritize React Hydration
   await onLocationChange(currentLocation);
 
   // Subscribe to history AFTER initial render to avoid duplicate triggers
@@ -633,39 +579,109 @@ async function initializeApp() {
     }),
   );
 
-  // Session restoration on tab visibility change:
-  // When user returns to tab, check if session is still valid
-  // Just refreshes tokens - fresh user data will be fetched on next navigation
-  visibilityChangeHandler = async () => {
-    if (document.visibilityState !== 'visible') return;
-    if (!isAuthenticated(store.getState())) return;
-    if (isRefreshingToken) return; // Guard against concurrent refreshes
+  // 🚀 ENTERPRISE GRADE: Defer WebSocket connection and non-critical listeners
+  // until AFTER the main thread has finished React hydration. This ensures the
+  // browser prioritizes Time to Interactive (TTI) for the user.
+  const scheduleBackground =
+    window.requestIdleCallback || (cb => setTimeout(cb, 50));
 
-    isRefreshingToken = true;
+  backgroundInitHandle = scheduleBackground(() => {
+    backgroundInitHandle = null;
+
+    // WebSocket
     try {
-      // Add timeout to prevent hanging
-      const refreshAction = store.dispatch(refreshToken());
-      let timeoutId;
-      await Promise.race([
-        refreshAction.unwrap(),
-        new Promise((_, reject) => {
-          timeoutId = setTimeout(() => {
-            if (refreshAction.abort) refreshAction.abort();
-            const err = new Error('Token refresh timeout');
-            err.name = 'TokenRefreshTimeoutError';
-            err.code = 'TOKEN_REFRESH_TIMEOUT';
-            reject(err);
-          }, 5_000);
-        }),
-      ]).finally(() => clearTimeout(timeoutId));
-    } catch (err) {
-      log(`⚠️ Token refresh failed: ${err.message}`, 'warn');
-      await store.dispatch(logout());
-    } finally {
-      isRefreshingToken = false;
+      const wsUrl = buildWebSocketUrl();
+      if (wsUrl) {
+        wsClient = createWebSocketClient({ url: wsUrl, autoReconnect: true });
+
+        // Listen for connection events
+        wsClient.on(MessageType.WELCOME, data => {
+          wsConnectionFailures = 0; // Reset on successful connection
+          log(`✅ WebSocket connected: ${data && data.connectionId}`);
+        });
+
+        wsClient.on(EventType.AUTHENTICATED, user => {
+          log(`✅ WebSocket authenticated as: ${user && user.id}`);
+        });
+
+        wsClient.on(EventType.DISCONNECTED, info => {
+          wsConnectionFailures++;
+          log(
+            `🔌 WebSocket disconnected (${wsConnectionFailures}/${WS_MAX_FAILURES}): ${info}`,
+            'warn',
+          );
+
+          if (wsConnectionFailures >= WS_MAX_FAILURES) {
+            store.dispatch({
+              type: 'WS_UNAVAILABLE',
+              payload: { retries: wsConnectionFailures },
+            });
+            log('⚠️ WebSocket unavailable after multiple attempts', 'error');
+          }
+        });
+
+        wsClient.on(EventType.RECONNECTING, attempt => {
+          log(`🔄 WebSocket reconnecting (attempt ${attempt})`, 'warn');
+        });
+
+        wsClient.on('error', error => {
+          log(`⚠️ WebSocket error: ${error}`, 'error');
+        });
+
+        // Sequential queue — process events in order, never drop any
+        let extensionEventQueue = Promise.resolve();
+        wsClient.on('extension:updated', event => {
+          extensionEventQueue = extensionEventQueue.then(async () => {
+            try {
+              await extensionManager.processLifecycleEvent(event);
+            } catch (err) {
+              log(`⚠️ Extension event failed: ${err.message}`, 'error');
+            }
+          });
+        });
+
+        wsClient.connect();
+      }
+    } catch (error) {
+      log(`❌ WebSocket init failed: ${error}`, 'error');
     }
-  };
-  document.addEventListener('visibilitychange', visibilityChangeHandler);
+
+    log('🚀 App initialized');
+
+    // Session restoration on tab visibility change:
+    // When user returns to tab, check if session is still valid
+    // Just refreshes tokens - fresh user data will be fetched on next navigation
+    visibilityChangeHandler = async () => {
+      if (document.visibilityState !== 'visible') return;
+      if (!isAuthenticated(store.getState())) return;
+      if (isRefreshingToken) return; // Guard against concurrent refreshes
+
+      isRefreshingToken = true;
+      try {
+        // Add timeout to prevent hanging
+        const refreshAction = store.dispatch(refreshToken());
+        let timeoutId;
+        await Promise.race([
+          refreshAction.unwrap(),
+          new Promise((_, reject) => {
+            timeoutId = setTimeout(() => {
+              if (refreshAction.abort) refreshAction.abort();
+              const err = new Error('Token refresh timeout');
+              err.name = 'TokenRefreshTimeoutError';
+              err.code = 'TOKEN_REFRESH_TIMEOUT';
+              reject(err);
+            }, 5_000);
+          }),
+        ]).finally(() => clearTimeout(timeoutId));
+      } catch (err) {
+        log(`⚠️ Token refresh failed: ${err.message}`, 'warn');
+        await store.dispatch(logout());
+      } finally {
+        isRefreshingToken = false;
+      }
+    };
+    document.addEventListener('visibilitychange', visibilityChangeHandler);
+  });
 }
 
 // =============================================================================
@@ -681,14 +697,36 @@ async function attemptStartup() {
   extensionManager.viewContainer = context.container;
   extensionManager.fetch = fetch;
 
-  // Phase 1b: Load active extensions (API is already reachable on the client)
-  try {
-    await extensionManager.sync(preloadedState.extensions);
-  } catch (error) {
-    log(`⚠️ Extension sync failed: ${error.message}`, 'error');
-  }
+  // Phase 2: Start all async work concurrently — no waterfalls.
+  //
+  // Key insight from architecture review:
+  //   - react-dom/client is the ONLY hard blocker for hydrateRoot
+  //   - Extension sync buffers routes (router not connected yet),
+  //     they flush when connectViewRouter() is called inside views.js.
+  //     So extensions must complete before views.resolve(), NOT before
+  //     the views.js chunk import.
+  //   - The views.js chunk import is pre-warmed here so the browser
+  //     starts downloading it while we await react-dom/client.
+  //     initializeViews() will consume this pre-warmed promise.
+  const domClientPromise = initReactDOMClient();
+  cachedViewsPreload = import('./bootstrap/views.js');
+  const extensionsPromise = extensionManager
+    .sync(preloadedState.extensions)
+    .catch(error => {
+      log(`⚠️ Extension sync failed: ${error.message}`, 'error');
+    });
 
-  // Initialize app
+  // Only wait for react-dom/client — the minimum needed for hydrateRoot.
+  // Extensions resolve concurrently; they must finish before views.resolve()
+  // which is called inside onLocationChange → initializeViews.
+  await domClientPromise;
+
+  // Ensure extensions are synced before the first route resolution.
+  // This await runs concurrently with the views.js chunk download
+  // (already started above), so there's no serial waterfall.
+  await extensionsPromise;
+
+  // Initialize app (triggers onLocationChange → initializeViews → hydrateRoot)
   await initializeApp();
 }
 
@@ -708,6 +746,7 @@ if (isDOMReady) {
 if (hotAPI) {
   hotAPI.accept(() => {
     cachedViews = null;
+    cachedViewsPreload = null; // Force fresh import on next resolve
     const loc = { ...currentLocation };
     const schedule = window.requestIdleCallback || setTimeout;
     schedule(
