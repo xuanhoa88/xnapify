@@ -105,6 +105,10 @@ let hasStarted = false;
 let isRefreshingToken = false;
 let wsConnectionFailures = 0;
 
+// HMR State
+let isExtensionReloadPending =
+  (hotAPI && hotAPI.data && hotAPI.data.extensionReloadPending) || false;
+
 const scrollPositionsHistory = new Map();
 
 // =============================================================================
@@ -724,9 +728,7 @@ if (hotAPI) {
   // eslint-disable-next-line no-underscore-dangle
   const hmrApi = window.__xnapify_hmr_api__;
   if (hmrApi) {
-    // Using Symbol to avoid name collisions
-    const RELOAD_PENDING = Symbol.for('__xnapify.hmr.extensionReloadPending__');
-
+    // Note: State preservation across reloads is handled via hotAPI.data in the dispose handler
     hmrUnsubscribers.push(
       hmrApi.onError(() => {
         log('⚠️ HMR EventSource connection error', 'warn');
@@ -752,8 +754,8 @@ if (hotAPI) {
           } else {
             // Fallback: reload if we can't resolve the IDs (e.g. new extension added)
             // Show only one confirm at a time and debounce
-            if (window[RELOAD_PENDING]) return;
-            window[RELOAD_PENDING] = true;
+            if (isExtensionReloadPending) return;
+            isExtensionReloadPending = true;
 
             setTimeout(() => {
               if (
@@ -764,7 +766,7 @@ if (hotAPI) {
                 window.location.reload();
               } else {
                 setTimeout(() => {
-                  window[RELOAD_PENDING] = false;
+                  isExtensionReloadPending = false;
                 }, 3000);
               }
             }, 100);
@@ -781,6 +783,7 @@ if (hotAPI) {
     if (store) {
       data.reduxState = store.getState();
     }
+    data.extensionReloadPending = isExtensionReloadPending;
 
     // Unsubscribe all HMR listeners to prevent handler leaks across reloads
     hmrUnsubscribers.forEach(unsub => unsub());

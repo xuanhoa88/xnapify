@@ -194,33 +194,39 @@ async function generateManifests(extensions) {
 // Static Assets & Node-RED Nodes
 // ---------------------------------------------------------------------------
 
-async function copyStaticAssets(extensions) {
-  for (const { name, dirName, manifest, path: extensionPath } of extensions) {
-    // 1. Copy public assets/
-    const assetSource = path.join(extensionPath, 'assets');
-    const assetTarget = path.join(EXTENSIONS_BUILD_DIR, dirName, 'assets');
+function copyStaticAssets(extensions) {
+  return extensions.map(
+    async ({ name, dirName, manifest, path: extensionPath }) => {
+      // 1. Copy public assets/
+      const assetSource = path.join(extensionPath, 'assets');
+      const assetTarget = path.join(EXTENSIONS_BUILD_DIR, dirName, 'assets');
 
-    if (await pathExists(assetSource)) {
-      await copyDir(assetSource, assetTarget);
-      logInfo(`📁 Copied static assets for ${name}`);
-    }
+      if (await pathExists(assetSource)) {
+        await copyDir(assetSource, assetTarget);
+        logInfo(`📁 Copied static assets for ${name}`);
+      }
 
-    // 2. Node-RED custom nodes are handled by rspack (extension.config.js)
+      // 2. Node-RED custom nodes are handled by rspack (extension.config.js)
 
-    // 3. Copy Node-RED flow definitions from manifest.nodered.flows
-    if (manifest.nodered && typeof manifest.nodered === 'object') {
-      const flowsRel = manifest.nodered.flows;
-      if (flowsRel) {
-        const flowsSource = path.join(extensionPath, flowsRel);
-        const flowsTarget = path.join(EXTENSIONS_BUILD_DIR, dirName, flowsRel);
+      // 3. Copy Node-RED flow definitions from manifest.nodered.flows
+      if (manifest.nodered && typeof manifest.nodered === 'object') {
+        const flowsRel = manifest.nodered.flows;
+        if (flowsRel) {
+          const flowsSource = path.join(extensionPath, flowsRel);
+          const flowsTarget = path.join(
+            EXTENSIONS_BUILD_DIR,
+            dirName,
+            flowsRel,
+          );
 
-        if (await pathExists(flowsSource)) {
-          await copyDir(flowsSource, flowsTarget);
-          logInfo(`🔗 Copied Node-RED flows for ${name}`);
+          if (await pathExists(flowsSource)) {
+            await copyDir(flowsSource, flowsTarget);
+            logInfo(`🔗 Copied Node-RED flows for ${name}`);
+          }
         }
       }
-    }
-  }
+    },
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -235,12 +241,15 @@ async function copyStaticAssets(extensions) {
  * them, but Node resolves from the *output* directory — which has no
  * `node_modules`. A symlink bridges the gap without duplicating files.
  */
-async function linkExtensionNodeModules(extensions) {
-  for (const { name, dirName, path: extensionPath } of extensions) {
-    const source = path.join(extensionPath, 'node_modules');
-    const target = path.join(EXTENSIONS_BUILD_DIR, dirName, 'node_modules');
+function linkExtensionNodeModules(extensions) {
+  return extensions.map(async ext => {
+    const source = path.join(ext.path, 'node_modules');
+    const target = path.join(EXTENSIONS_BUILD_DIR, ext.dirName, 'node_modules');
 
-    if (!(await pathExists(source))) continue;
+    if (!(await pathExists(source))) {
+      console.log('⚡ node_modules not found for', ext.name);
+      return;
+    }
 
     // Remove stale link or directory before creating a fresh symlink
     try {
@@ -253,8 +262,8 @@ async function linkExtensionNodeModules(extensions) {
     }
 
     await fs.promises.symlink(source, target, 'junction');
-    logInfo(`🔗 Linked node_modules for ${name}`);
-  }
+    logInfo(`🔗 Linked node_modules for ${ext.name}`);
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -436,11 +445,27 @@ async function buildExtensions(options = {}) {
         return;
       }
 
+      // Ensure output directories exist before attempting to write symlinks/assets.
+      // This prevents ENOENT errors if Rspack compilation fails or hasn't emitted files yet.
+      await Promise.all(
+        extensions.map(async ext => {
+          try {
+            await fs.promises.mkdir(
+              path.join(EXTENSIONS_BUILD_DIR, ext.dirName),
+              { recursive: true },
+            );
+            console.log('⚡ Directory created for', ext.name);
+          } catch (err) {
+            console.error(`Error creating directory for ${ext.name}:`, err);
+          }
+        }),
+      );
+
       // Link node_modules and copy assets first so the output directory
       // is complete before generateManifests checksums it.
       await Promise.all([
-        copyStaticAssets(extensions),
-        linkExtensionNodeModules(extensions),
+        ...copyStaticAssets(extensions),
+        ...linkExtensionNodeModules(extensions),
       ]);
       await generateManifests(extensions);
 

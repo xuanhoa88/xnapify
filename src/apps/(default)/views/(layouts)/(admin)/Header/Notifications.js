@@ -54,26 +54,26 @@ function AdminNotifications() {
     switch (type) {
       case 'warning':
         return {
-          colorClass: 'text-amber-11',
-          bgClass: 'bg-amber-3',
+          colorClass: 'text-[var(--amber-11)]',
+          bgClass: 'bg-[var(--amber-3)]',
           icon: 'ExclamationTriangleIcon',
         };
       case 'success':
         return {
-          colorClass: 'text-green-11',
-          bgClass: 'bg-green-3',
+          colorClass: 'text-[var(--green-11)]',
+          bgClass: 'bg-[var(--green-3)]',
           icon: 'CheckCircledIcon',
         };
       case 'error':
         return {
-          colorClass: 'text-red-11',
-          bgClass: 'bg-red-3',
+          colorClass: 'text-[var(--red-11)]',
+          bgClass: 'bg-[var(--red-3)]',
           icon: 'CrossCircledIcon',
         };
       default:
         return {
-          colorClass: 'text-blue-11',
-          bgClass: 'bg-blue-3',
+          colorClass: 'text-[var(--blue-11)]',
+          bgClass: 'bg-[var(--blue-3)]',
           icon: 'InfoCircledIcon',
         };
     }
@@ -85,14 +85,14 @@ function AdminNotifications() {
         <button
           type='button'
           title={t('common.notifications', 'Notifications')}
-          className='relative flex items-center justify-center w-9 h-9 rounded-full text-gray-500 cursor-pointer transition-colors bg-transparent hover:bg-gray-100 hover:text-gray-900 data-[state=open]:bg-gray-100 data-[state=open]:text-gray-900 outline-none border-none'
+          className='relative flex items-center justify-center w-9 h-9 rounded-full text-(--gray-11) cursor-pointer transition-colors bg-transparent hover:bg-(--gray-a3) hover:text-(--gray-12) data-[state=open]:bg-(--gray-a3) data-[state=open]:text-(--gray-12) outline-none border-none'
         >
           <Icon name='BellIcon' size={18} />
           {unreadCount > 0 && (
             <Flex
               align='center'
               justify='center'
-              className='absolute top-1 right-1 bg-red-500 text-white text-[9px] font-bold min-w-[14px] h-[14px] rounded-full px-0.5 border border-white'
+              className='absolute top-1 right-1 bg-(--red-9) text-white text-[9px] font-bold min-w-[14px] h-[14px] rounded-full px-0.5 border border-white'
             >
               {unreadCount > 9 ? '9+' : unreadCount}
             </Flex>
@@ -102,12 +102,12 @@ function AdminNotifications() {
 
       <Popover.Content
         align='end'
-        className='p-0 bg-panel-solid/90 backdrop-blur-md border border-gray-a6 rounded-md shadow-lg overflow-hidden z-[100] w-[calc(100vw-24px)] sm:w-[380px] data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95'
+        className='p-0 bg-(--color-panel-solid) backdrop-blur-md border border-(--gray-a6) rounded-md shadow-lg overflow-hidden z-100 w-[calc(100vw-24px)] sm:w-[380px] data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95'
       >
         <Flex
           align='center'
           justify='between'
-          className='px-4 py-3 border-b border-gray-a6 bg-gray-2'
+          className='px-4 py-3 border-b border-(--gray-a6) bg-(--gray-2)'
         >
           <Text size='3' weight='bold'>
             {t('common.notifications', 'Notifications')}
@@ -128,15 +128,15 @@ function AdminNotifications() {
                 key={notification.id}
                 gap='3'
                 className={clsx(
-                  'px-4 py-3 border-b border-gray-a6 bg-transparent cursor-pointer transition-colors hover:bg-gray-3',
-                  !notification.read && 'bg-indigo-2 hover:bg-indigo-3',
+                  'px-4 py-3 border-b border-(--gray-a6) bg-transparent cursor-pointer transition-colors hover:bg-(--gray-3)',
+                  !notification.read && 'bg-(--indigo-2) hover:bg-(--indigo-3)',
                 )}
               >
                 <Flex
                   align='center'
                   justify='center'
                   className={clsx(
-                    'w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center',
+                    'w-9 h-9 rounded-full shrink-0 flex items-center justify-center',
                     typeStyle.bgClass,
                     typeStyle.colorClass,
                   )}
@@ -166,14 +166,11 @@ function AdminNotifications() {
           })}
         </Box>
 
-        <Flex
-          justify='center'
-          className='p-2 bg-gray-2 border-t border-gray-a6'
-        >
+        <Flex justify='center' className='p-2 bg-(--gray-2)'>
           <Button
             variant='ghost'
             size='2'
-            className='text-indigo-11 font-medium cursor-pointer no-underline hover:underline'
+            className='text-(--indigo-11) font-medium cursor-pointer no-underline hover:underline'
           >
             {t('common.viewAll', 'View all notifications')}
           </Button>

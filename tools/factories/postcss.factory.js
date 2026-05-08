@@ -41,6 +41,11 @@ export default ({ cwd } = {}) => ({
       features: {
         // Enable CSS nesting via & parent selector
         'nesting-rules': true,
+
+        // Disable @layer polyfill. The polyfill inflates specificity using
+        // :not(#\#) which breaks the precedence of dynamically injected
+        // extension stylesheets. Modern browsers support @layer natively.
+        'cascade-layers': false,
       },
 
       // Autoprefixer options

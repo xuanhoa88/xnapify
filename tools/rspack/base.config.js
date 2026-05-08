@@ -797,7 +797,21 @@ function createRspackConfig(name, options = {}) {
               new rspack.SwcJsMinimizerRspackPlugin({
                 compress: { drop_console: !isServer },
               }),
-              new rspack.LightningCssMinimizerRspackPlugin(),
+              new rspack.LightningCssMinimizerRspackPlugin({
+                minimizerOptions: {
+                  // Explicitly set targets to browsers that natively support @layer.
+                  // This prevents Lightning CSS from polyfilling @layer by injecting
+                  // :not(#\#) which artificially inflates specificity and breaks
+                  // the precedence of unlayered extension styles.
+                  targets: [
+                    'chrome >= 99',
+                    'firefox >= 97',
+                    'safari >= 15.4',
+                    'ios_saf >= 15.4',
+                    'edge >= 99',
+                  ],
+                },
+              }),
             ]
           : [],
       },

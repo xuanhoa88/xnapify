@@ -13,12 +13,12 @@ import {
   ArrowUpIcon,
   ExitIcon,
 } from '@radix-ui/react-icons';
-import { Flex, Text, Box } from '@radix-ui/themes';
+import { Flex, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 
 import ContextMenu from '@shared/renderer/components/ContextMenu/index.js';
-import { Link, useHistory } from '@shared/renderer/components/History/index.js';
+import { useHistory } from '@shared/renderer/components/History/index.js';
 import { checkPermission } from '@shared/renderer/components/Rbac/index.js';
 import { features } from '@shared/renderer/redux/index.js';
 import { useWebSocket } from '@shared/ws/client/index.js';
@@ -108,57 +108,55 @@ function ProfileDropdown() {
 
       <ContextMenu.Menu
         align='end'
-        className='min-w-[200px] bg-panel-solid/90 backdrop-blur-md border border-gray-a6 rounded-md shadow-lg p-1 z-[100] data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95'
+        variant='soft'
+        size='2'
+        className='min-w-[200px] z-100 p-1 bg-(--color-panel-solid) backdrop-blur-md border border-(--gray-a6) rounded-(--radius-4) shadow-lg data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95'
       >
-        <Box py='2' px='3' mb='1' className='border-b border-gray-a6 mb-2'>
-          <Text as='div' size='2' weight='bold'>
-            {displayName}
-          </Text>
-          <Text as='div' size='1' color='gray' mt='1'>
-            {displayRole}
-          </Text>
-        </Box>
+        <ContextMenu.Header title={displayName} subtitle={displayRole} />
 
-        <ContextMenu.Item asChild>
-          <Link
-            to='/profile'
-            className='w-full flex items-center gap-2 px-3 py-2 rounded-sm text-left cursor-pointer transition-colors text-gray-12 hover:bg-gray-3 hover:text-gray-12 focus:outline-none focus:bg-gray-3 no-underline'
-          >
+        <ContextMenu.Item
+          onClick={() => history.push('/profile')}
+          className='cursor-pointer'
+        >
+          <Flex align='center' gap='2'>
             <PersonIcon width={16} height={16} />
             <Text size='2'>{t('navigation.profile', 'Profile')}</Text>
-          </Link>
+          </Flex>
         </ContextMenu.Item>
 
         {checkPermission(userProfile, 'nodered:admin') && (
-          <ContextMenu.Item asChild>
-            <a
-              href='/~/red/admin'
-              className='w-full flex items-center gap-2 px-3 py-2 rounded-sm text-left cursor-pointer transition-colors text-gray-12 hover:bg-gray-3 hover:text-gray-12 focus:outline-none focus:bg-gray-3 no-underline'
-            >
+          <ContextMenu.Item
+            onClick={() => (window.location.href = '/~/red/admin')}
+            className='cursor-pointer'
+          >
+            <Flex align='center' gap='2'>
               <LightningBoltIcon width={16} height={16} />
               <Text size='2'>Node-RED</Text>
-            </a>
+            </Flex>
           </ContextMenu.Item>
         )}
 
-        <ContextMenu.Item asChild>
-          <Link
-            to='/'
-            className='w-full flex items-center gap-2 px-3 py-2 rounded-sm text-left cursor-pointer transition-colors text-gray-12 hover:bg-gray-3 hover:text-gray-12 focus:outline-none focus:bg-gray-3 no-underline'
-          >
+        <ContextMenu.Item
+          onClick={() => history.push('/')}
+          className='cursor-pointer'
+        >
+          <Flex align='center' gap='2'>
             <ArrowUpIcon width={16} height={16} />
             <Text size='2'>{t('navigation.backToSite', 'Back to Site')}</Text>
-          </Link>
+          </Flex>
         </ContextMenu.Item>
 
-        <ContextMenu.Divider className='h-[1px] bg-gray-a6 my-1 mx-1' />
+        <ContextMenu.Divider />
 
         <ContextMenu.Item
           onClick={handleLogout}
-          className='w-full flex items-center gap-2 px-3 py-2 rounded-sm text-left cursor-pointer transition-colors text-red-11 hover:bg-red-3 hover:text-red-11 focus:outline-none focus:bg-red-3'
+          variant='danger'
+          className='cursor-pointer'
         >
-          <ExitIcon width={16} height={16} />
-          <Text size='2'>{t('navigation.logout', 'Logout')}</Text>
+          <Flex align='center' gap='2'>
+            <ExitIcon width={16} height={16} />
+            <Text size='2'>{t('navigation.logout', 'Logout')}</Text>
+          </Flex>
         </ContextMenu.Item>
       </ContextMenu.Menu>
     </ContextMenu>

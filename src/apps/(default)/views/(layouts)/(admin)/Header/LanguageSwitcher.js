@@ -7,8 +7,7 @@
 
 import { useCallback, useMemo } from 'react';
 
-import { Text } from '@radix-ui/themes';
-import clsx from 'clsx';
+import { Text, Flex } from '@radix-ui/themes';
 import { useDispatch, useSelector } from 'react-redux';
 
 import ContextMenu from '@shared/renderer/components/ContextMenu/index.js';
@@ -80,22 +79,27 @@ function AdminLanguageSwitcher() {
 
       <ContextMenu.Menu
         align='end'
-        className='min-w-[160px] bg-panel-solid/90 backdrop-blur-md border border-gray-a6 rounded-md shadow-lg p-1 z-[100] data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95'
+        variant='soft'
+        size='2'
+        className='min-w-[160px] z-100 p-1 bg-(--color-panel-solid) backdrop-blur-md border border-(--gray-a6) rounded-(--radius-4) shadow-lg data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95'
       >
         {localeEntries.map(([code, name]) => (
           <ContextMenu.Item
             key={code}
             onClick={e => handleLocaleChange(code, e)}
-            className={clsx(
-              'w-full flex items-center justify-between px-3 py-2 rounded-sm text-left cursor-pointer transition-colors text-gray-12 hover:bg-gray-3 focus:outline-none focus:bg-gray-3',
-              code === currentLocale &&
-                'bg-indigo-3 text-indigo-11 hover:bg-indigo-3 focus:bg-indigo-3',
-            )}
+            className='cursor-pointer'
           >
-            <Text size='2'>{name}</Text>
-            {code === currentLocale && (
-              <Icon name='CheckIcon' size={14} className='text-indigo-11' />
-            )}
+            <Flex width='100%' justify='between' align='center' gap='3'>
+              <Text
+                size='2'
+                color={code === currentLocale ? 'indigo' : undefined}
+              >
+                {name}
+              </Text>
+              {code === currentLocale && (
+                <Icon name='CheckIcon' size={14} className='text-indigo-11' />
+              )}
+            </Flex>
           </ContextMenu.Item>
         ))}
       </ContextMenu.Menu>

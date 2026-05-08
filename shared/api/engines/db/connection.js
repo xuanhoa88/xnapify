@@ -12,6 +12,8 @@ import path from 'path';
 import merge from 'lodash/merge';
 import Sequelize from 'sequelize';
 
+import { getHmrState } from '@shared/utils/hmrState.js';
+
 import { register } from '../../shutdown.js';
 
 import {
@@ -22,9 +24,6 @@ import {
   getMigrationStatus,
   getSeedStatus,
 } from './migrator.js';
-
-// HMR: Connection pool cache shared across hot reloads (keyed by resolved URL)
-const DB_CACHE_KEY = Symbol.for('__xnapify.hmr.dbConnections__');
 
 // ======================================================================
 // Constants
@@ -227,7 +226,7 @@ export function createConnection(url, options) {
   // createConnection('postgres://other') correctly returns a separate
   // instance instead of the default singleton.
   if (__DEV__) {
-    const cache = (globalThis[DB_CACHE_KEY] ||= new Map());
+    const cache = getHmrState('db:connections', () => new Map());
     const cached = cache.get(databaseUrl);
     if (cached) {
       // Reset both model registries so HMR re-registers fresh classes.
@@ -243,9 +242,9 @@ export function createConnection(url, options) {
   // Create connection and attach migration methods
   const sequelize = new Sequelize(databaseUrl, config);
 
-  // Store in dev HMR cache (Map is already initialised above)
+  // Store in dev HMR cache
   if (__DEV__) {
-    globalThis[DB_CACHE_KEY].set(databaseUrl, sequelize);
+    getHmrState('db:connections', () => new Map()).set(databaseUrl, sequelize);
   }
 
   return attachMigrationMethods(sequelize);

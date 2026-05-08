@@ -5,6 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { getHmrState } from '@shared/utils/hmrState.js';
+
 import { registerSchedules } from './schedules.js';
 import * as extensionService from './services/extension.service.js';
 import { registerExtensionWorkers } from './services/extension.workers.js';
@@ -51,19 +53,14 @@ export default {
  * it broadcasts `extensions-refreshed`, instructing the backend to hot-reload
  * manifests and invalidate API caches.
  */
-const IPC_STATE_KEY = Symbol.for('__xnapify.hmr.extensionIpcState__');
-
 function registerHmrIpcListener(container) {
   // Initialize or retrieve global state to survive HMR module re-evaluations
-  if (!globalThis[IPC_STATE_KEY]) {
-    globalThis[IPC_STATE_KEY] = {
-      isRefreshing: false,
-      pendingIds: null,
-      pendingExtensions: null,
-      listener: null,
-    };
-  }
-  const state = globalThis[IPC_STATE_KEY];
+  const state = getHmrState('extensions:ipc', () => ({
+    isRefreshing: false,
+    pendingIds: null,
+    pendingExtensions: null,
+    listener: null,
+  }));
 
   // Clean up any existing listener from a previous HMR hot-reload
   if (state.listener) {

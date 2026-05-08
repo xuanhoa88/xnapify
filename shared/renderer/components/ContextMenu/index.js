@@ -112,18 +112,20 @@ Menu.propTypes = {
 
 function Header({ children, title, subtitle, className }) {
   return (
-    <DropdownMenu.Label className={clsx(className, s.header)}>
-      {title && (
-        <Text as='div' size='2' weight='bold'>
-          {title}
-        </Text>
-      )}
-      {subtitle && (
-        <Text as='div' size='1' color='gray' mt='1'>
-          {subtitle}
-        </Text>
-      )}
-      {children}
+    <DropdownMenu.Label className={clsx(className, s.header, 'px-3 py-2 mb-1')}>
+      <Flex direction='column' className='w-full'>
+        {title && (
+          <Text as='div' size='2' weight='bold' className='truncate'>
+            {title}
+          </Text>
+        )}
+        {subtitle && (
+          <Text as='div' size='1' color='gray' mt='1' className='truncate'>
+            {subtitle}
+          </Text>
+        )}
+        {children}
+      </Flex>
     </DropdownMenu.Label>
   );
 }

@@ -14,6 +14,11 @@ import {
   getRefreshTokenFromCookie,
 } from '@shared/cookies/index.js';
 import { createNativeRequire } from '@shared/utils/createNativeRequire.js';
+import {
+  getHmrState,
+  setHmrState,
+  clearHmrState,
+} from '@shared/utils/hmrState.js';
 
 import initFlowSplitter from './flowSplitter.js';
 import {
@@ -22,9 +27,6 @@ import {
   writeExtensionNodeModule,
   removeExtensionNodeModule,
 } from './settings.js';
-
-// This prevents the instance from being lost during HMR
-const kNodeRedInstance = Symbol.for('__xnapify.nodeREDInstance__');
 
 /**
  * Lifecycle states for the Node-RED manager
@@ -225,8 +227,8 @@ export class NodeRedManager {
         await this.shutdown();
       }
 
-      // Clean up previous HMR instance if it exists on the server
-      const prevInstance = server[kNodeRedInstance];
+      // Clean up previous HMR instance if it exists
+      const prevInstance = getHmrState('nodered:instance', () => null);
       if (prevInstance && prevInstance !== this) {
         Logger.restart('Cleaning up previous HMR instance...');
         try {
@@ -255,13 +257,8 @@ export class NodeRedManager {
         Logger.debug('No previous HMR instance found to clean up');
       }
 
-      // Attach current instance to server for future cleanup
-      Object.defineProperty(server, kNodeRedInstance, {
-        value: this,
-        writable: true,
-        enumerable: false,
-        configurable: true,
-      });
+      // Attach current instance to HMR state for future cleanup
+      setHmrState('nodered:instance', this);
 
       await this._performInit(app, server, config);
     });
@@ -1018,6 +1015,9 @@ export class NodeRedManager {
     this._extModuleMap.clear();
     this._extOpQueue.clear();
     this._state = LifecycleState.UNINITIALIZED;
+
+    // Remove the instance from the HMR state cache
+    clearHmrState('nodered:instance');
 
     if (errors.length > 0) {
       Logger.warn(`Shutdown completed with ${errors.length} error(s)`);
