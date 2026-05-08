@@ -420,7 +420,7 @@ function CreateUserFormFields({
       <Box
         px='5'
         py='3'
-        className='bg-[var(--gray-a2)] border-b border-[var(--gray-a4)]'
+        className='bg-(--gray-a2) border-b border-(--gray-a4)'
       >
         <Text size='2' weight='bold' color='gray'>
           {t('users:admin.create.accountInfo', 'Account Information')}
@@ -492,7 +492,7 @@ function CreateUserFormFields({
       <Box
         px='5'
         py='3'
-        className='bg-[var(--gray-a2)] border-y border-[var(--gray-a4)]'
+        className='bg-(--gray-a2) border-y border-(--gray-a4)'
       >
         <Text size='2' weight='bold' color='gray'>
           {t('users:admin.create.personalInfo', 'Personal Information')}
@@ -538,7 +538,7 @@ function CreateUserFormFields({
       <Box
         px='5'
         py='3'
-        className='bg-[var(--gray-a2)] border-y border-[var(--gray-a4)]'
+        className='bg-(--gray-a2) border-y border-(--gray-a4)'
       >
         <Text size='2' weight='bold' color='gray'>
           {t('users:admin.create.accessAndPermissions', 'Access & Permissions')}
@@ -629,7 +629,7 @@ function CreateUserFormFields({
         justify='between'
         px='5'
         py='4'
-        className='rounded-b-md bg-[var(--gray-2)] border-t border-[var(--gray-a4)]'
+        className='rounded-b-md bg-(--gray-2) border-t border-(--gray-a4)'
       >
         <Button
           variant='soft'

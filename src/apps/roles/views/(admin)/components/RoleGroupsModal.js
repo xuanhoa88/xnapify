@@ -154,7 +154,7 @@ const RoleGroupsModal = forwardRef((props, ref) => {
               justify='center'
               align='center'
               p='8'
-              className='text-[var(--gray-9)] italic'
+              className='text-(--gray-9) italic'
             >
               {t('admin:common.loadingGroups', 'Loading groups...')}
             </Flex>
@@ -163,7 +163,7 @@ const RoleGroupsModal = forwardRef((props, ref) => {
               justify='center'
               align='center'
               p='8'
-              className='text-[var(--gray-9)] italic bg-[var(--gray-2)] rounded-[var(--radius-3)]'
+              className='text-(--gray-9) italic bg-(--gray-2) rounded-(--radius-3)'
             >
               {search
                 ? t('roles:admin.noGroupsMatch', 'No groups match your search')
@@ -179,7 +179,7 @@ const RoleGroupsModal = forwardRef((props, ref) => {
                   <Flex
                     align='center'
                     justify='center'
-                    className='w-10 h-10 rounded-[var(--radius-2)] bg-[var(--amber-3)] text-[var(--amber-11)] shrink-0'
+                    className='w-10 h-10 rounded-(--radius-2) bg-(--amber-3) text-(--amber-11) shrink-0'
                   >
                     <GroupIcon width={20} height={20} />
                   </Flex>

@@ -78,13 +78,13 @@ function ProfileDropdown() {
   const triggerButton = (
     <button
       type='button'
-      className='group border-none font-inherit text-inherit flex items-center px-[var(--space-2)] py-[var(--space-1)] rounded-[var(--radius-3)] cursor-pointer transition-colors duration-200 bg-transparent focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus-8)] focus-visible:outline-offset-[-1px] hover:bg-[var(--gray-3)] data-[state=open]:bg-[var(--gray-3)]'
+      className='group border-none font-inherit text-inherit flex items-center px-(--space-2) py-(--space-1) rounded-(--radius-3) cursor-pointer transition-colors duration-200 bg-transparent focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-(--focus-8) focus-visible:-outline-offset-1 hover:bg-(--gray-3) data-[state=open]:bg-(--gray-3)'
     >
       <Flex align='center' gap='2'>
         <Flex
           align='center'
           justify='center'
-          className='w-8 h-8 rounded-full bg-[var(--indigo-3)] text-[var(--indigo-11)] overflow-hidden font-bold text-[length:var(--font-size-2)] flex items-center justify-center'
+          className='w-8 h-8 rounded-full bg-(--indigo-3) text-(--indigo-11) overflow-hidden font-bold text-(length:--font-size-2) flex items-center justify-center'
         >
           {avatarUrl ? (
             <img
@@ -102,7 +102,7 @@ function ProfileDropdown() {
         <Text size='3' weight='medium' className='hidden md:block'>
           {displayName}
         </Text>
-        <Box className='flex text-[var(--gray-11)] transition-transform duration-200 group-data-[state=open]:rotate-180'>
+        <Box className='flex text-(--gray-11) transition-transform duration-200 group-data-[state=open]:rotate-180'>
           <ChevronDownIcon width={12} height={12} />
         </Box>
       </Flex>
@@ -124,7 +124,7 @@ function ProfileDropdown() {
           align='end'
           variant='soft'
           size='3'
-          className='min-w-[200px] shadow-[var(--shadow-4)]'
+          className='min-w-[200px] shadow-(--shadow-4)'
         >
           {/* Header */}
           <Box py='2' px='3' mb='1'>
@@ -142,7 +142,7 @@ function ProfileDropdown() {
             <PersonIcon
               width={16}
               height={16}
-              className='mr-[var(--space-2)]'
+              className='mr-(--space-2)'
             />
             {t('navigation.profile', 'Profile')}
           </ContextMenu.Item>
@@ -156,21 +156,21 @@ function ProfileDropdown() {
               <LightningBoltIcon
                 width={16}
                 height={16}
-                className='mr-[var(--space-2)]'
+                className='mr-(--space-2)'
               />
               {t('navigation.nodeRed', 'Node-RED')}
             </ContextMenu.Item>
           )}
 
           <ContextMenu.Item onClick={() => history.push('/admin')}>
-            <GearIcon width={16} height={16} className='mr-[var(--space-2)]' />
+            <GearIcon width={16} height={16} className='mr-(--space-2)' />
             {t('navigation.admin', 'Admin Panel')}
           </ContextMenu.Item>
 
           <ContextMenu.Divider />
 
           <ContextMenu.Item variant='danger' onClick={handleLogout}>
-            <ExitIcon width={16} height={16} className='mr-[var(--space-2)]' />
+            <ExitIcon width={16} height={16} className='mr-(--space-2)' />
             {t('navigation.logout', 'Logout')}
           </ContextMenu.Item>
         </ContextMenu.Menu>

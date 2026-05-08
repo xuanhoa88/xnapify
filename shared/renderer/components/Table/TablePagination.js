@@ -171,7 +171,7 @@ function TablePagination({
                     { pageSize },
                   )}
                 </span>
-                <Box className='flex text-[var(--gray-9)]'>
+                <Box className='flex text-(--gray-9)'>
                   <CaretDownIcon width={12} height={12} />
                 </Box>
               </button>
@@ -179,7 +179,7 @@ function TablePagination({
             <ContextMenu.Menu
               align='center'
               sideOffset={4}
-              className='border border-[var(--gray-a4)] rounded-md shadow-md overflow-hidden p-1'
+              className='border border-(--gray-a4) rounded-md shadow-md overflow-hidden p-1'
             >
               {pageSizeOptions.map(size => (
                 <ContextMenu.Item
@@ -187,7 +187,7 @@ function TablePagination({
                   onClick={() => handlePageSizeChange(size)}
                   className={clsx(
                     pageSize === size &&
-                      'bg-[var(--indigo-9)] text-white hover:bg-[var(--indigo-10)]',
+                      'bg-(--indigo-9) text-white hover:bg-(--indigo-10)',
                   )}
                 >
                   <Flex align='center' gap='2' width='100%'>

@@ -54,26 +54,26 @@ function AdminNotifications() {
     switch (type) {
       case 'warning':
         return {
-          colorClass: 'text-[var(--amber-11)]',
-          bgClass: 'bg-[var(--amber-3)]',
+          colorClass: 'text-(--amber-11)',
+          bgClass: 'bg-(--amber-3)',
           icon: 'ExclamationTriangleIcon',
         };
       case 'success':
         return {
-          colorClass: 'text-[var(--green-11)]',
-          bgClass: 'bg-[var(--green-3)]',
+          colorClass: 'text-(--green-11)',
+          bgClass: 'bg-(--green-3)',
           icon: 'CheckCircledIcon',
         };
       case 'error':
         return {
-          colorClass: 'text-[var(--red-11)]',
-          bgClass: 'bg-[var(--red-3)]',
+          colorClass: 'text-(--red-11)',
+          bgClass: 'bg-(--red-3)',
           icon: 'CrossCircledIcon',
         };
       default:
         return {
-          colorClass: 'text-[var(--blue-11)]',
-          bgClass: 'bg-[var(--blue-3)]',
+          colorClass: 'text-(--blue-11)',
+          bgClass: 'bg-(--blue-3)',
           icon: 'InfoCircledIcon',
         };
     }

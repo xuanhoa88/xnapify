@@ -170,7 +170,7 @@ const GroupRolesModal = forwardRef(({ fetchRoles }, ref) => {
         })}
       </Modal.Header>
       <Modal.Body error={error}>
-        <Modal.Description className='mb-4 text-[var(--gray-11)]'>
+        <Modal.Description className='mb-4 text-(--gray-11)'>
           {t(
             'groups:admin.manageRolesDescription',
             'Select roles to assign to this group. All users of the group will inherit these roles.',
@@ -217,8 +217,8 @@ const GroupRolesModal = forwardRef(({ fetchRoles }, ref) => {
                   tabIndex={0}
                   className={`border shadow-sm rounded-md cursor-pointer transition-colors ${
                     isSelected
-                      ? 'bg-[var(--indigo-a2)] border-[var(--indigo-a6)]'
-                      : 'border-[var(--gray-a5)] hover:bg-[var(--gray-a3)]'
+                      ? 'bg-(--indigo-a2) border-(--indigo-a6)'
+                      : 'border-(--gray-a5) hover:bg-(--gray-a3)'
                   }`}
                   onKeyDown={e => {
                     if (e.key === ' ' || e.key === 'Enter') {

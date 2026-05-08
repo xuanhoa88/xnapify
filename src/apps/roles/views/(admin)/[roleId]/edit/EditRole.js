@@ -64,7 +64,7 @@ function EditRoleIdentityCard({ role }) {
           justify='center'
           width='64px'
           height='64px'
-          className='rounded-full bg-[var(--indigo-3)] text-[var(--indigo-11)]'
+          className='rounded-full bg-(--indigo-3) text-(--indigo-11)'
         >
           <LockClosedIcon width={28} height={28} />
         </Flex>
@@ -361,7 +361,7 @@ function EditRoleFormFields({
       <Box
         px='5'
         py='3'
-        className='bg-[var(--gray-a2)] border-b border-[var(--gray-a4)]'
+        className='bg-(--gray-a2) border-b border-(--gray-a4)'
       >
         <Text size='2' weight='bold' color='gray'>
           {t('roles:admin.edit.roleInformation', 'Role Information')}
@@ -399,7 +399,7 @@ function EditRoleFormFields({
       <Box
         px='5'
         py='3'
-        className='bg-[var(--gray-a2)] border-t border-[var(--gray-a4)] border-b border-[var(--gray-a4)]'
+        className='bg-(--gray-a2) border-t border-(--gray-a4) border-b border-(--gray-a4)'
       >
         <Text size='2' weight='bold' color='gray'>
           {t(
@@ -446,7 +446,7 @@ function EditRoleFormFields({
         justify='between'
         px='5'
         py='4'
-        className='rounded-b-md bg-[var(--gray-2)] border-t border-[var(--gray-a4)]'
+        className='rounded-b-md bg-(--gray-2) border-t border-(--gray-a4)'
       >
         <Button
           variant='soft'

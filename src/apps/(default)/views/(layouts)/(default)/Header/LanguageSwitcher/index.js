@@ -62,7 +62,7 @@ function LanguageSwitcher() {
     <button
       type='button'
       title={t('common.languageSwitcher', 'Language switcher')}
-      className='bg-transparent border-none cursor-pointer flex items-center gap-[var(--space-2)] text-[var(--gray-11)] px-[var(--space-2)] py-[var(--space-1)] rounded-[var(--radius-3)] transition-colors duration-150 ease-in-out hover:bg-[var(--gray-a3)] hover:text-[var(--gray-12)] focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus-8)] focus-visible:outline-offset-[-1px] data-[state=open]:bg-[var(--gray-a3)] data-[state=open]:text-[var(--gray-12)]'
+      className='bg-transparent border-none cursor-pointer flex items-center gap-(--space-2) text-(--gray-11) px-(--space-2) py-(--space-1) rounded-(--radius-3) transition-colors duration-150 ease-in-out hover:bg-(--gray-a3) hover:text-(--gray-12) focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-(--focus-8) focus-visible:-outline-offset-1 data-[state=open]:bg-(--gray-a3) data-[state=open]:text-(--gray-12)'
     >
       <GlobeIcon width={16} height={16} />
       <Text size='3'>{currentLanguageName}</Text>
@@ -87,7 +87,7 @@ function LanguageSwitcher() {
             onClick={() => handleLocaleChange(code)}
             className={clsx(
               code === currentLocale &&
-                'bg-[var(--indigo-a3)] text-[var(--indigo-11)] font-medium hover:bg-[var(--indigo-a4)]',
+                'bg-(--indigo-a3) text-(--indigo-11) font-medium hover:bg-(--indigo-a4)',
             )}
           >
             <Text size='3' mr='3'>
@@ -97,7 +97,7 @@ function LanguageSwitcher() {
               <CheckIcon
                 width={14}
                 height={14}
-                className='text-[var(--indigo-11)] ml-auto'
+                className='text-(--indigo-11) ml-auto'
               />
             )}
           </ContextMenu.Item>

@@ -76,15 +76,15 @@ function SecurityCard() {
         columns={{ initial: '1', md: '2' }}
         gapY='2'
         gapX='4'
-        className='bg-[var(--blue-2)] border border-[var(--blue-5)] border-l-[4px] border-l-[var(--blue-9)] rounded-[var(--radius-3)] py-3 px-4 mb-6'
+        className='bg-(--blue-2) border border-(--blue-5) border-l-4 border-l-(--blue-9) rounded-(--radius-3) py-3 px-4 mb-6'
       >
-        <Flex align='center' gap='2' className='text-[var(--blue-11)]'>
+        <Flex align='center' gap='2' className='text-(--blue-11)'>
           <CheckCircledIcon width={16} height={16} />
           <Text size='2'>
             {t('profile.passwordTip1', 'Use at least 8 characters')}
           </Text>
         </Flex>
-        <Flex align='center' gap='2' className='text-[var(--blue-11)]'>
+        <Flex align='center' gap='2' className='text-(--blue-11)'>
           <CheckCircledIcon width={16} height={16} />
           <Text size='2'>
             {t(
@@ -93,7 +93,7 @@ function SecurityCard() {
             )}
           </Text>
         </Flex>
-        <Flex align='center' gap='2' className='text-[var(--blue-11)]'>
+        <Flex align='center' gap='2' className='text-(--blue-11)'>
           <CheckCircledIcon width={16} height={16} />
           <Text size='2'>
             {t('profile.passwordTip3', 'Avoid common words or personal info')}

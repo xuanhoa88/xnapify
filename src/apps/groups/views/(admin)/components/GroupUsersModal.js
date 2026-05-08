@@ -132,7 +132,7 @@ const GroupUsersModal = forwardRef((props, ref) => {
         })}
       </Modal.Header>
       <Modal.Body error={error}>
-        <Modal.Description className='mb-4 text-[var(--gray-11)]'>
+        <Modal.Description className='mb-4 text-(--gray-11)'>
           {t(
             'groups:admin.viewUsersDescription',
             'View all users that belong to this group.',
@@ -171,7 +171,7 @@ const GroupUsersModal = forwardRef((props, ref) => {
                 align='center'
                 gap='3'
                 p='3'
-                className='border border-[var(--gray-a5)] rounded-md bg-[var(--gray-a1)] hover:bg-[var(--gray-a2)] transition-colors shadow-sm'
+                className='border border-(--gray-a5) rounded-md bg-(--gray-a1) hover:bg-(--gray-a2) transition-colors shadow-sm'
               >
                 <Avatar
                   name={

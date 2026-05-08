@@ -34,6 +34,10 @@ export function getScript() {
         userBtnFound = true;
         userBtn.style.display = 'none';
 
+        var style = document.createElement('style');
+        style.innerHTML = '#red-ui-header-button-back { color: #aaaaaa !important; display: inline-flex; align-items: center; height: 100%; } #red-ui-header-button-back:hover { color: #ffffff !important; }';
+        document.head.appendChild(style);
+
         var backBtn = document.createElement('a');
         backBtn.href = '${url}';
         backBtn.id = 'red-ui-header-button-back';

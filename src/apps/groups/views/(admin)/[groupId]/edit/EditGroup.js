@@ -267,7 +267,7 @@ function EditGroup({ groupId, context }) {
           align='center'
           justify='center'
           p='6'
-          className='rounded-md border border-[var(--red-6)] bg-[var(--red-2)]'
+          className='rounded-md border border-(--red-6) bg-(--red-2)'
         >
           <Text color='red' size='4' weight='bold' mb='2'>
             {t('groups:admin.edit.errorLoading', 'Error loading group')}
@@ -425,7 +425,7 @@ function EditGroupFormFields({ onCancel, loading, isDirtyRef, fetchRoles }) {
       <Box
         px='5'
         py='3'
-        className='bg-[var(--gray-a2)] border-b border-[var(--gray-a4)]'
+        className='bg-(--gray-a2) border-b border-(--gray-a4)'
       >
         <Text size='2' weight='bold' color='gray'>
           {t('groups:admin.edit.groupInformation', 'Group Information')}
@@ -490,7 +490,7 @@ function EditGroupFormFields({ onCancel, loading, isDirtyRef, fetchRoles }) {
       <Box
         px='5'
         py='3'
-        className='bg-[var(--gray-a2)] border-y border-[var(--gray-a4)]'
+        className='bg-(--gray-a2) border-y border-(--gray-a4)'
       >
         <Text size='2' weight='bold' color='gray'>
           {t('groups:admin.edit.rolesCount', 'Roles ({{count}} selected)', {
@@ -531,7 +531,7 @@ function EditGroupFormFields({ onCancel, loading, isDirtyRef, fetchRoles }) {
         justify='between'
         px='5'
         py='4'
-        className='rounded-b-md bg-[var(--gray-2)] border-t border-[var(--gray-a4)]'
+        className='rounded-b-md bg-(--gray-2) border-t border-(--gray-a4)'
       >
         <Button
           variant='soft'

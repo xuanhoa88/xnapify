@@ -690,7 +690,7 @@ function DataTable({
               {as === 'table' ? (
                 <Box className={clsx(s.tableWrapper, s.customScrollbar)}>
                   <Table.Root variant={variant}>
-                    <Table.Header className='bg-[var(--color-panel-solid)]'>
+                    <Table.Header className='bg-(--color-panel-solid)'>
                       <Table.Row>
                         {selectable && (
                           <Table.ColumnHeaderCell

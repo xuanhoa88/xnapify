@@ -84,7 +84,7 @@ function Footer() {
     <>
       <Box
         as='footer'
-        className='bg-[var(--color-panel-solid)] border-t border-[var(--gray-a6)] pt-12 pb-6 mt-16'
+        className='bg-(--color-panel-solid) border-t border-(--gray-a6) pt-12 pb-6 mt-16'
       >
         <Container size='4' px='4'>
           <Grid
@@ -106,7 +106,7 @@ function Footer() {
               </Flex>
               <Text
                 size='3'
-                className='text-[var(--gray-11)] block mb-6 max-w-sm leading-relaxed'
+                className='text-(--gray-11) block mb-6 max-w-sm leading-relaxed'
               >
                 A modern, enterprise-grade boilerplate designed for
                 high-performance React applications.
@@ -121,7 +121,7 @@ function Footer() {
                       target='_blank'
                       rel='noreferrer'
                       aria-label={social.label}
-                      className='text-[var(--gray-11)] hover:text-[var(--indigo-11)] transition-colors duration-200'
+                      className='text-(--gray-11) hover:text-(--indigo-11) transition-colors duration-200'
                     >
                       <Icon width={20} height={20} />
                     </a>
@@ -137,7 +137,7 @@ function Footer() {
                   as='h3'
                   size='3'
                   mb='4'
-                  className='text-[var(--gray-12)]'
+                  className='text-(--gray-12)'
                 >
                   {column.title}
                 </Heading>
@@ -146,7 +146,7 @@ function Footer() {
                     <Link
                       key={link.to}
                       to={link.to}
-                      className='text-[var(--gray-11)] text-[length:var(--font-size-2)] hover:text-[var(--indigo-11)] no-underline transition-colors duration-200'
+                      className='text-(--gray-11) text-(length:--font-size-2) hover:text-(--indigo-11) no-underline transition-colors duration-200'
                     >
                       {t(link.key, link.defaultLabel)}
                     </Link>
@@ -157,23 +157,23 @@ function Footer() {
           </Grid>
 
           {/* Bottom Bar */}
-          <Box className='pt-6 border-t border-[var(--gray-a6)] flex flex-col md:flex-row justify-between items-center gap-4'>
+          <Box className='pt-6 border-t border-(--gray-a6) flex flex-col md:flex-row justify-between items-center gap-4'>
             <Text
               size='2'
-              className='text-[var(--gray-11)] text-center md:text-left'
+              className='text-(--gray-11) text-center md:text-left'
             >
               {t('footer.copyright', { year: currentYear })}
             </Text>
             <Flex gap='4' wrap='wrap' justify='center'>
               <Link
                 to='/not-found'
-                className='text-[var(--gray-10)] text-xs hover:text-[var(--gray-12)] no-underline transition-colors'
+                className='text-(--gray-10) text-xs hover:text-(--gray-12) no-underline transition-colors'
               >
                 {t('navigation.notFound', 'Not Found')}
               </Link>
               <Link
                 to='/error'
-                className='text-[var(--gray-10)] text-xs hover:text-[var(--gray-12)] no-underline transition-colors'
+                className='text-(--gray-10) text-xs hover:text-(--gray-12) no-underline transition-colors'
               >
                 {t('navigation.error', 'Error Test')}
               </Link>

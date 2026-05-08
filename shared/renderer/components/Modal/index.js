@@ -91,7 +91,7 @@ const ModalFooter = ({ children, className }) => (
     gap='3'
     pt='4'
     mt='auto'
-    className={clsx('border-t border-[var(--gray-a4)]', className)}
+    className={clsx('border-t border-(--gray-a4)', className)}
   >
     {children}
   </Flex>

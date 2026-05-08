@@ -71,7 +71,7 @@ function ScrollToTop() {
       onClick={scrollToTop}
       title={t('common.scrollToTop', 'Scroll to top')}
       className={clsx(
-        'fixed bottom-[var(--space-6)] right-[var(--space-6)] z-50 rounded-full w-12 h-12 p-0 flex items-center justify-center transition-all duration-300 ease-in-out shadow-[var(--shadow-4)] cursor-pointer',
+        'fixed bottom-(--space-6) right-(--space-6) z-50 rounded-full w-12 h-12 p-0 flex items-center justify-center transition-all duration-300 ease-in-out shadow-(--shadow-4) cursor-pointer',
         showScroll
           ? 'opacity-100 translate-y-0 pointer-events-auto'
           : 'opacity-0 translate-y-4 pointer-events-none',

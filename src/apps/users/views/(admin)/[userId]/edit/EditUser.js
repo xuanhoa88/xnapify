@@ -317,7 +317,7 @@ function EditUser({ userId, context }) {
           align='center'
           justify='center'
           p='6'
-          className='rounded-md border border-[var(--red-6)] bg-[var(--red-2)]'
+          className='rounded-md border border-(--red-6) bg-(--red-2)'
         >
           <Text color='red' size='4' weight='bold' mb='2'>
             {t('users:admin.edit.errorLoading', 'Error loading user')}
@@ -558,7 +558,7 @@ function EditUserFormFields({
       <Box
         px='5'
         py='3'
-        className='bg-[var(--gray-a2)] border-b border-[var(--gray-a4)]'
+        className='bg-(--gray-a2) border-b border-(--gray-a4)'
       >
         <Text size='2' weight='bold' color='gray'>
           {t('users:admin.edit.accountInfo', 'Account Information')}
@@ -623,7 +623,7 @@ function EditUserFormFields({
       <Box
         px='5'
         py='3'
-        className='bg-[var(--gray-a2)] border-y border-[var(--gray-a4)]'
+        className='bg-(--gray-a2) border-y border-(--gray-a4)'
       >
         <Text size='2' weight='bold' color='gray'>
           {t('users:admin.edit.personalInfo', 'Personal Information')}
@@ -669,7 +669,7 @@ function EditUserFormFields({
       <Box
         px='5'
         py='3'
-        className='bg-[var(--gray-a2)] border-y border-[var(--gray-a4)]'
+        className='bg-(--gray-a2) border-y border-(--gray-a4)'
       >
         <Text size='2' weight='bold' color='gray'>
           {t('users:admin.edit.accessAndPermissions', 'Access & Permissions')}
@@ -757,7 +757,7 @@ function EditUserFormFields({
         justify='between'
         px='5'
         py='4'
-        className='rounded-b-md bg-[var(--gray-2)] border-t border-[var(--gray-a4)]'
+        className='rounded-b-md bg-(--gray-2) border-t border-(--gray-a4)'
       >
         <Button
           variant='soft'

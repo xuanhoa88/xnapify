@@ -27,7 +27,7 @@ function Header() {
       as='header'
       position='sticky'
       top='0'
-      className='z-[100] w-full bg-[var(--color-panel-translucent)] backdrop-blur-[16px] border-b border-[var(--gray-a6)] shadow-[0_4px_24px_-6px_rgba(0,0,0,0.03)]'
+      className='z-100 w-full bg-(--color-panel-translucent) backdrop-blur-lg border-b border-(--gray-a6) shadow-[0_4px_24px_-6px_rgba(0,0,0,0.03)]'
     >
       <Flex
         align='center'
@@ -40,7 +40,7 @@ function Header() {
         <Flex align='center' gap='6'>
           <Link
             to='/'
-            className='no-underline text-[var(--gray-12)] hover:opacity-80 transition-opacity'
+            className='no-underline text-(--gray-12) hover:opacity-80 transition-opacity'
           >
             <Flex align='center' gap='2'>
               <img
@@ -61,13 +61,13 @@ function Header() {
             <Flex align='center' gap='2'>
               <Link
                 to='/docs'
-                className='text-[var(--color-text-secondary)] text-[length:var(--font-size-2)] font-medium px-3 py-[6px] rounded-[var(--radius-3)] no-underline transition-colors duration-150 ease-in-out hover:text-[var(--color-text-primary)] hover:bg-[var(--gray-a3)] hover:no-underline'
+                className='text-(--color-text-secondary) text-(length:--font-size-2) font-medium px-3 py-[6px] rounded-(--radius-3) no-underline transition-colors duration-150 ease-in-out hover:text-(--color-text-primary) hover:bg-(--gray-a3) hover:no-underline'
               >
                 Documentation
               </Link>
               <Link
                 to='/features'
-                className='text-[var(--color-text-secondary)] text-[length:var(--font-size-2)] font-medium px-3 py-[6px] rounded-[var(--radius-3)] no-underline transition-colors duration-150 ease-in-out hover:text-[var(--color-text-primary)] hover:bg-[var(--gray-a3)] hover:no-underline'
+                className='text-(--color-text-secondary) text-(length:--font-size-2) font-medium px-3 py-[6px] rounded-(--radius-3) no-underline transition-colors duration-150 ease-in-out hover:text-(--color-text-primary) hover:bg-(--gray-a3) hover:no-underline'
               >
                 Features
               </Link>
@@ -75,7 +75,7 @@ function Header() {
                 href='https://github.com/xuanhoa88/xnapify'
                 target='_blank'
                 rel='noreferrer'
-                className='text-[var(--color-text-secondary)] text-[length:var(--font-size-2)] font-medium px-3 py-[6px] rounded-[var(--radius-3)] no-underline transition-colors duration-150 ease-in-out hover:text-[var(--color-text-primary)] hover:bg-[var(--gray-a3)] hover:no-underline'
+                className='text-(--color-text-secondary) text-(length:--font-size-2) font-medium px-3 py-[6px] rounded-(--radius-3) no-underline transition-colors duration-150 ease-in-out hover:text-(--color-text-primary) hover:bg-(--gray-a3) hover:no-underline'
               >
                 GitHub
               </a>
@@ -86,7 +86,7 @@ function Header() {
         {/* Right: Language Switcher + Auth Switcher */}
         <Flex align='center' gap='4'>
           <LanguageSwitcher />
-          <Box className='w-[1px] h-6 bg-[var(--gray-6)] mx-1' />
+          <Box className='w-px h-6 bg-(--gray-6) mx-1' />
           <AuthSwitcher />
         </Flex>
       </Flex>

@@ -202,7 +202,7 @@ function Drawer({ minimal = false }) {
           treatAsCompact
             ? 'w-10 h-10 p-0 justify-center mx-auto flex'
             : 'w-full py-2.5 px-3',
-          !active && 'text-slate-400 hover:text-white hover:bg-white/[0.06]',
+          !active && 'text-slate-400 hover:text-white hover:bg-white/6',
           active && 'text-white font-medium bg-blue-500/15',
         )}
       >
@@ -259,7 +259,7 @@ function Drawer({ minimal = false }) {
     const linkProps = {
       onClick: isMobile ? handleCloseMobileDrawer : undefined,
       className:
-        'no-underline block mb-0.5 focus-visible:outline-none [color:inherit]',
+        'no-underline block mb-0.5 focus-visible:outline-none text-inherit',
     };
 
     if (item.external) {
@@ -318,7 +318,7 @@ function Drawer({ minimal = false }) {
               className={clsx(
                 'w-10 h-10 rounded-lg mx-auto transition-all duration-200 relative flex',
                 !groupActive &&
-                  'text-slate-500 hover:text-white hover:bg-white/[0.06]',
+                  'text-slate-500 hover:text-white hover:bg-white/6',
                 groupActive && 'text-blue-400 bg-blue-500/15',
               )}
             >
@@ -333,7 +333,7 @@ function Drawer({ minimal = false }) {
           side='right'
           align='start'
           sideOffset={16}
-          className='p-2 bg-[#0a1628] border border-white/[0.06] shadow-xl min-w-[220px]'
+          className='p-2 bg-[#0a1628] border border-white/6 shadow-xl min-w-[220px]'
         >
           <Text
             as='div'
@@ -361,7 +361,7 @@ function Drawer({ minimal = false }) {
         direction='column'
         className={clsx(
           'bg-[#0a1628] transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] top-0 bottom-0 fixed',
-          isMobile ? 'z-[100]' : 'z-40',
+          isMobile ? 'z-100' : 'z-40',
           isMobile && !drawerOpen ? '-translate-x-full' : 'translate-x-0',
           isMobile ? 'left-0 right-12 max-w-[300px]' : 'left-0',
           s.drawerContainer,
@@ -379,7 +379,7 @@ function Drawer({ minimal = false }) {
           height='64px'
           px={isCompact ? '0' : '5'}
           shrink='0'
-          className='border-b border-white/[0.06] overflow-hidden'
+          className='border-b border-white/6 overflow-hidden'
         >
           <Flex
             align='center'
@@ -432,7 +432,7 @@ function Drawer({ minimal = false }) {
 
               {/* Divider for compact mode */}
               {isCompact && gi > 0 && (
-                <Box className='h-px bg-white/[0.06] mx-2 mb-2.5 mt-[-4px]' />
+                <Box className='h-px bg-white/6 mx-2 mb-2.5 mt-[-4px]' />
               )}
 
               {/* Items */}
@@ -458,7 +458,7 @@ function Drawer({ minimal = false }) {
               </Text>
             )}
             {isCompact && (
-              <Box className='h-px bg-white/[0.06] mx-2 mb-2.5 mt-[-4px]' />
+              <Box className='h-px bg-white/6 mx-2 mb-2.5 mt-[-4px]' />
             )}
             <Flex direction='column' align='center' gap='0.5'>
               <Box className={isCompact ? '' : 'w-full'}>
@@ -478,7 +478,7 @@ function Drawer({ minimal = false }) {
         {isAuth && user && (
           <Box
             shrink='0'
-            className='border-t border-white/[0.06] w-full overflow-hidden'
+            className='border-t border-white/6 w-full overflow-hidden'
           >
             {isCompact ? (
               <Flex
@@ -491,7 +491,7 @@ function Drawer({ minimal = false }) {
                   <Flex
                     align='center'
                     justify='center'
-                    className='w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 to-orange-500 text-white cursor-default select-none shadow-sm shadow-orange-500/25'
+                    className='w-10 h-10 rounded-xl bg-linear-to-br from-orange-400 to-orange-500 text-white cursor-default select-none shadow-sm shadow-orange-500/25'
                   >
                     <RadixIcons.PersonIcon width={20} height={20} />
                   </Flex>
@@ -525,7 +525,7 @@ function Drawer({ minimal = false }) {
                     width='38px'
                     height='38px'
                     shrink='0'
-                    className='rounded-xl bg-gradient-to-br from-orange-400 to-orange-500 text-white shadow-sm shadow-orange-500/25'
+                    className='rounded-xl bg-linear-to-br from-orange-400 to-orange-500 text-white shadow-sm shadow-orange-500/25'
                   >
                     <RadixIcons.PersonIcon width={20} height={20} />
                   </Flex>
@@ -595,7 +595,7 @@ function Drawer({ minimal = false }) {
       {/* Mobile overlay */}
       {isMobile && drawerOpen && (
         <Box
-          className='fixed inset-0 bg-current opacity-50 z-[90]'
+          className='fixed inset-0 bg-current opacity-50 z-90'
           onClick={handleCloseMobileDrawer}
           role='presentation'
         />

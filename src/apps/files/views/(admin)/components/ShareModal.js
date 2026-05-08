@@ -179,8 +179,8 @@ const ShareModal = forwardRef((props, ref) => {
             className={clsx(
               'shrink-0',
               isGroup
-                ? 'bg-[var(--indigo-3)] text-[var(--indigo-11)] rounded-[var(--radius-3)]'
-                : 'bg-[var(--teal-3)] text-[var(--teal-11)] rounded-full',
+                ? 'bg-(--indigo-3) text-(--indigo-11) rounded-(--radius-3)'
+                : 'bg-(--teal-3) text-(--teal-11) rounded-full',
             )}
           >
             {(() => {
@@ -309,7 +309,7 @@ const ShareModal = forwardRef((props, ref) => {
             justify='center'
             className='py-8 px-6 text-center'
           >
-            <Box className='bg-[var(--red-a3)] text-[var(--red-9)] p-5 rounded-full mb-5 inline-flex items-center justify-center'>
+            <Box className='bg-(--red-a3) text-(--red-9) p-5 rounded-full mb-5 inline-flex items-center justify-center'>
               <LockClosedIcon width={40} height={40} />
             </Box>
             <Text as='p' size='3' weight='medium' color='gray'>
@@ -333,7 +333,7 @@ const ShareModal = forwardRef((props, ref) => {
               <Flex
                 align='center'
                 gap='3'
-                className='bg-[var(--gray-a2)] px-3 py-2.5 rounded-[var(--radius-3)] border border-[var(--gray-a4)]'
+                className='bg-(--gray-a2) px-3 py-2.5 rounded-(--radius-3) border border-(--gray-a4)'
               >
                 <Flex
                   align='center'
@@ -341,11 +341,11 @@ const ShareModal = forwardRef((props, ref) => {
                   className={clsx(
                     'w-9 h-9 rounded-full shrink-0 transition-colors',
                     shareType === 'private' &&
-                      'bg-[var(--gray-a4)] text-[var(--gray-11)]',
+                      'bg-(--gray-a4) text-(--gray-11)',
                     shareType === 'shared_users' &&
-                      'bg-[var(--indigo-a4)] text-[var(--indigo-11)]',
+                      'bg-(--indigo-a4) text-(--indigo-11)',
                     (shareType === 'public' || shareType === 'public_link') &&
-                      'bg-[var(--green-a4)] text-[var(--green-11)]',
+                      'bg-(--green-a4) text-(--green-11)',
                   )}
                 >
                   {shareType === 'private' ? (
@@ -365,7 +365,7 @@ const ShareModal = forwardRef((props, ref) => {
                     <Select.Trigger
                       variant='ghost'
                       size='1'
-                      className='w-max !-ml-2 !h-6 font-semibold text-[var(--gray-12)] !justify-start'
+                      className='w-max -ml-2! h-6! font-semibold text-(--gray-12) justify-start!'
                     />
                     <Select.Content position='popper' sideOffset={4}>
                       <Select.Item value='private'>
@@ -450,7 +450,7 @@ const ShareModal = forwardRef((props, ref) => {
                         <Flex
                           align='center'
                           gap='3'
-                          className='py-2 px-2 rounded-[var(--radius-2)]'
+                          className='py-2 px-2 rounded-(--radius-2)'
                         >
                           <Avatar
                             size='2'
@@ -494,7 +494,7 @@ const ShareModal = forwardRef((props, ref) => {
                           key={index}
                           align='center'
                           gap='3'
-                          className='py-2 px-2 rounded-[var(--radius-2)] hover:bg-[var(--gray-a2)] transition-colors group'
+                          className='py-2 px-2 rounded-(--radius-2) hover:bg-(--gray-a2) transition-colors group'
                         >
                           <Avatar
                             size='2'
@@ -562,7 +562,7 @@ const ShareModal = forwardRef((props, ref) => {
                               variant='ghost'
                               color='gray'
                               size='1'
-                              className='!w-7 !h-7 !p-0 shrink-0 opacity-0 group-hover:opacity-100 hover:!text-[var(--red-11)] hover:!bg-[var(--red-a3)] transition-all rounded-full'
+                              className='w-7! h-7! p-0! shrink-0 opacity-0 group-hover:opacity-100 hover:text-(--red-11)! hover:bg-(--red-a3)! transition-all rounded-full'
                               onClick={() => handleRemoveShare(index)}
                             >
                               <Cross2Icon width={14} height={14} />

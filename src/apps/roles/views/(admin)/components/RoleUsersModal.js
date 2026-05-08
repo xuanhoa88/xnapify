@@ -153,7 +153,7 @@ const RoleUsersModal = forwardRef((props, ref) => {
               justify='center'
               align='center'
               p='8'
-              className='text-[var(--gray-9)] italic'
+              className='text-(--gray-9) italic'
             >
               {t('admin:common.loadingUsers', 'Loading users...')}
             </Flex>
@@ -162,7 +162,7 @@ const RoleUsersModal = forwardRef((props, ref) => {
               justify='center'
               align='center'
               p='8'
-              className='text-[var(--gray-9)] italic bg-[var(--gray-2)] rounded-[var(--radius-3)]'
+              className='text-(--gray-9) italic bg-(--gray-2) rounded-(--radius-3)'
             >
               {search
                 ? t('roles:admin.noUsersMatch', 'No users match your search')

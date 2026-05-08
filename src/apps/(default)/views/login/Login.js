@@ -123,7 +123,7 @@ function Login() {
         </Flex>
 
         <Flex align='center' mb='6' className='opacity-60'>
-          <Box className='flex-1 h-px bg-[var(--gray-a6)]' />
+          <Box className='flex-1 h-px bg-(--gray-a6)' />
           <Text
             size='1'
             mx='3'
@@ -133,7 +133,7 @@ function Login() {
           >
             {t('login.orDivider', 'OR')}
           </Text>
-          <Box className='flex-1 h-px bg-[var(--gray-a6)]' />
+          <Box className='flex-1 h-px bg-(--gray-a6)' />
         </Flex>
       </Box>
 

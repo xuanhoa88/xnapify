@@ -125,7 +125,7 @@ const UserPermissionsModal = forwardRef((props, ref) => {
         })}
       </Modal.Header>
       <Modal.Body>
-        <Modal.Description className='mb-4 text-[var(--gray-11)]'>
+        <Modal.Description className='mb-4 text-(--gray-11)'>
           {t(
             'users:admin.permissions.description',
             "These permissions are inherited from the user's assigned roles and groups.",
@@ -240,7 +240,7 @@ const UserPermissionsModal = forwardRef((props, ref) => {
                     justify='center'
                     align='center'
                     p='6'
-                    className='border border-dashed border-[var(--gray-a6)] rounded-md'
+                    className='border border-dashed border-(--gray-a6) rounded-md'
                   >
                     <Text size='2' color='gray'>
                       {t(

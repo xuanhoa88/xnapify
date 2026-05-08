@@ -30,14 +30,14 @@ function PageHeader({ title, subtitle, icon, children }) {
       justify='between'
       wrap='wrap'
       gap='4'
-      className='pb-4 mb-6 border-b border-[var(--gray-a4)]'
+      className='pb-4 mb-6 border-b border-(--gray-a4)'
     >
       <Flex align='center' gap='3' className='min-w-0'>
         {icon && (
           <Flex
             align='center'
             justify='center'
-            className='w-9 h-9 md:w-10 md:h-10 rounded-md bg-[var(--gray-3)] text-[var(--gray-11)] shrink-0'
+            className='w-9 h-9 md:w-10 md:h-10 rounded-md bg-(--gray-3) text-(--gray-11) shrink-0'
           >
             {icon}
           </Flex>
