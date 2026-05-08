@@ -51,7 +51,7 @@ export default {
  * it broadcasts `extensions-refreshed`, instructing the backend to hot-reload
  * manifests and invalidate API caches.
  */
-const IPC_STATE_KEY = Symbol.for('__xnapify.extension.hmr.ipcState__');
+const IPC_STATE_KEY = Symbol.for('__xnapify.hmr.extensionIpcState__');
 
 function registerHmrIpcListener(container) {
   // Initialize or retrieve global state to survive HMR module re-evaluations

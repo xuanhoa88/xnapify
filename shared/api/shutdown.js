@@ -44,8 +44,6 @@
  *
  * ```js
  * // In engine factory
- * import { register } from '../shutdown.js';
- *
  * export function createFactory(config) {
  *   const engine = new Engine(config);
  *   register('myEngine', () => engine.cleanup(), 10);

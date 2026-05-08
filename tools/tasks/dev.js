@@ -47,9 +47,6 @@ const currentFilename = fileURLToPath(import.meta.url);
 // Unique symbol to mark rspack middlewares
 const kRspackMiddleware = Symbol('__xnapify.rspack.middleware__');
 
-// rspack HMR plugin
-const { HotModuleReplacementPlugin } = rspack;
-
 // Cache silent check for use throughout the task
 const silent = isSilent();
 
@@ -162,7 +159,7 @@ function configureRspackForDev(cfg, isClient = true) {
   cfg.plugins = Array.isArray(cfg.plugins) ? cfg.plugins : [];
 
   // Add HotModuleReplacementPlugin (required for both client and server)
-  cfg.plugins.push(new HotModuleReplacementPlugin());
+  cfg.plugins.push(new rspack.HotModuleReplacementPlugin());
 
   // Client-specific HMR configuration
   if (isClient) {

@@ -719,7 +719,7 @@ if (hotAPI) {
   // Listen for extension rebuild events from dev server via hot middleware.
   // Uses the singleton HMR API exposed by hotClient.js to avoid duplicate
   // EventSource connections.
-  const RELOAD_PENDING = Symbol.for('__xnapify.hmrExtensionReloadPending__');
+  const RELOAD_PENDING = Symbol.for('__xnapify.hmr.extensionReloadPending__');
   const hmrUnsubscribers = [];
 
   // eslint-disable-next-line no-underscore-dangle
@@ -774,22 +774,14 @@ if (hotAPI) {
 
   hotAPI.dispose(data => {
     log('🔥 HMR dispose', 'info');
+
+    // Save redux state, workspace settings
     if (store) {
       data.reduxState = store.getState();
     }
+
     // Unsubscribe all HMR listeners to prevent handler leaks across reloads
     hmrUnsubscribers.forEach(unsub => unsub());
     cleanup();
   });
 }
-
- 
-
-console.log("update");
-
-console.log("update2");
-
-console.log("update3");
- 
-console.log('test');
-console.log('test2');

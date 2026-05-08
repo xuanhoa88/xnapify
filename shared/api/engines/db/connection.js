@@ -23,6 +23,9 @@ import {
   getSeedStatus,
 } from './migrator.js';
 
+// HMR: Connection pool cache shared across hot reloads (keyed by resolved URL)
+const DB_CACHE_KEY = Symbol.for('__xnapify.hmr.dbConnections__');
+
 // ======================================================================
 // Constants
 // ======================================================================
@@ -182,7 +185,7 @@ export function createConnection(url, options) {
   if (databaseUrl.startsWith(SQLITE_PREFIX)) {
     // Resolve relative SQLite paths against XNAPIFY_SQLITE_DATA_DIR when set.
     // This mirrors how PG_DATA_DIR and MYSQL_DATA_DIR control data placement.
-    const filePath = databaseUrl.slice(SQLITE_PREFIX.length);
+    const filePath = databaseUrl.slice(SQLITE_PREFIX.length) || ':memory:';
 
     // Leave in-memory and explicit absolute paths completely untouched
     if (filePath !== ':memory:' && !path.isAbsolute(filePath)) {
@@ -219,8 +222,32 @@ export function createConnection(url, options) {
     };
   }
 
+  // Dev HMR: reuse connection across hot reloads to prevent teardown gaps.
+  // Cache is keyed by the fully-resolved database URL so that
+  // createConnection('postgres://other') correctly returns a separate
+  // instance instead of the default singleton.
+  if (__DEV__) {
+    const cache = (globalThis[DB_CACHE_KEY] ||= new Map());
+    const cached = cache.get(databaseUrl);
+    if (cached) {
+      // Reset both model registries so HMR re-registers fresh classes.
+      // - sequelize.models: dict used by include/association resolution
+      // - modelManager.models: array that grows on every define() call;
+      //   clearing it prevents a slow memory leak across reloads.
+      cached.models = {};
+      cached.modelManager.models = [];
+      return attachMigrationMethods(cached);
+    }
+  }
+
   // Create connection and attach migration methods
   const sequelize = new Sequelize(databaseUrl, config);
+
+  // Store in dev HMR cache (Map is already initialised above)
+  if (__DEV__) {
+    globalThis[DB_CACHE_KEY].set(databaseUrl, sequelize);
+  }
+
   return attachMigrationMethods(sequelize);
 }
 
@@ -232,6 +259,13 @@ export function createConnection(url, options) {
  * @returns {Promise<void>}
  */
 export async function closeConnection() {
+  if (__DEV__) {
+    // In development, the DB connection is cached globally and shared across HMR reloads.
+    // We do NOT close it here, allowing in-flight requests on the old bundle to complete safely
+    // using the exact same underlying connection pool that the new bundle will pick up.
+    return;
+  }
+
   if (connection && typeof connection.close === 'function') {
     await connection.close();
     console.log('[DB] Connection closed successfully.');
