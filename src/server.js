@@ -1197,6 +1197,8 @@ export async function bootstrapApp(app, server, options = {}) {
     'trust proxy',
     SERVER_CONFIG.nodeEnv === 'production' ? 1 : 'loopback',
   );
+
+  // Disable x-powered-by header for security reasons
   app.disable('x-powered-by');
 
   // Compression
@@ -1235,18 +1237,6 @@ export async function bootstrapApp(app, server, options = {}) {
 
   // Static assets (moved UP to avoid unnecessary body parsing, rate limiting, and locale processing)
   app.use(staticMiddleware());
-
-  // Short-circuit for static file extensions that express.static didn't serve.
-  // If express.static above didn't match, the file doesn't exist. Return 404
-  // immediately to prevent missing images/fonts/manifests from traversing
-  // cookieParser → locale → maintenance → timeout → API → Node-RED → SSR.
-  app.use((req, res, next) => {
-    const ext = path.extname(req.path).toLowerCase();
-    if (ext && STATIC_FILE_EXTENSIONS.has(ext)) {
-      return res.status(404).send('Not found');
-    }
-    next();
-  });
 
   // Locale detection with caching
   app.use(cookieParser());
@@ -1339,10 +1329,33 @@ export async function bootstrapApp(app, server, options = {}) {
   // Node-RED API proxy
   await appState.nodeRed.setupApiProxy(app, '/api');
 
+  // Catch-all for unmatched API routes. Prevents missing API endpoints or
+  // extension static assets (during HMR unloads) from falling through to the
+  // expensive SSR catch-all, returning a clean plain-text 404 instead of HTML.
+  app.use('/api', (req, res) => {
+    res.status(404).type('text/plain').send('Not found');
+  });
+
   // SSR catch-all
   // Pre-compute localhost check once at boot — avoids async DNS lookup per request
-  const isLocalHost = await isLocalhostIp(resolvedHost.replace(/[[\]]/g, ''));
-  app.get('{/*path}', makeSsrMiddleware(baseUrl, { isLocalHost }));
+  const isLocalHost = await isLocalhostIp(resolvedHost.replace(/[\\[\]]/g, ''));
+
+  // The static-extension guard runs ONLY for requests reaching the SSR route.
+  // If express.static (mounted earlier) didn't serve the file, it doesn't exist.
+  // Return 404 immediately instead of spinning up a full React render pipeline.
+  const rejectStaticExtensions = (req, res, next) => {
+    const ext = path.extname(req.path).toLowerCase();
+    if (ext && STATIC_FILE_EXTENSIONS.has(ext)) {
+      return res.status(404).send('Not found');
+    }
+    next();
+  };
+
+  app.get(
+    '{/*path}',
+    rejectStaticExtensions,
+    makeSsrMiddleware(baseUrl, { isLocalHost }),
+  );
 
   // Error handler (must be last)
   app.use(makeErrorMiddleware());
