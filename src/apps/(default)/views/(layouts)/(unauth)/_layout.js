@@ -118,7 +118,7 @@ function UnauthLayout({ children }) {
   return (
     <>
       <Grid
-        columns={{ initial: '1', lg: '2' }}
+        columns={{ initial: '1', md: '2' }}
         className='fixed inset-0 m-0 p-0 overflow-hidden bg-white z-50'
       >
         <HeroSection />

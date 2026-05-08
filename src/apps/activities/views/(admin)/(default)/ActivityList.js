@@ -142,7 +142,7 @@ const ActivityList = () => {
             {record.entity_id && (
               <Box
                 as='code'
-                className='font-mono bg-[var(--indigo-2)] text-[var(--indigo-11)] py-1 px-2 rounded-[var(--radius-1)] text-[13px]'
+                className='font-mono bg-(--indigo-2) text-(--indigo-11) py-1 px-2 rounded-(--radius-1) text-[13px]'
               >
                 {record.entity_id}
               </Box>
@@ -159,7 +159,7 @@ const ActivityList = () => {
           actor_id ? (
             <Box
               as='code'
-              className='font-mono bg-[var(--indigo-2)] text-[var(--indigo-11)] py-1 px-2 rounded-[var(--radius-1)] text-[13px]'
+              className='font-mono bg-(--indigo-2) text-(--indigo-11) py-1 px-2 rounded-(--radius-1) text-[13px]'
             >
               {actor_id}
             </Box>

@@ -21,9 +21,29 @@ function HeroSection() {
   const { t } = useTranslation();
 
   return (
-    <Section size='4' className={clsx(s.heroSectionModern, s.textCenter)}>
-      <Flex direction='column' align='center' className={s.heroContainer}>
-        <Box mb='4' className={s.badgeLabel}>
+    <Section
+      size='4'
+      className={clsx(
+        s.heroSectionModern,
+        s.textCenter,
+        'flex flex-col items-center justify-center',
+      )}
+    >
+      <Flex
+        direction='column'
+        align='center'
+        className={clsx(
+          s.heroContainer,
+          'flex flex-col items-center justify-center text-center mx-auto w-full',
+        )}
+      >
+        <Box
+          mb='4'
+          className={clsx(
+            s.badgeLabel,
+            'inline-flex items-center justify-center',
+          )}
+        >
           <Text size='3' weight='medium' color='indigo'>
             Fully Open Source & Extensible
           </Text>
@@ -32,21 +52,27 @@ function HeroSection() {
           as='h1'
           size={{ initial: '8', md: '9' }}
           align='center'
-          className={s.heroTitleModern}
+          className={clsx(s.heroTitleModern, 'text-center w-full')}
         >
           {t('home.hero.title', 'xnapify')}
         </Heading>
         <Text
           size={{ initial: '4', md: '5' }}
           align='center'
-          className={s.heroSubtitleModern}
+          className={clsx(s.heroSubtitleModern, 'text-center mx-auto w-full')}
         >
           {t(
             'home.hero.subtitle',
             'A modular, extensible platform with auto-discovered domains, dependency injection, file-based routing, and a runtime extension system',
           )}
         </Text>
-        <Flex gap='4' justify='center' wrap='wrap' mt='6'>
+        <Flex
+          gap='4'
+          justify='center'
+          wrap='wrap'
+          mt='6'
+          className='w-full items-center justify-center flex-row'
+        >
           <Button asChild size='4' variant='solid'>
             <Link to='/features'>
               {t('home.hero.exploreFeatures', 'Explore Features')}

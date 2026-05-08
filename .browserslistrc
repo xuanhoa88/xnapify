@@ -1,51 +1,16 @@
-# Browserslist configuration
-# https://github.com/browserslist/browserslist
-
 [production]
-# Production browsers - broader compatibility
-# Browsers with more than 0.5% market share
->0.5%
-
-# Last 2 versions of each major browser
+# Broader compatibility: targeting older browsers like iOS 14.
+# Because this targets browsers without native @layer support, the build will combine
+# all CSS into one file and Lightning CSS will correctly transpile the layers by rewriting selectors.
+> 0.5% and supports flexbox
 last 2 versions
-
-# Firefox Extended Support Release
-Firefox ESR
-
-# Exclude Internet Explorer completely (modern approach)
-not ie 11
-not ie_mob 11
-
-# Exclude dead browsers (no official support for 24+ months)
 not dead
-
-# Modern browsers with good ES6 support
-
-# Specific modern browser versions
-# Chrome 88+ (supports CSS aspect-ratio)
-chrome >= 88
-
-# Safari 14+ (better CSS support)
-safari >= 14
-
-# Edge 88+ (Chromium-based)
-edge >= 88
-
-# Firefox 87+ (better performance)
-firefox >= 87
-
-# Mobile browsers
-ios_saf >= 14
-android >= 81
 
 [development]
 # Development browsers - latest versions for faster builds
-# Only target the latest versions for faster development builds
 last 1 chrome version
 last 1 firefox version
 last 1 safari version
 last 1 edge version
-
-# Exclude mobile browsers for faster dev builds
 not android < 81
 not ios_saf < 14

@@ -12,13 +12,14 @@ import MarkdownViewer from '../components/preview/MarkdownViewer.js';
 // Configure marked with custom renderers here to avoid client/server mismatch
 const renderer = new marked.Renderer();
 const defaultCodeRenderer = renderer.code.bind(renderer);
-renderer.code = function (code, language, isEscaped) {
-  if (language === 'mermaid') {
-    return `<div class="mermaid">${code}</div>`;
+renderer.code = function (token) {
+  if (token.lang === 'mermaid') {
+    return `<div class="mermaid">${token.text}</div>`;
   }
-  return defaultCodeRenderer(code, language, isEscaped);
+  return defaultCodeRenderer(token);
 };
-renderer.blockquote = function (quote) {
+renderer.blockquote = function (token) {
+  const quote = this.parser.parse(token.tokens);
   const match = quote.match(/^<p>\[!(NOTE|WARNING|IMPORTANT|TIP|CAUTION)\]/i);
   if (match) {
     const type = match[1].toLowerCase();

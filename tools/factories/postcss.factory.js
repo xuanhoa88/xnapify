@@ -13,9 +13,10 @@ import postcssPresetEnv from 'postcss-preset-env';
 export default ({ cwd } = {}) => ({
   plugins: [
     // Tailwind CSS v4 — CSS-first configuration
-    // `base` sets the root directory for automatic content detection.
-    // Without it, Tailwind scans from each CSS file's parent directory,
-    // which would miss src/ when the entry CSS is in shared/renderer/.
+    // `base` sets the root directory for content detection context.
+    // However, auto-detection scans from the CSS file's directory by default.
+    // For broader scanning (e.g., entire src/), explicit content paths are required
+    // in the CSS import: @import 'tailwindcss' content(from: 'path').
     // https://tailwindcss.com/docs/installation
     tailwindcssPostcss({ base: cwd }),
 
@@ -50,8 +51,9 @@ export default ({ cwd } = {}) => ({
     }),
 
     // Unwraps nested rules like how Sass does it.
-    // Kept alongside postcss-nesting (from preset-env) for backward
-    // compatibility with Sass-style patterns (& .child, &:hover, &::pseudo).
+    // NOTE: Redundant with postcss-preset-env's 'nesting-rules': true.
+    // Kept for backward compatibility with Sass-style patterns (& .child, &:hover, &::pseudo).
+    // Consider removing if preset-env's nesting suffices.
     // https://github.com/postcss/postcss-nested
     postcssNested(),
 

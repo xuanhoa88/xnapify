@@ -27,6 +27,16 @@ class ClientExtensionManager extends BaseExtensionManager {
   constructor() {
     super(registry);
 
+    this.refreshingIds = new Set();
+
+    this.on('extensions:refreshing', ({ extensionIds }) => {
+      extensionIds.forEach(id => this.refreshingIds.add(id));
+    });
+
+    this.on('extensions:refreshed', ({ extensionIds }) => {
+      extensionIds.forEach(id => this.refreshingIds.delete(id));
+    });
+
     // Inject CSS and script tags when a extension is loaded at runtime
     this.on('extension:loaded', ({ id, manifest }) => {
       if (!manifest) return;
@@ -35,53 +45,118 @@ class ClientExtensionManager extends BaseExtensionManager {
 
       // Inject extension.css (content-hashed filename from buildManifest)
       if (manifest.hasClientCss) {
-        if (!document.querySelector(`link[data-extension-id="${id}"]`)) {
-          const cssFile = bm['extension.css'] || 'extension.css';
-          const url = this.getExtensionAssetUrl(id, cssFile);
+        const cssFile = bm['extension.css'] || 'extension.css';
+        const url = this.getExtensionAssetUrl(id, cssFile);
+        const existingLink = document.querySelector(
+          `link[data-extension-id="${id}"][href="${url}"]`,
+        );
+
+        if (!existingLink) {
           const link = document.createElement('link');
           link.rel = 'stylesheet';
           link.href = url;
           link.setAttribute('data-extension-id', id);
+
+          const cleanupStale = () => {
+            document
+              .querySelectorAll(
+                `link[data-extension-id="${id}"][data-extension-stale="true"]`,
+              )
+              .forEach(el => el.remove());
+          };
+          link.onload = cleanupStale;
+          link.onerror = cleanupStale;
+
           document.head.appendChild(link);
           if (__DEV__) {
             console.log(`[ExtensionManager] Injected CSS: ${url}`);
           }
+        } else {
+          existingLink.removeAttribute('data-extension-stale');
+          document
+            .querySelectorAll(
+              `link[data-extension-id="${id}"][data-extension-stale="true"]`,
+            )
+            .forEach(el => el.remove());
         }
+      } else {
+        document
+          .querySelectorAll(
+            `link[data-extension-id="${id}"][data-extension-stale="true"]`,
+          )
+          .forEach(el => el.remove());
       }
 
       // Inject remote.js (MF container, content-hashed filename)
       if (manifest.hasClientScript) {
-        if (!document.querySelector(`script[data-extension-id="${id}"]`)) {
-          const scriptFile = bm['remote.js'] || 'remote.js';
-          const url = this.getExtensionAssetUrl(id, scriptFile);
+        const scriptFile = bm['remote.js'] || 'remote.js';
+        const url = this.getExtensionAssetUrl(id, scriptFile);
+        const existingScript = document.querySelector(
+          `script[data-extension-id="${id}"][src="${url}"]`,
+        );
+
+        if (!existingScript) {
           const script = document.createElement('script');
           script.src = url;
           script.async = true;
           script.setAttribute('data-extension-id', id);
+
+          const cleanupStale = () => {
+            document
+              .querySelectorAll(
+                `script[data-extension-id="${id}"][data-extension-stale="true"]`,
+              )
+              .forEach(el => el.remove());
+          };
+          script.onload = cleanupStale;
+          script.onerror = cleanupStale;
+
           document.body.appendChild(script);
           if (__DEV__) {
             console.log(`[ExtensionManager] Injected script: ${url}`);
           }
+        } else {
+          existingScript.removeAttribute('data-extension-stale');
+          document
+            .querySelectorAll(
+              `script[data-extension-id="${id}"][data-extension-stale="true"]`,
+            )
+            .forEach(el => el.remove());
         }
+      } else {
+        document
+          .querySelectorAll(
+            `script[data-extension-id="${id}"][data-extension-stale="true"]`,
+          )
+          .forEach(el => el.remove());
       }
     });
 
     // Remove CSS and script tags when an extension is unloaded at runtime
     this.on('extension:unloaded', ({ id }) => {
-      // Remove CSS links
-      document
-        .querySelectorAll(`link[data-extension-id="${id}"]`)
-        .forEach(el => el.remove());
+      if (this.refreshingIds.has(id)) {
+        document
+          .querySelectorAll(`link[data-extension-id="${id}"]`)
+          .forEach(el => el.setAttribute('data-extension-stale', 'true'));
+        document
+          .querySelectorAll(`script[data-extension-id="${id}"]`)
+          .forEach(el => el.setAttribute('data-extension-stale', 'true'));
+      } else {
+        // Remove CSS links
+        document
+          .querySelectorAll(`link[data-extension-id="${id}"]`)
+          .forEach(el => el.remove());
 
-      // Remove script tags
-      document
-        .querySelectorAll(`script[data-extension-id="${id}"]`)
-        .forEach(el => el.remove());
+        // Remove script tags
+        document
+          .querySelectorAll(`script[data-extension-id="${id}"]`)
+          .forEach(el => el.remove());
 
-      if (__DEV__) {
-        console.log(
-          `[ExtensionManager] Removed resources for: ${this._formatDisplayName(id)}`,
-        );
+        if (__DEV__) {
+          console.log(
+            `[ExtensionManager] Removed resources for: ${this._formatDisplayName(id)}`,
+          );
+        }
       }
     });
   }

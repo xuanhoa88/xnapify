@@ -521,11 +521,30 @@ export async function getExtensionStaticDir(
   { extensionManager, models, cwd },
   id,
 ) {
-  const { extension } = await resolveExtension(models, id, {
-    required: false,
-  });
+  // Fast path: resolve from in-memory extension metadata first.
+  // This avoids a DB query on every static file request and prevents
+  // "ConnectionManager.getConnection was called after the connection manager
+  // was closed" errors during HMR full reloads (disposeApp drains the DB
+  // pool while in-flight static asset requests are still pending).
+  const metadata = extensionManager.getExtensionMetadata(id);
+  if (metadata && metadata.manifest && metadata.manifest.name) {
+    const { dir } = await extensionManager.resolveExtensionDir(
+      metadata.manifest.name,
+    );
+    if (dir) return dir;
+  }
 
-  let extensionKey = extension ? extension.name : null;
+  // Slow path: fall back to DB lookup (extension not yet loaded in memory)
+  let extensionKey = null;
+  try {
+    const { extension } = await resolveExtension(models, id, {
+      required: false,
+    });
+    extensionKey = extension ? extension.name : null;
+  } catch {
+    // DB may be unavailable during shutdown — continue to disk fallback
+  }
+
   if (!extensionKey) {
     const diskExt = await getDiskExtensionById(extensionManager, cwd, id);
     if (!diskExt) return null;

@@ -146,13 +146,6 @@ function createHostProvidedCSSPlugins() {
   );
 }
 
-/**
- * Directories and files containing CSS Modules that are already bundled by the
- * host app. Extensions should load their class name mappings but NOT extract
- * their CSS content into the extension's CSS bundle.
- */
-const HOST_PROVIDED_CSS_MODULES = [path.resolve(config.CWD, 'shared/renderer')];
-
 // =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
@@ -1023,7 +1016,6 @@ export {
   createDefinePlugin,
   createEnvDefine,
   createHostProvidedCSSPlugins,
-  HOST_PROVIDED_CSS_MODULES,
   createProgressPlugin,
   createSharedDependencies,
   createRspackConfig,

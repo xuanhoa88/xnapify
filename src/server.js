@@ -916,7 +916,9 @@ function makeErrorMiddleware() {
         ? req
         : { url: req.url, method: req.method, httpVersion: req.httpVersion };
 
-      const youch = new Youch(youchErr, youchReq);
+      const YouchConstructor =
+        typeof Youch === 'function' ? Youch : Youch.Youch || Youch.default;
+      const youch = new YouchConstructor(youchErr, youchReq);
       return res.send(await youch.toHTML());
     } catch (renderErr) {
       console.error('⚠️  Youch rendering failed:', renderErr.message);

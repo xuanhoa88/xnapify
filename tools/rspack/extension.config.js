@@ -12,6 +12,7 @@ import path from 'path';
 import { rspack } from '@rspack/core';
 import merge from 'rspack-merge';
 
+import config from '../config.js';
 import { rspackConfigs } from '../factories/registry.factory.js';
 import { logWarn } from '../utils/logger.js';
 
@@ -23,7 +24,6 @@ import {
   createDefinePlugin,
   createEnvDefine,
   createHostProvidedCSSPlugins,
-  HOST_PROVIDED_CSS_MODULES,
   createProgressPlugin,
   createSharedDependencies,
   getHmrWatchIgnored,
@@ -34,6 +34,13 @@ import BuildManifestPlugin from './BuildManifestPlugin.js';
 import StripRootCSSPlugin from './StripRootCSSPlugin.js';
 
 const require = createRequire(import.meta.url);
+
+/**
+ * Directories and files containing CSS Modules that are already bundled by the
+ * host app. Extensions should load their class name mappings but NOT extract
+ * their CSS content into the extension's CSS bundle.
+ */
+const HOST_PROVIDED_CSS_MODULES = [path.resolve(config.CWD, 'shared/renderer')];
 
 /**
  * Validate extension and extract metadata
@@ -192,14 +199,14 @@ function createClientConfig(extensionData, extensionDefines, buildPath) {
         // 1. Host-provided CSS: only export CSS module locals (class names).
         // Does NOT extract the CSS content, preventing extension CSS bloat.
         createCSSRule({
-          exportOnlyLocals: true,
           localIdentName,
+          exportOnlyLocals: true,
           include: HOST_PROVIDED_CSS_MODULES,
         }),
         // 2. Extension CSS: extract content to a standalone CSS file.
         createCSSRule({
-          extractLoader: rspack.CssExtractRspackPlugin.loader,
           localIdentName,
+          extractLoader: rspack.CssExtractRspackPlugin.loader,
           exclude: HOST_PROVIDED_CSS_MODULES,
         }),
       ],

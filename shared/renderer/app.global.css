@@ -5,6 +5,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+/* Global CSS for the entire app, including Tailwind base styles and Radix UI themes */
+@layer properties, theme, base, radix-ui, components, utilities;
+
+/* stylelint-disable-next-line import-notation */
 @import url('@radix-ui/themes/styles.css') layer(radix-ui);
 
 /* stylelint-disable-next-line import-notation */
@@ -39,19 +43,4 @@ body {
   height: 100%;
   min-width: 320px;
   overflow-x: hidden;
-}
-
-/* Enforce pointer cursor on all buttons (Radix UI uses cursor: default by default) */
-button,
-.rt-BaseButton,
-.rt-Button,
-.rt-IconButton {
-  cursor: pointer !important;
-}
-
-button:disabled,
-.rt-BaseButton:disabled,
-.rt-Button:disabled,
-.rt-IconButton:disabled {
-  cursor: not-allowed !important;
 }

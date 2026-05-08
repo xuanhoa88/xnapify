@@ -221,24 +221,19 @@ export default function Html({
         />
 
         {/* Preload critical JavaScript bundles for faster loading */}
-        {scripts
-          .filter(entry => {
-            const src = typeof entry === 'string' ? entry : entry.src;
-            return src.includes('runtime.') || src.includes('client.');
-          })
-          .map(entry => {
-            const src = typeof entry === 'string' ? entry : entry.src;
-            const id = typeof entry === 'object' ? entry.id : undefined;
-            return (
-              <link
-                key={`preload-${src}`}
-                rel='preload'
-                href={src}
-                as='script'
-                {...(id ? { 'data-extension-id': id } : {})}
-              />
-            );
-          })}
+        {scripts.map(entry => {
+          const src = typeof entry === 'string' ? entry : entry.src;
+          const id = typeof entry === 'object' ? entry.id : undefined;
+          return (
+            <link
+              key={`preload-${src}`}
+              rel='preload'
+              href={src}
+              as='script'
+              {...(id ? { 'data-extension-id': id } : {})}
+            />
+          );
+        })}
 
         {/* PWA manifest and icons */}
         <link rel='manifest' href='/site.webmanifest' />

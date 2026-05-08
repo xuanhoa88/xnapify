@@ -696,11 +696,7 @@ async function main() {
       setupRspackCompilers();
 
     // Ensure client compiler updates invalidate the SSR cache so dynamic chunks are picked up
-    clientCompiler.hooks.done.tap('InvalidateSSROnClientBuild', stats => {
-      console.log(
-        'Client emitted files:',
-        Object.keys(stats.compilation.assets),
-      );
+    clientCompiler.hooks.done.tap('InvalidateSSROnClientBuild', () => {
       if (typeof invalidateServerCaches === 'function') {
         invalidateServerCaches();
       }

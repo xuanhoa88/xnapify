@@ -59,6 +59,8 @@ export default function QuickAccess() {
     [setValue, handleSubmit],
   );
 
+  // hot key for quick login
+  // press 1-3 to login as demo user
   const handleKeyDown = useCallback(
     event => {
       const { key, target } = event;

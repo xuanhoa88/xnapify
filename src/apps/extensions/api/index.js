@@ -51,40 +51,76 @@ export default {
  * it broadcasts `extensions-refreshed`, instructing the backend to hot-reload
  * manifests and invalidate API caches.
  */
-const IPC_LISTENER_KEY = Symbol.for('__xnapify.extension.hmr.ipcListener__');
+const IPC_STATE_KEY = Symbol.for('__xnapify.extension.hmr.ipcState__');
+
 function registerHmrIpcListener(container) {
-  // Clean up any existing listener from a previous HMR hot-reload
-  // Since require.cache is cleared during full reloads, a module-scoped
-  // variable would reset to null, causing a memory leak of detached listeners.
-  // We use a global symbol to ensure the old listener is found and removed.
-  if (globalThis[IPC_LISTENER_KEY]) {
-    process.removeListener('message', globalThis[IPC_LISTENER_KEY]);
+  // Initialize or retrieve global state to survive HMR module re-evaluations
+  if (!globalThis[IPC_STATE_KEY]) {
+    globalThis[IPC_STATE_KEY] = {
+      isRefreshing: false,
+      pendingIds: null,
+      pendingExtensions: null,
+      listener: null,
+    };
   }
-  let isRefreshing = false;
-  const activeIpcListener = async msg => {
-    if (msg && msg.type === 'extensions-refreshed') {
-      if (isRefreshing) return;
-      isRefreshing = true;
-      const start = Date.now();
-      console.log('🔌 Refreshing all extensions...');
-      try {
-        const extensionIds = Array.isArray(msg.extensions)
-          ? msg.extensions
-          : [];
-        await extensionService.refreshExtensions(extensionIds, {
-          extensionManager: container.resolve('extension'),
-          cache: container.resolve('cache'),
-          models: container.resolve('models'),
-        });
-        const duration = Date.now() - start;
-        console.log(`✅ Extensions refreshed in ${duration}ms`);
-      } catch (err) {
-        console.error('❌ Failed to refresh extensions via IPC:', err.message);
-      } finally {
-        isRefreshing = false;
+  const state = globalThis[IPC_STATE_KEY];
+
+  // Clean up any existing listener from a previous HMR hot-reload
+  if (state.listener) {
+    process.removeListener('message', state.listener);
+  }
+
+  const processQueue = async () => {
+    if (state.isRefreshing || (!state.pendingIds && !state.pendingExtensions))
+      return;
+
+    state.isRefreshing = true;
+
+    // Capture the latest queued events and clear the queue
+    const queuedIds = state.pendingIds || [];
+    const queuedExtensions = state.pendingExtensions || [];
+    state.pendingIds = null;
+    state.pendingExtensions = null;
+
+    const start = Date.now();
+    console.log('🔌 Refreshing extensions...');
+    try {
+      const extensionIds = queuedIds.length > 0 ? queuedIds : queuedExtensions;
+      await extensionService.refreshExtensions(extensionIds, {
+        extensionManager: container.resolve('extension'),
+        cache: container.resolve('cache'),
+        models: container.resolve('models'),
+      });
+      const duration = Date.now() - start;
+      console.log(`✅ Extensions refreshed in ${duration}ms`);
+    } catch (err) {
+      console.error('❌ Failed to refresh extensions via IPC:', err.message);
+    } finally {
+      state.isRefreshing = false;
+      // If new events arrived while we were processing, process them now
+      if (state.pendingIds || state.pendingExtensions) {
+        processQueue();
       }
     }
   };
-  globalThis[IPC_LISTENER_KEY] = activeIpcListener;
-  process.on('message', activeIpcListener);
+
+  state.listener = async msg => {
+    if (msg && msg.type === 'extensions-refreshed') {
+      // Merge incoming arrays into the pending queue
+      if (Array.isArray(msg.ids)) {
+        state.pendingIds = [
+          ...new Set([...(state.pendingIds || []), ...msg.ids]),
+        ];
+      }
+      if (Array.isArray(msg.extensions)) {
+        state.pendingExtensions = [
+          ...new Set([...(state.pendingExtensions || []), ...msg.extensions]),
+        ];
+      }
+
+      processQueue();
+    }
+  };
+
+  process.on('message', state.listener);
 }

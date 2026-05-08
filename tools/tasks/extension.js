@@ -295,7 +295,8 @@ function notifyServer(extensions) {
 
   notifyTimer = setTimeout(() => {
     const names = extensions.map(p => p.name);
-    const msg = { type: 'extensions-refreshed', extensions: names };
+    const ids = extensions.map(p => p.id || generateExtensionId(p.name));
+    const msg = { type: 'extensions-refreshed', extensions: names, ids };
 
     if (typeof process.send === 'function') {
       process.send(msg);

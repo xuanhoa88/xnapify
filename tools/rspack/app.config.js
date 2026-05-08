@@ -315,8 +315,7 @@ const coreAppRspackConfigs = (
 for (const customRspack of coreAppRspackConfigs) {
   try {
     const appCustomizer =
-      (await import(customRspack.path)).default ||
-      (await import(customRspack.path));
+      require(customRspack.path).default || require(customRspack.path);
     if (typeof appCustomizer === 'function') {
       finalClientConfig =
         appCustomizer(finalClientConfig, merge) || finalClientConfig;
