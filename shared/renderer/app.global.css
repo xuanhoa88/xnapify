@@ -5,11 +5,18 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-/* stylelint-disable-next-line import-notation */
-@import url('@radix-ui/themes/styles.css') layer(radix-ui);
+/* stylelint-disable-next-line */
+@layer theme, base, radix-ui, components, utilities;
 
 /* stylelint-disable-next-line import-notation */
 @import 'tailwindcss';
+
+/* stylelint-disable-next-line import-notation */
+@import '@radix-ui/themes/styles.css' layer(radix-ui);
+
+@custom-variant dark (&:where(.dark, .dark *));
+@custom-variant translucent (&:where([data-panel-background="translucent"] *));
+@custom-variant solid (&:where([data-panel-background="solid"] *));
 
 /*
  * Enterprise-grade fluid typography scale for Radix UI Themes

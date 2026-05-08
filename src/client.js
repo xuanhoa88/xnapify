@@ -719,12 +719,14 @@ if (hotAPI) {
   // Listen for extension rebuild events from dev server via hot middleware.
   // Uses the singleton HMR API exposed by hotClient.js to avoid duplicate
   // EventSource connections.
-  const RELOAD_PENDING = Symbol.for('__xnapify.hmr.extensionReloadPending__');
   const hmrUnsubscribers = [];
 
   // eslint-disable-next-line no-underscore-dangle
   const hmrApi = window.__xnapify_hmr_api__;
   if (hmrApi) {
+    // Using Symbol to avoid name collisions
+    const RELOAD_PENDING = Symbol.for('__xnapify.hmr.extensionReloadPending__');
+
     hmrUnsubscribers.push(
       hmrApi.onError(() => {
         log('⚠️ HMR EventSource connection error', 'warn');

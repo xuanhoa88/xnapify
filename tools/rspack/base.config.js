@@ -420,6 +420,17 @@ function createCacheGroups(
   return {
     // --- High-priority named groups ---
 
+    // Bundle all CSS into a single chunk to avoid FOUC and guarantee CSS loading order.
+    // This is especially critical for Tailwind CSS + Radix UI where utility classes
+    // must be able to override component styles consistently.
+    styles: {
+      name: 'styles',
+      type: 'css/mini-extract',
+      chunks: 'all',
+      enforce: true,
+      priority: 50,
+    },
+
     // Radix UI primitives + their positioning/floating deps
     radix: {
       test: /[\\/]node_modules[\\/](@radix-ui[\\/]|@floating-ui[\\/]|@popperjs[\\/])/,

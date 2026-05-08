@@ -172,21 +172,6 @@ export default function Html({
         {/* Canonical URL for SEO */}
         {url && <link rel='canonical' href={url} />}
 
-        {/* CSS Layer Order Declaration
-            Must appear BEFORE any external stylesheets that use @layer.
-            vendor.radix.css loads before client.css, so without this inline
-            declaration the browser would encounter @layer radix-ui from the
-            vendor file first and assign it implicit ordering.  This inline
-            block establishes the correct cascade: radix-ui < Tailwind layers,
-            eliminating the FOUC caused by layer misordering. */}
-        <style
-          nonce={nonce}
-          dangerouslySetInnerHTML={{
-            __html:
-              '@layer properties, theme, base, radix-ui, components, utilities;',
-          }}
-        />
-
         {/* CSS stylesheets */}
         {stylesheets.map(entry => {
           const href = typeof entry === 'string' ? entry : entry.href;
