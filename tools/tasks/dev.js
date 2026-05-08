@@ -8,6 +8,7 @@
  */
 
 import { execSync } from 'child_process';
+import fs from 'fs';
 import http from 'http';
 import { createRequire } from 'module';
 import path from 'path';
@@ -238,6 +239,16 @@ function loadServerBundle() {
 
     // Load the server bundle using require to respect require.cache clearing
     // ESM import() maintains a separate cache that ignores require.cache deletions
+
+    // Ensure the localized package.json exists before requiring the bundle.
+    // If a clean operation wiped the directory during an active HMR session,
+    // this prevents Node.js from traversing up to the root ESM package.json
+    // and throwing "ReferenceError: require is not defined".
+    const pkgPath = path.join(buildDir, 'package.json');
+    if (!fs.existsSync(pkgPath)) {
+      fs.writeFileSync(pkgPath, JSON.stringify({ type: 'commonjs' }));
+    }
+
     const moduleNamespace = require(serverBundlePath);
     const exportsObj = moduleNamespace.default || moduleNamespace;
     const { hot, invalidateCaches, ...bundle } = exportsObj;

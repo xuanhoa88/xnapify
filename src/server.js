@@ -436,7 +436,6 @@ const localeMiddleware = expressRequestLanguage({
       secure: !__DEV__,
       sameSite: 'lax',
     },
-    url: `/${LOCALE_COOKIE_NAME}/{language}`,
   },
 });
 
@@ -1192,7 +1191,7 @@ export async function bootstrapApp(app, server, options = {}) {
     configurable: false,
   });
 
-  // Trust proxy
+  // Trust proxy for request-header based client IPs
   app.set(
     'trust proxy',
     SERVER_CONFIG.nodeEnv === 'production' ? 1 : 'loopback',
@@ -1253,13 +1252,29 @@ export async function bootstrapApp(app, server, options = {}) {
 
     const isLangRoute = req.path.startsWith(`/${LOCALE_COOKIE_NAME}/`);
 
-    // Skip cache for explicit language change URLs so the middleware can redirect
-    if (!isLangRoute) {
-      const cachedLang = appState.localeCache.get(cacheKey);
-      if (cachedLang) {
-        req.language = cachedLang;
-        return next();
+    // Express 5.x removed the 'back' redirect shorthand.
+    // Intercept language changes manually instead of relying on express-request-language
+    if (isLangRoute) {
+      const requestedLang = req.path
+        .slice(`/${LOCALE_COOKIE_NAME}/`.length)
+        .split('/')[0];
+      if (Object.keys(AVAILABLE_LOCALES).includes(requestedLang)) {
+        res.cookie(LOCALE_COOKIE_NAME, requestedLang, {
+          path: '/',
+          maxAge: LOCALE_COOKIE_MAX_AGE * 1000,
+          httpOnly: true,
+          secure: !__DEV__,
+          sameSite: 'lax',
+        });
+        return res.redirect(req.get('Referrer') || '/');
       }
+      return res.status(404).send('The language is not supported.');
+    }
+
+    const cachedLang = appState.localeCache.get(cacheKey);
+    if (cachedLang) {
+      req.language = cachedLang;
+      return next();
     }
 
     localeMiddleware(req, res, err => {
@@ -1310,7 +1325,7 @@ export async function bootstrapApp(app, server, options = {}) {
   app.use('/api', apiRouter);
   appState.apiDrain = api.drain;
 
-  // Node-RED
+  // Initialize Node-RED runtime and register Node-RED API proxy
   await appState.nodeRed.init(app, server, {
     ...SERVER_CONFIG,
     port,
@@ -1320,20 +1335,28 @@ export async function bootstrapApp(app, server, options = {}) {
       fetch: () =>
         createFetch(globalThis.fetch, {
           defaults: {
-            headers: { 'User-Agent': 'xnapify-NodeRED' },
+            headers: { 'User-Agent': 'xnapify/1.0.0 NodeRED' },
           },
         }),
     },
   });
-
-  // Node-RED API proxy
   await appState.nodeRed.setupApiProxy(app, '/api');
 
-  // Catch-all for unmatched API routes. Prevents missing API endpoints or
-  // extension static assets (during HMR unloads) from falling through to the
-  // expensive SSR catch-all, returning a clean plain-text 404 instead of HTML.
+  // Catch-all for unmatched API routes.
+  // Any /api/* request that wasn't handled by apiRouter or Node-RED falls here
+  // instead of continuing to the expensive SSR catch-all. Returns a structured
+  // JSON envelope matching makeErrorMiddleware's contract for client consistency.
   app.use('/api', (req, res) => {
-    res.status(404).type('text/plain').send('Not found');
+    if (__DEV__) {
+      console.debug(`[API] 404 ${req.method} ${req.originalUrl}`);
+    }
+
+    res.status(404).json({
+      status: 404,
+      success: false,
+      error: 'Not found',
+      requestId: req.id,
+    });
   });
 
   // SSR catch-all
