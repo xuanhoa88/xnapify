@@ -42,9 +42,12 @@ export default ({ cwd } = {}) => ({
         // Enable CSS nesting via & parent selector
         'nesting-rules': true,
 
-        // Disable @layer polyfill. The polyfill inflates specificity using
-        // :not(#\#) which breaks the precedence of dynamically injected
-        // extension stylesheets. Modern browsers support @layer natively.
+        // Disable @layer polyfill. When enabled, postcss-preset-env replaces
+        // @layer with :not(#\#) selectors to emulate layer specificity on old
+        // browsers. This inflates selector weight and breaks the cascade order
+        // defined in app.global.css (theme < base < radix-ui < components < utilities).
+        // With this disabled, @layer passes through natively on modern browsers
+        // (95%+ support) and degrades gracefully to source order on old ones.
         'cascade-layers': false,
       },
 

@@ -594,7 +594,12 @@ function setupServerBundleWatcher(serverCompiler) {
       try {
         await checkForUpdate(stats.hash);
       } catch (err) {
-        logError('❌ Failed to reload server bundle: ' + err.message);
+        logError(
+          '❌ Server bundle reload failed during ' +
+            (hmr ? 'HMR apply' : 'full restart') +
+            ': ' +
+            err.message,
+        );
         if (err.stack) logError(err.stack);
       } finally {
         flushPendingHmrPublishes();

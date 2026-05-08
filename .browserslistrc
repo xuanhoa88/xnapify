@@ -1,7 +1,7 @@
 [production]
 # Broader compatibility: targeting older browsers like iOS 14.
-# Because this targets browsers without native @layer support, the build will combine
-# all CSS into one file and Lightning CSS will correctly transpile the layers by rewriting selectors.
+# On browsers without native @layer support, layers are silently ignored
+# and CSS cascades by source order (Tailwind already emits in correct order).
 > 0.5% and supports flexbox
 last 2 versions
 not dead

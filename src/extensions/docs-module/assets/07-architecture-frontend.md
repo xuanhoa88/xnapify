@@ -121,3 +121,39 @@ export default function MyButton() {
 ## 5. Hot Module Reloading (HMR)
 
 The `docker-compose.dev.yml` binds `volumes` straight to local file systems. Instead of completely rebooting Node.js, editing React files pipes Webpack updates transparently modifying the active DOM instantly minimizing state clearance. This requires extensions explicitly unregistering hooks using their `shutdown()` lifecycle mechanism; otherwise, memory leakage collapses the HMR pipe iteratively.
+
+---
+
+## 6. CSS Cascade & Styling Architecture
+
+The project utilizes **Tailwind CSS v4** combined with **Radix UI**. To properly manage CSS specificity without resorting to `!important`, the main application explicitly leverages the native CSS `@layer` directive.
+
+### Layer Ordering
+In `shared/renderer/app.global.css`, the cascade order is strictly defined:
+```css
+@layer theme, base, radix-ui, components, utilities;
+
+@import 'tailwindcss';
+@import '@radix-ui/themes/styles.css' layer(radix-ui);
+```
+This guarantees that **Tailwind utilities** always override **Radix UI default styles**, regardless of the physical file import order.
+
+### Extension Specificity Rules
+
+Extensions inject their own CSS payloads dynamically. By the rules of the CSS Cascade Layers specification, **un-layered CSS always has higher priority than layered CSS**. 
+
+Because the entire core application UI (including Tailwind utilities) is wrapped inside the `@layer` rules, **extensions will naturally override core application styles** as long as they provide standard, un-layered CSS.
+
+If an extension wishes to explicitly participate in the layer cascade, it may wrap its styles:
+```css
+@layer extension {
+  .my-custom-override {
+    background-color: var(--accent-9);
+  }
+}
+```
+
+### Browser Polyfills
+The `LightningCssMinimizerRspackPlugin` handles minification for production targets defined in `.browserslistrc`.
+- On modern browsers (Safari 15.4+), native `@layer` is passed verbatim.
+- On legacy browsers (e.g., iOS 14), `@layer` declarations are silently ignored and the stylesheet falls back to standard source-order specificity. Because Tailwind emits styles in the correct physical order, the UI degrades gracefully.

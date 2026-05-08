@@ -196,7 +196,21 @@ Choose fonts that are beautiful, unique, and interesting. Avoid generic fonts li
 
 ---
 
-## 6. Visual Details & Backgrounds
+## 6. CSS Specificity & Cascade Layers
+
+xnapify uses **Tailwind CSS v4** combined with **Radix UI**. To maintain proper specificity without using `!important`, we rely on native CSS Cascade Layers.
+
+The core application defines the cascade order in `app.global.css` as:
+`@layer theme, base, radix-ui, components, utilities;`
+
+**Rules:**
+1. **Never attempt to polyfill or strip `@layer` rules**. Let LightningCSS handle graceful degradation.
+2. **Extensions**: Extension CSS defaults to un-layered, meaning it will naturally override core layered Tailwind utilities. If an extension needs its styles to be overridable by Tailwind, wrap them in `@layer extension { ... }`.
+3. **Radix Override**: Tailwind utilities will automatically override Radix UI defaults because `utilities` is placed after `radix-ui` in the layer definition.
+
+---
+
+## 7. Visual Details & Backgrounds
 
 Create atmosphere and depth rather than defaulting to solid colors. Add contextual effects and textures that match the overall aesthetic. Apply creative forms like noise textures, geometric patterns, layered transparencies, dramatic shadows, decorative borders, custom cursors, and grain overlays.
 

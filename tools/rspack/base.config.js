@@ -11,6 +11,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 import { rspack } from '@rspack/core';
+import browserslist from 'browserslist';
 import merge from 'rspack-merge';
 import nodeExternals from 'webpack-node-externals';
 
@@ -40,6 +41,14 @@ const isDev = nodeEnv !== 'production';
 const isProfile =
   process.argv.includes('--profile') || config.env('RSPACK_PROFILE') === 'true';
 const verbose = isVerbose();
+
+// Resolve .browserslistrc query strings once per build session.
+// LightningCssMinimizerRspackPlugin expects browserslist QUERIES (e.g. '> 0.5%'),
+// NOT resolved browser names (e.g. 'chrome 147'). Using browserslist.loadConfig()
+// reads the raw queries from .browserslistrc for the current NODE_ENV.
+const targetBrowsers = Object.freeze(
+  browserslist.loadConfig({ path: config.CWD, env: nodeEnv }) || ['defaults'],
+);
 
 // =============================================================================
 // FILE PATTERNS
@@ -799,17 +808,7 @@ function createRspackConfig(name, options = {}) {
               }),
               new rspack.LightningCssMinimizerRspackPlugin({
                 minimizerOptions: {
-                  // Explicitly set targets to browsers that natively support @layer.
-                  // This prevents Lightning CSS from polyfilling @layer by injecting
-                  // :not(#\#) which artificially inflates specificity and breaks
-                  // the precedence of unlayered extension styles.
-                  targets: [
-                    'chrome >= 99',
-                    'firefox >= 97',
-                    'safari >= 15.4',
-                    'ios_saf >= 15.4',
-                    'edge >= 99',
-                  ],
+                  targets: targetBrowsers,
                 },
               }),
             ]
@@ -996,20 +995,45 @@ function createWorkerConfig({
 }
 
 /**
- * Get the HMR watch ignored paths
- * @returns {string[]} Array of ignored paths
+ * Get the HMR watch ignored paths.
+ *
+ * Returns an immutable array of Chokidar-compatible glob patterns that the
+ * Rspack file watcher should skip. These paths are excluded because they:
+ *
+ * - **Dependencies:** `node_modules` — never compiled directly by Rspack.
+ * - **Version control:** `.git` — metadata changes must not trigger rebuilds.
+ * - **Runtime state:** `.xnapify` — SQLite DB, Node-RED flows, and other
+ *   runtime artifacts that are constantly mutated during development.
+ * - **Build caches:** `.cache`, `BUILD_DIR` — watching build output can
+ *   create feedback loops; caches are consumed, not compiled.
+ * - **Test artifacts:** `__tests__`, `*.test.*`, `*.spec.*` — test file
+ *   changes should trigger Jest, not the bundler.
+ * - **Benchmarks:** `__benchmarks__`, `*.benchmark.*` — performance tests
+ *   are not part of the application module graph.
+ *
+ * @returns {readonly string[]} Frozen array of ignored glob patterns
  */
 function getHmrWatchIgnored() {
   const buildDirGlob = config.BUILD_DIR.replace(/\\/g, '/');
-  return [
+  return Object.freeze([
+    // Dependencies
     '**/node_modules/**',
+
+    // Version control & runtime state
+    '**/.git/**',
+    '**/.xnapify/**',
+    '**/.cache/**',
+
+    // Test & benchmark files
     '**/__tests__/**',
     '**/*.test.*',
     '**/*.spec.*',
     '**/__benchmarks__/**',
     '**/*.benchmark.*',
+
+    // Build output
     `${buildDirGlob}/**`,
-  ];
+  ]);
 }
 
 // =============================================================================
@@ -1024,6 +1048,7 @@ export {
   verbose,
   isProfile,
   frozenPkg as pkg,
+  targetBrowsers,
 
   // File patterns
   reScript,
