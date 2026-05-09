@@ -425,8 +425,13 @@ export class NodeRedManager {
 
         const { moduleName } = result;
 
-        // Hot-load into the running registry using the same API as Palette Manager
-        const registry = (await import('@node-red/registry')).default;
+        // Hot-load into the running registry.
+        // IMPORTANT: We must use the registry instance that the runtime
+        // actually uses. A top-level import('@node-red/registry') resolves
+        // to a DIFFERENT, uninitialized copy due to npm/pnpm dependency
+        // isolation. Use _getRegistry() which resolves from the runtime's
+        // own require context.
+        const registry = this._getRegistry();
 
         // Check if already loaded (e.g. from boot)
         const existing = registry.getModuleInfo(moduleName);
@@ -442,10 +447,9 @@ export class NodeRedManager {
 
           // Notify connected editors via WebSocket so palettes update live
           try {
-            const { events } = (await import('@node-red/runtime')).default;
-            if (events) {
+            if (this._runtime && this._runtime.events) {
               const moduleInfo = registry.getModuleInfo(moduleName);
-              events.emit('runtime-event', {
+              this._runtime.events.emit('runtime-event', {
                 id: 'node/added',
                 retain: false,
                 payload: moduleInfo ? moduleInfo.nodes : [],
@@ -485,15 +489,15 @@ export class NodeRedManager {
       const { moduleName } = tracked;
 
       try {
-        // Remove from NR registry (clears node types, constructors, configs)
-        const registry = (await import('@node-red/registry')).default;
+        // Remove from NR registry (clears node types, constructors, configs).
+        // Use the runtime's own registry instance — see _getRegistry() docs.
+        const registry = this._getRegistry();
         const moduleInfo = registry.getModuleInfo(moduleName);
         if (moduleInfo) {
           // Notify connected editors before removal
           try {
-            const { events } = (await import('@node-red/runtime')).default;
-            if (events) {
-              events.emit('runtime-event', {
+            if (this._runtime && this._runtime.events) {
+              this._runtime.events.emit('runtime-event', {
                 id: 'node/removed',
                 retain: false,
                 payload: moduleInfo.nodes || [],
@@ -919,13 +923,6 @@ export class NodeRedManager {
         ),
       ]);
 
-      // Sanitize the Node-RED registry after startup.
-      // @node-red/registry/lib/loader.js silently swallows
-      // loadNodeConfig errors (.catch on line 94), leaving nodes
-      // without an `id` property. registry.addModule then pushes
-      // undefined into nodeList, causing getAllNodeConfigs to crash
-      // with "Cannot read properties of undefined (reading 'split')".
-      await this._sanitizeRegistry();
 
       // Sync _extModuleMap with boot-loaded extension modules.
       // During boot, writeCustomNodes() writes extension modules to
@@ -1130,7 +1127,8 @@ export class NodeRedManager {
         return;
       }
 
-      const registry = (await import('@node-red/registry')).default;
+      // Use the runtime's own registry instance — see _getRegistry() docs.
+      const registry = this._getRegistry();
       const entries = await fs.promises.readdir(extModDir);
 
       for (const entry of entries) {
@@ -1155,101 +1153,28 @@ export class NodeRedManager {
   }
 
   /**
-   * Patch the Node-RED registry to guard against undefined IDs.
+   * Get the Node-RED registry instance that the runtime actually uses.
    *
-   * @node-red/registry/lib/loader.js swallows loadNodeConfig errors
-   * (line 94 `.catch(err => console.log(err))`), leaving node sets
-   * without an `id` property. `registry.addModule` pushes `set.id`
-   * (undefined) into `nodeList`. Later, `getAllNodeConfigs` calls
-   * `getModuleFromSetId(id)` which does `id.split("/")` — crashing
-   * with "Cannot read properties of undefined (reading 'split')".
+   * IMPORTANT: A top-level `import('@node-red/registry')` or
+   * `require('@node-red/registry')` from the project root resolves to
+   * a DIFFERENT, uninitialized copy of the registry module. npm/pnpm
+   * dependency isolation creates two physical copies:
+   *   - Project root → node_modules/@node-red/registry (empty, never init'd)
+   *   - Runtime internal → .pnpm/@node-red+registry@.../node_modules/... (populated)
    *
-   * We wrap `getAllNodeConfigs` and `getNodeConfig` with try-catch.
-   * On crash, `getAllNodeConfigs` falls back to iterating `moduleConfigs`
-   * (via `getModuleList()`) which bypasses the corrupt `nodeList`.
+   * This method resolves the correct instance by using Node.js native
+   * `require` from the runtime's own directory, guaranteeing we get
+   * the same singleton that `@node-red/runtime/lib/nodes/index.js`
+   * imported at load time.
+   *
+   * @returns {object} The initialized @node-red/registry module
    * @private
    */
-  async _sanitizeRegistry() {
-    try {
-      // The call chain for `nodes.configs.get` is:
-      //   editor-api → runtimeAPI.nodes.getNodeConfigs()
-      //     → runtime.nodes.getNodeConfigs(lang)        [snapshot L3]
-      //       → registry/index.getNodeConfigs(lang)      [snapshot L2]
-      //         → registry.getAllNodeConfigs(lang)         [local fn L1]
-      //           → getModuleFromSetId(id).split('/')     [CRASH]
-      // Each layer stores a snapshot reference at load time,
-      // so we must patch ALL THREE.
-      const [registryMod, registryIndex, runtimeNodes, loaderMod] =
-        await Promise.all([
-          import('@node-red/registry/lib/registry').then(m => m.default || m),
-          import('@node-red/registry').then(m => m.default || m),
-          import('@node-red/runtime/lib/nodes').then(m => m.default || m),
-          import('@node-red/registry/lib/loader').then(m => m.default || m),
-        ]);
-
-      // --- Patch getAllNodeConfigs across all 3 snapshot layers ---
-      const origGetAll = registryMod.getAllNodeConfigs;
-      if (typeof origGetAll === 'function') {
-        const safe = function safeGetAllNodeConfigs(lang) {
-          try {
-            return origGetAll.call(this, lang);
-          } catch (err) {
-            // Fallback: iterate moduleConfigs directly (bypasses nodeList)
-            Logger.warn(
-              'Registry getAllNodeConfigs error, using fallback:',
-              err.message,
-            );
-            const moduleConfigs = registryMod.getModuleList();
-            let result = '';
-            for (const modName in moduleConfigs) {
-              if (!Object.hasOwn(moduleConfigs, modName)) continue;
-              const mod = moduleConfigs[modName];
-              if (mod.usedBy && mod.usedBy.length > 0 && !mod.user) continue;
-              const nodes = mod.nodes || {};
-              for (const nodeName in nodes) {
-                if (!Object.hasOwn(nodes, nodeName)) continue;
-                const config = nodes[nodeName];
-                if (!config || !config.enabled || config.err) continue;
-                const id = config.id || modName + '/' + nodeName;
-                result += '\n<!-- --- [red-module:' + id + '] --- -->\n';
-                result += config.config || '';
-                try {
-                  result +=
-                    loaderMod.getNodeHelp(config, lang || 'en-US') || '';
-                } catch {
-                  // help text unavailable — nodes still render
-                }
-              }
-            }
-            return result;
-          }
-        };
-        registryMod.getAllNodeConfigs = safe;
-        if (registryIndex) registryIndex.getNodeConfigs = safe;
-        if (runtimeNodes) runtimeNodes.getNodeConfigs = safe;
-      }
-
-      // --- Patch getNodeConfig across all 3 layers ---
-      const origGetOne = registryMod.getNodeConfig;
-      if (typeof origGetOne === 'function') {
-        const safe = function safeGetNodeConfig(id, lang) {
-          if (!id) return null;
-          try {
-            return origGetOne.call(this, id, lang);
-          } catch (err) {
-            Logger.warn('Registry getNodeConfig error:', err.message);
-            return null;
-          }
-        };
-        registryMod.getNodeConfig = safe;
-        if (registryIndex) registryIndex.getNodeConfig = safe;
-        if (runtimeNodes) runtimeNodes.getNodeConfig = safe;
-      }
-
-      Logger.debug('Registry sanitized');
-    } catch (err) {
-      Logger.warn('Registry sanitize skipped:', err.message);
-    }
+  _getRegistry() {
+    const { createRequire } = require('module');
+    const runtimePath = require.resolve('@node-red/runtime');
+    const runtimeRequire = createRequire(runtimePath);
+    return runtimeRequire('@node-red/registry');
   }
 
   /**

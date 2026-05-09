@@ -1375,7 +1375,7 @@ export async function bootstrapApp(app, server, options = {}) {
   };
 
   app.get(
-    '{/*path}',
+    '*',
     rejectStaticExtensions,
     makeSsrMiddleware(baseUrl, { isLocalHost }),
   );
