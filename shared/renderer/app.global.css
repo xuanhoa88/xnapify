@@ -34,6 +34,43 @@
   --font-size-9: clamp(3.75rem, 3.11rem + 3.2vw, 5.5rem);
 }
 
+/*
+ * Override Radix Themes cursor defaults.
+ * Radix Themes 3.3.0 uses cursor: default for all interactive elements
+ * to match native desktop behavior. Web users expect pointer cursors,
+ * so we override the CSS variables that control cursor styles.
+ *
+ * Coverage map (CSS variables → components):
+ *   --cursor-button        → Button, IconButton, Select.Trigger, Tabs.Trigger,
+ *                            Dialog close buttons, Popover.Trigger
+ *   --cursor-checkbox      → Checkbox
+ *   --cursor-menu-item     → DropdownMenu.Item, ContextMenu.Item, Select.Item
+ *   --cursor-radio         → Radio, RadioGroup.Item
+ *   --cursor-slider-thumb  → Slider (grab/grabbing)
+ *   --cursor-switch        → Switch
+ *   --cursor-link          → Link (already pointer by default, no change needed)
+ *   --cursor-disabled      → All disabled states (keep not-allowed)
+ */
+.radix-themes {
+  --cursor-button: pointer;
+  --cursor-checkbox: pointer;
+  --cursor-menu-item: pointer;
+  --cursor-radio: pointer;
+  --cursor-slider-thumb: grab;
+  --cursor-slider-thumb-active: grabbing;
+  --cursor-switch: pointer;
+}
+
+/*
+ * Hardcoded overrides for components that bypass CSS variables.
+ * Only CheckboxCards and RadioCards set cursor: default directly
+ * on their root container instead of using a variable.
+ */
+.rt-CheckboxCardsRoot,
+.rt-RadioCardsRoot {
+  cursor: pointer;
+}
+
 html,
 body {
   margin: 0 !important;

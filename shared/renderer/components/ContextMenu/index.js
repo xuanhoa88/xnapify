@@ -5,7 +5,13 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { forwardRef } from 'react';
+import {
+  forwardRef,
+  useState,
+  useEffect,
+  Children,
+  isValidElement,
+} from 'react';
 
 import { DropdownMenu, Flex, Text } from '@radix-ui/themes';
 import clsx from 'clsx';
@@ -22,6 +28,12 @@ import s from './ContextMenu.css';
  * Supports both controlled (isOpen/onToggle) and uncontrolled state.
  * All toggle, outside-click, focus-trap, and positioning logic is
  * delegated to Radix, eliminating the custom race-condition-prone code.
+ *
+ * SSR-safe: Radix DropdownMenu uses React.useId() internally which
+ * generates different IDs on server vs client, causing hydration
+ * mismatches. To avoid this, ContextMenu renders only the trigger
+ * content during SSR and the initial hydration pass. The full
+ * interactive DropdownMenu is mounted only after client hydration.
  */
 
 // ---------------------------------------------------------------------------
@@ -29,6 +41,28 @@ import s from './ContextMenu.css';
 // ---------------------------------------------------------------------------
 
 function ContextMenu({ children, isOpen, onToggle, modal = false }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Before mount: render only the trigger's children (no DropdownMenu wrapper)
+  // to avoid Radix useId() hydration mismatch.
+  if (!mounted) {
+    let triggerContent = null;
+    Children.forEach(children, child => {
+      if (
+        isValidElement(child) &&
+        (child.type === Trigger ||
+          child.type?.displayName === 'ContextMenu.Trigger')
+      ) {
+        triggerContent = child.props.children;
+      }
+    });
+    return triggerContent || null;
+  }
+
   return (
     <DropdownMenu.Root open={isOpen} onOpenChange={onToggle} modal={modal}>
       {children}
@@ -75,6 +109,8 @@ Trigger.propTypes = {
   className: PropTypes.string,
   asChild: PropTypes.bool,
 };
+
+Trigger.displayName = 'ContextMenu.Trigger';
 
 // ---------------------------------------------------------------------------
 // Menu (→ DropdownMenu.Content)
