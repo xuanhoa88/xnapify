@@ -201,6 +201,7 @@ describe('Profile Controller', () => {
     });
 
     it('should delete old avatar cleanly without throwing if missing', async () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
       req.uploadResult = { success: true, data: { fileName: 'avatar.png' } };
       profileService.getUserWithProfile.mockResolvedValue({
         id: 1,
@@ -211,6 +212,7 @@ describe('Profile Controller', () => {
       await profileController.uploadAvatar(req, res);
 
       expect(mockHttp.sendSuccess).toHaveBeenCalled();
+      consoleWarnSpy.mockRestore();
     });
 
     it('should return validation error if uploadResult fails', async () => {

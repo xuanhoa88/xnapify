@@ -38,12 +38,13 @@ function getDefaultConfig() {
     max,
     standardHeaders: true,
     legacyHeaders: false,
+    validate: false,
     async skip(req) {
       try {
         if (req.headers && req.headers['x-forwarded-for']) return false;
-        return await isLocalhostIp(
-          req.ip || (req.socket && req.socket.remoteAddress) || '',
-        );
+        const ip = req.ip || (req.socket && req.socket.remoteAddress);
+        if (!ip) return false;
+        return await isLocalhostIp(ip);
       } catch (error) {
         console.error(`Rate limiter skip error: ${error.message}`);
         return false;

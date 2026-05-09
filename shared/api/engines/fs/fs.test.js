@@ -135,6 +135,7 @@ describe('Filesystem Engine', () => {
     });
 
     it('should not override existing provider', () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
       const customProvider = {
         async store() {
           return { fileName: 'test' };
@@ -143,6 +144,7 @@ describe('Filesystem Engine', () => {
 
       const added = testFs.addProvider('memory', customProvider);
       expect(added).toBe(false);
+      consoleWarnSpy.mockRestore();
     });
 
     it('should get provider by name', () => {

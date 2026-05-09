@@ -95,6 +95,7 @@ describe('Email Engine', () => {
     });
 
     it('should not override existing provider', () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
       const customProvider = {
         async send() {
           return { messageId: 'test' };
@@ -103,6 +104,7 @@ describe('Email Engine', () => {
 
       const added = testEmail.addProvider('memory', customProvider);
       expect(added).toBe(false);
+      consoleWarnSpy.mockRestore();
     });
 
     it('should get provider by name', () => {

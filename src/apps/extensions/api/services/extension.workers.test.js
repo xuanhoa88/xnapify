@@ -130,6 +130,7 @@ describe('Extension Workers', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
     computeChecksum.mockResolvedValue('abc123hash');
     verifyExtensionChecksum.mockResolvedValue({
       valid: true,
@@ -163,6 +164,10 @@ describe('Extension Workers', () => {
     );
 
     registerExtensionWorkers(mockContainer);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   describe('registerExtensionWorkers', () => {

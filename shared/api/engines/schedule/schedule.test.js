@@ -342,6 +342,7 @@ describe('ScheduleManager', () => {
     });
 
     it('should correctly clear timeout timers to prevent event loop leaks', async () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
       const handler = jest.fn().mockImplementation(() => new Promise(() => {})); // pending forever
       manager.register('frozen', '* * * * *', handler);
 
@@ -358,6 +359,7 @@ describe('ScheduleManager', () => {
 
       expect(clearTimeoutSpy).toHaveBeenCalled();
       clearTimeoutSpy.mockRestore();
+      consoleWarnSpy.mockRestore();
     });
 
     it('should wrap synchronous handlers to avoid cleanup TypeError crashes', async () => {

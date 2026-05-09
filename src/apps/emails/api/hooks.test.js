@@ -19,6 +19,7 @@ describe('Email Hooks', () => {
   let sendTemplatedEmail;
 
   beforeEach(() => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
     hook = createHookFactory();
     emailManager = createEmailFactory();
 
@@ -55,7 +56,7 @@ describe('Email Hooks', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    jest.restoreAllMocks();
   });
 
   // ---------------------------------------------------------------------------
@@ -496,6 +497,7 @@ describe('Email Hooks', () => {
 
 describe('createSendTemplatedEmail', () => {
   test('returns a no-op when email service is missing', async () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
     const emptyContainer = { resolve: () => null };
     const send = createSendTemplatedEmail(emptyContainer);
 
@@ -503,6 +505,7 @@ describe('createSendTemplatedEmail', () => {
     await expect(
       send('test-slug', { to: 'a@b.com', subject: 'x', html: 'y' }),
     ).resolves.toBeUndefined();
+    jest.restoreAllMocks();
   });
 
   test('auto-injects baseVars into templateData', async () => {
