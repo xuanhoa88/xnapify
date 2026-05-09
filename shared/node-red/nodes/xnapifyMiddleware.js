@@ -167,7 +167,7 @@ export function getNodeHTML() {
   return `
 <script type="text/javascript">
   RED.nodes.registerType('xnapify-middleware', {
-    category: 'Xnapify',
+    category: 'xnapify',
     color: '#E9967A',
     defaults: {
       name:           { value: '' },

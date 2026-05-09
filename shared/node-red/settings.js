@@ -324,7 +324,16 @@ async function writeCustomNodes(userDir, app) {
             manifest.name,
           );
           if (!extDir) continue;
-          const extNodesDir = path.join(extDir, 'api', 'nodes');
+
+          const noderedKey = manifest.nodered;
+          const nodesRel =
+            noderedKey && typeof noderedKey === 'object'
+              ? noderedKey.nodes
+              : null;
+          const extNodesDir = nodesRel
+            ? path.join(extDir, nodesRel)
+            : path.join(extDir, 'api', 'nodes');
+
           // Use extId (registry key) — same key used by hot-load path
           await writeExtensionNodeModule(userDir, extId, extNodesDir);
         }

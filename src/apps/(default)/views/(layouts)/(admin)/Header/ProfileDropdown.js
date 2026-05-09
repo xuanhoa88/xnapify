@@ -83,6 +83,7 @@ function ProfileDropdown() {
       <ContextMenu.Trigger asChild>
         <button
           type='button'
+          suppressHydrationWarning
           className='w-9 h-9 p-0 m-0 rounded-full cursor-pointer transition-colors bg-transparent hover:bg-gray-100 data-[state=open]:bg-gray-100 outline-none border-none flex items-center justify-center'
         >
           <Flex

@@ -59,6 +59,7 @@ function AdminLanguageSwitcher() {
       <ContextMenu.Trigger asChild>
         <button
           type='button'
+          suppressHydrationWarning
           title={currentLanguageName || languageCode}
           className='flex items-center gap-2 px-3 h-9 rounded-full text-gray-500 bg-transparent outline-none border-none cursor-pointer transition-colors hover:bg-gray-100 hover:text-gray-900 data-[state=open]:bg-gray-100 data-[state=open]:text-gray-900'
         >

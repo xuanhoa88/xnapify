@@ -7,6 +7,7 @@
 
 /* eslint-disable no-underscore-dangle */
 import fs from 'fs';
+import { createRequire } from 'module';
 import path from 'path';
 
 import {
@@ -27,6 +28,8 @@ import {
   writeExtensionNodeModule,
   removeExtensionNodeModule,
 } from './settings.js';
+
+const nativeRequire = createNativeRequire(import.meta.url);
 
 /**
  * Lifecycle states for the Node-RED manager
@@ -409,46 +412,63 @@ export class NodeRedManager {
 
         // Derive paths from manifest.nodered object { nodes, flows }
         const noderedKey = manifest.nodered;
-        if (!noderedKey || typeof noderedKey !== 'object') return;
+        const nodesRel =
+          noderedKey && typeof noderedKey === 'object'
+            ? noderedKey.nodes
+            : null;
 
-        const nodesRel = noderedKey.nodes;
-
-        if (!nodesRel) return;
-
-        const extNodesDir = path.join(extDir, nodesRel);
+        const extNodesDir = nodesRel
+          ? path.join(extDir, nodesRel)
+          : path.join(extDir, 'api', 'nodes');
         const { userDir } = this._settings;
 
         // Write node files as a proper NR module (with package.json).
         // Use `id` (the extension registry key) consistently for module naming.
         const result = await writeExtensionNodeModule(userDir, id, extNodesDir);
-        if (!result) return; // No nodes in this extension
+        const moduleName = result ? result.moduleName : null;
 
-        const { moduleName } = result;
+        if (moduleName) {
+          // Hot-load into the running registry.
+          // IMPORTANT: We must use the registry instance that the runtime
+          // actually uses. A top-level import('@node-red/registry') resolves
+          // to a DIFFERENT, uninitialized copy due to npm/pnpm dependency
+          // isolation. Use _getRegistry() which resolves from the runtime's
+          // own require context.
+          const registry = this._getRegistry();
 
-        // Hot-load into the running registry.
-        // IMPORTANT: We must use the registry instance that the runtime
-        // actually uses. A top-level import('@node-red/registry') resolves
-        // to a DIFFERENT, uninitialized copy due to npm/pnpm dependency
-        // isolation. Use _getRegistry() which resolves from the runtime's
-        // own require context.
-        const registry = this._getRegistry();
+          // Check if already loaded (e.g. from boot or previous HMR cycle)
+          const existing = registry.getModuleInfo(moduleName);
+          if (existing) {
+            Logger.info(
+              `Extension module "${moduleName}" already loaded. Reloading to apply potential updates...`,
+            );
+            registry.removeModule(moduleName);
+          }
 
-        // Check if already loaded (e.g. from boot)
-        const existing = registry.getModuleInfo(moduleName);
-        if (existing) {
-          Logger.info(
-            `Extension module "${moduleName}" already loaded (from boot)`,
-          );
-        } else {
+          Logger.debug(`Attempting to addModule: ${moduleName}`);
           await registry.addModule(moduleName);
           Logger.success(
             `Hot-loaded extension module "${moduleName}" into Node-RED`,
           );
 
+          const moduleInfo = registry.getModuleInfo(moduleName);
+
+          if (moduleInfo && moduleInfo.nodes) {
+            for (const node of moduleInfo.nodes) {
+              try {
+                await registry.enableNode(node.id);
+              } catch (e) {
+                Logger.warn(
+                  `Failed to enable hot-loaded node ${node.id}:`,
+                  e.message,
+                );
+              }
+            }
+          }
+
           // Notify connected editors via WebSocket so palettes update live
           try {
             if (this._runtime && this._runtime.events) {
-              const moduleInfo = registry.getModuleInfo(moduleName);
               this._runtime.events.emit('runtime-event', {
                 id: 'node/added',
                 retain: false,
@@ -460,8 +480,18 @@ export class NodeRedManager {
           }
         }
 
+        const flowsRel =
+          noderedKey && typeof noderedKey === 'object'
+            ? noderedKey.flows
+            : null;
+
+        if (flowsRel) {
+          const flowsDir = path.join(extDir, flowsRel);
+          await this._injectExtensionFlows(id, flowsDir);
+        }
+
         // Track for cleanup on unload
-        this._extModuleMap.set(id, { moduleName, manifest });
+        this._extModuleMap.set(id, { moduleName, manifest, extDir });
       } catch (err) {
         Logger.error(
           `Failed to hot-load extension "${id}" into Node-RED:`,
@@ -483,39 +513,42 @@ export class NodeRedManager {
     if (!this._readyForExtEvents) return;
 
     const tracked = this._extModuleMap.get(id);
-    if (!tracked) return; // Extension had no nodes
+    if (!tracked) return; // Extension was never loaded
 
     return this._enqueueExtOp(id, async () => {
       const { moduleName } = tracked;
 
       try {
-        // Remove from NR registry (clears node types, constructors, configs).
-        // Use the runtime's own registry instance — see _getRegistry() docs.
-        const registry = this._getRegistry();
-        const moduleInfo = registry.getModuleInfo(moduleName);
-        if (moduleInfo) {
-          // Notify connected editors before removal
-          try {
-            if (this._runtime && this._runtime.events) {
-              this._runtime.events.emit('runtime-event', {
-                id: 'node/removed',
-                retain: false,
-                payload: moduleInfo.nodes || [],
-              });
+        if (moduleName) {
+          // Remove from NR registry (clears node types, constructors, configs).
+          // Use the runtime's own registry instance — see _getRegistry() docs.
+          const registry = this._getRegistry();
+          const moduleInfo = registry.getModuleInfo(moduleName);
+          if (moduleInfo) {
+            // Notify connected editors before removal
+            try {
+              if (this._runtime && this._runtime.events) {
+                this._runtime.events.emit('runtime-event', {
+                  id: 'node/removed',
+                  retain: false,
+                  payload: moduleInfo.nodes || [],
+                });
+              }
+            } catch {
+              // Editor notification is best-effort
             }
-          } catch {
-            // Editor notification is best-effort
+
+            registry.removeModule(moduleName);
+            Logger.success(
+              `Hot-unloaded extension module "${moduleName}" from Node-RED`,
+            );
           }
 
-          registry.removeModule(moduleName);
-          Logger.success(
-            `Hot-unloaded extension module "${moduleName}" from Node-RED`,
-          );
+          // Remove files from disk — use `id` consistently
+          await removeExtensionNodeModule(this._settings.userDir, id);
         }
 
-        // Remove files from disk — use `id` consistently
-        await removeExtensionNodeModule(this._settings.userDir, id);
-
+        await this._removeExtensionFlows(id);
         this._extModuleMap.delete(id);
       } catch (err) {
         Logger.error(
@@ -524,6 +557,107 @@ export class NodeRedManager {
         );
       }
     });
+  }
+
+  /**
+   * Inject flows from an extension into the running Node-RED instance
+   */
+  async _injectExtensionFlows(extId, flowsDir) {
+    if (!this._runtime || !this._runtime.flows) return;
+
+    try {
+      await fs.promises.access(flowsDir);
+    } catch {
+      return; // Directory doesn't exist, no flows to inject
+    }
+
+    const files = await fs.promises.readdir(flowsDir);
+    const jsonFiles = files.filter(f => f.endsWith('.json'));
+    if (jsonFiles.length === 0) return;
+
+    let newNodes = [];
+    for (const file of jsonFiles) {
+      try {
+        const content = await fs.promises.readFile(
+          path.join(flowsDir, file),
+          'utf8',
+        );
+        const nodes = JSON.parse(content);
+        if (Array.isArray(nodes)) {
+          // Tag nodes so they can be removed later
+          const taggedNodes = nodes.map(n => ({ ...n, _extId: extId }));
+          newNodes = newNodes.concat(taggedNodes);
+        }
+      } catch (e) {
+        Logger.warn(`Failed to parse extension flow ${file}:`, e.message);
+      }
+    }
+
+    if (newNodes.length === 0) return;
+
+    try {
+      const currentFlows = await this._runtime.flows.getFlows({ req: {} }); // Mock opts
+      const existingFlows = currentFlows.flows || [];
+      const { rev } = currentFlows;
+
+      // Filter out any existing nodes for this extension to avoid duplicates
+      // We skip injection completely if any nodes already exist, to preserve user modifications
+      // and prevent unnecessary 'setFlows' deployments on server boot.
+      const hasExisting = existingFlows.some(n => n._extId === extId);
+      if (hasExisting) {
+        Logger.debug(
+          `Flows for extension "${extId}" already exist, skipping injection.`,
+        );
+        return;
+      }
+
+      const updatedFlows = existingFlows.concat(newNodes);
+
+      await this._runtime.flows.setFlows({
+        flows: { flows: updatedFlows, rev },
+        deploymentType: 'nodes',
+        req: {},
+      });
+      Logger.success(
+        `Injected ${newNodes.length} nodes from extension "${extId}"`,
+      );
+    } catch (e) {
+      Logger.error(
+        `Failed to inject flows for extension "${extId}":`,
+        e.message,
+      );
+    }
+  }
+
+  /**
+   * Remove flows belonging to an extension
+   */
+  async _removeExtensionFlows(extId) {
+    if (!this._runtime || !this._runtime.flows) return;
+
+    try {
+      const currentFlows = await this._runtime.flows.getFlows({ req: {} });
+      const existingFlows = currentFlows.flows || [];
+      const { rev } = currentFlows;
+
+      const filteredFlows = existingFlows.filter(n => n._extId !== extId);
+
+      if (filteredFlows.length !== existingFlows.length) {
+        await this._runtime.flows.setFlows({
+          flows: { flows: filteredFlows, rev },
+          deploymentType: 'nodes',
+          req: {},
+        });
+        Logger.success(
+          `Removed ${existingFlows.length - filteredFlows.length} flow nodes for extension "${extId}"`,
+        );
+      }
+    } catch (e) {
+      Logger.error(
+        `Failed to remove flows for extension "${extId}":`,
+        e.message,
+      );
+    }
   }
 
   /**
@@ -590,7 +724,6 @@ export class NodeRedManager {
       // We must use the native require because Rspack's require.cache only
       // holds module wrappers for external dependencies, not the actual loaded singletons.
       if (__DEV__) {
-        const nativeRequire = createNativeRequire(import.meta.url);
         const nativeCache = nativeRequire.cache;
 
         const keysToDelete = Object.keys(nativeCache).filter(key =>
@@ -923,7 +1056,6 @@ export class NodeRedManager {
         ),
       ]);
 
-
       // Sync _extModuleMap with boot-loaded extension modules.
       // During boot, writeCustomNodes() writes extension modules to
       // <userDir>/node_modules/ and Node-RED discovers them during its
@@ -1171,8 +1303,8 @@ export class NodeRedManager {
    * @private
    */
   _getRegistry() {
-    const { createRequire } = require('module');
-    const runtimePath = require.resolve('@node-red/runtime');
+    const target = '@node-red/runtime';
+    const runtimePath = nativeRequire.resolve(target);
     const runtimeRequire = createRequire(runtimePath);
     return runtimeRequire('@node-red/registry');
   }

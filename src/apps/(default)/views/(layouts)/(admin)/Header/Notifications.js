@@ -84,6 +84,7 @@ function AdminNotifications() {
       <Popover.Trigger>
         <button
           type='button'
+          suppressHydrationWarning
           title={t('common.notifications', 'Notifications')}
           className='relative flex items-center justify-center w-9 h-9 rounded-full text-(--gray-11) cursor-pointer transition-colors bg-transparent hover:bg-(--gray-a3) hover:text-(--gray-12) data-[state=open]:bg-(--gray-a3) data-[state=open]:text-(--gray-12) outline-none border-none'
         >
