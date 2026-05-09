@@ -261,7 +261,7 @@ async function writeCustomNodes(userDir, app) {
   const seen = new Set();
 
   for (const modulePath of modulePaths) {
-    // Extract basename without extension, e.g. './xnapify-middleware.js' → 'xnapify-middleware'
+    // Extract basename without extension, e.g. './xnapify-auth-middleware.js' → 'xnapify-auth-middleware'
     const baseName = path.basename(modulePath).replace(/\.[cm]?[jt]s$/i, '');
     if (seen.has(baseName)) continue;
     seen.add(baseName);

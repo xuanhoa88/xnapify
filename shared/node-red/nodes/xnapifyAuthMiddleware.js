@@ -153,7 +153,7 @@ module.exports = function (RED) {
     });
   }
 
-  RED.nodes.registerType('xnapify-middleware', XnapifyMiddlewareNode);
+  RED.nodes.registerType('xnapify-auth-middleware', XnapifyMiddlewareNode);
 };
 `;
 }
@@ -166,9 +166,10 @@ module.exports = function (RED) {
 export function getNodeHTML() {
   return `
 <script type="text/javascript">
-  RED.nodes.registerType('xnapify-middleware', {
+  RED.nodes.registerType('xnapify-auth-middleware', {
     category: 'xnapify',
     color: '#E9967A',
+    paletteLabel: 'auth middleware',
     defaults: {
       name:           { value: '' },
       middlewareType:  { value: 'auth' },
@@ -210,7 +211,7 @@ export function getNodeHTML() {
   });
 </script>
 
-<script type="text/html" data-template-name="xnapify-middleware">
+<script type="text/html" data-template-name="xnapify-auth-middleware">
   <div class="form-row">
     <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
     <input type="text" id="node-input-name" placeholder="Name">
@@ -250,8 +251,8 @@ export function getNodeHTML() {
   </div>
 </script>
 
-<script type="text/html" data-help-name="xnapify-middleware">
-  <p>Applies Xnapify Express middlewares (auth, role, permission, group, ownership) to the incoming HTTP request.</p>
+<script type="text/html" data-help-name="xnapify-auth-middleware">
+  <p>Applies xnapify identity-related middlewares (auth, role, permission, group, ownership) to the incoming HTTP request.</p>
   <h3>Configuration</h3>
   <dl class="message-properties">
     <dt>Type</dt>
