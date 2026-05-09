@@ -152,7 +152,7 @@ export class NodeRedManager {
     this._readyForExtEvents = false;
     this._routesMounted = false;
     // Tracks which extensions have been hot-loaded as NR modules
-    // Map<extensionId, { moduleName, manifest }>
+    // Map<extensionId, { moduleName, manifest, extDir }>
     this._extModuleMap = new Map();
     // Per-extension operation queue to prevent concurrent toggle races
     // Map<extensionId, Promise>
@@ -466,18 +466,7 @@ export class NodeRedManager {
             }
           }
 
-          // Notify connected editors via WebSocket so palettes update live
-          try {
-            if (this._runtime && this._runtime.events) {
-              this._runtime.events.emit('runtime-event', {
-                id: 'node/added',
-                retain: false,
-                payload: moduleInfo ? moduleInfo.nodes : [],
-              });
-            }
-          } catch {
-            // Editor notification is best-effort
-          }
+          this._emitNodeEvent('node/added', moduleInfo);
         }
 
         const flowsRel =
@@ -525,18 +514,7 @@ export class NodeRedManager {
           const registry = this._getRegistry();
           const moduleInfo = registry.getModuleInfo(moduleName);
           if (moduleInfo) {
-            // Notify connected editors before removal
-            try {
-              if (this._runtime && this._runtime.events) {
-                this._runtime.events.emit('runtime-event', {
-                  id: 'node/removed',
-                  retain: false,
-                  payload: moduleInfo.nodes || [],
-                });
-              }
-            } catch {
-              // Editor notification is best-effort
-            }
+            this._emitNodeEvent('node/removed', moduleInfo);
 
             registry.removeModule(moduleName);
             Logger.success(
@@ -548,7 +526,10 @@ export class NodeRedManager {
           await removeExtensionNodeModule(this._settings.userDir, id);
         }
 
-        await this._removeExtensionFlows(id);
+        // Resolve known flow node IDs from the extension's source JSON.
+        // This handles boot-loaded flows that lack the _extId tag.
+        const knownNodeIds = await this._resolveExtFlowNodeIds(tracked);
+        await this._removeExtensionFlows(id, knownNodeIds);
         this._extModuleMap.delete(id);
       } catch (err) {
         Logger.error(
@@ -560,7 +541,15 @@ export class NodeRedManager {
   }
 
   /**
-   * Inject flows from an extension into the running Node-RED instance
+   * Inject flows from an extension into the running Node-RED instance.
+   *
+   * Each node is tagged with `_extId` so it can be identified for removal.
+   * If flows for this extension already exist (by _extId or matching node IDs),
+   * injection is skipped to preserve user modifications.
+   *
+   * @param {string} extId - Extension identifier
+   * @param {string} flowsDir - Absolute path to the flows directory
+   * @private
    */
   async _injectExtensionFlows(extId, flowsDir) {
     if (!this._runtime || !this._runtime.flows) return;
@@ -583,11 +572,20 @@ export class NodeRedManager {
           'utf8',
         );
         const nodes = JSON.parse(content);
-        if (Array.isArray(nodes)) {
-          // Tag nodes so they can be removed later
-          const taggedNodes = nodes.map(n => ({ ...n, _extId: extId }));
-          newNodes = newNodes.concat(taggedNodes);
-        }
+        if (!Array.isArray(nodes)) continue;
+
+        // Validate each node has required fields
+        const validNodes = nodes.filter(n => {
+          if (!n || typeof n !== 'object' || !n.id || !n.type) {
+            Logger.warn(`Skipping invalid node in ${file}: missing id or type`);
+            return false;
+          }
+          return true;
+        });
+
+        // Tag nodes so they can be removed later
+        const taggedNodes = validNodes.map(n => ({ ...n, _extId: extId }));
+        newNodes = newNodes.concat(taggedNodes);
       } catch (e) {
         Logger.warn(`Failed to parse extension flow ${file}:`, e.message);
       }
@@ -596,14 +594,17 @@ export class NodeRedManager {
     if (newNodes.length === 0) return;
 
     try {
-      const currentFlows = await this._runtime.flows.getFlows({ req: {} }); // Mock opts
+      const currentFlows = await this._runtime.flows.getFlows({ req: {} });
       const existingFlows = currentFlows.flows || [];
-      const { rev } = currentFlows;
 
-      // Filter out any existing nodes for this extension to avoid duplicates
-      // We skip injection completely if any nodes already exist, to preserve user modifications
-      // and prevent unnecessary 'setFlows' deployments on server boot.
-      const hasExisting = existingFlows.some(n => n._extId === extId);
+      // Check if flows already exist — by _extId tag OR matching node IDs.
+      // This prevents duplicates on server boot (boot-loaded flows lack _extId)
+      // and preserves any user modifications to previously-injected flows.
+      const newNodeIds = new Set(newNodes.map(n => n.id));
+      const hasExisting =
+        existingFlows.some(n => n._extId === extId) ||
+        existingFlows.some(n => newNodeIds.has(n.id));
+
       if (hasExisting) {
         Logger.debug(
           `Flows for extension "${extId}" already exist, skipping injection.`,
@@ -613,13 +614,15 @@ export class NodeRedManager {
 
       const updatedFlows = existingFlows.concat(newNodes);
 
+      // Omit rev to avoid version_mismatch errors from concurrent deployments
+      // (e.g. flow-splitter or user deploying from the editor simultaneously).
       await this._runtime.flows.setFlows({
-        flows: { flows: updatedFlows, rev },
-        deploymentType: 'nodes',
+        flows: { flows: updatedFlows },
+        deploymentType: 'flows',
         req: {},
       });
       Logger.success(
-        `Injected ${newNodes.length} nodes from extension "${extId}"`,
+        `Injected ${newNodes.length} flow nodes from extension "${extId}"`,
       );
     } catch (e) {
       Logger.error(
@@ -630,26 +633,38 @@ export class NodeRedManager {
   }
 
   /**
-   * Remove flows belonging to an extension
+   * Remove flows belonging to an extension.
+   *
+   * Identifies extension flows by _extId tag (runtime-injected) and by
+   * known node IDs from the source JSON (boot-loaded flows without tags).
+   *
+   * @param {string} extId - Extension identifier
+   * @param {string[]} [knownNodeIds=[]] - Node IDs from the extension's flow JSON
+   * @private
    */
-  async _removeExtensionFlows(extId) {
+  async _removeExtensionFlows(extId, knownNodeIds = []) {
     if (!this._runtime || !this._runtime.flows) return;
 
     try {
       const currentFlows = await this._runtime.flows.getFlows({ req: {} });
       const existingFlows = currentFlows.flows || [];
-      const { rev } = currentFlows;
 
-      const filteredFlows = existingFlows.filter(n => n._extId !== extId);
+      const knownIdSet = knownNodeIds.length > 0 ? new Set(knownNodeIds) : null;
 
-      if (filteredFlows.length !== existingFlows.length) {
+      const filteredFlows = existingFlows.filter(
+        n => n._extId !== extId && !(knownIdSet && knownIdSet.has(n.id)),
+      );
+
+      const removedCount = existingFlows.length - filteredFlows.length;
+      if (removedCount > 0) {
+        // Omit rev to avoid version_mismatch errors from concurrent deployments.
         await this._runtime.flows.setFlows({
-          flows: { flows: filteredFlows, rev },
-          deploymentType: 'nodes',
+          flows: { flows: filteredFlows },
+          deploymentType: 'flows',
           req: {},
         });
         Logger.success(
-          `Removed ${existingFlows.length - filteredFlows.length} flow nodes for extension "${extId}"`,
+          `Removed ${removedCount} flow nodes for extension "${extId}"`,
         );
       }
     } catch (e) {
@@ -657,6 +672,83 @@ export class NodeRedManager {
         `Failed to remove flows for extension "${extId}":`,
         e.message,
       );
+    }
+  }
+
+  /**
+   * Resolve the node IDs defined in an extension's flow JSON files.
+   *
+   * Used during unload to identify boot-loaded flows that lack the _extId tag.
+   * Falls back gracefully if the extension directory or manifest is unavailable.
+   *
+   * @param {{ manifest?: object, extDir?: string }} tracked - Tracked extension entry
+   * @returns {Promise<string[]>} Array of node IDs, empty on failure
+   * @private
+   */
+  async _resolveExtFlowNodeIds(tracked) {
+    try {
+      const { manifest } = tracked;
+      const { extDir } = tracked;
+      if (!manifest || !extDir) return [];
+
+      const noderedKey = manifest.nodered;
+      const flowsRel =
+        noderedKey && typeof noderedKey === 'object' ? noderedKey.flows : null;
+      if (!flowsRel) return [];
+
+      const flowsDir = path.join(extDir, flowsRel);
+      try {
+        await fs.promises.access(flowsDir);
+      } catch {
+        return [];
+      }
+
+      const files = await fs.promises.readdir(flowsDir);
+      const jsonFiles = files.filter(f => f.endsWith('.json'));
+      const ids = [];
+
+      for (const file of jsonFiles) {
+        try {
+          const content = await fs.promises.readFile(
+            path.join(flowsDir, file),
+            'utf8',
+          );
+          const nodes = JSON.parse(content);
+          if (Array.isArray(nodes)) {
+            for (const n of nodes) {
+              if (n && n.id) ids.push(n.id);
+            }
+          }
+        } catch {
+          // Skip unparseable files
+        }
+      }
+
+      return ids;
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Emit a node lifecycle event to connected Node-RED editors.
+   * Best-effort — failures are silently ignored.
+   *
+   * @param {'node/added'|'node/removed'} eventId - Event type
+   * @param {object} [moduleInfo] - Registry module info containing .nodes
+   * @private
+   */
+  _emitNodeEvent(eventId, moduleInfo) {
+    try {
+      if (this._runtime && this._runtime.events) {
+        this._runtime.events.emit('runtime-event', {
+          id: eventId,
+          retain: false,
+          payload: moduleInfo ? moduleInfo.nodes || [] : [],
+        });
+      }
+    } catch {
+      // Editor notification is best-effort
     }
   }
 
@@ -1274,7 +1366,8 @@ export class NodeRedManager {
         if (moduleInfo) {
           this._extModuleMap.set(extId, {
             moduleName: entry,
-            manifest: null, // not needed for unload
+            manifest: null,
+            extDir: null,
           });
           Logger.debug(`Boot-synced extension module "${entry}"`);
         }
