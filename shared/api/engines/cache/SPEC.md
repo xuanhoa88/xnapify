@@ -154,7 +154,7 @@ Filesystem-backed cache with persistent storage across restarts. **All operation
 
 | Option      | Default                                             | Description                 |
 | ----------- | --------------------------------------------------- | --------------------------- |
-| `directory` | `~/.xnapify/caches` (prod), `.xnapify/caches` (dev) | Cache directory path        |
+| `directory` | OS-native (prod), `.xnapify/caches` (dev) | Cache directory path        |
 | `maxSize`   | `10000`                                             | Maximum cache files         |
 | `ttl`       | `300000` (5 min)                                    | Default TTL in milliseconds |
 

@@ -5,8 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import os from 'os';
 import path from 'path';
+
+import { getDataDir } from '@shared/utils/env.js';
 
 /**
  * Filesystem Constants and Configuration
@@ -40,14 +41,9 @@ export const DEFAULT_CONFIG = {
     return parseInt(process.env.XNAPIFY_UPLOAD_FILE_LENGTH, 10) || 255;
   },
   get UPLOAD_DIR() {
-    return (
-      process.env.XNAPIFY_UPLOAD_DIR ||
-      path.join(
-        process.env.NODE_ENV === 'production' ? os.homedir() : process.cwd(),
-        '.xnapify',
-        'uploads',
-      )
-    );
+    return process.env.XNAPIFY_UPLOAD_DIR
+      ? path.resolve(process.env.XNAPIFY_UPLOAD_DIR)
+      : getDataDir('uploads');
   },
   get ALLOWED_EXTENSIONS() {
     return process.env.XNAPIFY_UPLOAD_FILE_EXT

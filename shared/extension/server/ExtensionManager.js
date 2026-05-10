@@ -6,12 +6,12 @@
  */
 
 import fs from 'fs';
-import os from 'os';
 import path from 'path';
 
 import { getTranslations } from '@shared/i18n/loader.js';
 import { addNamespace, removeNamespace } from '@shared/i18n/utils.js';
 import { createNativeRequire } from '@shared/utils/createNativeRequire.js';
+import { getDataDir } from '@shared/utils/env.js';
 
 import {
   BaseExtensionManager,
@@ -764,16 +764,9 @@ class ServerExtensionManager extends BaseExtensionManager {
    */
   getInstalledExtensionsDir() {
     try {
-      return path.resolve(
-        process.env.XNAPIFY_EXTENSION_DIR ||
-          path.join(
-            process.env.NODE_ENV === 'production'
-              ? os.homedir()
-              : process.cwd(),
-            '.xnapify',
-            'extensions',
-          ),
-      );
+      return process.env.XNAPIFY_EXTENSION_DIR
+        ? path.resolve(process.env.XNAPIFY_EXTENSION_DIR)
+        : getDataDir('extensions');
     } catch (err) {
       console.error(`Failed to get extension path:`, err);
       return null;

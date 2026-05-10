@@ -53,7 +53,7 @@ userCache.clear(); // Removes "users:*", leaves "posts:*" etc.
 | Type     | Class         | Default `maxSize` | Default Dir                                            | Description                                    |
 | -------- | ------------- | ----------------- | ------------------------------------------------------ | ---------------------------------------------- |
 | `memory` | `MemoryCache` | `1000`            | —                                                      | In-memory LRU cache (default)                  |
-| `file`   | `FileCache`   | `10000`           | `~/.xnapify/caches` (prod)<br/>`.xnapify/caches` (dev) | File-system backed, persistent across restarts |
+| `file`   | `FileCache`   | `10000`           | OS-native (prod)<br/>`.xnapify/caches` (dev) | File-system backed, persistent across restarts |
 | `noop`   | `NoOpCache`   | —                 | —                                                      | No-op (auto-selected in `__DEV__` mode)        |
 
 ### Memory Adapter

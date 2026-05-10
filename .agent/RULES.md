@@ -17,7 +17,7 @@ Whenever you provide assistance to a Developer on this codebase, you MUST adhere
 ## 2. Hard Coding Boundaries
 
 - **Follow ECMAScript Standards**: The project targets Node 20+. Modern ES features like optional chaining (`?.`), nullish coalescing (`??`), and logical assignments (`??=`) are fully supported and encouraged for clean code.
-- **Use the Single Source of Truth**: The `AGENT.md` file defines the overarching architecture (React 18 SSR, Express 5, Sequelize 6, Redux Toolkit). **Never deviate** from these technologies without explicit developer permission.
+- **Use the Single Source of Truth**: The `AGENT.md` file defines the overarching architecture (React 18 SSR, Express 4, Sequelize 6, Redux Toolkit). **Never deviate** from these technologies without explicit developer permission.
 - **Stop at Domain Boundaries**: Never write deeply coupled code between two isolated applications (`@apps/billing` should not `import` from `@apps/invoices`). Always utilize the DI container, hook system, or standard HTTP APIs for cross-domain communication.
 - **No Raw SQL**: Unless debugging a confirmed performance bottleneck, strictly utilize Sequelize ORM methods (`findAll`, `create`). Access models via `container.resolve('db').models` or `container.resolve('models')`.
 - **Mandatory License Headers**: Every new source file you create MUST begin with the standard `xnapify` MIT License header.

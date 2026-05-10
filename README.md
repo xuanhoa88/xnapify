@@ -127,7 +127,7 @@ xnapify/
 
 | Technology      | Purpose                                     |
 | --------------- | ------------------------------------------- |
-| Express 5       | HTTP server                                 |
+| Express 4       | HTTP server                                 |
 | Sequelize 6     | ORM (PostgreSQL, MySQL, SQLite)             |
 | JSON Web Tokens | Authentication                              |
 | Passport.js     | OAuth (Google, Facebook, GitHub, Microsoft) |
@@ -321,9 +321,9 @@ environment:
 
 | Variable                  | Default (prod)        | Docker Compose       |
 | ------------------------- | --------------------- | -------------------- |
-| `XNAPIFY_SQLITE_DATA_DIR` | `~/.xnapify/sqlite`   | `/app/data/sqlite`   |
-| `XNAPIFY_PG_DATA_DIR`     | `~/.xnapify/postgres` | `/app/data/postgres` |
-| `XNAPIFY_MYSQL_DATA_DIR`  | `~/.xnapify/mysql`    | `/app/data/mysql`    |
+| `XNAPIFY_SQLITE_DATA_DIR` | OS-native (`sqlite`)   | `/app/data/sqlite`   |
+| `XNAPIFY_PG_DATA_DIR`     | OS-native (`postgres`) | `/app/data/postgres` |
+| `XNAPIFY_MYSQL_DATA_DIR`  | OS-native (`mysql`)    | `/app/data/mysql`    |
 
 ## 🚢 Production Deployment
 

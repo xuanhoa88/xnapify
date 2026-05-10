@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-**xnapify** is a production-ready, full-stack React application with server-side rendering (SSR), built on React 18, Express 5, and Rspack. This is a **single-repository** application with comprehensive tooling, RBAC, WebSocket support, and Node-RED integration for modern web development.
+**xnapify** is a production-ready, full-stack React application with server-side rendering (SSR), built on React 18, Express 4, and Rspack. This is a **single-repository** application with comprehensive tooling, RBAC, WebSocket support, and Node-RED integration for modern web development.
 
 ## Project Structure
 
@@ -79,7 +79,7 @@ xnapify/
 
 ### Backend
 
-- **Server:** Express 5
+- **Server:** Express 4
 - **Authentication:** JWT
 - **Database:** Sequelize 6 ORM (PostgreSQL, MySQL, SQLite)
 - **WebSocket:** ws
@@ -768,7 +768,7 @@ XNAPIFY_PUBLIC_APP_DESC="Snap your API, Stream your React"
 XNAPIFY_DB_URL=sqlite:database.sqlite
 
 # Database data directories (control where each DB stores files)
-# Defaults: dev → .xnapify/<dialect>, prod → ~/.xnapify/<dialect>
+# Defaults: dev → .xnapify/<dialect>, prod → OS-native data directory (XDG/App Support)
 # XNAPIFY_SQLITE_DATA_DIR=       # SQLite database file location
 # XNAPIFY_PG_DATA_DIR=           # PostgreSQL data directory
 # XNAPIFY_MYSQL_DATA_DIR=        # MySQL data directory
@@ -876,9 +876,9 @@ environment:
 
 | Variable                  | Default (prod)        | Docker Compose       |
 | ------------------------- | --------------------- | -------------------- |
-| `XNAPIFY_SQLITE_DATA_DIR` | `~/.xnapify/sqlite`   | `/app/data/sqlite`   |
-| `XNAPIFY_PG_DATA_DIR`     | `~/.xnapify/postgres` | `/app/data/postgres` |
-| `XNAPIFY_MYSQL_DATA_DIR`  | `~/.xnapify/mysql`    | `/app/data/mysql`    |
+| `XNAPIFY_SQLITE_DATA_DIR` | OS-native (`sqlite`)   | `/app/data/sqlite`   |
+| `XNAPIFY_PG_DATA_DIR`     | OS-native (`postgres`) | `/app/data/postgres` |
+| `XNAPIFY_MYSQL_DATA_DIR`  | OS-native (`mysql`)    | `/app/data/mysql`    |
 
 ## Key Features
 

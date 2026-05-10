@@ -34,9 +34,9 @@ shared/api/engines/db/
 | `XNAPIFY_DB_LOG`          | `false`                                                  | Enable SQL query logging (disabled in production)                         |
 | `XNAPIFY_DB_POOL_MAX`     | `5`                                                      | Maximum connection pool size                                              |
 | `XNAPIFY_DB_POOL_MIN`     | `0`                                                      | Minimum connection pool size                                              |
-| `XNAPIFY_SQLITE_DATA_DIR` | `.xnapify/sqlite` (dev) / `~/.xnapify/sqlite` (prod)     | Directory for SQLite database file (relative paths resolved against this) |
-| `XNAPIFY_PG_DATA_DIR`     | `.xnapify/postgres` (dev) / `~/.xnapify/postgres` (prod) | Directory for embedded PostgreSQL data                                    |
-| `XNAPIFY_MYSQL_DATA_DIR`  | `.xnapify/mysql` (dev) / `~/.xnapify/mysql` (prod)       | Directory for embedded MySQL data                                         |
+| `XNAPIFY_SQLITE_DATA_DIR` | `.xnapify/sqlite` (dev) / OS-native (prod)     | Directory for SQLite database file (relative paths resolved against this) |
+| `XNAPIFY_PG_DATA_DIR`     | `.xnapify/postgres` (dev) / OS-native (prod) | Directory for embedded PostgreSQL data                                    |
+| `XNAPIFY_MYSQL_DATA_DIR`  | `.xnapify/mysql` (dev) / OS-native (prod)       | Directory for embedded MySQL data                                         |
 
 ### SQLite Concurrency Tuning
 

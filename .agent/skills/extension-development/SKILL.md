@@ -296,9 +296,10 @@ export default {
 
 ## Styling & CSS Cascade (Tailwind v4)
 
-xnapify uses Tailwind CSS v4 and native CSS Cascade Layers (`@layer`). The core UI defines its cascade as `@layer theme, base, radix-ui, components, utilities`. 
+xnapify uses Tailwind CSS v4 and native CSS Cascade Layers (`@layer`). The core UI defines its cascade as `@layer theme, base, radix-ui, components, utilities`.
 
 When styling extensions:
+
 1. **Implicit Priority**: By default, extension CSS is un-layered. According to the CSS spec, un-layered CSS **always overrides** layered CSS. This means your extension's standard CSS or CSS Modules will naturally override the core app's Tailwind utilities.
 2. **Explicit Layers**: If you need to participate in the layer cascade explicitly (e.g. to allow your base styles to be overridden by Tailwind utilities), wrap your styles in `@layer extension { ... }`.
 3. **DO NOT strip layers**: Never attempt to remove `@layer` from the build pipeline, as this destroys the priority hierarchy between Radix UI and Tailwind CSS.

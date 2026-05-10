@@ -51,8 +51,8 @@ Configures a custom Passport strategy (`XnapifyAuthStrategy`) to replace Node-RE
 
 Instead of storing configurations inside monolithic `flows.json`, this module plugs into `RED.events.on('flows:started')`:
 
-- **Execution (Split Mode)**: Triggered post-deployment. The script analyzes the raw JSON array configuration grouping nodes into `tabs`, `subflows`, and `config-nodes`. It stores separated JSON arrays natively into `~/.xnapify/node-red/src/`. It auto-deletes the monolithic `flows.json`.
-- **Execution (Rebuild Mode)**: Triggered on boot if `flows.json` does NOT exist or the runtime passes an empty flow array. It reads the files in `~/.xnapify/node-red/src/`, merges them, constructs a temporary `flows.json`, and orders `RED.nodes.loadFlows()` to parse them immediately.
+- **Execution (Split Mode)**: Triggered post-deployment. The script analyzes the raw JSON array configuration grouping nodes into `tabs`, `subflows`, and `config-nodes`. It stores separated JSON arrays natively into `<userDir>/src/`. It auto-deletes the monolithic `flows.json`.
+- **Execution (Rebuild Mode)**: Triggered on boot if `flows.json` does NOT exist or the runtime passes an empty flow array. It reads the files in `<userDir>/src/`, merges them, constructs a temporary `flows.json`, and orders `RED.nodes.loadFlows()` to parse them immediately.
 
 ## Extension Hot-Loading
 

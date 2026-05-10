@@ -6,12 +6,12 @@
  */
 
 import fs from 'fs';
-import os from 'os';
 import path from 'path';
 
 import merge from 'lodash/merge';
 import Sequelize from 'sequelize';
 
+import { getDataDir } from '@shared/utils/env.js';
 import { getHmrState } from '@shared/utils/hmrState.js';
 
 import { register } from '../../shutdown.js';
@@ -189,14 +189,9 @@ export function createConnection(url, options) {
     // Leave in-memory and explicit absolute paths completely untouched
     if (filePath !== ':memory:' && !path.isAbsolute(filePath)) {
       // Safely resolve the data dir with a development fallback
-      let dataDir = process.env.XNAPIFY_SQLITE_DATA_DIR;
-      if (!dataDir) {
-        dataDir = path.join(
-          process.env.NODE_ENV === 'production' ? os.homedir() : process.cwd(),
-          '.xnapify',
-          'sqlite',
-        );
-      }
+      let dataDir = process.env.XNAPIFY_SQLITE_DATA_DIR
+        ? path.resolve(process.env.XNAPIFY_SQLITE_DATA_DIR)
+        : getDataDir('sqlite');
 
       // Create data directory if it doesn't exist
       if (!fs.existsSync(dataDir)) {

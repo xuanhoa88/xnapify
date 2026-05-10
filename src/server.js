@@ -424,20 +424,69 @@ function storeSsrCache(key, data) {
 // Locale Middleware
 // ---------------------------------------------------------------------------
 
-const localeMiddleware = expressRequestLanguage({
-  languages: Object.keys(AVAILABLE_LOCALES),
-  queryName: LOCALE_COOKIE_NAME,
-  cookie: {
-    name: LOCALE_COOKIE_NAME,
-    options: {
-      path: '/',
-      maxAge: LOCALE_COOKIE_MAX_AGE * 1000,
-      httpOnly: true,
-      secure: !__DEV__,
-      sameSite: 'lax',
+function localeMiddleware() {
+  // eslint-disable-next-line no-underscore-dangle
+  const _detectLanguage = expressRequestLanguage({
+    languages: Object.keys(AVAILABLE_LOCALES),
+    queryName: LOCALE_COOKIE_NAME,
+    cookie: {
+      name: LOCALE_COOKIE_NAME,
+      options: {
+        path: '/',
+        maxAge: LOCALE_COOKIE_MAX_AGE * 1000,
+        httpOnly: true,
+        secure: !__DEV__,
+        sameSite: 'lax',
+      },
     },
-  },
-});
+  });
+
+  return (req, res, next) => {
+    const cookieLocale = req.cookies && req.cookies[LOCALE_COOKIE_NAME];
+    const queryLocale = req.query && req.query[LOCALE_COOKIE_NAME];
+
+    // Reduce cardinality by ignoring accept-language if explicit override exists
+    const cacheKey = queryLocale
+      ? `q:${queryLocale}`
+      : cookieLocale
+        ? `c:${cookieLocale}`
+        : `a:${req.get('accept-language') || DEFAULT_LOCALE}`;
+
+    const isLangRoute = req.path.startsWith(`/${LOCALE_COOKIE_NAME}/`);
+
+    if (isLangRoute) {
+      const requestedLang = req.path
+        .slice(`/${LOCALE_COOKIE_NAME}/`.length)
+        .split('/')[0];
+      if (Object.keys(AVAILABLE_LOCALES).includes(requestedLang)) {
+        res.cookie(LOCALE_COOKIE_NAME, requestedLang, {
+          path: '/',
+          maxAge: LOCALE_COOKIE_MAX_AGE * 1000,
+          httpOnly: true,
+          secure: !__DEV__,
+          sameSite: 'lax',
+        });
+        // Express 4 supports 'back' shorthand
+        return res.redirect('back');
+      }
+      return res.status(404).send('The language is not supported.');
+    }
+
+    const cachedLang = appState.localeCache.get(cacheKey);
+    if (cachedLang) {
+      req.language = cachedLang;
+      return next();
+    }
+
+    _detectLanguage(req, res, err => {
+      if (!err) {
+        // just store the language string; LRUCache handles TTL/eviction
+        appState.localeCache.set(cacheKey, req.language);
+      }
+      next(err);
+    });
+  };
+}
 
 // ---------------------------------------------------------------------------
 // View & Store Initialization
@@ -1237,54 +1286,11 @@ export async function bootstrapApp(app, server, options = {}) {
   // Static assets (moved UP to avoid unnecessary body parsing, rate limiting, and locale processing)
   app.use(staticMiddleware());
 
-  // Locale detection with caching
+  // Cookie parser
   app.use(cookieParser());
-  app.use((req, res, next) => {
-    const cookieLocale = req.cookies && req.cookies[LOCALE_COOKIE_NAME];
-    const queryLocale = req.query && req.query[LOCALE_COOKIE_NAME];
 
-    // Reduce cardinality by ignoring accept-language if explicit override exists
-    const cacheKey = queryLocale
-      ? `q:${queryLocale}`
-      : cookieLocale
-        ? `c:${cookieLocale}`
-        : `a:${req.get('accept-language') || DEFAULT_LOCALE}`;
-
-    const isLangRoute = req.path.startsWith(`/${LOCALE_COOKIE_NAME}/`);
-
-    // Express 5.x removed the 'back' redirect shorthand.
-    // Intercept language changes manually instead of relying on express-request-language
-    if (isLangRoute) {
-      const requestedLang = req.path
-        .slice(`/${LOCALE_COOKIE_NAME}/`.length)
-        .split('/')[0];
-      if (Object.keys(AVAILABLE_LOCALES).includes(requestedLang)) {
-        res.cookie(LOCALE_COOKIE_NAME, requestedLang, {
-          path: '/',
-          maxAge: LOCALE_COOKIE_MAX_AGE * 1000,
-          httpOnly: true,
-          secure: !__DEV__,
-          sameSite: 'lax',
-        });
-        return res.redirect(req.get('Referrer') || '/');
-      }
-      return res.status(404).send('The language is not supported.');
-    }
-
-    const cachedLang = appState.localeCache.get(cacheKey);
-    if (cachedLang) {
-      req.language = cachedLang;
-      return next();
-    }
-
-    localeMiddleware(req, res, err => {
-      if (!err) {
-        // just store the language string; LRUCache handles TTL/eviction
-        appState.localeCache.set(cacheKey, req.language);
-      }
-      next(err);
-    });
-  });
+  // Locale detection with caching
+  app.use(localeMiddleware());
 
   // Maintenance Mode
   app.use(maintenanceMiddleware());

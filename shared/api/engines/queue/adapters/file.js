@@ -6,8 +6,9 @@
  */
 
 import fs from 'fs';
-import os from 'os';
 import path from 'path';
+
+import { getDataDir } from '@shared/utils/env.js';
 
 import { JobNotFoundError, JobProcessingError, QueueError } from '../errors.js';
 import { JOB_STATUS } from '../utils/constants.js';
@@ -76,14 +77,11 @@ class FileQueue {
     });
 
     // Resolve and validate queue directory
-    const dataDir =
-      options.dataDir ||
-      process.env.XNAPIFY_QUEUE_DATA_DIR ||
-      path.join(
-        process.env.NODE_ENV === 'production' ? os.homedir() : process.cwd(),
-        '.xnapify',
-        'queues',
-      );
+    const dataDir = options.dataDir
+      ? path.resolve(options.dataDir)
+      : process.env.XNAPIFY_QUEUE_DATA_DIR
+        ? path.resolve(process.env.XNAPIFY_QUEUE_DATA_DIR)
+        : getDataDir('queues');
     this.queueDir = path.join(dataDir, this.name);
     this.lockDir = path.join(this.queueDir, '.locks');
 

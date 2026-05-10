@@ -358,11 +358,7 @@ function EditRoleFormFields({
   return (
     <Card variant='surface' className='p-0'>
       {/* ── Role Information ──────────────────────────────────────── */}
-      <Box
-        px='5'
-        py='3'
-        className='bg-(--gray-a2) border-b border-(--gray-a4)'
-      >
+      <Box px='5' py='3' className='bg-(--gray-a2) border-b border-(--gray-a4)'>
         <Text size='2' weight='bold' color='gray'>
           {t('roles:admin.edit.roleInformation', 'Role Information')}
         </Text>

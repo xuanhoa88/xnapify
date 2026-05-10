@@ -139,11 +139,7 @@ function ProfileDropdown() {
 
           {/* Navigation Items */}
           <ContextMenu.Item onClick={() => history.push('/profile')}>
-            <PersonIcon
-              width={16}
-              height={16}
-              className='mr-(--space-2)'
-            />
+            <PersonIcon width={16} height={16} className='mr-(--space-2)' />
             {t('navigation.profile', 'Profile')}
           </ContextMenu.Item>
 

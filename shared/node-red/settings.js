@@ -6,13 +6,13 @@
  */
 
 import fs from 'fs';
-import os from 'os';
 import path from 'path';
 
 import merge from 'lodash/merge';
 
 import { createRspackContextAdapter } from '@shared/utils/contextAdapter.js';
 import { createNativeRequire } from '@shared/utils/createNativeRequire.js';
+import { getDataDir } from '@shared/utils/env.js';
 
 import { createNodeRedAuth, createNodeRedLogoutConfig } from './auth.js';
 
@@ -477,12 +477,9 @@ export default async function createSettings(options = {}) {
     host = '127.0.0.1',
     port = 1337,
     protocol = 'http',
-    userDir = process.env.XNAPIFY_NODERED_HOME ||
-      path.join(
-        process.env.NODE_ENV === 'production' ? os.homedir() : process.cwd(),
-        '.xnapify',
-        'node-red',
-      ),
+    userDir = process.env.XNAPIFY_NODERED_HOME
+      ? path.resolve(process.env.XNAPIFY_NODERED_HOME)
+      : getDataDir('node-red'),
     logLevel = process.env.XNAPIFY_NODERED_LOG_LEVEL || 'info',
     enableProjects = process.env.XNAPIFY_NODERED_PROJECTS === 'true',
     httpAdminRoot = '/~/red/admin',

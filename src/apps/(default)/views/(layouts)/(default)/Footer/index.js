@@ -133,12 +133,7 @@ function Footer() {
             {/* Navigation Columns */}
             {FOOTER_COLUMNS.map(column => (
               <Box key={column.title}>
-                <Heading
-                  as='h3'
-                  size='3'
-                  mb='4'
-                  className='text-(--gray-12)'
-                >
+                <Heading as='h3' size='3' mb='4' className='text-(--gray-12)'>
                   {column.title}
                 </Heading>
                 <Flex direction='column' gap='3'>

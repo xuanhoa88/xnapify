@@ -7,8 +7,9 @@
 
 import crypto from 'crypto';
 import fs from 'fs';
-import os from 'os';
 import path from 'path';
+
+import { getCacheDir } from '@shared/utils/env.js';
 
 // ======================================================================
 // Constants
@@ -47,14 +48,11 @@ export default class FileCache {
    * @param {number} [options.ttl=300000] - Default TTL in ms (5 min)
    */
   constructor(options = {}) {
-    this.directory =
-      options.directory ||
-      process.env.XNAPIFY_CACHE_DIR ||
-      path.join(
-        process.env.NODE_ENV === 'production' ? os.homedir() : process.cwd(),
-        '.xnapify',
-        'caches',
-      );
+    this.directory = options.directory
+      ? path.resolve(options.directory)
+      : process.env.XNAPIFY_CACHE_DIR
+        ? path.resolve(process.env.XNAPIFY_CACHE_DIR)
+        : getCacheDir('caches');
     this.maxSize = options.maxSize || 10_000;
     this.defaultTTL = options.ttl || 5 * 60 * 1000; // 5 minutes
 

@@ -169,7 +169,7 @@ All providers implement: `store`, `retrieve`, `delete`, `exists`, `getMetadata`,
 
 | Config              | Default              | Description         |
 | ------------------- | -------------------- | ------------------- |
-| `basePath`          | `~/.xnapify/uploads` | Base directory      |
+| `basePath`          | OS-native          | Base directory      |
 | `createDirectories` | `true`               | Auto-create dirs    |
 | `maxFileSize`       | `10MB`               | Max file size       |
 | `allowedExtensions` | `null` (all)         | Extension whitelist |
@@ -254,7 +254,7 @@ Standardized result object: `{ success, data, message, timestamp, error? }`. Inc
 | ---------------------------- | -------------------- | ---------------------------------- |
 | `XNAPIFY_UPLOAD_FILE_SIZE`   | `50MB`               | Max upload file size               |
 | `XNAPIFY_UPLOAD_FILE_LENGTH` | `255`                | Max filename length                |
-| `XNAPIFY_UPLOAD_DIR`         | `~/.xnapify/uploads` | Upload directory                   |
+| `XNAPIFY_UPLOAD_DIR`         | OS-native          | Upload directory                   |
 | `XNAPIFY_UPLOAD_FILE_EXT`    | `null` (all)         | Comma-separated allowed extensions |
 
 ### `ERROR_CODES`

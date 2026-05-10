@@ -56,7 +56,7 @@ const seedStatus = await connection.getSeedStatus(seedsContext);
 | Logging           | Disabled                                             | `XNAPIFY_DB_LOG=true` (dev only) |
 | `freezeTableName` | `true`                                               | —                                |
 | `timestamps`      | `true`                                               | —                                |
-| SQLite data dir   | `.xnapify/sqlite` (dev) / `~/.xnapify/sqlite` (prod) | `XNAPIFY_SQLITE_DATA_DIR`        |
+| SQLite data dir   | `.xnapify/sqlite` (dev) / OS-native (prod)       | `XNAPIFY_SQLITE_DATA_DIR`        |
 
 > **Note:** SQL logging is automatically disabled in production (`NODE_ENV=production`) even when `XNAPIFY_DB_LOG=true`.
 >

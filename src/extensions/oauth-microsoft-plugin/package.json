@@ -7,7 +7,5 @@
   "dependencies": {
     "passport-microsoft": "^2.1.0"
   },
-  "slots": [
-    "/login"
-  ]
+  "slots": ["/login"]
 }
