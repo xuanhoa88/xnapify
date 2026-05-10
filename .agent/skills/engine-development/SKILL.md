@@ -38,8 +38,7 @@ shared/api/engines/<engine-name>/
 ├── index.js              # Default singleton export + re-exports
 ├── factory.js            # Manager class + createFactory()
 ├── errors.js             # Custom error class (optional)
-├── SPEC.md               # AI specification document
-├── README.md             # Human documentation (optional)
+├── README.md             # Documentation & specification
 ├── <engine>.test.js      # Jest unit tests
 ├── __mocks__/            # Manual Jest mocks (optional)
 │   └── external-dep.js
@@ -179,9 +178,9 @@ getProvider(name) {
 
 ---
 
-## SPEC.md Template
+## README.md Template
 
-Every engine MUST have a `SPEC.md` for AI context. Follow this structure:
+Every engine MUST have a `README.md` for AI context. Follow this structure:
 
 ```markdown
 # <Engine Name> Engine AI Specification
@@ -403,7 +402,7 @@ module.exports = {
 - [ ] `factory.js` with Manager class + `createFactory()`
 - [ ] `errors.js` with custom error class (code, statusCode, timestamp)
 - [ ] `index.js` with singleton export + named re-exports
-- [ ] `SPEC.md` following the template above
+- [ ] `README.md` following the template above
 - [ ] `<name>.test.js` with coverage for: core methods, error handling, factory, cleanup
 - [ ] Environment variables prefixed with `XNAPIFY_`
 - [ ] Cleanup registered with shutdown registry (`shared/api/registry.js`) in factory

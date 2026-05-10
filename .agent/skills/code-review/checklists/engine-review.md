@@ -7,7 +7,7 @@ Quick-reference for reviewing changes to `shared/api/engines/*`.
 - [ ] `index.js` exports singleton + named re-exports (`createFactory`, class, errors)
 - [ ] `factory.js` has Manager class + `createFactory()` function
 - [ ] `errors.js` has custom error class with `code`, `statusCode`, `timestamp`
-- [ ] `SPEC.md` exists and reflects current implementation
+- [ ] `README.md` exists and reflects current implementation
 - [ ] Test file `<engine>.test.js` exists
 
 ## Factory Pattern
@@ -20,7 +20,7 @@ Quick-reference for reviewing changes to `shared/api/engines/*`.
 ## DI Integration
 
 - [ ] Singleton auto-registered on container during bootstrap
-- [ ] Service key documented in SPEC.md
+- [ ] Service key documented in README.md
 - [ ] No circular dependencies with other engines
 
 ## Error Handling
@@ -44,7 +44,7 @@ Quick-reference for reviewing changes to `shared/api/engines/*`.
 - [ ] All env vars prefixed with `XNAPIFY_`
 - [ ] Defaults provided for development
 - [ ] No hardcoded secrets
-- [ ] Documented in SPEC.md env vars table
+- [ ] Documented in README.md env vars table
 
 ## Performance
 

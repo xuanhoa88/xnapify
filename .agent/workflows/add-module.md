@@ -931,11 +931,11 @@ See `src/apps/users/` for a complete working example with:
 
 ### 11. AI Specification (Optional)
 
-Each module can optionally include a `SPEC.md` file in its root directory to document specific features for AI assistance. To avoid duplication, start from the global template:
+Each module can optionally include a `README.md` file in its root directory to document specific features for AI assistance. To avoid duplication, start from the global template:
 
-- **Template:** [.agent/templates/SPEC.template.md](../templates/SPEC.template.md)
+- **Template:** [.agent/templates/README.template.md](../templates/README.template.md)
 
-Copy this template to `src/apps/{module-name}/SPEC.md` when planning a new feature.
+Copy this template to `src/apps/{module-name}/README.md` when planning a new feature.
 
 ---
 

@@ -10,8 +10,7 @@ Add a new engine under `shared/api/engines/`. Engines are auto-discovered and re
 shared/api/engines/{engine-name}/
 ├── index.js              # Public API (auto-loaded)
 ├── {engine-name}.test.js # Tests
-├── README.md             # Documentation
-└── SPEC.md               # Specification (optional)
+├── README.md             # Documentation & specification
 ```
 
 ## Step-by-Step

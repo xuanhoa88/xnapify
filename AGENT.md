@@ -55,7 +55,7 @@ xnapify/
 │   ├── RULES.md                  # Coding rules & constraints
 │   ├── workflows/                # Step-by-step development guides (22)
 │   ├── skills/                   # AI persona skills (17)
-│   └── templates/                # SPEC.md template
+│   └── templates/                # README.md template
 ├── database.sqlite               # Local SQLite database (dev)
 └── .env.xnapify                  # Environment variable template
 ```
@@ -1046,7 +1046,7 @@ polluting the regular test suite.
 - **.agent/RULES.md** — Hard rules and coding constraints
 - **.agent/workflows/** — 22 step-by-step development guides
 - **.agent/skills/** — 17 specialized AI persona skills
-- **.agent/templates/SPEC.template.md** — Feature specification template
+- **.agent/templates/README.template.md** — Feature specification template
 - **.env.xnapify** — Environment variable documentation
 - **CONTRIBUTING.md** — Contribution guidelines and commit conventions
 

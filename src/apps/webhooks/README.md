@@ -15,7 +15,7 @@ Provide a unified inbound webhook handling system for third-party service integr
 ```
 src/apps/webhooks/
 ├── package.json
-├── SPEC.md                              # This file
+├── README.md                              # This file
 └── api/
     ├── index.js                         # Lifecycle hooks (providers, boot, routes)
     ├── factory.js                       # WebhookManager class + createFactory()

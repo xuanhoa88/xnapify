@@ -78,7 +78,7 @@ Before designing, structurally challenge the scope. Does this feature make sense
 Investigate the existing architecture.
 
 - Identify which engines, modules, and extensions will be affected.
-- Review existing documentation, `SPEC.md` if applicable, and similar features in the codebase.
+- Review existing documentation, `README.md` if applicable, and similar features in the codebase.
 
 ### 3. Solution Design
 

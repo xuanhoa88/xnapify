@@ -12,7 +12,7 @@ xnapify/
 │   ├── RULES.md                  # Coding rules & constraints
 │   ├── workflows/                # Explicit guides on HOW to do things
 │   ├── skills/                   # Personas and Rulesets on WHAT is allowed
-│   └── templates/                # SPEC.md template for feature specs
+│   └── templates/                # README.md template for feature specs
 ├── .claude/                      # Local Symlinks (for Claude Desktop app compatibility)
 │   └── commands/                 # Symlinks to -> ../.agent/workflows
 ├── .gemini/                      # Meta-settings for Google Gemini Agents
