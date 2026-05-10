@@ -419,6 +419,7 @@ DataTableLoader.displayName = 'DataTableLoader';
 DataTableLoader.propTypes = {
   variant: PropTypes.oneOf(['skeleton', 'spinner', 'cards']),
   message: PropTypes.string,
+  skeletonCount: PropTypes.number,
 };
 
 /**
@@ -668,6 +669,10 @@ function DataTable({
                 (loaderSlot && loaderSlot.props.message) ||
                 t('common:components.dataTable.loading', 'Loading...')
               }
+              skeletonCount={
+                (loaderSlot && loaderSlot.props.skeletonCount) ||
+                (as === 'grid' ? gridCols : 5)
+              }
               className={s.fillHeight}
             />
           ) : (
@@ -900,6 +905,7 @@ function DataTable({
                       className={clsx(
                         s.gridContainer,
                         gridCols === 2 && s.gridCols2,
+                        gridCols === 3 && s.gridCols3,
                         gridCols === 4 && s.gridCols4,
                         gridCols === 5 && s.gridCols5,
                         gridCols === 6 && s.gridCols6,

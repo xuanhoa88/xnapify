@@ -40,7 +40,7 @@ function Loader({
   if (variant === 'cards') {
     return (
       <Flex gap='4' p='4' wrap='wrap' className={className}>
-        {Array.from({ length: 4 }).map((_, i) => (
+        {Array.from({ length: skeletonCount }).map((_, i) => (
           <Flex
             key={i}
             direction='column'

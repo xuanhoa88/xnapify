@@ -177,6 +177,10 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.gridCols3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .gridCols4 {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
@@ -190,6 +194,7 @@
 }
 
 @media (width <= 1200px) {
+  .gridCols3,
   .gridCols4 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -211,6 +216,7 @@
   }
 
   .gridCols2,
+  .gridCols3,
   .gridCols4,
   .gridCols5,
   .gridCols6 {
@@ -220,6 +226,7 @@
 
 @media (width <= 480px) {
   .gridCols2,
+  .gridCols3,
   .gridCols4,
   .gridCols5,
   .gridCols6 {

@@ -81,9 +81,9 @@ function ExtensionCard({
         extension.is_active ? s.cardActive : s.cardInactive,
       )}
     >
-      <Flex p='4' gap='3' align='start' className={s.headerFlex}>
+      <Flex p='4' pb='2' gap='3' align='center' className={s.headerFlex}>
         <Avatar
-          size='5'
+          size='3'
           radius='medium'
           src={
             extension.icon && /^https?:\/\//.test(extension.icon)
@@ -118,28 +118,29 @@ function ExtensionCard({
             <Box className={s.skeletonTitle} />
           ) : (
             <>
-              <Flex align='center' gap='2' mb='1'>
-                <Text as='h3' size='3' weight='bold' truncate>
+              <Box mb='1'>
+                <Text as='h3' size='3' weight='medium' truncate>
                   {extension.name}
                 </Text>
-                <Badge color='gray' radius='full' variant='surface'>
-                  v{extension.version}
-                </Badge>
-              </Flex>
+              </Box>
               <Flex align='center' gap='2' wrap='wrap'>
+                <Text as='span' size='2' color='gray'>
+                  v{extension.version}
+                </Text>
                 {extension.source && (
-                  <Badge
-                    variant={isLocal ? 'secondary' : 'primary'}
-                    color='gray'
-                    radius='full'
-                  >
-                    {isLocal
-                      ? t('extensions:admin.sourceLocal', 'LOCAL')
-                      : t('extensions:admin.sourceRemote', 'REMOTE')}
-                  </Badge>
+                  <>
+                    <Text as='span' size='2' color='gray'>
+                      &bull;
+                    </Text>
+                    <Text as='span' size='2' color='gray'>
+                      {isLocal
+                        ? t('extensions:admin.sourceLocal', 'Local')
+                        : t('extensions:admin.sourceRemote', 'Remote')}
+                    </Text>
+                  </>
                 )}
                 {authorText && (
-                  <Text as='span' size='1' color='gray'>
+                  <Text as='span' size='2' color='gray'>
                     &bull; {authorText}
                   </Text>
                 )}
@@ -149,7 +150,7 @@ function ExtensionCard({
         </Box>
       </Flex>
 
-      <Box p='4' grow='1'>
+      <Box px='4' pb='4' grow='1'>
         {isLoading ? (
           <Flex direction='column' gap='2'>
             <Box className={s.skeletonDesc1} />
@@ -157,7 +158,7 @@ function ExtensionCard({
             <Box className={s.skeletonDesc2} />
           </Flex>
         ) : (
-          <Text as='p' size='2' color='gray' className={s.descriptionText}>
+          <Text as='p' size='2' className={s.descriptionText}>
             {extension.description ||
               t(
                 'extensions:admin.noDescriptionAvailable',
@@ -167,12 +168,20 @@ function ExtensionCard({
         )}
       </Box>
 
-      <Flex p='3' align='center' justify='between' className={s.footerFlex}>
+      <Flex
+        px='4'
+        py='3'
+        align='center'
+        justify='between'
+        className={s.footerFlex}
+      >
         <Flex gap='2' align='center'>
           {extension.options && extension.options.repository && (
             <Button
-              variant='outline'
-              size='1'
+              variant='surface'
+              size='2'
+              color='gray'
+              highContrast
               onClick={() =>
                 window.open(extension.options.repository, '_blank')
               }
@@ -181,8 +190,9 @@ function ExtensionCard({
             </Button>
           )}
           <Button
-            variant='outline'
-            size='1'
+            variant='surface'
+            size='2'
+            color='red'
             onClick={() => onDelete(extension)}
           >
             {t('admin:common.remove', 'Remove')}
@@ -200,7 +210,7 @@ function ExtensionCard({
             <Flex align='center'>
               <Switch
                 size='2'
-                color='green'
+                color='blue'
                 checked={Boolean(extension.is_active)}
                 onCheckedChange={handleToggleStatus}
                 disabled={!canUpdate}
