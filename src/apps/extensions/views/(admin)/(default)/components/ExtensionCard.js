@@ -210,7 +210,7 @@ function ExtensionCard({
             <Flex align='center'>
               <Switch
                 size='2'
-                color='blue'
+                color='indigo'
                 checked={Boolean(extension.is_active)}
                 onCheckedChange={handleToggleStatus}
                 disabled={!canUpdate}

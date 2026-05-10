@@ -33,7 +33,7 @@
 .toolbarBox {
   padding: var(--space-4);
   border-bottom: 1px solid var(--gray-a6);
-  background-color: var(--gray-2);
+  background-color: transparent;
 }
 
 /* Search input sizing within the flat toolbar row */
