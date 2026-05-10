@@ -46,17 +46,17 @@ const seedStatus = await connection.getSeedStatus(seedsContext);
 
 ### Default Configuration
 
-| Option            | Value                                                | Env Override                     |
-| ----------------- | ---------------------------------------------------- | -------------------------------- |
-| Timezone          | `+00:00` (UTC)                                       | `XNAPIFY_DB_TZ`                  |
-| Pool max          | `5`                                                  | `XNAPIFY_DB_POOL_MAX`            |
-| Pool min          | `0`                                                  | `XNAPIFY_DB_POOL_MIN`            |
-| Pool idle         | `10s`                                                | —                                |
-| Pool acquire      | `30s`                                                | —                                |
-| Logging           | Disabled                                             | `XNAPIFY_DB_LOG=true` (dev only) |
-| `freezeTableName` | `true`                                               | —                                |
-| `timestamps`      | `true`                                               | —                                |
-| SQLite data dir   | `.xnapify/sqlite` (dev) / OS-native (prod)       | `XNAPIFY_SQLITE_DATA_DIR`        |
+| Option            | Value                                      | Env Override                     |
+| ----------------- | ------------------------------------------ | -------------------------------- |
+| Timezone          | `+00:00` (UTC)                             | `XNAPIFY_DB_TZ`                  |
+| Pool max          | `5`                                        | `XNAPIFY_DB_POOL_MAX`            |
+| Pool min          | `0`                                        | `XNAPIFY_DB_POOL_MIN`            |
+| Pool idle         | `10s`                                      | —                                |
+| Pool acquire      | `30s`                                      | —                                |
+| Logging           | Disabled                                   | `XNAPIFY_DB_LOG=true` (dev only) |
+| `freezeTableName` | `true`                                     | —                                |
+| `timestamps`      | `true`                                     | —                                |
+| SQLite data dir   | `.xnapify/sqlite` (dev) / OS-native (prod) | `XNAPIFY_SQLITE_DATA_DIR`        |
 
 > **Note:** SQL logging is automatically disabled in production (`NODE_ENV=production`) even when `XNAPIFY_DB_LOG=true`.
 >
@@ -97,16 +97,16 @@ shared/api/engines/db/
 
 ### Environment Variables
 
-| Variable                  | Default                                                  | Description                                                               |
-| ------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `XNAPIFY_DB_URL`          | `sqlite:database.sqlite`                                 | Database connection URL                                                   |
-| `XNAPIFY_DB_TZ`           | `+00:00`                                                 | Connection timezone (ignored for SQLite)                                  |
-| `XNAPIFY_DB_LOG`          | `false`                                                  | Enable SQL query logging (disabled in production)                         |
-| `XNAPIFY_DB_POOL_MAX`     | `5`                                                      | Maximum connection pool size                                              |
-| `XNAPIFY_DB_POOL_MIN`     | `0`                                                      | Minimum connection pool size                                              |
-| `XNAPIFY_SQLITE_DATA_DIR` | `.xnapify/sqlite` (dev) / OS-native (prod)     | Directory for SQLite database file (relative paths resolved against this) |
+| Variable                  | Default                                      | Description                                                               |
+| ------------------------- | -------------------------------------------- | ------------------------------------------------------------------------- |
+| `XNAPIFY_DB_URL`          | `sqlite:database.sqlite`                     | Database connection URL                                                   |
+| `XNAPIFY_DB_TZ`           | `+00:00`                                     | Connection timezone (ignored for SQLite)                                  |
+| `XNAPIFY_DB_LOG`          | `false`                                      | Enable SQL query logging (disabled in production)                         |
+| `XNAPIFY_DB_POOL_MAX`     | `5`                                          | Maximum connection pool size                                              |
+| `XNAPIFY_DB_POOL_MIN`     | `0`                                          | Minimum connection pool size                                              |
+| `XNAPIFY_SQLITE_DATA_DIR` | `.xnapify/sqlite` (dev) / OS-native (prod)   | Directory for SQLite database file (relative paths resolved against this) |
 | `XNAPIFY_PG_DATA_DIR`     | `.xnapify/postgres` (dev) / OS-native (prod) | Directory for embedded PostgreSQL data                                    |
-| `XNAPIFY_MYSQL_DATA_DIR`  | `.xnapify/mysql` (dev) / OS-native (prod)       | Directory for embedded MySQL data                                         |
+| `XNAPIFY_MYSQL_DATA_DIR`  | `.xnapify/mysql` (dev) / OS-native (prod)    | Directory for embedded MySQL data                                         |
 
 ### SQLite Concurrency Tuning
 

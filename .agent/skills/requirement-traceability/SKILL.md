@@ -71,14 +71,14 @@ xnapify has two types of specification documents. The traceability process appli
 
 Every module, engine, shared library, and extension has a `README.md` colocated in its root directory. These describe **current implementation** — what the code does today.
 
-| Pattern                               | Example                                 |
-| ------------------------------------- | --------------------------------------- |
+| Pattern                                 | Example                                   |
+| --------------------------------------- | ----------------------------------------- |
 | `src/apps/<module>/README.md`           | `src/apps/auth/README.md`                 |
 | `shared/api/engines/<engine>/README.md` | `shared/api/engines/db/README.md`         |
 | `shared/<library>/README.md`            | `shared/container/README.md`              |
 | `src/extensions/<ext>/README.md`        | `src/extensions/profile-plugin/README.md` |
-| `src/bootstrap/README.md`               | Bootstrap architecture                  |
-| `src/README.md`                         | Root application architecture           |
+| `src/bootstrap/README.md`               | Bootstrap architecture                    |
+| `src/README.md`                         | Root application architecture             |
 
 **Template:** `.agent/templates/README.template.md`
 
@@ -113,12 +113,12 @@ src/apps/<module>/
 
 ### Which tier applies?
 
-| Situation                                          | Spec Source        | Where                                     |
-| -------------------------------------------------- | ------------------ | ----------------------------------------- |
-| Modifying `src/apps/auth/`                         | Colocated README.md  | `src/apps/auth/README.md`                   |
-| Adding a feature to `shared/api/engines/db/`       | Colocated README.md  | `shared/api/engines/db/README.md`           |
-| Building a brand-new module from design-thinking   | Design spec        | `src/apps/<module>/specs/YYYY-MM-DD-*.md` |
-| Implementing a plan from `implementation-planning` | Plan + design spec | `src/apps/<module>/plans/YYYY-MM-DD-*.md` |
+| Situation                                          | Spec Source         | Where                                     |
+| -------------------------------------------------- | ------------------- | ----------------------------------------- |
+| Modifying `src/apps/auth/`                         | Colocated README.md | `src/apps/auth/README.md`                 |
+| Adding a feature to `shared/api/engines/db/`       | Colocated README.md | `shared/api/engines/db/README.md`         |
+| Building a brand-new module from design-thinking   | Design spec         | `src/apps/<module>/specs/YYYY-MM-DD-*.md` |
+| Implementing a plan from `implementation-planning` | Plan + design spec  | `src/apps/<module>/plans/YYYY-MM-DD-*.md` |
 
 ---
 
@@ -153,7 +153,7 @@ Create a mental (or written) map connecting spec sections → code files:
 
 **Tier 1 example (colocated README.md):**
 
-| README.md Section                          | Code Files                                                             | Status |
+| README.md Section                        | Code Files                                                             | Status |
 | ---------------------------------------- | ---------------------------------------------------------------------- | ------ |
 | §2 API Routes: `POST /api/auth/login`    | `api/controllers/auth.controller.js`, `api/routes/(default)/_route.js` | ☐      |
 | §2 API Routes: `POST /api/auth/register` | `api/controllers/auth.controller.js`                                   | ☐      |
@@ -283,13 +283,13 @@ Mark the task complete in your traceability map. Update `task.md`.
 
 ### Common Causes
 
-| Cause            | Example                                                   | Response                                      |
-| ---------------- | --------------------------------------------------------- | --------------------------------------------- |
-| **Discovery**    | "The spec says X, but that won't work because Y"          | Propose amendment                             |
-| **Gold-plating** | "While I'm here, let me also add Z"                       | Delete Z. It's not in the spec.               |
-| **Assumption**   | "The spec doesn't mention error handling, so I'll decide" | Ask, don't assume                             |
-| **Convenience**  | "It's easier to implement it slightly differently"        | Implement as spec says, or amend              |
-| **Stale spec**   | "README.md says column X, but code already uses column Y"   | Update README.md to match reality, then proceed |
+| Cause            | Example                                                   | Response                                        |
+| ---------------- | --------------------------------------------------------- | ----------------------------------------------- |
+| **Discovery**    | "The spec says X, but that won't work because Y"          | Propose amendment                               |
+| **Gold-plating** | "While I'm here, let me also add Z"                       | Delete Z. It's not in the spec.                 |
+| **Assumption**   | "The spec doesn't mention error handling, so I'll decide" | Ask, don't assume                               |
+| **Convenience**  | "It's easier to implement it slightly differently"        | Implement as spec says, or amend                |
+| **Stale spec**   | "README.md says column X, but code already uses column Y" | Update README.md to match reality, then proceed |
 
 ### The Amendment Process
 
@@ -324,14 +324,14 @@ Colocated `README.md` files describe **current implementation**. This means they
 
 ### When to Update README.md
 
-| Action                             | Update Needed                      |
-| ---------------------------------- | ---------------------------------- |
+| Action                             | Update Needed                        |
+| ---------------------------------- | ------------------------------------ |
 | Adding a new API route to a module | Add to §2 of that module's README.md |
 | Adding a new model column          | Add to §1 of that module's README.md |
 | Adding a new worker                | Add to §6 of that module's README.md |
-| Changing controller behavior       | Update §2 description              |
-| Adding a new frontend view         | Update §3                          |
-| Adding translation keys            | Update §4                          |
+| Changing controller behavior       | Update §2 description                |
+| Adding a new frontend view         | Update §3                            |
+| Adding translation keys            | Update §4                            |
 | Major refactor                     | Full README.md review                |
 
 ### How to Update
@@ -381,10 +381,10 @@ Can't check all boxes? You have drift. Fix it.
 | "The spec didn't cover this edge case"     | Ask or amend. Don't invent behavior.                                                |
 | "I improved the spec's approach"           | Propose amendment. Don't silently diverge.                                          |
 | "It's just a small addition"               | Small unauthorized additions compound into unmaintainable code.                     |
-| "The README.md is outdated"                  | Update the README.md first, then update the code.                                     |
-| "Nobody reads the README.md anyway"          | The README.md is the contract. AI agents read it every time.                          |
+| "The README.md is outdated"                | Update the README.md first, then update the code.                                   |
+| "Nobody reads the README.md anyway"        | The README.md is the contract. AI agents read it every time.                        |
 | "TDD is enough, I don't need traceability" | TDD ensures code works. Requirement traceability ensures you built the right thing. |
-| "I'll update the README.md later"            | Later never comes. Update now.                                                      |
+| "I'll update the README.md later"          | Later never comes. Update now.                                                      |
 
 ---
 

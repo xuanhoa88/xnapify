@@ -23,12 +23,12 @@
 ### For colocated README.md:
 
 | #   | README.md Section | Requirement Summary                                         | Test File                  | Source File                      | Status |
-| --- | --------------- | ----------------------------------------------------------- | -------------------------- | -------------------------------- | ------ |
-| R1  | §1 Database     | `User` model with `email`, `name` columns                   | `models/User.test.js`      | `models/User.js`                 | ☐      |
-| R2  | §2 API Routes   | `POST /api/auth/login` — validates credentials, sets JWT    | `controllers/auth.test.js` | `controllers/auth.controller.js` | ☐      |
-| R3  | §2 API Routes   | `POST /api/auth/register` — creates user, triggers email    | `controllers/auth.test.js` | `controllers/auth.controller.js` | ☐      |
-| R4  | §3 Frontend     | `LoginForm.js` with SSR data fetching                       | `LoginForm.test.js`        | `views/(default)/LoginForm.js`   | ☐      |
-| R5  | §4 Localization | Keys: `auth.login.failed`, `auth.password.reset_email_sent` | —                          | `translations/en-US.json`        | ☐      |
+| --- | ----------------- | ----------------------------------------------------------- | -------------------------- | -------------------------------- | ------ |
+| R1  | §1 Database       | `User` model with `email`, `name` columns                   | `models/User.test.js`      | `models/User.js`                 | ☐      |
+| R2  | §2 API Routes     | `POST /api/auth/login` — validates credentials, sets JWT    | `controllers/auth.test.js` | `controllers/auth.controller.js` | ☐      |
+| R3  | §2 API Routes     | `POST /api/auth/register` — creates user, triggers email    | `controllers/auth.test.js` | `controllers/auth.controller.js` | ☐      |
+| R4  | §3 Frontend       | `LoginForm.js` with SSR data fetching                       | `LoginForm.test.js`        | `views/(default)/LoginForm.js`   | ☐      |
+| R5  | §4 Localization   | Keys: `auth.login.failed`, `auth.password.reset_email_sent` | —                          | `translations/en-US.json`        | ☐      |
 
 ### For design specs (new features):
 
@@ -53,8 +53,8 @@
 Track all spec changes discovered during implementation.
 
 | Date | README.md Section | Original Text | Amended To | Reason | Approved By |
-| ---- | --------------- | ------------- | ---------- | ------ | ----------- |
-| —    | —               | —             | —          | —      | —           |
+| ---- | ----------------- | ------------- | ---------- | ------ | ----------- |
+| —    | —                 | —             | —          | —      | —           |
 
 ## Orphan Detection
 

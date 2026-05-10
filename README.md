@@ -319,8 +319,8 @@ environment:
 
 **Data directories** (control where each database stores its files):
 
-| Variable                  | Default (prod)        | Docker Compose       |
-| ------------------------- | --------------------- | -------------------- |
+| Variable                  | Default (prod)         | Docker Compose       |
+| ------------------------- | ---------------------- | -------------------- |
 | `XNAPIFY_SQLITE_DATA_DIR` | OS-native (`sqlite`)   | `/app/data/sqlite`   |
 | `XNAPIFY_PG_DATA_DIR`     | OS-native (`postgres`) | `/app/data/postgres` |
 | `XNAPIFY_MYSQL_DATA_DIR`  | OS-native (`mysql`)    | `/app/data/mysql`    |

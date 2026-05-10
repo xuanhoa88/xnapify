@@ -50,11 +50,11 @@ userCache.clear(); // Removes "users:*", leaves "posts:*" etc.
 
 ## Adapters
 
-| Type     | Class         | Default `maxSize` | Default Dir                                            | Description                                    |
-| -------- | ------------- | ----------------- | ------------------------------------------------------ | ---------------------------------------------- |
-| `memory` | `MemoryCache` | `1000`            | —                                                      | In-memory LRU cache (default)                  |
+| Type     | Class         | Default `maxSize` | Default Dir                                  | Description                                    |
+| -------- | ------------- | ----------------- | -------------------------------------------- | ---------------------------------------------- |
+| `memory` | `MemoryCache` | `1000`            | —                                            | In-memory LRU cache (default)                  |
 | `file`   | `FileCache`   | `10000`           | OS-native (prod)<br/>`.xnapify/caches` (dev) | File-system backed, persistent across restarts |
-| `noop`   | `NoOpCache`   | —                 | —                                                      | No-op (auto-selected in `__DEV__` mode)        |
+| `noop`   | `NoOpCache`   | —                 | —                                            | No-op (auto-selected in `__DEV__` mode)        |
 
 ### Memory Adapter
 
@@ -257,11 +257,11 @@ Filesystem-backed cache with persistent storage across restarts. **All operation
 
 ### Configuration
 
-| Option      | Default                                             | Description                 |
-| ----------- | --------------------------------------------------- | --------------------------- |
+| Option      | Default                                   | Description                 |
+| ----------- | ----------------------------------------- | --------------------------- |
 | `directory` | OS-native (prod), `.xnapify/caches` (dev) | Cache directory path        |
-| `maxSize`   | `10000`                                             | Maximum cache files         |
-| `ttl`       | `300000` (5 min)                                    | Default TTL in milliseconds |
+| `maxSize`   | `10000`                                   | Maximum cache files         |
+| `ttl`       | `300000` (5 min)                          | Default TTL in milliseconds |
 
 ### File Format
 

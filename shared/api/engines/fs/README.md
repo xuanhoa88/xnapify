@@ -90,11 +90,11 @@ await fs.cleanup(); // close all providers
 
 ## Providers
 
-| Provider   | Storage       | Default Dir                                              | Features                                                |
-| ---------- | ------------- | -------------------------------------------------------- | ------------------------------------------------------- |
+| Provider   | Storage       | Default Dir                                   | Features                                                |
+| ---------- | ------------- | --------------------------------------------- | ------------------------------------------------------- |
 | `local`    | Disk          | OS-native (prod)<br/>`.xnapify/uploads` (dev) | Stream-to-disk, recursive listing, extension validation |
-| `memory`   | In-memory Map | —                                                        | Max 1000 files, for testing/dev                         |
-| `selfhost` | HTTP REST     | —                                                        | Configurable routes, API key auth, 30s timeout          |
+| `memory`   | In-memory Map | —                                             | Max 1000 files, for testing/dev                         |
+| `selfhost` | HTTP REST     | —                                             | Configurable routes, API key auth, 30s timeout          |
 
 ### Provider Interface
 
@@ -102,12 +102,12 @@ All providers implement: `store`, `retrieve`, `delete`, `exists`, `getMetadata`,
 
 ## Environment Variables
 
-| Var                          | Default                                                  | Description                        |
-| ---------------------------- | -------------------------------------------------------- | ---------------------------------- |
-| `XNAPIFY_UPLOAD_FILE_SIZE`   | `50MB`                                                   | Max upload size                    |
-| `XNAPIFY_UPLOAD_FILE_LENGTH` | `255`                                                    | Max filename length                |
+| Var                          | Default                                       | Description                        |
+| ---------------------------- | --------------------------------------------- | ---------------------------------- |
+| `XNAPIFY_UPLOAD_FILE_SIZE`   | `50MB`                                        | Max upload size                    |
+| `XNAPIFY_UPLOAD_FILE_LENGTH` | `255`                                         | Max filename length                |
 | `XNAPIFY_UPLOAD_DIR`         | OS-native (prod)<br/>`.xnapify/uploads` (dev) | Upload directory                   |
-| `XNAPIFY_UPLOAD_FILE_EXT`    | all                                                      | Comma-separated allowed extensions |
+| `XNAPIFY_UPLOAD_FILE_EXT`    | all                                           | Comma-separated allowed extensions |
 
 ## Error Handling
 
@@ -296,12 +296,12 @@ All providers implement: `store`, `retrieve`, `delete`, `exists`, `getMetadata`,
 
 ### Local Provider (`providers/local.js`)
 
-| Config              | Default              | Description         |
-| ------------------- | -------------------- | ------------------- |
-| `basePath`          | OS-native          | Base directory      |
-| `createDirectories` | `true`               | Auto-create dirs    |
-| `maxFileSize`       | `10MB`               | Max file size       |
-| `allowedExtensions` | `null` (all)         | Extension whitelist |
+| Config              | Default      | Description         |
+| ------------------- | ------------ | ------------------- |
+| `basePath`          | OS-native    | Base directory      |
+| `createDirectories` | `true`       | Auto-create dirs    |
+| `maxFileSize`       | `10MB`       | Max file size       |
+| `allowedExtensions` | `null` (all) | Extension whitelist |
 
 **Key behaviors:**
 
@@ -379,12 +379,12 @@ Standardized result object: `{ success, data, message, timestamp, error? }`. Inc
 
 ### Environment Variables
 
-| Env Var                      | Default              | Description                        |
-| ---------------------------- | -------------------- | ---------------------------------- |
-| `XNAPIFY_UPLOAD_FILE_SIZE`   | `50MB`               | Max upload file size               |
-| `XNAPIFY_UPLOAD_FILE_LENGTH` | `255`                | Max filename length                |
-| `XNAPIFY_UPLOAD_DIR`         | OS-native          | Upload directory                   |
-| `XNAPIFY_UPLOAD_FILE_EXT`    | `null` (all)         | Comma-separated allowed extensions |
+| Env Var                      | Default      | Description                        |
+| ---------------------------- | ------------ | ---------------------------------- |
+| `XNAPIFY_UPLOAD_FILE_SIZE`   | `50MB`       | Max upload file size               |
+| `XNAPIFY_UPLOAD_FILE_LENGTH` | `255`        | Max filename length                |
+| `XNAPIFY_UPLOAD_DIR`         | OS-native    | Upload directory                   |
+| `XNAPIFY_UPLOAD_FILE_EXT`    | `null` (all) | Comma-separated allowed extensions |
 
 ### `ERROR_CODES`
 
