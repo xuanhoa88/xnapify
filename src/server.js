@@ -28,6 +28,8 @@ import {
   clearSecureCookie,
   setSecureCookie,
   getCookieValue,
+  getTokenFromCookie,
+  getRefreshTokenFromCookie,
 } from '@shared/cookies/index.js';
 import extensionManager from '@shared/extension/server/index.js';
 import { createFetch } from '@shared/fetch/index.js';
@@ -261,12 +263,12 @@ function validateCookieHeader(req, res) {
   }
 
   let authHeader = cookieHeader;
-  let authCookie = (req.cookies && req.cookies['id_token']) || '';
+  let authCookie = getTokenFromCookie(req) || '';
 
   if (authCookie) {
     const jwt = req.app.get('container').resolve('jwt');
     if (jwt && jwt.isTokenExpired(authCookie)) {
-      const refreshCookie = (req.cookies && req.cookies['refresh_token']) || '';
+      const refreshCookie = getRefreshTokenFromCookie(req) || '';
       if (refreshCookie) {
         try {
           const newTokens = jwt.refreshTokenPair(refreshCookie);
@@ -446,7 +448,7 @@ function localeMiddleware() {
   });
 
   return (req, res, next) => {
-    const cookieLocale = req.cookies && req.cookies[LOCALE_COOKIE_NAME];
+    const cookieLocale = getCookieValue(req, LOCALE_COOKIE_NAME);
     const queryLocale = req.query && req.query[LOCALE_COOKIE_NAME];
 
     // Reduce cardinality by ignoring accept-language if explicit override exists
