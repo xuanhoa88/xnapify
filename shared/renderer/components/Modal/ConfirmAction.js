@@ -7,6 +7,8 @@
 
 import { useState, useCallback, useImperativeHandle, forwardRef } from 'react';
 
+import { InfoCircledIcon } from '@radix-ui/react-icons';
+import { Flex, Box, Text } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
@@ -76,17 +78,38 @@ const ConfirmActionModal = forwardRef(
     );
 
     return (
-      <Modal isOpen={isOpen} onClose={resetState}>
+      <Modal isOpen={isOpen} onClose={resetState} maxWidth='400px'>
         <Modal.Header onClose={resetState}>{title}</Modal.Header>
         <Modal.Body>
-          <Modal.Description>{description}</Modal.Description>
+          <Flex gap='3' align='start'>
+            <Box
+              className={`shrink-0 p-2 rounded-full ${
+                variant === 'danger'
+                  ? 'bg-(--red-a3) text-(--red-11)'
+                  : 'bg-(--indigo-a3) text-(--indigo-11)'
+              }`}
+            >
+              <InfoCircledIcon width='24' height='24' />
+            </Box>
+            <Box className='pt-1'>
+              <Modal.Description>
+                <Text size='3' color='gray' className='leading-relaxed'>
+                  {description}
+                </Text>
+              </Modal.Description>
+            </Box>
+          </Flex>
         </Modal.Body>
         <Modal.Footer>
           <Modal.Actions>
             <Modal.Button variant='secondary' onClick={resetState}>
               {t('common:components.confirmModal.action.cancel', 'Cancel')}
             </Modal.Button>
-            <Modal.Button variant={variant} onClick={handleConfirm}>
+            <Modal.Button
+              variant='primary'
+              color={variant === 'danger' ? 'red' : 'indigo'}
+              onClick={handleConfirm}
+            >
               {confirmLabel || defaultConfirmLabel}
             </Modal.Button>
           </Modal.Actions>

@@ -37,7 +37,7 @@ import s from './Modal.css';
  */
 const ModalHeader = ({ children, onClose, className }) => (
   <Flex align='center' justify='between' gap='3' mb='4' className={className}>
-    <Dialog.Title className='m-0 shrink grow min-w-0 truncate'>
+    <Dialog.Title className='m-0 shrink grow min-w-0 truncate text-lg font-semibold tracking-tight'>
       {children}
     </Dialog.Title>
     {onClose && (
@@ -45,11 +45,11 @@ const ModalHeader = ({ children, onClose, className }) => (
         <Button
           variant='ghost'
           color='gray'
-          size='1'
-          className='shrink-0'
+          size='2'
+          className='shrink-0 rounded-full hover:bg-(--gray-a3) transition-colors cursor-pointer'
           onClick={onClose}
         >
-          <Cross2Icon width={16} height={16} />
+          <Cross2Icon width={18} height={18} />
         </Button>
       </Dialog.Close>
     )}
@@ -66,11 +66,19 @@ ModalHeader.propTypes = {
  * Modal.Body
  */
 const ModalBody = ({ children, error, className }) => (
-  <div className={clsx('flex-1 overflow-y-auto min-h-0', className)}>
+  <div className={clsx('flex-1 overflow-y-auto min-h-0 py-2', className)}>
     {error && (
-      <Text size='2' color='red' weight='medium' mb='3' as='div'>
-        {error}
-      </Text>
+      <Flex
+        gap='2'
+        align='center'
+        mb='4'
+        p='3'
+        className='bg-(--red-a2) text-(--red-11) rounded-md border border-(--red-a5)'
+      >
+        <Text size='2' weight='medium'>
+          {error}
+        </Text>
+      </Flex>
     )}
     {children}
   </div>
@@ -89,8 +97,9 @@ const ModalFooter = ({ children, className }) => (
   <Flex
     justify='end'
     gap='3'
-    pt='4'
-    mt='auto'
+    pt='5'
+    pb='1'
+    mt='5'
     className={clsx('border-t border-(--gray-a4)', className)}
   >
     {children}
@@ -118,7 +127,14 @@ ModalDescription.propTypes = {
  * Modal.Actions
  */
 const ModalActions = ({ children, className }) => (
-  <Flex wrap='wrap' align='center' justify='end' gap='2' className={className}>
+  <Flex
+    direction={{ initial: 'column-reverse', sm: 'row' }}
+    wrap='wrap'
+    align={{ initial: 'stretch', sm: 'center' }}
+    justify='end'
+    gap='3'
+    className={clsx('w-full sm:w-auto', className)}
+  >
     {children}
   </Flex>
 );
@@ -159,13 +175,20 @@ const ModalButton = ({
   disabled,
   onClick,
   variant = 'secondary',
+  color,
+  className,
   ...props
 }) => (
   <Button
-    variant={variant === 'primary' ? 'solid' : 'outline'}
-    color={variant === 'primary' ? 'indigo' : 'gray'}
+    variant={variant === 'primary' ? 'solid' : 'soft'}
+    color={color || (variant === 'primary' ? 'indigo' : 'gray')}
     onClick={onClick}
     disabled={disabled}
+    className={clsx(
+      'w-full sm:w-auto cursor-pointer transition-transform active:scale-95',
+      className,
+    )}
+    size='2'
     {...props}
   >
     {children}
@@ -175,6 +198,8 @@ const ModalButton = ({
 ModalButton.propTypes = {
   children: PropTypes.node,
   variant: PropTypes.oneOf(['primary', 'secondary']),
+  color: PropTypes.string,
+  className: PropTypes.string,
   disabled: PropTypes.bool,
   onClick: PropTypes.func,
   type: PropTypes.oneOf(['button', 'submit', 'reset']),
@@ -193,7 +218,7 @@ const Modal = ({
   width,
 }) => {
   const resolvedMaxWidth =
-    maxWidth || (placement === 'right' ? '480px' : undefined);
+    maxWidth || (placement === 'right' ? '480px' : '500px');
 
   return (
     <Dialog.Root
@@ -204,7 +229,7 @@ const Modal = ({
         maxWidth={resolvedMaxWidth}
         width={width}
         aria-describedby={undefined}
-        className={clsx(className, {
+        className={clsx(className, s.modalContent, {
           [s.rightPlacement]: placement === 'right',
         })}
       >

@@ -78,13 +78,13 @@ function ProfileDropdown() {
   const triggerButton = (
     <button
       type='button'
-      className='group border-none font-inherit text-inherit flex items-center px-(--space-2) py-(--space-1) rounded-(--radius-3) cursor-pointer transition-colors duration-200 bg-transparent focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-(--focus-8) focus-visible:-outline-offset-1 hover:bg-(--gray-3) data-[state=open]:bg-(--gray-3)'
+      className='group border-none font-inherit text-inherit flex items-center p-1 pr-2 rounded-full cursor-pointer transition-all duration-200 bg-transparent focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-(--focus-8) focus-visible:-outline-offset-1 hover:bg-(--gray-a3) data-[state=open]:bg-(--gray-a3) active:scale-95'
     >
       <Flex align='center' gap='2'>
         <Flex
           align='center'
           justify='center'
-          className='w-8 h-8 rounded-full bg-(--indigo-3) text-(--indigo-11) overflow-hidden font-bold text-(length:--font-size-2) flex items-center justify-center'
+          className='w-8 h-8 rounded-full bg-linear-to-br from-(--indigo-4) to-(--indigo-6) text-(--indigo-11) overflow-hidden font-bold text-xs flex items-center justify-center shadow-inner ring-1 ring-(--gray-a4)'
         >
           {avatarUrl ? (
             <img
@@ -99,11 +99,15 @@ function ProfileDropdown() {
             avatarInitial
           )}
         </Flex>
-        <Text size='3' weight='medium' className='hidden md:block'>
+        <Text
+          size='2'
+          weight='medium'
+          className='hidden md:block text-(--gray-11) group-hover:text-(--gray-12) transition-colors'
+        >
           {displayName}
         </Text>
-        <Box className='flex text-(--gray-11) transition-transform duration-200 group-data-[state=open]:rotate-180'>
-          <ChevronDownIcon width={12} height={12} />
+        <Box className='flex text-(--gray-9) transition-transform duration-200 group-data-[state=open]:rotate-180 group-hover:text-(--gray-12)'>
+          <ChevronDownIcon width={14} height={14} />
         </Box>
       </Flex>
     </button>

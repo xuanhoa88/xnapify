@@ -23,14 +23,15 @@ function GuestMode() {
       <Button
         variant='ghost'
         color='gray'
-        className='cursor-pointer no-underline!'
+        className='cursor-pointer no-underline! transition-transform active:scale-95 text-[14px] font-medium'
         onClick={() => history.push('/login')}
       >
         {t('navigation.login', 'Login')}
       </Button>
       <Button
         variant='solid'
-        className='cursor-pointer no-underline!'
+        color='indigo'
+        className='cursor-pointer no-underline! transition-transform active:scale-95 text-[14px] font-medium shadow-sm hover:opacity-90'
         onClick={() => history.push('/register')}
       >
         {t('navigation.register', 'Register')}

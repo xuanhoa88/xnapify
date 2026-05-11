@@ -7,6 +7,8 @@
 
 import { useState, useCallback, useImperativeHandle, forwardRef } from 'react';
 
+import { ExclamationTriangleIcon } from '@radix-ui/react-icons';
+import { Flex, Box, Text } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
@@ -60,23 +62,32 @@ const ConfirmDeleteModal = forwardRef(
     const itemName = item && getItemName ? getItemName(item) : '';
 
     return (
-      <Modal isOpen={isOpen} onClose={resetState}>
+      <Modal isOpen={isOpen} onClose={resetState} maxWidth='400px'>
         <Modal.Header onClose={resetState}>{title}</Modal.Header>
         <Modal.Body>
-          <Modal.Description>
-            {t(
-              'common:components.confirmModal.delete.description',
-              'Are you sure you want to delete "{{name}}"? This action cannot be undone.',
-              { name: itemName },
-            )}
-          </Modal.Description>
+          <Flex gap='3' align='start'>
+            <Box className='shrink-0 p-2 rounded-full bg-(--red-a3) text-(--red-11)'>
+              <ExclamationTriangleIcon width='24' height='24' />
+            </Box>
+            <Box className='pt-1'>
+              <Modal.Description>
+                <Text size='3' color='gray' className='leading-relaxed'>
+                  {t(
+                    'common:components.confirmModal.delete.description',
+                    'Are you sure you want to delete "{{name}}"? This action cannot be undone.',
+                    { name: itemName },
+                  )}
+                </Text>
+              </Modal.Description>
+            </Box>
+          </Flex>
         </Modal.Body>
         <Modal.Footer>
           <Modal.Actions>
             <Modal.Button variant='secondary' onClick={resetState}>
               {t('common:components.confirmModal.delete.cancel', 'Cancel')}
             </Modal.Button>
-            <Modal.Button variant='primary' onClick={handleConfirm}>
+            <Modal.Button variant='primary' color='red' onClick={handleConfirm}>
               {t('common:components.confirmModal.delete.delete', 'Delete')}
             </Modal.Button>
           </Modal.Actions>

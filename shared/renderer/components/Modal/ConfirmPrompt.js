@@ -14,7 +14,7 @@ import {
   useRef,
 } from 'react';
 
-import { TextField, Box } from '@radix-ui/themes';
+import { TextField, Box, Text } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
@@ -122,10 +122,18 @@ const ConfirmPromptModal = forwardRef(({ onSubmit, onSuccess }, ref) => {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose}>
+    <Modal isOpen={isOpen} onClose={handleClose} maxWidth='450px'>
       <Modal.Header onClose={handleClose}>{title}</Modal.Header>
       <Modal.Body error={error}>
-        <Box py='2'>
+        <Box py='1'>
+          <Modal.Description>
+            <Text size='2' color='gray' mb='3' as='div'>
+              {t(
+                'common:components.confirmModal.prompt.description',
+                'Please enter a value below:',
+              )}
+            </Text>
+          </Modal.Description>
           <TextField.Root
             ref={inputRef}
             type='text'
@@ -133,8 +141,12 @@ const ConfirmPromptModal = forwardRef(({ onSubmit, onSuccess }, ref) => {
             onChange={e => setValue(e.target.value)}
             onKeyDown={handleKeyDown}
             disabled={submitting}
-            size='2'
+            size='3'
             className={s.fullWidthInput}
+            placeholder={t(
+              'common:components.confirmModal.prompt.placeholder',
+              'Enter value...',
+            )}
           />
         </Box>
       </Modal.Body>

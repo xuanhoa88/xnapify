@@ -7,6 +7,8 @@
 
 import { useState, useCallback, useImperativeHandle, forwardRef } from 'react';
 
+import { InfoCircledIcon } from '@radix-ui/react-icons';
+import { Flex, Box, Text } from '@radix-ui/themes';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
@@ -44,24 +46,33 @@ const ConfirmBackModal = forwardRef(({ onConfirm }, ref) => {
   }, [onConfirm]);
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose}>
+    <Modal isOpen={isOpen} onClose={handleClose} maxWidth='400px'>
       <Modal.Header onClose={handleClose}>
         {t('common:components.confirmModal.back.title', 'Unsaved Changes')}
       </Modal.Header>
       <Modal.Body>
-        <Modal.Description>
-          {t(
-            'common:components.confirmModal.back.description',
-            'You have unsaved changes. Are you sure you want to leave? Your changes will be lost.',
-          )}
-        </Modal.Description>
+        <Flex gap='3' align='start'>
+          <Box className='shrink-0 p-2 rounded-full bg-(--amber-a3) text-(--amber-11)'>
+            <InfoCircledIcon width='24' height='24' />
+          </Box>
+          <Box className='pt-1'>
+            <Modal.Description>
+              <Text size='3' color='gray' className='leading-relaxed'>
+                {t(
+                  'common:components.confirmModal.back.description',
+                  'You have unsaved changes. Are you sure you want to leave? Your changes will be lost.',
+                )}
+              </Text>
+            </Modal.Description>
+          </Box>
+        </Flex>
       </Modal.Body>
       <Modal.Footer>
         <Modal.Actions>
           <Modal.Button variant='secondary' onClick={handleClose}>
             {t('common:components.confirmModal.back.stay', 'Stay')}
           </Modal.Button>
-          <Modal.Button variant='primary' onClick={handleConfirm}>
+          <Modal.Button variant='primary' color='amber' onClick={handleConfirm}>
             {t('common:components.confirmModal.back.leave', 'Leave')}
           </Modal.Button>
         </Modal.Actions>

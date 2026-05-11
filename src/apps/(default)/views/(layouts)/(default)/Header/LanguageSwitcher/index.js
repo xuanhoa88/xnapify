@@ -62,11 +62,21 @@ function LanguageSwitcher() {
     <button
       type='button'
       title={t('common.languageSwitcher', 'Language switcher')}
-      className='bg-transparent border-none cursor-pointer flex items-center gap-(--space-2) text-(--gray-11) px-(--space-2) py-(--space-1) rounded-(--radius-3) transition-colors duration-150 ease-in-out hover:bg-(--gray-a3) hover:text-(--gray-12) focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-(--focus-8) focus-visible:-outline-offset-1 data-[state=open]:bg-(--gray-a3) data-[state=open]:text-(--gray-12)'
+      className='group bg-transparent border-none cursor-pointer flex items-center gap-(--space-2) text-(--gray-11) px-2 py-1.5 rounded-(--radius-3) transition-all duration-200 ease-in-out hover:bg-(--gray-a3) hover:text-(--gray-12) focus:outline-none focus-visible:outline-2 focus-visible:outline-(--focus-8) focus-visible:-outline-offset-1 data-[state=open]:bg-(--gray-a3) data-[state=open]:text-(--gray-12) active:scale-95'
     >
-      <GlobeIcon width={16} height={16} />
-      <Text size='3'>{currentLanguageName}</Text>
-      <ChevronDownIcon width={12} height={12} />
+      <GlobeIcon
+        width={16}
+        height={16}
+        className='text-(--gray-10) group-hover:text-(--gray-12) transition-colors'
+      />
+      <Text size='2' weight='medium'>
+        {currentLanguageName}
+      </Text>
+      <ChevronDownIcon
+        width={12}
+        height={12}
+        className='text-(--gray-9) group-hover:text-(--gray-12) transition-colors group-data-[state=open]:rotate-180'
+      />
     </button>
   );
 
@@ -80,7 +90,12 @@ function LanguageSwitcher() {
     <ContextMenu>
       <ContextMenu.Trigger asChild>{triggerButton}</ContextMenu.Trigger>
 
-      <ContextMenu.Menu align='end' variant='soft' size='3'>
+      <ContextMenu.Menu
+        align='end'
+        variant='soft'
+        size='3'
+        className='shadow-(--shadow-4) min-w-[140px]'
+      >
         {localeEntries.map(([code, name]) => (
           <ContextMenu.Item
             key={code}
@@ -90,7 +105,7 @@ function LanguageSwitcher() {
                 'bg-(--indigo-a3) text-(--indigo-11) font-medium hover:bg-(--indigo-a4)',
             )}
           >
-            <Text size='3' mr='3'>
+            <Text size='2' mr='3'>
               {name}
             </Text>
             {code === currentLocale && (

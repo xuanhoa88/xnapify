@@ -93,12 +93,13 @@ const store = configureStore(initialState);
 
 ### Features (Ducks Pattern)
 
-| Feature   | Description                       |
-| --------- | --------------------------------- |
-| `runtime` | Locale, theme, env flags          |
-| `intl`    | i18n locale and messages          |
-| `user`    | Auth state, profile, tokens       |
-| `ui`      | Modals, sidebars, toasts, loading |
+| Feature    | Description                       |
+| ---------- | --------------------------------- |
+| `runtime`  | Locale, theme, env flags          |
+| `intl`     | i18n locale and messages          |
+| `settings` | Application settings              |
+| `user`     | Auth state, profile, tokens       |
+| `ui`       | Modals, sidebars, toasts, loading |
 
 ```javascript
 import { features } from '@shared/renderer/redux';
@@ -111,7 +112,7 @@ const locale = selectLocale(getState());
 
 ## UI Components
 
-14 shared application components extending Radix UI design primitives:
+15 shared application components extending Radix UI design primitives:
 
 | Component          | Description                            |
 | ------------------ | -------------------------------------- |
@@ -123,6 +124,7 @@ const locale = selectLocale(getState());
 | `InfiniteScroll`   | Scroll-based pagination                |
 | `Loader`           | Spinner / skeleton                     |
 | `Modal`            | Dialog system and confirmation modals  |
+| `PageHeader`       | Reusable page header component         |
 | `Portal`           | React portal wrapper                   |
 | `Rbac`             | Role-based access control              |
 | `SearchableSelect` | Searchable dropdown                    |
@@ -148,8 +150,10 @@ const locale = selectLocale(getState());
 shared/renderer/
 ├── App.js              # Root component (provider composition)
 ├── Html.js             # SSR HTML shell (meta, hydration, OG tags)
+├── app.global.css      # Global application styles
 ├── autoloader.js       # View module lifecycle orchestrator
 ├── Providers/
+│   ├── Extension.js    # Extension context provider
 │   └── History.js      # Browser history context provider
 ├── router/             # Client-side radix-tree router
 │   ├── index.js        # Router class (resolve, register, mount/unmount)
@@ -160,16 +164,18 @@ shared/renderer/
 │   ├── utils.js        # Path and segment utilities
 │   └── constants.js    # File-naming conventions
 ├── redux/              # Redux state management
+│   ├── index.js        # Redux public exports
 │   ├── configureStore.js  # Store factory (middleware, persistence, hot reload)
 │   ├── rootReducer.js     # Combined reducer
 │   └── features/          # Redux Ducks modules
-│       ├── runtime/       # Runtime variables (locale, theme, env)
+│       ├── index.js       # Features export
 │       ├── intl/          # Internationalization state
-│       ├── user/          # Authentication state
-│       └── ui/            # UI state (modals, sidebars, toasts)
+│       ├── runtime/       # Runtime variables (locale, theme, env)
+│       ├── settings/      # Application settings state
+│       ├── ui/            # UI state (modals, sidebars, toasts)
+│       └── user/          # Authentication state
 └── components/         # Shared UI component library
-    ├── variables.css   # CSS design tokens
-    └── 19 components   # See Components section
+    └── 15 components   # See Components section
 ```
 
 ## Components Detail
@@ -289,35 +295,32 @@ features/{name}/
 └── reducer.js     # State reducer (private)
 ```
 
-| Feature   | Slice           | Purpose                           |
-| --------- | --------------- | --------------------------------- |
-| `runtime` | `state.runtime` | Locale, theme, env flags          |
-| `intl`    | `state.intl`    | i18n locale and messages          |
-| `user`    | `state.user`    | Auth state, profile, tokens       |
-| `ui`      | `state.ui`      | Modals, sidebars, toasts, loading |
+| Feature    | Slice            | Purpose                           |
+| ---------- | ---------------- | --------------------------------- |
+| `runtime`  | `state.runtime`  | Locale, theme, env flags          |
+| `intl`     | `state.intl`     | i18n locale and messages          |
+| `settings` | `state.settings` | Application settings              |
+| `user`     | `state.user`     | Auth state, profile, tokens       |
+| `ui`       | `state.ui`       | Modals, sidebars, toasts, loading |
 
 ### 5. UI Component Library
 
 | Component          | Description                                              |
 | ------------------ | -------------------------------------------------------- |
-| `Avatar`           | User avatar with fallback                                |
-| `Box`              | Flexible layout container                                |
-| `Button`           | Button with variants and loading state                   |
-| `Card`             | Card container with header/body/footer                   |
-| `ConfirmModal`     | Confirmation dialog                                      |
 | `ContextMenu`      | Right-click / dropdown menu                              |
+| `Extension`        | Extension slots and hooks                                |
 | `Form`             | Form primitives (Input, Select, Checkbox, WYSIWYG, etc.) |
 | `History`          | Navigation history utilities                             |
 | `Icon`             | Icon component with sprite support                       |
 | `InfiniteScroll`   | Scroll-based pagination                                  |
 | `Loader`           | Loading spinner/skeleton                                 |
-| `Modal`            | Modal dialog system                                      |
+| `Modal`            | Modal dialog system and confirmation modals              |
+| `PageHeader`       | Reusable page header component                           |
+| `Portal`           | React portal wrapper                                     |
 | `Rbac`             | Role-based access control wrappers                       |
 | `SearchableSelect` | Searchable dropdown select                               |
 | `Table`            | Data table with sorting/pagination                       |
-| `Tabs`             | Tabbed interface                                         |
-| `Tag`              | Tag/badge component                                      |
 | `Toast`            | Toast notification system                                |
 | `WYSIWYG`          | Rich text editor (Tiptap)                                |
 
-All components import from `variables.css` for consistent design tokens.
+All components utilize Tailwind CSS and Radix UI themes for consistent design tokens.
