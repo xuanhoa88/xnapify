@@ -1,78 +1,79 @@
 {
   "admin": {
     "title": "Tập tin",
-    "sidebar": {
-      "my_drive": "Drive của tôi",
-      "recent": "Gần đây",
-      "starred": "Đã gắn sao",
-      "trash": "Thùng rác",
-      "new": "Mới",
-      "shared_with_me": "Được chia sẻ",
-      "storage": "Đã sử dụng {{used}} / {{total}}"
-    },
-    "toolbar": {
-      "list_view": "Chế độ danh sách",
-      "grid_view": "Chế độ lưới",
-      "search_placeholder": "Tìm kiếm tập tin..."
-    },
-    "grid": {
-      "loading": "Đang tải tập tin...",
-      "empty_title": "Không có tập tin",
-      "empty_desc": "Kéo thả tập tin vào đây hoặc dùng nút \"Mới\".",
-      "name": "Tên",
-      "owner": "Chủ sở hữu",
-      "owner_me": "Tôi",
-      "last_modified": "Sửa lần cuối",
-      "file_size": "Kích thước",
-      "rename": "Đổi tên",
-      "invalid_name": "Tên không hợp lệ",
-      "rename_failed": "Đổi tên thất bại",
-      "share": "Chia sẻ",
-      "download": "Tải xuống",
-      "copy_link": "Sao chép liên kết",
-      "link_copied": "Đã sao chép liên kết!",
-      "add_star": "Gắn sao",
-      "remove_star": "Bỏ sao",
-      "delete_permanently": "Xóa vĩnh viễn",
-      "move_to_trash": "Chuyển vào thùng rác"
-    },
-    "uploader": {
-      "untitled_folder": "Thư mục chưa đặt tên",
-      "new_folder": "Thư mục mới",
-      "file_upload": "Tải tập tin lên",
-      "cancel": "Hủy",
-      "create": "Tạo",
-      "create_failed": "Tạo thư mục thất bại",
-      "invalid_name": "Tên thư mục không hợp lệ",
-      "drop_to_upload": "Kéo thả tập tin để tải lên",
-      "uploads_status": "Tải lên ({{count}}/{{total}})",
-      "done": "Hoàn tất",
-      "failed": "Thất bại"
-    },
-    "share": {
-      "title": "Chia sẻ \"{{name}}\"",
-      "general_access": "Quyền truy cập chung",
-      "restricted": "Hạn chế",
-      "public_link": "Bất kỳ ai có liên kết",
-      "specific_users": "Người dùng hoặc Nhóm cụ thể",
-      "restricted_desc": "Chỉ người có quyền truy cập mới mở được",
-      "public_link_desc": "Bất kỳ ai trên internet có liên kết này đều có thể xem",
-      "specific_users_desc": "Chỉ người dùng hoặc nhóm cụ thể bạn thêm bên dưới mới truy cập được",
-      "copy_link": "Sao chép liên kết",
-      "saving": "Đang lưu...",
-      "done": "Hoàn tất",
-      "close": "Đóng",
-      "link_copied": "Đã sao chép liên kết!",
-      "user": "Người dùng",
-      "group": "Nhóm",
-      "owner": "Chủ sở hữu",
-      "permission_view": "Người xem",
-      "invalid_type": "Cài đặt chia sẻ không hợp lệ",
-      "save_failed": "Lỗi khi lưu cài đặt"
-    },
-    "page": {
-      "title": "Tập tin",
-      "subtitle": "Quản lý tập tin và thư mục"
-    }
+    "subtitle": "Quản lý tập tin và thư mục"
+  },
+  "sidebar": {
+    "my_drive": "Drive của tôi",
+    "recent": "Gần đây",
+    "starred": "Đã gắn sao",
+    "trash": "Thùng rác",
+    "new": "Mới",
+    "shared_with_me": "Được chia sẻ",
+    "storage": "Đã sử dụng {{used}} / {{total}}"
+  },
+  "toolbar": {
+    "list_view": "Chế độ danh sách",
+    "grid_view": "Chế độ lưới",
+    "search_placeholder": "Tìm kiếm tập tin..."
+  },
+  "grid": {
+    "loading": "Đang tải tập tin...",
+    "empty_title": "Không có tập tin",
+    "empty_desc": "Kéo thả tập tin vào đây hoặc dùng nút \"Mới\".",
+    "name": "Tên",
+    "owner": "Chủ sở hữu",
+    "owner_me": "Tôi",
+    "last_modified": "Sửa lần cuối",
+    "file_size": "Kích thước",
+    "rename": "Đổi tên",
+    "invalid_name": "Tên không hợp lệ",
+    "rename_failed": "Đổi tên thất bại",
+    "share": "Chia sẻ",
+    "download": "Tải xuống",
+    "copy_link": "Sao chép liên kết",
+    "link_copied": "Đã sao chép liên kết!",
+    "add_star": "Gắn sao",
+    "remove_star": "Bỏ sao",
+    "delete_permanently": "Xóa vĩnh viễn",
+    "move_to_trash": "Chuyển vào thùng rác"
+  },
+  "uploader": {
+    "untitled_folder": "Thư mục chưa đặt tên",
+    "new_folder": "Thư mục mới",
+    "file_upload": "Tải tập tin lên",
+    "cancel": "Hủy",
+    "create": "Tạo",
+    "create_failed": "Tạo thư mục thất bại",
+    "invalid_name": "Tên thư mục không hợp lệ",
+    "drop_to_upload": "Kéo thả tập tin để tải lên",
+    "uploads_status": "Tải lên ({{count}}/{{total}})",
+    "done": "Hoàn tất",
+    "failed": "Thất bại"
+  },
+  "share": {
+    "title": "Chia sẻ \"{{name}}\"",
+    "general_access": "Quyền truy cập chung",
+    "restricted": "Hạn chế",
+    "public_link": "Bất kỳ ai có liên kết",
+    "specific_users": "Người dùng hoặc Nhóm cụ thể",
+    "restricted_desc": "Chỉ người có quyền truy cập mới mở được",
+    "public_link_desc": "Bất kỳ ai trên internet có liên kết này đều có thể xem",
+    "specific_users_desc": "Chỉ người dùng hoặc nhóm cụ thể bạn thêm bên dưới mới truy cập được",
+    "copy_link": "Sao chép liên kết",
+    "saving": "Đang lưu...",
+    "done": "Hoàn tất",
+    "close": "Đóng",
+    "link_copied": "Đã sao chép liên kết!",
+    "user": "Người dùng",
+    "group": "Nhóm",
+    "owner": "Chủ sở hữu",
+    "permission_view": "Người xem",
+    "invalid_type": "Cài đặt chia sẻ không hợp lệ",
+    "save_failed": "Lỗi khi lưu cài đặt"
+  },
+  "page": {
+    "title": "Tập tin",
+    "subtitle": "Quản lý tập tin và thư mục"
   }
 }
