@@ -1042,22 +1042,31 @@ function makeErrorMiddleware() {
     try {
       // In production, feed Youch a sanitised error (no stack frames) and a
       // stripped request (no headers / cookies) so nothing internal leaks.
-      const youchErr = __DEV__
-        ? err
-        : Object.assign(new Error(message), {
-            name: isMaintenance ? 'Maintenance' : err.name || 'Error',
-            status,
-            stack: '', // empty → Youch renders zero frames
-          });
+      const youchErr =
+        __DEV__ && !isMaintenance
+          ? err
+          : Object.assign(new Error(message), {
+              name: isMaintenance ? 'Maintenance' : err.name || 'Error',
+              status,
+              stack: '', // empty → Youch renders zero frames
+            });
 
-      const youchReq = __DEV__
-        ? req
-        : { url: req.url, method: req.method, httpVersion: req.httpVersion };
+      const youchReq =
+        __DEV__ && !isMaintenance
+          ? req
+          : { url: req.url, method: req.method, httpVersion: req.httpVersion };
 
       const YouchConstructor =
         typeof Youch === 'function' ? Youch : Youch.Youch || Youch.default;
       const youch = new YouchConstructor(youchErr, youchReq);
-      return res.send(await youch.toHTML());
+      return res.send(
+        await youch.toHTML(youchErr, {
+          request: youchReq,
+          title: isMaintenance
+            ? 'Service Unavailable'
+            : 'Internal server error',
+        }),
+      );
     } catch (renderErr) {
       console.error('⚠️  Youch rendering failed:', renderErr.message);
 
