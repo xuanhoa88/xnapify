@@ -6,6 +6,7 @@
  */
 
 import { Box, Grid, Flex } from '@radix-ui/themes';
+import PropTypes from 'prop-types';
 
 import ActivityWidget from './components/ActivityWidget.js';
 import AtAGlanceWidget from './components/AtAGlanceWidget.js';
@@ -15,14 +16,14 @@ import SystemNewsWidget from './components/SystemNewsWidget.js';
 
 import s from './Dashboard.css';
 
-function Dashboard() {
+function Dashboard({ context }) {
   return (
     <Box className={s.container}>
       <Grid columns={{ initial: '1', md: '2' }} gap='4' align='start'>
         <Flex direction='column' gap='4'>
           <SiteHealthWidget />
-          <AtAGlanceWidget />
-          <ActivityWidget />
+          <AtAGlanceWidget context={context} />
+          <ActivityWidget context={context} />
         </Flex>
 
         <Flex direction='column' gap='4'>
@@ -33,5 +34,11 @@ function Dashboard() {
     </Box>
   );
 }
+
+Dashboard.propTypes = {
+  context: PropTypes.shape({
+    container: PropTypes.object.isRequired,
+  }).isRequired,
+};
 
 export default Dashboard;

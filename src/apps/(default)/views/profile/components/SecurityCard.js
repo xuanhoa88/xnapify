@@ -18,8 +18,6 @@ import Form, {
 } from '@shared/renderer/components/Form/index.js';
 import { features } from '@shared/renderer/redux/index.js';
 
-import { changePasswordFormSchema } from '../../../../users/validator/auth/index.js';
-
 import s from './SecurityCard.css';
 
 const {
@@ -31,7 +29,9 @@ const {
   showSuccessMessage,
 } = features;
 
-function SecurityCard() {
+function SecurityCard({ context }) {
+  const { changePasswordFormSchema } =
+    context.container.resolve('users:validators').auth;
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const loading = useSelector(isPasswordLoading);
@@ -214,6 +214,12 @@ function SecurityFormFields({ loading, dispatch }) {
 SecurityFormFields.propTypes = {
   loading: PropTypes.bool,
   dispatch: PropTypes.func.isRequired,
+};
+
+SecurityCard.propTypes = {
+  context: PropTypes.shape({
+    container: PropTypes.object.isRequired,
+  }).isRequired,
 };
 
 export default SecurityCard;

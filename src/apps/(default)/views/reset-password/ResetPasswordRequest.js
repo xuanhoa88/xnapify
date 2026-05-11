@@ -19,8 +19,6 @@ import Form, {
 import { Link } from '@shared/renderer/components/History/index.js';
 import { features } from '@shared/renderer/redux/index.js';
 
-import { passwordResetRequestFormSchema } from '../../../users/validator/auth/index.js';
-
 const {
   resetPasswordRequest,
   isResetPasswordLoading,
@@ -31,7 +29,9 @@ const {
 /**
  * Reset Password Request Page Component
  */
-function ResetPasswordRequest() {
+function ResetPasswordRequest({ context }) {
+  const { passwordResetRequestFormSchema } =
+    context.container.resolve('users:validators').auth;
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const loading = useSelector(isResetPasswordLoading);
@@ -187,6 +187,12 @@ function RequestFormFields({ loading }) {
 
 RequestFormFields.propTypes = {
   loading: PropTypes.bool,
+};
+
+ResetPasswordRequest.propTypes = {
+  context: PropTypes.shape({
+    container: PropTypes.object.isRequired,
+  }).isRequired,
 };
 
 export default ResetPasswordRequest;

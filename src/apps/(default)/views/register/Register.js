@@ -23,14 +23,14 @@ import {
 import { features } from '@shared/renderer/redux/index.js';
 import { useWebSocket } from '@shared/ws/client/index.js';
 
-import { registerFormSchema } from '../../../users/validator/auth/index.js';
-
 const { register, isAuthLoading, getAuthError, clearAuthError } = features;
 
 /**
  * Register Page Component
  */
-function Register() {
+function Register({ context }) {
+  const { registerFormSchema } =
+    context.container.resolve('users:validators').auth;
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const history = useHistory();
@@ -172,6 +172,12 @@ function RegisterFormFields({ loading }) {
 
 RegisterFormFields.propTypes = {
   loading: PropTypes.bool,
+};
+
+Register.propTypes = {
+  context: PropTypes.shape({
+    container: PropTypes.object.isRequired,
+  }).isRequired,
 };
 
 export default Register;

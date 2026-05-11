@@ -5,14 +5,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 
 import { Box, Flex, Text } from '@radix-ui/themes';
-import {
-  getActivities,
-  isActivitiesInitialized,
-} from 'apps/activities/views/(admin)/redux/selector';
-import { fetchActivities } from 'apps/activities/views/(admin)/redux/thunks';
+import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 
@@ -23,18 +19,24 @@ import WidgetCard from './WidgetCard.js';
 
 import s from './ActivityWidget.css';
 
-export default function ActivityWidget() {
+export default function ActivityWidget({ context }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
 
-  const activities = useSelector(getActivities);
-  const isInitialized = useSelector(isActivitiesInitialized);
+  // Resolve selectors and thunks from DI container
+  const { selectors, thunks } = useMemo(
+    () => context.container.resolve('activities:admin:state'),
+    [context.container],
+  );
+
+  const activities = useSelector(selectors.getActivities);
+  const isInitialized = useSelector(selectors.isActivitiesInitialized);
 
   useEffect(() => {
     if (!isInitialized) {
-      dispatch(fetchActivities({ page: 1, limit: 3 }));
+      dispatch(thunks.fetchActivities({ page: 1, limit: 3 }));
     }
-  }, [dispatch, isInitialized]);
+  }, [dispatch, isInitialized, thunks]);
 
   // Display top 3 or fallback
   const displayActivities =
@@ -81,3 +83,9 @@ export default function ActivityWidget() {
     </WidgetCard>
   );
 }
+
+ActivityWidget.propTypes = {
+  context: PropTypes.shape({
+    container: PropTypes.object.isRequired,
+  }).isRequired,
+};

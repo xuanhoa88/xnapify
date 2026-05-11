@@ -6,6 +6,7 @@
  */
 
 import { SEED_ROLES } from './constants.js';
+import * as rbacController from './controllers/admin/rbac.controller.js';
 
 /** @type {Symbol} Ownership key for this module's persistent bindings */
 const OWNER_KEY = Symbol('__xnapify.module.roles.api__');
@@ -39,6 +40,7 @@ export default {
   routes: () => routesContext,
   async providers({ container }) {
     container.bind('roles:seed_constants', () => SEED_ROLES, OWNER_KEY);
+    container.bind('roles:rbacController', () => rbacController, OWNER_KEY);
   },
   async boot() {},
 };

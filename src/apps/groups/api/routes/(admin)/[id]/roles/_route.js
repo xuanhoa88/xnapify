@@ -5,8 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import * as rbacController from '../../../../../../roles/api/controllers/admin/rbac.controller.js';
-
 function requirePermission(permission) {
   return (req, res, next) => {
     const {
@@ -18,10 +16,20 @@ function requirePermission(permission) {
 
 export const get = [
   requirePermission('groups:read'),
-  rbacController.getGroupRoles,
+  (req, res) => {
+    const rbacController = req.app
+      .get('container')
+      .resolve('roles:rbacController');
+    return rbacController.getGroupRoles(req, res);
+  },
 ];
 
 export const put = [
   requirePermission('groups:update'),
-  rbacController.assignRolesToGroup,
+  (req, res) => {
+    const rbacController = req.app
+      .get('container')
+      .resolve('roles:rbacController');
+    return rbacController.assignRolesToGroup(req, res);
+  },
 ];

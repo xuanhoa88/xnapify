@@ -18,8 +18,6 @@ import Form, {
 import Loader from '@shared/renderer/components/Loader/index.js';
 import { features } from '@shared/renderer/redux/index.js';
 
-import { updatePreferencesFormSchema } from '../../../../users/validator/auth/index.js';
-
 import s from './PreferencesCard.css';
 
 const {
@@ -43,7 +41,9 @@ const DEFAULT_PREFERENCES = Object.freeze({
   notifications: {},
 });
 
-function PreferencesCard() {
+function PreferencesCard({ context }) {
+  const { updatePreferencesFormSchema } =
+    context.container.resolve('users:validators').auth;
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const hasFetched = useRef(false);
@@ -248,6 +248,12 @@ function PreferencesFormFields({ loading }) {
 
 PreferencesFormFields.propTypes = {
   loading: PropTypes.bool,
+};
+
+PreferencesCard.propTypes = {
+  context: PropTypes.shape({
+    container: PropTypes.object.isRequired,
+  }).isRequired,
 };
 
 export default PreferencesCard;

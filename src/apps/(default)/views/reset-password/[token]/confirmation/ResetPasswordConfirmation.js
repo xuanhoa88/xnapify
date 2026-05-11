@@ -23,8 +23,6 @@ import Form, {
 import { Link } from '@shared/renderer/components/History/index.js';
 import { features } from '@shared/renderer/redux/index.js';
 
-import { passwordResetConfirmFormSchema } from '../../../../../users/validator/auth/index.js';
-
 const {
   resetPasswordConfirmation,
   isResetPasswordLoading,
@@ -37,7 +35,10 @@ const {
 /**
  * Reset Password Confirmation Page Component
  */
-function ResetPasswordConfirmation({ context: { params } }) {
+function ResetPasswordConfirmation({ context }) {
+  const { params } = context;
+  const { passwordResetConfirmFormSchema } =
+    context.container.resolve('users:validators').auth;
   const { token } = params;
   const { t } = useTranslation();
   const dispatch = useDispatch();
@@ -177,6 +178,7 @@ function ResetPasswordConfirmation({ context: { params } }) {
 
 ResetPasswordConfirmation.propTypes = {
   context: PropTypes.shape({
+    container: PropTypes.object.isRequired,
     params: PropTypes.shape({
       token: PropTypes.string.isRequired,
     }).isRequired,

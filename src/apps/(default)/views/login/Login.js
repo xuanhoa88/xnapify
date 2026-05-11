@@ -22,8 +22,6 @@ import {
 import { features } from '@shared/renderer/redux/index.js';
 import { useWebSocket } from '@shared/ws/client/index.js';
 
-import { loginFormSchema } from '../../../users/validator/auth/index.js';
-
 import s from './Login.css';
 
 const {
@@ -40,7 +38,9 @@ const {
 /**
  * Login Page Component
  */
-function Login() {
+function Login({ context }) {
+  const { loginFormSchema } =
+    context.container.resolve('users:validators').auth;
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const history = useHistory();
@@ -224,6 +224,12 @@ function LoginFormFields({ loading }) {
 
 LoginFormFields.propTypes = {
   loading: PropTypes.bool,
+};
+
+Login.propTypes = {
+  context: PropTypes.shape({
+    container: PropTypes.object.isRequired,
+  }).isRequired,
 };
 
 export default Login;

@@ -6,4 +6,3 @@
  */
 
 export * from './role.js';
-export { assignRolesToGroupFormSchema } from '../../../groups/validator/admin/index.js';

@@ -5,6 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import * as authValidators from '../validator/auth/index.js';
+
 import RoleTag from './(admin)/components/RoleTag.js';
 import reducer, { SLICE_NAME } from './(admin)/redux/index.js';
 import * as selectors from './(admin)/redux/selector.js';
@@ -46,6 +48,13 @@ export default {
       'users:admin:components',
       () => ({
         RoleTag,
+      }),
+      OWNER_KEY,
+    );
+    container.bind(
+      'users:validators',
+      () => ({
+        auth: authValidators,
       }),
       OWNER_KEY,
     );

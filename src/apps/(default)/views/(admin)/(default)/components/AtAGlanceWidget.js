@@ -13,21 +13,7 @@ import {
   PersonIcon,
 } from '@radix-ui/react-icons';
 import { Flex, Text, Box } from '@radix-ui/themes';
-import {
-  getGroupsPagination,
-  isGroupsListInitialized,
-} from 'apps/groups/views/(admin)/redux/selector';
-import { fetchGroups } from 'apps/groups/views/(admin)/redux/thunks';
-import {
-  getRolesPagination,
-  isRolesListInitialized,
-} from 'apps/roles/views/(admin)/redux/selector';
-import { fetchRoles } from 'apps/roles/views/(admin)/redux/thunks';
-import {
-  getUsersPagination,
-  isUsersListInitialized,
-} from 'apps/users/views/(admin)/redux/selector';
-import { fetchUsers } from 'apps/users/views/(admin)/redux/thunks';
+import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 
@@ -38,23 +24,48 @@ import WidgetCard from './WidgetCard.js';
 
 import s from './AtAGlanceWidget.css';
 
-export default function AtAGlanceWidget() {
+export default function AtAGlanceWidget({ context }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
 
-  const usersPagination = useSelector(getUsersPagination);
-  const rolesPagination = useSelector(getRolesPagination);
-  const groupsPagination = useSelector(getGroupsPagination);
+  // Resolve selectors and thunks from DI container
+  const { groupsState, rolesState, usersState } = useMemo(() => {
+    const { container } = context;
+    return {
+      groupsState: container.resolve('groups:admin:state'),
+      rolesState: container.resolve('roles:admin:state'),
+      usersState: container.resolve('users:admin:state'),
+    };
+  }, [context]);
 
-  const isUsersReady = useSelector(isUsersListInitialized);
-  const isRolesReady = useSelector(isRolesListInitialized);
-  const isGroupsReady = useSelector(isGroupsListInitialized);
+  const usersPagination = useSelector(usersState.selectors.getUsersPagination);
+  const rolesPagination = useSelector(rolesState.selectors.getRolesPagination);
+  const groupsPagination = useSelector(
+    groupsState.selectors.getGroupsPagination,
+  );
+
+  const isUsersReady = useSelector(usersState.selectors.isUsersListInitialized);
+  const isRolesReady = useSelector(rolesState.selectors.isRolesListInitialized);
+  const isGroupsReady = useSelector(
+    groupsState.selectors.isGroupsListInitialized,
+  );
 
   useEffect(() => {
-    if (!isUsersReady) dispatch(fetchUsers({ page: 1, limit: 1 }));
-    if (!isRolesReady) dispatch(fetchRoles({ page: 1, limit: 1 }));
-    if (!isGroupsReady) dispatch(fetchGroups({ page: 1, limit: 1 }));
-  }, [dispatch, isUsersReady, isRolesReady, isGroupsReady]);
+    if (!isUsersReady)
+      dispatch(usersState.thunks.fetchUsers({ page: 1, limit: 1 }));
+    if (!isRolesReady)
+      dispatch(rolesState.thunks.fetchRoles({ page: 1, limit: 1 }));
+    if (!isGroupsReady)
+      dispatch(groupsState.thunks.fetchGroups({ page: 1, limit: 1 }));
+  }, [
+    dispatch,
+    isUsersReady,
+    isRolesReady,
+    isGroupsReady,
+    usersState,
+    rolesState,
+    groupsState,
+  ]);
 
   const isInitialized = isUsersReady && isRolesReady && isGroupsReady;
 
@@ -125,3 +136,9 @@ export default function AtAGlanceWidget() {
     </WidgetCard>
   );
 }
+
+AtAGlanceWidget.propTypes = {
+  context: PropTypes.shape({
+    container: PropTypes.object.isRequired,
+  }).isRequired,
+};

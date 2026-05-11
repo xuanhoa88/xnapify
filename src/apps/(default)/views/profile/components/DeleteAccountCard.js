@@ -19,8 +19,6 @@ import Form, {
 import { useHistory } from '@shared/renderer/components/History/index.js';
 import { features } from '@shared/renderer/redux/index.js';
 
-import { deleteAccountFormSchema } from '../../../../users/validator/auth/index.js';
-
 import s from './DeleteAccountCard.css';
 
 const { deleteUser, isDeleteLoading, getDeleteError, clearDeleteError } =
@@ -29,7 +27,9 @@ const { deleteUser, isDeleteLoading, getDeleteError, clearDeleteError } =
 /**
  * DeleteAccountCard adopting pure functional Radix implementations overriding primitive mapped styles.
  */
-function DeleteAccountCard() {
+function DeleteAccountCard({ context }) {
+  const { deleteAccountFormSchema } =
+    context.container.resolve('users:validators').auth;
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const history = useHistory();
@@ -139,6 +139,12 @@ function DeleteAccountFormFields({ loading }) {
 
 DeleteAccountFormFields.propTypes = {
   loading: PropTypes.bool,
+};
+
+DeleteAccountCard.propTypes = {
+  context: PropTypes.shape({
+    container: PropTypes.object.isRequired,
+  }).isRequired,
 };
 
 export default DeleteAccountCard;

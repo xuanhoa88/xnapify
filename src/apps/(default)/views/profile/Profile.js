@@ -12,6 +12,7 @@ import {
   TrashIcon,
 } from '@radix-ui/react-icons';
 import { Box, Tabs } from '@radix-ui/themes';
+import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
 import DeleteAccountCard from './components/DeleteAccountCard.js';
@@ -23,7 +24,7 @@ import SecurityCard from './components/SecurityCard.js';
 /**
  * Profile layout component natively migrating from pure CSS to absolute Box and Flex parameters.
  */
-function Profile() {
+function Profile({ context }) {
   const { t } = useTranslation();
 
   return (
@@ -76,19 +77,19 @@ function Profile() {
 
             <Box pt='4'>
               <Tabs.Content value='personal'>
-                <PersonalInfoCard />
+                <PersonalInfoCard context={context} />
               </Tabs.Content>
 
               <Tabs.Content value='preferences'>
-                <PreferencesCard />
+                <PreferencesCard context={context} />
               </Tabs.Content>
 
               <Tabs.Content value='security'>
-                <SecurityCard />
+                <SecurityCard context={context} />
               </Tabs.Content>
 
               <Tabs.Content value='danger'>
-                <DeleteAccountCard />
+                <DeleteAccountCard context={context} />
               </Tabs.Content>
             </Box>
           </Tabs.Root>
@@ -97,5 +98,11 @@ function Profile() {
     </Box>
   );
 }
+
+Profile.propTypes = {
+  context: PropTypes.shape({
+    container: PropTypes.object.isRequired,
+  }).isRequired,
+};
 
 export default Profile;

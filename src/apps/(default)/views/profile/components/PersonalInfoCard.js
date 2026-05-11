@@ -26,8 +26,6 @@ import Loader from '@shared/renderer/components/Loader/index.js';
 import { features } from '@shared/renderer/redux/index.js';
 import { z } from '@shared/validator/index.js';
 
-import { updateProfileFormSchema } from '../../../../users/validator/auth/index.js';
-
 import s from './PersonalInfoCard.css';
 
 const {
@@ -39,7 +37,9 @@ const {
   showSuccessMessage,
 } = features;
 
-function PersonalInfoCard() {
+function PersonalInfoCard({ context }) {
+  const { updateProfileFormSchema } =
+    context.container.resolve('users:validators').auth;
   const { t, i18n } = useTranslation();
   const dispatch = useDispatch();
   const user = useSelector(getUserProfile);
@@ -54,7 +54,7 @@ function PersonalInfoCard() {
 
   const baseSchema = useMemo(
     () => updateProfileFormSchema({ i18n, z }),
-    [i18n],
+    [i18n, updateProfileFormSchema],
   );
 
   const [extendedValidator, loadingValidator] = useExtensionValidator(
@@ -217,6 +217,12 @@ function PersonalInfoFormFields({ loading }) {
 
 PersonalInfoFormFields.propTypes = {
   loading: PropTypes.bool,
+};
+
+PersonalInfoCard.propTypes = {
+  context: PropTypes.shape({
+    container: PropTypes.object.isRequired,
+  }).isRequired,
 };
 
 export default PersonalInfoCard;
