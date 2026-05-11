@@ -47,7 +47,7 @@ const COOKIE_TYPES = Object.freeze({
  * @param {Object} [options] - Cookie options
  * @param {number} [options.maxAge] - Max age in ms (undefined = session cookie)
  */
-function setSecureCookie(res, name, value, options = {}) {
+export function setSecureCookie(res, name, value, options = {}) {
   const config = {
     ...DEFAULT_COOKIE_CONFIG,
     ...options,
@@ -79,7 +79,7 @@ function setSecureCookie(res, name, value, options = {}) {
  * @param {string} name - Cookie name
  * @param {Object} [options] - Cookie options
  */
-function clearSecureCookie(res, name, options = {}) {
+export function clearSecureCookie(res, name, options = {}) {
   const config = {
     path: DEFAULT_COOKIE_CONFIG.path,
     ...options,
@@ -103,7 +103,7 @@ function clearSecureCookie(res, name, options = {}) {
  * @param {string} name - Cookie name
  * @returns {string|null} Cookie value or null if not found
  */
-function getCookieValue(req, name) {
+export function getCookieValue(req, name) {
   return (req.cookies && req.cookies[name]) || null;
 }
 

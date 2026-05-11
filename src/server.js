@@ -25,6 +25,9 @@ import { Container } from '@shared/container/index.js';
 import {
   setTokenCookie,
   setRefreshTokenCookie,
+  clearSecureCookie,
+  setSecureCookie,
+  getCookieValue,
 } from '@shared/cookies/index.js';
 import extensionManager from '@shared/extension/server/index.js';
 import { createFetch } from '@shared/fetch/index.js';
@@ -314,7 +317,7 @@ function generateRequestId() {
 }
 
 function maintenanceMiddleware() {
-  return async (req, res, next) => {
+  return (req, res, next) => {
     // 1. Is Maintenance Mode ON?
     const isMaintenance = process.env.XNAPIFY_MAINTENANCE_MODE === 'true';
     const bypassToken = process.env.XNAPIFY_MAINTENANCE_BYPASS_TOKEN;
@@ -327,22 +330,23 @@ function maintenanceMiddleware() {
       bypassToken.length >= 8 &&
       req.path === `/${bypassToken}`
     ) {
-      res.cookie('xnapify_maintenance_bypass', bypassToken, {
-        httpOnly: true,
-        path: '/',
+      setSecureCookie(res, 'xnapify_maintenance_bypass', bypassToken, {
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-        sameSite: 'lax',
       });
       return res.redirect('/');
     }
 
-    if (!isMaintenance) return next();
+    if (!isMaintenance) {
+      if (getCookieValue(req, 'xnapify_maintenance_bypass')) {
+        clearSecureCookie(res, 'xnapify_maintenance_bypass');
+      }
+      return next();
+    }
 
     // 3. Cookie Bypass Validation
     if (
       bypassToken &&
-      req.cookies &&
-      req.cookies['xnapify_maintenance_bypass'] === bypassToken
+      getCookieValue(req, 'xnapify_maintenance_bypass') === bypassToken
     ) {
       return next(); // Authed user bypassing
     }
