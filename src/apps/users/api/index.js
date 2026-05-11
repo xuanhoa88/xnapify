@@ -8,6 +8,7 @@
 import * as authController from './controllers/auth.controller.js';
 import * as profileController from './controllers/profile.controller.js';
 import { authenticate as handleApiKeyStrategy } from './utils/apiKey/index.js';
+import * as rbacCache from './utils/rbac/cache.js';
 import { getUserRbacData } from './utils/rbac/fetcher.js';
 import { registerSearchHooks } from './workers/index.js';
 
@@ -63,6 +64,7 @@ export default {
       }),
       OWNER_KEY,
     );
+    container.bind('users:rbacCache', () => rbacCache, OWNER_KEY);
     await registerAuthHooks(container);
     registerSearchHooks(container);
   },

@@ -5,8 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import * as rbacCache from '../../../../users/api/utils/rbac/cache.js';
-
 import { manageRolePermissions } from './rbac.service.js';
 
 // ========================================================================
@@ -352,7 +350,10 @@ export async function updateRole(role_id, updateData, options = {}) {
 
  * @returns {Promise<boolean>} Success status
  */
-export async function deleteRole(role_id, { models, hook, systemRoles }) {
+export async function deleteRole(
+  role_id,
+  { models, hook, systemRoles, rbacCache },
+) {
   const { Role, UserRole } = models;
 
   const role = await Role.findByPk(role_id);
@@ -384,7 +385,8 @@ export async function deleteRole(role_id, { models, hook, systemRoles }) {
 
   // Invalidate RBAC cache for affected users
   if (userRoles.length > 0) {
-    await rbacCache.invalidateUsers(userRoles.map(ur => ur.user_id));
+    if (rbacCache)
+      await rbacCache.invalidateUsers(userRoles.map(ur => ur.user_id));
   }
 
   // Emit hook event
@@ -408,7 +410,10 @@ export async function deleteRole(role_id, { models, hook, systemRoles }) {
  * @param {Function} options.hook - Hook emitter
  * @returns {Promise<string[]>} Successfully deleted role IDs
  */
-export async function bulkDeleteRoles(ids, { models, hook, systemRoles = [] }) {
+export async function bulkDeleteRoles(
+  ids,
+  { models, hook, systemRoles = [], rbacCache },
+) {
   const { Role, UserRole } = models;
 
   if (!Array.isArray(ids) || ids.length === 0) return [];
@@ -437,7 +442,8 @@ export async function bulkDeleteRoles(ids, { models, hook, systemRoles = [] }) {
 
       // Invalidate RBAC cache for affected users
       if (userRoles.length > 0) {
-        await rbacCache.invalidateUsers(userRoles.map(ur => ur.user_id));
+        if (rbacCache)
+          await rbacCache.invalidateUsers(userRoles.map(ur => ur.user_id));
       }
     }
   }

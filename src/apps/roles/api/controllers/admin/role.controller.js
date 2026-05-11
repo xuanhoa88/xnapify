@@ -248,6 +248,7 @@ export async function deleteRole(req, res) {
       models,
       hook: container.resolve('hook'),
       actorId: req.user.id,
+      rbacCache: container.resolve('users:rbacCache'),
       defaultResources: auth.DEFAULT_RESOURCES,
       defaultActions: auth.DEFAULT_ACTIONS,
       systemRoles: auth.SYSTEM_ROLES,
@@ -294,6 +295,7 @@ export async function bulkDeleteRoles(req, res) {
     const deletedIds = await roleService.bulkDeleteRoles(ids, {
       models,
       hook: container.resolve('hook'),
+      rbacCache: container.resolve('users:rbacCache'),
       systemRoles: auth.SYSTEM_ROLES,
     });
 

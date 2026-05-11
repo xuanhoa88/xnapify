@@ -37,6 +37,7 @@ export async function initializeDefaults(req, res) {
     // Initialize RBAC
     const result = await rbacService.initializeDefault({
       models: container.resolve('models'),
+      rbacCache: container.resolve('users:rbacCache'),
       adminRoleName: auth.ADMIN_ROLE,
       defaultRoleName: auth.DEFAULT_ROLE,
       moderatorRoleName: auth.MODERATOR_ROLE,
@@ -87,6 +88,7 @@ export async function assignRolesToUser(req, res) {
     // Assign roles
     const user = await rbacService.assignRolesToUser(id, role_names, {
       models: container.resolve('models'),
+      rbacCache: container.resolve('users:rbacCache'),
       hook: container.resolve('hook'),
       actorId: req.user.id,
     });
@@ -139,6 +141,7 @@ export async function assignGroupsToUser(req, res) {
     // Assign groups
     const user = await rbacService.assignGroupsToUser(id, group_ids, {
       models: container.resolve('models'),
+      rbacCache: container.resolve('users:rbacCache'),
       hook: container.resolve('hook'),
       actorId: req.user.id,
     });
@@ -177,6 +180,7 @@ export async function getUserPermissions(req, res) {
     const auth = container.resolve('auth');
     const permissions = await rbacService.getUserPermissions(id, {
       models: container.resolve('models'),
+      rbacCache: container.resolve('users:rbacCache'),
       defaultResources: auth.DEFAULT_RESOURCES,
       defaultActions: auth.DEFAULT_ACTIONS,
       cache: container.resolve('cache'),
@@ -219,6 +223,7 @@ export async function checkUserPermission(req, res) {
       permissionName,
       {
         models: container.resolve('models'),
+        rbacCache: container.resolve('users:rbacCache'),
         cache: container.resolve('cache'),
         defaultResources: auth.DEFAULT_RESOURCES,
         defaultActions: auth.DEFAULT_ACTIONS,
@@ -262,6 +267,7 @@ export async function removeRoleFromUser(req, res) {
 
     await rbacService.removeRoleFromUser(id, role_id, {
       models: container.resolve('models'),
+      rbacCache: container.resolve('users:rbacCache'),
       hook: container.resolve('hook'),
       actorId: req.user.id,
     });
@@ -295,6 +301,7 @@ export async function removeGroupFromUser(req, res) {
 
     await rbacService.removeGroupFromUser(id, group_id, {
       models: container.resolve('models'),
+      rbacCache: container.resolve('users:rbacCache'),
       hook: container.resolve('hook'),
       actorId: req.user.id,
     });
@@ -409,6 +416,7 @@ export async function assignRolesToGroup(req, res) {
 
     const updatedGroup = await rbacService.assignRolesToGroup(id, role_names, {
       models: container.resolve('models'),
+      rbacCache: container.resolve('users:rbacCache'),
       hook: container.resolve('hook'),
       actorId: req.user.id,
     });
@@ -453,6 +461,7 @@ export async function addRoleToGroup(req, res) {
 
     await rbacService.addRoleToGroup(id, role_id, {
       models: container.resolve('models'),
+      rbacCache: container.resolve('users:rbacCache'),
       hook: container.resolve('hook'),
       actorId: req.user.id,
     });
@@ -497,6 +506,7 @@ export async function removeRoleFromGroup(req, res) {
 
     await rbacService.removeRoleFromGroup(id, role_id, {
       models: container.resolve('models'),
+      rbacCache: container.resolve('users:rbacCache'),
       hook: container.resolve('hook'),
       actorId: req.user.id,
     });
@@ -604,6 +614,7 @@ export async function manageRolePermissions(req, res) {
         action,
         hook: container.resolve('hook'),
         actorId: req.user.id,
+        rbacCache: container.resolve('users:rbacCache'),
         defaultResources: auth.DEFAULT_RESOURCES,
         defaultActions: auth.DEFAULT_ACTIONS,
       },
