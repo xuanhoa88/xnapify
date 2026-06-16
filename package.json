@@ -126,7 +126,7 @@
     "nodemailer": "7.0.12",
     "passport": "0.7.0",
     "passport-strategy": "1.0.0",
-    "piscina": "4.9.2",
+    "piscina": "5.1.4",
     "prop-types": "15.8.1",
     "react": "18.3.1",
     "react-dom": "18.3.1",
