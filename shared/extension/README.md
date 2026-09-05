@@ -20,12 +20,15 @@ registry.registerHook('users.created', async data => {
 });
 ```
 
-**Asking one handler for an answer (IPC and similar):**
+**Asking one extension for an answer (IPC and similar):**
 
 ```javascript
-// Single answer: only the highest-priority handler runs, and its error
-// reaches you instead of being swallowed.
-const { handled, value } = await registry.invokeHook(
+// Claim the id. A second extension registering here throws
+// DuplicateHandlerError instead of silently winning by priority.
+registry.registerHandler('ipc:<id>:ping', async (data, { req }) => 'pong');
+
+// Call it. The handler's error reaches you instead of being swallowed.
+const { handled, value } = await registry.invokeHandler(
   'ipc:<id>:ping',
   data,
   ctx,
@@ -35,12 +38,17 @@ if (!handled) {
 }
 ```
 
-Pick the executor by contract, not by taste:
+Pick the kind at registration, not at call time:
 
-| Need                                     | Use                                   | On handler error   |
-| ---------------------------------------- | ------------------------------------- | ------------------ |
-| Merge contributions from every extension | `executeHook` / `executeHookParallel` | Logged and dropped |
-| Get one answer back to a caller          | `invokeHook`                          | Propagated         |
+|                     | Collector (`Hook`)                    | Handler (`Handler`)            |
+| ------------------- | ------------------------------------- | ------------------------------ |
+| Register with       | `registerHook`                        | `registerHandler`              |
+| Call with           | `executeHook` / `executeHookParallel` | `invokeHandler`                |
+| Contributors per id | Many                                  | Exactly one                    |
+| Second registration | Appended, ordered by priority         | Throws `DuplicateHandlerError` |
+| On handler error    | Logged and dropped                    | Propagated to the caller       |
+| Remove with         | Id **and** the callback reference     | Id alone                       |
+| `{ public: true }`  | Rejected                              | Allowed (guest IPC)            |
 
 To fail a call deliberately from an IPC handler, throw an error carrying a
 `status` (400-599) and optional `code`. The gateway forwards that status and
@@ -119,9 +127,9 @@ export default {
   async boot({ container, registry }) {
     // Register hooks, slots, IPC handlers.
     // IPC handlers are authenticated by default; opt in to guests with:
-    registry.registerHook('ipc:<id>:ping', handler, { public: true });
-    // `public` is an AND over every handler on that id: if another
-    // registration did not opt in, the id stays authenticated.
+    registry.registerHandler('ipc:<id>:ping', handler, { public: true });
+    // Keep the callback reference if shutdown() unregisters a collector
+    // hook: hooks are removed by identity, handlers by id alone.
   },
   async shutdown({ registry }) {
     // Automatic cleanup happens via the Registry,

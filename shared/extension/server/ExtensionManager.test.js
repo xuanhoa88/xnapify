@@ -12,9 +12,7 @@ const require = createRequire(import.meta.url);
 
 import {
   ACTIVE_EXTENSIONS,
-  BUFFERED_ROUTES,
   EXTENSION_METADATA,
-  STORED_ADAPTERS,
 } from '../utils/BaseExtensionManager.js';
 
 import serverManager, { scopeRouteModule } from './ExtensionManager.js';
@@ -617,8 +615,7 @@ describe('scopeRouteModule', () => {
 
   it('injects the scoped adapter into API route injection', () => {
     const added = [];
-    serverManager[STORED_ADAPTERS].clear();
-    serverManager[BUFFERED_ROUTES].length = 0;
+    serverManager.routes.reset();
     // eslint-disable-next-line no-underscore-dangle
     serverManager._connectRouter('api', {
       add: adapter => (added.push(adapter), []),

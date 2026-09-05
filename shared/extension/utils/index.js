@@ -6,5 +6,9 @@
  */
 
 export { default as Hook } from './Hook.js';
+export { default as Handler, DuplicateHandlerError } from './Handler.js';
+export { default as EventBus } from './EventBus.js';
+export { default as RouteTable, ROUTER_KEYS } from './RouteTable.js';
 export { default as ExtensionRegistry } from './Registry.js';
+export { createScopedRegistry, PASSTHROUGH_METHODS } from './scopedRegistry.js';
 export * from './BaseExtensionManager.js';

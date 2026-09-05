@@ -11,9 +11,6 @@ import {
   BaseExtensionManager,
   ACTIVE_EXTENSIONS,
   EXTENSION_METADATA,
-  BUFFERED_ROUTES,
-  STORED_ADAPTERS,
-  CONNECTED_ROUTERS,
 } from '../utils/BaseExtensionManager.js';
 import { isDeferrableExtension } from '../utils/deferral.js';
 import { normalizeRouteAdapter } from '../utils/routeAdapter.js';
@@ -460,11 +457,11 @@ class ClientExtensionManager extends BaseExtensionManager {
    */
   async _injectRoutes(id, hookResult, type = 'views') {
     const adapter = normalizeRouteAdapter(hookResult, type);
-    const viewRouter = this[CONNECTED_ROUTERS]['views'];
+    const viewRouter = this.routes.routerFor('views');
 
     if (!viewRouter) {
       // Router not available yet — buffer with internal routerKey
-      this[BUFFERED_ROUTES].push({ id, adapter, type: 'views' });
+      this.routes.buffer(id, adapter, 'views');
       if (__DEV__) {
         console.log(
           `[ClientExtensionManager] Buffered view route(s) for ${this._formatDisplayName(id)} (router not ready)`,
@@ -479,10 +476,7 @@ class ClientExtensionManager extends BaseExtensionManager {
     const ctx = viewRouter._lastResolveContext;
     await viewRouter.add(adapter, ctx, id);
 
-    if (!this[STORED_ADAPTERS].has(id)) {
-      this[STORED_ADAPTERS].set(id, {});
-    }
-    this[STORED_ADAPTERS].get(id).views = adapter;
+    this.routes.store(id, adapter, 'views');
 
     if (__DEV__) {
       console.log(

@@ -154,25 +154,31 @@ export default {
 
     const ipcPrefix = `ipc:${__EXTENSION_ID__}`;
 
-    registry.registerHook(
+    registry.registerHandler(
       `${ipcPrefix}:text:stats`,
       this[HANDLERS].ipcTextStats,
     );
-    registry.registerHook(`${ipcPrefix}:text:hash`, this[HANDLERS].ipcTextHash);
-    registry.registerHook(`${ipcPrefix}:text:find`, this[HANDLERS].ipcTextFind);
-    registry.registerHook(
+    registry.registerHandler(
+      `${ipcPrefix}:text:hash`,
+      this[HANDLERS].ipcTextHash,
+    );
+    registry.registerHandler(
+      `${ipcPrefix}:text:find`,
+      this[HANDLERS].ipcTextFind,
+    );
+    registry.registerHandler(
       `${ipcPrefix}:math:fibonacci`,
       this[HANDLERS].ipcFibonacci,
     );
-    registry.registerHook(
+    registry.registerHandler(
       `${ipcPrefix}:math:isPrime`,
       this[HANDLERS].ipcIsPrime,
     );
-    registry.registerHook(
+    registry.registerHandler(
       `${ipcPrefix}:math:sievePrimes`,
       this[HANDLERS].ipcSievePrimes,
     );
-    registry.registerHook(`${ipcPrefix}:stats`, this[HANDLERS].ipcStats);
+    registry.registerHandler(`${ipcPrefix}:stats`, this[HANDLERS].ipcStats);
 
     console.log(`[${__EXTENSION_ID__}] Registered 7 IPC handlers`);
   },

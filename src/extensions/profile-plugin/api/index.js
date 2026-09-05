@@ -181,7 +181,7 @@ export default {
         };
       },
     );
-    registry.registerHook(
+    registry.registerHandler(
       `ipc:${__EXTENSION_ID__}:hello`,
       this[HANDLERS].ipcHello,
     );
@@ -226,7 +226,7 @@ export default {
         }
       },
     );
-    registry.registerHook(
+    registry.registerHandler(
       `ipc:${__EXTENSION_ID__}:checkNickname`,
       this[HANDLERS].ipcCheckNickname,
     );

@@ -95,11 +95,12 @@ Extensions follow a well-defined phase-sequential lifecycle. Each phase runs for
 
 4. **IPC Pipelines:**
    To allow the frontend to communicate securely with the backend, use IPC pipelines.
-   - Backend: `registry.registerHook('ipc:${__EXTENSION_ID__}:action', registry.createPipeline(...middlewares, handler))` (add `{ public: true }` as the third argument to allow unauthenticated callers)
+   - Backend: `registry.registerHandler('ipc:${__EXTENSION_ID__}:action', registry.createPipeline(...middlewares, handler))` (add `{ public: true }` as the third argument to allow unauthenticated callers)
    - Frontend: `context.fetch('/api/extensions/${__EXTENSION_ID__}/ipc', { method: 'POST', body: { action, data } })`
-   - Register **one** handler per action. The gateway is a single-answer call: it runs the highest-priority handler, returns its value, and warns when several are registered.
+   - An action id has a single owner. A second `registerHandler` on the same id throws `DuplicateHandlerError`, so conflicts fail at boot rather than being resolved by load order.
    - To fail a call, throw an error with a `status` (400-599) and optional `code`; that status and message are returned. Any other throw is logged and answered with a generic `502`, never a successful empty body.
-   - `{ public: true }` only takes effect if **every** handler on that hook id opted in, so one extension cannot open another's handler to guests.
+   - `{ public: true }` applies to the one handler that owns the id. No other extension can register on it or widen its visibility.
+   - Use `registerHook` only for collectors (many extensions contribute and the caller merges). It rejects `{ public }`, and removal needs the callback reference you registered, so keep it if `shutdown()` unregisters.
 
 5. **Node-RED Nodes (`node-red/nodes/`):**
    Extensions can provide custom Node-RED palette nodes that are **hot-loaded without restarting** the runtime.

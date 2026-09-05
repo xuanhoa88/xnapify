@@ -20,10 +20,10 @@ Quick-reference checklist for reviewing `src/extensions/[extension-name]` code.
 - [ ] `boot({ container, registry })` registers IPC handlers and hook subscriptions
 - [ ] `shutdown({ container, registry })` unsubscribes **every** hook registered in `boot()`
 - [ ] `install({ container })` and `uninstall({ container })` wrap all DB ops in `try/catch`
-- [ ] IPC registered as: `registry.registerHook('ipc:${__EXTENSION_ID__}:action', ...)`
-- [ ] Exactly one handler per IPC action (the gateway answers with the highest-priority one and warns on duplicates)
+- [ ] IPC registered as: `registry.registerHandler('ipc:${__EXTENSION_ID__}:action', ...)`, never `registerHook`
+- [ ] Collector hooks use `registerHook`, and any `shutdown()` unregister passes the same callback reference (an id alone removes nothing)
 - [ ] IPC handlers that must fail the call throw an error carrying a `status` (400-599); a bare throw becomes a generic 502
-- [ ] Caller side uses `invokeHook` for request/response and `executeHook*` only to merge contributions
+- [ ] Caller side uses `invokeHandler` for request/response and `executeHook*` only to merge contributions
 - [ ] Pre-flight validation hooks use `.invoke()` (fail-fast); post-action hooks use `.emit()` (aggregate errors)
 
 ## Frontend Lifecycle

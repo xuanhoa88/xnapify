@@ -351,7 +351,7 @@ export const refreshExtensions = async (req, res) => {
  * Handle Extension IPC
  *
  * Centralized gateway for extension inter-process communication.
- * Extensions register IPC handlers via registry.registerHook('ipc:<extensionId>:<action>', handler).
+ * Extensions register IPC handlers via registry.registerHandler('ipc:<extensionId>:<action>', handler).
  * The gateway validates the request, executes the hook, and returns the result.
  *
  * @route   POST /api/extensions/:id/ipc
@@ -373,14 +373,14 @@ export const handleIPC = async (req, res) => {
       );
     }
 
-    // Build the hook ID: ipc:<extensionId>:<action>
-    const hookId = `ipc:${id}:${action}`;
+    // Build the handler ID: ipc:<extensionId>:<action>
+    const handlerId = `ipc:${id}:${action}`;
     const { registry: extensionRegistry } = req.app
       .get('container')
       .resolve('extension');
 
-    // Check if any handler is registered before executing
-    if (!extensionRegistry.hasHook(hookId)) {
+    // Check if a handler is registered before executing
+    if (!extensionRegistry.hasHandler(handlerId)) {
       return http.sendError(
         res,
         `No IPC handler registered for action "${action}" on extension "${id}"`,
@@ -389,18 +389,22 @@ export const handleIPC = async (req, res) => {
     }
 
     // IPC is authenticated by default. An extension must opt in explicitly
-    // with registerHook(id, fn, { public: true }) to accept guest callers.
-    const { public: isPublic = false } = extensionRegistry.getHookMeta(hookId);
+    // with registerHandler(id, fn, { public: true }) to accept guest callers.
+    const { public: isPublic = false } =
+      extensionRegistry.getHandlerMeta(handlerId);
     if (!isPublic && !(req.authenticated && req.user)) {
       return http.sendUnauthorized(res, 'Authentication required');
     }
 
-    // IPC is a request/response exchange, so use the single-answer executor.
-    // The collector executors swallow handler errors, which used to turn a
-    // crashed handler into "200 OK, data: null" here.
+    // IPC is a request/response exchange, so it resolves through the handler
+    // registry. The collector executors swallow handler errors, which used to
+    // turn a crashed handler into "200 OK, data: null" here.
     let outcome;
     try {
-      outcome = await extensionRegistry.invokeHook(hookId, data, { req, res });
+      outcome = await extensionRegistry.invokeHandler(handlerId, data, {
+        req,
+        res,
+      });
     } catch (handlerError) {
       // The handler itself failed. Honour an explicit status/code when the
       // extension threw a structured error; otherwise report a 502, because
@@ -430,7 +434,7 @@ export const handleIPC = async (req, res) => {
 
     // A handler may legitimately answer with nothing; that is still a success.
     // `handled: false` only happens if the handler was unregistered between
-    // the hasHook() check above and this call.
+    // the hasHandler() check above and this call.
     if (!outcome.handled) {
       return http.sendError(
         res,

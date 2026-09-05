@@ -22,9 +22,9 @@ function build({
     sendServerError: jest.fn(),
   };
   const registry = {
-    hasHook: jest.fn(() => hasHook),
-    getHookMeta: jest.fn(() => meta),
-    invokeHook: jest.fn(invoke),
+    hasHandler: jest.fn(() => hasHook),
+    getHandlerMeta: jest.fn(() => meta),
+    invokeHandler: jest.fn(invoke),
   };
   const container = {
     resolve: name => {
@@ -51,13 +51,13 @@ describe('handleIPC authorization', () => {
       res,
       'Authentication required',
     );
-    expect(registry.invokeHook).not.toHaveBeenCalled();
+    expect(registry.invokeHandler).not.toHaveBeenCalled();
   });
 
   it('allows authenticated callers for a private hook', async () => {
     const { req, res, http, registry } = build({ authenticated: true });
     await handleIPC(req, res);
-    expect(registry.invokeHook).toHaveBeenCalledWith(
+    expect(registry.invokeHandler).toHaveBeenCalledWith(
       'ipc:ext1:ping',
       { a: 1 },
       expect.objectContaining({ req }),
@@ -154,7 +154,7 @@ describe('handleIPC handler failures', () => {
     expect(http.sendSuccess).toHaveBeenCalledWith(res, 0);
   });
 
-  it('returns 404 when the handler vanished after the hasHook check', async () => {
+  it('returns 404 when the handler vanished after the hasHandler check', async () => {
     const { req, res, http } = build({
       authenticated: true,
       invoke: async () => ({ handled: false, value: undefined }),

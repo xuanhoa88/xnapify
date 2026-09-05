@@ -15,12 +15,14 @@ import { getTranslations } from '@shared/i18n/loader.js';
 import { addNamespace, removeNamespace } from '@shared/i18n/utils.js';
 import { LIFECYCLE_HOOKS } from '@shared/utils/lifecycle.js';
 
+import EventBus from './EventBus.js';
+import RouteTable from './RouteTable.js';
+import { createScopedRegistry } from './scopedRegistry.js';
+
 // Symbols — exported (used by subclass managers and tests)
 export const ACTIVE_EXTENSIONS = Symbol('__xnapify.ext.active__');
 export const EXTENSION_METADATA = Symbol('__xnapify.ext.metadata__');
-export const BUFFERED_ROUTES = Symbol('__xnapify.ext.pendingRoutes__');
-export const STORED_ADAPTERS = Symbol('__xnapify.ext.routeAdapters__');
-export const CONNECTED_ROUTERS = Symbol('__xnapify.ext.connectedRouters__');
+export const ROUTE_TABLE = Symbol('__xnapify.ext.routeTable__');
 export const SEQUENTIAL_SYNC = Symbol('__xnapify.ext.sequentialSync__');
 export const PENDING_LOADS = Symbol('__xnapify.ext.pendingLoads__');
 
@@ -57,22 +59,6 @@ export const ExtensionState = Object.freeze({
  * @property {Object} manifest - Full extension manifest
  */
 
-/**
- * Bind the given method names of `target` (skipping ones it lacks).
- * @param {Object} target
- * @param {string[]} names
- * @returns {Object}
- */
-function bindPassthrough(target, names) {
-  const bound = {};
-  for (const name of names) {
-    if (typeof target[name] === 'function') {
-      bound[name] = target[name].bind(target);
-    }
-  }
-  return bound;
-}
-
 export class BaseExtensionManager {
   // ---------------------------------------------------------------------------
   // 1. Constructor
@@ -89,10 +75,8 @@ export class BaseExtensionManager {
     this[FETCH] = null;
     this[ACTIVE_EXTENSIONS] = new Map(); // id -> extension instance
     this[EXTENSION_METADATA] = new Map(); // id -> metadata
-    this[EVENT_HANDLERS] = new Map(); // eventType -> Set of handlers
-    this[CONNECTED_ROUTERS] = { api: null, view: null };
-    this[STORED_ADAPTERS] = new Map(); // id -> { view?, api? }
-    this[BUFFERED_ROUTES] = []; // [{ id, adapter, type }]
+    this[EVENT_HANDLERS] = new EventBus('ExtensionManager');
+    this[ROUTE_TABLE] = new RouteTable();
     this[CONTEXTS] = { view: null, api: null };
     this[SYNC_PROMISE] = null;
     this[IS_REFRESHING] = false;
@@ -134,13 +118,15 @@ export class BaseExtensionManager {
    * @returns {boolean}
    */
   get hasViewRoutes() {
-    for (const adapters of this[STORED_ADAPTERS].values()) {
-      if (adapters.views) return true;
-    }
-    for (const entry of this[BUFFERED_ROUTES]) {
-      if (entry.type === 'views') return true;
-    }
-    return false;
+    return this[ROUTE_TABLE].has('views');
+  }
+
+  /**
+   * The extension route table (buffered + live adapters per router).
+   * @returns {RouteTable}
+   */
+  get routes() {
+    return this[ROUTE_TABLE];
   }
 
   /**
@@ -1133,60 +1119,7 @@ export class BaseExtensionManager {
    * @private
    */
   _scopedRegistry(extensionId) {
-    const real = this.registry;
-    return {
-      // Proxy registerSlot — inject extensionId for tracking
-      registerSlot(slotId, component, options = {}) {
-        return real.registerSlot(slotId, component, {
-          ...options,
-          extensionId,
-        });
-      },
-
-      // Proxy registerHook — inject extensionId for tracking.
-      // `options.public = true` marks an IPC action as callable by guests.
-      registerHook(hookId, callback, options = {}) {
-        return real.registerHook(hookId, callback, extensionId, options);
-      },
-
-      // Removal is limited to the extension's own registrations so one
-      // extension cannot silently disable another.
-      unregisterSlot(slotId, component) {
-        if (
-          typeof real.ownsSlot === 'function' &&
-          !real.ownsSlot(extensionId, slotId, component)
-        ) {
-          console.warn(
-            `[ExtensionRegistry] "${extensionId}" tried to unregister a slot it does not own: ${slotId}`,
-          );
-          return real;
-        }
-        return real.unregisterSlot(slotId, component);
-      },
-      unregisterHook(hookId, callback) {
-        if (
-          typeof real.ownsHook === 'function' &&
-          !real.ownsHook(extensionId, hookId, callback)
-        ) {
-          console.warn(
-            `[ExtensionRegistry] "${extensionId}" tried to unregister a hook it does not own: ${hookId}`,
-          );
-          return real;
-        }
-        return real.unregisterHook(hookId, callback);
-      },
-      ...bindPassthrough(real, [
-        'getSlotEntries',
-        'executeHook',
-        'executeHookParallel',
-        'invokeHook',
-        'hasHook',
-        'getHookMeta',
-        'subscribe',
-        'notify',
-        'createPipeline',
-      ]),
-    };
+    return createScopedRegistry(this.registry, extensionId);
   }
 
   // ---------------------------------------------------------------------------
@@ -1463,33 +1396,7 @@ export class BaseExtensionManager {
    * @param {Function} [injectFn] - Optional custom injection: (router, adapter, id) => void
    */
   _connectRouter(routerKey, router, injectFn) {
-    this[CONNECTED_ROUTERS][routerKey] = router;
-
-    // 1. Drain pending injections for this router key (buffer → store)
-    const remaining = [];
-    for (const entry of this[BUFFERED_ROUTES]) {
-      const entryKey = entry.type;
-      if (entryKey === routerKey) {
-        if (!this[STORED_ADAPTERS].has(entry.id)) {
-          this[STORED_ADAPTERS].set(entry.id, {});
-        }
-        this[STORED_ADAPTERS].get(entry.id)[routerKey] = entry.adapter;
-      } else {
-        remaining.push(entry);
-      }
-    }
-    this[BUFFERED_ROUTES].length = 0;
-    this[BUFFERED_ROUTES].push(...remaining);
-
-    // 2. Inject all stored adapters for this router key
-    if (router) {
-      const inject = injectFn || ((r, adapter) => r.add(adapter));
-      for (const [id, adapters] of this[STORED_ADAPTERS].entries()) {
-        if (adapters[routerKey]) {
-          inject(router, adapters[routerKey], id);
-        }
-      }
-    }
+    this[ROUTE_TABLE].connect(routerKey, router, injectFn);
   }
 
   /**
@@ -1506,37 +1413,17 @@ export class BaseExtensionManager {
    * @protected
    */
   async _removeRouteAdapters(id, removeFn) {
-    // 1. Purge buffered routes for this extension (prevents stale injection)
-    const remaining = this[BUFFERED_ROUTES].filter(entry => entry.id !== id);
-    this[BUFFERED_ROUTES].length = 0;
-    this[BUFFERED_ROUTES].push(...remaining);
-
-    // 2. Remove from connected routers
-    const adapters = this[STORED_ADAPTERS].get(id);
-    if (adapters) {
-      const remove = removeFn || ((router, adapter) => router.remove(adapter));
-      for (const routerKey of ['views', 'api']) {
-        try {
-          const router = this[CONNECTED_ROUTERS][routerKey];
-          if (router && adapters[routerKey]) {
-            await remove(router, adapters[routerKey], id);
-          }
-        } catch (error) {
-          console.error(
-            `[ExtensionManager] Failed to remove route adapters for ${this._formatDisplayName(id)}:`,
-            error,
-          );
-          await this.emit('extension:remove-route-adapters-error', {
-            id,
-            error,
-            phase: 'remove-route-adapters',
-          });
-        }
-      }
-    }
-
-    // 3. Clean up stored reference
-    this[STORED_ADAPTERS].delete(id);
+    await this[ROUTE_TABLE].remove(id, removeFn, async (error, routerKey) => {
+      console.error(
+        `[ExtensionManager] Failed to remove ${routerKey} route adapters for ${this._formatDisplayName(id)}:`,
+        error,
+      );
+      await this.emit('extension:remove-route-adapters-error', {
+        id,
+        error,
+        phase: 'remove-route-adapters',
+      });
+    });
 
     if (__DEV__) {
       console.log(
@@ -1684,75 +1571,32 @@ export class BaseExtensionManager {
   // ---------------------------------------------------------------------------
 
   /**
-   * Event emitter - emit an event
+   * Notify subscribers of a lifecycle event.
    * @param {string} eventType - Event type
    * @param {Object} data - Event data
-   * @returns {Promise<void>}
+   * @returns {Promise<void>} Resolves once every handler settled
    */
   async emit(eventType, data) {
-    const handlers = this[EVENT_HANDLERS].get(eventType);
-    if (!handlers || handlers.size === 0) {
-      return;
-    }
-
-    const handlerPromises = Array.from(handlers).map(handler =>
-      Promise.resolve()
-        .then(() => handler(data))
-        .catch(error => {
-          console.error(
-            `[ExtensionManager] Event handler error for "${eventType}":`,
-            error,
-          );
-          // Optionally re-throw or handle based on your error strategy
-        }),
-    );
-
-    await Promise.all(handlerPromises);
+    return this[EVENT_HANDLERS].emit(eventType, data);
   }
 
   /**
-   * Event emitter - subscribe to an event
+   * Subscribe to a lifecycle event.
    * @param {string} eventType - Event type
    * @param {Function} handler - Event handler
    * @returns {Function} Unsubscribe function
    */
   on(eventType, handler) {
-    if (typeof handler !== 'function') {
-      throw new TypeError('Handler must be a function');
-    }
-
-    if (!this[EVENT_HANDLERS].has(eventType)) {
-      this[EVENT_HANDLERS].set(eventType, new Set());
-    }
-
-    const handlers = this[EVENT_HANDLERS].get(eventType);
-    handlers.add(handler);
-
-    // Return unsubscribe function
-    return () => this.off(eventType, handler);
+    return this[EVENT_HANDLERS].on(eventType, handler);
   }
 
   /**
-   * Event emitter - unsubscribe from an event
+   * Unsubscribe from a lifecycle event.
    * @param {string} eventType - Event type
-   * @param {Function} handler - Event handler (optional - if omitted, removes all handlers)
+   * @param {Function} [handler] - Omit to remove all handlers for the type
    */
   off(eventType, handler) {
-    const handlers = this[EVENT_HANDLERS].get(eventType);
-    if (!handlers) {
-      return;
-    }
-
-    if (handler) {
-      handlers.delete(handler);
-      // Clean up empty event type
-      if (handlers.size === 0) {
-        this[EVENT_HANDLERS].delete(eventType);
-      }
-    } else {
-      // Remove all handlers for this event type
-      this[EVENT_HANDLERS].delete(eventType);
-    }
+    return this[EVENT_HANDLERS].off(eventType, handler);
   }
 
   // ---------------------------------------------------------------------------

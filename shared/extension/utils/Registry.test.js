@@ -388,3 +388,61 @@ describe('ExtensionRegistry', () => {
     });
   });
 });
+
+describe('ExtensionRegistry contract separation', () => {
+  let registry;
+
+  beforeEach(() => {
+    registry = new ExtensionRegistry();
+  });
+
+  it('refuses the public option on a collector hook', () => {
+    // `public` only ever meant "reachable by an unauthenticated IPC caller".
+    // Accepting it on a collector silently did nothing.
+    expect(() =>
+      registry.registerHook('h', () => 1, 'ext-a', { public: true }),
+    ).toThrow(/registerHandler/);
+  });
+
+  it('still accepts ordinary collector options', () => {
+    expect(() =>
+      registry.registerHook('h', () => 1, 'ext-a', { priority: 5 }),
+    ).not.toThrow();
+  });
+
+  it('keeps hooks and handlers in separate namespaces', () => {
+    registry.registerHook('shared.id', () => 'collector', 'ext-a');
+    registry.registerHandler('shared.id', () => 'answer', 'ext-a');
+
+    expect(registry.hasHook('shared.id')).toBe(true);
+    expect(registry.hasHandler('shared.id')).toBe(true);
+  });
+
+  it('clears both kinds when an extension is unregistered', async () => {
+    registry.register('ext-a', { name: 'A' });
+    registry.registerHook('h', () => 1, 'ext-a');
+    registry.registerHandler('ipc:ext-a:ping', () => 'pong', 'ext-a');
+
+    registry.unregister('ext-a');
+
+    expect(registry.hasHook('h')).toBe(false);
+    expect(registry.hasHandler('ipc:ext-a:ping')).toBe(false);
+  });
+
+  it('clear() empties handlers as well as hooks', () => {
+    registry.registerHook('h', () => 1, 'ext-a');
+    registry.registerHandler('ipc:ext-a:ping', () => 'pong', 'ext-a');
+
+    registry.clear();
+
+    expect(registry.hasHook('h')).toBe(false);
+    expect(registry.hasHandler('ipc:ext-a:ping')).toBe(false);
+  });
+
+  it('invokeHandler answers through the registry', async () => {
+    registry.registerHandler('ipc:ext-a:sum', (a, b) => a + b, 'ext-a');
+    await expect(
+      registry.invokeHandler('ipc:ext-a:sum', 2, 3),
+    ).resolves.toEqual({ handled: true, value: 5, extensionId: 'ext-a' });
+  });
+});

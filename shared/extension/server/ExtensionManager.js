@@ -17,9 +17,6 @@ import { getDataDir } from '@shared/utils/env.js';
 import {
   BaseExtensionManager,
   EXTENSION_METADATA,
-  BUFFERED_ROUTES,
-  STORED_ADAPTERS,
-  CONNECTED_ROUTERS,
   SEQUENTIAL_SYNC,
 } from '../utils/BaseExtensionManager.js';
 import {
@@ -335,9 +332,7 @@ class ServerExtensionManager extends BaseExtensionManager {
     this[EXTENSION_API_ENTRY_POINTS].clear();
     this[EXTENSION_CSS_ENTRY_POINTS].clear();
     this[EXTENSION_SCRIPT_ENTRY_POINTS].clear();
-    this[STORED_ADAPTERS].clear();
-    this[CONNECTED_ROUTERS] = { api: null, view: null };
-    this[BUFFERED_ROUTES].length = 0;
+    this.routes.reset();
   }
 
   // ---------------------------------------------------------------------------
@@ -817,7 +812,7 @@ class ServerExtensionManager extends BaseExtensionManager {
    */
   _injectRoutes(id, hookResult, type) {
     const routerKey = type === 'api' ? 'api' : 'views';
-    const router = this[CONNECTED_ROUTERS][routerKey];
+    const router = this.routes.routerFor(routerKey);
     let adapter = normalizeRouteAdapter(hookResult, type);
 
     // API handlers of module-type extensions run under the same capability
@@ -837,8 +832,8 @@ class ServerExtensionManager extends BaseExtensionManager {
     }
 
     if (!router) {
-      // Router not available yet — buffer with internal routerKey
-      this[BUFFERED_ROUTES].push({ id, adapter, type: routerKey });
+      // Router not available yet — hold it until the router connects
+      this.routes.buffer(id, adapter, routerKey);
       if (__DEV__) {
         console.log(
           `[ServerExtensionManager] Buffered ${type} route(s) for ${this._formatDisplayName(id)} (router not ready)`,
@@ -849,10 +844,7 @@ class ServerExtensionManager extends BaseExtensionManager {
 
     const added = router.add(adapter);
 
-    if (!this[STORED_ADAPTERS].has(id)) {
-      this[STORED_ADAPTERS].set(id, {});
-    }
-    this[STORED_ADAPTERS].get(id)[routerKey] = adapter;
+    this.routes.store(id, adapter, routerKey);
 
     if (__DEV__) {
       console.log(

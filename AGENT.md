@@ -147,7 +147,23 @@ The application uses an auto-discovery system for both API modules and page comp
 **Views** (`src/bootstrap/views.js`):
 
 - Automatically discovers views in `@apps/*/views/index.js`
-- Phases: `translations → providers → boot → routes`
+- Phases: `translations → providers → menus → boot → routes`
+- `menus({ store, i18n })` is where a module contributes its admin navigation.
+  Never register menu entries from a `_route.js`: the router would have to
+  evaluate every route module before it could draw the sidebar, which forces
+  every view into one bundle.
+- The `routes` hook returns `[context, { lazy: true }]`. The context uses
+  `mode: 'lazy'`, so each `_route.js` and `_layout.js` becomes its own chunk.
+  The router builds its tree from file paths and loads a view the first time
+  it is matched; the server preloads the whole tree at boot and emits the
+  matched view's chunks with the page.
+- The `translations` hook also returns a `mode: 'lazy'` context. Hand it to
+  the registry in `shared/i18n/resources.js` rather than loading it: the
+  browser then holds only the language it is showing, and pulls another one
+  when the user switches. Dictionaries are grouped into one chunk per locale
+  by the `locale.<code>` cache group, and the server names the chunk for the
+  language it just rendered. The server itself loads every locale at boot,
+  because it clones one i18next instance per request from a shared store.
 - Finds and mounts `_route.js` files using a defined hierarchy
 - Merges metadata and props via `getInitialProps`
 
@@ -202,10 +218,11 @@ The application uses an auto-discovery system for both API modules and page comp
 - `shared/config/env.js` validates `XNAPIFY_*` variables at boot: fatal in production, warnings elsewhere. Add new variables to its schema.
 - Migrations and seeds run under a cross-process schema lock (`withSchemaLock` in `shared/api/engines/db/migrator.js`): Postgres advisory lock, MySQL `GET_LOCK`, no-op on SQLite. Cluster workers and replicas can all boot at once without double-applying a migration.
 - Access logs are single-line JSON in production (`src/bootstrap/api/middlewares/logging.js`) and always carry `requestId`.
-- Extension IPC (`POST /api/extensions/:id/ipc`) requires an authenticated user unless the handler was registered with `registry.registerHook(id, fn, { public: true })`. `public` is an AND across every handler on a hook id: if any registration did not opt in, the id stays private, so one extension can never expose another's handler to guests. Extensions always receive the **scoped** registry, so `registerHook(hookId, fn, options)` has no `extensionId` argument.
-- Hooks have two contracts, and the executor you pick decides the error behaviour:
-  - **Collectors** — `executeHook` / `executeHookParallel` run every handler, log failures and drop them, then return the surviving results. One broken extension must not break a merged UI (table columns, settings tabs).
-  - **Single answer** — `invokeHook` runs only the highest-priority handler, returns `{ handled, value, extensionId }`, and lets the handler's error propagate. Use it for IPC and anything else where the caller needs the answer. `handled: false` means no handler was registered; a handler returning `undefined` is still `handled: true`.
+- Extension IPC (`POST /api/extensions/:id/ipc`) requires an authenticated user unless the handler was registered with `registry.registerHandler(id, fn, { public: true })`. Handler ids have a single owner, so no other extension can register on the id or widen its visibility. Extensions always receive the **scoped** registry, so registration calls have no `extensionId` argument.
+- Extension points come in two kinds, chosen at **registration**, not at call time:
+  - **Collectors** (`registerHook` / `executeHook` / `executeHookParallel`, backed by `Hook`) — many extensions contribute, every callback runs, failures are logged and dropped, and the caller merges what survived. One broken extension must not break a merged UI such as table columns or settings tabs. Removal is by callback reference.
+  - **Handlers** (`registerHandler` / `invokeHandler`, backed by `Handler`) — one extension owns the id. `invokeHandler` returns `{ handled, value, extensionId }` and lets the handler's error propagate. A competing registration throws `DuplicateHandlerError` (409) instead of being resolved silently by priority. Removal takes only the id. `handled: false` means nothing was registered; a handler returning `undefined` is still `handled: true`.
+  - `registerHook` throws if given `{ public }`, which only ever meant "reachable by an unauthenticated IPC caller" and silently did nothing on a collector.
 - The IPC gateway maps a thrown handler error onto a real status: an error carrying a valid `status` in the 400-599 range is passed through with its own message, anything else becomes `502` with a generic message (the original is logged, never sent).
 - Webhook signatures are verified against `req.rawBody` (captured by `express.json({ verify })`), never against re-serialised JSON.
 
@@ -222,7 +239,7 @@ The application features a robust extension system (`shared/extension`) for exte
 
 **Core Concepts:**
 
-- **Registry:** Singleton managing all extensions, slots, and hooks. Extensions get a _scoped_ registry: registrations are tagged with their id, and `unregisterSlot`/`unregisterHook` only work on their own registrations.
+- **Registry:** Singleton managing all extensions, slots, hooks and handlers. Extensions get a _scoped_ registry (`shared/extension/utils/scopedRegistry.js`): registrations are tagged with their id, and `unregisterSlot`/`unregisterHook`/`unregisterHandler` only work on their own registrations. Deactivating an extension clears its hooks and handlers even if it registered no slots.
 - **Slots:** UI extension points where extensions can render components.
 - **Hooks:** Logic extension points for modifying data or schema.
 - **Manifest contract (`package.json` → `xnapify`):** required. `version` is a semver range for the host (`^2.0.0`), checked at install, activation, and load; `capabilities` lists the container bindings the extension may `resolve()` (`db`, `models`, `hook`, `users:*`, or `*`). Undeclared bindings throw `CapabilityDeniedError`. Missing `capabilities` grants only `hook`, `cache`, `http`, `template`, `i18n`. `jwt`, `extension`, and `env` are never granted. Route handlers of module-type extensions are scoped too: while the final handler of a route runs, `req.app.get('container')` (and `req.container`) return the scoped container; middlewares ahead of it keep the full one.

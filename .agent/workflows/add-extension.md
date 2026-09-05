@@ -226,8 +226,10 @@ export default {
     );
 
     // Register IPC handler — the scoped registry tags it with this
-    // extension's id automatically (no extensionId argument)
-    registry.registerHook(
+    // extension's id automatically (no extensionId argument).
+    // registerHandler, not registerHook: an IPC action has one owner, its
+    // errors reach the caller, and a clashing id fails instead of racing.
+    registry.registerHandler(
       `ipc:${__EXTENSION_ID__}:hello`,
       this[HANDLERS].ipcHello,
     );

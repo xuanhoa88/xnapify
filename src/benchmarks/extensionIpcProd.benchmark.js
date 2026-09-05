@@ -41,14 +41,14 @@ function createApp(registry) {
     const { action, data } = req.body || {};
     if (!action) return res.status(400).json({ error: 'missing action' });
 
-    const hookId = `ipc:${id}:${action}`;
-    if (!registry.hasHook(hookId))
+    const handlerId = `ipc:${id}:${action}`;
+    if (!registry.hasHandler(handlerId))
       return res.status(404).json({ error: 'no-handler' });
 
     try {
       // Mirrors the real gateway: IPC is a single-answer call, and a failing
       // handler must surface as an error rather than a successful empty body.
-      const { handled, value } = await registry.invokeHook(hookId, data, {
+      const { handled, value } = await registry.invokeHandler(handlerId, data, {
         reqId: req.headers['x-req-id'],
       });
       if (!handled) return res.status(404).json({ error: 'no-handler' });
@@ -69,11 +69,13 @@ describe('extensionIpcProd', () => {
   beforeAll(done => {
     registry = new ExtensionRegistryClass();
 
-    // Register handlers for EXTENSION_ID:action="echo"
+    // One handler per action, which is what IPC actually looks like: an
+    // action id has a single owner. The loop sizes the registry so lookup
+    // cost is measured against a realistic number of registered actions.
     for (let i = 0; i < HANDLERS; i++) {
       // simulate lightweight async handler; optionally include I/O latency
-      registry.registerHook(
-        `ipc:${EXTENSION_ID}:echo`,
+      registry.registerHandler(
+        `ipc:${EXTENSION_ID}:echo-${i}`,
         async payload => {
           if (BENCH_IO_MS > 0) {
             await new Promise(r => setTimeout(r, BENCH_IO_MS));
@@ -103,7 +105,9 @@ describe('extensionIpcProd', () => {
 
   test('HTTP IPC stress test', async () => {
     const payload = makePayload(PAYLOAD_BYTES);
-    const actionBody = { action: 'echo', data: payload };
+    // Spread requests across the registered actions so the benchmark is not
+    // dominated by one hot map entry.
+    const actionFor = n => `echo-${n % HANDLERS}`;
 
     const batches = Math.ceil(REQUESTS / CONCURRENCY);
     const start = performance.now();
@@ -111,12 +115,15 @@ describe('extensionIpcProd', () => {
 
     for (let b = 0; b < batches; b++) {
       const batchSize = Math.min(CONCURRENCY, REQUESTS - b * CONCURRENCY);
-      const promises = new Array(batchSize).fill(0).map(async () => {
+      const promises = new Array(batchSize).fill(0).map(async (_unused, n) => {
         const t0 = performance.now();
         const r = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(actionBody),
+          body: JSON.stringify({
+            action: actionFor(b * CONCURRENCY + n),
+            data: payload,
+          }),
         });
         await r.json();
         const dt = performance.now() - t0;
