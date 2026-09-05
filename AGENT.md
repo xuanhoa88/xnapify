@@ -202,7 +202,11 @@ The application uses an auto-discovery system for both API modules and page comp
 - `shared/config/env.js` validates `XNAPIFY_*` variables at boot: fatal in production, warnings elsewhere. Add new variables to its schema.
 - Migrations and seeds run under a cross-process schema lock (`withSchemaLock` in `shared/api/engines/db/migrator.js`): Postgres advisory lock, MySQL `GET_LOCK`, no-op on SQLite. Cluster workers and replicas can all boot at once without double-applying a migration.
 - Access logs are single-line JSON in production (`src/bootstrap/api/middlewares/logging.js`) and always carry `requestId`.
-- Extension IPC (`POST /api/extensions/:id/ipc`) requires an authenticated user unless the handler was registered with `registry.registerHook(id, fn, { public: true })`. Extensions always receive the **scoped** registry, so `registerHook(hookId, fn, options)` has no `extensionId` argument.
+- Extension IPC (`POST /api/extensions/:id/ipc`) requires an authenticated user unless the handler was registered with `registry.registerHook(id, fn, { public: true })`. `public` is an AND across every handler on a hook id: if any registration did not opt in, the id stays private, so one extension can never expose another's handler to guests. Extensions always receive the **scoped** registry, so `registerHook(hookId, fn, options)` has no `extensionId` argument.
+- Hooks have two contracts, and the executor you pick decides the error behaviour:
+  - **Collectors** — `executeHook` / `executeHookParallel` run every handler, log failures and drop them, then return the surviving results. One broken extension must not break a merged UI (table columns, settings tabs).
+  - **Single answer** — `invokeHook` runs only the highest-priority handler, returns `{ handled, value, extensionId }`, and lets the handler's error propagate. Use it for IPC and anything else where the caller needs the answer. `handled: false` means no handler was registered; a handler returning `undefined` is still `handled: true`.
+- The IPC gateway maps a thrown handler error onto a real status: an error carrying a valid `status` in the 400-599 range is passed through with its own message, anything else becomes `502` with a generic message (the original is logged, never sent).
 - Webhook signatures are verified against `req.rawBody` (captured by `express.json({ verify })`), never against re-serialised JSON.
 
 ### 6. WebSocket Integration

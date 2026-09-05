@@ -486,6 +486,21 @@ class ExtensionRegistry {
     return this[HOOKS].executeParallel(hookId, ...args);
   }
 
+  /**
+   * Call a hook as a request/response exchange (single answer expected).
+   *
+   * Unlike `executeHook*`, handler errors are NOT swallowed — they propagate
+   * so the caller can turn them into a real failure response. Use this for
+   * IPC and anything else where the caller needs the answer.
+   *
+   * @param {string} hookId - Hook identifier
+   * @param {...any} args - Arguments to pass to the handler
+   * @returns {Promise<{handled: boolean, value: any, extensionId: string|undefined}>}
+   */
+  async invokeHook(hookId, ...args) {
+    return this[HOOKS].invoke(hookId, ...args);
+  }
+
   // =========================================================================
   // IPC & Middleware Utility
   // =========================================================================

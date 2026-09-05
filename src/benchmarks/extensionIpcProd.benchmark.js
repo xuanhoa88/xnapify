@@ -46,12 +46,15 @@ function createApp(registry) {
       return res.status(404).json({ error: 'no-handler' });
 
     try {
-      const results = await registry.executeHook(hookId, data, {
+      // Mirrors the real gateway: IPC is a single-answer call, and a failing
+      // handler must surface as an error rather than a successful empty body.
+      const { handled, value } = await registry.invokeHook(hookId, data, {
         reqId: req.headers['x-req-id'],
       });
-      return res.json({ ok: true, results: results.slice(0, 5) }); // limit payload for response
+      if (!handled) return res.status(404).json({ error: 'no-handler' });
+      return res.json({ ok: true, result: value });
     } catch (err) {
-      return res.status(500).json({ error: String(err) });
+      return res.status(502).json({ error: String(err) });
     }
   });
 

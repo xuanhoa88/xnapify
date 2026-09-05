@@ -9,16 +9,22 @@ class Hook {
   constructor() {
     this.hooks = new Map(); // Map<hookId, Array<{ callback, priority }>>
     this.registrations = new Map(); // Map<extensionId, Set<{ hookId, callback }>>
-    this.meta = new Map(); // Map<hookId, { public: boolean }>
   }
 
   /**
-   * Read metadata declared at registration time (e.g. `{ public: true }`).
+   * Read metadata derived from the current registrations for `hookId`.
+   *
+   * `public` is deliberately an AND across every registered handler: one
+   * extension opting in must never expose another extension's handler on the
+   * same id to unauthenticated callers.
+   *
    * @param {string} hookId - Hook identifier
-   * @returns {Object} Metadata object (empty when none declared)
+   * @returns {Object} `{ public: boolean }` (empty when nothing is registered)
    */
   getMeta(hookId) {
-    return this.meta.get(hookId) || {};
+    const entries = this.hooks.get(hookId);
+    if (!entries || entries.length === 0) return {};
+    return { public: entries.every(entry => entry.public === true) };
   }
 
   /**
@@ -41,9 +47,6 @@ class Hook {
     if (!this.hooks.has(hookId)) {
       this.hooks.set(hookId, []);
     }
-    if (isPublic) {
-      this.meta.set(hookId, { ...this.getMeta(hookId), public: true });
-    }
 
     const entries = this.hooks.get(hookId);
 
@@ -58,7 +61,7 @@ class Hook {
     }
 
     // Insert in priority order (stable: append at end of same-priority group)
-    const entry = { callback, priority };
+    const entry = { callback, priority, public: isPublic, extensionId };
     const insertIdx = entries.findIndex(e => e.priority > priority);
     if (insertIdx === -1) {
       entries.push(entry);
@@ -91,7 +94,6 @@ class Hook {
       }
       if (entries.length === 0) {
         this.hooks.delete(hookId);
-        this.meta.delete(hookId);
       }
     }
     // Drop the ownership record so owns() stays accurate
@@ -180,15 +182,56 @@ class Hook {
     const entries = this.hooks.get(hookId);
     if (!entries) return [];
 
-    const promises = entries.map(({ callback }) =>
-      Promise.resolve(callback(...args)).catch(error => {
+    // `callback` is invoked inside an async function so a synchronous throw
+    // rejects like an async one. Wrapping with Promise.resolve() would let a
+    // sync throw escape the catch and reject the whole batch.
+    const settle = async ({ callback }) => {
+      try {
+        return await callback(...args);
+      } catch (error) {
         console.error(`[HookRegistry] Hook "${hookId}" parallel error:`, error);
         return undefined;
-      }),
-    );
+      }
+    };
 
-    const results = await Promise.all(promises);
+    const results = await Promise.all(entries.map(settle));
     return results.filter(r => r !== undefined);
+  }
+
+  /**
+   * Call a hook as a request/response exchange (single answer expected).
+   *
+   * `execute` and `executeParallel` are collectors: they run every handler,
+   * log failures and drop them, because one broken extension must not break a
+   * merged UI. That is the wrong contract for IPC, where the caller needs the
+   * answer and needs to know when there wasn't one. This executor therefore
+   * runs only the highest-priority handler and lets its error propagate so the
+   * caller can map it onto a real response.
+   *
+   * @param {string} hookId - Hook identifier
+   * @param {...any} args - Arguments to pass to the handler
+   * @returns {Promise<{handled: boolean, value: any, extensionId: string|undefined}>}
+   *   `handled` is false only when no handler is registered. A handler that
+   *   returns undefined is still `handled: true`.
+   * @throws {*} Whatever the handler throws, unchanged
+   */
+  async invoke(hookId, ...args) {
+    const entries = this.hooks.get(hookId);
+    if (!entries || entries.length === 0) {
+      return { handled: false, value: undefined, extensionId: undefined };
+    }
+
+    if (entries.length > 1) {
+      console.warn(
+        `[HookRegistry] Hook "${hookId}" has ${entries.length} handlers but was ` +
+          'invoked as a single-answer call; using the highest-priority one ' +
+          `(from "${entries[0].extensionId || 'unknown'}").`,
+      );
+    }
+
+    const [{ callback, extensionId }] = entries;
+    const value = await callback(...args);
+    return { handled: true, value, extensionId };
   }
 
   /**

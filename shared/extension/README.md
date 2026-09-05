@@ -9,14 +9,43 @@ Extensions encapsulate domain-specific logic and UI.
 **Backend Extensibility:**
 
 ```javascript
-// Expose a hook
-await registry.executeHook('users.created', { userId: 123 });
+// Collector: run every handler, keep the results that succeeded.
+// A handler that throws is logged and dropped, so one bad extension
+// cannot break the caller.
+const results = await registry.executeHook('users.created', { userId: 123 });
 
 // Register to a hook
 registry.registerHook('users.created', async data => {
   console.log('User created:', data.userId);
 });
 ```
+
+**Asking one handler for an answer (IPC and similar):**
+
+```javascript
+// Single answer: only the highest-priority handler runs, and its error
+// reaches you instead of being swallowed.
+const { handled, value } = await registry.invokeHook(
+  'ipc:<id>:ping',
+  data,
+  ctx,
+);
+if (!handled) {
+  // nothing registered for this id
+}
+```
+
+Pick the executor by contract, not by taste:
+
+| Need                                     | Use                                   | On handler error   |
+| ---------------------------------------- | ------------------------------------- | ------------------ |
+| Merge contributions from every extension | `executeHook` / `executeHookParallel` | Logged and dropped |
+| Get one answer back to a caller          | `invokeHook`                          | Propagated         |
+
+To fail a call deliberately from an IPC handler, throw an error carrying a
+`status` (400-599) and optional `code`. The gateway forwards that status and
+message. Any other throw becomes a `502` with a generic message, and the
+original is logged rather than returned to the caller.
 
 **Frontend Extensibility (UI Slots):**
 
@@ -91,6 +120,8 @@ export default {
     // Register hooks, slots, IPC handlers.
     // IPC handlers are authenticated by default; opt in to guests with:
     registry.registerHook('ipc:<id>:ping', handler, { public: true });
+    // `public` is an AND over every handler on that id: if another
+    // registration did not opt in, the id stays authenticated.
   },
   async shutdown({ registry }) {
     // Automatic cleanup happens via the Registry,

@@ -97,6 +97,9 @@ Extensions follow a well-defined phase-sequential lifecycle. Each phase runs for
    To allow the frontend to communicate securely with the backend, use IPC pipelines.
    - Backend: `registry.registerHook('ipc:${__EXTENSION_ID__}:action', registry.createPipeline(...middlewares, handler))` (add `{ public: true }` as the third argument to allow unauthenticated callers)
    - Frontend: `context.fetch('/api/extensions/${__EXTENSION_ID__}/ipc', { method: 'POST', body: { action, data } })`
+   - Register **one** handler per action. The gateway is a single-answer call: it runs the highest-priority handler, returns its value, and warns when several are registered.
+   - To fail a call, throw an error with a `status` (400-599) and optional `code`; that status and message are returned. Any other throw is logged and answered with a generic `502`, never a successful empty body.
+   - `{ public: true }` only takes effect if **every** handler on that hook id opted in, so one extension cannot open another's handler to guests.
 
 5. **Node-RED Nodes (`node-red/nodes/`):**
    Extensions can provide custom Node-RED palette nodes that are **hot-loaded without restarting** the runtime.

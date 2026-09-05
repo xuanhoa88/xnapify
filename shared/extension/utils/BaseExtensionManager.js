@@ -1179,6 +1179,7 @@ export class BaseExtensionManager {
         'getSlotEntries',
         'executeHook',
         'executeHookParallel',
+        'invokeHook',
         'hasHook',
         'getHookMeta',
         'subscribe',

@@ -9,7 +9,12 @@ import { handleIPC } from './extension.controller.js';
 
 jest.mock('../services/extension.service.js', () => ({}));
 
-function build({ authenticated = false, meta = {}, hasHook = true } = {}) {
+function build({
+  authenticated = false,
+  meta = {},
+  hasHook = true,
+  invoke = async () => ({ handled: true, value: 'pong', extensionId: 'ext1' }),
+} = {}) {
   const http = {
     sendError: jest.fn(),
     sendUnauthorized: jest.fn(),
@@ -19,7 +24,7 @@ function build({ authenticated = false, meta = {}, hasHook = true } = {}) {
   const registry = {
     hasHook: jest.fn(() => hasHook),
     getHookMeta: jest.fn(() => meta),
-    executeHookParallel: jest.fn(async () => ['pong']),
+    invokeHook: jest.fn(invoke),
   };
   const container = {
     resolve: name => {
@@ -46,13 +51,13 @@ describe('handleIPC authorization', () => {
       res,
       'Authentication required',
     );
-    expect(registry.executeHookParallel).not.toHaveBeenCalled();
+    expect(registry.invokeHook).not.toHaveBeenCalled();
   });
 
   it('allows authenticated callers for a private hook', async () => {
     const { req, res, http, registry } = build({ authenticated: true });
     await handleIPC(req, res);
-    expect(registry.executeHookParallel).toHaveBeenCalledWith(
+    expect(registry.invokeHook).toHaveBeenCalledWith(
       'ipc:ext1:ping',
       { a: 1 },
       expect.objectContaining({ req }),
@@ -76,5 +81,89 @@ describe('handleIPC authorization', () => {
       404,
     );
     expect(http.sendUnauthorized).not.toHaveBeenCalled();
+  });
+});
+
+describe('handleIPC handler failures', () => {
+  it('reports 502 when the handler throws an unstructured error', async () => {
+    const { req, res, http } = build({
+      authenticated: true,
+      invoke: async () => {
+        throw new Error('database socket closed at 10.0.0.4');
+      },
+    });
+    await handleIPC(req, res);
+
+    expect(http.sendSuccess).not.toHaveBeenCalled();
+    const [, message, status] = http.sendError.mock.calls[0];
+    expect(status).toBe(502);
+    // The internal detail must not reach the client
+    expect(message).not.toContain('10.0.0.4');
+    expect(message).toContain('ping');
+  });
+
+  it('honours a status the handler declared deliberately', async () => {
+    const { req, res, http } = build({
+      authenticated: true,
+      invoke: async () => {
+        const error = new Error('Quota exceeded for this workspace');
+        error.status = 429;
+        error.code = 'E_QUOTA';
+        throw error;
+      },
+    });
+    await handleIPC(req, res);
+
+    const [, message, status, , meta] = http.sendError.mock.calls[0];
+    expect(status).toBe(429);
+    expect(message).toBe('Quota exceeded for this workspace');
+    expect(meta).toEqual(
+      expect.objectContaining({ action: 'ping', code: 'E_QUOTA' }),
+    );
+  });
+
+  it('ignores a nonsensical status from the handler', async () => {
+    const { req, res, http } = build({
+      authenticated: true,
+      invoke: async () => {
+        const error = new Error('nope');
+        error.status = 200;
+        throw error;
+      },
+    });
+    await handleIPC(req, res);
+    expect(http.sendError.mock.calls[0][2]).toBe(502);
+  });
+
+  it('treats an undefined answer as success, not as a failure', async () => {
+    const { req, res, http } = build({
+      authenticated: true,
+      invoke: async () => ({ handled: true, value: undefined }),
+    });
+    await handleIPC(req, res);
+    expect(http.sendSuccess).toHaveBeenCalledWith(res, null);
+    expect(http.sendError).not.toHaveBeenCalled();
+  });
+
+  it('preserves a falsy but real answer', async () => {
+    const { req, res, http } = build({
+      authenticated: true,
+      invoke: async () => ({ handled: true, value: 0 }),
+    });
+    await handleIPC(req, res);
+    expect(http.sendSuccess).toHaveBeenCalledWith(res, 0);
+  });
+
+  it('returns 404 when the handler vanished after the hasHook check', async () => {
+    const { req, res, http } = build({
+      authenticated: true,
+      invoke: async () => ({ handled: false, value: undefined }),
+    });
+    await handleIPC(req, res);
+    expect(http.sendError).toHaveBeenCalledWith(
+      res,
+      expect.stringContaining('No IPC handler'),
+      404,
+    );
   });
 });

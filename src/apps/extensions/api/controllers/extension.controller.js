@@ -395,14 +395,54 @@ export const handleIPC = async (req, res) => {
       return http.sendUnauthorized(res, 'Authentication required');
     }
 
-    // Execute the IPC hook (in parallel for maximum throughput)
-    const results = await extensionRegistry.executeHookParallel(hookId, data, {
-      req,
-      res,
-    });
+    // IPC is a request/response exchange, so use the single-answer executor.
+    // The collector executors swallow handler errors, which used to turn a
+    // crashed handler into "200 OK, data: null" here.
+    let outcome;
+    try {
+      outcome = await extensionRegistry.invokeHook(hookId, data, { req, res });
+    } catch (handlerError) {
+      // The handler itself failed. Honour an explicit status/code when the
+      // extension threw a structured error; otherwise report a 502, because
+      // the gateway is fine and the extension behind it is not.
+      const declared =
+        Number.isInteger(handlerError?.status) &&
+        handlerError.status >= 400 &&
+        handlerError.status <= 599;
+      // Only surface the handler's own message when it deliberately shaped the
+      // error for a client. An unstructured throw may carry internal detail,
+      // so it becomes a generic 502 and is logged by sendError instead.
+      const message = declared
+        ? handlerError.message
+        : `IPC handler for action "${action}" on extension "${id}" failed`;
+      return http.sendError(
+        res,
+        message,
+        declared ? handlerError.status : 502,
+        handlerError,
+        {
+          extensionId: id,
+          action,
+          code: handlerError?.code,
+        },
+      );
+    }
 
-    // Return the first handler's result (single handler per action is expected)
-    return http.sendSuccess(res, results[0] || null);
+    // A handler may legitimately answer with nothing; that is still a success.
+    // `handled: false` only happens if the handler was unregistered between
+    // the hasHook() check above and this call.
+    if (!outcome.handled) {
+      return http.sendError(
+        res,
+        `No IPC handler registered for action "${action}" on extension "${id}"`,
+        404,
+      );
+    }
+
+    return http.sendSuccess(
+      res,
+      outcome.value === undefined ? null : outcome.value,
+    );
   } catch (error) {
     return http.sendServerError(res, 'Extension IPC failed', error);
   }
