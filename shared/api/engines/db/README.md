@@ -12,6 +12,21 @@ const { models } = container.resolve('db');
 const users = await models.User.findAll();
 ```
 
+## Driver resolution
+
+Dialect drivers (`sqlite3`, `pg` + `pg-hstore`, `mysql2`) are not in `package.json`. `tools/npm/preboot.js` installs the one the current `XNAPIFY_DB_URL` needs into an isolated sandbox:
+
+```text
+.xnapify/sequelize-drivers/<dialect>/node_modules/<package>
+```
+
+Nothing is ever linked into the project `node_modules`. npm prunes entries it does not own from `node_modules` on every reify (`npm install <pkg>`, `npm ci`, `npm update`), so a link there would silently vanish and the next boot would fail with "Please install pg package manually". Instead, `createConnection()`:
+
+1. calls `registerDriverPaths()`, which appends every existing sandbox `node_modules` dir to `NODE_PATH` and refreshes `Module.globalPaths`, so Sequelize's own `require('pg-hstore')` resolves;
+2. passes `dialectModulePath` pointing at the sandboxed driver, unless the caller supplied `dialectModule` or `dialectModulePath`.
+
+Jest exposes the SQLite sandbox through `modulePaths` in `tools/jest/config.js`. The helpers are exported from this engine (`detectDialect`, `getDriverModulePath`, `getDriverModulesDir`, `registerDriverPaths`).
+
 ## API
 
 ### `createConnection(url?, options?)`

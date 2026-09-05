@@ -12,10 +12,12 @@ const require = createRequire(import.meta.url);
 
 import {
   ACTIVE_EXTENSIONS,
+  BUFFERED_ROUTES,
   EXTENSION_METADATA,
+  STORED_ADAPTERS,
 } from '../utils/BaseExtensionManager.js';
 
-import serverManager from './ExtensionManager.js';
+import serverManager, { scopeRouteModule } from './ExtensionManager.js';
 
 // Mock Registry
 jest.mock('./Registry', () => ({
@@ -377,7 +379,12 @@ describe('ServerExtensionManager', () => {
       serverManager._injectRoutes('test-ext', mockAdapter, 'api');
       serverManager.connectApiRouter(mockApiRouter);
 
-      expect(mockApiRouter.add).toHaveBeenCalledWith(mockAdapter);
+      expect(mockApiRouter.add).toHaveBeenCalledWith(
+        expect.objectContaining({
+          files: expect.any(Function),
+          load: expect.any(Function),
+        }),
+      );
     });
 
     it('re-injects stored adapters on subsequent connectViewRouter (SSR per-request)', () => {
@@ -410,7 +417,12 @@ describe('ServerExtensionManager', () => {
 
       serverManager.connectApiRouter(mockApiRouter);
 
-      expect(mockApiRouter.add).toHaveBeenCalledWith(apiAdapter);
+      expect(mockApiRouter.add).toHaveBeenCalledWith(
+        expect.objectContaining({
+          files: expect.any(Function),
+          load: expect.any(Function),
+        }),
+      );
     });
 
     it('handles null viewRouter without crash', () => {
@@ -424,5 +436,219 @@ describe('ServerExtensionManager', () => {
       serverManager.connectViewRouter(mockViewRouter);
       expect(mockViewRouter.add).toHaveBeenCalledWith(mockAdapter);
     });
+  });
+});
+
+describe('ServerExtensionManager — contract & isolation', () => {
+  beforeEach(() => {
+    serverManager[ACTIVE_EXTENSIONS].clear();
+    serverManager[EXTENSION_METADATA].clear();
+    jest.spyOn(console, 'log').mockImplementation(() => {});
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('refuses to load a manifest written for another host version', () => {
+    expect(() =>
+      // eslint-disable-next-line no-underscore-dangle
+      serverManager._assertLoadable('ext', {
+        name: 'ext',
+        xnapify: { version: '^99.0.0' },
+      }),
+    ).toThrow(expect.objectContaining({ name: 'IncompatibleExtensionError' }));
+
+    expect(() =>
+      // eslint-disable-next-line no-underscore-dangle
+      serverManager._assertLoadable('ext', { name: 'ext' }),
+    ).toThrow(expect.objectContaining({ code: 'MISSING_HOST_RANGE' }));
+
+    expect(() =>
+      // eslint-disable-next-line no-underscore-dangle
+      serverManager._assertLoadable('ext', {
+        name: 'ext',
+        xnapify: { version: '>=0.0.1' },
+      }),
+    ).not.toThrow();
+  });
+
+  it('hands lifecycle hooks a container limited to declared capabilities', async () => {
+    const install = jest.fn();
+    jest
+
+      .spyOn(serverManager, '_requireApiModule')
+      .mockResolvedValue({ install });
+    serverManager.apiContainer = {
+      has: () => true,
+      resolve: name => ({ name }),
+      getBindingNames: () => ['db', 'hook', 'jwt', 'worker'],
+    };
+
+    await serverManager.installExtension('ext', {
+      name: 'ext',
+      id: 'ext',
+      main: 'api.js',
+      xnapify: { version: '>=0.0.1', capabilities: ['hook', 'jwt'] },
+    });
+
+    const { container, registry } = install.mock.calls[0][0];
+    expect(container.resolve('hook')).toEqual({ name: 'hook' });
+    expect(() => container.resolve('db')).toThrow(
+      expect.objectContaining({ name: 'CapabilityDeniedError' }),
+    );
+    // Reserved bindings are never granted, even when declared
+    expect(() => container.resolve('jwt')).toThrow(
+      expect.objectContaining({ name: 'CapabilityDeniedError' }),
+    );
+    expect(container.bind).toBeUndefined();
+    expect(typeof registry.registerHook).toBe('function');
+  });
+
+  it('keeps view activation for the lifetime of the extension', async () => {
+    const def = { id: 'ext', shutdown: jest.fn() };
+    serverManager[ACTIVE_EXTENSIONS].set('ext', def);
+    serverManager.registry.getDefinitions = jest
+      .fn()
+      .mockReturnValue(new Set([def]));
+
+    await serverManager.deactivateViewNamespace('profile');
+
+    expect(def.shutdown).not.toHaveBeenCalled();
+    expect(serverManager[ACTIVE_EXTENSIONS].has('ext')).toBe(true);
+  });
+
+  it('checks dependency ranges with semver', () => {
+    // eslint-disable-next-line no-underscore-dangle
+    expect(serverManager._satisfiesRange('1.4.0', '^1.0.0')).toBe(true);
+    // eslint-disable-next-line no-underscore-dangle
+    expect(serverManager._satisfiesRange('2.0.0', '^1.0.0')).toBe(false);
+  });
+});
+
+describe('scopeRouteModule', () => {
+  function makeReq(container) {
+    const app = {
+      settings: { container },
+      get(name) {
+        return this.settings[name];
+      },
+    };
+    return { app, method: 'POST' };
+  }
+
+  const scoped = { resolve: name => `scoped:${name}` };
+  const full = { resolve: name => `full:${name}` };
+
+  it('scopes only the final handler of a method export', async () => {
+    const seen = {};
+    const middleware = (req, _res, next) => {
+      seen.middleware = req.app.get('container');
+      next();
+    };
+    const handler = async req => {
+      seen.handler = req.app.get('container');
+      seen.container = req.container;
+      return 'done';
+    };
+    const mod = scopeRouteModule(
+      { post: [middleware, handler], useRateLimit: false },
+      () => scoped,
+    );
+
+    expect(mod.useRateLimit).toBe(false);
+    expect(mod.post).toHaveLength(2);
+
+    const req = makeReq(full);
+    mod.post[0](req, {}, () => {});
+    expect(seen.middleware).toBe(full);
+
+    const result = await mod.post[1](req, {}, () => {});
+    expect(result).toBe('done');
+    expect(seen.handler).toBe(scoped);
+    expect(seen.container).toBe(scoped);
+    // The original app is restored once the handler settles
+    expect(req.app.get('container')).toBe(full);
+  });
+
+  it('scopes bare function exports and default exports', () => {
+    const mod = scopeRouteModule(
+      {
+        get: req => req.app.get('container'),
+        default: req => req.app.get('container'),
+      },
+      () => scoped,
+    );
+    expect(mod.get(makeReq(full), {}, () => {})).toBe(scoped);
+    expect(mod.default(makeReq(full), {}, () => {})).toBe(scoped);
+
+    const fn = scopeRouteModule(
+      req => req.app.get('container'),
+      () => scoped,
+    );
+    expect(fn(makeReq(full), {}, () => {})).toBe(scoped);
+  });
+
+  it('restores req.app when the handler throws', () => {
+    const mod = scopeRouteModule(
+      {
+        get: () => {
+          throw new Error('boom');
+        },
+      },
+      () => scoped,
+    );
+    const req = makeReq(full);
+    expect(() => mod.get(req, {}, () => {})).toThrow('boom');
+    expect(req.app.get('container')).toBe(full);
+  });
+
+  it('keeps non-container app settings reachable through the proxy', () => {
+    const mod = scopeRouteModule(
+      { get: req => req.app.get('env') },
+      () => scoped,
+    );
+    const req = makeReq(full);
+    req.app.settings.env = 'test';
+    expect(mod.get(req, {}, () => {})).toBe('test');
+  });
+
+  it('injects the scoped adapter into API route injection', () => {
+    const added = [];
+    serverManager[STORED_ADAPTERS].clear();
+    serverManager[BUFFERED_ROUTES].length = 0;
+    // eslint-disable-next-line no-underscore-dangle
+    serverManager._connectRouter('api', {
+      add: adapter => (added.push(adapter), []),
+    });
+    serverManager.apiContainer = {
+      resolve: name => `full:${name}`,
+      has: () => true,
+    };
+    serverManager[EXTENSION_METADATA].set('ext', {
+      manifest: {
+        name: 'ext',
+        xnapify: { version: '>=0.0.1', capabilities: ['hook'] },
+      },
+    });
+
+    const routeModule = { get: [req => req.app.get('container')] };
+    const adapter = {
+      files: () => ['./ext/api/routes/x/_route.js'],
+      load: () => routeModule,
+    };
+    // eslint-disable-next-line no-underscore-dangle
+    serverManager._injectRoutes('ext', adapter, 'api');
+
+    expect(added).toHaveLength(1);
+    const loaded = added[0].load('./ext/api/routes/x/_route.js');
+    const req = makeReq(serverManager.apiContainer);
+    const container = loaded.get[0](req, {}, () => {});
+    expect(container.resolve('hook')).toBe('full:hook');
+    expect(() => container.resolve('db')).toThrow(
+      expect.objectContaining({ name: 'CapabilityDeniedError' }),
+    );
   });
 });

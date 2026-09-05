@@ -57,6 +57,22 @@ export const ExtensionState = Object.freeze({
  * @property {Object} manifest - Full extension manifest
  */
 
+/**
+ * Bind the given method names of `target` (skipping ones it lacks).
+ * @param {Object} target
+ * @param {string[]} names
+ * @returns {Object}
+ */
+function bindPassthrough(target, names) {
+  const bound = {};
+  for (const name of names) {
+    if (typeof target[name] === 'function') {
+      bound[name] = target[name].bind(target);
+    }
+  }
+  return bound;
+}
+
 export class BaseExtensionManager {
   // ---------------------------------------------------------------------------
   // 1. Constructor
@@ -187,6 +203,42 @@ export class BaseExtensionManager {
   }
 
   /**
+   * Resolve the lifecycle context handed to one extension's view hooks.
+   * Subclasses scope the container by the extension's declared capabilities.
+   *
+   * @param {string} _id - Extension ID
+   * @returns {{ container: Object }}
+   * @protected
+   */
+  _hookContextFor(_id) {
+    // eslint-disable-next-line no-underscore-dangle
+    return { container: this._hookContext() };
+  }
+
+  /**
+   * Refuse to load a manifest the host cannot run (version contract).
+   * Base implementation accepts everything; the server enforces it.
+   *
+   * @param {string} _id - Extension ID
+   * @param {Object} _manifest - Extension manifest
+   * @protected
+   */
+  _assertLoadable(_id, _manifest) {}
+
+  /**
+   * Whether a loaded dependency version satisfies the requested range.
+   * Base implementation accepts everything; the server uses semver.
+   *
+   * @param {string} _version
+   * @param {string} _range
+   * @returns {boolean}
+   * @protected
+   */
+  _satisfiesRange(_version, _range) {
+    return true;
+  }
+
+  /**
    * Resolve the extension entry point based on manifest.
    * Override in subclasses.
    *
@@ -227,23 +279,20 @@ export class BaseExtensionManager {
 
   /**
    * Post-load hook called after an extension is successfully loaded.
-   * Eagerly activates namespaces for extensions so boot() runs
-   * immediately — injecting Redux reducers, registering sidebar menus,
-   * and registering slots for plugin-type extensions.
+   * Runs the view lifecycle (translations → providers → boot) exactly once
+   * for every definition — plugin-type and module-type alike — so boot()
+   * behaves the same on first load as after a route re-activation.
    *
    * @param {string} id - Extension ID
    * @param {Object} _ext - Loaded extension module
-   * @param {Object} manifest - Extension manifest
+   * @param {Object} _manifest - Extension manifest
    * @protected
    */
-  async _postLoad(id, _ext, manifest) {
-    const subs = Array.isArray(manifest.slots) ? manifest.slots : [];
-    if (subs.length === 0) return;
-
+  async _postLoad(id, _ext, _manifest) {
     const def = this.registry.findDefinition(id);
     if (def) {
       // eslint-disable-next-line no-underscore-dangle
-      await this._activateViewExtension(def, this._hookContext());
+      await this._activateViewExtension(def, this._hookContextFor(def.id));
     }
   }
 
@@ -418,6 +467,34 @@ export class BaseExtensionManager {
         missing.map(depId => this.loadExtension(depId, undefined, chain)),
       );
     }
+
+    // Every dependency must be loaded AND satisfy the requested range
+    for (const [depId, range] of Object.entries(dependencies)) {
+      const depMeta = this[EXTENSION_METADATA].get(depId);
+      const loaded =
+        this[ACTIVE_EXTENSIONS].has(depId) ||
+        (depMeta &&
+          (depMeta.state === ExtensionState.ACTIVE ||
+            depMeta.state === ExtensionState.LOADED));
+      if (!loaded) {
+        const error = new Error(
+          `Extension "${extensionId}" depends on "${depId}" which failed to load`,
+        );
+        error.name = 'ExtensionDependencyError';
+        error.code = 'EXTENSION_DEPENDENCY_MISSING';
+        throw error;
+      }
+      const depVersion = depMeta && depMeta.version;
+      // eslint-disable-next-line no-underscore-dangle
+      if (depVersion && !this._satisfiesRange(depVersion, range)) {
+        const error = new Error(
+          `Extension "${extensionId}" requires "${depId}@${range}" but ${depVersion} is loaded`,
+        );
+        error.name = 'ExtensionDependencyError';
+        error.code = 'EXTENSION_DEPENDENCY_VERSION';
+        throw error;
+      }
+    }
   }
 
   /**
@@ -526,6 +603,10 @@ export class BaseExtensionManager {
         }
       }
 
+      // Refuse manifests written for another host version
+      // eslint-disable-next-line no-underscore-dangle
+      this._assertLoadable(id, manifest);
+
       // Resolve entry point (main vs browser)
       // eslint-disable-next-line no-underscore-dangle
       const entryPoint = this._resolveEntryPoint(manifest);
@@ -604,13 +685,9 @@ export class BaseExtensionManager {
         await this._injectRoutes(id, routesObj, 'views');
       }
 
-      // Register as ACTIVE so teardown can find it (activateViewNamespace
-      // skips extensions already in ACTIVE_EXTENSIONS).
-      const def = this.registry.findDefinition(id);
-      if (def) {
-        this.registry.register(id, def);
-        this[ACTIVE_EXTENSIONS].set(id, def);
-      } else {
+      // _postLoad booted and registered the definition. An extension whose
+      // definition could not be recorded is still tracked so teardown works.
+      if (!this[ACTIVE_EXTENSIONS].has(id)) {
         this.registry.register(id, ext);
         this[ACTIVE_EXTENSIONS].set(id, ext);
       }
@@ -1066,21 +1143,48 @@ export class BaseExtensionManager {
         });
       },
 
-      // Proxy registerHook — inject extensionId for tracking
-      registerHook(hookId, callback) {
-        return real.registerHook(hookId, callback, extensionId);
+      // Proxy registerHook — inject extensionId for tracking.
+      // `options.public = true` marks an IPC action as callable by guests.
+      registerHook(hookId, callback, options = {}) {
+        return real.registerHook(hookId, callback, extensionId, options);
       },
 
-      // All other methods pass through unchanged
-      unregisterSlot: real.unregisterSlot.bind(real),
-      unregisterHook: real.unregisterHook.bind(real),
-      getSlotEntries: real.getSlotEntries.bind(real),
-      executeHook: real.executeHook.bind(real),
-      executeHookParallel: real.executeHookParallel.bind(real),
-      hasHook: real.hasHook.bind(real),
-      subscribe: real.subscribe.bind(real),
-      notify: real.notify.bind(real),
-      createPipeline: real.createPipeline.bind(real),
+      // Removal is limited to the extension's own registrations so one
+      // extension cannot silently disable another.
+      unregisterSlot(slotId, component) {
+        if (
+          typeof real.ownsSlot === 'function' &&
+          !real.ownsSlot(extensionId, slotId, component)
+        ) {
+          console.warn(
+            `[ExtensionRegistry] "${extensionId}" tried to unregister a slot it does not own: ${slotId}`,
+          );
+          return real;
+        }
+        return real.unregisterSlot(slotId, component);
+      },
+      unregisterHook(hookId, callback) {
+        if (
+          typeof real.ownsHook === 'function' &&
+          !real.ownsHook(extensionId, hookId, callback)
+        ) {
+          console.warn(
+            `[ExtensionRegistry] "${extensionId}" tried to unregister a hook it does not own: ${hookId}`,
+          );
+          return real;
+        }
+        return real.unregisterHook(hookId, callback);
+      },
+      ...bindPassthrough(real, [
+        'getSlotEntries',
+        'executeHook',
+        'executeHookParallel',
+        'hasHook',
+        'getHookMeta',
+        'subscribe',
+        'notify',
+        'createPipeline',
+      ]),
     };
   }
 
@@ -1244,12 +1348,9 @@ export class BaseExtensionManager {
         );
       }
 
-      // eslint-disable-next-line no-underscore-dangle
-      const context = this._hookContext();
-
       for (const def of pending) {
         // eslint-disable-next-line no-underscore-dangle
-        await this._activateViewExtension(def, context);
+        await this._activateViewExtension(def, this._hookContextFor(def.id));
       }
 
       if (__DEV__) {
@@ -1291,14 +1392,16 @@ export class BaseExtensionManager {
 
       if (active.length === 0) return;
 
-      // eslint-disable-next-line no-underscore-dangle
-      const context = this._hookContext();
-
       // ── Phase 1: Shutdown (all extensions) ──
       for (const def of active) {
         if (typeof def.shutdown === 'function') {
           try {
-            await def.shutdown({ ...context, registry: this.registry });
+            await def.shutdown({
+              // eslint-disable-next-line no-underscore-dangle
+              ...this._hookContextFor(def.id),
+              // eslint-disable-next-line no-underscore-dangle
+              registry: this._scopedRegistry(def.id),
+            });
           } catch (error) {
             console.error(
               `[ExtensionManager] Failed to shutdown extension ${def.id}:`,

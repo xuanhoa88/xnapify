@@ -14,6 +14,13 @@ import {
   validateResetToken,
 } from '../utils/password.js';
 
+// ------------------------------------------------------------------------
+// Automatic lockout policy
+// ------------------------------------------------------------------------
+const LOCKOUT_THRESHOLD = 5;
+const LOCKOUT_BASE_MS = 15 * 60 * 1000;
+const LOCKOUT_MAX_MS = 24 * 60 * 60 * 1000;
+
 // ========================================================================
 // AUTHENTICATION SERVICES
 // ========================================================================
@@ -182,8 +189,11 @@ export async function authenticateUser(
     throw error;
   }
 
-  // Check if account is locked
-  if (user.is_locked) {
+  // Check if account is locked — either manually (is_locked, admin action)
+  // or automatically (locked_until, expires on its own).
+  const now = Date.now();
+  const autoLocked = user.locked_until && user.locked_until.getTime() > now;
+  if (user.is_locked || autoLocked) {
     const error = new Error('User locked');
     error.name = 'UserLockedError';
     error.status = 403;
@@ -193,13 +203,18 @@ export async function authenticateUser(
   // Verify password using global auth utilities
   const isValidPassword = await verifyPassword(password, user.password);
   if (!isValidPassword) {
-    // Increment failed login attempts
-    await user.increment('failed_login_attempts');
+    const attempts = (user.failed_login_attempts || 0) + 1;
+    const updates = { failed_login_attempts: attempts };
 
-    // Lock account after 5 failed attempts
-    if (user.failed_login_attempts >= 4) {
-      await user.update({ is_locked: true });
+    // Time-boxed lockout with exponential backoff: 5 failures → 15 min,
+    // 10 → 30 min, 15 → 60 min … capped at 24 h. Never permanent, so an
+    // attacker cannot lock a victim out indefinitely by spamming bad passwords.
+    if (attempts >= LOCKOUT_THRESHOLD) {
+      const tier = Math.floor(attempts / LOCKOUT_THRESHOLD) - 1;
+      const lockMs = Math.min(LOCKOUT_BASE_MS * 2 ** tier, LOCKOUT_MAX_MS);
+      updates.locked_until = new Date(now + lockMs);
     }
+    await user.update(updates);
 
     const error = new Error('Invalid credentials');
     error.name = 'InvalidCredentialsError';
@@ -208,8 +223,8 @@ export async function authenticateUser(
   }
 
   // Reset failed login attempts on successful login
-  if (user.failed_login_attempts > 0) {
-    await user.update({ failed_login_attempts: 0 });
+  if (user.failed_login_attempts > 0 || user.locked_until) {
+    await user.update({ failed_login_attempts: 0, locked_until: null });
   }
 
   // Update user's last login

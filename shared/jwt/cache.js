@@ -14,7 +14,22 @@ import { LRUCache } from 'lru-cache';
  */
 export const jwtCache = new LRUCache({
   max: 10_000,
-  ttl: parseInt(process.env.XNAPIFY_SSR_CACHE_TTL, 10) || 60_000,
+  ttl: parseInt(process.env.XNAPIFY_JWT_CACHE_TTL, 10) || 60_000,
+});
+
+/**
+ * Negative cache for tokens that failed verification.
+ *
+ * A token that fails signature, type or expiry checks fails the same way on
+ * every retry, but each retry costs a full HMAC/RSA verification plus the
+ * exception path inside jsonwebtoken. Without this cache a client sending a
+ * garbage cookie makes every request several times more expensive, which is
+ * a cheap denial-of-service lever. Entries are short-lived so a key rotation
+ * or clock correction recovers quickly.
+ */
+export const jwtNegativeCache = new LRUCache({
+  max: 10_000,
+  ttl: parseInt(process.env.XNAPIFY_JWT_NEGATIVE_CACHE_TTL, 10) || 30_000,
 });
 
 /**
@@ -37,4 +52,71 @@ export function cacheToken(token, decoded) {
     }
   }
   jwtCache.set(token, decoded, options);
+  jwtNegativeCache.delete(token);
+}
+
+/**
+ * Build the negative-cache key. The expected token type is part of the key
+ * because a refresh token legitimately fails an `access` check while still
+ * verifying as `refresh`.
+ *
+ * @param {string} token
+ * @param {string} [expectedType]
+ * @returns {string}
+ */
+function negativeKey(token, expectedType) {
+  return `${expectedType || '*'}:${token}`;
+}
+
+/**
+ * Remember that a token failed verification.
+ *
+ * Only the fields needed to rebuild an equivalent error are stored, never
+ * the original error object (it may hold references to request state).
+ *
+ * @param {string} token
+ * @param {Error} error
+ * @param {string} [expectedType]
+ */
+export function cacheTokenFailure(token, error, expectedType) {
+  if (typeof token !== 'string' || !token) return;
+  jwtNegativeCache.set(negativeKey(token, expectedType), {
+    name: (error && error.name) || 'JsonWebTokenError',
+    message: (error && error.message) || 'Invalid token',
+    status: (error && error.status) || 401,
+    code: error && error.code,
+  });
+}
+
+/**
+ * Return a fresh Error equivalent to a cached verification failure, or null
+ * when the token has no negative entry.
+ *
+ * @param {string} token
+ * @param {string} [expectedType]
+ * @returns {Error|null}
+ */
+export function getCachedTokenFailure(token, expectedType) {
+  if (typeof token !== 'string' || !token) return null;
+  const entry = jwtNegativeCache.get(negativeKey(token, expectedType));
+  if (!entry) return null;
+
+  const err = new Error(entry.message);
+  err.name = entry.name;
+  err.status = entry.status;
+  if (entry.code) err.code = entry.code;
+  err.cached = true;
+  return err;
+}
+
+/**
+ * Drop every cached verdict for a token (positive and negative).
+ *
+ * @param {string} token
+ */
+export function forgetToken(token) {
+  jwtCache.delete(token);
+  for (const key of jwtNegativeCache.keys()) {
+    if (key.endsWith(`:${token}`)) jwtNegativeCache.delete(key);
+  }
 }

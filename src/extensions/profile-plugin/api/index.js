@@ -184,7 +184,6 @@ export default {
     registry.registerHook(
       `ipc:${__EXTENSION_ID__}:hello`,
       this[HANDLERS].ipcHello,
-      __EXTENSION_ID__,
     );
 
     // IPC handler to check if a nickname exists using createPipeline
@@ -230,7 +229,6 @@ export default {
     registry.registerHook(
       `ipc:${__EXTENSION_ID__}:checkNickname`,
       this[HANDLERS].ipcCheckNickname,
-      __EXTENSION_ID__,
     );
   },
   // Lifecycle: shutdown (called when extension is disabled)

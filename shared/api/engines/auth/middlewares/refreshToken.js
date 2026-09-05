@@ -14,6 +14,48 @@ import {
 } from '@shared/cookies/index.js';
 
 /**
+ * Rotate a refresh token through the `auth.session` hook channel.
+ *
+ * The users module owns the session store and registers the `rotate`
+ * handler; this engine stays storage-agnostic. If no handler is registered
+ * the refresh is refused — a stateless fallback would silently reintroduce
+ * unrevocable sessions.
+ *
+ * @param {Function} hook - Hook engine
+ * @param {{ refreshToken: string, req: import('express').Request }} params
+ * @returns {Promise<{ accessToken: string, refreshToken: string }>}
+ */
+export async function rotateViaSessionHook(hook, { refreshToken, req }) {
+  if (!hook || !hook.has('auth.session')) {
+    const error = new Error('Session rotation handler is not registered');
+    error.name = 'SessionRevokedError';
+    error.code = 'SESSION_HANDLER_MISSING';
+    error.status = 401;
+    throw error;
+  }
+
+  const ctx = {
+    refreshToken,
+    req,
+    meta: {
+      ip_address: req.ip,
+      user_agent: req.headers && req.headers['user-agent'],
+    },
+    tokens: null,
+  };
+  await hook('auth.session').invoke('rotate', ctx);
+
+  if (!ctx.tokens || !ctx.tokens.accessToken || !ctx.tokens.refreshToken) {
+    const error = new Error('Session rotation produced no tokens');
+    error.name = 'SessionRevokedError';
+    error.code = 'SESSION_ROTATION_FAILED';
+    error.status = 401;
+    throw error;
+  }
+  return ctx.tokens;
+}
+
+/**
  * Token refresh middleware
  *
  * Automatically refreshes access tokens when they are expired or close to expiration.
@@ -36,6 +78,9 @@ export function refreshToken(options = {}) {
     'InvalidTokenTypeError',
     'InvalidTokenFormatError',
     'JsonWebTokenError',
+    'InvalidRefreshTokenError',
+    'RefreshTokenReuseError',
+    'SessionRevokedError',
   ]);
 
   return async (req, res, next) => {
@@ -47,8 +92,10 @@ export function refreshToken(options = {}) {
         return next();
       }
 
-      // Get JWT instance from app
-      const jwt = req.app.get('container').resolve('jwt');
+      // Get JWT instance and hook engine from the container
+      const container = req.app.get('container');
+      const jwt = container.resolve('jwt');
+      const hook = container.resolve('hook');
 
       // Check if token is expired or close to expiration
       const isExpired = jwt.isTokenExpired(token);
@@ -60,7 +107,10 @@ export function refreshToken(options = {}) {
         const existingRefreshToken = getRefreshTokenFromCookie(req);
         if (existingRefreshToken) {
           try {
-            const newTokens = jwt.refreshTokenPair(existingRefreshToken);
+            const newTokens = await rotateViaSessionHook(hook, {
+              refreshToken: existingRefreshToken,
+              req,
+            });
 
             // Set new tokens
             setTokenCookie(res, newTokens.accessToken);

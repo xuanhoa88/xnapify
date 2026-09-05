@@ -9,6 +9,16 @@ class Hook {
   constructor() {
     this.hooks = new Map(); // Map<hookId, Array<{ callback, priority }>>
     this.registrations = new Map(); // Map<extensionId, Set<{ hookId, callback }>>
+    this.meta = new Map(); // Map<hookId, { public: boolean }>
+  }
+
+  /**
+   * Read metadata declared at registration time (e.g. `{ public: true }`).
+   * @param {string} hookId - Hook identifier
+   * @returns {Object} Metadata object (empty when none declared)
+   */
+  getMeta(hookId) {
+    return this.meta.get(hookId) || {};
   }
 
   /**
@@ -20,10 +30,19 @@ class Hook {
    * @param {string} [extensionId] - Optional extension ID for auto-cleanup
    * @param {Object} [options] - Options
    * @param {number} [options.priority=0] - Execution priority (lower = earlier)
+   * @param {boolean} [options.public=false] - For IPC hooks: allow unauthenticated callers
    */
-  register(hookId, callback, extensionId, { priority = 0 } = {}) {
+  register(
+    hookId,
+    callback,
+    extensionId,
+    { priority = 0, public: isPublic = false } = {},
+  ) {
     if (!this.hooks.has(hookId)) {
       this.hooks.set(hookId, []);
+    }
+    if (isPublic) {
+      this.meta.set(hookId, { ...this.getMeta(hookId), public: true });
     }
 
     const entries = this.hooks.get(hookId);
@@ -72,9 +91,38 @@ class Hook {
       }
       if (entries.length === 0) {
         this.hooks.delete(hookId);
+        this.meta.delete(hookId);
       }
     }
+    // Drop the ownership record so owns() stays accurate
+    for (const [extensionId, registrations] of this.registrations) {
+      for (const entry of registrations) {
+        if (entry.hookId === hookId && entry.callback === callback) {
+          registrations.delete(entry);
+        }
+      }
+      if (registrations.size === 0) this.registrations.delete(extensionId);
+    }
     return this;
+  }
+
+  /**
+   * Whether `extensionId` registered this exact callback for `hookId`.
+   * Used by scoped registries to stop one extension from unregistering
+   * another extension's handlers.
+   *
+   * @param {string} extensionId
+   * @param {string} hookId
+   * @param {Function} callback
+   * @returns {boolean}
+   */
+  owns(extensionId, hookId, callback) {
+    const registrations = this.registrations.get(extensionId);
+    if (!registrations) return false;
+    for (const entry of registrations) {
+      if (entry.hookId === hookId && entry.callback === callback) return true;
+    }
+    return false;
   }
 
   /**

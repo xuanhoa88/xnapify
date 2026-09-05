@@ -20,12 +20,9 @@ export const DEFAULT_OPTIONS = Object.freeze({
     exclude: ['node_modules', '.git', '__tests__', '__mocks__'],
   },
   files: {
-    exclude: [
-      '.DS_Store',
-      'package.json',
-      'package-lock.json',
-      'npm-debug.log',
-    ],
+    // package.json is intentionally INCLUDED: it declares the entry points
+    // and dependencies, so tampering with it must invalidate the checksum.
+    exclude: ['.DS_Store', 'package-lock.json', 'npm-debug.log'],
   },
 });
 

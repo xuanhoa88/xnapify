@@ -77,16 +77,11 @@ COPY --from=builder /build/.xnapify/sequelize-drivers ./build/.xnapify/sequelize
 WORKDIR /app/build
 RUN npm run setup && npm cache clean --force
 
-# Recreate driver symlinks (preboot.js ensureDeps creates these, but symlinks
-# don't survive COPY --from across Docker stages)
-RUN chmod -R 755 /app/build/.xnapify \
- && mkdir -p node_modules \
- && ln -sf /app/build/.xnapify/sequelize-drivers/sqlite/node_modules/sqlite3 node_modules/sqlite3 \
- && ln -sf /app/build/.xnapify/sequelize-drivers/postgres/node_modules/pg node_modules/pg \
- && ln -sf /app/build/.xnapify/sequelize-drivers/postgres/node_modules/pg-hstore node_modules/pg-hstore \
- && ln -sf /app/build/.xnapify/sequelize-drivers/mysql/node_modules/mysql2 node_modules/mysql2
+# Drivers are resolved straight from the sandbox at runtime — nothing is
+# linked into node_modules (npm would prune it). Only permissions need fixing.
+RUN chmod -R 755 /app/build/.xnapify
 
-# Preboot installs DB drivers on-demand at runtime (as `node` user via su-exec)
+# Preboot installs any still-missing driver into the sandbox at runtime (as `node` user via su-exec)
 RUN chown -R node:node /app/build
 
 # Copy entrypoint script

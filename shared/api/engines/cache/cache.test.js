@@ -313,7 +313,7 @@ describe('Cache Engine', () => {
     });
 
     it('should throw InvalidCacheTypeError for unsupported type', () => {
-      expect(() => createFactory({ type: 'redis' })).toThrow(
+      expect(() => createFactory({ type: 'memcached' })).toThrow(
         InvalidCacheTypeError,
       );
     });

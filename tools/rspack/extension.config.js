@@ -17,7 +17,6 @@ import { rspackConfigs } from '../factories/registry.factory.js';
 import { logWarn } from '../utils/logger.js';
 
 import {
-  createCacheGroups,
   createRspackConfig,
   createWorkerConfig,
   createCSSRule,
@@ -31,6 +30,7 @@ import {
   isDev,
 } from './base.config.js';
 import BuildManifestPlugin from './BuildManifestPlugin.js';
+import PrecompressPlugin from './PrecompressPlugin.js';
 import StripRootCSSPlugin from './StripRootCSSPlugin.js';
 
 const require = createRequire(import.meta.url);
@@ -143,9 +143,12 @@ function createClientConfig(extensionData, extensionDefines, buildPath) {
     },
     optimization: {
       runtimeChunk: false, // remotes must not emit a separate runtime
+      // Default cache groups only. Fixed-name vendor groups merged every
+      // node_modules dependency of every async import into one chunk that
+      // loaded with the exposed module, so a dynamically imported 3 MB
+      // diagram library shipped to pages that never rendered a diagram.
       splitChunks: {
         chunks: 'async',
-        cacheGroups: createCacheGroups('async'),
       },
     },
     performance: false, // extensions are async remotes — size hints not meaningful
@@ -174,10 +177,13 @@ function createClientConfig(extensionData, extensionDefines, buildPath) {
           eager: false,
           singleton: true,
           strictVersion: false,
+          // The host provides every shared package; do not bundle fallbacks.
+          importFallback: false,
         }),
       }),
       new BuildManifestPlugin('remote.js'),
       new BuildManifestPlugin('browser.js'),
+      !isDev && new PrecompressPlugin(),
       createProgressPlugin(),
     ].filter(Boolean),
   });

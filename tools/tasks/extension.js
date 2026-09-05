@@ -48,6 +48,7 @@ const MANIFEST_FIELDS = [
   'screenshots',
   'slots',
   'autoload',
+  'xnapify',
 ];
 
 // ---------------------------------------------------------------------------

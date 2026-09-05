@@ -55,6 +55,7 @@ const config = {
     NODE_ENV: 'readonly',
     __DEV__: 'readonly',
     __TEST__: 'readonly',
+    __XNAPIFY_VERSION__: 'readonly',
     __EXTENSION_ID__: 'readonly',
     __EXTENSION_DESCRIPTION__: 'readonly',
     __non_webpack_require__: 'readonly',

@@ -45,8 +45,9 @@ export function post(req, res) {
 
   // 3. Parse and verify HMAC signature
   const { algorithm, signature } = webhook.parseSignatureHeader(signatureRaw);
+  // Verify against the raw request bytes captured by express.json({ verify })
   const isValid = webhook.verifySignature(
-    req.body,
+    req.rawBody || req.body,
     signature,
     config.secret,
     algorithm,

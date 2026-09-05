@@ -46,31 +46,61 @@ The extension system contains universal utilities, client-specific managers, and
 
 - **Registry (`utils/Registry.js`)**: Universal. Manages `slots`, `hooks`, and `definitions`. Tracks registrations per extension ID allowing for clean uninstalls and reloads without memory leaks.
 - **Hook (`utils/Hook.js`)**: Universal. Executes registered callbacks sequentially (`execute`) or concurrently (`executeParallel`).
-- **ClientExtensionManager (`client/manager.js`)**: Discovers extension manifests from the server, injects `extension.css` and `remote.js` tags into the DOM, and orchestrates Rspack Module Federation (`container.init` and `container.get('./extension')`) to load React code at runtime.
-- **ServerExtensionManager (`server/manager.js`)**: Exposes physical filesystem resolving (`resolveExtensionDir`), reads package.json manifests natively, and loads backend extension code (`api.js`) to trigger lifecycle events (`install`, `uninstall`, `init`, `destroy`).
-- **ExtensionSlot (`client/ExtensionSlot.js`)**: A React component that listens to `Registry` changes and dynamically renders arrays of components injected by extensions.
+- **ClientExtensionManager (`client/ExtensionManager.js`)**: Discovers extension manifests from the server, injects `extension.css` and `remote.js` tags into the DOM, and orchestrates Rspack Module Federation (`container.init` and `container.get('./extension')`) to load React code at runtime.
+- **ServerExtensionManager (`server/ExtensionManager.js`)**: Exposes physical filesystem resolving (`resolveExtensionDir`), reads package.json manifests natively, and loads backend extension bundles to run the lifecycle phases (`translations → providers → migrations → models → seeds → boot → routes`, plus one-time `install` / `uninstall`).
+- **ExtensionSlot (`shared/renderer/components/Extension`)**: A React component that listens to `Registry` changes and dynamically renders arrays of components injected by extensions.
 
 ## Extension Identity
 
 Each extension has a single compile-time identifier injected by Rspack:
 
-- **`__EXTENSION_ID__`** — Generated at build time via `sqids(charCodes(manifest.name))` (e.g. `4ayO6ElAvIRLrgn...`). URL-safe, alphanumeric. Used for all purposes: IPC hook IDs, URL paths, i18n namespaces, logging, and migration prefixes.
+- **`__EXTENSION_ID__`** — Generated at build time via `hashids(sha256(manifest.name))` with a fixed salt (e.g. `TJO7Yw61SwQzV`). It is a pure function of the package name, so it is identical on every machine and deployment. URL-safe, alphanumeric. Used for all purposes: IPC hook IDs, URL paths, i18n namespaces, logging, and migration prefixes.
+
+## Host Contract & Isolation
+
+Every manifest declares the host it supports and the services it needs:
+
+```json
+{
+  "name": "@acme/reports",
+  "xnapify": { "version": "^2.0.0", "capabilities": ["db", "models", "hook"] }
+}
+```
+
+- `version` is checked by `validateManifest()` (install/toggle) and `_assertLoadable()` (load). Incompatible packages are refused with `IncompatibleExtensionError` (422).
+- Lifecycle hooks receive a **capability-scoped container** (`shared/container/scoped.js`): only declared bindings resolve, and there are no `bind`/`reset`/`cleanup` methods. `jwt`, `extension`, and `env` are never granted.
+- API route handlers of module-type extensions run under the same scope: the final handler of each `_route.js` export sees the scoped container via `req.app.get('container')` / `req.container`, while preceding middlewares (auth, validation) keep the full container.
+- Lifecycle hooks receive a **scoped registry**: `registerSlot`/`registerHook` are tagged with the extension id and `unregisterSlot`/`unregisterHook` refuse registrations owned by someone else.
+- `autoload` dependencies are version-checked with semver after loading; a missing or mismatched dependency fails the load.
+- Shared Module Federation singletons (`react`, `react-dom`, `react-redux`, `@reduxjs/toolkit`, `i18next`, `react-i18next`, `history`) use `strictVersion`, so a remote built against another major fails loudly instead of binding to the host copy.
+- On the server, view activation is permanent for the extension's lifetime (`deactivateViewNamespace` is a no-op) because one registry serves concurrent SSR requests. The client still activates and deactivates per route.
 
 ## Creating a Extension
 
 Extensions are dynamically loaded. Their capabilities are defined by entry points defined in their `package.json` (`main` for API/Server, `browser` for View/Client).
 
-A standard extension exports an object with `init` and `destroy` methods:
+A standard extension exports a lifecycle object (same shape as core modules):
 
 ```javascript
-// Example Extension API (api.js or browser.js)
+// Example Extension API (api/index.js) or view (views/index.js) entry
 export default {
-  async init(registry, context) {
-    // Register hooks, slots, or middlewares
+  async providers({ container }) {
+    // Bind services
   },
-  async destroy(registry, context) {
+  async boot({ container, registry }) {
+    // Register hooks, slots, IPC handlers.
+    // IPC handlers are authenticated by default; opt in to guests with:
+    registry.registerHook('ipc:<id>:ping', handler, { public: true });
+  },
+  async shutdown({ registry }) {
     // Automatic cleanup happens via the Registry,
     // but custom teardown goes here (e.g. closing DB connections)
+  },
+  routes() {
+    return [
+      'posts',
+      import.meta.webpackContext('./routes', { recursive: true }),
+    ];
   },
 };
 ```
@@ -96,8 +126,7 @@ shared/extension/
 ├── client/          # Frontend-specific implementation
 │   ├── index.js     # Client exports
 │   ├── ExtensionManager.js # ClientExtensionManager (Module Federation handler)
-│   ├── ExtensionSlot.js# React component for dynamic rendering
-│   └── useExtension.js # React hooks (useExtensionHooks, etc.)
+│   └── Registry.js  # Client registry (slots re-render on change)
 ├── server/          # Backend-specific implementation
 │   └── ExtensionManager.js # ServerExtensionManager (Node.js loader)
 └── utils/           # Universal isomorphic utilities
@@ -112,13 +141,13 @@ Lifecycle phase constants are defined in `shared/utils/lifecycle.js` — the sin
 
 Each extension has a single compile-time identifier injected by Rspack:
 
-| Constant           | Source                                                      | Example              |
-| ------------------ | ----------------------------------------------------------- | -------------------- |
-| `__EXTENSION_ID__` | `sqids(charCodes(manifest.name))` — generated at build time | `4ayO6ElAvIRLrgn...` |
+| Constant           | Source                                                                 | Example         |
+| ------------------ | ---------------------------------------------------------------------- | --------------- |
+| `__EXTENSION_ID__` | `hashids(sha256(manifest.name))`, fixed salt — generated at build time | `TJO7Yw61SwQzV` |
 
 This is URL-safe (alphanumeric only) and used consistently for IPC hook IDs, URL paths, route params, i18n namespaces, migration prefixes, and logging.
 
-The build pipeline generates `id` via `generateExtensionId(name)` (sqids) and writes it into the output `package.json`. The server-side `readManifest()` reads `manifest.id` directly.
+The build pipeline generates `id` via `generateExtensionId(name)` and writes it into the output `package.json`. The server-side `readManifest()` reads `manifest.id` directly and attaches `manifest.compatibility` from the host contract.
 
 ## Lifecycle Phases
 

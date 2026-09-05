@@ -64,15 +64,25 @@ mkdir -p src/extensions/{extension-name}
   "version": "1.0.0",
   "browser": "views/index.js",
   "main": "api/index.js",
-  "description": "Brief extension description"
+  "description": "Brief extension description",
+  "slots": ["profile"],
+  "xnapify": {
+    "version": "^2.0.0",
+    "capabilities": ["hook", "models"]
+  }
 }
 ```
 
+**Host contract (`xnapify`, required):**
+
+- `version` — semver range of host versions the extension supports. Install, activation, and load are refused outside the range (`IncompatibleExtensionError`, HTTP 422).
+- `capabilities` — container bindings the extension may `container.resolve()` in its lifecycle hooks (`db`, `models`, `hook`, `worker`, `users:*`, or `*`). Anything else throws `CapabilityDeniedError`. Omitting the list grants only `hook`, `cache`, `http`, `template`, `i18n`.
+
 **Namespace activation:**
 
-- **Plugin-kind extensions** (no `views()` hook): Subscribe to route paths via `defineExtension()` configuration.
-- **Module-kind extensions** (with `views()` hook): The namespace is **auto-derived** from the `views()` return tuple `[moduleName, context]`.
-- Extensions are **eagerly activated** during loading — their `boot()` runs immediately after registration, so Redux reducers and sidebar menus are available before the user navigates to the route.
+- **Plugin-kind extensions** (no `routes()` hook): list the namespaces they extend in `slots`. Core routes export `namespace` from `_route.js` (`profile`, `login`, `admin.settings`); the route path is only a fallback for routes without one.
+- **Module-kind extensions** (with `routes()` hook): subscribe to the `*` wildcard automatically.
+- Every extension's `boot()` runs once at load. On the client, plugin namespaces are shut down when the user leaves the route and booted again on entry; on the server they stay active for the extension's lifetime.
 
 **Route namespace override:** A `_route.js` file can export `namespace` to override which namespace the route belongs to:
 
@@ -215,11 +225,11 @@ export default {
       },
     );
 
-    // Register IPC handler - include extension name for auto-cleanup
+    // Register IPC handler — the scoped registry tags it with this
+    // extension's id automatically (no extensionId argument)
     registry.registerHook(
       `ipc:${__EXTENSION_ID__}:hello`,
       this[HANDLERS].ipcHello,
-      __EXTENSION_ID__,
     );
   },
 
@@ -893,11 +903,10 @@ this[HANDLERS].ipcCheckNickname = registry.createPipeline(
   },
 );
 
-// Register with extension ID for auto-cleanup
+// The scoped registry tracks ownership; pass { public: true } to allow guests
 registry.registerHook(
   `ipc:${__EXTENSION_ID__}:checkNickname`,
   this[HANDLERS].ipcCheckNickname,
-  __EXTENSION_ID__,
 );
 ```
 
@@ -1103,9 +1112,11 @@ See `src/extensions/posts-module/` for a complete working module-type extension 
 ### Extension Not Loading
 
 - Check `__EXTENSION_ID__` and `__EXTENSION_DESCRIPTION__` globals are defined
-- For **plugin-kind** extensions: verify the extension subscribes to the correct route paths where it should activate (e.g., `["/login", "/profile"]`)
-- For **module-kind** extensions: the namespace is auto-derived from `views()` — check that `views()` returns a valid `[moduleName, context]` tuple
-- Extensions are eagerly activated via `ensureViewNamespaceActive()` during loading — check console for `[ExtensionManager] Activating namespace:` logs
+- Check `GET /api/ready` — `checks.extensions.failed[]` lists extensions that failed to load with the error message; the admin list exposes the same under `runtime.state`
+- A manifest without `xnapify.version`, or one whose range excludes the running host, is refused with `IncompatibleExtensionError`
+- `CapabilityDeniedError` means a lifecycle hook resolved a binding missing from `xnapify.capabilities`
+- For **plugin-kind** extensions: verify `slots` lists the namespaces exported by the target routes (e.g., `["login", "profile"]`)
+- For **module-kind** extensions: check that `routes()` returns a valid `[moduleName, context]` tuple
 - Ensure both `api/index.js` and `views/index.js` export default extension definitions
 - Check browser console for any initialization errors
 - Verify the extension was built by Rspack (check `.cache/dev/extensions/` for build output)

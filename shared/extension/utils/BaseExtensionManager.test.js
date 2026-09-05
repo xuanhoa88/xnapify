@@ -176,7 +176,14 @@ describe('BaseExtensionManager', () => {
       manager[ACTIVE_EXTENSIONS].set('existing-dep', {});
       const loadExtensionSpy = jest
         .spyOn(manager, 'loadExtension')
-        .mockResolvedValue({});
+        .mockImplementation(async id => {
+          manager[EXTENSION_METADATA].set(id, {
+            id,
+            state: ExtensionState.ACTIVE,
+            version: '9.0.0',
+          });
+          return {};
+        });
 
       await manager.loadDependencies('extension-1', {
         'existing-dep': '^1.0.0',
@@ -195,6 +202,101 @@ describe('BaseExtensionManager', () => {
         undefined,
         expect.any(Set),
       );
+    });
+
+    it('fails when a dependency did not load', async () => {
+      await initManager();
+      jest.spyOn(manager, 'loadExtension').mockImplementation(async id => {
+        manager[EXTENSION_METADATA].set(id, {
+          id,
+          state: ExtensionState.FAILED,
+          error: new Error('boom'),
+        });
+      });
+
+      await expect(
+        manager.loadDependencies('extension-1', { 'broken-dep': '^1.0.0' }),
+      ).rejects.toMatchObject({
+        name: 'ExtensionDependencyError',
+        code: 'EXTENSION_DEPENDENCY_MISSING',
+      });
+    });
+
+    it('fails when a loaded dependency does not satisfy the range', async () => {
+      await initManager();
+      manager[ACTIVE_EXTENSIONS].set('dep-1', {});
+      manager[EXTENSION_METADATA].set('dep-1', {
+        id: 'dep-1',
+        state: ExtensionState.ACTIVE,
+        version: '1.0.0',
+      });
+
+      jest.spyOn(manager, '_satisfiesRange').mockReturnValue(false);
+
+      await expect(
+        manager.loadDependencies('extension-1', { 'dep-1': '^2.0.0' }),
+      ).rejects.toMatchObject({ code: 'EXTENSION_DEPENDENCY_VERSION' });
+    });
+  });
+
+  describe('_postLoad', () => {
+    it('boots every definition once at load, module-type included', async () => {
+      await initManager();
+      const boot = jest.fn();
+      const def = { id: 'mod-1', boot, routes: () => null };
+      registry.findDefinition.mockReturnValue(def);
+
+      // eslint-disable-next-line no-underscore-dangle
+      await manager._postLoad('mod-1', def, { slots: [] });
+
+      expect(boot).toHaveBeenCalledTimes(1);
+      expect(boot).toHaveBeenCalledWith(
+        expect.objectContaining({ registry: expect.any(Object) }),
+      );
+      expect(registry.register).toHaveBeenCalledWith('mod-1', def);
+      expect(manager[ACTIVE_EXTENSIONS].has('mod-1')).toBe(true);
+
+      // A later namespace activation must not boot it again
+      registry.getDefinitions.mockReturnValue(new Set([def]));
+      await manager.activateViewNamespace('*');
+      expect(boot).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('_scopedRegistry', () => {
+    it("refuses to unregister another extension's registrations", () => {
+      const real = {
+        registerSlot: jest.fn(),
+        registerHook: jest.fn(),
+        unregisterSlot: jest.fn(),
+        unregisterHook: jest.fn(),
+        ownsSlot: jest.fn((ext, slot) => slot === 'mine'),
+        ownsHook: jest.fn((ext, hook) => hook === 'mine'),
+      };
+      const scopedManager = new BaseExtensionManager(real);
+      // eslint-disable-next-line no-underscore-dangle
+      const scoped = scopedManager._scopedRegistry('ext-a');
+      const fn = () => {};
+
+      scoped.unregisterSlot('theirs', fn);
+      scoped.unregisterHook('theirs', fn);
+      expect(real.unregisterSlot).not.toHaveBeenCalled();
+      expect(real.unregisterHook).not.toHaveBeenCalled();
+
+      scoped.unregisterSlot('mine', fn);
+      scoped.unregisterHook('mine', fn);
+      expect(real.unregisterSlot).toHaveBeenCalledWith('mine', fn);
+      expect(real.unregisterHook).toHaveBeenCalledWith('mine', fn);
+
+      scoped.registerSlot('s', fn, { order: 2 });
+      expect(real.registerSlot).toHaveBeenCalledWith('s', fn, {
+        order: 2,
+        extensionId: 'ext-a',
+      });
+      scoped.registerHook('h', fn, { public: true });
+      expect(real.registerHook).toHaveBeenCalledWith('h', fn, 'ext-a', {
+        public: true,
+      });
     });
   });
 

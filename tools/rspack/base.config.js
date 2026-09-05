@@ -41,6 +41,8 @@ const isDev = nodeEnv !== 'production';
 const isProfile =
   process.argv.includes('--profile') || config.env('RSPACK_PROFILE') === 'true';
 const verbose = isVerbose();
+const usePersistentCache =
+  isDev && config.env('RSPACK_PERSISTENT_CACHE') !== 'false';
 
 // Resolve .browserslistrc query strings once per build session.
 // LightningCssMinimizerRspackPlugin expects browserslist QUERIES (e.g. '> 0.5%'),
@@ -339,6 +341,8 @@ const createCSSRule = ({
 const createDefinePlugin = extraDefinitions =>
   new rspack.DefinePlugin({
     __DEV__: !!isDev,
+    // Host version used by the extension compatibility contract
+    __XNAPIFY_VERSION__: JSON.stringify(pkg.version),
     ...extraDefinitions,
   });
 
@@ -373,6 +377,46 @@ const createEnvDefine = () =>
  * @param {Object} options - Configuration options
  * @returns {Object} Shared dependencies configuration
  */
+/**
+ * Packages that must resolve to exactly one copy across host and remotes.
+ * A remote built against another major of these silently binding to the
+ * host copy is the classic "hooks can only be called inside a component"
+ * failure, so version mismatches fail loudly at load time instead.
+ */
+const MF_STRICT_SINGLETONS = Object.freeze([
+  'react',
+  'react-dom',
+  'react-redux',
+  '@reduxjs/toolkit',
+  'react-i18next',
+  'i18next',
+  'history',
+]);
+
+/**
+ * Packages the host entry (src/client.js and everything it imports
+ * synchronously) needs before the first async boundary. Only these are
+ * shared eagerly; everything else is consumed on demand from the chunk that
+ * first imports it, so the editor, form and table libraries no longer sit in
+ * the initial download of every page.
+ */
+const MF_HOST_EAGER_DEPS = Object.freeze([
+  'react',
+  'react-dom',
+  'react-redux',
+  'redux',
+  '@reduxjs/toolkit',
+  'use-sync-external-store',
+  'react-i18next',
+  'i18next',
+  'history',
+  'prop-types',
+  'clsx',
+  'events',
+  'core-js',
+  '@radix-ui/themes',
+]);
+
 function createSharedDependencies(dependencies, options = {}) {
   const {
     eager = false,
@@ -381,6 +425,12 @@ function createSharedDependencies(dependencies, options = {}) {
     eagerDeps = [],
     singletonDeps = [],
     excludeDeps = [],
+    strictDeps = MF_STRICT_SINGLETONS,
+    // When false the consumer ships no fallback copy: it must obtain the
+    // package from the host's share scope. Remotes use this because the host
+    // declares every shared package, and a singleton share always resolves to
+    // the host copy anyway — the fallback was dead weight that still loaded.
+    importFallback = true,
   } = options;
 
   return Object.fromEntries(
@@ -400,8 +450,9 @@ function createSharedDependencies(dependencies, options = {}) {
             singleton: isSingleton,
             eager: isEager,
             requiredVersion,
-            strictVersion,
+            strictVersion: strictVersion || strictDeps.includes(dep),
             version: rawVersion,
+            ...(importFallback ? {} : { import: false }),
           },
         ];
       }),
@@ -474,26 +525,27 @@ function createCacheGroups(
       enforce: true,
     },
 
-    // prosemirror packages are published both as flat (prosemirror-*) and scoped
-    // (@prosemirror/*) — the regex covers both forms
-    tiptap: {
-      test: /[\\/]node_modules[\\/](@tiptap[\\/]|@prosemirror[\\/]|prosemirror-[\w-]+|turndown|marked|tippy\.js|@mixmark-io[\\/]|katex)/,
-      name: 'vendor.tiptap',
+    // NOTE: there is deliberately no enforced group for the TipTap/ProseMirror
+    // family or for react-hook-form + @hookform/resolvers. Those packages are
+    // shared non-eagerly through Module Federation and depend on each other;
+    // forcing them into one named chunk makes that chunk wait on a shared
+    // module whose fallback lives inside the very chunk being loaded, which
+    // never resolves. Rspack's default split keeps each shared fallback in its
+    // own async chunk, where no such cycle can form.
+
+    // Markdown conversion is consumed on its own (extensions render docs with
+    // `marked`); keeping it apart from the editor group means a page that
+    // renders markdown no longer downloads ProseMirror as well.
+    markdown: {
+      test: /[\\/]node_modules[\\/](marked|turndown|@mixmark-io[\\/])/,
+      name: 'vendor.markdown',
       chunks,
-      priority: 30,
+      priority: 31,
       enforce: true,
     },
 
     // --- Mid-tier: group related libs together ---
     // enforce: true added so rspack doesn't skip small packages due to minSize defaults
-
-    forms: {
-      test: /[\\/]node_modules[\\/](react-hook-form|@hookform[\\/]resolvers|zod|cleave\.js)[\\/]/,
-      name: 'vendor.forms',
-      chunks,
-      priority: 20,
-      enforce: true,
-    },
 
     i18n: {
       test: /[\\/]node_modules[\\/](i18next|react-i18next)[\\/]/,
@@ -519,11 +571,15 @@ function createCacheGroups(
       enforce: true,
     },
 
-    // --- Catch-all: remaining node_modules in a single stable chunk ---
+    // --- Catch-all: remaining node_modules reachable from the entry ---
+    // Restricted to initial chunks on purpose: a fixed-name group that also
+    // swept async chunks merged every lazily imported dependency into the
+    // one vendors file that loads on every page. Dependencies reached only
+    // through async chunks fall to rspack's default per-chunk vendor split.
     vendors: {
       test: /[\\/]node_modules[\\/]/,
       name: 'vendors',
-      chunks,
+      chunks: chunks === 'all' ? 'initial' : chunks,
       priority: 10,
       enforce: true, // added — prevents tiny packages escaping into the main bundle
       minSize: minChunkSize,
@@ -535,7 +591,8 @@ function createCacheGroups(
     // name function to avoid chunk ID collisions across entries.
     common: {
       minChunks: 2,
-      chunks,
+      // Initial only — see the splitChunks note in createRspackConfig
+      chunks: 'initial',
       priority: -20,
       minSize: minChunkSize,
       reuseExistingChunk: true,
@@ -790,7 +847,13 @@ function createRspackConfig(name, options = {}) {
         splitChunks: isServer
           ? false // SSR: no benefit splitting chunks server-side
           : {
-              chunks: 'all',
+              // Only initial chunks are split generically. Async chunks keep
+              // rspack's natural per-import-block layout so a Module
+              // Federation fallback module is never merged into a chunk that
+              // also consumes it (the load would wait on itself and never
+              // resolve). Named cache groups below opt into 'all' explicitly
+              // for package families that do not consume each other.
+              chunks: 'initial',
               minSize: 20_000, // don't split tiny chunks
               minChunks: 1,
               maxAsyncRequests: 20, // allow more parallel async imports
@@ -850,8 +913,28 @@ function createRspackConfig(name, options = {}) {
       // Stop compilation on first error
       bail: !isDev,
 
-      // Disable rspack 5 filesystem cache
-      cache: false,
+      // Persistent cache for development restarts and rebuilds. Production
+      // builds stay cold so an artifact never depends on a stale cache.
+      // Opt out with RSPACK_PERSISTENT_CACHE=false.
+      cache: usePersistentCache,
+      experiments: {
+        cache: usePersistentCache
+          ? {
+              type: 'persistent',
+              version: `${nodeEnv}:${pkg.version}`,
+              storage: {
+                type: 'filesystem',
+                directory: path.join(config.CWD, '.cache', 'rspack', name),
+              },
+              buildDependencies: [
+                currentFilename,
+                path.join(currentDir, 'app.config.js'),
+                path.join(currentDir, 'extension.config.js'),
+                path.join(config.CWD, 'package.json'),
+              ],
+            }
+          : false,
+      },
 
       // Enable source maps for debugging
       // Server uses eval-source-map (fast + accurate) instead of full source-map
@@ -1071,4 +1154,6 @@ export {
   createRspackConfig,
   createWorkerConfig,
   getHmrWatchIgnored,
+  MF_STRICT_SINGLETONS,
+  MF_HOST_EAGER_DEPS,
 };

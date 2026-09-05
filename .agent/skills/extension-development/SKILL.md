@@ -42,10 +42,10 @@ Extensions follow a well-defined phase-sequential lifecycle. Each phase runs for
 ### Plugin-kind (no `routes()` hook)
 
 - Extends existing modules (e.g., profile enhancements)
-- Subscribe to route paths via `defineExtension()` configuration (e.g., `["/profile"]`)
+- Subscribe to named namespaces via the manifest `slots` array (e.g., `["profile"]`); core routes export `namespace` from `_route.js`
 - Injects UI via slots and hooks
 
-> **Note:** Module-kind extensions auto-subscribe to the `'*'` wildcard namespace. Plugin-kind extensions should configure target routes via `defineExtension()`.
+> **Note:** Module-kind extensions auto-subscribe to the `'*'` wildcard namespace. Every manifest must carry `"xnapify": { "version": "^2.0.0", "capabilities": [...] }` — the host range is enforced and only listed container bindings resolve.
 
 ### Module-kind (with `routes()` hook)
 
@@ -95,7 +95,7 @@ Extensions follow a well-defined phase-sequential lifecycle. Each phase runs for
 
 4. **IPC Pipelines:**
    To allow the frontend to communicate securely with the backend, use IPC pipelines.
-   - Backend: `registry.registerHook('ipc:${__EXTENSION_ID__}:action', registry.createPipeline(...middlewares, handler), __EXTENSION_ID__)`
+   - Backend: `registry.registerHook('ipc:${__EXTENSION_ID__}:action', registry.createPipeline(...middlewares, handler))` (add `{ public: true }` as the third argument to allow unauthenticated callers)
    - Frontend: `context.fetch('/api/extensions/${__EXTENSION_ID__}/ipc', { method: 'POST', body: { action, data } })`
 
 5. **Node-RED Nodes (`node-red/nodes/`):**
@@ -183,9 +183,9 @@ await sendTemplatedEmail(
 
 Rspack injects a single compile-time constant for each extension:
 
-| Constant           | Value                                                         | Use For                                                                           |
-| ------------------ | ------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `__EXTENSION_ID__` | `snakeCase(manifest.name)` (e.g. `xnapify_extension_profile`) | Everything: IPC hook IDs, URL paths, i18n namespaces, logging, migration prefixes |
+| Constant           | Value                                                                     | Use For                                                                           |
+| ------------------ | ------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `__EXTENSION_ID__` | `hashids(sha256(manifest.name))` with a fixed salt (e.g. `TJO7Yw61SwQzV`) | Everything: IPC hook IDs, URL paths, i18n namespaces, logging, migration prefixes |
 
 ## Worker Functions in Extensions
 

@@ -188,26 +188,53 @@ class NavigationEntry {
  * Router class for file-based routing
  */
 export class Router extends BaseRouter {
+  /**
+   * @param {Object} adapter - Module loader with files() and load()
+   * @param {Object} [options]
+   * @param {{ routes: Object[], layouts: Map }} [options.compiled] - A route
+   *   tree already built by `Router.compile()`. When given, the constructor
+   *   skips module collection and tree building entirely. Used by the server
+   *   to share one immutable tree across concurrent requests while each
+   *   request still gets its own Router (navigation queue, registration state).
+   */
   constructor(adapter, options) {
     validateAdapter(adapter);
 
+    const compiled = options && options.compiled;
+
     // Collect and store layouts for reuse in add()
-    const layouts = collect(adapter, 'layouts');
+    const layouts = compiled ? compiled.layouts : collect(adapter, 'layouts');
 
-    const routes = buildRoutes(
-      collect(adapter, 'routes'),
-      collect(adapter, 'configs'),
-      layouts,
+    const routes = compiled
+      ? compiled.routes
+      : buildRoutes(
+          collect(adapter, 'routes'),
+          collect(adapter, 'configs'),
+          layouts,
+        );
+
+    // Initialize BaseRouter with pre-built routes and builder hooks.
+    // A compiled tree is already validated and parent-linked.
+    super(
+      routes,
+      compiled
+        ? { validateConfig: null, linkParents: null }
+        : { validateConfig, linkParents },
     );
-
-    // Initialize BaseRouter with pre-built routes and builder hooks
-    super(routes, { validateConfig, linkParents });
+    if (compiled) {
+      // eslint-disable-next-line no-underscore-dangle
+      this._validateConfig = validateConfig;
+      // eslint-disable-next-line no-underscore-dangle
+      this._linkParents = linkParents;
+    }
 
     this.options = options || {};
     this.baseUrl = this.options.baseUrl || '';
 
-    // Tag initial routes with their source adapter
-    this.routes.forEach(route => tagRoutes(route, adapter || null));
+    // Tag initial routes with their source adapter (already tagged when compiled)
+    if (!compiled) {
+      this.routes.forEach(route => tagRoutes(route, adapter || null));
+    }
 
     // Track previous route for unmount lifecycle (CSR only)
     this[ROUTE_PREV_KEY] = null;

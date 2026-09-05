@@ -19,6 +19,7 @@ import {
   createApiKeyFormSchema,
 } from '../../../validator/admin/index.js';
 import * as userAdminService from '../../services/admin/user.service.js';
+import * as sessionService from '../../services/session.service.js';
 
 // ========================================================================
 // USER ADMINISTRATION CONTROLLERS (Admin Only)
@@ -514,7 +515,6 @@ export async function impersonate(req, res) {
 
     const models = container.resolve('models');
     const authConfig = container.resolve('auth');
-    const jwt = container.resolve('jwt');
 
     // Get user data via service
     const user = await userAdminService.impersonateUser(id, {
@@ -525,22 +525,33 @@ export async function impersonate(req, res) {
       defaultActions: authConfig.DEFAULT_ACTIONS,
     });
 
-    // Generate token pair with impersonator_id so refresh preserves the claim
-    const tokens = jwt.generateTokenPair({
-      id: user.id,
-      email: user.email,
-      picture: user.picture || null,
-      is_admin: user.is_admin === true,
-      impersonator_id: req.user.id,
-    });
+    // Issue a persisted session carrying impersonator_id so rotation
+    // preserves the claim and the admin's own session stays revocable.
+    const tokens = await sessionService.issueTokenPair(
+      {
+        id: user.id,
+        email: user.email,
+        picture: user.picture || null,
+        is_admin: user.is_admin === true,
+        impersonator_id: req.user.id,
+      },
+      {
+        jwt: container.resolve('jwt'),
+        models,
+        meta: {
+          ip_address: http.getClientIP(req),
+          user_agent: http.getUserAgent(req),
+        },
+      },
+    );
 
     // Set both cookies
     setTokenCookie(res, tokens.accessToken);
     setRefreshTokenCookie(res, tokens.refreshToken);
 
     // Log activity for auditing
-    await req.app
-      .get('hook')('auth.activity')
+    await container
+      .resolve('hook')('auth.activity')
       .emit('impersonation:start', {
         admin_id: req.user.id,
         target_id: id,

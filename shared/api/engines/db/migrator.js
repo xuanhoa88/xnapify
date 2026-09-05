@@ -264,6 +264,92 @@ function createSeedUmzug(seeds, connection, options = {}) {
 }
 
 // ======================================================================
+// Cross-process lock
+// ======================================================================
+
+/** Arbitrary but stable 32-bit key for the Postgres advisory lock ('xnap') */
+const PG_LOCK_KEY = 0x786e6170;
+/** Named lock for MySQL/MariaDB GET_LOCK */
+const MYSQL_LOCK_NAME = 'xnapify_schema_lock';
+
+/**
+ * Run `fn` while holding a database-level lock so that only one process
+ * applies migrations or seeds at a time. Every cluster worker (and every
+ * replica behind a load balancer) runs the migration phase at boot; without
+ * this they race on `sequelize_migrations` and can apply the same file twice.
+ *
+ *   - Postgres: transaction-scoped advisory lock (released on commit/rollback)
+ *   - MySQL/MariaDB: GET_LOCK / RELEASE_LOCK on a pinned connection
+ *   - SQLite and others: no-op (SQLite serialises writers by itself)
+ *
+ * The lock is held on one pooled connection while the work runs on others,
+ * so it is skipped (with a warning) when the pool cannot hold two.
+ *
+ * @param {Sequelize} connection
+ * @param {() => Promise<*>} fn
+ * @param {Object} [options]
+ * @param {Console} [options.logger]
+ * @param {number} [options.timeoutSeconds=300] - MySQL wait timeout
+ * @returns {Promise<*>} Result of fn
+ */
+export async function withSchemaLock(connection, fn, options = {}) {
+  const logger = options.logger || console;
+  const timeoutSeconds = options.timeoutSeconds || 300;
+  const dialect =
+    typeof connection.getDialect === 'function' ? connection.getDialect() : '';
+  const poolMax =
+    connection.options && connection.options.pool
+      ? Number(connection.options.pool.max)
+      : NaN;
+
+  const lockable =
+    dialect === 'postgres' || dialect === 'mysql' || dialect === 'mariadb';
+  if (!lockable) return fn();
+
+  if (Number.isFinite(poolMax) && poolMax < 2) {
+    logger.warn(
+      '⚠️  Schema lock skipped: the connection pool must allow at least 2 connections',
+    );
+    return fn();
+  }
+
+  return connection.transaction(async transaction => {
+    if (dialect === 'postgres') {
+      await connection.query('SELECT pg_advisory_xact_lock(:key)', {
+        replacements: { key: PG_LOCK_KEY },
+        transaction,
+      });
+      return fn();
+    }
+
+    const [rows] = await connection.query(
+      'SELECT GET_LOCK(:name, :timeout) AS acquired',
+      {
+        replacements: { name: MYSQL_LOCK_NAME, timeout: timeoutSeconds },
+        transaction,
+      },
+    );
+    const acquired = rows && rows[0] && Number(rows[0].acquired) === 1;
+    if (!acquired) {
+      const error = new Error(
+        `Could not acquire schema lock within ${timeoutSeconds}s`,
+      );
+      error.name = 'SchemaLockTimeoutError';
+      error.code = 'SCHEMA_LOCK_TIMEOUT';
+      throw error;
+    }
+    try {
+      return await fn();
+    } finally {
+      await connection.query('SELECT RELEASE_LOCK(:name)', {
+        replacements: { name: MYSQL_LOCK_NAME },
+        transaction,
+      });
+    }
+  });
+}
+
+// ======================================================================
 // Public API
 // ======================================================================
 
@@ -328,18 +414,25 @@ export async function runMigrations(migrations, connection, options = {}) {
       ...options,
       logger,
     });
-    const pending = await umzug.pending();
+    // Re-read pending inside the lock: another process may have just applied them
+    await withSchemaLock(
+      connection,
+      async () => {
+        const pending = await umzug.pending();
 
-    if (pending.length > 0) {
-      logger.log(
-        `⚙️  Pending migrations:`,
-        pending.map(m => m.name),
-      );
-      await umzug.up();
-      logger.log('✅ Migrations executed successfully');
-    } else {
-      logger.log(`✅ Database is up to date`);
-    }
+        if (pending.length > 0) {
+          logger.log(
+            `⚙️  Pending migrations:`,
+            pending.map(m => m.name),
+          );
+          await umzug.up();
+          logger.log('✅ Migrations executed successfully');
+        } else {
+          logger.log(`✅ Database is up to date`);
+        }
+      },
+      { logger },
+    );
   } catch (error) {
     logger.error('❌ Migration failed:', error);
     throw error;
@@ -363,18 +456,24 @@ export async function runSeeds(seeds, connection, options = {}) {
       ...options,
       logger,
     });
-    const pending = await umzug.pending();
+    await withSchemaLock(
+      connection,
+      async () => {
+        const pending = await umzug.pending();
 
-    if (pending.length > 0) {
-      logger.log(
-        `🌱 Pending seeds:`,
-        pending.map(s => s.name),
-      );
-      await umzug.up();
-      logger.log('✅ Seeds executed successfully');
-    } else {
-      logger.log(`✅ No pending seeds`);
-    }
+        if (pending.length > 0) {
+          logger.log(
+            `🌱 Pending seeds:`,
+            pending.map(s => s.name),
+          );
+          await umzug.up();
+          logger.log('✅ Seeds executed successfully');
+        } else {
+          logger.log(`✅ No pending seeds`);
+        }
+      },
+      { logger },
+    );
   } catch (error) {
     logger.error('❌ Seeding failed:', error);
     throw error;

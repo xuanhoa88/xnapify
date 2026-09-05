@@ -31,6 +31,13 @@ export default {
   collectCoverage: isCoverage && !isBenchmark,
 
   /**
+   * Tests are transformed by SWC, which cannot instrument for the default
+   * babel/istanbul provider (that path silently reports 0/0). V8 coverage
+   * works with any transformer.
+   */
+  coverageProvider: 'v8',
+
+  /**
    * An array of glob patterns indicating a set of files for which coverage
    * information should be collected.
    */
@@ -89,15 +96,17 @@ export default {
    * Coverage thresholds to enforce minimum coverage percentages.
    * Tests will fail if coverage falls below these thresholds.
    *
-   * Note: Set to 0 for starter kit. Increase these values as you add more tests.
-   * Recommended production values: 80% for all metrics.
+   * Enforced whenever coverage is collected (`npm run test:coverage`, CI).
+   * Baseline measured 2026-09-05 with the V8 provider: statements 27%,
+   * branches 68%, functions 50%. Thresholds sit just under that so a change
+   * that removes tests fails, and are ratcheted up as coverage grows.
    */
   coverageThreshold: {
     global: {
-      branches: 0,
-      functions: 0,
-      lines: 0,
-      statements: 0,
+      branches: 60,
+      functions: 45,
+      lines: 25,
+      statements: 25,
     },
   },
 
@@ -208,6 +217,13 @@ export default {
    * identity-obj-proxy (which needs transformation for CSS module mocking).
    */
   transformIgnorePatterns: ['/node_modules/(?!(identity-obj-proxy)/)'],
+
+  /**
+   * On-demand DB drivers live in .xnapify/sequelize-drivers/<dialect>/node_modules,
+   * never in the project node_modules (npm prunes unmanaged entries on every
+   * reify). Tests run on in-memory SQLite, so expose that sandbox to the resolver.
+   */
+  modulePaths: ['<rootDir>/.xnapify/sequelize-drivers/sqlite/node_modules'],
 
   /**
    * A list of paths to modules that run some code to configure or set up the testing
@@ -349,16 +365,16 @@ export default {
   automock: false,
 
   /**
-   * Disable caching for Jest.
-   * Set to false to disable caching entirely.
+   * Transform cache. Jest 30's cache is safe under parallel workers and cuts
+   * repeat runs substantially; benchmarks force `--no-cache` themselves.
    */
-  cache: false,
+  cache: true,
 
   /**
-   * The directory where Jest should store its cached dependency information.
-   * (Not used when cache is disabled, but can cause ENOENT race conditions if kept manually in older Jest)
+   * Keep the cache inside the project so it is cleaned with `npm run clean --deep`
+   * and never collides with another checkout's cache in the OS temp dir.
    */
-  // cacheDirectory: '<rootDir>/.cache/jest',
+  cacheDirectory: '<rootDir>/.cache/jest',
 
   /**
    * An array of regexp patterns that are matched against all file paths before executing the test.

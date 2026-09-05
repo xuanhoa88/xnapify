@@ -7,6 +7,8 @@
 
 import { extractToken } from '@shared/cookies/index.js';
 
+import { verifyActiveSession } from '../revocation.js';
+
 /**
  * Basic JWT authentication middleware
  *
@@ -74,6 +76,9 @@ export function requireAuth(options = {}) {
             req.user = decoded;
             jwt.cacheToken(token, decoded);
           }
+          // Signature validity is necessary but not sufficient: the session
+          // may have been revoked or superseded since the token was issued.
+          await verifyActiveSession(container, req.user);
           req.authMethod = 'jwt';
         }
 

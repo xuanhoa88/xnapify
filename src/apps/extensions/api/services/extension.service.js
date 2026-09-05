@@ -264,8 +264,22 @@ export async function manageExtensions({
     }
   }
 
-  // Convert Map to Array
-  extensions.push(...metadata.values());
+  // Convert Map to Array, attaching the live runtime state so the admin UI
+  // can show load failures instead of a silently missing extension.
+  for (const entry of metadata.values()) {
+    const runtime = extensionManager.getExtensionMetadata(entry.id);
+    extensions.push({
+      ...entry,
+      runtime: runtime
+        ? {
+            state: runtime.state,
+            error: runtime.error ? runtime.error.message : null,
+            loadedAt: runtime.loadedAt || null,
+          }
+        : { state: 'inactive', error: null, loadedAt: null },
+      compatibility: entry.compatibility || null,
+    });
+  }
 
   // Attach job_status if there are active queue jobs for these extensions
   if (queue) {

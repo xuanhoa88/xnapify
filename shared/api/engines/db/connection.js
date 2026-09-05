@@ -17,6 +17,11 @@ import { getHmrState } from '@shared/utils/hmrState.js';
 import { register } from '../../shutdown.js';
 
 import {
+  detectDialect,
+  getDriverModulePath,
+  registerDriverPaths,
+} from './drivers.js';
+import {
   runMigrations,
   runSeeds,
   revertMigrations,
@@ -232,6 +237,15 @@ export function createConnection(url, options) {
       cached.modelManager.models = [];
       return attachMigrationMethods(cached);
     }
+  }
+
+  // Drivers live in .xnapify/sequelize-drivers/<dialect>, never in
+  // node_modules (npm prunes unmanaged entries on every reify). Expose the
+  // sandboxes to require() and point Sequelize at the dialect module directly.
+  registerDriverPaths();
+  if (!config.dialectModule && !config.dialectModulePath) {
+    const driverPath = getDriverModulePath(detectDialect(databaseUrl));
+    if (driverPath) config.dialectModulePath = driverPath;
   }
 
   // Create connection and attach migration methods

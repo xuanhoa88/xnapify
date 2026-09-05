@@ -157,38 +157,22 @@ export default {
     registry.registerHook(
       `${ipcPrefix}:text:stats`,
       this[HANDLERS].ipcTextStats,
-      __EXTENSION_ID__,
     );
-    registry.registerHook(
-      `${ipcPrefix}:text:hash`,
-      this[HANDLERS].ipcTextHash,
-      __EXTENSION_ID__,
-    );
-    registry.registerHook(
-      `${ipcPrefix}:text:find`,
-      this[HANDLERS].ipcTextFind,
-      __EXTENSION_ID__,
-    );
+    registry.registerHook(`${ipcPrefix}:text:hash`, this[HANDLERS].ipcTextHash);
+    registry.registerHook(`${ipcPrefix}:text:find`, this[HANDLERS].ipcTextFind);
     registry.registerHook(
       `${ipcPrefix}:math:fibonacci`,
       this[HANDLERS].ipcFibonacci,
-      __EXTENSION_ID__,
     );
     registry.registerHook(
       `${ipcPrefix}:math:isPrime`,
       this[HANDLERS].ipcIsPrime,
-      __EXTENSION_ID__,
     );
     registry.registerHook(
       `${ipcPrefix}:math:sievePrimes`,
       this[HANDLERS].ipcSievePrimes,
-      __EXTENSION_ID__,
     );
-    registry.registerHook(
-      `${ipcPrefix}:stats`,
-      this[HANDLERS].ipcStats,
-      __EXTENSION_ID__,
-    );
+    registry.registerHook(`${ipcPrefix}:stats`, this[HANDLERS].ipcStats);
 
     console.log(`[${__EXTENSION_ID__}] Registered 7 IPC handlers`);
   },

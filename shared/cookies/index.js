@@ -21,19 +21,36 @@ import ms from 'ms';
  * Predefined cookie types with their configurations
  * Uses getters to ensure dynamic environment variables are read at runtime.
  */
+/**
+ * Parse a duration string once per distinct value. The getters below run on
+ * every cookie write and clear; re-parsing the same env string each time
+ * showed up as measurable CPU in profiles.
+ */
+const durationCache = new Map();
+function parseDuration(value, fallback) {
+  const raw = value || fallback;
+  let parsed = durationCache.get(raw);
+  if (parsed === undefined) {
+    parsed = ms(raw);
+    if (durationCache.size > 32) durationCache.clear();
+    durationCache.set(raw, parsed);
+  }
+  return parsed;
+}
+
 const COOKIE_TYPES = Object.freeze({
   jwt: {
     name: 'id_token',
     get maxAge() {
       // Keep in sync with DEFAULT_JWT_CONFIG in shared/jwt/constants.js
-      return ms(process.env.XNAPIFY_JWT_EXPIRY || '7d');
+      return parseDuration(process.env.XNAPIFY_JWT_EXPIRY, '7d');
     },
   },
   refresh: {
     name: 'refresh_token',
     get maxAge() {
       // Keep in sync with process.env.XNAPIFY_JWT_REFRESH_EXPIRY
-      return ms(process.env.XNAPIFY_JWT_REFRESH_EXPIRY || '30d');
+      return parseDuration(process.env.XNAPIFY_JWT_REFRESH_EXPIRY, '30d');
     },
   },
 });
@@ -300,7 +317,7 @@ export function clearAllAuthCookies(res, options = {}) {
  */
 export function extractToken(req, options = {}) {
   const {
-    sources = ['cookie', 'header', 'query'],
+    sources = ['cookie', 'header'],
     headerName = 'authorization',
     headerPrefix = 'Bearer ',
     queryParam = 'token',

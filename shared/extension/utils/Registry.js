@@ -383,7 +383,28 @@ class ExtensionRegistry {
       slotMap.delete(component);
       this.notify();
     }
+    // Drop the ownership record so ownsSlot() stays accurate
+    for (const reg of this[REGISTRATIONS].values()) {
+      reg.slots = reg.slots.filter(
+        entry => !(entry.slotId === slotId && entry.component === component),
+      );
+    }
     return this;
+  }
+
+  /**
+   * Whether `extensionId` registered `component` in `slotId`.
+   * @param {string} extensionId
+   * @param {string} slotId
+   * @param {*} component
+   * @returns {boolean}
+   */
+  ownsSlot(extensionId, slotId, component) {
+    const reg = this[REGISTRATIONS].get(extensionId);
+    if (!reg) return false;
+    return reg.slots.some(
+      entry => entry.slotId === slotId && entry.component === component,
+    );
   }
 
   /** Get components for a slot (sorted by order) */
@@ -406,14 +427,34 @@ class ExtensionRegistry {
    * @param {Function} callback - Callback function (can be async)
    * @param {string} [extensionId] - Optional extension ID for auto-cleanup
    */
-  registerHook(hookId, callback, extensionId) {
-    this[HOOKS].register(hookId, callback, extensionId);
+  registerHook(hookId, callback, extensionId, options = {}) {
+    this[HOOKS].register(hookId, callback, extensionId, options);
     return this;
+  }
+
+  /**
+   * Read hook metadata declared at registration (e.g. `{ public: true }`)
+   * @param {string} hookId - Hook identifier
+   * @returns {Object}
+   */
+  getHookMeta(hookId) {
+    return this[HOOKS].getMeta(hookId);
   }
 
   unregisterHook(hookId, callback) {
     this[HOOKS].unregister(hookId, callback);
     return this;
+  }
+
+  /**
+   * Whether `extensionId` registered `callback` for `hookId`.
+   * @param {string} extensionId
+   * @param {string} hookId
+   * @param {Function} callback
+   * @returns {boolean}
+   */
+  ownsHook(extensionId, hookId, callback) {
+    return this[HOOKS].owns(extensionId, hookId, callback);
   }
 
   /**

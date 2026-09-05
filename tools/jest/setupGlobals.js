@@ -26,5 +26,9 @@ globalThis.__DEV__ = false;
 // eslint-disable-next-line no-underscore-dangle
 globalThis.__TEST__ = true;
 
+// Host version for the extension compatibility contract
+// eslint-disable-next-line no-underscore-dangle
+globalThis.__XNAPIFY_VERSION__ = process.env.npm_package_version || '2.0.0';
+
 // Increase MaxListeners to accommodate gracefully shutting down all backend engines during testing
 process.setMaxListeners(20);

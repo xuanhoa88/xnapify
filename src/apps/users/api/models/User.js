@@ -97,6 +97,19 @@ export default async function createUserModel(
       type: DataTypes.DATE,
       comment: 'When password was last changed',
     },
+
+    locked_until: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      comment: 'Automatic lockout expiry after repeated failed logins',
+    },
+
+    token_version: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+      comment: 'Bumped to invalidate every access token issued before the bump',
+    },
   };
 
   // Invoke hook to allow extensions to modify the model
@@ -212,6 +225,14 @@ export default async function createUserModel(
     User.hasMany(models.PasswordResetToken, {
       foreignKey: 'user_id',
       as: 'passwordResetTokens',
+      onUpdate: 'CASCADE',
+      onDelete: 'CASCADE',
+    });
+
+    // User → RefreshToken  (1:N)
+    User.hasMany(models.RefreshToken, {
+      foreignKey: 'user_id',
+      as: 'refreshTokens',
       onUpdate: 'CASCADE',
       onDelete: 'CASCADE',
     });

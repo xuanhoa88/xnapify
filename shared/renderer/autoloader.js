@@ -15,6 +15,13 @@
  *   - views()        — returns a rspack import.meta.webpackContext for view routes
  *
  * Mirrors the API autoloader pattern (shared/api/autoloader.js).
+ *
+ * Discovery is split into two halves:
+ *   - the static half (load lifecycles, register translations, collect route
+ *     contexts) depends only on the bundle and is computed once per process
+ *     and per modules context;
+ *   - the dynamic half (providers, boot) receives the caller's context and
+ *     runs every time, because on the server that context is per request.
  */
 
 import { getTranslations } from '@shared/i18n/loader.js';
@@ -193,57 +200,125 @@ export function mergeAdapters(adapters) {
 }
 
 // =============================================================================
-// PUBLIC API
+// STATIC DISCOVERY (once per process per modules context)
+// =============================================================================
+
+/** @type {WeakMap<object, Promise<object>>} modulesContext → static discovery */
+let staticCache = new WeakMap();
+
+/**
+ * Forget every cached discovery. Called on HMR so edited modules are
+ * re-discovered; harmless on the client.
+ */
+export function resetDiscoveryCache() {
+  staticCache = new WeakMap();
+}
+
+/**
+ * Load lifecycles, register translations and collect route contexts.
+ * Pure with respect to the caller: no context is needed, so the result is
+ * shared by every subsequent call for the same modules context.
+ *
+ * @param {object} modulesContext - Rspack import.meta.webpackContext or compatible
+ * @returns {Promise<{ lifecycles: Map, viewAdapters: Map, mergedAdapter: object|null, errors: object[] }>}
+ */
+export function discoverViewModules(modulesContext) {
+  let pending = staticCache.get(modulesContext);
+  if (pending) return pending;
+
+  pending = (async () => {
+    const startTime = Date.now();
+    const adapter = createRspackContextAdapter(modulesContext);
+
+    // Filter lifecycle paths
+    const lifecyclePaths = adapter
+      .files()
+      .filter(p => LIFECYCLE_PATH_PATTERN.test(p));
+
+    // Load hook objects
+    const { lifecycles, errors: loadErrors } = loadLifecycles(
+      adapter,
+      lifecyclePaths,
+    );
+    const errors = [...loadErrors];
+
+    // ─── Phase 1: translations ────────────────────────────────────────────
+    errors.push(
+      ...(await runPhase('translations', lifecycles, (name, hook) => {
+        const result = hook();
+        if (result) {
+          const [translationContext, customNs] = Array.isArray(result)
+            ? result
+            : [result];
+          if (translationContext) {
+            const translations = getTranslations(translationContext);
+            if (translations && Object.keys(translations).length > 0) {
+              const namespace = customNs || name;
+              addNamespace(namespace, translations);
+            }
+          }
+        }
+      })),
+    );
+
+    // ─── Phase 4: views (route contexts) ──────────────────────────────────
+    const viewAdapters = new Map();
+    errors.push(
+      ...(await runPhase('routes', lifecycles, (name, hook) => {
+        const viewContext = hook();
+        if (viewContext) {
+          const rawAdapter = createRspackContextAdapter(viewContext);
+          const prefix = `./${name}/views`;
+          viewAdapters.set(name, {
+            files: () => rawAdapter.files().map(p => p.replace(/^\./, prefix)),
+            load: p => rawAdapter.load(p.replace(prefix, '.')),
+            resolve: p => rawAdapter.resolve(p.replace(prefix, '.')),
+          });
+        }
+      })),
+    );
+
+    const mergedAdapter = mergeAdapters(viewAdapters);
+
+    log(
+      `${lifecycles.size} lifecycle(s), ${viewAdapters.size} view adapter(s) discovered in ${Date.now() - startTime}ms`,
+    );
+
+    return { lifecycles, viewAdapters, mergedAdapter, errors };
+  })();
+
+  // Do not cache a failed discovery; the next caller retries
+  pending.catch(() => {
+    if (staticCache.get(modulesContext) === pending) {
+      staticCache.delete(modulesContext);
+    }
+  });
+
+  staticCache.set(modulesContext, pending);
+  return pending;
+}
+
+// =============================================================================
+// DYNAMIC BOOT (per caller context)
 // =============================================================================
 
 /**
- * Discover and boot all view modules in lifecycle order.
+ * Run the context-dependent phases (providers → boot) for already
+ * discovered modules.
  *
- * @param {object} modulesContext - Rspack import.meta.webpackContext or compatible
- * @param {object} context - DI context
- * @returns {Promise<{ viewAdapters: Map, mergedAdapter: object|null, errors: object[] }>}
+ * @param {Map<string, object>} lifecycles - Module name → hooks
+ * @param {object} context - DI context (store, container, ...)
+ * @returns {Promise<object[]>} errors
  */
-export async function discoverModules(modulesContext, context) {
-  const startTime = Date.now();
-  const adapter = createRspackContextAdapter(modulesContext);
-
-  // Filter lifecycle paths
-  const lifecyclePaths = adapter
-    .files()
-    .filter(p => LIFECYCLE_PATH_PATTERN.test(p));
-
-  // Load hook objects
-  const { lifecycles, errors: loadErrors } = loadLifecycles(
-    adapter,
-    lifecyclePaths,
-  );
-  const errors = [...loadErrors];
-
-  // ─── Phase 1: translations ──────────────────────────────────────────────
-  errors.push(
-    ...(await runPhase('translations', lifecycles, (name, hook) => {
-      const result = hook();
-      if (result) {
-        const [translationContext, customNs] = Array.isArray(result)
-          ? result
-          : [result];
-        if (translationContext) {
-          const translations = getTranslations(translationContext);
-          if (translations && Object.keys(translations).length > 0) {
-            const namespace = customNs || name;
-            addNamespace(namespace, translations);
-          }
-        }
-      }
-    })),
-  );
+export async function bootViewModules(lifecycles, context) {
+  const errors = [];
 
   // ─── Phase 2: providers ─────────────────────────────────────────────────
   errors.push(
     ...(await runPhase('providers', lifecycles, async (name, hook) => {
       try {
         await hook(context);
-        log(`[${name}] Providers`);
+        if (__DEV__) log(`[${name}] Providers`);
       } catch (error) {
         // PersistentBindingError = idempotent re-registration on same container
         if (error.name === 'PersistentBindingError') return;
@@ -257,34 +332,44 @@ export async function discoverModules(modulesContext, context) {
     ...(await runPhase('boot', lifecycles, (_, hook) => hook(context))),
   );
 
-  // ─── Phase 4: views ─────────────────────────────────────────────────────
-  const viewAdapters = new Map();
-  errors.push(
-    ...(await runPhase('routes', lifecycles, (name, hook) => {
-      const viewContext = hook();
-      if (viewContext) {
-        const rawAdapter = createRspackContextAdapter(viewContext);
-        const prefix = `./${name}/views`;
-        viewAdapters.set(name, {
-          files: () => rawAdapter.files().map(p => p.replace(/^\./, prefix)),
-          load: p => rawAdapter.load(p.replace(prefix, '.')),
-          resolve: p => rawAdapter.resolve(p.replace(prefix, '.')),
-        });
-      }
-    })),
-  );
+  return errors;
+}
 
-  // ─── Merge adapters ─────────────────────────────────────────────────────
-  const mergedAdapter = mergeAdapters(viewAdapters);
+// =============================================================================
+// PUBLIC API
+// =============================================================================
 
-  // ─── Summary ────────────────────────────────────────────────────────────
-  log(
-    `${lifecycles.size} lifecycle(s), ${viewAdapters.size} view adapter(s) loaded in ${Date.now() - startTime}ms`,
-  );
+/**
+ * Discover and boot all view modules in lifecycle order.
+ *
+ * Static discovery is cached per modules context; the providers and boot
+ * phases run for every call with the supplied context.
+ *
+ * @param {object} modulesContext - Rspack import.meta.webpackContext or compatible
+ * @param {object} context - DI context
+ * @returns {Promise<{ viewAdapters: Map, mergedAdapter: object|null, errors: object[] }>}
+ */
+export async function discoverModules(modulesContext, context) {
+  const startTime = Date.now();
+  const discovered = await discoverViewModules(modulesContext);
+  const errors = [
+    ...discovered.errors,
+    ...(await bootViewModules(discovered.lifecycles, context)),
+  ];
+
+  if (__DEV__) {
+    log(
+      `${discovered.lifecycles.size} lifecycle(s) booted in ${Date.now() - startTime}ms`,
+    );
+  }
 
   if (errors.length > 0) {
     log(`${errors.length} error(s) during module loading`, 'warn');
   }
 
-  return { viewAdapters, mergedAdapter, errors };
+  return {
+    viewAdapters: discovered.viewAdapters,
+    mergedAdapter: discovered.mergedAdapter,
+    errors,
+  };
 }

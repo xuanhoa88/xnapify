@@ -10,6 +10,7 @@ import { validateForm } from '@shared/validator/index.js';
 
 import * as authService from '../services/auth.service.js';
 import * as profileService from '../services/profile.service.js';
+import * as sessionService from '../services/session.service.js';
 import { generatePassword } from '../utils/password.js';
 
 import * as authController from './auth.controller.js';
@@ -37,6 +38,18 @@ jest.mock('../services/auth.service', () => ({
 
 jest.mock('../services/profile.service', () => ({
   getUserWithProfile: jest.fn(),
+}));
+
+jest.mock('../services/session.service', () => ({
+  issueTokenPair: jest.fn(async () => ({
+    accessToken: 'access-token',
+    refreshToken: 'refresh-token',
+  })),
+  rotateTokenPair: jest.fn(async () => ({
+    accessToken: 'new-access-token',
+    refreshToken: 'new-refresh-token',
+  })),
+  revokeByToken: jest.fn(async () => 1),
 }));
 
 jest.mock('../utils/password', () => ({
@@ -92,6 +105,17 @@ describe('Auth Controller', () => {
 
     mockHookInstance = { emit: jest.fn(), invoke: jest.fn() };
     mockHook = jest.fn().mockReturnValue(mockHookInstance);
+
+    // resetMocks:true wipes factory implementations — restore them per test
+    sessionService.issueTokenPair.mockResolvedValue({
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
+    });
+    sessionService.rotateTokenPair.mockResolvedValue({
+      accessToken: 'new-access-token',
+      refreshToken: 'new-refresh-token',
+    });
+    sessionService.revokeByToken.mockResolvedValue(1);
 
     // Setting up global req/res
     req = {
@@ -156,7 +180,7 @@ describe('Auth Controller', () => {
         { email: 'test@example.com', password: 'password123' },
         expect.objectContaining({ defaultRoleName: 'user' }),
       );
-      expect(mockJwt.generateTokenPair).toHaveBeenCalled();
+      expect(sessionService.issueTokenPair).toHaveBeenCalled();
       expect(cookies.setTokenCookie).toHaveBeenCalledWith(res, 'access-token');
       expect(mockHttp.sendSuccess).toHaveBeenCalledWith(
         res,
@@ -252,6 +276,20 @@ describe('Auth Controller', () => {
         'Invalid email or password',
       );
     });
+
+    it('should not reveal whether the email exists (UserNotFoundError)', async () => {
+      validateForm.mockReturnValue([true, null]);
+      const error = new Error('User not found');
+      error.name = 'UserNotFoundError';
+      authService.authenticateUser.mockRejectedValue(error);
+
+      await authController.login(req, res);
+
+      expect(mockHttp.sendUnauthorized).toHaveBeenCalledWith(
+        res,
+        'Invalid email or password',
+      );
+    });
   });
 
   describe('logout', () => {
@@ -265,6 +303,7 @@ describe('Auth Controller', () => {
         1,
         expect.any(Object),
       );
+      expect(sessionService.revokeByToken).toHaveBeenCalled();
       expect(cookies.clearAllAuthCookies).toHaveBeenCalledWith(res);
       expect(mockJwt.cache.delete).toHaveBeenCalledWith('some-token');
       expect(mockHttp.sendSuccess).toHaveBeenCalled();
@@ -285,8 +324,9 @@ describe('Auth Controller', () => {
 
       await authController.refreshToken(req, res);
 
-      expect(mockJwt.refreshTokenPair).toHaveBeenCalledWith(
+      expect(sessionService.rotateTokenPair).toHaveBeenCalledWith(
         'valid-refresh-token',
+        expect.objectContaining({ jwt: mockJwt, models: mockModels }),
       );
       expect(cookies.setTokenCookie).toHaveBeenCalledWith(
         res,
@@ -310,9 +350,8 @@ describe('Auth Controller', () => {
       cookies.getRefreshTokenFromCookie.mockReturnValue('expired-token');
       const error = new Error('Expired');
       error.name = 'TokenExpiredError';
-      mockJwt.refreshTokenPair.mockImplementation(() => {
-        throw error;
-      });
+      error.status = 401;
+      sessionService.rotateTokenPair.mockRejectedValueOnce(error);
 
       await authController.refreshToken(req, res);
 
@@ -320,6 +359,23 @@ describe('Auth Controller', () => {
         res,
         'Refresh token has expired',
       );
+      expect(cookies.clearAllAuthCookies).toHaveBeenCalledWith(res);
+    });
+
+    it('should reject a replayed (already rotated) refresh token', async () => {
+      cookies.getRefreshTokenFromCookie.mockReturnValue('replayed-token');
+      const error = new Error('reused');
+      error.name = 'RefreshTokenReuseError';
+      error.status = 401;
+      sessionService.rotateTokenPair.mockRejectedValueOnce(error);
+
+      await authController.refreshToken(req, res);
+
+      expect(mockHttp.sendUnauthorized).toHaveBeenCalledWith(
+        res,
+        'Session is no longer valid',
+      );
+      expect(cookies.clearAllAuthCookies).toHaveBeenCalledWith(res);
     });
   });
 

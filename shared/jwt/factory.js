@@ -5,7 +5,14 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { jwtCache, cacheToken } from './cache.js';
+import {
+  jwtCache,
+  jwtNegativeCache,
+  cacheToken,
+  cacheTokenFailure,
+  getCachedTokenFailure,
+  forgetToken,
+} from './cache.js';
 import { validateJwtConfig, getJwtConfig } from './config.js';
 import { DEFAULT_JWT_CONFIG } from './constants.js';
 import { generateToken, verifyToken, decodeToken } from './core.js';
@@ -118,7 +125,57 @@ export function createJwt(config = {}) {
      * Cache a token
      */
     cacheToken,
+
+    /**
+     * Get the negative (failed verification) cache
+     */
+    get negativeCache() {
+      return jwtNegativeCache;
+    },
+
+    /**
+     * Drop every cached verdict for a token
+     */
+    forgetToken,
   });
+}
+
+/**
+ * Verification failures that are deterministic for the lifetime of a
+ * negative-cache entry. `nbf` failures are excluded because a token becomes
+ * valid on its own once the clock passes the claim.
+ *
+ * @param {Error} error
+ * @returns {boolean}
+ */
+function isNegativeCacheable(error) {
+  return (
+    !!error &&
+    error.status === 401 &&
+    error.name !== 'TokenNotActiveError' &&
+    error.cached !== true
+  );
+}
+
+/**
+ * Run a verification with the negative cache consulted first.
+ *
+ * @param {string} token
+ * @param {string|undefined} expectedType
+ * @param {Function} run - Performs the real verification
+ * @returns {Object} Decoded payload
+ */
+function verifyWithNegativeCache(token, expectedType, run) {
+  const cached = getCachedTokenFailure(token, expectedType);
+  if (cached) throw cached;
+  try {
+    return run();
+  } catch (error) {
+    if (isNegativeCacheable(error)) {
+      cacheTokenFailure(token, error, expectedType);
+    }
+    throw error;
+  }
 }
 
 /**
@@ -184,13 +241,14 @@ export function createJwtFromEnv() {
 
   // Key rotation: if a previous key is configured, wrap verify methods
   // to try the current key first, then fall back to the previous key.
+  let resolved = jwt;
   if (previousSecret && previousSecret.trim().length > 0) {
     const previousJwt = createJwt({
       secret: previousSecret,
       ...resolveConfig(),
     });
 
-    return Object.freeze({
+    resolved = Object.freeze({
       ...jwt,
       verifyToken(token, overrides) {
         try {
@@ -209,7 +267,21 @@ export function createJwtFromEnv() {
     });
   }
 
-  return jwt;
+  // Negative caching sits outermost so a token that fails every configured
+  // key is rejected from cache on the next request instead of re-verified.
+  return Object.freeze({
+    ...resolved,
+    verifyToken(token, overrides) {
+      return verifyWithNegativeCache(token, undefined, () =>
+        resolved.verifyToken(token, overrides),
+      );
+    },
+    verifyTypedToken(token, expectedType, overrides) {
+      return verifyWithNegativeCache(token, expectedType, () =>
+        resolved.verifyTypedToken(token, expectedType, overrides),
+      );
+    },
+  });
 }
 
 /**

@@ -57,6 +57,9 @@ import Container from './Container.js';
 // Export Container class for direct use / type checking
 export { Container };
 
+// Capability-scoped facade handed to extensions
+export { createScopedContainer, CapabilityDeniedError } from './scoped.js';
+
 /**
  * Create a new, independent Container instance.
  *

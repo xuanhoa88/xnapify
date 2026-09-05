@@ -7,5 +7,9 @@
   "dependencies": {
     "passport-google-oauth20": "^2.0.0"
   },
-  "slots": ["/login"]
+  "slots": ["login"],
+  "xnapify": {
+    "version": "^2.0.0",
+    "capabilities": ["models", "oauth"]
+  }
 }

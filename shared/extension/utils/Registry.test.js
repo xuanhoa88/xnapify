@@ -356,4 +356,35 @@ describe('ExtensionRegistry', () => {
       expect(data.value).toBe(30); // (5 + 10) * 2
     });
   });
+
+  describe('Ownership', () => {
+    test('tracks which extension owns a slot and a hook', () => {
+      const Comp = () => null;
+      const cb = () => {};
+      registry.registerSlot('profile.fields', Comp, { extensionId: 'ext-a' });
+      registry.registerHook('profile.validate', cb, 'ext-a');
+
+      expect(registry.ownsSlot('ext-a', 'profile.fields', Comp)).toBe(true);
+      expect(registry.ownsSlot('ext-b', 'profile.fields', Comp)).toBe(false);
+      expect(registry.ownsHook('ext-a', 'profile.validate', cb)).toBe(true);
+      expect(registry.ownsHook('ext-b', 'profile.validate', cb)).toBe(false);
+
+      registry.unregisterSlot('profile.fields', Comp);
+      registry.unregisterHook('profile.validate', cb);
+      expect(registry.ownsSlot('ext-a', 'profile.fields', Comp)).toBe(false);
+      expect(registry.ownsHook('ext-a', 'profile.validate', cb)).toBe(false);
+    });
+
+    test("unregister(extensionId) only removes that extension's registrations", () => {
+      const A = () => null;
+      const B = () => null;
+      registry.registerSlot('slot', A, { extensionId: 'ext-a' });
+      registry.registerSlot('slot', B, { extensionId: 'ext-b' });
+
+      registry.unregister('ext-a');
+
+      const entries = registry.getSlotEntries('slot').map(e => e.component);
+      expect(entries).toEqual([B]);
+    });
+  });
 });

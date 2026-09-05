@@ -5,7 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { extractToken } from '@shared/cookies/index.js';
+import { clearAllAuthCookies, extractToken } from '@shared/cookies/index.js';
+
+import { verifyActiveSession } from '../revocation.js';
 
 /**
  * Optional JWT authentication middleware
@@ -55,16 +57,20 @@ export function optionalAuth(options = {}) {
               req.user = decoded;
               jwt.cacheToken(token, decoded);
             }
+            // Reject tokens whose session was revoked since issuance
+            await verifyActiveSession(container, req.user);
             req.authMethod = 'jwt';
           }
         }
       } else {
         // Even without user resolution, verify the token signature
         // to ensure we don't mark forged/expired tokens as authenticated
-        if (!jwt.cache.get(token)) {
-          const decoded = jwt.verifyTypedToken(token, tokenType);
+        let decoded = jwt.cache.get(token);
+        if (!decoded) {
+          decoded = jwt.verifyTypedToken(token, tokenType);
           jwt.cacheToken(token, decoded);
         }
+        await verifyActiveSession(container, decoded);
       }
 
       if (!req.authMethod) {
@@ -74,8 +80,15 @@ export function optionalAuth(options = {}) {
       req.authenticated = true;
 
       next();
-    } catch (_error) {
+    } catch (error) {
       req.authenticated = false;
+      req.user = undefined;
+      if (error && error.name === 'SessionRevokedError') {
+        // The cookie is dead server-side: stop the browser from resending it
+        clearAllAuthCookies(res);
+        req.tokenCleared = true;
+        res.setHeader('X-Auth-Status', 'expired');
+      }
       next();
     }
   };

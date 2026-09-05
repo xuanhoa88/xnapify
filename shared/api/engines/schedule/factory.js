@@ -7,6 +7,8 @@
 
 import cron from 'node-cron';
 
+import { isSingletonWorker } from '@shared/utils/runtime.js';
+
 import { register } from '../../shutdown.js';
 
 import { ScheduleError } from './errors.js';
@@ -68,6 +70,10 @@ class ScheduleManager {
     const task = cron.schedule(
       cronExpression,
       async () => {
+        // In a cluster every worker registers the same schedules; only the
+        // singleton worker executes them so a job never runs N times.
+        if (!isSingletonWorker()) return;
+
         const item = this.tasks.get(name);
         if (!item || item.isExecuting) {
           if (item) {

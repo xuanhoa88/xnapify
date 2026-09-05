@@ -9,6 +9,8 @@ import { execFile } from 'child_process';
 import path from 'path';
 import { promisify } from 'util';
 
+import { checkHostCompatibility } from '@shared/extension/utils/compat.js';
+
 // Promisify execFile
 const execFileAsync = promisify(execFile);
 
@@ -64,6 +66,14 @@ export class ExtensionError extends Error {
       message || 'Extension already exists',
       'ExtensionConflict',
       409,
+    );
+  }
+
+  static incompatible(reason) {
+    return new ExtensionError(
+      `Extension is not compatible with this host: ${reason}`,
+      'IncompatibleExtension',
+      422,
     );
   }
 }
@@ -133,7 +143,14 @@ export function validateManifest(manifest) {
     );
   }
 
-  return { name, version };
+  // Host version contract — an extension built for another major must not
+  // be installed or activated.
+  const compatibility = checkHostCompatibility(manifest);
+  if (!compatibility.ok) {
+    throw ExtensionError.incompatible(compatibility.reason);
+  }
+
+  return { name, version, compatibility };
 }
 
 // ========================================================================
@@ -179,6 +196,10 @@ export async function installExtensionDependencies(extensionDir, extension) {
         '--no-fund',
         '--engine-strict',
         '--no-package-lock',
+        // Never execute lifecycle scripts from third-party packages inside
+        // the server process — extension code runs only through the
+        // sandboxed lifecycle hooks, not via npm preinstall/postinstall.
+        '--ignore-scripts',
       ],
       {
         cwd: extensionDir,

@@ -12,6 +12,9 @@ import reducer, { SLICE_NAME } from '../redux/index.js';
 
 import SettingsPage from './SettingsPage.js';
 
+/** Stable extension namespace (see manifest `slots`). */
+export const namespace = 'admin.settings';
+
 const { addBreadcrumb, registerMenu, unregisterMenu } = features;
 
 /**

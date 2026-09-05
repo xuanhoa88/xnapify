@@ -10,5 +10,9 @@
   "devDependencies": {
     "ts-loader": "^9.5.1"
   },
-  "slots": ["/profile"]
+  "slots": ["profile"],
+  "xnapify": {
+    "version": "^2.0.0",
+    "capabilities": ["db", "hook", "models"]
+  }
 }

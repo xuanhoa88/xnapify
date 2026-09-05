@@ -91,6 +91,8 @@ class WebSocketServer extends EventEmitter {
 
     // Heartbeat
     this.heartbeatTimer = null;
+    // Cross-instance fan-out (see attachPubSub)
+    this.pubsub = null;
 
     // Register default handlers
     // eslint-disable-next-line no-underscore-dangle
@@ -697,6 +699,166 @@ class WebSocketServer extends EventEmitter {
   }
 
   /**
+   * Close every connection matching a predicate.
+   * Used by session revocation: sockets were authenticated once at connect
+   * time, so a revoked session must be cut off explicitly.
+   *
+   * @param {Function} predicate - (ws) => boolean
+   * @param {string} [reason='Session revoked']
+   * @param {number} [code=CloseCode.POLICY_VIOLATION]
+   * @returns {number} Connections closed
+   */
+  closeConnections(
+    predicate,
+    reason = 'Session revoked',
+    code = CloseCode.POLICY_VIOLATION,
+  ) {
+    let closed = 0;
+    this.connections.forEach(ws => {
+      let match = false;
+      try {
+        match = !!predicate(ws);
+      } catch {
+        match = false;
+      }
+      if (!match) return;
+      try {
+        ws.close(code, reason);
+        closed += 1;
+      } catch {
+        // socket already closing
+      }
+    });
+    return closed;
+  }
+
+  /**
+   * Close every authenticated connection belonging to a user.
+   * @param {string|number} userId
+   * @param {string} [reason]
+   * @returns {number}
+   */
+  disconnectUser(userId, reason, { local = false } = {}) {
+    if (userId === undefined || userId === null) return 0;
+    if (!local) {
+      // eslint-disable-next-line no-underscore-dangle
+      this._publish({ op: 'disconnectUser', userId, reason });
+    }
+    const target = String(userId);
+    return this.closeConnections(
+      ws => ws.user && String(ws.user.id) === target,
+      reason,
+    );
+  }
+
+  /**
+   * Close every connection opened with an access token of one session.
+   * Requires the authentication handler to expose the token's `sid` claim
+   * on the user object.
+   * @param {string} sid - Session (refresh-token family) id
+   * @param {string} [reason]
+   * @returns {number}
+   */
+  disconnectSession(sid, reason, { local = false } = {}) {
+    if (!sid) return 0;
+    if (!local) {
+      // eslint-disable-next-line no-underscore-dangle
+      this._publish({ op: 'disconnectSession', sid, reason });
+    }
+    return this.closeConnections(ws => ws.user && ws.user.sid === sid, reason);
+  }
+
+  // ============================================================================
+  // CROSS-INSTANCE FAN-OUT
+  // ============================================================================
+
+  /**
+   * Share channel messages and disconnects with every other server instance
+   * through Redis pub/sub. Each worker holds its own connections; without
+   * this, a message sent from worker A never reaches a browser connected to
+   * worker B, and a session revoked on A stays open on B.
+   *
+   * @param {Object} options
+   * @param {Object} options.publisher - ioredis-compatible client
+   * @param {Object} options.subscriber - Dedicated subscriber client
+   * @param {string} [options.channel='ws:events'] - Pub/sub channel name
+   * @param {string} [options.instanceId] - Unique id of this process
+   * @returns {Promise<void>}
+   */
+  async attachPubSub({
+    publisher,
+    subscriber,
+    channel = 'ws:events',
+    instanceId = `${process.pid}:${uuidv4()}`,
+  }) {
+    if (!publisher || typeof publisher.publish !== 'function') {
+      throw new TypeError('attachPubSub requires a publisher client');
+    }
+    if (!subscriber || typeof subscriber.subscribe !== 'function') {
+      throw new TypeError('attachPubSub requires a subscriber client');
+    }
+
+    this.pubsub = { publisher, subscriber, channel, instanceId };
+
+    subscriber.on('message', (incomingChannel, raw) => {
+      if (incomingChannel !== channel) return;
+      let event;
+      try {
+        event = JSON.parse(raw);
+      } catch {
+        return;
+      }
+      if (!event || event.origin === instanceId) return;
+      // eslint-disable-next-line no-underscore-dangle
+      this._applyRemoteEvent(event);
+    });
+    await subscriber.subscribe(channel);
+    this.logger.info(`🔁 Fan-out enabled on "${channel}" as ${instanceId}`);
+  }
+
+  /**
+   * Stop sharing events with other instances.
+   * @returns {Promise<void>}
+   */
+  async detachPubSub() {
+    if (!this.pubsub) return;
+    const { subscriber, channel } = this.pubsub;
+    this.pubsub = null;
+    try {
+      await subscriber.unsubscribe(channel);
+    } catch {
+      // subscriber already closed
+    }
+  }
+
+  _publish(event) {
+    if (!this.pubsub) return;
+    const { publisher, channel, instanceId } = this.pubsub;
+    const payload = JSON.stringify({ ...event, origin: instanceId });
+    Promise.resolve(publisher.publish(channel, payload)).catch(err => {
+      this.logger.error(`Fan-out publish failed: ${err.message}`);
+    });
+  }
+
+  _applyRemoteEvent(event) {
+    switch (event.op) {
+      case 'channel':
+        this.sendToChannel(event.channelName, event.type, event.data, {
+          local: true,
+        });
+        break;
+      case 'disconnectUser':
+        this.disconnectUser(event.userId, event.reason, { local: true });
+        break;
+      case 'disconnectSession':
+        this.disconnectSession(event.sid, event.reason, { local: true });
+        break;
+      default:
+        this.logger.debug(`Ignoring unknown fan-out op: ${event.op}`);
+    }
+  }
+
+  /**
    * Send to specific connection
    */
   sendToConnection(connectionId, type, data) {
@@ -901,10 +1063,18 @@ class WebSocketServer extends EventEmitter {
   /**
    * Send message to a channel
    */
-  sendToChannel(channelName, type, data) {
+  sendToChannel(channelName, type, data, { local = false } = {}) {
+    // Fan out first so subscribers on other workers receive it even when
+    // this worker holds no local subscriber for the channel.
+    if (!local) {
+      // eslint-disable-next-line no-underscore-dangle
+      this._publish({ op: 'channel', channelName, type, data });
+    }
     const channel = this.channels.get(channelName);
     if (!channel) {
-      this.logger.warn(`⚠️ Channel not found: ${channelName}`);
+      if (!this.pubsub) {
+        this.logger.warn(`⚠️ Channel not found: ${channelName}`);
+      }
       return 0;
     }
 
@@ -996,6 +1166,9 @@ export function createWebSocketServer(options = {}, httpServer = null) {
   server.start(httpServer);
   return server;
 }
+
+// Export the class for tests and custom hosting
+export { WebSocketServer };
 
 // Re-export types for convenience
 export { EventType, MessageType, CloseCode, ChannelType };

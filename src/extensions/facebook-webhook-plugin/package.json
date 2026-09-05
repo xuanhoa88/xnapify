@@ -2,5 +2,9 @@
   "name": "@xnapify-extension/facebook-webhook",
   "version": "1.0.0",
   "main": "api/index.js",
-  "description": "Facebook webhook integration"
+  "description": "Facebook webhook integration",
+  "xnapify": {
+    "version": "^2.0.0",
+    "capabilities": ["hook", "webhook"]
+  }
 }

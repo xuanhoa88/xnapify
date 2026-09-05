@@ -5,6 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+// Strict per-route limit: credential and token endpoints are brute-force targets
+export const useRateLimit = { max: 10, windowMs: 15 * 60_000 };
+
 export const get = [
   function generateRandomPassword(req, ...args) {
     const { auth } = req.app.get('container').resolve('users:controllers');

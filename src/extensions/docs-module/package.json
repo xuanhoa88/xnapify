@@ -9,5 +9,9 @@
     "isomorphic-dompurify": "^1.13.0",
     "marked": "4.3.0",
     "mermaid": "^10.9.1"
+  },
+  "xnapify": {
+    "version": "^2.0.0",
+    "capabilities": ["cache", "http"]
   }
 }

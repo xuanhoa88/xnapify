@@ -11,5 +11,8 @@ export * from 'sequelize';
 // Export database connection
 export * from './connection.js';
 
+// Export on-demand driver sandbox helpers
+export * from './drivers.js';
+
 // Export database migrator
 export * from './migrator.js';

@@ -11,11 +11,26 @@ import FileQueue from './adapters/file.js';
 import MemoryQueue from './adapters/memory.js';
 import { Channel } from './channel.js';
 
-// Default options
+// Built-in adapter used when neither the factory nor the channel names one.
+// Persistent by default so queued work survives restarts. Override with
+// XNAPIFY_QUEUE_TYPE (e.g. 'memory' for throwaway dev/test queues).
+const DEFAULT_TYPE = 'file';
+
 const DEFAULT_OPTIONS = Object.freeze({
-  type: 'memory',
   concurrency: 1,
 });
+
+/**
+ * Resolve the default adapter type from the environment.
+ * @private
+ * @returns {string}
+ */
+function resolveDefaultType() {
+  const fromEnv = String(process.env.XNAPIFY_QUEUE_TYPE || '')
+    .trim()
+    .toLowerCase();
+  return fromEnv || DEFAULT_TYPE;
+}
 
 /**
  * Build a factory function with shared logic
@@ -180,7 +195,8 @@ function buildFactory(channelsMap, adaptersMap, baseOptions) {
 /**
  * Create a new isolated factory instance
  * @param {Object} options - Default options for this factory
- * @param {string} [options.type='memory'] - Default adapter type
+ * @param {string} [options.type] - Default adapter type. Falls back to
+ *   XNAPIFY_QUEUE_TYPE, then 'file'.
  * @param {number} [options.concurrency=1] - Default concurrency
  * @returns {Function} New factory function with its own state
  */
@@ -191,6 +207,7 @@ export function createFactory(options = {}) {
 
   const factory = buildFactory(new Map(), adaptersMap, {
     ...DEFAULT_OPTIONS,
+    type: resolveDefaultType(),
     ...options,
   });
 

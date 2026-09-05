@@ -26,9 +26,8 @@ xnapify/
 │   │   │   ├── db/               # Sequelize ORM & migrations
 │   │   │   ├── hook/             # Channel-based event system
 │   │   │   ├── schedule/         # Cron scheduling
-│   │   │   ├── webhook/          # Webhook engine
 │   │   │   └── worker/           # Worker thread pool engine
-│   │   │   └── ...               # email, fs, http, queue, search, template
+│   │   │   └── ...               # email, fs, http, queue, template
 
 │   │   ├── router/               # File-based API routing engine
 │   │   └── index.js              # Engine auto-loader
@@ -156,7 +155,8 @@ The application uses an auto-discovery system for both API modules and page comp
 
 **Shared API** (`shared/api/engines/` & `shared/jwt/`):
 
-- Core infrastructure: `auth`, `cache`, `db`, `email`, `fs`, `hook`, `http`, `queue`, `schedule`, `search`, `template`, `webhook`, `worker`
+- Core infrastructure: `auth`, `cache`, `db`, `email`, `fs`, `hook`, `http`, `queue`, `schedule`, `template`, `worker`
+- `search` and `webhook` are **modules** (`src/apps/search`, `src/apps/webhooks`) that bind themselves on the container, not engines
 - Auto-loaded from `shared/api/engines/*/index.js` and re-exported via `shared/api/index.js`
 - Provide reusable capabilities for modules — should not contain business logic
 
@@ -186,10 +186,24 @@ The application uses an auto-discovery system for both API modules and page comp
 ### 5. Authentication & Authorization
 
 - **JWT-based authentication** with HTTP-only cookies
+- **Revocable sessions:** every refresh token is recorded in `refresh_tokens` (users module, `services/session.service.js`). Refresh rotates the token, re-checks account status, and detects replay of an already-rotated token (revokes the family). Logout, password change, deactivation, and deletion revoke sessions via hook listeners in `src/apps/users/api/index.js`.
+- **Issuing tokens:** never call `jwt.generateTokenPair()` from controllers. Use `container.resolve('users:sessions').issueTokenPair(payload, { jwt, models, meta })`. Shared code rotates through `hook('auth.session').invoke('rotate', ctx)`.
+- **Multi-instance stores:** with `XNAPIFY_REDIS_URL` set, `src/bootstrap/api/index.js` moves the cache, rate-limit counters, session revocation store and WebSocket fan-out onto Redis (engine `redis`, `shared/api/engines/redis`). Without it every store is per process — `validateEnv` refuses `XNAPIFY_CLUSTER_WORKERS > 1` without Redis.
+- **Immediate revocation of access tokens:** every access token carries `sid` (session/family id) and `ver` (`users.token_version`). `requireAuth`/`optionalAuth` call `verifyActiveSession()` from `shared/api/engines/auth/revocation.js` after signature checks: a denylisted `sid` or a `ver` older than the user's column is rejected with `SESSION_REVOKED` / `SESSION_SUPERSEDED`. `revokeFamily()` denylists one session; `revokeUserSessions()` also bumps `token_version` (durable) and closes the user's WebSocket connections (`ws.disconnectUser` / `ws.disconnectSession`). The denylist is in-process (`MemoryRevocationStore`); swap it with `setRevocationStore()` when running multiple instances. Do not use the cache engine for this — it is a no-op in development.
+- **Lockout:** 5 failed logins set `users.locked_until` with exponential backoff (15 min → 24 h max). `is_locked` is the manual admin lock.
 - **RBAC system:** Users, Roles, Groups, Permissions
 - **Middleware:** `shared/api/engines/auth/middlewares/` (`requireAuth`, `requirePermission`, `requireRole`, `requireGroup`, `requireOwnership`, `optionalAuth`)
 - **Protected routes:** Use `requireAuth` and `requirePermission` middlewares
 - **API endpoints:** `/api/auth/login`, `/api/auth/logout`, `/api/auth/me`, `/api/auth/register`
+
+### 5b. Health, Config & Logging
+
+- `GET /api/health` (liveness) and `GET /api/ready` (DB + extension checks) live in `src/apps/(default)/api/routes/`. They bypass auth and rate limiting. Docker healthchecks target `/api/ready`. `ready` returns `degraded` (HTTP 200) with a `checks.extensions.failed[]` list when an extension failed to load, and `unavailable` (HTTP 503) only when the database is down.
+- `shared/config/env.js` validates `XNAPIFY_*` variables at boot: fatal in production, warnings elsewhere. Add new variables to its schema.
+- Migrations and seeds run under a cross-process schema lock (`withSchemaLock` in `shared/api/engines/db/migrator.js`): Postgres advisory lock, MySQL `GET_LOCK`, no-op on SQLite. Cluster workers and replicas can all boot at once without double-applying a migration.
+- Access logs are single-line JSON in production (`src/bootstrap/api/middlewares/logging.js`) and always carry `requestId`.
+- Extension IPC (`POST /api/extensions/:id/ipc`) requires an authenticated user unless the handler was registered with `registry.registerHook(id, fn, { public: true })`. Extensions always receive the **scoped** registry, so `registerHook(hookId, fn, options)` has no `extensionId` argument.
+- Webhook signatures are verified against `req.rawBody` (captured by `express.json({ verify })`), never against re-serialised JSON.
 
 ### 6. WebSocket Integration
 
@@ -204,16 +218,24 @@ The application features a robust extension system (`shared/extension`) for exte
 
 **Core Concepts:**
 
-- **Registry:** Singleton managing all extensions, slots, and hooks.
+- **Registry:** Singleton managing all extensions, slots, and hooks. Extensions get a _scoped_ registry: registrations are tagged with their id, and `unregisterSlot`/`unregisterHook` only work on their own registrations.
 - **Slots:** UI extension points where extensions can render components.
 - **Hooks:** Logic extension points for modifying data or schema.
+- **Manifest contract (`package.json` → `xnapify`):** required. `version` is a semver range for the host (`^2.0.0`), checked at install, activation, and load; `capabilities` lists the container bindings the extension may `resolve()` (`db`, `models`, `hook`, `users:*`, or `*`). Undeclared bindings throw `CapabilityDeniedError`. Missing `capabilities` grants only `hook`, `cache`, `http`, `template`, `i18n`. `jwt`, `extension`, and `env` are never granted. Route handlers of module-type extensions are scoped too: while the final handler of a route runs, `req.app.get('container')` (and `req.container`) return the scoped container; middlewares ahead of it keep the full one.
+- **Namespaces:** plugin-type extensions list namespaces in `slots` (`["profile", "login", "admin.settings"]`). A `_route.js` exports `namespace`; the route path is only a fallback. Module-type extensions (with `routes()`) subscribe to `*`.
+- **Activation:** every extension's view lifecycle (`translations → providers → boot`) runs once at load on both sides. The client deactivates plugin namespaces on navigation and re-activates on entry; the server never deactivates (one shared registry serves concurrent SSR requests).
+- **Identity:** `__EXTENSION_ID__` is a pure function of the package name (fixed salt) — the same on every machine and deployment.
 
 **Using Extensions:**
 
 ```javascript
+// package.json
+// { "name": "@acme/my-plugin", "browser": "views/index.js", "main": "api/index.js",
+//   "slots": ["profile"], "xnapify": { "version": "^2.0.0", "capabilities": ["hook", "models"] } }
+
 // Define an extension (src/extensions/my-plugin/views/index.js)
 export default {
-  boot({ registry }) {
+  boot({ container, registry }) {
     // Register UI slot
     registry.registerSlot('profile.actions', MyButton, { order: 10 });
 
@@ -317,7 +339,9 @@ const { models } = container.resolve('db');
 
 > **Convention:** In module code (`init`, services), use `container.resolve('name')` directly. In route handlers/controllers, use `req.app.get('container').resolve('name')`. Direct imports are reserved for shared libraries.
 
-**Available Engines:** `auth`, `cache`, `db`, `email`, `fs`, `hook`, `http`, `queue`, `schedule`, `search`, `template`, `webhook`, `worker`
+**Available Engines:** `auth`, `cache`, `db`, `email`, `fs`, `hook`, `http`, `queue`, `schedule`, `template`, `worker`
+
+Module-provided services that behave like engines: `search` (from `src/apps/search`), `webhook` (from `src/apps/webhooks`), `users:sessions` (from `src/apps/users`).
 
 **Adding a New Engine:**
 
@@ -776,6 +800,19 @@ XNAPIFY_DB_URL=sqlite:database.sqlite
 # On-demand dialect override (session-scoped, writes to .env.local)
 # Usage: XNAPIFY_DB_TYPE=mysql npm run dev
 # XNAPIFY_DB_TYPE=                 # Not set by default
+
+# Queue (default adapter for channels that don't name one)
+XNAPIFY_QUEUE_TYPE=file            # file (persistent, default) | memory (lost on exit)
+# XNAPIFY_QUEUE_DATA_DIR=          # File queue storage (default: .xnapify/queues in dev)
+
+# Process model & runtime caches
+# XNAPIFY_CLUSTER_WORKERS=1        # 1 (single process) | N | auto (one worker per CPU)
+# XNAPIFY_REDIS_URL=               # redis:// URL — required when workers > 1 (shared cache, rate limits, sessions, WS)
+# XNAPIFY_REDIS_PREFIX=xnapify     # key namespace per deployment
+# XNAPIFY_NODERED_ENABLED=true     # Node-RED is single-process; forced off when clustered
+# XNAPIFY_SSR_CACHE_MAX_BYTES=     # Byte budget for cached SSR HTML (default 64 MB)
+# XNAPIFY_JWT_NEGATIVE_CACHE_TTL=  # ms a failed token stays rejected without re-verify (default 30000)
+# XNAPIFY_PRECOMPRESS_BROTLI_QUALITY=10  # build-time .br quality; assets are served precompressed
 
 # Authentication
 XNAPIFY_KEY=                # Auto-generated on first run

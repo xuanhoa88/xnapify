@@ -4,6 +4,16 @@
   "browser": "views/index.js",
   "main": "api/index.js",
   "description": "Quick login with demo user accounts",
-  "slots": ["/login"],
-  "icon": "key"
+  "slots": ["login"],
+  "icon": "key",
+  "xnapify": {
+    "version": "^2.0.0",
+    "capabilities": [
+      "hook",
+      "models",
+      "users:seed_constants",
+      "roles:seed_constants",
+      "groups:seed_constants"
+    ]
+  }
 }

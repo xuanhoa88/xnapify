@@ -12,10 +12,34 @@ import morgan from 'morgan';
  *
  * @returns {Function} Logging middleware
  */
-export function createLoggingMiddleware() {
-  const format = __DEV__
-    ? 'dev' // Colored concise output for development
-    : 'combined'; // Apache combined log format for production
+// Expose the per-request id (set in server.js) so every access-log line can be
+// correlated with error logs and downstream services.
+morgan.token('id', req => req.id || '-');
+morgan.token('user', req => (req.user && req.user.id) || '-');
 
-  return morgan(format);
+export function createLoggingMiddleware() {
+  if (__DEV__) {
+    // Colored concise output for development
+    return morgan(
+      ':id :method :url :status :response-time ms - :res[content-length]',
+    );
+  }
+
+  // Production: single-line JSON so log shippers can parse fields without regex
+  return morgan((tokens, req, res) =>
+    JSON.stringify({
+      time: new Date().toISOString(),
+      level: 'info',
+      msg: 'http',
+      requestId: tokens.id(req, res),
+      method: tokens.method(req, res),
+      url: tokens.url(req, res),
+      status: Number(tokens.status(req, res)) || 0,
+      durationMs: Number(tokens['response-time'](req, res)) || 0,
+      length: Number(tokens.res(req, res, 'content-length')) || 0,
+      ip: tokens['remote-addr'](req, res),
+      userId: tokens.user(req, res),
+      userAgent: tokens['user-agent'](req, res),
+    }),
+  );
 }

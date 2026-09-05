@@ -8,6 +8,7 @@
 import fs from 'fs';
 import path from 'path';
 
+import { createScopedContainer } from '@shared/container/scoped.js';
 import { getTranslations } from '@shared/i18n/loader.js';
 import { addNamespace, removeNamespace } from '@shared/i18n/utils.js';
 import { createNativeRequire } from '@shared/utils/createNativeRequire.js';
@@ -21,6 +22,13 @@ import {
   CONNECTED_ROUTERS,
   SEQUENTIAL_SYNC,
 } from '../utils/BaseExtensionManager.js';
+import {
+  checkHostCompatibility,
+  getGrantedCapabilities,
+  incompatibleExtensionError,
+  satisfiesRange,
+} from '../utils/compat.js';
+import { isDeferrableExtension } from '../utils/deferral.js';
 import { normalizeRouteAdapter } from '../utils/routeAdapter.js';
 
 import { registry } from './Registry.js';
@@ -35,6 +43,100 @@ const EXTENSION_SCRIPT_ENTRY_POINTS = Symbol(
   '__xnapify.ext.scriptEntryPoints__',
 );
 const SERVER_CWD = Symbol('__xnapify.ext.serverCwd__');
+
+/** HTTP method exports a route module may define */
+const ROUTE_METHOD_KEYS = [
+  'get',
+  'post',
+  'put',
+  'patch',
+  'delete',
+  'head',
+  'options',
+];
+
+/**
+ * Wrap a route handler so that, while it runs, `req.app.get('container')`
+ * returns the extension's capability-scoped container. Middlewares that
+ * precede the handler (auth, validation) keep the full container because
+ * they are core code.
+ *
+ * @param {Function} handler
+ * @param {() => Object} getScopedContainer
+ * @returns {Function}
+ */
+function scopeRouteHandler(handler, getScopedContainer) {
+  return function scopedHandler(req, res, next) {
+    const scoped = getScopedContainer();
+    const originalApp = req.app;
+    const appProxy = new Proxy(originalApp, {
+      get(target, prop) {
+        if (prop === 'get') {
+          return (...args) =>
+            args.length === 1 && args[0] === 'container'
+              ? scoped
+              : target.get(...args);
+        }
+        const value = Reflect.get(target, prop, target);
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    });
+
+    req.app = appProxy;
+    req.container = scoped;
+    const restore = () => {
+      req.app = originalApp;
+    };
+
+    try {
+      const result = handler(req, res, next);
+      if (result && typeof result.then === 'function') {
+        return result.finally(restore);
+      }
+      restore();
+      return result;
+    } catch (error) {
+      restore();
+      throw error;
+    }
+  };
+}
+
+/**
+ * Return a copy of a route module whose handlers are scoped.
+ * @param {Object|Function} routeModule
+ * @param {() => Object} getScopedContainer
+ * @returns {Object|Function}
+ */
+export function scopeRouteModule(routeModule, getScopedContainer) {
+  if (typeof routeModule === 'function') {
+    return scopeRouteHandler(routeModule, getScopedContainer);
+  }
+  if (!routeModule || typeof routeModule !== 'object') return routeModule;
+
+  const scopeExport = value => {
+    if (Array.isArray(value)) {
+      if (value.length === 0) return value;
+      const last = value[value.length - 1];
+      return typeof last === 'function'
+        ? [...value.slice(0, -1), scopeRouteHandler(last, getScopedContainer)]
+        : value;
+    }
+    return typeof value === 'function'
+      ? scopeRouteHandler(value, getScopedContainer)
+      : value;
+  };
+
+  const copy = {};
+  for (const key of Object.keys(routeModule)) {
+    const lower = key.toLowerCase();
+    copy[key] =
+      ROUTE_METHOD_KEYS.includes(lower) || key === 'default'
+        ? scopeExport(routeModule[key])
+        : routeModule[key];
+  }
+  return copy;
+}
 
 /** Non-throwing async file existence check */
 async function fileExists(...filePaths) {
@@ -85,6 +187,68 @@ class ServerExtensionManager extends BaseExtensionManager {
   }
 
   /**
+   * Capability-scoped container for one extension.
+   * Only the bindings declared under `xnapify.capabilities` resolve.
+   *
+   * @param {string} id - Extension ID
+   * @param {Object} [manifest] - Manifest (defaults to loaded metadata)
+   * @returns {Object} Scoped container
+   */
+  _extensionContainer(id, manifest = null) {
+    const meta = this[EXTENSION_METADATA].get(id);
+    const effective = manifest || (meta && meta.manifest) || {};
+    return createScopedContainer(
+      this.apiContainer,
+      getGrantedCapabilities(effective),
+      { owner: this._formatDisplayName(id, effective) },
+    );
+  }
+
+  /**
+   * View lifecycle context: the scoped API container.
+   * @param {string} id - Extension ID
+   * @returns {{ container: Object }}
+   */
+  _hookContextFor(id) {
+    // eslint-disable-next-line no-underscore-dangle
+    return { container: this._extensionContainer(id) };
+  }
+
+  /**
+   * Enforce the host version contract before any bundle is required.
+   * @param {string} id
+   * @param {Object} manifest
+   */
+  _assertLoadable(id, manifest) {
+    const result =
+      manifest && manifest.compatibility
+        ? manifest.compatibility
+        : checkHostCompatibility(manifest);
+    if (!result.ok) {
+      throw incompatibleExtensionError(
+        this._formatDisplayName(id, manifest),
+        result,
+      );
+    }
+  }
+
+  _satisfiesRange(version, range) {
+    return satisfiesRange(version, range);
+  }
+
+  /**
+   * Server-side view activation lasts for the lifetime of the extension.
+   *
+   * The client activates plugin namespaces per route and tears them down on
+   * navigation. Doing the same on the server would mutate one shared
+   * registry from concurrent SSR requests, so extensions are booted once at
+   * load (see `_postLoad`) and only ever unregistered by `unloadExtension`.
+   *
+   * @param {string} _ns - Namespace (ignored)
+   */
+  async deactivateViewNamespace(_ns) {}
+
+  /**
    * Resolve the extension entry point based on manifest
    * @param {Object} manifest - Extension manifest
    * @returns {string|null} Entry point filename or null
@@ -111,6 +275,13 @@ class ServerExtensionManager extends BaseExtensionManager {
   async _onExtensionLoaded(id) {
     const metadata = this[EXTENSION_METADATA].get(id);
     const manifest = metadata && metadata.manifest;
+
+    // Tell the browser whether this extension contributes routes. Slot-only
+    // extensions can be fetched lazily when one of their namespaces
+    // activates; route providers must load before hydration.
+    if (manifest && typeof manifest === 'object') {
+      manifest.hasRoutes = metadata.hasRoutes === true;
+    }
 
     // Activate via public API (validation → events → _performActivate)
     await this.activateExtension(id, manifest);
@@ -365,8 +536,10 @@ class ServerExtensionManager extends BaseExtensionManager {
     }
 
     await apiModule.install({
-      container: this.apiContainer,
-      registry: this.registry,
+      // eslint-disable-next-line no-underscore-dangle
+      container: this._extensionContainer(id, manifest),
+      // eslint-disable-next-line no-underscore-dangle
+      registry: this._scopedRegistry(id),
     });
 
     console.log(
@@ -394,13 +567,15 @@ class ServerExtensionManager extends BaseExtensionManager {
     if (this.apiContainer) {
       try {
         const db = this.apiContainer.resolve('db');
+        // eslint-disable-next-line no-underscore-dangle
+        const scoped = this._extensionContainer(id, manifest);
         // Revert seeds first (data before schema)
         if (typeof apiModule.seeds === 'function') {
           const seedCtx = apiModule.seeds();
           if (seedCtx) {
             await db.connection.revertSeeds(
               [{ context: seedCtx, prefix: manifest.name }],
-              { container: this.apiContainer },
+              { container: scoped },
             );
           }
         }
@@ -431,8 +606,10 @@ class ServerExtensionManager extends BaseExtensionManager {
       }
 
       await apiModule.uninstall({
-        container: this.apiContainer,
-        registry: this.registry,
+        // eslint-disable-next-line no-underscore-dangle
+        container: this._extensionContainer(id, manifest),
+        // eslint-disable-next-line no-underscore-dangle
+        registry: this._scopedRegistry(id),
       });
 
       console.log(
@@ -471,6 +648,11 @@ class ServerExtensionManager extends BaseExtensionManager {
 
     try {
       const db = this.apiContainer.resolve('db');
+      // Extensions only ever see the bindings they declared
+      // eslint-disable-next-line no-underscore-dangle
+      const scoped = this._extensionContainer(id, manifest);
+      // eslint-disable-next-line no-underscore-dangle
+      const registry = this._scopedRegistry(id);
 
       if (__DEV__) {
         console.log(
@@ -501,19 +683,17 @@ class ServerExtensionManager extends BaseExtensionManager {
 
       // 2. Providers — bind DI services
       if (typeof extensionApi.providers === 'function') {
-        await extensionApi.providers({
-          container: this.apiContainer,
-          registry: this.registry,
-        });
+        await extensionApi.providers({ container: scoped, registry });
       }
 
       // 3. Migrations (idempotent — skips already-applied)
       if (db && typeof extensionApi.migrations === 'function') {
         const migrationCtx = extensionApi.migrations();
         if (migrationCtx) {
-          await db.connection.runMigrations([
-            { context: migrationCtx, prefix: manifest.name },
-          ]);
+          await db.connection.runMigrations(
+            [{ context: migrationCtx, prefix: manifest.name }],
+            { container: scoped },
+          );
         }
       }
 
@@ -535,17 +715,14 @@ class ServerExtensionManager extends BaseExtensionManager {
         if (seedCtx) {
           await db.connection.runSeeds(
             [{ context: seedCtx, prefix: manifest.name }],
-            { container: this.apiContainer },
+            { container: scoped },
           );
         }
       }
 
       // 6. Extension boot() hook
       if (typeof extensionApi.boot === 'function') {
-        await extensionApi.boot({
-          container: this.apiContainer,
-          registry: this.registry,
-        });
+        await extensionApi.boot({ container: scoped, registry });
       }
 
       // 7. API Routes
@@ -584,8 +761,10 @@ class ServerExtensionManager extends BaseExtensionManager {
       const apiEntry = this[EXTENSION_API_ENTRY_POINTS].get(id);
       if (apiEntry && typeof apiEntry.shutdown === 'function') {
         await apiEntry.shutdown({
-          container: this.apiContainer,
-          registry: this.registry,
+          // eslint-disable-next-line no-underscore-dangle
+          container: this._extensionContainer(id),
+          // eslint-disable-next-line no-underscore-dangle
+          registry: this._scopedRegistry(id),
         });
         if (__DEV__) {
           console.log(
@@ -639,7 +818,23 @@ class ServerExtensionManager extends BaseExtensionManager {
   _injectRoutes(id, hookResult, type) {
     const routerKey = type === 'api' ? 'api' : 'views';
     const router = this[CONNECTED_ROUTERS][routerKey];
-    const adapter = normalizeRouteAdapter(hookResult, type);
+    let adapter = normalizeRouteAdapter(hookResult, type);
+
+    // API handlers of module-type extensions run under the same capability
+    // scope as their lifecycle hooks.
+    if (type === 'api') {
+      const base = adapter;
+      // eslint-disable-next-line no-underscore-dangle
+      const getScoped = () => this._extensionContainer(id);
+      adapter = {
+        ...base,
+        files: () => base.files(),
+        load: p => scopeRouteModule(base.load(p), getScoped),
+        ...(typeof base.resolve === 'function' && {
+          resolve: p => base.resolve(p),
+        }),
+      };
+    }
 
     if (!router) {
       // Router not available yet — buffer with internal routerKey
@@ -912,6 +1107,9 @@ class ServerExtensionManager extends BaseExtensionManager {
       }
       manifest.buildManifest = buildManifest;
 
+      // Host version contract — evaluated once here, enforced in _assertLoadable
+      manifest.compatibility = checkHostCompatibility(manifest);
+
       // Detect built client assets from build manifest
       if (buildManifest) {
         manifest.hasClientCss = !!buildManifest['extension.css'];
@@ -956,9 +1154,23 @@ class ServerExtensionManager extends BaseExtensionManager {
   get cssUrls() {
     const entries = [];
     for (const [id, href] of this[EXTENSION_CSS_ENTRY_POINTS]) {
+      if (this.isExtensionDeferred(id)) continue;
       entries.push({ href, id });
     }
     return entries;
+  }
+
+  /**
+   * Whether an extension's assets are fetched lazily by the browser (when
+   * one of its namespaces activates) instead of being emitted in every page.
+   * The client manager injects the stylesheet itself on load.
+   *
+   * @param {string} id - Extension ID
+   * @returns {boolean}
+   */
+  isExtensionDeferred(id) {
+    const metadata = this[EXTENSION_METADATA].get(id);
+    return isDeferrableExtension(metadata && metadata.manifest);
   }
 
   /**
@@ -968,6 +1180,7 @@ class ServerExtensionManager extends BaseExtensionManager {
   get scriptUrls() {
     const entries = [];
     for (const [id, src] of this[EXTENSION_SCRIPT_ENTRY_POINTS]) {
+      if (this.isExtensionDeferred(id)) continue;
       entries.push({ src, id });
     }
     return entries;

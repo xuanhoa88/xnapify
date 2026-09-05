@@ -12,6 +12,13 @@ import Profile from './Profile.js';
 const { isAuthenticated } = features;
 
 /**
+ * Stable extension namespace. Plugins subscribe to this name (manifest
+ * `slots`) instead of the URL, so the route can move without silently
+ * disabling them.
+ */
+export const namespace = 'profile';
+
+/**
  * Page metadata
  */
 export async function getInitialProps({ i18n }) {

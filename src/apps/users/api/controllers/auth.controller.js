@@ -22,7 +22,28 @@ import {
 } from '../../validator/auth/index.js';
 import * as authService from '../services/auth.service.js';
 import * as profileService from '../services/profile.service.js';
+import * as sessionService from '../services/session.service.js';
 import { generatePassword } from '../utils/password.js';
+
+// ========================================================================
+// SESSION HELPERS
+// ========================================================================
+
+/**
+ * Issue a persisted access/refresh pair for a user payload.
+ * Centralised so every login-like flow records the session identically.
+ */
+async function issueSession(container, req, payload) {
+  const http = container.resolve('http');
+  return sessionService.issueTokenPair(payload, {
+    jwt: container.resolve('jwt'),
+    models: container.resolve('models'),
+    meta: {
+      ip_address: http.getClientIP(req),
+      user_agent: http.getUserAgent(req),
+    },
+  });
+}
 
 // ========================================================================
 // AUTHENTICATION CONTROLLERS
@@ -70,9 +91,8 @@ export async function register(req, res) {
       },
     );
 
-    // Generate token pair using configured JWT instance
-    const jwt = container.resolve('jwt');
-    const tokens = jwt.generateTokenPair({
+    // Issue a persisted session (access + refresh)
+    const tokens = await issueSession(container, req, {
       id: userData.id,
       email: userData.email,
       picture: userData.picture || null,
@@ -145,8 +165,8 @@ export async function login(req, res) {
       defaultActions: auth.DEFAULT_ACTIONS,
     });
 
-    // Generate token pair using configured JWT instance
-    const tokens = container.resolve('jwt').generateTokenPair({
+    // Issue a persisted session (access + refresh)
+    const tokens = await issueSession(container, req, {
       id: userData.id,
       email: userData.email,
       picture: userData.picture || null,
@@ -166,20 +186,24 @@ export async function login(req, res) {
       accessToken: tokens.accessToken,
     });
   } catch (error) {
-    if (error.name === 'UserNotFoundError') {
-      return http.sendUnauthorized(res, 'User not found');
+    // "Unknown email" and "wrong password" MUST be indistinguishable to the
+    // caller, otherwise the endpoint becomes a user-enumeration oracle.
+    if (
+      error.name === 'UserNotFoundError' ||
+      error.name === 'InvalidCredentialsError'
+    ) {
+      return http.sendUnauthorized(res, 'Invalid email or password');
     }
 
     if (error.name === 'UserInactiveError') {
-      return http.sendUnauthorized(res, 'User is inactive');
+      return http.sendUnauthorized(res, 'This account is inactive');
     }
 
     if (error.name === 'UserLockedError') {
-      return http.sendUnauthorized(res, 'User is locked');
-    }
-
-    if (error.name === 'InvalidCredentialsError') {
-      return http.sendUnauthorized(res, 'Invalid email or password');
+      return http.sendUnauthorized(
+        res,
+        'Too many failed attempts. Please try again later.',
+      );
     }
 
     return http.sendServerError(res, 'Login failed', error);
@@ -204,6 +228,13 @@ export async function logout(req, res) {
         hook: container.resolve('hook'),
       });
     }
+
+    // Revoke the whole rotation family so the refresh token cannot be replayed
+    await sessionService.revokeByToken(getRefreshTokenFromCookie(req), {
+      jwt: container.resolve('jwt'),
+      models: container.resolve('models'),
+      ws: container.has('ws') ? container.resolve('ws') : null,
+    });
 
     // Clear token cookies
     clearAllAuthCookies(res);
@@ -238,11 +269,15 @@ export async function refreshToken(req, res) {
       return http.sendUnauthorized(res, 'Refresh token required');
     }
 
-    // Generate new token pair
-    const newTokens = req.app
-      .get('container')
-      .resolve('jwt')
-      .refreshTokenPair(refreshToken);
+    // Rotate: validates signature + server-side record + account status
+    const newTokens = await sessionService.rotateTokenPair(refreshToken, {
+      jwt: container.resolve('jwt'),
+      models: container.resolve('models'),
+      meta: {
+        ip_address: http.getClientIP(req),
+        user_agent: http.getUserAgent(req),
+      },
+    });
 
     // Set new token cookies
     setTokenCookie(res, newTokens.accessToken);
@@ -250,9 +285,23 @@ export async function refreshToken(req, res) {
 
     return http.sendSuccess(res, { message: 'Token refreshed successfully' });
   } catch (error) {
+    // Any rejection means the browser's cookies are stale — clear them so the
+    // client stops retrying with a dead session.
+    if (error.status === 401) {
+      clearAllAuthCookies(res);
+    }
+
     // Handle specific token errors
     if (error.name === 'TokenExpiredError') {
       return http.sendUnauthorized(res, 'Refresh token has expired');
+    }
+
+    if (
+      error.name === 'InvalidRefreshTokenError' ||
+      error.name === 'RefreshTokenReuseError' ||
+      error.name === 'SessionRevokedError'
+    ) {
+      return http.sendUnauthorized(res, 'Session is no longer valid');
     }
 
     if (error.name === 'InvalidTokenFormatError') {
@@ -308,16 +357,13 @@ export async function emailVerification(req, res) {
       models,
     });
 
-    // Generate token pair using configured JWT instance
-    const tokens = req.app
-      .get('container')
-      .resolve('jwt')
-      .generateTokenPair({
-        id: user.id,
-        email: user.email,
-        picture: userData.picture || null,
-        is_admin: userData.is_admin === true,
-      });
+    // Issue a persisted session (access + refresh)
+    const tokens = await issueSession(container, req, {
+      id: user.id,
+      email: user.email,
+      picture: userData.picture || null,
+      is_admin: userData.is_admin === true,
+    });
 
     // Set token cookies
     setTokenCookie(res, tokens.accessToken);
@@ -505,9 +551,8 @@ export async function oauthCallback(req, res) {
       defaultRoleName: auth.DEFAULT_ROLE,
     });
 
-    // Generate token pair
-    const jwt = container.resolve('jwt');
-    const tokens = jwt.generateTokenPair({
+    // Issue a persisted session (access + refresh)
+    const tokens = await issueSession(container, req, {
       id: userData.id,
       email: userData.email,
       picture: userData.picture || null,
@@ -545,7 +590,6 @@ export async function stopImpersonating(req, res) {
 
     const authConfig = container.resolve('auth');
     const models = container.resolve('models');
-    const jwt = container.resolve('jwt');
 
     // Get original admin user data via service
     const userData = await authService.stopImpersonating(impersonatorId, {
@@ -556,8 +600,13 @@ export async function stopImpersonating(req, res) {
       defaultActions: authConfig.DEFAULT_ACTIONS,
     });
 
-    // Generate NEW standard token pair (no impersonator_id)
-    const tokens = jwt.generateTokenPair({
+    // Retire the impersonation session, then issue a clean one (no impersonator_id)
+    await sessionService.revokeByToken(getRefreshTokenFromCookie(req), {
+      jwt: container.resolve('jwt'),
+      models,
+      ws: container.has('ws') ? container.resolve('ws') : null,
+    });
+    const tokens = await issueSession(container, req, {
       id: userData.id,
       email: userData.email,
       picture: userData.picture || null,
@@ -569,8 +618,8 @@ export async function stopImpersonating(req, res) {
     setRefreshTokenCookie(res, tokens.refreshToken);
 
     // Log activity for auditing
-    await req.app
-      .get('hook')('auth.activity')
+    await container
+      .resolve('hook')('auth.activity')
       .emit('impersonation:stop', {
         admin_id: impersonatorId,
         target_id: req.user.id,

@@ -103,7 +103,13 @@ function npmInstall(cwd, label) {
     };
     delete env.NODE_OPTIONS;
 
-    execSync('npm install --xnapify-setup --no-fund --no-audit', {
+    // Root has a committed lockfile → `npm ci` for reproducible, lockfile-exact
+    // installs. Sub-packages (extensions) may not, so they keep `npm install`.
+    const hasLock = fs.existsSync(path.join(cwd, 'package-lock.json'));
+    const command = hasLock
+      ? 'npm ci --xnapify-setup --no-fund --no-audit'
+      : 'npm install --xnapify-setup --no-fund --no-audit';
+    execSync(command, {
       cwd,
       stdio: 'inherit',
       shell: true,

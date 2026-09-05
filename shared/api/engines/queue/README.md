@@ -185,8 +185,8 @@ shared/api/engines/queue/
 ├── channel.js            # Channel class (pub/sub wrapper)
 ├── errors.js             # QueueError + subclasses
 ├── adapters/
-│   ├── memory.js         # In-memory adapter (default)
-│   └── file.js           # Persistent file-based adapter
+│   ├── memory.js         # In-memory adapter (volatile)
+│   └── file.js           # Persistent file-based adapter (default)
 ├── utils/
 │   ├── constants.js      # JOB_STATUS enum
 │   ├── createJob.js      # Job creation factory utility
@@ -273,8 +273,8 @@ Private function that constructs a callable factory function with the following 
 Public export. Calls `buildFactory` with:
 
 - Fresh `Map` for channels
-- Fresh `Map` with `'memory' → MemoryQueue` pre-registered
-- Merged `DEFAULT_OPTIONS` (`{ type: 'memory', concurrency: 1 }`) with caller options
+- Fresh `Map` with `'memory' → MemoryQueue` and `'file' → FileQueue` pre-registered
+- Default `type` resolves from `options.type`, then `XNAPIFY_QUEUE_TYPE`, then `'file'`; merged with `{ concurrency: 1 }`
 - Registers cleanup handler with the centralized shutdown registry (`shared/api/shutdown.js`) for coordinated graceful shutdown
 
 ### Key difference from `factory(name)` vs `factory.channel(name)`
@@ -314,9 +314,39 @@ Called automatically on the first `on()` registration. Registers a **wildcard pr
 - If no handler found → returns `{ skipped: true }`.
 - If handler throws → logs error and **re-throws** (allowing adapter retry logic to trigger).
 
-## 6. Memory Queue Adapter (`adapters/memory.js`)
+## 6. Adapters
 
-In-memory job queue for development and single-instance deployments. Jobs are lost on restart.
+### Choosing an adapter
+
+| Type     | Persistence           | Multi-process         | When to use                                   |
+| -------- | --------------------- | --------------------- | --------------------------------------------- |
+| `file`   | Survives restarts     | Yes (shared data dir) | Default. Anything that must not be lost.      |
+| `memory` | Lost on exit or crash | No                    | Tests, throwaway dev sessions, ephemeral work |
+
+Set the app-wide default with `XNAPIFY_QUEUE_TYPE` (defaults to `file`). A channel can still override it: `queue('name', { type: 'memory' })`.
+
+### File Queue Adapter (`adapters/file.js`)
+
+Jobs are JSON files under `<dataDir>/<queue>/{pending,active,delayed,completed,failed}/`. `dataDir` comes from `options.dataDir`, then `XNAPIFY_QUEUE_DATA_DIR`, then the app data dir (`.xnapify/queues` in dev, OS data dir in prod). Filenames sort by inverted priority then creation time, so `readdir().sort()` yields processing order.
+
+Guarantees and mechanics:
+
+- **At-least-once delivery.** Every transition is a tmp-write plus atomic `rename`. A crash between steps leaves a duplicate copy, never a lost job.
+- **Claim = rename.** Moving `pending/x` → `active/x` is the claim. Two processes racing on the same file: one rename succeeds, the other gets `ENOENT` and moves to the next candidate.
+- **Concurrency cap is exact.** A slot is reserved synchronously (`claiming++`) before the first `await` of a claim, so overlapping `processNext()` calls from the poll tick, `resume()`, `add()` wake-ups and job completions can never exceed `concurrency`.
+- **Ownership locks with heartbeat.** `.locks/<file>.lock` is created with `wx` before the claim and its mtime refreshed every `lockStaleMs / 3` while the handler runs. A lock older than `lockStaleMs` (30 s) is treated as abandoned.
+- **Stale-lock steal is atomic.** A stale lock is renamed to a unique name before the stealer creates its own, so two stealers cannot both win.
+- **Crash recovery.** On boot and on every poll tick, files in `active/` whose lock is missing or stale are moved back to `pending/` with their attempt count intact. Files with a fresh lock belong to a live sibling process and are left alone. This process's own running jobs are never recovered from under it.
+- **Index consistency.** The in-memory index (`jobId → {status, filename}`) follows write-then-delete transitions, and `getJob`/`removeJob`/`retryJob` fall back to a directory scan so jobs written by other processes are visible.
+- **Low latency in-process.** `add()` and job completion wake the worker on the next macrotask; polling (500 ms) is only the safety net for cross-process and recovery work.
+
+Constraint: handlers must not block the event loop for longer than `lockStaleMs`, or a sibling process may conclude the job was abandoned and run it again.
+
+Extra constructor options beyond the memory adapter: `dataDir`, `pollInterval` (500), `lockStaleMs` (30000).
+
+### Memory Queue Adapter (`adapters/memory.js`)
+
+In-memory job queue for tests and throwaway sessions. Every queued, delayed, and active job is lost when the process exits.
 
 ### Constructor Options
 

@@ -7,6 +7,10 @@
   "dependencies": {
     "passport-github2": "^0.1.12"
   },
-  "slots": ["/login"],
-  "icon": "github"
+  "slots": ["login"],
+  "icon": "github",
+  "xnapify": {
+    "version": "^2.0.0",
+    "capabilities": ["models", "oauth"]
+  }
 }

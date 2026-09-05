@@ -259,12 +259,14 @@ function getCleanStats() {
 async function main() {
   state.stats.startTime = new Date();
 
-  // Deep clean is enabled by default
-  // Set CLEAN_DEEP=false to disable
-  const isExplicitlyDisabled =
-    config.env('CLEAN_DEEP') === 'false' ||
-    process.argv.includes('--deep=false');
-  const enableDeepClean = !isExplicitlyDisabled;
+  // Deep clean is opt-in. It removes .cache/ (dev build output, rspack and
+  // Jest caches), tmp/ and coverage/ in addition to the build directory, so a
+  // plain `npm run build` must never trigger it by accident.
+  // Enable with CLEAN_DEEP=true or `--deep`.
+  const enableDeepClean =
+    config.env('CLEAN_DEEP') === 'true' ||
+    process.argv.includes('--deep') ||
+    process.argv.includes('--deep=true');
 
   // Dry run mode - only show what would be deleted
   const isDryRun = config.env('CLEAN_DRY_RUN') === 'true';

@@ -10,6 +10,7 @@ import { register } from '../../shutdown.js';
 import FileCache from './adapters/file.js';
 import MemoryCache from './adapters/memory.js';
 import NoOpCache from './adapters/noop.js';
+import RedisCache from './adapters/redis.js';
 import {
   InvalidCacheError,
   InvalidCacheTypeError,
@@ -226,6 +227,10 @@ export function createFactory(options = {}) {
 
       case 'memory':
         adapter = new MemoryCache(config);
+        break;
+
+      case 'redis':
+        adapter = new RedisCache(config);
         break;
 
       default:

@@ -192,10 +192,20 @@ export async function extractZip(zipSource, extractPath, options = {}) {
     // Extract files
     for (const file of directory.files) {
       try {
-        const entryPath = path.join(extractPath, file.path);
+        const resolvedRoot = path.resolve(extractPath);
+        const entryPath = path.resolve(resolvedRoot, file.path);
 
-        // Security check: prevent directory traversal
-        if (!entryPath.startsWith(path.resolve(extractPath))) {
+        // Security check: prevent directory traversal (zip-slip).
+        // path.relative() is used instead of startsWith() so that a sibling
+        // directory sharing the same prefix (e.g. "/tmp/x-evil" vs "/tmp/x")
+        // cannot slip through.
+        const relative = path.relative(resolvedRoot, entryPath);
+        if (
+          !relative ||
+          relative.startsWith('..') ||
+          path.isAbsolute(relative) ||
+          file.path.includes('\0')
+        ) {
           results.errors.push({
             fileName: file.path,
             error: 'ZIP_INVALID_FILE_PATH',

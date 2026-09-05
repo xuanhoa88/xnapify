@@ -98,31 +98,13 @@ const DEFAULT_ALPHABET =
 const MIN_LENGTH = 5;
 
 /**
- * Derive a deterministically shuffled alphabet from a secret key.
- * Uses HMAC-SHA256 as a seed for a Fisher-Yates shuffle so the same
- * key always produces the same alphabet permutation.
- *
- * @param {string} key - Secret key (XNAPIFY_KEY)
- * @returns {string} Shuffled alphabet
+ * Fixed salt: an extension's id must be a pure function of its package name
+ * so it is identical on every machine, build, and deployment. Deriving the
+ * alphabet from `XNAPIFY_KEY` (as earlier versions did) tied ids to a
+ * secret — rotating the key orphaned every `extensions.key` row.
  */
-function deriveAlphabet(key) {
-  const seed = crypto.createHmac('sha256', key).update('hashids').digest();
-  const chars = DEFAULT_ALPHABET.split('');
-  for (let i = chars.length - 1; i > 0; i -= 1) {
-    const j = seed[i % seed.length] % (i + 1);
-    const tmp = chars[i];
-    chars[i] = chars[j];
-    chars[j] = tmp;
-  }
-  return chars.join('');
-}
-
-const alphabet = process.env.XNAPIFY_KEY
-  ? deriveAlphabet(process.env.XNAPIFY_KEY)
-  : DEFAULT_ALPHABET;
-
-const salt = process.env.XNAPIFY_KEY || '';
-const hashids = new Hashids(salt, MIN_LENGTH, alphabet);
+const SALT = 'xnapify-extension';
+const hashids = new Hashids(SALT, MIN_LENGTH, DEFAULT_ALPHABET);
 
 /**
  * Generate a deterministic, short, URL-safe extension ID from a manifest name.
@@ -134,8 +116,8 @@ const hashids = new Hashids(salt, MIN_LENGTH, alphabet);
  * This gives a 2^64 collision space (~18 quintillion) — more than sufficient
  * for extension identity while keeping IDs short and filesystem-friendly.
  *
- * When `XNAPIFY_KEY` is set, both the salt and the alphabet are derived
- * from the key, making IDs unique per deployment.
+ * The encoding is deterministic and environment-independent: the same
+ * name always yields the same id.
  *
  * @param {string} name - Extension manifest name (e.g. '@xnapify-extension/profile')
  * @returns {string|null} Compact encoded extension ID or null if name is invalid

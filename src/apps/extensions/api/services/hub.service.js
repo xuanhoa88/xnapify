@@ -8,6 +8,8 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { Readable } from 'stream';
+import { pipeline } from 'stream/promises';
 
 import {
   installExtensionFromPackage,
@@ -68,7 +70,7 @@ async function fetchRegistry() {
 
   try {
     const response = await fetch(process.env.XNAPIFY_HUB_REGISTRY_URL, {
-      timeout: 10_000,
+      signal: AbortSignal.timeout(10_000),
       headers: { Accept: 'application/json' },
     });
 
@@ -305,8 +307,19 @@ async function downloadHubPackage(listing) {
     throw err;
   }
 
-  const response = await fetch(listing.downloadUrl, { timeout: 60_000 });
-  if (!response.ok) {
+  if (!listing.checksum) {
+    const err = new Error(
+      `Extension "${listing.name}" has no checksum in registry — refusing to install unverified package`,
+    );
+    err.name = 'ExtensionChecksumMissingError';
+    err.status = 400;
+    throw err;
+  }
+
+  const response = await fetch(listing.downloadUrl, {
+    signal: AbortSignal.timeout(60_000),
+  });
+  if (!response.ok || !response.body) {
     const err = new Error(
       `Failed to download ${listing.name} from hub registry: HTTP ${response.status}`,
     );
@@ -323,13 +336,17 @@ async function downloadHubPackage(listing) {
     `${listing.name.replace(/\//g, '-')}-${Date.now()}.zip`,
   );
 
-  // Stream the response body to disk
-  const dest = fs.createWriteStream(tmpPath);
-  await new Promise((resolve, reject) => {
-    response.body.pipe(dest);
-    response.body.on('error', reject);
-    dest.on('finish', resolve);
-  });
+  // Stream the response body to disk. Native fetch returns a WHATWG
+  // ReadableStream (no .pipe), so convert it to a Node stream first.
+  try {
+    await pipeline(
+      Readable.fromWeb(response.body),
+      fs.createWriteStream(tmpPath),
+    );
+  } catch (err) {
+    await fs.promises.unlink(tmpPath).catch(() => {});
+    throw err;
+  }
 
   return tmpPath;
 }
@@ -399,7 +416,7 @@ export async function installFromHub(extensionName, context) {
       },
       {
         ...context,
-        expectedChecksum: listing.checksum || null,
+        expectedChecksum: listing.checksum,
       },
     );
 
@@ -484,7 +501,7 @@ export async function updateFromHub(extensionName, context) {
       },
       {
         ...context,
-        expectedChecksum: listing.checksum || null,
+        expectedChecksum: listing.checksum,
       },
     );
 
@@ -568,20 +585,27 @@ export async function recalculateUpdateCount(context) {
     getInstalledExtensionsMap(models),
   ]);
 
-  let updateCount = 0;
+  const hubByKey = new Map(
+    (registry.extensions || []).map(ext => [ext.key, ext]),
+  );
 
-  for (const localExt of Object.values(installedMap)) {
-    const hubExt = registry[localExt.key];
-    if (hubExt && !hubExt.deprecated) {
-      if (hubExt.version && hubExt.version !== localExt.version) {
-        updateCount++;
-      }
+  let updateCount = 0;
+  for (const [key, local] of installedMap) {
+    const hubExt = hubByKey.get(key);
+    if (
+      hubExt &&
+      !hubExt.deprecated &&
+      hubExt.version &&
+      hubExt.version !== local.version
+    ) {
+      updateCount++;
     }
   }
 
   await cache.set('extension_update_count', updateCount, 3600 * 24);
 
-  ws.sendToChannel('admin', 'extension:updates_available', {
+  // Broadcast to all authenticated sockets; the admin UI filters by permission.
+  ws.sendToProtectedChannel('extension:updates_available', {
     type: 'UPDATES_AVAILABLE_COUNT',
     count: updateCount,
   });

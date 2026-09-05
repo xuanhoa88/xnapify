@@ -5,5 +5,9 @@
     "nodes": "node-red/nodes",
     "flows": "node-red/flows"
   },
-  "description": "Node-RED nodes for xnapify extension"
+  "description": "Node-RED nodes for xnapify extension",
+  "xnapify": {
+    "version": "^2.0.0",
+    "capabilities": []
+  }
 }

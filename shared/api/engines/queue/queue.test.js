@@ -5,7 +5,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import fs from 'fs';
 import { createRequire } from 'module';
+import path from 'path';
+
 const require = createRequire(import.meta.url);
 
 jest.mock('uuid', () => ({
@@ -17,6 +20,8 @@ jest.mock('uuid', () => ({
     }),
 }));
 
+import FileQueue from './adapters/file.js';
+import MemoryQueue from './adapters/memory.js';
 import { Channel } from './channel.js';
 import { createFactory } from './factory.js';
 
@@ -25,7 +30,7 @@ describe('Queue Engine', () => {
 
   beforeEach(() => {
     // Create a fresh queue instance for each test
-    queue = createFactory();
+    queue = createFactory({ type: 'memory' });
   });
 
   afterEach(async () => {
@@ -996,5 +1001,53 @@ describe('Queue Error Classes', () => {
       expect(err.statusCode).toBe(503);
       expect(err).toBeInstanceOf(errors.QueueError);
     });
+  });
+});
+
+// ============================================================================
+// Default adapter resolution
+// ============================================================================
+
+describe('Factory default adapter type', () => {
+  const DATA_DIR = path.join(process.cwd(), '.xnapify', 'test-queues-factory');
+  const originalType = process.env.XNAPIFY_QUEUE_TYPE;
+  let factory;
+
+  afterEach(async () => {
+    if (factory) {
+      await factory.cleanup();
+      factory = null;
+    }
+    if (originalType === undefined) {
+      delete process.env.XNAPIFY_QUEUE_TYPE;
+    } else {
+      process.env.XNAPIFY_QUEUE_TYPE = originalType;
+    }
+    fs.rmSync(DATA_DIR, { recursive: true, force: true });
+  });
+
+  it('defaults to the persistent file adapter', () => {
+    delete process.env.XNAPIFY_QUEUE_TYPE;
+    factory = createFactory({ dataDir: DATA_DIR });
+
+    const channel = factory('persist');
+    expect(channel.queue).toBeInstanceOf(FileQueue);
+    expect(fs.existsSync(path.join(DATA_DIR, 'persist', 'pending'))).toBe(true);
+  });
+
+  it('honours XNAPIFY_QUEUE_TYPE', () => {
+    process.env.XNAPIFY_QUEUE_TYPE = 'memory';
+    factory = createFactory();
+
+    expect(factory('volatile').queue).toBeInstanceOf(MemoryQueue);
+  });
+
+  it('lets a channel override the default type', () => {
+    delete process.env.XNAPIFY_QUEUE_TYPE;
+    factory = createFactory({ dataDir: DATA_DIR });
+
+    expect(factory('mem', { type: 'memory' }).queue).toBeInstanceOf(
+      MemoryQueue,
+    );
   });
 });

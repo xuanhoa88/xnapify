@@ -15,9 +15,13 @@ import {
   STORED_ADAPTERS,
   CONNECTED_ROUTERS,
 } from '../utils/BaseExtensionManager.js';
+import { isDeferrableExtension } from '../utils/deferral.js';
 import { normalizeRouteAdapter } from '../utils/routeAdapter.js';
 
 import { registry } from './Registry.js';
+
+/** @type {symbol} id → manifest of extensions whose download is deferred */
+const DEFERRED = Symbol('__xnapify.ext.deferred__');
 
 class ClientExtensionManager extends BaseExtensionManager {
   // ---------------------------------------------------------------------------
@@ -26,6 +30,7 @@ class ClientExtensionManager extends BaseExtensionManager {
 
   constructor() {
     super(registry);
+    this[DEFERRED] = new Map();
 
     this.refreshingIds = new Set();
 
@@ -164,6 +169,88 @@ class ClientExtensionManager extends BaseExtensionManager {
   // ---------------------------------------------------------------------------
   // 2. Subclass Hooks
   // ---------------------------------------------------------------------------
+
+  // ---------------------------------------------------------------------------
+  // Deferred loading
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Whether an extension's remote bundle can wait until one of its
+   * namespaces activates.
+   *
+   * Only slot-only extensions qualify: an extension that contributes routes
+   * must be present before hydration, and a wildcard subscriber is needed on
+   * every page. `hasRoutes` is stamped by the server after it has loaded the
+   * extension; without that signal the extension loads eagerly (safe default).
+   *
+   * @param {Object|null} manifest
+   * @returns {boolean}
+   */
+  static shouldDefer(manifest) {
+    return isDeferrableExtension(manifest);
+  }
+
+  /**
+   * Load an extension, or park it until a namespace it subscribes to is
+   * activated by the router (`activateViewNamespace`).
+   *
+   * @param {string} id
+   * @param {Object|null} [manifest]
+   * @param {Set} [_loadingChain]
+   * @param {{ immediate?: boolean }} [options]
+   */
+  async loadExtension(id, manifest = null, _loadingChain, options = {}) {
+    const immediate = options && options.immediate === true;
+    if (
+      !immediate &&
+      !this[ACTIVE_EXTENSIONS].has(id) &&
+      ClientExtensionManager.shouldDefer(manifest)
+    ) {
+      this[DEFERRED].set(id, manifest);
+      if (__DEV__) {
+        console.log(
+          `[ClientExtensionManager] Deferred ${this._formatDisplayName(id, manifest)} until namespace: ${manifest.slots.join(', ')}`,
+        );
+      }
+      return null;
+    }
+    this[DEFERRED].delete(id);
+    return super.loadExtension(id, manifest, _loadingChain);
+  }
+
+  /**
+   * Download every deferred extension subscribed to a namespace, then run
+   * the regular activation.
+   *
+   * @param {string} ns
+   */
+  async activateViewNamespace(ns) {
+    const pending = [];
+    for (const [id, manifest] of this[DEFERRED]) {
+      if (Array.isArray(manifest.slots) && manifest.slots.includes(ns)) {
+        pending.push([id, manifest]);
+      }
+    }
+    if (pending.length > 0) {
+      await Promise.allSettled(
+        pending.map(([id, manifest]) =>
+          this.loadExtension(id, manifest, undefined, { immediate: true }),
+        ),
+      );
+    }
+    return super.activateViewNamespace(ns);
+  }
+
+  /**
+   * Forget a deferred extension on unload so a later activation does not
+   * resurrect it.
+   *
+   * @param {string} id
+   */
+  async unloadExtension(id) {
+    this[DEFERRED].delete(id);
+    return super.unloadExtension(id);
+  }
 
   /**
    * Resolve view context for lifecycle hooks.
@@ -571,8 +658,12 @@ class ClientExtensionManager extends BaseExtensionManager {
     const ext = this[ACTIVE_EXTENSIONS].get(loadedId);
     if (ext && typeof ext.shutdown === 'function') {
       try {
-        // eslint-disable-next-line no-underscore-dangle
-        await ext.shutdown({ ...this._hookContext(), registry: this.registry });
+        await ext.shutdown({
+          // eslint-disable-next-line no-underscore-dangle
+          ...this._hookContextFor(loadedId),
+          // eslint-disable-next-line no-underscore-dangle
+          registry: this._scopedRegistry(loadedId),
+        });
       } catch (error) {
         console.error(
           `[ClientExtensionManager] Failed to shutdown extension ${loadedId}:`,

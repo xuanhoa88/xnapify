@@ -192,25 +192,34 @@ export async function getUserList(options, ctx) {
     .emit('list:before', whereConditions, { sequelize });
 
   // Get users with pagination and search
+  // The count only needs the join tables when a role or group filter is
+  // active; otherwise a plain COUNT over users is the same number at a
+  // fraction of the cost.
+  const countIncludes = [
+    role && {
+      model: Role,
+      as: 'roles',
+      where: roleWhereConditions,
+      required: true,
+      attributes: [],
+      through: { attributes: [] },
+    },
+    group && {
+      model: Group,
+      as: 'groups',
+      where: groupWhereConditions,
+      required: true,
+      attributes: [],
+      through: { attributes: [] },
+    },
+  ].filter(Boolean);
+
   const [count, users] = await Promise.all([
     User.count({
       where: whereConditions,
-      include: [
-        role && {
-          model: Role,
-          as: 'roles',
-          where: roleWhereConditions,
-          required: true,
-        },
-        group && {
-          model: Group,
-          as: 'groups',
-          where: groupWhereConditions,
-          required: true,
-        },
-      ].filter(Boolean),
-      distinct: true,
-      col: 'id',
+      ...(countIncludes.length > 0
+        ? { include: countIncludes, distinct: true, col: 'id' }
+        : {}),
     }),
     User.findAll({
       where: whereConditions,
@@ -441,6 +450,7 @@ export async function updateUserById(
 
     if (password) {
       await hook('admin:users').emit('password_reset', {
+        user_id,
         email: user.email,
         password,
       });

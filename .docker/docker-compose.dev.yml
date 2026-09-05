@@ -38,6 +38,7 @@ services:
       XNAPIFY_SQLITE_DATA_DIR: /app/data/sqlite
       XNAPIFY_PG_DATA_DIR: /app/data/postgres
       XNAPIFY_MYSQL_DATA_DIR: /app/data/mysql
+      XNAPIFY_QUEUE_DATA_DIR: /app/data/queues
     volumes:
       # Bind-mount source code for live editing / HMR
       - ..:/app

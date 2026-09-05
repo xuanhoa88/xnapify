@@ -667,3 +667,241 @@ describe('FileQueue Adapter', () => {
     });
   });
 });
+
+// ============================================================================
+// Concurrency, locking and recovery guarantees
+// ============================================================================
+
+describe('FileQueue concurrency & recovery', () => {
+  let FileQueue;
+  const DATA_DIR = path.join(process.cwd(), '.xnapify', 'test-queues-race');
+  const opened = [];
+  const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+  const make = (options = {}) => {
+    const q = new FileQueue({
+      name: 'race',
+      dataDir: DATA_DIR,
+      pollInterval: 50,
+      defaultJobOptions: { attempts: 2, backoff: 10 },
+      ...options,
+    });
+    opened.push(q);
+    return q;
+  };
+
+  beforeEach(() => {
+    jest.resetModules();
+    FileQueue = require('./adapters/file.js').default;
+    fs.rmSync(DATA_DIR, { recursive: true, force: true });
+  });
+
+  afterEach(async () => {
+    while (opened.length) {
+      await opened.pop().close();
+    }
+    fs.rmSync(DATA_DIR, { recursive: true, force: true });
+  });
+
+  it('never exceeds concurrency under overlapping triggers', async () => {
+    const q = make({ concurrency: 2 });
+    let running = 0;
+    let peak = 0;
+    let done = 0;
+
+    q.process(async () => {
+      running++;
+      peak = Math.max(peak, running);
+      await sleep(60);
+      running--;
+      done++;
+    });
+
+    for (let i = 0; i < 6; i++) {
+      await q.add('job', { i });
+    }
+    // Hammer every entry point that can start a claim
+    for (let i = 0; i < 10; i++) {
+      q.resume();
+      q.tick();
+    }
+
+    await waitFor(() => done === 6, 5000);
+    expect(done).toBe(6);
+    expect(peak).toBe(2);
+  });
+
+  it('keeps the index pointing at the new status after completion', async () => {
+    const q = make();
+    q.process(async () => 'ok');
+
+    const job = await q.add('job', {}, { removeOnComplete: false });
+    await waitFor(
+      async () => (await q.getJobsByStatus('completed')).length === 1,
+    );
+
+    const stored = await q.getJob(job.id);
+    expect(stored.status).toBe(JOB_STATUS.COMPLETED);
+
+    const stats = await q.getStats();
+    expect(stats.counts.completed).toBe(1);
+    expect(stats.counts.active).toBe(0);
+  });
+
+  it('keeps the index consistent through failure and retryJob()', async () => {
+    const q = make({ defaultJobOptions: { attempts: 1, backoff: 10 } });
+    let calls = 0;
+    q.process(async () => {
+      calls++;
+      if (calls === 1) throw new Error('boom');
+      return 'ok';
+    });
+
+    const job = await q.add('job', {});
+    await waitFor(async () => (await q.getJobsByStatus('failed')).length === 1);
+
+    expect((await q.getJob(job.id)).status).toBe(JOB_STATUS.FAILED);
+    expect((await q.getStats()).counts.failed).toBe(1);
+
+    await q.retryJob(job.id);
+    await waitFor(() => calls === 2);
+    await waitFor(async () => (await q.getJobsByStatus('active')).length === 0);
+
+    expect((await q.getStats()).counts.failed).toBe(0);
+    await expect(q.getJob(job.id)).rejects.toThrow();
+  });
+
+  it('leaves an active job alone while its lock is fresh, recovers it once stale', async () => {
+    const q1 = make();
+    const job = await q1.add('job', {});
+    const filename = q1.buildFilename(job);
+    // Simulate a sibling process mid-job: file in active/ with a fresh lock
+    fs.renameSync(
+      q1.jobPath('pending', filename),
+      q1.jobPath('active', filename),
+    );
+    fs.writeFileSync(q1.lockPath(filename), '999');
+    await q1.close();
+
+    const q2 = make();
+    expect(fs.existsSync(q2.jobPath('active', filename))).toBe(true);
+    expect(fs.existsSync(q2.jobPath('pending', filename))).toBe(false);
+
+    // Age the lock past the stale threshold — the poll tick must recover it
+    const old = new Date(Date.now() - 60_000);
+    fs.utimesSync(q2.lockPath(filename), old, old);
+
+    let processed = 0;
+    q2.process(async () => {
+      processed++;
+    });
+    await waitFor(() => processed === 1);
+    expect(processed).toBe(1);
+  });
+
+  it('heartbeats the lock so a long-running job is not stolen by a sibling', async () => {
+    const q = make({ lockStaleMs: 900 });
+    let release;
+    let calls = 0;
+    q.process(
+      () =>
+        new Promise(resolve => {
+          calls++;
+          release = resolve;
+        }),
+    );
+    const job = await q.add('job', {});
+    await waitFor(() => calls === 1);
+    const filename = q.buildFilename(job);
+
+    // Wait longer than lockStaleMs, then boot a sibling against the same dir
+    await sleep(1500);
+    const sibling = make({ lockStaleMs: 900 });
+    expect(fs.existsSync(sibling.jobPath('active', filename))).toBe(true);
+    expect(fs.existsSync(sibling.jobPath('pending', filename))).toBe(false);
+    expect(calls).toBe(1);
+
+    release();
+    await waitFor(async () => (await q.getJobsByStatus('active')).length === 0);
+  });
+
+  it('steals a stale lock left on a pending job', async () => {
+    const q = make({ lockStaleMs: 200 });
+    const job = await q.add('job', {});
+    const lockPath = q.lockPath(q.buildFilename(job));
+    fs.writeFileSync(lockPath, '999');
+    const old = new Date(Date.now() - 1000);
+    fs.utimesSync(lockPath, old, old);
+
+    let processed = 0;
+    q.process(async () => {
+      processed++;
+    });
+    await waitFor(() => processed === 1);
+    expect(processed).toBe(1);
+  });
+
+  it('skips a pending job whose lock is held and takes the next candidate', async () => {
+    const q = make();
+    const a = await q.add('job', { n: 'a' }, { priority: 10 });
+    await q.add('job', { n: 'b' });
+    const lockA = q.lockPath(q.buildFilename(a));
+    fs.writeFileSync(lockA, '999'); // held by someone else, fresh
+
+    const seen = [];
+    q.process(async j => {
+      seen.push(j.data.n);
+    });
+
+    await waitFor(() => seen.length === 1);
+    expect(seen).toEqual(['b']);
+
+    fs.unlinkSync(lockA);
+    await waitFor(() => seen.length === 2);
+    expect(seen).toEqual(['b', 'a']);
+  });
+
+  it('finds and removes jobs written by another process via disk scan', async () => {
+    const writer = make();
+    const reader = make(); // indexed before the job below exists
+
+    const job = await writer.add('job', { x: 2 });
+    expect(reader.jobIndex.has(job.id)).toBe(false);
+
+    const found = await reader.getJob(job.id);
+    expect(found.data.x).toBe(2);
+    expect(await reader.removeJob(job.id)).toBe(true);
+    await expect(reader.getJob(job.id)).rejects.toThrow();
+  });
+
+  it('processes a newly added job without waiting for the poll interval', async () => {
+    const q = make({ pollInterval: 5000 });
+    let processed = 0;
+    q.process(async () => {
+      processed++;
+    });
+
+    const start = Date.now();
+    await q.add('job', {});
+    await waitFor(() => processed === 1, 2000);
+
+    expect(processed).toBe(1);
+    expect(Date.now() - start).toBeLessThan(2000);
+  });
+
+  it('close() drains running jobs before returning', async () => {
+    const q = make();
+    let finished = false;
+    q.process(async () => {
+      await sleep(150);
+      finished = true;
+    });
+
+    await q.add('job', {});
+    await waitFor(() => q.activeJobs === 1);
+    await q.close();
+
+    expect(finished).toBe(true);
+    expect(await q.getJobsByStatus('active')).toHaveLength(0);
+  });
+});

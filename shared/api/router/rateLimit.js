@@ -11,6 +11,25 @@ import isLocalhostIp from 'is-localhost-ip';
 const cache = new Map();
 const DEFAULT_KEY = '__default__';
 
+/**
+ * Optional shared-store factory. When set (see bootstrap), every limiter is
+ * backed by it so counters are shared across workers/instances instead of
+ * living in each process. Receives the limiter cache key so each route
+ * config gets its own key namespace.
+ * @type {null | ((cacheKey: string) => Object)}
+ */
+let storeFactory = null;
+
+/**
+ * Install (or clear) the shared store factory. Existing limiters are
+ * discarded so they are rebuilt with the new store on next use.
+ * @param {null | ((cacheKey: string) => Object)} factory
+ */
+export function configureRateLimitStore(factory) {
+  storeFactory = typeof factory === 'function' ? factory : null;
+  cache.clear();
+}
+
 let rateLimitPromise;
 async function getRateLimit() {
   if (rateLimitPromise === undefined) {
@@ -31,7 +50,10 @@ function getDefaultConfig() {
 
   const windowMs =
     parseInt(process.env.XNAPIFY_RATE_LIMIT_WINDOW, 10) || 15 * 60_000;
-  const max = parseInt(process.env.XNAPIFY_RATE_LIMIT_MAX, 10) || 50;
+  // Global ceiling per IP. Sensitive routes (login, register, reset) declare
+  // their own much stricter `useRateLimit` export; this default only guards
+  // against runaway clients, not brute force.
+  const max = parseInt(process.env.XNAPIFY_RATE_LIMIT_MAX, 10) || 1000;
 
   defaultConfig = {
     windowMs,
@@ -80,7 +102,8 @@ export async function createRateLimiter(config, key) {
   // Callers with functions must supply a stable key.
   const cacheKey = key || JSON.stringify(config);
   if (!cache.has(cacheKey)) {
-    cache.set(cacheKey, fn(config));
+    const store = storeFactory ? storeFactory(cacheKey) : undefined;
+    cache.set(cacheKey, fn(store ? { ...config, store } : config));
   }
   return cache.get(cacheKey);
 }

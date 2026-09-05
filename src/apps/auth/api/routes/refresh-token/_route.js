@@ -5,6 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+export const useRateLimit = { max: 60, windowMs: 15 * 60_000 };
+
 export const post = [
   function refreshToken(req, ...args) {
     const { auth } = req.app.get('container').resolve('users:controllers');

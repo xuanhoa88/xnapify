@@ -29,7 +29,9 @@ import {
   getHmrWatchIgnored,
   isDev,
   pkg,
+  MF_HOST_EAGER_DEPS,
 } from './base.config.js';
+import PrecompressPlugin from './PrecompressPlugin.js';
 import StatsManifestPlugin from './StatsManifestPlugin.js';
 
 const require = createRequire(import.meta.url);
@@ -192,8 +194,12 @@ const clientConfig = createRspackConfig('client', {
     createEnvDefine(),
     new rspack.container.ModuleFederationPlugin({
       name: 'host',
+      // Only the packages the entry needs synchronously are eager; the rest
+      // are consumed from the share scope by the async chunk that first
+      // imports them (views, editor, forms), keeping them off the first load.
       shared: createSharedDependencies(pkg.dependencies || {}, {
-        eager: true,
+        eager: false,
+        eagerDeps: MF_HOST_EAGER_DEPS,
         singleton: true,
         strictVersion: false,
       }),
@@ -208,6 +214,9 @@ const clientConfig = createRspackConfig('client', {
       ignoreOrder: isDev,
     }),
     createStatsWriterPlugin(),
+    // Emit .br/.gz siblings so the server never compresses immutable assets
+    // per request (see shared/api/engines/http/precompressed.js).
+    !isDev && new PrecompressPlugin(),
     createProgressPlugin(),
   ].filter(Boolean),
 });

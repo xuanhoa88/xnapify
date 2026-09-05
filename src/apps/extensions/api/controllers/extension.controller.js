@@ -5,8 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import express from 'express';
-
+import { createPrecompressedStatic } from '@shared/api/engines/http/precompressed.js';
 import { validateForm, z } from '@shared/validator/index.js';
 
 import { extensionStatusSchema } from '../../validator/extension.js';
@@ -129,11 +128,11 @@ export const serveExtensionStatic = async (req, res) => {
   // after extension HMR rebuilds replace chunk files.
   let staticMiddleware;
   if (__DEV__) {
-    staticMiddleware = express.static(staticDir);
+    staticMiddleware = createPrecompressedStatic(staticDir);
   } else {
     staticMiddleware = staticMiddlewareCache.get(staticDir);
     if (!staticMiddleware) {
-      staticMiddleware = express.static(staticDir);
+      staticMiddleware = createPrecompressedStatic(staticDir);
       staticMiddlewareCache.set(staticDir, staticMiddleware);
     }
   }
@@ -387,6 +386,13 @@ export const handleIPC = async (req, res) => {
         `No IPC handler registered for action "${action}" on extension "${id}"`,
         404,
       );
+    }
+
+    // IPC is authenticated by default. An extension must opt in explicitly
+    // with registerHook(id, fn, { public: true }) to accept guest callers.
+    const { public: isPublic = false } = extensionRegistry.getHookMeta(hookId);
+    if (!isPublic && !(req.authenticated && req.user)) {
+      return http.sendUnauthorized(res, 'Authentication required');
     }
 
     // Execute the IPC hook (in parallel for maximum throughput)

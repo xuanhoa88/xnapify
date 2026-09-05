@@ -16,7 +16,10 @@ import { verifySignature, parseSignatureHeader } from './utils/signature.js';
 
 // Helper: generate a valid HMAC signature for test payloads
 function sign(payload, secret, algorithm = 'sha256') {
-  const data = typeof payload === 'string' ? payload : JSON.stringify(payload);
+  const data =
+    Buffer.isBuffer(payload) || typeof payload === 'string'
+      ? payload
+      : JSON.stringify(payload);
   return crypto.createHmac(algorithm, secret).update(data).digest('hex');
 }
 
@@ -326,6 +329,19 @@ describe('Webhook Engine', () => {
 
       it('should return false for empty signature', () => {
         expect(verifySignature({}, '', secret)).toBe(false);
+      });
+
+      it('should verify a raw Buffer body byte-for-byte', () => {
+        // Providers sign the exact bytes on the wire, including whitespace and
+        // key order that JSON.stringify(req.body) would not reproduce.
+        const raw = Buffer.from('{ "b": 2,   "a": 1 }');
+        const sig = sign(raw, secret, 'sha256');
+
+        expect(verifySignature(raw, sig, secret, 'sha256')).toBe(true);
+        // The parsed object re-serialises differently and must NOT match
+        expect(verifySignature({ b: 2, a: 1 }, sig, secret, 'sha256')).toBe(
+          false,
+        );
       });
 
       it('should return false for empty secret', () => {

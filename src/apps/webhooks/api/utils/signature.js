@@ -58,7 +58,13 @@ export function verifySignature(
 ) {
   if (!signature || !secret) return false;
 
-  const data = typeof payload === 'string' ? payload : JSON.stringify(payload);
+  // Prefer raw bytes (Buffer) — providers sign the exact request body.
+  // Strings are used as-is; objects are only stringified as a last resort
+  // (tests / internal callers), since key order is not guaranteed.
+  const data =
+    Buffer.isBuffer(payload) || typeof payload === 'string'
+      ? payload
+      : JSON.stringify(payload);
   const expectedBuf = crypto
     .createHmac(algorithm, secret)
     .update(data)

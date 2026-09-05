@@ -4,5 +4,9 @@
   "browser": "views/index.js",
   "main": "api/index.js",
   "description": "Demo settings extension to populate the SettingsBuilderForm tab",
-  "slots": ["/admin/settings"]
+  "slots": ["admin.settings"],
+  "xnapify": {
+    "version": "^2.0.0",
+    "capabilities": []
+  }
 }

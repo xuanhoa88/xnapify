@@ -7,8 +7,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-/* eslint-disable import/no-unresolved, no-underscore-dangle */
-
 /**
  * Database Preboot — ensures .env exists and the correct DB driver is ready.
  *
@@ -62,14 +60,61 @@ const nativeRequire =
 let useLocalEnv = false;
 
 /**
- * Resolve the isolation directory for pre-compiled C++ database drivers.
- * Always locks to the application bundle directory so they never interact
- * with host volume binds, regardless of whether it's Docker or bare-metal production.
- * @param {string} dialect - 'sqlite' | 'postgres' | 'mysql'
+ * Resolve the isolation directory for on-demand database drivers.
+ *
+ * Drivers are installed here and loaded from here — NEVER linked into the
+ * project's node_modules. npm prunes anything it does not own from
+ * node_modules on every reify (`npm install <pkg>`, `npm ci`, `npm update`),
+ * so a link there silently disappears and the next boot fails. The server
+ * resolves the same sandbox via shared/api/engines/db/drivers.js.
+ *
+ * Always locks to the application bundle directory so it never interacts
+ * with host volume binds, regardless of Docker or bare-metal production.
+ * @param {string} dialect - 'sqlite' | 'postgres' | 'mysql' | '_embedded'
  * @returns {string}
  */
 function getDriverIsolationDir(dialect) {
   return path.join(ROOT, '.xnapify', 'sequelize-drivers', dialect);
+}
+
+/**
+ * Absolute path of a package inside a dialect sandbox.
+ * @param {string} dialect
+ * @param {string} name - npm package name
+ * @returns {string}
+ */
+function getDriverPackageDir(dialect, name) {
+  return path.join(getDriverIsolationDir(dialect), 'node_modules', name);
+}
+
+/**
+ * Load a driver package straight from its sandbox.
+ * @param {string} dialect
+ * @param {string} name - npm package name
+ * @param {string} [subpath] - Optional file inside the package (e.g. 'promise')
+ * @returns {*} Module exports
+ */
+function loadDriver(dialect, name, subpath = '') {
+  return nativeRequire(path.join(getDriverPackageDir(dialect, name), subpath));
+}
+
+/**
+ * True when the package exists in the sandbox and (for loadable packages)
+ * initialises under the current Node ABI.
+ * @param {string} dialect
+ * @param {{ name: string, load?: boolean }} dep
+ * @returns {boolean}
+ */
+function isDriverInstalled(dialect, dep) {
+  const pkgDir = getDriverPackageDir(dialect, dep.name);
+  if (!fs.existsSync(path.join(pkgDir, 'package.json'))) return false;
+  if (dep.load === false) return true;
+  try {
+    nativeRequire(pkgDir);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -148,7 +193,9 @@ const DIALECT_DEPS = (() => {
       { name: 'pg-hstore', spec: 'pg-hstore@2.3.4' },
     ],
     // Platform-specific PG binaries (initdb, pg_ctl, postgres)
-    _embedded: [{ name: embeddedPkg, spec: `${embeddedPkg}@18.3.0-beta.16` }],
+    _embedded: [
+      { name: embeddedPkg, spec: `${embeddedPkg}@18.3.0-beta.16`, load: false },
+    ],
     mysql: [{ name: 'mysql2', spec: 'mysql2@3.20.0' }],
   };
 })();
@@ -379,59 +426,18 @@ function detectDialect(url) {
 // ─── Dependency Management ──────────────────────────────────────────────────
 
 /**
- * Ensure dialect-specific packages are installed. Uses --no-save to avoid
- * modifying package.json. Skips if all packages are already resolvable.
- * @param {string} dialect - 'sqlite' | 'postgres' | 'mysql'
+ * Ensure dialect-specific packages are installed in their sandbox.
+ * Uses --no-save --prefix so package.json and node_modules are never touched.
+ * Skips if every package is already present and loadable.
+ * @param {string} dialect - 'sqlite' | 'postgres' | 'mysql' | '_embedded'
  */
 async function ensureDeps(dialect) {
   const deps = DIALECT_DEPS[dialect];
   if (!deps || deps.length === 0) return;
 
-  // Check by module name, install by spec (with version pin)
-  const missing = deps.filter(dep => {
-    try {
-      const resolved = nativeRequire.resolve(dep.name);
-      // Actually load it to ensure native bindings match current Node ABI
-      nativeRequire(resolved);
-      return false;
-    } catch {
-      return true;
-    }
-  });
-
-  if (missing.length === 0) return;
-
   const driverDir = getDriverIsolationDir(dialect);
-
-  // Fast path: attempt to recover broken symlinks from an existing sandbox build.
-  // This saves significant compilation time if node_modules was wiped but .xnapify wasn't.
-  const stillMissing = missing.filter(dep => {
-    const srcPath = path.join(driverDir, 'node_modules', dep.name);
-    const destPath = path.join(ROOT, 'node_modules', dep.name);
-
-    if (fs.existsSync(path.join(srcPath, 'package.json'))) {
-      try {
-        const parentDir = path.dirname(destPath);
-        fs.mkdirSync(parentDir, { recursive: true });
-        fs.rmSync(destPath, { recursive: true, force: true });
-        fs.symlinkSync(srcPath, destPath, 'junction');
-
-        const resolved = nativeRequire.resolve(dep.name);
-        nativeRequire(resolved);
-
-        return false; // Successfully recovered
-      } catch {
-        // Failed to load (e.g. Node ABI changed), needs reinstall
-        return true;
-      }
-    }
-    return true; // Not present in sandbox
-  });
-
-  if (stillMissing.length === 0) {
-    console.log(`✅ ${dialect} dependencies recovered from sandbox`);
-    return;
-  }
+  const stillMissing = deps.filter(dep => !isDriverInstalled(dialect, dep));
+  if (stillMissing.length === 0) return;
 
   const names = stillMissing.map(d => d.name);
   const specs = stillMissing.map(d => d.spec);
@@ -527,21 +533,16 @@ async function ensureDeps(dialect) {
         },
       );
 
-      // Bind the securely compiled library back natively into module resolution
-      // using directory junctions (admin bypasses Windows symlink restriction).
-      names.forEach(name => {
-        const srcPath = path.join(driverDir, 'node_modules', name);
-        const destPath = path.join(ROOT, 'node_modules', name);
-
-        // Ensure parent directory exists for scoped packages
-        // e.g. @embedded-postgres/linux-x64 needs node_modules/@embedded-postgres/
-        const parentDir = path.dirname(destPath);
-        fs.mkdirSync(parentDir, { recursive: true });
-
-        // Clear previous corrupted or orphaned directory paths
-        fs.rmSync(destPath, { recursive: true, force: true });
-        fs.symlinkSync(srcPath, destPath, 'junction');
-      });
+      // The sandbox is the only source of truth — verify it now rather than
+      // discovering a broken driver at server boot.
+      const broken = stillMissing.filter(
+        dep => !isDriverInstalled(dialect, dep),
+      );
+      if (broken.length > 0) {
+        throw new Error(
+          `Sandbox install incomplete: ${broken.map(d => d.name).join(', ')}`,
+        );
+      }
 
       success = true;
       break;
@@ -569,21 +570,6 @@ async function ensureDeps(dialect) {
       `Failed to install ${dialect} deps after ${maxAttempts} attempts: ${message}`,
     );
   }
-  // Bust Node's module resolution cache so require() finds the new packages
-  // within this same process (avoids stale _pathCache from prior resolve())
-
-  const { Module } = await import('module');
-  const pathCache = Module ? Module._pathCache : null;
-  if (pathCache) {
-    for (const key of Object.keys(pathCache)) {
-      for (const dep of stillMissing) {
-        if (key.includes(dep.name)) {
-          delete pathCache[key];
-        }
-      }
-    }
-  }
-
   console.log(`✅ ${dialect} dependencies installed`);
 }
 
@@ -788,18 +774,20 @@ function resolvePgBin(binName) {
   const archKey = archMap[arch] || arch;
   const pkgName = `@embedded-postgres/${platKey}-${archKey}`;
 
-  try {
-    const pkgDir = path.dirname(
-      nativeRequire.resolve(`${pkgName}/package.json`),
-    );
-    const bin = path.join(pkgDir, 'native', 'bin', fileName);
-    if (fs.existsSync(bin)) return bin;
-  } catch {
-    // Fall through to glob search
-  }
+  const bin = path.join(
+    getDriverPackageDir('_embedded', pkgName),
+    'native',
+    'bin',
+    fileName,
+  );
+  if (fs.existsSync(bin)) return bin;
 
-  // Fallback: search node_modules for any embedded-postgres platform package
-  const embeddedDir = path.join(ROOT, 'node_modules', '@embedded-postgres');
+  // Fallback: any embedded-postgres platform package present in the sandbox
+  const embeddedDir = path.join(
+    getDriverIsolationDir('_embedded'),
+    'node_modules',
+    '@embedded-postgres',
+  );
   if (fs.existsSync(embeddedDir)) {
     for (const entry of fs.readdirSync(embeddedDir)) {
       const candidate = path.join(
@@ -826,7 +814,7 @@ function resolvePgBin(binName) {
 async function terminateConnections(port) {
   try {
     await ensureDeps('postgres');
-    const { Client } = (await import('pg')).default || (await import('pg'));
+    const { Client } = loadDriver('postgres', 'pg');
     const client = new Client({
       host: DB_DEFAULT_HOST,
       port,
@@ -1674,7 +1662,7 @@ async function ensurePostgresDatabase(cfg) {
   const dbName = cfg.database || PG_DEFAULTS.database;
   const user = cfg.user || PG_DEFAULTS.user;
   try {
-    const { Client } = (await import('pg')).default || (await import('pg'));
+    const { Client } = loadDriver('postgres', 'pg');
     const client = new Client({
       host: cfg.host || DB_DEFAULT_HOST,
       port: cfg.port || PG_DEFAULTS.port,
@@ -1876,9 +1864,7 @@ async function mysqlFallbackChain() {
       port: MYSQL_DEFAULT_PORT,
     });
     try {
-      const mysql2 =
-        (await import('mysql2/promise')).default ||
-        (await import('mysql2/promise'));
+      const mysql2 = loadDriver('mysql', 'mysql2', 'promise');
       const conn = await mysql2.createConnection({
         host: DB_DEFAULT_HOST,
         port: MYSQL_DEFAULT_PORT,
@@ -1918,34 +1904,15 @@ async function showStatus(dialectOverride) {
   const dialect = dialectOverride || detectDialect(url);
   const separator = '─'.repeat(50);
 
-  // Check if deps are installed
+  // Drivers are only ever looked up in their sandbox
   const deps = DIALECT_DEPS[dialect] || [];
-  const installed = deps.filter(d => {
-    try {
-      nativeRequire.resolve(d.name);
-      return true;
-    } catch {
-      return false;
-    }
-  });
-
-  const inSandbox = deps.filter(d => {
-    if (installed.includes(d)) return false;
-    const driverDir = getDriverIsolationDir(dialect);
-    return fs.existsSync(
-      path.join(driverDir, 'node_modules', d.name, 'package.json'),
-    );
-  });
+  const installed = deps.filter(d => isDriverInstalled(dialect, d));
 
   let depsLine;
   if (installed.length === deps.length) {
-    depsLine = `✅ All installed (${deps.map(d => d.name).join(', ')})`;
-  } else if (installed.length + inSandbox.length === deps.length) {
-    depsLine = `✅ Built in sandbox (${inSandbox.map(d => d.name).join(', ')}) - auto-linked on boot`;
+    depsLine = `✅ Installed in sandbox (${deps.map(d => d.name).join(', ')})`;
   } else {
-    const missingDeps = deps.filter(
-      d => !installed.includes(d) && !inSandbox.includes(d),
-    );
+    const missingDeps = deps.filter(d => !installed.includes(d));
     depsLine = `⚠️  Missing: ${missingDeps.map(d => d.name).join(', ')} (auto-installed on next boot)`;
   }
 

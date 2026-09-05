@@ -9,6 +9,9 @@ import { features } from '@shared/renderer/redux/index.js';
 
 import Login from './Login.js';
 
+/** Stable extension namespace (see manifest `slots`). */
+export const namespace = 'login';
+
 const { isAuthenticated } = features;
 
 /**

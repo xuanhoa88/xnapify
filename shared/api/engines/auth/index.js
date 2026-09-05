@@ -8,5 +8,8 @@
 // Authentication middleware
 export * as middlewares from './middlewares/index.js';
 
+// Access-token revocation (session denylist + user token version)
+export * as revocation from './revocation.js';
+
 // Constants
 export * from './constants.js';

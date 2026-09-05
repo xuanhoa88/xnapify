@@ -5,10 +5,18 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import express from 'express';
+import crypto from 'crypto';
 
+import express from 'express';
+import { RedisStore } from 'rate-limit-redis';
+
+import {
+  RedisRevocationStore,
+  setRevocationStore,
+} from '@shared/api/engines/auth/revocation.js';
 import { discoverModules, engines, drain } from '@shared/api/index.js';
 import { Router as DynamicRouter } from '@shared/api/router/index.js';
+import { configureRateLimitStore } from '@shared/api/router/rateLimit.js';
 
 import { createCorsMiddleware } from './middlewares/cors.js';
 import { createLoggingMiddleware } from './middlewares/logging.js';
@@ -85,6 +93,63 @@ function registerEngines(container) {
 }
 
 /**
+ * Move the per-process stores onto Redis when it is configured.
+ *
+ * Without Redis every worker keeps its own cache, rate-limit counters,
+ * revoked-session set and WebSocket channel table, which is only correct
+ * for a single process. With it:
+ *   - `cache` is rebound to the Redis adapter (still a no-op in development)
+ *   - rate limiters share counters (rate-limit-redis)
+ *   - the session revocation store is shared
+ *   - WebSocket channel messages and disconnects fan out to every instance
+ *
+ * @param {object} container - DI container
+ * @returns {Promise<boolean>} Whether Redis was attached
+ */
+async function configureSharedBackends(container) {
+  const { redis } = engines;
+  if (!redis || !redis.isConfigured()) return false;
+
+  const client = redis.getClient();
+
+  setRevocationStore(new RedisRevocationStore(client));
+
+  container.instance(
+    'cache',
+    engines.cache.createFactory({
+      type: 'redis',
+      client,
+      ttl: 5 * 60 * 1000,
+    }),
+  );
+
+  configureRateLimitStore(cacheKey => {
+    const scope = crypto
+      .createHash('sha1')
+      .update(String(cacheKey))
+      .digest('hex')
+      .slice(0, 12);
+    return new RedisStore({
+      prefix: `rl:${scope}:`,
+      sendCommand: (...args) => client.call(...args),
+    });
+  });
+
+  if (container.has('ws')) {
+    const ws = container.resolve('ws');
+    if (ws && typeof ws.attachPubSub === 'function') {
+      await ws.attachPubSub({
+        publisher: client,
+        subscriber: redis.getSubscriber(),
+      });
+    }
+  }
+
+  log('Shared backends attached to Redis');
+  return true;
+}
+
+/**
  * Setup global middleware stack.
  *
  * @param {object} app - Express application
@@ -138,6 +203,11 @@ async function buildApiRouter(app, extension) {
   router.use(
     express.json({
       limit: process.env.XNAPIFY_JSON_BODY_LIMIT || '10mb',
+      // Keep the raw bytes so HMAC-signed payloads (webhooks) can be verified
+      // against exactly what the sender signed, not a re-serialised object.
+      verify(req, _res, buf) {
+        req.rawBody = buf;
+      },
     }),
   );
   router.use(
@@ -146,6 +216,13 @@ async function buildApiRouter(app, extension) {
       limit: process.env.XNAPIFY_URLENCODED_BODY_LIMIT || '1mb',
     }),
   );
+
+  // Authentication stack — mounted exactly once for the whole /api tree.
+  // Each module router below is path-less, so anything mounted alongside it
+  // would run again for every module the request passes through on its way
+  // to a match (13 modules + the extension router = 14 JWT verifications per
+  // request, and 14 failed verifications for a bad cookie).
+  router.use(...apiMiddlewares);
 
   // Discover and run module lifecycles (container-only DI)
   const { apiRoutes } = await discoverModules(
@@ -156,7 +233,7 @@ async function buildApiRouter(app, extension) {
   // Mount module API routes
   for (const [name, adapter] of apiRoutes) {
     try {
-      router.use(...apiMiddlewares, new DynamicRouter(adapter).resolve);
+      router.use(new DynamicRouter(adapter).resolve);
     } catch (error) {
       log(`[${name}] Failed to load routes: ${error.message}`, 'error');
     }
@@ -168,7 +245,7 @@ async function buildApiRouter(app, extension) {
       files: () => [],
       load: () => ({}),
     });
-    router.use(...apiMiddlewares, extRouter.resolve);
+    router.use(extRouter.resolve);
     extension.connectApiRouter(extRouter);
   }
   log(`Dynamic router built (${apiRoutes.size} module(s))`);
@@ -200,6 +277,9 @@ export default async function bootstrap(app, extension) {
 
     // Register engines on the DI container
     registerEngines(container);
+
+    // Multi-instance stores (no-op without XNAPIFY_REDIS_URL)
+    await configureSharedBackends(container);
 
     // Setup passport & OAuth registry (framework-level, before modules)
     const { oauth } = configurePassport();

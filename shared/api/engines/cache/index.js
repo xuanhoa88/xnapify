@@ -61,6 +61,7 @@ export {
 export { default as MemoryCache } from './adapters/memory.js';
 export { default as FileCache } from './adapters/file.js';
 export { default as NoOpCache } from './adapters/noop.js';
+export { default as RedisCache } from './adapters/redis.js';
 
 /**
  * Singleton instance of Cache Engine

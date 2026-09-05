@@ -6,6 +6,7 @@
  */
 
 import 'dotenv-flow/config';
+import cluster from 'cluster';
 import crypto from 'crypto';
 import fs from 'fs/promises';
 import path from 'path';
@@ -21,6 +22,10 @@ import { LRUCache } from 'lru-cache';
 import { renderToPipeableStream } from 'react-dom/server';
 import Youch from 'youch';
 
+import { rotateViaSessionHook } from '@shared/api/engines/auth/middlewares/refreshToken.js';
+import * as revocation from '@shared/api/engines/auth/revocation.js';
+import { createPrecompressedStatic } from '@shared/api/engines/http/precompressed.js';
+import { validateEnv } from '@shared/config/env.js';
 import { Container } from '@shared/container/index.js';
 import {
   setTokenCookie,
@@ -39,10 +44,21 @@ import i18n, {
   LOCALE_COOKIE_NAME,
   AVAILABLE_LOCALES,
 } from '@shared/i18n/index.js';
+import { createRequestI18n } from '@shared/i18n/request.js';
 import { configureJwt } from '@shared/jwt/index.js';
 import { NodeRedManager } from '@shared/node-red/index.js';
 import { configureStore, features } from '@shared/renderer/redux/index.js';
+import {
+  getClusterWorkerCount,
+  getWorkerIndex,
+  isClusterWorker,
+} from '@shared/utils/runtime.js';
 import { createWebSocketServer } from '@shared/ws/server/index.js';
+
+import initializeRouter, {
+  resetViewCache,
+  warmViews,
+} from './bootstrap/views.js';
 
 const { setRuntimeVariable, setLocale, me } = features;
 
@@ -52,7 +68,10 @@ const { setRuntimeVariable, setLocale, me } = features;
 
 const SERVER_TIMEOUTS = Object.freeze({
   STORE_INIT: 5_000,
-  VIEWS_LOAD: 5_000,
+  // The route tree is compiled once at boot; per-request work is only the
+  // providers/boot phases. Development keeps a generous ceiling because the
+  // first compile after an HMR reload happens inside a request.
+  VIEWS_LOAD: __DEV__ ? 30_000 : 5_000,
   PAGE_RESOLVE: 3_000,
   RENDER: 10_000,
   API_REQUEST: 30_000,
@@ -74,6 +93,17 @@ const SERVER_CONFIG = Object.freeze({
 
   enableSSRCache: process.env.XNAPIFY_SSR_CACHE === 'true',
   ssrCacheTTL: parseInt(process.env.XNAPIFY_SSR_CACHE_TTL, 10) || 60_000,
+  // Byte budget for cached HTML — 1 000 entries of a 50 KB page would
+  // otherwise pin 50 MB per process with no upper bound.
+  ssrCacheMaxBytes:
+    parseInt(process.env.XNAPIFY_SSR_CACHE_MAX_BYTES, 10) || 64 * 1024 * 1024,
+
+  // Node-RED runs an editor and a flow runtime bound to files on disk; it is
+  // a single-process feature. In cluster mode it is disabled automatically.
+  clusterWorkers: getClusterWorkerCount(),
+  enableNodeRed:
+    process.env.XNAPIFY_NODERED_ENABLED !== 'false' &&
+    getClusterWorkerCount() <= 1,
 
   localeCacheTTL: parseInt(process.env.XNAPIFY_I18N_CACHE_TTL, 10) || 60_000,
   localeCacheMax: parseInt(process.env.XNAPIFY_I18N_CACHE_MAX, 10) || 500,
@@ -86,6 +116,15 @@ const STATIC_SECURITY_HEADERS = Object.entries({
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'DENY',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Permissions-Policy':
+    'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()',
+  'Cross-Origin-Opener-Policy': 'same-origin',
+  'Cross-Origin-Resource-Policy': 'same-origin',
+  // HSTS is only meaningful over TLS; production is expected to sit behind
+  // a TLS-terminating proxy. Never emit it in development (plain http).
+  ...(!__DEV__
+    ? { 'Strict-Transport-Security': 'max-age=31536000; includeSubDomains' }
+    : {}),
 });
 
 // File extensions that must NEVER trigger the SSR catch-all.
@@ -200,7 +239,7 @@ function promiseWithDeadline(promise, timeoutMs, operationName) {
   ]);
 }
 
-async function extractPageMetadata(page, req, isLocalHost) {
+function extractPageMetadata(page, req, isLocalHost) {
   const metadata = {
     title: (page && page.title) || APP_METADATA.title,
     description: (page && page.description) || APP_METADATA.description,
@@ -241,7 +280,7 @@ async function extractPageMetadata(page, req, isLocalHost) {
   return metadata;
 }
 
-function validateCookieHeader(req, res) {
+async function validateCookieHeader(req, res) {
   let cookieHeader = req.headers.cookie || '';
   if (!cookieHeader) return { authHeader: '', authCookie: '' };
 
@@ -266,12 +305,16 @@ function validateCookieHeader(req, res) {
   let authCookie = getTokenFromCookie(req) || '';
 
   if (authCookie) {
-    const jwt = req.app.get('container').resolve('jwt');
+    const container = req.app.get('container');
+    const jwt = container.resolve('jwt');
     if (jwt && jwt.isTokenExpired(authCookie)) {
       const refreshCookie = getRefreshTokenFromCookie(req) || '';
       if (refreshCookie) {
         try {
-          const newTokens = jwt.refreshTokenPair(refreshCookie);
+          const newTokens = await rotateViaSessionHook(
+            container.resolve('hook'),
+            { refreshToken: refreshCookie, req },
+          );
 
           // Set refreshed cookies on the browser response
           setTokenCookie(res, newTokens.accessToken);
@@ -290,8 +333,11 @@ function validateCookieHeader(req, res) {
             console.info('🔄 SSR: Access token refreshed for', req.path);
           }
         } catch {
-          // Refresh token is also invalid — proceed as guest
+          // Refresh token is invalid or the session was revoked — proceed as
+          // guest and drop the dead cookies so the browser stops sending them.
           authCookie = '';
+          clearSecureCookie(res, 'id_token');
+          clearSecureCookie(res, 'refresh_token');
           if (__DEV__) {
             console.info(
               '⚠️ SSR: Token refresh failed, proceeding as guest for',
@@ -365,10 +411,18 @@ function buildCspHeader(nonce) {
   return [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}'`,
+    // Radix Themes and TipTap inject inline style attributes at runtime;
+    // 'unsafe-inline' for styles is the pragmatic floor until they support nonces.
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' https: data: blob:",
     "font-src 'self' data:",
-    "connect-src 'self' ws: wss:",
+    // 'self' covers same-origin ws:// and wss:// in CSP3-compliant browsers.
+    "connect-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+    'upgrade-insecure-requests',
   ].join('; ');
 }
 
@@ -379,6 +433,9 @@ function buildCspHeader(nonce) {
 const appState = {
   ssrCache: new LRUCache({
     max: 1000,
+    maxSize: SERVER_CONFIG.ssrCacheMaxBytes,
+    sizeCalculation: entry =>
+      Buffer.byteLength(entry && entry.html ? entry.html : '', 'utf8') + 256,
     ttl: SERVER_CONFIG.ssrCacheTTL,
     updateAgeOnGet: false, // Only evict by age, not access
   }),
@@ -397,6 +454,7 @@ export function invalidateCaches() {
   appState.ssrCache.clear();
   appState.ssrResourcesPromise = null;
   appState.ssrRetryCount = 0;
+  resetViewCache();
   if (__DEV__) console.log('🗑️  Caches cleared');
 }
 
@@ -499,18 +557,20 @@ function localeMiddleware() {
 // ---------------------------------------------------------------------------
 
 async function initializeViews(context) {
-  const m = await import('./bootstrap/views.js');
-  const views = await m.default(context, extensionManager);
+  const views = await initializeRouter(context, extensionManager);
   if (__DEV__) console.log('✅ Views initialized');
   return views;
 }
 
-async function createReduxStore({ fetch, history, locale }, options = {}) {
+async function createReduxStore(
+  { fetch, history, locale, i18n: requestI18n = i18n },
+  options = {},
+) {
   const { hasAuthCookie = false } = options;
 
   const store = configureStore(
     { user: { data: null } },
-    { fetch, history, locale, i18n },
+    { fetch, history, locale, i18n: requestI18n },
   );
 
   // Only fetch user profile if an auth cookie is present to avoid a
@@ -769,7 +829,7 @@ function makeSsrMiddleware(baseUrl, { isLocalHost = false } = {}) {
       const locale = availableKeys.includes(rawLocale)
         ? rawLocale
         : availableKeys.find(k => k.startsWith(rawLocale)) || DEFAULT_LOCALE;
-      const { authHeader, authCookie } = validateCookieHeader(req, res);
+      const { authHeader, authCookie } = await validateCookieHeader(req, res);
 
       // Compute cache key
       const cacheKey = computeSsrKey(req, baseUrl, locale, authCookie);
@@ -832,15 +892,15 @@ function makeSsrMiddleware(baseUrl, { isLocalHost = false } = {}) {
       }
 
       // ── Cache miss: build full view context ──
+      // Each request renders through its own i18next clone: the shared
+      // instance must never have its language switched mid-flight, or
+      // concurrent renders leak each other's locale (see shared/i18n/request.js).
       context = {
-        i18n,
+        i18n: createRequestI18n(locale),
         locale,
         container: new Container(),
         signal: abortController.signal,
       };
-
-      // Set view container for extensions
-      extensionManager.viewContainer = context.container;
 
       // Create memory history
       context.history = createMemoryHistory({
@@ -871,6 +931,7 @@ function makeSsrMiddleware(baseUrl, { isLocalHost = false } = {}) {
             fetch: context.fetch,
             history: context.history,
             locale: context.locale,
+            i18n: context.i18n,
           },
           {
             hasAuthCookie: !!authCookie,
@@ -936,7 +997,7 @@ function makeSsrMiddleware(baseUrl, { isLocalHost = false } = {}) {
           status,
           abortController,
           startTime,
-          metadata: await extractPageMetadata(page, req, isLocalHost),
+          metadata: extractPageMetadata(page, req, isLocalHost),
           component: page.component,
         }),
         SERVER_TIMEOUTS.RENDER,
@@ -1034,11 +1095,20 @@ function makeErrorMiddleware() {
     const wantsJson =
       req.path.startsWith('/api') || req.accepts(['html', 'json']) === 'json';
 
+    // Client errors (4xx) carry actionable, non-sensitive messages and are
+    // always surfaced. Server errors (5xx) are masked outside development.
+    const isClientError = status >= 400 && status < 500;
+    const publicMessage =
+      __DEV__ || isMaintenance || isClientError
+        ? message
+        : 'Internal server error';
+
     if (wantsJson) {
       return res.json({
         status,
         success: false,
-        error: __DEV__ || isMaintenance ? message : 'Internal server error',
+        error: publicMessage,
+        ...(err.code ? { code: err.code } : {}),
         maintenance: isMaintenance,
         requestId: req.id,
       });
@@ -1089,7 +1159,7 @@ function makeErrorMiddleware() {
   };
 }
 
-function validateWsToken(jwt, token) {
+async function validateWsToken(container, jwt, token) {
   if (!token) {
     const error = new Error('Token required');
     error.name = 'TokenRequired';
@@ -1106,15 +1176,17 @@ function validateWsToken(jwt, token) {
 
   // Standard User Token flow (fallback)
   // First consult cache to avoid redundant crypto work.
-  const cachedUser = jwt.cache.get(token);
-  if (cachedUser) {
-    return { id: cachedUser.id, email: cachedUser.email };
+  let decoded = jwt.cache.get(token);
+  if (!decoded) {
+    decoded = jwt.verifyTypedToken(token, 'access');
+    jwt.cacheToken(token, decoded);
   }
 
-  const decoded = jwt.verifyTypedToken(token, 'access');
-  jwt.cacheToken(token, decoded);
+  // A valid signature is not enough: the session may have been revoked
+  await revocation.verifyActiveSession(container, decoded);
 
-  return { id: decoded.id, email: decoded.email };
+  // `sid` lets session revocation close this socket later
+  return { id: decoded.id, email: decoded.email, sid: decoded.sid };
 }
 
 // ---------------------------------------------------------------------------
@@ -1142,10 +1214,12 @@ async function listen(server, baseUrl, port, host) {
   }
 
   // Start Node-RED first so it's ready to receive extension:loaded events via WebSocket/hot-load
-  try {
-    await appState.nodeRed.start();
-  } catch (err) {
-    console.warn('⚠️  Node-RED start failed:', err.message);
+  if (SERVER_CONFIG.enableNodeRed) {
+    try {
+      await appState.nodeRed.start();
+    } catch (err) {
+      console.warn('⚠️  Node-RED start failed:', err.message);
+    }
   }
 
   // Sync extensions after Node-RED is running so custom nodes are dynamically injected
@@ -1155,6 +1229,16 @@ async function listen(server, baseUrl, port, host) {
     console.warn('⚠️  Extension sync failed:', err.message);
   }
 
+  // Compile the SSR route tree now (modules, layouts, extension routes,
+  // translations) so the first request pays nothing and a broken view module
+  // fails the boot instead of a request.
+  try {
+    await warmViews(extensionManager);
+  } catch (err) {
+    console.error('❌ View route compilation failed:', err.message);
+    throw err;
+  }
+
   // Print server information
   const separator = '='.repeat(60);
   const wsUrl = baseUrl.replace(/^http(s?)/i, 'ws$1');
@@ -1162,6 +1246,11 @@ async function listen(server, baseUrl, port, host) {
   console.info(separator);
   console.info('🚀 Server started successfully');
   console.info(`Environment   : ${SERVER_CONFIG.nodeEnv}`);
+  if (isClusterWorker()) {
+    console.info(
+      `Worker        : ${getWorkerIndex() + 1}/${SERVER_CONFIG.clusterWorkers} (pid ${process.pid})`,
+    );
+  }
   console.info(
     `SSR Cache     : ${
       SERVER_CONFIG.enableSSRCache
@@ -1172,10 +1261,18 @@ async function listen(server, baseUrl, port, host) {
   console.info(`Base URL      : ${baseUrl}`);
   console.info(`API URL       : ${baseUrl}/api`);
   console.info(`WebSocket URL : ${wsUrl}/ws`);
-  const nodeRedRoot = appState.nodeRed.settings
-    ? appState.nodeRed.settings.httpAdminRoot
-    : '/~/red/admin';
-  console.info(`Node-RED URL  : ${baseUrl}${nodeRedRoot}`);
+  if (SERVER_CONFIG.enableNodeRed) {
+    const nodeRedRoot = appState.nodeRed.settings
+      ? appState.nodeRed.settings.httpAdminRoot
+      : '/~/red/admin';
+    console.info(`Node-RED URL  : ${baseUrl}${nodeRedRoot}`);
+  } else {
+    console.info(
+      `Node-RED      : disabled${
+        SERVER_CONFIG.clusterWorkers > 1 ? ' (cluster mode)' : ''
+      }`,
+    );
+  }
   console.info(separator);
 
   return server;
@@ -1191,6 +1288,9 @@ export function createServer({ express: expressMod, http: httpMod }) {
 }
 
 export async function bootstrapApp(app, server, options = {}) {
+  // Fail fast on a misconfigured environment (fatal in production only)
+  validateEnv();
+
   const {
     static: staticMiddleware,
     port = SERVER_CONFIG.port,
@@ -1241,7 +1341,7 @@ export async function bootstrapApp(app, server, options = {}) {
       path: '/ws',
       enableLogging: !__DEV__,
       onAuthentication: token =>
-        validateWsToken(apiContainer.resolve('jwt'), token),
+        validateWsToken(apiContainer, apiContainer.resolve('jwt'), token),
     },
     server,
   );
@@ -1347,21 +1447,23 @@ export async function bootstrapApp(app, server, options = {}) {
   appState.apiDrain = api.drain;
 
   // Initialize Node-RED runtime and register Node-RED API proxy
-  await appState.nodeRed.init(app, server, {
-    ...SERVER_CONFIG,
-    port,
-    host: resolvedHost,
-    functionGlobalContext: {
-      container: () => apiContainer,
-      fetch: () =>
-        createFetch(globalThis.fetch, {
-          defaults: {
-            headers: { 'User-Agent': 'xnapify/1.0.0 NodeRED' },
-          },
-        }),
-    },
-  });
-  await appState.nodeRed.setupApiProxy(app, '/api');
+  if (SERVER_CONFIG.enableNodeRed) {
+    await appState.nodeRed.init(app, server, {
+      ...SERVER_CONFIG,
+      port,
+      host: resolvedHost,
+      functionGlobalContext: {
+        container: () => apiContainer,
+        fetch: () =>
+          createFetch(globalThis.fetch, {
+            defaults: {
+              headers: { 'User-Agent': 'xnapify/1.0.0 NodeRED' },
+            },
+          }),
+      },
+    });
+    await appState.nodeRed.setupApiProxy(app, '/api');
+  }
 
   // Catch-all for unmatched API routes.
   // Any /api/* request that wasn't handled by apiRouter or Node-RED falls here
@@ -1422,7 +1524,7 @@ export async function disposeApp() {
   const errors = [];
 
   try {
-    if (appState.nodeRed) {
+    if (appState.nodeRed && SERVER_CONFIG.enableNodeRed) {
       console.info('   Shutting down Node-RED...');
       await appState.nodeRed.shutdown();
       console.info('   ✔ Node-RED shutdown complete');
@@ -1511,59 +1613,175 @@ if (hotAPI) {
     invalidateCaches();
     console.log('🔄 HMR: SSR dependencies updated, caches cleared');
   });
+} else if (
+  cluster.isPrimary &&
+  !isClusterWorker() &&
+  SERVER_CONFIG.clusterWorkers > 1
+) {
+  runClusterPrimary(SERVER_CONFIG.clusterWorkers);
 } else {
-  (async () => {
-    try {
-      const http = await import('http');
-      const expressMod = await import('express');
-      const expressLib = expressMod.default || expressMod;
-      const { app, server } = createServer({ http, express: expressMod });
-      const { listen: start } = await bootstrapApp(app, server, {
-        static: () =>
-          expressLib.static(path.resolve('public'), {
-            dotfiles: 'ignore',
-            etag: true,
-            lastModified: true,
-            index: false,
-            redirect: false,
-            fallthrough: true,
-            cacheControl: true,
-            setHeaders(res, filePath) {
-              res.setHeader('X-Content-Type-Options', 'nosniff');
-              if (/\.[a-f0-9]{8,}\./i.test(filePath)) {
-                res.setHeader(
-                  'Cache-Control',
-                  'public, max-age=31536000, immutable',
-                );
-              } else {
-                res.setHeader('Cache-Control', 'public, max-age=86400');
-              }
-            },
-          }),
-      });
-      await start();
+  startServer();
+}
 
-      // Production-only signal handlers
-      let shutdownPromise = null;
-      const handleShutdown = signal => {
-        if (shutdownPromise) return shutdownPromise;
-        shutdownPromise = (async () => {
-          console.info(`\n🛑 ${signal} received, shutting down...`);
-          try {
-            await destroyServer(server);
-          } catch (e) {
-            console.error('❌ Shutdown error:', e);
-            process.exit(1);
-          }
-          process.exit(0);
-        })();
-        return shutdownPromise;
-      };
-      process.on('SIGTERM', () => handleShutdown('SIGTERM'));
-      process.on('SIGINT', () => handleShutdown('SIGINT'));
-    } catch (err) {
-      console.error('❌ Startup failed:', err);
-      process.exit(1);
+// ---------------------------------------------------------------------------
+// Process model
+// ---------------------------------------------------------------------------
+
+/**
+ * Cluster primary: fork one worker per configured slot, restart crashed
+ * workers with backoff, and forward shutdown signals. The primary never
+ * serves traffic itself.
+ *
+ * @param {number} workerCount - Number of workers to keep alive
+ */
+function runClusterPrimary(workerCount) {
+  const restartHistory = new Map(); // index -> timestamps of recent restarts
+  let shuttingDown = false;
+
+  console.info(
+    `🧩 Cluster primary ${process.pid}: starting ${workerCount} worker(s)`,
+  );
+  if (process.env.XNAPIFY_NODERED_ENABLED !== 'false') {
+    console.warn(
+      '⚠️  Node-RED is disabled in cluster mode (single-process feature). Set XNAPIFY_CLUSTER_WORKERS=1 to use it.',
+    );
+  }
+
+  const fork = index => {
+    const worker = cluster.fork({
+      XNAPIFY_WORKER_INDEX: String(index),
+      XNAPIFY_CLUSTER_SIZE: String(workerCount),
+    });
+    worker.xnapifyIndex = index;
+    return worker;
+  };
+
+  for (let index = 0; index < workerCount; index += 1) fork(index);
+
+  const shutdown = signal => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    console.info(
+      `\n🛑 ${signal} received, stopping ${workerCount} worker(s)...`,
+    );
+
+    for (const worker of Object.values(cluster.workers).filter(Boolean)) {
+      try {
+        worker.process.kill(signal);
+      } catch {
+        // already gone
+      }
     }
-  })();
+
+    const forceExit = setTimeout(() => {
+      console.error('❌ Workers did not exit in time; killing');
+      for (const worker of Object.values(cluster.workers).filter(Boolean)) {
+        try {
+          worker.process.kill('SIGKILL');
+        } catch {
+          // already gone
+        }
+      }
+      process.exit(1);
+    }, SERVER_TIMEOUTS.SHUTDOWN).unref();
+
+    const checkDone = () => {
+      if (Object.values(cluster.workers).filter(Boolean).length === 0) {
+        clearTimeout(forceExit);
+        process.exit(process.exitCode || 0);
+      }
+    };
+    cluster.on('exit', checkDone);
+    checkDone();
+  };
+
+  cluster.on('exit', (worker, code, signal) => {
+    if (shuttingDown) return;
+    const index = worker.xnapifyIndex;
+    const now = Date.now();
+    const recent = (restartHistory.get(index) || []).filter(
+      t => now - t < 60_000,
+    );
+    recent.push(now);
+    restartHistory.set(index, recent);
+
+    if (recent.length > 5) {
+      console.error(
+        `❌ Worker ${index} exited ${recent.length} times within 60s (last: ${signal || code}); shutting down`,
+      );
+      process.exitCode = 1;
+      shutdown('SIGTERM');
+      return;
+    }
+
+    const delay = Math.min(1000 * 2 ** (recent.length - 1), 10_000);
+    console.warn(
+      `⚠️  Worker ${index} exited (${signal || code}); restarting in ${delay}ms`,
+    );
+    setTimeout(() => {
+      if (!shuttingDown) fork(index);
+    }, delay).unref();
+  });
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
+}
+
+/**
+ * Single process or cluster worker: bootstrap and listen.
+ */
+async function startServer() {
+  try {
+    const http = await import('http');
+    const expressMod = await import('express');
+    const { app, server } = createServer({ http, express: expressMod });
+    const { listen: start } = await bootstrapApp(app, server, {
+      // Serves build-time .br/.gz variants when the client accepts them, so
+      // immutable assets are never compressed per request.
+      static: () =>
+        createPrecompressedStatic(path.resolve('public'), {
+          dotfiles: 'ignore',
+          etag: true,
+          lastModified: true,
+          index: false,
+          redirect: false,
+          fallthrough: true,
+          cacheControl: true,
+          setHeaders(res, filePath) {
+            res.setHeader('X-Content-Type-Options', 'nosniff');
+            if (/\.[a-f0-9]{8,}\./i.test(filePath)) {
+              res.setHeader(
+                'Cache-Control',
+                'public, max-age=31536000, immutable',
+              );
+            } else {
+              res.setHeader('Cache-Control', 'public, max-age=86400');
+            }
+          },
+        }),
+    });
+    await start();
+
+    // Production-only signal handlers
+    let shutdownPromise = null;
+    const handleShutdown = signal => {
+      if (shutdownPromise) return shutdownPromise;
+      shutdownPromise = (async () => {
+        console.info(`\n🛑 ${signal} received, shutting down...`);
+        try {
+          await destroyServer(server);
+        } catch (e) {
+          console.error('❌ Shutdown error:', e);
+          process.exit(1);
+        }
+        process.exit(0);
+      })();
+      return shutdownPromise;
+    };
+    process.on('SIGTERM', () => handleShutdown('SIGTERM'));
+    process.on('SIGINT', () => handleShutdown('SIGINT'));
+  } catch (err) {
+    console.error('❌ Startup failed:', err);
+    process.exit(1);
+  }
 }
