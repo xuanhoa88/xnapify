@@ -53,6 +53,25 @@ class HookFactory {
   }
 
   /**
+   * Check if a channel has a handler registered for an event
+   *
+   * Reads the map instead of going through channel(): asking for the
+   * channel would create it, so the check itself would make the next
+   * has() report a channel that nothing ever registered on.
+   *
+   * @param {string} name
+   * @param {string} event
+   * @returns {boolean}
+   */
+  hasHandlers(name, event) {
+    const key = name && typeof name === 'string' ? name.trim() : '';
+    if (!key) return false;
+
+    const channel = this[HOOK_CHANNELS].get(key);
+    return channel ? channel.hasHandlers(event) : false;
+  }
+
+  /**
    * Remove a channel
    * @param {string} name
    * @returns {boolean}
@@ -101,6 +120,7 @@ export function createFactory() {
   // Attach methods
   factory.channel = name => manager.channel(name);
   factory.has = name => manager.has(name);
+  factory.hasHandlers = (name, event) => manager.hasHandlers(name, event);
   factory.remove = name => manager.remove(name);
   factory.getChannelNames = () => manager.getChannelNames();
   factory.cleanup = () => manager.cleanup();
@@ -120,6 +140,8 @@ export function createFactory() {
     // Attach all factory methods to maintain API parity
     boundFactory.channel = name => manager.channel(name).withContext(context);
     boundFactory.has = name => manager.has(name);
+    boundFactory.hasHandlers = (name, event) =>
+      manager.hasHandlers(name, event);
     boundFactory.remove = name => manager.remove(name);
     boundFactory.getChannelNames = () => manager.getChannelNames();
     boundFactory.cleanup = () => manager.cleanup();

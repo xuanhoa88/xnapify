@@ -302,6 +302,34 @@ describe('Hook Engine', () => {
       expect(() => channel.on('test', 123)).toThrow(TypeError);
     });
 
+    test('should report handler presence per event', () => {
+      expect(channel.hasHandlers('has-test')).toBe(false);
+
+      channel.on('has-test', jest.fn());
+
+      expect(channel.hasHandlers('has-test')).toBe(true);
+      expect(channel.hasHandlers('other-event')).toBe(false);
+    });
+
+    test('should stop reporting handlers once the last one is removed', () => {
+      const handler = jest.fn();
+      channel.on('drain-test', handler);
+      channel.off('drain-test', handler);
+
+      expect(channel.hasHandlers('drain-test')).toBe(false);
+    });
+
+    test('should report handler presence through a bound wrapper', () => {
+      const bound = channel.withContext({});
+
+      expect(bound.hasHandlers('bound-test')).toBe(false);
+
+      bound.on('bound-test', jest.fn());
+
+      expect(bound.hasHandlers('bound-test')).toBe(true);
+      expect(channel.hasHandlers('bound-test')).toBe(true);
+    });
+
     test('should not throw when off() targets a non-existent event', () => {
       expect(() => channel.off('never-registered')).not.toThrow();
     });
@@ -345,6 +373,40 @@ describe('Hook Engine', () => {
       expect(factory.has('a')).toBe(true);
       expect(factory.has('c')).toBe(false);
       expect(factory.getChannelNames()).toEqual(['a', 'b']);
+    });
+
+    test('should report handlers registered on a channel', () => {
+      const factory = createFactory();
+      factory('with-handlers').on('rotate', jest.fn());
+
+      expect(factory.hasHandlers('with-handlers', 'rotate')).toBe(true);
+      expect(factory.hasHandlers('with-handlers', 'other')).toBe(false);
+      expect(factory.hasHandlers('  with-handlers  ', 'rotate')).toBe(true);
+      expect(factory.hasHandlers('', 'rotate')).toBe(false);
+    });
+
+    test('should report no handlers for a channel that was merely touched', () => {
+      const factory = createFactory();
+      factory('touched');
+
+      expect(factory.has('touched')).toBe(true);
+      expect(factory.hasHandlers('touched', 'rotate')).toBe(false);
+    });
+
+    test('should not create a channel when asked about its handlers', () => {
+      const factory = createFactory();
+
+      expect(factory.hasHandlers('never-named', 'rotate')).toBe(false);
+      expect(factory.getChannelNames()).toEqual([]);
+    });
+
+    test('should expose hasHandlers on a context-bound factory', () => {
+      const factory = createFactory();
+      const bound = factory.withContext({});
+      bound('bound-channel').on('rotate', jest.fn());
+
+      expect(bound.hasHandlers('bound-channel', 'rotate')).toBe(true);
+      expect(bound.hasHandlers('bound-channel', 'other')).toBe(false);
     });
 
     test('should remove channels', () => {

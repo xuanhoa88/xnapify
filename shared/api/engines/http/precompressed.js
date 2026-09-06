@@ -86,6 +86,19 @@ export function createPrecompressedStatic(root, options = {}) {
     let search = '';
     try {
       const url = new URL(req.url, 'http://localhost');
+      // A request path starting with "//" (or more) is parsed by WHATWG URL
+      // as a network-path reference: the segment after the slashes becomes
+      // the AUTHORITY, not part of the pathname — `new URL('//assets/app.js',
+      // 'http://localhost').pathname` is `/app.js`, host `assets`. Express's
+      // actual router resolves the path with `parseurl` (legacy `url.parse`),
+      // which has no such rule and sees the literal pathname `//assets/app.js`.
+      // Left unchecked, this handler would stat and serve the compressed
+      // variant of a DIFFERENT file than the one express.static ends up
+      // matching for the same request — with `Vary: Accept-Encoding` already
+      // set, telling any shared cache the two bodies are interchangeable.
+      if (url.host !== 'localhost') {
+        return serve(req, res, next);
+      }
       pathname = decodeURIComponent(url.pathname);
       search = url.search;
     } catch {
@@ -105,6 +118,9 @@ export function createPrecompressedStatic(root, options = {}) {
       if (!acceptsEncoding(accept, encoding)) continue;
       if (!fileExists(absolute + ext)) continue;
 
+      // Express 4 coupling: `express.static.mime` is the mime@1 instance and is
+      // gone in Express 5 (it moved to mime-types inside send). An upgrade has
+      // to replace these two calls, not just bump the dependency.
       const type = express.static.mime.lookup(absolute);
       const charset = express.static.mime.charsets.lookup(type);
       res.setHeader(
@@ -115,14 +131,32 @@ export function createPrecompressedStatic(root, options = {}) {
       res.vary('Accept-Encoding');
 
       const originalUrl = req.url;
-      req.url = encodeURI(pathname + ext) + search;
+      // Re-encode segment by segment. encodeURI leaves "#" and "?" unescaped,
+      // so an asset named "a#b.js" was re-issued as "/a#b.js.br" and re-parsed
+      // by express.static as the pathname "/a" — it served a different file
+      // than the one fileExists() just approved. encodeURIComponent escapes
+      // both; splitting on "/" first preserves the separators it would
+      // otherwise escape, so the round-trip lands back on `absolute + ext`.
+      req.url =
+        (pathname + ext)
+          .split('/')
+          .map(segment => encodeURIComponent(segment))
+          .join('/') + search;
       return serve(req, res, err => {
         // Variant vanished between the existence check and the send:
         // restore the request and let the uncompressed path handle it.
         req.url = originalUrl;
+        if (err) {
+          // `err` only reaches this callback once serve-static's `forwardError`
+          // flag has flipped — which happens on send's `file` event, i.e. after
+          // headers may already be flushed. Forward before touching them: a
+          // `removeHeader` call here can throw ERR_HTTP_HEADERS_SENT, which
+          // would replace the real error with a bookkeeping one and, if it
+          // fires inside an fs stream's own `error` emit, crash the process.
+          return next(err);
+        }
         res.removeHeader('Content-Encoding');
         res.removeHeader('Content-Type');
-        if (err) return next(err);
         return serve(req, res, next);
       });
     }

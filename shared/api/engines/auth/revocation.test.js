@@ -15,8 +15,10 @@ import {
   assertSessionValid,
   getRevocationStore,
   parseDuration,
+  resetSessionLiveMemo,
   setRevocationStore,
   verifyActiveSession,
+  SESSION_LIVE_MEMO_MS,
   SESSION_REVOKED_TTL_MS,
 } from './revocation.js';
 
@@ -256,6 +258,159 @@ describe('revocation', () => {
     });
   });
 
+  describe('assertSessionValid durable session fallback', () => {
+    let logger;
+    let store;
+
+    beforeEach(() => {
+      logger = { error: jest.fn() };
+      store = new MemoryRevocationStore();
+      resetSessionLiveMemo();
+    });
+
+    it('is symmetric with the user version memo', () => {
+      expect(SESSION_LIVE_MEMO_MS).toBe(60_000);
+    });
+
+    it('denies a family the database says has no live rows left', async () => {
+      const loadSessionRevoked = jest.fn().mockResolvedValue(true);
+
+      await expect(
+        assertSessionValid(
+          { id: 9, sid: 'fam-1', ver: 0 },
+          { store, loadSessionRevoked, logger },
+        ),
+      ).rejects.toMatchObject({
+        name: 'SessionRevokedError',
+        code: 'SESSION_REVOKED',
+        status: 401,
+      });
+
+      // The verdict is pushed into the denylist, so the next request never
+      // reaches the database again.
+      expect(store.isSessionRevoked('fam-1')).toBe(true);
+      await expect(
+        assertSessionValid(
+          { id: 9, sid: 'fam-1', ver: 0 },
+          { store, loadSessionRevoked, logger },
+        ),
+      ).rejects.toMatchObject({ code: 'SESSION_REVOKED' });
+      expect(loadSessionRevoked).toHaveBeenCalledTimes(1);
+    });
+
+    it('never queries when the denylist is shared across processes', async () => {
+      const loadSessionRevoked = jest.fn().mockResolvedValue(true);
+      const shared = new RedisRevocationStore(new MemoryRedisClient());
+
+      await expect(
+        assertSessionValid(
+          { id: 9, sid: 'fam-1', ver: 0 },
+          { store: shared, loadSessionRevoked, logger },
+        ),
+      ).resolves.toBeUndefined();
+      expect(loadSessionRevoked).not.toHaveBeenCalled();
+
+      // …and the same token is caught the moment the store is process-local
+      await expect(
+        assertSessionValid(
+          { id: 9, sid: 'fam-1', ver: 0 },
+          { store, loadSessionRevoked, logger },
+        ),
+      ).rejects.toMatchObject({ code: 'SESSION_REVOKED' });
+      expect(loadSessionRevoked).toHaveBeenCalledTimes(1);
+    });
+
+    it('memoises a live session instead of querying per request', async () => {
+      const loadSessionRevoked = jest.fn().mockResolvedValue(false);
+      const decoded = { id: 9, sid: 'fam-live', ver: 0 };
+
+      for (let i = 0; i < 5; i += 1) {
+        await expect(
+          assertSessionValid(decoded, { store, loadSessionRevoked, logger }),
+        ).resolves.toBeUndefined();
+      }
+      expect(loadSessionRevoked).toHaveBeenCalledTimes(1);
+
+      // The memo is a TTL, not a cache forever: dropping it re-queries.
+      resetSessionLiveMemo();
+      await expect(
+        assertSessionValid(decoded, { store, loadSessionRevoked, logger }),
+      ).resolves.toBeUndefined();
+      expect(loadSessionRevoked).toHaveBeenCalledTimes(2);
+    });
+
+    it('skips the check when the caller has nothing to ask', async () => {
+      const loadSessionRevoked = jest.fn().mockResolvedValue(undefined);
+      await expect(
+        assertSessionValid(
+          { id: 9, sid: 'fam-1' },
+          { store, loadSessionRevoked, logger },
+        ),
+      ).resolves.toBeUndefined();
+    });
+
+    it('reports a failed lookup as 503, never as 401', async () => {
+      const loadSessionRevoked = jest
+        .fn()
+        .mockRejectedValue(new Error('db down'));
+
+      await expect(
+        assertSessionValid(
+          { id: 9, sid: 'fam-1', ver: 0 },
+          { store, loadSessionRevoked, logger },
+        ),
+      ).rejects.toMatchObject({
+        name: 'SessionStoreUnavailableError',
+        code: 'SESSION_STORE_UNAVAILABLE',
+        status: 503,
+      });
+
+      // A token with no durable claim at all lands on the same outage
+      await expect(
+        assertSessionValid(
+          { id: 9, sid: 'fam-1' },
+          { store, loadSessionRevoked, logger },
+        ),
+      ).rejects.toMatchObject({ status: 503 });
+
+      expect(logger.error).toHaveBeenCalled();
+    });
+
+    it('lets a good token_version answer stand despite a failed lookup', async () => {
+      // Losing the session check is a degraded read, not an outage: the
+      // durable column still answered, so the request must not become a 503.
+      const loadSessionRevoked = jest
+        .fn()
+        .mockRejectedValue(new Error('db down'));
+      const loadUserVersion = jest.fn().mockResolvedValue(2);
+
+      await expect(
+        assertSessionValid(
+          { id: 9, sid: 'fam-1', ver: 2 },
+          { store, loadSessionRevoked, loadUserVersion, logger },
+        ),
+      ).resolves.toBeUndefined();
+
+      await expect(
+        assertSessionValid(
+          { id: 9, sid: 'fam-1', ver: 1 },
+          { store, loadSessionRevoked, loadUserVersion, logger },
+        ),
+      ).rejects.toMatchObject({ code: 'SESSION_SUPERSEDED', status: 401 });
+    });
+
+    it('does not query while the denylist is already unreachable', async () => {
+      const loadSessionRevoked = jest.fn().mockResolvedValue(true);
+      await expect(
+        assertSessionValid(
+          { id: 9, sid: 'fam-1' },
+          { store: brokenStore(), loadSessionRevoked, logger },
+        ),
+      ).rejects.toMatchObject({ status: 503 });
+      expect(loadSessionRevoked).not.toHaveBeenCalled();
+    });
+  });
+
   describe('verifyActiveSession', () => {
     let previous;
 
@@ -298,6 +453,42 @@ describe('revocation', () => {
       const container = { has: () => false, resolve: () => null };
       await expect(
         verifyActiveSession(container, { id: 1, ver: 0 }),
+      ).resolves.toBeUndefined();
+    });
+
+    it('counts live refresh rows to decide whether a session survived', async () => {
+      const User = {
+        findByPk: jest.fn().mockResolvedValue({ token_version: 0 }),
+      };
+      const RefreshToken = { count: jest.fn().mockResolvedValue(0) };
+      const container = {
+        has: name => name === 'models',
+        resolve: () => ({ User, RefreshToken }),
+      };
+
+      await expect(
+        verifyActiveSession(container, { id: 1, sid: 'fam-1', ver: 0 }),
+      ).rejects.toMatchObject({ code: 'SESSION_REVOKED' });
+      expect(RefreshToken.count).toHaveBeenCalledWith({
+        where: { family_id: 'fam-1', revoked_at: null },
+      });
+
+      RefreshToken.count.mockResolvedValue(1);
+      await expect(
+        verifyActiveSession(container, { id: 1, sid: 'fam-2', ver: 0 }),
+      ).resolves.toBeUndefined();
+    });
+
+    it('skips the session check when RefreshToken is not bound', async () => {
+      const User = {
+        findByPk: jest.fn().mockResolvedValue({ token_version: 0 }),
+      };
+      await expect(
+        verifyActiveSession(containerWith(User), {
+          id: 1,
+          sid: 'fam-1',
+          ver: 0,
+        }),
       ).resolves.toBeUndefined();
     });
   });

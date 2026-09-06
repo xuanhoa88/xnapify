@@ -21,12 +21,17 @@ import {
  * the refresh is refused — a stateless fallback would silently reintroduce
  * unrevocable sessions.
  *
+ * The guard asks for the `rotate` handler, not for the channel: channels are
+ * created on first mention, so anyone naming `auth.session` anywhere would
+ * otherwise satisfy a channel-existence check and turn a missing handler into
+ * the wrong error code.
+ *
  * @param {Function} hook - Hook engine
  * @param {{ refreshToken: string, req: import('express').Request }} params
  * @returns {Promise<{ accessToken: string, refreshToken: string }>}
  */
 export async function rotateViaSessionHook(hook, { refreshToken, req }) {
-  if (!hook || !hook.has('auth.session')) {
+  if (!hook || !hook.hasHandlers('auth.session', 'rotate')) {
     const error = new Error('Session rotation handler is not registered');
     error.name = 'SessionRevokedError';
     error.code = 'SESSION_HANDLER_MISSING';

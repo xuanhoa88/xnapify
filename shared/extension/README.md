@@ -115,13 +115,16 @@ Every manifest declares the host it supports and the services it needs:
   | -------------------- | -------------------------------------------------------------------------------------------- |
   | key omitted entirely | the defaults                                                                                 |
   | `[]`                 | the defaults — an empty list narrows nothing, it just declares no extras                     |
-  | `["db", "models"]`   | the defaults **plus** `db` and `models`                                                      |
+  | `["db", "models"]`   | the defaults **plus** `db` and `models` — but only for a host-vouched extension (see below)  |
   | `["users:*"]`        | the defaults plus every binding whose name starts with `users:`                              |
   | `["*"]`              | ignored unless the host trusts this extension (see below); otherwise the other entries apply |
 
-  Two grants never come from the manifest's own word, because the manifest is the extension's own `package.json`:
+  Three grants never come from the manifest's own word, because the manifest is the extension's own `package.json`:
   - `extension`, `jwt`, and `env` are **reserved**. They are stripped from the declared list and passed to `createScopedContainer({ deny })`, so not even a granted `'*'` resolves them.
   - `'*'` is honoured only for an extension whose id or package name the operator listed in `XNAPIFY_TRUSTED_EXTENSIONS` (comma-separated). A self-declared `'*'` from anyone else is dropped with a one-time warning, and the extension keeps its other declared capabilities.
+  - The **privileged tier** — `db`, `models`, `worker`, `queue`, `schedule`, `fs`, `redis` (`PRIVILEGED_CAPABILITIES`) — is honoured only for an extension the operator trusts **or** one bundled with this host build. Everything in it either reaches user data (`users.password`, `refresh_tokens`) or runs the extension's code off-request, so a self-declared `["db"]` is the same self-grant as `["*"]`, through a smaller door. Bundled ids come from `__XNAPIFY_BUNDLED_EXTENSIONS__`, injected by the build from `src/extensions/`: those ship with the host and are covered by its review, unlike anything installed from the hub at runtime. An ungranted privileged capability is dropped with a one-time warning and the rest of the declaration still applies. A prefix grant is measured by what it covers, so `"d*"` is gated exactly like `"db"`.
+
+    The two gates are separate predicates (`isTrustedExtension` for `'*'`, `isPrivilegedExtension` for the tier): being bundled does **not** grant `'*'`, and widening one gate must not silently widen the other.
 
 - API route handlers of module-type extensions run under the same scope: **every** function a `_route.js` export lists — middlewares included, since they are the extension's own code — sees the scoped container via `req.app.get('container')`, `res.app.get('container')` and `req.container`. A route middleware that resolves `auth` for an RBAC check therefore has to declare `auth` in `xnapify.capabilities`.
 - Lifecycle hooks receive a **scoped registry**: `registerSlot`/`registerHook` are tagged with the extension id and `unregisterSlot`/`unregisterHook` refuse registrations owned by someone else.

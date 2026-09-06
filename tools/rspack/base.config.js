@@ -18,6 +18,7 @@ import nodeExternals from 'webpack-node-externals';
 import config from '../config.js';
 import globalPostcssConfigFn from '../factories/postcss.factory.js';
 import { postcssConfigs } from '../factories/registry.factory.js';
+import { listBundledExtensionIds } from '../utils/extension.js';
 import { isVerbose } from '../utils/logger.js';
 
 import loadDotenv from './loadDotenv.js';
@@ -364,6 +365,11 @@ const createDefinePlugin = extraDefinitions =>
     __DEV__: !!isDev,
     // Host version used by the extension compatibility contract
     __XNAPIFY_VERSION__: JSON.stringify(pkg.version),
+    // Extensions compiled into this build. They are the only ones the
+    // capability contract trusts with the privileged tier (`db`, `models`,
+    // …) on their manifest alone — a hub install writes its own manifest,
+    // and by then there is no build left to vouch for it.
+    __XNAPIFY_BUNDLED_EXTENSIONS__: JSON.stringify(listBundledExtensionIds()),
     ...extraDefinitions,
   });
 

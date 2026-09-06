@@ -11,9 +11,11 @@ import path from 'path';
 
 import {
   DEFAULT_EXTENSION_CAPABILITIES,
+  PRIVILEGED_CAPABILITIES,
   RESERVED_CAPABILITIES,
 } from '@shared/extension/utils/compat.js';
 
+import * as capabilitiesUtil from './capabilities.util.js';
 import {
   auditExtensionCapabilities,
   findResolvedBindings,
@@ -27,10 +29,28 @@ const EXTENSIONS_DIR = path.resolve(process.cwd(), 'src', 'extensions');
 
 describe('capability declarations mirror the runtime contract', () => {
   it('uses the same defaults as the scoped container', () => {
+    // These lists are duplicated on purpose — this module has to load from the
+    // build task, which runs on plain Node with no `@shared` alias — so the
+    // copies need a tripwire the way DIALECT_SCHEMES needed a single home.
     expect([...DEFAULT_CAPABILITIES]).toEqual([
       ...DEFAULT_EXTENSION_CAPABILITIES,
     ]);
     expect([...LOCAL_RESERVED]).toEqual([...RESERVED_CAPABILITIES]);
+  });
+
+  it('keeps no diverging copy of the privileged tier', () => {
+    // The privileged tier is deliberately NOT duplicated here: it is enforced
+    // when capabilities are granted, and this analyzer only answers whether a
+    // binding was declared. The day it is mirrored, this fails — turn it into
+    // an equality check against compat's list rather than deleting it.
+    expect(Object.keys(capabilitiesUtil)).not.toContain(
+      'PRIVILEGED_CAPABILITIES',
+    );
+    // And nothing privileged may hide in the always-on defaults, which would
+    // hand it to every extension before the gate is ever consulted.
+    for (const capability of PRIVILEGED_CAPABILITIES) {
+      expect(DEFAULT_CAPABILITIES).not.toContain(capability);
+    }
   });
 
   it('grants the defaults only when nothing is declared', () => {

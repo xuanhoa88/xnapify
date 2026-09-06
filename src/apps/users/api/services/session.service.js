@@ -438,9 +438,13 @@ export async function revokeUserSessions(
   );
 
   const store = getRevocationStore();
-  for (const familyId of familyIds) {
-    await store.revokeSession(familyId, SESSION_REVOKED_TTL_MS);
-  }
+  // One round trip per family serialised against Redis; a user with a dozen
+  // devices paid a dozen latencies before their sockets were even closed.
+  await Promise.all(
+    familyIds.map(familyId =>
+      store.revokeSession(familyId, SESSION_REVOKED_TTL_MS),
+    ),
+  );
   disconnectSessions(ws, familyIds, 'Session revoked');
 
   if (!exceptFamilyId) {

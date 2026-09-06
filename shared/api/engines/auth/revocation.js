@@ -27,6 +27,16 @@
  * replace the in-process map when the app runs more than one instance.
  * The cache engine is deliberately not used: it is a no-op in development
  * and a security control must behave identically in every environment.
+ *
+ * A store declares whether it is shared through a `shared` boolean. Anything
+ * that does not say `true` is treated as process-local, because being wrong
+ * that way only costs a query. A process-local denylist never hears about a
+ * logout that happened on another replica — and one worker per pod passes the
+ * `XNAPIFY_CLUSTER_WORKERS > 1` guard in `shared/config/env.js` that requires
+ * Redis — so for those stores the session check falls back to the durable
+ * `refresh_tokens` rows the revocation itself wrote. That fallback is
+ * memoised (see {@link SESSION_LIVE_MEMO_MS}), because the design only works
+ * as long as the hot path is a map lookup.
  */
 
 import { JWT_TOKEN_TYPES } from '@shared/jwt/constants.js';
@@ -65,6 +75,76 @@ export const SESSION_REVOKED_TTL_MS = parseDuration(
 
 /** How long a user's token version is memoised before re-reading the DB. */
 export const USER_VERSION_MEMO_MS = 60_000;
+
+/**
+ * How long a session confirmed live by the durable fallback is remembered.
+ *
+ * Symmetric with {@link USER_VERSION_MEMO_MS}, and the same trade: a logout
+ * on another replica is visible after at most this long instead of instantly,
+ * which is still far better than the full access lifetime it would otherwise
+ * take, and the alternative is one database query on every single request.
+ */
+export const SESSION_LIVE_MEMO_MS = 60_000;
+
+/**
+ * Hard cap on the confirmed-live memo. Keys are session ids, so a fleet
+ * churning through logins would otherwise grow the map forever. Evicting an
+ * entry costs one query, never a wrong verdict, so a blunt cap is safe.
+ */
+const SESSION_LIVE_MEMO_MAX = 10_000;
+
+/** sid -> expiresAt for sessions the durable fallback confirmed are live. */
+const sessionLiveMemo = new Map();
+
+/**
+ * @param {string} sid
+ * @returns {boolean} True while a confirmed-live verdict is still fresh
+ */
+function isSessionMemoisedLive(sid) {
+  const expiresAt = sessionLiveMemo.get(sid);
+  if (expiresAt === undefined) return false;
+  if (expiresAt <= Date.now()) {
+    sessionLiveMemo.delete(sid);
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Remember that a session is live. Prunes opportunistically the way
+ * {@link MemoryRevocationStore#prune} does, then enforces the cap.
+ *
+ * @param {string} sid
+ */
+function memoiseSessionLive(sid) {
+  if (sessionLiveMemo.size >= SESSION_LIVE_MEMO_MAX) {
+    const now = Date.now();
+    for (const [key, expiresAt] of sessionLiveMemo) {
+      if (expiresAt <= now) sessionLiveMemo.delete(key);
+    }
+    // Every entry shares one TTL, so insertion order is expiry order and the
+    // first keys left are the ones closest to expiring anyway.
+    while (sessionLiveMemo.size >= SESSION_LIVE_MEMO_MAX) {
+      const oldest = sessionLiveMemo.keys().next();
+      if (oldest.done) break;
+      sessionLiveMemo.delete(oldest.value);
+    }
+  }
+  // Re-inserting keeps insertion order aligned with expiry order.
+  sessionLiveMemo.delete(sid);
+  sessionLiveMemo.set(sid, Date.now() + SESSION_LIVE_MEMO_MS);
+}
+
+/**
+ * Forget every confirmed-live verdict.
+ *
+ * Called whenever the active store changes — a memo built against a
+ * process-local denylist says nothing about the store that replaced it — and
+ * by tests that need a clean slate.
+ */
+export function resetSessionLiveMemo() {
+  sessionLiveMemo.clear();
+}
 
 /**
  * Build the standard "session revoked" error.
@@ -112,6 +192,9 @@ export function sessionUnavailableError() {
  */
 export class MemoryRevocationStore {
   constructor({ now = Date.now } = {}) {
+    // Nothing outside this process writes to these maps, so callers must
+    // reach for a durable source before trusting "not revoked".
+    this.shared = false;
     this.now = now;
     this.sessions = new Map(); // sid -> expiresAt
     this.versions = new Map(); // userId -> { version, expiresAt }
@@ -204,6 +287,10 @@ export class RedisRevocationStore {
     if (!client || typeof client.set !== 'function') {
       throw new TypeError('RedisRevocationStore requires a Redis client');
     }
+    // Every instance of the fleet reads and writes the same keys, so the
+    // denylist is authoritative on its own and must not be second-guessed
+    // with a per-request database query.
+    this.shared = true;
     this.client = client;
     this.prefix = prefix;
   }
@@ -256,6 +343,10 @@ export function getRevocationStore() {
  * Replace the active store (e.g. with a Redis-backed implementation).
  * The replacement must implement the {@link MemoryRevocationStore} methods.
  *
+ * A store may also set `shared = true` to declare that its denylist is
+ * visible to every process. Leaving it unset is the safe default: the
+ * session check then confirms "not revoked" against the database.
+ *
  * @param {Object} store
  */
 export function setRevocationStore(store) {
@@ -271,6 +362,61 @@ export function setRevocationStore(store) {
     }
   }
   currentStore = store;
+  // The memo was built from the old store's denylist; it means nothing here.
+  resetSessionLiveMemo();
+}
+
+/**
+ * Second-guess a process-local denylist that said "not revoked".
+ *
+ * `revokeFamily()` — what logout calls — writes `refresh_tokens.revoked_at`
+ * and denylists the sid, but only the row is visible to another replica. So
+ * where the denylist is not shared, ask the database instead of trusting a
+ * map that was never told. Confirmed-live verdicts are memoised, because one
+ * query per request would undo the reason this design is cheap; confirmed
+ * revoked ones are pushed into the denylist so the next request is a map
+ * lookup again.
+ *
+ * @param {string} sid
+ * @param {Object} deps - { store, loadSessionRevoked, logger }
+ * @returns {Promise<boolean|undefined>} `true` revoked, `false` live or the
+ *   check does not apply, `undefined` when nothing could answer
+ */
+async function isSessionRevokedDurably(
+  sid,
+  { store, loadSessionRevoked, logger },
+) {
+  if (store.shared === true) return false;
+  if (typeof loadSessionRevoked !== 'function') return false;
+  if (isSessionMemoisedLive(sid)) return false;
+
+  let revoked;
+  try {
+    revoked = await loadSessionRevoked(sid);
+  } catch (error) {
+    logger.error(
+      '[Revocation] Durable session lookup failed:',
+      (error && error.message) || error,
+    );
+    return undefined;
+  }
+
+  if (revoked === true) {
+    try {
+      await store.revokeSession(sid);
+    } catch (error) {
+      logger.error(
+        '[Revocation] Could not denylist a durably revoked session:',
+        (error && error.message) || error,
+      );
+    }
+    return true;
+  }
+
+  // Anything but an explicit boolean means the caller had nothing to ask —
+  // no models bound, for instance. Skip the check rather than fail closed.
+  if (revoked === false) memoiseSessionLive(sid);
+  return false;
 }
 
 /**
@@ -283,12 +429,19 @@ export function setRevocationStore(store) {
  * @param {Object} [options]
  * @param {Object} [options.store] - Revocation store (defaults to the active one)
  * @param {Function} [options.loadUserVersion] - async (userId) => number|undefined
+ * @param {Function} [options.loadSessionRevoked] - async (sid) => boolean|undefined;
+ *   durable stand-in for a denylist that is not shared across processes
  * @returns {Promise<void>}
  * @throws {Error} SessionRevokedError
  */
 export async function assertSessionValid(
   decoded,
-  { store = getRevocationStore(), loadUserVersion, logger = console } = {},
+  {
+    store = getRevocationStore(),
+    loadUserVersion,
+    loadSessionRevoked,
+    logger = console,
+  } = {},
 ) {
   if (!decoded || typeof decoded !== 'object') return;
 
@@ -296,6 +449,11 @@ export async function assertSessionValid(
   // under RedisRevocationStore, so a rejection here means "unknown", not
   // "valid" — but it must not be mistaken for "revoked" either.
   let storeFailed = false;
+
+  // Same meaning for the durable session fallback, tracked apart so a sick
+  // database does not stop us reading a healthy store's version memo. Both
+  // fold into the one verdict at the bottom of this function.
+  let sessionUnknown = false;
 
   if (decoded.sid) {
     try {
@@ -310,6 +468,18 @@ export async function assertSessionValid(
         (error && error.message) || error,
       );
     }
+
+    // Only worth asking once the denylist has said "not revoked": a store
+    // that could not answer at all is already an outage, not a clean pass.
+    if (!storeFailed) {
+      const revoked = await isSessionRevokedDurably(decoded.sid, {
+        store,
+        loadSessionRevoked,
+        logger,
+      });
+      if (revoked === true) throw sessionRevokedError('SESSION_REVOKED');
+      if (revoked === undefined) sessionUnknown = true;
+    }
   }
 
   const hasVersionClaim = typeof decoded.ver === 'number' && decoded.id != null;
@@ -317,7 +487,7 @@ export async function assertSessionValid(
   if (!hasVersionClaim) {
     // The denylist was the only thing that could have answered, and it did
     // not. There is nothing durable to fall back on.
-    if (storeFailed) throw sessionUnavailableError();
+    if (storeFailed || sessionUnknown) throw sessionUnavailableError();
     return;
   }
 
@@ -372,12 +542,15 @@ export async function assertSessionValid(
   // revocation. `durableFailed` matters on its own: a healthy store that
   // simply has no memo yet is not an answer, so a database that throws
   // leaves the version unchecked and must not be waved through.
-  if (storeFailed || durableFailed) throw sessionUnavailableError();
+  if (storeFailed || durableFailed || sessionUnknown) {
+    throw sessionUnavailableError();
+  }
 }
 
 /**
  * Container-aware wrapper used by the auth middlewares: resolves the user's
- * durable token version from the `User` model when it is not memoised.
+ * durable token version from the `User` model when it is not memoised, and
+ * the session's liveness from `refresh_tokens` when the denylist is local.
  *
  * A user that no longer exists yields an infinite version so every token
  * they still hold is rejected.
@@ -387,10 +560,14 @@ export async function assertSessionValid(
  * @returns {Promise<void>}
  */
 export async function verifyActiveSession(container, decoded) {
+  const resolveModels = () => {
+    if (!container || typeof container.has !== 'function') return null;
+    if (!container.has('models')) return null;
+    return container.resolve('models') || null;
+  };
+
   const loadUserVersion = async userId => {
-    if (!container || typeof container.has !== 'function') return undefined;
-    if (!container.has('models')) return undefined;
-    const models = container.resolve('models');
+    const models = resolveModels();
     const User = models && models.User;
     if (!User || typeof User.findByPk !== 'function') return undefined;
     const user = await User.findByPk(userId, { attributes: ['token_version'] });
@@ -398,5 +575,24 @@ export async function verifyActiveSession(container, decoded) {
     return Number(user.token_version) || 0;
   };
 
-  return assertSessionValid(decoded, { loadUserVersion });
+  const loadSessionRevoked = async sid => {
+    const models = resolveModels();
+    const RefreshToken = models && models.RefreshToken;
+    // Undefined skips the check. Failing closed here would lock out every
+    // caller that resolves a container without the users module bound.
+    if (!RefreshToken || typeof RefreshToken.count !== 'function') {
+      return undefined;
+    }
+    // Revocation is expressed as "the family has no live rows left" rather
+    // than as a flag: `revokeFamily` and `revokeUserSessions` both stamp
+    // `revoked_at` on every row of the family, and rotation always creates
+    // the successor before retiring its predecessor, so a family that is
+    // still in use never drops to zero.
+    const live = await RefreshToken.count({
+      where: { family_id: sid, revoked_at: null },
+    });
+    return live === 0;
+  };
+
+  return assertSessionValid(decoded, { loadUserVersion, loadSessionRevoked });
 }

@@ -125,9 +125,11 @@ function buildSchema(nodeEnv) {
     // worst moment to discover it.
     XNAPIFY_MAINTENANCE_BYPASS_TOKEN: z.string().min(16).optional(),
 
-    // Comma-separated extension ids allowed to declare the `*` capability.
-    // Read by shared/extension/utils/compat.js; without membership here a
-    // manifest cannot grant itself the full container.
+    // Comma-separated extension ids allowed to declare the `*` capability,
+    // and the only way a hub-installed extension reaches the privileged tier
+    // (`db`, `models`, `worker`, …). Read by shared/extension/utils/compat.js;
+    // without membership here a manifest cannot grant itself the container or
+    // the bindings that reach user data.
     XNAPIFY_TRUSTED_EXTENSIONS: z.string().trim().optional(),
 
     XNAPIFY_HUB_REGISTRY_URL: z.string().trim().url().optional(),

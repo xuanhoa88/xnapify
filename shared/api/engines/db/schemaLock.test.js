@@ -28,22 +28,65 @@ beforeEach(() => {
 
 import { revertMigrations, undoSeeds, withSchemaLock } from './migrator.js';
 
+/**
+ * Models real Postgres transaction-abort semantics, not just query results:
+ * any statement error aborts the WHOLE transaction (25P02, "current
+ * transaction is aborted") until a rollback, and only a savepoint — a
+ * nested `connection.transaction({ transaction }, cb)` call — can roll back
+ * to a point short of the outer transaction. A fake that let every later
+ * query keep succeeding after one failure would certify an implementation
+ * that cannot actually survive a rejected `SET LOCAL` on a real server.
+ */
 function fakeConnection(
   dialect,
   { poolMax = 5, lockResult = 1, database, onQuery } = {},
 ) {
   const calls = [];
+  let aborted = false;
+  let savepointDepth = 0;
+
   return {
     calls,
     getDialect: () => dialect,
     authenticate: jest.fn(async () => {}),
     config: { database },
     options: { pool: { max: poolMax } },
-    transaction: jest.fn(async cb => cb({ id: 'tx' })),
+    transaction: jest.fn(async (optionsOrCb, maybeCb) => {
+      const nested = typeof optionsOrCb !== 'function';
+      const cb = nested ? maybeCb : optionsOrCb;
+      const tx = nested ? { id: `sp${savepointDepth + 1}` } : { id: 'tx' };
+
+      if (!nested) return cb(tx);
+
+      savepointDepth += 1;
+      try {
+        return await cb(tx);
+      } catch (error) {
+        // ROLLBACK TO SAVEPOINT clears the aborted state the failing
+        // statement just set, without touching the outer transaction.
+        aborted = false;
+        throw error;
+      } finally {
+        savepointDepth -= 1;
+      }
+    }),
     query: jest.fn(async (sql, opts) => {
+      if (aborted) {
+        const abortError = new Error(
+          'current transaction is aborted, commands ignored until end of transaction block',
+        );
+        abortError.parent = { code: '25P02' };
+        throw abortError;
+      }
       calls.push({ sql, replacements: opts.replacements });
-      expect(opts.transaction).toEqual({ id: 'tx' });
-      if (onQuery) await onQuery(sql);
+      try {
+        if (onQuery) await onQuery(sql);
+      } catch (error) {
+        // Outside a savepoint, a failure has nothing to roll back to and
+        // aborts the transaction for every statement that follows.
+        if (savepointDepth === 0) aborted = true;
+        throw error;
+      }
       if (sql.includes('GET_LOCK')) return [[{ acquired: lockResult }]];
       return [[]];
     }),
@@ -70,7 +113,8 @@ describe('withSchemaLock', () => {
     await expect(withSchemaLock(connection, fn, { logger })).resolves.toBe(
       'result',
     );
-    expect(connection.transaction).toHaveBeenCalledTimes(1);
+    // The outer transaction plus one SAVEPOINT for the idle-timeout guard.
+    expect(connection.transaction).toHaveBeenCalledTimes(2);
     expect(sql(connection)).toContain('SELECT pg_advisory_xact_lock(:key)');
     expect(fn).toHaveBeenCalledTimes(1);
   });
@@ -85,11 +129,70 @@ describe('withSchemaLock', () => {
     });
 
     expect(sql(connection)).toEqual([
+      'SET LOCAL idle_in_transaction_session_timeout = 0',
       "SELECT set_config('lock_timeout', :timeout, true)",
       'SELECT pg_advisory_xact_lock(:key)',
       "SELECT set_config('lock_timeout', '0', true)",
     ]);
-    expect(connection.calls[0].replacements).toEqual({ timeout: '30000' });
+    expect(connection.calls[1].replacements).toEqual({ timeout: '30000' });
+  });
+
+  it('disables idle_in_transaction_session_timeout before taking the lock', async () => {
+    // Regression: the lock is transaction-scoped, so the holding backend sits
+    // idle-in-transaction for the whole run. A managed Postgres timeout would
+    // kill it and release the lock mid-migration.
+    const connection = fakeConnection('postgres');
+    await withSchemaLock(connection, async () => {}, { logger });
+
+    const statements = sql(connection);
+    expect(statements[0]).toBe(
+      'SET LOCAL idle_in_transaction_session_timeout = 0',
+    );
+    expect(statements.indexOf('SELECT pg_advisory_xact_lock(:key)')).toBe(2);
+  });
+
+  it('does not touch idle_in_transaction_session_timeout on MySQL', async () => {
+    // GET_LOCK is connection-scoped and wait_timeout defaults to 8h, so the
+    // MySQL path is not exposed and must stay unchanged.
+    const connection = fakeConnection('mysql');
+    await withSchemaLock(connection, async () => {}, { logger });
+
+    expect(sql(connection)).toEqual([
+      'SELECT GET_LOCK(:name, :timeout) AS acquired',
+      'SELECT RELEASE_LOCK(:name)',
+    ]);
+  });
+
+  it('still runs when the SET LOCAL is rejected, recovering via its savepoint', async () => {
+    // An older Postgres, CockroachDB, or Redshift doesn't know the GUC and
+    // rejects it with 42704 ("unrecognized configuration parameter"); that
+    // must not turn a working migration into a hard boot failure. Because
+    // `fakeConnection` now models real transaction-abort semantics, this
+    // only passes if the implementation actually wraps the SET LOCAL in its
+    // own SAVEPOINT — a plain try/catch around the bare query would abort
+    // the outer transaction and every statement after it (including the
+    // advisory lock) would then reject with 25P02, failing this assertion.
+    const connection = fakeConnection('postgres', {
+      onQuery: statement => {
+        if (statement.includes('idle_in_transaction_session_timeout')) {
+          const error = new Error(
+            'unrecognized configuration parameter "idle_in_transaction_session_timeout"',
+          );
+          error.parent = { code: '42704' };
+          throw error;
+        }
+      },
+    });
+    const fn = jest.fn(async () => 'result');
+
+    await expect(withSchemaLock(connection, fn, { logger })).resolves.toBe(
+      'result',
+    );
+    expect(sql(connection)).toContain('SELECT pg_advisory_xact_lock(:key)');
+    expect(fn).toHaveBeenCalledTimes(1);
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining('idle_in_transaction_session_timeout'),
+    );
   });
 
   it('turns a Postgres lock_timeout abort into SCHEMA_LOCK_TIMEOUT', async () => {
@@ -196,7 +299,8 @@ describe('schema-mutating rollbacks', () => {
     const connection = fakeConnection('postgres');
     await revertMigrations([fakeSource()], connection, { logger });
 
-    expect(connection.transaction).toHaveBeenCalledTimes(1);
+    // The outer transaction plus one SAVEPOINT for the idle-timeout guard.
+    expect(connection.transaction).toHaveBeenCalledTimes(2);
     expect(sql(connection)).toContain('SELECT pg_advisory_xact_lock(:key)');
     expect(mockUmzug.down).toHaveBeenCalledTimes(1);
   });
@@ -205,7 +309,8 @@ describe('schema-mutating rollbacks', () => {
     const connection = fakeConnection('postgres');
     await undoSeeds([fakeSource()], connection, { logger });
 
-    expect(connection.transaction).toHaveBeenCalledTimes(1);
+    // The outer transaction plus one SAVEPOINT for the idle-timeout guard.
+    expect(connection.transaction).toHaveBeenCalledTimes(2);
     expect(sql(connection)).toContain('SELECT pg_advisory_xact_lock(:key)');
     expect(mockUmzug.down).toHaveBeenCalledTimes(1);
   });

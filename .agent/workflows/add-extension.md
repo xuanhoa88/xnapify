@@ -76,7 +76,7 @@ mkdir -p src/extensions/{extension-name}
 **Host contract (`xnapify`, required):**
 
 - `version` — semver range of host versions the extension supports. Install, activation, and load are refused outside the range (`IncompatibleExtensionError`, HTTP 422).
-- `capabilities` — container bindings the extension may `container.resolve()` in its lifecycle hooks (`db`, `models`, `worker`, `users:*`, …). Anything else throws `CapabilityDeniedError`. Grants are additive: the side-effect-free defaults (`hook`, `cache`, `http`, `template`, `i18n`) are always granted and your list adds to them, so omitting the key or giving `[]` still resolves those five. `extension`, `jwt` and `env` are reserved and never granted; `*` counts only for extensions the operator listed in `XNAPIFY_TRUSTED_EXTENSIONS`.
+- `capabilities` — container bindings the extension may `container.resolve()` in its lifecycle hooks (`db`, `models`, `worker`, `users:*`, …). Anything else throws `CapabilityDeniedError`. Grants are additive: the side-effect-free defaults (`hook`, `cache`, `http`, `template`, `i18n`) are always granted and your list adds to them, so omitting the key or giving `[]` still resolves those five. `extension`, `jwt` and `env` are reserved and never granted; `*` counts only for extensions the operator listed in `XNAPIFY_TRUSTED_EXTENSIONS`. The privileged tier — `db`, `models`, `worker`, `queue`, `schedule`, `fs`, `redis` — reaches user data or runs work off-request, so it is granted only to extensions bundled in `src/extensions/` (this workflow's case) or listed in `XNAPIFY_TRUSTED_EXTENSIONS`; declaring it from a hub-installed package drops it with a warning.
 
 **Namespace activation:**
 

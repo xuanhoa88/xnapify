@@ -48,6 +48,21 @@ class HookChannel {
   }
 
   /**
+   * Whether an event has at least one registered handler
+   *
+   * Distinct from the channel merely existing: a channel is created the
+   * moment anyone names it, so a guard that only asks for the channel
+   * passes for a name nothing ever registered on.
+   *
+   * @param {string} event - Event name
+   * @returns {boolean}
+   */
+  hasHandlers(event) {
+    const list = this[HOOK_HANDLERS].get(event);
+    return !!list && list.length > 0;
+  }
+
+  /**
    * Register a handler for an event
    *
    * @param {string} event - Event name
@@ -191,7 +206,7 @@ class HookChannel {
    * the provided context as `this` (handler.call(context, ...args)).
    *
    * @param {Object} context
-   * @returns {{on: Function, emit: Function, invoke: Function, off: Function, name: string, events: string[]}}
+   * @returns {{on: Function, emit: Function, invoke: Function, hasHandlers: Function, off: Function, name: string, events: string[]}}
    */
   withContext(context) {
     const channel = this;
@@ -219,6 +234,10 @@ class HookChannel {
 
       invoke(event, ...args) {
         return channel.invoke(event, ...args);
+      },
+
+      hasHandlers(event) {
+        return channel.hasHandlers(event);
       },
 
       off(event, handler) {

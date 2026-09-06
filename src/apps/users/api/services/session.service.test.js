@@ -343,6 +343,26 @@ describe('session.service', () => {
     expect(b.familyId).not.toBe(fresh.familyId);
   });
 
+  it('revokeUserSessions denylists every family, not just the first', async () => {
+    const pairs = [];
+    for (let i = 0; i < 4; i += 1) {
+      pairs.push(await sessions.issueTokenPair(payload(), deps()));
+    }
+
+    // The denylist writes run concurrently now; nothing may be dropped.
+    await sessions.revokeUserSessions(user.id, { models });
+
+    const store = getRevocationStore();
+    for (const pair of pairs) {
+      expect(await store.isSessionRevoked(pair.familyId)).toBe(true);
+    }
+
+    const live = await models.RefreshToken.count({
+      where: { user_id: user.id, revoked_at: null },
+    });
+    expect(live).toBe(0);
+  });
+
   it('revokeUserSessions with exceptFamilyId keeps the current access token alive', async () => {
     const keep = await sessions.issueTokenPair(payload(), deps());
     const other = await sessions.issueTokenPair(payload(), deps());

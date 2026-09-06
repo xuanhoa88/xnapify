@@ -9,6 +9,7 @@
 
 import { createJwt } from '@shared/jwt/factory.js';
 
+import { createFactory } from '../../hook/index.js';
 import {
   MemoryRevocationStore,
   getRevocationStore,
@@ -16,6 +17,7 @@ import {
 } from '../revocation.js';
 
 import { optionalAuth } from './optionalAuth.js';
+import { rotateViaSessionHook } from './refreshToken.js';
 import { requireAuth } from './requireAuth.js';
 
 const SECRET = 'test-secret-that-is-at-least-32-characters-long';
@@ -172,6 +174,58 @@ describe('auth middlewares — session revocation', () => {
       const req = makeReq(accessToken());
       await optionalAuth({ includeUser: false })(req, makeRes(), jest.fn());
       expect(req.authenticated).toBe(false);
+    });
+  });
+
+  describe('rotateViaSessionHook', () => {
+    const params = () => ({
+      refreshToken: 'rt-1',
+      req: { ip: '127.0.0.1', headers: { 'user-agent': 'jest' } },
+    });
+
+    it('refuses a channel nothing registered a rotate handler on', async () => {
+      const hook = createFactory();
+      // A channel exists as soon as any code names it, so this is what an
+      // unrelated `hook('auth.session')` elsewhere leaves behind.
+      hook('auth.session');
+
+      await expect(rotateViaSessionHook(hook, params())).rejects.toMatchObject({
+        name: 'SessionRevokedError',
+        code: 'SESSION_HANDLER_MISSING',
+        status: 401,
+      });
+    });
+
+    it('refuses a channel carrying only unrelated events', async () => {
+      const hook = createFactory();
+      hook('auth.session').on('revoke', jest.fn());
+
+      await expect(rotateViaSessionHook(hook, params())).rejects.toMatchObject({
+        code: 'SESSION_HANDLER_MISSING',
+      });
+    });
+
+    it('reports a registered handler that produced no tokens separately', async () => {
+      const hook = createFactory();
+      hook('auth.session').on('rotate', jest.fn());
+
+      await expect(rotateViaSessionHook(hook, params())).rejects.toMatchObject({
+        name: 'SessionRevokedError',
+        code: 'SESSION_ROTATION_FAILED',
+        status: 401,
+      });
+    });
+
+    it('returns the tokens the registered handler produced', async () => {
+      const hook = createFactory();
+      hook('auth.session').on('rotate', ctx => {
+        ctx.tokens = { accessToken: 'at-2', refreshToken: 'rt-2' };
+      });
+
+      await expect(rotateViaSessionHook(hook, params())).resolves.toEqual({
+        accessToken: 'at-2',
+        refreshToken: 'rt-2',
+      });
     });
   });
 });

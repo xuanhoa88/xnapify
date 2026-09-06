@@ -9,11 +9,13 @@
 
 import {
   DEFAULT_EXTENSION_CAPABILITIES,
+  PRIVILEGED_CAPABILITIES,
   RESERVED_CAPABILITIES,
   checkHostCompatibility,
   getGrantedCapabilities,
   getManifestContract,
   incompatibleExtensionError,
+  isPrivilegedCapability,
   isTrustedExtension,
   satisfiesRange,
 } from './compat.js';
@@ -39,10 +41,12 @@ describe('extension compat', () => {
     });
 
     it('never grants reserved bindings', () => {
+      // `auth`, not `db`: a privileged binding would be dropped here for a
+      // reason that has nothing to do with the reserved list.
       const granted = getGrantedCapabilities({
-        xnapify: { capabilities: ['db', 'jwt', 'extension', 'env'] },
+        xnapify: { capabilities: ['auth', 'jwt', 'extension', 'env'] },
       });
-      expect(granted).toContain('db');
+      expect(granted).toContain('auth');
       for (const reserved of RESERVED_CAPABILITIES) {
         expect(granted).not.toContain(reserved);
       }
@@ -54,20 +58,25 @@ describe('extension compat', () => {
 
     beforeEach(() => {
       delete process.env.XNAPIFY_TRUSTED_EXTENSIONS;
+      // eslint-disable-next-line no-underscore-dangle
+      globalThis.__XNAPIFY_BUNDLED_EXTENSIONS__ = [];
       warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
     });
 
     afterEach(() => {
       delete process.env.XNAPIFY_TRUSTED_EXTENSIONS;
+      // eslint-disable-next-line no-underscore-dangle
+      globalThis.__XNAPIFY_BUNDLED_EXTENSIONS__ = [];
       warn.mockRestore();
     });
 
     it('adds declared capabilities to the defaults instead of replacing them', () => {
       const granted = getGrantedCapabilities({
-        xnapify: { capabilities: ['db'] },
+        id: 'ext-additive',
+        xnapify: { capabilities: ['auth'] },
       });
       expect(granted).toEqual(
-        expect.arrayContaining([...DEFAULT_EXTENSION_CAPABILITIES, 'db']),
+        expect.arrayContaining([...DEFAULT_EXTENSION_CAPABILITIES, 'auth']),
       );
     });
 
@@ -85,10 +94,10 @@ describe('extension compat', () => {
       // self-grant of the whole container.
       const granted = getGrantedCapabilities({
         id: 'ext-a',
-        xnapify: { capabilities: ['*', 'db'] },
+        xnapify: { capabilities: ['*', 'auth'] },
       });
       expect(granted).not.toContain('*');
-      expect(granted).toContain('db');
+      expect(granted).toContain('auth');
       expect(console.warn).toHaveBeenCalledWith(
         expect.stringContaining('XNAPIFY_TRUSTED_EXTENSIONS'),
       );
@@ -103,6 +112,80 @@ describe('extension compat', () => {
       };
       expect(isTrustedExtension(manifest)).toBe(true);
       expect(getGrantedCapabilities(manifest)).toContain('*');
+    });
+
+    it('refuses a privileged binding to an untrusted extension, keeping the rest', () => {
+      // Same argument as the wildcard, one door narrower: the manifest is the
+      // extension's own package.json, and `db` reaches users.password.
+      const granted = getGrantedCapabilities({
+        id: 'ext-hub',
+        xnapify: { capabilities: ['db', 'models', 'auth'] },
+      });
+      expect(granted).not.toContain('db');
+      expect(granted).not.toContain('models');
+      expect(granted).toContain('auth');
+      expect(granted).toEqual(
+        expect.arrayContaining([...DEFAULT_EXTENSION_CAPABILITIES]),
+      );
+      expect(console.warn).toHaveBeenCalledWith(
+        expect.stringContaining('"db"'),
+      );
+    });
+
+    it('refuses every privileged binding to an untrusted extension', () => {
+      const granted = getGrantedCapabilities({
+        id: 'ext-all-privileged',
+        xnapify: { capabilities: [...PRIVILEGED_CAPABILITIES] },
+      });
+      for (const capability of PRIVILEGED_CAPABILITIES) {
+        expect(granted).not.toContain(capability);
+      }
+    });
+
+    it('grants a privileged binding to an extension bundled with the host', () => {
+      // eslint-disable-next-line no-underscore-dangle
+      globalThis.__XNAPIFY_BUNDLED_EXTENSIONS__ = ['@xnapify-extension/posts'];
+      const granted = getGrantedCapabilities({
+        id: 'ext-bundled',
+        name: '@xnapify-extension/posts',
+        xnapify: { capabilities: ['models'] },
+      });
+      expect(granted).toContain('models');
+    });
+
+    it('grants a privileged binding to an env-trusted extension', () => {
+      process.env.XNAPIFY_TRUSTED_EXTENSIONS = 'ext-env-trusted';
+      const granted = getGrantedCapabilities({
+        id: 'ext-env-trusted',
+        xnapify: { capabilities: ['db'] },
+      });
+      expect(granted).toContain('db');
+    });
+
+    it('keeps the wildcard gate independent of the privileged gate', () => {
+      // Bundling vouches for the capabilities the host reviewed, not for every
+      // binding the container will ever hold.
+      // eslint-disable-next-line no-underscore-dangle
+      globalThis.__XNAPIFY_BUNDLED_EXTENSIONS__ = ['ext-bundled-wild'];
+      const manifest = {
+        id: 'ext-bundled-wild',
+        xnapify: { capabilities: ['*'] },
+      };
+      expect(isTrustedExtension(manifest)).toBe(false);
+      expect(getGrantedCapabilities(manifest)).not.toContain('*');
+    });
+
+    it('measures a prefix grant by what it covers', () => {
+      // `"d*"` resolves `db` in the scoped container, so the gate has to see
+      // through the spelling — otherwise it is one asterisk wide.
+      expect(isPrivilegedCapability('d*')).toBe(true);
+      expect(isPrivilegedCapability('users:seed_constants')).toBe(false);
+      const granted = getGrantedCapabilities({
+        id: 'ext-prefix',
+        xnapify: { capabilities: ['d*', 'users:*'] },
+      });
+      expect(granted).not.toContain('d*');
+      expect(granted).toContain('users:*');
     });
 
     it('never grants a reserved binding, even to a trusted wildcard', () => {

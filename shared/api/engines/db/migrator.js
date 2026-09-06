@@ -363,6 +363,44 @@ export async function withSchemaLock(connection, fn, options = {}) {
 
   return connection.transaction(async transaction => {
     if (dialect === 'postgres') {
+      // The advisory lock below is transaction-scoped, so this transaction has
+      // to stay open for the whole run — which happens on other pooled
+      // connections, leaving this backend idle-in-transaction for minutes.
+      // Managed Postgres (RDS, Cloud SQL, Supabase) and most ops policies set
+      // idle_in_transaction_session_timeout; when it fires the backend is
+      // terminated and the lock is released mid-migration, letting a second
+      // worker straight into the race the lock exists to prevent — silently,
+      // because the connection that died is not the one running migrations.
+      // SET LOCAL is reverted on commit/rollback, so it cannot leak to the
+      // next user of this pooled connection.
+      //
+      // Run it inside its own SAVEPOINT. A server-side error inside a plain
+      // Postgres transaction block aborts the WHOLE transaction (25P02:
+      // "current transaction is aborted") — every statement after it fails,
+      // including the advisory lock and lock_timeout guard below — until a
+      // ROLLBACK. Catching the error without a savepoint would still leave
+      // the outer transaction unusable, turning "refuse the GUC" into a
+      // guaranteed boot failure instead of the warned-and-continue this
+      // guard exists to provide. Sequelize issues SAVEPOINT / ROLLBACK TO
+      // SAVEPOINT for a nested transaction automatically.
+      try {
+        await connection.transaction({ transaction }, nested =>
+          connection.query(
+            'SET LOCAL idle_in_transaction_session_timeout = 0',
+            { transaction: nested },
+          ),
+        );
+      } catch (error) {
+        // A pooler in transaction mode or a Postgres-wire variant that
+        // doesn't know the GUC (older Postgres, CockroachDB, Redshift) may
+        // refuse it. Running without the guard is a risk; refusing to boot
+        // over it is a certainty, so warn and carry on — the savepoint
+        // rollback above already restored the outer transaction.
+        logger.warn(
+          `⚠️  Could not disable idle_in_transaction_session_timeout for the schema lock: ${error.message}`,
+        );
+      }
+
       // pg_advisory_xact_lock() is the BLOCKING variant — on its own it waits
       // forever, so one instance stuck mid-migration would silently hold every
       // other instance's boot hostage. Bound the wait with a transaction-local
@@ -392,6 +430,10 @@ export async function withSchemaLock(connection, fn, options = {}) {
       return fn();
     }
 
+    // No idle-in-transaction guard on this branch: GET_LOCK is connection-
+    // scoped rather than transaction-scoped, and the only idle limit that
+    // applies is wait_timeout, which defaults to 8h. MySQL/MariaDB is simply
+    // not exposed the way Postgres is above — the asymmetry is deliberate.
     const name = mysqlLockName(connection);
     const [rows] = await connection.query(
       'SELECT GET_LOCK(:name, :timeout) AS acquired',

@@ -51,7 +51,7 @@ unloaded), so it only ever runs for extensions, which can be switched off at run
 - Subscribe to named namespaces via the manifest `slots` array (e.g., `["profile"]`); core routes export `namespace` from `_route.js`
 - Injects UI via slots and hooks
 
-> **Note:** Module-kind extensions auto-subscribe to the `'*'` wildcard namespace. Every manifest must carry `"xnapify": { "version": "^2.0.0", "capabilities": [...] }` — the host range is enforced and only listed container bindings resolve.
+> **Note:** Module-kind extensions auto-subscribe to the `'*'` wildcard namespace. Every manifest must carry `"xnapify": { "version": "^2.0.0", "capabilities": [...] }` — the host range is enforced and only listed container bindings resolve. Privileged bindings (`db`, `models`, `worker`, `queue`, `schedule`, `fs`, `redis`) resolve only for an extension bundled in `src/extensions/` or listed in `XNAPIFY_TRUSTED_EXTENSIONS`; a hub-installed manifest cannot grant them to itself.
 
 ### Module-kind (with `routes()` hook)
 

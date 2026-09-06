@@ -539,6 +539,84 @@ describe('ServerExtensionManager — contract & isolation', () => {
     }
   });
 
+  it('refuses a privileged binding declared by an untrusted extension', async () => {
+    // The hub install path never asks an operator anything: a manifest saying
+    // `capabilities: ["db"]` reached users.password on its own say-so.
+    delete process.env.XNAPIFY_TRUSTED_EXTENSIONS;
+    // eslint-disable-next-line no-underscore-dangle
+    globalThis.__XNAPIFY_BUNDLED_EXTENSIONS__ = [];
+    serverManager.apiContainer = {
+      has: () => true,
+      resolve: name => ({ name }),
+      getBindingNames: () => ['db', 'hook', 'auth'],
+    };
+    serverManager[EXTENSION_METADATA].set('hub-ext', {
+      manifest: {
+        name: '@acme/hub',
+        id: 'hub-ext',
+        xnapify: { version: '>=0.0.1', capabilities: ['db', 'auth'] },
+      },
+    });
+
+    // eslint-disable-next-line no-underscore-dangle
+    const container = serverManager._extensionContainer('hub-ext');
+
+    expect(() => container.resolve('db')).toThrow(
+      expect.objectContaining({ name: 'CapabilityDeniedError' }),
+    );
+    // The rest of the declaration survives the drop.
+    expect(container.resolve('auth')).toEqual({ name: 'auth' });
+  });
+
+  it('grants a privileged binding to an extension bundled with the host', async () => {
+    // Bundled extensions are compiled by this build and covered by its review,
+    // which is the approval step a hub install has no equivalent of.
+    delete process.env.XNAPIFY_TRUSTED_EXTENSIONS;
+    // eslint-disable-next-line no-underscore-dangle
+    globalThis.__XNAPIFY_BUNDLED_EXTENSIONS__ = ['@xnapify-extension/posts'];
+    serverManager.apiContainer = {
+      has: () => true,
+      resolve: name => ({ name }),
+      getBindingNames: () => ['models', 'hook'],
+    };
+    serverManager[EXTENSION_METADATA].set('posts', {
+      manifest: {
+        name: '@xnapify-extension/posts',
+        id: 'posts',
+        xnapify: { version: '>=0.0.1', capabilities: ['models'] },
+      },
+    });
+
+    // eslint-disable-next-line no-underscore-dangle
+    const container = serverManager._extensionContainer('posts');
+
+    expect(container.resolve('models')).toEqual({ name: 'models' });
+    // eslint-disable-next-line no-underscore-dangle
+    globalThis.__XNAPIFY_BUNDLED_EXTENSIONS__ = [];
+  });
+
+  it('grants a privileged binding to an env-trusted extension', async () => {
+    process.env.XNAPIFY_TRUSTED_EXTENSIONS = 'trusted-db-ext';
+    serverManager.apiContainer = {
+      has: () => true,
+      resolve: name => ({ name }),
+      getBindingNames: () => ['db', 'hook'],
+    };
+    serverManager[EXTENSION_METADATA].set('trusted-db-ext', {
+      manifest: {
+        name: '@acme/reports',
+        id: 'trusted-db-ext',
+        xnapify: { version: '>=0.0.1', capabilities: ['db'] },
+      },
+    });
+
+    // eslint-disable-next-line no-underscore-dangle
+    const container = serverManager._extensionContainer('trusted-db-ext');
+
+    expect(container.resolve('db')).toEqual({ name: 'db' });
+    delete process.env.XNAPIFY_TRUSTED_EXTENSIONS;
+  });
+
   it('denies the reserved bindings even to a trusted wildcard', async () => {
     process.env.XNAPIFY_TRUSTED_EXTENSIONS = 'trusted-ext';
     serverManager.apiContainer = {

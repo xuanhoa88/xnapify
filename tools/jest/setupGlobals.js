@@ -30,5 +30,11 @@ globalThis.__TEST__ = true;
 // eslint-disable-next-line no-underscore-dangle
 globalThis.__XNAPIFY_VERSION__ = process.env.npm_package_version || '2.0.0';
 
+// Extensions bundled with the host build, which the capability contract
+// trusts with the privileged tier. Nothing is bundled into a test run, so the
+// default is empty and a suite that needs a bundled extension assigns its own.
+// eslint-disable-next-line no-underscore-dangle
+globalThis.__XNAPIFY_BUNDLED_EXTENSIONS__ = [];
+
 // Increase MaxListeners to accommodate gracefully shutting down all backend engines during testing
 process.setMaxListeners(20);

@@ -43,6 +43,7 @@
  *
  * @example <caption>Factory Management</caption>
  * hook.has('users');          // Check existence
+ * hook.hasHandlers('users', 'create'); // Check a registered handler
  * hook.getChannelNames();     // List all channels
  * hook.remove('users');       // Remove channel
  * hook.cleanup();             // Clear all channels

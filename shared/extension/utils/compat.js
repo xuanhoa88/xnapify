@@ -30,11 +30,18 @@
  * block, an empty array and `["hook"]` all still resolve `hook`, and
  * `["db"]` means "the defaults plus db".
  *
- * Two grants are never handed out on the manifest's word alone:
+ * Three grants are never handed out on the manifest's word alone:
  * - {@link RESERVED_CAPABILITIES} are always denied, wildcard or not.
  * - `'*'` (everything else) is honoured only for an extension the *host*
  *   trusts, listed in `XNAPIFY_TRUSTED_EXTENSIONS`. The manifest is the
  *   extension's own package.json, so self-declared `'*'` is ignored.
+ * - {@link PRIVILEGED_CAPABILITIES} (`db`, `models`, `worker`, …) are honoured
+ *   only for an extension the host trusts *or* one bundled with this build
+ *   ({@link isPrivilegedExtension}). Gating `'*'` and not `["db"]` barred the
+ *   door and left the window open: both reach `users.password`, and a
+ *   hub-installed package writes either one into its own manifest. An
+ *   ungranted privileged capability is dropped; the rest of the declaration
+ *   still applies.
  */
 
 import semver from 'semver';
@@ -59,8 +66,126 @@ export const RESERVED_CAPABILITIES = Object.freeze(['extension', 'jwt', 'env']);
 /** Capability that grants every non-reserved binding. Trusted extensions only. */
 export const WILDCARD_CAPABILITY = '*';
 
-/** Extensions already warned about an ungranted wildcard (log once each). */
-const WILDCARD_WARNED = new Set();
+/**
+ * Bindings that are never granted on the manifest's word alone, however
+ * narrowly they are declared.
+ *
+ * The wildcard argument applies unchanged here: `capabilities` is the
+ * extension's own package.json, read verbatim at install with no operator
+ * approval, so `["db"]` is as much a self-grant as `["*"]` — it just reaches
+ * `users.password` through a smaller door.
+ *
+ * The line, drawn over the engines in `shared/api/engines/`, is "can this
+ * reach user data, or run arbitrary work off-request":
+ * - `db` — the raw Sequelize connection, `query()` included.
+ * - `models` — User, RefreshToken and every other row.
+ * - `worker` — runs the extension's own code in the thread pool.
+ * - `queue` — the same work, deferred: it outlives the request that enqueued it.
+ * - `schedule` — cron registration; runs with no request behind it at all.
+ * - `fs` — streams the host's storage, which is every user's uploads.
+ * - `redis` — the shared cache, rate-limit counters and the session denylist;
+ *   writing it is enough to un-revoke a session.
+ *
+ * Deliberately left out:
+ * - `auth` — this is how an extension guards *its own* routes
+ *   (`requirePermission`). Gating it would not protect users; it would produce
+ *   extensions that ship unguarded routes instead. Its `revocation` surface is
+ *   the one thing here that argues the other way.
+ * - `email` — one fixed operation with no read path into user data.
+ * - `http`, `cache`, `template`, `i18n`, `hook` — the defaults every extension
+ *   already has; side-effect-free or scoped by construction.
+ *
+ * Not mirrored in `src/apps/extensions/api/utils/capabilities.util.js`: that
+ * analyzer answers "is this binding declared", which privilege does not change.
+ */
+export const PRIVILEGED_CAPABILITIES = Object.freeze([
+  'db',
+  'models',
+  'worker',
+  'queue',
+  'schedule',
+  'fs',
+  'redis',
+]);
+
+/**
+ * Capabilities already warned about, keyed by extension + capability so each
+ * dropped grant is reported once instead of on every container scope.
+ */
+const CAPABILITY_WARNED = new Set();
+
+/**
+ * Split a comma-separated id/name list from the environment.
+ *
+ * @param {string|undefined} raw
+ * @returns {string[]}
+ */
+function splitIdList(raw) {
+  if (typeof raw !== 'string' || !raw.trim()) return [];
+  return raw
+    .split(',')
+    .map(entry => entry.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Whether a manifest identifies itself as one of `ids` (id or package name).
+ *
+ * @param {Object} manifest
+ * @param {string[]} ids
+ * @returns {boolean}
+ */
+function matchesIdList(manifest, ids) {
+  if (!manifest || ids.length === 0) return false;
+  return (
+    (typeof manifest.id === 'string' && ids.includes(manifest.id)) ||
+    (typeof manifest.name === 'string' && ids.includes(manifest.name))
+  );
+}
+
+/**
+ * Emit the one warning an extension gets for a capability it declared but
+ * does not receive.
+ *
+ * @param {Object} manifest
+ * @param {string} capability
+ * @param {string} reason - Sentence completing "…, which {reason}"
+ */
+function warnUngranted(manifest, capability, reason) {
+  const label = (manifest && (manifest.id || manifest.name)) || 'extension';
+  const key = `${label}\u0000${capability}`;
+  if (CAPABILITY_WARNED.has(key)) return;
+  CAPABILITY_WARNED.add(key);
+  console.warn(
+    `[ExtensionCompat] "${label}" declares the "${capability}" capability, ` +
+      `which ${reason} Falling back to its other declared capabilities.`,
+  );
+}
+
+/**
+ * Whether a declared capability reaches a privileged binding.
+ *
+ * Deliberately more conservative than `createCapabilityMatcher` itself: the
+ * container only treats a trailing `":*"` as a namespace prefix (`"users:*"`
+ * matches `"users:sessions"`), so today a bare `"d*"` grants nothing there —
+ * it is stored as the literal string and never matches `"db"`. This function
+ * refuses any capability ending in `"*"` that COULD cover a privileged name if
+ * that matching ever broadened, rather than depending on the matcher's exact
+ * syntax to keep the gate closed.
+ *
+ * @param {string} capability
+ * @returns {boolean}
+ */
+export function isPrivilegedCapability(capability) {
+  if (typeof capability !== 'string') return false;
+  const cap = capability.trim();
+  if (PRIVILEGED_CAPABILITIES.includes(cap)) return true;
+  if (cap.endsWith('*')) {
+    const prefix = cap.slice(0, -1);
+    return PRIVILEGED_CAPABILITIES.some(name => name.startsWith(prefix));
+  }
+  return false;
+}
 
 /**
  * Extension ids/names the host operator has explicitly trusted, read from
@@ -72,12 +197,7 @@ const WILDCARD_WARNED = new Set();
  * @returns {string[]}
  */
 export function getTrustedExtensionIds() {
-  const raw = process.env.XNAPIFY_TRUSTED_EXTENSIONS;
-  if (typeof raw !== 'string' || !raw.trim()) return [];
-  return raw
-    .split(',')
-    .map(entry => entry.trim())
-    .filter(Boolean);
+  return splitIdList(process.env.XNAPIFY_TRUSTED_EXTENSIONS);
 }
 
 /**
@@ -87,13 +207,63 @@ export function getTrustedExtensionIds() {
  * @returns {boolean}
  */
 export function isTrustedExtension(manifest) {
-  if (!manifest) return false;
-  const trusted = getTrustedExtensionIds();
-  if (trusted.length === 0) return false;
-  return (
-    (typeof manifest.id === 'string' && trusted.includes(manifest.id)) ||
-    (typeof manifest.name === 'string' && trusted.includes(manifest.name))
-  );
+  return matchesIdList(manifest, getTrustedExtensionIds());
+}
+
+/**
+ * Ids and package names of the extensions that ship with this host build,
+ * injected by `createDefinePlugin` in `tools/rspack/base.config.js`.
+ *
+ * These come from `src/extensions/`: they are compiled by the host's own build
+ * and covered by its review, so they are trusted by construction in a way
+ * nothing installed from the hub at runtime can be. Both forms are listed
+ * because a manifest is matched on either, exactly like the trusted env list.
+ *
+ * Read with the same defensive shape as {@link getHostVersion}: outside a
+ * bundle (jest, plain-node tooling) the define does not exist, so fall back to
+ * the environment. That fallback is not an operator knob — it is the value the
+ * build would have injected.
+ *
+ * @returns {string[]}
+ */
+export function getBundledExtensionIds() {
+  if (
+    typeof __XNAPIFY_BUNDLED_EXTENSIONS__ !== 'undefined' &&
+    Array.isArray(__XNAPIFY_BUNDLED_EXTENSIONS__)
+  ) {
+    return __XNAPIFY_BUNDLED_EXTENSIONS__
+      .filter(entry => typeof entry === 'string' && entry.trim())
+      .map(entry => entry.trim());
+  }
+  return splitIdList(process.env.XNAPIFY_BUNDLED_EXTENSIONS);
+}
+
+/**
+ * Whether this extension shipped with the host build.
+ *
+ * @param {Object} manifest - Extension manifest (package.json)
+ * @returns {boolean}
+ */
+export function isBundledExtension(manifest) {
+  return matchesIdList(manifest, getBundledExtensionIds());
+}
+
+/**
+ * Whether the host trusts this extension with {@link PRIVILEGED_CAPABILITIES}:
+ * the operator's `XNAPIFY_TRUSTED_EXTENSIONS` list *or* the set bundled with
+ * this build.
+ *
+ * Deliberately a separate predicate from {@link isTrustedExtension} rather than
+ * a widened one. `'*'` hands over every non-reserved binding at once, including
+ * ones added long after an extension was reviewed; a named `db` does not. The
+ * two gates answer different questions, so widening this one must not silently
+ * hand `'*'` to every bundled extension.
+ *
+ * @param {Object} manifest - Extension manifest (package.json)
+ * @returns {boolean}
+ */
+export function isPrivilegedExtension(manifest) {
+  return isTrustedExtension(manifest) || isBundledExtension(manifest);
 }
 
 /**
@@ -140,8 +310,8 @@ export function getManifestContract(manifest) {
 
 /**
  * Capabilities an extension actually receives: the side-effect-free defaults
- * plus whatever it declared, minus the reserved bindings, minus an
- * untrusted `'*'`.
+ * plus whatever it declared, minus the reserved bindings, minus an untrusted
+ * `'*'`, minus any {@link PRIVILEGED_CAPABILITIES} the host has not vouched for.
  *
  * Additive so that `capabilities: []` (or a narrow list) still resolves the
  * baseline services every extension needs, rather than silently granting
@@ -156,16 +326,26 @@ export function getGrantedCapabilities(manifest) {
 
   for (const cap of capabilities) {
     if (RESERVED_CAPABILITIES.includes(cap)) continue;
-    if (cap === WILDCARD_CAPABILITY && !isTrustedExtension(manifest)) {
-      const label = (manifest && (manifest.id || manifest.name)) || 'extension';
-      if (!WILDCARD_WARNED.has(label)) {
-        WILDCARD_WARNED.add(label);
-        console.warn(
-          `[ExtensionCompat] "${label}" declares the "*" capability, which is ` +
-            'granted only to extensions listed in XNAPIFY_TRUSTED_EXTENSIONS. ' +
-            'Falling back to its other declared capabilities.',
+    if (cap === WILDCARD_CAPABILITY) {
+      if (!isTrustedExtension(manifest)) {
+        warnUngranted(
+          manifest,
+          cap,
+          'is granted only to extensions listed in XNAPIFY_TRUSTED_EXTENSIONS.',
         );
+        continue;
       }
+      granted.add(cap);
+      continue;
+    }
+    if (isPrivilegedCapability(cap) && !isPrivilegedExtension(manifest)) {
+      warnUngranted(
+        manifest,
+        cap,
+        'reaches user data or off-request execution and is granted only to ' +
+          'extensions bundled with this host build or listed in ' +
+          'XNAPIFY_TRUSTED_EXTENSIONS.',
+      );
       continue;
     }
     granted.add(cap);

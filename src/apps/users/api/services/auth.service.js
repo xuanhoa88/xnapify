@@ -21,6 +21,37 @@ const LOCKOUT_THRESHOLD = 5;
 const LOCKOUT_BASE_MS = 15 * 60 * 1000;
 const LOCKOUT_MAX_MS = 24 * 60 * 60 * 1000;
 
+// ------------------------------------------------------------------------
+// Timing equaliser for the unknown-email login path
+// ------------------------------------------------------------------------
+// A throwaway hash to verify against when the email matches no row, so that
+// branch costs a scrypt too. Derived offline with the
+// DEFAULT_PASSWORD_CONFIG of ../utils/password.js (32-byte salt, 64-byte
+// key, N=16384, r=8, p=1); the cost only matches while those parameters do,
+// so this constant has to be regenerated whenever they change.
+const DUMMY_PASSWORD_HASH =
+  'd8f5f7e83cb8bc6566af932de3cf1f726202e8cf54d4f6dbaab37d0bc2fbc7a9:' +
+  'a9306fb5fb0c2554810e967e3ee411a1966f09e6be7304f31743361c91aa05db' +
+  '63a48c24d79f003745e02ca8c1907c43fc8489f290000b18311792130150f692';
+
+// Checked at import rather than at login. A malformed constant makes
+// verifyPassword throw InvalidPasswordHashFormatError (or, on a key of the
+// wrong length, timingSafeEqual throw), which would turn every unknown-email
+// login into a 400 while a known email still answers 401 — a louder oracle
+// than the one this closes, and one that only shows up in production. Boot
+// fails instead, where the first test run catches it.
+{
+  const [saltHex, keyHex] = DUMMY_PASSWORD_HASH.split(':');
+  if (
+    !/^[0-9a-f]{64}$/.test(saltHex ?? '') ||
+    !/^[0-9a-f]{128}$/.test(keyHex ?? '')
+  ) {
+    throw new Error(
+      'DUMMY_PASSWORD_HASH must be a 32-byte salt and 64-byte key as "saltHex:hashHex"',
+    );
+  }
+}
+
 // ========================================================================
 // AUTHENTICATION SERVICES
 // ========================================================================
@@ -175,6 +206,16 @@ export async function authenticateUser(
   });
 
   if (!user) {
+    // The same argument as the password check below, one step earlier. That
+    // check keeps the *reason* out of the answer; this keeps it out of the
+    // clock. An unknown address would otherwise be refused after one indexed
+    // SELECT while a known one pays ~50-100 ms of scrypt first, and an
+    // attacker reads that gap without ever looking at the response body —
+    // which is what makes the controller folding both errors onto one 401
+    // worth anything. Burn an equivalent verification against a constant
+    // hash; the result cannot match and is discarded.
+    await verifyPassword(password, DUMMY_PASSWORD_HASH);
+
     const error = new Error('User not found');
     error.name = 'UserNotFoundError';
     error.status = 404;
@@ -203,7 +244,17 @@ export async function authenticateUser(
   // which are already locked, and can keep them locked on demand. A locked
   // account still cannot be entered — the checks below run either way — the
   // reason is simply not disclosed until the password is right.
-  const isValidPassword = await verifyPassword(password, user.password);
+  //
+  // `user.password` is null for an OAuth-only account (see oauthLogin below).
+  // Handing null to verifyPassword throws on `null.split(':')`, which is a
+  // louder oracle than the one this file just closed: a caller can tell an
+  // OAuth-registered address from every other outcome by its HTTP status
+  // alone, no stopwatch required. Burn the same dummy-hash verification the
+  // unknown-user branch above uses, so the account still authenticates as
+  // "wrong credentials" rather than crashing.
+  const isValidPassword = user.password
+    ? await verifyPassword(password, user.password)
+    : await verifyPassword(password, DUMMY_PASSWORD_HASH).then(() => false);
   if (!isValidPassword) {
     // The counter FREEZES while an automatic lock is in force. Counting
     // during the lock window would let an attacker burst requests inside one

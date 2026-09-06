@@ -27,15 +27,16 @@ await userHooks.emit('created', { id: 1, name: 'John' });
 
 ### Factory (callable as function)
 
-| Method                   | Description                                                 |
-| ------------------------ | ----------------------------------------------------------- |
-| `hook('name')`           | Get or create a channel (callable shorthand)                |
-| `hook.channel('name')`   | Same as above                                               |
-| `hook.has('name')`       | Check if channel exists                                     |
-| `hook.getChannelNames()` | List all channel names                                      |
-| `hook.remove('name')`    | Remove channel and clear its handlers                       |
-| `hook.cleanup()`         | Clear all channels                                          |
-| `hook.withContext(ctx)`  | Create bound factory where handlers receive `ctx` as `this` |
+| Method                              | Description                                                 |
+| ----------------------------------- | ----------------------------------------------------------- |
+| `hook('name')`                      | Get or create a channel (callable shorthand)                |
+| `hook.channel('name')`              | Same as above                                               |
+| `hook.has('name')`                  | Check if channel exists                                     |
+| `hook.hasHandlers('name', 'event')` | Check if a channel has a handler registered for an event    |
+| `hook.getChannelNames()`            | List all channel names                                      |
+| `hook.remove('name')`               | Remove channel and clear its handlers                       |
+| `hook.cleanup()`                    | Clear all channels                                          |
+| `hook.withContext(ctx)`             | Create bound factory where handlers receive `ctx` as `this` |
 
 ### Channel
 
@@ -49,6 +50,7 @@ await userHooks.emit('created', { id: 1, name: 'John' });
 | `off(event, handler)`           | —               | Remove specific handler (by reference)                        |
 | `.name`                         | `string`        | Channel name                                                  |
 | `.events`                       | `string[]`      | Registered event names                                        |
+| `hasHandlers(event)`            | `boolean`       | Whether the event has at least one registered handler         |
 
 ### Priority Control
 
@@ -202,6 +204,10 @@ Executes handlers **sequentially and fails fast** if any handler throws an excep
 - The first handler to throw will immediately reject the promise and halt execution of subsequent hooks.
 - **Cancellation Support**: Like `emit`, if `args` contains an aborted signal, halts immediately and throws an `AbortError`.
 
+#### `hasHandlers(event) → boolean`
+
+Whether the event has at least one registered handler. Distinct from the channel existing at all — `channel()` creates a channel on first mention, so channel existence says nothing about registration.
+
 #### `off(event?, handler?)`
 
 Three-mode removal:
@@ -221,6 +227,7 @@ Returns a proxy-like object where handlers registered via `on()` are invoked wit
   on(event, handler, priority?) → this,  // wraps handler with ORIGINAL_HANDLER tracking
   emit(event, ...args),                  // delegates to channel.emit()
   invoke(event, ...args),                // delegates to channel.invoke()
+  hasHandlers(event),                    // delegates to channel.hasHandlers()
   off(event, handler?),                  // delegates to channel.off(event, handler?)
   withContext(newContext),               // creates a new bound wrapper with new context
   get name,                              // channel.name
@@ -240,13 +247,14 @@ Returns a proxy-like object where handlers registered via `on()` are invoked wit
 
 ### Methods
 
-| Method              | Behavior                                                                                                                                                          |
-| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `channel(name)`     | Lazy-creates `HookChannel` on first access. Trims name. Throws `Error` with `name: 'InvalidChannelNameError'` and `status: 400` if name is falsy or not a string. |
-| `has(name)`         | Checks map. Trims name. Returns `false` for invalid input.                                                                                                        |
-| `remove(name)`      | Calls `channel.off()` (clear all handlers), deletes from map. Returns `false` if not found.                                                                       |
-| `getChannelNames()` | `Array.from(channels.keys())`                                                                                                                                     |
-| `cleanup()`         | Calls `channel.off()` on every channel, then clears the map.                                                                                                      |
+| Method                     | Behavior                                                                                                                                                          |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `channel(name)`            | Lazy-creates `HookChannel` on first access. Trims name. Throws `Error` with `name: 'InvalidChannelNameError'` and `status: 400` if name is falsy or not a string. |
+| `has(name)`                | Checks map. Trims name. Returns `false` for invalid input.                                                                                                        |
+| `hasHandlers(name, event)` | Reads the map without creating the channel. Trims name. `false` for an unknown channel or an event with no handlers.                                              |
+| `remove(name)`             | Calls `channel.off()` (clear all handlers), deletes from map. Returns `false` if not found.                                                                       |
+| `getChannelNames()`        | `Array.from(channels.keys())`                                                                                                                                     |
+| `cleanup()`                | Calls `channel.off()` on every channel, then clears the map.                                                                                                      |
 
 ## 4. Factory Function: `createFactory()`
 
@@ -256,7 +264,7 @@ Creates a `HookFactory` instance, registers graceful shutdown handlers, and retu
 
 - `factory(name)` — shorthand for `factory.channel(name)`.
 - `factory.channel(name)` — delegates to `manager.channel(name)`.
-- `factory.has(name)`, `factory.remove(name)`, `factory.getChannelNames()`, `factory.cleanup()` — delegates to manager.
+- `factory.has(name)`, `factory.hasHandlers(name, event)`, `factory.remove(name)`, `factory.getChannelNames()`, `factory.cleanup()` — delegates to manager.
 
 ### `factory.withContext(context)`
 
@@ -268,7 +276,7 @@ boundFactory('users'); // → channel.withContext(ctx)
 boundFactory.channel('users'); // → same
 ```
 
-The bound factory has all the same methods (`has`, `remove`, `getChannelNames`, `cleanup`), which delegate to the **same underlying manager**. The bound factory supports chaining: `boundFactory.withContext(newContext)` creates a new factory bound to the new context.
+The bound factory has all the same methods (`has`, `hasHandlers`, `remove`, `getChannelNames`, `cleanup`), which delegate to the **same underlying manager**. The bound factory supports chaining: `boundFactory.withContext(newContext)` creates a new factory bound to the new context.
 
 ### Shutdown Registration
 
