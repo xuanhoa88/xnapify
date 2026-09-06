@@ -574,6 +574,14 @@ export default async function createSettings(options = {}) {
     // Global Context - Available to all function nodes
     functionGlobalContext: mergedGlobalContext,
 
+    // Node-RED periodically POSTs anonymised usage metrics to
+    // telemetry.nodered.org unless told otherwise (@node-red/runtime's
+    // isTelemetryEnabled() treats "no settings" as disabled, but a prior
+    // opt-in through the editor's banner persists past that default). This
+    // is an embedded flow editor, not a standalone Node-RED install, so the
+    // choice is made here rather than left to whoever clicks through it.
+    telemetry: { enabled: false },
+
     // Security: Disable deprecated features
     disableEditor: false,
 
