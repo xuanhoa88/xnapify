@@ -42,43 +42,101 @@ async function loadWithEnv(nodeEnv) {
 }
 
 describe('persistent cache', () => {
+  // Persistent cache is opt-in (RSPACK_PERSISTENT_CACHE=true). It aborts the
+  // process when two transactions share a storage directory, and `npm run dev`
+  // runs 14+ concurrent compilers, so it cannot default to on.
+  const withOptIn = fn => async () => {
+    const previous = process.env.RSPACK_PERSISTENT_CACHE;
+    process.env.RSPACK_PERSISTENT_CACHE = 'true';
+    try {
+      await fn();
+    } finally {
+      if (previous === undefined) delete process.env.RSPACK_PERSISTENT_CACHE;
+      else process.env.RSPACK_PERSISTENT_CACHE = previous;
+    }
+  };
+
   // Regression: this used to be configured under `experiments.cache`, a key
   // @rspack/core 2.x does not implement. Unknown `experiments` keys pass
   // validation untouched, so the cache silently never existed.
-  it('is declared at the top level, not under experiments', async () => {
-    const { createRspackConfig } = await loadWithEnv('development');
-    const config = createRspackConfig('client', {});
+  it(
+    'is declared at the top level, not under experiments',
+    withOptIn(async () => {
+      const { createRspackConfig } = await loadWithEnv('development');
+      const config = createRspackConfig('client', { cacheKey: 'app-client' });
 
-    expect(config.cache).toMatchObject({
-      type: 'persistent',
-      storage: { type: 'filesystem' },
-    });
-    expect(config.experiments?.cache).toBeUndefined();
-  });
+      expect(config.cache).toMatchObject({
+        type: 'persistent',
+        storage: { type: 'filesystem' },
+      });
+      expect(config.experiments?.cache).toBeUndefined();
+    }),
+  );
 
-  it('invalidates on the PostCSS plugin chain', async () => {
-    const { createRspackConfig } = await loadWithEnv('development');
-    const { buildDependencies } = createRspackConfig('client', {}).cache;
+  it(
+    'invalidates on the PostCSS plugin chain',
+    withOptIn(async () => {
+      const { createRspackConfig } = await loadWithEnv('development');
+      const { buildDependencies } = createRspackConfig('client', {
+        cacheKey: 'app-client',
+      }).cache;
 
-    // Neither file is a module in the graph, so only buildDependencies can
-    // notice an edit to them.
-    expect(
-      buildDependencies.some(file =>
-        file.endsWith('factories/postcss.factory.js'),
-      ),
-    ).toBe(true);
-    expect(
-      buildDependencies.some(file =>
-        file.endsWith('postcss/RadixBreakpointTrim.js'),
-      ),
-    ).toBe(true);
-  });
+      // Neither file is a module in the graph, so only buildDependencies can
+      // notice an edit to them.
+      expect(
+        buildDependencies.some(file =>
+          file.endsWith('factories/postcss.factory.js'),
+        ),
+      ).toBe(true);
+      expect(
+        buildDependencies.some(file =>
+          file.endsWith('postcss/RadixBreakpointTrim.js'),
+        ),
+      ).toBe(true);
+    }),
+  );
 
   it('stays off in production so an artifact never reuses a stale cache', async () => {
     const { createRspackConfig } = await loadWithEnv('production');
 
-    expect(createRspackConfig('client', {}).cache).toBe(false);
+    expect(createRspackConfig('client', { cacheKey: 'app-client' }).cache).toBe(
+      false,
+    );
   });
+
+  // Regression: `name` is a ROLE ('server' | 'client') reused by the app and
+  // by every extension's client/server/api/nodes bundle. Keying the cache
+  // directory on it pointed dozens of concurrent dev compilers at one storage
+  // directory, which aborts the process with `Transaction already in progress`.
+  it('defaults to in-memory cache in development', async () => {
+    const { createRspackConfig } = await loadWithEnv('development');
+
+    // Without the opt-in flag nothing touches the filesystem, whether or not
+    // a cacheKey is declared.
+    expect(createRspackConfig('client', { cacheKey: 'app-client' }).cache).toBe(
+      true,
+    );
+    expect(createRspackConfig('server', {}).cache).toBe(true);
+  });
+
+  it(
+    'keys the storage directory on cacheKey, not on name',
+    withOptIn(async () => {
+      const { createRspackConfig } = await loadWithEnv('development');
+
+      const server = createRspackConfig('server', { cacheKey: 'app-server' });
+      const client = createRspackConfig('client', { cacheKey: 'app-client' });
+
+      expect(server.cache.storage.directory).toMatch(/app-server$/);
+      expect(client.cache.storage.directory).toMatch(/app-client$/);
+      expect(server.cache.storage.directory).not.toBe(
+        client.cache.storage.directory,
+      );
+
+      // Extension bundles never get a filesystem directory to contend over.
+      expect(createRspackConfig('server', {}).cache).toBe(true);
+    }),
+  );
 });
 
 describe('splitChunks cache groups', () => {

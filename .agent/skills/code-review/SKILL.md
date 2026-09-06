@@ -296,7 +296,7 @@ src/apps/[module_name]/
 | `boot({ container })`      | 6     | —                                   | Register workers, hooks, schedules. Models available. |
 | `routes()`                 | 7     | Rspack context **directly**         | `() => routesContext` (**not** a tuple)               |
 
-> ⚠️ **Key distinction:** Modules return Rspack context **directly** from `routes()`. Extensions return `[name, context]` tuple.
+> ⚠️ **Key distinction:** API modules return the Rspack context **directly** from `routes()`. Extensions return a `[name, context]` tuple. View modules are different again — see 6.3.
 
 ### 6.3 Frontend Hooks (`views/index.js`)
 

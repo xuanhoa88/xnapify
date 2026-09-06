@@ -53,10 +53,11 @@ function tmpSuffix() {
  * File-Based Queue Adapter
  *
  * Persistent queue that survives process restarts. Jobs are stored as JSON
- * files organised by status directory. Each write is a tmp-file write that is
- * fsynced and then renamed into place, with the containing directory fsynced
- * after, so an interrupted transition leaves at most one extra copy of a job
- * (at-least-once delivery) rather than a truncated or missing one.
+ * files organised by status directory. Each write goes to a temp file that is
+ * fsynced (unless `fsync: false`) and then renamed into place, with the
+ * containing directory fsynced after, so an interrupted transition leaves at
+ * most one extra copy of a job (at-least-once delivery) rather than a
+ * truncated or missing one.
  *
  * Concurrency model:
  * - In-process: a slot is reserved *before* the first `await` of a claim, so

@@ -113,14 +113,31 @@ export default {
     // e.g. container.register('component:UserProfile', UserProfileComponent)
   },
 
+  // Contributes this module's sidebar navigation. Views are chunked one per
+  // route, so an entry registered from a route's `setup()` would not exist
+  // until the reader had already navigated to the page it links to.
+  menus({ store, i18n }) {
+    // e.g. store.dispatch(registerMenu({ ns: 'admin', id: 'billing', ... }))
+  },
+
   // Evaluated during react hydration and rendering startup
   async boot({ container }) {
     // Register custom hooks or UI startup mechanics here
   },
 
-  // Declaratively identifies page routes
-  routes: () =>
-    import.meta.webpackContext('.', { recursive: true, regExp: /_route\.js$/ }),
+  // Declaratively identifies page routes. The context is declared
+  // `mode: 'lazy'` (one chunk per view) and the hook returns
+  // `[context, { lazy: true }]`. Every view module must agree — a bare context
+  // here makes the merged adapter throw `MixedRouteLoadingStrategyError` at
+  // boot and no route mounts at all.
+  routes: () => [
+    import.meta.webpackContext('.', {
+      recursive: true,
+      regExp: /_route\.js$/,
+      mode: 'lazy',
+    }),
+    { lazy: true },
+  ],
 };
 ```
 
@@ -173,7 +190,7 @@ In xnapify, Frontend URLs are inferred directly from the file path where a `_rou
 > **Strict Isolation:** Avoid deep static `import/export` mapping across independent `apps/` domains. Rely instead on the **Dependency Injection (DI)** container `container.resolve()` capabilities or broadcasted hook events (`container.resolve('hook')('event-name')`).
 
 > [!IMPORTANT]
-> **WebPack Requirements:** Hooks such as `routes()`, `models()`, and `migrations()` MUST exactly return a `import.meta.webpackContext` evaluation; Webpack requires this literal compilation string to statically analyze files before bundling.
+> **Rspack Requirements:** Hooks such as `routes()`, `models()`, and `migrations()` MUST exactly return a `import.meta.webpackContext` evaluation — the bundler requires this literal compilation string to statically analyze files before bundling. A **view** module's `routes()` wraps it as `[context, { lazy: true }]`; everything else returns the context directly.
 
 > [!NOTE]
 > **Data Hydration:** Utilize `getInitialProps` on the frontend correctly to avoid cumulative layout impacts on screen load. By injecting states beforehand, React SSR will provide the finalized view HTML avoiding hydration mismatches.

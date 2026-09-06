@@ -38,6 +38,7 @@ export const MessageType = Object.freeze({
 export const ChannelType = Object.freeze({
   PUBLIC: 'public', // Anyone can subscribe
   PROTECTED: 'protected', // Only authenticated users
+  PRIVATE: 'private', // Only the user the channel belongs to
 });
 
 /**

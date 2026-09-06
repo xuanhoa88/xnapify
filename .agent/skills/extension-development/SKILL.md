@@ -35,7 +35,7 @@ unloaded), so it only ever runs for extensions, which can be switched off at run
 
 - **`providers({ container })`**: Called once per bootstrap (client) or once per request (SSR). Use to inject Redux reducers or other per-load setup.
 - **`boot({ container, registry })`**: Re-runs on every server boot. Register IPC handlers, subscribe to hooks. Data layer (migrations, models, seeds) is already processed before this runs.
-- **`menus({ store, i18n })`** _(view side)_: dispatch `registerMenu(...)` for the extension's sidebar entries. This is the **only** correct place for navigation. A route's `setup()` cannot do it — the sidebar has to list a page before the user can navigate to it, and an extension without routes has no `setup()` at all. The manager runs it on activation, once per SSR request, and again whenever the language changes, so it must be idempotent (`registerMenu` overwrites a section by id).
+- **`menus({ store, i18n })`** _(view side)_: dispatch `registerMenu(...)` for the extension's sidebar entries. This is the **only** correct place for navigation. A route's `setup()` cannot do it — the sidebar has to list a page before the user can navigate to it, and an extension without routes has no `setup()` at all. The manager runs it wherever there is a store to dispatch into: on activation in the browser, once per SSR request on the server, and again whenever the language changes — so it must be idempotent (`registerMenu` overwrites a section by id). The server's store is built per request, so server-side _activation_ skips this phase rather than calling the hook with `store: undefined`; `store` is therefore guaranteed whenever `menus` actually runs.
 - **`shutdown({ container, registry, store })`**: Called on deactivation. MUST unsubscribe from all hooks, and MUST `unregisterMenu(...)` anything `menus()` registered — unlike an application module, an extension can be switched off at runtime. Extension models are auto-unregistered from the `ModelRegistry`.
 
 ### One-time Hooks (backend only)
@@ -328,16 +328,19 @@ build-time or runtime warning.
 
 **Available to extensions:**
 
-| Radix feature     | Available                                                                                     |
-| ----------------- | --------------------------------------------------------------------------------------------- |
-| Colour scales     | `amber` `blue` `cyan` `gray` `green` `indigo` `orange` `plum` `purple` `red` `slate` `yellow` |
-| Responsive props  | `initial`, `sm`, `md`, `lg`                                                                   |
-| Components/tokens | Everything in `@radix-ui/themes/components.css` + `tokens/base.css`                           |
+| Radix feature     | Available                                                                                            |
+| ----------------- | ---------------------------------------------------------------------------------------------------- |
+| Colour scales     | `amber` `blue` `cyan` `gray` `green` `indigo` `orange` `plum` `purple` `red` `slate` `teal` `yellow` |
+| Responsive props  | `initial`, `sm`, `md`, `lg`                                                                          |
+| Components/tokens | Everything in `@radix-ui/themes/components.css` + `tokens/base.css`                                  |
 
-So `<Badge color="teal">` and `<Grid columns={{ initial: '1', xl: '4' }}>` will
-render without their colour or their breakpoint. Use a scale from the list, or
-ask for the host to add one — adding a scale means one `@import` in
-`app.global.css`, and adding a breakpoint means one entry in `DEFAULT_KEEP`.
+So `<Badge color="crimson">` and `<Grid columns={{ initial: '1', xl: '4' }}>`
+will render without their colour or their breakpoint. Use a scale from the list,
+or ask for the host to add one: a scale is one `@import` in `app.global.css`
+(pinned by `shared/renderer/radix-color-subset.test.js`). Breakpoints are not
+hardcoded — `collectUsedBreakpoints()` scans `src/` and `shared/` for responsive
+object keys, so an extension living under `src/extensions/` keeps the
+breakpoints it uses automatically, while one built outside this tree does not.
 
 ## Content-Hashed Bundles & Cache Busting
 

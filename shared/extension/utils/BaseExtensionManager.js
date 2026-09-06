@@ -651,13 +651,20 @@ export class BaseExtensionManager {
         containerName,
       );
 
-      // Null = extension was skipped (e.g., API-only on client)
+      // A subclass must return an instance or throw. The legitimate "nothing
+      // to run in this environment" case is the `!entryPoint` branch above,
+      // which has already returned. Anything null here is a failed load, and
+      // recording it as LOADED is what once made a broken bundle
+      // indistinguishable from a healthy one: sync's failure telemetry never
+      // fired, dependency resolution accepted the dead extension as
+      // satisfied, and every later lifecycle event for it silently no-oped.
       if (!ext) {
-        metadata.state = ExtensionState.LOADED;
-        metadata.loadedAt = Date.now();
-        metadata.manifest = { ...manifest };
-        await this.emit('extension:loaded', { id, ext: null, manifest });
-        return null;
+        const error = new Error(
+          `Extension module for "${this._formatDisplayName(id, manifest)}" resolved to nothing`,
+        );
+        error.name = 'ExtensionManagerError';
+        error.code = 'EXTENSION_MODULE_EMPTY';
+        throw error;
       }
 
       // Accept any object that has at least one recognized extension property
@@ -1288,20 +1295,11 @@ export class BaseExtensionManager {
     // and runs before boot so the sidebar is complete before anything the
     // extension boots can read it. Mirrors the `menus` phase the autoloader
     // runs for application modules (shared/utils/lifecycle.js).
-    if (typeof def.menus === 'function') {
-      try {
-        await def.menus({
-          ...context,
-          // eslint-disable-next-line no-underscore-dangle
-          registry: this._scopedRegistry(def.id),
-        });
-      } catch (error) {
-        console.error(
-          `[ExtensionManager] Failed to register menus for ${def.id}:`,
-          error,
-        );
-      }
-    }
+    //
+    // Only where there is a store to dispatch into: on the server that is
+    // `runViewMenus(context)`, once per request. See _runMenusHook.
+    // eslint-disable-next-line no-underscore-dangle
+    await this._runMenusHook(def.id, def, context);
 
     // Phase 4: Boot
     if (typeof def.boot === 'function') {
@@ -1350,28 +1348,66 @@ export class BaseExtensionManager {
 
     let count = 0;
     for (const [id, def] of this[ACTIVE_EXTENSIONS]) {
-      if (typeof def.menus !== 'function') continue;
-      try {
-        await def.menus({
-          ...context,
-          // The caller's render context carries the host's own container.
-          // Menus is a lifecycle phase like any other, so it gets the same
-          // capability-scoped container every other phase does — it must not
-          // be the one hole an extension can resolve `jwt` or `db` through.
-          // eslint-disable-next-line no-underscore-dangle
-          container: this._hookContextFor(id).container,
-          // eslint-disable-next-line no-underscore-dangle
-          registry: this._scopedRegistry(id),
-        });
-        count += 1;
-      } catch (error) {
-        console.error(
-          `[ExtensionManager] Failed to register menus for ${this._formatDisplayName(id)}:`,
-          error,
-        );
-      }
+      // eslint-disable-next-line no-underscore-dangle
+      if (await this._runMenusHook(id, def, context)) count += 1;
     }
     return count;
+  }
+
+  /**
+   * Run one extension's `menus` hook, if it has one and there is a store.
+   *
+   * The hook exists to dispatch navigation into a Redux store, so it can only
+   * run where one exists, and the two environments differ:
+   *
+   *   - the browser has a single long-lived store and publishes it as
+   *     `viewContext`, so activation registers the menu directly;
+   *   - the server builds a store per request and leaves `viewContext` null,
+   *     so there the phase belongs to `runViewMenus(context)` and activation
+   *     has nothing to give it.
+   *
+   * Activating on the server used to call the hook anyway, which is how
+   * `menus({ store })` threw "Cannot read properties of undefined (reading
+   * 'dispatch')" on every server-side extension load.
+   *
+   * @param {string} id - Extension ID, for container scoping and logging
+   * @param {Object} def - Extension definition
+   * @param {Object} context - Hook context; must carry `store` to run
+   * @returns {Promise<boolean>} Whether the hook ran to completion
+   * @private
+   */
+  async _runMenusHook(id, def, context) {
+    if (!def || typeof def.menus !== 'function') return false;
+
+    if (!context || !context.store) {
+      if (__DEV__) {
+        console.log(
+          `[ExtensionManager] Deferring menus for ${this._formatDisplayName(id)}: no store in this context`,
+        );
+      }
+      return false;
+    }
+
+    try {
+      await def.menus({
+        ...context,
+        // The caller's render context carries the host's own container.
+        // Menus is a lifecycle phase like any other, so it gets the same
+        // capability-scoped container every other phase does — it must not
+        // be the one hole an extension can resolve `jwt` or `db` through.
+        // eslint-disable-next-line no-underscore-dangle
+        container: this._hookContextFor(id).container,
+        // eslint-disable-next-line no-underscore-dangle
+        registry: this._scopedRegistry(id),
+      });
+      return true;
+    } catch (error) {
+      console.error(
+        `[ExtensionManager] Failed to register menus for ${this._formatDisplayName(id)}:`,
+        error,
+      );
+      return false;
+    }
   }
 
   /**
@@ -1443,7 +1479,11 @@ export class BaseExtensionManager {
     await this.emit('namespace:unloading', { ns });
 
     try {
-      const extensions = this.registry.getDefinitions(ns);
+      // Namespace-exact, unlike activation: an always-on extension is filed
+      // under the `'*'` wildcard that `getDefinitions` merges everywhere, and
+      // tearing it down because some unrelated route unmounted would strip
+      // its menus and slots on ordinary navigation.
+      const extensions = this.registry.getOwnDefinitions(ns);
       if (!extensions) return;
 
       const active = Array.from(extensions).filter(def =>
@@ -1671,6 +1711,32 @@ export class BaseExtensionManager {
    */
   getAllExtensionMetadata() {
     return Array.from(this[EXTENSION_METADATA].values());
+  }
+
+  /**
+   * Manifests the browser should load — everything this process is currently
+   * serving, and nothing it has torn down.
+   *
+   * `getAllExtensionMetadata()` is the raw map, and `unloadExtension` leaves
+   * an entry behind (state UNLOADED) so a later reload can reuse it. That
+   * makes the raw list wrong for the SSR payload: a deactivated extension
+   * would be handed to the browser, which fetches its bundle and lets it
+   * register its menus, routes and slots all over again — one hydration
+   * after the server dropped it. Failed loads are excluded for the same
+   * reason, and entries whose manifest never resolved because the client
+   * cannot load a null one.
+   *
+   * @returns {Array<Object>} Manifests of live extensions
+   */
+  getLoadableManifests() {
+    const torndown = new Set([
+      ExtensionState.UNLOADING,
+      ExtensionState.UNLOADED,
+      ExtensionState.FAILED,
+    ]);
+    return Array.from(this[EXTENSION_METADATA].values())
+      .filter(meta => meta && meta.manifest && !torndown.has(meta.state))
+      .map(meta => meta.manifest);
   }
 
   /**

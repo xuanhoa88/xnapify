@@ -172,6 +172,24 @@ describe('session.service', () => {
     expect(rotated.email).toBe(user.email);
   });
 
+  it('grants is_admin on rotation when the database says so', async () => {
+    // The mirror image of the demotion case: recomputing the claim must not
+    // silently strip admin from a real admin whose token predates the grant.
+    const adminRole = await models.Role.create({ name: 'admin' });
+
+    const first = await sessions.issueTokenPair(
+      { id: user.id, email: user.email, is_admin: false },
+      deps(),
+    );
+
+    await user.addRole(adminRole);
+
+    const next = await sessions.rotateTokenPair(first.refreshToken, deps());
+    expect(jwt.verifyTypedToken(next.accessToken, 'access').is_admin).toBe(
+      true,
+    );
+  });
+
   it('keeps non-authorization claims across rotation', async () => {
     const first = await sessions.issueTokenPair(
       {

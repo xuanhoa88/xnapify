@@ -736,6 +736,53 @@ describe('scopeRouteModule', () => {
     expect(req.app.get('container')).toBe(full);
   });
 
+  it('keeps the async handler scoped after the middleware ahead of it returns', async () => {
+    // Express runs the next layer from inside `next()`, so the middleware's
+    // swap is still installed when the handler's goes on top — and a
+    // synchronous middleware then unwinds first, while the handler is still
+    // awaiting. Restoring there handed the rest of the handler the FULL
+    // container and left the stale proxy on `req` for everything downstream.
+    const seen = {};
+    let release;
+    const gate = new Promise(resolve => {
+      release = resolve;
+    });
+
+    const mod = scopeRouteModule(
+      {
+        get: [
+          (req, _res, next) => {
+            seen.middleware = req.app.get('container');
+            next();
+          },
+          async (req, res) => {
+            await gate;
+            seen.afterAwait = req.app.get('container');
+            seen.afterAwaitRes = res.app.get('container');
+          },
+        ],
+      },
+      () => scoped,
+    );
+
+    const req = makeReq(full);
+    const res = { app: req.app };
+    let pending;
+    mod.get[0](req, res, () => {
+      pending = mod.get[1](req, res, () => {});
+    });
+
+    release();
+    await pending;
+
+    expect(seen.middleware).toBe(scoped);
+    expect(seen.afterAwait).toBe(scoped);
+    expect(seen.afterAwaitRes).toBe(scoped);
+    // ...and nothing scoped is left behind once the request is done
+    expect(req.app.get('container')).toBe(full);
+    expect(res.app.get('container')).toBe(full);
+  });
+
   it('scopes the container reachable through res.app too', async () => {
     // Express defines `app` on the response prototype as well, so scoping
     // req.app alone left res.app.get('container') fully unscoped.

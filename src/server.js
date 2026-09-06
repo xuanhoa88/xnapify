@@ -418,6 +418,30 @@ const ROTATABLE_AUTH_COOKIES = Object.freeze(['id_token', 'refresh_token']);
  * @param {Response} response - Loopback fetch response
  * @returns {void}
  */
+/**
+ * A Set-Cookie header that deletes rather than sets: empty value, Max-Age=0,
+ * or an Expires already in the past. Any of the three is how a server tells
+ * the browser to drop the cookie.
+ *
+ * @param {string} value - Raw cookie value (may be empty)
+ * @param {string} raw - The full Set-Cookie header
+ * @returns {boolean}
+ */
+function isCookieClear(value, raw) {
+  if (!value || value.trim() === '' || value.trim() === '""') return true;
+
+  const maxAge = /;\s*Max-Age\s*=\s*(-?\d+)/i.exec(raw);
+  if (maxAge && Number(maxAge[1]) <= 0) return true;
+
+  const expires = /;\s*Expires\s*=\s*([^;]+)/i.exec(raw);
+  if (expires) {
+    const at = Date.parse(expires[1].trim());
+    if (!Number.isNaN(at) && at <= Date.now()) return true;
+  }
+
+  return false;
+}
+
 function forwardLoopbackCookies(res, response) {
   try {
     if (!res || res.headersSent || !response || !response.headers) return;
@@ -429,11 +453,29 @@ function forwardLoopbackCookies(res, response) {
         : [headers.get('set-cookie')].filter(Boolean);
 
     for (const cookie of setCookies) {
-      const name = String(cookie).split('=')[0].trim();
+      const raw = String(cookie);
+      const [pair] = raw.split(';');
+      const eq = pair.indexOf('=');
+      const name = (eq === -1 ? pair : pair.slice(0, eq)).trim();
+      if (!ROTATABLE_AUTH_COOKIES.includes(name)) continue;
+
+      // Forward ROTATIONS only, never CLEARS.
+      //
+      // refreshToken.js calls clearAllAuthCookies(res) on reuse detection and
+      // on a revoked session, and those headers carry the same cookie names,
+      // so a name-only filter forwards them too. That matters because the
+      // loopback Cookie header is unchanged and createFetch retries GETs:
+      // a render that rotates and then retries replays the retired token,
+      // trips reuse detection, and the resulting clear is appended last and
+      // wins in the browser — logging the user out from a successful page
+      // render. Dropping clears restores the pre-forwarding behaviour for
+      // that case while keeping the rotation fix. Nothing is lost: a genuinely
+      // revoked session is still refused by the revocation store on the
+      // browser's next API call, which clears the cookies for real.
+      if (isCookieClear(pair.slice(eq + 1), raw)) continue;
+
       // Appended last, so the browser keeps the newest value for the name.
-      if (ROTATABLE_AUTH_COOKIES.includes(name)) {
-        res.append('Set-Cookie', cookie);
-      }
+      res.append('Set-Cookie', cookie);
     }
   } catch (err) {
     if (__DEV__) {
@@ -1056,9 +1098,7 @@ async function streamReactResponse(
         locale: context.locale,
         appState: {
           redux: context.store.getState(),
-          extensions: extensionManager
-            .getAllExtensionMetadata()
-            .map(m => m.manifest),
+          extensions: extensionManager.getLoadableManifests(),
         },
         nonce,
       };
@@ -1576,8 +1616,23 @@ async function validateWsToken(container, jwt, token) {
     jwt.cacheToken(token, decoded);
   }
 
-  // A valid signature is not enough: the session may have been revoked
-  await revocation.verifyActiveSession(container, decoded);
+  // A valid signature is not enough: the session may have been revoked.
+  //
+  // A store outage is a different condition from a revoked session and
+  // arrives as SessionStoreUnavailableError (status 503). Both refuse the
+  // handshake — failing closed is the right default for a long-lived socket
+  // — but an outage is logged distinctly so an operator can tell a Redis
+  // problem from a wave of stale tokens instead of reading it as auth noise.
+  try {
+    await revocation.verifyActiveSession(container, decoded);
+  } catch (error) {
+    if (error?.code === 'SESSION_STORE_UNAVAILABLE') {
+      console.error(
+        `[ws] session store unavailable, refusing handshake: ${error.message}`,
+      );
+    }
+    throw error;
+  }
 
   // `sid` lets session revocation close this socket later
   return { id: decoded.id, email: decoded.email, sid: decoded.sid };

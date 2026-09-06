@@ -80,7 +80,7 @@ Checksum operations are called directly (same-process):
 The checksum is the hash of two parts: the file tree **excluding `package.json`**,
 and the manifest with `integrity` and `builtAt` stripped and its keys sorted.
 The split is what makes the value verifiable at all — the build writes the
-checksum *into* the manifest it just hashed, so those two fields cannot be part
+checksum _into_ the manifest it just hashed, so those two fields cannot be part
 of their own input. Everything else in the manifest (entry points, dependencies,
 declared capabilities) is still covered, so tampering invalidates the hash.
 
@@ -91,18 +91,18 @@ imports — the build task loads it on plain Node ESM.
 
 ### Dependency Pinning
 
-Extensions installed at runtime (zip upload or hub download) are **intentionally
-unpinned**. `installExtensionDependencies()` passes `--no-package-lock`, so npm
-resolves the declared ranges at install time and writes no lockfile back. A
-lockfile shipped inside an extension package would describe the publisher's
-machine, not this deployment, and writing one back would mutate the directory
-the integrity hash covers.
+Extension dependencies are **pinned by lockfile**. `installExtensionDependencies()`
+runs `npm install` _without_ `--no-package-lock`, so a package that ships a
+`package-lock.json` is installed as its publisher tested it instead of
+re-resolving ranges like `^1.13.0` on every install. When a package ships none,
+npm resolves the declared ranges and writes the resulting lockfile; that is
+harmless because `package-lock.json` is excluded from the integrity hash.
 
-The bundled extensions under `src/extensions/` therefore ship **no
-`package-lock.json`**; `tools/npm/setup.js` falls back to `npm install` for
-sub-packages that have none. Do not commit one — it would be honoured by
-`npm ci` during development and ignored in production, which is the worst of
-both worlds.
+The bundled extensions under `src/extensions/` therefore commit a
+**lockfileVersion 3** `package-lock.json` each. `npm run setup` uses `npm ci`
+for any sub-package that has one, so the lockfile must stay in sync with its
+`package.json` — after changing an extension's `dependencies`, re-run
+`npm install` inside that extension and commit the updated lockfile.
 
 ### Queue-Based Handlers (`api/services/extension.workers.js`)
 

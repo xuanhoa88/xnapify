@@ -5,6 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import fs from 'fs';
+import path from 'path';
+
 import { validateEnv } from './env.js';
 
 const silent = { warn: jest.fn(), error: jest.fn() };
@@ -143,5 +146,35 @@ describe('validateEnv', () => {
     expect(result.errors).toEqual([
       expect.stringContaining('XNAPIFY_DB_POOL_MIN'),
     ]);
+  });
+});
+
+describe('.env.xnapify documents the validated schema', () => {
+  // A variable that validateEnv rejects but the template never mentions is a
+  // trap: the operator's only reference says nothing, and the first signal is
+  // a hard boot failure in production. XNAPIFY_JWT_CACHE_TTL reached main
+  // exactly that way after being renamed from XNAPIFY_SSR_CACHE_TTL.
+  //
+  // The reverse direction is deliberately not asserted: the template also
+  // carries runtime- and build-only keys (uploads, mail providers, OAuth
+  // credentials, XNAPIFY_PRECOMPRESS_BROTLI_QUALITY) that the boot validator
+  // does not police.
+  it('mentions every XNAPIFY_ key the zod schema validates', () => {
+    const root = path.resolve(__dirname, '../..');
+    const schemaSource = fs.readFileSync(
+      path.join(root, 'shared/config/env.js'),
+      'utf8',
+    );
+    const template = fs.readFileSync(path.join(root, '.env.xnapify'), 'utf8');
+
+    const declared = new Set(
+      [...schemaSource.matchAll(/(XNAPIFY_[A-Z0-9_]+)\s*:/g)].map(m => m[1]),
+    );
+    const documented = new Set(
+      [...template.matchAll(/(XNAPIFY_[A-Z0-9_]+)/g)].map(m => m[1]),
+    );
+
+    expect(declared.size).toBeGreaterThan(0);
+    expect([...declared].filter(key => !documented.has(key))).toEqual([]);
   });
 });

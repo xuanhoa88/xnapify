@@ -873,9 +873,13 @@ export class Router extends BaseRouter {
       }
       throw error;
     } finally {
-      // Restore the depth this pass found rather than assuming it is still
-      // `depth`: a nested pass has already restored its own.
-      this[RESOLVE_DEPTH_KEY] = depth - 1;
+      // Decrement rather than restoring `depth - 1`: a nested pass has
+      // already decremented its own, so both forms agree while resolves
+      // nest. They differ when two resolves overlap instead — a second
+      // navigation started before the first settled — where `depth - 1`
+      // leaves the counter permanently above zero, after which no pass is
+      // ever the outermost one and the metadata below is never cleared again.
+      this[RESOLVE_DEPTH_KEY] = Math.max(0, (this[RESOLVE_DEPTH_KEY] || 0) - 1);
 
       // Cleanup: Clear Sets to prevent memory leaks (only if allocated)
       if (ctx[ROUTE_MOUNT_KEY]) {

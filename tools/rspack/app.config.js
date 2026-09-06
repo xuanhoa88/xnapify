@@ -309,6 +309,9 @@ function createStatsWriterPlugin() {
  * and react-i18next are fully initialized before the app code runs.
  */
 const clientConfig = createRspackConfig('client', {
+  // Unique persistent-cache identity (see createRspackConfig): 'client' alone
+  // collides with every extension's client bundle.
+  cacheKey: 'app-client',
   entry: {
     client: [
       ...(isDev
@@ -387,6 +390,9 @@ const clientConfig = createRspackConfig('client', {
  * Targets Node.js environment with CommonJS output
  */
 const serverConfig = createRspackConfig('server', {
+  // Unique persistent-cache identity (see createRspackConfig): 'server' alone
+  // collides with every extension's server/api/nodes bundle.
+  cacheKey: 'app-server',
   entry: {
     server: [path.join(config.APP_DIR, 'server.js')],
   },

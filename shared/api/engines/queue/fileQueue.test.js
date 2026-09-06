@@ -1312,6 +1312,24 @@ describe('FileQueue concurrency & recovery', () => {
     expect(await q.getJobsByStatus('failed')).toHaveLength(1);
   });
 
+  it('runs the maintenance pass on a timer while processing', async () => {
+    const q = make({ maintenanceInterval: 60 });
+    const maintenance = jest.spyOn(q, 'maintenance');
+
+    // The sweep and the retention policy are only worth anything if something
+    // calls them — clean() previously had no caller outside tests.
+    expect(q.maintenanceTimer).toBeNull();
+    q.process(async () => 'ok');
+    expect(q.maintenanceTimer).not.toBeNull();
+
+    await waitFor(() => maintenance.mock.calls.length > 0, 2000);
+    expect(maintenance).toHaveBeenCalled();
+
+    await q.close();
+    expect(q.maintenanceTimer).toBeNull();
+    maintenance.mockRestore();
+  });
+
   // ==================================================================
   // Durability
   // ==================================================================

@@ -58,6 +58,9 @@ class ClientExtensionManager extends BaseExtensionManager {
           link.rel = 'stylesheet';
           link.href = url;
           link.setAttribute('data-extension-id', id);
+          // Distinguishes this tag from one the server put in the page, whose
+          // `error` fired long before anything here could listen for it.
+          link.setAttribute('data-extension-injected', 'true');
 
           const cleanupStale = () => {
             document
@@ -267,6 +270,21 @@ class ClientExtensionManager extends BaseExtensionManager {
       return Promise.resolve();
     }
 
+    // A tag the server emitted for this page, on a document that has finished
+    // loading: every stylesheet in the head has settled by then, so no `sheet`
+    // means it failed and its `error` event is long gone. Only a tag injected
+    // from here can still be in flight.
+    if (
+      !link.hasAttribute('data-extension-injected') &&
+      document.readyState === 'complete'
+    ) {
+      link.setAttribute('data-extension-css-error', 'true');
+      console.error(
+        `[ExtensionManager] Failed to load stylesheet for ${id}: ${link.href}`,
+      );
+      return Promise.resolve();
+    }
+
     return new Promise(resolve => {
       const done = () => {
         clearTimeout(timer);
@@ -382,6 +400,24 @@ class ClientExtensionManager extends BaseExtensionManager {
         return resolve();
       }
 
+      const loadFailed = () => {
+        const error = new Error(`Failed to load script: ${url}`);
+        error.code = 'SCRIPT_LOAD_FAILED';
+        error.url = url;
+        return error;
+      };
+
+      // A tag the server emitted for this page, as opposed to one this method
+      // appended. Server tags are `defer`, and a deferred script has NOT run
+      // when readiness flips to 'interactive' — the spec sets 'interactive'
+      // first and only then executes the deferred list. The host bundle is
+      // itself one of those scripts and extension tags follow it in document
+      // order, so at boot this method runs while the extension's own tag is
+      // still pending. Only 'complete' means every deferred script has had
+      // its turn and a missing container is a real failure.
+      const serverEmitted =
+        !!script && !script.hasAttribute('data-extension-injected');
+
       if (!script) {
         script = document.createElement('script');
         script.src = url;
@@ -389,39 +425,50 @@ class ClientExtensionManager extends BaseExtensionManager {
         script.setAttribute('data-extension-id', extensionId);
         script.setAttribute('data-extension-injected', 'true');
         document.body.appendChild(script);
-      } else if (
-        !script.hasAttribute('data-extension-injected') &&
-        document.readyState !== 'loading'
-      ) {
-        // A tag the server put in the page. Those are `defer`, so they have
-        // all run by the time parsing finishes — this one either defined its
-        // container (the caller checks that first and would not be here) or
-        // it failed, and its `error` event fired long before we could listen
-        // for it. Waiting would hang the activation, and with it the resolve
-        // that renders the page, forever.
-        const error = new Error(`Failed to load script: ${url}`);
-        error.code = 'SCRIPT_LOAD_FAILED';
-        error.url = url;
-        return reject(error);
+      } else if (serverEmitted && document.readyState === 'complete') {
+        // Every deferred script has executed and this one still has not
+        // defined its container, so it failed and its `error` event fired
+        // long before we could listen for it. Waiting would hang the
+        // activation, and with it the resolve that renders the page.
+        return reject(loadFailed());
       }
 
+      let settled = false;
       const cleanup = () => {
         script.removeEventListener('load', onLoad);
         script.removeEventListener('error', onError);
+        if (onWindowLoad) window.removeEventListener('load', onWindowLoad);
       };
       const onLoad = () => {
+        if (settled) return;
+        settled = true;
         script.setAttribute('data-loaded', 'true');
         cleanup();
         resolve();
       };
       const onError = e => {
+        if (settled) return;
+        settled = true;
         cleanup();
-        const error = new Error(`Failed to load script: ${url}`);
-        error.code = 'SCRIPT_LOAD_FAILED';
-        error.url = url;
+        const error = loadFailed();
         error.originalError = e;
         reject(error);
       };
+
+      // Bound the wait on a pending server tag. `load` fires after the last
+      // deferred script has executed, so a tag that has not fired by then
+      // never will — without this the activation would wait forever on a
+      // script whose `error` event we missed.
+      let onWindowLoad = null;
+      if (serverEmitted) {
+        onWindowLoad = () => {
+          if (settled) return;
+          settled = true;
+          cleanup();
+          reject(loadFailed());
+        };
+        window.addEventListener('load', onWindowLoad, { once: true });
+      }
 
       script.addEventListener('load', onLoad);
       script.addEventListener('error', onError);
@@ -539,7 +586,15 @@ class ClientExtensionManager extends BaseExtensionManager {
         error: err,
         phase: 'view-module',
       });
-      return null;
+      // Rethrow rather than return null. The base class reads null as
+      // "deliberately skipped for this environment" and records the
+      // extension as LOADED — but on the browser an API-only extension has
+      // no browser entry point and never reaches this method, so null here
+      // is only ever a failure. Reporting it as LOADED made a broken bundle
+      // indistinguishable from a healthy one: sync's failure telemetry never
+      // fired, and `_resolveLoadedId` returned null forever after, so every
+      // later lifecycle event for the extension silently no-oped.
+      throw err;
     }
   }
 
@@ -738,6 +793,25 @@ class ClientExtensionManager extends BaseExtensionManager {
   }
 
   /**
+   * Drop every trace the manager could rebuild an extension from.
+   *
+   * Used when there is no active instance to unload — `unloadExtension`
+   * bails in that case, so its own definition cleanup never runs.
+   *
+   * @param {string} id - Extension ID from WebSocket event
+   * @private
+   */
+  _forgetExtension(id) {
+    // eslint-disable-next-line no-underscore-dangle
+    const candidates = this._definitionIdsFor(id);
+    this[DEFERRED].delete(id);
+    for (const candidate of candidates) {
+      this.registry.removeDefinition(candidate);
+    }
+    this[EXTENSION_METADATA].delete(id);
+  }
+
+  /**
    * Full teardown: shutdown hook → translation cleanup → unload.
    * @param {string} id - Extension ID from WebSocket event
    * @private
@@ -745,7 +819,17 @@ class ClientExtensionManager extends BaseExtensionManager {
   async _teardownExtension(id) {
     // eslint-disable-next-line no-underscore-dangle
     const loadedId = this._resolveLoadedId(id);
-    if (!loadedId) return;
+    if (!loadedId) {
+      // Nothing active to unload, but the manager can still rebuild this
+      // extension: it is either parked in DEFERRED awaiting one of its
+      // slots, or it was loaded and then evicted by a namespace
+      // deactivation, which deliberately keeps the registry definition.
+      // Leaving either behind lets the next navigation resurrect an
+      // extension the operator just switched off.
+      // eslint-disable-next-line no-underscore-dangle
+      this._forgetExtension(id);
+      return;
+    }
 
     const ext = this[ACTIVE_EXTENSIONS].get(loadedId);
     if (ext && typeof ext.shutdown === 'function') {
@@ -791,8 +875,13 @@ class ClientExtensionManager extends BaseExtensionManager {
         break;
       }
 
+      // TAMPERED belongs here: the server deactivates an extension that
+      // fails integrity verification and announces it under that name, not
+      // as DEACTIVATED (extension.workers.js). Without it the browser kept
+      // running the very bundle the server had just quarantined.
       case 'EXTENSION_DEACTIVATED':
-      case 'EXTENSION_UNINSTALLED': {
+      case 'EXTENSION_UNINSTALLED':
+      case 'EXTENSION_TAMPERED': {
         // eslint-disable-next-line no-underscore-dangle
         await this._teardownExtension(extensionId);
         break;

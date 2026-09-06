@@ -92,17 +92,37 @@ describe('authenticateUser lockout policy', () => {
     await expect(login()).rejects.toMatchObject({ name: 'UserInactiveError' });
   });
 
-  it('keeps counting failures while the account is locked', async () => {
-    await user.update({
-      failed_login_attempts: 5,
-      locked_until: new Date(Date.now() + 60_000),
-    });
+  // Regression: counting during an active lock let an attacker burst requests
+  // inside one lock window, climb the backoff tiers to the 24 h cap and renew
+  // `locked_until` indefinitely — the permanent denial of service the
+  // time-boxed policy exists to prevent.
+  it('freezes the counter while the account is already locked', async () => {
+    const lockedUntil = new Date(Date.now() + 60_000);
+    await user.update({ failed_login_attempts: 5, locked_until: lockedUntil });
 
     await expect(login('wrong')).rejects.toMatchObject({
       name: 'InvalidCredentialsError',
     });
 
     await user.reload();
-    expect(user.failed_login_attempts).toBe(6);
+    expect(user.failed_login_attempts).toBe(5);
+    expect(user.locked_until.getTime()).toBe(lockedUntil.getTime());
+  });
+
+  it('cannot have its lock extended by repeated failures', async () => {
+    const lockedUntil = new Date(Date.now() + 60_000);
+    await user.update({ failed_login_attempts: 5, locked_until: lockedUntil });
+
+    for (let i = 0; i < 25; i += 1) {
+      await expect(login('wrong')).rejects.toMatchObject({
+        name: 'InvalidCredentialsError',
+      });
+    }
+
+    await user.reload();
+    // Neither the tier nor the deadline moved, so the lock still lapses on
+    // schedule instead of being pushed forward forever.
+    expect(user.failed_login_attempts).toBe(5);
+    expect(user.locked_until.getTime()).toBe(lockedUntil.getTime());
   });
 });

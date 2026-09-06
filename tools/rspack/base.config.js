@@ -41,8 +41,29 @@ const isDev = nodeEnv !== 'production';
 const isProfile =
   process.argv.includes('--profile') || config.env('RSPACK_PROFILE') === 'true';
 const verbose = isVerbose();
+// In-memory compilation cache: always on in dev, never in prod.
+const useMemoryCache = isDev;
+
+// Rspack's *persistent* (filesystem) cache is OPT-IN and defaults to OFF.
+//
+// It belongs at top-level `cache` — `experiments.cache` is not a key
+// @rspack/core 2.0.1 implements, and unknown `experiments` keys pass
+// validation untouched, so configuring it there silently does nothing.
+// That is how it sat here dead: the documented dev cold-start win never
+// happened and `.cache/rspack` was never created.
+//
+// Wiring it up correctly then exposed why it cannot be on by default:
+// rspack_storage PANICS (SIGABRT, killing the dev task) when two
+// transactions touch one storage directory —
+//   crates/rspack_storage/src/filesystem/db/transaction/mod.rs:53
+//   "Transaction already in progress by process <pid> in directory ..."
+// `npm run dev` drives 14+ concurrent compilers (app client, app server and
+// 12 extensions, each with client/server/api/nodes bundles) and rebuilds
+// them on watch, and contention is reached even with a directory used by a
+// single compiler. Until that is fixed upstream, correctness beats a warm
+// cache: set RSPACK_PERSISTENT_CACHE=true to experiment with it.
 const usePersistentCache =
-  isDev && config.env('RSPACK_PERSISTENT_CACHE') !== 'false';
+  isDev && config.env('RSPACK_PERSISTENT_CACHE') === 'true';
 
 // Resolve .browserslistrc query strings once per build session.
 // LightningCssMinimizerRspackPlugin expects browserslist QUERIES (e.g. '> 0.5%'),
@@ -859,7 +880,17 @@ function createRspackConfig(name, options = {}) {
   const isServer = name === 'server';
 
   // Extract additionalModuleDirs before forwarding to merge
-  const { additionalModuleDirs, ...mergeOptions } = options;
+  const { additionalModuleDirs, cacheKey, ...mergeOptions } = options;
+
+  // `name` is a ROLE ('server' | 'client'), not an identity: the app and every
+  // extension bundle reuse both values, so it can never key a cache directory.
+  // Persistent cache is therefore opt-in via an explicit, globally unique
+  // `cacheKey`. Two compilers sharing one storage directory abort the process
+  // with `Transaction already in progress` from rspack_storage.
+  const cacheDir = cacheKey
+    ? String(cacheKey).replace(/[^a-zA-Z0-9._-]+/g, '-')
+    : null;
+  const usePersistentCacheHere = usePersistentCache && Boolean(cacheDir);
 
   return merge(
     {
@@ -967,21 +998,18 @@ function createRspackConfig(name, options = {}) {
       // Stop compilation on first error
       bail: !isDev,
 
-      // Persistent cache for development restarts and rebuilds. Production
-      // builds stay cold so an artifact never depends on a stale cache.
-      // Opt out with RSPACK_PERSISTENT_CACHE=false.
-      //
-      // This belongs at TOP-LEVEL `cache`. `experiments.cache` is not a key
-      // @rspack/core 2.0.1 implements, and unknown `experiments` keys pass
-      // validation untouched, so configuring it there silently no-ops and
-      // every dev restart pays a full cold compile.
-      cache: usePersistentCache
+      // Compilation cache. Persistent (filesystem) only when a compiler
+      // declares a unique `cacheKey` AND RSPACK_PERSISTENT_CACHE=true;
+      // otherwise in-memory. Production always cold, so an artifact never
+      // depends on a stale cache. See the flag definitions at the top of
+      // this file for why persistent is opt-in.
+      cache: usePersistentCacheHere
         ? {
             type: 'persistent',
             version: `${nodeEnv}:${pkg.version}`,
             storage: {
               type: 'filesystem',
-              directory: path.join(config.CWD, '.cache', 'rspack', name),
+              directory: path.join(config.CWD, '.cache', 'rspack', cacheDir),
             },
             // Every file that shapes the compilation but is not itself a
             // module in the graph. Miss one and its edits are invisible to
@@ -996,7 +1024,9 @@ function createRspackConfig(name, options = {}) {
               path.join(config.CWD, 'package.json'),
             ],
           }
-        : false,
+        : // In-memory cache only. Shared safely by any number of concurrent
+          // compilers, and what every compiler used before this was wired up.
+          useMemoryCache,
 
       // Enable source maps for debugging
       // Server uses eval-source-map (fast + accurate) instead of full source-map

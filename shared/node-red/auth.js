@@ -277,10 +277,9 @@ async function isRefreshSessionLive(container, req) {
 
   let jti;
   try {
-    ({ jti } = container.resolve('jwt').verifyTypedToken(
-      refreshToken,
-      'refresh',
-    ));
+    ({ jti } = container
+      .resolve('jwt')
+      .verifyTypedToken(refreshToken, 'refresh'));
   } catch {
     return false;
   }

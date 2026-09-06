@@ -40,6 +40,38 @@ function connect(server, socket) {
   }
 }
 
+describe('channel types', () => {
+  let server;
+
+  beforeEach(() => {
+    server = new WebSocketServer({ enableLogging: false });
+  });
+
+  it('creates a private channel as PRIVATE, not PUBLIC', () => {
+    // ChannelType.PRIVATE was missing from the enum, so this call passed
+    // `undefined` as the type, _createChannel's default parameter made the
+    // channel PUBLIC, and CHANNEL_SUBSCRIBE's ownership check compared
+    // `channel.type` against `undefined` and never fired — any socket could
+    // subscribe to another user's `user:<id>` channel.
+    expect(ChannelType.PRIVATE).toBe('private');
+
+    server.createPrivateChannel('user-1');
+    const channel = server.channels.get('user:user-1');
+
+    expect(channel.type).toBe(ChannelType.PRIVATE);
+    expect(channel.type).not.toBe(ChannelType.PUBLIC);
+    expect(channel.metadata.userId).toBe('user-1');
+  });
+
+  it('refuses a channel whose type it does not know', () => {
+    // Failing closed is what stops a future channel kind from silently
+    // becoming world-readable the way `private` did.
+    // eslint-disable-next-line no-underscore-dangle
+    expect(server._createChannel('odd', 'not-a-type', {})).toBe(false);
+    expect(server.channels.has('odd')).toBe(false);
+  });
+});
+
 describe('WebSocketServer fan-out', () => {
   let bus;
   let a;

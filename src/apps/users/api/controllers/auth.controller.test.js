@@ -357,6 +357,24 @@ describe('Auth Controller', () => {
       expect(cookies.clearAllAuthCookies).toHaveBeenCalledWith(res);
     });
 
+    it('reports a concurrent rotation as retryable and keeps the cookies', async () => {
+      cookies.getRefreshTokenFromCookie.mockReturnValue('racing-token');
+      const error = new Error('Refresh token is already being rotated');
+      error.name = 'RefreshTokenRotationConflictError';
+      error.status = 409;
+      sessionService.rotateTokenPair.mockRejectedValueOnce(error);
+
+      await authController.refreshToken(req, res);
+
+      expect(mockHttp.sendError).toHaveBeenCalledWith(
+        res,
+        'Token refresh already in progress',
+        409,
+      );
+      expect(cookies.clearAllAuthCookies).not.toHaveBeenCalled();
+      expect(mockHttp.sendServerError).not.toHaveBeenCalled();
+    });
+
     it('should reject a replayed (already rotated) refresh token', async () => {
       cookies.getRefreshTokenFromCookie.mockReturnValue('replayed-token');
       const error = new Error('reused');

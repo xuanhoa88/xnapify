@@ -569,6 +569,9 @@ export async function resetUserPassword(
     password: newPassword,
     failed_login_attempts: 0,
     is_locked: false,
+    // Same as updateUserById: the automatic lockout has its own column and
+    // an "unlock" that leaves it set does nothing.
+    locked_until: null,
   });
 
   // Emit hook event

@@ -183,7 +183,12 @@ function createRouterOptions(extension) {
         log('Failed to load extension namespace: ' + err, 'error');
       }
     },
-    async onRouteDestroy(route) {
+    // `onRouteUnmount` is the name the router calls (see runUnmount in
+    // shared/renderer/router/lifecycle.js). This was declared as
+    // `onRouteDestroy`, which nothing invokes, so namespace teardown never
+    // ran in the browser and a plugin activated for one route stayed booted
+    // for the life of the page.
+    async onRouteUnmount(route) {
       try {
         const ns = getRouteNamespace(route);
         if (ns) {

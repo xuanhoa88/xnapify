@@ -205,18 +205,33 @@ export async function authenticateUser(
   // reason is simply not disclosed until the password is right.
   const isValidPassword = await verifyPassword(password, user.password);
   if (!isValidPassword) {
-    const attempts = (user.failed_login_attempts || 0) + 1;
-    const updates = { failed_login_attempts: attempts };
+    // The counter FREEZES while an automatic lock is in force. Counting
+    // during the lock window would let an attacker burst requests inside one
+    // 15-minute lock, climb the backoff tiers to the 24 h cap and then keep
+    // pushing `locked_until` forward forever — the lapse-reset above would
+    // never fire because the lock is continuously renewed. That is precisely
+    // the permanent denial of service the time-boxed policy exists to
+    // prevent, so a locked account absorbs further wrong passwords without
+    // extending its own sentence.
+    //
+    // The password is still verified above, and the error below is still the
+    // generic one, so nothing here tells the caller whether the account
+    // exists or is locked.
+    if (!autoLocked) {
+      const attempts = (user.failed_login_attempts || 0) + 1;
+      const updates = { failed_login_attempts: attempts };
 
-    // Time-boxed lockout with exponential backoff: 5 failures → 15 min,
-    // 10 → 30 min, 15 → 60 min … capped at 24 h. Never permanent, so an
-    // attacker cannot lock a victim out indefinitely by spamming bad passwords.
-    if (attempts >= LOCKOUT_THRESHOLD) {
-      const tier = Math.floor(attempts / LOCKOUT_THRESHOLD) - 1;
-      const lockMs = Math.min(LOCKOUT_BASE_MS * 2 ** tier, LOCKOUT_MAX_MS);
-      updates.locked_until = new Date(now + lockMs);
+      // Time-boxed lockout with exponential backoff: 5 failures → 15 min,
+      // 10 → 30 min, 15 → 60 min … capped at 24 h. Never permanent, so an
+      // attacker cannot lock a victim out indefinitely by spamming bad
+      // passwords.
+      if (attempts >= LOCKOUT_THRESHOLD) {
+        const tier = Math.floor(attempts / LOCKOUT_THRESHOLD) - 1;
+        const lockMs = Math.min(LOCKOUT_BASE_MS * 2 ** tier, LOCKOUT_MAX_MS);
+        updates.locked_until = new Date(now + lockMs);
+      }
+      await user.update(updates);
     }
-    await user.update(updates);
 
     const error = new Error('Invalid credentials');
     error.name = 'InvalidCredentialsError';
@@ -444,6 +459,9 @@ export async function resetPasswordConfirmation(
     password_changed_at: new Date(),
     failed_login_attempts: 0,
     is_locked: false,
+    // The automatic lockout lives in its own column: without clearing it a
+    // user who was locked out cannot recover through the reset email either.
+    locked_until: null,
   });
 
   // Mark token as used (single-use enforcement)

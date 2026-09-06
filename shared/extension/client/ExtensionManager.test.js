@@ -430,6 +430,70 @@ describe('ClientExtensionManager', () => {
     });
   });
 
+  describe('cold boot through the real script loader', () => {
+    it('boots an extension whose defer tag executes after the host bundle', async () => {
+      // The seam that actually failed in production, and the one every other
+      // test in this file bypasses by stubbing _loadExtensionModule: boot →
+      // real _loadScript → activation → menus. On a cold page load the host
+      // bundle runs at readyState 'interactive' with the extension's own
+      // defer tag still pending further down the document.
+      Object.defineProperty(document, 'readyState', {
+        value: 'interactive',
+        configurable: true,
+      });
+
+      const ID = 'cold-boot';
+      const store = { dispatch: jest.fn(), getState: () => ({}) };
+      clientManager.viewContext = {
+        store,
+        i18n: { t: (_k, fallback) => fallback },
+      };
+
+      const ext = {
+        menus: jest.fn(({ store: s }) => s.dispatch({ type: 'registerMenu' })),
+        shutdown: jest.fn(({ store: s }) =>
+          s.dispatch({ type: 'unregisterMenu' }),
+        ),
+        routes: () => ({ files: () => [], load: () => ({}) }),
+      };
+
+      const script = document.createElement('script');
+      script.setAttribute('data-extension-id', ID);
+      document.body.appendChild(script);
+
+      // The deferred script executes on a later task, exactly as the browser
+      // runs it after the host bundle finishes.
+      setTimeout(() => {
+        window[`extension_${ID}`] = {
+          init: jest.fn().mockResolvedValue(true),
+          get: jest.fn().mockResolvedValue(() => ext),
+        };
+        script.dispatchEvent(new Event('load'));
+      }, 0);
+
+      await clientManager.sync([
+        { id: ID, name: '@xnapify-extension/cold', hasClientScript: true },
+      ]);
+
+      // Loaded, active, and its navigation registered.
+      expect(clientManager[ACTIVE_EXTENSIONS].has(ID)).toBe(true);
+      expect(ext.menus).toHaveBeenCalledTimes(1);
+      expect(store.dispatch).toHaveBeenCalledWith({ type: 'registerMenu' });
+
+      // ...and because it is genuinely loaded, deactivation can find it.
+      await clientManager.processLifecycleEvent({
+        type: 'EXTENSION_DEACTIVATED',
+        extensionId: ID,
+      });
+      expect(ext.shutdown).toHaveBeenCalledTimes(1);
+      expect(store.dispatch).toHaveBeenCalledWith({ type: 'unregisterMenu' });
+      expect(clientManager[ACTIVE_EXTENSIONS].has(ID)).toBe(false);
+
+      clientManager.viewContext = null;
+      delete window[`extension_${ID}`];
+    });
+  });
+
   describe('route injection', () => {
     let mockRouter;
 
@@ -666,13 +730,53 @@ describe('ClientExtensionManager', () => {
     });
   });
 
+  describe('processLifecycleEvent', () => {
+    it('tears down an extension the server quarantined as tampered', async () => {
+      // A bundle that fails integrity verification is deactivated
+      // server-side and announced as EXTENSION_TAMPERED, never
+      // EXTENSION_DEACTIVATED. Without a case for it the browser kept
+      // running the quarantined code until a reload.
+      const teardown = jest
+        .spyOn(clientManager, '_teardownExtension')
+        .mockResolvedValue(undefined);
+
+      await clientManager.processLifecycleEvent({
+        type: 'EXTENSION_TAMPERED',
+        extensionId: 'ext-bad',
+      });
+
+      expect(teardown).toHaveBeenCalledWith('ext-bad');
+    });
+  });
+
   describe('_loadScript', () => {
+    const setReadyState = value =>
+      Object.defineProperty(document, 'readyState', {
+        value,
+        configurable: true,
+      });
+
+    const serverTag = id => {
+      // A tag the server emitted: it carries data-extension-id but NOT
+      // data-extension-injected, which _loadScript stamps on its own.
+      const script = document.createElement('script');
+      script.setAttribute('data-extension-id', id);
+      document.body.appendChild(script);
+      return script;
+    };
+
+    const flush = () => new Promise(resolve => setTimeout(resolve, 0));
+
+    afterEach(() => setReadyState('complete'));
+
     it('gives up on a server-emitted tag that already failed', async () => {
-      // The server now emits <script defer data-extension-id> for a deferred
-      // extension on the page that renders its slots. Defer scripts have all
-      // run by the time parsing ends, so if the container is still missing
-      // the fetch failed and its error event fired before anyone listened.
-      // Waiting for a second one would hang the resolve that renders the page.
+      // The server emits <script defer data-extension-id> for a deferred
+      // extension on the page that renders its slots. At readiness
+      // 'complete' every deferred script has executed, so a still-missing
+      // container means the fetch failed and its error event fired before
+      // anyone listened. Waiting for a second one would hang the resolve
+      // that renders the page.
+      setReadyState('complete');
       const script = document.createElement('script');
       script.src = '/api/extensions/quick/static/remote.js';
       script.setAttribute('data-extension-id', 'quick');
@@ -685,6 +789,51 @@ describe('ClientExtensionManager', () => {
           'quick',
         ),
       ).rejects.toMatchObject({ code: 'SCRIPT_LOAD_FAILED' });
+    });
+
+    it('waits for a server-emitted defer tag that has not executed yet', async () => {
+      // Readiness flips to 'interactive' BEFORE the deferred list executes,
+      // and the host bundle is itself one of those scripts with the
+      // extension tags after it in document order — so at boot the tag is
+      // still pending. Treating that as a failure made every extension fail
+      // to load on a cold page load, silently, because the failure was then
+      // recorded as ExtensionState.LOADED.
+      setReadyState('interactive');
+      const script = serverTag('ext-pending');
+
+      // eslint-disable-next-line no-underscore-dangle
+      const pending = clientManager._loadScript('/x.js', 'ext-pending');
+      let settled = false;
+      pending.then(
+        () => {
+          settled = true;
+        },
+        () => {
+          settled = true;
+        },
+      );
+      await flush();
+      expect(settled).toBe(false);
+
+      script.dispatchEvent(new Event('load'));
+      await expect(pending).resolves.toBeUndefined();
+      expect(script.getAttribute('data-loaded')).toBe('true');
+    });
+
+    it('gives up on a pending tag when the document finishes loading', async () => {
+      // The wait has to be bounded, or a tag whose error we missed would
+      // hang the activation — and with it the resolve that renders the page.
+      setReadyState('interactive');
+      serverTag('ext-never');
+
+      // eslint-disable-next-line no-underscore-dangle
+      const pending = clientManager._loadScript('/x.js', 'ext-never');
+      await flush();
+      window.dispatchEvent(new Event('load'));
+
+      await expect(pending).rejects.toMatchObject({
+        code: 'SCRIPT_LOAD_FAILED',
+      });
     });
 
     it('still waits on a tag it injected itself', async () => {
@@ -724,6 +873,7 @@ describe('ClientExtensionManager', () => {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
       link.setAttribute('data-extension-id', 'quick');
+      link.setAttribute('data-extension-injected', 'true');
       document.head.appendChild(link);
 
       // eslint-disable-next-line no-underscore-dangle
@@ -760,6 +910,7 @@ describe('ClientExtensionManager', () => {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
       link.setAttribute('data-extension-id', 'quick');
+      link.setAttribute('data-extension-injected', 'true');
       document.head.appendChild(link);
 
       // eslint-disable-next-line no-underscore-dangle
@@ -771,6 +922,35 @@ describe('ClientExtensionManager', () => {
       expect(console.error).toHaveBeenCalledWith(
         expect.stringContaining('Failed to load stylesheet'),
       );
+    });
+
+    it('gives up at once on a server-emitted link that already failed', async () => {
+      // The tag the server put in the head for a deferred extension carries no
+      // error handler, so nothing marks it. On a finished document every head
+      // stylesheet has settled, so a missing `sheet` is a failure whose error
+      // event is long gone — waiting for it burned the whole timeout.
+      jest.useFakeTimers();
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = '/api/extensions/quick/static/ext.css';
+      link.setAttribute('data-extension-id', 'quick');
+      document.head.appendChild(link);
+      expect(document.readyState).toBe('complete');
+
+      let settled = false;
+      // eslint-disable-next-line no-underscore-dangle
+      const pending = clientManager._settleStylesheet('quick').then(() => {
+        settled = true;
+      });
+
+      // No timers advanced: nothing may be waiting on one.
+      await pending;
+      expect(settled).toBe(true);
+      expect(link.getAttribute('data-extension-css-error')).toBe('true');
+      expect(console.error).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to load stylesheet'),
+      );
+      jest.useRealTimers();
     });
 
     it('marks the link when the injected stylesheet errors', async () => {
@@ -795,6 +975,7 @@ describe('ClientExtensionManager', () => {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
       link.setAttribute('data-extension-id', 'quick');
+      link.setAttribute('data-extension-injected', 'true');
       document.head.appendChild(link);
 
       // eslint-disable-next-line no-underscore-dangle

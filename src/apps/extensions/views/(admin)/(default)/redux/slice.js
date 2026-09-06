@@ -141,6 +141,28 @@ const extensionsSlice = createSlice({
       normalized.operations.uninstall.error = null;
       Object.assign(state, normalized);
     },
+    /**
+     * Drop a row's transient `job_status`.
+     *
+     * The card renders a pending badge instead of the switch whenever the row
+     * carries one (ExtensionCard resolvedActionLabel), and the toggle
+     * response injects it. Clearing the client-side actionMap alone is not
+     * enough — and it also cancels the safety timer — so a completion event
+     * has to strip the server-side half too, or the badge outlives the job
+     * it describes.
+     */
+    clearExtensionJobStatus: (state, action) => {
+      const normalized = normalizeState(state);
+      const index = findExtensionIndex(normalized.data.extensions, {
+        id: action.payload,
+      });
+      if (index !== -1 && normalized.data.extensions[index].job_status) {
+        const { job_status: _dropped, ...rest } =
+          normalized.data.extensions[index];
+        normalized.data.extensions[index] = rest;
+        Object.assign(state, normalized);
+      }
+    },
     resetExtensionsState: () => initialState,
   },
   extraReducers: builder => {
@@ -241,6 +263,7 @@ export const {
   clearExtensionUploadError,
   clearExtensionToggleError,
   clearExtensionUninstallError,
+  clearExtensionJobStatus,
   resetExtensionsState,
 } = extensionsSlice.actions;
 

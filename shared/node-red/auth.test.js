@@ -45,10 +45,7 @@ describe('node-red auth', () => {
       jwt,
       auth: { middlewares: { hasPermission: jest.fn(() => true) } },
       models: { User, RefreshToken },
-      hook: Object.assign(
-        () => ({ invoke: jest.fn() }),
-        { has: () => false },
-      ),
+      hook: Object.assign(() => ({ invoke: jest.fn() }), { has: () => false }),
     };
 
     app = {

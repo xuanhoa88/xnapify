@@ -107,12 +107,28 @@ function buildSchema(nodeEnv) {
       .trim()
       .regex(/^(auto|true|false|\d+)$/i, 'must be an integer or "auto"')
       .optional(),
+    // Set by the cluster primary on each fork and read back by
+    // shared/utils/runtime.js as the authoritative worker count.
+    XNAPIFY_CLUSTER_SIZE: optionalInt(1, 1024),
     XNAPIFY_NODERED_ENABLED: optionalBool,
     XNAPIFY_COMPRESSION: optionalBool,
+
+    // Explicit signal that TLS is terminated in front of this process.
+    // `upgrade-insecure-requests` and HSTS are emitted on the strength of
+    // this, not of NODE_ENV: the header is honoured on insecure origins, so
+    // asserting it on a plain-HTTP deployment breaks every subresource.
+    XNAPIFY_TLS_TERMINATED: optionalBool,
+
     XNAPIFY_MAINTENANCE_MODE: optionalBool,
-    XNAPIFY_MAINTENANCE_BYPASS_TOKEN: isProd
-      ? z.string().min(16).optional()
-      : z.string().optional(),
+    // 16 in every environment. A production-only floor let an 8-15 character
+    // token work in dev and then throw at production boot, which is the
+    // worst moment to discover it.
+    XNAPIFY_MAINTENANCE_BYPASS_TOKEN: z.string().min(16).optional(),
+
+    // Comma-separated extension ids allowed to declare the `*` capability.
+    // Read by shared/extension/utils/compat.js; without membership here a
+    // manifest cannot grant itself the full container.
+    XNAPIFY_TRUSTED_EXTENSIONS: z.string().trim().optional(),
 
     XNAPIFY_HUB_REGISTRY_URL: z.string().trim().url().optional(),
 

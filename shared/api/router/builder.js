@@ -135,7 +135,12 @@ export function buildRoutes(
     routeMap.set(pathname, {
       module,
       path: pathname,
-      action: createAction(pageInfo, matchedConfigs, matchedMiddlewares),
+      action: createAction(
+        pageInfo,
+        matchedConfigs,
+        matchedMiddlewares,
+        pathname,
+      ),
       translations: buildTranslationsLoader(
         matchedConfigs,
         module.translations,

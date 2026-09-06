@@ -33,6 +33,9 @@ function createMockRegistry() {
     // removeDefinition clears what it is. See Registry.removeDefinition.
     removeDefinition: jest.fn(),
     getDefinitions: jest.fn(),
+    // Namespace-exact lookup: teardown uses this so it cannot reach the
+    // '*' wildcard set that getDefinitions merges into every namespace.
+    getOwnDefinitions: jest.fn(),
     has: jest.fn(),
     findDefinition: jest.fn().mockReturnValue(null),
     runInstallHook: jest.fn().mockResolvedValue(true),
@@ -269,6 +272,7 @@ describe('BaseExtensionManager', () => {
   describe('menus hook', () => {
     it("runs an extension's menus hook, before boot", async () => {
       await initManager();
+      manager.viewContext = { store: { dispatch: jest.fn() } };
       const order = [];
       const def = {
         id: 'mod-menus',
@@ -312,8 +316,35 @@ describe('BaseExtensionManager', () => {
       expect(ctx.registry).toBeDefined();
     });
 
+    it('skips menus when the context has no store to dispatch into', async () => {
+      // The server never sets viewContext — its store is per request — so
+      // activating there used to call menus({ store: undefined }) and throw
+      // "Cannot read properties of undefined (reading 'dispatch')". The
+      // request-scoped runViewMenus() is what covers the server.
+      await initManager();
+      expect(manager.viewContext).toBeNull();
+
+      const boot = jest.fn();
+      const menus = jest.fn(({ store }) => store.dispatch({}));
+      const def = { id: 'mod-no-store', menus, boot };
+      registry.findDefinition.mockReturnValue(def);
+
+      // eslint-disable-next-line no-underscore-dangle
+      await manager._postLoad('mod-no-store', def, { slots: [] });
+
+      expect(menus).not.toHaveBeenCalled();
+      expect(boot).toHaveBeenCalledTimes(1);
+      expect(manager[ACTIVE_EXTENSIONS].has('mod-no-store')).toBe(true);
+
+      // ...and the same extension still gets its menu once a store shows up.
+      const store = { dispatch: jest.fn() };
+      expect(await manager.runViewMenus({ store })).toBe(1);
+      expect(menus).toHaveBeenCalledTimes(1);
+    });
+
     it('does not let a failing menus hook stop the extension booting', async () => {
       await initManager();
+      manager.viewContext = { store: { dispatch: jest.fn() } };
       const boot = jest.fn();
       const def = {
         id: 'mod-bad-menus',
@@ -328,6 +359,64 @@ describe('BaseExtensionManager', () => {
       await manager._postLoad('mod-bad-menus', def, { slots: [] });
 
       expect(boot).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('deactivateViewNamespace', () => {
+    it('never tears down an always-on extension', async () => {
+      await initManager();
+      // `getDefinitions` merges the '*' set into every namespace so that
+      // activation covers always-on extensions wherever the user navigates.
+      // Teardown must not inherit that: leaving one route's namespace would
+      // otherwise shut down an extension that lives on every page.
+      const wildcard = { id: 'always-on', shutdown: jest.fn() };
+      const scoped = { id: 'login-only', shutdown: jest.fn() };
+      manager[ACTIVE_EXTENSIONS].set('always-on', wildcard);
+      manager[ACTIVE_EXTENSIONS].set('login-only', scoped);
+
+      // getOwnDefinitions returns the namespace's own set; getDefinitions
+      // would have returned both.
+      registry.getOwnDefinitions.mockReturnValue(new Set([scoped]));
+      registry.getDefinitions.mockReturnValue(new Set([scoped, wildcard]));
+
+      await manager.deactivateViewNamespace('login');
+
+      expect(scoped.shutdown).toHaveBeenCalledTimes(1);
+      expect(wildcard.shutdown).not.toHaveBeenCalled();
+      expect(manager[ACTIVE_EXTENSIONS].has('always-on')).toBe(true);
+    });
+  });
+
+  describe('getLoadableManifests', () => {
+    it('does not offer the browser an extension the server tore down', async () => {
+      await initManager();
+      // unloadExtension leaves the metadata behind (state UNLOADED) so a
+      // later reload can reuse it. Serialising that raw map into the SSR
+      // payload handed the browser a deactivated extension, which fetched
+      // its bundle and re-registered its menus one hydration later.
+      manager[EXTENSION_METADATA].set('live', {
+        state: ExtensionState.ACTIVE,
+        manifest: { id: 'live' },
+      });
+      manager[EXTENSION_METADATA].set('no-entry-point', {
+        state: ExtensionState.LOADED,
+        manifest: { id: 'no-entry-point' },
+      });
+      manager[EXTENSION_METADATA].set('deactivated', {
+        state: ExtensionState.UNLOADED,
+        manifest: { id: 'deactivated' },
+      });
+      manager[EXTENSION_METADATA].set('broken', {
+        state: ExtensionState.FAILED,
+        manifest: null,
+      });
+
+      // LOADED stays: an extension with neither `browser` nor `main` never
+      // reaches ACTIVE yet is perfectly live.
+      expect(manager.getLoadableManifests().map(m => m.id)).toEqual([
+        'live',
+        'no-entry-point',
+      ]);
     });
   });
 

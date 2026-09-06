@@ -340,11 +340,30 @@ async function buildApiRouter(app, extension) {
   // request, and 14 failed verifications for a bad cookie).
   router.use(...apiMiddlewares);
 
-  // Discover and run module lifecycles (container-only DI)
-  const { apiRoutes } = await discoverModules(
+  // Discover and run module lifecycles (container-only DI).
+  //
+  // `errors` was previously discarded. discoverModules throws for a failed
+  // CORE module and for any failed migration, but every other non-core
+  // failure (models, seeds, boot, routes) is only collected — so a module
+  // could fail to load and the server would serve traffic with a single
+  // warn line as the sole trace. Surface them here at error level, named,
+  // so a half-loaded deployment is visible rather than inferred.
+  const { apiRoutes, errors: moduleErrors = [] } = await discoverModules(
     apisContext,
     app.get('container'),
   );
+
+  if (moduleErrors.length > 0) {
+    log(
+      `${moduleErrors.length} module lifecycle error(s) — these modules are degraded:`,
+      'error',
+    );
+    for (const err of moduleErrors) {
+      // createLoadError shape: { moduleName, path: '<phase>()', message }
+      const where = [err.moduleName, err.path].filter(Boolean).join(' ');
+      log(`  [${where || 'unknown'}] ${err.message || err}`, 'error');
+    }
+  }
 
   // Mount module API routes
   for (const [name, adapter] of apiRoutes) {

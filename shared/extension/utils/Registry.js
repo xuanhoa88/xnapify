@@ -263,6 +263,25 @@ class ExtensionRegistry {
   }
 
   /**
+   * Definitions filed under exactly this namespace, without the `'*'` merge.
+   *
+   * The wildcard set holds always-on extensions — module-type ones with
+   * `routes()`, and anything else with no declared slots. `getDefinitions`
+   * merges them into every namespace on purpose, so activation covers them
+   * wherever the user navigates. Teardown must NOT: a route leaving the
+   * `login` namespace has no business shutting down an extension that lives
+   * on every page, and doing so tore down its menus and slots on ordinary
+   * navigation.
+   *
+   * @param {string} ns - Namespace
+   * @returns {Set|null} Definitions declared for this namespace alone
+   */
+  getOwnDefinitions(ns) {
+    const exact = this[DEFINITIONS].get(ns);
+    return exact && exact.size > 0 ? new Set(exact) : null;
+  }
+
+  /**
    * Get all extension definitions for a namespace
    * @param {string} ns - Namespace
    * @returns {Set|null} Set of extension definitions or null

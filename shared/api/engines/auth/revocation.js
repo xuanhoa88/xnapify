@@ -322,6 +322,7 @@ export async function assertSessionValid(
   }
 
   let current;
+  let durableFailed = false;
   if (!storeFailed) {
     try {
       current = await store.getUserVersion(decoded.id);
@@ -348,6 +349,8 @@ export async function assertSessionValid(
         }
       }
     } catch (error) {
+      // The database was the fallback; losing it too leaves no verdict.
+      durableFailed = true;
       logger.error(
         '[Revocation] Durable token_version lookup failed:',
         (error && error.message) || error,
@@ -366,8 +369,10 @@ export async function assertSessionValid(
   }
 
   // Neither source could answer. Fail closed, but as an outage, not as a
-  // revocation.
-  if (storeFailed) throw sessionUnavailableError();
+  // revocation. `durableFailed` matters on its own: a healthy store that
+  // simply has no memo yet is not an answer, so a database that throws
+  // leaves the version unchecked and must not be waved through.
+  if (storeFailed || durableFailed) throw sessionUnavailableError();
 }
 
 /**

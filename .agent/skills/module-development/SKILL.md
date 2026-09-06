@@ -43,7 +43,7 @@ Modules interact with the core framework by exporting a **default object** with 
    - `export const useRateLimit = { max: 200, windowMs: 60_000 }` — custom per-route limiter (merged with app defaults)
    - `export const translations = () => context` — route-specific translations
 
-**Key distinction:** Modules return the Rspack context **directly** from `routes()` (e.g., `() => routesContext`). Extensions return a `[name, context]` tuple instead (e.g., `() => ['posts', routesContext]`).
+**Key distinction:** API modules return the Rspack context **directly** from `routes()` (e.g., `() => routesContext`). Extensions return a `[name, context]` tuple instead (e.g., `() => ['posts', routesContext]`). A **view** module returns `[context, { lazy: true }]` — see the next section.
 
 ## Procedure: Creating a Frontend View Module
 

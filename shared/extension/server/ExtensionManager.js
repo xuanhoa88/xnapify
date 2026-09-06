@@ -53,12 +53,22 @@ const ROUTE_METHOD_KEYS = [
   'options',
 ];
 
+/** @type {symbol} Bookkeeping for overlapping `app` swaps on one req/res. */
+const APP_SWAP = Symbol('__xnapify.ext.appSwap__');
+
 /**
  * Swap `app` on a request or response for the duration of a handler.
  *
  * Express defines `app` on BOTH the request and the response prototype, so
  * replacing it on the request alone leaves `res.app.get('container')` (and
  * `req.res.app`) pointing at the real, unscoped container.
+ *
+ * Swaps overlap: a middleware calls `next()` from inside its own swap, so the
+ * handler's swap is installed while the middleware's is still live, and a
+ * synchronous middleware then unwinds *first* — while the async handler it
+ * called is still running. Restoring blindly there would hand the rest of that
+ * handler the real container and leave a stale proxy behind afterwards, so the
+ * swaps are tracked as a stack and only the last one out puts `app` back.
  *
  * @param {Object} target - `req` or `res`
  * @param {Object} appProxy - Proxy to install
@@ -67,18 +77,43 @@ const ROUTE_METHOD_KEYS = [
 function swapApp(target, appProxy) {
   if (!target || typeof target !== 'object') return () => {};
 
-  const hadOwn = Object.prototype.hasOwnProperty.call(target, 'app');
-  const original = target.app;
+  let state = target[APP_SWAP];
+  if (!state) {
+    state = {
+      hadOwn: Object.prototype.hasOwnProperty.call(target, 'app'),
+      original: target.app,
+      stack: [],
+    };
+    Object.defineProperty(target, APP_SWAP, {
+      value: state,
+      configurable: true,
+      enumerable: false,
+      writable: true,
+    });
+  }
+
+  state.stack.push(appProxy);
   target.app = appProxy;
 
   return () => {
-    if (hadOwn) {
-      target.app = original;
+    const index = state.stack.lastIndexOf(appProxy);
+    if (index === -1) return;
+    state.stack.splice(index, 1);
+
+    if (state.stack.length > 0) {
+      // An outer or inner handler is still running under its own swap.
+      target.app = state.stack[state.stack.length - 1];
+      return;
+    }
+
+    if (state.hadOwn) {
+      target.app = state.original;
     } else {
       // `app` came from the Express prototype — drop the shadow rather than
       // leaving an own property behind.
       delete target.app;
     }
+    delete target[APP_SWAP];
   };
 }
 

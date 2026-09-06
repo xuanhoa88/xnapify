@@ -246,4 +246,34 @@ describe('auth.service emits (additional)', () => {
     expect(called).toBe(true);
     expect(validateResetToken).toHaveBeenCalled();
   });
+
+  test('resetPasswordConfirmation clears the automatic lockout', async () => {
+    const factory = createFactory();
+    const hook = factory.withContext({});
+
+    const update = jest.fn();
+    const models = {
+      User: { findByPk: jest.fn(async () => ({ id: 'u6', update })) },
+      PasswordResetToken: {
+        findOne: jest.fn(async () => ({
+          hashed_token: 'hashed_val',
+          user_id: 'u6',
+          expires_at: Date.now() + 10000,
+          used_at: null,
+          update: jest.fn(),
+        })),
+      },
+    };
+
+    await authService.resetPasswordConfirmation('token123', 'newpass', {
+      models,
+      hook,
+    });
+
+    // Leaving `locked_until` set makes the reset email useless to exactly
+    // the users who need it: those the automatic lockout shut out.
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({ is_locked: false, locked_until: null }),
+    );
+  });
 });

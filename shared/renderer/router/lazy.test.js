@@ -192,6 +192,44 @@ describe('per-resolve view metadata', () => {
   it('starts empty, before anything has been resolved', () => {
     expect(new Router(createLazyAdapter()).viewNamespaces).toEqual([]);
   });
+
+  it('still clears after two navigations overlapped', async () => {
+    // `resolve()` starts resolving immediately rather than waiting for the
+    // queue, so a navigation begun before the previous one settles runs
+    // alongside it rather than nested inside it, and raises the same nesting
+    // counter. Restoring that counter to the value each pass entered with
+    // left it stuck above zero once the two finished out of order — after
+    // which no later pass was ever the outermost one and the metadata was
+    // never cleared again.
+    const files = {
+      './(default)/views/(default)/_route.js': {
+        default: () => 'HomePage',
+        namespace: 'home',
+      },
+      './(default)/views/login/_route.js': {
+        default: () => 'LoginPage',
+        namespace: 'login',
+      },
+      './users/views/(admin)/(default)/_route.js': {
+        default: () => 'UsersPage',
+        namespace: 'users',
+      },
+    };
+    const router = new Router({
+      lazy: true,
+      files: () => Object.keys(files),
+      load: path => Promise.resolve(files[path]),
+    });
+
+    await Promise.allSettled([
+      router.resolve(createContext('/login')),
+      router.resolve(createContext('/admin/users')),
+    ]);
+
+    await router.resolve(createContext('/'));
+
+    expect(router.viewNamespaces).toEqual(['home']);
+  });
 });
 
 describe('mixed eager and lazy sources', () => {

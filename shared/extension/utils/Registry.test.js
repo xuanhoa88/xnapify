@@ -91,6 +91,28 @@ describe('ExtensionRegistry', () => {
       expect(registry.findDefinition('ext-1')).toBeFalsy();
       expect(registry.getDefinitions('any-namespace')).toBeNull();
     });
+
+    test('getOwnDefinitions excludes the wildcard set', () => {
+      // Activation merges '*' into every namespace so always-on extensions
+      // are covered wherever the user navigates. Teardown must not: leaving
+      // the 'login' namespace has no business shutting down an extension
+      // that lives on every page.
+      registry.defineExtension(MODULE_TYPE, {}, { id: 'always-on' });
+      registry.defineExtension(
+        { boot: () => {} },
+        {},
+        { id: 'login-only', slots: ['login'] },
+      );
+
+      const merged = [...registry.getDefinitions('login')].map(d => d.id);
+      expect(merged.sort()).toEqual(['always-on', 'login-only']);
+
+      const own = [...registry.getOwnDefinitions('login')].map(d => d.id);
+      expect(own).toEqual(['login-only']);
+
+      // A namespace nothing declared has no definitions of its own.
+      expect(registry.getOwnDefinitions('elsewhere')).toBeNull();
+    });
   });
 
   describe('Definitions', () => {

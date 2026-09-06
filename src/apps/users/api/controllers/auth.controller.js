@@ -305,6 +305,13 @@ export async function refreshToken(req, res) {
       return http.sendUnauthorized(res, 'Session is no longer valid');
     }
 
+    // A concurrent refresh won the race. The winning request has already
+    // installed the new pair, so this one is retryable — not a dead session
+    // and not a server fault.
+    if (error.name === 'RefreshTokenRotationConflictError') {
+      return http.sendError(res, 'Token refresh already in progress', 409);
+    }
+
     if (error.name === 'InvalidTokenFormatError') {
       return http.sendUnauthorized(res, 'Invalid refresh token format');
     }

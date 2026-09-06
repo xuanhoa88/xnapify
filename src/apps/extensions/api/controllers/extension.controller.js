@@ -66,7 +66,12 @@ export const getExtension = async (req, res) => {
       if (ws) {
         ws.sendToPublicChannel('extension:updated', {
           type: 'EXTENSION_TAMPERED',
-          extensionId: extensionData.manifest.name || req.params.id,
+          // The canonical key every other extension:updated payload uses —
+          // manifest.id, mirrored in the DB `key` column and in the list
+          // response's `id`. Sending the package name instead meant the
+          // admin UI could not match the event to a row, and the client
+          // extension manager had to fall back to a name scan.
+          extensionId: req.params.id,
         });
       }
     }
@@ -390,9 +395,8 @@ export const handleIPC = async (req, res) => {
 
     // IPC is authenticated by default. An extension must opt in explicitly
     // with registerHandler(id, fn, { public: true }) to accept guest callers.
-    const { public: isPublic = false } = hasHandler
-      ? extensionRegistry.getHandlerMeta(handlerId)
-      : {};
+    const { public: isPublic = false } =
+      (hasHandler && extensionRegistry.getHandlerMeta(handlerId)) || {};
     const authenticated = !!(req.authenticated && req.user);
 
     // Answering "no such handler" with a 404 and "not authenticated" with a

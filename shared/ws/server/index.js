@@ -1027,6 +1027,20 @@ class WebSocketServer extends EventEmitter {
       return false;
     }
 
+    // Refuse a type this server does not know rather than defaulting to
+    // PUBLIC. `ChannelType.PRIVATE` was missing from the enum, so
+    // `createPrivateChannel` passed `undefined`, the default parameter made
+    // every `user:<id>` channel PUBLIC, and the ownership check in
+    // CHANNEL_SUBSCRIBE compared `channel.type` against `undefined` and never
+    // fired — any socket could subscribe to another user's private channel.
+    // Failing closed here means a future channel kind cannot repeat that.
+    if (!Object.values(ChannelType).includes(type)) {
+      this.logger.error(
+        `❌ Refusing to create channel "${name}": unknown type "${type}"`,
+      );
+      return false;
+    }
+
     this.channels.set(name, {
       type,
       subscribers: new Set(),

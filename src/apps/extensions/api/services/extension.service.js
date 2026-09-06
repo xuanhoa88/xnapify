@@ -250,6 +250,66 @@ function withRuntimeState(extensionManager, entries) {
 }
 
 /**
+ * Attach each extension's live queue status.
+ *
+ * Per-request state, exactly like {@link withRuntimeState}: a job that is
+ * pending now has finished a second later. Computing it before `cache.set`
+ * froze "ACTIVATING" into a 60-second cache that nothing invalidates when the
+ * job completes, so the admin UI kept rendering the pending badge long after
+ * the toggle was done — and because the completion event also cancels the
+ * client's safety timer, nothing ever re-checked. Returns copies, so a cached
+ * entry is never stamped with a status that outlives the request.
+ *
+ * @param {Function|null} queue - Queue factory
+ * @param {Array} entries - Extension entries
+ * @returns {Promise<Array>} Entries with `job_status` where a job is live
+ */
+async function withJobStatus(queue, entries) {
+  if (!queue) return entries;
+
+  const queueChannel = queue('extensions');
+  if (
+    !queueChannel ||
+    !queueChannel.queue ||
+    typeof queueChannel.queue.getJobs !== 'function'
+  ) {
+    return entries;
+  }
+
+  const allJobs = await queueChannel.queue.getJobs();
+  const busyJobs = allJobs.filter(j =>
+    ['pending', 'active', 'delayed'].includes(j.status),
+  );
+  if (busyJobs.length === 0) return entries;
+
+  // Map extensionKey → specific job_status
+  const statusByExtensionKey = new Map();
+  for (const job of busyJobs) {
+    let status;
+    if (job.name === 'toggle') {
+      status = job.data.isActive ? 'ACTIVATING' : 'DEACTIVATING';
+    } else if (job.name === 'delete') {
+      status = 'UNINSTALLING';
+    } else {
+      status = 'INSTALLING';
+    }
+
+    if (job.data.extensionKey)
+      statusByExtensionKey.set(job.data.extensionKey, status);
+    if (job.data.extensionDir)
+      statusByExtensionKey.set(path.basename(job.data.extensionDir), status);
+  }
+
+  return entries.map(entry => {
+    const status =
+      statusByExtensionKey.get(entry.id) ||
+      statusByExtensionKey.get(entry.key) ||
+      statusByExtensionKey.get(entry.name);
+    return status ? { ...entry, job_status: status } : entry;
+  });
+}
+
+/**
  * Get all extensions (Admin) - Merged from DB and FS
  * @param {object} options - Options with models, cwd
  * @param {object} options.models - Models instance
@@ -267,7 +327,9 @@ export async function manageExtensions({
 
   if (cache) {
     const cached = await cache.get(CACHE_KEY);
-    if (cached) return withRuntimeState(extensionManager, cached);
+    if (cached) {
+      return withJobStatus(queue, withRuntimeState(extensionManager, cached));
+    }
   }
 
   const installedExtensionsDir = extensionManager.getInstalledExtensionsDir();
@@ -396,53 +458,6 @@ export async function manageExtensions({
     });
   }
 
-  // Attach job_status if there are active queue jobs for these extensions
-  if (queue) {
-    const queueChannel = queue('extensions');
-    if (
-      queueChannel &&
-      queueChannel.queue &&
-      typeof queueChannel.queue.getJobs === 'function'
-    ) {
-      const allJobs = await queueChannel.queue.getJobs();
-      const busyJobs = allJobs.filter(j =>
-        ['pending', 'active', 'delayed'].includes(j.status),
-      );
-
-      // Map extensionKey → specific job_status
-      const statusByExtensionKey = new Map();
-
-      for (const job of busyJobs) {
-        let status;
-        if (job.name === 'toggle') {
-          status = job.data.isActive ? 'ACTIVATING' : 'DEACTIVATING';
-        } else if (job.name === 'delete') {
-          status = 'UNINSTALLING';
-        } else {
-          status = 'INSTALLING';
-        }
-
-        if (job.data.extensionKey)
-          statusByExtensionKey.set(job.data.extensionKey, status);
-        if (job.data.extensionDir)
-          statusByExtensionKey.set(
-            path.basename(job.data.extensionDir),
-            status,
-          );
-      }
-
-      for (const p of extensions) {
-        const status =
-          statusByExtensionKey.get(p.id) ||
-          statusByExtensionKey.get(p.key) ||
-          statusByExtensionKey.get(p.name);
-        if (status) {
-          p.job_status = status;
-        }
-      }
-    }
-  }
-
   console.debug(
     `[manageExtensions] Total extensions found: ${extensions.length}`,
   );
@@ -451,7 +466,8 @@ export async function manageExtensions({
     await cache.set(CACHE_KEY, extensions, CACHE_TTL);
   }
 
-  return withRuntimeState(extensionManager, extensions);
+  // Live state is attached AFTER the cache write, never before it.
+  return withJobStatus(queue, withRuntimeState(extensionManager, extensions));
 }
 
 /**

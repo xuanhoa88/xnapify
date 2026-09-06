@@ -210,7 +210,10 @@ describe('revocation', () => {
 
     it('refuses a token with no durable claim to fall back on', async () => {
       await expect(
-        assertSessionValid({ id: 9, sid: 'fam-1' }, { store: brokenStore(), logger }),
+        assertSessionValid(
+          { id: 9, sid: 'fam-1' },
+          { store: brokenStore(), logger },
+        ),
       ).rejects.toMatchObject({ status: 503 });
     });
 
@@ -222,12 +225,32 @@ describe('revocation', () => {
       ).rejects.toMatchObject({ code: 'SESSION_REVOKED', status: 401 });
     });
 
+    it('reports 503 when only the durable lookup is down', async () => {
+      // A healthy store with no memo yet is not an answer: if the database
+      // then throws, nothing has checked `ver` and the request must not be
+      // waved through.
+      const store = new MemoryRevocationStore();
+      const loadUserVersion = jest.fn().mockRejectedValue(new Error('db down'));
+      await expect(
+        assertSessionValid(
+          { id: 9, sid: 'fam-1', ver: 3 },
+          { store, loadUserVersion, logger },
+        ),
+      ).rejects.toMatchObject({
+        name: 'SessionStoreUnavailableError',
+        status: 503,
+      });
+    });
+
     it('survives a memo write that fails after a successful read', async () => {
       const store = new MemoryRevocationStore();
       store.setUserVersion = () => Promise.reject(new Error('write failed'));
       const loadUserVersion = jest.fn().mockResolvedValue(2);
       await expect(
-        assertSessionValid({ id: 9, ver: 2 }, { store, loadUserVersion, logger }),
+        assertSessionValid(
+          { id: 9, ver: 2 },
+          { store, loadUserVersion, logger },
+        ),
       ).resolves.toBeUndefined();
       expect(logger.error).toHaveBeenCalled();
     });
