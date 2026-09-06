@@ -9,7 +9,10 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
-import { computeChecksum } from '../utils/checksum.util.js';
+import {
+  checksumMismatchReason,
+  computeChecksum,
+} from '../utils/checksum.util.js';
 
 import {
   CACHE_TTL,
@@ -791,12 +794,18 @@ export async function installExtensionFromPackage(
     // 5b. Verify checksum if provided (hub installs pass this from registry)
     if (expectedChecksum) {
       const actualChecksum = await computeChecksum(extensionRoot);
-      if (actualChecksum !== expectedChecksum) {
+      const reason = checksumMismatchReason(expectedChecksum, actualChecksum);
+      if (reason) {
+        // Fails closed either way; only the explanation differs.
         throw ExtensionError.invalidPackage(
           `Checksum mismatch for "${extensionName}": ` +
             `expected ${expectedChecksum.slice(0, 12)}…, ` +
             `got ${actualChecksum.slice(0, 12)}…. ` +
-            'The extension may have been tampered with.',
+            (reason === 'content'
+              ? 'The extension may have been tampered with.'
+              : 'The supplied checksum is in a format this server cannot ' +
+                'verify — the package predates the current checksum ' +
+                'version and must be republished.'),
         );
       }
     }

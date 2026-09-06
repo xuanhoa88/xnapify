@@ -25,6 +25,22 @@ import MemoryQueue from './adapters/memory.js';
 import { Channel } from './channel.js';
 import { createFactory } from './factory.js';
 
+/**
+ * Poll until `predicate` holds, or fail after `timeout`.
+ *
+ * Timing tests that sleep a fixed number of milliseconds assert on how much
+ * CPU the process happened to get. Under a full parallel suite that is not a
+ * property of the code under test, and it produced a CI flake here.
+ */
+async function waitFor(predicate, { timeout = 5000, interval = 10 } = {}) {
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) {
+    if (await predicate()) return;
+    await new Promise(resolve => setTimeout(resolve, interval));
+  }
+  throw new Error(`waitFor: condition not met within ${timeout}ms`);
+}
+
 describe('Queue Engine', () => {
   let queue;
 
@@ -579,8 +595,11 @@ describe('MemoryQueue Adapter', () => {
         throw new Error('Processing failed');
       });
 
-      // Wait long enough for retries (10ms + 20ms + processing)
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // Wait for the outcome rather than for a duration. The backoff is
+      // 10ms + 20ms, but a fixed 300ms sleep is a bet on how much CPU this
+      // process gets — under a full parallel suite run the third attempt had
+      // not happened yet and the assertion saw 1.
+      await waitFor(() => failedHandler.mock.calls.length > 0);
 
       expect(attemptCount).toBe(3);
       expect(failedHandler).toHaveBeenCalledTimes(1);

@@ -25,8 +25,38 @@ export const SELF_REFERENTIAL_MANIFEST_FIELDS = Object.freeze([
 /** Manifest filename — hashed separately from the rest of the tree. */
 export const MANIFEST_FILE = 'package.json';
 
+/**
+ * Current checksum format. Stored values carry it as a `v2:` prefix so a value
+ * produced by an older algorithm is recognisable as such instead of merely
+ * failing to match.
+ *
+ * Without this marker a v1 digest and a v2 digest were both bare 64-char hex,
+ * indistinguishable by inspection — so after the algorithm changed, every
+ * pre-existing install failed verification and was reported as TAMPERED, with
+ * no way back: the activation path refuses before it reaches the code that
+ * would recompute and restamp.
+ */
+export const CHECKSUM_VERSION = 'v2';
+
 /** Domain separator so a folder hash can never be mistaken for a checksum. */
-const CHECKSUM_PREFIX = 'xnapify-extension-checksum/v2';
+const CHECKSUM_PREFIX = `xnapify-extension-checksum/${CHECKSUM_VERSION}`;
+
+/** `v2:<64 hex>` — the shape every checksum this module produces takes. */
+const CHECKSUM_PATTERN = /^([a-z0-9]+):([0-9a-f]{64})$/;
+
+/**
+ * Split a stored checksum into its version and digest.
+ *
+ * @param {*} stored - Value read back from the DB or a manifest
+ * @returns {{ version: string, digest: string }|null} null when the value is
+ *   absent, malformed, or predates versioned checksums
+ */
+export function parseChecksum(stored) {
+  if (typeof stored !== 'string') return null;
+  const match = CHECKSUM_PATTERN.exec(stored.trim());
+  if (!match) return null;
+  return { version: match[1], digest: match[2] };
+}
 
 /**
  * Default options for folder hashing.
@@ -153,7 +183,7 @@ async function readManifestFile(dir) {
  * @param {Object} [options] - Override default hash options
  * @param {Object} [options.manifest] - Manifest to hash instead of the one on
  *   disk. Used at build time, where the manifest has not been written yet.
- * @returns {Promise<string>} Hex-encoded SHA-256 hash
+ * @returns {Promise<string>} Version-tagged checksum, `v2:<hex sha256>`
  * @throws {TypeError} If dir is not a non-empty string
  */
 export async function computeChecksum(dir, options = {}) {
@@ -181,23 +211,56 @@ export async function computeChecksum(dir, options = {}) {
       ? await readManifestFile(dir)
       : manifestOverride;
 
-  return crypto
+  const digest = crypto
     .createHash('sha256')
     .update(`${CHECKSUM_PREFIX}\n${result.hash}\n${hashManifest(manifest)}`)
     .digest('hex');
+
+  return `${CHECKSUM_VERSION}:${digest}`;
+}
+
+/**
+ * Why an expected checksum does not match a computed one.
+ *
+ * A supply-chain check must fail closed in every one of these cases — the
+ * point is only to say the true reason. "Tampered with" is a serious claim,
+ * and reporting it for a package whose checksum this build simply cannot read
+ * sends operators hunting for an attacker that is not there.
+ *
+ * @param {*} expected - Checksum supplied by a registry, manifest or DB row
+ * @param {string} actual - Checksum computed from the files on disk
+ * @returns {'unversioned'|'version'|'content'|null} null when they match
+ */
+export function checksumMismatchReason(expected, actual) {
+  const parsed = parseChecksum(expected);
+  if (!parsed) return 'unversioned';
+  if (parsed.version !== CHECKSUM_VERSION) return 'version';
+  return expected === actual ? null : 'content';
 }
 
 /**
  * Verify an extension directory against an expected checksum.
  *
+ * `comparable` is the question the caller actually needs answered: is the
+ * stored value something this build knows how to check? A value written by an
+ * older algorithm cannot be compared at all, and reporting that as a mismatch
+ * is what turned an upgrade into a false tamper accusation. Callers must
+ * recompute and restamp in that case rather than refuse.
+ *
  * @param {string} extensionDir - Absolute path to the extension directory
  * @param {string} expectedChecksum - The trusted checksum from DB or manifest
- * @returns {Promise<{ valid: boolean, actual: string }>}
+ * @returns {Promise<{ valid: boolean, actual: string, comparable: boolean,
+ *   storedVersion: string|null }>}
  */
 export async function verifyExtensionChecksum(extensionDir, expectedChecksum) {
   const actual = await computeChecksum(extensionDir);
+  const parsed = parseChecksum(expectedChecksum);
+  const comparable = parsed !== null && parsed.version === CHECKSUM_VERSION;
+
   return {
-    valid: actual === expectedChecksum,
+    valid: comparable && actual === expectedChecksum,
     actual,
+    comparable,
+    storedVersion: parsed ? parsed.version : null,
   };
 }

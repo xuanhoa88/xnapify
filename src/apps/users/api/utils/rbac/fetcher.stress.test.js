@@ -103,9 +103,16 @@ describe('RBAC Fetcher Stress Test', () => {
       `fetcher stress: cold=${Math.round(coldMs)}ms warm=${Math.round(warmMs)}ms`,
     );
 
-    // Expectations: warm run should be faster than cold run and DB was called exactly once
-    expect(warmMs).toBeLessThan(coldMs);
-    // Because of request coalescing, 2000 concurrent requests result in exactly 1 DB query
+    // The invariant worth asserting is the cache's actual contract, not a
+    // wall-clock comparison: `warmMs < coldMs` measures how much CPU this
+    // process got relative to the rest of the suite, and it failed under a
+    // full parallel run while the cache was working perfectly.
+    //
+    // Because of request coalescing, 2000 concurrent requests result in
+    // exactly 1 DB query — and the warm run must add none.
     expect(modelsMock.User.findByPk).toHaveBeenCalledTimes(1);
+    // The warm run is served entirely from the cache the cold run populated.
+    expect(cache.setUser).toHaveBeenCalledTimes(1);
+    expect(cacheStore.get('stress-user')).toBeDefined();
   });
 });

@@ -154,11 +154,21 @@ async function handleToggleJob(container, job) {
       );
       if (dbExtension && dbExtension.integrity) {
         // Verify integrity before activating
-        const { valid, actual } = await verifyExtensionChecksum(
-          extensionDir,
-          dbExtension.integrity,
-        );
-        if (!valid) {
+        const { valid, actual, comparable, storedVersion } =
+          await verifyExtensionChecksum(extensionDir, dbExtension.integrity);
+
+        if (!comparable) {
+          // Written by an older checksum algorithm, so there is nothing to
+          // compare against — not evidence of tampering. Refusing here would
+          // strand every install that predates the format change, because the
+          // recompute-and-restamp below is past this point. Re-establish
+          // trust from the files on disk instead, loudly.
+          console.warn(
+            `[ExtensionWorker] ⚠️ Stored integrity for ${extensionKey} is in an ` +
+              `unrecognised format (${storedVersion || 'unversioned'}); ` +
+              `cannot verify. Recomputing from disk and restamping.`,
+          );
+        } else if (!valid) {
           console.error(
             `[ExtensionWorker] ⛔ Integrity verification FAILED for extension ${extensionKey}. ` +
               `Expected: ${dbExtension.integrity}, Got: ${actual}. ` +

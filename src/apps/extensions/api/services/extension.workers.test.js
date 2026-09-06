@@ -9,7 +9,7 @@ jest.mock('../utils/checksum.util', () => ({
   computeChecksum: jest.fn().mockResolvedValue('abc123hash'),
   verifyExtensionChecksum: jest
     .fn()
-    .mockResolvedValue({ valid: true, actual: 'abc123hash' }),
+    .mockResolvedValue({ valid: true, actual: 'abc123hash', comparable: true }),
 }));
 
 jest.mock('./extension.helpers', () => ({
@@ -135,6 +135,7 @@ describe('Extension Workers', () => {
     verifyExtensionChecksum.mockResolvedValue({
       valid: true,
       actual: 'abc123hash',
+      comparable: true,
     });
     installExtensionDependencies.mockResolvedValue(undefined);
     resolveExtension.mockResolvedValue({ extension: null });
@@ -364,6 +365,7 @@ describe('Extension Workers', () => {
       verifyExtensionChecksum.mockResolvedValueOnce({
         valid: true,
         actual: 'expected-hash',
+        comparable: true,
       });
 
       const job = createMockJob({
@@ -394,6 +396,9 @@ describe('Extension Workers', () => {
       verifyExtensionChecksum.mockResolvedValueOnce({
         valid: false,
         actual: 'tampered-hash',
+        // A checksum this build CAN read, that does not match — the only
+        // thing that may be reported as tampering.
+        comparable: true,
       });
 
       const job = createMockJob({
@@ -412,6 +417,49 @@ describe('Extension Workers', () => {
         'EXTENSION_TAMPERED',
         'test-extension',
       );
+      spy.mockRestore();
+    });
+
+    it('restamps an unreadable stored checksum instead of crying tamper', async () => {
+      // A value written by an older checksum algorithm cannot be compared, so
+      // it is not evidence of tampering. Refusing here stranded every install
+      // that predated the format change: the recompute-and-restamp lives past
+      // the refusal, so the extension could never be activated again.
+      const spy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const mockDbExtension = {
+        integrity: 'a'.repeat(64), // v1: bare digest, no version tag
+        update: jest.fn(),
+      };
+      resolveExtension.mockResolvedValueOnce({
+        extension: mockDbExtension,
+        extensionKey: 'test-extension',
+      });
+
+      verifyExtensionChecksum.mockResolvedValueOnce({
+        valid: false,
+        actual: 'v2:' + 'b'.repeat(64),
+        comparable: false,
+        storedVersion: null,
+      });
+
+      const job = createMockJob({ isActive: true, isDevExtension: false });
+      const result = await handlers.toggle(job);
+
+      expect(result.success).toBe(true);
+      expect(mockDbExtension.update).not.toHaveBeenCalledWith({
+        is_active: false,
+      });
+      expect(notifyExtensionChange).not.toHaveBeenCalledWith(
+        mockContainer,
+        'EXTENSION_TAMPERED',
+        'test-extension',
+      );
+      // ...and it heals: the restamp writes the current-format checksum.
+      expect(computeChecksum).toHaveBeenCalledWith(
+        '/extensions/test-extension',
+      );
+      // The operator is told, rather than it happening silently.
+      expect(spy).toHaveBeenCalled();
       spy.mockRestore();
     });
 

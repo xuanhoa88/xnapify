@@ -362,6 +362,8 @@ class WebSocketServer extends EventEmitter {
         const channel = this.channels.get(channelName);
         if (channel) {
           channel.subscribers.delete(ws.id);
+          // eslint-disable-next-line no-underscore-dangle
+          this._reapEmptyPrivateChannel(channelName, channel);
         }
       });
       this.connectionChannels.delete(ws.id);
@@ -1182,8 +1184,32 @@ class WebSocketServer extends EventEmitter {
       connectionChannels.delete(channelName);
     }
 
+    // eslint-disable-next-line no-underscore-dangle
+    this._reapEmptyPrivateChannel(channelName, channel);
+
     this.logger.debug(`Unsubscribed ${ws.id} from channel ${channelName}`);
     return true;
+  }
+
+  /**
+   * Drop a per-user channel once its last socket is gone.
+   *
+   * `createPrivateChannel` runs on every authentication, and nothing removed
+   * the entry afterwards — `deleteChannel` has no internal caller — so the map
+   * grew by one entry per distinct user and kept them for the life of the
+   * process. PUBLIC and PROTECTED are singletons the server creates at start
+   * and must outlive any connection, so only PRIVATE is reaped.
+   *
+   * @param {string} channelName
+   * @param {Object} channel
+   * @private
+   */
+  _reapEmptyPrivateChannel(channelName, channel) {
+    if (!channel || channel.type !== ChannelType.PRIVATE) return;
+    if (channel.subscribers.size > 0) return;
+
+    this.channels.delete(channelName);
+    this.logger.debug(`Reaped empty private channel ${channelName}`);
   }
 
   /**

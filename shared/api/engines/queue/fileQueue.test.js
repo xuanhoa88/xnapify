@@ -13,12 +13,27 @@ const require = createRequire(import.meta.url);
 
 import { JOB_STATUS } from './utils/constants.js';
 
-const waitFor = async (conditionFn, timeout = 3000) => {
+/**
+ * Poll `conditionFn` until it returns truthy, or fail loudly.
+ *
+ * This used to fall out of the loop and return normally when the deadline
+ * passed, so a wait that never came true did not fail the test — it let the
+ * test carry on against a queue that had never reached the state it was
+ * waiting for. The failure then surfaced somewhere further down wearing a
+ * different face ("Only failed jobs can be retried", a length of 0) with
+ * nothing to say a wait had expired. Throwing names the wait that lost.
+ *
+ * The deadline is generous on purpose. Jobs fsync, jest runs these workers
+ * in parallel, and testTimeout is 10s: a loaded machine should be allowed to
+ * be slow, and should fail for the real reason when it is genuinely stuck.
+ */
+const waitFor = async (conditionFn, label = 'condition', timeout = 8000) => {
   const start = Date.now();
   while (Date.now() - start < timeout) {
     if (await conditionFn()) return;
     await new Promise(resolve => setTimeout(resolve, 50));
   }
+  throw new Error(`waitFor timed out after ${timeout}ms waiting for ${label}`);
 };
 
 jest.mock('uuid', () => ({
@@ -188,7 +203,7 @@ describe('FileQueue Adapter', () => {
       });
 
       // Wait for processing
-      await waitFor(() => completed.length === 1);
+      await waitFor(() => completed.length === 1, 'one completed job');
 
       expect(completed).toHaveLength(1);
       expect(completed[0].status).toBe(JOB_STATUS.COMPLETED);
@@ -206,7 +221,7 @@ describe('FileQueue Adapter', () => {
         if (!fs.existsSync(completedDir)) return false;
         files = fs.readdirSync(completedDir);
         return files.length === 1;
-      });
+      }, 'the completed job file to appear');
 
       expect(files.length).toBe(1);
     });
@@ -232,7 +247,7 @@ describe('FileQueue Adapter', () => {
           fs.readdirSync(pendingDir).length === 0 &&
           fs.readdirSync(activeDir).length === 0
         );
-      });
+      }, 'the completed job to be cleared from every directory');
 
       expect(fs.readdirSync(completedDir).length).toBe(0);
       expect(fs.readdirSync(pendingDir).length).toBe(0);
@@ -258,7 +273,7 @@ describe('FileQueue Adapter', () => {
       });
 
       queue.resume();
-      await waitFor(() => order.length === 3);
+      await waitFor(() => order.length === 3, 'all three jobs to process');
 
       expect(order[0]).toBe('high');
       expect(order[1]).toBe('medium');
@@ -281,7 +296,7 @@ describe('FileQueue Adapter', () => {
       });
 
       // Wait enough for retries
-      await waitFor(() => attemptCount >= 3);
+      await waitFor(() => attemptCount >= 3, 'three delivery attempts');
 
       expect(attemptCount).toBe(3);
     });
@@ -318,7 +333,10 @@ describe('FileQueue Adapter', () => {
       expect(processed).toHaveLength(0);
 
       queue.resume();
-      await waitFor(() => processed.length === 1);
+      await waitFor(
+        () => processed.length === 1,
+        'the job to process after resume',
+      );
       expect(processed).toHaveLength(1);
     });
   });
@@ -385,23 +403,32 @@ describe('FileQueue Adapter', () => {
 
   describe('retryJob()', () => {
     it('should retry a failed job', async () => {
-      await queue.add('retry-me', {}, { attempts: 1, backoff: 10 });
+      const added = await queue.add(
+        'retry-me',
+        {},
+        { attempts: 1, backoff: 10 },
+      );
 
       queue.process(async () => {
         throw new Error('fail');
       });
 
+      // Wait on the index, which is what retryJob consults (locateJob), not
+      // on a directory scan. The two can disagree mid-transition: the file is
+      // visible in failed/ before jobIndex catches up, so a scan-based wait
+      // let retryJob run against a stale entry and throw "Only failed jobs
+      // can be retried" under load.
       await waitFor(async () => {
-        const failedJobs = await queue.getJobsByStatus('failed');
-        return failedJobs.length === 1;
-      });
+        const entry = await queue.locateJob(added.id);
+        return Boolean(entry) && entry.status === 'failed';
+      }, 'the job to be indexed as failed');
 
       queue.pause();
 
       const failedJobs = await queue.getJobsByStatus('failed');
       expect(failedJobs).toHaveLength(1);
 
-      const retriedJob = await queue.retryJob(failedJobs[0].id);
+      const retriedJob = await queue.retryJob(added.id);
       expect(retriedJob.status).toBe('pending');
       expect(retriedJob.attempts).toBe(0);
       expect(retriedJob.error).toBeNull();
@@ -439,7 +466,7 @@ describe('FileQueue Adapter', () => {
       await waitFor(async () => {
         const completedJobs = await queue.getJobsByStatus('completed');
         return completedJobs.length === 2;
-      });
+      }, 'both jobs to complete');
 
       const cleaned = await queue.clean('completed', 0);
       expect(cleaned).toBe(2);
@@ -472,7 +499,7 @@ describe('FileQueue Adapter', () => {
         completed = true;
       });
       queue.process(async () => 'done');
-      await waitFor(() => completed);
+      await waitFor(() => completed, 'the job to complete');
 
       await queue.close();
 

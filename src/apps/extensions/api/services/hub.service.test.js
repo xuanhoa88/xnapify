@@ -26,8 +26,16 @@ jest.mock('./extension.service.js', () => ({
 }));
 
 jest.mock('../utils/checksum.util.js', () => ({
+  // Keep the real checksumMismatchReason: it is pure, and it is what decides
+  // whether a mismatch is reported as tampering or as an unreadable format.
+  ...jest.requireActual('../utils/checksum.util.js'),
   computeChecksum: jest.fn(),
 }));
+
+/** Checksums must carry the current version tag to be comparable at all. */
+const GOOD_CHECKSUM = `v2:${'a'.repeat(64)}`;
+const STALE_CHECKSUM = `v2:${'b'.repeat(64)}`;
+const ACTUAL_CHECKSUM = `v2:${'c'.repeat(64)}`;
 
 const registry = {
   version: 1,
@@ -166,7 +174,7 @@ describe('recalculateUpdateCount', () => {
 describe('updateFromHub ordering', () => {
   let originalFetch;
 
-  function buildContext({ checksum = 'good-checksum' } = {}) {
+  function buildContext({ checksum = GOOD_CHECKSUM } = {}) {
     const existing = {
       key: 'k-up',
       name: '@x/up',
@@ -199,7 +207,7 @@ describe('updateFromHub ordering', () => {
     originalFetch = global.fetch;
     process.env.XNAPIFY_HUB_REGISTRY_URL = 'https://hub.example/registry.json';
     invalidateRegistryCache();
-    computeChecksum.mockResolvedValue('good-checksum');
+    computeChecksum.mockResolvedValue(GOOD_CHECKSUM);
     installExtensionFromPackage.mockResolvedValue({ key: 'k-up' });
   });
 
@@ -259,7 +267,7 @@ describe('updateFromHub ordering', () => {
                   key: 'k-up',
                   name: '@x/up',
                   version: '2.0.0',
-                  checksum: 'good-checksum',
+                  checksum: GOOD_CHECKSUM,
                   downloadUrl: 'https://hub.example/up.zip',
                 },
               ],
@@ -281,11 +289,11 @@ describe('updateFromHub ordering', () => {
       key: 'k-up',
       name: '@x/up',
       version: '2.0.0',
-      checksum: 'stale-checksum',
+      checksum: STALE_CHECKSUM,
       downloadUrl: 'https://hub.example/up.zip',
     });
     const { context } = buildContext();
-    computeChecksum.mockResolvedValue('actual-checksum');
+    computeChecksum.mockResolvedValue(ACTUAL_CHECKSUM);
 
     await expect(updateFromHub('@x/up', context)).rejects.toThrow(
       /Checksum mismatch/,
@@ -300,7 +308,7 @@ describe('updateFromHub ordering', () => {
       key: 'k-up',
       name: '@x/up',
       version: '2.0.0',
-      checksum: 'good-checksum',
+      checksum: GOOD_CHECKSUM,
       downloadUrl: 'https://hub.example/up.zip',
     });
     const { context } = buildContext();
@@ -317,7 +325,7 @@ describe('updateFromHub ordering', () => {
       key: 'k-up',
       name: '@x/up',
       version: '2.0.0',
-      checksum: 'good-checksum',
+      checksum: GOOD_CHECKSUM,
       downloadUrl: 'https://hub.example/up.zip',
     });
     const { context } = buildContext();

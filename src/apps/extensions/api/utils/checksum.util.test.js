@@ -12,8 +12,11 @@ import path from 'path';
 import * as buildUtils from '../../../../../tools/utils/extension.js';
 
 import {
+  CHECKSUM_VERSION,
+  checksumMismatchReason,
   computeChecksum,
   hashManifest,
+  parseChecksum,
   stableStringify,
   verifyExtensionChecksum,
 } from './checksum.util.js';
@@ -157,6 +160,66 @@ describe('extension checksum round-trip', () => {
   it('exposes the same implementation to the build task', () => {
     expect(buildUtils.computeChecksum).toBe(computeChecksum);
     expect(buildUtils.hashManifest).toBe(hashManifest);
+  });
+});
+
+describe('checksum versioning', () => {
+  it('tags every checksum it produces with the current version', async () => {
+    // A bare digest is indistinguishable from one written by an older
+    // algorithm, which is how an upgrade turned into a false tamper report:
+    // every pre-existing install failed to verify with no way to tell why.
+    await writeExtensionTree(workDir);
+    const { integrity } = await packageExtension(workDir);
+
+    expect(integrity).toMatch(/^v2:[0-9a-f]{64}$/);
+    expect(parseChecksum(integrity)).toEqual({
+      version: CHECKSUM_VERSION,
+      digest: integrity.slice(CHECKSUM_VERSION.length + 1),
+    });
+  });
+
+  it('reads an unversioned value as unparseable, not as a digest', () => {
+    expect(parseChecksum('a'.repeat(64))).toBeNull();
+    expect(parseChecksum('')).toBeNull();
+    expect(parseChecksum(null)).toBeNull();
+    expect(parseChecksum('v2:short')).toBeNull();
+  });
+
+  it('reports an unverifiable stored value as comparable:false', async () => {
+    await writeExtensionTree(workDir);
+    const { integrity } = await packageExtension(workDir);
+
+    const legacy = await verifyExtensionChecksum(workDir, 'a'.repeat(64));
+    expect(legacy.comparable).toBe(false);
+    expect(legacy.valid).toBe(false);
+    expect(legacy.storedVersion).toBeNull();
+
+    const future = await verifyExtensionChecksum(
+      workDir,
+      `v9:${'a'.repeat(64)}`,
+    );
+    expect(future.comparable).toBe(false);
+    expect(future.storedVersion).toBe('v9');
+
+    const current = await verifyExtensionChecksum(workDir, integrity);
+    expect(current.comparable).toBe(true);
+    expect(current.valid).toBe(true);
+  });
+
+  it('separates a content mismatch from a format mismatch', async () => {
+    await writeExtensionTree(workDir);
+    const { integrity } = await packageExtension(workDir);
+
+    expect(checksumMismatchReason(integrity, integrity)).toBeNull();
+    expect(checksumMismatchReason(`v2:${'b'.repeat(64)}`, integrity)).toBe(
+      'content',
+    );
+    expect(checksumMismatchReason('a'.repeat(64), integrity)).toBe(
+      'unversioned',
+    );
+    expect(checksumMismatchReason(`v9:${'a'.repeat(64)}`, integrity)).toBe(
+      'version',
+    );
   });
 });
 

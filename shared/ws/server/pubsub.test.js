@@ -63,6 +63,39 @@ describe('channel types', () => {
     expect(channel.metadata.userId).toBe('user-1');
   });
 
+  it('reaps a per-user channel once its last socket disconnects', () => {
+    // createPrivateChannel runs on every authentication and deleteChannel had
+    // no internal caller, so the map grew by one entry per distinct user and
+    // held them for the life of the process.
+    const socket = fakeSocket('s1', { id: 'user-1' });
+    server.connections.set(socket.id, socket);
+    server.createPrivateChannel('user-1');
+    // eslint-disable-next-line no-underscore-dangle
+    server._subscribeToChannel(socket, 'user:user-1');
+    expect(server.channels.has('user:user-1')).toBe(true);
+
+    // eslint-disable-next-line no-underscore-dangle
+    server._handleClose(socket, 1000, Buffer.from('bye'));
+
+    expect(server.channels.has('user:user-1')).toBe(false);
+  });
+
+  it('keeps the shared channels alive when a socket leaves', () => {
+    // PUBLIC and PROTECTED are singletons created at start(); they must
+    // outlive any one connection.
+    const socket = fakeSocket('s2');
+    server.connections.set(socket.id, socket);
+    // eslint-disable-next-line no-underscore-dangle
+    server._createChannel(ChannelType.PUBLIC, ChannelType.PUBLIC, {});
+    // eslint-disable-next-line no-underscore-dangle
+    server._subscribeToChannel(socket, ChannelType.PUBLIC);
+
+    // eslint-disable-next-line no-underscore-dangle
+    server._handleClose(socket, 1000, Buffer.from('bye'));
+
+    expect(server.channels.has(ChannelType.PUBLIC)).toBe(true);
+  });
+
   it('refuses a channel whose type it does not know', () => {
     // Failing closed is what stops a future channel kind from silently
     // becoming world-readable the way `private` did.

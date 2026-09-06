@@ -13,7 +13,10 @@ import { pipeline } from 'stream/promises';
 
 import { Op } from 'sequelize';
 
-import { computeChecksum } from '../utils/checksum.util.js';
+import {
+  checksumMismatchReason,
+  computeChecksum,
+} from '../utils/checksum.util.js';
 
 import {
   installExtensionFromPackage,
@@ -479,12 +482,18 @@ async function verifyHubPackage(packagePath, listing, { fs: fsEngine }) {
     const root = await locateExtensionRoot(scratchDir);
     const actual = await computeChecksum(root);
 
-    if (actual !== listing.checksum) {
+    const reason = checksumMismatchReason(listing.checksum, actual);
+    if (reason) {
+      // Fails closed either way; only the explanation differs.
       const err = new Error(
         `Checksum mismatch for "${listing.name}": ` +
           `expected ${String(listing.checksum).slice(0, 12)}…, ` +
           `got ${actual.slice(0, 12)}…. ` +
-          'The registry entry is stale or the package was tampered with.',
+          (reason === 'content'
+            ? 'The registry entry is stale or the package was tampered with.'
+            : 'The registry entry predates the current checksum version and ' +
+              'cannot be verified by this server; the package must be ' +
+              'republished.'),
       );
       err.name = 'ExtensionChecksumMismatchError';
       err.status = 400;

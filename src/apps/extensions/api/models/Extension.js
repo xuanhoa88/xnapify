@@ -123,10 +123,12 @@ export default async function createExtensionModel(
     },
 
     integrity: {
-      type: DataTypes.STRING(64),
+      // Version-tagged: `v2:<64 hex>`. 64 was exactly a bare digest, leaving
+      // no room for the prefix that tells an old checksum from a current one.
+      type: DataTypes.STRING(128),
       allowNull: true,
       unique: true,
-      comment: 'SHA-256 integrity hash of built extension files',
+      comment: 'Version-tagged integrity checksum of built extension files',
     },
   };
 
