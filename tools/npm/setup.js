@@ -16,6 +16,8 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+import installHooks, { HOOKS_PATH } from '../git/installHooks.js';
+
 const currentFilename = fileURLToPath(import.meta.url);
 
 // ─── Paths ───────────────────────────────────────────────────────────────────
@@ -171,9 +173,9 @@ function main() {
 
   // 1. Root
   if (skipRoot) {
-    log('   [1/2] Root (skipped)');
+    log('   [1/3] Root (skipped)');
   } else {
-    log('   [1/2] Root');
+    log('   [1/3] Root');
     if (!npmInstall(ROOT, 'root')) {
       log('❌ Root install failed');
       process.exit(1);
@@ -181,7 +183,7 @@ function main() {
   }
 
   // 2. Sub-packages
-  log('   [2/2] Sub-packages');
+  log('   [2/3] Sub-packages');
   const packages = findSubPackages(ROOT);
 
   if (packages.length === 0) {
@@ -200,7 +202,17 @@ function main() {
     }
   }
 
-  log(`✅ All dependencies installed (${elapsed(start)})`);
+  // 3. Git hooks — a clone with no hooks installed is a clone with no secret
+  // scan, and nothing else in the toolchain would report that.
+  log('   [3/3] Git hooks');
+  const hooks = installHooks({ logger: { log, warn } });
+  if (hooks.status === 'installed' || hooks.status === 'already-set') {
+    log(`   ✅ core.hooksPath → ${HOOKS_PATH}`);
+  } else {
+    warn(`git hooks not installed: ${hooks.reason}`);
+  }
+
+  log(`✅ Setup complete (${elapsed(start)})`);
 }
 
 // Execute if called directly (as child process)

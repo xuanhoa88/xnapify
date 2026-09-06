@@ -1,0 +1,79 @@
+#!/bin/sh
+#
+# xnapify (https://github.com/xuanhoa88/xnapify/)
+#
+# This source code is licensed under the MIT license found in the
+# LICENSE.txt file in the root directory of this source tree.
+#
+# xnapify pre-commit hook
+#
+# Installed by `npm run setup` (tools/git/installHooks.js), which points
+# core.hooksPath at this directory. Living in the working tree rather than in
+# .git/hooks is the point: a hook nobody can review is a hook nobody notices
+# has stopped working.
+#
+# Runs:
+#   1. Secret scanner — blocks the commit if hardcoded secrets are staged
+#   2. bd (beads) flush — syncs pending issue data to JSONL
+#
+# To bypass in an emergency: git commit --no-verify
+
+# ---------------------------------------------------------------------------
+# 1. Secret scanner
+# ---------------------------------------------------------------------------
+# Scans staged files for hardcoded secrets, API keys, and credentials.
+#   exit 0 = clean
+#   exit 1 = secrets found      -> block the commit
+#   exit 2 = scanner error      -> allow, the scanner reports the reason
+#
+# This block used to be wrapped in `if [ -f "$SCANNER" ]`, and $SCANNER
+# pointed at a filename that does not exist (secret-scanner.js; the file is
+# secretScanner.js). The guard turned that typo into silence, so the scanner
+# never ran on a single commit and nothing ever said so. Anything that stops
+# the scan from happening is now loud and blocking — a secret scanner that
+# fails open is worse than none, because it is trusted.
+
+SCANNER="tools/git/secretScanner.js"
+
+if [ ! -f "$SCANNER" ]; then
+  echo "pre-commit: $SCANNER is missing — cannot scan for secrets." >&2
+  echo "            Restore it, or bypass with: git commit --no-verify" >&2
+  exit 1
+fi
+
+if ! command -v node >/dev/null 2>&1; then
+  echo "pre-commit: node not found — cannot scan for secrets." >&2
+  echo "            Install node, or bypass with: git commit --no-verify" >&2
+  exit 1
+fi
+
+node "$SCANNER" --fix
+SCAN_EXIT=$?
+if [ "$SCAN_EXIT" -eq 1 ]; then
+  exit 1
+fi
+
+# ---------------------------------------------------------------------------
+# 2. bd (beads) sync
+# ---------------------------------------------------------------------------
+# Optional tooling: absent bd, or an uninitialised .beads, is not an error.
+
+if ! command -v bd >/dev/null 2>&1; then
+  exit 0
+fi
+
+if [ ! -d ".beads" ]; then
+  exit 0
+fi
+
+if [ ! -f ".beads/beads.db" ] && [ ! -f ".beads/config.yaml" ]; then
+  exit 0
+fi
+
+if ! bd sync --flush-only >/dev/null 2>&1; then
+  echo "pre-commit: failed to flush bd changes to JSONL" >&2
+  echo "            Run 'bd sync --flush-only' manually to diagnose" >&2
+  exit 1
+fi
+
+exit 0
