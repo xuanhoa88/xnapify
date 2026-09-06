@@ -26,7 +26,7 @@ import Modal from '@shared/renderer/components/Modal/index.js';
 import { useRbac } from '@shared/renderer/components/Rbac/index.js';
 import { DataTable } from '@shared/renderer/components/Table/index.js';
 import { features } from '@shared/renderer/redux/index.js';
-import { useWebSocket } from '@shared/ws/client/index.js';
+import { EventType, useWebSocket } from '@shared/ws/client/index.js';
 
 import ExtensionCard from './components/ExtensionCard.js';
 import {
@@ -359,10 +359,19 @@ function Extensions() {
           break;
       }
     };
+    // Delivery is point-in-time: the server buffers nothing and the client
+    // replays nothing, so a completion event that fires while this socket is
+    // down is lost outright. Re-read the list on every (re)connect, or a
+    // toggle that finished during the gap leaves its card pending until the
+    // safety timer.
+    const onReconnect = () => debouncedFetch(signal);
+
     ws.on('extension:updated', handler);
+    ws.on(EventType.CONNECTED, onReconnect);
     return () => {
       controller.abort();
       ws.off('extension:updated', handler);
+      ws.off(EventType.CONNECTED, onReconnect);
     };
   }, [ws, dispatch, t, completeAction, debouncedFetch]);
 
