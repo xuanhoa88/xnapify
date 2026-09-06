@@ -7,6 +7,7 @@
 
 import { composeMiddleware } from '@shared/utils/middleware.js';
 
+import Handler from './Handler.js';
 import Hook from './Hook.js';
 
 // Symbols — private (internal to registry)
@@ -15,6 +16,7 @@ const SLOTS = Symbol('__xnapify.ext.slots__');
 const DEFINITIONS = Symbol('__xnapify.ext.definitions__');
 const LISTENERS = Symbol('__xnapify.ext.listeners__');
 const HOOKS = Symbol('__xnapify.ext.hooks__');
+const HANDLERS = Symbol('__xnapify.ext.handlers__');
 const REGISTRATIONS = Symbol('__xnapify.ext.registrations__');
 
 /**
@@ -27,7 +29,8 @@ class ExtensionRegistry {
   constructor() {
     this[EXTENSIONS] = new Map(); // Map<id, extension>
     this[SLOTS] = new Map(); // Map<slotId, Map<component, options>>
-    this[HOOKS] = new Hook(); // Specialized hook manager
+    this[HOOKS] = new Hook(); // Collectors (many contributors)
+    this[HANDLERS] = new Handler(); // Single-answer handlers (IPC)
     this[DEFINITIONS] = new Map(); // Map<namespace, Array<definition>>
     this[LISTENERS] = new Set(); // Set<callback>
     this[REGISTRATIONS] = new Map(); // Map<extensionId, { slots: [], hooks: [] }>
@@ -92,7 +95,7 @@ class ExtensionRegistry {
     if (!extensionId) return;
 
     if (!this[REGISTRATIONS].has(extensionId)) {
-      this[REGISTRATIONS].set(extensionId, { slots: [], hooks: [] });
+      this[REGISTRATIONS].set(extensionId, { slots: [] });
     }
     const reg = this[REGISTRATIONS].get(extensionId);
     if (reg[type]) {
@@ -105,19 +108,28 @@ class ExtensionRegistry {
    * @param {string} extensionId - Extension to clear registrations for
    */
   _clearExtensionRegistrations(extensionId) {
+    // No early return on a missing tracking entry. Only slots are tracked
+    // there, so an extension that registered nothing but hooks or handlers
+    // used to skip cleanup entirely and leak them past deactivation.
     const reg = this[REGISTRATIONS].get(extensionId);
-    if (!reg) return;
 
     // Clear slots
-    for (const { slotId, component } of reg.slots) {
+    for (const { slotId, component } of (reg && reg.slots) || []) {
       this.unregisterSlot(slotId, component);
     }
 
-    // Clear hooks (includes schema extenders)
+    // Clear hooks (includes schema extenders) and single-answer handlers.
+    // Counted before clearing, because the registries are the only place these
+    // registrations were ever recorded.
+    const hookCount = (this[HOOKS].registrations.get(extensionId) || new Set())
+      .size;
+
+    const handlerCount = this[HANDLERS].idsFor(extensionId).length;
     this[HOOKS].clear(extensionId);
+    this[HANDLERS].clear(extensionId);
 
     if (__DEV__) {
-      const total = reg.slots.length + reg.hooks.length;
+      const total = ((reg && reg.slots.length) || 0) + hookCount + handlerCount;
       if (total > 0) {
         console.log(
           `[ExtensionRegistry] Cleared ${total} registrations for extension: ${extensionId}`,
@@ -218,7 +230,21 @@ class ExtensionRegistry {
   }
 
   /**
-   * Remove an extension definition by ID across all namespaces
+   * Remove an extension definition by ID across all namespaces.
+   *
+   * `unregister` clears what an extension *did* — its slots and hooks — while
+   * leaving the definition in place, and that is deliberate:
+   * `deactivateViewNamespace` unregisters extensions it fully intends to
+   * activate again on the next navigation.
+   *
+   * An unloaded extension is the other case and must stay gone, so
+   * `unloadExtension` calls this as well. A module-type extension is filed
+   * under the `'*'` wildcard, which `getDefinitions` merges into *every*
+   * namespace, so a definition left behind means the next
+   * `ensureViewNamespaceActive` call re-runs its `menus()` and `boot()` —
+   * a deactivated extension's sidebar entry reappearing on the very next
+   * navigation is what this prevents.
+   *
    * @param {string} id - Extension ID
    * @returns {boolean} True if any definition was removed
    */
@@ -234,6 +260,25 @@ class ExtensionRegistry {
       }
     }
     return removed;
+  }
+
+  /**
+   * Definitions filed under exactly this namespace, without the `'*'` merge.
+   *
+   * The wildcard set holds always-on extensions — module-type ones with
+   * `routes()`, and anything else with no declared slots. `getDefinitions`
+   * merges them into every namespace on purpose, so activation covers them
+   * wherever the user navigates. Teardown must NOT: a route leaving the
+   * `login` namespace has no business shutting down an extension that lives
+   * on every page, and doing so tore down its menus and slots on ordinary
+   * navigation.
+   *
+   * @param {string} ns - Namespace
+   * @returns {Set|null} Definitions declared for this namespace alone
+   */
+  getOwnDefinitions(ns) {
+    const exact = this[DEFINITIONS].get(ns);
+    return exact && exact.size > 0 ? new Set(exact) : null;
   }
 
   /**
@@ -428,17 +473,15 @@ class ExtensionRegistry {
    * @param {string} [extensionId] - Optional extension ID for auto-cleanup
    */
   registerHook(hookId, callback, extensionId, options = {}) {
+    if (options && options.public !== undefined) {
+      throw new TypeError(
+        `Hook "${hookId}" was registered with { public }, which only applies to ` +
+          'request/response handlers. Collectors are never reachable by an ' +
+          'unauthenticated caller. Use registerHandler() if this is an IPC action.',
+      );
+    }
     this[HOOKS].register(hookId, callback, extensionId, options);
     return this;
-  }
-
-  /**
-   * Read hook metadata declared at registration (e.g. `{ public: true }`)
-   * @param {string} hookId - Hook identifier
-   * @returns {Object}
-   */
-  getHookMeta(hookId) {
-    return this[HOOKS].getMeta(hookId);
   }
 
   unregisterHook(hookId, callback) {
@@ -486,19 +529,74 @@ class ExtensionRegistry {
     return this[HOOKS].executeParallel(hookId, ...args);
   }
 
+  // =========================================================================
+  // Handler Management (request/response extension points)
+  // =========================================================================
+
   /**
-   * Call a hook as a request/response exchange (single answer expected).
+   * Claim a handler id. One extension owns an id; a competing registration
+   * throws instead of being resolved silently by priority.
    *
-   * Unlike `executeHook*`, handler errors are NOT swallowed — they propagate
-   * so the caller can turn them into a real failure response. Use this for
-   * IPC and anything else where the caller needs the answer.
+   * @param {string} handlerId - Handler identifier
+   * @param {Function} callback - Handler function (may be async)
+   * @param {string} [extensionId] - Owning extension, for auto-cleanup
+   * @param {Object} [options]
+   * @param {boolean} [options.public=false] - Allow unauthenticated callers
+   * @throws {DuplicateHandlerError} When another callback already owns the id
+   */
+  registerHandler(handlerId, callback, extensionId, options = {}) {
+    this[HANDLERS].register(handlerId, callback, extensionId, options);
+    return this;
+  }
+
+  /**
+   * Release a handler id. No callback argument is needed because an id has a
+   * single owner.
+   * @param {string} handlerId - Handler identifier
+   * @returns {ExtensionRegistry} this
+   */
+  unregisterHandler(handlerId) {
+    this[HANDLERS].unregister(handlerId);
+    return this;
+  }
+
+  /**
+   * @param {string} handlerId
+   * @returns {boolean}
+   */
+  hasHandler(handlerId) {
+    return this[HANDLERS].has(handlerId);
+  }
+
+  /**
+   * Registration metadata, e.g. `{ public: true }`.
+   * @param {string} handlerId
+   * @returns {Object}
+   */
+  getHandlerMeta(handlerId) {
+    return this[HANDLERS].getMeta(handlerId);
+  }
+
+  /**
+   * Whether `extensionId` owns this handler id.
+   * @param {string} extensionId
+   * @param {string} handlerId
+   * @returns {boolean}
+   */
+  ownsHandler(extensionId, handlerId) {
+    return this[HANDLERS].owns(extensionId, handlerId);
+  }
+
+  /**
+   * Call the handler and return `{ handled, value, extensionId }`.
+   * Handler errors propagate so the caller can report a real failure.
    *
-   * @param {string} hookId - Hook identifier
-   * @param {...any} args - Arguments to pass to the handler
+   * @param {string} handlerId - Handler identifier
+   * @param {...any} args - Arguments passed to the handler
    * @returns {Promise<{handled: boolean, value: any, extensionId: string|undefined}>}
    */
-  async invokeHook(hookId, ...args) {
-    return this[HOOKS].invoke(hookId, ...args);
+  async invokeHandler(handlerId, ...args) {
+    return this[HANDLERS].invoke(handlerId, ...args);
   }
 
   // =========================================================================
@@ -525,6 +623,7 @@ class ExtensionRegistry {
     this[EXTENSIONS].clear();
     this[SLOTS].clear();
     this[HOOKS].clear();
+    this[HANDLERS].clear();
     this[DEFINITIONS].clear();
     this.notify();
     return this;

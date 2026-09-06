@@ -11,7 +11,12 @@ import {
   validateAdapter,
 } from '@shared/utils/BaseRouter.js';
 
-import { buildRoutes, validateConfig, linkParents } from './builder.js';
+import {
+  buildRoutes,
+  materializeRoute,
+  validateConfig,
+  linkParents,
+} from './builder.js';
 import { collect } from './collector.js';
 import {
   ROUTE_MOUNT_KEY,
@@ -26,7 +31,22 @@ import {
   runUnmount,
 } from './lifecycle.js';
 import { createMatcher } from './matcher.js';
-import { createError, decodeUrl, isDescendant, log } from './utils.js';
+import {
+  createError,
+  decodeUrl,
+  getRouteNamespace,
+  isDescendant,
+  log,
+} from './utils.js';
+
+/** @type {symbol} View source files touched by the last resolve */
+const VIEW_ASSETS_KEY = Symbol('__xnapify.router.viewAssets__');
+
+/** @type {symbol} Extension namespaces activated by the last resolve */
+const VIEW_NAMESPACES_KEY = Symbol('__xnapify.router.viewNamespaces__');
+
+/** @type {symbol} Nesting depth of the resolve currently in flight */
+const RESOLVE_DEPTH_KEY = Symbol('__xnapify.router.resolveDepth__');
 
 // ============================================================================
 // Helpers
@@ -129,6 +149,17 @@ async function traverseRoutes(routes, method, context, childrenFirst = false) {
 }
 
 /**
+ * Union of an existing list and a set, order-preserving and de-duplicated.
+ *
+ * @param {string[]|undefined} existing - Values recorded so far
+ * @param {Set<string>} incoming - Values from this pass
+ * @returns {string[]}
+ */
+function union(existing, incoming) {
+  return Array.from(new Set([...(existing || []), ...incoming]));
+}
+
+/**
  * Clone context for safe storage
  * @param {Object} ctx - Context to clone
  * @returns {Object} Cloned context with essential properties
@@ -192,24 +223,35 @@ export class Router extends BaseRouter {
    * @param {Object} adapter - Module loader with files() and load()
    * @param {Object} [options]
    * @param {{ routes: Object[], layouts: Map }} [options.compiled] - A route
-   *   tree already built by `Router.compile()`. When given, the constructor
-   *   skips module collection and tree building entirely. Used by the server
-   *   to share one immutable tree across concurrent requests while each
-   *   request still gets its own Router (navigation queue, registration state).
+   *   tree already built by an earlier Router over the same adapter — see
+   *   `compileServerViews()` in `src/bootstrap/views.js`, which builds one,
+   *   injects the extension routes and materialises it. When given, the
+   *   constructor skips module collection and tree building entirely. Used by
+   *   the server to share one immutable tree across concurrent requests while
+   *   each request still gets its own Router (navigation queue, registration
+   *   state).
    */
   constructor(adapter, options) {
     validateAdapter(adapter);
 
     const compiled = options && options.compiled;
 
+    // A lazy adapter returns promises from load(), so nothing may be loaded
+    // while the tree is built. Route, layout and config modules are then
+    // fetched by materializeRoute() when a route is first matched.
+    const collectOptions =
+      adapter && adapter.lazy ? { defer: true } : undefined;
+
     // Collect and store layouts for reuse in add()
-    const layouts = compiled ? compiled.layouts : collect(adapter, 'layouts');
+    const layouts = compiled
+      ? compiled.layouts
+      : collect(adapter, 'layouts', collectOptions);
 
     const routes = compiled
       ? compiled.routes
       : buildRoutes(
-          collect(adapter, 'routes'),
-          collect(adapter, 'configs'),
+          collect(adapter, 'routes', collectOptions),
+          collect(adapter, 'configs', collectOptions),
           layouts,
         );
 
@@ -343,17 +385,21 @@ export class Router extends BaseRouter {
   async add(adapter, ctx, sourceId) {
     validateAdapter(adapter);
 
-    // Build new routes — merge core layouts with extension-provided layouts
+    // Build new routes — merge core layouts with extension-provided layouts.
+    // Each source keeps its own loading strategy: an extension bundle is
+    // eager, the application's own views are lazy, and the merged layout map
+    // can hold both because entries are resolved individually.
+    const collectOptions = adapter.lazy ? { defer: true } : undefined;
 
-    const extLayouts = collect(adapter, 'layouts');
+    const extLayouts = collect(adapter, 'layouts', collectOptions);
     const mergedLayouts = new Map([
       // eslint-disable-next-line no-underscore-dangle
       ...(this._layouts || []),
       ...extLayouts,
     ]);
     const newRoutes = buildRoutes(
-      collect(adapter, 'routes'),
-      collect(adapter, 'configs'),
+      collect(adapter, 'routes', collectOptions),
+      collect(adapter, 'configs', collectOptions),
       mergedLayouts,
     );
 
@@ -447,6 +493,35 @@ export class Router extends BaseRouter {
   }
 
   /**
+   * Source files of every view walked during the most recent resolve: the
+   * matched route, its ancestors, and their layouts and configs.
+   *
+   * The server maps these to chunk filenames and emits them with the entry
+   * bundle, so a lazily chunked view costs no extra round trip. Empty for an
+   * eagerly collected tree, which needs no such help.
+   *
+   * @returns {string[]}
+   */
+  get viewAssets() {
+    return this[VIEW_ASSETS_KEY] || [];
+  }
+
+  /**
+   * Extension namespaces activated during the most recent resolve — the same
+   * names `onRouteInit` hands to the extension manager, in match order.
+   *
+   * The server renders the slots of every extension, including those the
+   * browser is allowed to fetch lazily. Those extensions' markup is in the
+   * response, so their stylesheet has to be too; this is how the server knows
+   * which ones took part.
+   *
+   * @returns {string[]}
+   */
+  get viewNamespaces() {
+    return this[VIEW_NAMESPACES_KEY] || [];
+  }
+
+  /**
    * Resolves a URL to a route and executes its action
    * Handles the complete lifecycle: matching -> initializing -> unmounting -> mounting -> resolving
    */
@@ -499,6 +574,21 @@ export class Router extends BaseRouter {
    * Internal resolve implementation
    */
   async _resolveInternal(context, navigationEntry) {
+    // A resolve can nest: the catch-all's action re-enters with /not-found,
+    // and errorHandler with /error. The nested pass is what actually renders,
+    // so its views and namespaces are the ones the server must ship. Track
+    // the depth and union the results rather than letting the outer pass
+    // overwrite them with the synthetic route it matched. Only the outermost
+    // pass clears the previous navigation's metadata, so every nesting level
+    // — including one entered from the catch/errorHandler path, which is
+    // awaited so that this counter is still raised — adds to it.
+    const depth = (this[RESOLVE_DEPTH_KEY] || 0) + 1;
+    this[RESOLVE_DEPTH_KEY] = depth;
+    if (depth === 1) {
+      this[VIEW_ASSETS_KEY] = [];
+      this[VIEW_NAMESPACES_KEY] = [];
+    }
+
     // Store context for deferred lifecycle calls (e.g. add/remove with ctx)
     // eslint-disable-next-line no-underscore-dangle
     this._lastResolveContext = context;
@@ -545,6 +635,15 @@ export class Router extends BaseRouter {
       },
       ctx.pathname,
     );
+
+    // Source files of every view this resolve touches; read by the server
+    // through `viewAssets` to preload their chunks.
+    const viewAssets = new Set();
+
+    // Extension namespaces this resolve activates, in match order; read by
+    // the server through `viewNamespaces` to emit the assets of the deferred
+    // extensions whose slots it just rendered.
+    const viewNamespaces = new Set();
 
     const state = {
       matcher,
@@ -624,6 +723,42 @@ export class Router extends BaseRouter {
           return null;
         }
 
+        // Load the matched route's module, and its ancestors', before any
+        // hook reads them. Everything below — translations, init, mount and
+        // the action — then behaves exactly as it does for an eager tree.
+        const justLoaded = await materializeRoute(state.current.route);
+
+        // `setup` runs from a traversal that reads `route.module`, which for
+        // a deferred route is still undefined when that traversal happens.
+        // Without this the hook would first fire on the navigation *after*
+        // the one that loaded the route — the registration it performs
+        // (a menu entry, a reducer) missing from the render it was written
+        // for. Later navigations go through the traversal as usual.
+        for (const node of justLoaded) {
+          if (typeof node.module.setup !== 'function') continue;
+          try {
+            await node.module.setup(ctx);
+          } catch (error) {
+            log(`Setup error for "${node.path}": ${error.message}`, 'error');
+          }
+        }
+
+        for (let n = state.current.route; n; n = n.parent) {
+          if (Array.isArray(n.assetPaths)) {
+            n.assetPaths.forEach(f => viewAssets.add(f));
+          }
+        }
+
+        // Recorded here rather than inside onRouteInit so that the namespace
+        // is known even when the host installs no such hook, and so that it
+        // is read after materialize(), when `module.namespace` exists.
+        // Synthetic nodes (the hand-written catch-all) name no real view, so
+        // they would only add noise for the server to look assets up by.
+        if (state.current.route.module || state.current.route.filePath) {
+          const namespace = getRouteNamespace(state.current.route);
+          if (namespace) viewNamespaces.add(namespace);
+        }
+
         // Run translations hook (once per route, parent → child)
         await loadRouteTranslations(state.current.route, state.current);
 
@@ -688,6 +823,11 @@ export class Router extends BaseRouter {
       }
 
       navigationSuccessful = true;
+      this[VIEW_ASSETS_KEY] = union(this[VIEW_ASSETS_KEY], viewAssets);
+      this[VIEW_NAMESPACES_KEY] = union(
+        this[VIEW_NAMESPACES_KEY],
+        viewNamespaces,
+      );
 
       // Only update prev route tracking on successful navigation
       this[ROUTE_PREV_KEY] =
@@ -722,12 +862,25 @@ export class Router extends BaseRouter {
         }
       }
 
-      // Handle error with custom handler or rethrow
+      // Handle error with custom handler or rethrow.
+      // Awaited, not returned: the handler typically re-enters resolve() for
+      // /error, and `finally` below would otherwise decrement the depth first
+      // — the nested pass would then look like a depth-1 pass and reset the
+      // asset/namespace metadata instead of adding to it.
       if (typeof this.options.errorHandler === 'function') {
-        return this.options.errorHandler(error, ctx);
+        const handled = await this.options.errorHandler(error, ctx);
+        return handled;
       }
       throw error;
     } finally {
+      // Decrement rather than restoring `depth - 1`: a nested pass has
+      // already decremented its own, so both forms agree while resolves
+      // nest. They differ when two resolves overlap instead — a second
+      // navigation started before the first settled — where `depth - 1`
+      // leaves the counter permanently above zero, after which no pass is
+      // ever the outermost one and the metadata below is never cleared again.
+      this[RESOLVE_DEPTH_KEY] = Math.max(0, (this[RESOLVE_DEPTH_KEY] || 0) - 1);
+
       // Cleanup: Clear Sets to prevent memory leaks (only if allocated)
       if (ctx[ROUTE_MOUNT_KEY]) {
         ctx[ROUTE_MOUNT_KEY].clear();

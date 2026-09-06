@@ -11,8 +11,50 @@
 /* stylelint-disable-next-line import-notation */
 @import 'tailwindcss';
 
-/* stylelint-disable-next-line import-notation */
-@import '@radix-ui/themes/styles.css' layer(radix-ui);
+/*
+ * Radix Themes, imported as a subset rather than as `styles.css`.
+ *
+ * `styles.css` is 812 KB and is the concatenation of every colour scale,
+ * the token aliases, the component rules and the utility props. Two thirds
+ * of it can never apply here:
+ *
+ *   - 31 colour scales ship; this application references a subset. The list
+ *     below is every scale reachable from a `color="…"` prop or a custom
+ *     property reference (`var(--x-N)`, or Tailwind's `bg-(--x-N)`) in src/
+ *     and shared/, plus `slate`, which Radix pairs with the default indigo
+ *     accent when `grayColor` is left on "auto".
+ *
+ *     Dropping a scale a component still uses is silent: `var(--teal-3)` with
+ *     no definition makes the declaration invalid at computed-value time, so
+ *     the property is simply unset and nothing is logged. The list is pinned
+ *     by shared/renderer/radix-color-subset.test.js, which fails when a
+ *     component reaches for a scale that is not imported here.
+ *   - the remaining unused-breakpoint variants are dropped later in the
+ *     PostCSS pipeline; see tools/postcss/RadixBreakpointTrim.js.
+ *
+ * Order matters and mirrors the order inside styles.css: colour scales,
+ * then token aliases, then components, then utilities. Adding a new
+ * `color="…"` value to a component means adding its scale here.
+ */
+
+/* stylelint-disable import-notation */
+@import '@radix-ui/themes/tokens/colors/amber.css' layer(radix-ui);
+@import '@radix-ui/themes/tokens/colors/blue.css' layer(radix-ui);
+@import '@radix-ui/themes/tokens/colors/cyan.css' layer(radix-ui);
+@import '@radix-ui/themes/tokens/colors/gray.css' layer(radix-ui);
+@import '@radix-ui/themes/tokens/colors/green.css' layer(radix-ui);
+@import '@radix-ui/themes/tokens/colors/indigo.css' layer(radix-ui);
+@import '@radix-ui/themes/tokens/colors/orange.css' layer(radix-ui);
+@import '@radix-ui/themes/tokens/colors/plum.css' layer(radix-ui);
+@import '@radix-ui/themes/tokens/colors/purple.css' layer(radix-ui);
+@import '@radix-ui/themes/tokens/colors/red.css' layer(radix-ui);
+@import '@radix-ui/themes/tokens/colors/slate.css' layer(radix-ui);
+@import '@radix-ui/themes/tokens/colors/teal.css' layer(radix-ui);
+@import '@radix-ui/themes/tokens/colors/yellow.css' layer(radix-ui);
+@import '@radix-ui/themes/tokens/base.css' layer(radix-ui);
+@import '@radix-ui/themes/components.css' layer(radix-ui);
+@import '@radix-ui/themes/utilities.css' layer(radix-ui);
+/* stylelint-enable import-notation */
 
 @custom-variant dark (&:where(.dark, .dark *));
 @custom-variant translucent (&:where([data-panel-background="translucent"] *));

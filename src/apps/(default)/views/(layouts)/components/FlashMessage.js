@@ -14,24 +14,30 @@ import { features } from '@shared/renderer/redux/index.js';
 
 const { getFlashMessage, clearFlashMessage } = features;
 
+/**
+ * Bridges the `ui.flashMessage` slot in the store to a Toast instance.
+ *
+ * Every layout mounts exactly one of these. Keeping it in a single component
+ * matters: three hand-copied versions of this effect had already drifted apart.
+ */
 function FlashMessage() {
   const dispatch = useDispatch();
   const flashMessage = useSelector(getFlashMessage);
   const toastRef = useRef(null);
 
   useEffect(() => {
-    if (flashMessage && toastRef.current) {
-      // Display the flash message
-      toastRef.current.show({
-        variant: flashMessage.variant || 'info',
-        message: flashMessage.message,
-        title: flashMessage.title,
-        duration: flashMessage.duration || 4000,
-      });
+    if (!flashMessage || !toastRef.current) return;
 
-      // Clear from Redux state after displaying
-      dispatch(clearFlashMessage());
-    }
+    toastRef.current.show({
+      variant: flashMessage.variant || 'info',
+      message: flashMessage.message,
+      title: flashMessage.title,
+      // Passed through as-is so `duration: 0` still means "until dismissed".
+      duration: flashMessage.duration,
+    });
+
+    // Clear from Redux state after displaying
+    dispatch(clearFlashMessage());
   }, [flashMessage, dispatch]);
 
   return <Toast ref={toastRef} />;

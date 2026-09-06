@@ -111,6 +111,8 @@ export async function updateUserProfile(user_id, formData, { models, hook }) {
  * @param {Object} options - Options object
  * @param {Object} options.models - Database models
  * @param {Object} options.hook - Hook factory for activities logging
+ * @param {string} [options.sessionId] - Family id (`sid`) of the acting
+ *   session, so the listener that revokes the other sessions can spare it
  * @returns {Promise<boolean>} Success status
  * @throws {Error} If UserNotFoundError or password invalid
  */
@@ -118,7 +120,7 @@ export async function changeUserPassword(
   user_id,
   currentPassword,
   newPassword,
-  { models, hook },
+  { models, hook, sessionId = null },
 ) {
   const { User } = models;
 
@@ -147,6 +149,8 @@ export async function changeUserPassword(
     user,
     user_id,
     email: user.email,
+    // Identifies the session doing the change; everything else is revoked
+    family_id: sessionId,
   });
 
   return true;

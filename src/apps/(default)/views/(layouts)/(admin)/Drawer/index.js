@@ -34,6 +34,13 @@ export const SIDER_WIDTH = 240;
 export const SIDER_COLLAPSED_WIDTH = 80;
 export const SIDER_MINIMAL_WIDTH = 64;
 
+/**
+ * Stable empty result for the menu selector. Returning a fresh `[]` makes
+ * useSelector's reference check fail on every dispatched action, re-rendering
+ * the whole sidebar for changes that have nothing to do with it.
+ */
+const NO_MENUS = Object.freeze([]);
+
 function Drawer({ minimal = false }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
@@ -114,7 +121,7 @@ function Drawer({ minimal = false }) {
   );
 
   const dynamicMenus = useSelector(state =>
-    state.ui.menus && state.ui.menus.admin ? state.ui.menus.admin : [],
+    state.ui.menus && state.ui.menus.admin ? state.ui.menus.admin : NO_MENUS,
   );
 
   const menuItems = useMemo(() => {

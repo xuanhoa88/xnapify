@@ -17,16 +17,18 @@ const accessToken = jwt.generateTypedToken('access', { userId: 123 });
 const decoded = jwt.verifyTypedToken(accessToken, 'access');
 console.log(decoded.userId);
 
-// Generate a pair
-const pair = jwt.generateTokenPair({ userId: 123 });
-console.log(pair.accessToken, pair.refreshToken);
+// Token pairs are NOT minted here — a pair without a `refresh_tokens` row
+// cannot be revoked or rotated. Use the session service instead:
+const pair = await container
+  .resolve('users:sessions')
+  .issueTokenPair({ id: userId }, { jwt, models });
 ```
 
 ## Features
 
 - **Standard JWT**: Wrapper around `jsonwebtoken` ensuring valid signature formats and standard claims (`jti`, `iat`, `exp`, `iss`, `aud`).
 - **Typed Tokens**: Built-in support for different token types (`access`, `refresh`, `reset`, `verification`) preventing a refresh token from being used as an access token.
-- **Token Pairs**: High-level helpers to generate and rotate Access/Refresh token pairs.
+- **Token Pairs**: Owned by `users:sessions`, not by this module — every pair is recorded in `refresh_tokens` so it stays revocable and rotatable.
 - **Factory Approach**: Encapsulates the secret key inside a factory instance so it doesn't leak into business logic layers.
 - **Unified Errors**: Standardized error mappings (e.g. `TokenExpiredError`, `InvalidTokenTypeError`).
 
@@ -57,8 +59,7 @@ The instantiated `jwt` object provides the following functions:
 - `verifyToken(token, [options])`: Validates signature and expiration, returns payload.
 - `generateTypedToken(type, payload, [options])`: Creates a token with a specific `type` claim.
 - `verifyTypedToken(token, expectedType, [options])`: Validates signature and strictly enforces the the `type` claim.
-- `generateTokenPair(payload, [options])`: Returns `{ accessToken, refreshToken }`.
-- `refreshTokenPair(refreshToken, [options])`: Verifies a refresh token and issues a new pair.
+- `generateTokenPair(payload, [options])` / `refreshTokenPair(refreshToken, [options])`: **throw**. They minted sessions with no `refresh_tokens` row, no `sid` and no `ver` — unrevocable and unrotatable. Use `container.resolve('users:sessions').issueTokenPair()` / `rotateTokenPair()`.
 
 ### Static Utilities
 
@@ -135,8 +136,6 @@ Injects `type: tokenConfig.type` into the payload and overrides `expiresIn` with
 
 Runs `verifyToken` first, then rigorously asserts `decoded.type === expectedType`. Mismatches throw `InvalidTokenTypeError`.
 
-### `refreshTokenPair(refreshToken, secret)`
+### Rotation
 
-1. Verifies the provided token as `refresh` type.
-2. Strips standard JWT claims (`iat`, `exp`, `jti`, `type`, `aud`, `iss`) from the payload.
-3. Generates a fresh `accessToken` and `refreshToken` pair holding the exact same business schema payload as the original.
+Rotation lives in `users:sessions.rotateTokenPair()`, which verifies the token as `refresh`, re-reads the account's authorization claims from the database, retires the presented token atomically, and records the successor in the same family.

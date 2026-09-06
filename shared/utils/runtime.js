@@ -20,10 +20,22 @@ import os from 'os';
  * Number of worker processes requested by configuration.
  * `auto` maps to the number of available CPUs; anything unparsable is 1.
  *
+ * A forked worker is told the size the primary actually started with
+ * (`XNAPIFY_CLUSTER_SIZE`) and trusts that over re-deriving it: `auto` reads
+ * the CPU count at the moment it is evaluated, which a cgroup change can move
+ * between the primary's fork loop and a worker's boot. The variable is only
+ * honoured inside a worker, so setting it by hand cannot silently turn a
+ * single-process deployment into a cluster.
+ *
  * @param {NodeJS.ProcessEnv} [env]
  * @returns {number}
  */
 export function getClusterWorkerCount(env = process.env) {
+  if (isClusterWorker(env)) {
+    const forked = parseInt(env.XNAPIFY_CLUSTER_SIZE, 10);
+    if (Number.isInteger(forked) && forked > 0) return forked;
+  }
+
   const raw = String(env.XNAPIFY_CLUSTER_WORKERS || '')
     .trim()
     .toLowerCase();

@@ -34,9 +34,18 @@ import crypto from 'crypto';
 import { Op } from 'sequelize';
 
 import {
+  ADMIN_ROLE,
+  DEFAULT_ACTIONS,
+  DEFAULT_RESOURCES,
+} from '@shared/api/engines/auth/constants.js';
+import {
   getRevocationStore,
   SESSION_REVOKED_TTL_MS,
 } from '@shared/api/engines/auth/revocation.js';
+
+import { isAdmin } from '../utils/formatter.js';
+import { userFullIncludes } from '../utils/includes.js';
+import { collectUserRbacData } from '../utils/rbac/collector.js';
 
 /** Claims stripped from a decoded token before re-issuing */
 const RESERVED_CLAIMS = new Set([
@@ -51,12 +60,66 @@ const RESERVED_CLAIMS = new Set([
   'nbf',
 ]);
 
+/**
+ * How long after a token was rotated a second presentation of it is treated
+ * as a parallel refresh rather than a replay of a stolen token.
+ *
+ * Auto-rotation fires on any request made while the access token is within
+ * `refreshThreshold` of expiry, so a page that issues several XHRs at once
+ * routinely presents the same refresh token more than once. Punishing that
+ * as reuse would log the user out mid-work.
+ */
+export const ROTATION_GRACE_MS = 10_000;
+
 function sessionError(message, name, code, status = 401) {
   const error = new Error(message);
   error.name = name;
   error.code = code;
   error.status = status;
   return error;
+}
+
+/**
+ * Was this token retired by a rotation that is still in flight?
+ *
+ * True only when it was retired inside the grace window AND the successor it
+ * names really exists and is still live. A token retired by logout or by
+ * `revokeUserSessions` names no successor, so an explicit revocation is never
+ * mistaken for a parallel refresh.
+ *
+ * @param {Object} record - RefreshToken row
+ * @param {Object} RefreshToken - Model
+ * @returns {Promise<boolean>}
+ */
+async function isFreshlyRotated(record, RefreshToken) {
+  if (!record.revoked_at || !record.replaced_by) return false;
+  if (Date.now() - record.revoked_at.getTime() >= ROTATION_GRACE_MS) {
+    return false;
+  }
+  const successor = await RefreshToken.findByPk(record.replaced_by, {
+    attributes: ['id', 'family_id', 'revoked_at'],
+  });
+  return (
+    !!successor &&
+    successor.family_id === record.family_id &&
+    !successor.revoked_at
+  );
+}
+
+/**
+ * Two refreshes raced and this one lost. Retryable, and deliberately NOT a
+ * `RefreshTokenReuseError`: the caller keeps its cookies, and the winning
+ * request has already installed the new pair.
+ *
+ * @returns {Error}
+ */
+function rotationConflictError() {
+  return sessionError(
+    'Refresh token is already being rotated',
+    'RefreshTokenRotationConflictError',
+    'REFRESH_TOKEN_ROTATION_CONFLICT',
+    409,
+  );
 }
 
 function toUserPayload(decoded) {
@@ -141,7 +204,40 @@ export async function issueTokenPair(
 }
 
 /**
+ * Build the payload of the successor token.
+ *
+ * Authorization claims are read back from the database, never copied from
+ * the presented token: `RESERVED_CLAIMS` only strips JWT bookkeeping, so
+ * carrying the old payload forward would let a demoted admin stay an admin
+ * for the whole 30-day refresh chain. Everything else the token carries
+ * (`picture`, `impersonator_id`, extension claims) survives untouched.
+ *
+ * @param {Object} decoded - Verified payload of the presented refresh token
+ * @param {Object} user - Freshly loaded User with roles/groups/permissions
+ * @returns {Object} Payload for the successor pair
+ */
+function toRotatedPayload(decoded, user) {
+  const rbac = collectUserRbacData(user);
+  return {
+    ...toUserPayload(decoded),
+    id: user.id,
+    email: user.email,
+    is_admin: isAdmin(rbac, {
+      adminRoleName: ADMIN_ROLE,
+      defaultResources: DEFAULT_RESOURCES,
+      defaultActions: DEFAULT_ACTIONS,
+    }),
+  };
+}
+
+/**
  * Rotate a refresh token: validate, revoke the old one, issue a new pair.
+ *
+ * The retire step is a single conditional UPDATE (`revoked_at IS NULL`)
+ * rather than a read-then-write, so exactly one of N concurrent refreshes
+ * can succeed on any dialect — SQLite included, where `SELECT … FOR UPDATE`
+ * does not exist. The losers get a retryable conflict instead of forking
+ * the session or tripping reuse detection.
  *
  * @param {string} refreshToken - Presented refresh JWT
  * @param {Object} deps - { jwt, models, meta }
@@ -173,8 +269,13 @@ export async function rotateTokenPair(refreshToken, { jwt, models, meta }) {
   }
 
   // 3. Reuse detection: a rotated/revoked token being replayed means the
-  //    family is compromised. Kill every descendant.
+  //    family is compromised. Kill every descendant — unless it was retired
+  //    moments ago, which is a parallel refresh from the same client and
+  //    must not cost the user their session.
   if (record.revoked_at) {
+    if (await isFreshlyRotated(record, RefreshToken)) {
+      throw rotationConflictError();
+    }
     await revokeFamily(record.family_id, { models });
     throw sessionError(
       'Refresh token has been revoked',
@@ -184,7 +285,10 @@ export async function rotateTokenPair(refreshToken, { jwt, models, meta }) {
   }
 
   if (record.expires_at && record.expires_at.getTime() < Date.now()) {
-    await record.update({ revoked_at: new Date() });
+    await RefreshToken.update(
+      { revoked_at: new Date() },
+      { where: { id: record.id, revoked_at: null } },
+    );
     throw sessionError(
       'Refresh token has expired',
       'TokenExpiredError',
@@ -192,15 +296,23 @@ export async function rotateTokenPair(refreshToken, { jwt, models, meta }) {
     );
   }
 
-  // 4. Re-validate the account on every refresh
+  // 4. Re-validate the account AND re-read its authorization claims on every
+  //    refresh. Role changes never call revokeUserSessions, so this query is
+  //    the only thing standing between a demotion and a stale `is_admin`.
   const user = await User.findByPk(record.user_id, {
     attributes: [
       'id',
+      'email',
       'is_active',
       'is_locked',
       'locked_until',
       'token_version',
     ],
+    include: userFullIncludes(models, {
+      includePermissions: true,
+      roleAttributes: ['name'],
+      groupAttributes: ['name'],
+    }),
   });
 
   const lockedByTime =
@@ -215,8 +327,9 @@ export async function rotateTokenPair(refreshToken, { jwt, models, meta }) {
     );
   }
 
-  // 5. Issue successor within the same family, then retire the old token
-  const next = await issueTokenPair(toUserPayload(decoded), {
+  // 5. Issue the successor first, so a failure here never leaves the caller
+  //    without a usable token, then claim the rotation atomically.
+  const next = await issueTokenPair(toRotatedPayload(decoded, user), {
     jwt,
     models,
     meta,
@@ -224,7 +337,18 @@ export async function rotateTokenPair(refreshToken, { jwt, models, meta }) {
     tokenVersion: Number(user.token_version) || 0,
   });
 
-  await record.update({ revoked_at: new Date(), replaced_by: next.jti });
+  const [claimed] = await RefreshToken.update(
+    { revoked_at: new Date(), replaced_by: next.jti },
+    { where: { id: record.id, revoked_at: null } },
+  );
+
+  if (claimed === 0) {
+    // Another request retired this token between step 3 and here. Drop the
+    // successor we just minted rather than leaving the family with two live
+    // branches, and report a conflict — the family stays intact.
+    await RefreshToken.destroy({ where: { id: next.jti } });
+    throw rotationConflictError();
+  }
 
   return { accessToken: next.accessToken, refreshToken: next.refreshToken };
 }
@@ -281,13 +405,20 @@ export async function revokeByToken(refreshToken, { jwt, models, ws = null }) {
  * this process never saw. With `exceptFamilyId` the surviving session must
  * keep its current access token, so only the other families are denylisted.
  *
+ * API keys are long-lived bearer tokens for the same user, so a full
+ * revocation deactivates them too — otherwise "signed out everywhere" leaves
+ * a 365-day credential working. When a session is being kept alive
+ * (`exceptFamilyId`, i.e. the user changing their own password) the keys are
+ * left alone so integrations do not break; pass `revokeApiKeys` explicitly to
+ * override either way.
+ *
  * @param {string|number} userId
- * @param {Object} deps - { models, ws?, exceptFamilyId? }
+ * @param {Object} deps - { models, ws?, exceptFamilyId?, revokeApiKeys? }
  * @returns {Promise<number>} Number of refresh tokens revoked
  */
 export async function revokeUserSessions(
   userId,
-  { models, ws = null, exceptFamilyId = null },
+  { models, ws = null, exceptFamilyId = null, revokeApiKeys },
 ) {
   if (!userId) return 0;
   const where = { user_id: userId, revoked_at: null };
@@ -325,6 +456,30 @@ export async function revokeUserSessions(
     }
   }
 
+  if (revokeApiKeys ?? !exceptFamilyId) {
+    await revokeUserApiKeys(userId, { models });
+  }
+
+  return count;
+}
+
+/**
+ * Deactivate every live API key of a user.
+ *
+ * API keys authenticate through their own strategy and carry no rotation
+ * family, so the denylist cannot reach them; the `is_active` column is what
+ * makes them revocable.
+ *
+ * @param {string|number} userId
+ * @param {Object} deps - { models }
+ * @returns {Promise<number>} Number of keys deactivated
+ */
+export async function revokeUserApiKeys(userId, { models }) {
+  if (!userId || !models.UserApiKey) return 0;
+  const [count] = await models.UserApiKey.update(
+    { is_active: false },
+    { where: { user_id: userId, is_active: true } },
+  );
   return count;
 }
 

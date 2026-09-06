@@ -23,8 +23,18 @@
  *
  * `version` is a semver range checked against the running host.
  * `capabilities` is the allow-list handed to `createScopedContainer()`.
- * Missing declarations fall back to {@link DEFAULT_EXTENSION_CAPABILITIES},
- * which grants only side-effect-free services.
+ *
+ * Grants are ADDITIVE: every extension always receives
+ * {@link DEFAULT_EXTENSION_CAPABILITIES} (side-effect-free services), and a
+ * declaration adds to that baseline rather than replacing it. So a missing
+ * block, an empty array and `["hook"]` all still resolve `hook`, and
+ * `["db"]` means "the defaults plus db".
+ *
+ * Two grants are never handed out on the manifest's word alone:
+ * - {@link RESERVED_CAPABILITIES} are always denied, wildcard or not.
+ * - `'*'` (everything else) is honoured only for an extension the *host*
+ *   trusts, listed in `XNAPIFY_TRUSTED_EXTENSIONS`. The manifest is the
+ *   extension's own package.json, so self-declared `'*'` is ignored.
  */
 
 import semver from 'semver';
@@ -38,8 +48,53 @@ export const DEFAULT_EXTENSION_CAPABILITIES = Object.freeze([
   'i18n',
 ]);
 
-/** Bindings that must never be granted to an extension. */
+/**
+ * Bindings that must never be granted to an extension.
+ *
+ * Enforced twice: stripped from the declared list here, and passed to
+ * `createScopedContainer({ deny })` so `'*'` cannot resolve them either.
+ */
 export const RESERVED_CAPABILITIES = Object.freeze(['extension', 'jwt', 'env']);
+
+/** Capability that grants every non-reserved binding. Trusted extensions only. */
+export const WILDCARD_CAPABILITY = '*';
+
+/** Extensions already warned about an ungranted wildcard (log once each). */
+const WILDCARD_WARNED = new Set();
+
+/**
+ * Extension ids/names the host operator has explicitly trusted, read from
+ * `XNAPIFY_TRUSTED_EXTENSIONS` (comma-separated ids or package names).
+ *
+ * Trust cannot come from the manifest: it is the extension's own
+ * package.json, read verbatim with no approval step.
+ *
+ * @returns {string[]}
+ */
+export function getTrustedExtensionIds() {
+  const raw = process.env.XNAPIFY_TRUSTED_EXTENSIONS;
+  if (typeof raw !== 'string' || !raw.trim()) return [];
+  return raw
+    .split(',')
+    .map(entry => entry.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Whether the host trusts this extension with the `'*'` capability.
+ *
+ * @param {Object} manifest - Extension manifest (package.json)
+ * @returns {boolean}
+ */
+export function isTrustedExtension(manifest) {
+  if (!manifest) return false;
+  const trusted = getTrustedExtensionIds();
+  if (trusted.length === 0) return false;
+  return (
+    (typeof manifest.id === 'string' && trusted.includes(manifest.id)) ||
+    (typeof manifest.name === 'string' && trusted.includes(manifest.name))
+  );
+}
 
 /**
  * Version of the running host. Injected at build time; falls back to the
@@ -54,6 +109,10 @@ export function getHostVersion() {
 
 /**
  * Normalise the `xnapify` block of a manifest.
+ *
+ * `capabilities` here is what the manifest *declared* (the defaults when it
+ * declared nothing at all); {@link getGrantedCapabilities} turns that into
+ * what the extension is actually allowed to resolve.
  *
  * @param {Object} manifest
  * @returns {{ version: string|null, capabilities: string[] }}
@@ -80,14 +139,39 @@ export function getManifestContract(manifest) {
 }
 
 /**
- * Capabilities an extension may actually receive: declared minus reserved.
+ * Capabilities an extension actually receives: the side-effect-free defaults
+ * plus whatever it declared, minus the reserved bindings, minus an
+ * untrusted `'*'`.
+ *
+ * Additive so that `capabilities: []` (or a narrow list) still resolves the
+ * baseline services every extension needs, rather than silently granting
+ * nothing.
  *
  * @param {Object} manifest
  * @returns {string[]}
  */
 export function getGrantedCapabilities(manifest) {
   const { capabilities } = getManifestContract(manifest);
-  return capabilities.filter(cap => !RESERVED_CAPABILITIES.includes(cap));
+  const granted = new Set(DEFAULT_EXTENSION_CAPABILITIES);
+
+  for (const cap of capabilities) {
+    if (RESERVED_CAPABILITIES.includes(cap)) continue;
+    if (cap === WILDCARD_CAPABILITY && !isTrustedExtension(manifest)) {
+      const label = (manifest && (manifest.id || manifest.name)) || 'extension';
+      if (!WILDCARD_WARNED.has(label)) {
+        WILDCARD_WARNED.add(label);
+        console.warn(
+          `[ExtensionCompat] "${label}" declares the "*" capability, which is ` +
+            'granted only to extensions listed in XNAPIFY_TRUSTED_EXTENSIONS. ' +
+            'Falling back to its other declared capabilities.',
+        );
+      }
+      continue;
+    }
+    granted.add(cap);
+  }
+
+  return [...granted];
 }
 
 /**

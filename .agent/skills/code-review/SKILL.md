@@ -296,32 +296,35 @@ src/apps/[module_name]/
 | `boot({ container })`      | 6     | —                                   | Register workers, hooks, schedules. Models available. |
 | `routes()`                 | 7     | Rspack context **directly**         | `() => routesContext` (**not** a tuple)               |
 
-> ⚠️ **Key distinction:** Modules return Rspack context **directly** from `routes()`. Extensions return `[name, context]` tuple.
+> ⚠️ **Key distinction:** API modules return the Rspack context **directly** from `routes()`. Extensions return a `[name, context]` tuple. View modules are different again — see 6.3.
 
 ### 6.3 Frontend Hooks (`views/index.js`)
 
-| Hook                              | Phase | Notes                                                                |
-| --------------------------------- | ----- | -------------------------------------------------------------------- |
-| `translations()`                  | 1     | Returns rspack context (or `[context, ns]`)                          |
-| `providers({ container, store })` | 2     | Inject Redux reducers via `store.injectReducer(SLICE_NAME, reducer)` |
-| `boot({ container })`             | 3     | —                                                                    |
-| `routes()`                        | 4     | Rspack context **directly**                                          |
+| Hook                              | Phase | Notes                                                                                                                                  |
+| --------------------------------- | ----- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `translations()`                  | 1     | Returns rspack context (or `[context, ns]`), `mode: 'lazy'`                                                                            |
+| `providers({ container, store })` | 2     | Inject Redux reducers via `store.injectReducer(SLICE_NAME, reducer)`                                                                   |
+| `menus({ store, i18n })`          | 3     | `registerMenu(...)` — the only correct place for sidebar entries; must be idempotent                                                   |
+| `boot({ container })`             | 4     | —                                                                                                                                      |
+| `routes()`                        | 5     | `[context, { lazy: true }]` over a `mode: 'lazy'` context — a bare context throws `MixedRouteLoadingStrategyError` and no route mounts |
+
+> ⚠️ `shutdown` exists in `VIEW_LIFECYCLE_PHASES` but the autoloader filters it out: application modules are never unloaded. Only extensions run it.
 
 ### 6.4 Route Files (`_route.js`)
 
-| Export                             | Type                         | Purpose                                          |
-| ---------------------------------- | ---------------------------- | ------------------------------------------------ |
-| `middleware`                       | `false \| Function \| Array` | RBAC guard or opt-out                            |
-| `init({ store })`                  | Function                     | Reducer injection (legacy; prefer `providers()`) |
-| `setup({ store, i18n })`           | Function                     | Register sidebar menu via `registerMenu()`       |
-| `teardown({ store })`              | Function                     | Unregister menu via `unregisterMenu()`           |
-| `mount({ store, i18n, path })`     | Function                     | Add breadcrumbs via `addBreadcrumb()`            |
-| `unmount({ store })`               | Function                     | Cleanup on route exit                            |
-| `getInitialProps({ fetch, i18n })` | Async                        | SSR data fetching (keep lightweight)             |
-| `namespace`                        | String                       | Override extension namespace                     |
-| `useRateLimit`                     | `false \| Object`            | Rate limit override (API routes only)            |
-| `translations()`                   | Function                     | Route-specific translations                      |
-| `export default Component`         | React component              | **Required** — page component                    |
+| Export                             | Type                         | Purpose                                                                                                                       |
+| ---------------------------------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `middleware`                       | `false \| Function \| Array` | RBAC guard or opt-out                                                                                                         |
+| `init({ store })`                  | Function                     | Reducer injection (legacy; prefer `providers()`)                                                                              |
+| `setup({ store, i18n })`           | Function                     | Per-route registration — **never** sidebar menus (the chunk only loads once the route is matched; use the module's `menus()`) |
+| `teardown({ store })`              | Function                     | Reverse whatever `setup()` registered                                                                                         |
+| `mount({ store, i18n, path })`     | Function                     | Add breadcrumbs via `addBreadcrumb()`                                                                                         |
+| `unmount({ store })`               | Function                     | Cleanup on route exit                                                                                                         |
+| `getInitialProps({ fetch, i18n })` | Async                        | SSR data fetching (keep lightweight)                                                                                          |
+| `namespace`                        | String                       | Override extension namespace                                                                                                  |
+| `useRateLimit`                     | `false \| Object`            | Rate limit override (API routes only)                                                                                         |
+| `translations()`                   | Function                     | Route-specific translations                                                                                                   |
+| `export default Component`         | React component              | **Required** — page component                                                                                                 |
 
 ### 6.5 Module Review Checks
 
@@ -360,24 +363,25 @@ src/apps/[module_name]/
 
 ### 7.3 Frontend Hooks (`views/index.js`)
 
-| Hook                              | Notes                                                |
-| --------------------------------- | ---------------------------------------------------- |
-| `translations()`                  | Returns rspack context (or `[context, ns]`)          |
-| `providers({ container, store })` | Redux injection — **NOT** in `boot()`                |
-| `boot(registry)`                  | Register slots, hooks, IPC handlers                  |
-| `shutdown(registry)`              | **MUST exactly inverse `boot()`** — count must match |
+| Hook                                       | Notes                                                                                                                              |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `translations()`                           | Returns rspack context (or `[context, ns]`)                                                                                        |
+| `providers({ container, store })`          | Redux injection — **NOT** in `boot()`                                                                                              |
+| `menus({ store, i18n })`                   | `registerMenu(...)` for the extension's sidebar entries — re-runs per SSR request and on language change, so it must be idempotent |
+| `boot({ container, registry })`            | Register slots, hooks, IPC handlers                                                                                                |
+| `shutdown({ container, registry, store })` | **MUST exactly inverse `boot()` and `menus()`** — count must match                                                                 |
 
 ### 7.4 Extension Review Checks
 
-| Rule                                  | What to Check                                                                                                                                      |
-| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Isolation**                         | ❌ **NEVER** directly import from `src/apps/`                                                                                                      |
-| **Memory leak prevention** [CRITICAL] | Every listener in `boot()` must have `.off()` / `unregister()` in `shutdown()`. **Count them — they MUST match.**                                  |
-| **IPC pipelines**                     | Backend: `registry.registerHook('ipc:${__EXTENSION_ID__}:action', ...)`. Frontend: `context.fetch('/api/extensions/${__EXTENSION_ID__}/ipc', ...)` |
-| **Identity constant**                 | Use `__EXTENSION_ID__` for IPC, URLs, namespaces, logging. **Never** raw package name.                                                             |
-| **Defensive lifecycle**               | All DB ops in `install()`/`uninstall()` wrapped in `try/catch`                                                                                     |
-| **Redux in providers**                | `store.injectReducer()` in `providers()`, not `boot()`                                                                                             |
-| **Module-kind routes**                | `routes()` returns `[moduleName, routesContext]` tuple                                                                                             |
+| Rule                                  | What to Check                                                                                                                                                                                                                         |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Isolation**                         | ❌ **NEVER** directly import from `src/apps/`                                                                                                                                                                                         |
+| **Memory leak prevention** [CRITICAL] | Every listener in `boot()` must have `.off()` / `unregister()` in `shutdown()`. **Count them — they MUST match.**                                                                                                                     |
+| **IPC pipelines**                     | Backend: `registry.registerHandler('ipc:${__EXTENSION_ID__}:action', ...)` — **never** `registerHook`; the gateway dispatches through `invokeHandler` only. Frontend: `context.fetch('/api/extensions/${__EXTENSION_ID__}/ipc', ...)` |
+| **Identity constant**                 | Use `__EXTENSION_ID__` for IPC, URLs, namespaces, logging. **Never** raw package name.                                                                                                                                                |
+| **Defensive lifecycle**               | All DB ops in `install()`/`uninstall()` wrapped in `try/catch`                                                                                                                                                                        |
+| **Redux in providers**                | `store.injectReducer()` in `providers()`, not `boot()`                                                                                                                                                                                |
+| **Module-kind routes**                | `routes()` returns `[moduleName, routesContext]` tuple                                                                                                                                                                                |
 
 ---
 

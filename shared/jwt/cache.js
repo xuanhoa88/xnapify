@@ -33,6 +33,33 @@ export const jwtNegativeCache = new LRUCache({
 });
 
 /**
+ * Build the negative-cache key. The expected token type is part of the key
+ * because a refresh token legitimately fails an `access` check while still
+ * verifying as `refresh`.
+ *
+ * @param {string} token
+ * @param {string} [expectedType]
+ * @returns {string}
+ */
+function negativeKey(token, expectedType) {
+  return `${expectedType || '*'}:${token}`;
+}
+
+/**
+ * Drop every negative entry recorded for a token, whatever expected type it
+ * was stored under.
+ *
+ * @param {string} token
+ */
+function clearNegativeEntries(token) {
+  if (typeof token !== 'string' || !token) return;
+  const suffix = `:${token}`;
+  for (const key of jwtNegativeCache.keys()) {
+    if (key.endsWith(suffix)) jwtNegativeCache.delete(key);
+  }
+}
+
+/**
  * Set a cache entry whose TTL respects the JWT's own `exp` claim.
  * The entry expires at whichever comes first: the cache TTL or the JWT expiry.
  *
@@ -52,20 +79,10 @@ export function cacheToken(token, decoded) {
     }
   }
   jwtCache.set(token, decoded, options);
-  jwtNegativeCache.delete(token);
-}
-
-/**
- * Build the negative-cache key. The expected token type is part of the key
- * because a refresh token legitimately fails an `access` check while still
- * verifying as `refresh`.
- *
- * @param {string} token
- * @param {string} [expectedType]
- * @returns {string}
- */
-function negativeKey(token, expectedType) {
-  return `${expectedType || '*'}:${token}`;
+  // A token that now verifies must not keep an earlier failure on record.
+  // Negative entries are keyed by expected type, so the bare token never
+  // matches — every entry ending in `:<token>` has to go.
+  clearNegativeEntries(token);
 }
 
 /**
@@ -116,7 +133,5 @@ export function getCachedTokenFailure(token, expectedType) {
  */
 export function forgetToken(token) {
   jwtCache.delete(token);
-  for (const key of jwtNegativeCache.keys()) {
-    if (key.endsWith(`:${token}`)) jwtNegativeCache.delete(key);
-  }
+  clearNegativeEntries(token);
 }

@@ -44,21 +44,6 @@ export function generateTypedToken(type, payload, secret, options = {}) {
 }
 
 /**
- * Generate a token pair (access + refresh tokens)
- *
- * @param {Object} payload - Token payload (user data)
- * @param {string} secret - JWT secret
- * @param {Object} [options] - Additional options
- * @returns {Object} Token pair with accessToken, refreshToken, and expiresIn
- */
-export function generateTokenPair(payload, secret, options = {}) {
-  const accessToken = generateTypedToken('access', payload, secret, options);
-  const refreshToken = generateTypedToken('refresh', payload, secret, options);
-
-  return { accessToken, refreshToken };
-}
-
-/**
  * Verify a typed JWT token
  *
  * @param {string} token - JWT token to verify
@@ -91,55 +76,4 @@ export function verifyTypedToken(token, expectedType, secret, options = {}) {
   }
 
   return decoded;
-}
-
-/**
- * Refresh token pair (access + refresh)
- *
- * @param {string} refreshToken - Valid refresh token
- * @param {string} secret - JWT secret
- * @param {Object} [options] - Refresh options
- * @returns {Object} New token pair
- *
- * @example
- * try {
- *   const { accessToken, refreshToken: newRefreshToken } =
- *     refreshTokenPair(oldRefreshToken, secret);
- * } catch (error) {
- *   // Refresh token invalid, redirect to login
- * }
- */
-export function refreshTokenPair(refreshToken, secret, options = {}) {
-  // Verify refresh token
-  const decoded = verifyTypedToken(refreshToken, 'refresh', secret);
-
-  // Extract user payload (remove JWT-specific claims)
-  const {
-    iat: _iat,
-    exp: _exp,
-    jti: _jti,
-    type: _type,
-    aud: _aud,
-    iss: _iss,
-    ...userPayload
-  } = decoded;
-
-  // Generate new token pair
-  const newAccessToken = generateTypedToken(
-    'access',
-    userPayload,
-    secret,
-    options,
-  );
-  const newRefreshToken = generateTypedToken(
-    'refresh',
-    userPayload,
-    secret,
-    options,
-  );
-
-  return {
-    accessToken: newAccessToken,
-    refreshToken: newRefreshToken,
-  };
 }

@@ -69,9 +69,15 @@ function registerSessionRevocation(container) {
     ws: container.has('ws') ? container.resolve('ws') : null,
   });
 
-  // Password changed via profile → every other session must re-authenticate
-  hook('profile').on('password_changed', async ({ user_id }) => {
-    await sessionService.revokeUserSessions(user_id, deps());
+  // Password changed via profile → every OTHER session must re-authenticate.
+  // `family_id` is the session that performed the change: revoking it too
+  // would bounce the user to the login screen on their next click, right
+  // after the controller told them the change succeeded.
+  hook('profile').on('password_changed', async ({ user_id, family_id }) => {
+    await sessionService.revokeUserSessions(user_id, {
+      ...deps(),
+      exceptFamilyId: family_id || null,
+    });
   });
   // Password reset via email token → all sessions
   hook('auth').on('password_reset_completed', async ({ user_id }) => {

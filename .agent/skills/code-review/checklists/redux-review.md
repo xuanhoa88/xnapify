@@ -58,8 +58,10 @@ export const getItems = state => {
 ## Route Integration (`_route.js`)
 
 - [ ] `init()` injects reducer: `store.injectReducer(SLICE_NAME, reducer)`
-- [ ] `setup()` registers sidebar menu item
-- [ ] `teardown()` unregisters sidebar menu item
+- [ ] `setup()` does **not** register sidebar menu items — views are chunked one
+      per route, so the entry would be missing until the route is first matched.
+      Module navigation belongs in `menus({ store, i18n })` in `views/index.js`
+- [ ] `teardown()` reverses whatever `setup()` registered
 - [ ] `mount()` dispatches breadcrumbs
 - [ ] `unmount()` cleans up (cancels pending thunks if needed)
 - [ ] Redux injection in `_route.js` `init()`, NOT in `views/index.js`

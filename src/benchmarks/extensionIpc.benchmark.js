@@ -5,16 +5,18 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-// Stress benchmark for extension IPC via the ExtensionRegistry
-// Registers many handlers and issues many concurrent executeHook calls
+// Stress benchmark for collector hooks via the ExtensionRegistry.
+// Registers many contributors on one hook id and compares the sequential
+// executor against the parallel one. IPC is a single-answer call and is
+// benchmarked separately in extensionIpcProd.benchmark.js.
 
 import { performance } from 'perf_hooks';
 
 import ExtensionRegistry from '@shared/extension/utils/Registry.js';
 
-describe('extension IPC stress', () => {
+describe('extension collector hook stress', () => {
   let registry;
-  const hookId = 'ipc:stress-extension:echo';
+  const hookId = 'stress-extension:collect';
 
   beforeEach(() => {
     registry = new ExtensionRegistry();
@@ -37,7 +39,7 @@ describe('extension IPC stress', () => {
       );
     }
 
-    console.log('--- Benchmarking Extension IPC ---');
+    console.log('--- Benchmarking Extension Collector Hooks ---');
 
     const TOTAL_REQUESTS = requests;
     const CONCURRENT_HANDLERS = handlers;

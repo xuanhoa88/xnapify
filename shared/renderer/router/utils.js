@@ -150,3 +150,21 @@ export function isDescendant(parent, child) {
   }
   return false;
 }
+
+/**
+ * The extension namespace a route activates.
+ *
+ * A route module may name one explicitly (`export const namespace = 'login'`),
+ * which is what an extension manifest's `slots` entry matches against; without
+ * one the path itself is the namespace. Extensions subscribe to these names,
+ * so the value must be derived identically everywhere it is needed — the
+ * router records it per resolve, and the host activates it in `onRouteInit`.
+ *
+ * @param {Object} route - Route node
+ * @returns {string|null} Namespace, or null when the route has neither
+ */
+export function getRouteNamespace(route) {
+  if (!route) return null;
+  const declared = route.module && route.module.namespace;
+  return declared || route.path || null;
+}

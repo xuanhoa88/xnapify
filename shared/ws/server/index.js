@@ -93,6 +93,8 @@ class WebSocketServer extends EventEmitter {
     this.heartbeatTimer = null;
     // Cross-instance fan-out (see attachPubSub)
     this.pubsub = null;
+    // Backstop for dropped revocation events (see startRevocationSweep)
+    this.revocationSweepTimer = null;
 
     // Register default handlers
     // eslint-disable-next-line no-underscore-dangle
@@ -183,6 +185,9 @@ class WebSocketServer extends EventEmitter {
       clearInterval(this.heartbeatTimer);
       this.heartbeatTimer = null;
     }
+
+    // Stop the revocation backstop
+    this.stopRevocationSweep();
 
     // Remove HTTP upgrade listener
     // eslint-disable-next-line no-underscore-dangle
@@ -778,17 +783,24 @@ class WebSocketServer extends EventEmitter {
    * this, a message sent from worker A never reaches a browser connected to
    * worker B, and a session revoked on A stays open on B.
    *
+   * Redis does NOT apply a client's `keyPrefix` to PUBLISH/SUBSCRIBE, and
+   * pub/sub is not scoped to a database either — so two deployments sharing
+   * one Redis with different key prefixes would still share a literal
+   * channel name. The default therefore borrows the publisher's `keyPrefix`
+   * so each deployment gets its own channel.
+   *
    * @param {Object} options
    * @param {Object} options.publisher - ioredis-compatible client
    * @param {Object} options.subscriber - Dedicated subscriber client
-   * @param {string} [options.channel='ws:events'] - Pub/sub channel name
+   * @param {string} [options.channel] - Pub/sub channel name
+   *   (defaults to `<publisher keyPrefix>ws:events`)
    * @param {string} [options.instanceId] - Unique id of this process
    * @returns {Promise<void>}
    */
   async attachPubSub({
     publisher,
     subscriber,
-    channel = 'ws:events',
+    channel = `${publisher?.options?.keyPrefix ?? ''}ws:events`,
     instanceId = `${process.pid}:${uuidv4()}`,
   }) {
     if (!publisher || typeof publisher.publish !== 'function') {
@@ -798,9 +810,7 @@ class WebSocketServer extends EventEmitter {
       throw new TypeError('attachPubSub requires a subscriber client');
     }
 
-    this.pubsub = { publisher, subscriber, channel, instanceId };
-
-    subscriber.on('message', (incomingChannel, raw) => {
+    const onMessage = (incomingChannel, raw) => {
       if (incomingChannel !== channel) return;
       let event;
       try {
@@ -811,8 +821,22 @@ class WebSocketServer extends EventEmitter {
       if (!event || event.origin === instanceId) return;
       // eslint-disable-next-line no-underscore-dangle
       this._applyRemoteEvent(event);
-    });
-    await subscriber.subscribe(channel);
+    };
+
+    subscriber.on('message', onMessage);
+    try {
+      await subscriber.subscribe(channel);
+    } catch (error) {
+      // Never leave a half-attached pubsub behind: a truthy `this.pubsub`
+      // makes _publish write into a client nobody is listening on and
+      // silences the "Channel not found" warning that would reveal it.
+      if (typeof subscriber.off === 'function') {
+        subscriber.off('message', onMessage);
+      }
+      throw error;
+    }
+    // Committed only once the subscription actually exists.
+    this.pubsub = { publisher, subscriber, channel, instanceId, onMessage };
     this.logger.info(`🔁 Fan-out enabled on "${channel}" as ${instanceId}`);
   }
 
@@ -822,8 +846,13 @@ class WebSocketServer extends EventEmitter {
    */
   async detachPubSub() {
     if (!this.pubsub) return;
-    const { subscriber, channel } = this.pubsub;
+    const { subscriber, channel, onMessage } = this.pubsub;
     this.pubsub = null;
+    // The listener must go too: subscriber clients are shared and long-lived,
+    // so a later re-attach would otherwise apply every remote event twice.
+    if (onMessage && typeof subscriber.off === 'function') {
+      subscriber.off('message', onMessage);
+    }
     try {
       await subscriber.unsubscribe(channel);
     } catch {
@@ -836,8 +865,96 @@ class WebSocketServer extends EventEmitter {
     const { publisher, channel, instanceId } = this.pubsub;
     const payload = JSON.stringify({ ...event, origin: instanceId });
     Promise.resolve(publisher.publish(channel, payload)).catch(err => {
-      this.logger.error(`Fan-out publish failed: ${err.message}`);
+      // Redis pub/sub has no replay. A dropped channel broadcast is a lost
+      // notification; a dropped disconnect leaves a revoked session's socket
+      // open on every other instance until the revocation sweep catches it.
+      if (event.op === 'disconnectUser' || event.op === 'disconnectSession') {
+        this.logger.error(
+          `🚨 Revocation fan-out failed (${event.op}): ${err.message} — ` +
+            'sockets on other instances stay open until the next revocation sweep',
+        );
+        return;
+      }
+      this.logger.error(`Fan-out publish failed (${event.op}): ${err.message}`);
     });
+  }
+
+  // ============================================================================
+  // REVOCATION SWEEP
+  // ============================================================================
+
+  /**
+   * Periodically re-check authenticated sockets against a revocation
+   * predicate and close the ones whose session is gone.
+   *
+   * Fan-out is fire-and-forget over a transport with no replay, so a lost
+   * `disconnectSession` event would otherwise leave a revoked socket open on
+   * the other instances forever. This sweep is the self-healing backstop.
+   *
+   * @param {(sid: string) => boolean|Promise<boolean>} isRevoked
+   * @param {Object} [options]
+   * @param {number} [options.intervalMs=60000]
+   * @param {string} [options.reason='Session revoked']
+   * @returns {this}
+   */
+  startRevocationSweep(
+    isRevoked,
+    { intervalMs = 60_000, reason = 'Session revoked' } = {},
+  ) {
+    if (typeof isRevoked !== 'function') {
+      throw new TypeError('startRevocationSweep requires a predicate function');
+    }
+    this.stopRevocationSweep();
+    this.revocationSweepTimer = setInterval(() => {
+      this.sweepRevokedSessions(isRevoked, reason).catch(err => {
+        this.logger.error(`Revocation sweep failed: ${err.message}`);
+      });
+    }, intervalMs);
+    if (typeof this.revocationSweepTimer.unref === 'function') {
+      this.revocationSweepTimer.unref();
+    }
+    return this;
+  }
+
+  /** Stop the periodic revocation sweep. */
+  stopRevocationSweep() {
+    if (this.revocationSweepTimer) {
+      clearInterval(this.revocationSweepTimer);
+      this.revocationSweepTimer = null;
+    }
+    return this;
+  }
+
+  /**
+   * Run one revocation sweep over the live connections.
+   *
+   * @param {(sid: string) => boolean|Promise<boolean>} isRevoked
+   * @param {string} [reason]
+   * @returns {Promise<number>} Connections closed
+   */
+  async sweepRevokedSessions(isRevoked, reason = 'Session revoked') {
+    const sids = new Set();
+    this.connections.forEach(ws => {
+      if (ws.user && ws.user.sid) sids.add(String(ws.user.sid));
+    });
+
+    let closed = 0;
+    for (const sid of sids) {
+      let revoked = false;
+      try {
+        revoked = await isRevoked(sid);
+      } catch (err) {
+        // Store unavailable — leave the socket alone rather than closing
+        // every session because Redis blipped.
+        this.logger.warn(`Revocation sweep check failed: ${err.message}`);
+        continue;
+      }
+      // `local` — the revocation is already known everywhere; re-publishing
+      // it from every instance would multiply one kill into N.
+      if (revoked)
+        closed += this.disconnectSession(sid, reason, { local: true });
+    }
+    return closed;
   }
 
   _applyRemoteEvent(event) {
@@ -859,7 +976,12 @@ class WebSocketServer extends EventEmitter {
   }
 
   /**
-   * Send to specific connection
+   * Send to specific connection.
+   *
+   * LOCAL ONLY BY DESIGN — this is not fanned out over pub/sub. A connection
+   * id only means something on the instance that accepted the socket, so a
+   * remote instance could not act on it. Reach a user or a session across
+   * instances with {@link sendToPrivateChannel} / {@link sendToChannel}.
    */
   sendToConnection(connectionId, type, data) {
     const ws = this.connections.get(connectionId);
@@ -868,7 +990,12 @@ class WebSocketServer extends EventEmitter {
   }
 
   /**
-   * Broadcast to all connections
+   * Broadcast to all connections.
+   *
+   * LOCAL ONLY BY DESIGN — this reaches the sockets held by THIS instance,
+   * not the whole deployment, and the optional `filter` is a function that
+   * cannot be serialised over pub/sub. For a deployment-wide broadcast use
+   * {@link sendToPublicChannel}, which is fanned out.
    */
   broadcast(type, data, filter = null) {
     const message = createMessage(type, data);
@@ -897,6 +1024,20 @@ class WebSocketServer extends EventEmitter {
   _createChannel(name, type = ChannelType.PUBLIC, metadata = {}) {
     if (this.channels.has(name)) {
       this.logger.warn(`⚠️ Channel already exists: ${name}`);
+      return false;
+    }
+
+    // Refuse a type this server does not know rather than defaulting to
+    // PUBLIC. `ChannelType.PRIVATE` was missing from the enum, so
+    // `createPrivateChannel` passed `undefined`, the default parameter made
+    // every `user:<id>` channel PUBLIC, and the ownership check in
+    // CHANNEL_SUBSCRIBE compared `channel.type` against `undefined` and never
+    // fired — any socket could subscribe to another user's private channel.
+    // Failing closed here means a future channel kind cannot repeat that.
+    if (!Object.values(ChannelType).includes(type)) {
+      this.logger.error(
+        `❌ Refusing to create channel "${name}": unknown type "${type}"`,
+      );
       return false;
     }
 

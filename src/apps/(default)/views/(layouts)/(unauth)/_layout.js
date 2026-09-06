@@ -5,21 +5,16 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useEffect, useRef } from 'react';
-
 import { Box, Grid, Flex, Text, Heading } from '@radix-ui/themes';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
-import { useDispatch, useSelector } from 'react-redux';
 
 import { Link } from '@shared/renderer/components/History/index.js';
-import Toast from '@shared/renderer/components/Toast/index.js';
-import { features } from '@shared/renderer/redux/index.js';
+
+import FlashMessage from '../components/FlashMessage.js';
 
 import s from './_layout.css';
-
-const { getFlashMessage, clearFlashMessage } = features;
 
 /**
  * Hero Section - Enterprise-grade deep slate with animated mesh gradients
@@ -99,22 +94,6 @@ function HeroSection() {
  * routes (login, register, email-verification, reset-password).
  */
 function UnauthLayout({ children }) {
-  const dispatch = useDispatch();
-  const flashMessage = useSelector(getFlashMessage);
-  const toastRef = useRef(null);
-
-  useEffect(() => {
-    if (flashMessage && toastRef.current) {
-      toastRef.current.show({
-        variant: flashMessage.variant || 'info',
-        message: flashMessage.message,
-        title: flashMessage.title,
-        duration: flashMessage.duration || 4000,
-      });
-      dispatch(clearFlashMessage());
-    }
-  }, [flashMessage, dispatch]);
-
   return (
     <>
       <Grid
@@ -144,7 +123,7 @@ function UnauthLayout({ children }) {
           </Flex>
         </Box>
 
-        <Toast ref={toastRef} />
+        <FlashMessage />
       </Grid>
     </>
   );

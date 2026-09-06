@@ -5,26 +5,20 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+/**
+ * Hook registry — collector extension points (many contributors).
+ *
+ * Every registered callback runs and the caller merges the results. A failing
+ * callback is logged and dropped so one broken extension cannot break a merged
+ * UI such as table columns or settings tabs.
+ *
+ * For request/response extension points where the caller needs the answer and
+ * needs to know when it failed, use `Handler` instead.
+ */
 class Hook {
   constructor() {
     this.hooks = new Map(); // Map<hookId, Array<{ callback, priority }>>
     this.registrations = new Map(); // Map<extensionId, Set<{ hookId, callback }>>
-  }
-
-  /**
-   * Read metadata derived from the current registrations for `hookId`.
-   *
-   * `public` is deliberately an AND across every registered handler: one
-   * extension opting in must never expose another extension's handler on the
-   * same id to unauthenticated callers.
-   *
-   * @param {string} hookId - Hook identifier
-   * @returns {Object} `{ public: boolean }` (empty when nothing is registered)
-   */
-  getMeta(hookId) {
-    const entries = this.hooks.get(hookId);
-    if (!entries || entries.length === 0) return {};
-    return { public: entries.every(entry => entry.public === true) };
   }
 
   /**
@@ -36,14 +30,8 @@ class Hook {
    * @param {string} [extensionId] - Optional extension ID for auto-cleanup
    * @param {Object} [options] - Options
    * @param {number} [options.priority=0] - Execution priority (lower = earlier)
-   * @param {boolean} [options.public=false] - For IPC hooks: allow unauthenticated callers
    */
-  register(
-    hookId,
-    callback,
-    extensionId,
-    { priority = 0, public: isPublic = false } = {},
-  ) {
+  register(hookId, callback, extensionId, { priority = 0 } = {}) {
     if (!this.hooks.has(hookId)) {
       this.hooks.set(hookId, []);
     }
@@ -61,7 +49,7 @@ class Hook {
     }
 
     // Insert in priority order (stable: append at end of same-priority group)
-    const entry = { callback, priority, public: isPublic, extensionId };
+    const entry = { callback, priority, extensionId };
     const insertIdx = entries.findIndex(e => e.priority > priority);
     if (insertIdx === -1) {
       entries.push(entry);
@@ -196,42 +184,6 @@ class Hook {
 
     const results = await Promise.all(entries.map(settle));
     return results.filter(r => r !== undefined);
-  }
-
-  /**
-   * Call a hook as a request/response exchange (single answer expected).
-   *
-   * `execute` and `executeParallel` are collectors: they run every handler,
-   * log failures and drop them, because one broken extension must not break a
-   * merged UI. That is the wrong contract for IPC, where the caller needs the
-   * answer and needs to know when there wasn't one. This executor therefore
-   * runs only the highest-priority handler and lets its error propagate so the
-   * caller can map it onto a real response.
-   *
-   * @param {string} hookId - Hook identifier
-   * @param {...any} args - Arguments to pass to the handler
-   * @returns {Promise<{handled: boolean, value: any, extensionId: string|undefined}>}
-   *   `handled` is false only when no handler is registered. A handler that
-   *   returns undefined is still `handled: true`.
-   * @throws {*} Whatever the handler throws, unchanged
-   */
-  async invoke(hookId, ...args) {
-    const entries = this.hooks.get(hookId);
-    if (!entries || entries.length === 0) {
-      return { handled: false, value: undefined, extensionId: undefined };
-    }
-
-    if (entries.length > 1) {
-      console.warn(
-        `[HookRegistry] Hook "${hookId}" has ${entries.length} handlers but was ` +
-          'invoked as a single-answer call; using the highest-priority one ' +
-          `(from "${entries[0].extensionId || 'unknown'}").`,
-      );
-    }
-
-    const [{ callback, extensionId }] = entries;
-    const value = await callback(...args);
-    return { handled: true, value, extensionId };
   }
 
   /**

@@ -195,7 +195,12 @@ export async function installExtensionDependencies(extensionDir, extension) {
         '--no-update-notifier',
         '--no-fund',
         '--engine-strict',
-        '--no-package-lock',
+        // No '--no-package-lock': an extension that ships a package-lock.json
+        // gets exactly the tree its publisher tested, instead of re-resolving
+        // ranges like ^1.13.0 on every install. npm falls back to resolving
+        // the declared ranges (and writes the resulting lockfile) when the
+        // package ships none. The lockfile is excluded from the integrity
+        // hash, so writing one never invalidates an installed extension.
         // Never execute lifecycle scripts from third-party packages inside
         // the server process — extension code runs only through the
         // sandboxed lifecycle hooks, not via npm preinstall/postinstall.

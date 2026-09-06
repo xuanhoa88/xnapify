@@ -17,6 +17,18 @@
 
 import { z } from 'zod';
 
+import {
+  DIALECT_SCHEMES,
+  detectDialect,
+  parseDialect,
+} from '@shared/api/engines/db/drivers.js';
+
+/**
+ * Accepted `XNAPIFY_DB_URL` schemes, derived from the single dialect table in
+ * the db engine so validation can never drift from what actually connects.
+ */
+const DB_SCHEMES = Object.keys(DIALECT_SCHEMES);
+
 const DURATION_RE = /^\d+(ms|s|m|h|d|w|y)?$/i;
 
 const optionalInt = (min, max) =>
@@ -57,9 +69,9 @@ function buildSchema(nodeEnv) {
     XNAPIFY_DB_URL: z
       .string()
       .trim()
-      .regex(
-        /^(sqlite|postgres(ql)?|mysql|mariadb)(:|$)/i,
-        'must start with sqlite:, postgres:, or mysql:',
+      .refine(
+        value => parseDialect(value) !== null,
+        `must start with one of ${DB_SCHEMES.map(s => `${s}:`).join(', ')} (or be the bare dialect name)`,
       )
       .optional(),
     XNAPIFY_DB_POOL_MAX: optionalInt(1, 500),
@@ -95,12 +107,28 @@ function buildSchema(nodeEnv) {
       .trim()
       .regex(/^(auto|true|false|\d+)$/i, 'must be an integer or "auto"')
       .optional(),
+    // Set by the cluster primary on each fork and read back by
+    // shared/utils/runtime.js as the authoritative worker count.
+    XNAPIFY_CLUSTER_SIZE: optionalInt(1, 1024),
     XNAPIFY_NODERED_ENABLED: optionalBool,
     XNAPIFY_COMPRESSION: optionalBool,
+
+    // Explicit signal that TLS is terminated in front of this process.
+    // `upgrade-insecure-requests` and HSTS are emitted on the strength of
+    // this, not of NODE_ENV: the header is honoured on insecure origins, so
+    // asserting it on a plain-HTTP deployment breaks every subresource.
+    XNAPIFY_TLS_TERMINATED: optionalBool,
+
     XNAPIFY_MAINTENANCE_MODE: optionalBool,
-    XNAPIFY_MAINTENANCE_BYPASS_TOKEN: isProd
-      ? z.string().min(16).optional()
-      : z.string().optional(),
+    // 16 in every environment. A production-only floor let an 8-15 character
+    // token work in dev and then throw at production boot, which is the
+    // worst moment to discover it.
+    XNAPIFY_MAINTENANCE_BYPASS_TOKEN: z.string().min(16).optional(),
+
+    // Comma-separated extension ids allowed to declare the `*` capability.
+    // Read by shared/extension/utils/compat.js; without membership here a
+    // manifest cannot grant itself the full container.
+    XNAPIFY_TRUSTED_EXTENSIONS: z.string().trim().optional(),
 
     XNAPIFY_HUB_REGISTRY_URL: z.string().trim().url().optional(),
 
@@ -172,6 +200,23 @@ export function validateEnv(env = process.env, options = {}) {
     errors.push(
       'XNAPIFY_REDIS_URL: required when XNAPIFY_CLUSTER_WORKERS > 1 (shared cache, rate limits, session revocation and WebSocket fan-out)',
     );
+  }
+  if (clustered) {
+    // Every worker runs the migration phase at boot. `withSchemaLock` only
+    // serialises them on Postgres and MySQL/MariaDB, and only when the pool
+    // can spare a connection to hold the lock on — so clustering on any
+    // other dialect, or with a pool of one, is an unguarded migration race.
+    const dialect = detectDialect(env.XNAPIFY_DB_URL || '');
+    if (dialect === 'sqlite') {
+      errors.push(
+        'XNAPIFY_CLUSTER_WORKERS: clustering requires a dialect with a cross-process schema lock (postgres or mysql); SQLite workers would race on migrations',
+      );
+    }
+    if (poolMax < 2) {
+      errors.push(
+        'XNAPIFY_DB_POOL_MAX: must be at least 2 when XNAPIFY_CLUSTER_WORKERS > 1 — the schema lock is held on its own pooled connection',
+      );
+    }
   }
 
   if (errors.length === 0) return { ok: true, errors };

@@ -5,7 +5,13 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-export const useRateLimit = { max: 60, windowMs: 15 * 60_000 };
+// `key` is the bucket identity — without it every route declaring the same
+// numbers would share one counter.
+export const useRateLimit = {
+  key: 'auth:refresh-token',
+  max: 60,
+  windowMs: 15 * 60_000,
+};
 
 export const post = [
   function refreshToken(req, ...args) {

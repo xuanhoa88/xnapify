@@ -10,45 +10,9 @@ import { features } from '@shared/renderer/redux/index.js';
 
 import Users from './Users.js';
 
-const { addBreadcrumb, registerMenu, unregisterMenu } = features;
+const { addBreadcrumb } = features;
 
 export const middleware = requirePermission('users:read');
-
-/**
- * Register menu item for this route
- */
-export function setup({ store, i18n }) {
-  store.dispatch(
-    registerMenu({
-      ns: 'admin',
-      id: 'identity-access',
-      label: i18n.t('admin:navigation.identityAccess', 'Identity & Access'),
-      order: 10,
-      icon: 'LockClosedIcon',
-      items: [
-        {
-          path: '/admin/users',
-          label: i18n.t('admin:navigation.users', 'Users'),
-          icon: 'PersonIcon',
-          permission: 'users:read',
-          order: 10,
-        },
-      ],
-    }),
-  );
-}
-
-/**
- * Unregister menu item for this route
- */
-export function teardown({ store }) {
-  store.dispatch(
-    unregisterMenu({
-      ns: 'admin',
-      path: '/admin/users',
-    }),
-  );
-}
 
 /**
  * Page metadata

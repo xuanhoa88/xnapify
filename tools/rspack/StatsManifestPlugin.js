@@ -20,7 +20,12 @@ export default class StatsManifestPlugin {
    * @param {string} options.filename - The output filename (can be absolute or relative to output.path)
    * @param {boolean} [options.incremental=false] - Whether to read and merge the existing file contents
    * @param {Object} [options.statsOptions] - Arguments to pass to stats.toJson()
-   * @param {Function} options.transform - Function to transform statsData + existing manifest into the final manifest output
+   * @param {Function} options.transform - Function to transform statsData + existing manifest into the final manifest output.
+   *   Called as `(statsData, manifest, compiler, compilation)`. The live
+   *   compilation is passed because module-level questions ("which chunk
+   *   holds this source file?") are far cheaper to answer against it than
+   *   through `stats.toJson({ chunkModules: true })`, which serialises every
+   *   module of every chunk on every rebuild.
    */
   constructor(options = {}) {
     this.options = {
@@ -62,7 +67,12 @@ export default class StatsManifestPlugin {
           }
         }
 
-        const nextManifest = transform(statsData, manifest, compiler);
+        const nextManifest = transform(
+          statsData,
+          manifest,
+          compiler,
+          stats.compilation,
+        );
 
         fs.mkdirSync(path.dirname(manifestPath), { recursive: true });
         fs.writeFileSync(manifestPath, JSON.stringify(nextManifest, null, 2));

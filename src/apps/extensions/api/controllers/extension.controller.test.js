@@ -22,9 +22,9 @@ function build({
     sendServerError: jest.fn(),
   };
   const registry = {
-    hasHook: jest.fn(() => hasHook),
-    getHookMeta: jest.fn(() => meta),
-    invokeHook: jest.fn(invoke),
+    hasHandler: jest.fn(() => hasHook),
+    getHandlerMeta: jest.fn(() => meta),
+    invokeHandler: jest.fn(invoke),
   };
   const container = {
     resolve: name => {
@@ -51,13 +51,13 @@ describe('handleIPC authorization', () => {
       res,
       'Authentication required',
     );
-    expect(registry.invokeHook).not.toHaveBeenCalled();
+    expect(registry.invokeHandler).not.toHaveBeenCalled();
   });
 
   it('allows authenticated callers for a private hook', async () => {
     const { req, res, http, registry } = build({ authenticated: true });
     await handleIPC(req, res);
-    expect(registry.invokeHook).toHaveBeenCalledWith(
+    expect(registry.invokeHandler).toHaveBeenCalledWith(
       'ipc:ext1:ping',
       { a: 1 },
       expect.objectContaining({ req }),
@@ -72,15 +72,47 @@ describe('handleIPC authorization', () => {
     expect(http.sendSuccess).toHaveBeenCalledWith(res, 'pong');
   });
 
-  it('returns 404 before any auth check when no handler exists', async () => {
-    const { req, res, http } = build({ hasHook: false });
+  it('answers an anonymous caller identically whether or not the handler exists', async () => {
+    const missing = build({ hasHook: false });
+    await handleIPC(missing.req, missing.res);
+
+    const present = build({ hasHook: true });
+    await handleIPC(present.req, present.res);
+
+    // A 404 here vs a 401 there would tell an unauthenticated caller which
+    // extensions and actions this deployment runs.
+    expect(missing.http.sendUnauthorized).toHaveBeenCalledWith(
+      missing.res,
+      'Authentication required',
+    );
+    expect(present.http.sendUnauthorized).toHaveBeenCalledWith(
+      present.res,
+      'Authentication required',
+    );
+    expect(missing.http.sendError).not.toHaveBeenCalled();
+    expect(present.http.sendError).not.toHaveBeenCalled();
+  });
+
+  it('still 404s a missing handler once the caller is authenticated', async () => {
+    const { req, res, http } = build({ authenticated: true, hasHook: false });
     await handleIPC(req, res);
     expect(http.sendError).toHaveBeenCalledWith(
       res,
       expect.stringContaining('No IPC handler'),
       404,
     );
-    expect(http.sendUnauthorized).not.toHaveBeenCalled();
+  });
+
+  it('does not consult handler metadata for an unregistered id', async () => {
+    const { req, res, registry } = build({ hasHook: false });
+    await handleIPC(req, res);
+    expect(registry.getHandlerMeta).not.toHaveBeenCalled();
+  });
+
+  it('reaches a public handler anonymously even though the 404 path is hidden', async () => {
+    const { req, res, http } = build({ hasHook: true, meta: { public: true } });
+    await handleIPC(req, res);
+    expect(http.sendSuccess).toHaveBeenCalledWith(res, 'pong');
   });
 });
 
@@ -122,6 +154,25 @@ describe('handleIPC handler failures', () => {
     );
   });
 
+  it('never puts an undeclared error code in the response meta', async () => {
+    const { req, res, http } = build({
+      authenticated: true,
+      invoke: async () => {
+        const error = new Error('connect ECONNREFUSED 10.0.0.4:5432');
+        error.code = 'ECONNREFUSED';
+        throw error;
+      },
+    });
+    await handleIPC(req, res);
+
+    const [, , status, , meta] = http.sendError.mock.calls[0];
+    expect(status).toBe(502);
+    // sendError copies `meta` verbatim into the body — only `errors` is
+    // normalised — so a driver code here would leak straight to the client.
+    expect(meta).toEqual({ extensionId: 'ext1', action: 'ping' });
+    expect(meta).not.toHaveProperty('code');
+  });
+
   it('ignores a nonsensical status from the handler', async () => {
     const { req, res, http } = build({
       authenticated: true,
@@ -154,7 +205,7 @@ describe('handleIPC handler failures', () => {
     expect(http.sendSuccess).toHaveBeenCalledWith(res, 0);
   });
 
-  it('returns 404 when the handler vanished after the hasHook check', async () => {
+  it('returns 404 when the handler vanished after the hasHandler check', async () => {
     const { req, res, http } = build({
       authenticated: true,
       invoke: async () => ({ handled: false, value: undefined }),

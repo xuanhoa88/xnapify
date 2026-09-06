@@ -7,7 +7,11 @@
 
 import { Strategy } from 'passport-strategy';
 
-import { getTokenFromCookie } from '@shared/cookies/index.js';
+import { verifyActiveSession } from '@shared/api/engines/auth/revocation.js';
+import {
+  getTokenFromCookie,
+  getRefreshTokenFromCookie,
+} from '@shared/cookies/index.js';
 
 /**
  * Custom Passport Strategy for xnapify Authentication
@@ -73,6 +77,27 @@ class XnapifyAuthStrategy extends Strategy {
 
       if (!decoded || !decoded.id) {
         console.warn('⚠️  [Node-RED Auth] Token decoded but missing ID');
+        return this.redirect('/admin');
+      }
+
+      // A valid signature is not a live session. Without this check a user
+      // who logged out, was deactivated, or had their password reset keeps
+      // the flow editor — and Node-RED then mints its own ~7 day bearer
+      // token, so the revocation would never reach them at all.
+      try {
+        await verifyActiveSession(container, decoded);
+      } catch (revocationError) {
+        if (revocationError.name === 'SessionStoreUnavailableError') {
+          console.error(
+            '❌ [Node-RED Auth] Cannot verify session state:',
+            revocationError.message,
+          );
+          return this.fail(503);
+        }
+        console.warn(
+          '⚠️  [Node-RED Auth] Session is no longer valid:',
+          revocationError.code || revocationError.message,
+        );
         return this.redirect('/admin');
       }
 
@@ -173,14 +198,29 @@ async function getUserWithPermissions(app, username) {
       return null;
     }
 
-    // Find user to get ID
+    // Find user to get ID.
+    //
+    // Node-RED issues its own bearer token once it has accepted the JWT, and
+    // its BearerStrategy calls this on every admin request — so this is the
+    // one place where a revoked account can be caught on that token. Load
+    // the account state, not just the id.
     const { User } = container.resolve('models');
     const user = await User.findOne({
       where: { email: username },
-      attributes: ['id', 'email'],
+      attributes: ['id', 'email', 'is_active', 'is_locked', 'locked_until'],
     });
 
     if (!user) return null;
+
+    const lockedByTime =
+      user.locked_until && user.locked_until.getTime() > Date.now();
+
+    if (!user.is_active || user.is_locked || lockedByTime) {
+      console.warn(
+        `⚠️  [Node-RED Auth] Account ${username} is no longer eligible`,
+      );
+      return null;
+    }
 
     // Create mock request for hook resolution
     const req = {
@@ -206,6 +246,10 @@ async function getUserWithPermissions(app, username) {
       scope = 'read';
     }
 
+    // Permissions revoked since the token was issued: refuse the lookup
+    // rather than handing Node-RED an authenticated user with no scope.
+    if (!scope) return null;
+
     // Return user profile with permissions
     return {
       username: user.email,
@@ -215,6 +259,109 @@ async function getUserWithPermissions(app, username) {
     console.error('❌ [Node-RED Auth] User lookup failed:', error);
     return null;
   }
+}
+
+/**
+ * Is the refresh cookie still backed by a live session?
+ *
+ * The presence of the cookie proves nothing — the browser keeps it until
+ * something clears it — so the family row is what decides.
+ *
+ * @param {Object} container - DI container
+ * @param {Object} req - Express request
+ * @returns {Promise<boolean>}
+ */
+async function isRefreshSessionLive(container, req) {
+  const refreshToken = getRefreshTokenFromCookie(req);
+  if (!refreshToken) return false;
+
+  let jti;
+  try {
+    ({ jti } = container
+      .resolve('jwt')
+      .verifyTypedToken(refreshToken, 'refresh'));
+  } catch {
+    return false;
+  }
+  if (!jti || !container.has('models')) return false;
+
+  const { RefreshToken } = container.resolve('models');
+  if (!RefreshToken) return false;
+
+  const record = await RefreshToken.findByPk(jti, {
+    attributes: ['id', 'revoked_at'],
+  });
+  return !!record && !record.revoked_at;
+}
+
+/**
+ * Guard the Node-RED admin surface with the main application's session.
+ *
+ * Node-RED hands out its own bearer token with a ~7 day lifetime once it has
+ * accepted the JWT once, so nothing else would ever re-check the session
+ * behind an open editor. This runs on every admin request: when the main
+ * session is gone or revoked it strips the bearer token, Node-RED's own auth
+ * fails, and the login dialog sends the user back to /admin.
+ *
+ * @param {Object} app - Express app instance
+ * @returns {Function} Express middleware
+ */
+export function createNodeRedSessionGuard(app) {
+  return async function nodeRedSessionGuard(req, _res, next) {
+    try {
+      const container = app.get('container');
+      const auth = container && container.resolve('auth');
+      const jwt = container && container.resolve('jwt');
+
+      // Skip guard if auth services aren't available yet
+      if (!auth || !jwt) return next();
+
+      const token = getTokenFromCookie(req);
+      if (token) {
+        let decoded = null;
+        try {
+          decoded = jwt.verifyTypedToken(token, 'access');
+        } catch {
+          decoded = null;
+        }
+
+        if (decoded) {
+          try {
+            await verifyActiveSession(container, decoded);
+            // Cookie is valid and the session is live — proceed normally
+            return next();
+          } catch (error) {
+            if (error.name === 'SessionStoreUnavailableError') {
+              // Cannot tell. An outage must not evict everyone from the
+              // editor mid-deploy.
+              console.error(
+                '❌ [Node-RED Auth] Session state unavailable:',
+                error.message,
+              );
+              return next();
+            }
+            // Revoked — fall through and strip the bearer token
+          }
+        } else if (await isRefreshSessionLive(container, req)) {
+          // Access token expired but the session behind it is still live:
+          // keep Node-RED's bearer token alive so deploys don't fail
+          // mid-session.
+          return next();
+        }
+      }
+
+      // Main app session gone or revoked: strip Node-RED's bearer token so
+      // its BearerStrategy fails, triggering the login dialog which
+      // redirects to /admin via XnapifyAuthStrategy
+      delete req.headers.authorization;
+      return next();
+    } catch (error) {
+      // Fail closed: the worst case is the editor asking the user to log in
+      console.warn('⚠️  [Node-RED Auth] Session guard error:', error.message);
+      delete req.headers.authorization;
+      return next();
+    }
+  };
 }
 
 export function createNodeRedAuth(options = {}) {

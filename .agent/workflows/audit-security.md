@@ -195,11 +195,20 @@ done
 // turbo
 
 ```bash
-# Check IPC handler uses __EXTENSION_ID__
-grep -rn "registerHook.*ipc:" src/extensions/ --include="*.js" | grep -v "__EXTENSION_ID__"
+# IPC ids must be built from __EXTENSION_ID__, never a hardcoded package name
+grep -rn "ipc:" src/extensions/ --include="*.js" | grep -v "__EXTENSION_ID__"
 ```
 
-**Expected:** Boot registration count equals shutdown cleanup count. IPC hooks always use `__EXTENSION_ID__`.
+// turbo
+
+```bash
+# IPC must be a single-owner handler: the gateway only dispatches through
+# invokeHandler, so an `ipc:` id registered as a collector is a dead endpoint.
+# (The id is usually on the line after the call, hence -A2.)
+grep -rn -A2 "registerHook(" src/extensions/ --include="*.js" | grep "ipc:"
+```
+
+**Expected:** Boot registration count equals shutdown cleanup count. Both greps print nothing: every IPC id is built from `__EXTENSION_ID__` and registered with `registerHandler`.
 
 ## Step 9: Rate Limiting Audit
 

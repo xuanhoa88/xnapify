@@ -9,6 +9,6 @@
   },
   "xnapify": {
     "version": "^2.0.0",
-    "capabilities": ["http", "models"]
+    "capabilities": ["auth", "http", "models"]
   }
 }

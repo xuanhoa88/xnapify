@@ -49,17 +49,56 @@ export const API_LIFECYCLE_PHASES = [
  *
  *   translations — register i18n namespaces (no DB dependency)
  *   providers    — bind DI services (boot/views may consume them)
+ *   menus        — contribute navigation entries for the whole module
  *   boot         — run initialization logic after bindings are ready
  *   shutdown     — teardown on module unload (reverse of boot)
  *   routes       — collect/inject route contexts last
+ *
+ * `menus` exists so that navigation is a property of the module rather than
+ * of one of its routes. Registering a sidebar entry from a route's `setup()`
+ * hook forced the router to evaluate every route module before it could draw
+ * the sidebar, which in turn pinned every view into a single bundle. Modules
+ * declare their navigation here and their routes stay independently loadable.
  */
 export const VIEW_LIFECYCLE_PHASES = [
   'translations',
   'providers',
+  'menus',
   'boot',
   'shutdown',
   'routes',
 ];
+
+// =============================================================================
+// PROCESS DRAIN STATE
+// =============================================================================
+
+/**
+ * Whether this process has started shutting down.
+ *
+ * Readiness must flip before the teardown starts: an orchestrator keeps
+ * routing traffic to a pod that still answers `/api/ready` with 200, so a pod
+ * being rolled would tear its engines down underneath live requests. Liveness
+ * is deliberately unaffected — a draining process is still alive.
+ */
+let draining = false;
+
+/**
+ * Mark this process as draining. Idempotent, and never reversible: a process
+ * that has begun shutting down never returns to service.
+ *
+ * @returns {void}
+ */
+export function beginDraining() {
+  draining = true;
+}
+
+/**
+ * @returns {boolean} Whether this process has begun shutting down
+ */
+export function isDraining() {
+  return draining;
+}
 
 // =============================================================================
 // RECOGNIZED EXTENSION KEYS

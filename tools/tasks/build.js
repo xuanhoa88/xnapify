@@ -5,8 +5,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { execFile } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { promisify } from 'util';
 
 import { rspack } from '@rspack/core';
 
@@ -46,6 +48,8 @@ import clean from './clean.js';
 import createBundledExtensions from './extension.js';
 
 const currentFilename = fileURLToPath(import.meta.url);
+
+const execFileAsync = promisify(execFile);
 
 // Build configuration
 const BUILD_TIMESTAMP = Date.now();
@@ -145,6 +149,112 @@ async function copyFiles() {
       originalError: error.message,
     });
   }
+}
+
+/**
+ * Verify a generated lockfile actually describes the manifest beside it.
+ *
+ * `npm ci` refuses to install when the lockfile's root entry disagrees with
+ * package.json, and `tools/npm/setup.js` only reaches for `npm ci` when a
+ * lockfile is present — so a lockfile that does not match is worse than none:
+ * the production install would fail outright instead of quietly degrading.
+ *
+ * @param {Object} pkg - Parsed build/package.json
+ * @param {Object} lock - Parsed build/package-lock.json
+ * @throws {BuildError} When the lockfile does not describe the manifest
+ */
+export function assertLockfileMatchesManifest(pkg, lock) {
+  const root = lock?.packages?.[''];
+  if (!root) {
+    throw new BuildError('Lockfile has no root package entry');
+  }
+
+  const wanted = Object.keys(pkg?.dependencies || {});
+  const locked = Object.keys(root.dependencies || {});
+
+  const missing = wanted.filter(name => !locked.includes(name));
+  const unexpected = locked.filter(name => !wanted.includes(name));
+  if (missing.length > 0 || unexpected.length > 0) {
+    throw new BuildError(
+      `Lockfile does not match package.json (missing: ${
+        missing.join(', ') || 'none'
+      }; unexpected: ${unexpected.join(', ') || 'none'})`,
+      { missing, unexpected },
+    );
+  }
+
+  const devDependencies = Object.keys(root.devDependencies || {});
+  if (devDependencies.length > 0) {
+    throw new BuildError(
+      `Lockfile still carries devDependencies: ${devDependencies.join(', ')}`,
+      { devDependencies },
+    );
+  }
+}
+
+/**
+ * Generate a lockfile for the build directory.
+ *
+ * The shipped image installs from `build/`, whose dependency set is a pruned
+ * subset of the repo's (no devDependencies, no sqlite3). The root
+ * package-lock.json cannot simply be copied in — `npm ci` hard-fails when the
+ * lock disagrees with the manifest beside it — so it is copied in as a *seed*
+ * and npm is asked to rewrite it against build/package.json. Seeding keeps
+ * every surviving version identical to the one the repo resolved; without it
+ * npm re-resolves against the registry and two builds of the same commit can
+ * pin different patch releases.
+ *
+ * Without this step `tools/npm/setup.js` finds no lockfile in the build
+ * directory and falls back to `npm install`, leaving the image unpinned.
+ */
+async function generateLockfile() {
+  logInfo('🔒 Generating lockfile...');
+
+  const rootLock = path.join(config.CWD, 'package-lock.json');
+  const buildLock = path.join(config.BUILD_DIR, 'package-lock.json');
+
+  if (await pathExists(rootLock)) {
+    await copyFile(rootLock, buildLock);
+    logDebug('Seeded package-lock.json from the repo lockfile');
+  } else {
+    logWarn(
+      'No root package-lock.json to seed from — versions resolve fresh from the registry',
+    );
+  }
+
+  const env = {
+    ...process.env,
+    CI: 'true',
+    npm_config_engine_strict: 'false',
+  };
+  delete env.NODE_OPTIONS;
+
+  try {
+    await execFileAsync(
+      process.platform === 'win32' ? 'npm.cmd' : 'npm',
+      [
+        'install',
+        '--package-lock-only',
+        '--omit=dev',
+        '--ignore-scripts',
+        '--no-audit',
+        '--no-fund',
+      ],
+      { cwd: config.BUILD_DIR, env, maxBuffer: 32 * 1024 * 1024 },
+    );
+  } catch (error) {
+    throw new BuildError(`Lockfile generation failed: ${error.message}`, {
+      originalError: error.message,
+    });
+  }
+
+  const [manifest, lock] = await Promise.all([
+    readFile(path.join(config.BUILD_DIR, 'package.json'), 'utf-8'),
+    readFile(buildLock, 'utf-8'),
+  ]);
+  assertLockfileMatchesManifest(JSON.parse(manifest), JSON.parse(lock));
+
+  logInfo('✅ Lockfile generated');
 }
 
 /**
@@ -469,6 +579,15 @@ async function main() {
             verbose,
           }),
         description: 'Copying static files',
+      },
+      {
+        name: 'lockfile',
+        task: () =>
+          withBuildRetry(() => generateLockfile(), {
+            operation: 'generate-lockfile',
+            verbose,
+          }),
+        description: 'Generating lockfile',
       },
       {
         name: 'npm scripts',

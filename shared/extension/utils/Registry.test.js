@@ -65,6 +65,54 @@ describe('ExtensionRegistry', () => {
 
       expect(registry.getSlotEntries('header')).toHaveLength(0);
     });
+
+    // Module-type: contributes routes and declares no slots, so the registry
+    // files it under the '*' wildcard — the posts-module shape.
+    const MODULE_TYPE = { boot: () => {}, routes: () => ({}) };
+
+    test('unregister keeps the definition so a namespace can re-activate it', () => {
+      registry.defineExtension(MODULE_TYPE, {}, { id: 'ext-1' });
+      registry.unregister('ext-1');
+
+      // deactivateViewNamespace unregisters extensions it intends to bring
+      // back on the next navigation, so the definition has to survive.
+      expect(registry.findDefinition('ext-1')).toBeTruthy();
+    });
+
+    test('removeDefinition forgets the extension for good', () => {
+      // A module-type extension files itself under the '*' wildcard, which
+      // getDefinitions merges into every namespace — leaving the definition
+      // behind means the next navigation re-runs menus() and boot() and a
+      // deactivated extension's sidebar entry comes back.
+      registry.defineExtension(MODULE_TYPE, {}, { id: 'ext-1' });
+      registry.unregister('ext-1');
+      registry.removeDefinition('ext-1');
+
+      expect(registry.findDefinition('ext-1')).toBeFalsy();
+      expect(registry.getDefinitions('any-namespace')).toBeNull();
+    });
+
+    test('getOwnDefinitions excludes the wildcard set', () => {
+      // Activation merges '*' into every namespace so always-on extensions
+      // are covered wherever the user navigates. Teardown must not: leaving
+      // the 'login' namespace has no business shutting down an extension
+      // that lives on every page.
+      registry.defineExtension(MODULE_TYPE, {}, { id: 'always-on' });
+      registry.defineExtension(
+        { boot: () => {} },
+        {},
+        { id: 'login-only', slots: ['login'] },
+      );
+
+      const merged = [...registry.getDefinitions('login')].map(d => d.id);
+      expect(merged.sort()).toEqual(['always-on', 'login-only']);
+
+      const own = [...registry.getOwnDefinitions('login')].map(d => d.id);
+      expect(own).toEqual(['login-only']);
+
+      // A namespace nothing declared has no definitions of its own.
+      expect(registry.getOwnDefinitions('elsewhere')).toBeNull();
+    });
   });
 
   describe('Definitions', () => {
@@ -386,5 +434,63 @@ describe('ExtensionRegistry', () => {
       const entries = registry.getSlotEntries('slot').map(e => e.component);
       expect(entries).toEqual([B]);
     });
+  });
+});
+
+describe('ExtensionRegistry contract separation', () => {
+  let registry;
+
+  beforeEach(() => {
+    registry = new ExtensionRegistry();
+  });
+
+  it('refuses the public option on a collector hook', () => {
+    // `public` only ever meant "reachable by an unauthenticated IPC caller".
+    // Accepting it on a collector silently did nothing.
+    expect(() =>
+      registry.registerHook('h', () => 1, 'ext-a', { public: true }),
+    ).toThrow(/registerHandler/);
+  });
+
+  it('still accepts ordinary collector options', () => {
+    expect(() =>
+      registry.registerHook('h', () => 1, 'ext-a', { priority: 5 }),
+    ).not.toThrow();
+  });
+
+  it('keeps hooks and handlers in separate namespaces', () => {
+    registry.registerHook('shared.id', () => 'collector', 'ext-a');
+    registry.registerHandler('shared.id', () => 'answer', 'ext-a');
+
+    expect(registry.hasHook('shared.id')).toBe(true);
+    expect(registry.hasHandler('shared.id')).toBe(true);
+  });
+
+  it('clears both kinds when an extension is unregistered', async () => {
+    registry.register('ext-a', { name: 'A' });
+    registry.registerHook('h', () => 1, 'ext-a');
+    registry.registerHandler('ipc:ext-a:ping', () => 'pong', 'ext-a');
+
+    registry.unregister('ext-a');
+
+    expect(registry.hasHook('h')).toBe(false);
+    expect(registry.hasHandler('ipc:ext-a:ping')).toBe(false);
+  });
+
+  it('clear() empties handlers as well as hooks', () => {
+    registry.registerHook('h', () => 1, 'ext-a');
+    registry.registerHandler('ipc:ext-a:ping', () => 'pong', 'ext-a');
+
+    registry.clear();
+
+    expect(registry.hasHook('h')).toBe(false);
+    expect(registry.hasHandler('ipc:ext-a:ping')).toBe(false);
+  });
+
+  it('invokeHandler answers through the registry', async () => {
+    registry.registerHandler('ipc:ext-a:sum', (a, b) => a + b, 'ext-a');
+    await expect(
+      registry.invokeHandler('ipc:ext-a:sum', 2, 3),
+    ).resolves.toEqual({ handled: true, value: 5, extensionId: 'ext-a' });
   });
 });

@@ -318,31 +318,49 @@ Called automatically on the first `on()` registration. Registers a **wildcard pr
 
 ### Choosing an adapter
 
-| Type     | Persistence           | Multi-process         | When to use                                   |
-| -------- | --------------------- | --------------------- | --------------------------------------------- |
-| `file`   | Survives restarts     | Yes (shared data dir) | Default. Anything that must not be lost.      |
-| `memory` | Lost on exit or crash | No                    | Tests, throwaway dev sessions, ephemeral work |
+| Type     | Persistence           | Multi-process                    | When to use                                   |
+| -------- | --------------------- | -------------------------------- | --------------------------------------------- |
+| `file`   | Survives restarts     | Yes — one host, local filesystem | Default. Anything that must not be lost.      |
+| `memory` | Lost on exit or crash | No                               | Tests, throwaway dev sessions, ephemeral work |
 
 Set the app-wide default with `XNAPIFY_QUEUE_TYPE` (defaults to `file`). A channel can still override it: `queue('name', { type: 'memory' })`.
 
+> **Multi-process means one host.** The whole protocol rests on two properties of the filesystem: `rename()` is atomic (exactly one racer wins the claim, the loser gets `ENOENT`) and `mtime` is trustworthy enough to decide whether a lock is stale. Both hold for N cluster workers sharing `XNAPIFY_QUEUE_DATA_DIR` on one host's local disk. Neither is guaranteed on NFS, SMB/CIFS, or a container volume mounted RWX across several hosts: rename is not reliably atomic between clients there, and clock skew plus attribute caching make the 30 s lock-staleness check unsafe, so two hosts can run the same job concurrently. For work spread across hosts, use a real broker.
+
 ### File Queue Adapter (`adapters/file.js`)
 
-Jobs are JSON files under `<dataDir>/<queue>/{pending,active,delayed,completed,failed}/`. `dataDir` comes from `options.dataDir`, then `XNAPIFY_QUEUE_DATA_DIR`, then the app data dir (`.xnapify/queues` in dev, OS data dir in prod). Filenames sort by inverted priority then creation time, so `readdir().sort()` yields processing order.
+Jobs are JSON files under `<dataDir>/<queue>/{pending,active,delayed,completed,failed}/`, plus `.locks/` and `corrupt/`. `dataDir` comes from `options.dataDir`, then `XNAPIFY_QUEUE_DATA_DIR`, then the app data dir (`.xnapify/queues` in dev, OS data dir in prod). Filenames sort by inverted priority then creation time, so `readdir().sort()` yields processing order.
 
 Guarantees and mechanics:
 
-- **At-least-once delivery.** Every transition is a tmp-write plus atomic `rename`. A crash between steps leaves a duplicate copy, never a lost job.
-- **Claim = rename.** Moving `pending/x` → `active/x` is the claim. Two processes racing on the same file: one rename succeeds, the other gets `ENOENT` and moves to the next candidate.
+- **At-least-once delivery.** Every transition is a tmp-write plus atomic `rename`, so a process dying between steps leaves a duplicate copy, never a lost job.
+- **Durability is on by default (`fsync: true`).** Each job write fsyncs the temp file before the rename and the containing directory after it, so the job survives a host or power failure and not just a process crash. Set `fsync: false` to trade that guarantee for throughput: without it a power cut can land the rename while the bytes are still in the page cache, or lose the rename entirely. `meta.json` (counters only) is never fsynced. Cost is platform-dependent — cheap on Linux, tens of milliseconds per call on macOS, where libuv uses `F_FULLFSYNC`.
+- **Unreadable files are quarantined, never deleted.** A job file that fails to parse, or that parses without a string `id`/`name` (what a torn write looks like), is moved to `corrupt/<timestamp>-<status>-<filename>` and logged at error level. Nothing in the claim or recovery path deletes a job file it could not read.
+- **Claim = rename.** Moving `pending/x` → `active/x` is the claim. Two processes racing on the same file: one rename succeeds, the other gets `ENOENT` and moves to the next candidate. The claim runs under `try/finally`, so an unexpected error (`ENOSPC`, `EACCES`, a quarantine) always releases the lock instead of stranding the job in `active/`.
 - **Concurrency cap is exact.** A slot is reserved synchronously (`claiming++`) before the first `await` of a claim, so overlapping `processNext()` calls from the poll tick, `resume()`, `add()` wake-ups and job completions can never exceed `concurrency`.
-- **Ownership locks with heartbeat.** `.locks/<file>.lock` is created with `wx` before the claim and its mtime refreshed every `lockStaleMs / 3` while the handler runs. A lock older than `lockStaleMs` (30 s) is treated as abandoned.
+- **Ownership locks with heartbeat.** `.locks/<file>.lock` is created with `wx` before the claim, carrying a token unique to that acquisition, and its mtime is refreshed every `lockStaleMs / 3` while the handler runs. A lock older than `lockStaleMs` (30 s) is treated as abandoned. Release and heartbeat both verify the token first: a worker whose lock was stolen while it stalled will neither refresh nor delete its successor's lock. `lockStaleMs` is clamped up to 750 ms (three heartbeats) with a warning — below that a lock would expire before its own heartbeat could refresh it.
 - **Stale-lock steal is atomic.** A stale lock is renamed to a unique name before the stealer creates its own, so two stealers cannot both win.
-- **Crash recovery.** On boot and on every poll tick, files in `active/` whose lock is missing or stale are moved back to `pending/` with their attempt count intact. Files with a fresh lock belong to a live sibling process and are left alone. This process's own running jobs are never recovered from under it.
+- **Crash recovery, with an attempts ceiling.** On boot and on every poll tick, files in `active/` whose lock is missing or stale are moved back to `pending/` with their attempt count intact. A job that has already used every attempt (`attempts >= maxAttempts`) is dead-lettered to `failed/` instead, so a job that hard-crashes its worker — OOM, segfault, a shell-out that kills the process — is not replayed on every boot forever. Files with a fresh lock belong to a live sibling process and are left alone; this process's own running jobs are never recovered from under it.
+- **Shutdown does not orphan live work.** `close()` drains for `drainTimeout` (10 s). A handler still running after that keeps its lock heartbeated until it actually finishes, so a sibling cannot declare it abandoned and run the same work concurrently. Heartbeat timers are `unref`'d and never block process exit.
+- **Delayed jobs are cheap to skip.** `promoteExpiredDelayed()` checks due-ness first, from a `scheduledFor` cache validated by one `stat()`, and only locks and reads a job that is actually due.
+- **Bounded on disk.** While processing, a maintenance pass runs every `maintenanceInterval` (5 min): it sweeps orphaned `*.tmp` and `*.stale` artifacts older than a minute, then drops `completed/` jobs older than `retention.completed` (24 h) and `failed/` jobs older than `retention.failed` (7 days). Pass `null` for either to disable it. This matters because `removeOnFail` defaults to `false`, so `failed/` is otherwise terminal and permanent.
 - **Index consistency.** The in-memory index (`jobId → {status, filename}`) follows write-then-delete transitions, and `getJob`/`removeJob`/`retryJob` fall back to a directory scan so jobs written by other processes are visible.
 - **Low latency in-process.** `add()` and job completion wake the worker on the next macrotask; polling (500 ms) is only the safety net for cross-process and recovery work.
 
 Constraint: handlers must not block the event loop for longer than `lockStaleMs`, or a sibling process may conclude the job was abandoned and run it again.
 
-Extra constructor options beyond the memory adapter: `dataDir`, `pollInterval` (500), `lockStaleMs` (30000).
+Extra constructor options beyond the memory adapter:
+
+| Option                | Default           | Description                                                               |
+| --------------------- | ----------------- | ------------------------------------------------------------------------- |
+| `dataDir`             | app data dir      | Base directory for queue storage                                          |
+| `pollInterval`        | `500`             | Poll period in ms                                                         |
+| `lockStaleMs`         | `30000`           | Lock age after which a job is treated as abandoned (clamped to ≥ 750)     |
+| `drainTimeout`        | `10000`           | How long `close()` waits for running handlers                             |
+| `fsync`               | `true`            | Flush job writes (and their directory) to stable storage before returning |
+| `retention.completed` | `86400000` (24 h) | Age at which completed jobs are removed; `null` disables                  |
+| `retention.failed`    | `604800000` (7 d) | Age at which failed jobs are removed; `null` disables                     |
+| `maintenanceInterval` | `300000` (5 min)  | Period of the sweep + retention pass                                      |
 
 ### Memory Queue Adapter (`adapters/memory.js`)
 
@@ -412,23 +430,23 @@ All `setTimeout` timer IDs are tracked in `this.timers` (a `Set`) and cleared on
 
 ### Adapter Methods
 
-| Method                                             | Description                                                                        |
-| -------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `add(name, data, options)`                         | Create and enqueue a job                                                           |
-| `addBulk(jobs)`                                    | Batch add                                                                          |
-| `process(name, processor)` or `process(processor)` | Register processor (named or wildcard `'*'`)                                       |
-| `getJob(jobId)`                                    | Get job by ID (throws `JobNotFoundError`)                                          |
-| `getJobsByStatus(status)`                          | Filter jobs by status                                                              |
-| `getJobs()`                                        | All jobs                                                                           |
-| `removeJob(jobId)`                                 | Remove by ID                                                                       |
-| `retryJob(jobId)`                                  | Retry a failed job (resets attempts, throws `JobProcessingError` if not failed)    |
-| `pause()` / `resume()`                             | Pause/resume processing                                                            |
-| `isPausedState()`                                  | Check pause state                                                                  |
-| `empty()`                                          | Remove all pending jobs                                                            |
-| `clean(status?, grace?)`                           | Remove completed/failed jobs older than grace period                               |
-| `close()`                                          | Pause, clear processors and jobs                                                   |
-| `getStats()`                                       | Returns `{ name, concurrency, isPaused, activeJobs, counts: {...}, stats: {...} }` |
-| `on(event, handler)` / `off(event, handler)`       | Lifecycle event listeners                                                          |
+| Method                                             | Description                                                                                                                                                                                                                                   |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `add(name, data, options)`                         | Create and enqueue a job                                                                                                                                                                                                                      |
+| `addBulk(jobs)`                                    | Batch add                                                                                                                                                                                                                                     |
+| `process(name, processor)` or `process(processor)` | Register processor (named or wildcard `'*'`)                                                                                                                                                                                                  |
+| `getJob(jobId)`                                    | Get job by ID (throws `JobNotFoundError`)                                                                                                                                                                                                     |
+| `getJobsByStatus(status)`                          | Filter jobs by status                                                                                                                                                                                                                         |
+| `getJobs()`                                        | All jobs                                                                                                                                                                                                                                      |
+| `removeJob(jobId)`                                 | Remove by ID                                                                                                                                                                                                                                  |
+| `retryJob(jobId)`                                  | Retry a failed job (resets attempts, throws `JobProcessingError` if not failed)                                                                                                                                                               |
+| `pause()` / `resume()`                             | Pause/resume processing                                                                                                                                                                                                                       |
+| `isPausedState()`                                  | Check pause state                                                                                                                                                                                                                             |
+| `empty()`                                          | Remove all pending jobs                                                                                                                                                                                                                       |
+| `clean(status?, grace?)`                           | Remove completed/failed jobs older than grace period                                                                                                                                                                                          |
+| `close()`                                          | Pause, clear processors and jobs                                                                                                                                                                                                              |
+| `getStats()`                                       | Returns `{ name, concurrency, isPaused, activeJobs, counts: {...}, stats: {...} }`. In `FileQueue`, `counts` is read from disk and therefore covers every process sharing the data dir; `activeJobs` and `stats` are this process's own view. |
+| `on(event, handler)` / `off(event, handler)`       | Lifecycle event listeners                                                                                                                                                                                                                     |
 
 ### Adapter Events
 

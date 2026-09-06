@@ -74,8 +74,35 @@ Provide a unified framework for installing, managing, and executing system exten
 
 Checksum operations are called directly (same-process):
 
-- **`computeChecksum(dir)`**: Computes SHA-256 hash of an extension directory.
-- **`verifyChecksum(dir, expected)`**: Verifies a directory's checksum matches an expected value.
+- **`computeChecksum(dir, { manifest })`**: SHA-256 of an extension directory.
+- **`verifyExtensionChecksum(dir, expected)`**: Verifies a directory against an expected value.
+
+The checksum is the hash of two parts: the file tree **excluding `package.json`**,
+and the manifest with `integrity` and `builtAt` stripped and its keys sorted.
+The split is what makes the value verifiable at all — the build writes the
+checksum _into_ the manifest it just hashed, so those two fields cannot be part
+of their own input. Everything else in the manifest (entry points, dependencies,
+declared capabilities) is still covered, so tampering invalidates the hash.
+
+`tools/utils/extension.js` re-exports this module rather than reimplementing it:
+the publishing side and the installing side must agree bit-for-bit, and two
+copies drift. Keep this file free of `@shared` aliases and extension-less
+imports — the build task loads it on plain Node ESM.
+
+### Dependency Pinning
+
+Extension dependencies are **pinned by lockfile**. `installExtensionDependencies()`
+runs `npm install` _without_ `--no-package-lock`, so a package that ships a
+`package-lock.json` is installed as its publisher tested it instead of
+re-resolving ranges like `^1.13.0` on every install. When a package ships none,
+npm resolves the declared ranges and writes the resulting lockfile; that is
+harmless because `package-lock.json` is excluded from the integrity hash.
+
+The bundled extensions under `src/extensions/` therefore commit a
+**lockfileVersion 3** `package-lock.json` each. `npm run setup` uses `npm ci`
+for any sub-package that has one, so the lockfile must stay in sync with its
+`package.json` — after changing an extension's `dependencies`, re-run
+`npm install` inside that extension and commit the updated lockfile.
 
 ### Queue-Based Handlers (`api/services/extension.workers.js`)
 

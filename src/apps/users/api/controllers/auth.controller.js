@@ -239,9 +239,10 @@ export async function logout(req, res) {
     // Clear token cookies
     clearAllAuthCookies(res);
 
-    // Also clear cache entry for this token (if present)
+    // Drop every cached verdict for this token (positive and negative) —
+    // `cache.delete()` alone leaves the type-keyed negative entries behind.
     if (req.token) {
-      container.resolve('jwt').cache.delete(req.token);
+      container.resolve('jwt').forgetToken(req.token);
     }
 
     return http.sendSuccess(res, { message: 'Logged out successfully' });
@@ -302,6 +303,13 @@ export async function refreshToken(req, res) {
       error.name === 'SessionRevokedError'
     ) {
       return http.sendUnauthorized(res, 'Session is no longer valid');
+    }
+
+    // A concurrent refresh won the race. The winning request has already
+    // installed the new pair, so this one is retryable — not a dead session
+    // and not a server fault.
+    if (error.name === 'RefreshTokenRotationConflictError') {
+      return http.sendError(res, 'Token refresh already in progress', 409);
     }
 
     if (error.name === 'InvalidTokenFormatError') {

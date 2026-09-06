@@ -264,6 +264,236 @@ describe('ClientExtensionManager', () => {
     });
   });
 
+  describe('sidebar menus across activation', () => {
+    /**
+     * Walks the real activate/deactivate path a WebSocket event takes:
+     * processLifecycleEvent → loadExtension → _postLoad →
+     * _activateViewExtension → def.menus(...). Only the Module Federation
+     * fetch of the remote bundle is stubbed.
+     */
+    let store;
+    let ext;
+
+    beforeEach(() => {
+      store = { dispatch: jest.fn(), getState: () => ({}) };
+      clientManager.viewContext = {
+        store,
+        i18n: { t: (_k, fallback) => fallback },
+      };
+
+      ext = {
+        menus: jest.fn(({ store: s2, i18n }) =>
+          s2.dispatch({ type: 'ui/registerMenu', label: i18n.t('x', 'Posts') }),
+        ),
+        shutdown: jest.fn(({ store: s2 }) =>
+          s2.dispatch({ type: 'ui/unregisterMenu' }),
+        ),
+      };
+
+      jest.spyOn(clientManager, '_loadExtensionModule').mockResolvedValue(ext);
+    });
+
+    afterEach(async () => {
+      clientManager.viewContext = null;
+      clientManager[ACTIVE_EXTENSIONS].delete('menu-plugin');
+    });
+
+    const MANIFEST = {
+      id: 'menu-plugin',
+      name: '@xnapify-extension/menu',
+      version: '1.0.0',
+      hasClientScript: true,
+      slots: ['*'],
+    };
+
+    it('registers the sidebar entry when the extension is activated', async () => {
+      await clientManager.processLifecycleEvent({
+        type: 'EXTENSION_ACTIVATED',
+        extensionId: 'menu-plugin',
+        data: { manifest: MANIFEST },
+      });
+
+      expect(ext.menus).toHaveBeenCalledTimes(1);
+      expect(store.dispatch).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'ui/registerMenu', label: 'Posts' }),
+      );
+    });
+
+    it('removes the sidebar entry when the extension is deactivated', async () => {
+      await clientManager.processLifecycleEvent({
+        type: 'EXTENSION_ACTIVATED',
+        extensionId: 'menu-plugin',
+        data: { manifest: MANIFEST },
+      });
+      store.dispatch.mockClear();
+
+      await clientManager.processLifecycleEvent({
+        type: 'EXTENSION_DEACTIVATED',
+        extensionId: 'menu-plugin',
+      });
+
+      expect(ext.shutdown).toHaveBeenCalledTimes(1);
+      expect(store.dispatch).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'ui/unregisterMenu' }),
+      );
+    });
+  });
+
+  describe('re-activation after deactivation', () => {
+    it('re-registers the sidebar entry when toggled off and on again', async () => {
+      const store = { dispatch: jest.fn(), getState: () => ({}) };
+      clientManager.viewContext = {
+        store,
+        i18n: { t: (_k, fallback) => fallback },
+      };
+      const ext = {
+        menus: jest.fn(({ store: s2 }) =>
+          s2.dispatch({ type: 'ui/registerMenu' }),
+        ),
+        shutdown: jest.fn(),
+      };
+      jest.spyOn(clientManager, '_loadExtensionModule').mockResolvedValue(ext);
+
+      const manifest = {
+        id: 'toggle-plugin',
+        name: '@xnapify-extension/toggle',
+        version: '1.0.0',
+        hasClientScript: true,
+        slots: ['*'],
+      };
+      const activate = () =>
+        clientManager.processLifecycleEvent({
+          type: 'EXTENSION_ACTIVATED',
+          extensionId: 'toggle-plugin',
+          data: { manifest },
+        });
+
+      await activate();
+      await clientManager.processLifecycleEvent({
+        type: 'EXTENSION_DEACTIVATED',
+        extensionId: 'toggle-plugin',
+      });
+      await activate();
+
+      // The operator flipped the switch off and back on; the entry has to
+      // come back, which means the second activation must run menus again.
+      expect(ext.menus).toHaveBeenCalledTimes(2);
+
+      clientManager.viewContext = null;
+      clientManager[ACTIVE_EXTENSIONS].delete('toggle-plugin');
+    });
+  });
+
+  describe('a deactivated extension stays deactivated', () => {
+    it('is not resurrected by the next navigation', async () => {
+      const store = { dispatch: jest.fn(), getState: () => ({}) };
+      clientManager.viewContext = {
+        store,
+        i18n: { t: (_k, fallback) => fallback },
+      };
+      const ext = {
+        menus: jest.fn(({ store: s2 }) =>
+          s2.dispatch({ type: 'ui/registerMenu' }),
+        ),
+        shutdown: jest.fn(({ store: s2 }) =>
+          s2.dispatch({ type: 'ui/unregisterMenu' }),
+        ),
+        // Module-type: no explicit slots, so the registry files it under '*'.
+        routes: () => ({ files: () => [], load: () => ({}) }),
+      };
+      jest.spyOn(clientManager, '_loadExtensionModule').mockResolvedValue(ext);
+
+      await clientManager.sync([
+        {
+          id: 'posts',
+          name: '@xnapify-extension/posts',
+          version: '1.0.0',
+          hasClientScript: true,
+        },
+      ]);
+      expect(ext.menus).toHaveBeenCalledTimes(1);
+
+      await clientManager.processLifecycleEvent({
+        type: 'EXTENSION_DEACTIVATED',
+        extensionId: 'posts',
+      });
+      expect(ext.shutdown).toHaveBeenCalledTimes(1);
+
+      // The operator navigates. onRouteInit activates the route's namespace,
+      // and getDefinitions() merges the '*' subscribers into every namespace.
+      await clientManager.ensureViewNamespaceActive('users');
+
+      expect(ext.menus).toHaveBeenCalledTimes(1);
+
+      clientManager.viewContext = null;
+      clientManager[ACTIVE_EXTENSIONS].delete('posts');
+    });
+  });
+
+  describe('cold boot through the real script loader', () => {
+    it('boots an extension whose defer tag executes after the host bundle', async () => {
+      // The seam that actually failed in production, and the one every other
+      // test in this file bypasses by stubbing _loadExtensionModule: boot →
+      // real _loadScript → activation → menus. On a cold page load the host
+      // bundle runs at readyState 'interactive' with the extension's own
+      // defer tag still pending further down the document.
+      Object.defineProperty(document, 'readyState', {
+        value: 'interactive',
+        configurable: true,
+      });
+
+      const ID = 'cold-boot';
+      const store = { dispatch: jest.fn(), getState: () => ({}) };
+      clientManager.viewContext = {
+        store,
+        i18n: { t: (_k, fallback) => fallback },
+      };
+
+      const ext = {
+        menus: jest.fn(({ store: s }) => s.dispatch({ type: 'registerMenu' })),
+        shutdown: jest.fn(({ store: s }) =>
+          s.dispatch({ type: 'unregisterMenu' }),
+        ),
+        routes: () => ({ files: () => [], load: () => ({}) }),
+      };
+
+      const script = document.createElement('script');
+      script.setAttribute('data-extension-id', ID);
+      document.body.appendChild(script);
+
+      // The deferred script executes on a later task, exactly as the browser
+      // runs it after the host bundle finishes.
+      setTimeout(() => {
+        window[`extension_${ID}`] = {
+          init: jest.fn().mockResolvedValue(true),
+          get: jest.fn().mockResolvedValue(() => ext),
+        };
+        script.dispatchEvent(new Event('load'));
+      }, 0);
+
+      await clientManager.sync([
+        { id: ID, name: '@xnapify-extension/cold', hasClientScript: true },
+      ]);
+
+      // Loaded, active, and its navigation registered.
+      expect(clientManager[ACTIVE_EXTENSIONS].has(ID)).toBe(true);
+      expect(ext.menus).toHaveBeenCalledTimes(1);
+      expect(store.dispatch).toHaveBeenCalledWith({ type: 'registerMenu' });
+
+      // ...and because it is genuinely loaded, deactivation can find it.
+      await clientManager.processLifecycleEvent({
+        type: 'EXTENSION_DEACTIVATED',
+        extensionId: ID,
+      });
+      expect(ext.shutdown).toHaveBeenCalledTimes(1);
+      expect(store.dispatch).toHaveBeenCalledWith({ type: 'unregisterMenu' });
+      expect(clientManager[ACTIVE_EXTENSIONS].has(ID)).toBe(false);
+
+      clientManager.viewContext = null;
+      delete window[`extension_${ID}`];
+    });
+  });
+
   describe('route injection', () => {
     let mockRouter;
 
@@ -414,6 +644,378 @@ describe('ClientExtensionManager', () => {
         undefined,
         'test-ext',
       );
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Deferred slot-only extensions
+  // ---------------------------------------------------------------------------
+
+  describe('deferred extensions', () => {
+    const slotOnly = {
+      name: 'quick-access',
+      id: 'quick',
+      hasRoutes: false,
+      hasClientCss: true,
+      hasClientScript: true,
+      slots: ['login'],
+    };
+
+    it('parks a slot-only extension instead of loading it', async () => {
+      const load = jest
+        .spyOn(
+          Object.getPrototypeOf(Object.getPrototypeOf(clientManager)),
+          'loadExtension',
+        )
+        .mockResolvedValue({});
+
+      const result = await clientManager.loadExtension('quick', slotOnly);
+
+      expect(result).toBeNull();
+      expect(load).not.toHaveBeenCalled();
+    });
+
+    it('loads it, and waits for its stylesheet, when its namespace activates', async () => {
+      const order = [];
+      jest
+        .spyOn(
+          Object.getPrototypeOf(Object.getPrototypeOf(clientManager)),
+          'loadExtension',
+        )
+        .mockImplementation(async () => {
+          order.push('load');
+          return {};
+        });
+      jest
+        .spyOn(
+          Object.getPrototypeOf(Object.getPrototypeOf(clientManager)),
+          'activateViewNamespace',
+        )
+        .mockImplementation(async () => {
+          order.push('activate');
+        });
+      jest
+
+        .spyOn(clientManager, '_settleStylesheet')
+        .mockImplementation(async () => {
+          order.push('stylesheet');
+        });
+
+      await clientManager.loadExtension('quick', slotOnly);
+      await clientManager.activateViewNamespace('login');
+
+      // The slot is rendered by whoever awaited activation, so the stylesheet
+      // has to be settled before that returns.
+      expect(order).toEqual(['load', 'stylesheet', 'activate']);
+    });
+
+    it('leaves a deferred extension parked for an unrelated namespace', async () => {
+      const load = jest
+        .spyOn(
+          Object.getPrototypeOf(Object.getPrototypeOf(clientManager)),
+          'loadExtension',
+        )
+        .mockResolvedValue({});
+      jest
+        .spyOn(
+          Object.getPrototypeOf(Object.getPrototypeOf(clientManager)),
+          'activateViewNamespace',
+        )
+        .mockResolvedValue(undefined);
+
+      await clientManager.loadExtension('quick', slotOnly);
+      await clientManager.activateViewNamespace('/admin/users');
+
+      expect(load).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('processLifecycleEvent', () => {
+    it('tears down an extension the server quarantined as tampered', async () => {
+      // A bundle that fails integrity verification is deactivated
+      // server-side and announced as EXTENSION_TAMPERED, never
+      // EXTENSION_DEACTIVATED. Without a case for it the browser kept
+      // running the quarantined code until a reload.
+      const teardown = jest
+        .spyOn(clientManager, '_teardownExtension')
+        .mockResolvedValue(undefined);
+
+      await clientManager.processLifecycleEvent({
+        type: 'EXTENSION_TAMPERED',
+        extensionId: 'ext-bad',
+      });
+
+      expect(teardown).toHaveBeenCalledWith('ext-bad');
+    });
+  });
+
+  describe('_loadScript', () => {
+    const setReadyState = value =>
+      Object.defineProperty(document, 'readyState', {
+        value,
+        configurable: true,
+      });
+
+    const serverTag = id => {
+      // A tag the server emitted: it carries data-extension-id but NOT
+      // data-extension-injected, which _loadScript stamps on its own.
+      const script = document.createElement('script');
+      script.setAttribute('data-extension-id', id);
+      document.body.appendChild(script);
+      return script;
+    };
+
+    const flush = () => new Promise(resolve => setTimeout(resolve, 0));
+
+    afterEach(() => setReadyState('complete'));
+
+    it('gives up on a server-emitted tag that already failed', async () => {
+      // The server emits <script defer data-extension-id> for a deferred
+      // extension on the page that renders its slots. At readiness
+      // 'complete' every deferred script has executed, so a still-missing
+      // container means the fetch failed and its error event fired before
+      // anyone listened. Waiting for a second one would hang the resolve
+      // that renders the page.
+      setReadyState('complete');
+      const script = document.createElement('script');
+      script.src = '/api/extensions/quick/static/remote.js';
+      script.setAttribute('data-extension-id', 'quick');
+      document.body.appendChild(script);
+
+      await expect(
+        // eslint-disable-next-line no-underscore-dangle
+        clientManager._loadScript(
+          '/api/extensions/quick/static/remote.js',
+          'quick',
+        ),
+      ).rejects.toMatchObject({ code: 'SCRIPT_LOAD_FAILED' });
+    });
+
+    it('waits for a server-emitted defer tag that has not executed yet', async () => {
+      // Readiness flips to 'interactive' BEFORE the deferred list executes,
+      // and the host bundle is itself one of those scripts with the
+      // extension tags after it in document order — so at boot the tag is
+      // still pending. Treating that as a failure made every extension fail
+      // to load on a cold page load, silently, because the failure was then
+      // recorded as ExtensionState.LOADED.
+      setReadyState('interactive');
+      const script = serverTag('ext-pending');
+
+      // eslint-disable-next-line no-underscore-dangle
+      const pending = clientManager._loadScript('/x.js', 'ext-pending');
+      let settled = false;
+      pending.then(
+        () => {
+          settled = true;
+        },
+        () => {
+          settled = true;
+        },
+      );
+      await flush();
+      expect(settled).toBe(false);
+
+      script.dispatchEvent(new Event('load'));
+      await expect(pending).resolves.toBeUndefined();
+      expect(script.getAttribute('data-loaded')).toBe('true');
+    });
+
+    it('gives up on a pending tag when the document finishes loading', async () => {
+      // The wait has to be bounded, or a tag whose error we missed would
+      // hang the activation — and with it the resolve that renders the page.
+      setReadyState('interactive');
+      serverTag('ext-never');
+
+      // eslint-disable-next-line no-underscore-dangle
+      const pending = clientManager._loadScript('/x.js', 'ext-never');
+      await flush();
+      window.dispatchEvent(new Event('load'));
+
+      await expect(pending).rejects.toMatchObject({
+        code: 'SCRIPT_LOAD_FAILED',
+      });
+    });
+
+    it('still waits on a tag it injected itself', async () => {
+      // eslint-disable-next-line no-underscore-dangle
+      const pending = clientManager._loadScript('/x/remote.js', 'own');
+      const script = document.querySelector('script[data-extension-id="own"]');
+
+      expect(script).not.toBeNull();
+      expect(script.getAttribute('data-extension-injected')).toBe('true');
+
+      script.dispatchEvent(new Event('load'));
+      await expect(pending).resolves.toBeUndefined();
+    });
+
+    it('resolves at once for a tag already marked loaded', async () => {
+      const script = document.createElement('script');
+      script.setAttribute('data-extension-id', 'done');
+      script.setAttribute('data-loaded', 'true');
+      document.body.appendChild(script);
+
+      await expect(
+        // eslint-disable-next-line no-underscore-dangle
+        clientManager._loadScript('/x/remote.js', 'done'),
+      ).resolves.toBeUndefined();
+    });
+  });
+
+  describe('_settleStylesheet', () => {
+    it('resolves at once when the page carries no such stylesheet', async () => {
+      await expect(
+        // eslint-disable-next-line no-underscore-dangle
+        clientManager._settleStylesheet('nope'),
+      ).resolves.toBeUndefined();
+    });
+
+    it('resolves when the link finishes loading', async () => {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.setAttribute('data-extension-id', 'quick');
+      link.setAttribute('data-extension-injected', 'true');
+      document.head.appendChild(link);
+
+      // eslint-disable-next-line no-underscore-dangle
+      const settled = clientManager._settleStylesheet('quick');
+      link.dispatchEvent(new Event('load'));
+
+      await expect(settled).resolves.toBeUndefined();
+    });
+
+    it('gives up at once on a link whose error already fired', async () => {
+      // The injector marks a failed sheet. Without that mark the error event
+      // is long gone by the time anyone listens, so the first navigation to a
+      // page hosting the extension burned the full timeout.
+      jest.useFakeTimers();
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.setAttribute('data-extension-id', 'quick');
+      link.setAttribute('data-extension-css-error', 'true');
+      document.head.appendChild(link);
+
+      let settled = false;
+      // eslint-disable-next-line no-underscore-dangle
+      const pending = clientManager._settleStylesheet('quick').then(() => {
+        settled = true;
+      });
+
+      // No timers advanced: nothing may be waiting on one.
+      await pending;
+      expect(settled).toBe(true);
+      jest.useRealTimers();
+    });
+
+    it('marks and logs a link that fails while it waits', async () => {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.setAttribute('data-extension-id', 'quick');
+      link.setAttribute('data-extension-injected', 'true');
+      document.head.appendChild(link);
+
+      // eslint-disable-next-line no-underscore-dangle
+      const settled = clientManager._settleStylesheet('quick');
+      link.dispatchEvent(new Event('error'));
+
+      await expect(settled).resolves.toBeUndefined();
+      expect(link.getAttribute('data-extension-css-error')).toBe('true');
+      expect(console.error).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to load stylesheet'),
+      );
+    });
+
+    it('gives up at once on a server-emitted link that already failed', async () => {
+      // The tag the server put in the head for a deferred extension carries no
+      // error handler, so nothing marks it. On a finished document every head
+      // stylesheet has settled, so a missing `sheet` is a failure whose error
+      // event is long gone — waiting for it burned the whole timeout.
+      jest.useFakeTimers();
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = '/api/extensions/quick/static/ext.css';
+      link.setAttribute('data-extension-id', 'quick');
+      document.head.appendChild(link);
+      expect(document.readyState).toBe('complete');
+
+      let settled = false;
+      // eslint-disable-next-line no-underscore-dangle
+      const pending = clientManager._settleStylesheet('quick').then(() => {
+        settled = true;
+      });
+
+      // No timers advanced: nothing may be waiting on one.
+      await pending;
+      expect(settled).toBe(true);
+      expect(link.getAttribute('data-extension-css-error')).toBe('true');
+      expect(console.error).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to load stylesheet'),
+      );
+      jest.useRealTimers();
+    });
+
+    it('marks the link when the injected stylesheet errors', async () => {
+      await clientManager.emit('extension:loaded', {
+        id: 'quick',
+        manifest: { hasClientCss: true },
+      });
+
+      const link = document.querySelector('link[data-extension-id="quick"]');
+      link.dispatchEvent(new Event('error'));
+
+      expect(link.getAttribute('data-extension-css-error')).toBe('true');
+
+      await expect(
+        // eslint-disable-next-line no-underscore-dangle
+        clientManager._settleStylesheet('quick'),
+      ).resolves.toBeUndefined();
+    });
+
+    it('gives up rather than holding a navigation open', async () => {
+      jest.useFakeTimers();
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.setAttribute('data-extension-id', 'quick');
+      link.setAttribute('data-extension-injected', 'true');
+      document.head.appendChild(link);
+
+      // eslint-disable-next-line no-underscore-dangle
+      const settled = clientManager._settleStylesheet('quick', 50);
+      jest.advanceTimersByTime(50);
+
+      await expect(settled).resolves.toBeUndefined();
+      jest.useRealTimers();
+    });
+  });
+
+  // Runs last: destroy() clears the singleton's own event subscriptions.
+  describe('destroy', () => {
+    it('forgets parked manifests so they cannot be resurrected', async () => {
+      const slotOnly = {
+        name: 'quick-access',
+        id: 'quick',
+        hasRoutes: false,
+        slots: ['login'],
+      };
+
+      await clientManager.loadExtension('quick', slotOnly);
+      await clientManager.destroy();
+
+      const load = jest
+        .spyOn(
+          Object.getPrototypeOf(Object.getPrototypeOf(clientManager)),
+          'loadExtension',
+        )
+        .mockResolvedValue({});
+      jest
+        .spyOn(
+          Object.getPrototypeOf(Object.getPrototypeOf(clientManager)),
+          'activateViewNamespace',
+        )
+        .mockResolvedValue(undefined);
+
+      await clientManager.activateViewNamespace('login');
+
+      expect(load).not.toHaveBeenCalled();
     });
   });
 });

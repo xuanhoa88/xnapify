@@ -171,7 +171,17 @@ export default {
    * This limits Jest to only look in the src directory, automatically excluding
    * tools, build, release, out, and coverage directories.
    */
-  roots: [config.APP_DIR, path.resolve(config.CWD, 'shared')],
+  roots: [
+    config.APP_DIR,
+    path.resolve(config.CWD, 'shared'),
+    // Build tooling is tested too. Without this root (and the matching
+    // removal of '/tools/' from testPathIgnorePatterns below) every
+    // co-located tools/**/*.test.js is silently skipped — jest reports
+    // "No tests found" rather than failing, so the suites look green while
+    // never having run. Coverage is unaffected: collectCoverageFrom covers
+    // only src/ and shared/.
+    path.resolve(config.CWD, 'tools'),
+  ],
 
   /**
    * The glob patterns Jest uses to detect test files.
@@ -190,7 +200,10 @@ export default {
    */
   testPathIgnorePatterns: [
     '/node_modules/',
-    '/tools/',
+    // The task runner behind `npm test`. Its name matches testMatch's
+    // `**/*test.js`, but it is a build task, not a suite — jest reports
+    // "Your test suite must contain at least one test" for it.
+    '/tools/tasks/test\\.js$',
     '/build/',
     '/release/',
     '/out/',

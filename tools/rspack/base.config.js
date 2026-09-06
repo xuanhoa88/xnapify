@@ -41,8 +41,29 @@ const isDev = nodeEnv !== 'production';
 const isProfile =
   process.argv.includes('--profile') || config.env('RSPACK_PROFILE') === 'true';
 const verbose = isVerbose();
+// In-memory compilation cache: always on in dev, never in prod.
+const useMemoryCache = isDev;
+
+// Rspack's *persistent* (filesystem) cache is OPT-IN and defaults to OFF.
+//
+// It belongs at top-level `cache` — `experiments.cache` is not a key
+// @rspack/core 2.0.1 implements, and unknown `experiments` keys pass
+// validation untouched, so configuring it there silently does nothing.
+// That is how it sat here dead: the documented dev cold-start win never
+// happened and `.cache/rspack` was never created.
+//
+// Wiring it up correctly then exposed why it cannot be on by default:
+// rspack_storage PANICS (SIGABRT, killing the dev task) when two
+// transactions touch one storage directory —
+//   crates/rspack_storage/src/filesystem/db/transaction/mod.rs:53
+//   "Transaction already in progress by process <pid> in directory ..."
+// `npm run dev` drives 14+ concurrent compilers (app client, app server and
+// 12 extensions, each with client/server/api/nodes bundles) and rebuilds
+// them on watch, and contention is reached even with a directory used by a
+// single compiler. Until that is fixed upstream, correctness beats a warm
+// cache: set RSPACK_PERSISTENT_CACHE=true to experiment with it.
 const usePersistentCache =
-  isDev && config.env('RSPACK_PERSISTENT_CACHE') !== 'false';
+  isDev && config.env('RSPACK_PERSISTENT_CACHE') === 'true';
 
 // Resolve .browserslistrc query strings once per build session.
 // LightningCssMinimizerRspackPlugin expects browserslist QUERIES (e.g. '> 0.5%'),
@@ -473,11 +494,57 @@ const DEFAULT_MIN_CHUNK_SIZE = 20_000; // 20 kB
  * @param {number} minChunkSize - Minimum chunk size in bytes (default 20 kB)
  * @returns {Object} cacheGroups configuration
  */
+/**
+ * Locales the application ships, read from the shared dictionary directory.
+ * @returns {string[]}
+ */
+function readAvailableLocales() {
+  try {
+    return fs
+      .readdirSync(path.join(config.CWD, 'shared', 'i18n', 'translations'))
+      .filter(name => name.endsWith('.json'))
+      .map(name => name.replace(/\.json$/, ''));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * One chunk per locale for the per-module dictionaries.
+ *
+ * Module translations are loaded through lazy contexts so the browser only
+ * fetches the language it is showing. Without grouping that would be one
+ * request per module per locale; this collapses them into a single file the
+ * server can name in the page. Route-level dictionaries are deliberately
+ * excluded: they live under `views/` and belong in their route's own chunk.
+ *
+ * @param {string[]} locales - Locale codes
+ * @returns {Object} splitChunks cache groups
+ */
+function createLocaleCacheGroups(locales) {
+  return Object.fromEntries(
+    locales.map(locale => [
+      `locale_${locale.replace(/[^a-zA-Z0-9]/g, '_')}`,
+      {
+        test: new RegExp(
+          `[\\\\/]apps[\\\\/][^\\\\/]+[\\\\/]translations[\\\\/]${locale.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\.json$`,
+        ),
+        name: `locale.${locale}`,
+        chunks: 'async',
+        priority: 60,
+        enforce: true,
+      },
+    ]),
+  );
+}
+
 function createCacheGroups(
   chunks = 'all',
   minChunkSize = DEFAULT_MIN_CHUNK_SIZE,
 ) {
   return {
+    ...createLocaleCacheGroups(readAvailableLocales()),
+
     // --- High-priority named groups ---
 
     // Bundle all CSS into a single chunk to avoid FOUC and guarantee CSS loading order.
@@ -536,10 +603,18 @@ function createCacheGroups(
     // Markdown conversion is consumed on its own (extensions render docs with
     // `marked`); keeping it apart from the editor group means a page that
     // renders markdown no longer downloads ProseMirror as well.
+    //
+    // `chunks: 'initial'` is load-bearing, NOT the shared `chunks` argument:
+    // `marked` and `turndown` are non-eager Module Federation shares, so an
+    // async fixed-name chunk holding them is exactly the deadlock described
+    // above — the chunk waits on a shared module whose fallback it contains.
+    // Today no host view imports markdown, so the group never fires and the
+    // bug is invisible; restricting it to initial chunks keeps it that way,
+    // and the async case falls back to rspack's per-share default split.
     markdown: {
       test: /[\\/]node_modules[\\/](marked|turndown|@mixmark-io[\\/])/,
       name: 'vendor.markdown',
-      chunks,
+      chunks: 'initial',
       priority: 31,
       enforce: true,
     },
@@ -805,7 +880,17 @@ function createRspackConfig(name, options = {}) {
   const isServer = name === 'server';
 
   // Extract additionalModuleDirs before forwarding to merge
-  const { additionalModuleDirs, ...mergeOptions } = options;
+  const { additionalModuleDirs, cacheKey, ...mergeOptions } = options;
+
+  // `name` is a ROLE ('server' | 'client'), not an identity: the app and every
+  // extension bundle reuse both values, so it can never key a cache directory.
+  // Persistent cache is therefore opt-in via an explicit, globally unique
+  // `cacheKey`. Two compilers sharing one storage directory abort the process
+  // with `Transaction already in progress` from rspack_storage.
+  const cacheDir = cacheKey
+    ? String(cacheKey).replace(/[^a-zA-Z0-9._-]+/g, '-')
+    : null;
+  const usePersistentCacheHere = usePersistentCache && Boolean(cacheDir);
 
   return merge(
     {
@@ -913,28 +998,35 @@ function createRspackConfig(name, options = {}) {
       // Stop compilation on first error
       bail: !isDev,
 
-      // Persistent cache for development restarts and rebuilds. Production
-      // builds stay cold so an artifact never depends on a stale cache.
-      // Opt out with RSPACK_PERSISTENT_CACHE=false.
-      cache: usePersistentCache,
-      experiments: {
-        cache: usePersistentCache
-          ? {
-              type: 'persistent',
-              version: `${nodeEnv}:${pkg.version}`,
-              storage: {
-                type: 'filesystem',
-                directory: path.join(config.CWD, '.cache', 'rspack', name),
-              },
-              buildDependencies: [
-                currentFilename,
-                path.join(currentDir, 'app.config.js'),
-                path.join(currentDir, 'extension.config.js'),
-                path.join(config.CWD, 'package.json'),
-              ],
-            }
-          : false,
-      },
+      // Compilation cache. Persistent (filesystem) only when a compiler
+      // declares a unique `cacheKey` AND RSPACK_PERSISTENT_CACHE=true;
+      // otherwise in-memory. Production always cold, so an artifact never
+      // depends on a stale cache. See the flag definitions at the top of
+      // this file for why persistent is opt-in.
+      cache: usePersistentCacheHere
+        ? {
+            type: 'persistent',
+            version: `${nodeEnv}:${pkg.version}`,
+            storage: {
+              type: 'filesystem',
+              directory: path.join(config.CWD, '.cache', 'rspack', cacheDir),
+            },
+            // Every file that shapes the compilation but is not itself a
+            // module in the graph. Miss one and its edits are invisible to
+            // the cache — the PostCSS plugin chain in particular, since a
+            // stylesheet's output depends on it without importing it.
+            buildDependencies: [
+              currentFilename,
+              path.join(currentDir, 'app.config.js'),
+              path.join(currentDir, 'extension.config.js'),
+              path.resolve(currentDir, '../factories/postcss.factory.js'),
+              path.resolve(currentDir, '../postcss/RadixBreakpointTrim.js'),
+              path.join(config.CWD, 'package.json'),
+            ],
+          }
+        : // In-memory cache only. Shared safely by any number of concurrent
+          // compilers, and what every compiler used before this was wired up.
+          useMemoryCache,
 
       // Enable source maps for debugging
       // Server uses eval-source-map (fast + accurate) instead of full source-map

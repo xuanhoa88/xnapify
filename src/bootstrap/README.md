@@ -112,7 +112,7 @@ api/index.js
 └── middlewares/cors.js, middlewares/logging.js
 
 views.js
-├── @shared/renderer/autoloader (discoverModules)
+├── @shared/renderer/autoloader (discoverViewModules, bootViewModules, runMenuModules)
 ├── @shared/renderer/redux (features, rootReducer)
 └── @shared/renderer/router (Router)
 ```
@@ -214,7 +214,7 @@ Overrides `resolve(context)` to handle metadata:
 | ---------------- | -------------------------------------------------------------------------- |
 | `errorHandler`   | In `__DEV__`: throws non-403 errors. In prod: redirects to `/error` route. |
 | `onRouteInit`    | Loads extension namespace for the route (if not already loaded).           |
-| `onRouteDestroy` | Unloads extension namespace for the route.                                 |
+| `onRouteUnmount` | Unloads the route's own extension namespace (never `'*'` extensions).      |
 | Catch-all        | `/*path` → redirects to `/not-found` route.                                |
 
 Extension namespace is derived from: `route.workspace` → `route.module.workspace` → `route.path`.

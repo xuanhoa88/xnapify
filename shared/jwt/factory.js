@@ -16,18 +16,36 @@ import {
 import { validateJwtConfig, getJwtConfig } from './config.js';
 import { DEFAULT_JWT_CONFIG } from './constants.js';
 import { generateToken, verifyToken, decodeToken } from './core.js';
-import {
-  generateTypedToken,
-  verifyTypedToken,
-  generateTokenPair,
-  refreshTokenPair,
-} from './typed.js';
+import { generateTypedToken, verifyTypedToken } from './typed.js';
 import {
   isTokenExpired,
   getTokenExpiration,
   getTokenTimeLeft,
   createTokenBlacklistEntry,
 } from './utils.js';
+
+/**
+ * Sessions are records, not just signatures. A pair minted straight from the
+ * JWT instance has no `refresh_tokens` row, no `sid` and no `ver`, so it can
+ * neither be revoked nor rotated — an invisible, immortal session. Both
+ * helpers stay on the instance only to fail loudly for anything still
+ * calling them.
+ *
+ * @param {string} method - The helper that was called
+ * @throws {Error} Always
+ */
+function unsupportedTokenPair(method) {
+  const error = new Error(
+    `jwt.${method}() is no longer supported: it creates a session that ` +
+      'cannot be revoked or rotated. Use ' +
+      "container.resolve('users:sessions').issueTokenPair() / " +
+      'rotateTokenPair() instead.',
+  );
+  error.name = 'UnsupportedTokenPairError';
+  error.code = 'JWT_TOKEN_PAIR_UNSUPPORTED';
+  error.status = 500;
+  throw error;
+}
 
 /**
  * Create a configured JWT instance
@@ -92,17 +110,17 @@ export function createJwt(config = {}) {
     },
 
     /**
-     * Generate a token pair (access + refresh tokens)
+     * @deprecated Removed — see {@link unsupportedTokenPair}
      */
-    generateTokenPair(payload, overrides = {}) {
-      return generateTokenPair(payload, secret, overrides);
+    generateTokenPair() {
+      return unsupportedTokenPair('generateTokenPair');
     },
 
     /**
-     * Refresh token pair
+     * @deprecated Removed — see {@link unsupportedTokenPair}
      */
-    refreshTokenPair(refreshToken, overrides = {}) {
-      return refreshTokenPair(refreshToken, secret, overrides);
+    refreshTokenPair() {
+      return unsupportedTokenPair('refreshTokenPair');
     },
 
     // Static utilities (don't need secret)
@@ -231,11 +249,11 @@ export function createJwtFromEnv() {
     verifyTypedToken(token, expectedType, overrides = {}) {
       return verifyTypedToken(token, expectedType, secret, overrides);
     },
-    generateTokenPair(payload, overrides = {}) {
-      return generateTokenPair(payload, secret, overrides);
+    generateTokenPair() {
+      return unsupportedTokenPair('generateTokenPair');
     },
-    refreshTokenPair(refreshToken, overrides = {}) {
-      return refreshTokenPair(refreshToken, secret, overrides);
+    refreshTokenPair() {
+      return unsupportedTokenPair('refreshTokenPair');
     },
   });
 

@@ -377,6 +377,9 @@ export async function updateUserById(
     userUpdates.password = password; // Password hashed by model hook
     userUpdates.failed_login_attempts = 0; // Reset failed attempts
     userUpdates.is_locked = false; // Unlock if locked
+    // The automatic lockout has its own column; leaving it set meant an admin
+    // "unlock" did nothing until the window expired on its own (up to 24 h).
+    userUpdates.locked_until = null;
   }
   if (typeof is_active === 'boolean') userUpdates.is_active = is_active;
 
@@ -566,6 +569,9 @@ export async function resetUserPassword(
     password: newPassword,
     failed_login_attempts: 0,
     is_locked: false,
+    // Same as updateUserById: the automatic lockout has its own column and
+    // an "unlock" that leaves it set does nothing.
+    locked_until: null,
   });
 
   // Emit hook event
@@ -707,7 +713,7 @@ export async function listApiKeys(userId, models) {
  */
 export async function createApiKey(userId, data, { models, jwt, hook }) {
   const { name, scopes: requestedScopes = [], expiresIn, cache } = data;
-  const { UserApiKey } = models;
+  const { UserApiKey, User } = models;
 
   // Fetch user's effective permissions (resource:action format)
   const rbacData = await fetchUserRbacData(userId, { models, cache });
@@ -726,6 +732,11 @@ export async function createApiKey(userId, data, { models, jwt, hook }) {
   const days = expiresIn || 365;
   const expiresAt = dayjs().add(days, 'day').toDate();
 
+  // Stamp the owner's current token_version so "sign out everywhere" (which
+  // bumps the column) invalidates the key immediately, exactly as it does an
+  // access token.
+  const owner = await User.findByPk(userId, { attributes: ['token_version'] });
+
   // Generate JWT with type: 'api_key' and our DB id as jti
   const token = jwt.generateToken(
     {
@@ -734,6 +745,7 @@ export async function createApiKey(userId, data, { models, jwt, hook }) {
       jti: keyId,
       scopes,
       type: 'api_key',
+      ver: owner ? Number(owner.token_version) || 0 : 0,
     },
     { expiresIn: `${days}d` },
   );

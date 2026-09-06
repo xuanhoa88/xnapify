@@ -62,6 +62,28 @@ describe('createScopedContainer', () => {
     );
   });
 
+  it('refuses denied bindings even under the global wildcard', () => {
+    // '*' is what an extension manifest can ask for; the host's reserved
+    // bindings must stay unreachable through it.
+    const scoped = createScopedContainer(container, ['*', 'db'], {
+      owner: 'ext-a',
+      deny: ['db'],
+    });
+
+    expect(scoped.resolve('hook')).toEqual({ name: 'hook' });
+    expect(() => scoped.resolve('db')).toThrow(CapabilityDeniedError);
+    expect(scoped.has('db')).toBe(false);
+    expect(scoped.getBindingNames()).not.toContain('db');
+  });
+
+  it('deny also outranks a namespace wildcard', () => {
+    const allowed = createCapabilityMatcher(['users:*'], {
+      deny: ['users:sessions'],
+    });
+    expect(allowed('users:rbacCache')).toBe(true);
+    expect(allowed('users:sessions')).toBe(false);
+  });
+
   it('exposes no mutation methods', () => {
     const scoped = createScopedContainer(container, ['*']);
     expect(scoped.bind).toBeUndefined();

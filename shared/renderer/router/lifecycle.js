@@ -48,6 +48,30 @@ function getHierarchy(route) {
 }
 
 /**
+ * Returns the memo store kept under `key` on the navigation context,
+ * creating it on first use.
+ *
+ * Init and translations must be remembered per navigation, never on the route
+ * node: the server compiles the route tree once and shares those nodes across
+ * every request, so a flag written on a node would let the hook run for the
+ * first request only and leave every later request's store (and i18n
+ * registry) without what the hook installs. Mirrors the `ctx[ROUTE_MOUNT_KEY]`
+ * pattern. Falls back to a throwaway store when there is no context, so the
+ * helpers stay callable standalone.
+ *
+ * @param {Object|undefined} ctx - Route context
+ * @param {symbol} key - Symbol the store lives under
+ * @param {Function} Ctor - Set or Map
+ * @returns {Set|Map}
+ * @private
+ */
+function getContextMemo(ctx, key, Ctor) {
+  if (!ctx || typeof ctx !== 'object') return new Ctor();
+  ctx[key] ??= new Ctor();
+  return ctx[key];
+}
+
+/**
  * Extracts the router options from the context.
  * Avoids repeated `ctx._instance && ctx._instance.options` property chains.
  *
@@ -286,13 +310,18 @@ export function buildTranslationsLoader(
 
 /**
  * Runs translation registration for a route hierarchy (parent → child).
- * Each route's translations are registered once (tracked via ROUTE_TRANSLATIONS_KEY).
+ * Each route's translations are registered once per navigation, tracked in a
+ * `ctx[ROUTE_TRANSLATIONS_KEY]` map so that a route tree shared across SSR
+ * requests still registers its namespaces for every one of them.
  * Uses cached hierarchy to avoid redundant .parent walks.
  */
-export async function loadRouteTranslations(route, _ctx) {
+export async function loadRouteTranslations(route, ctx) {
   if (!route) return;
 
   const hierarchy = getHierarchy(route);
+
+  // route node → translations already merged for this navigation
+  const registered = getContextMemo(ctx, ROUTE_TRANSLATIONS_KEY, Map);
 
   // Track the accumulated translations as we move down the tree
   let accumulatedTranslations = {};
@@ -300,12 +329,12 @@ export async function loadRouteTranslations(route, _ctx) {
   for (const r of hierarchy) {
     if (typeof r.translations === 'function') {
       try {
-        if (!r[ROUTE_TRANSLATIONS_KEY]) {
+        if (registered.has(r)) {
+          accumulatedTranslations = registered.get(r);
+        } else {
           accumulatedTranslations =
             r.translations(accumulatedTranslations) || accumulatedTranslations;
-          r[ROUTE_TRANSLATIONS_KEY] = accumulatedTranslations;
-        } else {
-          accumulatedTranslations = r[ROUTE_TRANSLATIONS_KEY];
+          registered.set(r, accumulatedTranslations);
         }
       } catch (error) {
         log(`Translations error for "${r.path}": ${error.message}`, 'error');
@@ -414,12 +443,18 @@ export async function runInit(route, ctx) {
     }
   }
 
+  // Routes initialised during this navigation. Keyed on the context and not
+  // on the node: the server shares one compiled tree across requests while
+  // every request builds its own store, so a node-level flag would inject a
+  // route's reducer into the first request's store only.
+  const initialized = getContextMemo(ctx, ROUTE_INIT_KEY, Set);
+
   // Init each route in sequence (parent → child)
   for (const r of hierarchy) {
-    if (typeof r.init === 'function' && !r[ROUTE_INIT_KEY]) {
+    if (typeof r.init === 'function' && !initialized.has(r)) {
+      initialized.add(r);
       try {
         await r.init(ctx);
-        r[ROUTE_INIT_KEY] = true;
       } catch (error) {
         log(`Init error for "${r.path}": ${error.message}`, 'error');
       }

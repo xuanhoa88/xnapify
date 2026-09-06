@@ -39,7 +39,21 @@ const FORMATTABLE_EXTENSIONS = [
 ];
 
 // Directories to exclude
-const EXCLUDED_DIRS = ['node_modules', 'build', 'coverage', '.git', '.cache'];
+// This walker does not read .prettierignore, so the generated-output dirs
+// listed there have to be repeated here or `format:check` fails on runtime
+// data. `.xnapify` in particular holds the Node-RED home, the file-queue
+// state and the Sequelize driver sandbox — all written while the app runs,
+// none of it source.
+const EXCLUDED_DIRS = [
+  'node_modules',
+  'build',
+  'release',
+  'out',
+  'coverage',
+  '.git',
+  '.cache',
+  '.xnapify',
+];
 
 /**
  * Recursively find files to format

@@ -217,13 +217,33 @@ Server-side rendered HTML document with:
 
 Discovers and boots view modules. Mirrors the API autoloader pattern.
 
+Discovery is split from booting: `discoverViewModules(modulesContext)` reads
+the static shape once (memoised per context), and `bootViewModules(lifecycles,
+context)` runs the per-context phases against it. `runMenuModules` re-runs just
+`menus` when the language changes.
+
 #### Lifecycle Phases (sequential)
 
-| #   | Phase          | Hook Signature                                  | Purpose                      |
-| --- | -------------- | ----------------------------------------------- | ---------------------------- |
-| 1   | `translations` | `translations()` → `import.meta.webpackContext` | Register i18n namespaces     |
-| 2   | `providers`    | `providers({ container })`                      | Bind client-side DI services |
-| 3   | `views`        | `views()` → `import.meta.webpackContext`        | Collect view route contexts  |
+The authoritative list is `VIEW_LIFECYCLE_PHASES` in `shared/utils/lifecycle.js`.
+
+| #   | Phase          | Hook Signature                                  | Purpose                                 |
+| --- | -------------- | ----------------------------------------------- | --------------------------------------- |
+| 1   | `translations` | `translations()` → `import.meta.webpackContext` | Register i18n namespaces                |
+| 2   | `providers`    | `providers({ container })`                      | Bind client-side DI services            |
+| 3   | `menus`        | `menus({ store, i18n })`                        | Register module-wide navigation         |
+| 4   | `boot`         | `boot({ container, store })`                    | Module initialisation                   |
+| 5   | `shutdown`     | `shutdown({ container, registry, store })`      | Reverse of boot/menus (extensions only) |
+| 6   | `routes`       | `routes()` → `[context, { lazy: true }]`        | Collect view route contexts             |
+
+`menus` exists because route chunks are lazy: a route's `_route.js` is not
+fetched until that route is first matched, so a sidebar entry registered from
+`setup()` would be missing until the user had already reached the page it
+links to. It re-runs per SSR request and on every language change, so it must
+be idempotent.
+
+`routes()` returns a tuple, not a bare context. Modules must agree on the
+strategy — a mix of eager and lazy contexts throws
+`MixedRouteLoadingStrategyError` at discovery.
 
 #### Adapter Merging
 

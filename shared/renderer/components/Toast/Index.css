@@ -5,12 +5,65 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-.toastContainer {
+/*
+ * Class names here must be camelCase. Rspack's CSS-modules export is
+ * camelCase-*only*: a `.variant-success` rule is exported as `variantSuccess`
+ * and nothing else, so `s['variant-success']` reads back `undefined` and the
+ * class is quietly dropped from the element. See
+ * shared/renderer/css-module-class-names.test.js.
+ */
+
+/*
+ * The live region wrapper is always in the DOM (it carries aria-live), so it
+ * must never paint, occupy space or swallow clicks while empty. It is given no
+ * width of its own for that reason — an empty wrapper is a 0x0 box, and the
+ * card inside supplies the width once there is something to show. Placement
+ * lives here; the card only animates on the Y axis, so centring and the
+ * transition can no longer fight over `transform`.
+ */
+.liveRegion {
   position: fixed;
   z-index: 100;
-  max-width: 400px;
-  width: calc(100vw - 32px);
   margin: 16px;
+  pointer-events: none;
+}
+
+.placementTopRight {
+  top: 0;
+  right: 0;
+}
+
+.placementTopLeft {
+  top: 0;
+  left: 0;
+}
+
+.placementTopCenter {
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.placementBottomRight {
+  bottom: 0;
+  right: 0;
+}
+
+.placementBottomLeft {
+  bottom: 0;
+  left: 0;
+}
+
+.placementBottomCenter {
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.toastCard {
+  pointer-events: auto;
+  width: calc(100vw - 32px);
+  max-width: 400px;
   background-color: var(--toast-bg);
   border: 1px solid var(--toast-border);
   border-radius: var(--radius-3);
@@ -20,85 +73,58 @@
     transform 0.2s ease;
 }
 
-.placement-top-right {
-  top: 0;
-  right: 0;
+/* Variants */
+.variantSuccess {
+  --toast-bg: var(--green-2);
+  --toast-border: var(--green-7);
+  --toast-icon: var(--green-9);
+  --toast-text: var(--green-11);
 }
 
-.placement-top-left {
-  top: 0;
-  left: 0;
+.variantError {
+  --toast-bg: var(--red-2);
+  --toast-border: var(--red-7);
+  --toast-icon: var(--red-9);
+  --toast-text: var(--red-11);
 }
 
-.placement-top-center {
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
+.variantWarning {
+  --toast-bg: var(--amber-2);
+  --toast-border: var(--amber-7);
+  --toast-icon: var(--amber-9);
+  --toast-text: var(--amber-11);
 }
 
-.placement-bottom-right {
-  bottom: 0;
-  right: 0;
-}
-
-.placement-bottom-left {
-  bottom: 0;
-  left: 0;
-}
-
-.placement-bottom-center {
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-.variant-info {
+.variantInfo {
   --toast-bg: var(--blue-2);
   --toast-border: var(--blue-7);
   --toast-icon: var(--blue-9);
   --toast-text: var(--blue-11);
 }
 
-.enteredTop {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.enteredBottom {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.enteredTopCenter {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-}
-
-.enteredBottomCenter {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-}
-
-.exitingTop {
+/* Transitions — `hidden*` is both the enter "from" and the exit "to" state. */
+.hiddenTop {
   opacity: 0;
   transform: translateY(-10px);
 }
 
-.exitingBottom {
+.hiddenBottom {
   opacity: 0;
   transform: translateY(10px);
 }
 
-.exitingTopCenter {
-  opacity: 0;
-  transform: translateX(-50%) translateY(-10px);
+.visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
-.exitingBottomCenter {
-  opacity: 0;
-  transform: translateX(-50%) translateY(10px);
+@media (prefers-reduced-motion: reduce) {
+  .toastCard {
+    transition: none;
+  }
 }
 
+/* Content */
 .iconBox {
   color: var(--toast-icon);
   flex-shrink: 0;

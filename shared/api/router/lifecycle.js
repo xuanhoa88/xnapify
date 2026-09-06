@@ -233,7 +233,12 @@ export function createMiddlewareRunner(configs, routeMiddlewares) {
 /**
  * Creates the action function for an API route
  */
-export function createAction(pageInfo, configs = [], middlewares = []) {
+export function createAction(
+  pageInfo,
+  configs = [],
+  middlewares = [],
+  routeKey,
+) {
   const { module } = pageInfo;
 
   // Generic/inherited route middleware chain + Custom route parsers
@@ -292,7 +297,12 @@ export function createAction(pageInfo, configs = [], middlewares = []) {
         cachedRateLimiter = null;
       } else {
         try {
-          const rl = await resolveRateLimiter(module.useRateLimit);
+          // Pass the route's identity so two routes declaring the same
+          // limits get their own counters. Without it every such route
+          // hashes to one cache key and shares a single bucket — six
+          // sensitive auth routes all declaring {max:10, windowMs:900000}
+          // were sharing one 10-per-15-minutes allowance per IP.
+          const rl = await resolveRateLimiter(module.useRateLimit, routeKey);
           cachedRateLimiter = typeof rl === 'function' ? rl : null;
         } catch (e) {
           log(`Failed to load rate limiter: ${e.message}`, 'error');

@@ -26,7 +26,7 @@ import Modal from '@shared/renderer/components/Modal/index.js';
 import { useRbac } from '@shared/renderer/components/Rbac/index.js';
 import { DataTable } from '@shared/renderer/components/Table/index.js';
 import { features } from '@shared/renderer/redux/index.js';
-import { useWebSocket } from '@shared/ws/client/index.js';
+import { EventType, useWebSocket } from '@shared/ws/client/index.js';
 
 import ExtensionCard from './components/ExtensionCard.js';
 import {
@@ -34,6 +34,7 @@ import {
   uploadExtension,
   toggleExtensionStatus,
   uninstallExtension,
+  clearExtensionJobStatus,
   getExtensions,
   isExtensionsListLoading,
   isExtensionUploading,
@@ -89,25 +90,40 @@ function Extensions() {
   // Safety timeout timers — keyed by extension ID
   const actionTimersRef = useRef({});
 
+  // What each pending action is waiting for. Reconciliation reads this
+  // instead of `job_status`, which the server only populates when the queue
+  // adapter exposes getJobs — the very same precondition that gates the
+  // completion event (extension.workers.js). A backstop built on that field
+  // is therefore blind in exactly the cases it exists to cover.
+  const actionIntentRef = useRef({});
+
   // Set an actionMap entry with a safety timeout that auto-clears it
-  const setActionWithTimeout = useCallback((id, label) => {
-    setActionMap(prev => ({ ...prev, [id]: label }));
+  const setActionWithTimeout = useCallback(
+    (id, label, intent) => {
+      setActionMap(prev => ({ ...prev, [id]: label }));
+      actionIntentRef.current[id] = intent;
 
-    // Cancel any existing timer for this ID
-    if (actionTimersRef.current[id]) {
-      clearTimeout(actionTimersRef.current[id]);
-    }
+      // Cancel any existing timer for this ID
+      if (actionTimersRef.current[id]) {
+        clearTimeout(actionTimersRef.current[id]);
+      }
 
-    actionTimersRef.current[id] = setTimeout(() => {
-      setActionMap(prev => {
-        if (!(id in prev)) return prev;
-        const next = { ...prev };
-        delete next[id];
-        return next;
-      });
-      delete actionTimersRef.current[id];
-    }, ACTION_TIMEOUT_MS);
-  }, []);
+      actionTimersRef.current[id] = setTimeout(() => {
+        setActionMap(prev => {
+          if (!(id in prev)) return prev;
+          const next = { ...prev };
+          delete next[id];
+          return next;
+        });
+        delete actionTimersRef.current[id];
+        // No completion event arrived in time (WebSocket down or the job is
+        // wedged). Re-read the server state so the card stops guessing and
+        // shows whatever actually happened.
+        dispatch(fetchExtensions());
+      }, ACTION_TIMEOUT_MS);
+    },
+    [dispatch],
+  );
 
   // Clear an actionMap entry and its safety timer
   const clearAction = useCallback(id => {
@@ -115,6 +131,7 @@ function Extensions() {
       clearTimeout(actionTimersRef.current[id]);
       delete actionTimersRef.current[id];
     }
+    delete actionIntentRef.current[id];
     setActionMap(prev => {
       if (!(id in prev)) return prev;
       const next = { ...prev };
@@ -122,6 +139,20 @@ function Extensions() {
       return next;
     });
   }, []);
+
+  // A completion event has to clear BOTH halves of the pending state: the
+  // client-side actionMap label, and the server-injected `job_status` that
+  // ExtensionCard falls back to when there is no label. Clearing only the
+  // first left the badge up — and `clearAction` also cancels the safety
+  // timer, so nothing was left to re-check.
+  const completeAction = useCallback(
+    id => {
+      if (!id) return;
+      clearAction(id);
+      dispatch(clearExtensionJobStatus(id));
+    },
+    [clearAction, dispatch],
+  );
 
   // Cleanup all timers on unmount
   useEffect(() => {
@@ -143,50 +174,59 @@ function Extensions() {
     dispatch(fetchExtensions());
   }, [dispatch]);
 
-  // Track which extensions were last seen WITH a job_status so the
-  // reconciliation effect can detect the transition "had status → no status"
-  // instead of blindly clearing entries that never had status at all.
-  const prevJobStatusRef = useRef({});
-
-  // Reconcile actionMap with fetched data — clear an actionMap entry only
-  // when an extension *previously had* a job_status that has now disappeared
-  // (meaning the job completed between fetches). This prevents premature
-  // clearing caused by thunk fulfilled handlers storing extensions without
-  // job_status while other extensions still have pending jobs.
+  // Reconcile the pending labels against freshly fetched rows: an action is
+  // over once the server agrees with what it asked for and no job is still
+  // running for that row.
+  //
+  // The decision is made in the effect body and the ref is advanced here too,
+  // so the setState updater stays pure — React may replay an updater when
+  // another update is queued on the same hook (clearAction firing mid-render
+  // does exactly that), and the previous version both read and wrote
+  // `prevJobStatusRef` inside it, so a replay saw its own advanced state and
+  // dropped the deletion.
   useEffect(() => {
-    // Build current job_status snapshot
-    const currentStatus = {};
-    for (const ext of extensions) {
-      if (ext.job_status) {
-        currentStatus[ext.id] = ext.job_status;
+    const settled = [];
+
+    for (const id of Object.keys(actionIntentRef.current)) {
+      const intent = actionIntentRef.current[id];
+      const ext = extensions.find(e => e.id === id);
+
+      if (intent && intent.removed) {
+        if (!ext) settled.push(id);
+        continue;
+      }
+      // `job_status` still counts when present — it is the precise signal.
+      // It is just no longer *required*, so a deployment whose queue cannot
+      // report job state still converges.
+      if (
+        ext &&
+        !ext.job_status &&
+        intent &&
+        Boolean(ext.is_active) === intent.isActive
+      ) {
+        settled.push(id);
       }
     }
 
-    setActionMap(prev => {
-      const ids = Object.keys(prev);
-      if (ids.length === 0) {
-        prevJobStatusRef.current = currentStatus;
-        return prev;
-      }
+    if (settled.length === 0) return;
 
+    for (const id of settled) {
+      if (actionTimersRef.current[id]) {
+        clearTimeout(actionTimersRef.current[id]);
+        delete actionTimersRef.current[id];
+      }
+      delete actionIntentRef.current[id];
+    }
+
+    setActionMap(prev => {
       let changed = false;
       const next = { ...prev };
-      for (const id of ids) {
-        const ext = extensions.find(e => e.id === id);
-        // Only clear if this extension previously HAD a job_status
-        // and now no longer does — that means the job finished.
-        const hadStatus = prevJobStatusRef.current[id];
-        if (ext && hadStatus && !ext.job_status) {
+      for (const id of settled) {
+        if (id in next) {
           delete next[id];
-          if (actionTimersRef.current[id]) {
-            clearTimeout(actionTimersRef.current[id]);
-            delete actionTimersRef.current[id];
-          }
           changed = true;
         }
       }
-
-      prevJobStatusRef.current = currentStatus;
       return changed ? next : prev;
     });
   }, [extensions]);
@@ -223,9 +263,7 @@ function Extensions() {
       switch (data.type) {
         case 'EXTENSION_INSTALLED':
         case 'EXTENSION_UPDATED': {
-          if (data.extensionId) {
-            clearAction(data.extensionId);
-          }
+          completeAction(data.extensionId);
           if (data.type === 'EXTENSION_INSTALLED') {
             dispatch(
               showSuccessMessage({
@@ -243,9 +281,7 @@ function Extensions() {
           break;
         }
         case 'EXTENSION_UNINSTALLED': {
-          if (data.extensionId) {
-            clearAction(data.extensionId);
-          }
+          completeAction(data.extensionId);
           dispatch(
             showSuccessMessage({
               message: t(
@@ -258,9 +294,7 @@ function Extensions() {
           break;
         }
         case 'EXTENSION_ACTIVATED': {
-          if (data.extensionId) {
-            clearAction(data.extensionId);
-          }
+          completeAction(data.extensionId);
           dispatch(
             showSuccessMessage({
               message: t(
@@ -273,9 +307,7 @@ function Extensions() {
           break;
         }
         case 'EXTENSION_DEACTIVATED': {
-          if (data.extensionId) {
-            clearAction(data.extensionId);
-          }
+          completeAction(data.extensionId);
           dispatch(
             showSuccessMessage({
               message: t(
@@ -295,9 +327,7 @@ function Extensions() {
         case 'EXTENSION_ACTIVATE_FAILED':
         case 'EXTENSION_DEACTIVATE_FAILED':
         case 'EXTENSION_UNINSTALL_FAILED': {
-          if (data.extensionId) {
-            clearAction(data.extensionId);
-          }
+          completeAction(data.extensionId);
           dispatch(
             showWarningMessage({
               message: t(
@@ -310,6 +340,10 @@ function Extensions() {
           break;
         }
         case 'EXTENSION_TAMPERED': {
+          // An integrity failure aborts the toggle job, so no
+          // ACTIVATED/DEACTIVATED ever follows. Without this clear the card
+          // sits on "Activating..." until the 120s safety timer fires.
+          completeAction(data.extensionId);
           dispatch(
             showWarningMessage({
               message: t(
@@ -325,12 +359,21 @@ function Extensions() {
           break;
       }
     };
+    // Delivery is point-in-time: the server buffers nothing and the client
+    // replays nothing, so a completion event that fires while this socket is
+    // down is lost outright. Re-read the list on every (re)connect, or a
+    // toggle that finished during the gap leaves its card pending until the
+    // safety timer.
+    const onReconnect = () => debouncedFetch(signal);
+
     ws.on('extension:updated', handler);
+    ws.on(EventType.CONNECTED, onReconnect);
     return () => {
       controller.abort();
       ws.off('extension:updated', handler);
+      ws.off(EventType.CONNECTED, onReconnect);
     };
-  }, [ws, dispatch, t, clearAction, debouncedFetch]);
+  }, [ws, dispatch, t, completeAction, debouncedFetch]);
 
   // --- Uninstall (existing ConfirmModal.Delete) ---
   const handleDelete = useCallback(extension => {
@@ -343,6 +386,7 @@ function Extensions() {
       setActionWithTimeout(
         item.id,
         t('admin:common.uninstalling', 'Uninstalling...'),
+        { removed: true },
       );
       try {
         await dispatch(uninstallExtension(item.id)).unwrap();
@@ -365,6 +409,7 @@ function Extensions() {
       setActionWithTimeout(
         item.id,
         t('admin:common.activating', 'Activating...'),
+        { isActive: true },
       );
       try {
         await dispatch(
@@ -389,6 +434,7 @@ function Extensions() {
       setActionWithTimeout(
         item.id,
         t('admin:common.deactivating', 'Deactivating...'),
+        { isActive: false },
       );
       try {
         await dispatch(

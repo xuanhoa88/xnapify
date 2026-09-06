@@ -157,8 +157,157 @@ async function getDiskExtensionById(extensionManager, cwd, id) {
 }
 
 // ========================================================================
+// Package Helpers
+// ========================================================================
+
+/**
+ * Locate the extension root inside an extracted package.
+ *
+ * A published zip may put `package.json` at the top level, or nest it inside a
+ * single wrapper directory (`package/`, `@scope/name/`, …). Walks down through
+ * single-child directories until it finds one.
+ *
+ * Shared with the hub update path, which verifies a downloaded package before
+ * it is allowed to replace a working installation.
+ *
+ * @param {string} extractDir - Directory the package was extracted into
+ * @returns {Promise<string>} Absolute path to the directory holding package.json
+ * @throws {ExtensionError} When no manifest is found
+ */
+export async function locateExtensionRoot(extractDir) {
+  const hasManifest = dir =>
+    fs.promises
+      .access(path.join(dir, 'package.json'))
+      .then(() => true)
+      .catch(() => false);
+
+  if (await hasManifest(extractDir)) return extractDir;
+
+  let currentDir = extractDir;
+  let depth = 0;
+  while (currentDir && depth < 5) {
+    depth++;
+    let entries;
+    try {
+      entries = await fs.promises.readdir(currentDir, { withFileTypes: true });
+    } catch {
+      break;
+    }
+    const subdirs = entries.filter(d => d.isDirectory());
+
+    if (depth === 1) {
+      console.debug('[locateExtensionRoot] Extracted contents:', {
+        currentDir,
+        entries: entries.map(e => ({ name: e.name, isDir: e.isDirectory() })),
+        subdirs: subdirs.map(d => d.name),
+      });
+    }
+
+    if (subdirs.length !== 1) break;
+
+    currentDir = path.join(currentDir, subdirs[0].name);
+    if (await hasManifest(currentDir)) return currentDir;
+  }
+
+  throw ExtensionError.invalidPackage(
+    'Invalid extension package: package.json not found. ' +
+      'Ensure the zip contains package.json at the root, or in a single subdirectory.',
+  );
+}
+
+// ========================================================================
 // Service Functions
 // ========================================================================
+
+/**
+ * Attach the live load state of each extension to a list entry.
+ *
+ * Deliberately applied *outside* the list cache: an extension that crashes
+ * while booting never writes to the DB and never invalidates the cache, so a
+ * cached `state: 'active'` would keep the admin UI claiming an extension is
+ * healthy for the rest of the TTL — the exact failure this field exists to
+ * surface. The expensive part (FS scan + DB merge) stays cached; only this
+ * cheap in-memory lookup is redone on every read.
+ *
+ * @param {object} extensionManager - Extension manager
+ * @param {Array} entries - Cached or freshly built list entries
+ * @returns {Array} Entries with a fresh `runtime` block
+ */
+function withRuntimeState(extensionManager, entries) {
+  return entries.map(entry => {
+    const runtime = extensionManager.getExtensionMetadata(entry.id);
+    return {
+      ...entry,
+      runtime: runtime
+        ? {
+            state: runtime.state,
+            error: runtime.error ? runtime.error.message : null,
+            loadedAt: runtime.loadedAt || null,
+          }
+        : { state: 'inactive', error: null, loadedAt: null },
+    };
+  });
+}
+
+/**
+ * Attach each extension's live queue status.
+ *
+ * Per-request state, exactly like {@link withRuntimeState}: a job that is
+ * pending now has finished a second later. Computing it before `cache.set`
+ * froze "ACTIVATING" into a 60-second cache that nothing invalidates when the
+ * job completes, so the admin UI kept rendering the pending badge long after
+ * the toggle was done — and because the completion event also cancels the
+ * client's safety timer, nothing ever re-checked. Returns copies, so a cached
+ * entry is never stamped with a status that outlives the request.
+ *
+ * @param {Function|null} queue - Queue factory
+ * @param {Array} entries - Extension entries
+ * @returns {Promise<Array>} Entries with `job_status` where a job is live
+ */
+async function withJobStatus(queue, entries) {
+  if (!queue) return entries;
+
+  const queueChannel = queue('extensions');
+  if (
+    !queueChannel ||
+    !queueChannel.queue ||
+    typeof queueChannel.queue.getJobs !== 'function'
+  ) {
+    return entries;
+  }
+
+  const allJobs = await queueChannel.queue.getJobs();
+  const busyJobs = allJobs.filter(j =>
+    ['pending', 'active', 'delayed'].includes(j.status),
+  );
+  if (busyJobs.length === 0) return entries;
+
+  // Map extensionKey → specific job_status
+  const statusByExtensionKey = new Map();
+  for (const job of busyJobs) {
+    let status;
+    if (job.name === 'toggle') {
+      status = job.data.isActive ? 'ACTIVATING' : 'DEACTIVATING';
+    } else if (job.name === 'delete') {
+      status = 'UNINSTALLING';
+    } else {
+      status = 'INSTALLING';
+    }
+
+    if (job.data.extensionKey)
+      statusByExtensionKey.set(job.data.extensionKey, status);
+    if (job.data.extensionDir)
+      statusByExtensionKey.set(path.basename(job.data.extensionDir), status);
+  }
+
+  return entries.map(entry => {
+    const status =
+      statusByExtensionKey.get(entry.id) ||
+      statusByExtensionKey.get(entry.key) ||
+      statusByExtensionKey.get(entry.name);
+    return status ? { ...entry, job_status: status } : entry;
+  });
+}
 
 /**
  * Get all extensions (Admin) - Merged from DB and FS
@@ -178,7 +327,9 @@ export async function manageExtensions({
 
   if (cache) {
     const cached = await cache.get(CACHE_KEY);
-    if (cached) return cached;
+    if (cached) {
+      return withJobStatus(queue, withRuntimeState(extensionManager, cached));
+    }
   }
 
   const installedExtensionsDir = extensionManager.getInstalledExtensionsDir();
@@ -217,17 +368,51 @@ export async function manageExtensions({
 
   // 2. Fetch from DB
   const dbExtensions = await Extension.findAll();
-  const dbExtensionsMap = new Map();
-  dbExtensions.forEach(p => dbExtensionsMap.set(p.key, p));
+
+  // `key` holds the extension's build-time id, which is derived from the
+  // manifest name. Change how that derivation works and every row written by
+  // an older build stops matching the manifest now on disk, so the row reads
+  // as an extension the user deleted and the branch below deactivates it —
+  // silently uninstalling working extensions on the next admin page load.
+  // `name` is unique and never derived, so match on it as well and repair the
+  // stale key instead.
+  const fsByName = new Map();
+  for (const entry of metadata.values()) {
+    if (entry && entry.name) fsByName.set(entry.name, entry);
+  }
+
+  // Metadata keys claimed by a DB row, so 2b can tell a genuinely new
+  // extension from one whose key was just repaired.
+  const installedKeys = new Set();
 
   // 2a. Process DB extensions
   for (const dbExtension of dbExtensions) {
-    const fsExtension = metadata.get(dbExtension.key);
+    let fsExtension = metadata.get(dbExtension.key);
+
+    if (!fsExtension) {
+      const byName = fsByName.get(dbExtension.name);
+      if (byName && byName.id) {
+        const staleKey = dbExtension.key;
+        fsExtension = byName;
+        try {
+          await dbExtension.update({ key: byName.id });
+          console.info(
+            `[manageExtensions] Re-keyed ${dbExtension.name}: ${staleKey} -> ${byName.id}`,
+          );
+        } catch (err) {
+          console.error(
+            `[manageExtensions] Failed to re-key ${dbExtension.name} (${staleKey} -> ${byName.id})`,
+            err,
+          );
+        }
+      }
+    }
 
     if (fsExtension) {
+      installedKeys.add(fsExtension.id);
       // Extension exists in both DB and FS
       // Merge DB data into FS data. DB is the source of truth for status.
-      metadata.set(dbExtension.key, {
+      metadata.set(fsExtension.id, {
         ...fsExtension,
         ...dbExtension.toJSON(),
         id: fsExtension.id,
@@ -254,7 +439,7 @@ export async function manageExtensions({
 
   // 2b. Process new extensions on disk (Not in DB)
   for (const [key, manifest] of metadata.entries()) {
-    if (!dbExtensionsMap.has(key)) {
+    if (!installedKeys.has(key)) {
       metadata.set(key, {
         ...manifest,
         isInstalled: false,
@@ -264,68 +449,13 @@ export async function manageExtensions({
     }
   }
 
-  // Convert Map to Array, attaching the live runtime state so the admin UI
-  // can show load failures instead of a silently missing extension.
+  // Convert Map to Array. The live runtime state is attached on the way out
+  // (see withRuntimeState) so it is never served from the cache.
   for (const entry of metadata.values()) {
-    const runtime = extensionManager.getExtensionMetadata(entry.id);
     extensions.push({
       ...entry,
-      runtime: runtime
-        ? {
-            state: runtime.state,
-            error: runtime.error ? runtime.error.message : null,
-            loadedAt: runtime.loadedAt || null,
-          }
-        : { state: 'inactive', error: null, loadedAt: null },
       compatibility: entry.compatibility || null,
     });
-  }
-
-  // Attach job_status if there are active queue jobs for these extensions
-  if (queue) {
-    const queueChannel = queue('extensions');
-    if (
-      queueChannel &&
-      queueChannel.queue &&
-      typeof queueChannel.queue.getJobs === 'function'
-    ) {
-      const allJobs = await queueChannel.queue.getJobs();
-      const busyJobs = allJobs.filter(j =>
-        ['pending', 'active', 'delayed'].includes(j.status),
-      );
-
-      // Map extensionKey → specific job_status
-      const statusByExtensionKey = new Map();
-
-      for (const job of busyJobs) {
-        let status;
-        if (job.name === 'toggle') {
-          status = job.data.isActive ? 'ACTIVATING' : 'DEACTIVATING';
-        } else if (job.name === 'delete') {
-          status = 'UNINSTALLING';
-        } else {
-          status = 'INSTALLING';
-        }
-
-        if (job.data.extensionKey)
-          statusByExtensionKey.set(job.data.extensionKey, status);
-        if (job.data.extensionDir)
-          statusByExtensionKey.set(
-            path.basename(job.data.extensionDir),
-            status,
-          );
-      }
-
-      for (const p of extensions) {
-        const status =
-          statusByExtensionKey.get(p.id) ||
-          statusByExtensionKey.get(p.key) ||
-          statusByExtensionKey.get(p.name);
-        if (status) {
-          p.job_status = status;
-        }
-      }
-    }
   }
 
   console.debug(
@@ -336,7 +466,8 @@ export async function manageExtensions({
     await cache.set(CACHE_KEY, extensions, CACHE_TTL);
   }
 
-  return extensions;
+  // Live state is attached AFTER the cache write, never before it.
+  return withJobStatus(queue, withRuntimeState(extensionManager, extensions));
 }
 
 /**
@@ -631,66 +762,7 @@ export async function installExtensionFromPackage(
     await fsEngine.extract(tempPath, tempExtractDir);
 
     // 3. Read manifest (package.json)
-    let manifestPath = path.join(tempExtractDir, 'package.json');
-    let extensionRoot = tempExtractDir;
-
-    if (
-      !(await fs.promises
-        .access(manifestPath)
-        .then(() => true)
-        .catch(() => false))
-    ) {
-      // Deeply search for package.json through single subdirectories (handles scoped formats as well as package/)
-      let currentDir = tempExtractDir;
-      let depth = 0;
-      while (currentDir && depth < 5) {
-        depth++;
-        const entries = await fs.promises.readdir(currentDir, {
-          withFileTypes: true,
-        });
-        const subdirs = entries.filter(d => d.isDirectory());
-
-        if (depth === 1) {
-          console.debug('[installExtensionFromPackage] Extracted contents:', {
-            currentDir,
-            entries: entries.map(e => ({
-              name: e.name,
-              isDir: e.isDirectory(),
-            })),
-            subdirs: subdirs.map(d => d.name),
-          });
-        }
-
-        if (subdirs.length === 1) {
-          currentDir = path.join(currentDir, subdirs[0].name);
-          const currentManifestPath = path.join(currentDir, 'package.json');
-          const hasManifest = await fs.promises
-            .access(currentManifestPath)
-            .then(() => true)
-            .catch(() => false);
-
-          if (hasManifest) {
-            extensionRoot = currentDir;
-            manifestPath = currentManifestPath;
-            break;
-          }
-        } else {
-          break;
-        }
-      }
-    }
-
-    if (
-      !(await fs.promises
-        .access(manifestPath)
-        .then(() => true)
-        .catch(() => false))
-    ) {
-      throw ExtensionError.invalidPackage(
-        'Invalid extension package: package.json not found. ' +
-          'Ensure the zip contains package.json at the root, or in a single subdirectory.',
-      );
-    }
+    const extensionRoot = await locateExtensionRoot(tempExtractDir);
 
     const manifest = await extensionManager.readManifest(extensionRoot);
     if (!manifest) {

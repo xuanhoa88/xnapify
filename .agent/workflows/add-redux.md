@@ -557,7 +557,7 @@ Then in the route file, only keep navigation and data-fetching hooks:
 import { requirePermission } from '@shared/renderer/components/Rbac';
 import { features } from '@shared/renderer/redux';
 
-const { addBreadcrumb, registerMenu, unregisterMenu } = features;
+const { addBreadcrumb } = features;
 import PostsList from './PostsList';
 
 /**
@@ -565,35 +565,31 @@ import PostsList from './PostsList';
  */
 export const middleware = requirePermission('posts:read');
 
-/**
- * Setup - called once when route is discovered (for menus, etc.)
- */
-export function setup({ store, i18n }) {
-  store.dispatch(
-    registerMenu({
-      ns: 'admin',
-      item: {
-        path: '/admin/posts',
-        label: i18n.t('navigation.posts', 'Posts'),
-        icon: 'file-text',
-        permission: 'posts:read',
-        order: 20,
-      },
-    }),
-  );
-}
+// Sidebar navigation belongs in the module's `menus()` hook in
+// views/index.js, not here: this route module is only loaded once its route
+// is first matched, so a menu registered here would appear only after the
+// user had already visited the page.
+//
+//   menus({ store, i18n }) {
+//     store.dispatch(
+//       registerMenu({
+//         ns: 'admin',
+//         item: {
+//           path: '/admin/posts',
+//           label: i18n.t('navigation.posts', 'Posts'),
+//           icon: 'file-text',
+//           permission: 'posts:read',
+//           order: 20,
+//         },
+//       }),
+//     );
+//   },
 
-/**
- * Teardown - called when route is unloaded
- */
-export function teardown({ store }) {
-  store.dispatch(
-    unregisterMenu({
-      ns: 'admin',
-      path: '/admin/posts',
-    }),
-  );
-}
+// There is no teardown counterpart for an application module's menu: app
+// modules are discovered once and never unloaded, so the entry registered by
+// `menus()` is correct for the life of the process. (Extensions do need one —
+// they use `shutdown()` in their views/index.js, which the extension manager
+// runs on unload.)
 
 /**
  * Mount - dispatch breadcrumb when route is mounted

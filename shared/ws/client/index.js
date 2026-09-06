@@ -7,6 +7,8 @@
 
 import { EventEmitter } from 'events';
 
+import { useSyncExternalStore } from 'react';
+
 import {
   DefaultConfig,
   MessageType,
@@ -20,6 +22,13 @@ import {
  * This allows components to access the client without needing React Context
  */
 let wsClientInstance = null;
+
+/**
+ * Subscribers notified whenever the global client instance is swapped.
+ * The client is created lazily (after hydration, from an idle callback), so
+ * components that mounted before it existed must be told when it appears.
+ */
+const clientSubscribers = new Set();
 
 /**
  * Client-specific event types
@@ -603,17 +612,88 @@ class WebSocketClient extends EventEmitter {
  * @param {WebSocketClient} client - WebSocket client instance
  */
 export function setWebSocketClient(client) {
+  if (wsClientInstance === client) return;
   wsClientInstance = client;
+  clientSubscribers.forEach(listener => {
+    try {
+      listener();
+    } catch (error) {
+      console.error('[WebSocket Client] Subscriber failed:', error);
+    }
+  });
 }
 
 /**
- * Get the global WebSocket client instance
+ * useSyncExternalStore plumbing for `useWebSocket`.
+ */
+const subscribeToClient = listener => {
+  clientSubscribers.add(listener);
+  return () => {
+    clientSubscribers.delete(listener);
+  };
+};
+
+const getClientSnapshot = () => wsClientInstance;
+
+const getServerClientSnapshot = () => null;
+
+/**
+ * Read the global WebSocket client outside of React render.
+ * Use this from module scope, timers and event callbacks; `useWebSocket` is
+ * for components and must obey the rules of hooks.
+ * @returns {WebSocketClient|null} WebSocket client or null if not initialized
+ */
+export function getWebSocketClient() {
+  return wsClientInstance;
+}
+
+/**
+ * Run a callback with the global WebSocket client, now or as soon as one
+ * exists, and keep running it on every later replacement.
+ *
+ * The client is created from an idle callback after hydration, so anything
+ * outside React that needs it — a route module, a module-scope subscriber —
+ * runs before it exists. Guessing a delay (`setTimeout(..., 2000)`) is both
+ * a race on a slow machine and dead weight on a fast one; this is the same
+ * subscription `useWebSocket` uses, without the hook.
+ *
+ * @param {(client: WebSocketClient) => void} listener - Called with the client
+ * @returns {() => void} Unsubscribe. ALWAYS call this from a teardown path:
+ *   the subscriber set is module-scoped and outlives any single view.
+ */
+export function onWebSocketClient(listener) {
+  if (typeof listener !== 'function') return () => {};
+
+  const notify = () => {
+    if (wsClientInstance) listener(wsClientInstance);
+  };
+  const unsubscribe = subscribeToClient(notify);
+
+  // Fire immediately when the client is already up, so a late caller is not
+  // left waiting for a `setWebSocketClient` that has already happened.
+  notify();
+
+  return unsubscribe;
+}
+
+/**
+ * Get the global WebSocket client instance.
+ *
+ * Subscribes to instance changes so a component that rendered before the
+ * client existed re-renders once it does. The client is created from an idle
+ * callback after hydration, so on a cold page load every view mounts while
+ * this is still null — without the subscription those views would keep a
+ * permanently null reference and silently never attach their listeners.
+ *
  * Returns null during SSR to prevent hydration mismatches.
  * @returns {WebSocketClient|null} WebSocket client or null if not initialized
  */
 export function useWebSocket() {
-  if (typeof window === 'undefined') return null;
-  return wsClientInstance;
+  return useSyncExternalStore(
+    subscribeToClient,
+    getClientSnapshot,
+    getServerClientSnapshot,
+  );
 }
 
 /**

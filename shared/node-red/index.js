@@ -10,10 +10,6 @@ import fs from 'fs';
 import { createRequire } from 'module';
 import path from 'path';
 
-import {
-  getTokenFromCookie,
-  getRefreshTokenFromCookie,
-} from '@shared/cookies/index.js';
 import { createNativeRequire } from '@shared/utils/createNativeRequire.js';
 import {
   getHmrState,
@@ -21,6 +17,7 @@ import {
   clearHmrState,
 } from '@shared/utils/hmrState.js';
 
+import { createNodeRedSessionGuard } from './auth.js';
 import initFlowSplitter from './flowSplitter.js';
 import {
   createProductionSettings,
@@ -1045,41 +1042,10 @@ export class NodeRedManager {
     }
 
     try {
-      // Cookie-guard: ensure main app session is still valid.
-      // When the main app's JWT cookie is cleared (user logged out
-      // from /admin), strip the Node-RED bearer token from the request
-      // so Node-RED's own auth fails naturally and shows the login dialog.
-      app.use(this._settings.httpAdminRoot, (req, _res, next) => {
-        const container = app.get('container');
-        const auth = container.resolve('auth');
-        const jwt = container.resolve('jwt');
-
-        // Skip guard if auth services aren't available yet
-        if (!auth || !jwt) return next();
-
-        // Check for main app's JWT cookie
-        const token = getTokenFromCookie(req);
-        if (token) {
-          try {
-            jwt.verifyTypedToken(token, 'access');
-            // Cookie is valid — proceed normally
-            return next();
-          } catch {
-            // Access token expired — check if refresh token still exists.
-            // If so, the user hasn't logged out; keep Node-RED's own
-            // bearer token alive so deploys don't fail mid-session.
-            if (getRefreshTokenFromCookie(req)) {
-              return next();
-            }
-          }
-        }
-
-        // Main app session truly gone (no cookies): strip Node-RED's
-        // bearer token so its BearerStrategy fails, triggering the
-        // login dialog which redirects to /admin via XnapifyAuthStrategy
-        delete req.headers.authorization;
-        return next();
-      });
+      // Session guard: re-check the main app session on every admin
+      // request. Node-RED's own bearer token lives ~7 days, so this is what
+      // makes a logout, deactivation or password reset reach an open editor.
+      app.use(this._settings.httpAdminRoot, createNodeRedSessionGuard(app));
 
       // Serve Node-RED admin — delegates to current _editorApi via `this`.
       // The closure captures `this` (the NodeRedManager), not the

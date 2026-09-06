@@ -16,6 +16,40 @@ const gzip = promisify(zlib.gzip);
 const PLUGIN_NAME = 'PrecompressPlugin';
 
 /**
+ * Assets compressed at a time.
+ *
+ * `zlib`'s async API runs on the libuv threadpool, four threads by default.
+ * Dispatching every asset at once therefore buys no extra parallelism: it
+ * only queues hundreds of jobs while holding every compressed buffer in
+ * memory and starving rspack's own file IO of threadpool slots.
+ */
+const DEFAULT_CONCURRENCY =
+  Number.parseInt(process.env.UV_THREADPOOL_SIZE, 10) || 4;
+
+/**
+ * Run an async worker over items, never more than `limit` at a time.
+ *
+ * @template T
+ * @param {T[]} items - Work items
+ * @param {number} limit - Maximum in-flight workers
+ * @param {(item: T) => Promise<void>} worker - Per-item task
+ * @returns {Promise<void>}
+ */
+export async function mapWithConcurrency(items, limit, worker) {
+  let next = 0;
+  const lanes = Math.max(1, Math.min(limit, items.length));
+
+  await Promise.all(
+    Array.from({ length: lanes }, async () => {
+      // `next++` is atomic here: there is no await between read and write.
+      while (next < items.length) {
+        await worker(items[next++]);
+      }
+    }),
+  );
+}
+
+/**
  * Emit `.br` and `.gz` siblings for compressible assets at build time.
  *
  * Runtime compression re-encodes the same immutable bytes on every request
@@ -35,6 +69,7 @@ class PrecompressPlugin {
    * @param {number} [options.minRatio=0.9] - Skip variants that do not shrink below this ratio
    * @param {Array<'br'|'gz'>} [options.algorithms] - Variants to emit
    * @param {number} [options.brotliQuality=10] - Brotli quality (0-11); env XNAPIFY_PRECOMPRESS_BROTLI_QUALITY overrides
+   * @param {number} [options.concurrency] - Assets compressed at a time; defaults to the libuv threadpool size
    */
   constructor(options = {}) {
     this.test =
@@ -52,6 +87,7 @@ class PrecompressPlugin {
     this.brotliQuality = Number.isInteger(envQuality)
       ? Math.min(Math.max(envQuality, 0), zlib.constants.BROTLI_MAX_QUALITY)
       : (options.brotliQuality ?? 10);
+    this.concurrency = Math.max(1, options.concurrency ?? DEFAULT_CONCURRENCY);
   }
 
   /**
@@ -72,8 +108,8 @@ class PrecompressPlugin {
                 this.test.test(asset.name) && !/\.(?:br|gz)$/i.test(asset.name),
             );
 
-          await Promise.all(
-            assets.map(asset => this.compressAsset(compilation, asset)),
+          await mapWithConcurrency(assets, this.concurrency, asset =>
+            this.compressAsset(compilation, asset),
           );
         },
       );

@@ -81,9 +81,11 @@ This allows modifying how specific paths operate natively!
 
 The Router supports three primary internal state lifecycles:
 
-1. **`init(ctx)`** - Ran once when the application starts / route is first matched
+1. **`init(ctx)`** - Ran once per navigation, parent route → child route, before the route's data loads. Use it for setup that the render depends on, such as `store.injectReducer()`.
 2. **`mount(ctx)`** - Ran on every navigation INTO this route
 3. **`unmount(ctx)`** - Ran on navigation AWAY from this route
+
+> **`init` is remembered on the context, not on the route node.** On the server one compiled route tree is shared by every request (see §7) while each request builds its own store, so a node-level "already initialized" flag would inject a route's reducer into the _first_ request's store and leave every later request without it. The same applies to a route's `translations()`. Both are therefore memoized in `ctx`, which means `init` runs once per navigation — keep it idempotent (`injectReducer` already is).
 
 You can export these functions cleanly from `_route.js` files to seamlessly handle component setup and teardown automatically.
 
@@ -118,3 +120,66 @@ router.add(extensionAdapter);
 // Unmount and flush those specific routes on demand
 router.remove(extensionAdapter);
 ```
+
+## 7. Lazy Views, Materialization and the Compiled Tree
+
+Application views are collected from a `mode: 'lazy'` require context, so each
+view is its own chunk and the page that boots the router does not bundle every
+route of every module.
+
+**Collection is deferred.** `collect(adapter, type, { defer: true })` — set
+automatically when the adapter reports `lazy: true` — emits a `load()` thunk
+per entry instead of a module. Every key the collector produces (pathname,
+module name, layout name) comes from the _file path_, so the whole tree can be
+built without evaluating a single view.
+
+**A deferred node is incomplete.** Until it is materialized it carries only
+`path`, `moduleName`, `filePath` and `materialize()`; `action`, `module`,
+`init`, `mount`, `unmount`, `translations` and `assetPaths` are all undefined.
+Never read those off a node you have not materialized.
+
+```javascript
+import { materializeRoute, materializeTree } from './builder.js';
+
+// One matched route and its ancestors (what resolve() does for you)
+const freshlyLoaded = await materializeRoute(route);
+
+// Or the whole tree — the server does this at boot
+await materializeTree(router.routes);
+```
+
+`resolve()` materializes the matched route before any hook reads its module,
+and runs the `setup` hook of every node that call just loaded, so a
+registration written for that render is not missed.
+
+**The server compiles once and shares.** `compileServerViews()` in
+`src/bootstrap/views.js` builds the tree, injects extension routes, appends the
+catch-all and materializes everything, then hands the result to each request:
+
+```javascript
+new AppRouter(mergedAdapter, {
+  ...routerOptions,
+  compiled: { routes, layouts },
+});
+```
+
+With `compiled`, the constructor skips collection and tree building entirely.
+Each request still gets its own Router (navigation queue, registration state)
+over the same nodes — which is exactly why per-request state must never be
+cached on a node. There is no `Router.compile()`; `compiled` is simply the
+`routes` and `_layouts` of a Router that has already been built.
+
+**Telling the server which chunks to send.** After a resolve, the router
+exposes what that navigation touched:
+
+- `router.viewAssets` — source files of the matched route, its ancestors and
+  their layouts and configs. The server maps them to chunk filenames and emits
+  them with the entry bundle, so a lazily chunked view costs no extra round
+  trip. Empty for an eagerly collected tree.
+- `router.viewNamespaces` — extension namespaces the resolve activated, in
+  match order, so the server can ship the assets of the deferred extensions
+  whose slots it just rendered.
+
+Both are reset by the outermost resolve only: a resolve that nests (the
+catch-all re-entering with `/not-found`, `errorHandler` with `/error`) adds to
+them rather than replacing them.

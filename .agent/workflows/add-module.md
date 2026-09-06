@@ -539,7 +539,7 @@ Frontend routes work similarly to backend routes, but use React:
 import { requirePermission } from '@shared/renderer/components/Rbac';
 import { features } from '@shared/renderer/redux';
 
-const { addBreadcrumb, registerMenu, unregisterMenu } = features;
+const { addBreadcrumb } = features;
 import reducer, { SLICE_NAME } from '../redux';
 import ModuleList from './ModuleList';
 
@@ -560,36 +560,38 @@ export function init({ store }) {
   store.injectReducer(SLICE_NAME, reducer);
 }
 
-/**
- * Setup — register sidebar menus (runs once when route discovered)
- */
-export function setup({ store, i18n }) {
-  store.dispatch(
-    registerMenu({
-      ns: 'admin',
-      id: '{module-name}',
-      label: i18n.t('admin:navigation.{module-name}', 'Module'),
-      order: 20,
-      icon: 'folder',
-      items: [
-        {
-          path: '/admin/{module-name}',
-          label: i18n.t('admin:navigation.{module-name}', 'Module'),
-          icon: 'folder',
-          permission: '{module-name}:read',
-          order: 10,
-        },
-      ],
-    }),
-  );
-}
+// NOTE: sidebar menus are NOT registered here. Views are chunked one per
+// route, so this module is not loaded until its route is first matched — a
+// menu registered here would be missing from the sidebar until the user had
+// already navigated to the page it links to. Register navigation from the
+// module's `menus()` hook in views/index.js instead:
+//
+//   menus({ store, i18n }) {
+//     store.dispatch(
+//       registerMenu({
+//         ns: 'admin',
+//         id: '{module-name}',
+//         label: i18n.t('admin:navigation.{module-name}', 'Module'),
+//         order: 20,
+//         icon: 'folder',
+//         items: [
+//           {
+//             path: '/admin/{module-name}',
+//             label: i18n.t('admin:navigation.{module-name}', 'Module'),
+//             icon: 'folder',
+//             permission: '{module-name}:read',
+//             order: 10,
+//           },
+//         ],
+//       }),
+//     );
+//   },
 
-/**
- * Teardown — unregister menus (runs when route unloaded)
- */
-export function teardown({ store }) {
-  store.dispatch(unregisterMenu({ ns: 'admin', path: '/admin/{module-name}' }));
-}
+// There is no teardown counterpart for an application module's menu: app
+// modules are discovered once and never unloaded, so the entry registered by
+// `menus()` is correct for the life of the process. (Extensions do need one —
+// they use `shutdown()` in their views/index.js, which the extension manager
+// runs on unload.)
 
 /**
  * Mount — dispatch breadcrumbs (runs on each navigation)

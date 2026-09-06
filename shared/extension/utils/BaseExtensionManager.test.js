@@ -29,7 +29,13 @@ function createMockRegistry() {
     defineExtension: jest.fn().mockResolvedValue(true),
     register: jest.fn(),
     unregister: jest.fn(),
+    // Part of the unload contract: unregister clears what an extension did,
+    // removeDefinition clears what it is. See Registry.removeDefinition.
+    removeDefinition: jest.fn(),
     getDefinitions: jest.fn(),
+    // Namespace-exact lookup: teardown uses this so it cannot reach the
+    // '*' wildcard set that getDefinitions merges into every namespace.
+    getOwnDefinitions: jest.fn(),
     has: jest.fn(),
     findDefinition: jest.fn().mockReturnValue(null),
     runInstallHook: jest.fn().mockResolvedValue(true),
@@ -260,6 +266,295 @@ describe('BaseExtensionManager', () => {
       registry.getDefinitions.mockReturnValue(new Set([def]));
       await manager.activateViewNamespace('*');
       expect(boot).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('menus hook', () => {
+    it("runs an extension's menus hook, before boot", async () => {
+      await initManager();
+      manager.viewContext = { store: { dispatch: jest.fn() } };
+      const order = [];
+      const def = {
+        id: 'mod-menus',
+        providers: jest.fn(() => order.push('providers')),
+        menus: jest.fn(() => order.push('menus')),
+        boot: jest.fn(() => order.push('boot')),
+      };
+      registry.findDefinition.mockReturnValue(def);
+
+      // eslint-disable-next-line no-underscore-dangle
+      await manager._postLoad('mod-menus', def, { slots: [] });
+
+      // `menus` is listed in VIEW_LIFECYCLE_PHASES, so an extension that
+      // declares one has to get it run — it used to be silently skipped.
+      expect(def.menus).toHaveBeenCalledTimes(1);
+      expect(def.menus).toHaveBeenCalledWith(
+        expect.objectContaining({ registry: expect.any(Object) }),
+      );
+      expect(order).toEqual(['providers', 'menus', 'boot']);
+    });
+
+    it('hands the menus hook a context it can dispatch from', async () => {
+      await initManager();
+      const store = { dispatch: jest.fn() };
+      const i18n = { t: (_k, fallback) => fallback };
+      manager.viewContext = { store, i18n };
+
+      const def = { id: 'mod-ctx', menus: jest.fn() };
+      registry.findDefinition.mockReturnValue(def);
+
+      // eslint-disable-next-line no-underscore-dangle
+      await manager._postLoad('mod-ctx', def, { slots: [] });
+
+      // Registering a sidebar entry means dispatching registerMenu, so the
+      // hook is useless without the store and the translator. Extensions used
+      // to get `{ container, registry }` only.
+      const [ctx] = def.menus.mock.calls[0];
+      expect(ctx.store).toBe(store);
+      expect(ctx.i18n).toBe(i18n);
+      expect(ctx.container).toBeDefined();
+      expect(ctx.registry).toBeDefined();
+    });
+
+    it('skips menus when the context has no store to dispatch into', async () => {
+      // The server never sets viewContext — its store is per request — so
+      // activating there used to call menus({ store: undefined }) and throw
+      // "Cannot read properties of undefined (reading 'dispatch')". The
+      // request-scoped runViewMenus() is what covers the server.
+      await initManager();
+      expect(manager.viewContext).toBeNull();
+
+      const boot = jest.fn();
+      const menus = jest.fn(({ store }) => store.dispatch({}));
+      const def = { id: 'mod-no-store', menus, boot };
+      registry.findDefinition.mockReturnValue(def);
+
+      // eslint-disable-next-line no-underscore-dangle
+      await manager._postLoad('mod-no-store', def, { slots: [] });
+
+      expect(menus).not.toHaveBeenCalled();
+      expect(boot).toHaveBeenCalledTimes(1);
+      expect(manager[ACTIVE_EXTENSIONS].has('mod-no-store')).toBe(true);
+
+      // ...and the same extension still gets its menu once a store shows up.
+      const store = { dispatch: jest.fn() };
+      expect(await manager.runViewMenus({ store })).toBe(1);
+      expect(menus).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not let a failing menus hook stop the extension booting', async () => {
+      await initManager();
+      manager.viewContext = { store: { dispatch: jest.fn() } };
+      const boot = jest.fn();
+      const def = {
+        id: 'mod-bad-menus',
+        menus: jest.fn(() => {
+          throw new Error('bad menu');
+        }),
+        boot,
+      };
+      registry.findDefinition.mockReturnValue(def);
+
+      // eslint-disable-next-line no-underscore-dangle
+      await manager._postLoad('mod-bad-menus', def, { slots: [] });
+
+      expect(boot).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('deactivateViewNamespace', () => {
+    it('never tears down an always-on extension', async () => {
+      await initManager();
+      // `getDefinitions` merges the '*' set into every namespace so that
+      // activation covers always-on extensions wherever the user navigates.
+      // Teardown must not inherit that: leaving one route's namespace would
+      // otherwise shut down an extension that lives on every page.
+      const wildcard = { id: 'always-on', shutdown: jest.fn() };
+      const scoped = { id: 'login-only', shutdown: jest.fn() };
+      manager[ACTIVE_EXTENSIONS].set('always-on', wildcard);
+      manager[ACTIVE_EXTENSIONS].set('login-only', scoped);
+
+      // getOwnDefinitions returns the namespace's own set; getDefinitions
+      // would have returned both.
+      registry.getOwnDefinitions.mockReturnValue(new Set([scoped]));
+      registry.getDefinitions.mockReturnValue(new Set([scoped, wildcard]));
+
+      await manager.deactivateViewNamespace('login');
+
+      expect(scoped.shutdown).toHaveBeenCalledTimes(1);
+      expect(wildcard.shutdown).not.toHaveBeenCalled();
+      expect(manager[ACTIVE_EXTENSIONS].has('always-on')).toBe(true);
+    });
+  });
+
+  describe('getLoadableManifests', () => {
+    it('does not offer the browser an extension the server tore down', async () => {
+      await initManager();
+      // unloadExtension leaves the metadata behind (state UNLOADED) so a
+      // later reload can reuse it. Serialising that raw map into the SSR
+      // payload handed the browser a deactivated extension, which fetched
+      // its bundle and re-registered its menus one hydration later.
+      manager[EXTENSION_METADATA].set('live', {
+        state: ExtensionState.ACTIVE,
+        manifest: { id: 'live' },
+      });
+      manager[EXTENSION_METADATA].set('no-entry-point', {
+        state: ExtensionState.LOADED,
+        manifest: { id: 'no-entry-point' },
+      });
+      manager[EXTENSION_METADATA].set('deactivated', {
+        state: ExtensionState.UNLOADED,
+        manifest: { id: 'deactivated' },
+      });
+      manager[EXTENSION_METADATA].set('broken', {
+        state: ExtensionState.FAILED,
+        manifest: null,
+      });
+
+      // LOADED stays: an extension with neither `browser` nor `main` never
+      // reaches ACTIVE yet is perfectly live.
+      expect(manager.getLoadableManifests().map(m => m.id)).toEqual([
+        'live',
+        'no-entry-point',
+      ]);
+    });
+  });
+
+  describe('runViewMenus', () => {
+    it('re-runs every active extension menus hook against a given context', async () => {
+      await initManager();
+      const menus = jest.fn();
+      manager[ACTIVE_EXTENSIONS].set('mod-a', { id: 'mod-a', menus });
+      manager[ACTIVE_EXTENSIONS].set('mod-b', { id: 'mod-b' });
+
+      const context = { store: { dispatch: jest.fn() }, i18n: { t: x => x } };
+      const ran = await manager.runViewMenus(context);
+
+      expect(ran).toBe(1);
+      const [ctx] = menus.mock.calls[0];
+      expect(ctx.store).toBe(context.store);
+      expect(ctx.i18n).toBe(context.i18n);
+      expect(ctx.registry).toBeDefined();
+    });
+
+    it('hands the menus hook the extension-scoped container', async () => {
+      // menus was the one view phase that skipped _hookContextFor, so on the
+      // server it ran with the unscoped API container — on every page.
+      await initManager();
+      const menus = jest.fn();
+      manager[ACTIVE_EXTENSIONS].set('mod-a', { id: 'mod-a', menus });
+      jest
+
+        .spyOn(manager, '_hookContextFor')
+        .mockImplementation(id => ({ container: `scoped:${id}` }));
+
+      const context = { store: { dispatch: jest.fn() }, container: 'FULL' };
+      await manager.runViewMenus(context);
+
+      const [ctx] = menus.mock.calls[0];
+      // eslint-disable-next-line no-underscore-dangle
+      expect(manager._hookContextFor).toHaveBeenCalledWith('mod-a');
+      expect(ctx.container).toBe('scoped:mod-a');
+      expect(ctx.store).toBe(context.store);
+    });
+
+    it('does nothing without a store to dispatch into', async () => {
+      await initManager();
+      const menus = jest.fn();
+      manager[ACTIVE_EXTENSIONS].set('mod-a', { id: 'mod-a', menus });
+
+      expect(await manager.runViewMenus(undefined)).toBe(0);
+      expect(await manager.runViewMenus({ i18n: {} })).toBe(0);
+      expect(menus).not.toHaveBeenCalled();
+    });
+
+    it('keeps going when one extension menus hook throws', async () => {
+      await initManager();
+      const good = jest.fn();
+      manager[ACTIVE_EXTENSIONS].set('bad', {
+        id: 'bad',
+        menus: () => {
+          throw new Error('nope');
+        },
+      });
+      manager[ACTIVE_EXTENSIONS].set('good', { id: 'good', menus: good });
+
+      expect(await manager.runViewMenus({ store: {} })).toBe(1);
+      expect(good).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('capability-scoped load path', () => {
+    it('stores the scoped context on the definition', async () => {
+      // def.context is handed to install()/uninstall() by the registry, so it
+      // must be the scoped container, not the host's own.
+      await initManager();
+      mockContext.fetch.mockResolvedValue({
+        success: true,
+        data: { manifest: { id: 'ext', name: 'ext', main: 'index.js' } },
+      });
+      jest.spyOn(manager, '_resolveEntryPoint').mockReturnValue('index.js');
+      jest
+        .spyOn(manager, '_loadExtensionModule')
+        .mockResolvedValue({ boot: jest.fn() });
+      jest
+
+        .spyOn(manager, '_hookContextFor')
+        .mockImplementation(id => ({ container: `scoped:${id}` }));
+
+      await manager.loadExtension('ext');
+
+      expect(registry.defineExtension).toHaveBeenCalledWith(
+        expect.any(Object),
+        'scoped:ext',
+        expect.objectContaining({ id: 'ext' }),
+      );
+    });
+
+    it('publishes the manifest before the post-load lifecycle runs', async () => {
+      // On the API-resolved path (targeted refresh after install/update) the
+      // metadata manifest stayed null until the very end, so every hook run
+      // from _postLoad saw an empty manifest — i.e. default capabilities only.
+      await initManager();
+      const manifest = {
+        id: 'ext',
+        name: 'ext',
+        main: 'index.js',
+        xnapify: { capabilities: ['db'] },
+      };
+      mockContext.fetch.mockResolvedValue({
+        success: true,
+        data: { manifest },
+      });
+      jest.spyOn(manager, '_resolveEntryPoint').mockReturnValue('index.js');
+      jest
+        .spyOn(manager, '_loadExtensionModule')
+        .mockResolvedValue({ boot: jest.fn() });
+
+      let seen;
+
+      jest.spyOn(manager, '_postLoad').mockImplementation(async id => {
+        seen = manager[EXTENSION_METADATA].get(id).manifest;
+      });
+
+      await manager.loadExtension('ext');
+
+      expect(seen).toEqual(manifest);
+    });
+  });
+
+  describe('destroy', () => {
+    it('lets go of the route table and the render context', async () => {
+      await initManager();
+      manager.viewContext = { store: {}, i18n: {}, history: {} };
+      manager.routes.connect('views', { add: () => [] });
+      manager.routes.buffered.push({ id: 'ext', routerKey: 'views' });
+
+      await manager.destroy();
+
+      expect(manager.viewContext).toBeNull();
+      expect(manager.routes.routers.views).toBeNull();
+      expect(manager.routes.buffered).toHaveLength(0);
     });
   });
 

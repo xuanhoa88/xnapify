@@ -12,14 +12,6 @@ import Hub from './Hub.js';
 import { resetHubState } from './redux/index.js';
 const { addBreadcrumb } = features;
 
-// Load translations
-const translationsContext = import.meta.webpackContext(
-  '../../../translations',
-  {
-    recursive: false,
-    regExp: /\.json$/i,
-  },
-);
 export const middleware = requirePermission('extensions:read');
 
 /**
@@ -27,15 +19,6 @@ export const middleware = requirePermission('extensions:read');
  */
 export function unmount({ store }) {
   store.dispatch(resetHubState());
-}
-
-/**
- * Translations hook — returns the webpack import.meta.webpackContext for this module's translations.
- *
- * @returns {object} Webpack import.meta.webpackContext for translations
- */
-export function translations() {
-  return translationsContext;
 }
 
 /**

@@ -79,6 +79,10 @@ export { createFactory };
 // Export Manager class for type referencing and extension if needed
 export { ScheduleManager } from './factory.js';
 
+// Deployment-wide leader election (see ./lock.js); wired up by bootstrap
+export { configureScheduleLock } from './factory.js';
+export { createRedisScheduleLock } from './lock.js';
+
 // Export error class
 export { ScheduleError } from './errors.js';
 

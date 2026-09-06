@@ -99,11 +99,244 @@ function findParentPath(pathname, routeMap) {
       ROUTE_SEPARATOR + segments.slice(0, i).join(ROUTE_SEPARATOR);
     if (routeMap.has(validPath)) return validPath;
   }
-  return ROUTE_SEPARATOR;
+
+  // No route owns a prefix of this path, so it has no parent. `/` is not one:
+  // every path starts with it, but the home page is a sibling of `/login`,
+  // not its section. Nesting them anyway made the router walk into `/` on
+  // every request — and once views became one chunk per route, that meant
+  // fetching the home page and the public layout on pages that render
+  // neither. A route that genuinely nests (`/admin/users` under `/admin`)
+  // still finds its parent above.
+  return null;
+}
+
+/**
+ * Resolve a collected entry to its module, loading it once if the collector
+ * deferred it. The result is cached on the entry, so layouts and configs
+ * shared by several routes are fetched a single time.
+ *
+ * @param {Object} entry - Collected entry with either `module` or `load()`
+ * @returns {Promise<Object>} The module namespace
+ */
+async function resolveEntry(entry) {
+  if (entry.module) return entry.module;
+  entry.module = (await entry.load()) || {};
+  return entry.module;
+}
+
+/**
+ * Attach the action and lifecycle hooks a route needs, given its module.
+ * Shared by the eager and deferred paths so both produce the same node shape.
+ *
+ * @param {Object} route - Route node to fill in
+ * @param {Object} pageInfo - Collected page entry
+ * @param {Object} module - The route module
+ * @param {Object[]} matchedConfigs - Config entries with modules resolved
+ * @param {Object[]} matchedLayouts - Layout entries with modules resolved
+ */
+function attachRouteBehaviour(
+  route,
+  pageInfo,
+  module,
+  matchedConfigs,
+  matchedLayouts,
+) {
+  route.module = module;
+  // Every source file this route renders from. The server maps these to the
+  // chunks the browser will need and emits them alongside the entry bundle,
+  // so a lazily chunked view does not cost an extra round trip.
+  route.assetPaths = [
+    pageInfo.filePath,
+    ...matchedConfigs.map(c => c.filePath),
+    ...matchedLayouts.map(l => l.filePath),
+  ].filter(Boolean);
+  route.action = createAction(
+    { ...pageInfo, module },
+    matchedConfigs,
+    matchedLayouts,
+  );
+  route.translations = buildTranslationsLoader(
+    matchedConfigs,
+    module.translations,
+    route.path,
+    pageInfo.moduleName,
+  );
+  route.init = createInit(matchedConfigs, module.init);
+  route.mount = createMount(matchedConfigs, module.mount);
+  route.unmount = createUnmount(matchedConfigs, module.unmount);
+}
+
+/**
+ * Load a deferred route's module and everything the route needs to render:
+ * its layouts (whose selection depends on the module's own `layout` export)
+ * and its section configs. Memoised, so concurrent matches share one load.
+ *
+ * @param {Object} route - Deferred route node
+ * @param {Object} pageInfo - Collected page entry
+ * @param {Map} configs - All collected configs
+ * @param {Map} layouts - All collected layouts
+ * @returns {Promise<void>}
+ */
+function createMaterializer(route, pageInfo, configs, layouts) {
+  let pending = null;
+
+  return function materialize() {
+    if (route.module) return Promise.resolve();
+    if (pending) return pending;
+
+    pending = (async () => {
+      const module = await resolveEntry(pageInfo);
+      const rootSegment = getRootSegment(route.path);
+
+      const matchedConfigs = findConfigs(configs, rootSegment);
+      const matchedLayouts = findLayouts(
+        layouts,
+        rootSegment,
+        route.path,
+        module,
+      );
+
+      // Layouts and configs may be deferred too; fetch them in parallel.
+      await Promise.all(
+        [...matchedConfigs, ...matchedLayouts].map(resolveEntry),
+      );
+
+      attachRouteBehaviour(
+        route,
+        pageInfo,
+        module,
+        matchedConfigs,
+        matchedLayouts,
+      );
+    })();
+
+    // A failed load must not poison the route forever
+    pending.catch(() => {
+      pending = null;
+    });
+
+    return pending;
+  };
+}
+
+/**
+ * Resolve the deferred layouts and configs an *eagerly* collected route was
+ * matched against.
+ *
+ * Extension bundles are eager, but `Router.add()` merges them against the
+ * application's own layout map, which is lazy. The route's module is in hand,
+ * so it takes the eager path — yet `createAction` reads `layout.module.default`
+ * at render time, and for an entry that is still a `load()` thunk that is a
+ * TypeError. Nothing else would ever resolve it: `materializeRoute` only walks
+ * nodes that carry a `materialize()`, and eager nodes had none.
+ *
+ * The route keeps its module and its behaviour from the moment it is built,
+ * so `setup`/`teardown` traversal still sees it; this only re-attaches once
+ * the borrowed entries are loaded.
+ *
+ * @param {Object} route - Eagerly built route node
+ * @param {Object} pageInfo - Collected page entry
+ * @param {Object} module - The route module
+ * @param {Object[]} matchedConfigs - Config entries
+ * @param {Object[]} matchedLayouts - Layout entries
+ * @returns {Function|null} A materializer, or null when nothing is deferred
+ */
+function createEntryResolver(
+  route,
+  pageInfo,
+  module,
+  matchedConfigs,
+  matchedLayouts,
+) {
+  const borrowed = [...matchedConfigs, ...matchedLayouts].filter(
+    entry => entry && !entry.module && typeof entry.load === 'function',
+  );
+  if (borrowed.length === 0) return null;
+
+  let pending = null;
+
+  return function materialize() {
+    if (borrowed.every(entry => entry.module)) return Promise.resolve();
+    if (pending) return pending;
+
+    pending = Promise.all(borrowed.map(resolveEntry)).then(() => {
+      attachRouteBehaviour(
+        route,
+        pageInfo,
+        module,
+        matchedConfigs,
+        matchedLayouts,
+      );
+    });
+
+    // A failed load must not poison the route forever
+    pending.catch(() => {
+      pending = null;
+    });
+
+    return pending;
+  };
+}
+
+/**
+ * Load the modules a matched route needs, walking up to the root so that
+ * hierarchy-wide hooks (translations, init) see every ancestor.
+ *
+ * A no-op for eagerly collected routes and for hand-written route objects
+ * such as the catch-all, neither of which carry a materializer.
+ *
+ * @param {Object} route - Matched route node
+ * @returns {Promise<Object[]>} Nodes whose module was loaded by this call
+ */
+export async function materializeRoute(route) {
+  const chain = [];
+  for (let node = route; node; node = node.parent) {
+    if (typeof node.materialize === 'function') chain.push(node);
+  }
+  if (chain.length === 0) return [];
+
+  // Which nodes had no module before this call: their `setup` hook has never
+  // been offered to the registration traversal, which reads `route.module`
+  // and runs before anything is materialised. The caller runs it for them.
+  const fresh = chain.filter(node => !node.module);
+  await Promise.all(chain.map(node => node.materialize()));
+  return fresh.filter(node => node.module);
+}
+
+/**
+ * Materialise every deferred node in a tree.
+ *
+ * Used on the server, where laziness buys nothing: the modules are all in the
+ * same process bundle, so loading them once at boot keeps rendering free of
+ * per-request loads and surfaces a broken view at startup rather than in a
+ * request log.
+ *
+ * @param {Object[]} routes - Route tree
+ * @returns {Promise<void>}
+ */
+export async function materializeTree(routes) {
+  const pending = [];
+
+  const walk = list => {
+    if (!Array.isArray(list)) return;
+    for (const route of list) {
+      if (!route || typeof route !== 'object') continue;
+      if (typeof route.materialize === 'function') pending.push(route);
+      walk(route.children);
+    }
+  };
+
+  walk(routes);
+  await Promise.all(pending.map(route => route.materialize()));
 }
 
 /**
  * Builds a structured route tree from collected pages, configs, and layouts.
+ *
+ * Pages collected with `{ defer: true }` produce nodes that carry a
+ * `materialize()` thunk instead of an action. The router calls it when the
+ * route is first matched; until then the module has never been evaluated.
+ *
  * @param {Map<string, Object>} pages - Collected route page modules
  * @param {Map<string, Object>} [configs=new Map()] - Collected config modules
  * @param {Map<string, Object>} [layouts=new Map()] - Collected layout modules
@@ -114,26 +347,42 @@ export function buildRoutes(pages, configs = new Map(), layouts = new Map()) {
 
   // Create route objects
   pages.forEach((pageInfo, pathname) => {
-    const rootSegment = getRootSegment(pathname);
     const { module, moduleName } = pageInfo;
+
+    // Deferred: nothing about this route is known beyond its path yet.
+    if (!module && typeof pageInfo.load === 'function') {
+      const route = { path: pathname, moduleName, filePath: pageInfo.filePath };
+      route.materialize = createMaterializer(route, pageInfo, configs, layouts);
+      routeMap.set(pathname, route);
+      return;
+    }
+
+    const rootSegment = getRootSegment(pathname);
     const matchedConfigs = findConfigs(configs, rootSegment);
     const matchedLayouts = findLayouts(layouts, rootSegment, pathname, module);
 
-    routeMap.set(pathname, {
-      module, // Preserve module for register/unregister lifecycle
-      path: pathname,
-      action: createAction(pageInfo, matchedConfigs, matchedLayouts),
-      // Lifecycle hooks: boot (config + route), mount/unmount (both)
-      translations: buildTranslationsLoader(
-        matchedConfigs,
-        module.translations,
-        pathname,
-        moduleName,
-      ),
-      init: createInit(matchedConfigs, module.init),
-      mount: createMount(matchedConfigs, module.mount),
-      unmount: createUnmount(matchedConfigs, module.unmount),
-    });
+    const route = { path: pathname, moduleName, filePath: pageInfo.filePath };
+    attachRouteBehaviour(
+      route,
+      pageInfo,
+      module,
+      matchedConfigs,
+      matchedLayouts,
+    );
+
+    // An eager route can still be matched against deferred layouts/configs
+    // when its source was merged with a lazy one; those need loading before
+    // the action runs. See createEntryResolver.
+    const resolveBorrowed = createEntryResolver(
+      route,
+      pageInfo,
+      module,
+      matchedConfigs,
+      matchedLayouts,
+    );
+    if (resolveBorrowed) route.materialize = resolveBorrowed;
+
+    routeMap.set(pathname, route);
   });
 
   // Build tree structure

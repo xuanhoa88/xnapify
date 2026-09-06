@@ -19,6 +19,7 @@ import { register } from '../../shutdown.js';
 import {
   detectDialect,
   getDriverModulePath,
+  normalizeDatabaseUrl,
   registerDriverPaths,
 } from './drivers.js';
 import {
@@ -183,6 +184,15 @@ export function createConnection(url, options) {
 
   // Deep merge with fresh defaults
   const config = merge({}, getDefaultOptions(), opts);
+
+  // `mariadb:` is an alias for the mysql dialect: mysql2 is the only MySQL
+  // family driver provisioned, and it speaks the MariaDB protocol. Left as
+  // `mariadb:` Sequelize would select its `mariadb` dialect and demand the
+  // `mariadb` package, which is never installed. A caller that pins
+  // `dialect` explicitly is left alone — it brought its own driver.
+  if (!config.dialect) {
+    databaseUrl = normalizeDatabaseUrl(databaseUrl);
+  }
 
   // SQLite-specific tuning
   const SQLITE_PREFIX = 'sqlite:';

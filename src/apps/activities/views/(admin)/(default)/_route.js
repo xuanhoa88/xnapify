@@ -14,45 +14,9 @@ import { features } from '@shared/renderer/redux/index.js';
 
 import ActivityList from './ActivityList.js';
 
-const { addBreadcrumb, registerMenu, unregisterMenu } = features;
+const { addBreadcrumb } = features;
 
 export const middleware = requirePermission('activities:read');
-
-/**
- * Register menu item
- */
-export function setup({ store, i18n }) {
-  store.dispatch(
-    registerMenu({
-      ns: 'admin',
-      id: 'system',
-      label: i18n.t('admin:navigation.system', 'System'),
-      order: 99,
-      icon: 'ActivityLogIcon',
-      items: [
-        {
-          path: '/admin/activities',
-          label: i18n.t('admin:navigation.activities', 'Activity Logs'),
-          icon: 'ActivityLogIcon',
-          permission: 'activities:read',
-          order: 10,
-        },
-      ],
-    }),
-  );
-}
-
-/**
- * Unregister menu item
- */
-export function teardown({ store }) {
-  store.dispatch(
-    unregisterMenu({
-      ns: 'admin',
-      path: '/admin/activities',
-    }),
-  );
-}
 
 /**
  * Page metadata

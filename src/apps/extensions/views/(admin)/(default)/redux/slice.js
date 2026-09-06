@@ -12,6 +12,7 @@ import {
   uploadExtension,
   toggleExtensionStatus,
   uninstallExtension,
+  REQUEST_ABORTED,
 } from './thunks.js';
 
 /**
@@ -74,6 +75,22 @@ export const normalizeState = state => {
 };
 
 /**
+ * Locate an extension in the list by its canonical key.
+ *
+ * List rows are keyed by the manifest id (mirrored in the DB as `key`), while
+ * single-record endpoints may echo back either that key or the DB UUID. Match
+ * on both so a write response always finds the row it belongs to.
+ */
+const findExtensionIndex = (extensions, payload) => {
+  if (!payload) return -1;
+  const candidates = [payload.id, payload.key].filter(Boolean);
+  if (candidates.length === 0) return -1;
+  return extensions.findIndex(
+    p => candidates.includes(p.id) || candidates.includes(p.key),
+  );
+};
+
+/**
  * Create pending handler for a specific operation
  */
 const createPendingHandler = operationKey => state => {
@@ -124,6 +141,28 @@ const extensionsSlice = createSlice({
       normalized.operations.uninstall.error = null;
       Object.assign(state, normalized);
     },
+    /**
+     * Drop a row's transient `job_status`.
+     *
+     * The card renders a pending badge instead of the switch whenever the row
+     * carries one (ExtensionCard resolvedActionLabel), and the toggle
+     * response injects it. Clearing the client-side actionMap alone is not
+     * enough — and it also cancels the safety timer — so a completion event
+     * has to strip the server-side half too, or the badge outlives the job
+     * it describes.
+     */
+    clearExtensionJobStatus: (state, action) => {
+      const normalized = normalizeState(state);
+      const index = findExtensionIndex(normalized.data.extensions, {
+        id: action.payload,
+      });
+      if (index !== -1 && normalized.data.extensions[index].job_status) {
+        const { job_status: _dropped, ...rest } =
+          normalized.data.extensions[index];
+        normalized.data.extensions[index] = rest;
+        Object.assign(state, normalized);
+      }
+    },
     resetExtensionsState: () => initialState,
   },
   extraReducers: builder => {
@@ -137,7 +176,17 @@ const extensionsSlice = createSlice({
         normalized.data.initialized = true;
         Object.assign(state, normalized);
       })
-      .addCase(fetchExtensions.rejected, createRejectedHandler('list'));
+      .addCase(fetchExtensions.rejected, (state, action) => {
+        // An aborted request is not a failure — the component unmounted or a
+        // newer fetch superseded it. Keep the list and surface no error.
+        if (action.payload === REQUEST_ABORTED) {
+          const normalized = normalizeState(state);
+          normalized.operations.list.loading = false;
+          Object.assign(state, normalized);
+          return;
+        }
+        createRejectedHandler('list')(state, action);
+      });
 
     // Upload
     builder
@@ -146,12 +195,19 @@ const extensionsSlice = createSlice({
         const normalized = normalizeState(state);
         normalized.operations.upload = createOperationState();
         // Add new extension to list or replace if exists
-        const index = normalized.data.extensions.findIndex(
-          p => p.id === action.payload.id,
+        const index = findExtensionIndex(
+          normalized.data.extensions,
+          action.payload,
         );
         if (index !== -1) {
-          normalized.data.extensions[index] = action.payload;
-        } else {
+          // Merge, don't replace: the list row carries filesystem-derived
+          // fields (source, icon, runtime, compatibility) that the DB record
+          // returned here does not have.
+          normalized.data.extensions[index] = {
+            ...normalized.data.extensions[index],
+            ...action.payload,
+          };
+        } else if (action.payload) {
           normalized.data.extensions.push(action.payload);
         }
         Object.assign(state, normalized);
@@ -167,11 +223,17 @@ const extensionsSlice = createSlice({
       .addCase(toggleExtensionStatus.fulfilled, (state, action) => {
         const normalized = normalizeState(state);
         normalized.operations.toggleStatus = createOperationState();
-        const index = normalized.data.extensions.findIndex(
-          p => p.id === action.payload.id,
+        const index = findExtensionIndex(
+          normalized.data.extensions,
+          action.payload,
         );
         if (index !== -1) {
-          normalized.data.extensions[index] = action.payload;
+          // Merge so the row keeps its filesystem-derived fields while picking
+          // up the new is_active / job_status from the server.
+          normalized.data.extensions[index] = {
+            ...normalized.data.extensions[index],
+            ...action.payload,
+          };
         }
         Object.assign(state, normalized);
       })
@@ -201,6 +263,7 @@ export const {
   clearExtensionUploadError,
   clearExtensionToggleError,
   clearExtensionUninstallError,
+  clearExtensionJobStatus,
   resetExtensionsState,
 } = extensionsSlice.actions;
 

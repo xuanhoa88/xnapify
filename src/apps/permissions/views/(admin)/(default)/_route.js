@@ -7,7 +7,7 @@
 
 import { requirePermission } from '@shared/renderer/components/Rbac/index.js';
 import { features } from '@shared/renderer/redux/index.js';
-const { addBreadcrumb, registerMenu, unregisterMenu } = features;
+const { addBreadcrumb } = features;
 
 import reducer, { SLICE_NAME } from '../redux/index.js';
 
@@ -20,42 +20,6 @@ export const middleware = requirePermission('permissions:read');
  */
 export function init({ store }) {
   store.injectReducer(SLICE_NAME, reducer);
-}
-
-/**
- * Register menu item for this route
- */
-export function setup({ store, i18n }) {
-  store.dispatch(
-    registerMenu({
-      ns: 'admin',
-      id: 'identity-access',
-      label: i18n.t('admin:navigation.identityAccess', 'Identity & Access'),
-      order: 10,
-      icon: 'LockClosedIcon',
-      items: [
-        {
-          path: '/admin/permissions',
-          label: i18n.t('admin:navigation.permissions', 'Permissions'),
-          icon: 'LockOpen1Icon',
-          permission: 'permissions:read',
-          order: 40,
-        },
-      ],
-    }),
-  );
-}
-
-/**
- * Unregister menu item for this route
- */
-export function teardown({ store }) {
-  store.dispatch(
-    unregisterMenu({
-      ns: 'admin',
-      path: '/admin/permissions',
-    }),
-  );
 }
 
 /**

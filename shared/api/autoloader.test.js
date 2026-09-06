@@ -364,5 +364,66 @@ describe('shared/api/autoloader', () => {
       expect(apiModels.User).toBeDefined();
       expect(apiModels.size).toBe(1);
     });
+
+    it('refuses to boot when any module\u2019s migrations fail', async () => {
+      // Regression: a failed migration phase in a non-core module was one log
+      // line, and the caller discarded `errors`, so a worker went on to serve
+      // traffic against a half-migrated schema.
+      const { discoverModules } = require('./autoloader.js');
+
+      const CORE = [
+        'users',
+        'roles',
+        'groups',
+        'permissions',
+        'auth',
+        'files',
+        'extensions',
+        'emails',
+        'webhooks',
+        'search',
+        'settings',
+        'activities',
+      ];
+
+      const mockContext = jest.fn();
+      mockContext.keys = jest
+        .fn()
+        .mockReturnValue([...CORE, 'reports'].map(p => `./${p}/api/index.js`));
+
+      const bootedAfterMigrations = jest.fn();
+      const migrationsContext = jest.fn();
+
+      mockContext.mockImplementation(key => {
+        if (key === './reports/api/index.js') {
+          // 'reports' is NOT a core module — the old code only logged this.
+          return {
+            migrations: () => migrationsContext,
+            boot: bootedAfterMigrations,
+          };
+        }
+        return { boot: jest.fn() };
+      });
+
+      const db = {
+        connection: {
+          runMigrations: jest.fn(async () => {
+            throw new Error('SQLITE_BUSY: database is locked');
+          }),
+        },
+      };
+      const container = {
+        resolve: jest.fn(key => (key === 'db' ? db : null)),
+        has: jest.fn(key => key === 'db'),
+        instance: jest.fn(),
+      };
+
+      await expect(
+        discoverModules(mockContext, container),
+      ).rejects.toMatchObject({ code: 'MIGRATION_PHASE_FAILED' });
+      expect(db.connection.runMigrations).toHaveBeenCalled();
+      // Boot must not have run: nothing may serve on a half-migrated schema.
+      expect(bootedAfterMigrations).not.toHaveBeenCalled();
+    });
   });
 });

@@ -18,7 +18,11 @@ import {
   createExtensionConfig,
   getHmrWatchIgnored,
 } from '../rspack/extension.config.js';
-import { computeChecksum, generateExtensionId } from '../utils/extension.js';
+import {
+  auditExtensionCapabilities,
+  computeChecksum,
+  generateExtensionId,
+} from '../utils/extension.js';
 import { copyDir, pathExists } from '../utils/fs.js';
 import { logInfo, logError, formatDuration } from '../utils/logger.js';
 
@@ -151,18 +155,6 @@ async function generateManifests(extensions) {
       );
     }
 
-    let checksum;
-    try {
-      checksum = await computeChecksum(outputDir);
-    } catch (checksumErr) {
-      // Gracefully degrade — use a timestamp-based fallback so the build
-      // continues even if hashing fails (e.g. broken symlinks).
-      logError(
-        `⚠️  Checksum failed for ${name}: ${checksumErr.message} — using fallback`,
-      );
-      checksum = `fallback-${Date.now()}`;
-    }
-
     const outputManifest = {
       ...pick(manifest, MANIFEST_FIELDS),
       // Canonical identity
@@ -180,14 +172,66 @@ async function generateManifests(extensions) {
       }),
       // Build metadata
       id: generateExtensionId(name),
-      integrity: checksum,
       builtAt: Date.now(),
     };
+
+    // The checksum covers the built tree *and* this manifest, minus the two
+    // fields that describe the build itself (`integrity`, `builtAt`). Hashing
+    // the folder alone was unverifiable: the installer hashes what it received,
+    // package.json included, and the file it received is the one written below.
+    let checksum;
+    try {
+      checksum = await computeChecksum(outputDir, { manifest: outputManifest });
+    } catch (checksumErr) {
+      // Gracefully degrade — use a timestamp-based fallback so the build
+      // continues even if hashing fails (e.g. broken symlinks).
+      logError(
+        `⚠️  Checksum failed for ${name}: ${checksumErr.message} — using fallback`,
+      );
+      checksum = `fallback-${Date.now()}`;
+    }
+
+    outputManifest.integrity = checksum;
 
     fs.writeFileSync(
       path.join(outputDir, 'package.json'),
       JSON.stringify(outputManifest, null, 2),
     );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Capability Audit
+// ---------------------------------------------------------------------------
+
+/**
+ * Flag every container binding an extension resolves by name but never
+ * declared under `xnapify.capabilities`.
+ *
+ * Extensions receive a capability-scoped container, so an undeclared binding
+ * throws CapabilityDeniedError the first time that code path runs — often long
+ * after the build. Surfacing it here turns a production crash into a warning
+ * next to the compilation that produced it.
+ *
+ * @param {Array} extensions - Discovered extensions
+ */
+async function auditCapabilities(extensions) {
+  for (const { name, manifest, path: extensionPath } of extensions) {
+    let report;
+    try {
+      report = await auditExtensionCapabilities(extensionPath, manifest);
+    } catch (err) {
+      logError(`Capability audit failed for ${name}: ${err.message}`);
+      continue;
+    }
+
+    for (const { capability, files } of report.undeclared) {
+      logError(
+        `⚠️  ${name} resolves "${capability}" but does not declare it in ` +
+          `xnapify.capabilities (granted: ${report.granted.join(', ') || 'none'}) — ` +
+          `used in ${files.join(', ')}`,
+      );
+    }
   }
 }
 
@@ -469,6 +513,7 @@ async function buildExtensions(options = {}) {
         ...linkExtensionNodeModules(extensions),
       ]);
       await generateManifests(extensions);
+      await auditCapabilities(extensions);
 
       logInfo(
         `✅ Extension build completed in ${formatDuration(Date.now() - start)}`,

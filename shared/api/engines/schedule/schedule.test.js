@@ -10,8 +10,15 @@ jest.mock('node-cron', () => require('./__mocks__/nodeCron.js'));
 
 import cron from 'node-cron';
 
+import { MemoryRedisClient } from '@shared/api/engines/redis/memoryClient.js';
+
 import { ScheduleError } from './errors.js';
-import { ScheduleManager, createFactory } from './factory.js';
+import {
+  ScheduleManager,
+  createFactory,
+  configureScheduleLock,
+} from './factory.js';
+import { createRedisScheduleLock } from './lock.js';
 
 beforeEach(() => {
   cron.validate.mockImplementation(expression => {
@@ -585,5 +592,92 @@ describe('createFactory()', () => {
     expect(schedule.autoStart).toBe(false);
 
     schedule.cleanup();
+  });
+});
+
+describe('distributed leader lease', () => {
+  afterEach(() => {
+    configureScheduleLock(null);
+  });
+
+  function tickOf(manager, name) {
+    // eslint-disable-next-line no-underscore-dangle
+    return manager.get(name).task._callback;
+  }
+
+  it('runs a tick on exactly one instance when a lease is configured', async () => {
+    const client = new MemoryRedisClient();
+    configureScheduleLock(createRedisScheduleLock(client));
+
+    const handlers = [jest.fn(), jest.fn(), jest.fn()];
+    const managers = handlers.map(handler => {
+      const manager = new ScheduleManager({ autoStart: false });
+      manager.register('digest:emails', '0 */4 * * *', handler);
+      return manager;
+    });
+
+    await Promise.all(managers.map(m => tickOf(m, 'digest:emails')()));
+
+    expect(handlers.filter(h => h.mock.calls.length === 1)).toHaveLength(1);
+    expect(handlers.reduce((n, h) => n + h.mock.calls.length, 0)).toBe(1);
+
+    managers.forEach(m => m.cleanup());
+  });
+
+  it('gives a different task its own lease', async () => {
+    const client = new MemoryRedisClient();
+    configureScheduleLock(createRedisScheduleLock(client));
+
+    const first = jest.fn();
+    const second = jest.fn();
+    const manager = new ScheduleManager({ autoStart: false });
+    manager.register('task:a', '0 */4 * * *', first);
+    manager.register('task:b', '0 */4 * * *', second);
+
+    await tickOf(manager, 'task:a')();
+    await tickOf(manager, 'task:b')();
+
+    expect(first).toHaveBeenCalledTimes(1);
+    expect(second).toHaveBeenCalledTimes(1);
+
+    manager.cleanup();
+  });
+
+  it('falls back to the host-local guard when the lease store is down', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation();
+    configureScheduleLock(async () => {
+      throw new Error('Redis down');
+    });
+
+    const handler = jest.fn();
+    const manager = new ScheduleManager({ autoStart: false });
+    manager.register('resilient', '0 */4 * * *', handler);
+
+    await tickOf(manager, 'resilient')();
+
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('Schedule lease unavailable'),
+    );
+
+    warn.mockRestore();
+    manager.cleanup();
+  });
+});
+
+describe('createRedisScheduleLock', () => {
+  it('grants the lease once per window and re-grants after it expires', async () => {
+    const client = new MemoryRedisClient();
+    const acquire = createRedisScheduleLock(client, { prefix: 'lease:' });
+
+    expect(await acquire('job', 1_000)).toBe(true);
+    expect(await acquire('job', 1_000)).toBe(false);
+
+    await new Promise(resolve => setTimeout(resolve, 1_050));
+    expect(await acquire('job', 1_000)).toBe(true);
+  });
+
+  it('rejects a client that cannot SET', () => {
+    expect(() => createRedisScheduleLock({})).toThrow(TypeError);
   });
 });

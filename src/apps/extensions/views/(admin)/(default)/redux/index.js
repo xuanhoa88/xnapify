@@ -19,6 +19,7 @@ export {
   clearExtensionToggleError,
   clearExtensionUninstallError,
   // Utility actions
+  clearExtensionJobStatus,
   resetExtensionsState,
   // Slice name constant
   SLICE_NAME,

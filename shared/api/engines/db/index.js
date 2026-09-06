@@ -16,3 +16,6 @@ export * from './drivers.js';
 
 // Export database migrator
 export * from './migrator.js';
+
+// Export migration guards for destructive dialect-specific operations
+export * from './migrationGuards.js';

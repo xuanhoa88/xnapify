@@ -116,9 +116,13 @@ export const installFromHub = async (req, res) => {
       extensionManager: container.resolve('extension'),
       models: container.resolve('models'),
       cache: container.resolve('cache'),
+      // installExtensionFromPackage() cannot unpack a zip without the FS
+      // engine — omitting it made every hub install fail at extraction.
+      fs: container.resolve('fs'),
       actorId: req.user && req.user.id,
       queue: container.resolve('queue'),
       ws: container.resolve('ws'),
+      cwd: container.resolve('config').cwd,
     });
 
     return http.sendSuccess(res, { extension }, 201);
@@ -157,9 +161,13 @@ export const updateFromHub = async (req, res) => {
       extensionManager: container.resolve('extension'),
       models: container.resolve('models'),
       cache: container.resolve('cache'),
+      // Needed twice over: to verify the downloaded package before the
+      // existing installation is removed, and to unpack it afterwards.
+      fs: container.resolve('fs'),
       actorId: req.user && req.user.id,
       queue: container.resolve('queue'),
       ws: container.resolve('ws'),
+      cwd: container.resolve('config').cwd,
     });
 
     return http.sendSuccess(res, { extension });

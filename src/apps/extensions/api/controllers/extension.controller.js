@@ -66,7 +66,12 @@ export const getExtension = async (req, res) => {
       if (ws) {
         ws.sendToPublicChannel('extension:updated', {
           type: 'EXTENSION_TAMPERED',
-          extensionId: extensionData.manifest.name || req.params.id,
+          // The canonical key every other extension:updated payload uses —
+          // manifest.id, mirrored in the DB `key` column and in the list
+          // response's `id`. Sending the package name instead meant the
+          // admin UI could not match the event to a row, and the client
+          // extension manager had to fall back to a name scan.
+          extensionId: req.params.id,
         });
       }
     }
@@ -248,6 +253,11 @@ export const uploadExtension = async (req, res) => {
       ...(typeof extension.toJSON === 'function'
         ? extension.toJSON()
         : extension),
+      // Report the canonical key as `id`. The admin list endpoint keys every
+      // extension by its manifest id (the DB `key`), not the DB UUID, so
+      // returning the UUID here leaves the client unable to match this record
+      // against the row it already holds.
+      id: extension.key,
       job_status: 'INSTALLING',
     };
 
@@ -300,6 +310,8 @@ export const updateExtensionStatus = async (req, res) => {
       ...(typeof extension.toJSON === 'function'
         ? extension.toJSON()
         : extension),
+      // Same canonical identity as the list endpoint — see uploadExtension.
+      id: extension.key,
       job_status: result.is_active ? 'ACTIVATING' : 'DEACTIVATING',
     };
 
@@ -351,7 +363,7 @@ export const refreshExtensions = async (req, res) => {
  * Handle Extension IPC
  *
  * Centralized gateway for extension inter-process communication.
- * Extensions register IPC handlers via registry.registerHook('ipc:<extensionId>:<action>', handler).
+ * Extensions register IPC handlers via registry.registerHandler('ipc:<extensionId>:<action>', handler).
  * The gateway validates the request, executes the hook, and returns the result.
  *
  * @route   POST /api/extensions/:id/ipc
@@ -373,14 +385,31 @@ export const handleIPC = async (req, res) => {
       );
     }
 
-    // Build the hook ID: ipc:<extensionId>:<action>
-    const hookId = `ipc:${id}:${action}`;
+    // Build the handler ID: ipc:<extensionId>:<action>
+    const handlerId = `ipc:${id}:${action}`;
     const { registry: extensionRegistry } = req.app
       .get('container')
       .resolve('extension');
 
-    // Check if any handler is registered before executing
-    if (!extensionRegistry.hasHook(hookId)) {
+    const hasHandler = extensionRegistry.hasHandler(handlerId);
+
+    // IPC is authenticated by default. An extension must opt in explicitly
+    // with registerHandler(id, fn, { public: true }) to accept guest callers.
+    const { public: isPublic = false } =
+      (hasHandler && extensionRegistry.getHandlerMeta(handlerId)) || {};
+    const authenticated = !!(req.authenticated && req.user);
+
+    // Answering "no such handler" with a 404 and "not authenticated" with a
+    // 401 let an anonymous caller enumerate which extensions (and which of
+    // their actions) a deployment runs — extension ids are deployment
+    // independent, so that is a stable fingerprint. An unauthenticated caller
+    // gets the same 401 either way and learns nothing.
+    if (!isPublic && !authenticated) {
+      return http.sendUnauthorized(res, 'Authentication required');
+    }
+
+    // Past the auth gate, a missing handler is genuinely a 404.
+    if (!hasHandler) {
       return http.sendError(
         res,
         `No IPC handler registered for action "${action}" on extension "${id}"`,
@@ -388,19 +417,15 @@ export const handleIPC = async (req, res) => {
       );
     }
 
-    // IPC is authenticated by default. An extension must opt in explicitly
-    // with registerHook(id, fn, { public: true }) to accept guest callers.
-    const { public: isPublic = false } = extensionRegistry.getHookMeta(hookId);
-    if (!isPublic && !(req.authenticated && req.user)) {
-      return http.sendUnauthorized(res, 'Authentication required');
-    }
-
-    // IPC is a request/response exchange, so use the single-answer executor.
-    // The collector executors swallow handler errors, which used to turn a
-    // crashed handler into "200 OK, data: null" here.
+    // IPC is a request/response exchange, so it resolves through the handler
+    // registry. The collector executors swallow handler errors, which used to
+    // turn a crashed handler into "200 OK, data: null" here.
     let outcome;
     try {
-      outcome = await extensionRegistry.invokeHook(hookId, data, { req, res });
+      outcome = await extensionRegistry.invokeHandler(handlerId, data, {
+        req,
+        res,
+      });
     } catch (handlerError) {
       // The handler itself failed. Honour an explicit status/code when the
       // extension threw a structured error; otherwise report a 502, because
@@ -415,6 +440,10 @@ export const handleIPC = async (req, res) => {
       const message = declared
         ? handlerError.message
         : `IPC handler for action "${action}" on extension "${id}" failed`;
+      // `meta` is copied verbatim into the response body — only `errors` goes
+      // through normalizeError. An undeclared error's `code` is whatever the
+      // runtime threw (ECONNREFUSED, ER_ACCESS_DENIED_ERROR, …), so it is
+      // gated exactly like the message.
       return http.sendError(
         res,
         message,
@@ -423,14 +452,14 @@ export const handleIPC = async (req, res) => {
         {
           extensionId: id,
           action,
-          code: handlerError?.code,
+          ...(declared && handlerError.code ? { code: handlerError.code } : {}),
         },
       );
     }
 
     // A handler may legitimately answer with nothing; that is still a success.
     // `handled: false` only happens if the handler was unregistered between
-    // the hasHook() check above and this call.
+    // the hasHandler() check above and this call.
     if (!outcome.handled) {
       return http.sendError(
         res,

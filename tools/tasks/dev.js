@@ -63,16 +63,13 @@ const host = config.env('XNAPIFY_HOST', '127.0.0.1');
 // - server: Holds the HTTP server instance
 // - dispose: Dispose server bundle (Node-RED, etc.)
 // - invalidateServerCaches: Lightweight SSR cache invalidation (no service shutdown)
-// - hmr: Tracks Hot Module Replacement state and configuration
 // - hotMiddleware: rspack hot middleware instance
 // - devMiddleware: rspack dev middleware instance
-let app,
-  server,
-  dispose,
-  invalidateServerCaches,
-  hmr,
-  hotMiddleware,
-  devMiddleware;
+//
+// The server bundle's own `module.hot` is deliberately not kept: applying an
+// update in place cannot reach the Express app this task is serving through.
+// See checkForUpdate.
+let app, server, dispose, invalidateServerCaches, hotMiddleware, devMiddleware;
 
 // Synchronized HMR: buffers client HMR 'built' events while the server
 // compiler is still recompiling, then flushes them once the server bundle
@@ -251,13 +248,10 @@ function loadServerBundle() {
 
     const moduleNamespace = require(serverBundlePath);
     const exportsObj = moduleNamespace.default || moduleNamespace;
-    const { hot, invalidateCaches, ...bundle } = exportsObj;
+    const { hot: _hot, invalidateCaches, ...bundle } = exportsObj;
 
     // Expose lightweight cache invalidation for extension HMR
     invalidateServerCaches = invalidateCaches;
-
-    // Set up HMR if available (for development)
-    hmr = hot;
 
     // Return a clean API surface
     return bundle;
@@ -439,16 +433,20 @@ let loadedServerHash = null;
 /**
  * Reload the server bundle after a successful recompilation.
  *
- * Three-tier strategy, from fastest to most reliable:
+ * Two tiers:
  *
  * 1. **Skip** — compilation hash unchanged → nothing to do.
- * 2. **HMR fast-path** — `hmr.check(true)` applies the update in-place
- *    and `invalidateServerCaches()` clears SSR caches. No Express restart.
- *    Works for typical edits (changing a component, fixing a string, etc.).
- * 3. **Full reload** — clears require.cache, re-requires the bundle from
- *    disk, and re-bootstraps Express. Required when HMR can't apply the
- *    update (e.g. new files added to a `require.context`, deleted modules,
- *    or structural changes that break the module graph).
+ * 2. **Full reload** — clears require.cache, re-requires the bundle from
+ *    disk, and re-bootstraps Express.
+ *
+ * There is deliberately no HMR fast path. src/server.js self-accepts, so
+ * every server-side edit bubbles to it and a successful apply re-executes it
+ * into a *new* module instance — while this task keeps serving through the
+ * Express app built from the old one, with the old caches and the old
+ * compiled route tree. `hmr.check()` would report modules applied and the
+ * running server would go on answering with the code it booted with, which
+ * is worse than a slower reload: the edit looks lost. Only re-requiring the
+ * bundle and re-bootstrapping Express actually swaps the running code.
  *
  * @param {string} [currentHash] Compilation hash from `stats.hash`.
  * @returns {Promise<boolean>} True if the server was reloaded.
@@ -471,37 +469,7 @@ async function checkForUpdate(currentHash) {
   }
 
   // -----------------------------------------------------------------------
-  // Tier 2: Try HMR fast-path (in-memory update, no Express restart)
-  // -----------------------------------------------------------------------
-  if (hmr && typeof hmr.status === 'function' && hmr.status() === 'idle') {
-    try {
-      const updatedModules = await hmr.check(/* autoApply */ true);
-
-      if (updatedModules && updatedModules.length > 0) {
-        // HMR applied successfully — module.hot.accept() in server.js
-        // already called invalidateCaches(). Just update the hash.
-        loadedServerHash = currentHash;
-        logInfo(`🔥 HMR: Applied ${updatedModules.length} module(s) in-place`);
-        return true;
-      }
-
-      // hmr.check returned empty — the compiler ran but produced
-      // identical HMR output. This is effectively a no-op.
-      if (verbose) logInfo('HMR found no updated modules');
-      loadedServerHash = currentHash;
-      return false;
-    } catch {
-      // HMR apply failed — expected for structural changes (new context
-      // entries, deleted modules, etc.). Fall through to full reload.
-      // After a failed apply HMR status may be 'abort' or 'fail';
-      // loadServerBundle() below captures a fresh `module.hot` from
-      // the re-required bundle, restoring the runtime to 'idle'.
-      logInfo('⚠️ HMR apply failed, falling back to full reload');
-    }
-  }
-
-  // -----------------------------------------------------------------------
-  // Tier 3: Full bundle reload from disk
+  // Tier 2: Full bundle reload from disk
   // -----------------------------------------------------------------------
   logInfo('🔄 Full server bundle reload...');
 
@@ -519,8 +487,7 @@ async function checkForUpdate(currentHash) {
   await notifyBrowserSyncRestart();
 
   // Re-require the server bundle from disk.
-  // loadServerBundle() clears require.cache for the build dir, captures
-  // a fresh `hmr` (module.hot) from the new bundle, and returns
+  // loadServerBundle() clears require.cache for the build dir and returns
   // the new { createServer, bootstrapApp } surface.
   let createServer, bootstrapApp;
   ({ createServer, bootstrapApp, disposeApp: dispose } = loadServerBundle());
@@ -597,7 +564,7 @@ function setupServerBundleWatcher(serverCompiler) {
       } catch (err) {
         logError(
           '❌ Server bundle reload failed during ' +
-            (hmr ? 'HMR apply' : 'full restart') +
+            'full restart' +
             ': ' +
             err.message,
         );
@@ -680,7 +647,6 @@ async function main() {
       // Reset references to allow GC
       app = null;
       server = null;
-      hmr = null;
       devMiddleware = null;
       hotMiddleware = null;
       dispose = null;

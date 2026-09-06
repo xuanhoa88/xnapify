@@ -379,7 +379,7 @@ Same flow as `requireAuth`. Differences:
 2. Check `jwt.isTokenExpired(token)` and `jwt.getTokenTimeLeft(token)`.
 3. If needs refresh and `autoRefresh`:
    - Get refresh token from cookie.
-   - Call `jwt.refreshTokenPair(refreshToken)` → set new cookies.
+   - Rotate through `hook('auth.session').invoke('rotate', ctx)` → set new cookies.
    - Set `req.tokenRefreshed = true`, `X-Auth-Status: refreshed`, `X-Token-Refreshed: true`.
 4. On refresh error:
    - Token truly invalid (4 error types: `TokenExpiredError`, `InvalidTokenTypeError`, `InvalidTokenFormatError`, `JsonWebTokenError`) → clear cookies, `X-Auth-Status: expired`.

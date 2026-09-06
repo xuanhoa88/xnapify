@@ -12,9 +12,13 @@ import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 
 import {
+  DRIVER_SANDBOX_DIR,
   detectDialect,
   getDriverModulePath,
   getDriverModulesDir,
+  normalizeDatabaseUrl,
+  parseDialect,
+  resolveSandboxRoot,
 } from './drivers.js';
 
 const DRIVERS_MODULE = pathToFileURL(
@@ -67,9 +71,65 @@ describe('db driver sandbox resolution', () => {
     expect(detectDialect('postgres')).toBe('postgres');
     expect(detectDialect('postgresql://u:p@h:5432/db')).toBe('postgres');
     expect(detectDialect('mysql://u:p@h/db')).toBe('mysql');
-    expect(detectDialect('mariadb://u:p@h/db')).toBe('mariadb');
+    // MariaDB is served by the mysql dialect — mysql2 is the only MySQL
+    // family driver ever installed.
+    expect(detectDialect('mariadb://u:p@h/db')).toBe('mysql');
     expect(detectDialect('sqlite:database.sqlite')).toBe('sqlite');
     expect(detectDialect('')).toBe('sqlite');
+  });
+
+  it('always resolves a driver package for every dialect it can return', () => {
+    // Regression: detectDialect('mariadb://…') used to return a dialect that
+    // DIALECT_DRIVERS had no entry for, so getDriverModulePath() returned null
+    // and boot died with "install pg/mysql2 manually".
+    for (const url of [
+      'sqlite:db.sqlite',
+      'postgres',
+      'postgresql',
+      'postgresql://u:p@h/db',
+      'mysql://u:p@h/db',
+      'mariadb://u:p@h/db',
+    ]) {
+      const dialect = detectDialect(url);
+      fakePackage(
+        dialect,
+        { sqlite: 'sqlite3', postgres: 'pg', mysql: 'mysql2' }[dialect],
+      );
+      expect(getDriverModulePath(dialect, root)).not.toBeNull();
+    }
+  });
+
+  it('separates validation from the sqlite fallback', () => {
+    expect(parseDialect('postgresql')).toBe('postgres');
+    expect(parseDialect('mariadb://u@h/db')).toBe('mysql');
+    // Unknown schemes are rejected here even though detectDialect defaults
+    // them to sqlite — this is what shared/config/env.js validates with.
+    expect(parseDialect('mongodb://u@h/db')).toBeNull();
+    expect(parseDialect('')).toBeNull();
+    expect(detectDialect('mongodb://u@h/db')).toBe('sqlite');
+  });
+
+  it('rewrites mariadb: URLs onto the mysql dialect', () => {
+    expect(normalizeDatabaseUrl('mariadb://u:p@h:3306/db')).toBe(
+      'mysql://u:p@h:3306/db',
+    );
+    expect(normalizeDatabaseUrl('MariaDB://h/db')).toBe('mysql://h/db');
+    expect(normalizeDatabaseUrl('postgres://h/db')).toBe('postgres://h/db');
+    expect(normalizeDatabaseUrl('sqlite:db.sqlite')).toBe('sqlite:db.sqlite');
+  });
+
+  it('derives the sandbox root from the module location, not the cwd', () => {
+    // Regression: starting the server from an unrelated working directory
+    // (systemd WorkingDirectory, `node /app/build/server.js` from /) made
+    // every driver lookup miss.
+    const appRoot = path.join(root, 'app');
+    const nested = path.join(appRoot, 'build', 'chunks');
+    fs.mkdirSync(nested, { recursive: true });
+    fs.writeFileSync(path.join(appRoot, 'package.json'), '{"name":"app"}');
+    fs.mkdirSync(path.join(appRoot, DRIVER_SANDBOX_DIR), { recursive: true });
+
+    expect(resolveSandboxRoot(nested)).toBe(appRoot);
+    expect(resolveSandboxRoot(nested)).not.toBe(process.cwd());
   });
 
   it('returns the sandbox package dir only when it is installed', () => {

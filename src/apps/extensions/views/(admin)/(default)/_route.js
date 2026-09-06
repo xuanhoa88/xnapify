@@ -7,12 +7,28 @@
 
 import { requirePermission } from '@shared/renderer/components/Rbac/index.js';
 import { features } from '@shared/renderer/redux/index.js';
-import { useWebSocket } from '@shared/ws/client/index.js';
+import { onWebSocketClient } from '@shared/ws/client/index.js';
+
+import { createRegisterHubMenu } from '../../menu.js';
 
 import Extensions from './Extensions.js';
 import reducer, { SLICE_NAME } from './redux/index.js';
 
-const { addBreadcrumb, registerMenu, unregisterMenu } = features;
+const { addBreadcrumb } = features;
+
+/**
+ * Live subscriptions owned by the current mount. Module scope because a route
+ * module is a singleton and `unmount` gets no handle on what `mount` created.
+ */
+let unsubscribeWs = null;
+let detachWs = null;
+
+function teardown() {
+  if (detachWs) detachWs();
+  if (unsubscribeWs) unsubscribeWs();
+  unsubscribeWs = null;
+  detachWs = null;
+}
 
 export const middleware = requirePermission('extensions:read');
 
@@ -21,62 +37,6 @@ export const middleware = requirePermission('extensions:read');
  */
 export function init({ store }) {
   store.injectReducer(SLICE_NAME, reducer);
-}
-
-const createRegisterHubMenu =
-  (store, i18n) =>
-  (badgeCount = 0) => {
-    store.dispatch(
-      registerMenu({
-        ns: 'admin',
-        id: 'extensions',
-        label: i18n.t('admin:navigation.extensionsGroup', 'Extensions'),
-        order: 90,
-        items: [
-          {
-            path: '/admin/extensions/hub',
-            label: i18n.t('admin:navigation.hub', 'Hub'),
-            icon: 'GlobeIcon',
-            permission: 'extensions:read',
-            order: 10,
-            badge: badgeCount > 0 ? badgeCount : undefined,
-          },
-          {
-            path: '/admin/extensions',
-            label: i18n.t('admin:navigation.extensions', 'Manage'),
-            icon: 'CubeIcon',
-            permission: 'extensions:read',
-            order: 20,
-            exact: true,
-          },
-        ],
-      }),
-    );
-  };
-
-/**
- * Register menu item for this route
- */
-export function setup({ store, i18n }) {
-  createRegisterHubMenu(store, i18n)(0);
-}
-
-/**
- * Unregister menu item for this route
- */
-export function teardown({ store }) {
-  store.dispatch(
-    unregisterMenu({
-      ns: 'admin',
-      path: '/admin/extensions',
-    }),
-  );
-  store.dispatch(
-    unregisterMenu({
-      ns: 'admin',
-      path: '/admin/extensions/hub',
-    }),
-  );
 }
 
 /**
@@ -117,20 +77,32 @@ export function mount({ store, i18n, path, fetch }) {
       })
       .catch(() => {}); // Ignore network errors
 
-    // 2. Subscribe to WebSocket updates
-    // Use a slight timeout to ensure WS client is initialized
-    setTimeout(() => {
-      const ws = useWebSocket();
-      if (ws) {
-        // Assume 'admin' channel is subscribed globally by the layout
-        ws.on('extension:updates_available', data => {
-          if (data && data.type === 'UPDATES_AVAILABLE_COUNT') {
-            registerHubMenu(data.count || 0);
-          }
-        });
+    // 2. Subscribe to WebSocket updates.
+    // `mount` runs on every visit to this route, so everything registered
+    // here has to be released by `unmount` — the WS client is a long-lived
+    // EventEmitter that appends listeners unconditionally, and a handler
+    // left behind closes over this visit's store and i18n forever.
+    teardown();
+    const handler = data => {
+      if (data && data.type === 'UPDATES_AVAILABLE_COUNT') {
+        registerHubMenu(data.count || 0);
       }
-    }, 2000);
+    };
+    // Assume 'admin' channel is subscribed globally by the layout
+    unsubscribeWs = onWebSocketClient(ws => {
+      ws.off('extension:updates_available', handler);
+      ws.on('extension:updates_available', handler);
+      detachWs = () => ws.off('extension:updates_available', handler);
+    });
   }
+}
+
+/**
+ * Release everything `mount` registered. Exported so the router calls it on
+ * navigation away (shared/renderer/router/lifecycle.js runUnmount).
+ */
+export function unmount() {
+  teardown();
 }
 
 /**

@@ -98,6 +98,9 @@
       "loadingMore": "Đang tải thêm...",
       "searchPlaceholder": "Tìm kiếm...",
       "clearSearch": "Xóa tìm kiếm"
+    },
+    "toast": {
+      "close": "Đóng thông báo"
     }
   },
   "form": {

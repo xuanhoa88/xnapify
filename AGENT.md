@@ -143,11 +143,31 @@ The application uses an auto-discovery system for both API modules and page comp
 - Each module exports lifecycle hooks via `export default { ... }`
 - Phases run in strict order (defined in `shared/utils/lifecycle.js`):
   `translations → providers → migrations → models → seeds → boot → routes`
+- `shared/utils/lifecycle.js` also lists a `shutdown` phase between `boot` and
+  `routes`. Both autoloaders filter it out — application modules are never
+  unloaded — so it runs only for **extensions**, when one is deactivated at
+  runtime. It must exactly reverse `boot` (and, view side, `menus`).
 
 **Views** (`src/bootstrap/views.js`):
 
 - Automatically discovers views in `@apps/*/views/index.js`
-- Phases: `translations → providers → boot → routes`
+- Phases: `translations → providers → menus → boot → routes`
+- `menus({ store, i18n })` is where a module contributes its admin navigation.
+  Never register menu entries from a `_route.js`: the router would have to
+  evaluate every route module before it could draw the sidebar, which forces
+  every view into one bundle.
+- The `routes` hook returns `[context, { lazy: true }]`. The context uses
+  `mode: 'lazy'`, so each `_route.js` and `_layout.js` becomes its own chunk.
+  The router builds its tree from file paths and loads a view the first time
+  it is matched; the server preloads the whole tree at boot and emits the
+  matched view's chunks with the page.
+- The `translations` hook also returns a `mode: 'lazy'` context. Hand it to
+  the registry in `shared/i18n/resources.js` rather than loading it: the
+  browser then holds only the language it is showing, and pulls another one
+  when the user switches. Dictionaries are grouped into one chunk per locale
+  by the `locale.<code>` cache group, and the server names the chunk for the
+  language it just rendered. The server itself loads every locale at boot,
+  because it clones one i18next instance per request from a shared store.
 - Finds and mounts `_route.js` files using a defined hierarchy
 - Merges metadata and props via `getInitialProps`
 
@@ -155,7 +175,7 @@ The application uses an auto-discovery system for both API modules and page comp
 
 **Shared API** (`shared/api/engines/` & `shared/jwt/`):
 
-- Core infrastructure: `auth`, `cache`, `db`, `email`, `fs`, `hook`, `http`, `queue`, `schedule`, `template`, `worker`
+- Core infrastructure: `auth`, `cache`, `db`, `email`, `fs`, `hook`, `http`, `queue`, `redis`, `schedule`, `template`, `worker`
 - `search` and `webhook` are **modules** (`src/apps/search`, `src/apps/webhooks`) that bind themselves on the container, not engines
 - Auto-loaded from `shared/api/engines/*/index.js` and re-exported via `shared/api/index.js`
 - Provide reusable capabilities for modules — should not contain business logic
@@ -202,10 +222,11 @@ The application uses an auto-discovery system for both API modules and page comp
 - `shared/config/env.js` validates `XNAPIFY_*` variables at boot: fatal in production, warnings elsewhere. Add new variables to its schema.
 - Migrations and seeds run under a cross-process schema lock (`withSchemaLock` in `shared/api/engines/db/migrator.js`): Postgres advisory lock, MySQL `GET_LOCK`, no-op on SQLite. Cluster workers and replicas can all boot at once without double-applying a migration.
 - Access logs are single-line JSON in production (`src/bootstrap/api/middlewares/logging.js`) and always carry `requestId`.
-- Extension IPC (`POST /api/extensions/:id/ipc`) requires an authenticated user unless the handler was registered with `registry.registerHook(id, fn, { public: true })`. `public` is an AND across every handler on a hook id: if any registration did not opt in, the id stays private, so one extension can never expose another's handler to guests. Extensions always receive the **scoped** registry, so `registerHook(hookId, fn, options)` has no `extensionId` argument.
-- Hooks have two contracts, and the executor you pick decides the error behaviour:
-  - **Collectors** — `executeHook` / `executeHookParallel` run every handler, log failures and drop them, then return the surviving results. One broken extension must not break a merged UI (table columns, settings tabs).
-  - **Single answer** — `invokeHook` runs only the highest-priority handler, returns `{ handled, value, extensionId }`, and lets the handler's error propagate. Use it for IPC and anything else where the caller needs the answer. `handled: false` means no handler was registered; a handler returning `undefined` is still `handled: true`.
+- Extension IPC (`POST /api/extensions/:id/ipc`) requires an authenticated user unless the handler was registered with `registry.registerHandler(id, fn, { public: true })`. Handler ids have a single owner, so no other extension can register on the id or widen its visibility. Extensions always receive the **scoped** registry, so registration calls have no `extensionId` argument.
+- Extension points come in two kinds, chosen at **registration**, not at call time:
+  - **Collectors** (`registerHook` / `executeHook` / `executeHookParallel`, backed by `Hook`) — many extensions contribute, every callback runs, failures are logged and dropped, and the caller merges what survived. One broken extension must not break a merged UI such as table columns or settings tabs. Removal is by callback reference.
+  - **Handlers** (`registerHandler` / `invokeHandler`, backed by `Handler`) — one extension owns the id. `invokeHandler` returns `{ handled, value, extensionId }` and lets the handler's error propagate. A competing registration throws `DuplicateHandlerError` (409) instead of being resolved silently by priority. Removal takes only the id. `handled: false` means nothing was registered; a handler returning `undefined` is still `handled: true`.
+  - `registerHook` throws if given `{ public }`, which only ever meant "reachable by an unauthenticated IPC caller" and silently did nothing on a collector.
 - The IPC gateway maps a thrown handler error onto a real status: an error carrying a valid `status` in the 400-599 range is passed through with its own message, anything else becomes `502` with a generic message (the original is logged, never sent).
 - Webhook signatures are verified against `req.rawBody` (captured by `express.json({ verify })`), never against re-serialised JSON.
 
@@ -222,12 +243,13 @@ The application features a robust extension system (`shared/extension`) for exte
 
 **Core Concepts:**
 
-- **Registry:** Singleton managing all extensions, slots, and hooks. Extensions get a _scoped_ registry: registrations are tagged with their id, and `unregisterSlot`/`unregisterHook` only work on their own registrations.
+- **Registry:** Singleton managing all extensions, slots, hooks and handlers. Extensions get a _scoped_ registry (`shared/extension/utils/scopedRegistry.js`): registrations are tagged with their id, and `unregisterSlot`/`unregisterHook`/`unregisterHandler` only work on their own registrations. Deactivating an extension clears its hooks and handlers even if it registered no slots.
 - **Slots:** UI extension points where extensions can render components.
 - **Hooks:** Logic extension points for modifying data or schema.
-- **Manifest contract (`package.json` → `xnapify`):** required. `version` is a semver range for the host (`^2.0.0`), checked at install, activation, and load; `capabilities` lists the container bindings the extension may `resolve()` (`db`, `models`, `hook`, `users:*`, or `*`). Undeclared bindings throw `CapabilityDeniedError`. Missing `capabilities` grants only `hook`, `cache`, `http`, `template`, `i18n`. `jwt`, `extension`, and `env` are never granted. Route handlers of module-type extensions are scoped too: while the final handler of a route runs, `req.app.get('container')` (and `req.container`) return the scoped container; middlewares ahead of it keep the full one.
+- **Manifest contract (`package.json` → `xnapify`):** required. `version` is a semver range for the host (`^2.0.0`), checked at install, activation, and load; `capabilities` lists the container bindings the extension may `resolve()` (`db`, `models`, `users:*`, …). Undeclared bindings throw `CapabilityDeniedError`. Grants are **additive**: every extension always gets the side-effect-free defaults (`hook`, `cache`, `http`, `template`, `i18n`), and a declaration — including an empty `[]` — adds to that baseline rather than replacing it. `jwt`, `extension`, and `env` are reserved and never granted. `*` is honoured only for an extension listed in `XNAPIFY_TRUSTED_EXTENSIONS`; a self-declared `*` from anyone else is dropped with a warning. Route handlers of module-type extensions are scoped too: **every** function a `_route.js` exports is wrapped — middlewares included, since they are the extension's own code — so while any of them runs, `req.app.get('container')` (and `req.container`) return the scoped container. A route middleware that resolves `auth` must therefore declare `auth` in `capabilities`.
 - **Namespaces:** plugin-type extensions list namespaces in `slots` (`["profile", "login", "admin.settings"]`). A `_route.js` exports `namespace`; the route path is only a fallback. Module-type extensions (with `routes()`) subscribe to `*`.
-- **Activation:** every extension's view lifecycle (`translations → providers → boot`) runs once at load on both sides. The client deactivates plugin namespaces on navigation and re-activates on entry; the server never deactivates (one shared registry serves concurrent SSR requests).
+- **Activation:** every extension's view lifecycle (`translations → providers → menus → boot`) runs once at load on both sides. `menus({ store, i18n })` also re-runs per SSR request and whenever the language changes, so it must be idempotent. The client deactivates plugin namespaces on navigation and re-activates on entry; the server never deactivates (one shared registry serves concurrent SSR requests).
+- **Deactivation:** `shutdown({ container, registry, store })` is the reverse of `boot`/`menus` and runs only for extensions, when one is switched off at runtime (`deactivateViewNamespace`: `shutdown → removeNamespace → unregister`). Unsubscribe every hook and `unregisterMenu(...)` everything `menus()` added.
 - **Identity:** `__EXTENSION_ID__` is a pure function of the package name (fixed salt) — the same on every machine and deployment.
 
 **Using Extensions:**
@@ -343,7 +365,7 @@ const { models } = container.resolve('db');
 
 > **Convention:** In module code (`init`, services), use `container.resolve('name')` directly. In route handlers/controllers, use `req.app.get('container').resolve('name')`. Direct imports are reserved for shared libraries.
 
-**Available Engines:** `auth`, `cache`, `db`, `email`, `fs`, `hook`, `http`, `queue`, `schedule`, `template`, `worker`
+**Available Engines:** `auth`, `cache`, `db`, `email`, `fs`, `hook`, `http`, `queue`, `redis`, `schedule`, `template`, `worker`
 
 Module-provided services that behave like engines: `search` (from `src/apps/search`), `webhook` (from `src/apps/webhooks`), `users:sessions` (from `src/apps/users`).
 
@@ -591,7 +613,7 @@ import { features } from '@shared/renderer/redux';
 import { requirePermission } from '@shared/renderer/components/Rbac';
 import reducer, { SLICE_NAME } from '../redux';
 
-const { addBreadcrumb, registerMenu, unregisterMenu } = features;
+const { addBreadcrumb } = features;
 
 // 1. Middleware — permission guard (const, not function)
 export const middleware = requirePermission('activities:read');
@@ -601,31 +623,18 @@ export function init({ store }) {
   store.injectReducer(SLICE_NAME, reducer);
 }
 
-// 3. Setup — register sidebar menus (runs once when route discovered)
-export function setup({ store, i18n }) {
-  store.dispatch(
-    registerMenu({
-      ns: 'admin',
-      id: 'monitoring',
-      label: i18n.t('admin:navigation.monitoring', 'Monitoring'),
-      order: 30,
-      icon: 'activity',
-      items: [
-        {
-          path: '/admin/activities',
-          label: i18n.t('admin:navigation.activities', 'Activity Logs'),
-          icon: 'activity',
-          permission: 'activities:read',
-          order: 10,
-        },
-      ],
-    }),
-  );
+// 3. Setup — per-route registration redone on every navigation.
+// NOT for sidebar links: a route's chunk is only fetched when that route is
+// first matched, so a menu registered here is missing until the user has
+// already been there. Module-wide navigation belongs in the module's
+// `menus()` hook (`views/index.js`).
+export function setup({ store }) {
+  // e.g. register a layout-level widget this page owns
 }
 
-// 4. Teardown — unregister menus (runs when route unloaded)
+// 4. Teardown — unregister what setup() registered (runs when route unloaded)
 export function teardown({ store }) {
-  store.dispatch(unregisterMenu({ ns: 'admin', path: '/admin/activities' }));
+  // e.g. remove that widget again
 }
 
 // 5. Mount — dispatch breadcrumbs (runs on each navigation)
@@ -652,16 +661,16 @@ export default ActivityList;
 
 **Route Lifecycle Hooks:**
 
-| Hook              | Purpose                         | Called When      |
-| ----------------- | ------------------------------- | ---------------- |
-| `middleware`      | Permission checks, redirects    | Before rendering |
-| `init`            | Inject Redux reducer            | Once per route   |
-| `setup`           | Register sidebar menus          | Route discovered |
-| `teardown`        | Unregister menus, cleanup state | Route unloaded   |
-| `mount`           | Dispatch breadcrumbs            | Route mounted    |
-| `unmount`         | Cleanup breadcrumbs or state    | Route unmounted  |
-| `getInitialProps` | Data fetching, page metadata    | Before rendering |
-| `namespace`       | Override extension namespace    | (const export)   |
+| Hook              | Purpose                                                                            | Called When      |
+| ----------------- | ---------------------------------------------------------------------------------- | ---------------- |
+| `middleware`      | Permission checks, redirects                                                       | Before rendering |
+| `init`            | Inject Redux reducer                                                               | Once per route   |
+| `setup`           | Per-route registration — **never** sidebar menus (use the module's `menus()` hook) | Route discovered |
+| `teardown`        | Reverse `setup`, cleanup state                                                     | Route unloaded   |
+| `mount`           | Dispatch breadcrumbs                                                               | Route mounted    |
+| `unmount`         | Cleanup breadcrumbs or state                                                       | Route unmounted  |
+| `getInitialProps` | Data fetching, page metadata                                                       | Before rendering |
+| `namespace`       | Override extension namespace                                                       | (const export)   |
 
 ### 5. API Module Structure
 

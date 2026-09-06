@@ -282,8 +282,10 @@ export async function discoverModules(modulesContext, container) {
   );
 
   // ─── Phase 3: migrations ──────────────────────────────────────────────────
-  errors.push(
-    ...(await runPhase('migrations', lifecycles, async (name, hook) => {
+  const migrationErrors = await runPhase(
+    'migrations',
+    lifecycles,
+    async (name, hook) => {
       const result = await hook({ container });
       // Declarative: hook returned a context → auto-execute
       if (result) {
@@ -292,8 +294,26 @@ export async function discoverModules(modulesContext, container) {
           container,
         });
       }
-    })),
+    },
   );
+  errors.push(...migrationErrors);
+
+  // A module whose migrations did not run must not serve requests: its
+  // queries would hit a schema that is missing columns or tables. Unlike the
+  // core-module guard below this applies to EVERY module, and it fires before
+  // models, seeds, boot and routes so nothing is wired up on a half-migrated
+  // database.
+  if (migrationErrors.length > 0) {
+    const failed = [...new Set(migrationErrors.map(e => e.moduleName))];
+    const err = new Error(
+      `Migrations failed for module(s): ${failed.join(', ')}. ` +
+        `Refusing to boot on a partially migrated schema.`,
+    );
+    err.name = 'MigrationPhaseError';
+    err.code = 'MIGRATION_PHASE_FAILED';
+    err.errors = migrationErrors;
+    throw err;
+  }
 
   // ─── Phase 4: models ──────────────────────────────────────────────────────
   const registry = new ModelRegistry(container);

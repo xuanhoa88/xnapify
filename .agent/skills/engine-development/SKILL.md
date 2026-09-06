@@ -23,6 +23,7 @@ Engines are singleton services registered on the DI container during application
 | `hook`     | `'hook'`           | Event hook factory for pub/sub                     |
 | `http`     | `'http'`           | HTTP response helpers (`sendSuccess`, `sendError`) |
 | `queue`    | `'queue'`          | Channel-based pub/sub job queue                    |
+| `redis`    | `'redis'`          | Shared backend for multi-instance deployments      |
 | `schedule` | `'schedule'`       | Cron-based task scheduling                         |
 | `template` | `'template'`       | LiquidJS template rendering                        |
 | `worker`   | `'worker'`         | Elastic thread pool for CPU-bound worker functions |

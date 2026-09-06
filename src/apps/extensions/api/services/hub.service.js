@@ -11,9 +11,14 @@ import path from 'path';
 import { Readable } from 'stream';
 import { pipeline } from 'stream/promises';
 
+import { Op } from 'sequelize';
+
+import { computeChecksum } from '../utils/checksum.util.js';
+
 import {
   installExtensionFromPackage,
   deleteExtension,
+  locateExtensionRoot,
   toggleExtensionStatus,
 } from './extension.service.js';
 
@@ -439,17 +444,160 @@ export async function installFromHub(extensionName, context) {
 // ========================================================================
 
 /**
+ * Extract a downloaded hub package to a scratch directory and check it against
+ * the checksum the registry advertised.
+ *
+ * `installExtensionFromPackage()` performs the same check, but only *after*
+ * the previous installation has been removed. An update must know the
+ * replacement is good while the working copy is still on disk.
+ *
+ * @param {string} packagePath - Downloaded .zip
+ * @param {Object} listing - Registry listing (must carry `checksum`)
+ * @param {Object} context - App context ({ fs })
+ * @returns {Promise<void>}
+ */
+async function verifyHubPackage(packagePath, listing, { fs: fsEngine }) {
+  if (!fsEngine || typeof fsEngine.extract !== 'function') {
+    const err = new Error(
+      'FS engine required to verify a hub package before installing',
+    );
+    err.name = 'ExtensionPackageError';
+    err.status = 500;
+    throw err;
+  }
+
+  const scratchDir = path.join(
+    os.tmpdir(),
+    'xnapify-hub-verify',
+    `${listing.name.replace(/\//g, '-')}-${Date.now()}`,
+  );
+
+  try {
+    await fs.promises.mkdir(path.dirname(scratchDir), { recursive: true });
+    await fsEngine.extract(packagePath, scratchDir);
+
+    const root = await locateExtensionRoot(scratchDir);
+    const actual = await computeChecksum(root);
+
+    if (actual !== listing.checksum) {
+      const err = new Error(
+        `Checksum mismatch for "${listing.name}": ` +
+          `expected ${String(listing.checksum).slice(0, 12)}…, ` +
+          `got ${actual.slice(0, 12)}…. ` +
+          'The registry entry is stale or the package was tampered with.',
+      );
+      err.name = 'ExtensionChecksumMismatchError';
+      err.status = 400;
+      throw err;
+    }
+  } finally {
+    await fs.promises
+      .rm(scratchDir, { recursive: true, force: true })
+      .catch(() => {});
+  }
+}
+
+/**
+ * Copy the installed extension aside so a failed swap can be undone.
+ *
+ * @param {Object} extension - Extension DB row
+ * @param {Object} context - App context ({ extensionManager })
+ * @returns {Promise<{ record: Object, sourceDir: string|null, backupDir: string|null }>}
+ */
+async function snapshotExtension(extension, { extensionManager }) {
+  const snapshot = {
+    record: extension.toJSON(),
+    sourceDir: null,
+    backupDir: null,
+  };
+
+  try {
+    const { dir } = await extensionManager.resolveExtensionDir(extension.name);
+    if (!dir) return snapshot;
+
+    const backupDir = path.join(
+      os.tmpdir(),
+      'xnapify-hub-rollback',
+      `${extension.key}-${Date.now()}`,
+    );
+    await fs.promises.mkdir(path.dirname(backupDir), { recursive: true });
+    await fs.promises.cp(dir, backupDir, { recursive: true });
+
+    snapshot.sourceDir = dir;
+    snapshot.backupDir = backupDir;
+  } catch (err) {
+    console.warn(
+      `[HubService] Could not snapshot ${extension.name} before update: ${err.message}`,
+    );
+  }
+
+  return snapshot;
+}
+
+/**
+ * Put back what {@link snapshotExtension} saved. Best effort: the uninstall
+ * job runs on the background queue, so a restore issued while that job is
+ * still in flight can be undone by it. The extension always comes back
+ * inactive — its files are on disk again, and the admin re-activates it.
+ *
+ * @param {Object} snapshot - Result of snapshotExtension()
+ * @param {Object} context - App context ({ models, cache })
+ */
+async function restoreExtension(snapshot, { models, cache }) {
+  const { record, sourceDir, backupDir } = snapshot;
+
+  if (sourceDir && backupDir) {
+    try {
+      await fs.promises.rm(sourceDir, { recursive: true, force: true });
+      await fs.promises.mkdir(path.dirname(sourceDir), { recursive: true });
+      await fs.promises.cp(backupDir, sourceDir, { recursive: true });
+    } catch (err) {
+      console.error(
+        `[HubService] Failed to restore extension files for ${record.name}: ${err.message}`,
+      );
+    }
+  }
+
+  try {
+    const { Extension } = models;
+    const [row, created] = await Extension.findOrCreate({
+      where: { key: record.key },
+      defaults: { ...record, is_active: false },
+    });
+    if (!created) {
+      await row.update({ ...record, is_active: false });
+    }
+  } catch (err) {
+    console.error(
+      `[HubService] Failed to restore extension record for ${record.name}: ${err.message}`,
+    );
+  }
+
+  if (cache) {
+    try {
+      await cache.delete('extensions:list:all');
+      await cache.delete('extensions:list:active');
+    } catch {
+      // Cache is best-effort
+    }
+  }
+}
+
+/**
  * Update an already-installed extension from the hub registry.
  *
  * Flow:
  *  1. Look up the extension in the remote registry.
  *  2. Verify it is already installed locally.
- *  3. Deactivate the extension if currently active.
- *  4. Delete the existing installation (DB + FS).
- *  5. Re-install the new version from the hub.
+ *  3. Download the replacement and check it against the registry checksum.
+ *  4. Snapshot the working installation.
+ *  5. Deactivate, delete (DB + FS) and install the new version.
+ *  6. Restore the snapshot if step 5 fails.
  *
- * This reuses the existing `deleteExtension()` and `installExtensionFromPackage()`
- * pipelines to maintain consistency with the core extension lifecycle.
+ * Steps 3 and 4 are what stop a stale registry entry from uninstalling a
+ * working extension: the download is refused outright when the entry carries
+ * no checksum, and a checksum that no longer matches the published package is
+ * rejected while the old files are still in place.
  *
  * @param {string} extensionName - Extension name from registry
  * @param {Object} context - App context
@@ -482,37 +630,58 @@ export async function updateFromHub(extensionName, context) {
     throw err;
   }
 
-  // 1. Deactivate if currently active (deleteExtension requires inactive state)
-  if (existing.is_active) {
-    await toggleExtensionStatus(existing.key, false, context);
-  }
-
-  // 2. Delete the existing installation — this removes the DB record and FS dir
-  await deleteExtension(existing.key, context);
-
-  // 3. Re-install the new version from hub
+  // 1. Fetch and verify the replacement while the current install is intact.
   const tmpPath = await downloadHubPackage(listing);
 
   try {
-    const result = await installExtensionFromPackage(
-      {
-        path: tmpPath,
-        originalname: `${extensionName.replace(/\//g, '-')}.zip`,
-      },
-      {
-        ...context,
-        expectedChecksum: listing.checksum,
-      },
-    );
+    await verifyHubPackage(tmpPath, listing, context);
 
-    invalidateRegistryCache();
-    // Post-update: Re-calculate the global updates badge count
+    // 2. Snapshot so a failed swap can be rolled back.
+    const snapshot = await snapshotExtension(existing, context);
+
     try {
-      await recalculateUpdateCount(context);
+      // 3. Deactivate if active (deleteExtension requires inactive state)
+      if (existing.is_active) {
+        await toggleExtensionStatus(existing.key, false, context);
+      }
+
+      // 4. Delete the existing installation (DB record + FS dir)
+      await deleteExtension(existing.key, context);
+
+      // 5. Install the verified replacement
+      const result = await installExtensionFromPackage(
+        {
+          path: tmpPath,
+          originalname: `${extensionName.replace(/\//g, '-')}.zip`,
+        },
+        {
+          ...context,
+          expectedChecksum: listing.checksum,
+        },
+      );
+
+      invalidateRegistryCache();
+      // Post-update: Re-calculate the global updates badge count
+      try {
+        await recalculateUpdateCount(context);
+      } catch (err) {
+        // Ignore background badge recalculation errors
+      }
+      return result;
     } catch (err) {
-      // Ignore background badge recalculation errors
+      console.error(
+        `[HubService] Update failed for ${extensionName} — restoring previous version:`,
+        err.message,
+      );
+      await restoreExtension(snapshot, context);
+      throw err;
+    } finally {
+      if (snapshot.backupDir) {
+        await fs.promises
+          .rm(snapshot.backupDir, { recursive: true, force: true })
+          .catch(() => {});
+      }
     }
-    return result;
   } finally {
     fs.promises.unlink(tmpPath).catch(() => {});
   }
@@ -570,6 +739,106 @@ export async function uninstallFromHub(extensionName, context) {
 // Update Badge synchronization
 // ========================================================================
 
+/** Permission that gates the extension hub, and so the update badge. */
+const UPDATE_BADGE_PERMISSION = { resource: 'extensions', action: 'read' };
+
+/**
+ * Ids of the users allowed to see the update badge.
+ *
+ * Resolved from RBAC rather than from the socket: the protected channel holds
+ * every authenticated connection, so anything published there is readable by
+ * any logged-in user. Wildcard grants (`*:*`, `extensions:*`, `*:read`) count,
+ * matching `hasPermission()` in the auth engine.
+ *
+ * Returns null when the RBAC models are unavailable, which callers treat as
+ * "send to nobody" — failing closed is the point of the exercise.
+ *
+ * @param {Object} models - Sequelize model registry
+ * @returns {Promise<string[]|null>}
+ */
+async function findUsersWithUpdateBadgePermission(models) {
+  const { User, Role, Group, Permission } = models || {};
+  if (!User || !Role || !Group || !Permission) return null;
+
+  const roles = await Role.findAll({
+    attributes: ['id'],
+    include: [
+      {
+        model: Permission,
+        as: 'permissions',
+        attributes: [],
+        required: true,
+        through: { attributes: [] },
+        where: {
+          is_active: true,
+          resource: { [Op.in]: [UPDATE_BADGE_PERMISSION.resource, '*'] },
+          action: { [Op.in]: [UPDATE_BADGE_PERMISSION.action, '*'] },
+        },
+      },
+    ],
+  });
+
+  const roleIds = roles.map(role => role.id);
+  if (roleIds.length === 0) return [];
+
+  const roleFilter = {
+    model: Role,
+    as: 'roles',
+    attributes: [],
+    required: true,
+    through: { attributes: [] },
+    where: { id: { [Op.in]: roleIds } },
+  };
+
+  const [direct, viaGroups] = await Promise.all([
+    User.findAll({ attributes: ['id'], include: [roleFilter] }),
+    User.findAll({
+      attributes: ['id'],
+      include: [
+        {
+          model: Group,
+          as: 'groups',
+          attributes: [],
+          required: true,
+          through: { attributes: [] },
+          include: [roleFilter],
+        },
+      ],
+    }),
+  ]);
+
+  return [...new Set([...direct, ...viaGroups].map(user => user.id))];
+}
+
+/**
+ * Push the update count to the users who are allowed to act on it.
+ *
+ * @param {Object} ws - WebSocket server
+ * @param {Object} models - Sequelize model registry
+ * @param {number} updateCount - Number of pending updates
+ * @returns {Promise<number>} Recipients addressed
+ */
+async function broadcastUpdateCount(ws, models, updateCount) {
+  let recipients;
+  try {
+    recipients = await findUsersWithUpdateBadgePermission(models);
+  } catch (err) {
+    console.warn(
+      `[HubService] Could not resolve update badge recipients: ${err.message}`,
+    );
+    return 0;
+  }
+
+  if (!recipients || recipients.length === 0) return 0;
+
+  const payload = { type: 'UPDATES_AVAILABLE_COUNT', count: updateCount };
+  for (const userId of recipients) {
+    ws.sendToPrivateChannel(userId, 'extension:updates_available', payload);
+  }
+
+  return recipients.length;
+}
+
 /**
  * Re-calculate the available updates count and broadcast via WebSockets.
  * Called by the background cron job and immediately after a successful update/uninstall.
@@ -604,11 +873,7 @@ export async function recalculateUpdateCount(context) {
 
   await cache.set('extension_update_count', updateCount, 3600 * 24);
 
-  // Broadcast to all authenticated sockets; the admin UI filters by permission.
-  ws.sendToProtectedChannel('extension:updates_available', {
-    type: 'UPDATES_AVAILABLE_COUNT',
-    count: updateCount,
-  });
+  await broadcastUpdateCount(ws, models, updateCount);
 
   return updateCount;
 }
