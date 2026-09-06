@@ -85,6 +85,26 @@ export function sessionRevokedError(
 }
 
 /**
+ * Build the "cannot tell" error.
+ *
+ * A REVOKED verdict and an UNREACHABLE store are different conditions: the
+ * first is an authentication failure (401), the second is a dependency
+ * outage (503). Reporting an outage as 401 would log out every user of the
+ * fleet the moment Redis hiccups, and clients treat 401 as "your session is
+ * gone" — they clear cookies and bounce to the login screen. A 503 is
+ * retryable and leaves the session intact.
+ *
+ * @returns {Error}
+ */
+export function sessionUnavailableError() {
+  const error = new Error('Session state is temporarily unavailable');
+  error.name = 'SessionStoreUnavailableError';
+  error.code = 'SESSION_STORE_UNAVAILABLE';
+  error.status = 503;
+  return error;
+}
+
+/**
  * In-process revocation store.
  *
  * Every method may return a promise so that a networked implementation can
@@ -268,26 +288,86 @@ export function setRevocationStore(store) {
  */
 export async function assertSessionValid(
   decoded,
-  { store = getRevocationStore(), loadUserVersion } = {},
+  { store = getRevocationStore(), loadUserVersion, logger = console } = {},
 ) {
   if (!decoded || typeof decoded !== 'object') return;
 
-  if (decoded.sid && (await store.isSessionRevoked(decoded.sid))) {
-    throw sessionRevokedError('SESSION_REVOKED');
+  // Set once the store stops answering. Every store call is a network call
+  // under RedisRevocationStore, so a rejection here means "unknown", not
+  // "valid" — but it must not be mistaken for "revoked" either.
+  let storeFailed = false;
+
+  if (decoded.sid) {
+    try {
+      if (await store.isSessionRevoked(decoded.sid)) {
+        throw sessionRevokedError('SESSION_REVOKED');
+      }
+    } catch (error) {
+      if (error && error.name === 'SessionRevokedError') throw error;
+      storeFailed = true;
+      logger.error(
+        '[Revocation] Session denylist unavailable:',
+        (error && error.message) || error,
+      );
+    }
   }
 
-  if (typeof decoded.ver === 'number' && decoded.id != null) {
-    let current = await store.getUserVersion(decoded.id);
-    if (current === undefined && typeof loadUserVersion === 'function') {
-      current = await loadUserVersion(decoded.id);
-      if (typeof current === 'number') {
-        await store.setUserVersion(decoded.id, current);
-      }
-    }
-    if (typeof current === 'number' && current > decoded.ver) {
-      throw sessionRevokedError('SESSION_SUPERSEDED', 'Session was signed out');
+  const hasVersionClaim = typeof decoded.ver === 'number' && decoded.id != null;
+
+  if (!hasVersionClaim) {
+    // The denylist was the only thing that could have answered, and it did
+    // not. There is nothing durable to fall back on.
+    if (storeFailed) throw sessionUnavailableError();
+    return;
+  }
+
+  let current;
+  if (!storeFailed) {
+    try {
+      current = await store.getUserVersion(decoded.id);
+    } catch (error) {
+      storeFailed = true;
+      logger.error(
+        '[Revocation] Version memo unavailable:',
+        (error && error.message) || error,
+      );
     }
   }
+
+  if (current === undefined && typeof loadUserVersion === 'function') {
+    try {
+      current = await loadUserVersion(decoded.id);
+      if (typeof current === 'number' && !storeFailed) {
+        try {
+          await store.setUserVersion(decoded.id, current);
+        } catch (error) {
+          logger.error(
+            '[Revocation] Could not memoise user version:',
+            (error && error.message) || error,
+          );
+        }
+      }
+    } catch (error) {
+      logger.error(
+        '[Revocation] Durable token_version lookup failed:',
+        (error && error.message) || error,
+      );
+    }
+  }
+
+  if (typeof current === 'number') {
+    // The durable column answered — that verdict stands even if the store
+    // is down, which is the whole point of keeping `token_version` in the
+    // database. Only the short-lived session denylist is lost.
+    if (current > decoded.ver) {
+      throw sessionRevokedError('SESSION_SUPERSEDED', 'Session was signed out');
+    }
+    return;
+  }
+
+  // Neither source could answer. Fail closed, but as an outage, not as a
+  // revocation.
+  if (storeFailed) throw sessionUnavailableError();
 }
 
 /**

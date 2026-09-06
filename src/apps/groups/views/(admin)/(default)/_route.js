@@ -10,45 +10,9 @@ import { features } from '@shared/renderer/redux/index.js';
 
 import Groups from './Groups.js';
 
-const { addBreadcrumb, registerMenu, unregisterMenu } = features;
+const { addBreadcrumb } = features;
 
 export const middleware = requirePermission('groups:read');
-
-/**
- * Register menu item for this route
- */
-export function setup({ store, i18n }) {
-  store.dispatch(
-    registerMenu({
-      ns: 'admin',
-      id: 'identity-access',
-      label: i18n.t('admin:navigation.identityAccess', 'Identity & Access'),
-      order: 10,
-      icon: 'LockClosedIcon',
-      items: [
-        {
-          path: '/admin/groups',
-          label: i18n.t('admin:navigation.groups', 'Groups'),
-          icon: 'GroupIcon',
-          permission: 'groups:read',
-          order: 20,
-        },
-      ],
-    }),
-  );
-}
-
-/**
- * Unregister menu item for this route
- */
-export function teardown({ store }) {
-  store.dispatch(
-    unregisterMenu({
-      ns: 'admin',
-      path: '/admin/groups',
-    }),
-  );
-}
 
 /**
  * Page metadata

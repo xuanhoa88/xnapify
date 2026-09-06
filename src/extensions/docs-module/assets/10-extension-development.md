@@ -150,12 +150,12 @@ export default {
 
 ## 4. Understanding Identifiers (`__EXTENSION_ID__`)
 
-Webpack statically injects a universal constant called `__EXTENSION_ID__` inside all extension scripts at compile-time. Its value is derived from the extension's **directory name** (e.g., `docs-module` for `src/extensions/docs-module/`), optionally overridden by the `id` field in the extension's database record.
+Rspack statically injects a universal constant called `__EXTENSION_ID__` inside all extension scripts at compile-time. Its value is a pure function of the **manifest name** in `package.json` — `hashids(sha256(name))` with a fixed salt (`tools/utils/extension.js`) — so it is short, URL-safe, and identical on every machine and deployment.
 
 It's conventionally used to safely prefix:
 
 - Database Tables / Migrations (`table: ${__EXTENSION_ID__}_logs`)
-- IPC Communication Channels (`registry.registerHook("ipc:${__EXTENSION_ID__}:compute")`)
+- IPC Communication Channels (`registry.registerHandler("ipc:${__EXTENSION_ID__}:compute")` — `registerHandler`, never `registerHook`: the IPC gateway dispatches through `invokeHandler` only)
 - Translation Scopes (`t("extension:${__EXTENSION_ID__}:labels.submit")`)
 
 ---

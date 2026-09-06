@@ -473,11 +473,57 @@ const DEFAULT_MIN_CHUNK_SIZE = 20_000; // 20 kB
  * @param {number} minChunkSize - Minimum chunk size in bytes (default 20 kB)
  * @returns {Object} cacheGroups configuration
  */
+/**
+ * Locales the application ships, read from the shared dictionary directory.
+ * @returns {string[]}
+ */
+function readAvailableLocales() {
+  try {
+    return fs
+      .readdirSync(path.join(config.CWD, 'shared', 'i18n', 'translations'))
+      .filter(name => name.endsWith('.json'))
+      .map(name => name.replace(/\.json$/, ''));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * One chunk per locale for the per-module dictionaries.
+ *
+ * Module translations are loaded through lazy contexts so the browser only
+ * fetches the language it is showing. Without grouping that would be one
+ * request per module per locale; this collapses them into a single file the
+ * server can name in the page. Route-level dictionaries are deliberately
+ * excluded: they live under `views/` and belong in their route's own chunk.
+ *
+ * @param {string[]} locales - Locale codes
+ * @returns {Object} splitChunks cache groups
+ */
+function createLocaleCacheGroups(locales) {
+  return Object.fromEntries(
+    locales.map(locale => [
+      `locale_${locale.replace(/[^a-zA-Z0-9]/g, '_')}`,
+      {
+        test: new RegExp(
+          `[\\\\/]apps[\\\\/][^\\\\/]+[\\\\/]translations[\\\\/]${locale.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\.json$`,
+        ),
+        name: `locale.${locale}`,
+        chunks: 'async',
+        priority: 60,
+        enforce: true,
+      },
+    ]),
+  );
+}
+
 function createCacheGroups(
   chunks = 'all',
   minChunkSize = DEFAULT_MIN_CHUNK_SIZE,
 ) {
   return {
+    ...createLocaleCacheGroups(readAvailableLocales()),
+
     // --- High-priority named groups ---
 
     // Bundle all CSS into a single chunk to avoid FOUC and guarantee CSS loading order.
@@ -536,10 +582,18 @@ function createCacheGroups(
     // Markdown conversion is consumed on its own (extensions render docs with
     // `marked`); keeping it apart from the editor group means a page that
     // renders markdown no longer downloads ProseMirror as well.
+    //
+    // `chunks: 'initial'` is load-bearing, NOT the shared `chunks` argument:
+    // `marked` and `turndown` are non-eager Module Federation shares, so an
+    // async fixed-name chunk holding them is exactly the deadlock described
+    // above — the chunk waits on a shared module whose fallback it contains.
+    // Today no host view imports markdown, so the group never fires and the
+    // bug is invisible; restricting it to initial chunks keeps it that way,
+    // and the async case falls back to rspack's per-share default split.
     markdown: {
       test: /[\\/]node_modules[\\/](marked|turndown|@mixmark-io[\\/])/,
       name: 'vendor.markdown',
-      chunks,
+      chunks: 'initial',
       priority: 31,
       enforce: true,
     },
@@ -916,25 +970,33 @@ function createRspackConfig(name, options = {}) {
       // Persistent cache for development restarts and rebuilds. Production
       // builds stay cold so an artifact never depends on a stale cache.
       // Opt out with RSPACK_PERSISTENT_CACHE=false.
-      cache: usePersistentCache,
-      experiments: {
-        cache: usePersistentCache
-          ? {
-              type: 'persistent',
-              version: `${nodeEnv}:${pkg.version}`,
-              storage: {
-                type: 'filesystem',
-                directory: path.join(config.CWD, '.cache', 'rspack', name),
-              },
-              buildDependencies: [
-                currentFilename,
-                path.join(currentDir, 'app.config.js'),
-                path.join(currentDir, 'extension.config.js'),
-                path.join(config.CWD, 'package.json'),
-              ],
-            }
-          : false,
-      },
+      //
+      // This belongs at TOP-LEVEL `cache`. `experiments.cache` is not a key
+      // @rspack/core 2.0.1 implements, and unknown `experiments` keys pass
+      // validation untouched, so configuring it there silently no-ops and
+      // every dev restart pays a full cold compile.
+      cache: usePersistentCache
+        ? {
+            type: 'persistent',
+            version: `${nodeEnv}:${pkg.version}`,
+            storage: {
+              type: 'filesystem',
+              directory: path.join(config.CWD, '.cache', 'rspack', name),
+            },
+            // Every file that shapes the compilation but is not itself a
+            // module in the graph. Miss one and its edits are invisible to
+            // the cache — the PostCSS plugin chain in particular, since a
+            // stylesheet's output depends on it without importing it.
+            buildDependencies: [
+              currentFilename,
+              path.join(currentDir, 'app.config.js'),
+              path.join(currentDir, 'extension.config.js'),
+              path.resolve(currentDir, '../factories/postcss.factory.js'),
+              path.resolve(currentDir, '../postcss/RadixBreakpointTrim.js'),
+              path.join(config.CWD, 'package.json'),
+            ],
+          }
+        : false,
 
       // Enable source maps for debugging
       // Server uses eval-source-map (fast + accurate) instead of full source-map

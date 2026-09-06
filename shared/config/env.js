@@ -17,6 +17,18 @@
 
 import { z } from 'zod';
 
+import {
+  DIALECT_SCHEMES,
+  detectDialect,
+  parseDialect,
+} from '@shared/api/engines/db/drivers.js';
+
+/**
+ * Accepted `XNAPIFY_DB_URL` schemes, derived from the single dialect table in
+ * the db engine so validation can never drift from what actually connects.
+ */
+const DB_SCHEMES = Object.keys(DIALECT_SCHEMES);
+
 const DURATION_RE = /^\d+(ms|s|m|h|d|w|y)?$/i;
 
 const optionalInt = (min, max) =>
@@ -57,9 +69,9 @@ function buildSchema(nodeEnv) {
     XNAPIFY_DB_URL: z
       .string()
       .trim()
-      .regex(
-        /^(sqlite|postgres(ql)?|mysql|mariadb)(:|$)/i,
-        'must start with sqlite:, postgres:, or mysql:',
+      .refine(
+        value => parseDialect(value) !== null,
+        `must start with one of ${DB_SCHEMES.map(s => `${s}:`).join(', ')} (or be the bare dialect name)`,
       )
       .optional(),
     XNAPIFY_DB_POOL_MAX: optionalInt(1, 500),
@@ -172,6 +184,23 @@ export function validateEnv(env = process.env, options = {}) {
     errors.push(
       'XNAPIFY_REDIS_URL: required when XNAPIFY_CLUSTER_WORKERS > 1 (shared cache, rate limits, session revocation and WebSocket fan-out)',
     );
+  }
+  if (clustered) {
+    // Every worker runs the migration phase at boot. `withSchemaLock` only
+    // serialises them on Postgres and MySQL/MariaDB, and only when the pool
+    // can spare a connection to hold the lock on — so clustering on any
+    // other dialect, or with a pool of one, is an unguarded migration race.
+    const dialect = detectDialect(env.XNAPIFY_DB_URL || '');
+    if (dialect === 'sqlite') {
+      errors.push(
+        'XNAPIFY_CLUSTER_WORKERS: clustering requires a dialect with a cross-process schema lock (postgres or mysql); SQLite workers would race on migrations',
+      );
+    }
+    if (poolMax < 2) {
+      errors.push(
+        'XNAPIFY_DB_POOL_MAX: must be at least 2 when XNAPIFY_CLUSTER_WORKERS > 1 — the schema lock is held on its own pooled connection',
+      );
+    }
   }
 
   if (errors.length === 0) return { ok: true, errors };

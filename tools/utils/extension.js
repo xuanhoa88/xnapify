@@ -7,84 +7,30 @@
 
 import crypto from 'crypto';
 
-import { hashElement } from 'folder-hash';
 import Hashids from 'hashids';
-
-const DEFAULT_OPTIONS = Object.freeze({
-  algo: 'sha256',
-  encoding: 'hex',
-  folders: Object.freeze({
-    exclude: Object.freeze(['node_modules', '.git', '__tests__', '__mocks__']),
-  }),
-  files: Object.freeze({
-    exclude: Object.freeze(['.DS_Store', 'package-lock.json', 'npm-debug.log']),
-  }),
-});
 
 // ========================================================================
 // Checksum
 // ========================================================================
 
 /**
- * Compute a SHA-256 checksum of an extension directory.
+ * The publishing side and the installing side must agree bit-for-bit, so they
+ * share one implementation instead of two that drift. `checksum.util.js` is
+ * deliberately free of `@shared` aliases and extension-less imports so this
+ * build task, which runs on plain Node ESM, can load it directly.
  *
- * @param {string} dir - Absolute path to the extension directory
- * @param {Object} [options] - Override/extend default hash options
- * @returns {Promise<string>} Hex-encoded SHA-256 hash
- * @throws {TypeError} If dir is not a non-empty string
- * @throws {Error} If hashing fails or returns no hash
+ * @see src/apps/extensions/api/utils/checksum.util.js
  */
-export async function computeChecksum(dir, options) {
-  if (options == null) {
-    options = {};
-  }
+export {
+  computeChecksum,
+  hashManifest,
+  stableStringify,
+  verifyExtensionChecksum,
+  MANIFEST_FILE,
+  SELF_REFERENTIAL_MANIFEST_FIELDS,
+} from '../../src/apps/extensions/api/utils/checksum.util.js';
 
-  if (typeof dir !== 'string' || dir.trim() === '') {
-    throw new TypeError('computeChecksum: dir must be a non-empty string');
-  }
-
-  const opts = {
-    ...DEFAULT_OPTIONS,
-    ...options,
-    folders: {
-      ...DEFAULT_OPTIONS.folders,
-      ...(options.folders || {}),
-      exclude: [
-        ...DEFAULT_OPTIONS.folders.exclude,
-        ...(options.folders && options.folders.exclude
-          ? options.folders.exclude
-          : []),
-      ],
-    },
-    files: {
-      ...DEFAULT_OPTIONS.files,
-      ...(options.files || {}),
-      exclude: [
-        ...DEFAULT_OPTIONS.files.exclude,
-        ...(options.files && options.files.exclude
-          ? options.files.exclude
-          : []),
-      ],
-    },
-  };
-
-  let result;
-  try {
-    result = await hashElement(dir, opts);
-  } catch (err) {
-    throw new Error(
-      'computeChecksum: failed to hash directory "' + dir + '": ' + err.message,
-    );
-  }
-
-  if (!result || !result.hash) {
-    throw new Error(
-      'computeChecksum: no hash returned for directory "' + dir + '"',
-    );
-  }
-
-  return result.hash;
-}
+export { auditExtensionCapabilities } from '../../src/apps/extensions/api/utils/capabilities.util.js';
 
 // ========================================================================
 // Extension ID Generation

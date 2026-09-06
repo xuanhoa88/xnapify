@@ -13,6 +13,49 @@ import { register } from '../../shutdown.js';
 
 import { ScheduleError } from './errors.js';
 
+/** Default lease window — long enough to absorb clock spread between hosts. */
+const DEFAULT_LOCK_TTL_MS = 30_000;
+
+/**
+ * Optional deployment-wide leader lease (see `./lock.js`). When unset, cron
+ * de-duplication is host-local only: every container runs every schedule.
+ * @type {null | ((name: string, ttlMs: number) => Promise<boolean>)}
+ */
+let scheduleLock = null;
+
+/**
+ * Install (or clear) the distributed lease used to elect a single runner for
+ * each tick. Bootstrap installs a Redis-backed one when Redis is configured.
+ *
+ * @param {null | ((name: string, ttlMs: number) => Promise<boolean>)} lock
+ */
+export function configureScheduleLock(lock) {
+  scheduleLock = typeof lock === 'function' ? lock : null;
+}
+
+/**
+ * Whether this process should execute a tick of `name`.
+ *
+ * `isSingletonWorker()` is host-local (it only knows this host's cluster), so
+ * it dedupes within a container but not across containers. The lease closes
+ * that gap; without one we keep the old, per-host behaviour.
+ *
+ * @param {string} name - Task name
+ * @param {number} ttlMs - Lease window
+ * @returns {boolean|Promise<boolean>}
+ */
+function claimTick(name, ttlMs) {
+  if (!isSingletonWorker()) return false;
+  if (!scheduleLock) return true;
+  return Promise.resolve(scheduleLock(name, ttlMs)).catch(error => {
+    console.warn(
+      `⚠️ Schedule lease unavailable for '${name}' (${error.message}) — ` +
+        'falling back to the host-local guard',
+    );
+    return true;
+  });
+}
+
 /**
  * Schedule Manager
  * Handles registration and management of cron tasks.
@@ -33,6 +76,9 @@ class ScheduleManager {
    * @param {Object} [options] - Options for the task
    * @param {boolean} [options.scheduled=true] - Whether to auto-start the task
    * @param {string} [options.timezone] - Timezone for execution
+   * @param {number} [options.lockTtl=30000] - Leader-lease window in ms when a
+   *   distributed lease is configured. Must stay below the task's interval, so
+   *   sub-minute schedules have to lower it.
    * @returns {Object} The scheduled task instance
    */
   register(name, cronExpression, handler, options = {}) {
@@ -67,12 +113,18 @@ class ScheduleManager {
       );
     }
 
+    const lockTtl = options.lockTtl || DEFAULT_LOCK_TTL_MS;
+
     const task = cron.schedule(
       cronExpression,
       async () => {
-        // In a cluster every worker registers the same schedules; only the
-        // singleton worker executes them so a job never runs N times.
-        if (!isSingletonWorker()) return;
+        // Every worker of every instance registers the same schedules; only
+        // one of them may execute a given tick. Without a distributed lease
+        // this is host-local, so N containers still run the job N times.
+        const claim = claimTick(name, lockTtl);
+        // Stay synchronous when there is no lease to await — callers rely on
+        // the overlap guard being set before the first tick yields.
+        if (claim !== true && !(await claim)) return;
 
         const item = this.tasks.get(name);
         if (!item || item.isExecuting) {

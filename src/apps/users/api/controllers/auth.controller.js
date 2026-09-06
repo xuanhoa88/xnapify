@@ -239,9 +239,10 @@ export async function logout(req, res) {
     // Clear token cookies
     clearAllAuthCookies(res);
 
-    // Also clear cache entry for this token (if present)
+    // Drop every cached verdict for this token (positive and negative) —
+    // `cache.delete()` alone leaves the type-keyed negative entries behind.
     if (req.token) {
-      container.resolve('jwt').cache.delete(req.token);
+      container.resolve('jwt').forgetToken(req.token);
     }
 
     return http.sendSuccess(res, { message: 'Logged out successfully' });

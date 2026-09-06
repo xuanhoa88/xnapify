@@ -98,6 +98,9 @@
       "loadingMore": "Loading more...",
       "searchPlaceholder": "Search...",
       "clearSearch": "Clear search"
+    },
+    "toast": {
+      "close": "Close notification"
     }
   },
   "form": {

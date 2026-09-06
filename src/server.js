@@ -6,6 +6,7 @@
  */
 
 import 'dotenv-flow/config';
+import { AsyncLocalStorage } from 'async_hooks';
 import cluster from 'cluster';
 import crypto from 'crypto';
 import fs from 'fs/promises';
@@ -48,6 +49,7 @@ import { createRequestI18n } from '@shared/i18n/request.js';
 import { configureJwt } from '@shared/jwt/index.js';
 import { NodeRedManager } from '@shared/node-red/index.js';
 import { configureStore, features } from '@shared/renderer/redux/index.js';
+import { beginDraining } from '@shared/utils/lifecycle.js';
 import {
   getClusterWorkerCount,
   getWorkerIndex,
@@ -120,12 +122,25 @@ const STATIC_SECURITY_HEADERS = Object.entries({
     'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()',
   'Cross-Origin-Opener-Policy': 'same-origin',
   'Cross-Origin-Resource-Policy': 'same-origin',
-  // HSTS is only meaningful over TLS; production is expected to sit behind
-  // a TLS-terminating proxy. Never emit it in development (plain http).
-  ...(!__DEV__
-    ? { 'Strict-Transport-Security': 'max-age=31536000; includeSubDomains' }
-    : {}),
 });
+
+// HSTS and `upgrade-insecure-requests` are only correct when TLS really is
+// terminated in front of this process. Browsers ignore HSTS over plain http,
+// but they DO honour `upgrade-insecure-requests` there, so emitting it on a
+// plain-http deployment (bare VM, docker-compose without a TLS proxy) rewrites
+// every subresource to https:// against a port that speaks none, and the page
+// renders blank. Both are therefore gated on `isTlsTerminated()`, never on
+// NODE_ENV alone.
+const HSTS_HEADER = 'max-age=31536000; includeSubDomains';
+
+// Orchestrator probes. Liveness must never depend on application-level policy
+// (maintenance mode, feature flags): a probe that 503s makes the orchestrator
+// restart an otherwise healthy pod.
+const PROBE_PATHS = Object.freeze(new Set(['/api/health', '/api/ready']));
+
+// Minimum length of XNAPIFY_MAINTENANCE_BYPASS_TOKEN for the magic-link path.
+// Mirrors the production floor in shared/config/env.js.
+const MAINTENANCE_BYPASS_TOKEN_MIN_LENGTH = 16;
 
 // File extensions that must NEVER trigger the SSR catch-all.
 // Hoisted as a frozen Set for O(1) lookup on every request.
@@ -185,6 +200,37 @@ const APP_METADATA = {
 // ---------------------------------------------------------------------------
 // Utilities
 // ---------------------------------------------------------------------------
+
+/**
+ * Whether TLS is terminated in front of this process.
+ *
+ * `XNAPIFY_TLS_TERMINATED` is the explicit override (`true`/`false`) for
+ * proxies that do not forward `x-forwarded-proto`. Otherwise Express decides
+ * from the request: `req.secure` honours `x-forwarded-proto` for the hops
+ * covered by the configured `trust proxy` setting.
+ *
+ * @param {import('express').Request} [req]
+ * @returns {boolean}
+ */
+function isTlsTerminated(req) {
+  const flag = process.env.XNAPIFY_TLS_TERMINATED;
+  if (flag === 'true') return true;
+  if (flag === 'false') return false;
+  return !!(req && req.secure);
+}
+
+/**
+ * Whether a path is one of the orchestrator probes.
+ *
+ * @param {string} pathname - `req.path`
+ * @returns {boolean}
+ */
+function isProbePath(pathname) {
+  if (typeof pathname !== 'string') return false;
+  const normalized =
+    pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname;
+  return PROBE_PATHS.has(normalized);
+}
 
 function validatePort(port, defaultPort = 1337) {
   const parsed = parseInt(port, 10);
@@ -355,6 +401,47 @@ async function validateCookieHeader(req, res) {
   return { authHeader, authCookie };
 }
 
+// Auth cookies the API may rotate while serving the SSR loopback.
+const ROTATABLE_AUTH_COOKIES = Object.freeze(['id_token', 'refresh_token']);
+
+/**
+ * Copy auth cookies set by a loopback API response onto the browser response.
+ *
+ * `me()` is a real HTTP request back through the API stack carrying the
+ * browser's cookies. When the access token is close to expiry the API rotates
+ * the refresh token and returns the replacement pair as Set-Cookie headers on
+ * that internal response. Dropping them leaves the browser holding a refresh
+ * token the server has already retired: its next use trips reuse detection and
+ * logs the user out. Forwarding them keeps the browser in step.
+ *
+ * @param {import('express').Response} res - Outgoing browser response
+ * @param {Response} response - Loopback fetch response
+ * @returns {void}
+ */
+function forwardLoopbackCookies(res, response) {
+  try {
+    if (!res || res.headersSent || !response || !response.headers) return;
+
+    const { headers } = response;
+    const setCookies =
+      typeof headers.getSetCookie === 'function'
+        ? headers.getSetCookie()
+        : [headers.get('set-cookie')].filter(Boolean);
+
+    for (const cookie of setCookies) {
+      const name = String(cookie).split('=')[0].trim();
+      // Appended last, so the browser keeps the newest value for the name.
+      if (ROTATABLE_AUTH_COOKIES.includes(name)) {
+        res.append('Set-Cookie', cookie);
+      }
+    }
+  } catch (err) {
+    if (__DEV__) {
+      console.warn('⚠️ SSR: could not forward loopback cookies:', err.message);
+    }
+  }
+}
+
 let requestCounter = 0;
 const requestIdPrefix = crypto.randomBytes(8).toString('hex');
 function generateRequestId() {
@@ -364,18 +451,94 @@ function generateRequestId() {
   return `${requestIdPrefix}-${timestamp}-${counter}`;
 }
 
+// ---------------------------------------------------------------------------
+// Request-scoped i18n (API path)
+// ---------------------------------------------------------------------------
+
+/**
+ * i18next clone per available locale.
+ *
+ * The process-wide instance must never have its language switched per request
+ * (see shared/i18n/request.js), so the API path resolves through a clone
+ * pinned to the request's negotiated locale. Clones are read-only translation
+ * views over the shared resource store, so one per locale is enough — the set
+ * is bounded by AVAILABLE_LOCALES.
+ *
+ * @param {string} locale - Negotiated locale
+ * @returns {import('i18next').i18n} Locale-pinned instance
+ */
+const localeI18nInstances = new Map();
+function getLocaleI18n(locale) {
+  if (!locale || !Object.keys(AVAILABLE_LOCALES).includes(locale)) return i18n;
+
+  let instance = localeI18nInstances.get(locale);
+  if (!instance) {
+    try {
+      instance = createRequestI18n(locale);
+    } catch {
+      instance = i18n;
+    }
+    localeI18nInstances.set(locale, instance);
+  }
+  return instance;
+}
+
+const requestI18nStorage = new AsyncLocalStorage();
+
+/**
+ * Binding published as `container.resolve('i18n')`.
+ *
+ * Reads forward to the locale-pinned instance of the request in flight, and
+ * fall back to the singleton outside a request (boot, schedulers). Without it
+ * the API answers in whatever language the singleton last held — effectively
+ * always English, since only SSR clones switch language.
+ *
+ * @returns {import('i18next').i18n} Request-aware facade
+ */
+function createScopedI18n() {
+  return new Proxy(i18n, {
+    get(target, prop) {
+      const active = requestI18nStorage.getStore() || target;
+      const value = active[prop];
+      return typeof value === 'function' ? value.bind(active) : value;
+    },
+  });
+}
+
+/**
+ * Pin the request's locale for everything downstream on the API path.
+ *
+ * @returns {import('express').RequestHandler} Middleware
+ */
+function apiI18nMiddleware() {
+  return (req, res, next) => {
+    const requestI18n = getLocaleI18n(req.language);
+    req.i18n = requestI18n;
+    req.t = requestI18n.t.bind(requestI18n);
+    requestI18nStorage.run(requestI18n, next);
+  };
+}
+
 function maintenanceMiddleware() {
   return (req, res, next) => {
+    // 0. Orchestrator probes are exempt. Maintenance mode is an
+    //    application-level policy; liveness/readiness must not depend on it or
+    //    the orchestrator restarts the very pod that is serving the
+    //    maintenance page (.docker/docker-compose.yml health-checks /api/ready).
+    if (isProbePath(req.path)) return next();
+
     // 1. Is Maintenance Mode ON?
     const isMaintenance = process.env.XNAPIFY_MAINTENANCE_MODE === 'true';
     const bypassToken = process.env.XNAPIFY_MAINTENANCE_BYPASS_TOKEN;
 
-    // 2. Bypass Token Magic Link — only process when maintenance is active
-    //    and the token is long enough to avoid route collisions
+    // 2. Bypass Token Magic Link — only process when maintenance is active and
+    //    the token is long enough to avoid route collisions. The floor matches
+    //    the production minimum enforced by shared/config/env.js, so a token
+    //    that works here can never be rejected at boot.
     if (
       isMaintenance &&
       bypassToken &&
-      bypassToken.length >= 8 &&
+      bypassToken.length >= MAINTENANCE_BYPASS_TOKEN_MIN_LENGTH &&
       req.path === `/${bypassToken}`
     ) {
       setSecureCookie(res, 'xnapify_maintenance_bypass', bypassToken, {
@@ -407,7 +570,7 @@ function maintenanceMiddleware() {
   };
 }
 
-function buildCspHeader(nonce) {
+function buildCspHeader(nonce, { upgradeInsecure = false } = {}) {
   return [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}'`,
@@ -422,7 +585,8 @@ function buildCspHeader(nonce) {
     "base-uri 'self'",
     "form-action 'self'",
     "frame-ancestors 'none'",
-    'upgrade-insecure-requests',
+    // Only when TLS actually terminates in front of us — see HSTS_HEADER.
+    ...(upgradeInsecure ? ['upgrade-insecure-requests'] : []),
   ].join('; ');
 }
 
@@ -458,7 +622,38 @@ export function invalidateCaches() {
   if (__DEV__) console.log('🗑️  Caches cleared');
 }
 
-function computeSsrKey(req, baseUrl, locale, authHeader) {
+/**
+ * Short, stable fingerprint of the public settings snapshot seeded into a
+ * rendered page.
+ *
+ * The settings service hands back the same object identity until a write
+ * invalidates its cache, so the hash is computed once per snapshot and looked
+ * up by identity afterwards.
+ *
+ * @param {object|null} publicSettings - Seeded public settings, or null
+ * @returns {string} Fingerprint ('none' when nothing was seeded)
+ */
+const settingsFingerprints = new WeakMap();
+function computeSettingsFingerprint(publicSettings) {
+  if (!publicSettings || typeof publicSettings !== 'object') return 'none';
+
+  const cached = settingsFingerprints.get(publicSettings);
+  if (cached) return cached;
+
+  const entries = Object.keys(publicSettings)
+    .sort()
+    .map(key => [key, publicSettings[key]]);
+  const fingerprint = crypto
+    .createHash('sha256')
+    .update(JSON.stringify(entries))
+    .digest('hex')
+    .slice(0, 12);
+
+  settingsFingerprints.set(publicSettings, fingerprint);
+  return fingerprint;
+}
+
+function computeSsrKey(req, baseUrl, locale, authHeader, publicSettings) {
   if (!SERVER_CONFIG.enableSSRCache) return null;
 
   const url = new URL(req.url, baseUrl);
@@ -467,7 +662,12 @@ function computeSsrKey(req, baseUrl, locale, authHeader) {
   );
   if (params.length > 0) return null;
 
-  return `${req.path}:${locale}:${crypto
+  // The cached HTML embeds the seeded public settings, so they are part of the
+  // cache identity: without this an admin write stays invisible for up to
+  // ssrCacheTTL, and under clustering flickers as workers expire separately.
+  return `${req.path}:${locale}:${computeSettingsFingerprint(
+    publicSettings,
+  )}:${crypto
     .createHash('sha256')
     .update(authHeader)
     .digest('hex')
@@ -562,14 +762,51 @@ async function initializeViews(context) {
   return views;
 }
 
+/**
+ * Read the public settings dictionary straight from the settings engine.
+ *
+ * The `settings` Redux slice is written for the browser: its thunk calls
+ * `fetch('/api/settings/public')`, which on the server is a real loopback
+ * HTTP request through the whole Express stack, once per render. The service
+ * behind that endpoint lives in this very process, already memoised for a
+ * minute and already invalidated on write, so the server seeds the store
+ * instead of calling itself. The client keeps fetching exactly as before —
+ * the view module's `boot()` hook only dispatches when the store is empty.
+ *
+ * Returns null when settings are unavailable (module not installed, engine
+ * not ready, database error), which falls back to the fetch path.
+ *
+ * @param {object} req - Express request
+ * @returns {Promise<object|null>} Public settings map, or null
+ */
+async function loadPublicSettings(req) {
+  try {
+    const container = req.app.get('container');
+    if (!container || !container.has('settings')) return null;
+
+    const settings = container.resolve('settings');
+    if (!settings || typeof settings.getPublic !== 'function') return null;
+
+    const dictionary = await settings.getPublic();
+    return dictionary && typeof dictionary === 'object' ? dictionary : null;
+  } catch (error) {
+    if (__DEV__) {
+      console.warn('⚠️ SSR: public settings seed failed:', error.message);
+    }
+    return null;
+  }
+}
+
 async function createReduxStore(
   { fetch, history, locale, i18n: requestI18n = i18n },
   options = {},
 ) {
-  const { hasAuthCookie = false } = options;
+  const { hasAuthCookie = false, publicSettings = null } = options;
 
   const store = configureStore(
-    { user: { data: null } },
+    publicSettings
+      ? { user: { data: null }, settings: publicSettings }
+      : { user: { data: null } },
     { fetch, history, locale, i18n: requestI18n },
   );
 
@@ -639,14 +876,21 @@ const deduplicateEntries = entries => {
 const loadSsrResources = async () => {
   const rawScripts = [];
   const rawStyles = [];
+  let viewChunks = {};
+  let localeChunks = {};
 
   try {
     const statsPath = path.resolve(__dirname, 'stats.json');
-    const { scripts = [], stylesheets = [] } = JSON.parse(
-      await fs.readFile(statsPath, 'utf8'),
-    );
+    const {
+      scripts = [],
+      stylesheets = [],
+      views = {},
+      locales = {},
+    } = JSON.parse(await fs.readFile(statsPath, 'utf8'));
     rawScripts.push(...scripts);
     rawStyles.push(...stylesheets);
+    viewChunks = views;
+    localeChunks = locales;
   } catch (err) {
     if (__DEV__) console.error('❌ Failed to load stats.json:', err);
   }
@@ -659,9 +903,95 @@ const loadSsrResources = async () => {
   return {
     App,
     Html,
+    viewChunks,
+    localeChunks,
     scripts: deduplicateEntries(rawScripts.map(normalizeEntry)),
     stylesheets: deduplicateEntries(rawStyles.map(normalizeEntry)),
   };
+};
+
+/**
+ * Script tags for the module dictionaries of the language being rendered.
+ *
+ * Module translations are chunked per locale so a reader never downloads a
+ * language they are not seeing. The server already knows which one it just
+ * rendered in, so it names that chunk instead of letting the browser discover
+ * it after the bootstrap bundle runs. The default locale rides along as the
+ * fallback i18next resolves missing keys against.
+ *
+ * @param {string} locale - Locale this response was rendered in
+ * @param {Object} localeChunks - stats.json map of locale → chunk files
+ * @returns {string[]} Script URLs
+ */
+function collectLocaleChunks(locale, localeChunks) {
+  if (!localeChunks) return [];
+
+  const files = new Set();
+  for (const code of new Set([locale, DEFAULT_LOCALE])) {
+    const chunks = localeChunks[code];
+    if (Array.isArray(chunks)) chunks.forEach(f => files.add(f));
+  }
+
+  return Array.from(files);
+}
+
+/**
+ * Script tags for the chunks a lazily loaded view needs.
+ *
+ * Views ship one chunk per route, so without this the browser would only
+ * discover the matched route's chunk after running the bootstrap bundle:
+ * two extra sequential round trips before hydration. Naming them here puts
+ * them in the same response as the entry bundle, and rspack chunks register
+ * themselves on load, so the runtime finds them already installed.
+ *
+ * @param {Object} views - Router instance that resolved this request
+ * @param {Object} viewChunks - stats.json map of view file → chunk files
+ * @returns {string[]} Script URLs, empty when nothing is known
+ */
+function collectViewChunks(views, viewChunks) {
+  if (!views || !viewChunks) return [];
+
+  const paths = views.viewAssets;
+  if (!Array.isArray(paths) || paths.length === 0) return [];
+
+  const files = new Set();
+  for (const filePath of paths) {
+    // Router paths look like './(default)/views/login/_route.js'; the
+    // manifest is keyed by the same path without the leading './'.
+    const key = String(filePath).replace(/^\.\//, '');
+    const chunks = viewChunks[key];
+    if (Array.isArray(chunks)) chunks.forEach(f => files.add(f));
+  }
+
+  return Array.from(files);
+}
+
+/**
+ * Assets of the deferred extensions whose slots this page rendered.
+ *
+ * A slot-only extension is normally left out of the page so that the browser
+ * fetches it only when a namespace it subscribes to activates. That is wrong
+ * for the one page it does render on: SSR already put its markup in the
+ * response, so the stylesheet has to be there too or the first paint shows
+ * unstyled content until the client bundle catches up.
+ *
+ * @param {Object} views - Router instance that resolved this request
+ * @returns {{stylesheets: Array<Object>, scripts: Array<Object>}}
+ */
+const getDeferredExtensionResources = views => {
+  const empty = { stylesheets: [], scripts: [] };
+  if (!views) return empty;
+
+  try {
+    const namespaces = views.viewNamespaces;
+    if (!Array.isArray(namespaces) || namespaces.length === 0) return empty;
+    return extensionManager.getDeferredResources(namespaces) || empty;
+  } catch (err) {
+    if (__DEV__) {
+      console.error('❌ Failed to read deferred extension assets:', err);
+    }
+    return empty;
+  }
 };
 
 const getSsrResources = () => {
@@ -689,16 +1019,40 @@ async function streamReactResponse(
     abortController,
     metadata = {},
     status = 200,
+    views = null,
   },
 ) {
   const executeStreamingRender = async (resolve, reject) => {
     try {
-      const { scripts, stylesheets, App, Html } = await getSsrResources();
+      const { scripts, stylesheets, viewChunks, localeChunks, App, Html } =
+        await getSsrResources();
+
+      // Chunks for the view and the language that were just rendered, so the
+      // browser starts them with the entry bundle rather than after it.
+      const routeScripts = deduplicateEntries(
+        [
+          ...collectViewChunks(views, viewChunks),
+          ...collectLocaleChunks(context.locale, localeChunks),
+        ].map(normalizeEntry),
+      );
+
+      // Extensions the browser may fetch lazily, except on this page: their
+      // slots are in the markup being streamed, so their assets ship with it.
+      const deferredExtensions = getDeferredExtensionResources(views);
 
       const htmlData = {
         ...metadata,
-        stylesheets: [...stylesheets, ...getExtensionUrls('cssUrls')],
-        scripts: [...scripts, ...getExtensionUrls('scriptUrls')],
+        stylesheets: deduplicateEntries([
+          ...stylesheets,
+          ...getExtensionUrls('cssUrls'),
+          ...deferredExtensions.stylesheets,
+        ]),
+        scripts: deduplicateEntries([
+          ...scripts,
+          ...routeScripts,
+          ...getExtensionUrls('scriptUrls'),
+          ...deferredExtensions.scripts,
+        ]),
         locale: context.locale,
         appState: {
           redux: context.store.getState(),
@@ -831,8 +1185,34 @@ function makeSsrMiddleware(baseUrl, { isLocalHost = false } = {}) {
         : availableKeys.find(k => k.startsWith(rawLocale)) || DEFAULT_LOCALE;
       const { authHeader, authCookie } = await validateCookieHeader(req, res);
 
+      // Public settings are seeded into the store AND folded into the cache
+      // key, so they must be read before the cache lookup. The read carries
+      // its own ceiling: passed as an argument to createReduxStore it was
+      // evaluated before promiseWithDeadline() was ever entered, so a slow
+      // settings query ran unbounded until the 60s request timeout. A timeout
+      // here degrades to the client-side fetch path instead.
+      let publicSettings = null;
+      try {
+        publicSettings = await promiseWithDeadline(
+          loadPublicSettings(req),
+          SERVER_TIMEOUTS.STORE_INIT,
+          'Public settings load',
+        );
+      } catch (settingsErr) {
+        console.warn(
+          '⚠️ SSR: public settings seed skipped:',
+          settingsErr.message,
+        );
+      }
+
       // Compute cache key
-      const cacheKey = computeSsrKey(req, baseUrl, locale, authCookie);
+      const cacheKey = computeSsrKey(
+        req,
+        baseUrl,
+        locale,
+        authCookie,
+        publicSettings,
+      );
 
       // Check cache
       const cached = fetchSsrCache(cacheKey);
@@ -912,17 +1292,26 @@ function makeSsrMiddleware(baseUrl, { isLocalHost = false } = {}) {
         new URLSearchParams(context.history.location.search),
       );
 
-      // Create fetch with abort controller
-      context.fetch = createFetch(globalThis.fetch, {
-        signal: abortController.signal,
-        defaults: {
-          baseUrl,
-          headers: {
-            Cookie: authHeader,
-            'User-Agent': req.headers['user-agent'] || 'xnapify',
+      // Create fetch with abort controller. The loopback runs through the
+      // real API stack, so a response may carry rotated auth cookies —
+      // forward them to the browser instead of discarding them.
+      context.fetch = createFetch(
+        async (input, init) => {
+          const response = await globalThis.fetch(input, init);
+          forwardLoopbackCookies(res, response);
+          return response;
+        },
+        {
+          signal: abortController.signal,
+          defaults: {
+            baseUrl,
+            headers: {
+              Cookie: authHeader,
+              'User-Agent': req.headers['user-agent'] || 'xnapify',
+            },
           },
         },
-      });
+      );
 
       // Initialize Redux store
       context.store = await promiseWithDeadline(
@@ -935,6 +1324,7 @@ function makeSsrMiddleware(baseUrl, { isLocalHost = false } = {}) {
           },
           {
             hasAuthCookie: !!authCookie,
+            publicSettings,
           },
         ),
         SERVER_TIMEOUTS.STORE_INIT,
@@ -984,7 +1374,10 @@ function makeSsrMiddleware(baseUrl, { isLocalHost = false } = {}) {
         ? crypto.randomBytes(16).toString('base64')
         : undefined;
       if (nonce) {
-        res.setHeader('Content-Security-Policy', buildCspHeader(nonce));
+        res.setHeader(
+          'Content-Security-Policy',
+          buildCspHeader(nonce, { upgradeInsecure: isTlsTerminated(req) }),
+        );
       }
 
       const status = page.status || 200;
@@ -999,6 +1392,7 @@ function makeSsrMiddleware(baseUrl, { isLocalHost = false } = {}) {
           startTime,
           metadata: extractPageMetadata(page, req, isLocalHost),
           component: page.component,
+          views,
         }),
         SERVER_TIMEOUTS.RENDER,
         'SSR render',
@@ -1320,7 +1714,9 @@ export async function bootstrapApp(app, server, options = {}) {
   apiContainer.instance('cwd', SERVER_CONFIG.cwd);
   apiContainer.instance('env', SERVER_CONFIG.nodeEnv);
   apiContainer.instance('jwt', configureJwt());
-  apiContainer.instance('i18n', i18n);
+  // Request-scoped: resolves to the locale-pinned clone of the request in
+  // flight, and to the singleton outside one.
+  apiContainer.instance('i18n', createScopedI18n());
   apiContainer.instance('extension', extensionManager);
 
   // Set api container
@@ -1392,6 +1788,9 @@ export async function bootstrapApp(app, server, options = {}) {
       for (const [k, v] of STATIC_SECURITY_HEADERS) {
         res.setHeader(k, v);
       }
+      if (!__DEV__ && isTlsTerminated(req)) {
+        res.setHeader('Strict-Transport-Security', HSTS_HEADER);
+      }
     } catch (err) {
       console.error('❌ Error setting security headers:', err);
     }
@@ -1443,6 +1842,7 @@ export async function bootstrapApp(app, server, options = {}) {
   // API routes
   const api = await import('./bootstrap/api/index.js');
   const apiRouter = await api.default(app, extensionManager);
+  app.use('/api', apiI18nMiddleware());
   app.use('/api', apiRouter);
   appState.apiDrain = api.drain;
 
@@ -1594,6 +1994,14 @@ export async function destroyServer(server) {
           resolve();
         }
       });
+
+      // `close()` waits for every socket to go away, and an idle keep-alive
+      // socket never does on its own — it would hold the shutdown open past
+      // the orchestrator's grace period until it SIGKILLs us. Idle sockets
+      // are safe to drop immediately; in-flight requests still finish.
+      if (typeof server.closeIdleConnections === 'function') {
+        server.closeIdleConnections();
+      }
     });
   }
 }
@@ -1609,18 +2017,43 @@ const hotAPI =
 export const hot = hotAPI;
 
 if (hotAPI) {
-  hotAPI.accept(() => {
+  // Self-accept so an edit anywhere below this entry does not bubble out of
+  // the bundle. Note that a one-argument `accept(fn)` registers an *error*
+  // handler, not an apply callback — it runs only if re-executing this module
+  // throws — so the cache clearing lives in `dispose`, which does run on
+  // every apply, before the replacement instance is created.
+  //
+  // A successful apply still produces a module instance the running Express
+  // app cannot see: `tools/tasks/dev.js` holds middleware closed over the old
+  // one. That is why the dev task reloads the whole bundle instead of
+  // trusting this; see its `checkForUpdate`.
+  hotAPI.dispose(() => {
     invalidateCaches();
     console.log('🔄 HMR: SSR dependencies updated, caches cleared');
   });
-} else if (
-  cluster.isPrimary &&
-  !isClusterWorker() &&
-  SERVER_CONFIG.clusterWorkers > 1
-) {
-  runClusterPrimary(SERVER_CONFIG.clusterWorkers);
+  hotAPI.accept();
 } else {
-  startServer();
+  // Validate the environment BEFORE choosing a process model. Left inside
+  // bootstrapApp it only ever ran in a worker, so a bad env under clustering
+  // surfaced as every worker throwing and the primary restarting them with
+  // backoff for ~25s — and the check most specific to clustering (Redis
+  // required when workers > 1) could never fire in the primary at all.
+  try {
+    validateEnv();
+  } catch (err) {
+    console.error(`❌ ${err.message}`);
+    process.exit(1);
+  }
+
+  if (
+    cluster.isPrimary &&
+    !isClusterWorker() &&
+    SERVER_CONFIG.clusterWorkers > 1
+  ) {
+    runClusterPrimary(SERVER_CONFIG.clusterWorkers);
+  } else {
+    startServer();
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1648,6 +2081,9 @@ function runClusterPrimary(workerCount) {
   }
 
   const fork = index => {
+    // XNAPIFY_CLUSTER_SIZE is the count the primary actually forked with —
+    // authoritative for workers, which would otherwise re-derive it from
+    // XNAPIFY_CLUSTER_WORKERS ('auto' can resolve differently later).
     const worker = cluster.fork({
       XNAPIFY_WORKER_INDEX: String(index),
       XNAPIFY_CLUSTER_SIZE: String(workerCount),
@@ -1767,13 +2203,33 @@ async function startServer() {
     const handleShutdown = signal => {
       if (shutdownPromise) return shutdownPromise;
       shutdownPromise = (async () => {
+        // First act: stop advertising readiness so the load balancer takes
+        // this instance out of rotation before its engines are torn down.
+        beginDraining();
         console.info(`\n🛑 ${signal} received, shutting down...`);
+
+        // The cluster primary SIGKILLs stragglers after SHUTDOWN; a single
+        // process or a worker started on its own has no such supervisor, so
+        // it bounds itself rather than outliving the orchestrator's grace
+        // period on one stuck engine or connection.
+        const forceExit = setTimeout(() => {
+          console.error(
+            `❌ Shutdown exceeded ${SERVER_TIMEOUTS.SHUTDOWN}ms; forcing exit`,
+          );
+          if (typeof server.closeAllConnections === 'function') {
+            server.closeAllConnections();
+          }
+          process.exit(1);
+        }, SERVER_TIMEOUTS.SHUTDOWN);
+        forceExit.unref();
+
         try {
           await destroyServer(server);
         } catch (e) {
           console.error('❌ Shutdown error:', e);
           process.exit(1);
         }
+        clearTimeout(forceExit);
         process.exit(0);
       })();
       return shutdownPromise;

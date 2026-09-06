@@ -19,8 +19,13 @@ Extensions follow a well-defined phase-sequential lifecycle. Each phase runs for
 
 ### Phase-Sequential Activation Order
 
-**View-side** (`activateViewNamespace`): `translations → providers → boot → routes`
+**View-side** (`activateViewNamespace`): `translations → providers → menus → boot → routes`
 **API-side** (`_performActivate`): `translations → providers → migrations → models → seeds → boot → routes`
+
+**Deactivation** — view side (`deactivateViewNamespace`): `shutdown → removeNamespace → unregister`; API side (`_performDeactivate`): `shutdown → unregister models → removeNamespace`.
+`shutdown` is a real lifecycle phase — it sits between `boot` and `routes` in both arrays in
+`shared/utils/lifecycle.js`. The module autoloaders filter it out (application modules are never
+unloaded), so it only ever runs for extensions, which can be switched off at runtime.
 
 ### Boot-time Hooks (no DI context)
 
@@ -30,7 +35,8 @@ Extensions follow a well-defined phase-sequential lifecycle. Each phase runs for
 
 - **`providers({ container })`**: Called once per bootstrap (client) or once per request (SSR). Use to inject Redux reducers or other per-load setup.
 - **`boot({ container, registry })`**: Re-runs on every server boot. Register IPC handlers, subscribe to hooks. Data layer (migrations, models, seeds) is already processed before this runs.
-- **`shutdown({ container, registry })`**: Called on deactivation. MUST unsubscribe from all hooks. Extension models are auto-unregistered from the `ModelRegistry`.
+- **`menus({ store, i18n })`** _(view side)_: dispatch `registerMenu(...)` for the extension's sidebar entries. This is the **only** correct place for navigation. A route's `setup()` cannot do it — the sidebar has to list a page before the user can navigate to it, and an extension without routes has no `setup()` at all. The manager runs it on activation, once per SSR request, and again whenever the language changes, so it must be idempotent (`registerMenu` overwrites a section by id).
+- **`shutdown({ container, registry, store })`**: Called on deactivation. MUST unsubscribe from all hooks, and MUST `unregisterMenu(...)` anything `menus()` registered — unlike an application module, an extension can be switched off at runtime. Extension models are auto-unregistered from the `ModelRegistry`.
 
 ### One-time Hooks (backend only)
 
@@ -90,8 +96,9 @@ Extensions follow a well-defined phase-sequential lifecycle. Each phase runs for
 3. **Frontend Entry (`views/index.js`):**
    - Export an object containing `translations`, `providers`, `boot`, and `shutdown`.
    - **`providers({ container })`**: Use `store.injectReducer(name, reducer)` to inject Redux state. Called once per bootstrap (before routes render).
-   - **`boot(registry)`**: Use `registry.registerSlot('extension.point', Component)` to inject UI. Use `registry.registerHook` to inject validation schema extenders or data middleware.
-   - **`shutdown(registry)`**: MUST exactly inverse `boot` with `unregisterSlot` and `unregisterHook`.
+   - **`boot({ container, registry })`**: Use `registry.registerSlot('extension.point', Component)` to inject UI. Use `registry.registerHook` to inject validation schema extenders or data middleware.
+   - **`menus({ store, i18n })`**: Dispatch `registerMenu(...)` for sidebar entries. See `src/extensions/posts-module/views/index.js`. Declaring this hook also makes the extension load on every page instead of waiting for one of its slots — the sidebar is everywhere, so a deferred bundle would leave the entry missing.
+   - **`shutdown({ registry, store })`**: MUST exactly inverse `boot` with `unregisterSlot`/`unregisterHook`, and inverse `menus` with `unregisterMenu`.
 
 4. **IPC Pipelines:**
    To allow the frontend to communicate securely with the backend, use IPC pipelines.
@@ -129,7 +136,7 @@ Both use the shared `_connectRouter(routerKey, router)` method internally. Route
 
 ## Namespace Activation (View-side only)
 
-- **`activateViewNamespace(ns)`**: Activates all extensions for a namespace (translations → providers → boot → register)
+- **`activateViewNamespace(ns)`**: Activates all extensions for a namespace (translations → providers → menus → boot → register)
 - **`deactivateViewNamespace(ns)`**: Deactivates all extensions (shutdown → removeNamespace → unregister)
 - **`ensureViewNamespaceActive(ns)`**: Activates only if not already active
 - **`isViewNamespaceActive(ns)`**: Checks if namespace is currently active
@@ -308,6 +315,29 @@ When styling extensions:
 2. **Explicit Layers**: If you need to participate in the layer cascade explicitly (e.g. to allow your base styles to be overridden by Tailwind utilities), wrap your styles in `@layer extension { ... }`.
 3. **DO NOT strip layers**: Never attempt to remove `@layer` from the build pipeline, as this destroys the priority hierarchy between Radix UI and Tailwind CSS.
 4. **Polyfills**: Minification handles iOS 14 graceful degradation automatically. You do not need to worry about specificity inflation polyfills (like `:not(#\#)`) because they are disabled.
+
+### The host's Radix subset is a contract
+
+Extensions are compiled separately and ship no Radix Themes CSS of their own —
+every Radix token and component rule they use comes from the host stylesheet.
+The host does not ship all of Radix Themes: `shared/renderer/app.global.css`
+imports a subset of the colour scales, and `tools/postcss/RadixBreakpointTrim.js`
+drops the responsive variants for breakpoints nothing uses. Anything outside
+that subset resolves to an unset custom property and renders unstyled, with no
+build-time or runtime warning.
+
+**Available to extensions:**
+
+| Radix feature     | Available                                                                                     |
+| ----------------- | --------------------------------------------------------------------------------------------- |
+| Colour scales     | `amber` `blue` `cyan` `gray` `green` `indigo` `orange` `plum` `purple` `red` `slate` `yellow` |
+| Responsive props  | `initial`, `sm`, `md`, `lg`                                                                   |
+| Components/tokens | Everything in `@radix-ui/themes/components.css` + `tokens/base.css`                           |
+
+So `<Badge color="teal">` and `<Grid columns={{ initial: '1', xl: '4' }}>` will
+render without their colour or their breakpoint. Use a scale from the list, or
+ask for the host to add one — adding a scale means one `@import` in
+`app.global.css`, and adding a breakpoint means one entry in `DEFAULT_KEEP`.
 
 ## Content-Hashed Bundles & Cache Busting
 

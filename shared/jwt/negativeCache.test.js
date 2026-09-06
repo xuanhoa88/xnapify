@@ -50,11 +50,32 @@ describe('JWT negative cache', () => {
   });
 
   test('failure is keyed by expected type', () => {
-    const { refreshToken } = jwt.generateTokenPair({ id: 7 });
+    const refreshToken = jwt.generateTypedToken('refresh', { id: 7 });
 
     expect(() => jwt.verifyTypedToken(refreshToken, 'access')).toThrow();
     // Same token, different expected type: must not hit the negative entry
     expect(jwt.verifyTypedToken(refreshToken, 'refresh').id).toBe(7);
+  });
+
+  test('a token that verifies drops its earlier negative entries', () => {
+    // A refresh token first presented as an access token is recorded under
+    // the `access:` key; verifying it as a refresh token caches it positively
+    // and must clear that entry, not a non-existent bare-token one.
+    const refreshToken = jwt.generateTypedToken('refresh', { id: 11 });
+    expect(() => jwt.verifyTypedToken(refreshToken, 'access')).toThrow();
+    expect(jwtNegativeCache.size).toBe(1);
+
+    jwt.cacheToken(refreshToken, jwt.verifyTypedToken(refreshToken, 'refresh'));
+    expect(jwtNegativeCache.size).toBe(0);
+  });
+
+  test('the token-pair helpers refuse to mint unrevocable sessions', () => {
+    expect(() => jwt.generateTokenPair({ id: 1 })).toThrow(
+      /no longer supported/,
+    );
+    expect(() => jwt.refreshTokenPair('token')).toThrow(
+      expect.objectContaining({ code: 'JWT_TOKEN_PAIR_UNSUPPORTED' }),
+    );
   });
 
   test('valid tokens verify and are not negatively cached', () => {

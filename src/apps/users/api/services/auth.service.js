@@ -181,26 +181,28 @@ export async function authenticateUser(
     throw error;
   }
 
-  // Check if account is active
-  if (!user.is_active) {
-    const error = new Error('User inactive');
-    error.name = 'UserInactiveError';
-    error.status = 403;
-    throw error;
-  }
-
-  // Check if account is locked — either manually (is_locked, admin action)
-  // or automatically (locked_until, expires on its own).
   const now = Date.now();
-  const autoLocked = user.locked_until && user.locked_until.getTime() > now;
-  if (user.is_locked || autoLocked) {
-    const error = new Error('User locked');
-    error.name = 'UserLockedError';
-    error.status = 403;
-    throw error;
+
+  // A lockout that has run its course clears itself, counter included.
+  // Leaving `failed_login_attempts` behind ratchets the backoff tier up for
+  // good: one mistake after a lapsed 24 h lock immediately re-locks for
+  // another 24 h, which is exactly the permanent denial of service the
+  // time-boxed policy exists to prevent.
+  if (user.locked_until && user.locked_until.getTime() <= now) {
+    await user.update({ failed_login_attempts: 0, locked_until: null });
   }
 
-  // Verify password using global auth utilities
+  const autoLocked = user.locked_until && user.locked_until.getTime() > now;
+
+  // Verify password using global auth utilities.
+  //
+  // This runs BEFORE the account-state checks on purpose. "This account is
+  // inactive" and "too many failed attempts" are distinct 401 bodies, so
+  // answering them to a caller who has not proven any credentials turns the
+  // endpoint into an oracle: an attacker learns which addresses exist and
+  // which are already locked, and can keep them locked on demand. A locked
+  // account still cannot be entered — the checks below run either way — the
+  // reason is simply not disclosed until the password is right.
   const isValidPassword = await verifyPassword(password, user.password);
   if (!isValidPassword) {
     const attempts = (user.failed_login_attempts || 0) + 1;
@@ -219,6 +221,23 @@ export async function authenticateUser(
     const error = new Error('Invalid credentials');
     error.name = 'InvalidCredentialsError';
     error.status = 401;
+    throw error;
+  }
+
+  // Credentials are proven — from here the real reason can be disclosed.
+  if (!user.is_active) {
+    const error = new Error('User inactive');
+    error.name = 'UserInactiveError';
+    error.status = 403;
+    throw error;
+  }
+
+  // Locked either manually (is_locked, admin action) or automatically
+  // (locked_until, expires on its own).
+  if (user.is_locked || autoLocked) {
+    const error = new Error('User locked');
+    error.name = 'UserLockedError';
+    error.status = 403;
     throw error;
   }
 

@@ -87,6 +87,12 @@ describe('session.service', () => {
     const first = await sessions.issueTokenPair(payload(), deps());
     const second = await sessions.rotateTokenPair(first.refreshToken, deps());
 
+    // Age the rotation past the grace window so this reads as a replay
+    await models.RefreshToken.update(
+      { revoked_at: new Date(Date.now() - sessions.ROTATION_GRACE_MS - 1000) },
+      { where: { id: first.jti } },
+    );
+
     await expect(
       sessions.rotateTokenPair(first.refreshToken, deps()),
     ).rejects.toMatchObject({ name: 'RefreshTokenReuseError', status: 401 });
@@ -95,6 +101,93 @@ describe('session.service', () => {
     await expect(
       sessions.rotateTokenPair(second.refreshToken, deps()),
     ).rejects.toMatchObject({ name: 'RefreshTokenReuseError' });
+  });
+
+  it('treats a token re-presented right after rotation as a conflict, not reuse', async () => {
+    const first = await sessions.issueTokenPair(payload(), deps());
+    const second = await sessions.rotateTokenPair(first.refreshToken, deps());
+
+    // Parallel XHRs routinely present the same refresh token twice; the
+    // loser must not cost the user their session.
+    await expect(
+      sessions.rotateTokenPair(first.refreshToken, deps()),
+    ).rejects.toMatchObject({
+      name: 'RefreshTokenRotationConflictError',
+      code: 'REFRESH_TOKEN_ROTATION_CONFLICT',
+      status: 409,
+    });
+
+    // The family survived: the successor still rotates
+    await expect(
+      sessions.rotateTokenPair(second.refreshToken, deps()),
+    ).resolves.toBeDefined();
+  });
+
+  it('lets only one of several concurrent rotations win', async () => {
+    const first = await sessions.issueTokenPair(payload(), deps());
+
+    const results = await Promise.allSettled(
+      Array.from({ length: 4 }, () =>
+        sessions.rotateTokenPair(first.refreshToken, deps()),
+      ),
+    );
+
+    const winners = results.filter(r => r.status === 'fulfilled');
+    expect(winners).toHaveLength(1);
+    for (const loser of results.filter(r => r.status === 'rejected')) {
+      expect(loser.reason.name).toBe('RefreshTokenRotationConflictError');
+    }
+
+    // Exactly one live successor — the losers cleaned theirs up
+    const live = await models.RefreshToken.findAll({
+      where: { family_id: first.familyId, revoked_at: null },
+    });
+    expect(live).toHaveLength(1);
+
+    // And the family was never revoked
+    const winnerToken = winners[0].value.refreshToken;
+    await expect(
+      sessions.rotateTokenPair(winnerToken, deps()),
+    ).resolves.toBeDefined();
+  });
+
+  it('re-reads authorization claims from the database on rotation', async () => {
+    const adminRole = await models.Role.create({ name: 'admin' });
+    await user.addRole(adminRole);
+
+    const first = await sessions.issueTokenPair(
+      { id: user.id, email: user.email, is_admin: true },
+      deps(),
+    );
+    expect(jwt.verifyTypedToken(first.accessToken, 'access').is_admin).toBe(
+      true,
+    );
+
+    // Demotion never calls revokeUserSessions — rotation is what must notice
+    await user.setRoles([]);
+
+    const next = await sessions.rotateTokenPair(first.refreshToken, deps());
+    const rotated = jwt.verifyTypedToken(next.accessToken, 'access');
+    expect(rotated.is_admin).toBe(false);
+    expect(rotated.email).toBe(user.email);
+  });
+
+  it('keeps non-authorization claims across rotation', async () => {
+    const first = await sessions.issueTokenPair(
+      {
+        id: user.id,
+        email: user.email,
+        is_admin: false,
+        picture: 'avatar.png',
+        impersonator_id: 'admin-1',
+      },
+      deps(),
+    );
+
+    const next = await sessions.rotateTokenPair(first.refreshToken, deps());
+    const rotated = jwt.verifyTypedToken(next.accessToken, 'access');
+    expect(rotated.picture).toBe('avatar.png');
+    expect(rotated.impersonator_id).toBe('admin-1');
   });
 
   it('rejects a well-signed refresh token that was never issued', async () => {
@@ -250,6 +343,47 @@ describe('session.service', () => {
     await expect(assertSessionValid(otherDecoded)).rejects.toMatchObject({
       code: 'SESSION_REVOKED',
     });
+  });
+
+  it('revokeUserSessions deactivates the user API keys as well', async () => {
+    const key = await models.UserApiKey.create({
+      user_id: user.id,
+      name: 'CI',
+      token_prefix: 'eyJhbGciO',
+      is_active: true,
+    });
+
+    await sessions.revokeUserSessions(user.id, { models });
+
+    await key.reload();
+    expect(key.is_active).toBe(false);
+  });
+
+  it('revokeUserSessions leaves API keys alone when a session is kept', async () => {
+    const keep = await sessions.issueTokenPair(payload(), deps());
+    const key = await models.UserApiKey.create({
+      user_id: user.id,
+      name: 'CI',
+      token_prefix: 'eyJhbGciO',
+      is_active: true,
+    });
+
+    await sessions.revokeUserSessions(user.id, {
+      models,
+      exceptFamilyId: keep.familyId,
+    });
+
+    await key.reload();
+    expect(key.is_active).toBe(true);
+
+    // …unless the caller asks for it explicitly
+    await sessions.revokeUserSessions(user.id, {
+      models,
+      exceptFamilyId: keep.familyId,
+      revokeApiKeys: true,
+    });
+    await key.reload();
+    expect(key.is_active).toBe(false);
   });
 
   it('purgeExpired removes expired and long-revoked rows only', async () => {

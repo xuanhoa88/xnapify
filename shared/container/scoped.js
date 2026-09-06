@@ -14,9 +14,14 @@
  * registration, no reset, no cleanup — so an extension can use the
  * services it declared and cannot rebind or remove anyone else's.
  *
- * The allow-list is a set of binding names. `'*'` grants everything (for
- * first-party or explicitly trusted extensions). A trailing `:*` grants a
- * namespace, e.g. `users:*` matches `users:sessions`.
+ * The allow-list is a set of binding names. `'*'` grants everything the deny
+ * list does not take back (the caller decides who may declare it — see
+ * `getGrantedCapabilities`). A trailing `:*` grants a namespace, e.g.
+ * `users:*` matches `users:sessions`.
+ *
+ * The optional deny list wins over every grant, wildcard included, so a
+ * binding the host reserves for itself stays unreachable no matter what the
+ * allow-list says.
  */
 
 /**
@@ -40,11 +45,16 @@ export class CapabilityDeniedError extends Error {
  * Compile an allow-list into a matcher.
  *
  * @param {Iterable<string>} capabilities
+ * @param {Object} [options]
+ * @param {Iterable<string>} [options.deny] - Names refused even under `'*'`
  * @returns {(name: string) => boolean}
  */
-export function createCapabilityMatcher(capabilities) {
+export function createCapabilityMatcher(capabilities, { deny } = {}) {
   const exact = new Set();
   const prefixes = [];
+  const denied = new Set(
+    [...(deny || [])].filter(name => typeof name === 'string' && name.trim()),
+  );
   let all = false;
 
   for (const raw of capabilities || []) {
@@ -61,11 +71,12 @@ export function createCapabilityMatcher(capabilities) {
   }
 
   return name =>
-    all ||
-    exact.has(name) ||
-    prefixes.some(
-      prefix => typeof name === 'string' && name.startsWith(prefix),
-    );
+    !denied.has(name) &&
+    (all ||
+      exact.has(name) ||
+      prefixes.some(
+        prefix => typeof name === 'string' && name.startsWith(prefix),
+      ));
 }
 
 /**
@@ -75,18 +86,19 @@ export function createCapabilityMatcher(capabilities) {
  * @param {Iterable<string>} capabilities - Allowed binding names
  * @param {Object} [options]
  * @param {string} [options.owner='extension'] - Name used in error messages
+ * @param {Iterable<string>} [options.deny] - Bindings refused even under `'*'`
  * @returns {{ resolve: Function, has: Function, getBindingNames: Function, capabilities: string[] }}
  */
 export function createScopedContainer(
   container,
   capabilities,
-  { owner = 'extension' } = {},
+  { owner = 'extension', deny } = {},
 ) {
   if (!container || typeof container.resolve !== 'function') {
     throw new TypeError('createScopedContainer requires a container');
   }
 
-  const allowed = createCapabilityMatcher(capabilities);
+  const allowed = createCapabilityMatcher(capabilities, { deny });
   const granted = Object.freeze([...new Set(capabilities || [])]);
 
   return Object.freeze({

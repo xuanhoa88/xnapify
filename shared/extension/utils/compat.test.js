@@ -5,12 +5,16 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+/* global jest */
+
 import {
   DEFAULT_EXTENSION_CAPABILITIES,
+  RESERVED_CAPABILITIES,
   checkHostCompatibility,
   getGrantedCapabilities,
   getManifestContract,
   incompatibleExtensionError,
+  isTrustedExtension,
   satisfiesRange,
 } from './compat.js';
 
@@ -35,11 +39,81 @@ describe('extension compat', () => {
     });
 
     it('never grants reserved bindings', () => {
-      expect(
-        getGrantedCapabilities({
-          xnapify: { capabilities: ['db', 'jwt', 'extension', 'env'] },
-        }),
-      ).toEqual(['db']);
+      const granted = getGrantedCapabilities({
+        xnapify: { capabilities: ['db', 'jwt', 'extension', 'env'] },
+      });
+      expect(granted).toContain('db');
+      for (const reserved of RESERVED_CAPABILITIES) {
+        expect(granted).not.toContain(reserved);
+      }
+    });
+  });
+
+  describe('getGrantedCapabilities', () => {
+    let warn;
+
+    beforeEach(() => {
+      delete process.env.XNAPIFY_TRUSTED_EXTENSIONS;
+      warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      delete process.env.XNAPIFY_TRUSTED_EXTENSIONS;
+      warn.mockRestore();
+    });
+
+    it('adds declared capabilities to the defaults instead of replacing them', () => {
+      const granted = getGrantedCapabilities({
+        xnapify: { capabilities: ['db'] },
+      });
+      expect(granted).toEqual(
+        expect.arrayContaining([...DEFAULT_EXTENSION_CAPABILITIES, 'db']),
+      );
+    });
+
+    it('still grants the defaults for an empty declaration', () => {
+      // `capabilities: []` used to grant NOTHING — not even the
+      // side-effect-free defaults — so resolve('hook') threw for the two
+      // in-repo extensions that ship an empty array.
+      expect(getGrantedCapabilities({ xnapify: { capabilities: [] } })).toEqual(
+        [...DEFAULT_EXTENSION_CAPABILITIES],
+      );
+    });
+
+    it('ignores a self-declared wildcard', () => {
+      // The manifest is the extension's own package.json, so "*" in it is a
+      // self-grant of the whole container.
+      const granted = getGrantedCapabilities({
+        id: 'ext-a',
+        xnapify: { capabilities: ['*', 'db'] },
+      });
+      expect(granted).not.toContain('*');
+      expect(granted).toContain('db');
+      expect(console.warn).toHaveBeenCalledWith(
+        expect.stringContaining('XNAPIFY_TRUSTED_EXTENSIONS'),
+      );
+    });
+
+    it('honours the wildcard for a host-trusted extension', () => {
+      process.env.XNAPIFY_TRUSTED_EXTENSIONS = 'other, @acme/reports';
+      const manifest = {
+        id: 'ext-b',
+        name: '@acme/reports',
+        xnapify: { capabilities: ['*'] },
+      };
+      expect(isTrustedExtension(manifest)).toBe(true);
+      expect(getGrantedCapabilities(manifest)).toContain('*');
+    });
+
+    it('never grants a reserved binding, even to a trusted wildcard', () => {
+      process.env.XNAPIFY_TRUSTED_EXTENSIONS = 'ext-c';
+      const granted = getGrantedCapabilities({
+        id: 'ext-c',
+        xnapify: { capabilities: ['*', 'jwt', 'env', 'extension'] },
+      });
+      for (const reserved of RESERVED_CAPABILITIES) {
+        expect(granted).not.toContain(reserved);
+      }
     });
   });
 

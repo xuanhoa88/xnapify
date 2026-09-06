@@ -49,19 +49,22 @@ Modules interact with the core framework by exporting a **default object** with 
 
 1. **Setup Directory:** Create `src/apps/[module_name]/views/`.
 2. **The Index File (`views/index.js`):** Export a `default` object with the following hooks:
-   - `translations()`: returns the Rspack context for frontend locale JSON files, or an array `[context, customNamespace]`.
+   - `translations()`: returns the Rspack context for frontend locale JSON files, or an array `[context, customNamespace]`. Declare it with `{ mode: 'lazy' }` so each locale is its own chunk and readers download only the language they are seeing.
    - `providers({ container })`: bind UI components or Redux selectors/thunks to the container for cross-module usage.
-   - `routes()`: returns the Rspack context directly (e.g., `() => viewsContext`).
+   - `menus({ store, i18n })`: dispatch `registerMenu(...)` for the module's navigation. This is the **only** correct place for sidebar entries: views are chunked one per route, so a menu registered from a route's `setup()` would not exist until the user had already visited that route. It runs once per SSR request and, on the client, again whenever the language changes.
+   - `routes()`: returns `[viewsContext, { lazy: true }]`. The context itself must be declared with `{ mode: 'lazy' }` so each route becomes its own chunk. **Every module must agree** — a module returning a bare context while the others are lazy raises `MixedRouteLoadingStrategyError` at boot.
 
-   _Phase order: `translations → providers → boot → routes` (defined in `shared/utils/lifecycle.js`)_
+   _Phase order: `translations → providers → menus → boot → routes` (defined in `shared/utils/lifecycle.js`)_
+
+   _`shared/utils/lifecycle.js` also lists a `shutdown` phase between `boot` and `routes`, but both autoloaders filter it out: application modules are discovered once and never unloaded. A `shutdown()` on an app module is dead code — only extensions run it._
 
 3. **Defining Pages:**
    Views are discovered via hierarchical `_route.js` files.
    A standard `_route.js` should export:
    - `export const middleware`: permission guard (e.g., `requirePermission('resource:read')`)
    - `export function init({ store })`: injects Redux reducer via `store.injectReducer(SLICE_NAME, reducer)`.
-   - `export function setup({ store, i18n })`: registers the sidebar menu item.
-   - `export function teardown({ store })`: unregisters the menu item.
+   - `export function setup({ store, i18n })`: per-route registration re-run on every navigation. Do **not** register sidebar menus here — views are lazily chunked, so the route module does not exist until the route is first matched. Use the module's `menus()` hook instead (see below).
+   - `export function teardown({ store })`: undoes `setup`.
    - `export function mount({ store, i18n, path })`: dispatches breadcrumbs.
    - `export function unmount({ store })`: cleanup on route exit.
    - `export async function getInitialProps({ fetch, i18n })`: SSR data fetching.

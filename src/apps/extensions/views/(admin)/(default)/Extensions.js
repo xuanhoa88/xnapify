@@ -90,24 +90,31 @@ function Extensions() {
   const actionTimersRef = useRef({});
 
   // Set an actionMap entry with a safety timeout that auto-clears it
-  const setActionWithTimeout = useCallback((id, label) => {
-    setActionMap(prev => ({ ...prev, [id]: label }));
+  const setActionWithTimeout = useCallback(
+    (id, label) => {
+      setActionMap(prev => ({ ...prev, [id]: label }));
 
-    // Cancel any existing timer for this ID
-    if (actionTimersRef.current[id]) {
-      clearTimeout(actionTimersRef.current[id]);
-    }
+      // Cancel any existing timer for this ID
+      if (actionTimersRef.current[id]) {
+        clearTimeout(actionTimersRef.current[id]);
+      }
 
-    actionTimersRef.current[id] = setTimeout(() => {
-      setActionMap(prev => {
-        if (!(id in prev)) return prev;
-        const next = { ...prev };
-        delete next[id];
-        return next;
-      });
-      delete actionTimersRef.current[id];
-    }, ACTION_TIMEOUT_MS);
-  }, []);
+      actionTimersRef.current[id] = setTimeout(() => {
+        setActionMap(prev => {
+          if (!(id in prev)) return prev;
+          const next = { ...prev };
+          delete next[id];
+          return next;
+        });
+        delete actionTimersRef.current[id];
+        // No completion event arrived in time (WebSocket down or the job is
+        // wedged). Re-read the server state so the card stops guessing and
+        // shows whatever actually happened.
+        dispatch(fetchExtensions());
+      }, ACTION_TIMEOUT_MS);
+    },
+    [dispatch],
+  );
 
   // Clear an actionMap entry and its safety timer
   const clearAction = useCallback(id => {

@@ -146,15 +146,6 @@ export async function quitRedis() {
   await Promise.allSettled(closing);
 }
 
-/**
- * Test hook: forget cached clients without closing them.
- * @private
- */
-export function resetRedisClients() {
-  client = null;
-  subscriber = null;
-}
-
 export default {
   isConfigured: isRedisConfigured,
   getClient: getRedisClient,

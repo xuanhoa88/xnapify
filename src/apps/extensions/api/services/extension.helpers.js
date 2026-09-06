@@ -195,6 +195,12 @@ export async function installExtensionDependencies(extensionDir, extension) {
         '--no-update-notifier',
         '--no-fund',
         '--engine-strict',
+        // Runtime extension installs are deliberately unpinned: an extension
+        // arrives as a zip or a hub download, so whatever lockfile it shipped
+        // describes the publisher's machine, not this deployment's resolution.
+        // Nothing here ships a lockfile either (see src/apps/extensions/README.md),
+        // so npm resolves the declared ranges and writes no lockfile back —
+        // which would otherwise change the directory the integrity hash covers.
         '--no-package-lock',
         // Never execute lifecycle scripts from third-party packages inside
         // the server process — extension code runs only through the

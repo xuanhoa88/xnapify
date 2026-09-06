@@ -87,15 +87,10 @@ describe('Auth Controller', () => {
       getRefreshTokenFromCookie: jest.fn(),
     };
 
+    // Token pairs are minted by the session service, never by the JWT
+    // instance — `generateTokenPair`/`refreshTokenPair` now throw.
     mockJwt = {
-      generateTokenPair: jest.fn(() => ({
-        accessToken: 'access-token',
-        refreshToken: 'refresh-token',
-      })),
-      refreshTokenPair: jest.fn(() => ({
-        accessToken: 'new-access-token',
-        refreshToken: 'new-refresh-token',
-      })),
+      forgetToken: jest.fn(),
       cache: {
         delete: jest.fn(),
       },
@@ -305,7 +300,7 @@ describe('Auth Controller', () => {
       );
       expect(sessionService.revokeByToken).toHaveBeenCalled();
       expect(cookies.clearAllAuthCookies).toHaveBeenCalledWith(res);
-      expect(mockJwt.cache.delete).toHaveBeenCalledWith('some-token');
+      expect(mockJwt.forgetToken).toHaveBeenCalledWith('some-token');
       expect(mockHttp.sendSuccess).toHaveBeenCalled();
     });
 

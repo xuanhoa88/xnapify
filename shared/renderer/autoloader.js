@@ -24,8 +24,7 @@
  *     runs every time, because on the server that context is per request.
  */
 
-import { getTranslations } from '@shared/i18n/loader.js';
-import { addNamespace } from '@shared/i18n/utils.js';
+import { registerResourceContext } from '@shared/i18n/resources.js';
 import { createRspackContextAdapter } from '@shared/utils/contextAdapter.js';
 import { VIEW_LIFECYCLE_PHASES } from '@shared/utils/lifecycle.js';
 
@@ -180,7 +179,29 @@ export function mergeAdapters(adapters) {
     }
   }
 
+  // Every source must agree on the loading strategy: the merged adapter is
+  // handed to a single collector, which cannot mix deferred and immediate
+  // entries for one file set. Disagreement is a wiring mistake, not a
+  // fallback — taking the eager path over a `mode: 'lazy'` context stores
+  // the load() promise itself as the module, so every route in the app
+  // silently resolves to "no component". Name the offenders instead.
+  const entries = [...adapters.entries()];
+  const eager = entries
+    .filter(([, a]) => a.lazy !== true)
+    .map(([name]) => name);
+  if (eager.length > 0 && eager.length !== entries.length) {
+    const err = new Error(
+      `View modules disagree on route loading strategy: ${eager.join(', ')} ` +
+        `returned an eager context while the rest are lazy. Return ` +
+        `[context, { lazy: true }] from routes() in each module's views/index.js.`,
+    );
+    err.name = 'MixedRouteLoadingStrategyError';
+    throw err;
+  }
+  const lazy = eager.length === 0;
+
   return {
+    lazy,
     files: () => allFiles,
     load: path => {
       const adapter = fileMap.get(path);
@@ -244,20 +265,19 @@ export function discoverViewModules(modulesContext) {
 
     // ─── Phase 1: translations ────────────────────────────────────────────
     errors.push(
-      ...(await runPhase('translations', lifecycles, (name, hook) => {
+      ...(await runPhase('translations', lifecycles, async (name, hook) => {
         const result = hook();
-        if (result) {
-          const [translationContext, customNs] = Array.isArray(result)
-            ? result
-            : [result];
-          if (translationContext) {
-            const translations = getTranslations(translationContext);
-            if (translations && Object.keys(translations).length > 0) {
-              const namespace = customNs || name;
-              addNamespace(namespace, translations);
-            }
-          }
-        }
+        if (!result) return;
+
+        const [translationContext, customNs] = Array.isArray(result)
+          ? result
+          : [result];
+        if (!translationContext) return;
+
+        // Hand over the context rather than its contents: the registry pulls
+        // only the locale in use, and pulls another one if the language
+        // changes. See shared/i18n/resources.js.
+        await registerResourceContext(customNs || name, translationContext);
       })),
     );
 
@@ -265,11 +285,19 @@ export function discoverViewModules(modulesContext) {
     const viewAdapters = new Map();
     errors.push(
       ...(await runPhase('routes', lifecycles, (name, hook) => {
-        const viewContext = hook();
+        // The hook returns either a context, or `[context, { lazy }]`.
+        // A lazy context returns promises from load(), so the router builds
+        // the tree from file paths and fetches each view when it is matched.
+        const result = hook();
+        const [viewContext, contextOptions = {}] = Array.isArray(result)
+          ? result
+          : [result];
+
         if (viewContext) {
           const rawAdapter = createRspackContextAdapter(viewContext);
           const prefix = `./${name}/views`;
           viewAdapters.set(name, {
+            lazy: contextOptions.lazy === true,
             files: () => rawAdapter.files().map(p => p.replace(/^\./, prefix)),
             load: p => rawAdapter.load(p.replace(prefix, '.')),
             resolve: p => rawAdapter.resolve(p.replace(prefix, '.')),
@@ -310,6 +338,24 @@ export function discoverViewModules(modulesContext) {
  * @param {object} context - DI context (store, container, ...)
  * @returns {Promise<object[]>} errors
  */
+/**
+ * Run the `menus` phase on its own.
+ *
+ * Menu payloads hold translated strings, not keys, so they are only correct
+ * for the language they were built in. The server rebuilds them per request;
+ * the browser boots once and must rebuild them itself whenever the reader
+ * switches language, or the sidebar stays in the old language until a full
+ * reload. `registerMenu` overwrites a section by id, so re-running is
+ * idempotent.
+ *
+ * @param {Map<string, object>} lifecycles - Module name → hooks
+ * @param {object} context - DI context (store, i18n, ...)
+ * @returns {Promise<object[]>} errors
+ */
+export async function runMenuModules(lifecycles, context) {
+  return runPhase('menus', lifecycles, (_, hook) => hook(context));
+}
+
 export async function bootViewModules(lifecycles, context) {
   const errors = [];
 
@@ -327,49 +373,16 @@ export async function bootViewModules(lifecycles, context) {
     })),
   );
 
-  // ─── Phase 3: boot ──────────────────────────────────────────────────────
+  // ─── Phase 3: menus ─────────────────────────────────────────────────────
+  // Navigation belongs to the module, not to one of its routes. Running it
+  // here means the sidebar is complete before the first render without any
+  // route module having been loaded. See shared/utils/lifecycle.js.
+  errors.push(...(await runMenuModules(lifecycles, context)));
+
+  // ─── Phase 4: boot ──────────────────────────────────────────────────────
   errors.push(
     ...(await runPhase('boot', lifecycles, (_, hook) => hook(context))),
   );
 
   return errors;
-}
-
-// =============================================================================
-// PUBLIC API
-// =============================================================================
-
-/**
- * Discover and boot all view modules in lifecycle order.
- *
- * Static discovery is cached per modules context; the providers and boot
- * phases run for every call with the supplied context.
- *
- * @param {object} modulesContext - Rspack import.meta.webpackContext or compatible
- * @param {object} context - DI context
- * @returns {Promise<{ viewAdapters: Map, mergedAdapter: object|null, errors: object[] }>}
- */
-export async function discoverModules(modulesContext, context) {
-  const startTime = Date.now();
-  const discovered = await discoverViewModules(modulesContext);
-  const errors = [
-    ...discovered.errors,
-    ...(await bootViewModules(discovered.lifecycles, context)),
-  ];
-
-  if (__DEV__) {
-    log(
-      `${discovered.lifecycles.size} lifecycle(s) booted in ${Date.now() - startTime}ms`,
-    );
-  }
-
-  if (errors.length > 0) {
-    log(`${errors.length} error(s) during module loading`, 'warn');
-  }
-
-  return {
-    viewAdapters: discovered.viewAdapters,
-    mergedAdapter: discovered.mergedAdapter,
-    errors,
-  };
 }

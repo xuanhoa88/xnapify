@@ -309,6 +309,25 @@ describe('Profile Controller', () => {
       expect(mockHttp.sendSuccess).toHaveBeenCalled();
     });
 
+    it('forwards the acting session id so the caller stays signed in', async () => {
+      req.user = { id: 1, sid: 'family-7' };
+      req.body = {
+        currentPassword: '1',
+        newPassword: '2',
+        confirmNewPassword: '2',
+      };
+      validateForm.mockReturnValue([true, null]);
+
+      await profileController.changePassword(req, res);
+
+      expect(profileService.changeUserPassword).toHaveBeenCalledWith(
+        1,
+        '1',
+        '2',
+        expect.objectContaining({ sessionId: 'family-7' }),
+      );
+    });
+
     it('should catch InvalidPasswordError', async () => {
       validateForm.mockReturnValue([true, null]);
       const error = new Error('Bad pwd');

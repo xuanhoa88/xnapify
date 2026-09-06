@@ -12,6 +12,10 @@
  * Redux reducer injection is handled per-route in _route.js init().
  */
 
+import { features } from '@shared/renderer/redux/index.js';
+
+const { registerMenu, unregisterMenu } = features;
+
 const viewsContext = import.meta.webpackContext('.', {
   recursive: true,
   regExp: /(?:\/_route|\/_layout)\.[cm]?[jt]sx?$/i,
@@ -37,6 +41,45 @@ export default {
   translations() {
     return translationsContext;
   },
+  /**
+   * Lifecycle: menus — contribute the sidebar entry for this extension.
+   *
+   * Navigation belongs to the extension, not to one of its routes: the entry
+   * has to exist on every page, while a route module is only reached once the
+   * user is already on the page it links to. The manager runs this on
+   * activation, once per SSR request, and again whenever the language changes.
+   */
+  menus({ store, i18n }) {
+    store.dispatch(
+      registerMenu({
+        ns: 'admin',
+        id: 'content',
+        label: i18n.t('admin:navigation.content', 'Content'),
+        order: 20,
+        icon: 'FileTextIcon',
+        items: [
+          {
+            path: '/admin/posts',
+            label: i18n.t('admin:navigation.posts', 'Posts'),
+            icon: 'ReaderIcon',
+            permission: 'posts:read',
+            order: 10,
+          },
+        ],
+      }),
+    );
+  },
+
+  /**
+   * Lifecycle: shutdown — remove the sidebar entry when deactivated.
+   *
+   * Unlike an application module, an extension can be switched off at
+   * runtime, so its navigation needs an explicit counterpart to `menus`.
+   */
+  shutdown({ store }) {
+    store.dispatch(unregisterMenu({ ns: 'admin', path: '/admin/posts' }));
+  },
+
   /**
    * Module-type hook: provides view routes for dynamic injection.
    * Returns [moduleName, context] — the framework auto-builds the adapter.

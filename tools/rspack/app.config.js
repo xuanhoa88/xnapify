@@ -57,6 +57,125 @@ const currentDir = path.dirname(currentFilename);
  *
  * @returns {import('@rspack/core').RspackPluginInstance}
  */
+/**
+ * Source files under `src/apps/**\/views/` that the router can match: route
+ * modules, layout modules, and the `(routes)/(name)` form.
+ */
+const VIEW_FILE =
+  /src[\\/]apps[\\/](.+?[\\/]views[\\/](?:.+?_(?:route|layout)|\(routes\)[\\/]\([^)]+\))\.[cm]?[jt]sx?)$/;
+
+/**
+ * Map every view source file to the script files the browser must have
+ * loaded before that view can render.
+ *
+ * The views context is lazy, so each route lives in its own chunk and the
+ * server has to name that chunk in the page or the browser only discovers it
+ * after running the bootstrap bundle. The mapping is read off the live
+ * compilation — `compilation.modules` still lists the original modules after
+ * scope hoisting, and `chunkGraph.getModuleChunksIterable` answers which
+ * chunks hold each one — because the equivalent stats query
+ * (`chunkModules: true`) serialises every module of every chunk and takes an
+ * order of magnitude longer on every rebuild.
+ *
+ * Entry and initial chunks are skipped: they already ship with the page.
+ *
+ * @param {object} compilation - The rspack compilation
+ * @param {object} statsData - Chunk-level stats, used for sibling links
+ * @returns {Object<string, string[]>} View path → chunk filenames
+ */
+function buildViewMap(compilation, statsData) {
+  const views = {};
+  if (!compilation || !compilation.chunkGraph) return views;
+
+  // A chunk that belongs to a group with other chunks needs them too; the
+  // sibling links only exist at the stats level.
+  const chunksById = new Map();
+  (statsData.chunks || []).forEach(chunk => {
+    if (chunk.id !== undefined && chunk.id !== null) {
+      chunksById.set(String(chunk.id), chunk);
+    }
+  });
+  const siblingsOf = new Map();
+  (statsData.chunks || []).forEach(chunk => {
+    const files = (chunk.siblings || [])
+      .map(id => chunksById.get(String(id)))
+      .filter(sibling => sibling && !sibling.entry && !sibling.initial)
+      .flatMap(sibling => sibling.files || [])
+      .filter(name => name.endsWith('.js') && !/\.hot-update\./i.test(name));
+    (chunk.files || []).forEach(name => siblingsOf.set(name, files));
+  });
+
+  for (const mod of compilation.modules) {
+    const source =
+      mod.resource ||
+      (typeof mod.nameForCondition === 'function'
+        ? mod.nameForCondition()
+        : null);
+    if (typeof source !== 'string') continue;
+
+    const match = source.match(VIEW_FILE);
+    if (!match) continue;
+
+    const key = match[1].split('\\').join('/');
+    const files = new Set(views[key] || []);
+    for (const chunk of compilation.chunkGraph.getModuleChunksIterable(mod)) {
+      // Entry and initial chunks already ship with the page; naming them
+      // again only pads the manifest the SSR template renders. Mirrors the
+      // `!sibling.entry && !sibling.initial` filter applied above —
+      // `canBeInitial()` is true for entry chunks as well as initial ones.
+      if (typeof chunk.canBeInitial === 'function' && chunk.canBeInitial()) {
+        continue;
+      }
+      for (const name of chunk.files) {
+        if (!name.endsWith('.js') || /\.hot-update\./i.test(name)) continue;
+        files.add(name);
+        (siblingsOf.get(name) || []).forEach(sibling => files.add(sibling));
+      }
+    }
+    if (files.size > 0) views[key] = Array.from(files);
+  }
+
+  return views;
+}
+
+/**
+ * The chunk holding the client's async bootstrap (`src/bootstrap/views.js`).
+ *
+ * Everything the router needs — the module lifecycle registry, every
+ * module's `views/index.js`, and the lazy context maps — lives in this one
+ * chunk, and `client.js` `import()`s it on every page. Left out of the page
+ * it is discovered only after the entry bundle runs, so the route and locale
+ * chunks the server carefully pre-emitted sit idle waiting for it. Rspack's
+ * `webpackPreload` hint does not reach the entrypoint's stats children, so
+ * the chunk is resolved the same way views are.
+ *
+ * @param {object} compilation - The rspack compilation
+ * @returns {string[]} Chunk filenames, empty when it cannot be resolved
+ */
+function findBootstrapChunks(compilation) {
+  if (!compilation || !compilation.chunkGraph) return [];
+
+  const files = new Set();
+  for (const mod of compilation.modules) {
+    const source =
+      mod.resource ||
+      (typeof mod.nameForCondition === 'function'
+        ? mod.nameForCondition()
+        : null);
+    if (typeof source !== 'string') continue;
+    if (!/src[\\/]bootstrap[\\/]views\.[cm]?[jt]s$/.test(source)) continue;
+
+    for (const chunk of compilation.chunkGraph.getModuleChunksIterable(mod)) {
+      for (const name of chunk.files) {
+        if (name.endsWith('.js') && !/\.hot-update\./i.test(name)) {
+          files.add(name);
+        }
+      }
+    }
+  }
+  return Array.from(files);
+}
+
 function createStatsWriterPlugin() {
   return new StatsManifestPlugin({
     filename: path.join(config.BUILD_DIR, 'stats.json'),
@@ -68,10 +187,24 @@ function createStatsWriterPlugin() {
       assets: true,
       chunkGroups: true,
       namedChunkGroups: true,
-      chunks: false,
-      modules: false,
+      // Needed to map each view file to the chunk it landed in. The views
+      // context is lazy, so a route lives in its own chunk and the server
+      // has to name that chunk to avoid a second round trip. Scope hoisting
+      // buries view files inside concatenated modules, so nested modules
+      // must be reported and the default listing caps lifted.
+      // Chunk-level only. The view→chunk map is built from the live
+      // compilation instead (see buildViewMap): asking `toJson` for it via
+      // `chunkModules` serialises every module of every chunk and costs
+      // ~475 ms on each rebuild, which in dev is paid before the browser is
+      // told to refresh.
+      chunks: true,
+      // Sibling links, so a view's entry lists the whole chunk group rather
+      // than just the file its own module landed in — a route that pulls in
+      // a split group (a locale dictionary, a vendor split) needs those too
+      // or the browser discovers them only after running the route chunk.
+      chunkRelations: true,
     },
-    transform: statsData => {
+    transform: (statsData, _manifest, _compiler, compilation) => {
       const scripts = new Set();
       const stylesheets = new Set();
 
@@ -131,9 +264,33 @@ function createStatsWriterPlugin() {
         }
       });
 
+      // 3. Map every view source file to the chunk that contains it, keyed
+      //    by its path under src/apps/ so the router's own file paths line
+      //    up. Built from the compilation, not from the stats JSON.
+      const views = buildViewMap(compilation, statsData);
+
+      // 4. Locale dictionary chunks, named by the `locale.<code>` cache
+      //    group, so the server can ship the language it just rendered in
+      //    rather than making the browser discover it.
+      const locales = {};
+      (statsData.chunks || []).forEach(chunk => {
+        const name = (chunk.names || []).find(n => /^locale\./.test(n));
+        if (!name) return;
+        const files = (chunk.files || [])
+          .filter(isScript)
+          .filter(f => !isHotUpdate(f));
+        if (files.length > 0) locales[name.slice('locale.'.length)] = files;
+      });
+
+      // The async bootstrap chunk every page needs, named in the document so
+      // it downloads beside the entry bundle rather than after it.
+      findBootstrapChunks(compilation).forEach(name => scripts.add(name));
+
       return {
         scripts: Array.from(scripts),
         stylesheets: Array.from(stylesheets),
+        views,
+        locales,
       };
     },
   });
@@ -351,4 +508,6 @@ export {
   finalServerConfig as serverConfig,
   workerConfig,
   getHmrWatchIgnored,
+  // Exported for tests; the build reaches it through the stats plugin.
+  buildViewMap,
 };

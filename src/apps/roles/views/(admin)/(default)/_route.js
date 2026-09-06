@@ -10,45 +10,9 @@ import { features } from '@shared/renderer/redux/index.js';
 
 import Roles from './Roles.js';
 
-const { addBreadcrumb, registerMenu, unregisterMenu } = features;
+const { addBreadcrumb } = features;
 
 export const middleware = requirePermission('roles:read');
-
-/**
- * Register menu item for this route
- */
-export function setup({ store, i18n }) {
-  store.dispatch(
-    registerMenu({
-      ns: 'admin',
-      id: 'identity-access',
-      label: i18n.t('admin:navigation.identityAccess', 'Identity & Access'),
-      order: 10,
-      icon: 'LockClosedIcon',
-      items: [
-        {
-          path: '/admin/roles',
-          label: i18n.t('admin:navigation.roles', 'Roles'),
-          icon: 'IdCardIcon',
-          permission: 'roles:read',
-          order: 30,
-        },
-      ],
-    }),
-  );
-}
-
-/**
- * Unregister menu item for this route
- */
-export function teardown({ store }) {
-  store.dispatch(
-    unregisterMenu({
-      ns: 'admin',
-      path: '/admin/roles',
-    }),
-  );
-}
 
 /**
  * Page metadata

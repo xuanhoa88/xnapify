@@ -11,16 +11,8 @@ import { features } from '@shared/renderer/redux/index.js';
 import reducer, { SLICE_NAME } from '../redux/index.js';
 
 import Files from './Files.js';
-const { addBreadcrumb, registerMenu, unregisterMenu } = features;
+const { addBreadcrumb } = features;
 
-// Load translations
-const translationsContext = import.meta.webpackContext(
-  '../../../translations',
-  {
-    recursive: false,
-    regExp: /\.json$/i,
-  },
-);
 export const middleware = requirePermission('files:read');
 
 /**
@@ -28,51 +20,6 @@ export const middleware = requirePermission('files:read');
  */
 export function init({ store }) {
   store.injectReducer(SLICE_NAME, reducer);
-}
-
-/**
- * Translations hook — returns the webpack import.meta.webpackContext for this module's translations.
- *
- * @returns {object} Webpack import.meta.webpackContext for translations
- */
-export function translations() {
-  return translationsContext;
-}
-
-/**
- * Register menu item for this route
- */
-export function setup({ store, i18n }) {
-  store.dispatch(
-    registerMenu({
-      ns: 'admin',
-      id: 'content',
-      label: i18n.t('admin:navigation.content', 'Content'),
-      order: 20,
-      icon: 'FileTextIcon',
-      items: [
-        {
-          path: '/admin/files',
-          label: i18n.t('admin:navigation.files', 'Files'),
-          icon: 'FileTextIcon',
-          permission: 'files:read',
-          order: 10,
-        },
-      ],
-    }),
-  );
-}
-
-/**
- * Unregister menu item for this route
- */
-export function teardown({ store }) {
-  store.dispatch(
-    unregisterMenu({
-      ns: 'admin',
-      path: '/admin/files',
-    }),
-  );
 }
 
 /**

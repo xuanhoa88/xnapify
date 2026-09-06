@@ -8,6 +8,7 @@
 import { createPath } from 'history';
 
 import { DEFAULT_LOCALE, LOCALE_COOKIE_NAME } from '@shared/i18n/index.js';
+import { activateLocale } from '@shared/i18n/resources.js';
 
 import {
   setLocaleStart,
@@ -117,6 +118,12 @@ export function setLocale(locale) {
 
       // Start locale change
       dispatch(setLocaleStart({ locale }));
+
+      // Module dictionaries are chunked per language, so the new one has to
+      // be in the resource store before i18next switches or the first render
+      // after the switch falls back to keys. Loading a locale that is
+      // already present is free. See shared/i18n/resources.js.
+      await activateLocale(locale);
 
       // Change i18next language
       await i18n.changeLanguage(locale);

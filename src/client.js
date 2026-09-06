@@ -15,7 +15,7 @@ import { createFetch } from '@shared/fetch/index.js';
 import i18n, { DEFAULT_LOCALE } from '@shared/i18n/index.js';
 import App from '@shared/renderer/App.js';
 import { configureStore, features } from '@shared/renderer/redux/index.js';
-const { refreshToken, logout, isAuthenticated } = features;
+const { refreshToken, logout, isAuthenticated, me } = features;
 import {
   createWebSocketClient,
   EventType,
@@ -93,6 +93,44 @@ let unlistenHistory = null;
 let cachedViews = null;
 let cachedViewsPreload = null; // Pre-warmed views.js chunk promise (consumed by initializeViews)
 let wsClient = null;
+let permissionRefreshTimer = null;
+
+/**
+ * Extension lifecycle events that can change what the current user may see.
+ *
+ * An extension seeds its permissions when it is installed or activated and
+ * revokes them on the way out. The admin sidebar filters entries by
+ * `item.permission` against the user object held in Redux, which was read
+ * once at page load — so without re-reading the profile, a freshly activated
+ * extension's menu entry is registered and then immediately filtered out,
+ * and only appears after a full reload.
+ */
+const PERMISSION_CHANGING_EXTENSION_EVENTS = new Set([
+  'EXTENSION_INSTALLED',
+  'EXTENSION_ACTIVATED',
+  'EXTENSION_DEACTIVATED',
+  'EXTENSION_UNINSTALLED',
+  'EXTENSIONS_REFRESHED',
+]);
+
+/** Coalescing window for profile re-reads, in ms. */
+const PERMISSION_REFRESH_DELAY_MS = 300;
+
+/**
+ * Re-read the signed-in user's profile so the sidebar's permission filter
+ * sees the extension's permissions. Coalesced: refreshing the extension list
+ * emits one event per extension, and they must not become one request each.
+ */
+function schedulePermissionRefresh() {
+  if (!isAuthenticated(store.getState())) return;
+  if (permissionRefreshTimer) clearTimeout(permissionRefreshTimer);
+  permissionRefreshTimer = setTimeout(() => {
+    permissionRefreshTimer = null;
+    // `me` reports failure through its own rejected action; a network blip
+    // here must not surface as an unhandled rejection.
+    Promise.resolve(store.dispatch(me())).catch(() => {});
+  }, PERMISSION_REFRESH_DELAY_MS);
+}
 let isTransitioning = false;
 let transitionAbortController = null;
 let hasHydrated = false;
@@ -502,6 +540,13 @@ function cleanup() {
     abortTransition();
   });
 
+  safeCleanup('Cancel pending permission refresh', () => {
+    if (permissionRefreshTimer) {
+      clearTimeout(permissionRefreshTimer);
+      permissionRefreshTimer = null;
+    }
+  });
+
   // Dispose WebSocket client (removes all event listeners)
   safeCleanup('Dispose WebSocket', () => {
     if (wsClient && typeof wsClient.dispose === 'function') {
@@ -637,6 +682,9 @@ async function initializeApp() {
             } catch (err) {
               log(`⚠️ Extension event failed: ${err.message}`, 'error');
             }
+            if (event && PERMISSION_CHANGING_EXTENSION_EVENTS.has(event.type)) {
+              schedulePermissionRefresh();
+            }
           });
         });
 
@@ -695,6 +743,10 @@ async function attemptStartup() {
 
   // Phase 1: Initialize extension manager (setup only, no sync)
   extensionManager.viewContainer = context.container;
+  // Extension view hooks (`menus`, `boot`, `shutdown`) dispatch into the same
+  // store as application modules; without this they only ever saw the DI
+  // container and could not contribute navigation.
+  extensionManager.viewContext = context;
   extensionManager.fetch = fetch;
 
   // Phase 2: Start all async work concurrently — no waterfalls.
@@ -709,6 +761,11 @@ async function attemptStartup() {
   //     starts downloading it while we await react-dom/client.
   //     initializeViews() will consume this pre-warmed promise.
   const domClientPromise = initReactDOMClient();
+  // The server names this chunk in the page alongside the entry bundle (the
+  // build manifest lists it; see tools/rspack/app.config.js), so by the time
+  // this runs the browser already has it. That matters because the router
+  // that consumes the pre-emitted route and locale chunks lives in here —
+  // without it those would sit idle behind one more sequential round trip.
   cachedViewsPreload = import('./bootstrap/views.js');
   const extensionsPromise = extensionManager
     .sync(preloadedState.extensions)

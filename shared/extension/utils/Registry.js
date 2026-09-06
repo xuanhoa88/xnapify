@@ -230,7 +230,21 @@ class ExtensionRegistry {
   }
 
   /**
-   * Remove an extension definition by ID across all namespaces
+   * Remove an extension definition by ID across all namespaces.
+   *
+   * `unregister` clears what an extension *did* — its slots and hooks — while
+   * leaving the definition in place, and that is deliberate:
+   * `deactivateViewNamespace` unregisters extensions it fully intends to
+   * activate again on the next navigation.
+   *
+   * An unloaded extension is the other case and must stay gone, so
+   * `unloadExtension` calls this as well. A module-type extension is filed
+   * under the `'*'` wildcard, which `getDefinitions` merges into *every*
+   * namespace, so a definition left behind means the next
+   * `ensureViewNamespaceActive` call re-runs its `menus()` and `boot()` —
+   * a deactivated extension's sidebar entry reappearing on the very next
+   * navigation is what this prevents.
+   *
    * @param {string} id - Extension ID
    * @returns {boolean} True if any definition was removed
    */

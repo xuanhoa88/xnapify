@@ -144,13 +144,24 @@ const COLLECTORS = Object.freeze({
 });
 
 /**
- * Collects and loads modules from the adapter by scanning file paths.
+ * Collects modules from the adapter by scanning file paths.
+ *
+ * Every key this produces (pathname, module name, layout name) comes from the
+ * file path, never from the module body, so collection can run without loading
+ * anything. With `defer`, each entry carries a `load()` thunk instead of a
+ * `module`, and the module is fetched the first time its route is matched.
+ * That is what lets a lazy context emit one chunk per view rather than
+ * bundling every view together.
+ *
  * @param {Object} source - Module loader adapter with files() and load() methods
  * @param {'routes'|'configs'|'layouts'} type - Which collector to use
- * @returns {Map<string, Object>} Map of route keys to loaded module info
+ * @param {Object} [options]
+ * @param {boolean} [options.defer=false] - Emit `load()` thunks instead of modules
+ * @returns {Map<string, Object>} Map of route keys to module info
  * @throws {Error} If type is unknown
  */
-export function collect(source, type) {
+export function collect(source, type, options = {}) {
+  const defer = options.defer === true;
   const config = COLLECTORS[type];
   if (!config) {
     const err = new Error(`Unknown collector type: ${type}`);
@@ -176,14 +187,26 @@ export function collect(source, type) {
     if (!extracted) continue;
 
     try {
-      const module = source.load(filePath);
       if (results.has(extracted.key)) {
         log(
           `Duplicate ${config.label} key "${extracted.key}" from ${filePath} (overwrites ${results.get(extracted.key).filePath})`,
           'warn',
         );
       }
-      results.set(extracted.key, { ...extracted.data, module, filePath });
+
+      if (defer) {
+        results.set(extracted.key, {
+          ...extracted.data,
+          load: () => source.load(filePath),
+          filePath,
+        });
+      } else {
+        results.set(extracted.key, {
+          ...extracted.data,
+          module: source.load(filePath),
+          filePath,
+        });
+      }
     } catch (error) {
       log(`Error loading ${filePath}: ${error.message}`, 'error');
     }

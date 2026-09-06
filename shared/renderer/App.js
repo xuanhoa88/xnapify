@@ -6,6 +6,8 @@
  */
 
 import './app.global.css';
+// Pins the order of the shared components' CSS; see the file's comment.
+import './components.global.js';
 
 import React, { Suspense } from 'react';
 

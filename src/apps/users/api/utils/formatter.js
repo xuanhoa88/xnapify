@@ -11,6 +11,9 @@ import { collectUserRbacData } from './rbac/collector.js';
  * Check if a user object is an admin (RBAC compatible)
  * Checks for: is_admin flag, admin role, or super admin permission (*:*)
  *
+ * Exported because session rotation has to recompute the claim from the
+ * database instead of trusting the one in the presented token.
+ *
  * @param {object} user - User object with roles/permissions
  * @param {object} options - Options containing auth constants
  * @param {string} options.adminRoleName - Admin role name
@@ -18,7 +21,7 @@ import { collectUserRbacData } from './rbac/collector.js';
  * @param {object} options.defaultActions - Default actions object
  * @returns {boolean} True if user is an admin
  */
-function isAdmin(user, options = {}) {
+export function isAdmin(user, options = {}) {
   const { adminRoleName, defaultResources, defaultActions } = options;
   try {
     if (!user) return false;

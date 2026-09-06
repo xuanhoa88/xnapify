@@ -23,8 +23,11 @@ registry.registerHook('users.created', async data => {
 **Asking one extension for an answer (IPC and similar):**
 
 ```javascript
-// Claim the id. A second extension registering here throws
-// DuplicateHandlerError instead of silently winning by priority.
+// Claim the id. `<id>` must be this extension's own id — the scoped registry
+// rejects an `ipc:` id addressed to anyone else with HandlerOwnershipError,
+// so no one can answer (or squat) another extension's endpoint. A second
+// extension registering here throws DuplicateHandlerError instead of
+// silently winning by priority.
 registry.registerHandler('ipc:<id>:ping', async (data, { req }) => 'pong');
 
 // Call it. The handler's error reaches you instead of being swallowed.
@@ -40,15 +43,15 @@ if (!handled) {
 
 Pick the kind at registration, not at call time:
 
-|                     | Collector (`Hook`)                    | Handler (`Handler`)            |
-| ------------------- | ------------------------------------- | ------------------------------ |
-| Register with       | `registerHook`                        | `registerHandler`              |
-| Call with           | `executeHook` / `executeHookParallel` | `invokeHandler`                |
-| Contributors per id | Many                                  | Exactly one                    |
-| Second registration | Appended, ordered by priority         | Throws `DuplicateHandlerError` |
-| On handler error    | Logged and dropped                    | Propagated to the caller       |
-| Remove with         | Id **and** the callback reference     | Id alone                       |
-| `{ public: true }`  | Rejected                              | Allowed (guest IPC)            |
+|                     | Collector (`Hook`)                    | Handler (`Handler`)                                                                              |
+| ------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Register with       | `registerHook`                        | `registerHandler`                                                                                |
+| Call with           | `executeHook` / `executeHookParallel` | `invokeHandler`                                                                                  |
+| Contributors per id | Many                                  | Exactly one                                                                                      |
+| Second registration | Appended, ordered by priority         | Same function: no-op (re-boot is idempotent). Different function: throws `DuplicateHandlerError` |
+| On handler error    | Logged and dropped                    | Propagated to the caller                                                                         |
+| Remove with         | Id **and** the callback reference     | Id alone                                                                                         |
+| `{ public: true }`  | Rejected                              | Allowed (guest IPC)                                                                              |
 
 To fail a call deliberately from an IPC handler, throw an error carrying a
 `status` (400-599) and optional `code`. The gateway forwards that status and
@@ -105,8 +108,22 @@ Every manifest declares the host it supports and the services it needs:
 ```
 
 - `version` is checked by `validateManifest()` (install/toggle) and `_assertLoadable()` (load). Incompatible packages are refused with `IncompatibleExtensionError` (422).
-- Lifecycle hooks receive a **capability-scoped container** (`shared/container/scoped.js`): only declared bindings resolve, and there are no `bind`/`reset`/`cleanup` methods. `jwt`, `extension`, and `env` are never granted.
-- API route handlers of module-type extensions run under the same scope: the final handler of each `_route.js` export sees the scoped container via `req.app.get('container')` / `req.container`, while preceding middlewares (auth, validation) keep the full container.
+- Lifecycle hooks receive a **capability-scoped container** (`shared/container/scoped.js`): only declared bindings resolve, and there are no `bind`/`reset`/`cleanup` methods. Anything else throws `CapabilityDeniedError`.
+- What `capabilities` grants — **grants are additive**. Every extension always receives the side-effect-free defaults (`hook`, `cache`, `http`, `template`, `i18n`); a declaration adds to that baseline instead of replacing it.
+
+  | Declared             | Resolves                                                                                     |
+  | -------------------- | -------------------------------------------------------------------------------------------- |
+  | key omitted entirely | the defaults                                                                                 |
+  | `[]`                 | the defaults — an empty list narrows nothing, it just declares no extras                     |
+  | `["db", "models"]`   | the defaults **plus** `db` and `models`                                                      |
+  | `["users:*"]`        | the defaults plus every binding whose name starts with `users:`                              |
+  | `["*"]`              | ignored unless the host trusts this extension (see below); otherwise the other entries apply |
+
+  Two grants never come from the manifest's own word, because the manifest is the extension's own `package.json`:
+  - `extension`, `jwt`, and `env` are **reserved**. They are stripped from the declared list and passed to `createScopedContainer({ deny })`, so not even a granted `'*'` resolves them.
+  - `'*'` is honoured only for an extension whose id or package name the operator listed in `XNAPIFY_TRUSTED_EXTENSIONS` (comma-separated). A self-declared `'*'` from anyone else is dropped with a one-time warning, and the extension keeps its other declared capabilities.
+
+- API route handlers of module-type extensions run under the same scope: **every** function a `_route.js` export lists — middlewares included, since they are the extension's own code — sees the scoped container via `req.app.get('container')`, `res.app.get('container')` and `req.container`. A route middleware that resolves `auth` for an RBAC check therefore has to declare `auth` in `xnapify.capabilities`.
 - Lifecycle hooks receive a **scoped registry**: `registerSlot`/`registerHook` are tagged with the extension id and `unregisterSlot`/`unregisterHook` refuse registrations owned by someone else.
 - `autoload` dependencies are version-checked with semver after loading; a missing or mismatched dependency fails the load.
 - Shared Module Federation singletons (`react`, `react-dom`, `react-redux`, `@reduxjs/toolkit`, `i18next`, `react-i18next`, `history`) use `strictVersion`, so a remote built against another major fails loudly instead of binding to the host copy.
@@ -204,12 +221,14 @@ The build pipeline generates `id` via `generateExtensionId(name)` and writes it 
 
 ### View Extensions (Server SSR + Client)
 
-| #   | Phase          | Description                 |
-| --- | -------------- | --------------------------- |
-| 1   | `translations` | Register i18n namespaces    |
-| 2   | `providers`    | Bind DI services            |
-| 3   | `boot`         | Module-level initialization |
-| 4   | `routes`       | Inject view routes          |
+| #   | Phase          | Description                                                                                                                                                       |
+| --- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `translations` | Register i18n namespaces                                                                                                                                          |
+| 2   | `providers`    | Bind DI services                                                                                                                                                  |
+| 3   | `menus`        | `registerMenu(...)` — navigation belongs to the extension, not to one of its routes. Also re-run per SSR request and on language change, so it must be idempotent |
+| 4   | `boot`         | Module-level initialization                                                                                                                                       |
+| 5   | `shutdown`     | Reverse of `boot`/`menus`; runs on deactivation only                                                                                                              |
+| 6   | `routes`       | Inject view routes                                                                                                                                                |
 
 ## `Registry` (`utils/Registry.js`)
 
@@ -237,7 +256,7 @@ Extends `BaseExtensionManager`. It operates strictly within the browser context 
 4. Pauses until the script parses, attaching a global variable representing the MF Container.
 5. Injects the shared host scope via `container.init(__webpack_share_scopes__.default)`.
 6. Extracts the bootstrapped module via `container.get('./extension')`.
-7. Runs the full view lifecycle (`translations → providers → boot → routes`).
+7. Runs the full view lifecycle (`translations → providers → menus → boot → routes`); `deactivateViewNamespace` later runs `shutdown → removeNamespace → unregister`.
 
 ## Server Extension Manager (`server/ExtensionManager.js`)
 
@@ -249,6 +268,6 @@ Operates in Node.js and relies on standard `fs` resolution and non-rspack `requi
 2. Deletes the `require` cache entry for the targeted module ensuring fresh code is loaded on HMR.
 3. Loads the module cleanly utilizing `__non_webpack_require__`.
 4. Runs the full API lifecycle (`translations → providers → migrations → models → seeds → boot → routes`).
-5. For view modules, runs the view lifecycle (`translations → providers → boot → routes`).
+5. For view modules, runs the view lifecycle (`translations → providers → menus → boot → routes`).
 6. Caches generated CSS and JS entry points to serialize into SSR HTML responses.
 7. On uninstall, auto-reverts seeds and migrations using the extension's declarative contexts.

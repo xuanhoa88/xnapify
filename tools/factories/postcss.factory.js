@@ -10,6 +10,8 @@ import postcssFlexbugsFixes from 'postcss-flexbugs-fixes';
 import postcssNested from 'postcss-nested';
 import postcssPresetEnv from 'postcss-preset-env';
 
+import radixBreakpointTrim from '../postcss/RadixBreakpointTrim.js';
+
 export default ({ cwd } = {}) => ({
   plugins: [
     // Tailwind CSS v4 — CSS-first configuration
@@ -68,5 +70,12 @@ export default ({ cwd } = {}) => ({
     // Postcss flexbox bug fixer — still relevant for Safari 14 edge cases
     // https://github.com/luisrudge/postcss-flexbugs-fixes
     postcssFlexbugsFixes(),
+
+    // Drop Radix Themes responsive variants for breakpoints no component
+    // asks for. Runs last so it sees the fully expanded stylesheet, and
+    // only removes media blocks made up entirely of Radix variant rules.
+    // The breakpoints to keep are derived by scanning `cwd` for responsive
+    // props, so a newly written `{ initial: '1', xl: '4' }` keeps its CSS.
+    radixBreakpointTrim({ cwd }),
   ],
 });

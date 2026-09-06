@@ -5,13 +5,17 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { activateLocale } from '@shared/i18n/resources.js';
 import {
   discoverViewModules,
   bootViewModules,
   resetDiscoveryCache,
+  runMenuModules,
 } from '@shared/renderer/autoloader.js';
 import { features } from '@shared/renderer/redux/index.js';
+import { materializeTree } from '@shared/renderer/router/builder.js';
 import Router from '@shared/renderer/router/index.js';
+import { getRouteNamespace } from '@shared/renderer/router/utils.js';
 const { getAppName, getAppDescription } = features;
 
 // Discover view lifecycle modules from apps directory
@@ -21,6 +25,9 @@ const viewsContext = import.meta.webpackContext('../apps', {
 });
 
 const IS_SERVER = typeof window === 'undefined';
+
+/** @type {Function|null} Client-only i18next listener that relabels menus */
+let localeMenuListener = null;
 
 // =============================================================================
 // LOGGING
@@ -101,6 +108,22 @@ class AppRouter extends Router {
 // =============================================================================
 
 /**
+ * Whether an error is the bundler's "chunk failed to load" error.
+ *
+ * Views are lazily chunked, so a stale deploy or a dropped connection
+ * surfaces here rather than at boot. Matched by name and message because
+ * rspack's runtime throws a plain Error in some paths.
+ *
+ * @param {Error} error - Error thrown during a resolve
+ * @returns {boolean}
+ */
+function isChunkLoadError(error) {
+  if (!error) return false;
+  if (error.name === 'ChunkLoadError') return true;
+  return /Loading chunk \S+ failed|ChunkLoadError/i.test(error.message || '');
+}
+
+/**
  * Router options shared by every AppRouter instance.
  *
  * @param {Object} extension - Extension manager instance
@@ -113,6 +136,18 @@ function createRouterOptions(extension) {
         console.error('Router Error:', error);
         throw error;
       }
+
+      // The error page is a lazily loaded chunk like any other view, so it
+      // can fail exactly the way the route that got us here did. Answering a
+      // failed chunk load with another chunk load recurses forever — after a
+      // deploy every old chunk URL 404s, so the retry never succeeds and the
+      // outer resolve never settles. Hand these back to the caller instead:
+      // src/client.js reloads the page on a chunk error, which is the only
+      // recovery that works against a stale bundle.
+      if (isChunkLoadError(error) || ctx.pathname === '/error') {
+        throw error;
+      }
+
       const { _instance, ...context } = ctx;
       return _instance.resolve({
         ...context,
@@ -120,9 +155,24 @@ function createRouterOptions(extension) {
         pathname: '/error',
       });
     },
-    async onRouteInit(route) {
+    async onRouteInit(route, ctx) {
+      // A dictionary whose chunk failed to arrive leaves its namespace
+      // resolving to raw keys for the rest of the session: the loader
+      // records the failure and nothing re-enters it unless the language
+      // changes. Retrying per navigation heals that, and costs nothing when
+      // everything is loaded — each locale is memoised per namespace.
+      if (!IS_SERVER) {
+        try {
+          const locale =
+            (ctx && ctx.locale) || (ctx && ctx.i18n && ctx.i18n.language);
+          if (locale) await activateLocale(locale);
+        } catch (err) {
+          log('Failed to refresh translations: ' + err, 'warn');
+        }
+      }
+
       try {
-        const ns = (route.module && route.module.namespace) || route.path;
+        const ns = getRouteNamespace(route);
         if (ns) {
           if (__DEV__) {
             console.log(`[Router] Loading extension namespace: ${ns}`);
@@ -135,7 +185,7 @@ function createRouterOptions(extension) {
     },
     async onRouteDestroy(route) {
       try {
-        const ns = (route.module && route.module.namespace) || route.path;
+        const ns = getRouteNamespace(route);
         if (ns) {
           if (__DEV__) {
             console.log(`[Router] Unloading extension namespace: ${ns}`);
@@ -242,6 +292,12 @@ async function compileServerViews(extension) {
 
   router.routes.push(createCatchAllRoute(router));
 
+  // The view contexts are lazy so the browser gets one chunk per route. On
+  // the server that split has no value and a cost, so load every view now:
+  // rendering stays free of per-request module loads and a broken view fails
+  // the boot instead of the first request that happens to hit it.
+  await materializeTree(router.routes);
+
   log(`Route tree compiled in ${Date.now() - startTime}ms`);
 
   return {
@@ -299,6 +355,12 @@ export default async function initializeRouter(context, extension) {
     // Context-dependent phases (providers → boot) run per request
     await bootViewModules(compiled.lifecycles, context);
 
+    // Extensions are loaded once at boot, but their menu payloads are built
+    // from this request's store and language, so their `menus` phase has to
+    // run here too — otherwise an extension's sidebar entry is missing from
+    // the server-rendered markup and only appears after hydration.
+    await extension.runViewMenus(context);
+
     return new AppRouter(compiled.mergedAdapter, {
       ...createRouterOptions(extension),
       compiled: { routes: compiled.routes, layouts: compiled.layouts },
@@ -314,6 +376,7 @@ export default async function initializeRouter(context, extension) {
     throw err;
   }
   await bootViewModules(lifecycles, context);
+  await extension.runViewMenus(context);
 
   const router = new AppRouter(mergedAdapter, createRouterOptions(extension));
 
@@ -325,6 +388,51 @@ export default async function initializeRouter(context, extension) {
   }
 
   router.routes.push(createCatchAllRoute(router));
+
+  // Menu payloads carry translated strings, so they belong to the language
+  // they were built in. The server rebuilds them per request; the browser
+  // boots once, so without this the sidebar keeps the boot-time language
+  // after a switch while everything around it changes — the behaviour the
+  // route-level `setup()` hook used to provide by re-running on every
+  // navigation. `registerMenu` overwrites by id, so this only relabels.
+  watchLocaleForMenus(lifecycles, context, extension);
+
   log('Router initialized');
   return router;
+}
+
+/**
+ * Re-run the `menus` phase whenever i18next switches language (client only).
+ *
+ * Bound once per module context; a re-init after HMR replaces the listener
+ * rather than stacking a second one.
+ *
+ * @param {Map<string, object>} lifecycles - Module name → hooks
+ * @param {Object} context - DI context handed to the menus hook
+ * @param {Object} extension - Extension manager, whose menus are relabelled too
+ */
+function watchLocaleForMenus(lifecycles, context, extension) {
+  const { i18n } = context;
+  if (!i18n || typeof i18n.on !== 'function') return;
+
+  if (localeMenuListener) {
+    if (typeof i18n.off === 'function') {
+      i18n.off('languageChanged', localeMenuListener);
+    }
+    localeMenuListener = null;
+  }
+
+  localeMenuListener = () => {
+    runMenuModules(lifecycles, context)
+      .then(errors => {
+        if (errors.length > 0) {
+          log(`Menu refresh reported ${errors.length} error(s)`, 'warn');
+        }
+        // Extension menus carry translated labels too.
+        return extension.runViewMenus(context);
+      })
+      .catch(err => log(`Menu refresh failed: ${err.message}`, 'warn'));
+  };
+
+  i18n.on('languageChanged', localeMenuListener);
 }

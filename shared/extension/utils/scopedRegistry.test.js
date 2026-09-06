@@ -7,6 +7,7 @@
 
 import ExtensionRegistry from './Registry.js';
 import {
+  HandlerOwnershipError,
   PASSTHROUGH_METHODS,
   bindPassthrough,
   createScopedRegistry,
@@ -45,6 +46,36 @@ describe('createScopedRegistry identity injection', () => {
   it('forwards the public opt-in for handlers', () => {
     scoped.registerHandler('ipc:ext-a:ping', () => 'pong', { public: true });
     expect(registry.getHandlerMeta('ipc:ext-a:ping')).toEqual({ public: true });
+  });
+
+  it('refuses an ipc handler id addressed to another extension', () => {
+    // The gateway builds `ipc:<url id>:<action>`, so registering under
+    // someone else's prefix either answers their callers or — because a
+    // second claim throws DuplicateHandlerError inside boot() — stops them
+    // from ever mounting.
+    expect(() => scoped.registerHandler('ipc:ext-b:doThing', () => 1)).toThrow(
+      HandlerOwnershipError,
+    );
+    expect(registry.hasHandler('ipc:ext-b:doThing')).toBe(false);
+
+    try {
+      scoped.registerHandler('ipc:ext-b:doThing', () => 1);
+    } catch (err) {
+      expect(err.code).toBe('E_HANDLER_NOT_OWNED');
+      expect(err.status).toBe(403);
+      expect(err.extensionId).toBe('ext-a');
+    }
+  });
+
+  it('refuses an id that only looks like its own prefix', () => {
+    expect(() =>
+      scoped.registerHandler('ipc:ext-a-evil:doThing', () => 1),
+    ).toThrow(HandlerOwnershipError);
+  });
+
+  it('leaves non-ipc handler ids alone', () => {
+    scoped.registerHandler('reports:render', () => 'ok');
+    expect(registry.ownsHandler('ext-a', 'reports:render')).toBe(true);
   });
 
   it('tags slot registrations with the owning extension', () => {

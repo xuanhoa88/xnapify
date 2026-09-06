@@ -67,7 +67,16 @@ class ClientExtensionManager extends BaseExtensionManager {
               .forEach(el => el.remove());
           };
           link.onload = cleanupStale;
-          link.onerror = cleanupStale;
+          // A failed sheet fires `error` once, possibly before anything is
+          // listening. Record it on the element so `_settleStylesheet` can
+          // give up at once instead of waiting out its timeout.
+          link.onerror = () => {
+            link.setAttribute('data-extension-css-error', 'true');
+            console.error(
+              `[ExtensionManager] Failed to load stylesheet for ${id}: ${url}`,
+            );
+            cleanupStale();
+          };
 
           document.head.appendChild(link);
           if (__DEV__) {
@@ -211,8 +220,71 @@ class ClientExtensionManager extends BaseExtensionManager {
       }
       return null;
     }
-    this[DEFERRED].delete(id);
-    return super.loadExtension(id, manifest, _loadingChain);
+    const wasDeferred = this[DEFERRED].delete(id);
+    const loaded = await super.loadExtension(id, manifest, _loadingChain);
+
+    // An extension that was parked has its stylesheet injected as it loads,
+    // and the router renders its slots the moment activation returns. Wait
+    // for the sheet to apply first, or the panel paints unstyled for a few
+    // frames. Bounded and best-effort: a stylesheet that never arrives must
+    // not hold up a navigation.
+    // eslint-disable-next-line no-underscore-dangle
+    if (wasDeferred) await this._settleStylesheet(id);
+
+    return loaded;
+  }
+
+  /**
+   * Resolve once an extension's stylesheet has applied, or give up.
+   *
+   * A sheet already in the document — injected by an earlier load, or emitted
+   * by the server for a page that renders this extension's slots — exposes
+   * `link.sheet` and resolves immediately.
+   *
+   * @param {string} id - Extension ID
+   * @param {number} [timeout=2000] - Milliseconds to wait before giving up
+   * @returns {Promise<void>}
+   * @private
+   */
+  _settleStylesheet(id, timeout = 2000) {
+    if (typeof document === 'undefined') return Promise.resolve();
+
+    const link = document.querySelector(
+      `link[data-extension-id="${id}"]:not([data-extension-stale="true"])`,
+    );
+    if (!link) return Promise.resolve();
+
+    // The sheet already failed: `error` fired before this ran and will not
+    // fire again, so waiting would burn the whole timeout on a navigation.
+    if (link.getAttribute('data-extension-css-error') === 'true') {
+      return Promise.resolve();
+    }
+
+    try {
+      if (link.sheet) return Promise.resolve();
+    } catch {
+      // Unreadable sheet — same-origin here, but never block on the answer
+      return Promise.resolve();
+    }
+
+    return new Promise(resolve => {
+      const done = () => {
+        clearTimeout(timer);
+        link.removeEventListener('load', done);
+        link.removeEventListener('error', done);
+        resolve();
+      };
+      const fail = () => {
+        link.setAttribute('data-extension-css-error', 'true');
+        console.error(
+          `[ExtensionManager] Failed to load stylesheet for ${id}: ${link.href}`,
+        );
+        done();
+      };
+      const timer = setTimeout(done, timeout);
+      link.addEventListener('load', done);
+      link.addEventListener('error', fail);
+    });
   }
 
   /**
@@ -247,6 +319,17 @@ class ClientExtensionManager extends BaseExtensionManager {
   async unloadExtension(id) {
     this[DEFERRED].delete(id);
     return super.unloadExtension(id);
+  }
+
+  /**
+   * Drop the parked manifests along with the base state. They are never
+   * unloaded (they were never loaded), so nothing else clears them and a
+   * destroyed manager would keep them — and resurrect them on the next
+   * namespace activation.
+   */
+  async destroy() {
+    await super.destroy();
+    this[DEFERRED].clear();
   }
 
   /**
@@ -304,7 +387,22 @@ class ClientExtensionManager extends BaseExtensionManager {
         script.src = url;
         script.async = true;
         script.setAttribute('data-extension-id', extensionId);
+        script.setAttribute('data-extension-injected', 'true');
         document.body.appendChild(script);
+      } else if (
+        !script.hasAttribute('data-extension-injected') &&
+        document.readyState !== 'loading'
+      ) {
+        // A tag the server put in the page. Those are `defer`, so they have
+        // all run by the time parsing finishes — this one either defined its
+        // container (the caller checks that first and would not be here) or
+        // it failed, and its `error` event fired long before we could listen
+        // for it. Waiting would hang the activation, and with it the resolve
+        // that renders the page, forever.
+        const error = new Error(`Failed to load script: ${url}`);
+        error.code = 'SCRIPT_LOAD_FAILED';
+        error.url = url;
+        return reject(error);
       }
 
       const cleanup = () => {

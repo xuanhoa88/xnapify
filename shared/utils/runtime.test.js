@@ -34,6 +34,31 @@ describe('runtime topology helpers', () => {
     );
   });
 
+  test('a worker trusts the size the primary forked it with', () => {
+    // The primary passes XNAPIFY_CLUSTER_SIZE on fork; a worker uses it
+    // instead of re-deriving 'auto' from the CPU count.
+    expect(
+      getClusterWorkerCount({
+        XNAPIFY_WORKER_INDEX: '2',
+        XNAPIFY_CLUSTER_SIZE: '3',
+        XNAPIFY_CLUSTER_WORKERS: 'auto',
+      }),
+    ).toBe(3);
+
+    // Ignored outside a worker, so it cannot turn a single process into a
+    // cluster on its own.
+    expect(getClusterWorkerCount({ XNAPIFY_CLUSTER_SIZE: '4' })).toBe(1);
+
+    // Falls back to XNAPIFY_CLUSTER_WORKERS when the value is unusable.
+    expect(
+      getClusterWorkerCount({
+        XNAPIFY_WORKER_INDEX: '0',
+        XNAPIFY_CLUSTER_SIZE: 'nope',
+        XNAPIFY_CLUSTER_WORKERS: '2',
+      }),
+    ).toBe(2);
+  });
+
   test('identifies cluster workers and the singleton worker', () => {
     expect(isClusterWorker({})).toBe(false);
     expect(isSingletonWorker({})).toBe(true);

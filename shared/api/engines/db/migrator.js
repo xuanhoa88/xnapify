@@ -269,8 +269,52 @@ function createSeedUmzug(seeds, connection, options = {}) {
 
 /** Arbitrary but stable 32-bit key for the Postgres advisory lock ('xnap') */
 const PG_LOCK_KEY = 0x786e6170;
-/** Named lock for MySQL/MariaDB GET_LOCK */
-const MYSQL_LOCK_NAME = 'xnapify_schema_lock';
+/** Prefix for the MySQL/MariaDB GET_LOCK name (namespaced per database). */
+const MYSQL_LOCK_PREFIX = 'xnapify_schema_lock';
+/** Postgres SQLSTATE raised when `lock_timeout` expires. */
+const PG_LOCK_NOT_AVAILABLE = '55P03';
+
+/**
+ * MySQL named locks are scoped to the whole SERVER, unlike the Postgres
+ * advisory locks used below, which are scoped to a database. Two xnapify
+ * databases on one MySQL server would otherwise serialise — and time out —
+ * each other's boot, so the lock name carries the database name.
+ *
+ * MySQL 5.7+ caps lock names at 64 characters; longer database names are
+ * truncated, which at worst restores the old (over-broad) sharing.
+ *
+ * @param {Sequelize} connection
+ * @returns {string}
+ */
+function mysqlLockName(connection) {
+  const database =
+    connection.config?.database || connection.options?.database || '';
+  const name = database
+    ? `${MYSQL_LOCK_PREFIX}:${database}`
+    : MYSQL_LOCK_PREFIX;
+  return name.slice(0, 64);
+}
+
+/**
+ * @param {number} timeoutSeconds
+ * @param {Error} [cause]
+ * @returns {Error}
+ */
+function schemaLockTimeoutError(timeoutSeconds, cause) {
+  const error = new Error(
+    `Could not acquire schema lock within ${timeoutSeconds}s`,
+  );
+  error.name = 'SchemaLockTimeoutError';
+  error.code = 'SCHEMA_LOCK_TIMEOUT';
+  if (cause) error.cause = cause;
+  return error;
+}
+
+/** True when a Postgres error is the `lock_timeout` abort, not a real failure. */
+function isPgLockTimeout(error) {
+  const code = error?.parent?.code ?? error?.original?.code ?? error?.code;
+  return code === PG_LOCK_NOT_AVAILABLE;
+}
 
 /**
  * Run `fn` while holding a database-level lock so that only one process
@@ -280,7 +324,11 @@ const MYSQL_LOCK_NAME = 'xnapify_schema_lock';
  *
  *   - Postgres: transaction-scoped advisory lock (released on commit/rollback)
  *   - MySQL/MariaDB: GET_LOCK / RELEASE_LOCK on a pinned connection
- *   - SQLite and others: no-op (SQLite serialises writers by itself)
+ *   - SQLite and others: no-op (SQLite serialises writers by itself, and
+ *     `shared/config/env.js` refuses to cluster on those dialects)
+ *
+ * Both paths give up after `timeoutSeconds` with a `SCHEMA_LOCK_TIMEOUT`
+ * error rather than waiting forever behind an instance stuck mid-migration.
  *
  * The lock is held on one pooled connection while the work runs on others,
  * so it is skipped (with a warning) when the pool cannot hold two.
@@ -289,7 +337,7 @@ const MYSQL_LOCK_NAME = 'xnapify_schema_lock';
  * @param {() => Promise<*>} fn
  * @param {Object} [options]
  * @param {Console} [options.logger]
- * @param {number} [options.timeoutSeconds=300] - MySQL wait timeout
+ * @param {number} [options.timeoutSeconds=300] - Lock wait timeout
  * @returns {Promise<*>} Result of fn
  */
 export async function withSchemaLock(connection, fn, options = {}) {
@@ -315,34 +363,52 @@ export async function withSchemaLock(connection, fn, options = {}) {
 
   return connection.transaction(async transaction => {
     if (dialect === 'postgres') {
-      await connection.query('SELECT pg_advisory_xact_lock(:key)', {
-        replacements: { key: PG_LOCK_KEY },
+      // pg_advisory_xact_lock() is the BLOCKING variant — on its own it waits
+      // forever, so one instance stuck mid-migration would silently hold every
+      // other instance's boot hostage. Bound the wait with a transaction-local
+      // lock_timeout, then clear it so the migrations themselves keep the
+      // server's normal lock behaviour.
+      await connection.query(
+        "SELECT set_config('lock_timeout', :timeout, true)",
+        {
+          replacements: { timeout: String(timeoutSeconds * 1000) },
+          transaction,
+        },
+      );
+      try {
+        await connection.query('SELECT pg_advisory_xact_lock(:key)', {
+          replacements: { key: PG_LOCK_KEY },
+          transaction,
+        });
+      } catch (error) {
+        if (isPgLockTimeout(error)) {
+          throw schemaLockTimeoutError(timeoutSeconds, error);
+        }
+        throw error;
+      }
+      await connection.query("SELECT set_config('lock_timeout', '0', true)", {
         transaction,
       });
       return fn();
     }
 
+    const name = mysqlLockName(connection);
     const [rows] = await connection.query(
       'SELECT GET_LOCK(:name, :timeout) AS acquired',
       {
-        replacements: { name: MYSQL_LOCK_NAME, timeout: timeoutSeconds },
+        replacements: { name, timeout: timeoutSeconds },
         transaction,
       },
     );
     const acquired = rows && rows[0] && Number(rows[0].acquired) === 1;
     if (!acquired) {
-      const error = new Error(
-        `Could not acquire schema lock within ${timeoutSeconds}s`,
-      );
-      error.name = 'SchemaLockTimeoutError';
-      error.code = 'SCHEMA_LOCK_TIMEOUT';
-      throw error;
+      throw schemaLockTimeoutError(timeoutSeconds);
     }
     try {
       return await fn();
     } finally {
       await connection.query('SELECT RELEASE_LOCK(:name)', {
-        replacements: { name: MYSQL_LOCK_NAME },
+        replacements: { name },
         transaction,
       });
     }
@@ -497,15 +563,23 @@ export async function revertMigrations(migrations, connection, options = {}) {
       ...options,
       logger,
     });
-    const executed = await umzug.executed();
+    // Reverting mutates the schema exactly like applying does, so it takes
+    // the same cross-process lock as runMigrations().
+    await withSchemaLock(
+      connection,
+      async () => {
+        const executed = await umzug.executed();
 
-    if (executed.length === 0) {
-      logger.log('⚠️  No migrations to revert');
-      return;
-    }
+        if (executed.length === 0) {
+          logger.log('⚠️  No migrations to revert');
+          return;
+        }
 
-    const [reverted] = await umzug.down();
-    logger.log(`✅ Reverted migration: ${reverted.name}`);
+        const [reverted] = await umzug.down();
+        logger.log(`✅ Reverted migration: ${reverted.name}`);
+      },
+      { logger },
+    );
   } catch (error) {
     logger.error('❌ Revert failed:', error);
     throw error;
@@ -529,15 +603,21 @@ export async function undoSeeds(seeds, connection, options = {}) {
       ...options,
       logger,
     });
-    const executed = await umzug.executed();
+    await withSchemaLock(
+      connection,
+      async () => {
+        const executed = await umzug.executed();
 
-    if (executed.length === 0) {
-      logger.log('⚠️  No seeds to undo');
-      return;
-    }
+        if (executed.length === 0) {
+          logger.log('⚠️  No seeds to undo');
+          return;
+        }
 
-    const [reverted] = await umzug.down();
-    logger.log(`✅ Undo seed: ${reverted.name}`);
+        const [reverted] = await umzug.down();
+        logger.log(`✅ Undo seed: ${reverted.name}`);
+      },
+      { logger },
+    );
   } catch (error) {
     logger.error('❌ Failed to undo seed:', error);
     throw error;

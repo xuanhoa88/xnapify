@@ -13,6 +13,9 @@
  * so an attacker cannot permanently deny a victim access by spamming bad
  * passwords.
  */
+
+import { assertColumnDropSupported } from '@shared/api/engines/db/migrationGuards.js';
+
 export async function up({ context, Sequelize }) {
   const { queryInterface } = context;
   const { DataTypes } = Sequelize;
@@ -30,5 +33,9 @@ export async function up({ context, Sequelize }) {
  */
 export async function down({ context }) {
   const { queryInterface } = context;
+  assertColumnDropSupported(queryInterface, {
+    table: 'users',
+    column: 'locked_until',
+  });
   await queryInterface.removeColumn('users', 'locked_until');
 }

@@ -76,7 +76,7 @@ mkdir -p src/extensions/{extension-name}
 **Host contract (`xnapify`, required):**
 
 - `version` — semver range of host versions the extension supports. Install, activation, and load are refused outside the range (`IncompatibleExtensionError`, HTTP 422).
-- `capabilities` — container bindings the extension may `container.resolve()` in its lifecycle hooks (`db`, `models`, `hook`, `worker`, `users:*`, or `*`). Anything else throws `CapabilityDeniedError`. Omitting the list grants only `hook`, `cache`, `http`, `template`, `i18n`.
+- `capabilities` — container bindings the extension may `container.resolve()` in its lifecycle hooks (`db`, `models`, `worker`, `users:*`, …). Anything else throws `CapabilityDeniedError`. Grants are additive: the side-effect-free defaults (`hook`, `cache`, `http`, `template`, `i18n`) are always granted and your list adds to them, so omitting the key or giving `[]` still resolves those five. `extension`, `jwt` and `env` are reserved and never granted; `*` counts only for extensions the operator listed in `XNAPIFY_TRUSTED_EXTENSIONS`.
 
 **Namespace activation:**
 
@@ -411,7 +411,7 @@ export default {
   },
 
   // Lifecycle: shutdown (called when extension is disabled)
-  shutdown(registry) {
+  shutdown({ registry }) {
     registry.unregisterSlot('profile.personal_info.fields', ExtensionField);
     registry.unregisterHook(
       'profile.personal_info.validator',
@@ -717,7 +717,7 @@ export default {
     console.log('[Comments Extension] Initialized');
   },
 
-  shutdown(registry) {
+  shutdown({ registry }) {
     registry.unregisterSlot('posts.detail.comments', CommentForm);
     registry.unregisterHook('posts.comments.validator', extendCommentValidator);
     this[HANDLERS] = {};
@@ -905,8 +905,10 @@ this[HANDLERS].ipcCheckNickname = registry.createPipeline(
   },
 );
 
-// The scoped registry tracks ownership; pass { public: true } to allow guests
-registry.registerHook(
+// registerHandler, not registerHook: the IPC gateway dispatches through
+// invokeHandler, so a collector registered here would never be called.
+// The scoped registry tracks ownership; pass { public: true } to allow guests.
+registry.registerHandler(
   `ipc:${__EXTENSION_ID__}:checkNickname`,
   this[HANDLERS].ipcCheckNickname,
 );

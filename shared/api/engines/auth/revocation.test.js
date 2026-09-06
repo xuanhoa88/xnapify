@@ -20,6 +20,17 @@ import {
   SESSION_REVOKED_TTL_MS,
 } from './revocation.js';
 
+/** A store whose every method rejects, like Redis mid-outage. */
+function brokenStore(message = 'ECONNREFUSED') {
+  const fail = () => Promise.reject(new Error(message));
+  return {
+    revokeSession: fail,
+    isSessionRevoked: fail,
+    setUserVersion: fail,
+    getUserVersion: fail,
+  };
+}
+
 describe('revocation', () => {
   describe('parseDuration', () => {
     it('parses jsonwebtoken style durations', () => {
@@ -151,6 +162,74 @@ describe('revocation', () => {
       await expect(
         assertSessionValid({ id: 9, ver: 0 }, { store, loadUserVersion }),
       ).resolves.toBeUndefined();
+    });
+  });
+
+  describe('assertSessionValid when the store is unavailable', () => {
+    let logger;
+
+    beforeEach(() => {
+      logger = { error: jest.fn() };
+    });
+
+    it('falls back to the durable token_version and logs the outage', async () => {
+      const loadUserVersion = jest.fn().mockResolvedValue(4);
+
+      // Stale token: the database still knows it was superseded
+      await expect(
+        assertSessionValid(
+          { id: 9, sid: 'fam-1', ver: 3 },
+          { store: brokenStore(), loadUserVersion, logger },
+        ),
+      ).rejects.toMatchObject({ code: 'SESSION_SUPERSEDED' });
+
+      // Current token: still accepted, the outage does not log anyone out
+      await expect(
+        assertSessionValid(
+          { id: 9, sid: 'fam-1', ver: 4 },
+          { store: brokenStore(), loadUserVersion, logger },
+        ),
+      ).resolves.toBeUndefined();
+
+      expect(logger.error).toHaveBeenCalled();
+    });
+
+    it('reports 503, not 401, when neither source can answer', async () => {
+      const loadUserVersion = jest.fn().mockRejectedValue(new Error('db down'));
+      await expect(
+        assertSessionValid(
+          { id: 9, sid: 'fam-1', ver: 3 },
+          { store: brokenStore(), loadUserVersion, logger },
+        ),
+      ).rejects.toMatchObject({
+        name: 'SessionStoreUnavailableError',
+        code: 'SESSION_STORE_UNAVAILABLE',
+        status: 503,
+      });
+    });
+
+    it('refuses a token with no durable claim to fall back on', async () => {
+      await expect(
+        assertSessionValid({ id: 9, sid: 'fam-1' }, { store: brokenStore(), logger }),
+      ).rejects.toMatchObject({ status: 503 });
+    });
+
+    it('still reports a genuine revocation as revoked', async () => {
+      const store = new MemoryRevocationStore();
+      store.revokeSession('fam-1');
+      await expect(
+        assertSessionValid({ id: 9, sid: 'fam-1', ver: 0 }, { store, logger }),
+      ).rejects.toMatchObject({ code: 'SESSION_REVOKED', status: 401 });
+    });
+
+    it('survives a memo write that fails after a successful read', async () => {
+      const store = new MemoryRevocationStore();
+      store.setUserVersion = () => Promise.reject(new Error('write failed'));
+      const loadUserVersion = jest.fn().mockResolvedValue(2);
+      await expect(
+        assertSessionValid({ id: 9, ver: 2 }, { store, loadUserVersion, logger }),
+      ).resolves.toBeUndefined();
+      expect(logger.error).toHaveBeenCalled();
     });
   });
 

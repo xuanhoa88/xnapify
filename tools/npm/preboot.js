@@ -31,9 +31,25 @@ import net from 'net';
 import os from 'os';
 import path from 'path';
 
+// Relative import: the build bundles it in (only non-relative requests are
+// externalised), so preboot and the server share ONE dialect table.
+import {
+  DIALECT_DRIVERS,
+  detectDialect,
+  parseDialect,
+  resolveSandboxRoot,
+} from '../../shared/api/engines/db/drivers.js';
+
 // ─── Constants ──────────────────────────────────────────────────────────────
 
 const ROOT = process.cwd();
+
+/**
+ * Where driver sandboxes are installed. Derived the same way the server
+ * derives it (`resolveSandboxRoot`) so the two never disagree when the
+ * process is started from an unrelated working directory.
+ */
+const DRIVER_ROOT = resolveSandboxRoot();
 const ENV_PATH = path.join(ROOT, '.env');
 const ENV_LOCAL_PATH = path.join(ROOT, '.env.local');
 const ENV_TEMPLATE = path.join(ROOT, '.env.xnapify');
@@ -74,7 +90,7 @@ let useLocalEnv = false;
  * @returns {string}
  */
 function getDriverIsolationDir(dialect) {
-  return path.join(ROOT, '.xnapify', 'sequelize-drivers', dialect);
+  return path.join(DRIVER_ROOT, '.xnapify', 'sequelize-drivers', dialect);
 }
 
 /**
@@ -396,31 +412,19 @@ function cleanupEnvLocal() {
 
 // ─── Dialect Detection ──────────────────────────────────────────────────────
 
-/** @type {Set<string>} Valid dialect shorthand values */
-const DIALECT_SHORTHANDS = new Set(
-  Object.keys(DIALECT_DEPS).filter(k => !k.startsWith('_')),
+// `detectDialect` is imported from shared/api/engines/db/drivers.js — the one
+// table that also drives XNAPIFY_DB_URL validation (shared/config/env.js) and
+// the Sequelize connection. Reimplementing it here is what let a URL validate,
+// provision the wrong server and then fail to boot.
+//
+// Every dialect it can return must have an entry in DIALECT_DEPS.
+const UNMAPPED_DIALECTS = Object.keys(DIALECT_DRIVERS).filter(
+  d => !DIALECT_DEPS[d],
 );
-
-/**
- * Detect SQL dialect from XNAPIFY_DB_URL.
- * Supports full URLs and shorthand values:
- *   'postgres' | 'postgresql://...' → postgres
- *   'mysql'    | 'mysql://...'      → mysql
- *   'sqlite'   | 'sqlite:...'       → sqlite (default)
- * @param {string} url - Database URL or shorthand
- * @returns {'sqlite'|'postgres'|'mysql'}
- */
-function detectDialect(url) {
-  if (!url) return 'sqlite';
-  const lower = url.toLowerCase().trim();
-
-  // Shorthand: bare dialect name (e.g. XNAPIFY_DB_URL=postgres)
-  if (DIALECT_SHORTHANDS.has(lower)) return lower;
-
-  // Full URL scheme
-  if (/^postgres(ql)?:\/\//i.test(url)) return 'postgres';
-  if (/^mysql:\/\//i.test(url)) return 'mysql';
-  return 'sqlite';
+if (UNMAPPED_DIALECTS.length > 0) {
+  throw new Error(
+    `preboot is missing dependencies for dialect(s): ${UNMAPPED_DIALECTS.join(', ')}`,
+  );
 }
 
 // ─── Dependency Management ──────────────────────────────────────────────────
@@ -2013,7 +2017,9 @@ Examples:
  * @returns {string} 'sqlite' | 'postgres' | 'mysql'
  */
 async function resolveDialect(dbOverride) {
-  if (dbOverride) return dbOverride;
+  // Map the override through the shared table too (`--db mariadb` → mysql),
+  // but pass an unrecognised value through so callers still report it.
+  if (dbOverride) return parseDialect(dbOverride) ?? dbOverride;
   ensureEnvFile();
   await loadEnv();
   return detectDialect(process.env.XNAPIFY_DB_URL || '');

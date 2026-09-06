@@ -43,7 +43,7 @@ Whenever you provide assistance to a Developer on this codebase, you MUST adhere
   export const get = [requirePermission('resource:read'), handler];
   ```
   **Never** directly import from `@shared/api/engines/auth/middlewares` in route files — always resolve via `container.resolve('auth').middlewares`.
-- **Environment Variables**: New environment configurations must always use the `XNAPIFY_` prefix.
+- **Environment Variables**: New environment configurations must always use the `XNAPIFY_` prefix. Every runtime variable must also be added to the zod schema in `shared/config/env.js` (so a bad value fails at boot with a readable message) and documented with a comment in `.env.xnapify`. Build-time-only variables are exempt from the schema.
 
 ---
 
@@ -85,9 +85,12 @@ Whenever you provide assistance to a Developer on this codebase, you MUST adhere
 - **API modules** (`api/index.js`) must use `export default { ... }` with lifecycle hooks in this order:
   `translations → providers → migrations → models → seeds → boot → routes`
 - **View modules** (`views/index.js`) must use `export default { ... }` with:
-  `translations → providers → boot → routes`
-- **Declarative hooks** (`migrations`, `models`, `seeds`, `routes`) return Rspack `import.meta.webpackContext` directly — the autoloader handles execution.
-- **Imperative hooks** (`providers`, `boot`) contain your initialization logic and receive `{ container }`.
+  `translations → providers → menus → boot → routes`
+- **`menus({ store, i18n })`** (view side only) is the one correct place to register sidebar navigation. Never register a menu from a route's `setup()`: a route's chunk is only fetched the first time that route is matched, so the link would be missing until the user is already on the page it points to.
+- **`shutdown`** sits between `boot` and `routes` in both phase arrays but is never run by the autoloaders — application modules are never unloaded. It runs only when an **extension** is deactivated, and must exactly reverse what `boot`/`menus` registered.
+- **Declarative hooks** (`translations`, `migrations`, `models`, `seeds`, and API `routes`) return a Rspack `import.meta.webpackContext` directly — the autoloader handles execution.
+- **View `routes()`** is the exception: it must return `[context, { lazy: true }]` over a `mode: 'lazy'` context. Every view module has to agree — one module returning a bare context makes the merged adapter throw `MixedRouteLoadingStrategyError` at boot and the whole route tree fails to mount (`shared/renderer/autoloader.js`).
+- **Imperative hooks** (`providers`, `menus`, `boot`) contain your initialization logic and receive `{ container }` (view side also gets `{ store, i18n }`).
 - **Route hooks** (`_route.js`) may export: `middleware`, `init`, `setup`, `teardown`, `mount`, `unmount`, `getInitialProps`, `namespace`.
 
 ---

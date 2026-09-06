@@ -14,6 +14,8 @@
  *    extension never has to pass (or forge) it.
  * 2. Removal is limited to that extension's own registrations, so one
  *    extension cannot disable another's slots, hooks or handlers.
+ * 3. An `ipc:` handler id must be addressed to the registrant, so one
+ *    extension can neither answer nor squat another's IPC endpoint.
  *
  * This has no dependency on the extension manager: it is a pure function of a
  * registry and an id, which is why it lives here rather than as a method.
@@ -52,6 +54,54 @@ export const PASSTHROUGH_METHODS = Object.freeze([
   'notify',
   'createPipeline',
 ]);
+
+/**
+ * Prefix reserved for the extension IPC gateway.
+ *
+ * `POST /api/extensions/:id/ipc` resolves `ipc:<id>:<action>`, so the id
+ * segment decides which extension a call reaches.
+ */
+const IPC_PREFIX = 'ipc:';
+
+/**
+ * Raised when an extension claims a handler id that belongs to another one.
+ */
+export class HandlerOwnershipError extends Error {
+  constructor(handlerId, extensionId) {
+    super(
+      `Extension "${extensionId}" cannot register handler "${handlerId}": ` +
+        `IPC handler ids are addressed as "${IPC_PREFIX}<extensionId>:<action>", ` +
+        `so this extension may only claim ids under "${IPC_PREFIX}${extensionId}:".`,
+    );
+    this.name = 'HandlerOwnershipError';
+    this.code = 'E_HANDLER_NOT_OWNED';
+    this.status = 403;
+    this.handlerId = handlerId;
+    this.extensionId = extensionId;
+  }
+}
+
+/**
+ * Reject an IPC handler id addressed to a different extension.
+ *
+ * The gateway builds the id from the URL, never from the registration, so an
+ * id under someone else's prefix either serves their callers or — since a
+ * second claim throws DuplicateHandlerError inside boot() — stops them from
+ * ever mounting. Binding the id to its registrant at registration closes
+ * both.
+ *
+ * @param {string} handlerId
+ * @param {string} extensionId
+ * @throws {HandlerOwnershipError}
+ */
+function assertHandlerId(handlerId, extensionId) {
+  if (typeof handlerId !== 'string' || !handlerId.startsWith(IPC_PREFIX)) {
+    return;
+  }
+  if (!handlerId.startsWith(`${IPC_PREFIX}${extensionId}:`)) {
+    throw new HandlerOwnershipError(handlerId, extensionId);
+  }
+}
 
 /**
  * Refuse an ownership-checked removal, warning instead of throwing so a
@@ -100,8 +150,14 @@ export function createScopedRegistry(registry, extensionId) {
     /**
      * Request/response extension point: this extension owns the id.
      * Pass `{ public: true }` to allow unauthenticated IPC callers.
+     *
+     * An `ipc:` id must be addressed to this extension — `ipc:<own id>:…` —
+     * so one extension cannot answer, or squat, another's IPC endpoint.
+     *
+     * @throws {HandlerOwnershipError} On an id under another extension's prefix
      */
     registerHandler(handlerId, callback, options = {}) {
+      assertHandlerId(handlerId, extensionId);
       return registry.registerHandler(
         handlerId,
         callback,

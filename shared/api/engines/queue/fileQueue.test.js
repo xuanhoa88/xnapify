@@ -683,6 +683,12 @@ describe('FileQueue concurrency & recovery', () => {
       name: 'race',
       dataDir: DATA_DIR,
       pollInterval: 50,
+      // These tests exercise claim/lock/recovery mechanics. fsync is a full
+      // hardware flush (F_FULLFSYNC on macOS, tens of ms per call) that would
+      // make the timing-sensitive races here slow and flaky; the durable write
+      // path itself is covered by the durability tests below, and the
+      // lifecycle suite above runs on the real default.
+      fsync: false,
       defaultJobOptions: { attempts: 2, backoff: 10 },
       ...options,
     });
@@ -903,5 +909,477 @@ describe('FileQueue concurrency & recovery', () => {
 
     expect(finished).toBe(true);
     expect(await q.getJobsByStatus('active')).toHaveLength(0);
+  });
+
+  // ==================================================================
+  // Crash-failure dead-lettering (attempts ceiling on the recovery path)
+  // ==================================================================
+
+  it('dead-letters an abandoned job that has used every attempt (boot)', async () => {
+    const dirs = ['pending', 'active', 'completed', 'failed', 'delayed'];
+    for (const dir of dirs) {
+      fs.mkdirSync(path.join(DATA_DIR, 'race', dir), { recursive: true });
+    }
+    fs.mkdirSync(path.join(DATA_DIR, 'race', '.locks'), { recursive: true });
+
+    const poison = {
+      id: 'poison-1',
+      name: 'poison',
+      status: 'active',
+      priority: 0,
+      createdAt: Date.now() - 10_000,
+      attempts: 99,
+      maxAttempts: 1,
+    };
+    const filename = `9999-${String(poison.createdAt).padStart(15, '0')}-poison-1.json`;
+    fs.writeFileSync(
+      path.join(DATA_DIR, 'race', 'active', filename),
+      JSON.stringify(poison),
+    );
+
+    // No lock file → the boot recovery path picks it up.
+    const q = make();
+
+    expect(fs.readdirSync(path.join(DATA_DIR, 'race', 'pending'))).toHaveLength(
+      0,
+    );
+    expect(fs.readdirSync(path.join(DATA_DIR, 'race', 'active'))).toHaveLength(
+      0,
+    );
+    const failed = await q.getJobsByStatus('failed');
+    expect(failed).toHaveLength(1);
+    expect(failed[0].id).toBe('poison-1');
+    expect(failed[0].status).toBe(JOB_STATUS.FAILED);
+    expect(failed[0].error.message).toMatch(/abandoned/i);
+  });
+
+  it('dead-letters an abandoned job that has used every attempt (poll tick)', async () => {
+    const q = make();
+    const job = await q.add('job', {}, { attempts: 1 });
+    const filename = q.buildFilename(job);
+
+    // Simulate a worker that claimed the job (attempt spent) and then died.
+    const stored = JSON.parse(
+      fs.readFileSync(q.jobPath('pending', filename), 'utf8'),
+    );
+    stored.status = JOB_STATUS.ACTIVE;
+    stored.attempts = 1;
+    fs.writeFileSync(
+      q.jobPath('pending', filename),
+      JSON.stringify(stored),
+      'utf8',
+    );
+    fs.renameSync(
+      q.jobPath('pending', filename),
+      q.jobPath('active', filename),
+    );
+
+    let ran = 0;
+    q.process(async () => {
+      ran++;
+    });
+
+    await waitFor(async () => (await q.getJobsByStatus('failed')).length === 1);
+    const failed = await q.getJobsByStatus('failed');
+    expect(failed).toHaveLength(1);
+    expect(failed[0].id).toBe(job.id);
+    expect(ran).toBe(0);
+  });
+
+  // ==================================================================
+  // Corrupt job files are quarantined, never deleted
+  // ==================================================================
+
+  it('quarantines an unreadable pending job instead of destroying it', async () => {
+    const q = make();
+    const job = await q.add('job', {});
+    const filename = q.buildFilename(job);
+    // Valid JSON, but no id — exactly what a torn write can look like.
+    fs.writeFileSync(
+      q.jobPath('pending', filename),
+      JSON.stringify({ name: 'job', data: {} }),
+      'utf8',
+    );
+
+    q.process(async () => 'ok');
+
+    const corruptDir = path.join(DATA_DIR, 'race', 'corrupt');
+    await waitFor(() => fs.readdirSync(corruptDir).length === 1);
+
+    const quarantined = fs.readdirSync(corruptDir);
+    expect(quarantined).toHaveLength(1);
+    expect(quarantined[0]).toContain(filename);
+    expect(fs.existsSync(q.jobPath('pending', filename))).toBe(false);
+    expect(fs.existsSync(q.jobPath('active', filename))).toBe(false);
+    expect(
+      JSON.parse(
+        fs.readFileSync(path.join(corruptDir, quarantined[0]), 'utf8'),
+      ),
+    ).toEqual({ name: 'job', data: {} });
+  });
+
+  it('quarantines unparseable JSON instead of throwing out of the tick', async () => {
+    const q = make();
+    const job = await q.add('job', {});
+    const filename = q.buildFilename(job);
+    fs.writeFileSync(
+      q.jobPath('pending', filename),
+      '{"id":"a", trunc',
+      'utf8',
+    );
+
+    let processed = 0;
+    q.process(async () => {
+      processed++;
+    });
+
+    const corruptDir = path.join(DATA_DIR, 'race', 'corrupt');
+    await waitFor(() => fs.readdirSync(corruptDir).length === 1);
+    expect(fs.readdirSync(corruptDir)).toHaveLength(1);
+
+    // The queue is still healthy afterwards — the tick did not blow up and
+    // the claim lock was not left behind.
+    await q.add('job', {});
+    await waitFor(() => processed === 1);
+    expect(processed).toBe(1);
+  });
+
+  // ==================================================================
+  // Lock hygiene
+  // ==================================================================
+
+  it('releases the claim lock when the claim throws unexpectedly', async () => {
+    const q = make();
+    const job = await q.add('job', {});
+    const filename = q.buildFilename(job);
+
+    const realWriteJob = q.writeJob.bind(q);
+    let injected = false;
+    q.writeJob = async (status, j) => {
+      if (!injected && status === 'active') {
+        injected = true;
+        const err = new Error('no space left on device');
+        err.code = 'ENOSPC';
+        throw err;
+      }
+      return realWriteJob(status, j);
+    };
+
+    let processed = 0;
+    q.process(async () => {
+      processed++;
+    });
+
+    await waitFor(() => injected);
+    // Without the try/finally the lock would stay behind forever and the job
+    // would be stranded in active/ with a frozen lock mtime.
+    await waitFor(() => !fs.existsSync(q.lockPath(filename)));
+    expect(fs.existsSync(q.lockPath(filename))).toBe(false);
+
+    await waitFor(() => processed === 1);
+    expect(processed).toBe(1);
+  });
+
+  it('does not release a lock that now belongs to another owner', async () => {
+    const q = make();
+    const job = await q.add('job', {});
+    const filename = q.buildFilename(job);
+
+    expect(await q.acquireLock(filename)).toBe(true);
+    // A stale-lock steal by a sibling, followed by that sibling's own lock.
+    fs.writeFileSync(q.lockPath(filename), 'other-owner:1');
+
+    await q.releaseLock(filename);
+
+    expect(fs.existsSync(q.lockPath(filename))).toBe(true);
+    expect(fs.readFileSync(q.lockPath(filename), 'utf8')).toBe('other-owner:1');
+  });
+
+  it('stops heartbeating once the lock belongs to another owner', async () => {
+    const q = make({ lockStaleMs: 1000 });
+    let release;
+    q.process(
+      () =>
+        new Promise(resolve => {
+          release = resolve;
+        }),
+    );
+    const job = await q.add('job', {});
+    await waitFor(() => q.activeJobs === 1);
+    const filename = q.buildFilename(job);
+
+    // Sibling steals the lock and installs its own.
+    fs.writeFileSync(q.lockPath(filename), 'other-owner:1');
+
+    await waitFor(() => !q.heartbeats.has(filename), 2000);
+    expect(q.heartbeats.has(filename)).toBe(false);
+    expect(fs.readFileSync(q.lockPath(filename), 'utf8')).toBe('other-owner:1');
+
+    release();
+    await waitFor(() => q.activeJobs === 0);
+    // The finally must not delete the successor's lock either.
+    expect(fs.readFileSync(q.lockPath(filename), 'utf8')).toBe('other-owner:1');
+    fs.unlinkSync(q.lockPath(filename));
+  });
+
+  it('keeps heartbeating a job that outlives the close() drain', async () => {
+    const q = make({ drainTimeout: 100, lockStaleMs: 750 });
+    let release;
+    q.process(
+      () =>
+        new Promise(resolve => {
+          release = resolve;
+        }),
+    );
+    const job = await q.add('job', {});
+    await waitFor(() => q.activeJobs === 1);
+    const filename = q.buildFilename(job);
+    const before = fs.statSync(q.lockPath(filename)).mtimeMs;
+
+    await q.close();
+
+    // The handler is still running: its lock must keep being refreshed, or a
+    // sibling would declare it abandoned and run the same work concurrently.
+    expect(q.activeJobs).toBe(1);
+    expect(q.heartbeats.has(filename)).toBe(true);
+    await waitFor(
+      () => fs.statSync(q.lockPath(filename)).mtimeMs > before,
+      2000,
+    );
+    expect(fs.statSync(q.lockPath(filename)).mtimeMs).toBeGreaterThan(before);
+
+    release();
+    await waitFor(() => q.activeJobs === 0);
+    expect(q.heartbeats.has(filename)).toBe(false);
+  });
+
+  it('clamps a lockStaleMs shorter than the heartbeat interval', () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation();
+    const q = make({ lockStaleMs: 100 });
+
+    expect(q.lockStaleMs).toBe(750);
+    expect(q.heartbeatMs).toBeLessThanOrEqual(q.lockStaleMs / 3);
+    expect(
+      warn.mock.calls.some(
+        c => typeof c[0] === 'string' && c[0].includes('lockStaleMs'),
+      ),
+    ).toBe(true);
+    warn.mockRestore();
+  });
+
+  // ==================================================================
+  // Delayed promotion cost
+  // ==================================================================
+
+  it('does not lock or read delayed jobs that are not due yet', async () => {
+    const q = make();
+    await q.add('later', {}, { delay: 60_000 });
+
+    const acquire = jest.spyOn(q, 'acquireLock');
+    const read = jest.spyOn(q, 'readJob');
+
+    await q.promoteExpiredDelayed();
+    read.mockClear(); // first pass populates the due-ness cache
+    await q.promoteExpiredDelayed();
+    await q.promoteExpiredDelayed();
+
+    expect(acquire).not.toHaveBeenCalled();
+    expect(read).not.toHaveBeenCalled();
+
+    acquire.mockRestore();
+    read.mockRestore();
+  });
+
+  it('still promotes a delayed job once it becomes due', async () => {
+    const q = make();
+    const job = await q.add('soon', {}, { delay: 40 });
+    await q.promoteExpiredDelayed();
+    expect(await q.getJobsByStatus('delayed')).toHaveLength(1);
+
+    await sleep(80);
+    await q.promoteExpiredDelayed();
+
+    expect(await q.getJobsByStatus('delayed')).toHaveLength(0);
+    const pending = await q.getJobsByStatus('pending');
+    expect(pending).toHaveLength(1);
+    expect(pending[0].id).toBe(job.id);
+    expect(pending[0].status).toBe(JOB_STATUS.PENDING);
+  });
+
+  // ==================================================================
+  // Housekeeping
+  // ==================================================================
+
+  it('does not accumulate debounce timers in the tracking set', async () => {
+    const q = make();
+
+    q.markMetaDirty();
+    q.markMetaDirty();
+    expect(q.timers.size).toBe(1);
+
+    await waitFor(() => q.timers.size === 0, 3000);
+    expect(q.timers.size).toBe(0);
+
+    q.markMetaDirty();
+    await waitFor(() => q.timers.size === 0, 3000);
+    expect(q.timers.size).toBe(0);
+  });
+
+  it('sweeps orphaned .tmp and *.stale artifacts older than the grace period', async () => {
+    const q = make();
+    const orphanTmp = path.join(
+      DATA_DIR,
+      'race',
+      'pending',
+      '9999-000000000000001-x.json-1-abc.tmp',
+    );
+    const orphanStale = path.join(
+      DATA_DIR,
+      'race',
+      '.locks',
+      '9999-000000000000001-x.json.lock-1-abc.stale',
+    );
+    const freshTmp = path.join(
+      DATA_DIR,
+      'race',
+      'pending',
+      '9999-000000000000002-y.json-1-def.tmp',
+    );
+    fs.writeFileSync(orphanTmp, '{}');
+    fs.writeFileSync(orphanStale, '1');
+    fs.writeFileSync(freshTmp, '{}');
+    const old = new Date(Date.now() - 5 * 60_000);
+    fs.utimesSync(orphanTmp, old, old);
+    fs.utimesSync(orphanStale, old, old);
+
+    expect(await q.sweepArtifacts()).toBe(2);
+    expect(fs.existsSync(orphanTmp)).toBe(false);
+    expect(fs.existsSync(orphanStale)).toBe(false);
+    // Still inside the grace window — a concurrent write must survive.
+    expect(fs.existsSync(freshTmp)).toBe(true);
+  });
+
+  it('applies the retention policy to completed and failed jobs', async () => {
+    const q = make({ retention: { completed: 0, failed: 0 } });
+    const stamp = Date.now() - 60_000;
+    const done = {
+      id: 'done-1',
+      name: 'x',
+      status: JOB_STATUS.COMPLETED,
+      priority: 0,
+      createdAt: stamp,
+      completedAt: stamp,
+    };
+    const dead = {
+      id: 'dead-1',
+      name: 'x',
+      status: JOB_STATUS.FAILED,
+      priority: 0,
+      createdAt: stamp,
+      failedAt: stamp,
+    };
+    fs.writeFileSync(
+      q.jobPath('completed', q.buildFilename(done)),
+      JSON.stringify(done),
+    );
+    fs.writeFileSync(
+      q.jobPath('failed', q.buildFilename(dead)),
+      JSON.stringify(dead),
+    );
+
+    expect(await q.applyRetention()).toBe(2);
+    expect(await q.getJobsByStatus('completed')).toHaveLength(0);
+    expect(await q.getJobsByStatus('failed')).toHaveLength(0);
+  });
+
+  it('leaves terminal jobs alone when retention is disabled', async () => {
+    const q = make({ retention: { completed: null, failed: null } });
+    const stamp = Date.now() - 60_000;
+    const dead = {
+      id: 'dead-2',
+      name: 'x',
+      status: JOB_STATUS.FAILED,
+      priority: 0,
+      createdAt: stamp,
+      failedAt: stamp,
+    };
+    fs.writeFileSync(
+      q.jobPath('failed', q.buildFilename(dead)),
+      JSON.stringify(dead),
+    );
+
+    expect(await q.applyRetention()).toBe(0);
+    expect(await q.getJobsByStatus('failed')).toHaveLength(1);
+  });
+
+  // ==================================================================
+  // Durability
+  // ==================================================================
+
+  it('fsyncs the file and its directory only in durable mode', async () => {
+    const q = make();
+    const dirSync = jest.spyOn(q, 'fsyncDir').mockResolvedValue(undefined);
+    const pendingDir = path.join(DATA_DIR, 'race', 'pending');
+    const target = path.join(pendingDir, 'durability-probe.json');
+
+    await q.writeFileAtomic(target, '{"a":1}', { durable: true });
+    expect(dirSync).toHaveBeenCalledWith(pendingDir);
+    expect(fs.readFileSync(target, 'utf8')).toBe('{"a":1}');
+
+    dirSync.mockClear();
+    await q.writeFileAtomic(target, '{"a":2}', { durable: false });
+    expect(dirSync).not.toHaveBeenCalled();
+    expect(fs.readFileSync(target, 'utf8')).toBe('{"a":2}');
+
+    // Neither mode may leave scratch files behind.
+    expect(fs.readdirSync(pendingDir).filter(f => f.endsWith('.tmp'))).toEqual(
+      [],
+    );
+    dirSync.mockRestore();
+  });
+
+  it('writes jobs through the durable path unless fsync is disabled', async () => {
+    // Durability is the default; only these tests opt out of it.
+    const defaults = new FileQueue({ name: 'race', dataDir: DATA_DIR });
+    opened.push(defaults);
+    expect(defaults.fsync).toBe(true);
+
+    const durable = make({ fsync: true });
+
+    const spy = jest.spyOn(durable, 'writeFileAtomic');
+    const job = await durable.add('job', {});
+    expect(spy).toHaveBeenCalledWith(
+      expect.stringContaining(job.id),
+      expect.any(String),
+      { durable: true },
+    );
+
+    spy.mockClear();
+    const buffered = make({ fsync: false });
+    const bufferedSpy = jest.spyOn(buffered, 'writeFileAtomic');
+    await buffered.add('job', {});
+    expect(bufferedSpy).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      { durable: false },
+    );
+
+    spy.mockRestore();
+    bufferedSpy.mockRestore();
+  });
+
+  // ==================================================================
+  // Stats
+  // ==================================================================
+
+  it('counts jobs written by another process in getStats()', async () => {
+    const writer = make();
+    const reader = make(); // indexed before the job below exists
+
+    await writer.add('job', {});
+    expect(reader.jobIndex.size).toBe(0);
+
+    const stats = await reader.getStats();
+    expect(stats.counts.pending).toBe(1);
   });
 });

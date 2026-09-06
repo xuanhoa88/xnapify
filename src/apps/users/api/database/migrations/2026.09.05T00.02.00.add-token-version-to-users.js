@@ -13,6 +13,9 @@
  * after which the auth middlewares reject any token carrying an older value.
  * Unlike the in-process session denylist this survives restarts.
  */
+
+import { assertColumnDropSupported } from '@shared/api/engines/db/migrationGuards.js';
+
 export async function up({ context, Sequelize }) {
   const { queryInterface } = context;
   const { DataTypes } = Sequelize;
@@ -30,5 +33,9 @@ export async function up({ context, Sequelize }) {
  */
 export async function down({ context }) {
   const { queryInterface } = context;
+  assertColumnDropSupported(queryInterface, {
+    table: 'users',
+    column: 'token_version',
+  });
   await queryInterface.removeColumn('users', 'token_version');
 }

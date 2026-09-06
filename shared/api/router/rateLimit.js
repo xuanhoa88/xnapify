@@ -12,6 +12,14 @@ const cache = new Map();
 const DEFAULT_KEY = '__default__';
 
 /**
+ * First `useRateLimit` object seen for a generated (identity-less) cache key.
+ * A second, different object landing on the same key means two routes are
+ * silently sharing one bucket.
+ * @type {Map<string, Object>}
+ */
+const collisionOwners = new Map();
+
+/**
  * Optional shared-store factory. When set (see bootstrap), every limiter is
  * backed by it so counters are shared across workers/instances instead of
  * living in each process. Receives the limiter cache key so each route
@@ -28,13 +36,17 @@ let storeFactory = null;
 export function configureRateLimitStore(factory) {
   storeFactory = typeof factory === 'function' ? factory : null;
   cache.clear();
+  collisionOwners.clear();
 }
 
 let rateLimitPromise;
 async function getRateLimit() {
   if (rateLimitPromise === undefined) {
     rateLimitPromise = import('express-rate-limit')
-      .then(mod => mod.default || mod)
+      .then(mod => ({
+        rateLimit: mod.default || mod,
+        MemoryStore: mod.MemoryStore,
+      }))
       .catch(() => null);
   }
   return rateLimitPromise;
@@ -92,30 +104,104 @@ function getDefaultConfig() {
 // ---------------------------------------------------------------------------
 
 /**
+ * Wrap a shared-store limiter so a store outage degrades instead of 500ing.
+ *
+ * Rate limiting sits on the hot path of every request, so a Redis blip would
+ * otherwise turn into a full API outage. On a store error we count the
+ * request in a per-process memory store instead: the limit still applies
+ * (per instance rather than per deployment) and the request is never lost.
+ *
+ * @param {Object} mod - `{ rateLimit, MemoryStore }` from express-rate-limit
+ * @param {Object} config - Limiter config
+ * @param {Object} store - Shared store
+ * @returns {Function} Express middleware
+ */
+function withStoreFallback({ rateLimit, MemoryStore }, config, store) {
+  const primary = rateLimit({ ...config, store });
+  let fallback = null;
+
+  return function rateLimiterWithFallback(req, res, next) {
+    const degrade = error => {
+      console.error(
+        `Shared rate-limit store unavailable, counting in-process: ${error.message}`,
+      );
+      if (!fallback && typeof MemoryStore === 'function') {
+        fallback = rateLimit({ ...config, store: new MemoryStore() });
+      }
+      if (!fallback) return next();
+      try {
+        fallback(req, res, fallbackError => {
+          if (fallbackError) {
+            console.error(`Rate limiter failed open: ${fallbackError.message}`);
+          }
+          next();
+        });
+      } catch (fallbackError) {
+        console.error(`Rate limiter failed open: ${fallbackError.message}`);
+        next();
+      }
+    };
+
+    try {
+      primary(req, res, error => (error ? degrade(error) : next()));
+    } catch (error) {
+      degrade(error);
+    }
+  };
+}
+
+/**
  * Create (or retrieve cached) rate limiter middleware.
  */
 export async function createRateLimiter(config, key) {
-  const fn = await getRateLimit();
-  if (!fn) return null;
+  const mod = await getRateLimit();
+  if (!mod) return null;
 
   // Default key: JSON.stringify works for plain objects but drops functions.
   // Callers with functions must supply a stable key.
   const cacheKey = key || JSON.stringify(config);
   if (!cache.has(cacheKey)) {
     const store = storeFactory ? storeFactory(cacheKey) : undefined;
-    cache.set(cacheKey, fn(store ? { ...config, store } : config));
+    cache.set(
+      cacheKey,
+      store
+        ? withStoreFallback(mod, config, store)
+        : mod.rateLimit({ ...config }),
+    );
   }
   return cache.get(cacheKey);
+}
+
+function warnOnSharedBucket(cacheKey, routeRateLimit) {
+  if (!collisionOwners.has(cacheKey)) {
+    collisionOwners.set(cacheKey, routeRateLimit);
+    return;
+  }
+  if (collisionOwners.get(cacheKey) !== routeRateLimit) {
+    console.warn(
+      `Two routes declare the same useRateLimit (${JSON.stringify(routeRateLimit)}) ` +
+        'and now share one bucket — give each a `key` to separate them.',
+    );
+  }
 }
 
 /**
  * Resolve rate limiter for a route based on its `useRateLimit` export.
  *
- *   false            → skip
- *   { max, windowMs} → custom (merged with defaults)
- *   undefined        → app default
+ *   false                 → skip
+ *   { key, max, windowMs} → custom (merged with defaults)
+ *   undefined             → app default
+ *
+ * `key` is the route's rate-limit identity, not a limiter option: it is what
+ * gives the route its own counter. Without it, every route declaring the same
+ * numbers shares a single bucket (six auth routes did), so any route with a
+ * custom limit — above all the sensitive ones — must declare one.
+ *
+ * @param {false|Object|undefined} routeRateLimit - The route's export
+ * @param {string} [routeKey] - Route identity supplied by the caller,
+ *   used when the export declares no `key` of its own
  */
-export async function resolveRateLimiter(routeRateLimit) {
+export async function resolveRateLimiter(routeRateLimit, routeKey) {
   if (routeRateLimit === false) return null;
 
   if (process.env.XNAPIFY_RATE_LIMIT === 'false') return null;
@@ -124,7 +210,14 @@ export async function resolveRateLimiter(routeRateLimit) {
   if (!config) return null;
 
   if (routeRateLimit && typeof routeRateLimit === 'object') {
-    return createRateLimiter({ ...config, ...routeRateLimit });
+    const { key, ...overrides } = routeRateLimit;
+    const merged = { ...config, ...overrides };
+    const identity = key || routeKey;
+    if (identity) return createRateLimiter(merged, `route:${identity}`);
+
+    const cacheKey = JSON.stringify(merged);
+    warnOnSharedBucket(cacheKey, routeRateLimit);
+    return createRateLimiter(merged, cacheKey);
   }
 
   return createRateLimiter(config, DEFAULT_KEY);

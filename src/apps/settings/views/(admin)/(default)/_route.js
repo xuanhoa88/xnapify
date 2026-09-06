@@ -15,7 +15,7 @@ import SettingsPage from './SettingsPage.js';
 /** Stable extension namespace (see manifest `slots`). */
 export const namespace = 'admin.settings';
 
-const { addBreadcrumb, registerMenu, unregisterMenu } = features;
+const { addBreadcrumb } = features;
 
 /**
  * Route boot — inject Redux reducer into the store.
@@ -25,42 +25,6 @@ export function init({ store }) {
 }
 
 export const middleware = requirePermission('settings:read');
-
-/**
- * Register menu item for this route
- */
-export function setup({ store, i18n }) {
-  store.dispatch(
-    registerMenu({
-      ns: 'admin',
-      id: 'system',
-      label: i18n.t('admin:navigation.system', 'System'),
-      order: 99,
-      icon: 'MixerHorizontalIcon',
-      items: [
-        {
-          path: '/admin/settings',
-          label: i18n.t('admin:navigation.settings', 'Settings'),
-          icon: 'GearIcon',
-          permission: 'settings:read',
-          order: 0,
-        },
-      ],
-    }),
-  );
-}
-
-/**
- * Unregister menu item for this route
- */
-export function teardown({ store }) {
-  store.dispatch(
-    unregisterMenu({
-      ns: 'admin',
-      path: '/admin/settings',
-    }),
-  );
-}
 
 /**
  * Page metadata

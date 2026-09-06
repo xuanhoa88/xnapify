@@ -74,8 +74,35 @@ Provide a unified framework for installing, managing, and executing system exten
 
 Checksum operations are called directly (same-process):
 
-- **`computeChecksum(dir)`**: Computes SHA-256 hash of an extension directory.
-- **`verifyChecksum(dir, expected)`**: Verifies a directory's checksum matches an expected value.
+- **`computeChecksum(dir, { manifest })`**: SHA-256 of an extension directory.
+- **`verifyExtensionChecksum(dir, expected)`**: Verifies a directory against an expected value.
+
+The checksum is the hash of two parts: the file tree **excluding `package.json`**,
+and the manifest with `integrity` and `builtAt` stripped and its keys sorted.
+The split is what makes the value verifiable at all — the build writes the
+checksum *into* the manifest it just hashed, so those two fields cannot be part
+of their own input. Everything else in the manifest (entry points, dependencies,
+declared capabilities) is still covered, so tampering invalidates the hash.
+
+`tools/utils/extension.js` re-exports this module rather than reimplementing it:
+the publishing side and the installing side must agree bit-for-bit, and two
+copies drift. Keep this file free of `@shared` aliases and extension-less
+imports — the build task loads it on plain Node ESM.
+
+### Dependency Pinning
+
+Extensions installed at runtime (zip upload or hub download) are **intentionally
+unpinned**. `installExtensionDependencies()` passes `--no-package-lock`, so npm
+resolves the declared ranges at install time and writes no lockfile back. A
+lockfile shipped inside an extension package would describe the publisher's
+machine, not this deployment, and writing one back would mutate the directory
+the integrity hash covers.
+
+The bundled extensions under `src/extensions/` therefore ship **no
+`package-lock.json`**; `tools/npm/setup.js` falls back to `npm install` for
+sub-packages that have none. Do not commit one — it would be honoured by
+`npm ci` during development and ignored in production, which is the worst of
+both worlds.
 
 ### Queue-Based Handlers (`api/services/extension.workers.js`)
 

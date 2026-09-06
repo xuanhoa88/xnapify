@@ -29,8 +29,8 @@ Quick-reference checklist for reviewing `src/extensions/[extension-name]` code.
 ## Frontend Lifecycle
 
 - [ ] `providers({ container, store })` — Redux injection here, **not** in `boot()`
-- [ ] `boot(registry)` — slot and hook registrations
-- [ ] `shutdown(registry)` — **exactly inverses** `boot()`
+- [ ] `boot({ container, registry })` — slot and hook registrations
+- [ ] `shutdown({ container, registry, store })` — **exactly inverses** `boot()`
 
 ## Memory Leak Audit (CRITICAL)
 

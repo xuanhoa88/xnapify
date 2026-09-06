@@ -302,6 +302,10 @@ describe('FileQueue Performance', () => {
       dataDir: TEST_DATA_DIR,
       pollInterval: 30,
       concurrency: 5,
+      // These benchmarks measure queue mechanics. fsync is a hardware flush
+      // (F_FULLFSYNC on macOS, ~50 ms/call) that would dominate every number
+      // here; its cost is measured on its own below.
+      fsync: false,
       defaultJobOptions: { removeOnComplete: false, attempts: 1 },
     });
   });
@@ -451,6 +455,36 @@ describe('FileQueue Performance', () => {
     results.push(r);
   });
 
+  it('add() — durability cost (fsync on vs off)', async () => {
+    const buffered = new FileQueue({
+      name: 'perf-nofsync',
+      dataDir: TEST_DATA_DIR,
+      fsync: false,
+    });
+    const durable = new FileQueue({
+      name: 'perf-fsync',
+      dataDir: TEST_DATA_DIR,
+      fsync: true,
+    });
+
+    const bufferedResult = await benchmark(
+      'add() x20 (fsync off)',
+      async () => {
+        for (let i = 0; i < 20; i++) await buffered.add(`event-${i}`, { i });
+      },
+    );
+    const durableResult = await benchmark('add() x20 (fsync on)', async () => {
+      for (let i = 0; i < 20; i++) await durable.add(`event-${i}`, { i });
+    });
+    results.push(bufferedResult, durableResult);
+
+    expect(await buffered.getJobsByStatus('pending')).toHaveLength(20);
+    expect(await durable.getJobsByStatus('pending')).toHaveLength(20);
+
+    await buffered.close();
+    await durable.close();
+  }, 60000);
+
   it('crash recovery — 50 stale active jobs', async () => {
     // Prepare stale jobs directly in active/
     const activeDir = path.join(TEST_DATA_DIR, 'recovery-perf', 'active');
@@ -527,6 +561,8 @@ describe('Adapter Comparison', () => {
       name: 'cmp-file',
       dataDir: TEST_DATA_DIR,
       concurrency: 1,
+      // Compare adapter overhead, not the platform's fsync latency.
+      fsync: false,
     });
 
     const count = 200;

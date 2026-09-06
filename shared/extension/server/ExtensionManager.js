@@ -20,6 +20,7 @@ import {
   SEQUENTIAL_SYNC,
 } from '../utils/BaseExtensionManager.js';
 import {
+  RESERVED_CAPABILITIES,
   checkHostCompatibility,
   getGrantedCapabilities,
   incompatibleExtensionError,
@@ -53,10 +54,43 @@ const ROUTE_METHOD_KEYS = [
 ];
 
 /**
- * Wrap a route handler so that, while it runs, `req.app.get('container')`
- * returns the extension's capability-scoped container. Middlewares that
- * precede the handler (auth, validation) keep the full container because
- * they are core code.
+ * Swap `app` on a request or response for the duration of a handler.
+ *
+ * Express defines `app` on BOTH the request and the response prototype, so
+ * replacing it on the request alone leaves `res.app.get('container')` (and
+ * `req.res.app`) pointing at the real, unscoped container.
+ *
+ * @param {Object} target - `req` or `res`
+ * @param {Object} appProxy - Proxy to install
+ * @returns {() => void} Restore function
+ */
+function swapApp(target, appProxy) {
+  if (!target || typeof target !== 'object') return () => {};
+
+  const hadOwn = Object.prototype.hasOwnProperty.call(target, 'app');
+  const original = target.app;
+  target.app = appProxy;
+
+  return () => {
+    if (hadOwn) {
+      target.app = original;
+    } else {
+      // `app` came from the Express prototype — drop the shadow rather than
+      // leaving an own property behind.
+      delete target.app;
+    }
+  };
+}
+
+/**
+ * Wrap a route function so that, while it runs, `req.app.get('container')`
+ * and `res.app.get('container')` return the extension's capability-scoped
+ * container.
+ *
+ * Every function a route module exports is wrapped, not just the terminal
+ * one: an extension's route array is the extension's own code, so a
+ * non-terminal middleware doing the real work would otherwise run with the
+ * full container.
  *
  * @param {Function} handler
  * @param {() => Object} getScopedContainer
@@ -79,10 +113,12 @@ function scopeRouteHandler(handler, getScopedContainer) {
       },
     });
 
-    req.app = appProxy;
+    const restoreReq = swapApp(req, appProxy);
+    const restoreRes = swapApp(res, appProxy);
     req.container = scoped;
     const restore = () => {
-      req.app = originalApp;
+      restoreReq();
+      restoreRes();
     };
 
     try {
@@ -113,11 +149,11 @@ export function scopeRouteModule(routeModule, getScopedContainer) {
 
   const scopeExport = value => {
     if (Array.isArray(value)) {
-      if (value.length === 0) return value;
-      const last = value[value.length - 1];
-      return typeof last === 'function'
-        ? [...value.slice(0, -1), scopeRouteHandler(last, getScopedContainer)]
-        : value;
+      return value.map(entry =>
+        typeof entry === 'function'
+          ? scopeRouteHandler(entry, getScopedContainer)
+          : entry,
+      );
     }
     return typeof value === 'function'
       ? scopeRouteHandler(value, getScopedContainer)
@@ -185,7 +221,9 @@ class ServerExtensionManager extends BaseExtensionManager {
 
   /**
    * Capability-scoped container for one extension.
-   * Only the bindings declared under `xnapify.capabilities` resolve.
+   * Only the bindings declared under `xnapify.capabilities` resolve, and the
+   * reserved bindings never do — `deny` outranks every grant, so a `'*'`
+   * capability cannot reach `extension`, `jwt` or `env`.
    *
    * @param {string} id - Extension ID
    * @param {Object} [manifest] - Manifest (defaults to loaded metadata)
@@ -197,7 +235,10 @@ class ServerExtensionManager extends BaseExtensionManager {
     return createScopedContainer(
       this.apiContainer,
       getGrantedCapabilities(effective),
-      { owner: this._formatDisplayName(id, effective) },
+      {
+        owner: this._formatDisplayName(id, effective),
+        deny: RESERVED_CAPABILITIES,
+      },
     );
   }
 
@@ -278,6 +319,7 @@ class ServerExtensionManager extends BaseExtensionManager {
     // activates; route providers must load before hydration.
     if (manifest && typeof manifest === 'object') {
       manifest.hasRoutes = metadata.hasRoutes === true;
+      manifest.hasMenus = metadata.hasMenus === true;
     }
 
     // Activate via public API (validation → events → _performActivate)
@@ -568,7 +610,7 @@ class ServerExtensionManager extends BaseExtensionManager {
         if (typeof apiModule.seeds === 'function') {
           const seedCtx = apiModule.seeds();
           if (seedCtx) {
-            await db.connection.revertSeeds(
+            await db.connection.undoSeeds(
               [{ context: seedCtx, prefix: manifest.name }],
               { container: scoped },
             );
@@ -1163,6 +1205,51 @@ class ServerExtensionManager extends BaseExtensionManager {
   isExtensionDeferred(id) {
     const metadata = this[EXTENSION_METADATA].get(id);
     return isDeferrableExtension(metadata && metadata.manifest);
+  }
+
+  /**
+   * SSR assets for the deferred extensions that took part in this render.
+   *
+   * Deferral keeps a slot-only extension out of every page that cannot show
+   * it, but the page that *can* show it is a different case: this process
+   * renders every extension's slots, so a deferred extension's markup is
+   * already in the response. Withholding its stylesheet there means the
+   * browser paints that markup unstyled and only corrects itself once the
+   * client bundle has booted, resolved the route and activated the namespace
+   * — three round trips of visibly broken layout on a cold load of, say,
+   * `/login`.
+   *
+   * So an extension is deferred everywhere except on the pages whose
+   * namespaces it subscribes to, where it is emitted exactly like an eager
+   * one. The script rides along for the same reason: the client manager
+   * reuses an SSR-injected tag, so the bundle downloads beside the entry
+   * chunk instead of after it, and hydration finds the slot already filled.
+   *
+   * @param {string[]|Set<string>} namespaces - Namespaces this page activated
+   * @returns {{stylesheets: Array<{href: string, id: string}>,
+   *            scripts: Array<{src: string, id: string}>}}
+   */
+  getDeferredResources(namespaces) {
+    const wanted =
+      namespaces instanceof Set ? namespaces : new Set(namespaces || []);
+    const stylesheets = [];
+    const scripts = [];
+    if (wanted.size === 0) return { stylesheets, scripts };
+
+    for (const [id, metadata] of this[EXTENSION_METADATA]) {
+      if (!this.isExtensionDeferred(id)) continue;
+
+      const slots = (metadata.manifest && metadata.manifest.slots) || [];
+      if (!slots.some(slot => wanted.has(slot))) continue;
+
+      const href = this[EXTENSION_CSS_ENTRY_POINTS].get(id);
+      if (href) stylesheets.push({ href, id });
+
+      const src = this[EXTENSION_SCRIPT_ENTRY_POINTS].get(id);
+      if (src) scripts.push({ src, id });
+    }
+
+    return { stylesheets, scripts };
   }
 
   /**

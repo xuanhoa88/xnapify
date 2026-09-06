@@ -356,6 +356,8 @@ export async function changePassword(req, res) {
       {
         models: container.resolve('models'),
         hook: container.resolve('hook'),
+        // Keep the caller signed in; every other session is revoked
+        sessionId: req.user.sid || null,
       },
     );
 

@@ -7,6 +7,8 @@
 
 import { EventEmitter } from 'events';
 
+import { useSyncExternalStore } from 'react';
+
 import {
   DefaultConfig,
   MessageType,
@@ -20,6 +22,13 @@ import {
  * This allows components to access the client without needing React Context
  */
 let wsClientInstance = null;
+
+/**
+ * Subscribers notified whenever the global client instance is swapped.
+ * The client is created lazily (after hydration, from an idle callback), so
+ * components that mounted before it existed must be told when it appears.
+ */
+const clientSubscribers = new Set();
 
 /**
  * Client-specific event types
@@ -603,17 +612,59 @@ class WebSocketClient extends EventEmitter {
  * @param {WebSocketClient} client - WebSocket client instance
  */
 export function setWebSocketClient(client) {
+  if (wsClientInstance === client) return;
   wsClientInstance = client;
+  clientSubscribers.forEach(listener => {
+    try {
+      listener();
+    } catch (error) {
+      console.error('[WebSocket Client] Subscriber failed:', error);
+    }
+  });
 }
 
 /**
- * Get the global WebSocket client instance
+ * useSyncExternalStore plumbing for `useWebSocket`.
+ */
+const subscribeToClient = listener => {
+  clientSubscribers.add(listener);
+  return () => {
+    clientSubscribers.delete(listener);
+  };
+};
+
+const getClientSnapshot = () => wsClientInstance;
+
+const getServerClientSnapshot = () => null;
+
+/**
+ * Read the global WebSocket client outside of React render.
+ * Use this from module scope, timers and event callbacks; `useWebSocket` is
+ * for components and must obey the rules of hooks.
+ * @returns {WebSocketClient|null} WebSocket client or null if not initialized
+ */
+export function getWebSocketClient() {
+  return wsClientInstance;
+}
+
+/**
+ * Get the global WebSocket client instance.
+ *
+ * Subscribes to instance changes so a component that rendered before the
+ * client existed re-renders once it does. The client is created from an idle
+ * callback after hydration, so on a cold page load every view mounts while
+ * this is still null — without the subscription those views would keep a
+ * permanently null reference and silently never attach their listeners.
+ *
  * Returns null during SSR to prevent hydration mismatches.
  * @returns {WebSocketClient|null} WebSocket client or null if not initialized
  */
 export function useWebSocket() {
-  if (typeof window === 'undefined') return null;
-  return wsClientInstance;
+  return useSyncExternalStore(
+    subscribeToClient,
+    getClientSnapshot,
+    getServerClientSnapshot,
+  );
 }
 
 /**

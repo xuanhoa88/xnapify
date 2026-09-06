@@ -14,6 +14,13 @@ import { createAsyncThunk } from '@reduxjs/toolkit';
  */
 
 /**
+ * Sentinel rejection value for a request the caller aborted.
+ * An abort is not a failure: the reducer keeps the current list and error
+ * state instead of overwriting them.
+ */
+export const REQUEST_ABORTED = '@admin/extensions/requestAborted';
+
+/**
  * Fetch all extensions
  */
 export const fetchExtensions = createAsyncThunk(
@@ -25,7 +32,7 @@ export const fetchExtensions = createAsyncThunk(
       });
       return data.extensions || [];
     } catch (error) {
-      if (error.name === 'AbortError') return [];
+      if (error.name === 'AbortError') return rejectWithValue(REQUEST_ABORTED);
       return rejectWithValue(
         (error.data && error.data.message) || error.message,
       );

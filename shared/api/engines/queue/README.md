@@ -318,12 +318,14 @@ Called automatically on the first `on()` registration. Registers a **wildcard pr
 
 ### Choosing an adapter
 
-| Type     | Persistence           | Multi-process         | When to use                                   |
-| -------- | --------------------- | --------------------- | --------------------------------------------- |
-| `file`   | Survives restarts     | Yes (shared data dir) | Default. Anything that must not be lost.      |
-| `memory` | Lost on exit or crash | No                    | Tests, throwaway dev sessions, ephemeral work |
+| Type     | Persistence           | Multi-process                    | When to use                                   |
+| -------- | --------------------- | -------------------------------- | --------------------------------------------- |
+| `file`   | Survives restarts     | Yes — one host, local filesystem | Default. Anything that must not be lost.      |
+| `memory` | Lost on exit or crash | No                               | Tests, throwaway dev sessions, ephemeral work |
 
 Set the app-wide default with `XNAPIFY_QUEUE_TYPE` (defaults to `file`). A channel can still override it: `queue('name', { type: 'memory' })`.
+
+> **Multi-process means one host.** The whole protocol rests on two properties of the filesystem: `rename()` is atomic (exactly one racer wins the claim, the loser gets `ENOENT`) and `mtime` is trustworthy enough to decide whether a lock is stale. Both hold for N cluster workers sharing `XNAPIFY_QUEUE_DATA_DIR` on one host's local disk. Neither is guaranteed on NFS, SMB/CIFS, or a container volume mounted RWX across several hosts: rename is not reliably atomic between clients there, and clock skew plus attribute caching make the 30 s lock-staleness check unsafe, so two hosts can run the same job concurrently. For work spread across hosts, use a real broker.
 
 ### File Queue Adapter (`adapters/file.js`)
 
@@ -331,7 +333,8 @@ Jobs are JSON files under `<dataDir>/<queue>/{pending,active,delayed,completed,f
 
 Guarantees and mechanics:
 
-- **At-least-once delivery.** Every transition is a tmp-write plus atomic `rename`. A crash between steps leaves a duplicate copy, never a lost job.
+- **At-least-once delivery — against process crashes.** Every transition is a tmp-write plus atomic `rename`, so a process dying between steps leaves a duplicate copy, never a lost job.
+- **Atomicity is not durability.** Nothing in the adapter calls `fsync`, on either the job file or its directory. A host or power failure can therefore land the rename while the file's bytes are still in the page cache, leaving a zero-length or truncated job file: that job is lost, and since the reader only skips files that parse into the wrong shape, an unparseable one surfaces as a claim/recovery error on every poll tick until it is deleted by hand. If jobs must survive a power cut, use a broker that fsyncs.
 - **Claim = rename.** Moving `pending/x` → `active/x` is the claim. Two processes racing on the same file: one rename succeeds, the other gets `ENOENT` and moves to the next candidate.
 - **Concurrency cap is exact.** A slot is reserved synchronously (`claiming++`) before the first `await` of a claim, so overlapping `processNext()` calls from the poll tick, `resume()`, `add()` wake-ups and job completions can never exceed `concurrency`.
 - **Ownership locks with heartbeat.** `.locks/<file>.lock` is created with `wx` before the claim and its mtime refreshed every `lockStaleMs / 3` while the handler runs. A lock older than `lockStaleMs` (30 s) is treated as abandoned.

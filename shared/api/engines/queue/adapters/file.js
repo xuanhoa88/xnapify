@@ -23,12 +23,23 @@ import { findProcessor } from '../utils/findProcessor.js';
 const POLL_INTERVAL_MS = 500;
 const LOCK_STALE_MS = 30_000;
 const MIN_HEARTBEAT_MS = 250;
+// A lock must be refreshed at least three times inside its staleness window,
+// so anything below this makes the heartbeat slower than the steal threshold.
+const MIN_LOCK_STALE_MS = MIN_HEARTBEAT_MS * 3;
 const DRAIN_TIMEOUT_MS = 10_000;
 const DRAIN_POLL_MS = 100;
 const MAX_LOCK_DEPTH = 2;
 const MAX_PRIORITY = 9999;
 const SAFE_NAME_RE = /^[a-zA-Z0-9_-]+$/;
 const STATUS_DIRS = ['pending', 'active', 'completed', 'failed', 'delayed'];
+// Unparseable / malformed job files are moved here instead of being deleted.
+const CORRUPT_DIR = 'corrupt';
+// Retention + housekeeping defaults (override per queue via `options`).
+const MAINTENANCE_INTERVAL_MS = 5 * 60_000;
+const COMPLETED_RETENTION_MS = 24 * 60 * 60_000;
+const FAILED_RETENTION_MS = 7 * 24 * 60 * 60_000;
+// Leftover `.tmp` / `.stale` artifacts older than this are swept.
+const ARTIFACT_GRACE_MS = 60_000;
 
 /**
  * Unique temp-file suffix so concurrent writers never collide.
@@ -42,22 +53,33 @@ function tmpSuffix() {
  * File-Based Queue Adapter
  *
  * Persistent queue that survives process restarts. Jobs are stored as JSON
- * files organised by status directory. All state transitions are atomic
- * `fs.rename()` calls, so a crash at any point leaves at most one extra copy
- * of a job (at-least-once delivery), never a lost job.
+ * files organised by status directory. Each write is a tmp-file write that is
+ * fsynced and then renamed into place, with the containing directory fsynced
+ * after, so an interrupted transition leaves at most one extra copy of a job
+ * (at-least-once delivery) rather than a truncated or missing one.
  *
  * Concurrency model:
  * - In-process: a slot is reserved *before* the first `await` of a claim, so
  *   overlapping `processNext()` calls can never exceed `concurrency`.
  * - Cross-process: the pending → active rename is the claim. Only one process
  *   can win the rename; losers see ENOENT and move on to the next candidate.
- * - Per-job lock files in `.locks/` carry ownership. The owner refreshes the
- *   lock mtime on a heartbeat while the job runs. A lock older than
- *   `lockStaleMs` is treated as abandoned and may be stolen — the steal is a
- *   rename, so two stealers cannot both succeed.
+ * - Per-job lock files in `.locks/` carry ownership. Each acquisition stamps a
+ *   unique owner token, and the owner refreshes the lock mtime on a heartbeat
+ *   while the job runs. A lock older than `lockStaleMs` is treated as
+ *   abandoned and may be stolen — the steal is a rename, so two stealers
+ *   cannot both succeed. Release and heartbeat verify the token first, so a
+ *   worker whose lock was stolen never deletes or refreshes its successor's.
  * - Jobs left in `active/` whose lock is stale or missing are moved back to
- *   `pending/` on boot and on every poll tick. Jobs with a live lock
+ *   `pending/` on boot and on every poll tick, unless they have already used
+ *   every attempt — those are dead-lettered to `failed/`, so a job that
+ *   hard-crashes its worker cannot be replayed forever. Jobs with a live lock
  *   (another process still working) are left alone.
+ * - A job file that cannot be parsed or is missing `id`/`name` is moved to
+ *   `corrupt/` and logged; it is never deleted.
+ *
+ * Housekeeping (while processing): `.tmp`/`.stale` crash artifacts are swept
+ * and terminal jobs older than `retention.completed` / `retention.failed` are
+ * removed, every `maintenanceInterval`.
  *
  * Handlers must not block the event loop for longer than `lockStaleMs`, or
  * a sibling process may legitimately conclude the job was abandoned.
@@ -69,7 +91,21 @@ class FileQueue {
    * @param {string} [options.dataDir] - Base directory for queue storage
    * @param {number} [options.concurrency=1] - Concurrent workers
    * @param {number} [options.pollInterval=500] - Poll interval in ms
-   * @param {number} [options.lockStaleMs=30000] - Lock age after which a job is considered abandoned
+   * @param {number} [options.lockStaleMs=30000] - Lock age after which a job is
+   *   considered abandoned. Clamped up to 750ms (three heartbeats) — below
+   *   that a lock would expire before its own heartbeat could refresh it.
+   * @param {number} [options.drainTimeout=10000] - How long close() waits for
+   *   running jobs. Jobs outliving it keep their locks heartbeated.
+   * @param {Object} [options.retention] - Terminal-job retention in ms.
+   * @param {number|null} [options.retention.completed=86400000] - Age after
+   *   which completed jobs are removed; null/Infinity disables.
+   * @param {number|null} [options.retention.failed=604800000] - Age after
+   *   which failed jobs are removed; null/Infinity disables.
+   * @param {number} [options.maintenanceInterval=300000] - Housekeeping period
+   * @param {boolean} [options.fsync=true] - Flush each job write (and its
+   *   directory) to stable storage before returning. Disable only where
+   *   losing recently written jobs to a host crash is acceptable; it trades
+   *   the durability guarantee for a large throughput win.
    * @param {Object} [options.defaultJobOptions] - Default job options
    */
   constructor(options = {}) {
@@ -85,11 +121,47 @@ class FileQueue {
     this.name = name;
     this.concurrency = Math.max(1, options.concurrency || 1);
     this.pollInterval = options.pollInterval || POLL_INTERVAL_MS;
-    this.lockStaleMs = options.lockStaleMs || LOCK_STALE_MS;
+
+    // A lock is refreshed every `lockStaleMs / 3`, but never faster than
+    // MIN_HEARTBEAT_MS. Anything below MIN_LOCK_STALE_MS would therefore be
+    // declared stale before its own heartbeat could refresh it, silently
+    // disabling the anti-steal guarantee — clamp and warn instead.
+    const requestedStaleMs = options.lockStaleMs || LOCK_STALE_MS;
+    if (requestedStaleMs < MIN_LOCK_STALE_MS) {
+      console.warn(
+        `FileQueue '${name}': lockStaleMs ${requestedStaleMs}ms is below the ` +
+          `${MIN_LOCK_STALE_MS}ms minimum (heartbeat is ${MIN_HEARTBEAT_MS}ms); clamping`,
+      );
+    }
+    this.lockStaleMs = Math.max(MIN_LOCK_STALE_MS, requestedStaleMs);
     this.heartbeatMs = Math.max(
       MIN_HEARTBEAT_MS,
       Math.floor(this.lockStaleMs / 3),
     );
+    this.drainTimeout = Number.isFinite(options.drainTimeout)
+      ? Math.max(0, options.drainTimeout)
+      : DRAIN_TIMEOUT_MS;
+
+    // Flush job writes to stable storage before the rename. On by default:
+    // without it a host (not process) crash can leave the renamed file
+    // truncated or the rename unrecorded, i.e. a genuinely lost job.
+    this.fsync = options.fsync !== false;
+
+    // Retention policy for terminal jobs. `null` disables a bucket.
+    const retention = options.retention || {};
+    this.retention = {
+      completed:
+        retention.completed === undefined
+          ? COMPLETED_RETENTION_MS
+          : retention.completed,
+      failed:
+        retention.failed === undefined ? FAILED_RETENTION_MS : retention.failed,
+    };
+    this.maintenanceInterval =
+      Number.isFinite(options.maintenanceInterval) &&
+      options.maintenanceInterval > 0
+        ? options.maintenanceInterval
+        : MAINTENANCE_INTERVAL_MS;
     this.defaultJobOptions = Object.freeze({
       attempts: 3,
       backoff: 1000,
@@ -108,6 +180,7 @@ class FileQueue {
         : getDataDir('queues');
     this.queueDir = path.join(dataDir, this.name);
     this.lockDir = path.join(this.queueDir, '.locks');
+    this.corruptDir = path.join(this.queueDir, CORRUPT_DIR);
 
     const resolved = path.resolve(this.queueDir);
     if (!resolved.startsWith(path.resolve(dataDir))) {
@@ -133,12 +206,27 @@ class FileQueue {
     this.owned = new Set();
     this.heartbeats = new Map();
 
+    // Lock ownership. A pid alone cannot distinguish "my lock" from "a lock
+    // created at the same path after mine was stolen", so every acquisition
+    // stamps a unique token that release/heartbeat verify before touching the
+    // lock file.
+    this.ownerId = `${process.pid}-${Date.now().toString(36)}-${Math.random()
+      .toString(36)
+      .slice(2)}`;
+    this.lockSeq = 0;
+    this.lockTokens = new Map();
+
     // In-memory job index for O(1) lookups: jobId → { status, filename }
     this.jobIndex = new Map();
+
+    // delayed/ due-ness cache: filename → { mtimeMs, scheduledFor }. Lets the
+    // poll tick skip locking and reading jobs that are not due yet.
+    this.delayedSchedule = new Map();
 
     // Debounced meta persistence — write at most once per second
     this.metaDirty = false;
     this.metaTimer = null;
+    this.maintenanceTimer = null;
 
     // Stats
     this.stats = { processed: 0, failed: 0, completed: 0 };
@@ -167,6 +255,7 @@ class FileQueue {
       fs.mkdirSync(path.join(this.queueDir, dir), { recursive: true });
     }
     fs.mkdirSync(this.lockDir, { recursive: true });
+    fs.mkdirSync(this.corruptDir, { recursive: true });
   }
 
   /**
@@ -209,16 +298,121 @@ class FileQueue {
   }
 
   /**
-   * Write job to disk (async, atomic via tmp+rename).
+   * Best-effort fsync of a directory so a rename into it survives a host
+   * crash. Some platforms/filesystems refuse to open a directory for sync;
+   * the file contents were already flushed, so failures are ignored.
+   * @private
+   */
+  async fsyncDir(dirPath) {
+    let handle = null;
+    try {
+      handle = await fs.promises.open(dirPath, 'r');
+      await handle.sync();
+    } catch {
+      // Directory fsync unsupported here — nothing else to do.
+    } finally {
+      if (handle) await handle.close().catch(() => {});
+    }
+  }
+
+  /**
+   * Sync variant of {@link fsyncDir} (constructor-time recovery only).
+   * @private
+   */
+  fsyncDirSync(dirPath) {
+    let fd = null;
+    try {
+      fd = fs.openSync(dirPath, 'r');
+      fs.fsyncSync(fd);
+    } catch {
+      // Directory fsync unsupported here — nothing else to do.
+    } finally {
+      if (fd !== null) {
+        try {
+          fs.closeSync(fd);
+        } catch {
+          // Already closed.
+        }
+      }
+    }
+  }
+
+  /**
+   * Atomically replace `filePath` via a unique temp file plus rename.
+   *
+   * With `durable`, the temp file is fsynced before the rename and the
+   * containing directory after it. Without those two flushes a host crash (as
+   * opposed to a process crash) can leave the renamed file truncated or the
+   * rename itself unrecorded — i.e. a genuinely lost job, which the
+   * at-least-once contract does not allow.
+   * @private
+   */
+  async writeFileAtomic(filePath, content, { durable = false } = {}) {
+    const tmpPath = filePath + tmpSuffix();
+    if (durable) {
+      let handle = null;
+      try {
+        handle = await fs.promises.open(tmpPath, 'w');
+        await handle.writeFile(content, 'utf8');
+        await handle.sync();
+      } finally {
+        if (handle) await handle.close();
+      }
+    } else {
+      await fs.promises.writeFile(tmpPath, content, 'utf8');
+    }
+
+    try {
+      await fs.promises.rename(tmpPath, filePath);
+    } catch (err) {
+      await fs.promises.unlink(tmpPath).catch(() => {});
+      throw err;
+    }
+    if (durable) await this.fsyncDir(path.dirname(filePath));
+  }
+
+  /**
+   * Sync variant of {@link writeFileAtomic}.
+   * @private
+   */
+  writeFileAtomicSync(filePath, content, { durable = false } = {}) {
+    const tmpPath = filePath + tmpSuffix();
+    if (durable) {
+      const fd = fs.openSync(tmpPath, 'w');
+      try {
+        fs.writeFileSync(fd, content, 'utf8');
+        fs.fsyncSync(fd);
+      } finally {
+        fs.closeSync(fd);
+      }
+    } else {
+      fs.writeFileSync(tmpPath, content, 'utf8');
+    }
+
+    try {
+      fs.renameSync(tmpPath, filePath);
+    } catch (err) {
+      try {
+        fs.unlinkSync(tmpPath);
+      } catch {
+        // Already gone.
+      }
+      throw err;
+    }
+    if (durable) this.fsyncDirSync(path.dirname(filePath));
+  }
+
+  /**
+   * Write job to disk (async, atomic + durable via tmp+fsync+rename).
    * Updates the in-memory job index.
    * @private
    */
   async writeJob(status, job) {
     const filename = this.buildFilename(job);
     const filePath = this.jobPath(status, filename);
-    const tmpPath = filePath + tmpSuffix();
-    await fs.promises.writeFile(tmpPath, JSON.stringify(job), 'utf8');
-    await fs.promises.rename(tmpPath, filePath);
+    await this.writeFileAtomic(filePath, JSON.stringify(job), {
+      durable: this.fsync,
+    });
     this.jobIndex.set(job.id, { status, filename });
     return filename;
   }
@@ -228,32 +422,139 @@ class FileQueue {
    * @private
    */
   writeJobSync(status, job, filename) {
-    const filePath = this.jobPath(status, filename);
-    const tmpPath = filePath + tmpSuffix();
-    fs.writeFileSync(tmpPath, JSON.stringify(job), 'utf8');
-    fs.renameSync(tmpPath, filePath);
+    this.writeFileAtomicSync(
+      this.jobPath(status, filename),
+      JSON.stringify(job),
+      { durable: this.fsync },
+    );
   }
 
   /**
-   * Read job from disk (async) with shape validation
+   * Quarantine a job file that cannot be interpreted.
+   *
+   * Deleting it would destroy work (a torn write from a host crash looks
+   * exactly like garbage), so the file is moved to `corrupt/` for an operator
+   * to inspect and an error is logged.
+   * @private
+   */
+  async quarantineJob(status, filename, reason) {
+    const dest = path.join(
+      this.corruptDir,
+      `${Date.now()}-${status}-${filename}`,
+    );
+    try {
+      await fs.promises.mkdir(this.corruptDir, { recursive: true });
+      await fs.promises.rename(this.jobPath(status, filename), dest);
+    } catch (err) {
+      if (err.code !== 'ENOENT') {
+        console.error(
+          `FileQueue '${this.name}': quarantine failed for ${status}/${filename}:`,
+          err.message,
+        );
+      }
+      return;
+    }
+    console.error(
+      `FileQueue '${this.name}': quarantined ${status}/${filename} (${reason}) → ${dest}`,
+    );
+    const jobId = this.extractJobId(filename);
+    if (jobId) {
+      const entry = this.jobIndex.get(jobId);
+      if (entry && entry.status === status) {
+        this.jobIndex.delete(jobId);
+      }
+    }
+  }
+
+  /**
+   * Sync variant of {@link quarantineJob} (constructor recovery only).
+   * @private
+   */
+  quarantineJobSync(status, filename, reason) {
+    const dest = path.join(
+      this.corruptDir,
+      `${Date.now()}-${status}-${filename}`,
+    );
+    try {
+      fs.mkdirSync(this.corruptDir, { recursive: true });
+      fs.renameSync(this.jobPath(status, filename), dest);
+    } catch (err) {
+      if (err.code !== 'ENOENT') {
+        console.error(
+          `FileQueue '${this.name}': quarantine failed for ${status}/${filename}:`,
+          err.message,
+        );
+      }
+      return;
+    }
+    console.error(
+      `FileQueue '${this.name}': quarantined ${status}/${filename} (${reason}) → ${dest}`,
+    );
+  }
+
+  /**
+   * Read job from disk (async) with shape validation.
+   * Returns null when the file is gone; an unreadable file is quarantined
+   * (never deleted) and also reported as null.
    * @private
    */
   async readJob(status, filename) {
     const filePath = this.jobPath(status, filename);
+    let content;
     try {
-      const content = await fs.promises.readFile(filePath, 'utf8');
-      const job = JSON.parse(content);
-      if (!job || typeof job.id !== 'string' || typeof job.name !== 'string') {
-        console.warn(
-          `FileQueue '${this.name}': invalid job file ${filename}, skipping`,
-        );
-        return null;
-      }
-      return job;
+      content = await fs.promises.readFile(filePath, 'utf8');
     } catch (err) {
       if (err.code === 'ENOENT') return null;
       throw err;
     }
+
+    let job;
+    try {
+      job = JSON.parse(content);
+    } catch (err) {
+      await this.quarantineJob(
+        status,
+        filename,
+        `unparseable JSON: ${err.message}`,
+      );
+      return null;
+    }
+    if (!job || typeof job.id !== 'string' || typeof job.name !== 'string') {
+      await this.quarantineJob(status, filename, 'missing id/name');
+      return null;
+    }
+    return job;
+  }
+
+  /**
+   * Sync variant of {@link readJob} (constructor recovery only).
+   * @private
+   */
+  readJobSync(status, filename) {
+    let content;
+    try {
+      content = fs.readFileSync(this.jobPath(status, filename), 'utf8');
+    } catch (err) {
+      if (err.code === 'ENOENT') return null;
+      throw err;
+    }
+
+    let job;
+    try {
+      job = JSON.parse(content);
+    } catch (err) {
+      this.quarantineJobSync(
+        status,
+        filename,
+        `unparseable JSON: ${err.message}`,
+      );
+      return null;
+    }
+    if (!job || typeof job.id !== 'string' || typeof job.name !== 'string') {
+      this.quarantineJobSync(status, filename, 'missing id/name');
+      return null;
+    }
+    return job;
   }
 
   /**
@@ -433,10 +734,10 @@ class FileQueue {
     if (depth > MAX_LOCK_DEPTH) return false;
 
     const lockPath = this.lockPath(filename);
+    const token = this.nextLockToken();
     try {
-      await fs.promises.writeFile(lockPath, String(process.pid), {
-        flag: 'wx',
-      });
+      await fs.promises.writeFile(lockPath, token, { flag: 'wx' });
+      this.lockTokens.set(filename, token);
       return true;
     } catch (err) {
       if (err.code !== 'EEXIST') throw err;
@@ -474,10 +775,52 @@ class FileQueue {
   }
 
   /**
-   * Release a lock
+   * Mint a token that identifies one specific lock acquisition by this
+   * instance. Two acquisitions of the same path never share a token, so a
+   * stolen-and-recreated lock is always distinguishable from our own.
+   * @private
+   */
+  nextLockToken() {
+    this.lockSeq += 1;
+    return `${this.ownerId}:${this.lockSeq}`;
+  }
+
+  /**
+   * Whether the lock file at `filename` still carries `token`.
+   * @private
+   */
+  async ownsLock(filename, token) {
+    try {
+      const content = await fs.promises.readFile(
+        this.lockPath(filename),
+        'utf8',
+      );
+      return content === token;
+    } catch (err) {
+      if (err.code === 'ENOENT') return false;
+      throw err;
+    }
+  }
+
+  /**
+   * Release a lock we still own.
+   *
+   * A no-op when this instance never held the lock or when the file now
+   * carries someone else's token: a stalled worker waking up after its lock
+   * went stale must not delete the lock its successor is relying on.
    * @private
    */
   async releaseLock(filename) {
+    const token = this.lockTokens.get(filename);
+    this.lockTokens.delete(filename);
+    if (!token) return;
+
+    if (!(await this.ownsLock(filename, token))) {
+      console.warn(
+        `FileQueue '${this.name}': lock for ${filename} is no longer ours; not releasing`,
+      );
+      return;
+    }
     try {
       await fs.promises.unlink(this.lockPath(filename));
     } catch (err) {
@@ -492,8 +835,10 @@ class FileQueue {
    */
   acquireLockSync(filename) {
     const lockPath = this.lockPath(filename);
+    let token = this.nextLockToken();
     try {
-      fs.writeFileSync(lockPath, String(process.pid), { flag: 'wx' });
+      fs.writeFileSync(lockPath, token, { flag: 'wx' });
+      this.lockTokens.set(filename, token);
       return true;
     } catch (err) {
       if (err.code !== 'EEXIST') throw err;
@@ -507,8 +852,10 @@ class FileQueue {
     } catch (err) {
       if (err.code !== 'ENOENT') throw err;
     }
+    token = this.nextLockToken();
     try {
-      fs.writeFileSync(lockPath, String(process.pid), { flag: 'wx' });
+      fs.writeFileSync(lockPath, token, { flag: 'wx' });
+      this.lockTokens.set(filename, token);
       return true;
     } catch (err) {
       if (err.code === 'EEXIST') return false;
@@ -517,10 +864,21 @@ class FileQueue {
   }
 
   /**
+   * Sync variant of {@link releaseLock} — also ownership-checked.
    * @private
    */
   releaseLockSync(filename) {
+    const token = this.lockTokens.get(filename);
+    this.lockTokens.delete(filename);
+    if (!token) return;
+
     try {
+      if (fs.readFileSync(this.lockPath(filename), 'utf8') !== token) {
+        console.warn(
+          `FileQueue '${this.name}': lock for ${filename} is no longer ours; not releasing`,
+        );
+        return;
+      }
       fs.unlinkSync(this.lockPath(filename));
     } catch (err) {
       if (err.code !== 'ENOENT') throw err;
@@ -534,19 +892,47 @@ class FileQueue {
    */
   startHeartbeat(filename) {
     const lockPath = this.lockPath(filename);
-    const beat = () => {
-      const now = new Date();
-      fs.promises.utimes(lockPath, now, now).catch(err => {
-        if (err.code === 'ENOENT') {
-          // Someone removed our lock; re-assert ownership.
-          return fs.promises
-            .writeFile(lockPath, String(process.pid))
-            .catch(() => {});
-        }
-        return undefined;
-      });
+    const token = this.lockTokens.get(filename);
+
+    const lost = reason => {
+      console.warn(
+        `FileQueue '${this.name}': lock for ${filename} ${reason}; stopping heartbeat`,
+      );
+      this.lockTokens.delete(filename);
+      this.stopHeartbeat(filename);
     };
-    const id = setInterval(beat, this.heartbeatMs);
+
+    const beat = async () => {
+      if (!token) return;
+      let content;
+      try {
+        content = await fs.promises.readFile(lockPath, 'utf8');
+      } catch (err) {
+        if (err.code !== 'ENOENT') return;
+        // Our lock vanished. Re-assert it exclusively so we never clobber a
+        // lock a different owner legitimately created in the meantime.
+        try {
+          await fs.promises.writeFile(lockPath, token, { flag: 'wx' });
+        } catch (writeErr) {
+          if (writeErr.code === 'EEXIST')
+            lost('was taken over by another owner');
+        }
+        return;
+      }
+      if (content !== token) {
+        lost('was taken over by another owner');
+        return;
+      }
+      const now = new Date();
+      await fs.promises.utimes(lockPath, now, now).catch(() => {});
+    };
+
+    const id = setInterval(() => {
+      beat().catch(() => {});
+    }, this.heartbeatMs);
+    // Never hold the event loop open: after close() a heartbeat may outlive
+    // the drain window (see close()), but it must not prevent process exit.
+    if (typeof id.unref === 'function') id.unref();
     this.heartbeats.set(filename, id);
   }
 
@@ -591,9 +977,8 @@ class FileQueue {
   async saveMeta() {
     const metaPath = path.join(this.queueDir, 'meta.json');
     const meta = { stats: this.stats, updatedAt: Date.now() };
-    const tmpPath = metaPath + tmpSuffix();
-    await fs.promises.writeFile(tmpPath, JSON.stringify(meta), 'utf8');
-    await fs.promises.rename(tmpPath, metaPath);
+    // Counters only — never fsynced, losing them costs nothing but stats.
+    await this.writeFileAtomic(metaPath, JSON.stringify(meta));
   }
 
   /**
@@ -605,7 +990,10 @@ class FileQueue {
     this.metaDirty = true;
     if (this.metaTimer) return;
 
-    this.metaTimer = setTimeout(() => {
+    const timerId = setTimeout(() => {
+      // Drop the timer from the tracking set — otherwise `timers` grows by one
+      // entry per active second until close().
+      this.timers.delete(timerId);
       this.metaTimer = null;
       if (this.metaDirty) {
         this.metaDirty = false;
@@ -617,7 +1005,8 @@ class FileQueue {
         });
       }
     }, 1000);
-    this.timers.add(this.metaTimer);
+    this.metaTimer = timerId;
+    this.timers.add(timerId);
   }
 
   /**
@@ -627,13 +1016,97 @@ class FileQueue {
    * Attempts are NOT reset — the stale run consumed one attempt.
    * @private
    */
+  /**
+   * Whether a job has already burned every attempt it is allowed.
+   *
+   * `attempts` is incremented before the handler runs, so a job whose worker
+   * died mid-handler comes back with the attempt already counted. Without
+   * this ceiling a job that hard-crashes the process (OOM, segfault) is
+   * replayed forever, taking the worker down on every boot.
+   * @private
+   */
+  isAttemptsExhausted(job) {
+    const max = Number(job.maxAttempts);
+    if (!Number.isFinite(max) || max <= 0) return false;
+    return (Number(job.attempts) || 0) >= max;
+  }
+
+  /**
+   * Build the error recorded on a job whose worker died while running it.
+   * @private
+   */
+  abandonedError(job) {
+    return {
+      message: `Job abandoned after ${Number(job.attempts) || 0} attempt(s): the worker died while processing it`,
+      stack: null,
+    };
+  }
+
+  /**
+   * Dead-letter a crash-failed job whose attempts are exhausted (async).
+   * Mirrors the throw-failure path in runJob().
+   * @private
+   */
+  async failAbandonedJob(job, filename) {
+    job.status = JOB_STATUS.FAILED;
+    job.processedAt = null;
+    job.failedAt = Date.now();
+    job.error = this.abandonedError(job);
+
+    this.stats.failed++;
+    this.stats.processed++;
+
+    console.error(
+      `☠️ FileQueue '${this.name}': job ${job.id} exhausted maxAttempts while abandoned → failed`,
+    );
+    this.emit('failed', job, new Error(job.error.message));
+
+    if (job.removeOnFail) {
+      await this.deleteJob('active', filename);
+    } else {
+      await this.transitionJob('active', 'failed', job, filename);
+    }
+    this.markMetaDirty();
+  }
+
+  /**
+   * Sync variant of {@link failAbandonedJob} (constructor recovery only).
+   * @private
+   */
+  failAbandonedJobSync(job, filename) {
+    job.status = JOB_STATUS.FAILED;
+    job.processedAt = null;
+    job.failedAt = Date.now();
+    job.error = this.abandonedError(job);
+
+    this.stats.failed++;
+    this.stats.processed++;
+
+    if (!job.removeOnFail) {
+      this.writeJobSync('failed', job, filename);
+    }
+    try {
+      fs.unlinkSync(this.jobPath('active', filename));
+    } catch (err) {
+      if (err.code !== 'ENOENT') throw err;
+    }
+    console.error(
+      `☠️ FileQueue '${this.name}': job ${job.id} exhausted maxAttempts while abandoned → failed`,
+    );
+  }
+
   recoverStaleActiveSync() {
     for (const filename of this.listJobsSync('active')) {
       if (this.isLockFreshSync(filename)) continue;
       if (!this.acquireLockSync(filename)) continue;
       try {
+        const job = this.readJobSync('active', filename);
+        if (!job) continue;
+        if (this.isAttemptsExhausted(job)) {
+          this.failAbandonedJobSync(job, filename);
+          continue;
+        }
         const activePath = this.jobPath('active', filename);
-        const job = JSON.parse(fs.readFileSync(activePath, 'utf8'));
         job.status = JOB_STATUS.PENDING;
         job.processedAt = null;
         this.writeJobSync('active', job, filename);
@@ -672,6 +1145,10 @@ class FileQueue {
           if (this.owned.has(filename)) continue;
           const job = await this.readJob('active', filename);
           if (!job) continue;
+          if (this.isAttemptsExhausted(job)) {
+            await this.failAbandonedJob(job, filename);
+            continue;
+          }
           job.status = JOB_STATUS.PENDING;
           job.processedAt = null;
           await this.writeJob('active', job);
@@ -703,8 +1180,8 @@ class FileQueue {
       if (!this.acquireLockSync(filename)) continue;
       try {
         const delayedPath = this.jobPath('delayed', filename);
-        const job = JSON.parse(fs.readFileSync(delayedPath, 'utf8'));
-        if (job.scheduledFor && job.scheduledFor <= now) {
+        const job = this.readJobSync('delayed', filename);
+        if (job && job.scheduledFor && job.scheduledFor <= now) {
           job.status = JOB_STATUS.PENDING;
           job.scheduledFor = null;
           this.writeJobSync('delayed', job, filename);
@@ -731,10 +1208,25 @@ class FileQueue {
     const delayedFiles = await this.listJobs('delayed');
     const now = Date.now();
 
+    // Forget cache entries for files that left delayed/.
+    if (this.delayedSchedule.size) {
+      const present = new Set(delayedFiles);
+      for (const key of this.delayedSchedule.keys()) {
+        if (!present.has(key)) this.delayedSchedule.delete(key);
+      }
+    }
+
     for (const filename of delayedFiles) {
       try {
+        // Cheap due-ness check FIRST: one stat validates the cached
+        // scheduledFor. Locking and reading every not-yet-due job on every
+        // poll tick costs ~6 syscalls/second/job for nothing.
+        const scheduledFor = await this.readScheduledFor(filename);
+        if (!scheduledFor || scheduledFor > now) continue;
+
         if (!(await this.acquireLock(filename))) continue;
         try {
+          // Re-read under the lock: another process may have moved it.
           const job = await this.readJob('delayed', filename);
           if (job && job.scheduledFor && job.scheduledFor <= now) {
             job.status = JOB_STATUS.PENDING;
@@ -742,6 +1234,7 @@ class FileQueue {
             // Update content in place, then move atomically
             await this.writeJob('delayed', job);
             await this.moveJob('delayed', 'pending', filename);
+            this.delayedSchedule.delete(filename);
           }
         } finally {
           await this.releaseLock(filename);
@@ -755,6 +1248,34 @@ class FileQueue {
         }
       }
     }
+  }
+
+  /**
+   * `scheduledFor` of a delayed job, cached against the file's mtime so a
+   * not-yet-due job costs a single `stat()` per poll tick instead of a lock
+   * round-trip plus a full read.
+   * @private
+   * @returns {Promise<number|null>}
+   */
+  async readScheduledFor(filename) {
+    let mtimeMs;
+    try {
+      ({ mtimeMs } = await fs.promises.stat(this.jobPath('delayed', filename)));
+    } catch (err) {
+      if (err.code === 'ENOENT') {
+        this.delayedSchedule.delete(filename);
+        return null;
+      }
+      throw err;
+    }
+
+    const cached = this.delayedSchedule.get(filename);
+    if (cached && cached.mtimeMs === mtimeMs) return cached.scheduledFor;
+
+    const job = await this.readJob('delayed', filename);
+    const scheduledFor = job && job.scheduledFor ? job.scheduledFor : null;
+    this.delayedSchedule.set(filename, { mtimeMs, scheduledFor });
+    return scheduledFor;
   }
 
   /**
@@ -998,14 +1519,15 @@ class FileQueue {
     const start = Date.now();
     while (
       this.activeJobs + this.claiming > 0 &&
-      Date.now() - start < DRAIN_TIMEOUT_MS
+      Date.now() - start < this.drainTimeout
     ) {
       await new Promise(resolve => setTimeout(resolve, DRAIN_POLL_MS));
     }
 
     if (this.activeJobs > 0) {
       console.warn(
-        `FileQueue '${this.name}': ${this.activeJobs} jobs still active after drain timeout`,
+        `FileQueue '${this.name}': ${this.activeJobs} jobs still active after drain timeout; ` +
+          'their locks stay heartbeated until they finish',
       );
     }
 
@@ -1013,11 +1535,21 @@ class FileQueue {
       clearTimeout(this.metaTimer);
       this.metaTimer = null;
     }
+    if (this.maintenanceTimer) {
+      clearInterval(this.maintenanceTimer);
+      this.maintenanceTimer = null;
+    }
     for (const timerId of this.timers) {
       clearTimeout(timerId);
     }
     this.timers.clear();
     for (const filename of Array.from(this.heartbeats.keys())) {
+      // A handler that outlived the drain window is still real work. Killing
+      // its heartbeat lets its lock go stale, and a sibling would re-queue
+      // and run it concurrently — the exact race the heartbeat prevents.
+      // Heartbeat intervals are unref'd, so they never block process exit;
+      // runJob()'s finally stops each one when its job actually finishes.
+      if (this.owned.has(filename)) continue;
       this.stopHeartbeat(filename);
     }
     this.processors = [];
@@ -1027,7 +1559,10 @@ class FileQueue {
   }
 
   /**
-   * Get queue statistics
+   * Get queue statistics.
+   *
+   * `counts` is read from disk, so it reflects every process sharing the data
+   * directory. `activeJobs` and `stats` are this process's own view.
    * @returns {Promise<Object>}
    */
   async getStats() {
@@ -1039,10 +1574,8 @@ class FileQueue {
       delayed: 0,
     };
 
-    for (const entry of this.jobIndex.values()) {
-      if (counts[entry.status] !== undefined) {
-        counts[entry.status]++;
-      }
+    for (const status of STATUS_DIRS) {
+      counts[status] = (await this.listJobs(status)).length;
     }
 
     return {
@@ -1066,7 +1599,93 @@ class FileQueue {
    */
   startPolling() {
     this.pollTimer = setInterval(() => this.tick(), this.pollInterval);
+    if (!this.maintenanceTimer) {
+      this.maintenanceTimer = setInterval(() => {
+        this.maintenance().catch(err => {
+          console.error(
+            `FileQueue '${this.name}': maintenance error:`,
+            err.message,
+          );
+        });
+      }, this.maintenanceInterval);
+      if (typeof this.maintenanceTimer.unref === 'function') {
+        this.maintenanceTimer.unref();
+      }
+    }
     this.tick();
+  }
+
+  /**
+   * Periodic housekeeping so a long-lived worker's data dir stays bounded:
+   * sweep crash artifacts, then apply the retention policy to terminal jobs.
+   * @private
+   */
+  async maintenance() {
+    if (this.closed) return;
+    await this.sweepArtifacts();
+    await this.applyRetention();
+  }
+
+  /**
+   * Delete orphaned `*.tmp` write scratch files and `*.stale` lock-steal
+   * artifacts left behind by crashed processes. Only files older than
+   * ARTIFACT_GRACE_MS are touched, so in-flight writes are never disturbed.
+   * @private
+   * @returns {Promise<number>} Number of artifacts removed
+   */
+  async sweepArtifacts() {
+    const cutoff = Date.now() - ARTIFACT_GRACE_MS;
+    const dirs = [
+      this.queueDir,
+      this.lockDir,
+      ...STATUS_DIRS.map(status => path.join(this.queueDir, status)),
+    ];
+
+    let removed = 0;
+    for (const dir of dirs) {
+      let entries;
+      try {
+        entries = await fs.promises.readdir(dir);
+      } catch (err) {
+        if (err.code === 'ENOENT') continue;
+        throw err;
+      }
+      for (const entry of entries) {
+        if (!entry.endsWith('.tmp') && !entry.endsWith('.stale')) continue;
+        const target = path.join(dir, entry);
+        try {
+          const stat = await fs.promises.stat(target);
+          if (stat.mtimeMs > cutoff) continue;
+          await fs.promises.unlink(target);
+          removed++;
+        } catch (err) {
+          if (err.code !== 'ENOENT') {
+            console.warn(
+              `FileQueue '${this.name}': sweep failed for ${target}:`,
+              err.message,
+            );
+          }
+        }
+      }
+    }
+    return removed;
+  }
+
+  /**
+   * Drop terminal jobs older than the configured retention window.
+   * `removeOnFail` defaults to false, so without this failed/ would grow
+   * without bound for the life of the data directory.
+   * @private
+   * @returns {Promise<number>} Number of jobs removed
+   */
+  async applyRetention() {
+    let removed = 0;
+    for (const status of ['completed', 'failed']) {
+      const grace = this.retention[status];
+      if (!Number.isFinite(grace) || grace < 0) continue;
+      removed += await this.clean(status, grace);
+    }
+    return removed;
   }
 
   /**
@@ -1175,46 +1794,51 @@ class FileQueue {
       // STEP 1: Lock — ownership marker for siblings and recovery
       if (!(await this.acquireLock(filename))) continue;
 
-      // STEP 2: Atomic claim — exactly one process wins this rename
+      // Ownership is handed to runJob() only on a successful claim. Every
+      // other exit — including an unexpected throw from a read or a write —
+      // must release the lock, or the job is stranded in active/ with a lock
+      // nobody heartbeats and recovery re-queues it forever.
+      let handedOff = false;
       try {
-        await this.moveJob('pending', 'active', filename);
-      } catch (err) {
-        await this.releaseLock(filename);
-        if (err.code === 'ENOENT') continue;
-        throw err;
-      }
-
-      // STEP 3: Read from active/ (we own it now)
-      const job = await this.readJob('active', filename);
-      if (!job) {
-        await this.deleteJob('active', filename);
-        await this.releaseLock(filename);
-        continue;
-      }
-
-      const processor = findProcessor(job.name, this.processors);
-      if (!processor) {
-        // Nobody can run this — put it back and stop scanning
+        // STEP 2: Atomic claim — exactly one process wins this rename
         try {
-          await this.moveJob('active', 'pending', filename);
-        } catch (moveErr) {
-          console.warn(
-            `FileQueue '${this.name}': move-back failed:`,
-            moveErr.message,
-          );
+          await this.moveJob('pending', 'active', filename);
+        } catch (err) {
+          if (err.code === 'ENOENT') continue;
+          throw err;
         }
-        await this.releaseLock(filename);
-        return null;
+
+        // STEP 3: Read from active/ (we own it now). A null here means the
+        // file vanished or was quarantined — never delete it blindly.
+        const job = await this.readJob('active', filename);
+        if (!job) continue;
+
+        const processor = findProcessor(job.name, this.processors);
+        if (!processor) {
+          // Nobody can run this — put it back and stop scanning
+          try {
+            await this.moveJob('active', 'pending', filename);
+          } catch (moveErr) {
+            console.warn(
+              `FileQueue '${this.name}': move-back failed:`,
+              moveErr.message,
+            );
+          }
+          return null;
+        }
+
+        // STEP 4: Persist the attempt before running so a crash mid-handler
+        // is counted against maxAttempts on recovery
+        job.status = JOB_STATUS.ACTIVE;
+        job.processedAt = Date.now();
+        job.attempts++;
+        await this.writeJob('active', job);
+
+        handedOff = true;
+        return { job, filename, processor };
+      } finally {
+        if (!handedOff) await this.releaseLock(filename);
       }
-
-      // STEP 4: Persist the attempt before running so a crash mid-handler
-      // is counted against maxAttempts on recovery
-      job.status = JOB_STATUS.ACTIVE;
-      job.processedAt = Date.now();
-      job.attempts++;
-      await this.writeJob('active', job);
-
-      return { job, filename, processor };
     }
 
     return null;

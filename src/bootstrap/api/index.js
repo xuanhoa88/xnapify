@@ -12,8 +12,13 @@ import { RedisStore } from 'rate-limit-redis';
 
 import {
   RedisRevocationStore,
+  getRevocationStore,
   setRevocationStore,
 } from '@shared/api/engines/auth/revocation.js';
+import {
+  configureScheduleLock,
+  createRedisScheduleLock,
+} from '@shared/api/engines/schedule/index.js';
 import { discoverModules, engines, drain } from '@shared/api/index.js';
 import { Router as DynamicRouter } from '@shared/api/router/index.js';
 import { configureRateLimitStore } from '@shared/api/router/rateLimit.js';
@@ -39,6 +44,12 @@ export { drain };
 // =============================================================================
 
 const TAG = 'API';
+
+/** How often to retry attaching WebSocket fan-out while Redis is unreachable */
+const FAN_OUT_RETRY_MS = 30_000;
+
+/** How often to re-check live sockets against the revocation store */
+const REVOCATION_SWEEP_MS = 60_000;
 
 /**
  * Log a bootstrap phase message.
@@ -129,24 +140,129 @@ async function configureSharedBackends(container) {
       .update(String(cacheKey))
       .digest('hex')
       .slice(0, 12);
-    return new RedisStore({
+    const store = new RedisStore({
       prefix: `rl:${scope}:`,
       sendCommand: (...args) => client.call(...args),
     });
+    // rate-limit-redis kicks off SCRIPT LOAD in its constructor and parks the
+    // promises on the instance; nothing awaits them, so a Redis that is down
+    // at construction time produces unhandled rejections (fatal on Node 22).
+    // The limiter itself re-loads the script on demand, so logging is enough.
+    for (const field of ['incrementScriptSha', 'getScriptSha']) {
+      const pending = store[field];
+      if (pending && typeof pending.then === 'function') {
+        pending.catch(error => {
+          log(`Rate-limit script load failed: ${error.message}`, 'error');
+        });
+      }
+    }
+    return store;
   });
 
-  if (container.has('ws')) {
-    const ws = container.resolve('ws');
-    if (ws && typeof ws.attachPubSub === 'function') {
-      await ws.attachPubSub({
-        publisher: client,
-        subscriber: redis.getSubscriber(),
-      });
-    }
-  }
+  // Cron de-duplication is host-local without this: four containers behind a
+  // load balancer would each fire every schedule.
+  configureScheduleLock(createRedisScheduleLock(client));
+
+  attachWebSocketFanOut(container, redis, client);
 
   log('Shared backends attached to Redis');
   return true;
+}
+
+/**
+ * Wire WebSocket fan-out onto Redis pub/sub, without ever failing bootstrap.
+ *
+ * Subscribing touches the socket, and ioredis rejects queued commands with
+ * MaxRetriesPerRequestError while Redis is down — so an outage or a failover
+ * during a rolling deploy would otherwise stop every new pod from starting.
+ * Every other Redis consumer here degrades to per-instance behaviour instead,
+ * and so must this one: log, keep serving, and re-attach when Redis returns.
+ *
+ * @param {object} container - DI container
+ * @param {object} redis - Redis engine
+ * @param {object} client - Shared command client (publisher)
+ */
+function attachWebSocketFanOut(container, redis, client) {
+  if (!container.has('ws')) return;
+  const ws = container.resolve('ws');
+  if (!ws || typeof ws.attachPubSub !== 'function') return;
+
+  const subscriber = redis.getSubscriber();
+  if (!subscriber) return;
+
+  // Redis never applies a key prefix to PUBLISH/SUBSCRIBE and pub/sub is not
+  // database-scoped, so the channel name is the only isolation two
+  // deployments sharing one Redis have.
+  const channel = `${redis.getKeyPrefix()}ws:events`;
+
+  let attaching = false;
+  let retryTimer = null;
+
+  const stopRetrying = () => {
+    if (retryTimer) {
+      clearInterval(retryTimer);
+      retryTimer = null;
+    }
+  };
+
+  const attach = async () => {
+    if (attaching || ws.pubsub) return;
+    attaching = true;
+    try {
+      await ws.attachPubSub({ publisher: client, subscriber, channel });
+      stopRetrying();
+      log(`WebSocket fan-out attached on "${channel}"`);
+    } catch (error) {
+      log(
+        `WebSocket fan-out unavailable (${error.message}) — ` +
+          'running single-instance until Redis recovers',
+        'error',
+      );
+      if (!retryTimer) {
+        retryTimer = setInterval(() => {
+          attach();
+        }, FAN_OUT_RETRY_MS);
+        if (typeof retryTimer.unref === 'function') retryTimer.unref();
+      }
+    } finally {
+      attaching = false;
+    }
+  };
+
+  // A reconnect is the cheapest recovery signal ioredis gives us.
+  subscriber.on('ready', () => {
+    attach();
+  });
+
+  // Fire-and-forget: bootstrap must not await the socket.
+  attach();
+
+  // Fan-out is fire-and-forget over a transport with no replay, so a kill
+  // event lost during a blip would leave a revoked socket open here forever.
+  if (typeof ws.startRevocationSweep === 'function') {
+    ws.startRevocationSweep(sid => getRevocationStore().isSessionRevoked(sid), {
+      intervalMs: REVOCATION_SWEEP_MS,
+    });
+  }
+}
+
+/**
+ * Keep a stray promise rejection from killing the server.
+ *
+ * Node >= 22 defaults to `--unhandled-rejections=throw`, and third-party
+ * clients (rate-limit-redis, ioredis) start work in their constructors that
+ * nobody awaits. A background failure must be logged, not fatal.
+ *
+ * Registered only if the runtime has no handler yet, so a host process that
+ * installs its own policy wins.
+ */
+function installUnhandledRejectionGuard() {
+  if (process.listenerCount('unhandledRejection') > 0) return;
+  process.on('unhandledRejection', reason => {
+    const error = reason instanceof Error ? reason : new Error(String(reason));
+    log(`Unhandled promise rejection: ${error.message}`, 'error');
+    if (error.stack) console.error(error.stack);
+  });
 }
 
 /**
@@ -273,6 +389,8 @@ async function buildApiRouter(app, extension) {
  */
 export default async function bootstrap(app, extension) {
   try {
+    installUnhandledRejectionGuard();
+
     const container = app.get('container');
 
     // Register engines on the DI container

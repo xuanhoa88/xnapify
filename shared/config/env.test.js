@@ -62,6 +62,79 @@ describe('validateEnv', () => {
     expect(silent.warn).toHaveBeenCalled();
   });
 
+  it('accepts every scheme the db engine can actually connect with', () => {
+    // Regression: env.js had its own dialect regex, so `postgresql` (bare)
+    // validated here and then provisioned SQLite in preboot.
+    for (const url of [
+      'sqlite:database.sqlite',
+      'postgres',
+      'postgresql',
+      'postgresql://u:p@h:5432/app',
+      'mysql://u:p@h/app',
+      'mariadb://u:p@h/app',
+    ]) {
+      const result = validateEnv(
+        { NODE_ENV: 'test', XNAPIFY_DB_URL: url },
+        { logger: silent, throwOnError: false },
+      );
+      expect(result).toEqual({ ok: true, errors: [] });
+    }
+  });
+
+  it('rejects a database URL no dialect can be derived from', () => {
+    const result = validateEnv(
+      { NODE_ENV: 'test', XNAPIFY_DB_URL: 'mongodb://h/app' },
+      { logger: silent, throwOnError: false },
+    );
+    expect(result.errors).toEqual([expect.stringContaining('XNAPIFY_DB_URL')]);
+  });
+
+  it('refuses to cluster on SQLite', () => {
+    // Regression: withSchemaLock is a no-op on SQLite, so four workers all
+    // ran the migration phase unguarded against the same file.
+    const result = validateEnv(
+      {
+        NODE_ENV: 'test',
+        XNAPIFY_CLUSTER_WORKERS: '4',
+        XNAPIFY_REDIS_URL: 'redis://localhost:6379',
+      },
+      { logger: silent, throwOnError: false },
+    );
+    expect(result.errors).toEqual([
+      expect.stringContaining('XNAPIFY_CLUSTER_WORKERS'),
+    ]);
+  });
+
+  it('refuses to cluster with a pool too small to hold the schema lock', () => {
+    const result = validateEnv(
+      {
+        NODE_ENV: 'test',
+        XNAPIFY_CLUSTER_WORKERS: 'auto',
+        XNAPIFY_REDIS_URL: 'redis://localhost:6379',
+        XNAPIFY_DB_URL: 'postgres://u:p@h/app',
+        XNAPIFY_DB_POOL_MAX: '1',
+      },
+      { logger: silent, throwOnError: false },
+    );
+    expect(result.errors).toEqual([
+      expect.stringContaining('XNAPIFY_DB_POOL_MAX'),
+    ]);
+  });
+
+  it('allows clustering on a lockable dialect with a usable pool', () => {
+    const result = validateEnv(
+      {
+        NODE_ENV: 'test',
+        XNAPIFY_CLUSTER_WORKERS: '4',
+        XNAPIFY_REDIS_URL: 'redis://localhost:6379',
+        XNAPIFY_DB_URL: 'postgres://u:p@h/app',
+        XNAPIFY_DB_POOL_MAX: '5',
+      },
+      { logger: silent, throwOnError: false },
+    );
+    expect(result).toEqual({ ok: true, errors: [] });
+  });
+
   it('rejects pool min greater than pool max', () => {
     const result = validateEnv(
       { NODE_ENV: 'test', XNAPIFY_DB_POOL_MIN: '10', XNAPIFY_DB_POOL_MAX: '5' },

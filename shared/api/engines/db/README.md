@@ -25,7 +25,20 @@ Nothing is ever linked into the project `node_modules`. npm prunes entries it do
 1. calls `registerDriverPaths()`, which appends every existing sandbox `node_modules` dir to `NODE_PATH` and refreshes `Module.globalPaths`, so Sequelize's own `require('pg-hstore')` resolves;
 2. passes `dialectModulePath` pointing at the sandboxed driver, unless the caller supplied `dialectModule` or `dialectModulePath`.
 
-Jest exposes the SQLite sandbox through `modulePaths` in `tools/jest/config.js`. The helpers are exported from this engine (`detectDialect`, `getDriverModulePath`, `getDriverModulesDir`, `registerDriverPaths`).
+Jest exposes the SQLite sandbox through `modulePaths` in `tools/jest/config.js`. The helpers are exported from this engine (`parseDialect`, `detectDialect`, `normalizeDatabaseUrl`, `resolveSandboxRoot`, `getDriverModulePath`, `getDriverModulesDir`, `registerDriverPaths`).
+
+`drivers.js` owns the ONE URL → dialect table (`DIALECT_SCHEMES`). `shared/config/env.js` validates `XNAPIFY_DB_URL` with `parseDialect()` and `tools/npm/preboot.js` provisions with `detectDialect()`, so validation, provisioning and connection can never disagree:
+
+| URL / shorthand                              | Dialect    | Driver             |
+| -------------------------------------------- | ---------- | ------------------ |
+| `sqlite`, `sqlite:…`                         | `sqlite`   | `sqlite3`          |
+| `postgres`, `postgresql`, `postgres(ql)://…` | `postgres` | `pg` + `pg-hstore` |
+| `mysql`, `mysql://…`                         | `mysql`    | `mysql2`           |
+| `mariadb`, `mariadb://…`                     | `mysql`    | `mysql2`           |
+
+MariaDB is an **alias** for the mysql dialect — `mysql2` speaks its wire protocol and Sequelize's separate `mariadb` dialect would demand a package that is never installed. `createConnection()` rewrites a `mariadb:` URL to `mysql:` via `normalizeDatabaseUrl()` unless the caller pinned `dialect` itself. Anything else is rejected by env validation.
+
+The sandbox root is derived from this module's own location (nearest ancestor with a `package.json`), not `process.cwd()`, so a server started from an unrelated working directory — a systemd unit with its own `WorkingDirectory`, or `node /app/build/server.js` from `/` — still finds the drivers preboot installed.
 
 ## API
 
@@ -64,7 +77,7 @@ const seedStatus = await connection.getSeedStatus(seedsContext);
 | Option            | Value                                      | Env Override                     |
 | ----------------- | ------------------------------------------ | -------------------------------- |
 | Timezone          | `+00:00` (UTC)                             | `XNAPIFY_DB_TZ`                  |
-| Pool max          | `5`                                        | `XNAPIFY_DB_POOL_MAX`            |
+| Pool max          | `5` (must be ≥ 2 for the schema lock)      | `XNAPIFY_DB_POOL_MAX`            |
 | Pool min          | `0`                                        | `XNAPIFY_DB_POOL_MIN`            |
 | Pool idle         | `10s`                                      | —                                |
 | Pool acquire      | `30s`                                      | —                                |
@@ -98,9 +111,11 @@ Provide a pre-configured Sequelize connection with migration/seed lifecycle meth
 
 ```
 shared/api/engines/db/
-├── index.js          # Re-exports Sequelize, connection, migrator
-├── connection.js     # createConnection(), closeConnection(), default singleton, migration method attachment
-└── migrator.js       # runMigrations, runSeeds, revertMigrations, undoSeeds, status methods
+├── index.js             # Re-exports Sequelize, connection, drivers, migrator, guards
+├── connection.js        # createConnection(), closeConnection(), default singleton, migration method attachment
+├── drivers.js           # dialect table, driver sandbox resolution (shared with env.js and preboot)
+├── migrationGuards.js   # refusals for dialect-destructive migration operations
+└── migrator.js          # runMigrations, runSeeds, revertMigrations, undoSeeds, withSchemaLock, status methods
 ```
 
 ## 2. Connection (`connection.js`)
@@ -112,16 +127,16 @@ shared/api/engines/db/
 
 ### Environment Variables
 
-| Variable                  | Default                                      | Description                                                               |
-| ------------------------- | -------------------------------------------- | ------------------------------------------------------------------------- |
-| `XNAPIFY_DB_URL`          | `sqlite:database.sqlite`                     | Database connection URL                                                   |
-| `XNAPIFY_DB_TZ`           | `+00:00`                                     | Connection timezone (ignored for SQLite)                                  |
-| `XNAPIFY_DB_LOG`          | `false`                                      | Enable SQL query logging (disabled in production)                         |
-| `XNAPIFY_DB_POOL_MAX`     | `5`                                          | Maximum connection pool size                                              |
-| `XNAPIFY_DB_POOL_MIN`     | `0`                                          | Minimum connection pool size                                              |
-| `XNAPIFY_SQLITE_DATA_DIR` | `.xnapify/sqlite` (dev) / OS-native (prod)   | Directory for SQLite database file (relative paths resolved against this) |
-| `XNAPIFY_PG_DATA_DIR`     | `.xnapify/postgres` (dev) / OS-native (prod) | Directory for embedded PostgreSQL data                                    |
-| `XNAPIFY_MYSQL_DATA_DIR`  | `.xnapify/mysql` (dev) / OS-native (prod)    | Directory for embedded MySQL data                                         |
+| Variable                  | Default                                      | Description                                                                                                                                                          |
+| ------------------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `XNAPIFY_DB_URL`          | `sqlite:database.sqlite`                     | Database connection URL                                                                                                                                              |
+| `XNAPIFY_DB_TZ`           | `+00:00`                                     | Connection timezone (ignored for SQLite)                                                                                                                             |
+| `XNAPIFY_DB_LOG`          | `false`                                      | Enable SQL query logging (disabled in production)                                                                                                                    |
+| `XNAPIFY_DB_POOL_MAX`     | `5`                                          | Maximum connection pool size. **Correctness knob:** the schema lock needs its own pooled connection, so `1` disables it (env validation rejects `1` when clustering) |
+| `XNAPIFY_DB_POOL_MIN`     | `0`                                          | Minimum connection pool size                                                                                                                                         |
+| `XNAPIFY_SQLITE_DATA_DIR` | `.xnapify/sqlite` (dev) / OS-native (prod)   | Directory for SQLite database file (relative paths resolved against this)                                                                                            |
+| `XNAPIFY_PG_DATA_DIR`     | `.xnapify/postgres` (dev) / OS-native (prod) | Directory for embedded PostgreSQL data                                                                                                                               |
+| `XNAPIFY_MYSQL_DATA_DIR`  | `.xnapify/mysql` (dev) / OS-native (prod)    | Directory for embedded MySQL data                                                                                                                                    |
 
 ### SQLite Concurrency Tuning
 
@@ -144,6 +159,27 @@ When the connection URL starts with `sqlite:`, Sequelize's `afterConnect` hook a
 - `getMigrationStatus` / `getSeedStatus` — returns `{ executed, pending }`.
 - Migration sources come exclusively from modules via Rspack `import.meta.webpackContext` passed by the module autoloader.
 - **Validation:** Throws `InvalidMigrationError` if a migration file does not export a valid `up` function.
+
+### `withSchemaLock(connection, fn, options)`
+
+Every cluster worker and every replica runs the migration phase at boot, so all four schema-mutating entry points — `runMigrations`, `runSeeds`, `revertMigrations`, `undoSeeds` — run their work inside a cross-process database lock.
+
+| Dialect           | Lock                                                                      | Bounded by                                          |
+| ----------------- | ------------------------------------------------------------------------- | --------------------------------------------------- |
+| `postgres`        | `pg_advisory_xact_lock()` (per **database**, released on commit/rollback) | transaction-local `lock_timeout`, cleared once held |
+| `mysql`/`mariadb` | `GET_LOCK` / `RELEASE_LOCK`, named `xnapify_schema_lock:<database>`       | `GET_LOCK`'s own timeout argument                   |
+| everything else   | **no lock** — the function just runs                                      | —                                                   |
+
+Both lockable paths give up after `options.timeoutSeconds` (default `300`) with an error whose `code` is `SCHEMA_LOCK_TIMEOUT`, rather than waiting forever behind an instance stuck mid-migration. MySQL named locks are server-wide, so the name carries the database (truncated to MySQL's 64-character limit); Postgres advisory locks are already per-database.
+
+Two ways the lock silently does nothing, both of which `shared/config/env.js` refuses to combine with `XNAPIFY_CLUSTER_WORKERS > 1`:
+
+- **SQLite (the default dialect) and any other non-lockable dialect** — a single-process deployment is fine, since SQLite serialises writers itself; multiple processes are not.
+- **`XNAPIFY_DB_POOL_MAX < 2`** — the lock is held on one pooled connection while the migrations run on another, so a pool of one would deadlock. It is skipped with a `logger.warn` instead.
+
+### Migration guards (`migrationGuards.js`)
+
+`assertColumnDropSupported(queryInterface, { table, column })` makes a `down()` migration refuse to run on SQLite. Sequelize emulates `DROP COLUMN` there by rebuilding the table, which fires every `ON DELETE CASCADE` pointing at it (destroying child rows while the parent survives) and loses every explicit index, including UNIQUE ones. Reverting such a migration on SQLite means restoring a backup.
 
 ## 4. Module Integration
 

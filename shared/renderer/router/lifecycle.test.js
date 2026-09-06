@@ -111,7 +111,8 @@ describe('Translations Inheritance', () => {
         translations: routeTranslationsGrandchild,
       };
 
-      await loadRouteTranslations(grandchildRoute);
+      const ctx = { pathname: '/child/grand' };
+      await loadRouteTranslations(grandchildRoute, ctx);
 
       expect(routeTranslationsRoot).toHaveBeenCalledWith({});
       expect(routeTranslationsChild).toHaveBeenCalledWith({ rootProp: true });
@@ -120,43 +121,57 @@ describe('Translations Inheritance', () => {
         childProp: true,
       });
 
-      expect(rootRoute[ROUTE_TRANSLATIONS_KEY]).toEqual({ rootProp: true });
-      expect(childRoute[ROUTE_TRANSLATIONS_KEY]).toEqual({
+      // Memoised on the navigation context, never on the route node.
+      const registered = ctx[ROUTE_TRANSLATIONS_KEY];
+      expect(registered.get(rootRoute)).toEqual({ rootProp: true });
+      expect(registered.get(childRoute)).toEqual({
         rootProp: true,
         childProp: true,
       });
-      expect(grandchildRoute[ROUTE_TRANSLATIONS_KEY]).toEqual({
+      expect(registered.get(grandchildRoute)).toEqual({
         rootProp: true,
         childProp: true,
         grandProp: true,
       });
+      expect(rootRoute[ROUTE_TRANSLATIONS_KEY]).toBeUndefined();
     });
 
-    it('should reuse accumulated translations if already executed', async () => {
+    it('should reuse accumulated translations within the same navigation', async () => {
       const rootTranslations = jest.fn(() => ({ root: true }));
       const childTranslations = jest.fn(inherited => ({
         ...inherited,
         child: true,
       }));
 
-      const rootRoute = {
-        path: '/',
-        translations: rootTranslations,
-        [ROUTE_TRANSLATIONS_KEY]: { root: true },
-      };
+      const rootRoute = { path: '/', translations: rootTranslations };
       const childRoute = {
         path: '/child',
         parent: rootRoute,
         translations: childTranslations,
       };
 
-      await loadRouteTranslations(childRoute);
+      // The router calls this once per matched route, so a hierarchy is
+      // walked several times within one navigation.
+      const ctx = { pathname: '/child' };
+      await loadRouteTranslations(rootRoute, ctx);
+      await loadRouteTranslations(childRoute, ctx);
 
-      // Should completely skip calling root's translation fn again because ROUTE_TRANSLATIONS_KEY exists
-      expect(rootTranslations).not.toHaveBeenCalled();
-
-      // Should call child with the cached root translations
+      expect(rootTranslations).toHaveBeenCalledTimes(1);
       expect(childTranslations).toHaveBeenCalledWith({ root: true });
+    });
+
+    it('re-registers for a second navigation over the same route node', async () => {
+      // The server compiles one route tree and shares its nodes across every
+      // request. A memo written on the node would register a route's
+      // namespace for the first request only and leave every later request
+      // resolving raw keys.
+      const rootTranslations = jest.fn(() => ({ root: true }));
+      const rootRoute = { path: '/', translations: rootTranslations };
+
+      await loadRouteTranslations(rootRoute, { pathname: '/' });
+      await loadRouteTranslations(rootRoute, { pathname: '/' });
+
+      expect(rootTranslations).toHaveBeenCalledTimes(2);
     });
   });
 });

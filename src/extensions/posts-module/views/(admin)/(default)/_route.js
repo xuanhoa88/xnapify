@@ -16,7 +16,7 @@ import reducer, { SLICE_NAME } from '../redux/index.js';
 
 import Posts from './Posts.js';
 
-const { addBreadcrumb, registerMenu, unregisterMenu } = features;
+const { addBreadcrumb } = features;
 
 export const middleware = requirePermission('posts:read');
 
@@ -29,41 +29,11 @@ export function init({ store }) {
   store.injectReducer(SLICE_NAME, reducer);
 }
 
-/**
- * Register menu item for this route
- */
-export function setup({ store, i18n }) {
-  store.dispatch(
-    registerMenu({
-      ns: 'admin',
-      id: 'content',
-      label: i18n.t('admin:navigation.content', 'Content'),
-      order: 20,
-      icon: 'FileTextIcon',
-      items: [
-        {
-          path: '/admin/posts',
-          label: i18n.t('admin:navigation.posts', 'Posts'),
-          icon: 'ReaderIcon',
-          permission: 'posts:read',
-          order: 10,
-        },
-      ],
-    }),
-  );
-}
-
-/**
- * Unregister menu item for this route
- */
-export function teardown({ store }) {
-  store.dispatch(
-    unregisterMenu({
-      ns: 'admin',
-      path: '/admin/posts',
-    }),
-  );
-}
+// NOTE: the sidebar entry is registered from this extension's `menus()` hook
+// in views/index.js, not here. A route module only exists once its route has
+// been matched, and the sidebar has to list the page before the user can
+// navigate to it. `shutdown()` removes the entry when the extension is
+// deactivated.
 
 /**
  * Page metadata

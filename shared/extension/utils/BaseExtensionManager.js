@@ -81,6 +81,14 @@ export class BaseExtensionManager {
     this[SYNC_PROMISE] = null;
     this[IS_REFRESHING] = false;
     this[PENDING_LOADS] = new Map();
+
+    /**
+     * View context (store, i18n, history, ...) shared with extension view
+     * hooks. Long-lived in the browser; on the server it stays null because
+     * the store is per request — there `runViewMenus(context)` supplies it.
+     * @type {Object|null}
+     */
+    this.viewContext = null;
   }
 
   // ---------------------------------------------------------------------------
@@ -192,13 +200,22 @@ export class BaseExtensionManager {
    * Resolve the lifecycle context handed to one extension's view hooks.
    * Subclasses scope the container by the extension's declared capabilities.
    *
+   * Carries `viewContext` (store, i18n, history, ...) when the host has set
+   * one. A hook that contributes navigation has to dispatch `registerMenu`,
+   * which the DI container alone cannot do — application modules get the same
+   * `{ store, i18n }` from the autoloader, and extensions must not be a
+   * second-class citizen of the same lifecycle.
+   *
    * @param {string} _id - Extension ID
    * @returns {{ container: Object }}
    * @protected
    */
   _hookContextFor(_id) {
-    // eslint-disable-next-line no-underscore-dangle
-    return { container: this._hookContext() };
+    return {
+      ...(this.viewContext || null),
+      // eslint-disable-next-line no-underscore-dangle
+      container: this._hookContext(),
+    };
   }
 
   /**
@@ -589,6 +606,16 @@ export class BaseExtensionManager {
         }
       }
 
+      // Publish the manifest before anything reads it back. Capability
+      // scoping resolves through `metadata.manifest`, so leaving it at the
+      // (possibly null) caller-supplied value until the tail of this method
+      // gave every hook run from _postLoad the default capabilities only —
+      // a load-path-dependent grant, since a disk manifest arrives here
+      // already populated and an API-resolved one does not.
+      if (manifest) {
+        metadata.manifest = { ...manifest };
+      }
+
       // Refuse manifests written for another host version
       // eslint-disable-next-line no-underscore-dangle
       this._assertLoadable(id, manifest);
@@ -653,8 +680,15 @@ export class BaseExtensionManager {
         );
       }
 
-      // eslint-disable-next-line no-underscore-dangle
-      await this.registry.defineExtension(ext, this._hookContext(), manifest);
+      // The stored context is handed to the extension's install()/uninstall()
+      // hooks (Registry.runInstallHook), so it is scoped like every other
+      // lifecycle context rather than being the raw host container.
+      await this.registry.defineExtension(
+        ext,
+        // eslint-disable-next-line no-underscore-dangle
+        this._hookContextFor(id).container,
+        manifest,
+      );
 
       // Extensions with routes() are module-type (eagerly activated);
       // extensions without routes are plugin-type (lazily activated).
@@ -681,6 +715,10 @@ export class BaseExtensionManager {
 
       // Update metadata
       metadata.hasRoutes = hasRoutes;
+      // A menu-contributing extension has to run on every page, because the
+      // sidebar is on every page. The browser uses this to decide whether the
+      // bundle may wait for one of the extension's slots to activate.
+      metadata.hasMenus = typeof ext.menus === 'function';
       metadata.loadedAt = Date.now();
       metadata.manifest = { ...manifest };
 
@@ -704,6 +742,25 @@ export class BaseExtensionManager {
 
       await this.emit('extension:failed', { id, error });
     }
+  }
+
+  /**
+   * Every id a registry definition for this extension could be filed under.
+   *
+   * The manager keys extensions by whatever id the caller loaded them with,
+   * while `defineExtension` files them under `manifest.id || manifest.name`.
+   * Those usually agree, and removal must work when they do not.
+   *
+   * @param {string} id - Extension ID as the manager knows it
+   * @returns {Set<string>}
+   * @private
+   */
+  _definitionIdsFor(id) {
+    const meta = this[EXTENSION_METADATA].get(id);
+    const manifest = meta && meta.manifest;
+    return new Set(
+      [id, manifest && manifest.id, manifest && manifest.name].filter(Boolean),
+    );
   }
 
   /**
@@ -740,6 +797,13 @@ export class BaseExtensionManager {
 
       // Unregister from registry (clears slots, hooks)
       this.registry.unregister(id);
+
+      // ...and forget the definition, or the next namespace activation
+      // rebuilds the extension from it. See Registry.removeDefinition.
+      // eslint-disable-next-line no-underscore-dangle
+      for (const candidate of this._definitionIdsFor(id)) {
+        this.registry.removeDefinition(candidate);
+      }
 
       // Remove from active extensions
       this[ACTIVE_EXTENSIONS].delete(id);
@@ -1161,7 +1225,7 @@ export class BaseExtensionManager {
 
   /**
    * Activate a single extension for the view layer through its full initialization
-   * lifecycle (translations -> providers -> boot).
+   * lifecycle (translations -> providers -> menus -> boot).
    * @param {Object} def - Extension definition wrapper
    * @param {Object} context - Hook context
    */
@@ -1219,7 +1283,27 @@ export class BaseExtensionManager {
       }
     }
 
-    // Phase 3: Boot
+    // Phase 3: Menus
+    // Navigation is a property of the extension, not of one of its routes,
+    // and runs before boot so the sidebar is complete before anything the
+    // extension boots can read it. Mirrors the `menus` phase the autoloader
+    // runs for application modules (shared/utils/lifecycle.js).
+    if (typeof def.menus === 'function') {
+      try {
+        await def.menus({
+          ...context,
+          // eslint-disable-next-line no-underscore-dangle
+          registry: this._scopedRegistry(def.id),
+        });
+      } catch (error) {
+        console.error(
+          `[ExtensionManager] Failed to register menus for ${def.id}:`,
+          error,
+        );
+      }
+    }
+
+    // Phase 4: Boot
     if (typeof def.boot === 'function') {
       try {
         await def.boot({
@@ -1246,6 +1330,48 @@ export class BaseExtensionManager {
 
     const meta = this[EXTENSION_METADATA].get(def.id);
     if (meta) meta.state = ExtensionState.ACTIVE;
+  }
+
+  /**
+   * Re-run every active extension's `menus` hook against a specific context.
+   *
+   * Menu payloads carry translated labels and are dispatched into a store, so
+   * they belong to one render: the server builds a fresh store per request and
+   * the browser rebuilds them when the language changes. Application modules
+   * get this from the autoloader's `menus` phase; this is the same phase for
+   * extensions, which the manager cannot cover from `_activateViewExtension`
+   * alone because that runs once per load, not once per render.
+   *
+   * @param {Object} context - Render context ({ store, i18n, ... })
+   * @returns {Promise<number>} How many hooks ran
+   */
+  async runViewMenus(context) {
+    if (!context || !context.store) return 0;
+
+    let count = 0;
+    for (const [id, def] of this[ACTIVE_EXTENSIONS]) {
+      if (typeof def.menus !== 'function') continue;
+      try {
+        await def.menus({
+          ...context,
+          // The caller's render context carries the host's own container.
+          // Menus is a lifecycle phase like any other, so it gets the same
+          // capability-scoped container every other phase does — it must not
+          // be the one hole an extension can resolve `jwt` or `db` through.
+          // eslint-disable-next-line no-underscore-dangle
+          container: this._hookContextFor(id).container,
+          // eslint-disable-next-line no-underscore-dangle
+          registry: this._scopedRegistry(id),
+        });
+        count += 1;
+      } catch (error) {
+        console.error(
+          `[ExtensionManager] Failed to register menus for ${this._formatDisplayName(id)}:`,
+          error,
+        );
+      }
+    }
+    return count;
   }
 
   /**
@@ -1623,6 +1749,11 @@ export class BaseExtensionManager {
     this[EXTENSION_METADATA].clear();
     this[FETCH] = null;
     this[CONTEXTS] = { view: null, api: null };
+    // The route table holds both routers and every stored adapter, and
+    // viewContext is the whole render context (store, i18n, history). A
+    // destroyed manager must not keep either alive.
+    this[ROUTE_TABLE].reset();
+    this.viewContext = null;
 
     await this.emit('manager:destroyed');
 

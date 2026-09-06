@@ -1,0 +1,23 @@
+/**
+ * xnapify (https://github.com/xuanhoa88/xnapify/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+/*
+ * Space held for the editor while its chunk downloads.
+ *
+ * The spacer is a child of the fallback rather than a `min-height` on the
+ * fallback itself: callers pass their own class through `className`, and a
+ * `min-height` there (`PostForm.css`'s `.contentField`) would be competing
+ * with this one at equal specificity, so which of the two won would come down
+ * to stylesheet order. A child that occupies the height cannot lose that
+ * fight — a taller caller box stays taller, an unstyled one still reserves.
+ *
+ * The height is the editor's own resting footprint: toolbar plus
+ * `.editorContent`'s 160px minimum, from WYSIWYG.css.
+ */
+.reservedSpace {
+  height: 200px;
+}

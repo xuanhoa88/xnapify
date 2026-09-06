@@ -298,7 +298,10 @@ describe('ServerExtensionManager', () => {
     });
 
     it('auto-reverts seeds and migrations before uninstall hook', async () => {
-      const mockRevertSeeds = jest.fn().mockResolvedValue();
+      // The connection exposes undoSeeds — there is no revertSeeds. Mocking
+      // one used to hide that the real call threw TypeError, whose catch
+      // swallowed the failure and skipped revertMigrations entirely.
+      const mockUndoSeeds = jest.fn().mockResolvedValue();
       const mockRevertMigrations = jest.fn().mockResolvedValue();
       const mockApi = {
         seeds: jest.fn(() => ({ up: jest.fn() })),
@@ -311,7 +314,7 @@ describe('ServerExtensionManager', () => {
       serverManager.apiContainer = {
         resolve: jest.fn().mockReturnValue({
           connection: {
-            revertSeeds: mockRevertSeeds,
+            undoSeeds: mockUndoSeeds,
             revertMigrations: mockRevertMigrations,
           },
         }),
@@ -322,8 +325,11 @@ describe('ServerExtensionManager', () => {
       await serverManager.uninstallExtension('test_extension_id', manifest);
 
       // Seeds reverted before migrations
-      expect(mockRevertSeeds).toHaveBeenCalled();
+      expect(mockUndoSeeds).toHaveBeenCalled();
       expect(mockRevertMigrations).toHaveBeenCalled();
+      expect(mockUndoSeeds.mock.invocationCallOrder[0]).toBeLessThan(
+        mockRevertMigrations.mock.invocationCallOrder[0],
+      );
       // Then custom hook runs
       expect(mockApi.uninstall).toHaveBeenCalled();
     });
@@ -505,6 +511,61 @@ describe('ServerExtensionManager — contract & isolation', () => {
     expect(typeof registry.registerHook).toBe('function');
   });
 
+  it('refuses a self-declared wildcard, and never the reserved bindings', async () => {
+    // A manifest is the extension's own package.json: `capabilities: ['*']`
+    // used to hand it the whole container, the manager included.
+    delete process.env.XNAPIFY_TRUSTED_EXTENSIONS;
+    serverManager.apiContainer = {
+      has: () => true,
+      resolve: name => ({ name }),
+      getBindingNames: () => ['db', 'hook', 'jwt', 'env', 'extension'],
+    };
+    serverManager[EXTENSION_METADATA].set('ext', {
+      manifest: {
+        name: 'ext',
+        id: 'ext',
+        xnapify: { version: '>=0.0.1', capabilities: ['*'] },
+      },
+    });
+
+    // eslint-disable-next-line no-underscore-dangle
+    const container = serverManager._extensionContainer('ext');
+
+    expect(container.resolve('hook')).toEqual({ name: 'hook' });
+    for (const denied of ['db', 'jwt', 'env', 'extension']) {
+      expect(() => container.resolve(denied)).toThrow(
+        expect.objectContaining({ name: 'CapabilityDeniedError' }),
+      );
+    }
+  });
+
+  it('denies the reserved bindings even to a trusted wildcard', async () => {
+    process.env.XNAPIFY_TRUSTED_EXTENSIONS = 'trusted-ext';
+    serverManager.apiContainer = {
+      has: () => true,
+      resolve: name => ({ name }),
+      getBindingNames: () => ['db', 'jwt', 'env', 'extension'],
+    };
+    serverManager[EXTENSION_METADATA].set('trusted-ext', {
+      manifest: {
+        name: '@acme/trusted',
+        id: 'trusted-ext',
+        xnapify: { version: '>=0.0.1', capabilities: ['*'] },
+      },
+    });
+
+    // eslint-disable-next-line no-underscore-dangle
+    const container = serverManager._extensionContainer('trusted-ext');
+
+    expect(container.resolve('db')).toEqual({ name: 'db' });
+    for (const reserved of ['jwt', 'env', 'extension']) {
+      expect(() => container.resolve(reserved)).toThrow(
+        expect.objectContaining({ name: 'CapabilityDeniedError' }),
+      );
+    }
+    delete process.env.XNAPIFY_TRUSTED_EXTENSIONS;
+  });
+
   it('keeps view activation for the lifetime of the extension', async () => {
     const def = { id: 'ext', shutdown: jest.fn() };
     serverManager[ACTIVE_EXTENSIONS].set('ext', def);
@@ -516,6 +577,106 @@ describe('ServerExtensionManager — contract & isolation', () => {
 
     expect(def.shutdown).not.toHaveBeenCalled();
     expect(serverManager[ACTIVE_EXTENSIONS].has('ext')).toBe(true);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Deferred extension assets
+  // ---------------------------------------------------------------------------
+
+  describe('getDeferredResources', () => {
+    /** Reach the private entry-point maps the way the loader fills them. */
+    const entryPoints = kind => {
+      const symbol = Object.getOwnPropertySymbols(serverManager).find(
+        s => s.description === `__xnapify.ext.${kind}EntryPoints__`,
+      );
+      return serverManager[symbol];
+    };
+
+    const register = (id, manifest) => {
+      serverManager[EXTENSION_METADATA].set(id, { manifest });
+      if (manifest.hasClientCss) {
+        entryPoints('css').set(id, `/api/extensions/${id}/static/ext.css`);
+      }
+      if (manifest.hasClientScript) {
+        entryPoints('script').set(id, `/api/extensions/${id}/static/remote.js`);
+      }
+    };
+
+    beforeEach(() => {
+      entryPoints('css').clear();
+      entryPoints('script').clear();
+    });
+
+    const slotOnly = {
+      hasRoutes: false,
+      hasClientCss: true,
+      hasClientScript: true,
+      slots: ['login'],
+    };
+
+    it('emits a deferred extension on the page whose slot it fills', () => {
+      register('quick', slotOnly);
+
+      const { stylesheets, scripts } = serverManager.getDeferredResources([
+        '/',
+        'login',
+      ]);
+
+      expect(stylesheets).toEqual([
+        { href: '/api/extensions/quick/static/ext.css', id: 'quick' },
+      ]);
+      expect(scripts).toEqual([
+        { src: '/api/extensions/quick/static/remote.js', id: 'quick' },
+      ]);
+    });
+
+    it('leaves it out of every other page', () => {
+      register('quick', slotOnly);
+
+      expect(serverManager.getDeferredResources(['/', '/admin/users'])).toEqual(
+        {
+          stylesheets: [],
+          scripts: [],
+        },
+      );
+      expect(serverManager.getDeferredResources([])).toEqual({
+        stylesheets: [],
+        scripts: [],
+      });
+    });
+
+    it('ignores extensions that already ship on every page', () => {
+      // A route provider is never deferred, so `cssUrls` already covers it —
+      // returning it here too would emit the tag twice.
+      register('docs', { ...slotOnly, hasRoutes: true, slots: ['login'] });
+
+      expect(serverManager.getDeferredResources(['login'])).toEqual({
+        stylesheets: [],
+        scripts: [],
+      });
+      expect(serverManager.cssUrls).toEqual([
+        { href: '/api/extensions/docs/static/ext.css', id: 'docs' },
+      ]);
+    });
+
+    it('omits assets the extension does not build', () => {
+      register('quick', { ...slotOnly, hasClientCss: false });
+
+      const { stylesheets, scripts } = serverManager.getDeferredResources([
+        'login',
+      ]);
+
+      expect(stylesheets).toEqual([]);
+      expect(scripts).toHaveLength(1);
+    });
+
+    it('accepts a Set of namespaces', () => {
+      register('quick', slotOnly);
+
+      expect(
+        serverManager.getDeferredResources(new Set(['login'])).stylesheets,
+      ).toHaveLength(1);
+    });
   });
 
   it('checks dependency ranges with semver', () => {
@@ -540,7 +701,9 @@ describe('scopeRouteModule', () => {
   const scoped = { resolve: name => `scoped:${name}` };
   const full = { resolve: name => `full:${name}` };
 
-  it('scopes only the final handler of a method export', async () => {
+  it('scopes every function of a method export, not just the last', async () => {
+    // An extension's route array is the extension's own code, so a
+    // non-terminal middleware used to be a free hole to the full container.
     const seen = {};
     const middleware = (req, _res, next) => {
       seen.middleware = req.app.get('container');
@@ -561,7 +724,9 @@ describe('scopeRouteModule', () => {
 
     const req = makeReq(full);
     mod.post[0](req, {}, () => {});
-    expect(seen.middleware).toBe(full);
+    expect(seen.middleware).toBe(scoped);
+    // Restored between the two functions
+    expect(req.app.get('container')).toBe(full);
 
     const result = await mod.post[1](req, {}, () => {});
     expect(result).toBe('done');
@@ -569,6 +734,51 @@ describe('scopeRouteModule', () => {
     expect(seen.container).toBe(scoped);
     // The original app is restored once the handler settles
     expect(req.app.get('container')).toBe(full);
+  });
+
+  it('scopes the container reachable through res.app too', async () => {
+    // Express defines `app` on the response prototype as well, so scoping
+    // req.app alone left res.app.get('container') fully unscoped.
+    const seen = {};
+    const mod = scopeRouteModule(
+      {
+        get: async (req, res) => {
+          seen.res = res.app.get('container');
+          seen.viaReq = req.res.app.get('container');
+        },
+      },
+      () => scoped,
+    );
+
+    const req = makeReq(full);
+    const res = { app: req.app };
+    req.res = res;
+
+    await mod.get(req, res, () => {});
+
+    expect(seen.res).toBe(scoped);
+    expect(seen.viaReq).toBe(scoped);
+    // Both are restored once the handler settles
+    expect(res.app.get('container')).toBe(full);
+    expect(req.app.get('container')).toBe(full);
+  });
+
+  it('restores an inherited res.app without leaving a shadow property', () => {
+    const app = {
+      settings: { container: full },
+      get(name) {
+        return this.settings[name];
+      },
+    };
+    const res = Object.create({ app });
+    const mod = scopeRouteModule(
+      { get: (_req, r) => r.app.get('container') },
+      () => scoped,
+    );
+
+    expect(mod.get({ app }, res, () => {})).toBe(scoped);
+    expect(Object.prototype.hasOwnProperty.call(res, 'app')).toBe(false);
+    expect(res.app).toBe(app);
   });
 
   it('scopes bare function exports and default exports', () => {

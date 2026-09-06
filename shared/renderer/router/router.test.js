@@ -56,16 +56,32 @@ function createAdapter(fileMap) {
 // =============================================================================
 
 describe('Route Tree Construction', () => {
-  it('should build root and nested child routes correctly', () => {
+  it('keeps unrelated top-level routes out of the home route', () => {
     const router = new Router(mockModuleLoader);
 
+    // `/` owns no prefix of `/test-nextjs` in any meaningful sense — every
+    // path starts with `/`. Nesting them made the router walk into the home
+    // route on every request, which with one chunk per view meant fetching
+    // the home page on pages that never render it.
     const rootRoute = router.routes.find(r => r.path === '/');
     expect(rootRoute).toBeDefined();
+    expect(rootRoute.children).toBeUndefined();
 
-    const testRoute = rootRoute.children.find(r => r.path === '/test-nextjs');
+    const testRoute = router.routes.find(r => r.path === '/test-nextjs');
     expect(testRoute).toBeDefined();
-    expect(testRoute.parent).toBeDefined();
-    expect(testRoute.parent.path).toBe('/');
+  });
+
+  it('still nests a route under the section that owns its prefix', () => {
+    const adapter = createAdapter({
+      './(default)/views/(admin)/(default)/_route.js': { default: () => 'A' },
+      './users/views/(admin)/(default)/_route.js': { default: () => 'U' },
+    });
+
+    const router = new Router(adapter);
+    const admin = router.routes.find(r => r.path === '/admin');
+
+    expect(admin).toBeDefined();
+    expect(admin.children.map(c => c.path)).toContain('/admin/users');
   });
 
   it('should handle dynamic parameter routes ([id])', () => {
@@ -80,11 +96,7 @@ describe('Route Tree Construction', () => {
     });
 
     const router = new Router(adapter);
-    const rootRoute = router.routes.find(r => r.path === '/');
-    expect(rootRoute).toBeDefined();
-
-    // Dynamic route should exist as child
-    const userRoute = rootRoute.children.find(r => r.path === '/users/:id');
+    const userRoute = router.routes.find(r => r.path === '/users/:id');
     expect(userRoute).toBeDefined();
   });
 
@@ -100,11 +112,66 @@ describe('Route Tree Construction', () => {
     });
 
     const router = new Router(adapter);
-    const rootRoute = router.routes.find(r => r.path === '/');
-    expect(rootRoute).toBeDefined();
-
-    const docsRoute = rootRoute.children.find(r => r.path === '/docs/:path*');
+    const docsRoute = router.routes.find(r => r.path === '/docs/:path*');
     expect(docsRoute).toBeDefined();
+  });
+});
+
+// =============================================================================
+// Matching behaviour across the flatter top level
+// =============================================================================
+
+describe('Route matching across the top level', () => {
+  const FILES = {
+    './(default)/views/(default)/_route.js': { default: () => 'HomePage' },
+    './(default)/views/login/_route.js': { default: () => 'LoginPage' },
+    './(default)/views/(admin)/(default)/_route.js': {
+      default: () => 'AdminHome',
+    },
+    './users/views/(admin)/(default)/_route.js': {
+      default: () => 'AdminUsers',
+    },
+    './(default)/views/users/[id]/_route.js': { default: () => 'UserPage' },
+    './(default)/views/not-found/_route.js': { default: () => 'NotFound' },
+  };
+
+  const makeRouter = () => {
+    const router = new Router(createAdapter(FILES));
+    router.routes.push({
+      path: '/:path*',
+      action: ctx =>
+        // eslint-disable-next-line no-underscore-dangle
+        ctx._instance.resolve({ ...ctx, pathname: '/not-found' }),
+    });
+    return router;
+  };
+
+  const context = pathname => ({
+    pathname,
+    store: { getState: () => ({}), dispatch: () => {} },
+    i18n: { t: (_key, fallback) => fallback },
+  });
+
+  it.each([
+    ['/', 'HomePage'],
+    ['/login', 'LoginPage'],
+    ['/admin', 'AdminHome'],
+    ['/admin/users', 'AdminUsers'],
+    ['/users/42', 'UserPage'],
+    ['/nope/deep', 'NotFound'],
+  ])('resolves %s to the right page', async (pathname, expected) => {
+    const page = await makeRouter().resolve(context(pathname));
+
+    expect(page).toBeTruthy();
+    const element = page.component;
+    expect(String(element.type(element.props))).toContain(expected);
+  });
+
+  it('walks only the matched route, not the home page, for a top-level path', async () => {
+    const router = makeRouter();
+    await router.resolve(context('/login'));
+
+    expect(router.viewAssets).toEqual(['./(default)/views/login/_route.js']);
   });
 });
 

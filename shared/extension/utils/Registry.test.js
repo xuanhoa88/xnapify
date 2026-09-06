@@ -65,6 +65,32 @@ describe('ExtensionRegistry', () => {
 
       expect(registry.getSlotEntries('header')).toHaveLength(0);
     });
+
+    // Module-type: contributes routes and declares no slots, so the registry
+    // files it under the '*' wildcard — the posts-module shape.
+    const MODULE_TYPE = { boot: () => {}, routes: () => ({}) };
+
+    test('unregister keeps the definition so a namespace can re-activate it', () => {
+      registry.defineExtension(MODULE_TYPE, {}, { id: 'ext-1' });
+      registry.unregister('ext-1');
+
+      // deactivateViewNamespace unregisters extensions it intends to bring
+      // back on the next navigation, so the definition has to survive.
+      expect(registry.findDefinition('ext-1')).toBeTruthy();
+    });
+
+    test('removeDefinition forgets the extension for good', () => {
+      // A module-type extension files itself under the '*' wildcard, which
+      // getDefinitions merges into every namespace — leaving the definition
+      // behind means the next navigation re-runs menus() and boot() and a
+      // deactivated extension's sidebar entry comes back.
+      registry.defineExtension(MODULE_TYPE, {}, { id: 'ext-1' });
+      registry.unregister('ext-1');
+      registry.removeDefinition('ext-1');
+
+      expect(registry.findDefinition('ext-1')).toBeFalsy();
+      expect(registry.getDefinitions('any-namespace')).toBeNull();
+    });
   });
 
   describe('Definitions', () => {

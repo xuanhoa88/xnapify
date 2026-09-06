@@ -178,6 +178,18 @@ const SECRET_PATTERNS = [
     severity: 'HIGH',
   },
 
+  // user:password inside an http(s) URL. This is the shape npm writes into
+  // package-lock.json's `resolved` fields when the tree was installed from an
+  // authenticated private registry, and the shape a hardcoded Basic-auth
+  // endpoint takes anywhere else. Host:port (`http://localhost:1337/`) does
+  // not match: the userinfo half must be followed by `@`.
+  {
+    id: 'url-credentials',
+    label: 'Credentials Embedded in URL',
+    regex: /\bhttps?:\/\/(?!\$\{)[^\s/:'"@]+:(?!\$\{)[^\s/'"@]+@[^\s/'"@]+/i,
+    severity: 'CRITICAL',
+  },
+
   // npm tokens
   {
     id: 'npm-token',
@@ -210,7 +222,12 @@ const SECRET_PATTERNS = [
  */
 const SKIP_PATTERNS = [
   // Config / lock files
-  /package-lock\.json$/,
+  //
+  // NOTE: package-lock.json is deliberately NOT skipped. npm writes the
+  // registry credentials of an authenticated private registry straight into
+  // the `resolved` URLs, so the lockfile is one of the likeliest files in the
+  // tree to leak one. The integrity hashes that made it noisy are handled at
+  // line level (see SKIP_LINE_PATTERNS) instead of by exempting the file.
   /yarn\.lock$/,
   /pnpm-lock\.yaml$/,
   /\.lock$/,
@@ -268,6 +285,10 @@ const SKIP_LINE_PATTERNS = [
   /^(?:import|const\s+\w+\s*=\s*require)/,
   // Template literal building URL from variables (not hardcoded)
   /`[^`]*\$\{[^}]+\}[^`]*`/,
+  // Lockfile integrity digests. High entropy by construction and public by
+  // design — this is the only lockfile noise worth exempting, which is why
+  // package-lock.json itself is scanned rather than skipped wholesale.
+  /^\s*"integrity"\s*:\s*"(?:sha\d+)-/,
 ];
 
 // ---------------------------------------------------------------------------
