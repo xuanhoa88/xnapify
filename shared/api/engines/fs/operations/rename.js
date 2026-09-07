@@ -9,7 +9,11 @@
  * Rename Operations
  */
 
-import { FilesystemError, createOperationResult } from '../utils/index.js';
+import {
+  ERROR_CODES,
+  FilesystemError,
+  createOperationResult,
+} from '../utils/index.js';
 
 /**
  * Rename file(s)
@@ -39,19 +43,30 @@ export async function rename(manager, operations, options = {}) {
       const newName = op.newName || op.newFileName;
 
       try {
-        // Check target exists for overwrite protection
-        if (!options.overwrite) {
-          const targetExists = await provider.exists(newName);
-          if (targetExists) {
-            errors.push({ oldName, newName, error: 'TARGET_EXISTS' });
-            continue;
-          }
+        // Overwrite protection is the provider's to enforce, not this loop's:
+        // asking `exists` first and moving second leaves a window in which the
+        // destination is created, and `rename(2)` then replaces it without a
+        // word. The providers that can decide-and-act in one step do; the
+        // check below only gives the ones that cannot a cheaper, friendlier
+        // failure than the move itself would.
+        if (!options.overwrite && (await provider.exists(newName))) {
+          errors.push({ oldName, newName, error: 'TARGET_EXISTS' });
+          continue;
         }
 
-        await provider.move(oldName, newName);
+        await provider.move(oldName, newName, {
+          overwrite: Boolean(options.overwrite),
+        });
         results.push({ oldName, newName, renamedAt: new Date().toISOString() });
       } catch (error) {
-        errors.push({ oldName, newName, error: error.message });
+        errors.push({
+          oldName,
+          newName,
+          error:
+            error.code === ERROR_CODES.TARGET_EXISTS
+              ? 'TARGET_EXISTS'
+              : error.message,
+        });
       }
     }
 

@@ -5,9 +5,16 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import crypto from 'crypto';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+
+import {
+  isMissingFsError,
+  resolveWithin,
+  safeSegment,
+} from '@shared/utils/atomic/index.js';
 
 import {
   checksumMismatchReason,
@@ -29,11 +36,20 @@ let diskScanPromise = null;
 const DISK_SCAN_TTL = 30_000; // 30 seconds TTL — extension HMR triggers explicit invalidation
 
 /**
- * Scan a directory and add extensions to the map
+ * Scan a directory and add extensions to the map.
+ *
+ * A directory that is not there holds no extensions, and saying so is the
+ * whole answer — a machine with no local extensions directory is the normal
+ * case. A directory that cannot be *read* is a different statement, and this
+ * throws rather than making it: the callers reconcile what they find against
+ * the database, and an EACCES or an EMFILE reported as "empty" tells them
+ * every installed extension was uninstalled.
+ *
  * @param {string} dirPath - Directory path
  * @param {string} source - Source of extensions ('remote' or 'local')
  * @param {Map} metadata - Map to store extensions
  * @param {object} extensionManager - Extension manager
+ * @throws {Error} If a directory exists but could not be listed
  */
 async function scanDirectory(dirPath, source, metadata, extensionManager) {
   if (!dirPath) return;
@@ -41,8 +57,9 @@ async function scanDirectory(dirPath, source, metadata, extensionManager) {
   let files;
   try {
     files = await fs.promises.readdir(dirPath, { withFileTypes: true });
-  } catch {
-    return;
+  } catch (err) {
+    if (isMissingFsError(err)) return;
+    throw err;
   }
 
   const processDirent = async (dirent, parentScope = '') => {
@@ -55,8 +72,9 @@ async function scanDirectory(dirPath, source, metadata, extensionManager) {
         scopeFiles = await fs.promises.readdir(scopePath, {
           withFileTypes: true,
         });
-      } catch {
-        return;
+      } catch (err) {
+        if (isMissingFsError(err)) return;
+        throw err;
       }
       await Promise.all(
         scopeFiles.map(scopeDirent => processDirent(scopeDirent, dirent.name)),
@@ -67,7 +85,17 @@ async function scanDirectory(dirPath, source, metadata, extensionManager) {
     const manifestArgs = parentScope
       ? [dirPath, parentScope, dirent.name]
       : [dirPath, dirent.name];
-    const manifest = await extensionManager.readManifest(...manifestArgs);
+
+    // `strict` closes the same door one level down from the readdir guard
+    // above. readManifest answers null for *everything* that goes wrong, so an
+    // EACCES or an EMFILE on package.json — and this scan reads every
+    // extension's manifest through one unbounded Promise.all, so a large
+    // install can exhaust the descriptor table by itself — arrives here
+    // indistinguishable from "there is no extension in this directory".
+    // manageExtensions reads that as uninstalled and deactivates the row.
+    const manifest = await extensionManager.readManifest(...manifestArgs, {
+      strict: true,
+    });
     if (!manifest) return;
 
     metadata.set(manifest.id, {
@@ -141,7 +169,20 @@ async function getDiskExtensionById(extensionManager, cwd, id) {
           );
         }
 
-        await Promise.all(scanTasks);
+        const scans = await Promise.allSettled(scanTasks);
+        const failed = scans.find(scan => scan.status === 'rejected');
+        if (failed) {
+          // A scan that could not read one of the directories saw a subset of
+          // what is installed. Serving that is a wrong answer; caching it and
+          // serving it for the next 30 seconds is the same wrong answer with
+          // no way to retry, so the timestamp is left alone and the next call
+          // scans again.
+          console.warn(
+            '[getDiskExtensionById] Extension scan incomplete, not caching',
+            failed.reason,
+          );
+          return;
+        }
 
         diskExtensionCache.clear();
         for (const [key, val] of metadata.entries()) {
@@ -367,7 +408,18 @@ export async function manageExtensions({
     );
   }
 
-  await Promise.all(scanTasks);
+  const scans = await Promise.allSettled(scanTasks);
+  // "Not on disk" is a claim about the whole filesystem, and step 2a acts on
+  // it by deactivating the row. One unreadable directory makes the claim
+  // unfounded for every extension that lives in it, so the sweep is held back
+  // rather than run on partial evidence.
+  const incompleteScan = scans.find(scan => scan.status === 'rejected');
+  if (incompleteScan) {
+    console.warn(
+      '[manageExtensions] Extension scan incomplete — missing extensions will not be deactivated this pass',
+      incompleteScan.reason,
+    );
+  }
 
   // 2. Fetch from DB
   const dbExtensions = await Extension.findAll();
@@ -423,6 +475,18 @@ export async function manageExtensions({
         isInstalled: true,
         source: fsExtension.source === 'local' ? 'db+local' : 'db+remote',
       });
+    } else if (incompleteScan) {
+      // Left exactly as it is: a row this pass could not see is not a row the
+      // user uninstalled, and deactivating it costs them a manual re-enable
+      // for every extension, per failed scan.
+      metadata.set(dbExtension.key, {
+        ...dbExtension.toJSON(),
+        id: dbExtension.key,
+        isActive: dbExtension.is_active,
+        isInstalled: true,
+        source: 'db',
+      });
+      installedKeys.add(dbExtension.key);
     } else {
       // Extension in DB but not on disk (Missing)
       // Deactivate from DB as per missing source logic instead of hard deletion to preserve configuration
@@ -560,8 +624,37 @@ export async function deleteExtension(
     required: false,
   });
 
-  // Canonical key: DB record's key, or raw ID for disk-only extensions
-  const key = extension ? extension.key : id;
+  // Canonical key: DB record's key, or raw ID for disk-only extensions.
+  //
+  // This becomes the directory the background delete worker removes
+  // recursively, and with no matching DB row it is the raw route parameter —
+  // so `../../something` handed `rm -rf` a target outside the extensions
+  // directory entirely.
+  //
+  // Validated by containment rather than reduced to one segment: keys are
+  // legitimately scoped (`@xnapify-extension/docs`), so collapsing to a single
+  // segment would both break those and silently retarget `../../../etc` at an
+  // unrelated extension called `etc`. Refusing is the only safe answer.
+  const key = String(extension ? extension.key : (id ?? ''));
+  const installedDir =
+    typeof extensionManager?.getInstalledExtensionsDir === 'function'
+      ? extensionManager.getInstalledExtensionsDir()
+      : null;
+  const baseDir = installedDir || '/extensions';
+  try {
+    const resolved = resolveWithin(baseDir, key);
+    // resolveWithin permits the base itself — correct in general, wrong here:
+    // a key of "." or "" resolves to the extensions directory, so the delete
+    // worker would remove every installed extension rather than one.
+    if (resolved === path.resolve(baseDir)) {
+      throw new Error('key resolves to the extensions directory itself');
+    }
+  } catch {
+    const error = new Error(`Invalid extension identifier: ${String(id)}`);
+    error.name = 'ExtensionNotFoundError';
+    error.statusCode = 400;
+    throw error;
+  }
 
   let extensionName = extension ? extension.name : key;
   if (!extension) {
@@ -584,7 +677,11 @@ export async function deleteExtension(
   // Enqueue the background deletion job
   if (queue && cwd) {
     const queueChannel = queue('extensions');
-    queueChannel.emit('delete', {
+    // Awaited, because `emit` is async and this call *is* the deletion:
+    // dropping the promise reports success for work that was never scheduled,
+    // and a rejection with nobody attached is an unhandled rejection — which
+    // on Node 20 takes the process down rather than the request.
+    await queueChannel.emit('delete', {
       extensionKey: key,
       extensionName,
       actorId,
@@ -706,6 +803,38 @@ export async function getExtensionStaticDir(
 }
 
 /**
+ * Move a directory, falling back to copy-then-remove across filesystems.
+ *
+ * `rename` cannot cross a mount point: it returns EXDEV. Extraction happens in
+ * `os.tmpdir()` and installation lands in the app tree, and this project ships
+ * a docker-compose that puts those on separate volumes — so the fallback is the
+ * normal path in production, not an exotic one.
+ *
+ * @param {string} source
+ * @param {string} destination
+ * @returns {Promise<void>}
+ */
+async function moveDirectory(source, destination) {
+  try {
+    await fs.promises.rename(source, destination);
+    return;
+  } catch (error) {
+    if (error.code !== 'EXDEV') throw error;
+  }
+
+  // Copy first, and only drop the source once the copy is complete, so an
+  // interruption leaves the extraction intact rather than losing both copies.
+  await fs.promises.cp(source, destination, {
+    recursive: true,
+    force: true,
+    errorOnExist: false,
+  });
+  await fs.promises
+    .rm(source, { recursive: true, force: true })
+    .catch(() => {});
+}
+
+/**
  * Install an extension from an uploaded package (zip).
  *
  * Steps:
@@ -742,10 +871,19 @@ export async function installExtensionFromPackage(
   const { Extension } = models;
   const tempPath = file.path;
   const extensionsDir = extensionManager.getInstalledExtensionsDir();
+  // Unique per install, and reduced to a single safe segment.
+  //
+  // `path.parse('..').name` is `'..'`, so an upload literally named `..` made
+  // this resolve to the system temp directory itself — which the cleanup below
+  // then removes recursively. The random suffix is equally load-bearing: the
+  // name alone is deterministic, so two concurrent installs of the same file
+  // shared one directory and each one's cleanup deleted the other's in-flight
+  // extraction.
   const tempExtractDir = path.join(
     os.tmpdir(),
     'xnapify-extension-install',
-    path.parse(file.originalname || '').name,
+    `${safeSegment(file.originalname || '', { fallback: 'package' })}-` +
+      `${process.pid.toString(36)}-${crypto.randomBytes(6).toString('hex')}`,
   );
 
   try {
@@ -762,7 +900,47 @@ export async function installExtensionFromPackage(
     await fs.promises.mkdir(tmpDir, { recursive: true });
 
     // 2. Extract using shared FS engine
-    await fsEngine.extract(tempPath, tempExtractDir);
+    //
+    // The extractor never rejects on a per-entry failure: a write that hit
+    // ENOSPC, a path it refused as zip-slip, an entry it skipped because the
+    // target already existed — each is collected into `errors`/`skippedFiles`
+    // and the call still resolves `{ success: true }`. Half an archive still
+    // carries a valid package.json, so the manifest checks below pass, the tree
+    // is installed, and the install worker then hashes it as the integrity
+    // baseline — after which nothing downstream can tell a truncated extension
+    // from a whole one. Completeness is only knowable from these lists.
+    const extraction = await fsEngine.extract(tempPath, tempExtractDir);
+
+    const reportsEntries =
+      extraction &&
+      Array.isArray(extraction.extractedFiles) &&
+      Array.isArray(extraction.errors) &&
+      Array.isArray(extraction.skippedFiles);
+    if (!reportsEntries) {
+      // An engine that does not report what it wrote is indistinguishable from
+      // one that wrote nothing, so refuse rather than assume success.
+      throw ExtensionError.invalidPackage(
+        'Extraction result could not be verified; refusing to install an ' +
+          'unchecked package.',
+      );
+    }
+
+    // `tempExtractDir` is fresh and unique per install, so nothing legitimate
+    // can already occupy an entry's path: a skip means the archive names the
+    // same file twice, and is as much a reason to stop as an outright error.
+    const badEntries = [...extraction.errors, ...extraction.skippedFiles];
+    if (badEntries.length > 0) {
+      const sample = badEntries
+        .slice(0, 5)
+        .map(entry => entry.fileName)
+        .join(', ');
+      throw ExtensionError.invalidPackage(
+        `Extraction was incomplete: ${extraction.errors.length} entries ` +
+          `failed and ${extraction.skippedFiles.length} were skipped ` +
+          `(${sample}${badEntries.length > 5 ? ', …' : ''}). ` +
+          'The package was not installed.',
+      );
+    }
 
     // 3. Read manifest (package.json)
     const extensionRoot = await locateExtensionRoot(tempExtractDir);
@@ -811,29 +989,134 @@ export async function installExtensionFromPackage(
     }
 
     // 6. Move to final destination (use manifest.name for directory — supports @org/name)
-    const finalExtensionDir = path.join(extensionsDir, extensionName);
+    //
+    // `extensionName` comes out of the uploaded package's own manifest, so it is
+    // attacker-controlled: a plain join would let `"name": "../../../etc"`
+    // place the payload anywhere the process can write.
+    const finalExtensionDir = resolveWithin(extensionsDir, extensionName);
 
     // Ensure parent scope directory exists for scoped names (e.g. @xnapify-extension/)
     await fs.promises.mkdir(path.dirname(finalExtensionDir), {
       recursive: true,
     });
-    await fs.promises.rm(finalExtensionDir, { recursive: true, force: true });
 
-    await fs.promises.rename(extensionRoot, finalExtensionDir);
+    // Swap through a backup instead of deleting first.
+    //
+    // Removing the existing installation and *then* renaming leaves nothing at
+    // all if the rename fails — and it does fail, predictably: `extensionRoot`
+    // lives under os.tmpdir() while `extensionsDir` is in the app tree, and this
+    // project's own docker-compose puts those on different mounts, where rename
+    // returns EXDEV. An upgrade would uninstall the working version and stop.
+    const backupDir =
+      `${finalExtensionDir}.replaced-${process.pid.toString(36)}-` +
+      `${crypto.randomBytes(4).toString('hex')}`;
+    let backedUp = false;
+    try {
+      await fs.promises.rename(finalExtensionDir, backupDir);
+      backedUp = true;
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+    }
+
+    try {
+      await moveDirectory(extensionRoot, finalExtensionDir);
+    } catch (error) {
+      if (backedUp) {
+        // A failed moveDirectory can still have populated the destination: it
+        // falls back to copy-then-remove across mounts (EXDEV), which this
+        // project's docker-compose makes the normal path, and a copy that dies
+        // part way leaves a truncated tree behind. rename() refuses to replace
+        // a non-empty directory — ENOTEMPTY — so restoring the backup on top of
+        // that debris failed, leaving the truncated install live under the name
+        // the loader reads and the only good copy orphaned under .replaced-.
+        await fs.promises
+          .rm(finalExtensionDir, { recursive: true, force: true })
+          .catch(() => {});
+        await fs.promises
+          .rename(backupDir, finalExtensionDir)
+          .catch(restoreErr => {
+            console.error(
+              `[installExtensionFromPackage] Install failed AND the previous ` +
+                `installation could not be restored; it is preserved at ` +
+                `${backupDir}: ${restoreErr.message}`,
+            );
+          });
+      }
+      throw error;
+    }
 
     // 7. Create DB record — inactive by default (admin must manually activate)
-    const extension = await Extension.create({
-      key: manifest.id,
-      name: extensionName,
-      description: manifest.description,
-      version: extensionVersion,
-      is_active: false,
-      options: {
-        author: manifest.author,
-        repository: manifest.repository,
-      },
-      integrity: null,
-    });
+    //
+    // The backup is kept until this succeeds, on purpose: two cluster workers
+    // installing the same new extension both pass the duplicate check at step 5
+    // (neither has created its row yet), both reach here, and the loser's
+    // Extension.create fails on the unique `key`/`name` constraint. Without a
+    // backup to restore, that failure would leave the winner's directory
+    // overwritten by the loser's tree with no DB row pointing at it — an
+    // extension present on disk that manageExtensions can never re-adopt,
+    // since 2a only re-keys a row whose *name* still matches (extension.service.js
+    // fsByName lookup) and this row does not exist at all.
+    let extension;
+    try {
+      extension = await Extension.create({
+        key: manifest.id,
+        name: extensionName,
+        description: manifest.description,
+        version: extensionVersion,
+        is_active: false,
+        options: {
+          author: manifest.author,
+          repository: manifest.repository,
+        },
+        integrity: null,
+      });
+    } catch (createErr) {
+      if (backedUp) {
+        // finalExtensionDir now holds the tree this install just moved in, so
+        // rename() cannot drop the backup back onto it directly — move the
+        // failed install aside first, the same way the initial swap works.
+        const failedDir =
+          `${finalExtensionDir}.failed-${process.pid.toString(36)}-` +
+          `${crypto.randomBytes(4).toString('hex')}`;
+        try {
+          await fs.promises.rename(finalExtensionDir, failedDir);
+          await fs.promises.rename(backupDir, finalExtensionDir);
+          await fs.promises
+            .rm(failedDir, { recursive: true, force: true })
+            .catch(() => {});
+        } catch (restoreErr) {
+          console.error(
+            `[installExtensionFromPackage] Extension.create failed AND the ` +
+              `previous installation could not be restored; the rejected ` +
+              `install is at ${failedDir}, the previous version is preserved ` +
+              `at ${backupDir}: ${restoreErr.message}`,
+          );
+        }
+      } else if (createErr.name === 'SequelizeUniqueConstraintError') {
+        // A unique-key rejection on the no-backup path is not a failed
+        // install, it is a lost race: two workers passed the duplicate check
+        // before either had a row, and this one lost. The winner's tree is
+        // what now sits at finalExtensionDir, so removing it would delete a
+        // successfully installed extension and leave the winner's row pointing
+        // at nothing — and manageExtensions can only re-adopt a row whose tree
+        // still exists.
+        console.warn(
+          `[installExtensionFromPackage] "${extensionName}" was installed ` +
+            `concurrently by another worker; leaving its directory in place.`,
+        );
+      } else {
+        // No prior version to restore — a rejected create means nothing
+        // should be installed at all.
+        await fs.promises
+          .rm(finalExtensionDir, { recursive: true, force: true })
+          .catch(() => {});
+      }
+      throw createErr;
+    }
+
+    await fs.promises
+      .rm(backupDir, { recursive: true, force: true })
+      .catch(() => {});
 
     // 7. Enqueue the heavy dependencies install and module reload
     const queueChannel = queue('extensions');
@@ -850,21 +1133,32 @@ export async function installExtensionFromPackage(
     console.error('Extension install error:', err);
     throw err;
   } finally {
-    // Cleanup temp files
-    try {
-      await fs.promises.rm(tempExtractDir, { recursive: true, force: true });
+    // Cleanup temp files. Each step is independent — one throwing (a
+    // permissions error, a busy handle) must not skip the ones after it, or a
+    // single stuck removal leaks every temp artifact this install touched.
+    await fs.promises
+      .rm(tempExtractDir, { recursive: true, force: true })
+      .catch(cleanupErr => {
+        console.warn(
+          '[installExtensionFromPackage] Failed to remove temp extraction dir:',
+          cleanupErr.message,
+        );
+      });
 
-      if (file.filename && fsEngine && typeof fsEngine.remove === 'function') {
-        await fsEngine.remove(file.filename);
-      }
-
-      await fs.promises.unlink(tempPath).catch(() => {});
-    } catch (cleanupErr) {
-      console.warn(
-        '[installExtensionFromPackage] Cleanup failed:',
-        cleanupErr.message,
-      );
+    // The upload middleware's custom multer storage sets `fileName`
+    // (capital N, see shared/api/engines/fs/middlewares.js); `filename`
+    // (lowercase) is the vanilla-multer disk-storage convention this codebase
+    // never uses, so checking it here meant fsEngine.remove could never fire.
+    if (file.fileName && fsEngine && typeof fsEngine.remove === 'function') {
+      await fsEngine.remove(file.fileName).catch(cleanupErr => {
+        console.warn(
+          '[installExtensionFromPackage] Failed to remove uploaded file:',
+          cleanupErr.message,
+        );
+      });
     }
+
+    await fs.promises.unlink(tempPath).catch(() => {});
   }
 }
 

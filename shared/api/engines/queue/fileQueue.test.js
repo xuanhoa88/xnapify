@@ -6,8 +6,11 @@
  */
 
 import fs from 'fs';
+import fsp from 'fs/promises';
 import { createRequire } from 'module';
 import path from 'path';
+
+import { writeFileAtomic } from '@shared/utils/atomic/index.js';
 
 const require = createRequire(import.meta.url);
 
@@ -507,6 +510,26 @@ describe('FileQueue Adapter', () => {
       expect(fs.existsSync(metaPath)).toBe(true);
       const meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
       expect(meta.stats.completed).toBeGreaterThanOrEqual(1);
+    });
+
+    it('still closes when meta.json cannot be written', async () => {
+      queue.process(async () => 'done');
+
+      // meta.json lives in the queue directory. Taking the directory away is
+      // the deterministic stand-in for the transient failures that actually
+      // happen here: EMFILE when jest runs many workers at once, or a racing
+      // cleanup in a sibling test. The periodic save at `scheduleMetaSave`
+      // already treats this as non-fatal; close() must too, or a shutdown
+      // that cannot write a counter file rejects and abandons the rest of
+      // the teardown.
+      await fsp.rm(path.join(TEST_DATA_DIR, 'test-queue'), {
+        recursive: true,
+        force: true,
+      });
+
+      await expect(queue.close()).resolves.toBeUndefined();
+      expect(queue.pollTimer).toBeNull();
+      expect(queue.processors).toHaveLength(0);
     });
   });
 
@@ -1219,11 +1242,15 @@ describe('FileQueue concurrency & recovery', () => {
 
   it('still promotes a delayed job once it becomes due', async () => {
     const q = make();
-    const job = await q.add('soon', {}, { delay: 40 });
+    // The window has to outlast the add() and the promote() that follow it.
+    // At 40ms a loaded worker could spend longer than that just writing the
+    // job, so the first assertion raced the delay it was checking and the job
+    // was already due by the time it looked.
+    const job = await q.add('soon', {}, { delay: 400 });
     await q.promoteExpiredDelayed();
     expect(await q.getJobsByStatus('delayed')).toHaveLength(1);
 
-    await sleep(80);
+    await sleep(450);
     await q.promoteExpiredDelayed();
 
     expect(await q.getJobsByStatus('delayed')).toHaveLength(0);
@@ -1362,25 +1389,46 @@ describe('FileQueue concurrency & recovery', () => {
   // ==================================================================
 
   it('fsyncs the file and its directory only in durable mode', async () => {
-    const q = make();
-    const dirSync = jest.spyOn(q, 'fsyncDir').mockResolvedValue(undefined);
+    // Asserts the syscalls rather than an instance method, so the test still
+    // certifies durability now that the write goes through the shared atomic
+    // primitive instead of a private helper.
     const pendingDir = path.join(DATA_DIR, 'race', 'pending');
+    fs.mkdirSync(pendingDir, { recursive: true });
     const target = path.join(pendingDir, 'durability-probe.json');
 
-    await q.writeFileAtomic(target, '{"a":1}', { durable: true });
-    expect(dirSync).toHaveBeenCalledWith(pendingDir);
-    expect(fs.readFileSync(target, 'utf8')).toBe('{"a":1}');
+    const realOpen = fsp.open;
+    const synced = [];
+    const openSpy = jest
+      .spyOn(fsp, 'open')
+      .mockImplementation(async (p, ...rest) => {
+        const handle = await realOpen.call(fsp, p, ...rest);
+        const realSync = handle.sync.bind(handle);
+        handle.sync = async () => {
+          synced.push(String(p));
+          return realSync();
+        };
+        return handle;
+      });
 
-    dirSync.mockClear();
-    await q.writeFileAtomic(target, '{"a":2}', { durable: false });
-    expect(dirSync).not.toHaveBeenCalled();
-    expect(fs.readFileSync(target, 'utf8')).toBe('{"a":2}');
+    try {
+      await writeFileAtomic(target, '{"a":1}', { durable: true });
+      // Both the temp file and the directory holding it must be flushed.
+      expect(synced.some(p => p.endsWith('.tmp'))).toBe(true);
+      expect(synced).toContain(pendingDir);
+      expect(fs.readFileSync(target, 'utf8')).toBe('{"a":1}');
+
+      synced.length = 0;
+      await writeFileAtomic(target, '{"a":2}', { durable: false });
+      expect(synced).toEqual([]);
+      expect(fs.readFileSync(target, 'utf8')).toBe('{"a":2}');
+    } finally {
+      openSpy.mockRestore();
+    }
 
     // Neither mode may leave scratch files behind.
     expect(fs.readdirSync(pendingDir).filter(f => f.endsWith('.tmp'))).toEqual(
       [],
     );
-    dirSync.mockRestore();
   });
 
   it('writes jobs through the durable path unless fsync is disabled', async () => {
@@ -1389,28 +1437,37 @@ describe('FileQueue concurrency & recovery', () => {
     opened.push(defaults);
     expect(defaults.fsync).toBe(true);
 
-    const durable = make({ fsync: true });
+    const realOpen = fsp.open;
+    const synced = [];
+    const openSpy = jest
+      .spyOn(fsp, 'open')
+      .mockImplementation(async (p, ...rest) => {
+        const handle = await realOpen.call(fsp, p, ...rest);
+        const realSync = handle.sync.bind(handle);
+        handle.sync = async () => {
+          synced.push(String(p));
+          return realSync();
+        };
+        return handle;
+      });
 
-    const spy = jest.spyOn(durable, 'writeFileAtomic');
-    const job = await durable.add('job', {});
-    expect(spy).toHaveBeenCalledWith(
-      expect.stringContaining(job.id),
-      expect.any(String),
-      { durable: true },
-    );
+    try {
+      const durable = make({ fsync: true });
+      const job = await durable.add('job', {});
+      expect(synced.some(p => p.endsWith('.tmp'))).toBe(true);
+      expect(
+        fs
+          .readdirSync(path.join(durable.queueDir, 'pending'))
+          .some(f => f.includes(job.id)),
+      ).toBe(true);
 
-    spy.mockClear();
-    const buffered = make({ fsync: false });
-    const bufferedSpy = jest.spyOn(buffered, 'writeFileAtomic');
-    await buffered.add('job', {});
-    expect(bufferedSpy).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.any(String),
-      { durable: false },
-    );
-
-    spy.mockRestore();
-    bufferedSpy.mockRestore();
+      synced.length = 0;
+      const buffered = make({ fsync: false });
+      await buffered.add('job', {});
+      expect(synced).toEqual([]);
+    } finally {
+      openSpy.mockRestore();
+    }
   });
 
   // ==================================================================

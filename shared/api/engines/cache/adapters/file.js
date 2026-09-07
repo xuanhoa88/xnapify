@@ -9,6 +9,12 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 
+import {
+  ensureDir,
+  mapLimit,
+  readJsonSafe,
+  writeFileAtomic,
+} from '@shared/utils/atomic/index.js';
 import { getCacheDir } from '@shared/utils/env.js';
 
 // ======================================================================
@@ -38,6 +44,30 @@ const EVICTION_PERCENT = 0.1;
  * - keys(): Get all cache keys
  * - size: (getter, sync fallback)
  */
+/**
+ * Log the failures in a settled `mapLimit` batch, and say how many there were.
+ *
+ * `mapLimit` never rejects — it settles every task and hands back one result
+ * object per item — so `await mapLimit(...)` inside a try/catch throws nothing
+ * and the catch never runs. Housekeeping should carry on past a failed unlink,
+ * but carrying on *silently* is how a cache that can no longer delete anything
+ * reports success on clear() and re-runs the same doomed eviction on every
+ * set(), growing past maxSize forever with nothing to show for it.
+ *
+ * @param {string} label - Operation name, for the log line.
+ * @param {Array<{status: string, reason?: Error}>} results - From mapLimit.
+ * @returns {number} How many tasks failed.
+ */
+function reportFailures(label, results) {
+  const failed = results.filter(result => result.status === 'rejected');
+  if (failed.length === 0) return 0;
+  console.error(
+    `[Cache:file] ${label}: ${failed.length} of ${results.length} failed ` +
+      `(first: ${failed[0].reason && failed[0].reason.message})`,
+  );
+  return failed.length;
+}
+
 export default class FileCache {
   /**
    * Create a new file cache instance
@@ -59,8 +89,22 @@ export default class FileCache {
     // Async mutex: maps key → Promise chain
     this.lockQueues = new Map();
 
-    // Track pending initialization
-    this.ready = this.ensureDirectory();
+    // Track pending initialization.
+    //
+    // The rejection must be neutralised here, not left for whichever caller
+    // happens to await `ready` first: a promise that rejects with no handler
+    // attached in the same tick is an unhandled rejection, which on Node 20
+    // terminates the process — so an unwritable cache directory would take the
+    // whole server down at boot rather than degrading to "cache disabled".
+    this.evicting = null;
+    this.initError = null;
+    this.ready = this.ensureDirectory().catch(error => {
+      this.initError = error;
+      console.error(
+        `[Cache:file] Cache directory ${this.directory} is unusable; ` +
+          `cache operations will no-op: ${error.message}`,
+      );
+    });
   }
 
   // ====================================================================
@@ -72,11 +116,10 @@ export default class FileCache {
    * @returns {Promise<void>}
    */
   async ensureDirectory() {
-    try {
-      await fs.promises.access(this.directory);
-    } catch {
-      await fs.promises.mkdir(this.directory, { recursive: true });
-    }
+    // `recursive: true` is already idempotent, so the access() probe it
+    // replaced only added a window in which another worker could create the
+    // directory between the check and the mkdir.
+    await ensureDir(this.directory);
   }
 
   /**
@@ -147,15 +190,12 @@ export default class FileCache {
    * @returns {Promise<Object|null>} Parsed data or null
    */
   async readFile(filename) {
-    try {
-      const content = await fs.promises.readFile(filename, 'utf8');
-      return JSON.parse(content);
-    } catch (err) {
-      if (err.code === 'ENOENT') return null;
-      // Corrupted file
-      if (err instanceof SyntaxError) return null;
-      throw err;
-    }
+    // A cache is the one store where discarding an unreadable entry is the
+    // right call — the value is reconstructible by definition — so corruption
+    // degrades to a miss rather than an error. Everything that is *not*
+    // "absent or unparseable" still propagates: an EACCES swallowed here would
+    // turn a misconfigured deployment into a permanent, silent 0% hit rate.
+    return readJsonSafe(filename, { fallback: null, onCorrupt: 'fallback' });
   }
 
   /**
@@ -166,9 +206,15 @@ export default class FileCache {
    * @returns {Promise<void>}
    */
   async writeFile(filename, data) {
-    const tmpFile = `${filename}.tmp.${Date.now()}`;
-    await fs.promises.writeFile(tmpFile, JSON.stringify(data), 'utf8');
-    await fs.promises.rename(tmpFile, filename);
+    // `durable: false` on purpose: a cache entry lost to a power cut is a miss,
+    // and paying two fsyncs per write would dominate the cost of the very
+    // lookups this exists to avoid. The temp file, its unique name and its
+    // cleanup are not optional — those defend against a concurrent reader or
+    // writer, which is a per-request event rather than a per-outage one.
+    await writeFileAtomic(filename, JSON.stringify(data), {
+      durable: false,
+      ensureDir: false,
+    });
   }
 
   /**
@@ -177,6 +223,32 @@ export default class FileCache {
    * @param {string} filename - File path
    * @returns {Promise<boolean>} True if deleted
    */
+  /**
+   * Identify the inode currently behind `filename`, or null when absent.
+   *
+   * A path is not an identity: this adapter publishes entries with rename, so
+   * the same path can point at a different file moments later.
+   * @private
+   */
+  async fileIdentity(filename) {
+    try {
+      const stat = await fs.promises.stat(filename);
+      return `${stat.dev}:${stat.ino}`;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Unlink `filename` only while it still refers to `identity`.
+   * @private
+   */
+  async deleteFileIfUnchanged(filename, identity) {
+    if (identity === null) return false;
+    if ((await this.fileIdentity(filename)) !== identity) return false;
+    return this.deleteFile(filename);
+  }
+
   async deleteFile(filename) {
     try {
       await fs.promises.unlink(filename);
@@ -215,12 +287,18 @@ export default class FileCache {
     await this.ready;
     return this.withLock(key, async () => {
       const filename = this.getFilename(key);
+      const identity = await this.fileIdentity(filename);
       const data = await this.readFile(filename);
       if (!data) return null;
 
       // Check if expired
       if (Date.now() > data.expiresAt) {
-        await this.deleteFile(filename);
+        // Delete by identity, not by path. Entries are published with rename,
+        // so between reading this one and unlinking it another writer can have
+        // put a *fresh* entry at the same path — and a path-based unlink would
+        // throw that new entry away, turning an expiry into a lost write that
+        // repeats for as long as the key stays hot.
+        await this.deleteFileIfUnchanged(filename, identity);
         return null;
       }
 
@@ -238,10 +316,12 @@ export default class FileCache {
    */
   async set(key, value, ttl = this.defaultTTL) {
     await this.ready;
-    return this.withLock(key, async () => {
-      // Check max size and evict if needed
-      await this.evictIfNeeded();
+    // Eviction is a property of the whole directory, not of this key, so it
+    // runs outside the per-key lock. Holding that lock across a full-directory
+    // sweep queued every other operation on the same key behind it.
+    await this.evictIfNeeded();
 
+    return this.withLock(key, async () => {
       const filename = this.getFilename(key);
       const now = Date.now();
       const data = {
@@ -278,11 +358,16 @@ export default class FileCache {
     await this.ready;
     return this.withLock(key, async () => {
       const filename = this.getFilename(key);
+      // Same reason get() captures identity before reading: entries are
+      // published by rename, so a fresh entry can land at this path between
+      // the read and the unlink, and deleting by path alone would throw that
+      // write away rather than the expired entry this read saw.
+      const identity = await this.fileIdentity(filename);
       const data = await this.readFile(filename);
       if (!data) return false;
 
       if (Date.now() > data.expiresAt) {
-        await this.deleteFile(filename);
+        await this.deleteFileIfUnchanged(filename, identity);
         return false;
       }
 
@@ -299,10 +384,19 @@ export default class FileCache {
     await this.ready;
     try {
       const files = await this.getCacheFiles();
-      await Promise.all(
-        files.map(file => this.deleteFile(path.join(this.directory, file))),
+      // Bounded fan-out: a cache that has grown to `maxSize` entries would
+      // otherwise open ten thousand descriptors at once and hit EMFILE, which
+      // surfaces as unrelated open() failures across the whole process.
+      reportFailures(
+        'clear',
+        await mapLimit(files, file =>
+          this.deleteFile(path.join(this.directory, file)),
+        ),
       );
-      this.lockQueues.clear();
+      // `lockQueues` is deliberately left alone. Clearing it does not cancel
+      // the operations already chained on those promises — it just makes the
+      // next caller for the same key build a fresh chain, so two writers to one
+      // key run concurrently and the mutex silently stops holding.
     } catch (error) {
       console.error('[Cache:file] Clear error:', error.message);
     }
@@ -314,36 +408,50 @@ export default class FileCache {
    * @returns {Promise<void>}
    */
   async evictIfNeeded() {
-    try {
-      const files = await this.getCacheFiles();
-      if (files.length < this.maxSize) return;
+    // Guarded so only one eviction sweep runs at a time. Without it, every
+    // concurrent set() past the threshold starts its own full-directory pass.
+    if (this.evicting) return this.evicting;
 
-      // Read all files to sort by creation time
-      const fileEntries = [];
-      for (const file of files) {
-        const filepath = path.join(this.directory, file);
-        try {
-          const data = await this.readFile(filepath);
-          fileEntries.push({
-            file,
-            createdAt: (data && data.createdAt) || 0,
-            filepath,
-          });
-        } catch {
-          fileEntries.push({ file, createdAt: 0, filepath });
-        }
+    this.evicting = (async () => {
+      try {
+        const files = await this.getCacheFiles();
+        if (files.length < this.maxSize) return;
+
+        // Order by mtime rather than by the `createdAt` stored inside each
+        // entry. Reading and JSON-parsing every file to sort them meant 10,000
+        // whole-file reads (each as large as whatever the caller cached) before
+        // a single byte could be written — turning one set() into an O(n)
+        // stall. Entries are published by rename, so mtime is the moment the
+        // entry became visible: the same ordering, from a stat.
+        const stats = await mapLimit(files, async file => {
+          const filepath = path.join(this.directory, file);
+          const stat = await fs.promises.stat(filepath);
+          return { filepath, mtimeMs: stat.mtimeMs };
+        });
+
+        const entries = stats
+          .filter(r => r.status === 'fulfilled')
+          .map(r => r.value)
+          .sort((a, b) => a.mtimeMs - b.mtimeMs);
+
+        const toRemove = Math.max(
+          1,
+          Math.floor(files.length * EVICTION_PERCENT),
+        );
+        reportFailures(
+          'evict',
+          await mapLimit(entries.slice(0, toRemove), entry =>
+            this.deleteFile(entry.filepath),
+          ),
+        );
+      } catch (error) {
+        console.error('[Cache:file] Evict error:', error.message);
+      } finally {
+        this.evicting = null;
       }
+    })();
 
-      fileEntries.sort((a, b) => a.createdAt - b.createdAt);
-
-      // Remove oldest 10% or at least 1 entry
-      const toRemove = Math.max(1, Math.floor(files.length * EVICTION_PERCENT));
-      for (let i = 0; i < toRemove && i < fileEntries.length; i++) {
-        await this.deleteFile(fileEntries[i].filepath);
-      }
-    } catch (error) {
-      console.error('[Cache:file] Evict error:', error.message);
-    }
+    return this.evicting;
   }
 
   /**
@@ -401,23 +509,19 @@ export default class FileCache {
 
       for (const file of files) {
         const filepath = path.join(this.directory, file);
+        // cleanup() is the registered shutdown hook, so it runs while
+        // in-flight set() calls are still draining in this very process —
+        // it races live writers without needing a second one. Identity is
+        // captured before the read for the same reason get() and has() do it.
+        const identity = await this.fileIdentity(filepath);
         const data = await this.readFile(filepath);
 
-        if (!data) {
-          // Remove corrupted files
-          await this.deleteFile(filepath);
-          removed++;
-        } else if (now > data.expiresAt) {
-          await this.deleteFile(filepath);
-          removed++;
+        if (!data || now > data.expiresAt) {
+          // Corrupt or expired: either way, only remove the entry this pass
+          // actually looked at, never whatever has since replaced it.
+          if (await this.deleteFileIfUnchanged(filepath, identity)) removed++;
         }
       }
-
-      // Clean up stale lock queues
-      const staleKeys = [];
-      this.lockQueues.forEach((_promise, key) => {
-        staleKeys.push(key);
-      });
 
       if (removed > 0) {
         console.info(`[Cache:file] Removed ${removed} expired entries`);

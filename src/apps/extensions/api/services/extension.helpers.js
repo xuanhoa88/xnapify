@@ -6,6 +6,8 @@
  */
 
 import { execFile } from 'child_process';
+import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { promisify } from 'util';
 
@@ -107,6 +109,12 @@ export async function resolveExtension(models, id, { required = true } = {}) {
 // ========================================================================
 
 /**
+ * One path segment of an extension name: must start with a letter or digit, so
+ * "." and ".." cannot qualify, and may then carry the punctuation npm allows.
+ */
+const SAFE_NAME_SEGMENT = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+
+/**
  * Validate a parsed extension manifest (requires name + version).
  *
  * @param {Object} manifest - Parsed package.json content
@@ -140,6 +148,24 @@ export function validateManifest(manifest) {
   ) {
     throw ExtensionError.invalidPackage(
       `Extension name "${name}" contains invalid path characters`,
+    );
+  }
+
+  // Rejecting traversal is not enough, because the dangerous names here do not
+  // traverse anywhere. "." and "@scope/." contain no "..", no backslash, and
+  // parse as a well-formed scoped name, yet neither denotes a leaf: the first
+  // resolves to the extensions root itself and the second to an entire scope
+  // directory. `resolveWithin` accepts both — they really are inside the root.
+  // The installer then renames whatever that path denotes aside as its backup
+  // and, if the DB insert fails, rm -rf's it, so one uploaded package would
+  // destroy every installed extension. Require each segment to be a real name.
+  const segments = isScopedName
+    ? [name.slice(1, name.indexOf('/')), name.slice(name.indexOf('/') + 1)]
+    : [name];
+
+  if (segments.some(segment => !SAFE_NAME_SEGMENT.test(segment))) {
+    throw ExtensionError.invalidPackage(
+      `Extension name "${name}" is not a usable directory name`,
     );
   }
 
@@ -270,4 +296,105 @@ export function notifyExtensionChange(container, type, extensionKey) {
   }
 
   ws.sendToPublicChannel('extension:updated', payload);
+}
+
+/**
+ * Temp roots the install and verify paths create under `os.tmpdir()`.
+ *
+ * Each holds one entry per operation, cleaned up by that operation's own
+ * `finally`. A `finally` does not run for SIGKILL or an OOM kill, so every
+ * such death strands its entry — a downloaded package or a whole extracted
+ * tree — with nothing that ever revisits it.
+ */
+const INSTALL_TEMP_ROOTS = Object.freeze([
+  'xnapify-hub-install',
+  'xnapify-hub-verify',
+  'xnapify-extension-install',
+]);
+
+/**
+ * Backups written beside the extension they snapshot.
+ *
+ * `.rollback.` is the upgrade path's. The install path adds two more that this
+ * pattern used to miss entirely: `.replaced-<pid>-<rand>`, the swap taken
+ * before the new tree moves in, and `.failed-<pid>-<rand>`, the rejected
+ * install moved aside when Extension.create fails. All three are full copies of
+ * an extension tree, and all three are stranded by a kill that skips the
+ * cleanup that would otherwise remove them.
+ */
+const INSTALL_BACKUP_PATTERN = /\.rollback\.|\.replaced-|\.failed-/;
+
+/**
+ * Remove install artifacts left behind by a process that was killed.
+ *
+ * Age is the only safe discriminator: a live install's scratch directory is
+ * indistinguishable from an abandoned one, so the grace period has to sit
+ * above the longest an install can legitimately take (a hub download plus an
+ * extraction). Never throws — housekeeping must not fail the boot it runs in.
+ *
+ * @param {object} [options]
+ * @param {string} [options.extensionsDir] - Where `.rollback` backups live
+ * @param {number} [options.graceMs] - Minimum age before an entry is removed
+ * @param {string} [options.tmpDir] - Override for the temp root parent
+ * @returns {Promise<number>} How many entries were removed
+ */
+export async function sweepInstallTemps({
+  extensionsDir = null,
+  graceMs = 6 * 60 * 60_000,
+  tmpDir = os.tmpdir(),
+} = {}) {
+  const cutoff = Date.now() - graceMs;
+  let removed = 0;
+
+  const reap = async (parent, matches) => {
+    let entries;
+    try {
+      entries = await fs.promises.readdir(parent);
+    } catch {
+      return;
+    }
+
+    for (const entry of entries) {
+      if (matches && !matches(entry)) continue;
+      const target = path.join(parent, entry);
+      try {
+        const stats = await fs.promises.stat(target);
+        if (stats.mtimeMs > cutoff) continue;
+        await fs.promises.rm(target, { recursive: true, force: true });
+        removed += 1;
+      } catch {
+        // Swept by someone else, or not ours to remove. Either is fine.
+      }
+    }
+  };
+
+  for (const root of INSTALL_TEMP_ROOTS) {
+    await reap(path.join(tmpDir, root), null);
+  }
+  if (extensionsDir) {
+    const matches = name => INSTALL_BACKUP_PATTERN.test(name);
+    await reap(extensionsDir, matches);
+
+    // Scoped names put the backup one level down, so a flat listing of
+    // extensionsDir only ever sees the scope directory itself — which matches
+    // nothing. Every extension in this project is scoped
+    // (@xnapify-extension/...), so without this the extensionsDir sweep
+    // reclaimed nothing at all.
+    let scopes = [];
+    try {
+      scopes = await fs.promises.readdir(extensionsDir, {
+        withFileTypes: true,
+      });
+    } catch {
+      scopes = [];
+    }
+    for (const entry of scopes) {
+      // withFileTypes uses lstat, so a symlinked scope is not isDirectory()
+      // and is skipped — the sweep must not follow a link out of the tree.
+      if (!entry.isDirectory() || !entry.name.startsWith('@')) continue;
+      await reap(path.join(extensionsDir, entry.name), matches);
+    }
+  }
+
+  return removed;
 }

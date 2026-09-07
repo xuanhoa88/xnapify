@@ -11,9 +11,15 @@ jest.mock('child_process', () => ({
 
 import { execFile } from 'child_process';
 import fs from 'fs';
+import fsp from 'fs/promises';
+import os from 'os';
 import path from 'path';
 
-import { installExtensionDependencies } from './extension.helpers.js';
+import {
+  installExtensionDependencies,
+  sweepInstallTemps,
+  validateManifest,
+} from './extension.helpers.js';
 
 const EXTENSIONS_DIR = path.resolve(process.cwd(), 'src', 'extensions');
 
@@ -88,5 +94,149 @@ describe('bundled extension lockfiles', () => {
     expect(lock.packages[''].dependencies || {}).toEqual(
       manifest.dependencies || {},
     );
+  });
+});
+
+describe('sweepInstallTemps', () => {
+  let tmpDir;
+  let extensionsDir;
+
+  const age = async (target, ms) => {
+    const when = new Date(Date.now() - ms);
+    await fsp.utimes(target, when, when);
+  };
+
+  beforeEach(async () => {
+    tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'xnapify-sweep-'));
+    extensionsDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'xnapify-exts-'));
+  });
+
+  afterEach(async () => {
+    await fsp.rm(tmpDir, { recursive: true, force: true });
+    await fsp.rm(extensionsDir, { recursive: true, force: true });
+  });
+
+  it('reclaims abandoned install scratch and spares live ones', async () => {
+    // Install and verify clean up in a `finally`, which an OOM kill skips —
+    // and nothing else ever revisits these paths.
+    const root = path.join(tmpDir, 'xnapify-extension-install');
+    await fsp.mkdir(root, { recursive: true });
+
+    const abandoned = path.join(root, 'pkg-abandoned');
+    await fsp.mkdir(abandoned);
+    await fsp.writeFile(path.join(abandoned, 'big.bin'), 'x');
+    await age(abandoned, 7 * 60 * 60_000);
+
+    const live = path.join(root, 'pkg-live');
+    await fsp.mkdir(live);
+
+    const removed = await sweepInstallTemps({ tmpDir });
+
+    expect(removed).toBe(1);
+    await expect(fsp.access(abandoned)).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+    await expect(fsp.access(live)).resolves.toBeUndefined();
+  });
+
+  it('reclaims rollback backups left beside an extension', async () => {
+    const stale = path.join(extensionsDir, 'demo.rollback.abc123');
+    await fsp.mkdir(stale);
+    await age(stale, 7 * 60 * 60_000);
+
+    // The extension itself is old too, and must not be mistaken for scratch.
+    const installed = path.join(extensionsDir, 'demo');
+    await fsp.mkdir(installed);
+    await age(installed, 30 * 24 * 60 * 60_000);
+
+    const removed = await sweepInstallTemps({ tmpDir, extensionsDir });
+
+    expect(removed).toBe(1);
+    await expect(fsp.access(stale)).rejects.toMatchObject({ code: 'ENOENT' });
+    await expect(fsp.access(installed)).resolves.toBeUndefined();
+  });
+
+  it('reclaims the backups the install path actually creates', async () => {
+    // The installer names its backups `.replaced-<pid>-<rand>` (the pre-upgrade
+    // swap) and `.failed-<pid>-<rand>` (the rejected install moved aside when
+    // Extension.create fails). Neither contains ".rollback.", so the sweep
+    // walked straight past both and an OOM kill between the swap and the
+    // cleanup stranded a full copy of the extension tree forever.
+    const replaced = path.join(extensionsDir, 'demo.replaced-1f-a3b4c5d6');
+    const failed = path.join(extensionsDir, 'demo.failed-1f-a3b4c5d6');
+    for (const target of [replaced, failed]) {
+      await fsp.mkdir(target);
+      await age(target, 7 * 60 * 60_000);
+    }
+
+    const removed = await sweepInstallTemps({ tmpDir, extensionsDir });
+
+    expect(removed).toBe(2);
+    for (const target of [replaced, failed]) {
+      await expect(fsp.access(target)).rejects.toMatchObject({
+        code: 'ENOENT',
+      });
+    }
+  });
+
+  it('reclaims backups inside a scope directory', async () => {
+    // Every extension in this repo is scoped (@xnapify-extension/...), so the
+    // backup always lands one level down. A non-recursive listing of
+    // extensionsDir only ever sees "@xnapify-extension" — which matches no
+    // pattern — so in practice the extensionsDir sweep reclaimed nothing at all.
+    const scope = path.join(extensionsDir, '@xnapify-extension');
+    await fsp.mkdir(scope);
+
+    const stale = path.join(scope, 'docs.replaced-1f-a3b4c5d6');
+    await fsp.mkdir(stale);
+    await age(stale, 7 * 60 * 60_000);
+
+    const installed = path.join(scope, 'docs');
+    await fsp.mkdir(installed);
+    await age(installed, 30 * 24 * 60 * 60_000);
+
+    const removed = await sweepInstallTemps({ tmpDir, extensionsDir });
+
+    expect(removed).toBe(1);
+    await expect(fsp.access(stale)).rejects.toMatchObject({ code: 'ENOENT' });
+    await expect(fsp.access(installed)).resolves.toBeUndefined();
+  });
+
+  it('does nothing when the temp roots have never been created', async () => {
+    await expect(sweepInstallTemps({ tmpDir })).resolves.toBe(0);
+  });
+});
+
+describe('validateManifest name safety', () => {
+  const manifestFor = name => ({
+    name,
+    version: '1.0.0',
+    xnapify: { version: '*' },
+  });
+
+  // These clear every check the traversal guard makes — no '..', no backslash,
+  // and a scoped shape that parses as well formed — but they do not name a
+  // leaf. `resolveWithin` is satisfied, because the result really is inside
+  // the extensions root: '.' resolves to the root itself and '@scope/.' to an
+  // entire scope directory. The installer then renames that path aside as its
+  // backup and, on a failed Extension.create, rm -rf's it — so a single
+  // uploaded package would take out every installed extension at once.
+  it.each(['.', '@xnapify-extension/.', '@xnapify-extension/', '-lead'])(
+    'rejects %p, which does not name a leaf directory',
+    name => {
+      expect(() => validateManifest(manifestFor(name))).toThrow(
+        /invalid|not a usable/i,
+      );
+    },
+  );
+
+  it.each([
+    'docs',
+    'my-ext',
+    'ext.name',
+    '@xnapify-extension/docs',
+    '@xnapify-extension/test-hello-plugin',
+  ])('accepts the ordinary name %p', name => {
+    expect(validateManifest(manifestFor(name)).name).toBe(name);
   });
 });

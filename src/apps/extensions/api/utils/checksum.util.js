@@ -59,6 +59,30 @@ export function parseChecksum(stored) {
 }
 
 /**
+ * Whether two checksums denote the same value.
+ *
+ * The comparison is between parsed forms, never the raw strings: parsing
+ * normalises surrounding whitespace, so a registry entry carrying a trailing
+ * newline gets through the version gate and a byte comparison would then call a
+ * byte-for-byte correct package tampered with. Both halves of the check have to
+ * agree on what the stored value is.
+ *
+ * @param {*} a - Checksum from a registry, manifest or DB row
+ * @param {*} b - Checksum to compare it against
+ * @returns {boolean} false when either side is unparseable
+ */
+function sameChecksum(a, b) {
+  const left = parseChecksum(a);
+  const right = parseChecksum(b);
+  return (
+    left !== null &&
+    right !== null &&
+    left.version === right.version &&
+    left.digest === right.digest
+  );
+}
+
+/**
  * Default options for folder hashing.
  * Excludes volatile / non-source files so the checksum
  * only changes when the actual extension code changes.
@@ -83,24 +107,41 @@ export const DEFAULT_OPTIONS = Object.freeze({
   }),
 });
 
+// A package.json is attacker-supplied content: an install job hashes
+// whatever registry or upload handed it, before validateManifest has looked
+// at anything but name/version/host-compat. Recursing without a depth cap
+// turns a value nested a few thousand levels deep — trivial to construct,
+// ~10KB on the wire — into a V8 stack overflow, which surfaces as an opaque
+// RangeError instead of the checksum failure this really is.
+const MAX_STABLE_STRINGIFY_DEPTH = 500;
+
 /**
  * Deterministic JSON serialisation: object keys are emitted in sorted order so
  * two manifests with the same content hash the same regardless of key order or
  * formatting.
  *
  * @param {*} value - Any JSON-serialisable value
+ * @param {number} [depth] - Current nesting depth; internal to the recursion
  * @returns {string}
+ * @throws {RangeError} If `value` nests deeper than {@link MAX_STABLE_STRINGIFY_DEPTH}
  */
-export function stableStringify(value) {
+export function stableStringify(value, depth = 0) {
   if (value === null || typeof value !== 'object') {
     return JSON.stringify(value) ?? 'null';
   }
+  if (depth >= MAX_STABLE_STRINGIFY_DEPTH) {
+    throw new RangeError(
+      `stableStringify: nesting exceeds ${MAX_STABLE_STRINGIFY_DEPTH} levels`,
+    );
+  }
   if (Array.isArray(value)) {
-    return `[${value.map(stableStringify).join(',')}]`;
+    return `[${value.map(item => stableStringify(item, depth + 1)).join(',')}]`;
   }
   const keys = Object.keys(value).sort();
   return `{${keys
-    .map(key => `${JSON.stringify(key)}:${stableStringify(value[key])}`)
+    .map(
+      key => `${JSON.stringify(key)}:${stableStringify(value[key], depth + 1)}`,
+    )
     .join(',')}}`;
 }
 
@@ -235,7 +276,7 @@ export function checksumMismatchReason(expected, actual) {
   const parsed = parseChecksum(expected);
   if (!parsed) return 'unversioned';
   if (parsed.version !== CHECKSUM_VERSION) return 'version';
-  return expected === actual ? null : 'content';
+  return sameChecksum(expected, actual) ? null : 'content';
 }
 
 /**
@@ -258,7 +299,7 @@ export async function verifyExtensionChecksum(extensionDir, expectedChecksum) {
   const comparable = parsed !== null && parsed.version === CHECKSUM_VERSION;
 
   return {
-    valid: comparable && actual === expectedChecksum,
+    valid: comparable && sameChecksum(expectedChecksum, actual),
     actual,
     comparable,
     storedVersion: parsed ? parsed.version : null,

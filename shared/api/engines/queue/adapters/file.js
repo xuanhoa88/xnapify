@@ -8,6 +8,12 @@
 import fs from 'fs';
 import path from 'path';
 
+import {
+  pathExists,
+  tempSuffix,
+  writeFileAtomic,
+  writeFileAtomicSync,
+} from '@shared/utils/atomic/index.js';
 import { getDataDir } from '@shared/utils/env.js';
 
 import { JobNotFoundError, JobProcessingError, QueueError } from '../errors.js';
@@ -40,14 +46,6 @@ const COMPLETED_RETENTION_MS = 24 * 60 * 60_000;
 const FAILED_RETENTION_MS = 7 * 24 * 60 * 60_000;
 // Leftover `.tmp` / `.stale` artifacts older than this are swept.
 const ARTIFACT_GRACE_MS = 60_000;
-
-/**
- * Unique temp-file suffix so concurrent writers never collide.
- * @private
- */
-function tmpSuffix() {
-  return `-${process.pid}-${Math.random().toString(36).slice(2)}.tmp`;
-}
 
 /**
  * File-Based Queue Adapter
@@ -299,111 +297,6 @@ class FileQueue {
   }
 
   /**
-   * Best-effort fsync of a directory so a rename into it survives a host
-   * crash. Some platforms/filesystems refuse to open a directory for sync;
-   * the file contents were already flushed, so failures are ignored.
-   * @private
-   */
-  async fsyncDir(dirPath) {
-    let handle = null;
-    try {
-      handle = await fs.promises.open(dirPath, 'r');
-      await handle.sync();
-    } catch {
-      // Directory fsync unsupported here — nothing else to do.
-    } finally {
-      if (handle) await handle.close().catch(() => {});
-    }
-  }
-
-  /**
-   * Sync variant of {@link fsyncDir} (constructor-time recovery only).
-   * @private
-   */
-  fsyncDirSync(dirPath) {
-    let fd = null;
-    try {
-      fd = fs.openSync(dirPath, 'r');
-      fs.fsyncSync(fd);
-    } catch {
-      // Directory fsync unsupported here — nothing else to do.
-    } finally {
-      if (fd !== null) {
-        try {
-          fs.closeSync(fd);
-        } catch {
-          // Already closed.
-        }
-      }
-    }
-  }
-
-  /**
-   * Atomically replace `filePath` via a unique temp file plus rename.
-   *
-   * With `durable`, the temp file is fsynced before the rename and the
-   * containing directory after it. Without those two flushes a host crash (as
-   * opposed to a process crash) can leave the renamed file truncated or the
-   * rename itself unrecorded — i.e. a genuinely lost job, which the
-   * at-least-once contract does not allow.
-   * @private
-   */
-  async writeFileAtomic(filePath, content, { durable = false } = {}) {
-    const tmpPath = filePath + tmpSuffix();
-    if (durable) {
-      let handle = null;
-      try {
-        handle = await fs.promises.open(tmpPath, 'w');
-        await handle.writeFile(content, 'utf8');
-        await handle.sync();
-      } finally {
-        if (handle) await handle.close();
-      }
-    } else {
-      await fs.promises.writeFile(tmpPath, content, 'utf8');
-    }
-
-    try {
-      await fs.promises.rename(tmpPath, filePath);
-    } catch (err) {
-      await fs.promises.unlink(tmpPath).catch(() => {});
-      throw err;
-    }
-    if (durable) await this.fsyncDir(path.dirname(filePath));
-  }
-
-  /**
-   * Sync variant of {@link writeFileAtomic}.
-   * @private
-   */
-  writeFileAtomicSync(filePath, content, { durable = false } = {}) {
-    const tmpPath = filePath + tmpSuffix();
-    if (durable) {
-      const fd = fs.openSync(tmpPath, 'w');
-      try {
-        fs.writeFileSync(fd, content, 'utf8');
-        fs.fsyncSync(fd);
-      } finally {
-        fs.closeSync(fd);
-      }
-    } else {
-      fs.writeFileSync(tmpPath, content, 'utf8');
-    }
-
-    try {
-      fs.renameSync(tmpPath, filePath);
-    } catch (err) {
-      try {
-        fs.unlinkSync(tmpPath);
-      } catch {
-        // Already gone.
-      }
-      throw err;
-    }
-    if (durable) this.fsyncDirSync(path.dirname(filePath));
-  }
-
-  /**
    * Write job to disk (async, atomic + durable via tmp+fsync+rename).
    * Updates the in-memory job index.
    * @private
@@ -411,8 +304,10 @@ class FileQueue {
   async writeJob(status, job) {
     const filename = this.buildFilename(job);
     const filePath = this.jobPath(status, filename);
-    await this.writeFileAtomic(filePath, JSON.stringify(job), {
+    await writeFileAtomic(filePath, JSON.stringify(job), {
       durable: this.fsync,
+      ensureDir: false,
+      preserveMode: false,
     });
     this.jobIndex.set(job.id, { status, filename });
     return filename;
@@ -423,11 +318,11 @@ class FileQueue {
    * @private
    */
   writeJobSync(status, job, filename) {
-    this.writeFileAtomicSync(
-      this.jobPath(status, filename),
-      JSON.stringify(job),
-      { durable: this.fsync },
-    );
+    writeFileAtomicSync(this.jobPath(status, filename), JSON.stringify(job), {
+      durable: this.fsync,
+      ensureDir: false,
+      preserveMode: false,
+    });
   }
 
   /**
@@ -597,6 +492,20 @@ class FileQueue {
   }
 
   /**
+   * Delete a job file (sync — constructor recovery only).
+   * The index is not maintained here: rebuildIndexSync() runs after every
+   * caller of this.
+   * @private
+   */
+  deleteJobSync(status, filename) {
+    try {
+      fs.unlinkSync(this.jobPath(status, filename));
+    } catch (err) {
+      if (err.code !== 'ENOENT') throw err;
+    }
+  }
+
+  /**
    * Transition a job to a new status with updated content.
    * Writes the new copy first, then removes the old one, so a crash in
    * between leaves a duplicate (recovered as at-least-once) rather than
@@ -762,7 +671,7 @@ class FileQueue {
     if (!stale) return false;
 
     // Steal via atomic rename so only one process can claim the stale lock.
-    const stealPath = `${lockPath}${tmpSuffix()}.stale`;
+    const stealPath = `${lockPath}${tempSuffix()}.stale`;
     try {
       await fs.promises.rename(lockPath, stealPath);
     } catch (renameErr) {
@@ -846,7 +755,7 @@ class FileQueue {
     }
     if (this.isLockFreshSync(filename)) return false;
 
-    const stealPath = `${lockPath}${tmpSuffix()}.stale`;
+    const stealPath = `${lockPath}${tempSuffix()}.stale`;
     try {
       fs.renameSync(lockPath, stealPath);
       fs.unlinkSync(stealPath);
@@ -979,7 +888,11 @@ class FileQueue {
     const metaPath = path.join(this.queueDir, 'meta.json');
     const meta = { stats: this.stats, updatedAt: Date.now() };
     // Counters only — never fsynced, losing them costs nothing but stats.
-    await this.writeFileAtomic(metaPath, JSON.stringify(meta));
+    await writeFileAtomic(metaPath, JSON.stringify(meta), {
+      ensureDir: false,
+      preserveMode: false,
+      durable: false,
+    });
   }
 
   /**
@@ -1044,11 +957,52 @@ class FileQueue {
   }
 
   /**
+   * The terminal directory that already holds a copy of `filename`, if any.
+   *
+   * Every transition writes the destination before unlinking the source, so a
+   * worker killed between the two leaves the job in `active/` *and* in the
+   * terminal directory it reached. That leftover is a finished job, not an
+   * abandoned one.
+   * @private
+   * @returns {Promise<string|null>}
+   */
+  async terminalCopyOf(filename) {
+    for (const status of ['completed', 'failed']) {
+      if (await pathExists(this.jobPath(status, filename))) return status;
+    }
+    return null;
+  }
+
+  /**
+   * Sync variant of {@link terminalCopyOf} (constructor recovery only).
+   * @private
+   */
+  terminalCopyOfSync(filename) {
+    for (const status of ['completed', 'failed']) {
+      if (fs.existsSync(this.jobPath(status, filename))) return status;
+    }
+    return null;
+  }
+
+  /**
    * Dead-letter a crash-failed job whose attempts are exhausted (async).
    * Mirrors the throw-failure path in runJob().
    * @private
    */
   async failAbandonedJob(job, filename) {
+    const terminal = await this.terminalCopyOf(filename);
+    if (terminal) {
+      // The run that owned this job did reach a terminal state and was killed
+      // during its cleanup. Synthesising a record now would overwrite the
+      // handler's own error with the abandoned-worker message, count the job a
+      // second time, and announce a failure for work that may have succeeded.
+      await this.deleteJob('active', filename);
+      console.info(
+        `♻️ FileQueue '${this.name}': job ${job.id} is already recorded as ${terminal}; dropped its abandoned copy`,
+      );
+      return;
+    }
+
     job.status = JOB_STATUS.FAILED;
     job.processedAt = null;
     job.failedAt = Date.now();
@@ -1075,6 +1029,15 @@ class FileQueue {
    * @private
    */
   failAbandonedJobSync(job, filename) {
+    const terminal = this.terminalCopyOfSync(filename);
+    if (terminal) {
+      this.deleteJobSync('active', filename);
+      console.info(
+        `♻️ FileQueue '${this.name}': job ${job.id} is already recorded as ${terminal}; dropped its abandoned copy`,
+      );
+      return;
+    }
+
     job.status = JOB_STATUS.FAILED;
     job.processedAt = null;
     job.failedAt = Date.now();
@@ -1086,11 +1049,7 @@ class FileQueue {
     if (!job.removeOnFail) {
       this.writeJobSync('failed', job, filename);
     }
-    try {
-      fs.unlinkSync(this.jobPath('active', filename));
-    } catch (err) {
-      if (err.code !== 'ENOENT') throw err;
-    }
+    this.deleteJobSync('active', filename);
     console.error(
       `☠️ FileQueue '${this.name}': job ${job.id} exhausted maxAttempts while abandoned → failed`,
     );
@@ -1172,6 +1131,19 @@ class FileQueue {
   }
 
   /**
+   * Whether a job sitting in `delayed/` belongs in `pending/` now.
+   *
+   * A delayed job carrying no `scheduledFor` has no date it can ever become
+   * due on, so reading a missing one as "not yet" would hide the file from
+   * this scan for the life of the data directory. Due now is the only reading
+   * that still makes progress.
+   * @private
+   */
+  isDelayedJobDue(job, now) {
+    return !job.scheduledFor || job.scheduledFor <= now;
+  }
+
+  /**
    * Promote delayed jobs whose scheduledFor has passed (sync — constructor)
    * @private
    */
@@ -1180,13 +1152,12 @@ class FileQueue {
     for (const filename of this.listJobsSync('delayed')) {
       if (!this.acquireLockSync(filename)) continue;
       try {
-        const delayedPath = this.jobPath('delayed', filename);
         const job = this.readJobSync('delayed', filename);
-        if (job && job.scheduledFor && job.scheduledFor <= now) {
+        if (job && this.isDelayedJobDue(job, now)) {
           job.status = JOB_STATUS.PENDING;
           job.scheduledFor = null;
-          this.writeJobSync('delayed', job, filename);
-          fs.renameSync(delayedPath, this.jobPath('pending', filename));
+          this.writeJobSync('pending', job, filename);
+          this.deleteJobSync('delayed', filename);
         }
       } catch (err) {
         if (err.code !== 'ENOENT') {
@@ -1223,18 +1194,20 @@ class FileQueue {
         // scheduledFor. Locking and reading every not-yet-due job on every
         // poll tick costs ~6 syscalls/second/job for nothing.
         const scheduledFor = await this.readScheduledFor(filename);
-        if (!scheduledFor || scheduledFor > now) continue;
+        if (scheduledFor === null || scheduledFor > now) continue;
 
         if (!(await this.acquireLock(filename))) continue;
         try {
           // Re-read under the lock: another process may have moved it.
           const job = await this.readJob('delayed', filename);
-          if (job && job.scheduledFor && job.scheduledFor <= now) {
+          if (job && this.isDelayedJobDue(job, now)) {
             job.status = JOB_STATUS.PENDING;
             job.scheduledFor = null;
-            // Update content in place, then move atomically
-            await this.writeJob('delayed', job);
-            await this.moveJob('delayed', 'pending', filename);
+            // The pending/ copy is written before the delayed/ one is dropped,
+            // like every other transition. Rewriting the delayed/ copy in place
+            // first would, whenever the removal did not follow, leave a file in
+            // delayed/ that no longer looks like a delayed job to any scanner.
+            await this.transitionJob('delayed', 'pending', job, filename);
             this.delayedSchedule.delete(filename);
           }
         } finally {
@@ -1256,7 +1229,9 @@ class FileQueue {
    * not-yet-due job costs a single `stat()` per poll tick instead of a lock
    * round-trip plus a full read.
    * @private
-   * @returns {Promise<number|null>}
+   * @returns {Promise<number|null>} The due timestamp, `0` for a job that
+   *   carries none (due now — see {@link isDelayedJobDue}), `null` when there
+   *   is no readable job behind the filename at all.
    */
   async readScheduledFor(filename) {
     let mtimeMs;
@@ -1274,7 +1249,7 @@ class FileQueue {
     if (cached && cached.mtimeMs === mtimeMs) return cached.scheduledFor;
 
     const job = await this.readJob('delayed', filename);
-    const scheduledFor = job && job.scheduledFor ? job.scheduledFor : null;
+    const scheduledFor = job ? job.scheduledFor || 0 : null;
     this.delayedSchedule.set(filename, { mtimeMs, scheduledFor });
     return scheduledFor;
   }
@@ -1555,7 +1530,16 @@ class FileQueue {
     }
     this.processors = [];
 
-    await this.saveMeta();
+    // Same tolerance as the periodic save in `scheduleMetaSave`: these are
+    // counters, and the comment on saveMeta() already says losing them costs
+    // nothing but stats. Letting the rejection out is what costs something —
+    // close() is the shutdown path, so it abandons the rest of teardown and
+    // lands as an unhandled rejection, which is fatal on Node 20+.
+    try {
+      await this.saveMeta();
+    } catch (err) {
+      console.error(`FileQueue '${this.name}': saveMeta error:`, err.message);
+    }
     this.metaDirty = false;
   }
 

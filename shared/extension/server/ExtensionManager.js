@@ -11,6 +11,11 @@ import path from 'path';
 import { createScopedContainer } from '@shared/container/scoped.js';
 import { getTranslations } from '@shared/i18n/loader.js';
 import { addNamespace, removeNamespace } from '@shared/i18n/utils.js';
+import {
+  PathEscapeError,
+  isMissingFsError,
+  resolveWithin,
+} from '@shared/utils/atomic/index.js';
 import { createNativeRequire } from '@shared/utils/createNativeRequire.js';
 import { getDataDir } from '@shared/utils/env.js';
 
@@ -204,6 +209,35 @@ export function scopeRouteModule(routeModule, getScopedContainer) {
         : routeModule[key];
   }
   return copy;
+}
+
+/**
+ * Resolve an extension key to a directory strictly below `baseDir`.
+ *
+ * The key reaches this module straight off a request path — the admin delete
+ * route passes `req.params.id` through unvalidated — and the directory that
+ * comes back is handed to `fs.rm(dir, { recursive: true, force: true })` by the
+ * delete worker. `path.join` is not a containment check under those stakes: it
+ * maps `'..'` onto the deployment root and `'.'` onto the extensions tree
+ * itself, and a NUL byte lets `'ext\0/../..'` climb out the same way while
+ * still looking like a plain name. `resolveWithin` refuses all three, and the
+ * base directory is refused on top of it because `resolveWithin` deliberately
+ * permits it.
+ *
+ * @param {string} baseDir - Directory the extension must live in
+ * @param {string} extensionKey - Untrusted key / directory name
+ * @returns {string} Absolute path below `baseDir`
+ * @throws {PathEscapeError} When the key names anything else
+ */
+function resolveExtensionPath(baseDir, extensionKey) {
+  const dir = resolveWithin(baseDir, extensionKey);
+  if (dir === path.resolve(baseDir)) {
+    throw new PathEscapeError(
+      `Extension key ${JSON.stringify(extensionKey)} names the extensions directory itself`,
+      { path: extensionKey, operation: 'resolveExtensionPath' },
+    );
+  }
+  return dir;
 }
 
 /** Non-throwing async file existence check */
@@ -1066,8 +1100,9 @@ class ServerExtensionManager extends BaseExtensionManager {
    * Resolve the physical directory of an extension on disk.
    * Checks local/dev path first (dev override), then installed/remote path.
    *
-   * Supports both flat (my-ext/) and scoped (@org/name/) layouts.
-   * For scoped names, uses path.join which correctly handles the nested structure.
+   * Supports both flat (my-ext/) and scoped (@org/name/) layouts; the key is
+   * confined to the directory it is resolved against, so a key that escapes or
+   * names the base itself resolves to `null` rather than to a real directory.
    *
    * This is the single source of truth for extension path resolution — used
    * internally by `_getExtensionBundlePath` and externally by the service layer
@@ -1083,7 +1118,7 @@ class ServerExtensionManager extends BaseExtensionManager {
       if (this[SERVER_CWD]) {
         const devBaseDir = this.getDevExtensionsDir(this[SERVER_CWD]);
         if (devBaseDir) {
-          const devDir = path.join(devBaseDir, extensionKey);
+          const devDir = resolveExtensionPath(devBaseDir, extensionKey);
           if (await fileExists(devDir)) {
             return {
               dir: devDir,
@@ -1096,7 +1131,7 @@ class ServerExtensionManager extends BaseExtensionManager {
       // 2. Check installed dir (~/.xnapify/extensions/)
       const baseDir = this.getInstalledExtensionsDir();
       if (baseDir) {
-        const installedDir = path.join(baseDir, extensionKey);
+        const installedDir = resolveExtensionPath(baseDir, extensionKey);
         if (await fileExists(installedDir)) {
           return { dir: installedDir, isDevExtension: false };
         }
@@ -1106,10 +1141,8 @@ class ServerExtensionManager extends BaseExtensionManager {
       //    In development the server bundle may live in .cache/dev/ (via
       //    BUILD_DIR override) while extensions are built to build/extensions/.
       //    This fallback bridges the gap without requiring a full rebuild.
-      const fallbackDir = path.resolve(
-        process.cwd(),
-        'build',
-        'extensions',
+      const fallbackDir = resolveExtensionPath(
+        path.resolve(process.cwd(), 'build', 'extensions'),
         extensionKey,
       );
       if (await fileExists(fallbackDir)) {
@@ -1144,16 +1177,45 @@ class ServerExtensionManager extends BaseExtensionManager {
    * build pipeline. Loads the sibling `stats.json` for
    * content-hashed filename resolution.
    * Detects built client assets from the build manifest.
-   * @param {...string} extensionDirs - Absolute path to the extension directory
-   * @returns {Object|null} Parsed manifest or null on failure
+   *
+   * Returns null for anything that goes wrong, which suits the callers that
+   * ask "is there a usable extension here?" — but null then means both "no
+   * manifest" and "could not read the manifest", and a caller that reconciles
+   * the disk against a database reads the second as the first and concludes
+   * the extension was uninstalled. `strict` separates them: it lets an
+   * unreadable manifest (EACCES, EMFILE, EIO) surface as an error, while a
+   * manifest that is absent, or present and malformed, still returns null —
+   * those are answers, and the extension really is unusable either way.
+   *
+   * @param {...(string|{strict?: boolean})} extensionDirs - Path segments of
+   *   the extension directory, optionally followed by an options object
+   * @returns {Promise<Object|null>} Parsed manifest, or null
+   * @throws {Error} Only when `strict` is set and the manifest exists but
+   *   could not be read
    */
   async readManifest(...extensionDirs) {
+    const last = extensionDirs[extensionDirs.length - 1];
+    // Path segments are always strings, so a trailing object is unambiguous.
+    const { strict = false } =
+      last && typeof last === 'object' ? extensionDirs.pop() : {};
+
+    const extDir = path.join(...extensionDirs);
+
+    // Read outside the catch-all below, which exists to turn "this extension
+    // is not usable" into null. An unreadable manifest is not that statement,
+    // and passing it through the catch-all would erase it again.
+    let manifestContent;
     try {
-      const extDir = path.join(...extensionDirs);
-      const manifestContent = await fs.promises.readFile(
+      manifestContent = await fs.promises.readFile(
         path.join(extDir, 'package.json'),
         'utf8',
       );
+    } catch (err) {
+      if (strict && !isMissingFsError(err)) throw err;
+      return null;
+    }
+
+    try {
       const manifest = JSON.parse(manifestContent);
 
       // Trust id from built manifest. Fall back to _resolveExtensionId()

@@ -7,7 +7,7 @@
 
 import { Readable } from 'stream';
 
-import { FilesystemError } from '../utils/index.js';
+import { ERROR_CODES, FilesystemError } from '../utils/index.js';
 
 /**
  * Memory Filesystem Provider
@@ -219,12 +219,23 @@ export class MemoryFilesystemProvider {
   /**
    * Copy a file
    */
-  async copy(sourceFileName, destinationFileName) {
+  async copy(sourceFileName, destinationFileName, options = {}) {
+    const { overwrite = true } = options;
     try {
       const sourceData = this.files.get(sourceFileName);
 
       if (!sourceData) {
         throw new FilesystemError(`Source file not found: ${sourceFileName}`);
+      }
+
+      // Synchronous Map operations from here on, so this lookup is the guard
+      // the local provider needs COPYFILE_EXCL and a rename for.
+      if (!overwrite && this.files.has(destinationFileName)) {
+        throw new FilesystemError(
+          `Destination already exists: ${destinationFileName}`,
+          ERROR_CODES.TARGET_EXISTS,
+          409,
+        );
       }
 
       // Check max files limit
@@ -258,6 +269,11 @@ export class MemoryFilesystemProvider {
         provider: 'memory',
       };
     } catch (error) {
+      // Already carries a code the caller acts on (TARGET_EXISTS from the
+      // overwrite refusal above); rewrapping would erase it. The local
+      // provider rethrows for the same reason — the two have to agree, or
+      // the same request answers differently depending on the provider.
+      if (error instanceof FilesystemError) throw error;
       throw new FilesystemError(`Failed to copy file: ${error.message}`);
     }
   }
@@ -265,12 +281,24 @@ export class MemoryFilesystemProvider {
   /**
    * Move/rename a file
    */
-  async move(sourceFileName, destinationFileName) {
+  async move(sourceFileName, destinationFileName, options = {}) {
+    const { overwrite = true } = options;
     try {
       const sourceData = this.files.get(sourceFileName);
 
       if (!sourceData) {
         throw new FilesystemError(`Source file not found: ${sourceFileName}`);
+      }
+
+      // Nothing can interleave between this check and the writes below — they
+      // are synchronous Map operations — so the guard the local provider needs
+      // `link` for is just a lookup here.
+      if (!overwrite && this.files.has(destinationFileName)) {
+        throw new FilesystemError(
+          `Destination already exists: ${destinationFileName}`,
+          ERROR_CODES.TARGET_EXISTS,
+          409,
+        );
       }
 
       // Check max files limit (only if destination is new)
@@ -306,6 +334,11 @@ export class MemoryFilesystemProvider {
         provider: 'memory',
       };
     } catch (error) {
+      // Already carries a code the caller acts on (TARGET_EXISTS from the
+      // overwrite refusal above); rewrapping would erase it. The local
+      // provider rethrows for the same reason — the two have to agree, or
+      // the same request answers differently depending on the provider.
+      if (error instanceof FilesystemError) throw error;
       throw new FilesystemError(`Failed to move file: ${error.message}`);
     }
   }

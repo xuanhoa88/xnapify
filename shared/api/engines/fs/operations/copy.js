@@ -9,7 +9,11 @@
  * Copy Operations
  */
 
-import { FilesystemError, createOperationResult } from '../utils/index.js';
+import {
+  ERROR_CODES,
+  FilesystemError,
+  createOperationResult,
+} from '../utils/index.js';
 
 /**
  * Copy file(s)
@@ -39,19 +43,29 @@ export async function copy(manager, operations, options = {}) {
       const target = op.target || op.targetFileName;
 
       try {
-        // Check target exists for overwrite protection
-        if (!options.overwrite) {
-          const targetExists = await provider.exists(target);
-          if (targetExists) {
-            errors.push({ source, target, error: 'TARGET_EXISTS' });
-            continue;
-          }
+        // Overwrite protection belongs to the provider, not to this loop:
+        // asking `exists` first and copying second leaves a window in which
+        // the target is created, and the copy then replaces it without a word.
+        // The check below only gives providers that cannot decide-and-act in
+        // one step a cheaper, friendlier failure than the copy itself would.
+        if (!options.overwrite && (await provider.exists(target))) {
+          errors.push({ source, target, error: 'TARGET_EXISTS' });
+          continue;
         }
 
-        await provider.copy(source, target);
+        await provider.copy(source, target, {
+          overwrite: Boolean(options.overwrite),
+        });
         results.push({ source, target, copiedAt: new Date().toISOString() });
       } catch (error) {
-        errors.push({ source, target, error: error.message });
+        errors.push({
+          source,
+          target,
+          error:
+            error.code === ERROR_CODES.TARGET_EXISTS
+              ? 'TARGET_EXISTS'
+              : error.message,
+        });
       }
     }
 

@@ -5,7 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import fs from 'fs';
 import { createRequire } from 'module';
+import os from 'os';
+import path from 'path';
+
 const require = createRequire(import.meta.url);
 
 /* global jest */
@@ -88,6 +92,58 @@ describe('ServerExtensionManager', () => {
       });
       expect(manifest.hasClientCss).toBe(true);
       expect(manifest.hasClientScript).toBe(true);
+    });
+
+    it.each([
+      ['EACCES', 'permission denied'],
+      ['EMFILE', 'too many open files'],
+    ])(
+      'surfaces a manifest it could not read (%s) when strict',
+      async (code, description) => {
+        // Not hypothetical: the scan reads every extension's manifest through
+        // one unbounded Promise.all, so a large install can exhaust the file
+        // descriptor table on its own. Reported as null, that reads as "this
+        // extension is gone" and the reconciler deactivates it.
+        mockFs.readFile.mockImplementation(async () => {
+          throw Object.assign(new Error(`${code}: ${description}`), { code });
+        });
+
+        await expect(
+          serverManager.readManifest('/tmp/ext', { strict: true }),
+        ).rejects.toMatchObject({ code });
+
+        // The default contract is unchanged for every existing caller.
+        await expect(
+          serverManager.readManifest('/tmp/ext'),
+        ).resolves.toBeNull();
+      },
+    );
+
+    it('still answers null for a manifest that is simply not there', async () => {
+      // ENOENT is an answer, not a refusal to answer: there is no extension
+      // here, and strict mode must not turn that into an error.
+      mockFs.readFile.mockImplementation(async () => {
+        throw Object.assign(new Error('ENOENT: no such file'), {
+          code: 'ENOENT',
+        });
+      });
+
+      await expect(
+        serverManager.readManifest('/tmp/ext', { strict: true }),
+      ).resolves.toBeNull();
+    });
+
+    it('still answers null for a manifest that is present but malformed', async () => {
+      // The file was read, so nothing is being hidden; the extension is just
+      // unusable. Strict mode is about unreadable, not about invalid.
+      mockFs.readFile.mockImplementation(async pathStr => {
+        if (pathStr.endsWith('package.json')) return '{ not json';
+        throw new Error('File not found');
+      });
+
+      await expect(
+        serverManager.readManifest('/tmp/ext', { strict: true }),
+      ).resolves.toBeNull();
     });
 
     it('falls back to file existence if stats.json is missing', async () => {
@@ -982,5 +1038,105 @@ describe('scopeRouteModule', () => {
     expect(() => container.resolve('db')).toThrow(
       expect.objectContaining({ name: 'CapabilityDeniedError' }),
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Path Containment
+// ---------------------------------------------------------------------------
+
+describe('resolveExtensionDir - path containment', () => {
+  let root;
+  let installedRoot;
+  const previousInstalledDir = process.env.XNAPIFY_EXTENSION_DIR;
+
+  beforeEach(async () => {
+    root = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'xnapify-ext-'));
+    installedRoot = path.join(root, 'installed');
+    await fs.promises.mkdir(path.join(root, 'extensions', 'flat-ext'), {
+      recursive: true,
+    });
+    await fs.promises.mkdir(path.join(root, 'extensions', '@org', 'scoped'), {
+      recursive: true,
+    });
+    await fs.promises.mkdir(path.join(installedRoot, 'installed-ext'), {
+      recursive: true,
+    });
+    // Stands in for everything the delete worker must never reach: the
+    // deployment root also holds the database, the build output and .env.
+    await fs.promises.writeFile(path.join(root, 'database.sqlite'), 'rows');
+
+    process.env.XNAPIFY_EXTENSION_DIR = installedRoot;
+    serverManager.setDevExtensionsDir(root);
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(async () => {
+    serverManager.setDevExtensionsDir(undefined);
+    if (previousInstalledDir === undefined) {
+      delete process.env.XNAPIFY_EXTENSION_DIR;
+    } else {
+      process.env.XNAPIFY_EXTENSION_DIR = previousInstalledDir;
+    }
+    jest.restoreAllMocks();
+    await fs.promises.rm(root, { recursive: true, force: true });
+  });
+
+  it('resolves a flat key inside the dev directory', async () => {
+    await expect(
+      serverManager.resolveExtensionDir('flat-ext'),
+    ).resolves.toEqual({
+      dir: path.join(root, 'extensions', 'flat-ext'),
+      isDevExtension: true,
+    });
+  });
+
+  it('resolves a scoped key inside the dev directory', async () => {
+    await expect(
+      serverManager.resolveExtensionDir('@org/scoped'),
+    ).resolves.toEqual({
+      dir: path.join(root, 'extensions', '@org', 'scoped'),
+      isDevExtension: true,
+    });
+  });
+
+  it('resolves a key inside the installed directory', async () => {
+    await expect(
+      serverManager.resolveExtensionDir('installed-ext'),
+    ).resolves.toEqual({
+      dir: path.join(installedRoot, 'installed-ext'),
+      isDevExtension: false,
+    });
+  });
+
+  it('refuses a key that climbs out of the extensions directory', async () => {
+    // The delete worker rm -rf's whatever comes back, so '..' resolving to the
+    // deployment root erases the running install.
+    await expect(serverManager.resolveExtensionDir('..')).resolves.toEqual({
+      dir: null,
+      isDevExtension: false,
+    });
+    await expect(
+      serverManager.resolveExtensionDir('../../etc'),
+    ).resolves.toEqual({ dir: null, isDevExtension: false });
+  });
+
+  it('refuses a key that names the extensions directory itself', async () => {
+    await expect(serverManager.resolveExtensionDir('.')).resolves.toEqual({
+      dir: null,
+      isDevExtension: false,
+    });
+  });
+
+  it('refuses an absolute key rather than reinterpreting it as relative', async () => {
+    await expect(
+      serverManager.resolveExtensionDir('/flat-ext'),
+    ).resolves.toEqual({ dir: null, isDevExtension: false });
+  });
+
+  it('refuses a key carrying a NUL byte', async () => {
+    await expect(
+      serverManager.resolveExtensionDir('flat-ext\u0000/../..'),
+    ).resolves.toEqual({ dir: null, isDevExtension: false });
   });
 });

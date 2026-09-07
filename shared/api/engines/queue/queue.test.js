@@ -921,13 +921,22 @@ describe('MemoryQueue Adapter', () => {
       expect(handler).not.toHaveBeenCalled();
     });
 
-    it('should ignore unrecognized event names', () => {
+    it('should ignore unrecognized event names, but say so', () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
       const handler = jest.fn();
       queue.on('nonexistent', handler);
+
+      // Still tolerated rather than fatal — but no longer invisible. Silently
+      // discarding the registration made a typo total: the handler was never
+      // stored, and the event it meant to watch fired forever with nothing
+      // listening, indistinguishable from an event that never happened.
+      expect(consoleWarnSpy).toHaveBeenCalled();
 
       // Should not throw
       queue.emit('nonexistent');
       expect(handler).not.toHaveBeenCalled();
+
+      consoleWarnSpy.mockRestore();
     });
 
     it('should catch errors in event handlers', () => {

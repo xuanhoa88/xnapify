@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { MemoryRedisClient } from '../../redis/memoryClient.js';
+import { MemoryRedisClient } from '../../broker/memoryClient.js';
 import { createFactory, withNamespace } from '../factory.js';
 
 import RedisCache from './redis.js';
@@ -59,5 +59,19 @@ describe('RedisCache', () => {
 
   it('requires a client', () => {
     expect(() => new RedisCache({})).toThrow(TypeError);
+  });
+
+  it('does not expose the raw connection as a property', () => {
+    // `broker` is a privileged capability precisely because getClient() is a
+    // raw connection to the session denylist and the rate-limit counters —
+    // writing through it is enough to un-revoke a revoked session. `cache` is
+    // a *default* capability that every extension holds without asking. If a
+    // cache instance carried the same connection on a public property, the
+    // broker gate would be decorative: `container.resolve('cache').client`
+    // reaches the identical surface. The prefixing that makes this adapter
+    // "scoped by construction" only applies to its own methods.
+    expect(cache.client).toBeUndefined();
+    expect(Object.values(cache)).not.toContain(client);
+    expect(JSON.stringify(Object.keys(cache))).not.toMatch(/client/i);
   });
 });

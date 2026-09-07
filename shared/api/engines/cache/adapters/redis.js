@@ -17,6 +17,9 @@
 const DEFAULT_TTL = 5 * 60 * 1000;
 
 class RedisCache {
+  /** @type {import('ioredis').Redis} */
+  #client;
+
   /**
    * @param {Object} options
    * @param {import('ioredis').Redis} options.client - Connected client
@@ -27,7 +30,13 @@ class RedisCache {
     if (!options.client) {
       throw new TypeError('RedisCache requires a `client` option');
     }
-    this.client = options.client;
+    // Private on purpose. `cache` is a default capability every extension
+    // holds, while `broker` is gated because a raw connection reaches the
+    // session denylist and the rate-limit counters. A public property here
+    // would hand out that same connection through the ungated door, making
+    // the broker gate decorative. `#client` is unreachable from outside the
+    // class — not merely undocumented.
+    this.#client = options.client;
     this.defaultTTL = options.ttl || DEFAULT_TTL;
     this.prefix = options.prefix || 'cache:';
   }
@@ -38,11 +47,11 @@ class RedisCache {
 
   /** Prefix ioredis applies on the wire (needed for SCAN patterns) */
   clientPrefix() {
-    return (this.client.options && this.client.options.keyPrefix) || '';
+    return (this.#client.options && this.#client.options.keyPrefix) || '';
   }
 
   async get(key) {
-    const raw = await this.client.get(this.keyFor(key));
+    const raw = await this.#client.get(this.keyFor(key));
     if (raw === null || raw === undefined) return null;
     try {
       return JSON.parse(raw);
@@ -53,16 +62,16 @@ class RedisCache {
 
   async set(key, value, ttl = this.defaultTTL) {
     const ms = Math.max(1, Math.floor(ttl));
-    await this.client.set(this.keyFor(key), JSON.stringify(value), 'PX', ms);
+    await this.#client.set(this.keyFor(key), JSON.stringify(value), 'PX', ms);
   }
 
   async delete(key) {
-    const removed = await this.client.del(this.keyFor(key));
+    const removed = await this.#client.del(this.keyFor(key));
     return removed > 0;
   }
 
   async has(key) {
-    const found = await this.client.exists(this.keyFor(key));
+    const found = await this.#client.exists(this.keyFor(key));
     return found > 0;
   }
 
@@ -75,7 +84,7 @@ class RedisCache {
     const found = [];
     let cursor = '0';
     do {
-      const [next, batch] = await this.client.scan(
+      const [next, batch] = await this.#client.scan(
         cursor,
         'MATCH',
         `${wirePrefix}*`,
@@ -97,7 +106,7 @@ class RedisCache {
     if (keys.length === 0) return 0;
     let removed = 0;
     for (let i = 0; i < keys.length; i += 500) {
-      removed += await this.client.del(
+      removed += await this.#client.del(
         ...keys.slice(i, i + 500).map(key => this.keyFor(key)),
       );
     }
