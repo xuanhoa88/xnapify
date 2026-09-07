@@ -18,23 +18,15 @@ import config from '../config.js';
 // ========================================================================
 
 /**
- * The publishing side and the installing side must agree bit-for-bit, so they
- * share one implementation instead of two that drift. `checksum.util.js` is
- * deliberately free of `@shared` aliases and extension-less imports so this
- * build task, which runs on plain Node ESM, can load it directly.
+ * `computeChecksum` is the only part of the checksum algorithm the build uses;
+ * the verifying half stays on the runtime side. It lives in `./checksum.js`
+ * rather than being imported from `src/apps/extensions` so that `tools/`
+ * imports nothing outside itself — see that file's header for how the two
+ * copies are kept from drifting.
  *
- * @see src/apps/extensions/api/utils/checksum.util.js
+ * @see ./checksum.js
  */
-export {
-  computeChecksum,
-  hashManifest,
-  stableStringify,
-  verifyExtensionChecksum,
-  MANIFEST_FILE,
-  SELF_REFERENTIAL_MANIFEST_FIELDS,
-} from '../../src/apps/extensions/api/utils/checksum.util.js';
-
-export { auditExtensionCapabilities } from '../../src/apps/extensions/api/utils/capabilities.util.js';
+export { computeChecksum } from './checksum.js';
 
 // ========================================================================
 // Extension ID Generation

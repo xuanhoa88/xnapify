@@ -11,7 +11,6 @@
     "capabilities": [
       "hook",
       "models",
-      "users:seed_constants",
       "roles:seed_constants",
       "groups:seed_constants"
     ]

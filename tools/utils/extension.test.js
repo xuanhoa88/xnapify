@@ -8,11 +8,16 @@
 import fs from 'fs';
 import path from 'path';
 
-import { isBundledExtension } from '@shared/extension/utils/compat.js';
+import config from '../config.js';
 
 import { generateExtensionId, listBundledExtensionIds } from './extension.js';
 
-const EXTENSIONS_DIR = path.resolve(process.cwd(), 'src', 'extensions');
+// Resolved the same way listBundledExtensionIds resolves it, rather than
+// hardcoding 'src', so the two cannot disagree when APP_DIR is overridden.
+const EXTENSIONS_DIR = path.resolve(
+  config.APP_DIR,
+  config.env('XNAPIFY_EXTENSION_LOCAL_PATH', 'extensions'),
+);
 
 const manifests = fs
   .readdirSync(EXTENSIONS_DIR, { withFileTypes: true })
@@ -32,27 +37,16 @@ describe('listBundledExtensionIds', () => {
   });
 
   it.each(manifests.map(m => [m.name, m]))(
-    '%s reaches the runtime as bundled',
-    (name, manifest) => {
-      // This is the whole chain the privileged capability tier rests on: the
-      // build lists what it compiled, DefinePlugin injects the list, and
-      // compat.js matches a manifest against it. A first-party extension that
-      // fell out of the list would silently lose `models`/`db` in production
-      // and fail at its first resolve().
+    '%s is listed under both its name and its derived id',
+    name => {
+      // The build lists what it compiled and DefinePlugin injects that list;
+      // the runtime half of this chain — that compat.js then matches a manifest
+      // against the list — is asserted in
+      // shared/extension/utils/compat.test.js, because `tools/` is a standalone
+      // package and does not import from shared/.
       const ids = listBundledExtensionIds();
       expect(ids).toContain(name);
       expect(ids).toContain(generateExtensionId(name));
-
-      // eslint-disable-next-line no-underscore-dangle
-      const previous = globalThis.__XNAPIFY_BUNDLED_EXTENSIONS__;
-      // eslint-disable-next-line no-underscore-dangle
-      globalThis.__XNAPIFY_BUNDLED_EXTENSIONS__ = ids;
-      try {
-        expect(isBundledExtension(manifest)).toBe(true);
-      } finally {
-        // eslint-disable-next-line no-underscore-dangle
-        globalThis.__XNAPIFY_BUNDLED_EXTENSIONS__ = previous;
-      }
     },
   );
 
@@ -68,5 +62,24 @@ describe('listBundledExtensionIds', () => {
         process.env.XNAPIFY_EXTENSION_LOCAL_PATH = previous;
       }
     }
+  });
+});
+
+describe('generateExtensionId', () => {
+  it('is a pure function of the name, so every machine derives the same id', () => {
+    // Deriving the alphabet from XNAPIFY_KEY (as an earlier version did) tied
+    // ids to a secret, so rotating the key orphaned every extensions.key row.
+    expect(generateExtensionId('@xnapify-extension/profile')).toBe(
+      generateExtensionId('@xnapify-extension/profile'),
+    );
+    expect(generateExtensionId('@xnapify-extension/profile')).not.toBe(
+      generateExtensionId('@xnapify-extension/other'),
+    );
+  });
+
+  it('rejects a name that is not a non-empty string', () => {
+    expect(generateExtensionId('')).toBeNull();
+    expect(generateExtensionId(null)).toBeNull();
+    expect(generateExtensionId(42)).toBeNull();
   });
 });

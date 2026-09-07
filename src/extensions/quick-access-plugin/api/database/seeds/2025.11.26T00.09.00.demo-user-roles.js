@@ -7,6 +7,8 @@
 
 import { v4 as uuidv4 } from 'uuid';
 
+import { SEED_USERS } from '../../constants.js';
+
 /**
  * Run the seed
  */
@@ -15,7 +17,6 @@ export async function up(_, { container }) {
 
   // Get seed constants from the container
   const SEED_ROLES = container.resolve('roles:seed_constants');
-  const SEED_USERS = container.resolve('users:seed_constants');
 
   const userRoles = [
     // Admin user - admin role
@@ -72,9 +73,6 @@ export async function up(_, { container }) {
  */
 export async function down(_, { container }) {
   const { UserRole } = container.resolve('models');
-
-  // Get seed constants from the container
-  const SEED_USERS = container.resolve('users:seed_constants');
 
   // Remove all seeded user roles by userId
   await UserRole.destroy({

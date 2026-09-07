@@ -7,6 +7,12 @@
 
 /* global jest */
 
+import fs from 'fs';
+import path from 'path';
+
+import toolsConfig from '../../../tools/config.js';
+import { listBundledExtensionIds } from '../../../tools/utils/extension.js';
+
 import {
   DEFAULT_EXTENSION_CAPABILITIES,
   PRIVILEGED_CAPABILITIES,
@@ -15,10 +21,29 @@ import {
   getGrantedCapabilities,
   getManifestContract,
   incompatibleExtensionError,
+  isBundledExtension,
+  isPrivilegedExtension,
   isPrivilegedCapability,
   isTrustedExtension,
   satisfiesRange,
 } from './compat.js';
+
+const EXTENSIONS_DIR = path.resolve(
+  toolsConfig.APP_DIR,
+  toolsConfig.env('XNAPIFY_EXTENSION_LOCAL_PATH', 'extensions'),
+);
+
+const bundledManifests = fs
+  .readdirSync(EXTENSIONS_DIR, { withFileTypes: true })
+  .filter(entry => entry.isDirectory())
+  .map(entry =>
+    JSON.parse(
+      fs.readFileSync(
+        path.join(EXTENSIONS_DIR, entry.name, 'package.json'),
+        'utf8',
+      ),
+    ),
+  );
 
 describe('extension compat', () => {
   describe('getManifestContract', () => {
@@ -272,5 +297,51 @@ describe('extension compat', () => {
       expect(error.status).toBe(422);
       expect(error.message).toContain('ext');
     });
+  });
+});
+
+describe('bundled extensions reach the runtime', () => {
+  // The far end of a chain that starts in the build: tools lists the extensions
+  // it compiled, DefinePlugin injects that list as
+  // __XNAPIFY_BUNDLED_EXTENSIONS__, and isBundledExtension matches a manifest
+  // against it to grant the privileged capability tier (`db`, `models`,
+  // `worker`, …). A first-party extension that fell out of the list would
+  // silently lose those in production and fail at its first resolve().
+  //
+  // The assertion lives here rather than in tools/utils/extension.test.js
+  // because `tools/` is a standalone package that imports nothing from shared/.
+  // Depending on tools/ from this side is the allowed direction.
+  it.each(bundledManifests.map(m => [m.name, m]))(
+    '%s is granted the bundled tier',
+    (name, manifest) => {
+      const ids = listBundledExtensionIds();
+
+      // eslint-disable-next-line no-underscore-dangle
+      const previous = globalThis.__XNAPIFY_BUNDLED_EXTENSIONS__;
+      // eslint-disable-next-line no-underscore-dangle
+      globalThis.__XNAPIFY_BUNDLED_EXTENSIONS__ = ids;
+      try {
+        expect(isBundledExtension(manifest)).toBe(true);
+        expect(isPrivilegedExtension(manifest)).toBe(true);
+      } finally {
+        // eslint-disable-next-line no-underscore-dangle
+        globalThis.__XNAPIFY_BUNDLED_EXTENSIONS__ = previous;
+      }
+    },
+  );
+
+  it('does not grant the tier to an extension the build did not compile', () => {
+    // eslint-disable-next-line no-underscore-dangle
+    const previous = globalThis.__XNAPIFY_BUNDLED_EXTENSIONS__;
+    // eslint-disable-next-line no-underscore-dangle
+    globalThis.__XNAPIFY_BUNDLED_EXTENSIONS__ = listBundledExtensionIds();
+    try {
+      expect(isBundledExtension({ name: '@hub/arrived-at-runtime' })).toBe(
+        false,
+      );
+    } finally {
+      // eslint-disable-next-line no-underscore-dangle
+      globalThis.__XNAPIFY_BUNDLED_EXTENSIONS__ = previous;
+    }
   });
 });

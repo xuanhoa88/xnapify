@@ -7,6 +7,8 @@
 
 import { v4 as uuidv4 } from 'uuid';
 
+import { SEED_USERS } from '../../constants.js';
+
 /**
  * Run the seed
  */
@@ -15,7 +17,6 @@ export async function up(_, { container }) {
 
   // Get seed constants from the container
   const SEED_GROUPS = container.resolve('groups:seed_constants');
-  const SEED_USERS = container.resolve('users:seed_constants');
 
   const userGroups = [
     // Admin - Management and Engineering groups (multi-group membership)
@@ -65,9 +66,6 @@ export async function up(_, { container }) {
  */
 export async function down(_, { container }) {
   const { UserGroup } = container.resolve('models');
-
-  // Get seed constants from the container
-  const SEED_USERS = container.resolve('users:seed_constants');
 
   // Remove all seeded user groups by userId
   await UserGroup.destroy({

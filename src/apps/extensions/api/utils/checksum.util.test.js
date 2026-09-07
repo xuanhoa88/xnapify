@@ -9,10 +9,14 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
+import * as buildChecksum from '../../../../../tools/utils/checksum.js';
 import * as buildUtils from '../../../../../tools/utils/extension.js';
 
 import {
   CHECKSUM_VERSION,
+  DEFAULT_OPTIONS,
+  MANIFEST_FILE,
+  SELF_REFERENTIAL_MANIFEST_FIELDS,
   checksumMismatchReason,
   computeChecksum,
   hashManifest,
@@ -21,8 +25,15 @@ import {
   verifyExtensionChecksum,
 } from './checksum.util.js';
 
-// The build task loads the same module through this barrel. Importing it here
-// is what proves the publisher and the installer cannot drift apart.
+// `tools/` is a standalone build-time package — it imports nothing from src/ or
+// shared/ — so the publishing half of this algorithm lives in
+// tools/utils/checksum.js and the verifying half lives here. They are two
+// implementations that must produce identical digests, so this file is the
+// guard: `packageExtension` below publishes with the *build* copy and every
+// assertion verifies with the *runtime* copy, and the drift suite at the bottom
+// compares them directly. Change one side and this goes red — which is the
+// cheap failure, as against a valid extension reported as TAMPERED in
+// production.
 
 let workDir;
 
@@ -156,10 +167,135 @@ describe('extension checksum round-trip', () => {
 
     await expect(computeChecksum(workDir)).resolves.toBe(integrity);
   });
+});
 
-  it('exposes the same implementation to the build task', () => {
-    expect(buildUtils.computeChecksum).toBe(computeChecksum);
-    expect(buildUtils.hashManifest).toBe(hashManifest);
+describe('the build copy and the runtime copy cannot drift apart', () => {
+  /**
+   * These are two separate implementations by design — `tools/` imports nothing
+   * outside itself. Identity (`===`) is therefore the wrong assertion; agreeing
+   * on every digest is the right one.
+   *
+   * Comparing digests over fixtures is necessary but *not sufficient*, and the
+   * gap is worth stating because it is easy to build a guard that looks strict
+   * and catches nothing. An exclusion list that drifts on one side only changes
+   * a digest when the fixture happens to contain a file with the newly-excluded
+   * name — add `'CHANGELOG.md'` to one copy and every output assertion below
+   * still passes. So the parameters that *define* the algorithm are compared
+   * structurally as well, and the two halves cover different failures:
+   *
+   *   - parameters  → exclusion lists, version tag, stripped manifest fields
+   *   - digests     → hashing logic, ordering, the domain separator
+   */
+  describe('parameters', () => {
+    it('excludes exactly the same files and folders from the tree hash', () => {
+      expect(buildChecksum.DEFAULT_OPTIONS).toEqual(DEFAULT_OPTIONS);
+    });
+
+    it('agrees on the version tag and the manifest filename', () => {
+      expect(buildChecksum.CHECKSUM_VERSION).toBe(CHECKSUM_VERSION);
+      expect(buildChecksum.MANIFEST_FILE).toBe(MANIFEST_FILE);
+    });
+
+    it('strips the same self-referential manifest fields', () => {
+      expect(buildChecksum.SELF_REFERENTIAL_MANIFEST_FIELDS).toEqual(
+        SELF_REFERENTIAL_MANIFEST_FIELDS,
+      );
+    });
+  });
+
+  describe('shared primitives', () => {
+    it('canonicalises objects identically', () => {
+      const tricky = {
+        z: [3, { b: 2, a: 1 }],
+        a: null,
+        nested: { '': 0, ünïcode: '✓', 'with"quote': true },
+      };
+      expect(buildChecksum.stableStringify(tricky)).toBe(
+        stableStringify(tricky),
+      );
+    });
+
+    it('hashes manifests identically, including the absent case', () => {
+      const manifest = { name: '@acme/demo', integrity: 'x', builtAt: 1 };
+      expect(buildChecksum.hashManifest(manifest)).toBe(hashManifest(manifest));
+      expect(buildChecksum.hashManifest(null)).toBe(hashManifest(null));
+    });
+  });
+
+  it('agrees on a plain built tree', async () => {
+    await writeExtensionTree(workDir);
+
+    await expect(buildUtils.computeChecksum(workDir)).resolves.toBe(
+      await computeChecksum(workDir),
+    );
+  });
+
+  it('agrees when the manifest is supplied instead of read from disk', async () => {
+    // The build path: the manifest has not been written yet, so it is passed in.
+    await writeExtensionTree(workDir);
+    const manifest = {
+      name: '@acme/demo',
+      version: '2.3.4',
+      xnapify: { version: '^2.0.0', capabilities: ['hook', 'db'] },
+    };
+
+    await expect(
+      buildUtils.computeChecksum(workDir, { manifest }),
+    ).resolves.toBe(await computeChecksum(workDir, { manifest }));
+  });
+
+  it('agrees on a directory that has no manifest at all', async () => {
+    await writeExtensionTree(workDir);
+
+    await expect(buildUtils.computeChecksum(workDir)).resolves.toBe(
+      await computeChecksum(workDir),
+    );
+  });
+
+  it('agrees about which files are excluded from the hash', async () => {
+    await writeExtensionTree(workDir);
+    const before = await buildUtils.computeChecksum(workDir);
+
+    await fs.promises.mkdir(path.join(workDir, 'node_modules', 'dep'), {
+      recursive: true,
+    });
+    await fs.promises.writeFile(
+      path.join(workDir, 'node_modules', 'dep', 'index.js'),
+      'module.exports = 1;',
+    );
+    await fs.promises.writeFile(path.join(workDir, '.DS_Store'), 'junk');
+    await fs.promises.writeFile(
+      path.join(workDir, 'package-lock.json'),
+      '{"lockfileVersion":3}',
+    );
+
+    // Both must still ignore all three, and still agree with each other.
+    await expect(buildUtils.computeChecksum(workDir)).resolves.toBe(before);
+    await expect(computeChecksum(workDir)).resolves.toBe(before);
+  });
+
+  it('agrees that a nested source change moves the digest', async () => {
+    await writeExtensionTree(workDir);
+    const before = await buildUtils.computeChecksum(workDir);
+
+    await fs.promises.writeFile(
+      path.join(workDir, 'views', 'browser.js'),
+      'export default { changed: true };',
+    );
+
+    const buildAfter = await buildUtils.computeChecksum(workDir);
+    expect(buildAfter).not.toBe(before);
+    await expect(computeChecksum(workDir)).resolves.toBe(buildAfter);
+  });
+
+  it('agrees on the version tag, so neither side can bump it alone', async () => {
+    // A one-sided version bump is the exact failure that once turned an upgrade
+    // into a tamper report for every pre-existing install.
+    await writeExtensionTree(workDir);
+    const fromBuild = await buildUtils.computeChecksum(workDir);
+
+    expect(fromBuild.startsWith(`${CHECKSUM_VERSION}:`)).toBe(true);
+    expect(parseChecksum(fromBuild).version).toBe(CHECKSUM_VERSION);
   });
 });
 
@@ -221,6 +357,28 @@ describe('checksum versioning', () => {
       'version',
     );
   });
+
+  it('does not call a whitespace-padded stored value a content mismatch', async () => {
+    // Nothing normalises the checksum a registry entry supplies, and parsing
+    // tolerates padding — so a value with a trailing newline clears the version
+    // gate and reaches the comparison. Calling that package tampered with is the
+    // most serious verdict here, raised over one invisible byte: the operator
+    // message truncates both values and never shows the difference.
+    await writeExtensionTree(workDir);
+    const { integrity } = await packageExtension(workDir);
+
+    expect(checksumMismatchReason(`${integrity}\n`, integrity)).toBeNull();
+    expect(checksumMismatchReason(`  ${integrity}  `, integrity)).toBeNull();
+
+    await expect(
+      verifyExtensionChecksum(workDir, `${integrity}\n`),
+    ).resolves.toMatchObject({ valid: true, comparable: true });
+
+    // Padding must not make a genuinely different digest verify.
+    expect(checksumMismatchReason(`v2:${'b'.repeat(64)}\n`, integrity)).toBe(
+      'content',
+    );
+  });
 });
 
 describe('hashManifest', () => {
@@ -246,5 +404,25 @@ describe('stableStringify', () => {
     expect(stableStringify({ b: [{ z: 1, a: 2 }], a: null })).toBe(
       '{"a":null,"b":[{"a":2,"z":1}]}',
     );
+  });
+
+  // computeChecksum hashes whatever package.json a registry or upload
+  // handed it, before validateManifest has looked at anything but
+  // name/version/host-compat — so an attacker-nested value reaches this
+  // function directly. Without a cap, that overflows the V8 call stack;
+  // the depth this throws at must sit safely below that limit.
+  function nest(depth) {
+    let value = 0;
+    for (let i = 0; i < depth; i += 1) value = [value];
+    return value;
+  }
+
+  it('rejects nesting deep enough to overflow the call stack, cleanly', () => {
+    expect(() => stableStringify(nest(5000))).toThrow(RangeError);
+    expect(() => stableStringify(nest(5000))).not.toThrow(/call stack/i);
+  });
+
+  it('still serialises nesting an ordinary manifest could plausibly use', () => {
+    expect(() => stableStringify(nest(50))).not.toThrow();
   });
 });

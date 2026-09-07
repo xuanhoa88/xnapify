@@ -5,6 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { SEED_USERS } from '../../constants.js';
+
 /**
  * Run the seed
  */
@@ -13,9 +15,6 @@ export async function up(_, { container }) {
 
   // Get User and UserProfile models from the container
   const { User, UserProfile } = container.resolve('models');
-
-  // Get seed constants from the container
-  const SEED_USERS = container.resolve('users:seed_constants');
 
   // Passwords will be automatically hashed by beforeBulkCreate hook
   const users = [
@@ -173,9 +172,6 @@ export async function up(_, { container }) {
 export async function down(_, { container }) {
   // Get User model from the container
   const { User } = container.resolve('models');
-
-  // Get seed constants from the container
-  const SEED_USERS = container.resolve('users:seed_constants');
 
   // Remove all seeded users by email.
   // This will cascade delete their associated user_profiles because User.associate

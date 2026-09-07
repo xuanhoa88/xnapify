@@ -12,8 +12,8 @@ import { fileURLToPath } from 'url';
 
 import { format as prettierFormatter } from 'prettier';
 
-import prettierConfig from '../../prettier.config.js';
 import config from '../config.js';
+import prettierConfig from '../factories/prettier.factory.js';
 import { readDir, writeFile } from '../utils/fs.js';
 import {
   formatDuration,

@@ -23,6 +23,10 @@
  *   - MySQL 8.4 LTS (via portable binary download from dev.mysql.com)
  *
  * Cross-platform: macOS, Linux, Windows (x64 + arm64)
+ *
+ * The CLI dispatch at the bottom runs only when this file is the entry point,
+ * so the co-located test can import the exported pieces without provisioning a
+ * database or exiting the process.
  */
 import { execSync } from 'child_process';
 import fs from 'fs';
@@ -30,19 +34,50 @@ import { createRequire } from 'module';
 import net from 'net';
 import os from 'os';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
-// Relative import: the build bundles it in (only non-relative requests are
-// externalised), so preboot and the server share ONE dialect table.
+// Local vendors: copies of shared/api/engines/db/drivers.js and
+// shared/utils/atomic kept inside tools/ so this script has zero external deps.
+import {
+  readFileSafeSync,
+  resolveWithin,
+  tempSuffix,
+  writeFileAtomicSync,
+} from '../atomic/index.js';
 import {
   DIALECT_DRIVERS,
   detectDialect,
   parseDialect,
   resolveSandboxRoot,
-} from '../../shared/api/engines/db/drivers.js';
+} from '../utils/db-drivers.js';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
 const ROOT = process.cwd();
+
+/**
+ * The path Node is actually executing.
+ *
+ * `import.meta.url` alone would be wrong for the production bundle: rspack
+ * cannot give a file concatenated into a single CommonJS bundle its own
+ * per-source-file runtime URL, so `import.meta.url` there is replaced with a
+ * *compile-time* literal of the original source path — permanently
+ * `.../tools/npm/preboot.js` on whichever machine ran the build, never the
+ * deployed `build/npm/preboot.js`. `isEntryPoint()` below compares this value
+ * against `process.argv[1]`, so a wrong answer here means the CLI dispatch
+ * never fires: no `.env`, no JWT secret, no driver sandbox, on every
+ * `predev`/`prestart`/`pretest` run of the compiled bundle.
+ *
+ * `__filename` does not have this problem. Node's CJS module wrapper provides
+ * it per-file, dynamically, and rspack is configured (`node.__filename: false`
+ * in tools/rspack/base.config.js) to leave it alone rather than shim it — the
+ * same reasoning `tools/utils/db-drivers.js`'s `moduleDir()` already relies on
+ * for `__dirname`. It exists only in the bundled CommonJS output, though, so
+ * unbundled ESM (dev; the co-located test importing this module directly)
+ * still needs the `import.meta.url` fallback.
+ */
+const currentFilename =
+  typeof __filename === 'string' ? __filename : fileURLToPath(import.meta.url);
 
 /**
  * Where driver sandboxes are installed. Derived the same way the server
@@ -177,6 +212,15 @@ const MYSQL_EMBEDDED_PORT = 3307;
 const MYSQL_DATA_DIR = safePath(
   process.env.XNAPIFY_MYSQL_DATA_DIR || defaultDataDir('mysql'),
 );
+
+/**
+ * Written last into a staged MySQL tree, and the only thing that marks one as
+ * usable. Its absence means the extraction did not finish.
+ */
+const MYSQL_INSTALL_MARKER = '.xnapify-install-complete';
+
+/** Prefix of the per-install staging directories under MYSQL_DATA_DIR. */
+const MYSQL_STAGE_PREFIX = 'stage';
 
 // MySQL initialization creates 'root'@'localhost' implicitly by default
 const MYSQL_SYSTEM_USER = 'root';
@@ -355,11 +399,6 @@ function updateEnvDbUrl(newUrl) {
   // For .env — existing behavior: create from template if missing
   ensureEnvFile();
 
-  if (!fs.existsSync(targetFile)) {
-    fs.writeFileSync(targetFile, `XNAPIFY_DB_URL=${newUrl}\n`, 'utf-8');
-    return;
-  }
-
   upsertEnvVar(targetFile, 'XNAPIFY_DB_URL', newUrl);
 }
 
@@ -369,28 +408,52 @@ function updateEnvDbUrl(newUrl) {
  * @param {string} key - Environment variable name
  * @param {string} value - New value
  */
-function upsertEnvVar(filePath, key, value) {
-  if (!fs.existsSync(filePath)) {
-    fs.writeFileSync(filePath, `${key}=${value}\n`, 'utf-8');
+export function upsertEnvVar(filePath, key, value) {
+  // readFileSafeSync rather than existsSync + readFileSync: a file that exists
+  // but cannot be read (EACCES on a root-owned .env in a container) must not be
+  // mistaken for a missing one and replaced with a single line.
+  const content = readFileSafeSync(filePath, { fallback: null });
+  const line = `${key}=${value}`;
+
+  if (content === null) {
+    writeEnvFile(filePath, `${line}\n`);
     return;
   }
 
-  const content = fs.readFileSync(filePath, 'utf-8');
   // Escape regex metacharacters in key to prevent injection
   const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const pattern = new RegExp(`^${escaped}=.*`, 'm');
 
   if (pattern.test(content)) {
-    const updated = content.replace(pattern, `${key}=${value}`);
-    fs.writeFileSync(filePath, updated, 'utf-8');
+    // A function replacement, because `$&`/`$1` in a value are substitution
+    // directives to String.replace — a password containing one would be
+    // rewritten into the URL as the text it matched.
+    writeEnvFile(
+      filePath,
+      content.replace(pattern, () => line),
+    );
   } else {
     const separator = content.endsWith('\n') ? '' : '\n';
-    fs.writeFileSync(
-      filePath,
-      `${content}${separator}${key}=${value}\n`,
-      'utf-8',
-    );
+    writeEnvFile(filePath, `${content}${separator}${line}\n`);
   }
+}
+
+/**
+ * Replace an env file's contents without ever exposing a partial one.
+ *
+ * `.env` is the only copy of the operator's credentials — the tracked
+ * `.env.xnapify` is a template, and a `.env` truncated to zero length still
+ * satisfies `ensureEnvFile`, so nothing here would ever restore it. A plain
+ * `writeFileSync` truncates the target before the first byte lands, so an
+ * ENOSPC or a kill in that window leaves the file destroyed rather than
+ * unchanged; the atomic write publishes by rename, so the old file survives
+ * every failure.
+ *
+ * @param {string} filePath - Path to the env file
+ * @param {string} content - Full replacement contents
+ */
+function writeEnvFile(filePath, content) {
+  writeFileAtomicSync(filePath, content);
 }
 
 /**
@@ -398,15 +461,15 @@ function upsertEnvVar(filePath, key, value) {
  * Deletes the file entirely if XNAPIFY_DB_URL was the only content.
  */
 function cleanupEnvLocal() {
-  if (!fs.existsSync(ENV_LOCAL_PATH)) return;
+  const content = readFileSafeSync(ENV_LOCAL_PATH, { fallback: null });
+  if (content === null) return;
 
-  const content = fs.readFileSync(ENV_LOCAL_PATH, 'utf-8');
   const cleaned = content.replace(/^XNAPIFY_DB_URL=.*\n?/m, '');
 
   if (cleaned.trim() === '') {
     fs.unlinkSync(ENV_LOCAL_PATH);
   } else {
-    fs.writeFileSync(ENV_LOCAL_PATH, cleaned, 'utf-8');
+    writeEnvFile(ENV_LOCAL_PATH, cleaned);
   }
 }
 
@@ -987,7 +1050,7 @@ function resolveMariaDbBin(binName) {
  * Get platform-specific MySQL download info.
  * @returns {{ url: string, dirName: string, archiveExt: string }}
  */
-function getMysqlDownloadInfo() {
+export function getMysqlDownloadInfo() {
   const plat = os.platform();
   const arch = os.arch();
 
@@ -1148,7 +1211,7 @@ function extractArchive(archivePath, destDir) {
  * Idempotent — skips if basedir already exists.
  * @returns {string} basedir — path to extracted MySQL directory
  */
-async function ensureMysqlBinaries() {
+export async function ensureMysqlBinaries() {
   const platform = os.platform();
 
   // On musl/Alpine, use system MariaDB instead of downloading glibc MySQL
@@ -1164,31 +1227,78 @@ async function ensureMysqlBinaries() {
   }
 
   const info = getMysqlDownloadInfo();
-  const basedir = path.join(MYSQL_DATA_DIR, info.dirName);
-  const mysqldBin = path.join(
-    basedir,
-    'bin',
-    platform === 'win32' ? 'mysqld.exe' : 'mysqld',
-  );
+  const basedir = mysqlArtifactPath(info.dirName);
 
-  if (fs.existsSync(mysqldBin)) return basedir;
+  if (isMysqlInstallComplete(basedir)) return basedir;
+
+  fs.mkdirSync(MYSQL_DATA_DIR, { recursive: true });
+  sweepMysqlStaging();
+
+  // Asked again rather than reusing the verdict from above. The sweep deletes
+  // abandoned 600 MB trees, which is not instantaneous, and a concurrent
+  // preboot publishes its installation here with a single rename — so the
+  // window is wide and the change lands in one step. Discarding on the older
+  // verdict would delete a finished installation, plausibly the one whose
+  // mysqld is already serving this machine.
+  if (isMysqlInstallComplete(basedir)) return basedir;
+
+  // A tree with no completion marker never finished extracting — the binaries
+  // in it are whatever tar had written when the run died. Discard it rather
+  // than boot from it; the alternative is exec'ing a truncated mysqld on every
+  // run until someone thinks to delete the directory by hand.
+  if (fs.existsSync(basedir)) {
+    console.log('🧹 Discarding an incomplete MySQL installation...');
+    discardMysqlArtifact(basedir);
+  }
 
   console.log(
     `🐬 Downloading MySQL ${MYSQL_VERSION} for ${platform}/${os.arch()}...`,
   );
-  fs.mkdirSync(MYSQL_DATA_DIR, { recursive: true });
 
-  const archiveName = `mysql-${MYSQL_VERSION}${info.archiveExt}`;
-  const archivePath = path.join(MYSQL_DATA_DIR, archiveName);
-
-  try {
+  installMysqlTree(basedir, info.dirName, stageDir => {
+    const archivePath = path.join(
+      stageDir,
+      `mysql-${MYSQL_VERSION}${info.archiveExt}`,
+    );
     downloadFile(info.url, archivePath);
     console.log('📦 Extracting MySQL binaries...');
-    extractArchive(archivePath, MYSQL_DATA_DIR);
+    extractArchive(archivePath, stageDir);
+  });
 
-    // Cleanup archive
-    fs.unlinkSync(archivePath);
+  console.log('✅ MySQL binaries ready');
 
+  return basedir;
+}
+
+/**
+ * Build a MySQL installation at `basedir` from a tree `populate` extracts.
+ *
+ * `populate` is handed a staging directory of its own and may leave it in any
+ * state; only a run that returns is published, by renaming the finished tree
+ * over `basedir`. Extracting straight into the final location is what makes an
+ * interrupted install indistinguishable from a finished one: tar creates
+ * `bin/mysqld` in the first seconds of a multi-minute extraction and streams
+ * into it for the rest, so Ctrl-C during the download leaves a complete-looking
+ * path holding a truncated binary — and, because bin/ precedes lib/ and share/
+ * in the archive, a whole binary in a tree with no error-message files.
+ *
+ * Staging also keeps the archive private to this process. Two preboots sharing
+ * one download path had two curls writing the same file.
+ *
+ * @param {string} basedir - Where the finished tree is published
+ * @param {string} dirName - Directory the archive unpacks into
+ * @param {(stageDir: string) => void} populate - Fills the staging directory
+ */
+export function installMysqlTree(basedir, dirName, populate) {
+  const platform = os.platform();
+  const stageDir = mysqlArtifactPath(`${MYSQL_STAGE_PREFIX}${tempSuffix()}`);
+  fs.mkdirSync(stageDir, { recursive: true });
+
+  try {
+    populate(stageDir);
+
+    const staged = path.join(stageDir, dirName);
+    const mysqldBin = path.join(staged, 'bin', mysqlBinFile('mysqld'));
     if (!fs.existsSync(mysqldBin)) {
       throw new Error(
         `Extraction completed but mysqld not found at ${mysqldBin}`,
@@ -1197,43 +1307,226 @@ async function ensureMysqlBinaries() {
 
     // Ensure bin executables are executable on Unix
     if (platform !== 'win32') {
-      const binDir = path.join(basedir, 'bin');
+      const binDir = path.join(staged, 'bin');
       for (const file of fs.readdirSync(binDir)) {
         fs.chmodSync(path.join(binDir, file), 0o755);
       }
     }
 
-    console.log('✅ MySQL binaries ready');
-  } catch (err) {
-    // Cleanup partial downloads
-    if (fs.existsSync(archivePath)) fs.unlinkSync(archivePath);
-    throw err;
+    // Written into the staging tree rather than beside it, so that the rename
+    // publishes the tree and the proof that it is whole in one step.
+    fs.writeFileSync(
+      path.join(staged, MYSQL_INSTALL_MARKER),
+      `${MYSQL_VERSION}\n`,
+      'utf-8',
+    );
+
+    try {
+      fs.renameSync(staged, basedir);
+    } catch (err) {
+      // Renaming onto a populated directory fails (ENOTEMPTY, or EPERM on
+      // Windows). A concurrent preboot publishing the same version first is a
+      // reason to use its tree, not to fail the boot.
+      if (!isMysqlInstallComplete(basedir)) throw err;
+    }
+  } finally {
+    // Skipped when the process is signalled mid-download — sweepMysqlStaging
+    // collects what that leaves behind.
+    fs.rmSync(stageDir, { recursive: true, force: true });
+  }
+}
+
+/**
+ * Delete staging directories left by an interrupted install.
+ *
+ * SIGINT terminates the process outright, so the `finally` above does not run
+ * and a Ctrl-C during the download strands up to 600 MB. Age is the only safe
+ * discriminator — a live installer's staging directory looks exactly like an
+ * abandoned one — and the ceiling on a live one is the download plus extraction
+ * timeouts, so the grace period sits well above their sum.
+ *
+ * Never throws: housekeeping must not fail the install it runs before.
+ *
+ * @param {number} [graceMs] - Minimum age before a directory is removed
+ */
+export function sweepMysqlStaging(graceMs = 30 * 60_000) {
+  const cutoff = Date.now() - graceMs;
+  let entries = [];
+  try {
+    entries = fs.readdirSync(MYSQL_DATA_DIR);
+  } catch {
+    return;
   }
 
-  return basedir;
+  for (const entry of entries) {
+    if (!entry.startsWith(MYSQL_STAGE_PREFIX)) continue;
+    try {
+      const staleDir = mysqlArtifactPath(entry);
+      if (fs.statSync(staleDir).mtimeMs > cutoff) continue;
+      fs.rmSync(staleDir, { recursive: true, force: true });
+    } catch {
+      // Someone else swept it, or it is not ours to remove. Either is fine.
+    }
+  }
+}
+
+/**
+ * True when `basedir` holds an installation that finished extracting.
+ *
+ * The presence of `bin/mysqld` proves nothing — it appears at the start of the
+ * extraction and is only whole at the end. The marker is written last, inside
+ * the staging tree, so it can only be observed on a tree that was published
+ * complete.
+ *
+ * @param {string} basedir - Path to an extracted MySQL directory
+ * @returns {boolean}
+ */
+export function isMysqlInstallComplete(basedir) {
+  return (
+    fs.existsSync(path.join(basedir, MYSQL_INSTALL_MARKER)) &&
+    fs.existsSync(path.join(basedir, 'bin', mysqlBinFile('mysqld')))
+  );
+}
+
+/**
+ * Resolve an install artifact inside MYSQL_DATA_DIR, refusing the directory
+ * itself.
+ *
+ * These paths are passed to `rmSync({ recursive: true })` and to `renameSync`,
+ * and MYSQL_DATA_DIR also holds `data/` — the databases themselves. Containment
+ * alone is not enough: `resolveWithin` permits the base, so a name that
+ * resolved to it (an empty `dirName` from a mistyped download matrix entry)
+ * would delete every database under it.
+ *
+ * @param {string} name - Single directory name inside MYSQL_DATA_DIR
+ * @returns {string} Absolute path to the artifact
+ */
+function mysqlArtifactPath(name) {
+  const target = resolveWithin(MYSQL_DATA_DIR, name);
+  if (target === path.resolve(MYSQL_DATA_DIR)) {
+    throw new Error(
+      `Refusing to treat the MySQL data directory itself as an install artifact: ${JSON.stringify(name)}`,
+    );
+  }
+  return target;
+}
+
+/**
+ * Remove an install artifact, taking its name out of the way first.
+ *
+ * A recursive delete of a 600 MB tree is not instantaneous, and for as long as
+ * it runs the directory still exists — so a concurrent reader would see a
+ * half-deleted installation. The rename is atomic, so the name disappears
+ * before a single file does.
+ *
+ * @param {string} artifactPath - Path returned by {@link mysqlArtifactPath}
+ */
+function discardMysqlArtifact(artifactPath) {
+  const doomed = mysqlArtifactPath(`${MYSQL_STAGE_PREFIX}${tempSuffix()}`);
+  try {
+    fs.renameSync(artifactPath, doomed);
+  } catch (err) {
+    // Already gone: another preboot discarded the same incomplete tree.
+    if (err.code === 'ENOENT') return;
+    throw err;
+  }
+  fs.rmSync(doomed, { recursive: true, force: true });
+}
+
+/**
+ * Read the last `lines` lines of a file without loading the whole thing.
+ *
+ * `log-error` has no rotation configured, so a crash-looping mysqld can grow
+ * error.log without bound — and this runs precisely when mysqld is failing to
+ * start. Reading it whole to keep ten lines would replace the diagnostic the
+ * developer needs with an allocation error.
+ *
+ * @param {string} filePath - File to tail
+ * @param {number} lines - How many trailing lines to return
+ * @param {number} [maxBytes] - How far back from the end to read
+ * @returns {string} The trailing lines, or a short note explaining why not
+ */
+export function tailFile(filePath, lines, maxBytes = 64 * 1024) {
+  let handle;
+  try {
+    handle = fs.openSync(filePath, 'r');
+    const { size } = fs.fstatSync(handle);
+    const length = Math.min(size, maxBytes);
+    const buffer = Buffer.alloc(length);
+    fs.readSync(handle, buffer, 0, length, size - length);
+    return buffer.toString('utf-8').split('\n').slice(-lines).join('\n');
+  } catch (error) {
+    return `(could not read ${filePath}: ${error.message})`;
+  } finally {
+    if (handle !== undefined) {
+      try {
+        fs.closeSync(handle);
+      } catch {
+        // The diagnostic must not fail on its own cleanup.
+      }
+    }
+  }
+}
+
+/**
+ * Platform-correct filename for a MySQL binary.
+ * @param {string} binName - Binary name (e.g. 'mysqld')
+ * @returns {string}
+ */
+function mysqlBinFile(binName) {
+  return os.platform() === 'win32' ? `${binName}.exe` : binName;
 }
 
 /**
  * Resolve a MySQL binary path from the extracted installation.
+ *
+ * Every caller but one runs after {@link ensureMysqlBinaries}, so the tree it
+ * reads is one this process just published or verified. `stopMysql` is the
+ * exception — it has a server to shut down and no business downloading 600 MB
+ * to do it — and it is the caller `requireComplete: false` exists for.
+ *
  * @param {string} binName - Binary name (e.g. 'mysqld', 'mysqladmin', 'mysql')
+ * @param {{ requireComplete?: boolean }} [options]
+ * @param {boolean} [options.requireComplete] - Accept only a tree carrying the
+ *   completion marker. Default true; false also accepts an unmarked tree,
+ *   which is what an installation predating the marker looks like.
  * @returns {string} Absolute path to the binary
  */
-function resolveMysqlBin(binName) {
-  const fileName = os.platform() === 'win32' ? `${binName}.exe` : binName;
+export function resolveMysqlBin(binName, { requireComplete = true } = {}) {
+  const fileName = mysqlBinFile(binName);
 
   const info = getMysqlDownloadInfo();
-  const basedir = path.join(MYSQL_DATA_DIR, info.dirName);
-  const bin = path.join(basedir, 'bin', fileName);
+  const preferred = path.join(MYSQL_DATA_DIR, info.dirName);
 
-  if (fs.existsSync(bin)) return bin;
+  // Completeness, not existence: a binary out of an interrupted extraction is
+  // present, executable and truncated, and exec'ing it fails with an ENOEXEC
+  // that names nothing a developer could act on. Relaxing the check trades
+  // that for the opposite failure — the binary runs, or reports its own
+  // truncation — which is the better trade only when there is no install step
+  // to fall back on.
+  const usable = dir => {
+    if (requireComplete && !isMysqlInstallComplete(dir)) return null;
+    const candidate = path.join(dir, 'bin', fileName);
+    return fs.existsSync(candidate) ? candidate : null;
+  };
 
-  // Fallback: scan top-level dirs in MYSQL_DATA_DIR for any mysql-* directory
+  const bin = usable(preferred);
+  if (bin) return bin;
+
+  // Fallback: scan top-level dirs in MYSQL_DATA_DIR for any mysql-* directory.
+  // A complete tree is preferred over a merely present one even here, so a
+  // relaxed lookup never picks a truncated install over a finished one.
   if (fs.existsSync(MYSQL_DATA_DIR)) {
+    let relaxed = null;
     for (const entry of fs.readdirSync(MYSQL_DATA_DIR)) {
       if (!entry.startsWith('mysql-')) continue;
-      const candidate = path.join(MYSQL_DATA_DIR, entry, 'bin', fileName);
-      if (fs.existsSync(candidate)) return candidate;
+      const dir = path.join(MYSQL_DATA_DIR, entry);
+      const candidate = usable(dir);
+      if (!candidate) continue;
+      if (isMysqlInstallComplete(dir)) return candidate;
+      relaxed = relaxed || candidate;
     }
+    if (relaxed) return relaxed;
   }
 
   throw new Error(
@@ -1403,13 +1696,28 @@ async function startMysql(cfg = MYSQL_DEFAULTS) {
   const cnfPath = generateMyCnf(cfg, useSystemMariaDb ? '/usr' : basedir);
 
   // Step 4: Clean up stale socket from previous crash (Unix only)
+  //
+  // Two preboots can reach this together — one `npm run dev`, one `npm test`,
+  // against the same data directory — and the loser used to find the socket
+  // already gone and throw ENOENT out of startMysql, through autoMode, to the
+  // top-level catch and `process.exit(1)`. A socket another process cleaned up
+  // is the work already done, not a reason to fail the boot.
+  //
+  // The window between the liveness probe and the unlink is left as it is:
+  // `isPortReachable` waits up to a second, and re-probing to narrow the gap
+  // would pay that second twice on every start — the common case by far —
+  // to shrink a race whose remaining cost is one daemon needing a restart.
   const socketPath = path.join(MYSQL_DATA_DIR, 'mysql.sock');
   if (
     platform !== 'win32' &&
     fs.existsSync(socketPath) &&
     !(await isPortReachable(port))
   ) {
-    fs.unlinkSync(socketPath);
+    try {
+      fs.unlinkSync(socketPath);
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+    }
   }
 
   // Step 5: Start daemon securely with execSync relying on shell detachment
@@ -1449,14 +1757,7 @@ async function startMysql(cfg = MYSQL_DEFAULTS) {
   // Step 6: Wait for MySQL to become reachable
   if (!(await waitForPort(port))) {
     const errorLog = path.join(MYSQL_DATA_DIR, 'error.log');
-    if (fs.existsSync(errorLog)) {
-      const tail = fs
-        .readFileSync(errorLog, 'utf-8')
-        .split('\n')
-        .slice(-10)
-        .join('\n');
-      console.error(`Last 10 lines of error.log:\n${tail}`);
-    }
+    console.error(`Last 10 lines of error.log:\n${tailFile(errorLog, 10)}`);
     throw new Error(`MySQL did not become reachable on port ${port}`);
   }
 
@@ -1563,9 +1864,14 @@ async function stopMysql() {
 
   try {
     const socketPath = path.join(MYSQL_DATA_DIR, 'mysql.sock');
+    // The only resolveMysqlBin caller that does not run ensureMysqlBinaries
+    // first: a server is listening on the port, so a usable tree existed when
+    // it started, and refusing to shut it down over a missing completion
+    // marker — what every installation predating the marker looks like —
+    // leaves the developer to find the pid themselves.
     const mysqladmin = isMusl()
       ? resolveMariaDbBin('mysqladmin')
-      : resolveMysqlBin('mysqladmin');
+      : resolveMysqlBin('mysqladmin', { requireComplete: false });
     console.log(`🐬 Stopping embedded MySQL on port ${embeddedPort}...`);
 
     const shutdownArgs = [
@@ -2088,14 +2394,53 @@ const COMMANDS = {
   '--help': async () => showHelp(),
 };
 
-const run = COMMANDS[flag] || autoMode;
+/**
+ * True when node was asked to run this file.
+ *
+ * `process.argv[1]` is whatever the caller typed: relative in the production
+ * bundle's `node npm/preboot.js`, absolute in `node tools/npm/preboot.js`, and
+ * a symlink under some launchers. Each is resolved to the same real path
+ * before it is compared against `currentFilename` — see that constant's own
+ * comment for why a naive `import.meta.url` read there would silently break
+ * this check for the compiled bundle specifically.
+ *
+ * (An earlier version of this check tried `require.main === module` as the
+ * CommonJS-side fix instead of correcting `currentFilename`. That does not
+ * work: rspack recognizes the `require.main` idiom and rewrites it to compare
+ * against its own internal module-cache entry — a check for "is this the
+ * bundle's first module", not "is this the file Node was told to run" — so it
+ * still answered false. Fixing `currentFilename` once, here, lets this
+ * function stay the single check that is correct in both module systems.)
+ *
+ * @returns {boolean}
+ */
+function isEntryPoint() {
+  const invoked = process.argv[1];
+  if (!invoked) return false;
 
-run()
-  .then(() => process.exit(0))
-  .catch(err => {
-    console.error(`❌ Preboot failed: ${err.message}`);
-    if (process.env.LOG_VERBOSE === 'true') {
-      console.error(err.stack);
-    }
-    process.exit(1);
-  });
+  const resolved = path.resolve(invoked);
+  if (resolved === currentFilename) return true;
+
+  try {
+    return fs.realpathSync(resolved) === fs.realpathSync(currentFilename);
+  } catch {
+    // A path that cannot be resolved is not this file.
+    return false;
+  }
+}
+
+// Run the CLI only as an entry point, so the co-located test can import the
+// exported pieces without provisioning a database or exiting the process.
+if (isEntryPoint()) {
+  const run = COMMANDS[flag] || autoMode;
+
+  run()
+    .then(() => process.exit(0))
+    .catch(err => {
+      console.error(`❌ Preboot failed: ${err.message}`);
+      if (process.env.LOG_VERBOSE === 'true') {
+        console.error(err.stack);
+      }
+      process.exit(1);
+    });
+}
