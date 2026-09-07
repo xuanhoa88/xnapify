@@ -7,7 +7,7 @@
 
 .cardFlex {
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: transform 0.2s ease;
   height: 100%;
   min-height: 200px;
 }

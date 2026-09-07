@@ -130,7 +130,24 @@ function npmInstall(cwd, label) {
 function findSubPackages(dir) {
   const results = [];
 
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+  // A directory that cannot be listed must not abort the whole scan. This walks
+  // the working tree, where a stale symlink, a permission-restricted folder or
+  // a directory another process removes mid-walk are all ordinary — and an
+  // uncaught throw here aborts `npm run setup` before it installs dependencies
+  // or the git hooks, leaving a half-provisioned checkout.
+  let entries;
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch (error) {
+    if (error.code !== 'ENOENT') {
+      console.warn(
+        `⚠️  Skipping unreadable directory ${dir}: ${error.message}`,
+      );
+    }
+    return results;
+  }
+
+  for (const entry of entries) {
     if (!entry.isDirectory() || SKIP_DIRS.has(entry.name)) continue;
 
     const child = path.join(dir, entry.name);

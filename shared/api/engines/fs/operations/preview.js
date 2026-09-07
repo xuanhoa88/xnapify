@@ -66,7 +66,12 @@ export async function preview(manager, fileName, options = {}) {
         },
         headers: {
           'Content-Type': mimeType,
-          'Content-Length': metadata.size,
+          // Spread, so an unknown size omits the header entirely and Node falls
+          // back to chunked encoding. Emitting `Content-Length: undefined` or 0
+          // against a real body truncates the download at the client.
+          ...(Number.isFinite(metadata.size)
+            ? { 'Content-Length': metadata.size }
+            : {}),
           'Cache-Control': 'public, max-age=3600',
           'Content-Disposition': contentDisposition,
         },

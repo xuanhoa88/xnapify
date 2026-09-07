@@ -27,7 +27,11 @@
  *
  * @example <caption>Download File (returns stream)</caption>
  * const result = await fs.download('photo.jpg');
- * result.data.stream.pipe(res);
+ * // Always hand the stream to sendStream (stream.pipeline underneath).
+ * // A bare .pipe(res) leaves the 'error' event unhandled, which Node
+ * // escalates to an uncaughtException, and leaks the reader when the
+ * // client disconnects mid-download.
+ * await http.sendStream(res, result.data.stream, contentType);
  *
  * @example <caption>Other Operations</caption>
  * await fs.remove('photo.jpg');
@@ -64,7 +68,7 @@
  * const localProvider = fs.getProvider('local');
  *
  * // Get stats from all providers
- * const stats = fs.getAllStats();
+ * const stats = await fs.getAllStats();
  * // {
  * //   local: { files: 100, size: 1024000 },
  * //   memory: { available: false },

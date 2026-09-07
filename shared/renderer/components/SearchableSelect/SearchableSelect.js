@@ -75,6 +75,9 @@ function SearchableSelect({
   const menuRef = useRef(null);
   const debounceTimer = useRef(null);
 
+  // Frame handle for the coalesced repositioner below.
+  const positionFrame = useRef(null);
+
   // Dynamic positioning for Portal
   const updatePosition = useCallback(() => {
     if (!usePortal) return;
@@ -97,18 +100,44 @@ function SearchableSelect({
     menu.style.zIndex = '99999';
   }, [isOpen, usePortal]);
 
-  useEffect(() => {
-    if (isOpen) {
+  /*
+   * Coalesce repositioning onto one animation frame.
+   *
+   * The scroll listener below is capture-phase, so it fires for every
+   * scrolling element in the document, not just the window. `updatePosition`
+   * reads `getBoundingClientRect()` and then writes six inline styles, so
+   * running it straight from the handler forced a synchronous layout on each
+   * of those events. Batching to a frame means at most one measure-and-write
+   * per painted frame no matter how many scrollers report in.
+   */
+  const schedulePosition = useCallback(() => {
+    if (positionFrame.current !== null) return;
+    positionFrame.current = requestAnimationFrame(() => {
+      positionFrame.current = null;
       updatePosition();
-      // Use capture phase to catch scrolls even on overflowing divs
-      window.addEventListener('scroll', updatePosition, true);
-      window.addEventListener('resize', updatePosition);
-      return () => {
-        window.removeEventListener('scroll', updatePosition, true);
-        window.removeEventListener('resize', updatePosition);
-      };
-    }
-  }, [isOpen, updatePosition]);
+    });
+  }, [updatePosition]);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+
+    updatePosition();
+
+    // `passive` so a scroll is never blocked waiting on this handler;
+    // `capture` so scrolls inside overflowing ancestors still reposition.
+    const scrollOptions = { passive: true, capture: true };
+    window.addEventListener('scroll', schedulePosition, scrollOptions);
+    window.addEventListener('resize', schedulePosition, { passive: true });
+
+    return () => {
+      window.removeEventListener('scroll', schedulePosition, scrollOptions);
+      window.removeEventListener('resize', schedulePosition);
+      if (positionFrame.current !== null) {
+        cancelAnimationFrame(positionFrame.current);
+        positionFrame.current = null;
+      }
+    };
+  }, [isOpen, updatePosition, schedulePosition]);
 
   // Normalize value to array for consistent comparisons
   const selectedValues = useMemo(() => {
@@ -323,8 +352,9 @@ function SearchableSelect({
                 ref={node => {
                   menuRef.current = node;
                   if (node && isOpen && usePortal) {
-                    // Small delay to ensure DOM is fully painted before measuring
-                    requestAnimationFrame(() => updatePosition());
+                    // Wait for paint before measuring; shares the frame
+                    // with any scroll/resize reposition already queued.
+                    schedulePosition();
                   }
                 }}
                 className={clsx(s.menuContainer, {

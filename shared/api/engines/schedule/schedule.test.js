@@ -10,7 +10,7 @@ jest.mock('node-cron', () => require('./__mocks__/nodeCron.js'));
 
 import cron from 'node-cron';
 
-import { MemoryRedisClient } from '@shared/api/engines/redis/memoryClient.js';
+import { MemoryRedisClient } from '@shared/api/engines/broker/memoryClient.js';
 
 import { ScheduleError } from './errors.js';
 import {

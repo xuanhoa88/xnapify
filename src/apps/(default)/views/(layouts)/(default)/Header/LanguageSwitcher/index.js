@@ -62,7 +62,7 @@ function LanguageSwitcher() {
     <button
       type='button'
       title={t('common.languageSwitcher', 'Language switcher')}
-      className='group bg-transparent border-none cursor-pointer flex items-center gap-(--space-2) text-(--gray-11) px-2 py-1.5 rounded-(--radius-3) transition-all duration-200 ease-in-out hover:bg-(--gray-a3) hover:text-(--gray-12) focus:outline-none focus-visible:outline-2 focus-visible:outline-(--focus-8) focus-visible:-outline-offset-1 data-[state=open]:bg-(--gray-a3) data-[state=open]:text-(--gray-12) active:scale-95'
+      className='group bg-transparent border-none cursor-pointer flex items-center gap-(--space-2) text-(--gray-11) px-2 py-1.5 rounded-(--radius-3) transition-[background-color,color,transform] duration-200 ease-in-out hover:bg-(--gray-a3) hover:text-(--gray-12) focus:outline-none focus-visible:outline-2 focus-visible:outline-(--focus-8) focus-visible:-outline-offset-1 data-[state=open]:bg-(--gray-a3) data-[state=open]:text-(--gray-12) active:scale-95'
     >
       <GlobeIcon
         width={16}

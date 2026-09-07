@@ -24,16 +24,29 @@ function HeroSection() {
 
   return (
     <Box className='hidden lg:flex items-center justify-center p-12 relative w-full h-full bg-slate-950 overflow-hidden m-0'>
-      {/* Animated Mesh Gradient Background */}
+      {/*
+        Animated Mesh Gradient Background.
+
+        No `mix-blend-*` here on purpose. A blended element cannot be promoted
+        to its own compositor layer, so the browser had to re-blend these two
+        heavily blurred surfaces against their backdrop on every frame of the
+        pulse — on the busiest unauthenticated pages in the app. Against the
+        slate-950 ground these indigo/blue radials read the same under normal
+        blending, and the blurred layer is now rasterised once and merely
+        faded by the compositor.
+
+        `motion-safe:` keeps the loop out of the way for anyone who has asked
+        for reduced motion.
+      */}
       <Box
         className={clsx(
-          'absolute top-[-20%] left-[-10%] w-[70%] h-[70%] rounded-full mix-blend-screen filter blur-[100px] opacity-30 animate-pulse',
+          'absolute top-[-20%] left-[-10%] w-[70%] h-[70%] rounded-full filter blur-[100px] opacity-30 motion-safe:animate-pulse',
           s.meshGradient1,
         )}
       />
       <Box
         className={clsx(
-          'absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] rounded-full mix-blend-screen filter blur-[120px] opacity-20 animate-pulse',
+          'absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] rounded-full filter blur-[120px] opacity-20 motion-safe:animate-pulse',
           s.meshGradient2,
         )}
       />
@@ -51,7 +64,7 @@ function HeroSection() {
           to='/'
           className='inline-flex items-center gap-4 no-underline mb-12 hover:-translate-y-1 transition-transform duration-300 group'
         >
-          <Box className='relative overflow-hidden rounded-xl w-14 h-14 shadow-2xl shadow-indigo-500/20 ring-1 ring-white/10 group-hover:ring-indigo-500/50 transition-all'>
+          <Box className='relative overflow-hidden rounded-xl w-14 h-14 shadow-2xl shadow-indigo-500/20 ring-1 ring-white/10 group-hover:ring-indigo-500/50 transition-[box-shadow]'>
             <img
               src='/xnapify_72x72.png'
               alt='xnapify'

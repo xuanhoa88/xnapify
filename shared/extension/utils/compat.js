@@ -83,8 +83,10 @@ export const WILDCARD_CAPABILITY = '*';
  * - `queue` — the same work, deferred: it outlives the request that enqueued it.
  * - `schedule` — cron registration; runs with no request behind it at all.
  * - `fs` — streams the host's storage, which is every user's uploads.
- * - `redis` — the shared cache, rate-limit counters and the session denylist;
- *   writing it is enough to un-revoke a session.
+ * - `broker` — `getClient()` is a raw connection to the shared cache,
+ *   rate-limit counters and the session denylist; writing through it is
+ *   enough to un-revoke a session. (Formerly the standalone `redis` engine;
+ *   the capability moved with it when that engine was folded into `broker`.)
  *
  * Deliberately left out:
  * - `auth` — this is how an extension guards *its own* routes
@@ -105,7 +107,7 @@ export const PRIVILEGED_CAPABILITIES = Object.freeze([
   'queue',
   'schedule',
   'fs',
-  'redis',
+  'broker',
 ]);
 
 /**

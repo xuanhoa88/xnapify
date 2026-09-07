@@ -205,7 +205,7 @@ function Drawer({ minimal = false }) {
         align='center'
         gap='3'
         className={clsx(
-          'rounded-lg transition-all duration-200 cursor-pointer select-none relative group/item no-underline',
+          'rounded-lg transition-[color,background-color] duration-200 cursor-pointer select-none relative group/item no-underline',
           treatAsCompact
             ? 'w-10 h-10 p-0 justify-center mx-auto flex'
             : 'w-full py-2.5 px-3',
@@ -323,7 +323,7 @@ function Drawer({ minimal = false }) {
               align='center'
               justify='center'
               className={clsx(
-                'w-10 h-10 rounded-lg mx-auto transition-all duration-200 relative flex',
+                'w-10 h-10 rounded-lg mx-auto transition-[color,background-color] duration-200 relative flex',
                 !groupActive &&
                   'text-slate-500 hover:text-white hover:bg-white/6',
                 groupActive && 'text-blue-400 bg-blue-500/15',
@@ -367,7 +367,7 @@ function Drawer({ minimal = false }) {
         ref={siderRef}
         direction='column'
         className={clsx(
-          'bg-[#0a1628] transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] top-0 bottom-0 fixed',
+          'bg-[#0a1628] transition-[width,transform] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] top-0 bottom-0 fixed',
           isMobile ? 'z-100' : 'z-40',
           isMobile && !drawerOpen ? '-translate-x-full' : 'translate-x-0',
           isMobile ? 'left-0 right-12 max-w-[300px]' : 'left-0',
@@ -585,7 +585,7 @@ function Drawer({ minimal = false }) {
                 ? t('common.collapse', 'Collapse')
                 : t('common.expand', 'Expand')
             }
-            className='absolute top-1/2 -right-3 -translate-y-1/2 w-6 h-6 rounded-full bg-white border border-gray-200 text-gray-500 cursor-pointer z-10 shadow-sm transition-all duration-200 hover:text-gray-900 hover:border-gray-300 hover:shadow-md'
+            className='absolute top-1/2 -right-3 -translate-y-1/2 w-6 h-6 rounded-full bg-white border border-gray-200 text-gray-500 cursor-pointer z-10 shadow-sm transition-[color,border-color,box-shadow] duration-200 hover:text-gray-900 hover:border-gray-300 hover:shadow-md'
           >
             <Box
               className={clsx(

@@ -562,7 +562,7 @@ const ShareModal = forwardRef((props, ref) => {
                               variant='ghost'
                               color='gray'
                               size='1'
-                              className='w-7! h-7! p-0! shrink-0 opacity-0 group-hover:opacity-100 hover:text-(--red-11)! hover:bg-(--red-a3)! transition-all rounded-full'
+                              className='w-7! h-7! p-0! shrink-0 opacity-0 group-hover:opacity-100 hover:text-(--red-11)! hover:bg-(--red-a3)! transition-[opacity,color,background-color] rounded-full'
                               onClick={() => handleRemoveShare(index)}
                             >
                               <Cross2Icon width={14} height={14} />

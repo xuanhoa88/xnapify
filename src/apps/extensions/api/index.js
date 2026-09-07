@@ -6,8 +6,10 @@
  */
 
 import { getHmrState } from '@shared/utils/hmrState.js';
+import { isSingletonWorker } from '@shared/utils/runtime.js';
 
 import { registerSchedules } from './schedules.js';
+import { sweepInstallTemps } from './services/extension.helpers.js';
 import * as extensionService from './services/extension.service.js';
 import { registerExtensionWorkers } from './services/extension.workers.js';
 
@@ -41,11 +43,50 @@ export default {
   async boot({ container }) {
     registerExtensionWorkers(container);
     registerSchedules(container);
+    reclaimAbandonedInstalls(container);
     if (process.env.NODE_ENV !== 'production') {
       registerHmrIpcListener(container);
     }
   },
 };
+
+/**
+ * Remove install scratch directories a killed process left behind.
+ *
+ * Install and verify both clean up in a `finally`, which does not run when the
+ * container is OOM-killed mid-download — and nothing else ever revisits those
+ * paths, so each such death strands a package or a whole extracted tree under
+ * os.tmpdir() permanently. One worker does this, not all of them, and it is
+ * deliberately not awaited: boot must not wait on housekeeping, and a failure
+ * here must not take the app down with it.
+ *
+ * @param {object} container - Application container
+ */
+function reclaimAbandonedInstalls(container) {
+  if (!isSingletonWorker()) return;
+
+  let extensionsDir = null;
+  try {
+    extensionsDir = container.resolve('extension').getInstalledExtensionsDir();
+  } catch {
+    // Rollback backups live beside the installed extensions; without that
+    // directory the temp roots are still worth sweeping.
+  }
+
+  sweepInstallTemps({ extensionsDir })
+    .then(removed => {
+      if (removed > 0) {
+        console.info(
+          `[extensions] Reclaimed ${removed} abandoned install artifact(s)`,
+        );
+      }
+    })
+    .catch(error => {
+      console.warn(
+        `[extensions] Could not sweep abandoned installs: ${error.message}`,
+      );
+    });
+}
 
 /**
  * Registers an IPC message listener for local Webpack recompilations (HMR).

@@ -103,7 +103,7 @@ function AdminNotifications() {
 
       <Popover.Content
         align='end'
-        className='p-0 bg-(--color-panel-solid) backdrop-blur-md border border-(--gray-a6) rounded-md shadow-lg overflow-hidden z-100 w-[calc(100vw-24px)] sm:w-[380px] data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95'
+        className='p-0 bg-(--color-panel-solid) border border-(--gray-a6) rounded-md shadow-lg overflow-hidden z-100 w-[calc(100vw-24px)] sm:w-[380px] data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95'
       >
         <Flex
           align='center'

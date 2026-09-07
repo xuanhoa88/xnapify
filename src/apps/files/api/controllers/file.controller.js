@@ -381,7 +381,15 @@ export async function downloadFile(req, res) {
       );
     }
 
-    result.stream.pipe(res);
+    // sendStream, not .pipe(res): pipeline() underneath propagates the read
+    // stream's 'error' event instead of leaving it unhandled — an unhandled
+    // 'error' becomes an uncaughtException and takes the whole server down —
+    // and destroys the file handle when the client disconnects mid-download.
+    await http.sendStream(
+      res,
+      result.stream,
+      result.headers['Content-Type'] || 'application/octet-stream',
+    );
   } catch (error) {
     return http.sendServerError(res, 'Failed to download file', error);
   }

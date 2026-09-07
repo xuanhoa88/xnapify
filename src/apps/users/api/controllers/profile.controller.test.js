@@ -62,6 +62,7 @@ describe('Profile Controller', () => {
       sendValidationError: jest.fn(),
       sendServerError: jest.fn(),
       sendNotFound: jest.fn(),
+      sendStream: jest.fn().mockResolvedValue(undefined),
     };
 
     mockAuth = {
@@ -229,19 +230,40 @@ describe('Profile Controller', () => {
   describe('previewAvatar', () => {
     it('should stream local avatar file', async () => {
       req.query = { fileName: 'local-file.png' };
-      const pipeMock = jest.fn();
+      const stream = { pipe: jest.fn() };
       mockFs.preview.mockResolvedValue({
         success: true,
-        data: {
-          headers: { 'Content-Type': 'image/png' },
-          stream: { pipe: pipeMock },
-        },
+        data: { headers: { 'Content-Type': 'image/png' }, stream },
       });
 
       await profileController.previewAvatar(req, res);
 
       expect(res.setHeader).toHaveBeenCalledWith('Content-Type', 'image/png');
-      expect(pipeMock).toHaveBeenCalledWith(res);
+      // Handed to sendStream (stream.pipeline underneath) rather than piped
+      // directly: a bare .pipe(res) leaves the read stream's 'error' event
+      // unhandled, and Node escalates that to an uncaughtException.
+      expect(mockHttp.sendStream).toHaveBeenCalledWith(
+        res,
+        stream,
+        'image/png',
+      );
+      expect(stream.pipe).not.toHaveBeenCalled();
+      expect(res.redirect).not.toHaveBeenCalled();
+    });
+
+    it('falls back to the default avatar when the stream helper fails', async () => {
+      req.query = { fileName: 'local-file.png' };
+      mockFs.preview.mockResolvedValue({
+        success: true,
+        data: { headers: { 'Content-Type': 'image/png' }, stream: {} },
+      });
+      mockHttp.sendStream.mockRejectedValueOnce(new Error('disk read failed'));
+
+      await profileController.previewAvatar(req, res);
+
+      // An <img> tag must still resolve to something, so a failure here is a
+      // redirect rather than a dead response.
+      expect(res.redirect).toHaveBeenCalled();
     });
 
     it('should redirect external URL', async () => {

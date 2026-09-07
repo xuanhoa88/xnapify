@@ -189,6 +189,11 @@ class WebSocketServer extends EventEmitter {
     // Stop the revocation backstop
     this.stopRevocationSweep();
 
+    // Release the cross-instance subscription. Nothing else in this class's
+    // lifecycle removes it, so without this a stopped server keeps receiving
+    // remote events — and the broker's handler keeps the dead server alive.
+    await this.detachPubSub();
+
     // Remove HTTP upgrade listener
     // eslint-disable-next-line no-underscore-dangle
     if (this._httpServer && this._upgradeHandler) {
@@ -229,6 +234,10 @@ class WebSocketServer extends EventEmitter {
    */
   async dispose() {
     await this.stop();
+    // `stop()` returns early when the server was never started, so detach
+    // again here — it is idempotent, and disposing must always release the
+    // subscription regardless of how far the server got.
+    await this.detachPubSub();
     this.messageHandlers.clear();
     this.removeAllListeners();
   }
@@ -781,39 +790,39 @@ class WebSocketServer extends EventEmitter {
 
   /**
    * Share channel messages and disconnects with every other server instance
-   * through Redis pub/sub. Each worker holds its own connections; without
+   * through a pub/sub broker. Each worker holds its own connections; without
    * this, a message sent from worker A never reaches a browser connected to
    * worker B, and a session revoked on A stays open on B.
    *
-   * Redis does NOT apply a client's `keyPrefix` to PUBLISH/SUBSCRIBE, and
-   * pub/sub is not scoped to a database either — so two deployments sharing
-   * one Redis with different key prefixes would still share a literal
-   * channel name. The default therefore borrows the publisher's `keyPrefix`
-   * so each deployment gets its own channel.
+   * The broker is an adapter from `@shared/api/engines/broker` — this class
+   * only calls `publish`/`subscribe` on it, so swapping the underlying
+   * transport (Redis, RabbitMQ, Kafka, ...) never touches this file. Any
+   * channel-name isolation between deployments (e.g. namespacing by
+   * environment) is the broker adapter's responsibility — see
+   * `RedisBroker#channel()`.
    *
    * @param {Object} options
-   * @param {Object} options.publisher - ioredis-compatible client
-   * @param {Object} options.subscriber - Dedicated subscriber client
-   * @param {string} [options.channel] - Pub/sub channel name
-   *   (defaults to `<publisher keyPrefix>ws:events`)
+   * @param {import('@shared/api/engines/broker').BrokerAdapter} options.broker
+   * @param {string} [options.channel='ws:events'] - Pub/sub channel name
    * @param {string} [options.instanceId] - Unique id of this process
    * @returns {Promise<void>}
    */
   async attachPubSub({
-    publisher,
-    subscriber,
-    channel = `${publisher?.options?.keyPrefix ?? ''}ws:events`,
+    broker,
+    channel = 'ws:events',
     instanceId = `${process.pid}:${uuidv4()}`,
-  }) {
-    if (!publisher || typeof publisher.publish !== 'function') {
-      throw new TypeError('attachPubSub requires a publisher client');
-    }
-    if (!subscriber || typeof subscriber.subscribe !== 'function') {
-      throw new TypeError('attachPubSub requires a subscriber client');
+  } = {}) {
+    if (
+      !broker ||
+      typeof broker.publish !== 'function' ||
+      typeof broker.subscribe !== 'function'
+    ) {
+      throw new TypeError(
+        'attachPubSub requires a broker adapter (see @shared/api/engines/broker)',
+      );
     }
 
-    const onMessage = (incomingChannel, raw) => {
-      if (incomingChannel !== channel) return;
+    const onMessage = raw => {
       let event;
       try {
         event = JSON.parse(raw);
@@ -825,20 +834,21 @@ class WebSocketServer extends EventEmitter {
       this._applyRemoteEvent(event);
     };
 
-    subscriber.on('message', onMessage);
-    try {
-      await subscriber.subscribe(channel);
-    } catch (error) {
-      // Never leave a half-attached pubsub behind: a truthy `this.pubsub`
-      // makes _publish write into a client nobody is listening on and
-      // silences the "Channel not found" warning that would reveal it.
-      if (typeof subscriber.off === 'function') {
-        subscriber.off('message', onMessage);
-      }
-      throw error;
+    // Committed only once the subscription actually exists — the broker
+    // adapter itself guarantees no listener is left behind if this rejects.
+    const unsubscribe = await broker.subscribe(channel, onMessage);
+
+    // An adapter that subscribes but returns no way to unsubscribe cannot be
+    // detached: `detachPubSub` would no-op, and the next attach would add a
+    // second listener that applies every remote event twice. That is silent,
+    // so refuse the adapter loudly here instead of discovering it later.
+    if (typeof unsubscribe !== 'function') {
+      throw new TypeError(
+        'attachPubSub: broker.subscribe() must resolve to an unsubscribe function',
+      );
     }
-    // Committed only once the subscription actually exists.
-    this.pubsub = { publisher, subscriber, channel, instanceId, onMessage };
+
+    this.pubsub = { broker, channel, instanceId, unsubscribe };
     this.logger.info(`🔁 Fan-out enabled on "${channel}" as ${instanceId}`);
   }
 
@@ -848,25 +858,20 @@ class WebSocketServer extends EventEmitter {
    */
   async detachPubSub() {
     if (!this.pubsub) return;
-    const { subscriber, channel, onMessage } = this.pubsub;
+    const { unsubscribe } = this.pubsub;
     this.pubsub = null;
-    // The listener must go too: subscriber clients are shared and long-lived,
-    // so a later re-attach would otherwise apply every remote event twice.
-    if (onMessage && typeof subscriber.off === 'function') {
-      subscriber.off('message', onMessage);
-    }
     try {
-      await subscriber.unsubscribe(channel);
+      await unsubscribe();
     } catch {
-      // subscriber already closed
+      // broker already closed
     }
   }
 
   _publish(event) {
     if (!this.pubsub) return;
-    const { publisher, channel, instanceId } = this.pubsub;
+    const { broker, channel, instanceId } = this.pubsub;
     const payload = JSON.stringify({ ...event, origin: instanceId });
-    Promise.resolve(publisher.publish(channel, payload)).catch(err => {
+    Promise.resolve(broker.publish(channel, payload)).catch(err => {
       // Redis pub/sub has no replay. A dropped channel broadcast is a lost
       // notification; a dropped disconnect leaves a revoked session's socket
       // open on every other instance until the revocation sweep catches it.

@@ -5,16 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
 .sectionPadding {
   padding: var(--space-9) var(--space-4);
 }
@@ -55,7 +45,13 @@
 }
 
 .featureCardDynamic {
-  transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+  /* Explicit list, not `all`: `all` also animates whatever layout
+     properties happen to change (grid spans at breakpoints, padding),
+     which costs a relayout per frame for the whole transition. */
+  transition:
+    transform 0.4s cubic-bezier(0.25, 1, 0.5, 1),
+    box-shadow 0.4s cubic-bezier(0.25, 1, 0.5, 1),
+    border-color 0.4s cubic-bezier(0.25, 1, 0.5, 1);
   background: var(--color-surface);
   border: 1px solid var(--gray-4);
   box-shadow:

@@ -7,7 +7,7 @@
 
 /* global jest */
 
-import { MemoryRedisClient } from '../redis/memoryClient.js';
+import { MemoryRedisClient } from '../broker/memoryClient.js';
 
 import {
   MemoryRevocationStore,

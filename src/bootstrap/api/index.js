@@ -22,7 +22,9 @@ import {
 import { discoverModules, engines, drain } from '@shared/api/index.js';
 import { Router as DynamicRouter } from '@shared/api/router/index.js';
 import { configureRateLimitStore } from '@shared/api/router/rateLimit.js';
+import { register } from '@shared/api/shutdown.js';
 
+import { attachFanOut } from './fanout.js';
 import { createCorsMiddleware } from './middlewares/cors.js';
 import { createLoggingMiddleware } from './middlewares/logging.js';
 import { configurePassport } from './passport.js';
@@ -104,9 +106,10 @@ function registerEngines(container) {
 }
 
 /**
- * Move the per-process stores onto Redis when it is configured.
+ * Move the per-process stores onto the shared broker's Redis client when one
+ * is configured.
  *
- * Without Redis every worker keeps its own cache, rate-limit counters,
+ * Without it, every worker keeps its own cache, rate-limit counters,
  * revoked-session set and WebSocket channel table, which is only correct
  * for a single process. With it:
  *   - `cache` is rebound to the Redis adapter (still a no-op in development)
@@ -114,14 +117,35 @@ function registerEngines(container) {
  *   - the session revocation store is shared
  *   - WebSocket channel messages and disconnects fan out to every instance
  *
+ * `broker` (`@shared/api/engines/broker`) is what used to be the standalone
+ * `redis` engine — it is already registered on the container by
+ * `registerEngines` (every engine is), so this function only has to read it,
+ * not build or bind it.
+ *
  * @param {object} container - DI container
- * @returns {Promise<boolean>} Whether Redis was attached
+ * @returns {Promise<boolean>} Whether a Redis-backed broker was attached
  */
 async function configureSharedBackends(container) {
-  const { redis } = engines;
-  if (!redis || !redis.isConfigured()) return false;
+  const { broker } = engines;
+  if (!broker || !broker.isConfigured()) return false;
 
-  const client = redis.getClient();
+  // Pub/sub and a KV client are separate capabilities: the `file` adapter
+  // carries messages between processes on one host but has no client to run
+  // GET/SET/SET NX against, so the KV-shaped stores below stay per-process
+  // while fan-out still gets wired. Say which of the two happened, because a
+  // half-shared deployment that looks fully shared is how a revoked session
+  // survives on another worker.
+  const client = broker.getClient();
+  if (!client) {
+    log(
+      'Broker carries pub/sub only — cache, rate-limit counters, session ' +
+        'revocation and the cron lock remain per-process (set ' +
+        'XNAPIFY_REDIS_URL to share them)',
+      'warn',
+    );
+    attachWebSocketFanOut(container, broker);
+    return true;
+  }
 
   setRevocationStore(new RedisRevocationStore(client));
 
@@ -163,79 +187,49 @@ async function configureSharedBackends(container) {
   // load balancer would each fire every schedule.
   configureScheduleLock(createRedisScheduleLock(client));
 
-  attachWebSocketFanOut(container, redis, client);
+  attachWebSocketFanOut(container, broker);
 
   log('Shared backends attached to Redis');
   return true;
 }
 
 /**
- * Wire WebSocket fan-out onto Redis pub/sub, without ever failing bootstrap.
+ * Wire WebSocket fan-out onto the shared broker, without ever failing bootstrap.
  *
  * Subscribing touches the socket, and ioredis rejects queued commands with
  * MaxRetriesPerRequestError while Redis is down — so an outage or a failover
  * during a rolling deploy would otherwise stop every new pod from starting.
- * Every other Redis consumer here degrades to per-instance behaviour instead,
- * and so must this one: log, keep serving, and re-attach when Redis returns.
+ * Every other consumer of the broker's Redis client degrades to
+ * per-instance behaviour instead, and so must this one: log, keep serving,
+ * and re-attach when Redis returns.
  *
  * @param {object} container - DI container
- * @param {object} redis - Redis engine
- * @param {object} client - Shared command client (publisher)
+ * @param {object} broker - Broker engine (already Redis-backed; caller checked)
  */
-function attachWebSocketFanOut(container, redis, client) {
+function attachWebSocketFanOut(container, broker) {
   if (!container.has('ws')) return;
   const ws = container.resolve('ws');
   if (!ws || typeof ws.attachPubSub !== 'function') return;
 
-  const subscriber = redis.getSubscriber();
-  if (!subscriber) return;
+  // Neither Redis nor a shared data directory separates two deployments on
+  // its own, so the channel name is the only isolation between them.
+  // `broker.channel()` is what knows how to apply that — this file only sees
+  // the broker interface.
+  const channel = broker.channel('ws:events');
 
-  // Redis never applies a key prefix to PUBLISH/SUBSCRIBE and pub/sub is not
-  // database-scoped, so the channel name is the only isolation two
-  // deployments sharing one Redis have.
-  const channel = `${redis.getKeyPrefix()}ws:events`;
-
-  let attaching = false;
-  let retryTimer = null;
-
-  const stopRetrying = () => {
-    if (retryTimer) {
-      clearInterval(retryTimer);
-      retryTimer = null;
-    }
-  };
-
-  const attach = async () => {
-    if (attaching || ws.pubsub) return;
-    attaching = true;
-    try {
-      await ws.attachPubSub({ publisher: client, subscriber, channel });
-      stopRetrying();
-      log(`WebSocket fan-out attached on "${channel}"`);
-    } catch (error) {
-      log(
-        `WebSocket fan-out unavailable (${error.message}) — ` +
-          'running single-instance until Redis recovers',
-        'error',
-      );
-      if (!retryTimer) {
-        retryTimer = setInterval(() => {
-          attach();
-        }, FAN_OUT_RETRY_MS);
-        if (typeof retryTimer.unref === 'function') retryTimer.unref();
-      }
-    } finally {
-      attaching = false;
-    }
-  };
-
-  // A reconnect is the cheapest recovery signal ioredis gives us.
-  subscriber.on('ready', () => {
-    attach();
+  // The attach/retry/recover lifecycle lives in ./fanout.js so it can be
+  // tested; bootstrap keeps the wiring it alone can do.
+  const fanOut = attachFanOut({
+    ws,
+    broker,
+    channel,
+    retryMs: FAN_OUT_RETRY_MS,
+    log,
   });
 
-  // Fire-and-forget: bootstrap must not await the socket.
-  attach();
+  // Stop retrying and unhook at shutdown; the timer is unref'd, so this is
+  // about not leaving handlers pointing at a server that is going away.
+  register('ws:fan-out', () => fanOut.stop());
 
   // Fan-out is fire-and-forget over a transport with no replay, so a kill
   // event lost during a blip would leave a revoked socket open here forever.

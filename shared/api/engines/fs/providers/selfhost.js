@@ -17,6 +17,19 @@ import { FilesystemError } from '../utils/index.js';
  *
  * All API routes are fully configurable via the `routes` config option.
  */
+/**
+ * Parse an upstream Content-Length into a number, or undefined when it is
+ * absent or not a whole number of bytes.
+ *
+ * @param {string|null} raw
+ * @returns {number|undefined}
+ */
+function parseContentLength(raw) {
+  if (raw == null || !/^\d+$/.test(raw.trim())) return undefined;
+  const size = Number(raw.trim());
+  return Number.isSafeInteger(size) ? size : undefined;
+}
+
 export class SelfHostFilesystemProvider {
   constructor(config = {}) {
     if (!config.baseUrl) {
@@ -317,7 +330,13 @@ export class SelfHostFilesystemProvider {
         stream,
         metadata: {
           fileName,
-          size: parseInt(response.headers.get('content-length') || '0', 10),
+          // Absent means *unknown*, never zero. The upstream omits this header
+          // whenever it uses chunked transfer-encoding, and fetch strips it
+          // after decoding a gzipped body — both routine. Coercing that to 0
+          // propagated into a `Content-Length: 0` on our own response while the
+          // real bytes were still streamed, so a conforming client stopped
+          // reading immediately and wrote an empty file, under a 200.
+          size: parseContentLength(response.headers.get('content-length')),
           mimeType:
             response.headers.get('content-type') || 'application/octet-stream',
           provider: 'selfhost',

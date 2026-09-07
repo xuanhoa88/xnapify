@@ -81,7 +81,14 @@
   box-shadow:
     0 4px 6px -1px var(--black-a1),
     inset 0 2px 4px 0 var(--white-a8);
-  transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+
+  /* Explicit list, not `all`: `all` also animates whatever layout
+     properties happen to change (grid spans at breakpoints, padding),
+     which costs a relayout per frame for the whole transition. */
+  transition:
+    transform 0.4s cubic-bezier(0.25, 1, 0.5, 1),
+    box-shadow 0.4s cubic-bezier(0.25, 1, 0.5, 1),
+    border-color 0.4s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .newsCard:hover {
@@ -136,4 +143,18 @@
   border-top-color: var(--indigo-11);
   border-radius: 50%;
   animation: spin 1s linear infinite;
+
+  /*
+   * Loading indicators are the one animation here that must never be
+   * throttled or disabled — a spinner that stops reads as a hung app, so
+   * this is deliberately NOT wrapped in a prefers-reduced-motion guard.
+   *
+   * It is also already the cheapest animation a browser can run: a pure
+   * `transform: rotate()` is handled entirely by the compositor, with no
+   * layout and no paint on any frame after the first. `will-change` just
+   * gets the layer promoted before the first frame instead of on it, so
+   * the spin starts smooth rather than dropping its opening frames. The
+   * element unmounts when loading ends, so the layer is not retained.
+   */
+  will-change: transform;
 }

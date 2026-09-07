@@ -175,7 +175,7 @@ The application uses an auto-discovery system for both API modules and page comp
 
 **Shared API** (`shared/api/engines/` & `shared/jwt/`):
 
-- Core infrastructure: `auth`, `cache`, `db`, `email`, `fs`, `hook`, `http`, `queue`, `redis`, `schedule`, `template`, `worker`
+- Core infrastructure: `auth`, `broker`, `cache`, `db`, `email`, `fs`, `hook`, `http`, `queue`, `schedule`, `template`, `worker`
 - `search` and `webhook` are **modules** (`src/apps/search`, `src/apps/webhooks`) that bind themselves on the container, not engines
 - Auto-loaded from `shared/api/engines/*/index.js` and re-exported via `shared/api/index.js`
 - Provide reusable capabilities for modules — should not contain business logic
@@ -208,8 +208,10 @@ The application uses an auto-discovery system for both API modules and page comp
 - **JWT-based authentication** with HTTP-only cookies
 - **Revocable sessions:** every refresh token is recorded in `refresh_tokens` (users module, `services/session.service.js`). Refresh rotates the token, re-checks account status, and detects replay of an already-rotated token (revokes the family). Logout, password change, deactivation, and deletion revoke sessions via hook listeners in `src/apps/users/api/index.js`.
 - **Issuing tokens:** never call `jwt.generateTokenPair()` from controllers. Use `container.resolve('users:sessions').issueTokenPair(payload, { jwt, models, meta })`. Shared code rotates through `hook('auth.session').invoke('rotate', ctx)`.
-- **Multi-instance stores:** with `XNAPIFY_REDIS_URL` set, `src/bootstrap/api/index.js` moves the cache, rate-limit counters, session revocation store and WebSocket fan-out onto Redis (engine `redis`, `shared/api/engines/redis`). Without it every store is per process — `validateEnv` refuses `XNAPIFY_CLUSTER_WORKERS > 1` without Redis.
-- **Immediate revocation of access tokens:** every access token carries `sid` (session/family id) and `ver` (`users.token_version`). `requireAuth`/`optionalAuth` call `verifyActiveSession()` from `shared/api/engines/auth/revocation.js` after signature checks: a denylisted `sid` or a `ver` older than the user's column is rejected with `SESSION_REVOKED` / `SESSION_SUPERSEDED`. `revokeFamily()` denylists one session; `revokeUserSessions()` also bumps `token_version` (durable) and closes the user's WebSocket connections (`ws.disconnectUser` / `ws.disconnectSession`). The denylist is in-process (`MemoryRevocationStore`); swap it with `setRevocationStore()` when running multiple instances. Do not use the cache engine for this — it is a no-op in development.
+- **Multi-instance stores:** with `XNAPIFY_REDIS_URL` set, `src/bootstrap/api/index.js` moves the cache, rate-limit counters, session revocation store, cron lock and WebSocket fan-out onto the shared backend (engine `broker`, `shared/api/engines/broker`). Without it every store is per process — `validateEnv` refuses `XNAPIFY_CLUSTER_WORKERS > 1` without Redis.
+- **Immediate revocation of access tokens:** every access token carries `sid` (session/family id) and `ver` (`users.token_version`). `requireAuth`/`optionalAuth` call `verifyActiveSession()` from `shared/api/engines/auth/revocation.js` after signature checks: a denylisted `sid` or a `ver` older than the user's column is rejected with `SESSION_REVOKED` / `SESSION_SUPERSEDED`. `revokeFamily()` denylists one session; `revokeUserSessions()` also bumps `token_version` (durable) and closes the user's WebSocket connections (`ws.disconnectUser` / `ws.disconnectSession`). Do not use the cache engine for this — it is a no-op in development.
+- **Where the denylist lives:** `MemoryRevocationStore` (per process) by default; `configureSharedBackends()` swaps in `RedisRevocationStore` automatically when the broker is configured — you do not call `setRevocationStore()` yourself unless you are writing a third store. A store declares `shared = true` when every process sees the same keys. Because a per-process denylist never hears about a logout on another replica, `assertSessionValid()` confirms a "not revoked" verdict against the `refresh_tokens` rows when `shared !== true`, memoised for `SESSION_LIVE_MEMO_MS` (60 s). So single-device logout lands immediately with Redis, and within 60 s without it — note that one worker per pod passes the `XNAPIFY_CLUSTER_WORKERS` guard, so horizontal scaling without Redis is the 60 s case.
+- **Revoked vs unavailable:** a revoked session is `401` (`SessionRevokedError`), a store or database that cannot answer is `503` (`SessionStoreUnavailableError`). Never collapse the two: clients treat `401` as "your session is gone" and clear cookies, so reporting an outage that way logs out the whole fleet. A healthy durable `token_version` answer still stands even when the denylist is unreachable.
 - **Lockout:** 5 failed logins set `users.locked_until` with exponential backoff (15 min → 24 h max). `is_locked` is the manual admin lock.
 - **RBAC system:** Users, Roles, Groups, Permissions
 - **Middleware:** `shared/api/engines/auth/middlewares/` (`requireAuth`, `requirePermission`, `requireRole`, `requireGroup`, `requireOwnership`, `optionalAuth`)
@@ -365,7 +367,7 @@ const { models } = container.resolve('db');
 
 > **Convention:** In module code (`init`, services), use `container.resolve('name')` directly. In route handlers/controllers, use `req.app.get('container').resolve('name')`. Direct imports are reserved for shared libraries.
 
-**Available Engines:** `auth`, `cache`, `db`, `email`, `fs`, `hook`, `http`, `queue`, `redis`, `schedule`, `template`, `worker`
+**Available Engines:** `auth`, `broker`, `cache`, `db`, `email`, `fs`, `hook`, `http`, `queue`, `schedule`, `template`, `worker`
 
 Module-provided services that behave like engines: `search` (from `src/apps/search`), `webhook` (from `src/apps/webhooks`), `users:sessions` (from `src/apps/users`).
 

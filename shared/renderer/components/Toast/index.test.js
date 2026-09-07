@@ -57,9 +57,9 @@ describe('Toast', () => {
     expect(assertive().getAttribute('role')).toBe('alert');
   });
 
-  it('defaults to the bottom-right corner', () => {
-    expect(polite().className).toContain('placementBottomRight');
-    expect(assertive().className).toContain('placementBottomRight');
+  it('defaults to the top-right corner', () => {
+    expect(polite().className).toContain('placementTopRight');
+    expect(assertive().className).toContain('placementTopRight');
   });
 
   it('places the toast in the corner the caller asks for', () => {

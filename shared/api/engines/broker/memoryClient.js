@@ -9,9 +9,9 @@
  * In-memory stand-in for the subset of the ioredis API the app uses.
  *
  * Exists so the Redis-backed adapters (cache, revocation store, WebSocket
- * fan-out, rate-limit store) can be unit-tested without a server. Pub/sub
- * is shared between every instance created from the same `bus`, which lets
- * a test simulate several workers.
+ * fan-out via the `redis` broker adapter, rate-limit store) can be
+ * unit-tested without a server. Pub/sub is shared between every instance
+ * created from the same `bus`, which lets a test simulate several workers.
  *
  * It is NOT a Redis replacement for production.
  */

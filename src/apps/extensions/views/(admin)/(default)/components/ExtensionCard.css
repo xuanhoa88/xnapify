@@ -5,6 +5,25 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+/*
+ * Local `pulse` keyframes — do not remove, and do not rely on Tailwind's.
+ *
+ * The four skeleton rules below referenced `pulse` without defining it.
+ * CSS Modules scopes every animation name it finds in an `animation`
+ * shorthand, so the reference was rewritten to a hashed name that nothing
+ * defined; the built stylesheet shipped `animation:1.5s infinite OElTQ`
+ * with no matching @keyframes and the skeletons never animated at all.
+ * It did NOT fall through to Tailwind's global `pulse`. The definition has
+ * to live in this file for the scoping to resolve it.
+ *
+ * Opacity-only, so the compositor handles it without touching paint.
+ */
+@keyframes pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+
 .cardContainer {
   background-color: var(--color-panel-solid);
   border: 1px solid var(--gray-4);
@@ -94,4 +113,13 @@
 
 .switchControlDisabled {
   cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeletonTitle,
+  .skeletonDesc1,
+  .skeletonDesc2,
+  .skeletonSwitch {
+    animation: none;
+  }
 }

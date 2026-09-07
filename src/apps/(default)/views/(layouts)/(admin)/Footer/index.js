@@ -82,7 +82,7 @@ function AdminFooter() {
       <Button
         variant='solid'
         className={clsx(
-          'fixed bottom-6 right-6 w-10 h-10 rounded-xl shadow-lg z-50 transition-all duration-300 flex items-center justify-center cursor-pointer bg-[#0e1b38] text-white hover:bg-[#1a294b]',
+          'fixed bottom-6 right-6 w-10 h-10 rounded-xl shadow-lg z-50 transition-[opacity,visibility,transform,background-color] duration-300 flex items-center justify-center cursor-pointer bg-[#0e1b38] text-white hover:bg-[#1a294b]',
           showScroll
             ? 'opacity-100 visible translate-y-0'
             : 'opacity-0 invisible translate-y-2',

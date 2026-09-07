@@ -8,10 +8,12 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { Readable } from 'stream';
+import { Readable, Transform } from 'stream';
 import { pipeline } from 'stream/promises';
 
 import { Op } from 'sequelize';
+
+import { tempSuffix } from '@shared/utils/atomic/index.js';
 
 import {
   checksumMismatchReason,
@@ -300,6 +302,46 @@ export async function getListingDetail(deps, name) {
 // ========================================================================
 
 /**
+ * Largest hub package accepted, in bytes.
+ *
+ * The same artifact uploaded by hand is refused past this size by the upload
+ * middleware's `maxFileSize`; arriving over the network does not entitle a
+ * package to more. The download timeout is not a substitute — it bounds the
+ * duration, so the bytes landing on the temp volume scale with the peer's
+ * bandwidth rather than with anything the registry promised.
+ */
+const MAX_PACKAGE_BYTES = 10 * 1024 * 1024;
+
+/**
+ * Abort a transfer that runs past `limit` bytes.
+ *
+ * `Content-Length` is written by the peer, so it can only ever be an early
+ * exit: the bytes themselves have to be counted.
+ *
+ * @param {number} limit - Byte ceiling
+ * @param {string} name - Extension name, for the error message
+ * @returns {Transform} Pass-through that errors once the limit is passed
+ */
+function limitBytes(limit, name) {
+  let received = 0;
+  return new Transform({
+    transform(chunk, _encoding, callback) {
+      received += chunk.length;
+      if (received > limit) {
+        const err = new Error(
+          `Package for "${name}" exceeds the ${limit}-byte download limit`,
+        );
+        err.name = 'ExtensionPackageTooLargeError';
+        err.status = 502;
+        callback(err);
+        return;
+      }
+      callback(null, chunk);
+    },
+  });
+}
+
+/**
  * Download a .zip from the hub registry to a temp file.
  *
  * @param {Object} listing - Registry listing with `downloadUrl` and `name`
@@ -336,6 +378,17 @@ async function downloadHubPackage(listing) {
     throw err;
   }
 
+  const advertised = Number(response.headers.get('content-length'));
+  if (Number.isFinite(advertised) && advertised > MAX_PACKAGE_BYTES) {
+    const err = new Error(
+      `Package for "${listing.name}" is ${advertised} bytes, over the ` +
+        `${MAX_PACKAGE_BYTES}-byte download limit`,
+    );
+    err.name = 'ExtensionPackageTooLargeError';
+    err.status = 502;
+    throw err;
+  }
+
   const tmpDir = path.join(os.tmpdir(), 'xnapify-hub-install');
   await fs.promises.mkdir(tmpDir, { recursive: true });
 
@@ -349,6 +402,7 @@ async function downloadHubPackage(listing) {
   try {
     await pipeline(
       Readable.fromWeb(response.body),
+      limitBytes(MAX_PACKAGE_BYTES, listing.name),
       fs.createWriteStream(tmpPath),
     );
   } catch (err) {
@@ -509,37 +563,61 @@ async function verifyHubPackage(packagePath, listing, { fs: fsEngine }) {
 /**
  * Copy the installed extension aside so a failed swap can be undone.
  *
+ * Throws when the copy cannot be made: an installation there is no way back
+ * from must not be deleted, and the caller's next step is to delete it.
+ *
  * @param {Object} extension - Extension DB row
  * @param {Object} context - App context ({ extensionManager })
  * @returns {Promise<{ record: Object, sourceDir: string|null, backupDir: string|null }>}
  */
 async function snapshotExtension(extension, { extensionManager }) {
+  if (
+    !extensionManager ||
+    typeof extensionManager.resolveExtensionDir !== 'function'
+  ) {
+    const err = new Error(
+      'Extension manager required to save an installation before replacing it',
+    );
+    err.name = 'ExtensionPackageError';
+    err.status = 500;
+    throw err;
+  }
+
   const snapshot = {
     record: extension.toJSON(),
     sourceDir: null,
     backupDir: null,
   };
 
+  const { dir } = await extensionManager.resolveExtensionDir(extension.name);
+  // Nothing on disk to lose, so the DB row is the whole of the rollback.
+  if (!dir) return snapshot;
+
+  // A sibling of the installation rather than os.tmpdir(): restoring renames
+  // this copy back into place, which only works within one filesystem, and
+  // /tmp is a separate mount — usually a tmpfs the download and the extraction
+  // are already competing for — in most container deployments.
+  const backupDir = `${dir}.rollback${tempSuffix()}`;
+
   try {
-    const { dir } = await extensionManager.resolveExtensionDir(extension.name);
-    if (!dir) return snapshot;
-
-    const backupDir = path.join(
-      os.tmpdir(),
-      'xnapify-hub-rollback',
-      `${extension.key}-${Date.now()}`,
-    );
-    await fs.promises.mkdir(path.dirname(backupDir), { recursive: true });
     await fs.promises.cp(dir, backupDir, { recursive: true });
-
-    snapshot.sourceDir = dir;
-    snapshot.backupDir = backupDir;
   } catch (err) {
-    console.warn(
-      `[HubService] Could not snapshot ${extension.name} before update: ${err.message}`,
+    // A half-copied tree is not a rollback, and nothing else knows this path.
+    await fs.promises
+      .rm(backupDir, { recursive: true, force: true })
+      .catch(() => {});
+
+    const failure = new Error(
+      `Cannot update "${extension.name}": the installed version could not be ` +
+        `saved aside (${err.message})`,
     );
+    failure.name = 'ExtensionSnapshotError';
+    failure.status = 500;
+    throw failure;
   }
 
+  snapshot.sourceDir = dir;
+  snapshot.backupDir = backupDir;
   return snapshot;
 }
 
@@ -551,19 +629,40 @@ async function snapshotExtension(extension, { extensionManager }) {
  *
  * @param {Object} snapshot - Result of snapshotExtension()
  * @param {Object} context - App context ({ models, cache })
+ * @returns {Promise<boolean>} Whether the saved files are back in place
  */
 async function restoreExtension(snapshot, { models, cache }) {
   const { record, sourceDir, backupDir } = snapshot;
 
+  // No files were saved, so there are none to put back.
+  let filesRestored = !(sourceDir && backupDir);
+
   if (sourceDir && backupDir) {
+    // Both steps are renames, so neither can half-succeed: what the aborted
+    // install left behind is moved out of the way instead of deleted, and the
+    // saved copy is moved — not copied — into its place. A failure here
+    // therefore leaves that copy whole, which is what the caller checks before
+    // deleting it.
+    const abortedDir = `${sourceDir}.aborted${tempSuffix()}`;
     try {
-      await fs.promises.rm(sourceDir, { recursive: true, force: true });
-      await fs.promises.mkdir(path.dirname(sourceDir), { recursive: true });
-      await fs.promises.cp(backupDir, sourceDir, { recursive: true });
+      await fs.promises.rename(sourceDir, abortedDir).catch(err => {
+        // The uninstall job got there first; an absent target is the expected
+        // case rather than a failure.
+        if (err.code !== 'ENOENT') throw err;
+      });
+      await fs.promises.rename(backupDir, sourceDir);
+      filesRestored = true;
     } catch (err) {
       console.error(
-        `[HubService] Failed to restore extension files for ${record.name}: ${err.message}`,
+        `[HubService] Failed to restore extension files for ${record.name} — ` +
+          `the previous installation is kept at ${backupDir}: ${err.message}`,
       );
+    } finally {
+      // Superseded either way: it holds the aborted install, or a second copy
+      // of what `backupDir` already carries.
+      await fs.promises
+        .rm(abortedDir, { recursive: true, force: true })
+        .catch(() => {});
     }
   }
 
@@ -590,6 +689,8 @@ async function restoreExtension(snapshot, { models, cache }) {
       // Cache is best-effort
     }
   }
+
+  return filesRestored;
 }
 
 /**
@@ -605,8 +706,9 @@ async function restoreExtension(snapshot, { models, cache }) {
  *
  * Steps 3 and 4 are what stop a stale registry entry from uninstalling a
  * working extension: the download is refused outright when the entry carries
- * no checksum, and a checksum that no longer matches the published package is
- * rejected while the old files are still in place.
+ * no checksum, a checksum that no longer matches the published package is
+ * rejected while the old files are still in place, and an installation that
+ * cannot be copied aside is not deleted at all.
  *
  * @param {string} extensionName - Extension name from registry
  * @param {Object} context - App context
@@ -645,8 +747,10 @@ export async function updateFromHub(extensionName, context) {
   try {
     await verifyHubPackage(tmpPath, listing, context);
 
-    // 2. Snapshot so a failed swap can be rolled back.
+    // 2. Snapshot so a failed swap can be rolled back. Throws rather than
+    //    letting the update proceed without one.
     const snapshot = await snapshotExtension(existing, context);
+    let backupIsTheOnlyCopy = false;
 
     try {
       // 3. Deactivate if active (deleteExtension requires inactive state)
@@ -682,10 +786,13 @@ export async function updateFromHub(extensionName, context) {
         `[HubService] Update failed for ${extensionName} — restoring previous version:`,
         err.message,
       );
-      await restoreExtension(snapshot, context);
+      backupIsTheOnlyCopy = !(await restoreExtension(snapshot, context));
       throw err;
     } finally {
-      if (snapshot.backupDir) {
+      // Whatever did not make it back into place survives only here, so this
+      // is the difference between discarding a spare and deleting the
+      // extension.
+      if (snapshot.backupDir && !backupIsTheOnlyCopy) {
         await fs.promises
           .rm(snapshot.backupDir, { recursive: true, force: true })
           .catch(() => {});

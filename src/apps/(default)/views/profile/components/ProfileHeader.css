@@ -19,6 +19,20 @@
 .spinner {
   color: var(--white-a12);
   animation: spin 1s linear infinite;
+
+  /*
+   * Loading indicators are the one animation here that must never be
+   * throttled or disabled — a spinner that stops reads as a hung app, so
+   * this is deliberately NOT wrapped in a prefers-reduced-motion guard.
+   *
+   * It is also already the cheapest animation a browser can run: a pure
+   * `transform: rotate()` is handled entirely by the compositor, with no
+   * layout and no paint on any frame after the first. `will-change` just
+   * gets the layer promoted before the first frame instead of on it, so
+   * the spin starts smooth rather than dropping its opening frames. The
+   * element unmounts when loading ends, so the layer is not retained.
+   */
+  will-change: transform;
 }
 
 .headerContainer {
@@ -30,34 +44,59 @@
   overflow: hidden;
 }
 
+/*
+ * The drifting cover gradient.
+ *
+ * This used to animate `background-position` over a `background-size: 200%`
+ * gradient. `background-position` is a paint property with no compositor
+ * path, so the main thread repainted this full-width 140px band on every
+ * frame for as long as the profile page stayed open.
+ *
+ * The gradient now lives on an oversized child that is moved with
+ * `transform`, which the compositor handles on its own thread. Identical
+ * motion, zero main-thread paint per frame.
+ */
 .coverBackground {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   height: 140px;
+  overflow: hidden;
+  background-color: var(--indigo-9);
+  z-index: 0;
+}
+
+.coverBackground::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 200%;
   background: linear-gradient(
     135deg,
     var(--indigo-9),
     var(--indigo-11),
     var(--indigo-9)
   );
-  background-size: 200% 200%;
   animation: gradient-shift 12s ease infinite;
-  z-index: 0;
 }
 
 @keyframes gradient-shift {
-  0% {
-    background-position: 0% 50%;
+  0%,
+  100% {
+    transform: translateX(0);
   }
 
   50% {
-    background-position: 100% 50%;
+    transform: translateX(-50%);
   }
+}
 
-  100% {
-    background-position: 0% 50%;
+@media (prefers-reduced-motion: reduce) {
+  .coverBackground::before {
+    animation: none;
   }
 }
 

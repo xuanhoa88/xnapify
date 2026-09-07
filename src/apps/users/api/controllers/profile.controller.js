@@ -210,7 +210,9 @@ export async function uploadAvatar(req, res) {
  * @param {Object} res - Express response object
  */
 export async function previewAvatar(req, res) {
-  const fs = req.app.get('container').resolve('fs');
+  const container = req.app.get('container');
+  const fs = container.resolve('fs');
+  const http = container.resolve('http');
 
   // Default avatar URL (can be configured via env)
   const defaultAvatar =
@@ -259,7 +261,15 @@ export async function previewAvatar(req, res) {
       res.setHeader(key, value);
     });
 
-    result.data.stream.pipe(res);
+    // sendStream, not .pipe(res): an unhandled 'error' on this read stream is
+    // an uncaughtException, so a vanished or unreadable avatar file would kill
+    // the server rather than fall back to the default image. safeRedirect
+    // cannot help once the stream has already started.
+    await http.sendStream(
+      res,
+      result.data.stream,
+      result.data.headers['Content-Type'] || 'application/octet-stream',
+    );
   } catch (error) {
     // Any error - redirect to default avatar
     return safeRedirect(defaultAvatar);

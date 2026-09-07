@@ -390,11 +390,19 @@ export async function sendStream(
   });
 
   try {
+    // pipeline(), never .pipe(): it is the only form that propagates the
+    // source's 'error' event instead of leaving it unhandled (an unhandled
+    // 'error' is an uncaughtException) and that destroys both streams when
+    // either end fails or the client disconnects mid-transfer.
     await pipeline(stream, res);
   } catch (err) {
     if (!res.headersSent) {
       console.error('Stream error:', err);
       return sendServerError(res, 'Stream error', err);
     }
+    // Headers are already on the wire, so the status cannot be changed and the
+    // client just sees a truncated body. Still log it: silently discarding this
+    // is how a disk returning bad reads looks like a healthy server.
+    console.error('Stream error after headers were sent:', err);
   }
 }

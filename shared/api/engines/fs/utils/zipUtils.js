@@ -12,9 +12,13 @@
 
 import fs from 'fs';
 import path from 'path';
+import { Transform } from 'stream';
+import { pipeline } from 'stream/promises';
 
 import archiver from 'archiver';
 import unzipper from 'unzipper';
+
+import { PathEscapeError, resolveWithin } from '@shared/utils/atomic/index.js';
 
 import { ERROR_CODES, DEFAULT_CONFIG } from './constants.js';
 import { FilesystemError } from './errors.js';
@@ -111,13 +115,51 @@ export async function createZip(fileInfos, options = {}) {
 }
 
 /**
+ * Meter an entry's inflated bytes and fail the stream once they pass `limit`.
+ *
+ * The central directory's `uncompressedSize` is written by whoever built the
+ * archive, so on its own it bounds nothing: an entry may declare 1KB and
+ * inflate to gigabytes, and the `zlib.createInflateRaw()` unzipper drives has
+ * no output cap of its own. Counting the bytes that actually arrive is what
+ * turns `maxSize` from a claim about the header into a limit on the disk.
+ *
+ * @param {number} limit - Maximum bytes this entry may produce.
+ * @param {string} entryName - Entry path, for the error message.
+ * @returns {Transform} Transform exposing the byte count as `bytesSeen`.
+ */
+function createSizeLimiter(limit, entryName) {
+  const limiter = new Transform({
+    transform(chunk, _encoding, callback) {
+      this.bytesSeen += chunk.length;
+      if (this.bytesSeen > limit) {
+        callback(
+          new FilesystemError(
+            `ZIP entry expands beyond its allowed size: ${entryName} (> ${limit} bytes)`,
+            ERROR_CODES.FILE_TOO_LARGE,
+            400,
+          ),
+        );
+        return;
+      }
+      callback(null, chunk);
+    },
+  });
+  limiter.bytesSeen = 0;
+  return limiter;
+}
+
+/**
  * Extract ZIP archive to specified directory (streaming)
  * Uses unzipper for streaming extraction - handles huge ZIP files efficiently.
  *
  * @param {string|Buffer} zipSource - ZIP file path or buffer
  * @param {string} extractPath - Directory to extract files to
  * @param {Object} options - Extraction options
- * @returns {Promise<Object>} Extraction result
+ * @param {boolean} [options.overwrite=false] - Replace entries already on disk
+ * @param {number} [options.maxFiles=1000] - Maximum number of entries
+ * @param {number} [options.maxSize] - Maximum bytes written across all entries
+ * @param {number} [options.maxArchiveSize] - Maximum size of the archive itself
+ * @returns {Promise<Object>} Extraction result, `totalSize` being bytes written
  */
 export async function extractZip(zipSource, extractPath, options = {}) {
   try {
@@ -125,6 +167,7 @@ export async function extractZip(zipSource, extractPath, options = {}) {
       overwrite = false,
       maxFiles = 1000,
       maxSize = 100 * 1024 * 1024, // 100MB
+      maxArchiveSize = maxSize,
     } = options;
 
     // Create extraction directory if it doesn't exist
@@ -140,19 +183,32 @@ export async function extractZip(zipSource, extractPath, options = {}) {
       totalSize: 0,
     };
 
-    // Validate source and get buffer for parsing
-    let zipBuffer;
+    // Validate the source and measure the archive before opening it
+    let archiveSize;
+    let openDirectory;
     if (Buffer.isBuffer(zipSource)) {
-      zipBuffer = zipSource;
+      archiveSize = zipSource.length;
+      openDirectory = () => unzipper.Open.buffer(zipSource);
     } else if (typeof zipSource === 'string') {
-      if (!fs.existsSync(zipSource)) {
+      let stats;
+      try {
+        stats = await fs.promises.stat(zipSource);
+      } catch (error) {
+        if (error.code !== 'ENOENT') {
+          throw error;
+        }
         throw new FilesystemError(
           `ZIP file not found: ${zipSource}`,
           ERROR_CODES.FILE_NOT_FOUND,
           404,
         );
       }
-      zipBuffer = await fs.promises.readFile(zipSource);
+      archiveSize = stats.size;
+      // Open.file walks the central directory with ranged reads on a file
+      // handle. Reading the archive into a Buffer first would mean a
+      // multi-gigabyte upload is an out-of-memory kill in the SSR process
+      // before either guard below ever gets to reject it.
+      openDirectory = () => unzipper.Open.file(zipSource);
     } else {
       throw new FilesystemError(
         'ZIP source must be a Buffer or file path',
@@ -161,8 +217,18 @@ export async function extractZip(zipSource, extractPath, options = {}) {
       );
     }
 
-    // Parse ZIP using unzipper
-    const directory = await unzipper.Open.buffer(zipBuffer);
+    // Compressed bytes are never meaningfully larger than what they expand to,
+    // so an archive bigger than the extraction budget cannot fit within it
+    // whatever it contains, and a stat says so before anything is parsed.
+    if (archiveSize > maxArchiveSize) {
+      throw new FilesystemError(
+        `ZIP archive too large (${archiveSize} > ${maxArchiveSize} bytes)`,
+        ERROR_CODES.FILE_TOO_LARGE,
+        400,
+      );
+    }
+
+    const directory = await openDirectory();
 
     // Validate file count
     if (directory.files.length > maxFiles) {
@@ -173,39 +239,49 @@ export async function extractZip(zipSource, extractPath, options = {}) {
       );
     }
 
-    // Calculate total uncompressed size
-    const totalSize = directory.files.reduce(
-      (sum, file) => sum + file.uncompressedSize,
+    // Cheap pre-filter on what the archive claims, so an obviously oversized
+    // one is refused without opening a single entry. It is not the guarantee:
+    // the declared sizes are attacker-controlled, and only the per-entry meter
+    // below decides how many bytes reach the disk.
+    const declaredSize = directory.files.reduce(
+      (sum, file) =>
+        sum +
+        (Number.isFinite(file.uncompressedSize) ? file.uncompressedSize : 0),
       0,
     );
-    if (totalSize > maxSize) {
+    if (declaredSize > maxSize) {
       throw new FilesystemError(
-        `ZIP uncompressed size too large (${totalSize} > ${maxSize} bytes)`,
+        `ZIP uncompressed size too large (${declaredSize} > ${maxSize} bytes)`,
         ERROR_CODES.FILE_TOO_LARGE,
         400,
       );
     }
 
     results.totalFiles = directory.files.length;
-    results.totalSize = totalSize;
 
     // Extract files
     for (const file of directory.files) {
       try {
-        const resolvedRoot = path.resolve(extractPath);
-        const entryPath = path.resolve(resolvedRoot, file.path);
+        // Security check: prevent directory traversal (zip-slip). Entry paths
+        // come from the archive, so containment has to be verified rather than
+        // assumed - path.join() would happily hand back /etc/passwd.
+        let entryPath;
+        try {
+          entryPath = resolveWithin(extractPath, file.path);
+        } catch (error) {
+          if (!(error instanceof PathEscapeError)) {
+            throw error;
+          }
+          results.errors.push({
+            fileName: file.path,
+            error: 'ZIP_INVALID_FILE_PATH',
+          });
+          continue;
+        }
 
-        // Security check: prevent directory traversal (zip-slip).
-        // path.relative() is used instead of startsWith() so that a sibling
-        // directory sharing the same prefix (e.g. "/tmp/x-evil" vs "/tmp/x")
-        // cannot slip through.
-        const relative = path.relative(resolvedRoot, entryPath);
-        if (
-          !relative ||
-          relative.startsWith('..') ||
-          path.isAbsolute(relative) ||
-          file.path.includes('\0')
-        ) {
+        // resolveWithin permits the base directory itself, which as an entry
+        // path means the archive is trying to write over the extraction root.
+        if (entryPath === path.resolve(extractPath)) {
           results.errors.push({
             fileName: file.path,
             error: 'ZIP_INVALID_FILE_PATH',
@@ -239,20 +315,40 @@ export async function extractZip(zipSource, extractPath, options = {}) {
             fs.mkdirSync(parentDir, { recursive: true });
           }
 
-          // Stream file to disk
-          const writeStream = fs.createWriteStream(entryPath);
-          const fileStream = file.stream();
-          await new Promise((resolve, reject) => {
-            fileStream.pipe(writeStream);
-            fileStream.on('error', reject);
-            writeStream.on('finish', resolve);
-            writeStream.on('error', reject);
-          });
+          // Hold the entry to the smaller of what it declared and what is left
+          // of the archive-wide budget: a declared size that is absent or not a
+          // number must not read as "unlimited".
+          const declaredEntrySize = Number.isFinite(file.uncompressedSize)
+            ? file.uncompressedSize
+            : Infinity;
+          const limiter = createSizeLimiter(
+            Math.min(declaredEntrySize, maxSize - results.totalSize),
+            file.path,
+          );
 
+          // Stream file to disk. pipeline(), never .pipe(): .pipe() leaves the
+          // write stream neither ended nor destroyed when the source fails, so
+          // its fd stays open for the life of the process - a thousand-entry
+          // archive of corrupt entries walks the process into EMFILE.
+          try {
+            await pipeline(
+              file.stream(),
+              limiter,
+              fs.createWriteStream(entryPath),
+            );
+          } catch (error) {
+            // The bytes already written survive the torn-down pipeline, and
+            // nothing downstream - a manifest read, a checksum - can tell a
+            // truncated entry from a complete one.
+            await fs.promises.rm(entryPath, { force: true });
+            throw error;
+          }
+
+          results.totalSize += limiter.bytesSeen;
           results.extractedFiles.push({
             fileName: file.path,
             type: 'file',
-            size: file.uncompressedSize,
+            size: limiter.bytesSeen,
           });
         }
       } catch (error) {

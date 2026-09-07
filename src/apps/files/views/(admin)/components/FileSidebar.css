@@ -18,7 +18,9 @@
 .newBtn {
   justify-content: center;
   box-shadow: var(--shadow-3);
-  transition: all 0.2s;
+  transition:
+    background-color 0.2s,
+    box-shadow 0.2s;
   height: 48px;
   font-size: var(--font-size-2);
   width: 100%;

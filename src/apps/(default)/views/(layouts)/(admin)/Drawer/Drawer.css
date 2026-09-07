@@ -45,6 +45,16 @@
   z-index: 40;
   transform: translateX(0);
   box-shadow: none;
+
+  /*
+   * The collapse animation transitions `width`, so this subtree relayouts on
+   * every frame of it. `contain: layout` keeps that invalidation provably
+   * inside the aside instead of letting it escape into the document.
+   *
+   * `layout` only — NOT `paint`. The collapse toggle button is positioned at
+   * `-right-3`, outside this box, and `contain: paint` would clip it.
+   */
+  contain: layout;
 }
 
 .drawerContainer[data-mobile='true'] {

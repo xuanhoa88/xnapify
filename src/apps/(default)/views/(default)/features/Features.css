@@ -64,7 +64,14 @@
   position: relative;
   background-color: var(--color-panel-solid);
   border-radius: var(--radius-5);
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Explicit list, not `all`: `all` also animates whatever layout
+     properties happen to change (grid spans at breakpoints, padding),
+     which costs a relayout per frame for the whole transition. */
+  transition:
+    transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 0 4px 24px -12px var(--black-a3);
   border: 1px solid var(--gray-4);
   overflow: hidden;

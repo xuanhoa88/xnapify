@@ -261,6 +261,20 @@
 
 .spinIcon {
   animation: spin 1s linear infinite;
+
+  /*
+   * Loading indicators are the one animation here that must never be
+   * throttled or disabled — a spinner that stops reads as a hung app, so
+   * this is deliberately NOT wrapped in a prefers-reduced-motion guard.
+   *
+   * It is also already the cheapest animation a browser can run: a pure
+   * `transform: rotate()` is handled entirely by the compositor, with no
+   * layout and no paint on any frame after the first. `will-change` just
+   * gets the layer promoted before the first frame instead of on it, so
+   * the spin starts smooth rather than dropping its opening frames. The
+   * element unmounts when loading ends, so the layer is not retained.
+   */
+  will-change: transform;
 }
 
 .installErrorBox {

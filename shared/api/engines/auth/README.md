@@ -148,20 +148,29 @@ requireTimeBasedOwnership({
 
 ## Cookie Utilities
 
+Cookie helpers are imported from `@shared/cookies`, **not** from this engine —
+the client and SSR use them too, so they cannot sit behind the API engine
+autoloader.
+
 ```javascript
 import {
   setTokenCookie,
+  setRefreshTokenCookie,
   getTokenFromCookie,
   clearAllAuthCookies,
   extractToken,
-} from '@shared/api/engines/auth';
+} from '@shared/cookies';
 
 setTokenCookie(res, jwtToken); // Set id_token (7 days)
 setRefreshTokenCookie(res, refreshToken); // Set refresh_token (30 days)
 const token = getTokenFromCookie(req);
 clearAllAuthCookies(res);
-const token = extractToken(req, { sources: ['cookie', 'header', 'query'] });
+const token = extractToken(req); // defaults to ['cookie', 'header']
 ```
+
+> `extractToken` deliberately does **not** read the query string by default.
+> A token in a URL lands in access logs, proxy logs and `Referer` headers.
+> Pass `sources` explicitly if a specific integration genuinely needs it.
 
 | Cookie  | Name            | Max Age |
 | ------- | --------------- | ------- |
@@ -214,9 +223,9 @@ Provide a composable authentication and authorization layer that can be applied 
 
 ```
 shared/api/engines/auth/
-├── index.js              # Re-exports cookies, middlewares, constants
+├── index.js              # Re-exports middlewares, revocation, constants
 ├── constants.js          # RBAC roles, groups, permissions, resources, actions
-├── cookies.js            # Cookie set/get/clear + token extraction
+├── revocation.js         # Access-token revocation: denylist + token_version
 ├── middlewares/
 │   ├── index.js          # Re-exports all middleware
 │   ├── requireAuth.js    # JWT authentication (cache + strategy hooks)
@@ -226,15 +235,24 @@ shared/api/engines/auth/
 │   ├── requireRole.js    # Role checks (ALL/ANY/level/dynamic)
 │   ├── requireGroup.js   # Group checks (ALL/ANY/level)
 │   └── requireOwnership.js   # Ownership checks (5 strategies)
-└── middlewares.test.js   # Jest test suite
+├── middlewares.test.js   # Jest test suite
+├── revocation.test.js    # Store contract, outage discipline, durable fallback
+└── middlewares/sessionRevocation.test.js  # Enforcement through the middlewares
 ```
+
+Cookie helpers live **outside** this engine, in `shared/cookies/index.js` — they
+are imported by the client and by SSR too, so they cannot sit behind the API
+engine autoloader.
 
 ### Dependencies
 
 ```
-index.js → cookies.js, middlewares/*, constants.js
-requireAuth/optionalAuth → cookies.js (extractToken), container.resolve('jwt'), container.resolve('hook')
-refreshToken → cookies.js (extractToken, set/get/clear cookies), container.resolve('jwt')
+index.js → middlewares/*, revocation.js, constants.js
+requireAuth/optionalAuth → @shared/cookies (extractToken), revocation.js (verifyActiveSession),
+                           container.resolve('jwt'), container.resolve('hook')
+refreshToken → @shared/cookies (extractToken, set/get/clear cookies),
+               container.resolve('jwt'), container.resolve('hook')  ← rotates via hook('auth.session')
+revocation → @shared/jwt/constants.js, container.resolve('models')  ← User, RefreshToken
 requirePermission → constants.js (ADMIN_ROLE), container.resolve('hook')
 requireRole → constants.js (ADMIN_ROLE), container.resolve('hook')
 requireGroup → constants.js (ADMIN_ROLE), container.resolve('hook')
@@ -392,7 +410,62 @@ Same flow as `requireAuth`. Differences:
 
 `valid` | `refreshed` | `expired` | `needs-refresh` | `refresh-failed` | `guest` | `error`
 
-## 7. Middleware: `requirePermission` / `requireAnyPermission`
+## 7. Access-Token Revocation (`revocation.js`)
+
+Access tokens are stateless JWTs with a 15-minute life, so revoking a session
+cannot un-sign one already issued. Two cheap request-time checks close that gap,
+run by `requireAuth` / `optionalAuth` (and by the WebSocket handshake, the API-key
+strategy, and the Node-RED auth strategy) **after** signature verification:
+
+| Claim | Source                                        | Revokes                    |
+| ----- | --------------------------------------------- | -------------------------- |
+| `sid` | rotation family id, set by `issueTokenPair()` | one session / device       |
+| `ver` | `users.token_version`                         | every session of that user |
+
+`verifyActiveSession(container, decoded)` is the container-aware entry point;
+`assertSessionValid(decoded, opts)` is the testable core. A token carrying
+neither claim (API keys, legacy tokens) passes through untouched.
+
+### Stores
+
+| Store                   | `shared` | Used when                                                                      |
+| ----------------------- | -------- | ------------------------------------------------------------------------------ |
+| `MemoryRevocationStore` | `false`  | default — per process                                                          |
+| `RedisRevocationStore`  | `true`   | `configureSharedBackends()` installs it when the `broker` engine is configured |
+
+`setRevocationStore()` swaps the active store and validates the method contract;
+bootstrap already calls it, so application code should not. The cache engine is
+deliberately **not** used here — it is a no-op in development, and a security
+control must behave identically in every environment.
+
+### Durable fallback
+
+A store that is not `shared` never hears about a logout on another replica, and
+`revokeFamily()` (what logout calls) does not bump `token_version`. So when
+`store.shared !== true`, a "not revoked" verdict is confirmed against the
+`refresh_tokens` rows — the family is revoked when it has no rows left with
+`revoked_at IS NULL`. Confirmed-live verdicts are memoised for
+`SESSION_LIVE_MEMO_MS` (60 s) so the hot path stays a map lookup; a
+confirmed-revoked one is written into the denylist so later requests short-circuit.
+
+Rotation always inserts the successor **before** retiring its predecessor, so a
+family in active use never momentarily reads as zero.
+
+### Outage discipline
+
+| Condition                                       | Error                                                        | Status |
+| ----------------------------------------------- | ------------------------------------------------------------ | ------ |
+| Session denylisted, or family has no live rows  | `SessionRevokedError` / `SESSION_REVOKED`                    | 401    |
+| `token_version` newer than the token's `ver`    | `SessionRevokedError` / `SESSION_SUPERSEDED`                 | 401    |
+| Neither the store nor the database could answer | `SessionStoreUnavailableError` / `SESSION_STORE_UNAVAILABLE` | 503    |
+
+Never collapse the last row into a 401. Clients treat 401 as "your session is
+gone" and clear cookies, so reporting a Redis or database blip that way signs out
+the entire fleet; 503 is retryable and leaves the session intact. A healthy
+durable `token_version` answer still stands even when the denylist is unreachable
+— that is the whole point of keeping the column in the database.
+
+## 8. Middleware: `requirePermission` / `requireAnyPermission`
 
 **Use after `requireAuth`.** Checks resolved permissions.
 
@@ -424,7 +497,7 @@ requirePermission({ permissions: ['a:b'], adminBypass: false }); // object confi
 
 Error: `ForbiddenError` (403, code: `PERMISSION_DENIED`).
 
-## 8. Middleware: Role Family
+## 9. Middleware: Role Family
 
 **Use after `requireAuth`.** Checks resolved roles.
 
@@ -458,7 +531,7 @@ requireRoleLevel('moderator', hierarchy); // user must have 'moderator' or 'admi
 
 Error: `ForbiddenError` (403, codes: `ROLE_REQUIRED`, `ROLE_LEVEL_REQUIRED`, `DYNAMIC_ROLE_REQUIRED`).
 
-## 9. Middleware: Group Family
+## 10. Middleware: Group Family
 
 **Use after `requireAuth`.** Same pattern as roles. Admin bypass default **ON**.
 
@@ -470,7 +543,7 @@ Error: `ForbiddenError` (403, codes: `ROLE_REQUIRED`, `ROLE_LEVEL_REQUIRED`, `DY
 
 Error: `ForbiddenError` (403, codes: `GROUP_REQUIRED`, `GROUP_LEVEL_REQUIRED`).
 
-## 10. Middleware: Ownership Family
+## 11. Middleware: Ownership Family
 
 **Use after `requireAuth`.** All default to `adminBypass = true`.
 
@@ -501,7 +574,7 @@ Hook: `auth.hierarchical_ownership` → module populates `req.ownerChain` (array
 
 Hook: `auth.time_based_ownership` → module sets `req.isOwner` and `req.ownershipExpiresAt`. Checks ownership first, then expiry. Error codes: `OWNERSHIP_REQUIRED`, `OWNERSHIP_EXPIRED`.
 
-## 11. Hook Channels Summary
+## 12. Hook Channels Summary
 
 | Channel                       | Event          | Purpose                    | Populated Field                         |
 | ----------------------------- | -------------- | -------------------------- | --------------------------------------- |
@@ -515,7 +588,7 @@ Hook: `auth.time_based_ownership` → module sets `req.isOwner` and `req.ownersh
 | `auth.dynamic_roles`          | `resolve`      | Resolve dynamic roles      | `req.requiredRoles`                     |
 | `auth.strategy.{type}`        | `authenticate` | Pluggable auth strategies  | `req.user`                              |
 
-## 12. Error Responses
+## 13. Error Responses
 
 All RBAC middleware call `next(error)` with named errors:
 

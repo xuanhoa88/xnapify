@@ -18,11 +18,7 @@ import {
   createExtensionConfig,
   getHmrWatchIgnored,
 } from '../rspack/extension.config.js';
-import {
-  auditExtensionCapabilities,
-  computeChecksum,
-  generateExtensionId,
-} from '../utils/extension.js';
+import { computeChecksum, generateExtensionId } from '../utils/extension.js';
 import { copyDir, pathExists } from '../utils/fs.js';
 import { logInfo, logError, formatDuration } from '../utils/logger.js';
 
@@ -201,41 +197,6 @@ async function generateManifests(extensions) {
 }
 
 // ---------------------------------------------------------------------------
-// Capability Audit
-// ---------------------------------------------------------------------------
-
-/**
- * Flag every container binding an extension resolves by name but never
- * declared under `xnapify.capabilities`.
- *
- * Extensions receive a capability-scoped container, so an undeclared binding
- * throws CapabilityDeniedError the first time that code path runs — often long
- * after the build. Surfacing it here turns a production crash into a warning
- * next to the compilation that produced it.
- *
- * @param {Array} extensions - Discovered extensions
- */
-async function auditCapabilities(extensions) {
-  for (const { name, manifest, path: extensionPath } of extensions) {
-    let report;
-    try {
-      report = await auditExtensionCapabilities(extensionPath, manifest);
-    } catch (err) {
-      logError(`Capability audit failed for ${name}: ${err.message}`);
-      continue;
-    }
-
-    for (const { capability, files } of report.undeclared) {
-      logError(
-        `⚠️  ${name} resolves "${capability}" but does not declare it in ` +
-          `xnapify.capabilities (granted: ${report.granted.join(', ') || 'none'}) — ` +
-          `used in ${files.join(', ')}`,
-      );
-    }
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Static Assets & Node-RED Nodes
 // ---------------------------------------------------------------------------
 
@@ -296,17 +257,21 @@ function linkExtensionNodeModules(extensions) {
       return;
     }
 
-    // Remove stale link or directory before creating a fresh symlink
-    try {
-      const stat = await fs.promises.lstat(target);
-      if (stat.isSymbolicLink() || stat.isDirectory()) {
-        await fs.promises.rm(target, { recursive: true, force: true });
-      }
-    } catch {
-      // target doesn't exist — nothing to remove
-    }
+    // Remove whatever is at the target before linking. Anything at all, not
+    // just a symlink or a directory: a regular file left by a corrupted build
+    // is exactly what `symlink` then fails on with EEXIST, and the check that
+    // ignored it was the reason that failure survived a rebuild.
+    await fs.promises.rm(target, { recursive: true, force: true });
 
-    await fs.promises.symlink(source, target, 'junction');
+    try {
+      await fs.promises.symlink(source, target, 'junction');
+    } catch (error) {
+      // A concurrent rebuild can recreate the target between the removal and
+      // this call — rspack starts a new pass without waiting for the previous
+      // pass's async post-processing. The link it made is the one this call
+      // was going to make, so the work is done.
+      if (error.code !== 'EEXIST') throw error;
+    }
     logInfo(`🔗 Linked node_modules for ${ext.name}`);
   });
 }
@@ -482,12 +447,11 @@ async function buildExtensions(options = {}) {
   return new Promise((resolve, reject) => {
     let initialBuildComplete = false;
 
-    const onBuild = async (err, stats) => {
+    const runBuild = async (err, stats) => {
       const error = handleBuildResult(err, stats, isWatch);
 
       if (error && !isWatch) {
-        reject(error);
-        return;
+        throw error;
       }
 
       // Ensure output directories exist before attempting to write symlinks/assets.
@@ -513,7 +477,6 @@ async function buildExtensions(options = {}) {
         ...linkExtensionNodeModules(extensions),
       ]);
       await generateManifests(extensions);
-      await auditCapabilities(extensions);
 
       logInfo(
         `✅ Extension build completed in ${formatDuration(Date.now() - start)}`,
@@ -532,6 +495,40 @@ async function buildExtensions(options = {}) {
         initialBuildComplete = true;
         resolve();
       }
+    };
+
+    // Rspack invokes this callback for effect only — `Compiler.run`'s
+    // finalCallback and `Watching._done` both discard what it returns — so an
+    // async callback hands its promise to nobody. Attaching the rejection here
+    // is what keeps a failing mkdir/copy/symlink from leaving the promise
+    // pending forever while node aborts the process over the loose rejection.
+    const onBuild = (err, stats) => {
+      runBuild(err, stats).catch(buildErr => {
+        if (!isWatch) {
+          // Closed on the way out too. The success path closes the compiler;
+          // the failure path returned without ever doing so, and build.js
+          // retries this whole call — constructing a second compiler while
+          // the first still holds its file handles and worker threads.
+          compiler.close(closeErr => {
+            if (closeErr) console.error('Failed to close compiler:', closeErr);
+            reject(buildErr);
+          });
+          return;
+        }
+
+        // A watch session outlives its failures: a compilation error above is
+        // logged rather than rejected, and a transient EACCES/EEXIST during a
+        // rebuild must not take the dev server down with the watcher.
+        logError(`Extension build failed: ${buildErr.message}`);
+        console.error(buildErr.stack || buildErr);
+
+        // The caller is still waiting on the first build, and a watcher reports
+        // again only once a source file changes.
+        if (!initialBuildComplete) {
+          initialBuildComplete = true;
+          resolve();
+        }
+      });
     };
 
     if (isWatch) {

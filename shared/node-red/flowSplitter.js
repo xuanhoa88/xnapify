@@ -20,6 +20,12 @@
 import fs from 'fs';
 import path from 'path';
 
+import {
+  readJsonSafe,
+  resolveWithin,
+  writeJsonAtomic,
+} from '@shared/utils/atomic/index.js';
+
 const EXTENSION_NAME = 'xnapify-flow-splitter';
 const EXTENSION_LOG_PREFIX = `[${EXTENSION_NAME}]`;
 const SPLIT_CONFIG_FILE = '.config.flow-splitter.json';
@@ -147,6 +153,49 @@ function getUniqueFilename(usedNames, baseName, id) {
 }
 
 /**
+ * Delete every split file in `dir` that this run did not write.
+ *
+ * `rebuildFlows` concatenates whatever it finds, so a file orphaned by a
+ * renamed or deleted tab is not inert: its nodes come back on the next boot
+ * and are re-split as legitimate content on the deploy after that, so the
+ * resurrection never heals. Only the writer knows which filenames are current,
+ * which is why it has to own the directory rather than merely add to it.
+ *
+ * @param {string} dir - Destination directory to reconcile
+ * @param {Set<string>} keep - Filenames written by this run
+ * @param {string} ext - Configured file extension
+ * @param {object} RED - Node-RED runtime (for logging)
+ */
+async function pruneOrphans(dir, keep, ext, RED) {
+  const entries = await fs.promises.readdir(dir, { withFileTypes: true });
+
+  for (const entry of entries) {
+    // Match what rebuildFlows would read back, minus directories — a stale
+    // symlink resurrects nodes just as a stale file does, and unlinking one
+    // removes the link, never its target.
+    if (entry.isDirectory()) continue;
+    if (!entry.name.endsWith(`.${ext}`) || keep.has(entry.name)) continue;
+
+    // `resolveWithin` permits the base directory itself, which for an unlink
+    // would target the whole destination rather than a file inside it.
+    const filePath = resolveWithin(dir, entry.name);
+    if (filePath === path.resolve(dir)) continue;
+
+    try {
+      await fs.promises.unlink(filePath);
+    } catch (err) {
+      // Already gone is the outcome this wanted; anything else has to surface,
+      // because a surviving orphan is silently re-deployed automation.
+      if (err.code !== 'ENOENT') throw err;
+    }
+
+    RED.log.info(
+      `${EXTENSION_LOG_PREFIX} Removed stale ${path.basename(dir)}/${entry.name}`,
+    );
+  }
+}
+
+/**
  * Split flows into individual files
  * @param {Array} flowsArray - Full flows array
  * @param {object} config - Splitter config
@@ -166,11 +215,19 @@ async function splitFlows(flowsArray, config, rootPath, RED) {
   const usedNames = new Set();
   const ext = config.fileFormat;
 
+  // Filenames are derived from the mutable label, so a rename produces a new
+  // file rather than moving the old one. Recording what each directory should
+  // hold is what lets the orphan be reconciled away below.
+  const writtenTabs = new Set();
+  const writtenSubflows = new Set();
+  const writtenConfigNodes = new Set();
+
   // Write tabs
   for (const tab of tabs) {
     const filename = `${getUniqueFilename(usedNames, tab.label, tab.id)}.${ext}`;
     const filePath = path.join(tabsDir, filename);
-    await fs.promises.writeFile(filePath, JSON.stringify(tab.nodes, null, 2));
+    await writeJsonAtomic(filePath, tab.nodes, { spaces: 2 });
+    writtenTabs.add(filename);
     RED.log.info(
       `${EXTENSION_LOG_PREFIX} Saved tab: ${tab.label} → ${filename}`,
     );
@@ -180,7 +237,8 @@ async function splitFlows(flowsArray, config, rootPath, RED) {
   for (const sf of subflows) {
     const filename = `${getUniqueFilename(usedNames, sf.label, sf.id)}.${ext}`;
     const filePath = path.join(subflowsDir, filename);
-    await fs.promises.writeFile(filePath, JSON.stringify(sf.nodes, null, 2));
+    await writeJsonAtomic(filePath, sf.nodes, { spaces: 2 });
+    writtenSubflows.add(filename);
     RED.log.info(
       `${EXTENSION_LOG_PREFIX} Saved subflow: ${sf.label} → ${filename}`,
     );
@@ -191,11 +249,19 @@ async function splitFlows(flowsArray, config, rootPath, RED) {
     // Group individual config nodes by type+name, or write all in one file
     const filename = `_global.${ext}`;
     const filePath = path.join(configNodesDir, filename);
-    await fs.promises.writeFile(filePath, JSON.stringify(configNodes, null, 2));
+    await writeJsonAtomic(filePath, configNodes, { spaces: 2 });
+    writtenConfigNodes.add(filename);
     RED.log.info(
       `${EXTENSION_LOG_PREFIX} Saved ${configNodes.length} config node(s) → ${filename}`,
     );
   }
+
+  // Reconcile after writing, never before: a run that fails part-way then
+  // leaves the previous set on disk, which rebuilds to stale flows rather than
+  // to no flows at all.
+  await pruneOrphans(tabsDir, writtenTabs, ext, RED);
+  await pruneOrphans(subflowsDir, writtenSubflows, ext, RED);
+  await pruneOrphans(configNodesDir, writtenConfigNodes, ext, RED);
 
   // Update tabs order
   config.tabsOrder = tabs.map(t => t.id);
@@ -221,6 +287,11 @@ async function rebuildFlows(config, rootPath, RED) {
   }
 
   let allNodes = [];
+  // Node id -> the file that defined it. Node-RED keys its flow registry by id,
+  // so a duplicate does not fail the deploy: whichever file readdir happens to
+  // return last silently wins, and the losing copy's edits disappear on a
+  // restart that reorders the directory.
+  const seenIds = new Map();
 
   // Read from tabs, subflows, config-nodes in order
   for (const subdir of ['tabs', 'subflows', 'config-nodes']) {
@@ -237,20 +308,37 @@ async function rebuildFlows(config, rootPath, RED) {
 
     for (const file of files) {
       const filePath = path.join(dir, file);
-      try {
-        const content = await fs.promises.readFile(filePath, 'utf8');
-        const nodes = JSON.parse(content);
-        if (Array.isArray(nodes)) {
-          allNodes = allNodes.concat(nodes);
-          RED.log.info(
-            `${EXTENSION_LOG_PREFIX} Loaded: ${subdir}/${file} (${nodes.length} node(s))`,
+      // A file that cannot be read must abort the rebuild. Skipping it and
+      // carrying on writes the *surviving subset* back out as the authoritative
+      // flows.json, which silently deletes every node in the unreadable file —
+      // and the only visible symptom is a tab that vanished overnight.
+      const nodes = await readJsonSafe(filePath, {
+        validate: Array.isArray,
+      }).catch(err => {
+        throw new Error(
+          `${EXTENSION_LOG_PREFIX} Refusing to rebuild flows: ` +
+            `${subdir}/${file} is unreadable (${err.message}). ` +
+            `Fix or remove that file — rebuilding without it would discard its nodes.`,
+          { cause: err },
+        );
+      });
+      for (const node of nodes) {
+        if (!node || !node.id) continue;
+        const owner = seenIds.get(node.id);
+        if (owner) {
+          throw new Error(
+            `${EXTENSION_LOG_PREFIX} Refusing to rebuild flows: node id ` +
+              `${node.id} is defined in ${owner} and again in ${subdir}/${file}. ` +
+              `Delete whichever copy is stale — merging them would drop one silently.`,
           );
         }
-      } catch (err) {
-        RED.log.warn(
-          `${EXTENSION_LOG_PREFIX} Failed to parse ${subdir}/${file}: ${err.message}`,
-        );
+        seenIds.set(node.id, `${subdir}/${file}`);
       }
+
+      allNodes = allNodes.concat(nodes);
+      RED.log.info(
+        `${EXTENSION_LOG_PREFIX} Loaded: ${subdir}/${file} (${nodes.length} node(s))`,
+      );
     }
   }
 
@@ -283,12 +371,16 @@ async function rebuildFlows(config, rootPath, RED) {
  */
 async function readConfig(rootPath) {
   const cfgPath = path.join(rootPath, SPLIT_CONFIG_FILE);
-  try {
-    const raw = JSON.parse(await fs.promises.readFile(cfgPath, 'utf8'));
-    return { ...DEFAULT_CONFIG, ...raw };
-  } catch {
-    return { ...DEFAULT_CONFIG };
-  }
+  // Missing is normal (first run). Corrupt is not, and defaulting silently is
+  // dangerous here: `fileFormat` decides which files the splitter reads, so
+  // falling back to the default can orphan an existing split tree.
+  const raw = await readJsonSafe(cfgPath, {
+    fallback: null,
+    onCorrupt: 'fallback',
+    validate: value => value !== null && typeof value === 'object',
+  });
+  if (raw === null) return { ...DEFAULT_CONFIG };
+  return { ...DEFAULT_CONFIG, ...raw };
 }
 
 /**
@@ -298,8 +390,7 @@ async function readConfig(rootPath) {
  */
 async function writeConfig(config, rootPath) {
   const cfgPath = path.join(rootPath, SPLIT_CONFIG_FILE);
-  const toWrite = { ...config };
-  await fs.promises.writeFile(cfgPath, JSON.stringify(toWrite, null, 2));
+  await writeJsonAtomic(cfgPath, { ...config }, { spaces: 2 });
 }
 
 /**
@@ -319,6 +410,7 @@ function handleFlowsStarted(RED) {
     }
 
     isProcessing = true;
+    let config = null;
     try {
       RED.log.info(`${EXTENSION_LOG_PREFIX} Flow start event detected`);
 
@@ -329,7 +421,7 @@ function handleFlowsStarted(RED) {
       }
 
       const rootPath = userDir;
-      const config = await readConfig(rootPath);
+      config = await readConfig(rootPath);
       config.monolithFilename = RED.settings.flowFile || 'flows.json';
 
       const flowsFromEvent =
@@ -352,10 +444,7 @@ function handleFlowsStarted(RED) {
 
         // Write the rebuilt flows.json
         const monolithPath = path.join(rootPath, config.monolithFilename);
-        await fs.promises.writeFile(
-          monolithPath,
-          JSON.stringify(rebuilt, null, 4),
-        );
+        await writeJsonAtomic(monolithPath, rebuilt, { spaces: 4 });
         RED.log.info(
           `${EXTENSION_LOG_PREFIX} Rebuilt ${config.monolithFilename} with ${rebuilt.length} node(s)`,
         );
@@ -399,6 +488,16 @@ function handleFlowsStarted(RED) {
       }
 
       RED.log.info(`${EXTENSION_LOG_PREFIX} Split complete ✅`);
+    } catch (err) {
+      // EventEmitter does not await an async listener, so anything thrown here
+      // becomes an unhandled rejection — which terminates the process on Node
+      // 20. A failed split must degrade to "flows.json stays authoritative",
+      // never to a dead server.
+      RED.log.error(
+        `${EXTENSION_LOG_PREFIX} Flow split/rebuild failed; leaving ` +
+          `${config?.monolithFilename ?? 'flows.json'} untouched: ${err.message}`,
+      );
+      if (err.stack) RED.log.debug(err.stack);
     } finally {
       isProcessing = false;
     }

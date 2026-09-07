@@ -45,7 +45,7 @@ function AdminHeader() {
       as='header'
       position='sticky'
       top='0'
-      className='z-40 bg-(--color-background) h-16'
+      className='z-40 bg-(--color-background) h-16 border-b border-(--gray-a5)'
     >
       <Flex align='center' justify='between' className='h-full px-6'>
         {/* Left Section - Toggle & Breadcrumbs */}

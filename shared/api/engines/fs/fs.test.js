@@ -158,10 +158,29 @@ describe('Filesystem Engine', () => {
       }).toThrow();
     });
 
-    it('should get all provider stats', () => {
-      const stats = testFs.getAllStats();
+    it('should get all provider stats', async () => {
+      const stats = await testFs.getAllStats();
       expect(stats).toHaveProperty('memory');
-      expect(stats.memory).toBeDefined();
+      // Not toBeDefined(): a Promise satisfies that, which is exactly how the
+      // un-awaited version passed this test while returning promises.
+      expect(stats.memory).not.toBeInstanceOf(Promise);
+      expect(typeof stats.memory).toBe('object');
+    });
+
+    it('reports one provider failing without rejecting or killing the process', async () => {
+      // An un-awaited getStats() leaves its rejection unhandled, and Node 20
+      // treats an unhandled rejection as fatal — so a single unreachable
+      // provider took the whole server down on a status call.
+      testFs.providers.set('broken', {
+        getStats: async () => {
+          throw new Error('provider unreachable');
+        },
+      });
+
+      const stats = await testFs.getAllStats();
+
+      expect(stats.broken).toEqual({ error: 'provider unreachable' });
+      expect(stats.memory).not.toBeInstanceOf(Promise);
     });
   });
 

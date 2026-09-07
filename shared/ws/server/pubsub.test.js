@@ -7,21 +7,30 @@
 
 /* global jest */
 
-import { MemoryRedisClient } from '@shared/api/engines/redis/memoryClient.js';
+import { EventEmitter } from 'events';
+
+import { MemoryBroker, RedisBroker } from '@shared/api/engines/broker/index.js';
+import { MemoryRedisClient } from '@shared/api/engines/broker/memoryClient.js';
 
 import { WebSocketServer, ChannelType, CloseCode } from './index.js';
 
 const OPEN = 1;
+const CHANNEL = 'ws:events';
 
 function fakeSocket(id, user) {
   return { id, readyState: OPEN, send: jest.fn(), close: jest.fn(), user };
 }
 
+/**
+ * A worker whose fan-out runs on an in-process broker. Instances sharing the
+ * same `bus` simulate separate processes without touching Redis — this is
+ * the point of the broker abstraction: WebSocket fan-out itself no longer
+ * knows or cares that production uses `RedisBroker`.
+ */
 async function makeWorker(bus, instanceId) {
   const server = new WebSocketServer({ enableLogging: false });
-  const publisher = new MemoryRedisClient({ bus });
-  const subscriber = publisher.duplicate();
-  await server.attachPubSub({ publisher, subscriber, instanceId });
+  const broker = new MemoryBroker({ bus });
+  await server.attachPubSub({ broker, channel: CHANNEL, instanceId });
   return server;
 }
 
@@ -111,7 +120,7 @@ describe('WebSocketServer fan-out', () => {
   let b;
 
   beforeEach(async () => {
-    bus = new MemoryRedisClient().bus;
+    bus = new EventEmitter();
     a = await makeWorker(bus, 'A');
     b = await makeWorker(bus, 'B');
   });
@@ -172,7 +181,7 @@ describe('WebSocketServer fan-out', () => {
     );
   });
 
-  it('validates clients and stops after detach', async () => {
+  it('validates the broker adapter and stops after detach', async () => {
     const lone = new WebSocketServer({ enableLogging: false });
     await expect(lone.attachPubSub({})).rejects.toThrow(TypeError);
 
@@ -186,22 +195,33 @@ describe('WebSocketServer fan-out', () => {
 });
 
 describe('WebSocketServer fan-out isolation', () => {
-  it('namespaces the default channel with the publisher key prefix', async () => {
+  it('namespaces the channel with the publisher key prefix', async () => {
+    // Two deployments sharing one Redis instance must not cross-talk. This
+    // is `RedisBroker`-specific isolation behaviour, so unlike the other
+    // fan-out tests this one exercises the Redis adapter, not `MemoryBroker`.
     const { bus } = new MemoryRedisClient();
 
-    const stagingPub = new MemoryRedisClient({ bus, keyPrefix: 'staging:' });
+    const stagingClient = new MemoryRedisClient({ bus, keyPrefix: 'staging:' });
+    const stagingBroker = new RedisBroker({
+      client: stagingClient,
+      subscriber: stagingClient.duplicate({ keyPrefix: '' }),
+    });
     const staging = new WebSocketServer({ enableLogging: false });
     await staging.attachPubSub({
-      publisher: stagingPub,
-      subscriber: stagingPub.duplicate({ keyPrefix: '' }),
+      broker: stagingBroker,
+      channel: stagingBroker.channel(CHANNEL),
       instanceId: 'staging-1',
     });
 
-    const prodPub = new MemoryRedisClient({ bus, keyPrefix: 'prod:' });
+    const prodClient = new MemoryRedisClient({ bus, keyPrefix: 'prod:' });
+    const prodBroker = new RedisBroker({
+      client: prodClient,
+      subscriber: prodClient.duplicate({ keyPrefix: '' }),
+    });
     const prod = new WebSocketServer({ enableLogging: false });
     await prod.attachPubSub({
-      publisher: prodPub,
-      subscriber: prodPub.duplicate({ keyPrefix: '' }),
+      broker: prodBroker,
+      channel: prodBroker.channel(CHANNEL),
       instanceId: 'prod-1',
     });
 
@@ -223,32 +243,54 @@ describe('WebSocketServer fan-out isolation', () => {
 
 describe('WebSocketServer attach/detach hygiene', () => {
   it('leaves pubsub unset when the subscription fails', async () => {
-    const publisher = new MemoryRedisClient();
-    const subscriber = publisher.duplicate();
-    subscriber.subscribe = jest.fn(async () => {
-      throw new Error('NOAUTH');
-    });
+    const broker = {
+      publish: jest.fn(),
+      subscribe: jest.fn(async () => {
+        throw new Error('NOAUTH');
+      }),
+    };
 
     const server = new WebSocketServer({ enableLogging: false });
-    await expect(
-      server.attachPubSub({ publisher, subscriber }),
-    ).rejects.toThrow('NOAUTH');
+    await expect(server.attachPubSub({ broker })).rejects.toThrow('NOAUTH');
 
     expect(server.pubsub).toBeNull();
-    // and the message listener must not linger on the shared subscriber
-    expect(subscriber.listenerCount('message')).toBe(0);
+  });
+
+  it('refuses an adapter whose subscribe() returns no unsubscribe', async () => {
+    // Such an adapter cannot be detached, so a re-attach would stack a second
+    // listener and apply every remote event twice — silently.
+    const broker = { publish: jest.fn(), subscribe: jest.fn(async () => {}) };
+
+    const server = new WebSocketServer({ enableLogging: false });
+    await expect(server.attachPubSub({ broker })).rejects.toThrow(TypeError);
+
+    expect(server.pubsub).toBeNull();
+  });
+
+  it('releases the broker subscription when the server is disposed', async () => {
+    // Nothing else in the server lifecycle removes it: a disposed server that
+    // stayed subscribed keeps receiving remote events, and the broker's
+    // handler keeps the dead server reachable.
+    const bus = new EventEmitter();
+    const server = await makeWorker(bus, 'D');
+    expect(server.pubsub).not.toBeNull();
+    expect(bus.listenerCount(CHANNEL)).toBe(1);
+
+    await server.dispose();
+
+    expect(server.pubsub).toBeNull();
+    expect(bus.listenerCount(CHANNEL)).toBe(0);
   });
 
   it('does not apply remote events twice after a re-attach', async () => {
-    const { bus } = new MemoryRedisClient();
+    const bus = new EventEmitter();
     const sender = await makeWorker(bus, 'sender');
 
-    const publisher = new MemoryRedisClient({ bus });
-    const subscriber = publisher.duplicate();
+    const broker = new MemoryBroker({ bus });
     const server = new WebSocketServer({ enableLogging: false });
-    await server.attachPubSub({ publisher, subscriber, instanceId: 'R' });
+    await server.attachPubSub({ broker, channel: CHANNEL, instanceId: 'R' });
     await server.detachPubSub();
-    await server.attachPubSub({ publisher, subscriber, instanceId: 'R' });
+    await server.attachPubSub({ broker, channel: CHANNEL, instanceId: 'R' });
 
     const socket = fakeSocket('r1');
     connect(server, socket);
@@ -267,7 +309,7 @@ describe('WebSocketServer revocation sweep', () => {
   let server;
 
   beforeEach(async () => {
-    bus = new MemoryRedisClient().bus;
+    bus = new EventEmitter();
     server = await makeWorker(bus, 'S');
   });
 
@@ -282,7 +324,7 @@ describe('WebSocketServer revocation sweep', () => {
     connect(server, revoked);
     connect(server, live);
 
-    const publish = jest.spyOn(server.pubsub.publisher, 'publish');
+    const publish = jest.spyOn(server.pubsub.broker, 'publish');
     const isRevoked = jest.fn(async sid => sid === 'fam-1');
 
     await expect(server.sweepRevokedSessions(isRevoked)).resolves.toBe(1);
@@ -309,7 +351,7 @@ describe('WebSocketServer revocation sweep', () => {
   it('logs a failed revocation publish distinctly from a channel publish', async () => {
     const errors = [];
     server.logger.error = message => errors.push(String(message));
-    server.pubsub.publisher.publish = jest.fn(async () => {
+    server.pubsub.broker.publish = jest.fn(async () => {
       throw new Error('connection lost');
     });
 

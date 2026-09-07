@@ -226,6 +226,7 @@ Provides a state machine orchestrating Node-RED. Since `@node-red/runtime` behav
 Constructs the Node-RED settings object:
 
 - Merges runtime defaults (like overriding `logLevel`, `projects`, `httpNodeRoot`).
+- **Telemetry is hard-disabled** (`telemetry: { enabled: false }`). Node-RED otherwise POSTs anonymised usage metrics to `telemetry.nodered.org` on a schedule; the runtime only defaults to off until someone accepts the editor's opt-in banner, which then persists. This is an embedded editor, so the choice is made in code rather than left to whoever clicks through it.
 - **Global Context**: Pre-injects commonly used libraries (`lodash`, `dayjs`, `zod`, `uuid`) into the default namespace available within Function nodes.
 - **Extraction Magic** (all async via `fs.promises`):
   - `writeCustomNodes(userDir)`: Resolves `import.meta.webpackContext('./nodes')`, extracting `getNodeJS()` and `getNodeHTML()`, and writing physical files to `<userDir>/nodes/xnapify/`. Also scans active extensions' `manifest.nodered.nodes` paths and writes them as `xnapify-nodered-<id>` modules to `<userDir>/node_modules/`.

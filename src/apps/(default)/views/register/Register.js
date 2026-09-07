@@ -159,7 +159,7 @@ function RegisterFormFields({ loading }) {
         size='3'
         type='submit'
         mt='3'
-        className='w-full cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md'
+        className='w-full cursor-pointer transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-md'
         loading={loading || isSubmitting}
       >
         {loading

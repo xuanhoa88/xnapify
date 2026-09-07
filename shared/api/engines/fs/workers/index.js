@@ -104,18 +104,10 @@ export async function processDelete(fileNames, options = {}) {
  */
 export async function processRename(operations, options = {}) {
   const fs = createFactory(options);
-  const isBatch = Array.isArray(operations) && operations.length > 1;
-  if (isBatch) {
-    return await fs.rename(operations.renameOperations, {
-      ...operations.options,
-      useWorker: false,
-    });
-  }
-  const { oldName, newName, options: singleOptions } = operations;
-  return await fs.rename(
-    { oldName, newName },
-    { ...(singleOptions || options), useWorker: false },
-  );
+  // The rename operation normalises a lone object into a list of its own, so
+  // the list is forwarded whole. Splitting single from batch here would only
+  // add a second place for the two shapes to disagree.
+  return await fs.rename(operations, { ...options, useWorker: false });
 }
 
 /**

@@ -54,7 +54,7 @@ function Header() {
       as='header'
       position='sticky'
       top='0'
-      className='z-100 w-full bg-(--color-panel-translucent) backdrop-blur-xl border-b border-(--gray-a5) shadow-[0_1px_3px_0_rgba(0,0,0,0.02)]'
+      className='z-100 w-full bg-(--color-panel-solid) border-b border-(--gray-a5) shadow-[0_1px_3px_0_rgba(0,0,0,0.02)]'
     >
       <Flex
         align='center'
@@ -68,7 +68,7 @@ function Header() {
         <Flex align='center' gap='6'>
           <Link
             to='/'
-            className='group no-underline text-(--gray-12) transition-all active:scale-95'
+            className='group no-underline text-(--gray-12) transition-transform active:scale-95'
           >
             <Flex align='center' gap='2'>
               <img

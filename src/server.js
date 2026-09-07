@@ -1150,6 +1150,25 @@ async function streamReactResponse(
             if (cacheKey) {
               pipe(passThrough);
               passThrough.pipe(res);
+
+              // React installs its abort-on-disconnect handlers on whichever
+              // stream it was handed — `destination.on('close'|'error')` — and
+              // here that is the PassThrough, not the response. A dead client
+              // therefore never reaches it: `res` is destroyed, pipe() merely
+              // unpipes, and the render runs to completion while the `data`
+              // listener above buffers the entire document. Tearing the
+              // PassThrough down is what lets React see the disconnect, so a
+              // cached route gets the same protection the uncached branch
+              // (`pipe(res)`) already has for free.
+              //
+              // Destroy never emits `end`, so the `end` handler that populates
+              // the cache does not run — an abandoned request cannot store a
+              // half-rendered page.
+              res.on('close', () => {
+                if (!res.writableEnded && !passThrough.destroyed) {
+                  passThrough.destroy();
+                }
+              });
             } else {
               pipe(res);
             }

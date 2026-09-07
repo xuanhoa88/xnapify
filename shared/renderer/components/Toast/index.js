@@ -30,7 +30,7 @@ const DEFAULT_DURATION = 4000;
 const EXIT_ANIMATION_MS = 200;
 
 /** Corner a toast appears in when the caller does not choose one. */
-const DEFAULT_PLACEMENT = 'bottom-right';
+const DEFAULT_PLACEMENT = 'top-right';
 
 /*
  * One table per variant, keyed by the camelCase name the CSS-modules loader

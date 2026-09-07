@@ -5,20 +5,29 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+/*
+ * Composited-only glow loop.
+ *
+ * `opacity` and `transform` are both handled on the compositor, so this
+ * animation costs nothing per frame once the layer is rasterised.
+ *
+ * The blur radius is deliberately NOT animated. A changing `filter: blur()`
+ * cannot be cached as a texture — the GPU has to re-run the blur convolution
+ * over this element's full surface (60vw square, up to 800x800 plus the blur
+ * margin) on every single frame, forever, on the public landing page. The
+ * radius is set once on .heroSectionModern::before instead; the opacity swing
+ * carries the same visual pulse.
+ */
 @keyframes pulseGlow {
-  0% {
-    filter: blur(60px) opacity(0.8);
+  0%,
+  100% {
+    opacity: 0.8;
     transform: translateY(0);
   }
 
   50% {
-    filter: blur(80px) opacity(1);
+    opacity: 1;
     transform: translateY(-10px);
-  }
-
-  100% {
-    filter: blur(60px) opacity(0.8);
-    transform: translateY(0);
   }
 }
 
@@ -51,7 +60,17 @@
   border-radius: 50%;
   z-index: 0;
   pointer-events: none;
+
+  /* Rasterised once — see the note on @keyframes pulseGlow above. */
+  filter: blur(70px);
+  opacity: 0.8;
   animation: pulseGlow 8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heroSectionModern::before {
+    animation: none;
+  }
 }
 
 .textCenter {

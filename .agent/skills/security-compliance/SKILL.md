@@ -1,13 +1,13 @@
 ---
 name: security-compliance
-description: Audit routes, controllers, inputs, extensions, and infrastructure for security compliance. Checks Zod validation, RBAC guards, CSP, integrity verification, path traversal, WebSocket auth, and env var conventions.
-version: 2.0
+description: Audit routes, controllers, inputs, extensions, and infrastructure for security compliance. Checks Zod validation, RBAC guards, CSP, integrity verification, path traversal, WebSocket auth, session/token revocation, extension capability grants, and env var conventions.
+version: 2.1
 priority: HIGH
 ---
 
 # Security Auditor Skill
 
-When reviewing or generating code, enforce these security checks automatically. This skill covers **10 security domains** specific to the xnapify architecture.
+When reviewing or generating code, enforce these security checks automatically. This skill covers **13 security domains** specific to the xnapify architecture.
 
 ---
 
@@ -337,6 +337,33 @@ When integrity verification fails:
 2. Send WS notification: `notifyExtensionChange(container, 'EXTENSION_TAMPERED', extensionKey)`
 3. Log detailed error with expected vs actual hash
 
+### 8.4 Capability Grants
+
+An extension's `xnapify.capabilities` list is its **own package.json**, read
+verbatim at install with no operator approval. Treat every entry as a
+self-declaration, never as authorisation. `shared/extension/utils/compat.js`
+enforces three tiers:
+
+| Tier                      | Rule                                                                                |
+| ------------------------- | ----------------------------------------------------------------------------------- |
+| `RESERVED_CAPABILITIES`   | `extension`, `jwt`, `env` — never granted to anyone, wildcard included              |
+| `PRIVILEGED_CAPABILITIES` | `db`, `models`, `worker`, `queue`, `schedule`, `fs`, `broker` — host trust required |
+| `'*'`                     | Everything non-reserved — `XNAPIFY_TRUSTED_EXTENSIONS` only                         |
+
+Host trust for the privileged tier is `XNAPIFY_TRUSTED_EXTENSIONS` **or** the
+set bundled with the build (`__XNAPIFY_BUNDLED_EXTENSIONS__`, injected from
+`src/extensions/`). A hub-installed package is neither.
+
+| Check                                                                          | Description                                                                                  |
+| ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| 🔴 New binding reaches user data but is missing from `PRIVILEGED_CAPABILITIES` | Anything that can read `users`/`refresh_tokens` or run work off-request belongs in that list |
+| 🔴 Capability gate bypassed by resolving the raw container                     | Extensions must only ever receive `createScopedContainer()`                                  |
+| 🟡 `XNAPIFY_TRUSTED_EXTENSIONS` used to silence a warning                      | Trust is an operator decision about a specific package, not a way to make a log line go away |
+
+> Granting `db` is equivalent to granting `'*'` for data-exfiltration purposes —
+> it reaches `users.password` through a smaller door. Audit an addition to the
+> privileged list with the same care as a wildcard grant.
+
 ---
 
 ## 9. Content Security Policy (CSP)
@@ -446,6 +473,46 @@ res.status(status).json({
 
 ---
 
+## 13. Session & Token Lifecycle
+
+Access tokens are stateless JWTs (15 min), so a signature check alone never
+proves a session is still valid. `requireAuth`/`optionalAuth` call
+`verifyActiveSession()` after verifying the signature — see
+`shared/api/engines/auth/revocation.js`.
+
+### What to Check
+
+| Check                                                                 | Description                                                                                             |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| 🔴 New auth entry point skips `verifyActiveSession()`                 | Any path that accepts an access token (WS handshake, API key, Node-RED, a custom strategy) must call it |
+| 🔴 Controller calls `jwt.generateTokenPair()` directly                | Bypasses the `refresh_tokens` registry — the session becomes unrevocable. Use `users:sessions`          |
+| 🔴 Store outage reported as 401                                       | Must be 503 (`SessionStoreUnavailableError`). A 401 makes clients clear cookies and signs out the fleet |
+| 🔴 A state change that should end sessions has no revocation listener | Password change, deactivation, deletion, role removal — wire it in `src/apps/users/api/index.js`        |
+| 🟡 Long-lived credential not covered by revocation                    | API keys carry no `sid`; `revokeUserApiKeys()` is what reaches them                                     |
+| 🟡 Authorization claims copied forward on refresh                     | `rotateTokenPair` must re-read `is_admin`/roles from the database, or a demotion survives 30 days       |
+
+### Enumeration Oracles
+
+The login endpoint must answer identically for "no such account" and "wrong
+password" — **including timing and status code**, not just the response body.
+
+| Check                                                      | Description                                                                               |
+| ---------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| 🔴 Missing-user path returns before the password hash runs | scrypt costs ~50–100 ms; skipping it makes an unknown address measurably faster           |
+| 🔴 Account state disclosed before credentials are proven   | "inactive" / "locked" must come _after_ the password check, never instead of it           |
+| 🔴 A user row shape that crashes the password check        | e.g. an OAuth-only account with `password: null` — a 500 identifies the account instantly |
+| 🟡 Lockout that can be extended indefinitely               | An attacker must not be able to keep a victim locked out by spamming wrong passwords      |
+
+### Deployment Assumptions
+
+The session denylist is per process unless a shared backend is configured. If a
+deployment runs multiple replicas without `XNAPIFY_REDIS_URL`, revocation relies
+on the durable `refresh_tokens` fallback and takes up to `SESSION_LIVE_MEMO_MS`
+(60 s) to propagate. Flag any design that assumes instant fleet-wide revocation
+without confirming Redis is present.
+
+---
+
 ## When to Apply This Skill
 
 | Trigger                             | Action                               |
@@ -454,6 +521,7 @@ res.status(status).json({
 | New extension developed             | Extension security audit (section 8) |
 | File upload/download feature        | Path traversal audit (section 7)     |
 | WebSocket handler added             | WS security audit (section 10)       |
+| Auth, login, or token code touched  | Session lifecycle audit (section 13) |
 | PR review or `/modify` workflow     | Full audit                           |
 | Environment variable added          | Env var audit (section 3)            |
 | CSP violation reported              | CSP audit (section 9)                |

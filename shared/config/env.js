@@ -80,6 +80,9 @@ function buildSchema(nodeEnv) {
     XNAPIFY_QUEUE_TYPE: z.string().trim().min(1).optional(),
     XNAPIFY_QUEUE_DATA_DIR: z.string().trim().min(1).optional(),
 
+    XNAPIFY_BROKER_TYPE: z.enum(['memory', 'file', 'redis']).optional(),
+    XNAPIFY_BROKER_DATA_DIR: z.string().trim().min(1).optional(),
+
     XNAPIFY_KEY: isProd
       ? z
           .string()

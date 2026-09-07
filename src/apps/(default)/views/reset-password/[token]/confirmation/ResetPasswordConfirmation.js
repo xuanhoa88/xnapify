@@ -109,7 +109,7 @@ function ResetPasswordConfirmation({ context }) {
             variant='solid'
             color='indigo'
             size='3'
-            className='w-full cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md'
+            className='w-full cursor-pointer transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-md'
           >
             <Link to='/login'>
               {t('resetPasswordConfirmation.goToLogin', 'Go to Login')}
@@ -271,7 +271,7 @@ function ResetFormFields({ loading, dispatch }) {
         color='indigo'
         size='3'
         type='submit'
-        className='w-full cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md'
+        className='w-full cursor-pointer transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-md'
         loading={loading || isSubmitting}
       >
         {loading

@@ -53,7 +53,12 @@ export async function download(manager, fileNames, options = {}) {
           },
           headers: {
             'Content-Type': metadata.mimeType || 'application/octet-stream',
-            'Content-Length': metadata.size,
+            // Spread, so an unknown size omits the header entirely and Node falls
+            // back to chunked encoding. Emitting `Content-Length: undefined` or 0
+            // against a real body truncates the download at the client.
+            ...(Number.isFinite(metadata.size)
+              ? { 'Content-Length': metadata.size }
+              : {}),
             'Content-Disposition': `attachment; filename="${metadata.name || fileName}"`,
           },
         },

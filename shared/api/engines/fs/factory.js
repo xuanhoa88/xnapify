@@ -5,6 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { mapLimit } from '@shared/utils/atomic/index.js';
+
 import { createUploadMiddleware, MIDDLEWARES } from './middlewares.js';
 import { LocalFilesystemProvider } from './providers/local.js';
 import { MemoryFilesystemProvider } from './providers/memory.js';
@@ -120,20 +122,41 @@ class FilesystemManager {
   }
 
   /**
-   * Get statistics from all providers
-   * @returns {Object} Stats object keyed by provider name
+   * Get statistics from all providers.
+   *
+   * Async because every provider's `getStats` is: local and selfhost both hit
+   * the filesystem or the network to answer. Assigning the un-awaited promise
+   * put a `Promise` in the returned object where callers expected numbers, and
+   * left the rejection with no handler attached — which a surrounding
+   * `try/catch` cannot intercept and Node 20 escalates to process termination.
+   * One provider being unreachable must degrade to `{ error }` for that entry,
+   * not take the server down.
+   *
+   * @returns {Promise<Object>} Stats object keyed by provider name
    */
-  getAllStats() {
+  async getAllStats() {
+    const entries = Array.from(this.providers.entries());
     const stats = {};
-    for (const [name, provider] of this.providers) {
+
+    // Bounded: a deployment with several remote providers would otherwise open
+    // every connection at once purely to answer a status call.
+    const settled = await mapLimit(entries, async ([name, provider]) => {
+      if (typeof provider.getStats !== 'function') {
+        return [name, { available: false }];
+      }
       try {
-        if (provider.getStats && typeof provider.getStats === 'function') {
-          stats[name] = provider.getStats();
-        } else {
-          stats[name] = { available: false };
-        }
+        return [name, await provider.getStats()];
       } catch (error) {
-        stats[name] = { error: error.message };
+        return [name, { error: error.message }];
+      }
+    });
+
+    for (const outcome of settled) {
+      if (outcome.status === 'fulfilled') {
+        const [name, value] = outcome.value;
+        stats[name] = value;
+      } else {
+        stats[outcome.item[0]] = { error: outcome.reason.message };
       }
     }
     return stats;

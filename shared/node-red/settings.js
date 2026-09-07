@@ -575,11 +575,23 @@ export default async function createSettings(options = {}) {
     functionGlobalContext: mergedGlobalContext,
 
     // Node-RED periodically POSTs anonymised usage metrics to
-    // telemetry.nodered.org unless told otherwise (@node-red/runtime's
-    // isTelemetryEnabled() treats "no settings" as disabled, but a prior
-    // opt-in through the editor's banner persists past that default). This
-    // is an embedded flow editor, not a standalone Node-RED install, so the
-    // choice is made here rather than left to whoever clicks through it.
+    // telemetry.nodered.org. This is an embedded flow editor, not a standalone
+    // Node-RED install, so the choice is made here rather than left to whoever
+    // clicks through the editor's banner.
+    //
+    // Both keys are required, and `telemetryEnabled` is the one that actually
+    // decides. `isTelemetryEnabled()` reads `telemetryEnabled` *first* and
+    // returns it whenever it is defined, only falling through to
+    // `telemetry.enabled` when it is not — so a stored opt-in in the userDir's
+    // .config.json silently outranks `telemetry: { enabled: false }` on its
+    // own. That is why setting only the latter left telemetry running.
+    //
+    // Putting `telemetryEnabled` here also makes it permanent: settings.get()
+    // resolves this file before the persisted config, and settings.set()
+    // refuses to overwrite a key defined here. An opt-in attempt from the
+    // editor therefore fails read-only, which the settings API already catches
+    // and logs rather than propagating.
+    telemetryEnabled: false,
     telemetry: { enabled: false },
 
     // Security: Disable deprecated features

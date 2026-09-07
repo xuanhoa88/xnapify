@@ -5,6 +5,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+
 import { computeChecksum } from '../utils/checksum.util.js';
 
 import {
@@ -227,6 +231,7 @@ describe('updateFromHub ordering', () => {
       // Package download
       return {
         ok: true,
+        headers: new Headers({ 'content-length': '3' }),
         body: new ReadableStream({
           start(controller) {
             controller.enqueue(new Uint8Array([1, 2, 3]));
@@ -337,5 +342,229 @@ describe('updateFromHub ordering', () => {
     expect(context.models.Extension.findOrCreate).toHaveBeenCalledWith(
       expect.objectContaining({ where: { key: 'k-up' } }),
     );
+  });
+});
+
+describe('updateFromHub rollback', () => {
+  let originalFetch;
+  let root;
+  let sourceDir;
+
+  /** Content that identifies a copy of the installation that was there first. */
+  const INSTALLED = '{"version":"1.0.0"}';
+
+  const LISTING = {
+    key: 'k-up',
+    name: '@x/up',
+    version: '2.0.0',
+    checksum: GOOD_CHECKSUM,
+    downloadUrl: 'https://hub.example/up.zip',
+  };
+
+  /** A web stream of `count` zero-filled chunks. */
+  function streamOf(count, chunkSize) {
+    let sent = 0;
+    return new ReadableStream({
+      pull(controller) {
+        if (sent >= count) {
+          controller.close();
+          return;
+        }
+        sent += 1;
+        controller.enqueue(new Uint8Array(chunkSize));
+      },
+    });
+  }
+
+  function mockHub({ headers = { 'content-length': '3' }, body } = {}) {
+    global.fetch = jest.fn(async url =>
+      String(url).endsWith('registry.json')
+        ? {
+            ok: true,
+            json: async () => ({ version: 1, extensions: [LISTING] }),
+          }
+        : {
+            ok: true,
+            headers: new Headers(headers),
+            body: body ? body() : streamOf(1, 3),
+          },
+    );
+  }
+
+  function hubContext() {
+    const existing = {
+      key: 'k-up',
+      name: '@x/up',
+      version: '1.0.0',
+      is_active: true,
+      toJSON: () => ({ key: 'k-up', name: '@x/up', version: '1.0.0' }),
+    };
+
+    return {
+      models: {
+        Extension: {
+          findOne: jest.fn(async () => existing),
+          findOrCreate: jest.fn(async () => [{ update: jest.fn() }, true]),
+        },
+      },
+      extensionManager: {
+        resolveExtensionDir: jest.fn(async () => ({ dir: sourceDir })),
+      },
+      cache: { delete: jest.fn() },
+      fs: { extract: jest.fn(async () => {}) },
+      queue: jest.fn(),
+    };
+  }
+
+  /**
+   * Make every attempt to put files back at `target` fail, whether it is
+   * attempted as a copy or as a rename.
+   */
+  function denyWritesInto(target) {
+    const deny = () =>
+      Object.assign(new Error('EACCES: permission denied'), {
+        code: 'EACCES',
+      });
+    const realCp = fs.promises.cp;
+    const realRename = fs.promises.rename;
+    jest
+      .spyOn(fs.promises, 'cp')
+      .mockImplementation((from, to, options) =>
+        to === target ? Promise.reject(deny()) : realCp(from, to, options),
+      );
+    jest
+      .spyOn(fs.promises, 'rename')
+      .mockImplementation((from, to) =>
+        to === target ? Promise.reject(deny()) : realRename(from, to),
+      );
+  }
+
+  /**
+   * Every directory still holding the pre-update installation, wherever the
+   * service chose to keep it.
+   */
+  async function survivingCopies() {
+    const roots = [
+      path.dirname(sourceDir),
+      path.join(os.tmpdir(), 'xnapify-hub-rollback'),
+    ];
+    const found = [];
+    for (const dir of roots) {
+      let entries;
+      try {
+        entries = await fs.promises.readdir(dir);
+      } catch {
+        continue;
+      }
+      for (const entry of entries) {
+        const candidate = path.join(dir, entry);
+        try {
+          const manifest = await fs.promises.readFile(
+            path.join(candidate, 'manifest.json'),
+            'utf8',
+          );
+          if (manifest === INSTALLED) found.push(candidate);
+        } catch {
+          // Not a copy of the installation.
+        }
+      }
+    }
+    return found;
+  }
+
+  beforeEach(async () => {
+    originalFetch = global.fetch;
+    process.env.XNAPIFY_HUB_REGISTRY_URL = 'https://hub.example/registry.json';
+    invalidateRegistryCache();
+    computeChecksum.mockResolvedValue(GOOD_CHECKSUM);
+    installExtensionFromPackage.mockResolvedValue({ key: 'k-up' });
+
+    root = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'hub-rollback-'));
+    sourceDir = path.join(root, 'extensions', '@x', 'up');
+    await fs.promises.mkdir(sourceDir, { recursive: true });
+    await fs.promises.writeFile(
+      path.join(sourceDir, 'manifest.json'),
+      INSTALLED,
+    );
+  });
+
+  afterEach(async () => {
+    global.fetch = originalFetch;
+    delete process.env.XNAPIFY_HUB_REGISTRY_URL;
+    // restoreMocks is off, so a leaked fs spy would follow us into the next test.
+    jest.restoreAllMocks();
+    for (const copy of await survivingCopies()) {
+      await fs.promises.rm(copy, { recursive: true, force: true });
+    }
+    await fs.promises.rm(root, { recursive: true, force: true });
+  });
+
+  it('keeps the saved copy when the files cannot be put back', async () => {
+    mockHub();
+    const context = hubContext();
+    // Production removes the directory on the queue, so the restore runs
+    // against a target that is already gone.
+    deleteExtension.mockImplementation(async () => {
+      await fs.promises.rm(sourceDir, { recursive: true, force: true });
+    });
+    installExtensionFromPackage.mockRejectedValue(new Error('disk full'));
+    denyWritesInto(sourceDir);
+
+    await expect(updateFromHub('@x/up', context)).rejects.toThrow('disk full');
+
+    expect(await survivingCopies()).not.toHaveLength(0);
+    expect(context.models.Extension.findOrCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { key: 'k-up' } }),
+    );
+  });
+
+  it('does not delete an installation it could not save aside', async () => {
+    mockHub();
+    const context = hubContext();
+    const realCp = fs.promises.cp;
+    jest.spyOn(fs.promises, 'cp').mockImplementation(async (from, to, opts) => {
+      if (from !== sourceDir) return realCp(from, to, opts);
+      // Dies partway through, as a full disk or an unreadable file would.
+      await fs.promises.mkdir(to, { recursive: true });
+      await fs.promises.writeFile(path.join(to, 'half.js'), 'partial');
+      throw Object.assign(new Error('ENOSPC: no space left on device'), {
+        code: 'ENOSPC',
+      });
+    });
+
+    await expect(updateFromHub('@x/up', context)).rejects.toThrow(
+      /could not be saved aside/,
+    );
+
+    expect(toggleExtensionStatus).not.toHaveBeenCalled();
+    expect(deleteExtension).not.toHaveBeenCalled();
+    expect(installExtensionFromPackage).not.toHaveBeenCalled();
+    // The half-written copy is gone: nothing else knows the path.
+    expect(await fs.promises.readdir(path.dirname(sourceDir))).toEqual(['up']);
+  });
+
+  it('refuses a package whose advertised size is over the limit', async () => {
+    mockHub({ headers: { 'content-length': String(11 * 1024 * 1024) } });
+    const context = hubContext();
+
+    await expect(updateFromHub('@x/up', context)).rejects.toThrow(
+      /download limit/,
+    );
+
+    expect(deleteExtension).not.toHaveBeenCalled();
+  });
+
+  it('stops a download that streams past the limit whatever it advertised', async () => {
+    mockHub({
+      headers: { 'content-length': '3' },
+      body: () => streamOf(12, 1024 * 1024),
+    });
+    const context = hubContext();
+
+    await expect(updateFromHub('@x/up', context)).rejects.toThrow(
+      /download limit/,
+    );
+
+    expect(deleteExtension).not.toHaveBeenCalled();
   });
 });

@@ -5,8 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import fs from 'fs';
 import path from 'path';
+
+// Relative, with an explicit extension: this plugin is loaded by the raw-Node
+// build task, where the `@shared` alias does not exist.
+import { readJsonSafeSync, writeJsonAtomicSync } from '../atomic/index.js';
 
 /**
  * A generalized, reusable rspack plugin for generating custom stats/manifest files.
@@ -60,11 +63,15 @@ export default class StatsManifestPlugin {
       try {
         let manifest = {};
         if (incremental) {
-          try {
-            manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-          } catch {
-            // File does not exist or is invalid JSON; start fresh
-          }
+          // Missing is normal — this is the first compiler to run. Corrupt is
+          // not: `incremental` means "merge with what another compiler already
+          // wrote", so quietly starting from {} deletes those entries from the
+          // manifest the server reads at boot, and the only symptom is a page
+          // rendered with no scripts or stylesheets.
+          manifest = readJsonSafeSync(manifestPath, {
+            fallback: {},
+            validate: value => value !== null && typeof value === 'object',
+          });
         }
 
         const nextManifest = transform(
@@ -74,8 +81,10 @@ export default class StatsManifestPlugin {
           stats.compilation,
         );
 
-        fs.mkdirSync(path.dirname(manifestPath), { recursive: true });
-        fs.writeFileSync(manifestPath, JSON.stringify(nextManifest, null, 2));
+        // Atomic and durable: the server parses this file at boot, so a build
+        // interrupted mid-write must leave the previous manifest intact rather
+        // than a truncated one. One fsync per build is free at this frequency.
+        writeJsonAtomicSync(manifestPath, nextManifest, { spaces: 2 });
       } catch (err) {
         console.error(
           `[StatsManifestPlugin] Failed to generate or write ${filename}:`,

@@ -78,7 +78,7 @@ function ProfileDropdown() {
   const triggerButton = (
     <button
       type='button'
-      className='group border-none font-inherit text-inherit flex items-center p-1 pr-2 rounded-full cursor-pointer transition-all duration-200 bg-transparent focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-(--focus-8) focus-visible:-outline-offset-1 hover:bg-(--gray-a3) data-[state=open]:bg-(--gray-a3) active:scale-95'
+      className='group border-none font-inherit text-inherit flex items-center p-1 pr-2 rounded-full cursor-pointer transition-[background-color,transform] duration-200 bg-transparent focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-(--focus-8) focus-visible:-outline-offset-1 hover:bg-(--gray-a3) data-[state=open]:bg-(--gray-a3) active:scale-95'
     >
       <Flex align='center' gap='2'>
         <Flex

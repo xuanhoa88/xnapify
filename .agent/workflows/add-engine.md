@@ -133,6 +133,7 @@ npm test
 | Engine     | Purpose                                            |
 | ---------- | -------------------------------------------------- |
 | `auth`     | Authentication middlewares & cookies               |
+| `broker`   | Shared backend for multi-instance deployments (pub/sub + Redis KV/lock) |
 | `cache`    | LRU caching                                        |
 | `db`       | Sequelize ORM & migrations                         |
 | `email`    | Nodemailer service                                 |

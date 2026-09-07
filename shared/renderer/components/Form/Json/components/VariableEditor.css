@@ -43,7 +43,9 @@
   resize: vertical;
   outline: none;
   box-shadow: var(--shadow-sm, 0 1px 2px 0 rgb(0 0 0 / 5%));
-  transition: all 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .editInput:focus {

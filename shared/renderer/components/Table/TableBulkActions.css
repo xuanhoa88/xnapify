@@ -24,8 +24,17 @@
   bottom: var(--space-6);
   left: 50%;
   transform: translateX(-50%);
-  background-color: rgb(17 17 17 / 85%); /* Premium dark translucent */
-  backdrop-filter: blur(12px);
+
+  /*
+   * Opaque rather than backdrop-blurred on purpose.
+   *
+   * This bar sits over the table body, so `backdrop-filter: blur(12px)` made
+   * the browser re-sample and re-blur everything behind it on every frame of
+   * every scroll — precisely when a selection is active and the user is
+   * scrolling to find more rows. At 94% over table content the difference is
+   * not visible, and the per-frame GPU work goes to zero.
+   */
+  background-color: rgb(17 17 17 / 94%); /* Premium dark, near-opaque */
   border: 1px solid rgb(255 255 255 / 15%);
   border-radius: 9999px; /* Perfect pill shape */
   box-shadow:
@@ -78,7 +87,9 @@
   border-radius: 9999px !important;
   padding: 0 12px !important;
   height: 28px !important;
-  transition: all 0.2s ease !important;
+  transition:
+    background-color 0.2s ease,
+    transform 0.2s ease !important;
   background-color: transparent !important;
 }
 
@@ -97,7 +108,9 @@
   border-radius: 9999px !important;
   height: 28px !important;
   padding-right: 12px !important;
-  transition: all 0.2s ease !important;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease !important;
   background-color: transparent !important;
 }
 

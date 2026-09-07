@@ -64,11 +64,23 @@ async function withRetry(operation, options = {}) {
     }
   }
 
-  // All attempts failed
-  throw new Error(
+  // All attempts failed.
+  //
+  // The context has to be attached explicitly: `new Error(msg, options)` only
+  // reads `cause` from its second argument and silently discards every other
+  // key. Passing an object there therefore threw away `error.code`, so every
+  // `err.code === 'ENOENT'` check downstream of a retried operation saw
+  // `undefined` and took the wrong branch.
+  const failure = new Error(
     `Operation failed after ${maxRetries + 1} attempts: ${lastError.message}`,
-    { ...context, originalError: lastError, attempts: maxRetries + 1 },
+    { cause: lastError },
   );
+  Object.assign(failure, context, {
+    code: lastError.code,
+    originalError: lastError,
+    attempts: maxRetries + 1,
+  });
+  throw failure;
 }
 
 /**

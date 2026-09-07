@@ -19,6 +19,8 @@
 - **Server-Side Rendering** — Fast initial loads with SEO-friendly HTML, then seamless SPA hydration
 - **Module Auto-Discovery** — Drop-in modules under `src/apps/` are automatically loaded (API + views)
 - **RBAC** — Built-in users, roles, groups, and granular permissions with middleware guards
+- **Revocable Sessions** — Rotating refresh tokens with reuse detection; logout and deactivation take effect immediately instead of at token expiry
+- **Horizontal Scaling** — Optional Redis backend shares cache, rate limits, session revocation, cron locks and WebSocket fan-out across workers and replicas
 - **Tailwind v4 & Lightning CSS** — Native, blazing-fast CSS processing pipeline without PostCSS bottlenecks
 - **Extension System** — Extend functionality through UI Slots and logic Hooks without touching core code
 - **Node-RED Integration** — Embedded visual workflow automation with versioned flow migrations
@@ -75,7 +77,8 @@ xnapify/
 ├── shared/                     # Shared libraries (@shared alias)
 │   ├── api/                    # Core API infrastructure
 │   │   ├── engines/            # Auto-loaded engine modules
-│   │   │   ├── auth/           # Auth middlewares & cookies
+│   │   │   ├── auth/           # Auth middlewares & session revocation
+│   │   │   ├── broker/         # Shared backend (Redis pub/sub + KV)
 │   │   │   ├── cache/          # Caching layer (LRU)
 │   │   │   ├── db/             # Database & Sequelize ORM
 │   │   │   ├── email/          # Email service (Nodemailer)
@@ -84,9 +87,8 @@ xnapify/
 │   │   │   ├── http/           # HTTP client utilities
 │   │   │   ├── queue/          # Job queue
 │   │   │   ├── schedule/       # Cron scheduling
-│   │   │   ├── search/         # Full-text search
 │   │   │   ├── template/       # Template engine (LiquidJS)
-│   │   │   └── webhook/        # Webhook engine
+│   │   │   └── worker/         # Worker thread pool
 │   │   ├── autoloader.js       # Module auto-discovery
 │   │   └── index.js            # Re-exports all engines
 │   ├── container/              # Dependency injection container
@@ -226,7 +228,10 @@ export default {
 
 ### Authentication & RBAC
 
-- **JWT** in HTTP-only cookies for stateless auth
+- **JWT** in HTTP-only cookies — a short-lived access token (15 min) plus a rotating refresh token (30 days)
+- **Revocable sessions**: every refresh token is recorded in `refresh_tokens` and grouped into a rotation family (one family = one login). Logout, password change, and deactivation revoke immediately rather than waiting for expiry — access tokens carry the family id and a `token_version`, both checked on every request
+- **Refresh rotation with reuse detection**: replaying an already-rotated token revokes the whole family, and each rotation re-reads account status and role claims from the database
+- **Brute-force lockout**: 5 failed logins trigger a time-boxed lock with exponential backoff (15 min → 24 h), never permanent
 - **Middleware guards**: `requireAuth`, `requirePermission`, `requireRole`, `requireGroup`, `requireOwnership`, `optionalAuth`
 - **OAuth**: Google, Facebook, GitHub, Microsoft via Passport.js
 
@@ -296,6 +301,11 @@ node tools/npm/preboot.js --db sqlite --install   # Pre-install SQLite driver
 The Docker image ships with all 3 database drivers pre-installed (`sqlite3`, `pg`, `mysql2`).
 Switch databases at runtime by setting `XNAPIFY_DB_URL`.
 
+The compose stack also starts a Redis container as the shared backend, and the
+app's healthcheck polls `/api/ready` — so a container only joins as healthy once
+its database is reachable _and_ migrated. Scale out with
+`XNAPIFY_CLUSTER_WORKERS` (see [Scaling out](#scaling-out)).
+
 ```bash
 # Build and start (SQLite default)
 docker compose -f .docker/docker-compose.yml up -d --build
@@ -339,6 +349,41 @@ cd build
 npm run setup              # ← only for build/, NOT project root (.npmrc forces production=true)
 npm start                  # .env + DB driver auto-provisioned on first start
 ```
+
+### Health checks
+
+Both probes are unauthenticated, rate-limit exempt, and never render SSR, so an
+orchestrator can poll them cheaply.
+
+| Endpoint      | Purpose   | Behaviour                                                                                                                                                     |
+| ------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/api/health` | Liveness  | Always `200` while the process is up. Restart the container if this fails.                                                                                    |
+| `/api/ready`  | Readiness | `503` while draining or when the database is unreachable or unmigrated; reports failed extensions as `degraded` without pulling the instance out of rotation. |
+
+`/api/ready` returns `503` as soon as shutdown begins, so a rolling deploy stops
+receiving traffic before the engines are torn down.
+
+### Scaling out
+
+```bash
+XNAPIFY_CLUSTER_WORKERS=auto              # integer, or "auto" for one worker per CPU
+XNAPIFY_REDIS_URL=redis://redis:6379/0    # required once there is more than one worker
+```
+
+Without a shared backend, the cache, rate-limit counters, session revocation
+denylist, cron locks and WebSocket channels all live inside a single process.
+`validateEnv()` refuses to boot a clustered deployment without `XNAPIFY_REDIS_URL`
+rather than letting those silently diverge.
+
+> **Running multiple replicas** (Kubernetes, ECS) with one worker each does _not_
+> trip that guard — set `XNAPIFY_REDIS_URL` anyway, or single-device logout takes
+> up to 60 s to propagate between replicas and each one keeps its own rate-limit
+> counters.
+
+Node-RED is a single-process feature (an editor bound to files on disk) and is
+disabled automatically when `XNAPIFY_CLUSTER_WORKERS > 1`. Cron schedules run
+only on worker 0, and are additionally guarded by a Redis lock so several
+replicas do not each fire the same job.
 
 ## 🤝 Contributing
 

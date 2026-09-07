@@ -8,6 +8,8 @@
 import crypto from 'crypto';
 import path from 'path';
 
+import { withFileLock } from '../atomic/index.js';
+
 import { pathExists, readFile, writeFile } from './fs.js';
 import { logInfo, logWarn, logDebug } from './logger.js';
 
@@ -120,20 +122,39 @@ function updateEnvContent(lines, existingKeys, jwtConfig) {
  * @returns {Promise<void>}
  */
 async function generateJWT(cwd, buildDir) {
+  // Determine source and target paths
+  const envPath = path.resolve(buildDir || cwd, '.env');
+  const envDefaultsPath = path.resolve(cwd, '.env.xnapify');
+
+  // The whole read-modify-write runs under one lock. Making the write atomic is
+  // not enough on its own: `npm run setup` and `preboot` both rewrite this file
+  // from a whole-file snapshot, so two of them interleaving produces two
+  // perfectly-formed .env files, the later of which silently reverts the
+  // other's keys — including a freshly minted XNAPIFY_KEY, which invalidates
+  // every session signed with it.
+  return withFileLock(
+    `${envPath}.lock`,
+    () => generateJWTLocked(envPath, envDefaultsPath),
+    { timeoutMs: 30_000, staleMs: 60_000 },
+  );
+}
+
+async function generateJWTLocked(envPath, envDefaultsPath) {
   try {
     logInfo(
       `🔐 Checking JWT configuration for ${process.env.NODE_ENV || 'development'}...`,
     );
 
-    // Determine source and target paths
-    const envPath = path.resolve(buildDir || cwd, '.env');
-    const envDefaultsPath = path.resolve(cwd, '.env.xnapify');
-
     let envContent = '';
     let shouldGenerateSecret = false;
 
+    // Captured before the write below, because that write creates the file:
+    // probing afterwards can only ever answer "it exists", so a first-time
+    // setup would report itself as a routine secret rotation.
+    const envExistedBefore = await pathExists(envPath);
+
     // Try to read existing .env file first
-    if (await pathExists(envPath)) {
+    if (envExistedBefore) {
       envContent = await readFile(envPath, { encoding: 'utf8' });
       logDebug(`Reading existing .env file`);
 
@@ -195,11 +216,16 @@ async function generateJWT(cwd, buildDir) {
     // Update content with JWT config
     const updatedLines = updateEnvContent(lines, keys, jwtConfig);
 
-    // Write updated content back to .env
-    await writeFile(envPath, updatedLines.join('\n'));
+    // Write updated content back to .env, owner-only.
+    //
+    // This file holds XNAPIFY_KEY, the JWT signing secret. Created under a
+    // default umask it lands at 0644, so every local account can read it and
+    // mint tokens the server will accept — on a shared host or any container
+    // where the app does not run alone, that is a full authentication bypass.
+    await writeFile(envPath, updatedLines.join('\n'), { mode: 0o600 });
 
     // Log success
-    if (!(await pathExists(envPath))) {
+    if (!envExistedBefore) {
       logInfo(`✅ Created ${path.basename(envPath)}`);
     } else if (shouldGenerateSecret) {
       logInfo(`✅ Generated new JWT secret in ${path.basename(envPath)}`);

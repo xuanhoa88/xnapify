@@ -177,6 +177,27 @@ Two ways the lock silently does nothing, both of which `shared/config/env.js` re
 - **SQLite (the default dialect) and any other non-lockable dialect** — a single-process deployment is fine, since SQLite serialises writers itself; multiple processes are not.
 - **`XNAPIFY_DB_POOL_MAX < 2`** — the lock is held on one pooled connection while the migrations run on another, so a pool of one would deadlock. It is skipped with a `logger.warn` instead.
 
+A third way it can silently do nothing, which no configuration check can catch:
+because `pg_advisory_xact_lock()` is transaction-scoped, the transaction has to
+stay open for the whole run while the migrations execute on other connections —
+leaving that backend **idle in transaction**, often for minutes. Managed Postgres
+commonly sets `idle_in_transaction_session_timeout`; when it fires, the backend is
+terminated, the lock is released mid-migration, and a second worker walks into
+exactly the race the lock exists to prevent. So the Postgres path issues
+`SET LOCAL idle_in_transaction_session_timeout = 0` before taking the lock.
+
+That statement runs inside its own **savepoint**. Any server-side error inside a
+Postgres transaction aborts the whole transaction (`25P02`), so a plain
+`try`/`catch` around a bare query would leave every later statement failing —
+turning "warn and carry on" into a guaranteed boot failure on a Postgres-wire
+server that does not know the GUC (older Postgres, CockroachDB, Redshift, or a
+pooler that filters `SET`). Rolling back to the savepoint keeps the outer
+transaction usable so the lock can still be taken without the guard.
+
+MySQL/MariaDB needs none of this: `GET_LOCK` is connection-scoped rather than
+transaction-scoped, and the applicable idle limit is `wait_timeout`, which
+defaults to 8 hours. The asymmetry is deliberate.
+
 ### Migration guards (`migrationGuards.js`)
 
 `assertColumnDropSupported(queryInterface, { table, column })` makes a `down()` migration refuse to run on SQLite. Sequelize emulates `DROP COLUMN` there by rebuilding the table, which fires every `ON DELETE CASCADE` pointing at it (destroying child rows while the parent survives) and loses every explicit index, including UNIQUE ones. Reverting such a migration on SQLite means restoring a backup.
